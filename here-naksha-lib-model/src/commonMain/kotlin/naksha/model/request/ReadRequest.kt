@@ -31,13 +31,13 @@ open class ReadRequest: Request() {
     /**
      * A parameter to tell the storage if the client wants a handle.
      *
-     * If _true_, the storage need to always generate the full result-set. It does not need to load all features into memory all the time, but as soon as a handle should be generated, an ordered result-set is needed, which requires to fetch all results to order them. Therefore, the storage at least need to generate the list of all [row identifiers][naksha.model.RowId] being part of the result, then ordering them, optimally only by `version` and `uid`, which does not require to load all the row data. This is needed to be able to generate a handle from it (so to seek within the result-set).
+     * If _true_, the storage need to always generate the full result-set. It does not need to load all features into memory all the time, but as soon as a handle should be generated, an ordered result-set is needed, which requires to fetch all results to order them. Therefore, the storage at least need to generate the list of all [row identifiers][naksha.model.RowNumber] being part of the result, then ordering them, optimally only by `version` and `uid`, which does not require to load all the row data. This is needed to be able to generate a handle from it (so to seek within the result-set).
      *
      * If the storage need to apply any filter-lambdas or perform a _property_ search (which is as well an intrinsic filtering lambda), it at least need to load as many results as the [limit] describes from the storage into memory.
      *
      * A middle ground is to order by data that is part of the [metadata][naksha.model.Metadata]. This requires the storage to load all rows with their metadata into memory, but it does not yet need to load the feature itself, nor the geometry, tags or attachment.
      *
-     * The worst case is an order by something very custom, when requested, the storage needs not only the [row identifiers][naksha.model.RowId], but the full rows with all data. In that case all results are loaded into memory, filtered, and eventually ordered.
+     * The worst case is an order by something very custom, when requested, the storage needs not only the [row identifiers][naksha.model.RowNumber], but the full rows with all data. In that case all results are loaded into memory, filtered, and eventually ordered.
      * @since 3.0.0
      */
     var returnHandle by BOOLEAN

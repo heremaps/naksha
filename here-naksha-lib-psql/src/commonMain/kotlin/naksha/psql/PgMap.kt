@@ -2,47 +2,51 @@
 
 package naksha.psql
 
-import naksha.base.AtomicMap
-import naksha.base.Int64
-import naksha.base.Platform
-import naksha.base.WeakRef
+import naksha.base.*
 import naksha.base.fn.Fn0
+import naksha.model.*
 import naksha.model.NakshaContext.NakshaContextCompanion.currentContext
 import naksha.model.NakshaError.NakshaErrorCompanion.UNAUTHORIZED
 import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
-import naksha.model.NakshaException
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
-import naksha.model.SessionOptions
+import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
-import kotlin.jvm.JvmField
 
 /**
  * Information about the database and connection, that need only to be queried ones per session.
  */
 @JsExport
-open class PgSchema(
+open class PgMap(
     /**
      * The reference to the storage to which the schema belongs.
      */
-    @JvmField val storage: PgStorage,
+    override val storage: PgStorage,
+
+    /**
+     * The map-id.
+     */
+    override val id: String,
+
     /**
      * The name of the schema.
      */
-    @JvmField val name: String
-) {
+    val schemaName: String
+) : IMap {
     /**
      * Admin options for this schema aka map.
      */
-    fun adminOptions(): SessionOptions = storage.adminOptions.copy(map = storage.mapToSchema(name))
+    fun adminOptions(): SessionOptions = storage.adminOptions.copy(mapId = id)
+
+    internal var _number: Int? = null
 
     /**
-     * The map of this schema.
+     * The map-number of this map.
      */
-    val map: String
-        get() = storage.schemaToMap(name)
+    override val number: Int
+        get() = _number ?: throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
 
     /**
      * The lock internally used to synchronize access.
@@ -67,24 +71,25 @@ open class PgSchema(
         get() {
             if (_updateAt == null) refresh()
             val _oid = this._oid
-            check(_oid != null) { "The schema '$name' does not exist" }
+            check(_oid != null) { "The schema '$schemaName' does not exist" }
             return _oid
         }
 
     /**
      * Test if this is the default schema.
      */
-    fun isDefault(): Boolean = name == storage.defaultSchemaName
+    fun isDefault(): Boolean = schemaName == storage.defaultSchemaName
 
     /**
      * The quoted schema, for example `"foo"`, if no quoting is necessary, the string may be unquoted.
      */
-    open val nameQuoted = quoteIdent(name)
+    open val nameQuoted = quoteIdent(schemaName)
 
     /**
      * A concurrent hash map with all managed collections of this schema.
      */
     internal val collections: AtomicMap<String, WeakRef<out PgCollection>> = Platform.newAtomicMap()
+    internal val collectionIdByNumber: AtomicMap<Int64, String> = Platform.newAtomicMap()
 
     /**
      * Returns the dictionaries' collection.
@@ -106,17 +111,19 @@ open class PgSchema(
 
     /**
      * Returns a shared cached [PgCollection] wrapper. This method is internally called, when a storage or realm are initialized to create all internal collections.
-     * @param id the collection identifier.
+     * @param collectionId the collection-id.
      * @return the shared and cached [PgCollection] wrapper.
      */
-    open operator fun get(id: String): PgCollection = getCollection(id) {
-        when (id) {
+    override operator fun get(collectionId: String): PgCollection = getCollection(collectionId) {
+        when (collectionId) {
             VIRT_DICTIONARIES -> PgNakshaDictionaries(this)
             VIRT_COLLECTIONS -> PgNakshaCollections(this)
             VIRT_TRANSACTIONS -> PgNakshaTransactions(this)
-            else -> PgCollection(this, id)
+            else -> PgCollection(this, collectionId)
         }
     }
+
+    override fun getCollectionId(collectionNumber: Int64): String? = collectionIdByNumber[collectionNumber]
 
     /**
      * Returns a shared cached [PgCollection] wrapper. This method is internally called, when a storage or realm are initialized to create all internal collections.
@@ -144,44 +151,54 @@ open class PgSchema(
         }
     }
 
-    private fun connOf(connection: PgConnection?): PgConnection {
-        return connection ?: storage.newConnection(adminOptions()) { _, _ -> }
-    }
+    /**
+     * Returns either the given connection, or opens a new admin connection, when the given connection is _null_.
+     */
+    private fun connOf(connection: PgConnection?): PgConnection = connection ?: storage.adminConnection(adminOptions()) { _, _ -> }
 
-    private fun closeOf(conn: PgConnection, connection: PgConnection?, commitBeforeClose: Boolean) {
+    /**
+     * The counter-part of [connOf], if the connection is _null_, closes [conn], if [commitOnClose] is _true_, commit changes before closing. Does nothing, when the [connection] is not _null_ ([commitOnClose] is ignored in this case).
+     */
+    private fun closeOf(conn: PgConnection, connection: PgConnection?, commitOnClose: Boolean) {
         if (conn !== connection) {
-            if (commitBeforeClose) conn.commit()
+            if (commitOnClose) conn.commit()
             conn.close()
         }
     }
 
     /**
-     * Refresh the schema information cache. This is automatically called when any value is queries for the first time.
+     * Refresh the schema information cache.
+     *
+     * This is automatically called when any value is queries for the first time.
+     *
      * @param connection the connection to use to query information from the database; if _null_, a new connection is used temporary.
      * @return this.
      */
-    open fun refresh(connection: PgConnection? = null): PgSchema {
+    open fun refresh(connection: PgConnection? = null): PgMap {
         if (_updateAt == null || Platform.currentMillis() < _updateAt) {
             val conn = connOf(connection)
             try {
-                val cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(name)).fetch()
+                val cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(id)).fetch()
                 cursor.use {
                     _oid = cursor["oid"]
                 }
             } finally {
                 closeOf(conn, connection, false)
             }
-            // We update every 15 seconds.
-            _updateAt = Platform.currentMillis() + 15_000
+            updateUpdateAt()
         }
         return this
+    }
+
+    protected fun updateUpdateAt() {
+        _updateAt = Platform.currentMillis() + PlatformUtil.HOUR
     }
 
     /**
      * Tests if the schema exists.
      * @return _true_ if the schema exists.
      */
-    open fun exists(): Boolean {
+    override fun exists(): Boolean {
         if (_updateAt == null) refresh()
         return _oid != null
     }
@@ -198,6 +215,23 @@ open class PgSchema(
     }
 
     /**
+     * Internally called to initialize the storage.
+     * @param storageId the storage-id to install, if _null_, a new storage identifier is generated.
+     * @param connection the connection to use, if _null_, a new connection is created.
+     * @param version the version of the PLV8 code and PSQL library, if the existing installed version is smaller, it will be updated.
+     * @param override if _true_, forcefully override currently installed stored functions and PLV8 modules, even if version matches.
+     * @return the storage-id given or the generated storage-id.
+     */
+    internal open fun init_internal(
+        storageId: String?,
+        connection: PgConnection,
+        version: NakshaVersion = NakshaVersion.latest,
+        override: Boolean = false
+    ): String {
+        throw NakshaException(UNSUPPORTED_OPERATION, "This environment does not allow to initialize the schema")
+    }
+
+    /**
      * Drop the schema.
      *
      * The method does auto-commit, if no [connection] was given; otherwise committing must be done explicitly.
@@ -207,7 +241,7 @@ open class PgSchema(
         check(currentContext().su) { throw NakshaException(UNAUTHORIZED, "Only superusers may drop schemata") }
         val conn = connOf(connection)
         try {
-            conn.execute("DROP SCHEMA ${quoteIdent(name)}").close()
+            conn.execute("DROP SCHEMA ${quoteIdent(id)}").close()
         } finally {
             closeOf(conn, connection, true)
         }

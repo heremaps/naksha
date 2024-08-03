@@ -13,6 +13,14 @@ import kotlin.math.min
  * @property replicas a mutable list of read-replicas, can be changed at runtime.
  */
 class PsqlCluster(override val master: PgInstance, override var replicas: MutableList<PgInstance> = mutableListOf()) : PgCluster {
+    override val connectionLimit: Int
+        get() {
+            var limit = master.connectionLimit
+            for (instance in replicas) {
+                limit += instance.connectionLimit
+            }
+            return limit
+        }
 
     override fun newConnection(options: SessionOptions, readOnly: Boolean): PsqlConnection {
         if (!readOnly || options.useMaster || replicas.isEmpty()) {

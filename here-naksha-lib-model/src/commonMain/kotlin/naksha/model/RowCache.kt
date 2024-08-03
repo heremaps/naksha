@@ -18,7 +18,7 @@ class RowCache internal constructor(
      */
     @JvmField val storageId: String
 ) {
-    private val rows = AtomicMap<RowId, WeakRef<Row>>()
+    private val rows = AtomicMap<RowNumber, WeakRef<Row>>()
 
     /**
      * Adds the given row into the cache.
@@ -35,7 +35,7 @@ class RowCache internal constructor(
      * @param id the row identifier.
      * @return the row from the cache.
      */
-    operator fun get(id: RowId): Row? = rows[id]?.deref()
+    operator fun get(id: RowNumber): Row? = rows[id]?.deref()
 
     /**
      * Store the given row.
@@ -45,47 +45,47 @@ class RowCache internal constructor(
      * @return either the existing row, the given one or a merge row.
      */
     fun store(row: Row): Row {
-        val row_id = row.id
-        val existingRef = rows[row_id]
+        val row_number = row.rowNumber
+        val existingRef = rows[row_number]
         if (existingRef != null) {
             val existing = existingRef.deref()
-            if (existing != null && existing.id == row_id) {
+            if (existing != null && existing.rowNumber == row_number) {
                 val merged = existing.merge(row)
                 if (existing !== merged) {
-                    rows[row_id] = WeakRef(merged)
+                    rows[row_number] = WeakRef(merged)
                     return merged
                 }
                 return existing
             }
         }
-        rows[row_id] = WeakRef(row)
+        rows[row_number] = WeakRef(row)
         return row
     }
 
     /**
      * Store the given row.
-     * @param id the row id, must match [Row.id], otherwise an [ILLEGAL_ARGUMENT] is raised.
+     * @param rowNumber the row-number, must match [Row.rowNumber], otherwise an [ILLEGAL_ARGUMENT] is raised.
      * @param row the row to store.
      */
-    operator fun set(id: RowId, row: Row) {
-        if (id != row.id) {
-            throw NakshaException(ILLEGAL_ARGUMENT, "The given row-id ($id) does not match the one of the given row (${row.id}")
+    operator fun set(rowNumber: RowNumber, row: Row) {
+        if (rowNumber != row.rowNumber) {
+            throw NakshaException(ILLEGAL_ARGUMENT, "The given row-id ($rowNumber) does not match the one of the given row (${row.rowNumber}")
         }
         store(row)
     }
 
     /**
      * Tests if the cache contains a row with the given id.
-     * @param id the [row id][RowId].
+     * @param id the [row id][RowNumber].
      */
-    operator fun contains(id: RowId): Boolean = rows.containsKey(id)
+    operator fun contains(id: RowNumber): Boolean = rows.containsKey(id)
 
     /**
      * Remove (evict) the cached row.
-     * @param id the [RowId] of the row to remove.
+     * @param id the [RowNumber] of the row to remove.
      * @return the removed [row][Row]; if any.
      */
-    fun remove(id: RowId): Row? {
+    fun remove(id: RowNumber): Row? {
         val rowRef = rows.remove(id)
         return rowRef?.deref()
     }

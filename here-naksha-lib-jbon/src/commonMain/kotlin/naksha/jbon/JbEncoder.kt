@@ -825,12 +825,17 @@ open class JbEncoder(var global: JbDictionary? = null) : Binary() {
     }
 
     /**
-     * Expects a GeoJSON feature as input and convert it into JBON. The first being the JBON feature,
-     * the second being the XYZ namespace, the third being the geometry.
+     * Expects a GeoJSON feature as input and convert it into JBON.
+     *
+     * - This method will copy `id` into the JBON feature id.
+     * - This method will ignore `geometry`
+     * - This method will ignore `properties.@ns:com:here:xyz`.
+     *
      * @param map The GeoJSON feature to convert into JBON.
      * @return The JBON representation of the feature, the XYZ-namespace and the geometry.
      */
     fun buildFeatureFromMap(map: MapProxy<String, *>): ByteArray {
+        // TODO: Make the ignore configurable!
         clear()
         val id: String? = map.getAs("id", String::class)
         xyz = null

@@ -150,12 +150,12 @@ open class NakshaContext protected constructor() {
     /**
      * The map to use.
      *
-     * The map is read from the JWT `map` claim, but can be overridden by the client using the HTTP header `X-Map` or by using specially crafted requests which explicitly specify the map. If neither is available, the default is [DEFAULT_MAP].
+     * The map is read from the JWT `map` claim, but can be overridden by the client using the HTTP header `X-Map` or by using specially crafted requests which explicitly specify the map. If neither is available, the default is [DEFAULT_MAP_ID].
      *
      * Note: In `lib-psql` the default map is mapped to the default schema configured within the storage driver. Other maps are simply stored in their own dedicated schemas with the same name (this only applies for the default PostgresQL storage implementation).
      * @since 3.0.0
      */
-    open var map: String = DEFAULT_MAP
+    open var mapId: String = DEFAULT_MAP_ID
 
     /**
      * Change the current map.
@@ -163,7 +163,7 @@ open class NakshaContext protected constructor() {
      * @return this.
      */
     open fun withMap(map: String): NakshaContext {
-        this.map = map
+        this.mapId = map
         return this
     }
 
@@ -328,6 +328,11 @@ open class NakshaContext protected constructor() {
     @Suppress("OPT_IN_USAGE")
     companion object NakshaContextCompanion {
         /**
+         * The default map, being an empty string.
+         */
+        const val DEFAULT_MAP_ID = ""
+
+        /**
          * The immutable default app-name to be used, if nothing else is available (defined at build time).
          */
         const val DEFAULT_APP_NAME = "NakshaClient/${NakshaVersion.LATEST}"
@@ -390,17 +395,12 @@ open class NakshaContext protected constructor() {
         val defaultLockTimeout = AtomicInt(10_000)
 
         /**
-         * The default map, being an empty string.
-         */
-        const val DEFAULT_MAP = ""
-
-        /**
          * Returns the current map.
          * @return the current map.
          */
         @JvmStatic
         @JsStatic
-        fun map(): String = currentContext().map
+        fun mapId(): String = currentContext().mapId
 
         /**
          * Returns the current application name.

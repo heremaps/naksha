@@ -48,6 +48,14 @@ AS $$ BEGIN
   RETURN ${schemaLiteral};
 END $$;
 
+CREATE OR REPLACE FUNCTION naksha_default_schema() RETURNS text
+LANGUAGE 'plpgsql'
+IMMUTABLE
+PARALLEL SAFE
+AS $$ BEGIN
+  RETURN ${defaultSchemaLiteral};
+END $$;
+
 CREATE OR REPLACE FUNCTION naksha_start_session(app_name text, stream_id text, app_id text, author text)
 RETURNS void
 LANGUAGE 'plv8'

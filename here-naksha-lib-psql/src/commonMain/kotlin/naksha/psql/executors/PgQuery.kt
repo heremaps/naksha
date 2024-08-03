@@ -2,16 +2,13 @@
 
 package naksha.psql.executors
 
-import naksha.model.IRowIdArray
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaException
-import naksha.model.RowIdBinaryArray
+import naksha.model.IMetadataArray
 import naksha.psql.PgConnection
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 /**
- * A query.
+ * A single query to be executed, mainly used when reading features.
  */
 @JsExport
 class PgQuery internal constructor(
@@ -33,10 +30,10 @@ class PgQuery internal constructor(
     @JvmField
     internal val arguments: Array<Any?>?
 ) {
-    private var _results: IRowIdArray? = null
-
     /**
-     * The result that is produces by [execute], basically:
+     * Executes this query in the current thread, using the given connection, and return the outcome.
+     *
+     * Internally most will do something like:
      * ```sql
      * SELECT array_agg(rowid) as rowid_arr FROM table WHERE ...
      * ```
@@ -44,15 +41,16 @@ class PgQuery internal constructor(
      * ```sql
      * SELECT gzip(array_agg(rowid)) as rowid_arr FROM table WHERE ...
      * ```
-     */
-    val results: IRowIdArray
-        get() = _results ?: throw NakshaException(ILLEGAL_STATE, "Invoke 'execute' before reading the results")
-
-    /**
-     * Executes this query in the current thread, using the given connection, fetches the results, and stores them in [results].
+     * Optionally may include the feature-ids:
+     * ```sql
+     * SELECT gzip(string_agg(rowid||id::bytea,'\x00'::bytea))
+     *   AS rowid_arr FROM table WHERE ...
+     * ```
      * @param conn the connection to use to execute the query.
+     * @return the result that are produces.
      */
-    fun execute(conn: PgConnection) {
+    fun execute(conn: PgConnection): IMetadataArray {
+        conn.execute(sql, arguments)
         TODO("Implement me!")
     }
 }

@@ -26,14 +26,14 @@ class PgResultSet(
     internal val map: String,
 
     /**
-     * The result-set as [naksha.model.RowId] array, read from the query.
+     * The result-set as [naksha.model.RowNumber] array, read from the query.
      *
      * **Note**: After sorting, the array is replaced with the ordered version. This is quite important to acknowledge when saving the rows-ids to restore result-sets quickly when seeking in them!
      */
-    internal var rowIdArray: IRowIdArray,
+    internal var rowNumberArray: RowNumberByteArray,
 
     /**
-     * Signal that the [rowIdArray] is incomplete (not the full result set).
+     * Signal that the [rowNumberArray] is incomplete (not the full result set).
      *
      * - This requires that [offset] is 0.
      * - This requires that [limit] is `rowIdArray.size`.
@@ -44,12 +44,12 @@ class PgResultSet(
     internal val incomplete: Boolean,
 
     /**
-     * How many entries in the [rowIdArray] are already filtered.
+     * How many entries in the [rowNumberArray] are already filtered.
      */
     internal var validTill: Int = 0,
 
     /**
-     * The offset where in the ordered, and filtered, result-set ([rowIdArray]) to start reading.
+     * The offset where in the ordered, and filtered, result-set ([rowNumberArray]) to start reading.
      */
     internal var offset: Int = 0,
 
@@ -60,10 +60,10 @@ class PgResultSet(
      * - If this is restored for a [ReadHandle][naksha.model.request.ReadHandle], then the limit will be restored from the handle, except the client changes the limit via request parameter.
      * - If this is the result of a [WriteRequest][naksha.model.request.WriteRequest], then the limit should be set to `rowIdArray.size`.
      */
-    internal val limit: Int = if (incomplete) rowIdArray.size else 10_000,
+    internal val limit: Int = if (incomplete) rowNumberArray.size else 10_000,
 
     /**
-     * The order to ensure, if _null_ the current order of [rowIdArray] is good.
+     * The order to ensure, if _null_ the current order of [rowNumberArray] is good.
      *
      * - If restored from a [ReadHandle] request, and from a cached result-set, then this will be _null_.
      * - If a `handle` is requested by the client, and this is the result of a query, then this parameter should be set to [OrderBy.deterministic]. In no case _null_ is acceptable in this case, because without an order it is not possible to generate a handle. This means as well, the result-set must not be [incomplete].
@@ -73,13 +73,13 @@ class PgResultSet(
     /**
      * Optional filters to run above the ordered results to remove or modify result-rows.
      *
-     * - If restored from a [ReadHandle] request, and from a cached result-set, then this may be _null_, but could be as well set, when the given [rowIdArray] is not yet fully filtered.
+     * - If restored from a [ReadHandle] request, and from a cached result-set, then this may be _null_, but could be as well set, when the given [rowNumberArray] is not yet fully filtered.
      * - If the client requested a query above the `properties` using an [IPropertyQuery][naksha.model.request.query.IPropertyQuery], then a method need to be created, and added as first result-filter in this filter list.
      */
     internal val filters: ResultFilterList? = null
 ) : ResultSet {
     /**
-     * The generated results rows, same size as [rowIdArray].
+     * The generated results rows, same size as [rowNumberArray].
      */
     internal var all: ResultRowList
 
@@ -110,10 +110,10 @@ class PgResultSet(
         if (a == null) return 1
         if (b == null) return -1
 
-        val v = a.rowId.version.txn - b.rowId.version.txn
+        val v = a.rowNumber.version.txn - b.rowNumber.version.txn
         if (v < 0) return -1
         if (v > 0) return 1
-        val u = a.rowId.uid - b.rowId.uid
+        val u = a.rowNumber.uid - b.rowNumber.uid
         if (u < 0) return -1
         if (u > 0) return 1
         return 0
@@ -157,7 +157,7 @@ class PgResultSet(
     */
 
     init {
-        all = rowIdArray.toResultRowList(storage, map)
+        all = ResultRowList.fromRowNumberArray(storage, rowNumberArray)
         if (orderBy == DETERMINISTIC || orderBy == VERSION) {
             fetchMode = null
             all.sortedWith(this::order_txn_uid)
@@ -178,10 +178,10 @@ class PgResultSet(
         if (!incomplete) {
             end = offset + limit
             // If limit is Int.MAX_VALUE, we get an overflow below zero, but we mean: everything!
-            if (end < 0 || end > rowIdArray.size) end = rowIdArray.size
+            if (end < 0 || end > rowNumberArray.size) end = rowNumberArray.size
             validateTill(end)
         } else {
-            end = rowIdArray.size
+            end = rowNumberArray.size
             validTill = end
         }
     }

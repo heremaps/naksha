@@ -30,7 +30,7 @@ class TestPsql {
 
     @Test
     fun ensure_that_essentials_exist() {
-        val schema = env.storage.defaultSchema()
+        val schema = env.storage.defaultMap()
         assertTrue(schema.exists(), "The default schema should exists!")
 
         val naksha_collections = schema[VIRT_COLLECTIONS]

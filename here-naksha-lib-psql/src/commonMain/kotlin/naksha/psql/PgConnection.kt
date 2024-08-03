@@ -24,6 +24,18 @@ interface PgConnection : AutoCloseable {
     var options: SessionOptions
 
     /**
+     * If auto-commit should be enabled; defaults to false.
+     */
+    var autoCommit: Boolean
+
+    /**
+     * The URI of the database connection.
+     * @param showPassword if explicitly _true_, the plain password is part of the URI, otherwise it will be obfuscated.
+     * @return the URI of the database connection.
+     */
+    fun toUri(showPassword: Boolean = false): String
+
+    /**
      * Execute an SQL query with the given arguments. The placeholder should be **$1** to **$n**.
      * @param sql The SQL query to execute.
      * @param args The arguments to be set at $n position, where $1 is the first array element.

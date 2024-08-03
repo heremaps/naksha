@@ -2,7 +2,6 @@
 
 package naksha.psql
 
-import naksha.jbon.*
 import kotlinx.datetime.*
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
@@ -14,7 +13,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
 import naksha.model.objects.Transaction
-import naksha.psql.executors.PgSimpleWriter
+import naksha.psql.executors.PgWriter
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
@@ -60,9 +59,9 @@ open class PgSession(
         }
 
     override var map: String
-        get() = storage.schemaToMap(options.map)
+        get() = storage.schemaToMapId(options.mapId)
         set(value) {
-            options = options.copy(map = value)
+            options = options.copy(mapId = value)
         }
 
     /**
@@ -146,12 +145,10 @@ open class PgSession(
     }
 
     /**
-     * Returns the current transaction number, if no transaction number is yet generated, generates a new one.
-     *
-     * Uses the current session, does not commit or rollback the current session.
-     * @return The current transaction number.
+     * Returns the current version (transaction number), if no version is yet generated, acquires a new one from the database.
+     * @return The current version (transaction number).
      */
-    fun txn(): Version {
+    fun version(): Version {
         if (_version == null) {
             // Start a new transaction.
             val conn = usePgConnection()
@@ -200,11 +197,11 @@ open class PgSession(
     }
 
     /**
-     * The start time of the transaction in epoch milliseconds.
-     * @return the start time of the transaction in epoch milliseconds.
+     * The start time of the version (transaction) in epoch milliseconds.
+     * @return the start time of the version (transaction) in epoch milliseconds.
      */
-    fun txnTs(): Int64 {
-        txn()
+    fun versionTime(): Int64 {
+        version()
         return _txts!!
     }
 
@@ -277,7 +274,7 @@ open class PgSession(
     fun transaction(): Transaction {
         var t = transaction
         if (t == null) {
-            t = Transaction(txn().txn)
+            t = Transaction(version().txn)
             transaction = t
         }
         return t
@@ -286,7 +283,7 @@ open class PgSession(
     override fun execute(request: Request): Response {
         when (request) {
             is WriteRequest -> {
-                PgSimpleWriter(this, request.writes)
+                PgWriter(this, request.writes)
             }
 
             is ReadRequest -> {
@@ -296,14 +293,6 @@ open class PgSession(
             else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown request")
         }
         throw NakshaException(ILLEGAL_ARGUMENT, "Unknown request")
-    }
-
-    override fun getFeatureById(id: String): ResultRow? {
-        TODO("Not yet implemented")
-    }
-
-    override fun getFeaturesByIds(vararg ids: String): Map<String, ResultRow> {
-        TODO("Not yet implemented")
     }
 
     /**

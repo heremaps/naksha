@@ -196,7 +196,7 @@ open class PgTable(
                 )
             }
         }
-        val storage = collection.schema.storage
+        val storage = collection.map.storage
         when (storageClass) {
             PgStorageClass.Brittle -> {
                 CREATE_TABLE = "CREATE UNLOGGED TABLE IF NOT EXISTS "
@@ -240,9 +240,9 @@ open class PgTable(
         }
         if (partitionOfTable != null) {
             val PARTITION_OF = """ PARTITION OF ${partitionOfTable.quotedName} FOR VALUES FROM (${partitionOfValue}) TO (${partitionOfValue + 1}) """
-            CREATE_SQL = """$CREATE_TABLE ${collection.schema.nameQuoted}.$quotedName ${PARTITION_OF}${PARTITION_BY}${WITH}${TABLESPACE}"""
+            CREATE_SQL = """$CREATE_TABLE ${collection.map.nameQuoted}.$quotedName ${PARTITION_OF}${PARTITION_BY}${WITH}${TABLESPACE}"""
         } else {
-            CREATE_SQL = "$CREATE_TABLE ${collection.schema.nameQuoted}.$quotedName ${TABLE_BODY}${PARTITION_BY}${WITH}${TABLESPACE}"
+            CREATE_SQL = "$CREATE_TABLE ${collection.map.nameQuoted}.$quotedName ${TABLE_BODY}${PARTITION_BY}${WITH}${TABLESPACE}"
         }
     }
 

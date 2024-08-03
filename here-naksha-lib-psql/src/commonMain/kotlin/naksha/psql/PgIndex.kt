@@ -7,7 +7,7 @@ import naksha.psql.PgColumn.PgColumnCompanion.id as c_id
 import naksha.psql.PgColumn.PgColumnCompanion.txn as c_txn
 import naksha.psql.PgColumn.PgColumnCompanion.uid as c_uid
 import naksha.psql.PgColumn.PgColumnCompanion.flags as c_flags
-import naksha.psql.PgColumn.PgColumnCompanion.rowid as c_rowid
+import naksha.psql.PgColumn.PgColumnCompanion.row_number as c_rowid
 import naksha.psql.PgColumn.PgColumnCompanion.app_id as c_app_id
 import naksha.psql.PgColumn.PgColumnCompanion.author as c_author
 import naksha.psql.PgColumn.PgColumnCompanion.author_ts as c_author_ts

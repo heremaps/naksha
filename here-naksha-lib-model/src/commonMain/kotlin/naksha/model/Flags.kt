@@ -10,9 +10,6 @@ import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_MASK
 import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_CLEAR
 import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_GZIP_BIT
 import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_MASK
-import naksha.model.FlagsBits.FlagsBitsCompanion.PARTITION_NUMBER_CLEAR
-import naksha.model.FlagsBits.FlagsBitsCompanion.PARTITION_NUMBER_MASK
-import naksha.model.FlagsBits.FlagsBitsCompanion.PARTITION_NUMBER_SHIFT
 import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_CLEAR
 import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_GZIP_BIT
 import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_MASK
@@ -175,17 +172,3 @@ inline fun Flags.action(encoding: Int): Flags = (this and ACTION_CLEAR) or (enco
  * @return the new flags.
  */
 inline fun Flags.action(action: Action): Flags = (this and ACTION_CLEAR) or (action.action and ACTION_MASK)
-
-/**
- * Returns the partition number.
- * @return the partition number.
- */
-inline fun Flags.partitionNumber(): Int = (this and PARTITION_NUMBER_MASK) ushr PARTITION_NUMBER_SHIFT
-
-/**
- * Updates the partition number in the given flags.
- * @param partitionNumber the partition number to set.
- * @return the new flags.
- */
-inline fun Flags.partitionNumber(partitionNumber: Int): Flags =
-    (this and PARTITION_NUMBER_CLEAR) or ((partitionNumber and 255) shl PARTITION_NUMBER_SHIFT)

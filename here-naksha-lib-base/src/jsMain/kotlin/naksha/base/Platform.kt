@@ -723,36 +723,36 @@ return obj;
 
         /**
          * Compress bytes.
-         * @param raw The bytes to compress.
-         * @return The deflated (compressed) bytes.
+         * @param raw the bytes to compress.
+         * @return the deflated (compressed) bytes.
          */
         @JsStatic
         actual fun lz4Deflate(raw: ByteArray): ByteArray {
-            if (isPlv8()) js("""plv8.execute('SELECT lz4_deflate($1) as c',[raw])[0].c""").unsafeCast<ByteArray>()
+            if (isPlv8()) js("""plv8.execute('SELECT lz4_deflate($1::bytea)::bytea as c',[raw])[0].c""").unsafeCast<ByteArray>()
             // TODO: Use Stream-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
             throw UnsupportedOperationException("lz4Deflate is not implemented in the current environment")
         }
 
         /**
          * Decompress bytes.
-         * @param compressed The bytes to decompress.
-         * @return The inflated (decompress) bytes.
+         * @param compressed the bytes to decompress.
+         * @return the inflated (raw) bytes.
          */
         @JsStatic
         actual fun lz4Inflate(compressed: ByteArray): ByteArray {
-            if (isPlv8()) js("""plv8.execute('SELECT lz4_inflate($1) as c',[compressed])[0].c""").unsafeCast<ByteArray>()
+            if (isPlv8()) js("""plv8.execute('SELECT lz4_inflate($1::bytea)::bytea as c',[compressed])[0].c""").unsafeCast<ByteArray>()
             // TODO: Use Stream-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
             throw UnsupportedOperationException("lz4Inflate is not implemented in the current environment")
         }
 
         /**
          * Compress bytes.
-         * @param raw The bytes to compress.
-         * @return The deflated (compressed) bytes.
+         * @param raw the bytes to compress.
+         * @return the deflated (compressed) bytes.
          */
         @JsStatic
         actual fun gzipDeflate(raw: ByteArray): ByteArray {
-            if (isPlv8()) js("""plv8.execute('SELECT gzip($1) as c',[raw])[0].c""").unsafeCast<ByteArray>()
+            if (isPlv8()) js("""plv8.execute('SELECT gzip($1::bytea)::bytea as c',[raw])[0].c""").unsafeCast<ByteArray>()
             // TODO: Use Stream-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
             throw UnsupportedOperationException("lz4Inflate is not implemented in the current environment")
         }
@@ -760,11 +760,11 @@ return obj;
         /**
          * Decompress bytes.
          * @param compressed The bytes to decompress.
-         * @return The inflated (decompress) bytes.
+         * @return the inflated (raw) bytes.
          */
         @JsStatic
         actual fun gzipInflate(compressed: ByteArray): ByteArray {
-            if (isPlv8()) js("""plv8.execute('SELECT gunzip($1) as c',[compressed])[0].c""").unsafeCast<ByteArray>()
+            if (isPlv8()) js("""plv8.execute('SELECT gunzip($1::bytea)::bytea as c',[compressed])[0].c""").unsafeCast<ByteArray>()
             // TODO: Use Stream-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
             throw UnsupportedOperationException("lz4Inflate is not implemented in the current environment")
         }

@@ -44,8 +44,8 @@ open class ReturnColumns() : AnyObject() {
         fun all(): ReturnColumns = ReturnColumns(feature = true, geometry = true, refPoint = true, meta = true, tags = true, attachment = true)
 
         /**
-         * Create new return-options with all columns being disabled (only returns [naksha.model.RowId]).
-         * @return new return-options with all columns being disabled (only returns [naksha.model.RowId]).
+         * Create new return-options with all columns being disabled (only returns [naksha.model.RowNumber]).
+         * @return new return-options with all columns being disabled (only returns [naksha.model.RowNumber]).
          */
         @JvmStatic
         @JsStatic

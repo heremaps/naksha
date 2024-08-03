@@ -122,6 +122,14 @@ open class NakshaError() : AnyObject() {
         const val TOO_MANY_REQUESTS = "TooManyRequests"
 
         /**
+         * Returned by the storage, if too many connections are established already.
+         *
+         * This should result in an 429 Too Many Requests response.
+         * @since 3.0.0
+         */
+        const val TOO_MANY_CONNECTIONS = "TooManyConnections"
+
+        /**
          * A provided argument is invalid or missing.
          *
          * This will lead to an HTTP 400 Bad Request response.
@@ -182,6 +190,13 @@ open class NakshaError() : AnyObject() {
          * @since 3.0.0
          */
         const val FEATURE_NOT_FOUND = "FeatureNotFound"
+
+        /**
+         * Thrown if the storage does not support multiple maps (only default map may be used).
+         *
+         * @since 3.0.0
+         */
+        const val MAP_NOT_SUPPORTED = "MapNotSupported"
 
         /**
          * A map does exist, but is expected to not exist.

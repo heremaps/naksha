@@ -11,7 +11,7 @@ import kotlin.js.JsExport
  * The internal dictionaries table.
  */
 @JsExport
-class PgNakshaDictionaries internal constructor(schema: PgSchema) :
+class PgNakshaDictionaries internal constructor(schema: PgMap) :
     PgCollection(schema, Naksha.VIRT_DICTIONARIES), PgInternalCollection, IDictManager
 {
 

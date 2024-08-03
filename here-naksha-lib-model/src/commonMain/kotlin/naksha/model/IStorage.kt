@@ -24,21 +24,28 @@ import kotlin.js.JsExport
 interface IStorage : AutoCloseable {
 
     /**
-     * The admin options to use for internal processing.
-     *
-     * They are needed for administrative work, reading dictionaries, collection information, create administrative structures. The application can override the defaults to have more control over the `appId` and/or `author` being written, when internal data is processed, and how internal connections authenticate (`appName`).
-     *
-     * If not set, some defaults are read from [NakshaContext] application level defaults, others are internally generated (like `appName`).
-     */
-    val adminOptions: SessionOptions
-
-    /**
      * The storage-id.
      *
      * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
      * @since 2.0.8
      */
     fun id(): String
+
+    /**
+     * The admin options to use for internal processing.
+     *
+     * They are needed for administrative work, reading dictionaries, collection information, create administrative structures. The application can override the defaults to have more control over the `appId` and/or `author` being written, when internal data is processed, and how internal connections authenticate (`appName`).
+     *
+     * If not set, some defaults are read from [NakshaContext] application level defaults, others are internally generated (like `appName`).
+     * @since 3.0.0
+     */
+    val adminOptions: SessionOptions
+
+    /**
+     * Tests if this storage is initialized, so [initStorage] has been called.
+     * @return _true_ if this storage is initialized; _false_ otherwise.
+     */
+    fun isInitialized(): Boolean
 
     /**
      * Initializes the storage for the default map. The function will try to read the storage identifier from the storage. If necessary, creating the transaction table, installs needed scripts, and extensions. If the storage is already initialized, and a storage identifier is provided in the params, then the method ensures that the actual storage-id matches the requested one. This operation requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights.
@@ -50,24 +57,49 @@ interface IStorage : AutoCloseable {
     fun initStorage(params: Map<String, *>? = null)
 
     /**
+     * Returns the default map.
+     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
+     * @return the default map.
+     * @since 3.0.0
+     */
+    fun defaultMap(): IMap
+
+    /**
      * Initializes the given map in the storage. If the given map is already initialized, the method does nothing. This operation requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights.
      *
      * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
      * - Throws [NakshaError.FORBIDDEN], if not called as super-user, and the storage is a new one.
-     * @param map the realm to initialize.
+     * - Throws [NakshaError.MAP_NOT_SUPPORTED], if either this map, or generally maps are not supported.
+     * @param mapId the realm to initialize.
      * @throws NakshaException if the initialization failed (e.g. the storage does not support multi-realms).
      * @since 3.0.0
      */
-    fun initMap(map: String)
+    fun initMap(mapId: String)
+
+    /**
+     * Returns the map with the given identifier.
+     * @param mapId the map identifier.
+     * @return the map admin object.
+     */
+    operator fun get(mapId: String): IMap
+
+    /**
+     * Returns the map-identifier for the given map-number.
+     * @param mapNumber the map-number.
+     * @return the map-identifier or _null_, if no such map exists.
+     */
+    fun getMapId(mapNumber: Int): String?
 
     /**
      * Deletes the given map with all data in it. This operation requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights.
      *
      * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
      * - Throws [NakshaError.FORBIDDEN], if the user has no super-user rights.
+     * - Throws [NakshaError.MAP_NOT_FOUND], may be thrown, if no such map exists or the storage silently does nothing.
+     * - Throws [NakshaError.MAP_NOT_SUPPORTED], if either this map, or generally maps are not supported.
      * @since 3.0.0
      */
-    fun dropMap(map: String)
+    fun dropMap(mapId: String)
 
     /**
      * Convert the given [Row] into a [NakshaFeature].
@@ -94,13 +126,23 @@ interface IStorage : AutoCloseable {
      * @return The dictionary manager of the storage.
      * @since 3.0.0
      */
-    fun dictManager(map: String = NakshaContext.currentContext().map): IDictManager
+    fun dictManager(map: String = NakshaContext.currentContext().mapId): IDictManager
 
+    // TODO: We should move this into IWriteSession so that we can implement it using an advisory lock!
+    //       We have all kind of security measurements already in PgSession, for example we manage a
+    //       shared background connection, and to keep an advisory lock alive, we need this, because it
+    //       is bound to the session (aka connection).
+    //       Additionally, we can continue to use this connection, that has the lock, for the whole session
+    //       that might be useful for all handlers too.
+    //       Another thing to take into account, when some fatal error happens, we should terminate the connection
+    //       to ensure that the lock is released!
     @Deprecated(
-        "This is not yet implemented and need further review",
+        "This is not yet implemented and need further review, we should move it into IWriteSession",
         level = DeprecationLevel.ERROR
     )
-    fun enterLock(id: String, waitMillis: Int64): ILock // Hint: Implement in PsqlStorage
+    fun enterLock(id: String, waitMillis: Int64): ILock {
+        throw NakshaException(NakshaError.NOT_IMPLEMENTED, "enterLock")
+    }
 
     /**
      * Open a new write session.
@@ -136,33 +178,74 @@ interface IStorage : AutoCloseable {
     fun validateHandle(handle: String, ttl: Int? = null): Boolean
 
     /**
-     * Fetches all rows with the given row identifiers.
-     * @param map the map from which to fetch.
-     * @param collectionId the collection from to fetch.
-     * @param rowIds a list of row identifiers of the rows to fetch.
-     * @param mode the fetch mode, can be [all][FETCH_ALL], [id][FETCH_ID], [meta][FETCH_META], or [cache][FETCH_CACHE].
-     * @return the list of the fetched rows, _null_, if the row was not in cached or not found in the storage.
+     * Load all rows in the latest state with the given feature identifiers.
+     *
+     * The fetch modes are:
+     * - [all][FETCH_ALL] (_**default**_) - all columns
+     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
+     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
+     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
+     * - [cached-only][FETCH_CACHE] - only what is available in cache
+     *
+     * @param mapId the map from which to load.
+     * @param collectionId the collection from to load.
+     * @param featureIds a list of feature identifiers to load.
+     * @param mode the fetch mode.
+     * @return the list of the loaded rows, _null_, if the row was not found (or not in cache, when [cached-only][FETCH_CACHE]).
      * @since 3.0.0
      */
-    fun fetchRowsById(map: String, collectionId: String, rowIds: Array<RowId>, mode: String = FETCH_ALL): List<Row?>
+    fun getRowsByFeatureId(mapId: String, collectionId: String, featureIds: Array<String>, mode: String = FETCH_ALL): List<Row?>
 
     /**
-     * Fetches all rows in the given result-rows.
-     * @param rows a list of result-rows to fetch.
-     * @param from the index of the first result-row to fetch.
-     * @param to the index of the first result-row to ignore.
-     * @param mode the fetch mode, can be [all][FETCH_ALL], [id][FETCH_ID], [meta][FETCH_META], or [cache][FETCH_CACHE].
+     * Load all rows with the given row identifiers.
+     *
+     * The fetch modes are:
+     * - [all][FETCH_ALL] (_**default**_) - all columns
+     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
+     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
+     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
+     * - [cached-only][FETCH_CACHE] - only what is available in cache
+     *
+     * @param rowNumbers a list of row-numbers of the rows to load.
+     * @param mode the fetch mode.
+     * @return the list of the loaded rows, _null_, if the row was not found (or not in cache, when [cached-only][FETCH_CACHE]).
      * @since 3.0.0
      */
-    fun fetchRows(rows: List<ResultRow?>, from:Int = 0, to:Int = rows.size, mode: String = FETCH_ALL)
+    fun getRows(rowNumbers: Array<RowNumber>, mode: String = FETCH_ALL): List<Row?>
 
     /**
      * Fetches a single result-row.
+     *
+     * The fetch modes are:
+     * - [all][FETCH_ALL] (_**default**_) - all columns
+     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
+     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
+     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
+     * - [cached-only][FETCH_CACHE] - only what is available in cache
+     *
      * @param row the result-row into which to load the row.
-     * @param mode the fetch mode, can be [all][FETCH_ALL], [id][FETCH_ID], [meta][FETCH_META], or [cache][FETCH_CACHE].
+     * @param mode the fetch mode.
      * @since 3.0.0
      */
     fun fetchRow(row: ResultRow, mode: String = FETCH_ALL)
+
+    /**
+     * Fetches all rows in the given result-rows.
+     *
+     * The fetch modes are:
+     * - [all][FETCH_ALL] (_**default**_) - all columns
+     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
+     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
+     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
+     * - [cached-only][FETCH_CACHE] - only what is available in cache
+     *
+     * @param rows a list of result-rows to fetch.
+     * @param from the index of the first result-row to fetch.
+     * @param to the index of the first result-row to ignore.
+     * @param mode the fetch mode.
+     * @since 3.0.0
+     */
+    fun fetchRows(rows: List<ResultRow?>, from:Int = 0, to:Int = rows.size, mode: String = FETCH_ALL)
 
     /**
      * Shutdown the storage instance, blocks until the storage is down (all sessions are closed).

@@ -122,13 +122,12 @@ expect class PgPlatform {
 
         /**
          * Decode a GeoJSON geometry from encoded bytes.
-         * @param bytes the bytes to decode.
+         * @param raw the bytes to decode.
          * @param flags the codec flags.
          * @return the GeoJSON geometry.
          * @since 3.0.0
          */
-        fun decodeGeometry(bytes: ByteArray?, flags: Int): SpGeometry?
-        // TODO: In Java use JTS, in PLV8 use PostGis functions!
+        fun decodeGeometry(raw: ByteArray?, flags: Int): SpGeometry?
 
         /**
          * Encodes the given GeoJSON geometry into bytes.
@@ -137,7 +136,6 @@ expect class PgPlatform {
          * @return the encoded GeoJSON geometry.
          * @since 3.0.0
          */
-        fun encodeGeometry(geometry: SpGeometry?, flags: Int): ByteArray
-        // TODO: In Java use JTS, in PLV8 use PostGis functions!
+        fun encodeGeometry(geometry: SpGeometry?, flags: Int): ByteArray?
     }
 }

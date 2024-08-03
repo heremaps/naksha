@@ -35,22 +35,27 @@ class Naksha private constructor() {
         const val VIRT_DICTIONARIES = "naksha~dictionaries"
 
         /**
-         * Fetch only the `id` into the [Row].
+         * Fetch only the `id`, other parts only from cache.
          */
         const val FETCH_ID = "id"
 
         /**
-         * Fetch the [metadata][Metadata] into the [Row].
+         * Fetch the [metadata][Metadata], other parts only from cache.
          */
         const val FETCH_META = "meta"
 
         /**
-         * Fetch all columns into the [Row].
+         * Fetch all columns.
          */
         const val FETCH_ALL = "all"
 
         /**
-         * Only load form cache into the [Row].
+         * Fetch all columns, do not use the cache.
+         */
+        const val FETCH_ALL_NO_CACHE = "all-no-cache"
+
+        /**
+         * Only load form cache.
          */
         const val FETCH_CACHE = "cache"
 
@@ -165,6 +170,6 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun partitionNumber(featureId: String): Int = Platform.md5(featureId)[0].toInt() and 255
+        fun partitionNumber(featureId: String?): Int = if (featureId == null) 0 else Platform.md5(featureId)[0].toInt() and 255
     }
 }

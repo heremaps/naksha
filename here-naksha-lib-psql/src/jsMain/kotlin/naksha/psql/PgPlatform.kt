@@ -1,7 +1,18 @@
 package naksha.psql
 
+import naksha.base.Platform
+import naksha.base.PlatformMap
 import naksha.geo.SpGeometry
-import naksha.model.SessionOptions
+import naksha.model.*
+import naksha.model.GeoEncoding.GeoEncoding_C.EWKB
+import naksha.model.GeoEncoding.GeoEncoding_C.EWKB_GZIP
+import naksha.model.GeoEncoding.GeoEncoding_C.GEO_JSON
+import naksha.model.GeoEncoding.GeoEncoding_C.GEO_JSON_GZIP
+import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
+import naksha.model.GeoEncoding.GeoEncoding_C.TWKB_GZIP
+import naksha.model.GeoEncoding.GeoEncoding_C.WKB
+import naksha.model.GeoEncoding.GeoEncoding_C.WKB_GZIP
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "OPT_IN_USAGE")
 @JsExport
@@ -173,15 +184,60 @@ parts && parts.length>0 ? (parts.length===1 ? plv8.quote_ident(parts[0]) : plv8.
             TODO("Not yet implemented")
         }
 
+        //
+        // We use the native C implementations from PostGIS:
+        //
+        // [ST_GeomFromGeoJSON(text)](https://postgis.net/docs/ST_GeomFromGeoJSON.html)
+        // [ST_AsGeoJSON(geo, 7, 0)](https://postgis.net/docs/ST_AsGeoJSON.html)
+        //
+        // [ST_GeomFromEWKB(bytes)](https://postgis.net/docs/ST_GeomFromEWKB.html)
+        // [ST_AsEWKB(geo, 'XDR')](https://postgis.net/docs/ST_AsEWKB.html) - little-endian ('NDR') or big-endian ('XDR').
+        //
+        // [ST_GeomFromWKB(bytes, 4326)](https://postgis.net/docs/ST_GeomFromWKB.html)
+        // [ST_AsBinary(geo, 'XDR')](https://postgis.net/docs/ST_AsBinary.html) - little-endian ('NDR') or big-endian ('XDR').
+        //
+        // [ST_GeomFromTWKB(bytes)](https://postgis.net/docs/ST_GeomFromTWKB.html)
+        // [ST_AsTWKB(geo, 7, 7, 0, false, false)](https://postgis.net/docs/ST_AsTWKB.html)
+        //
+        // WKT Helper:
+        // [ST_AsText(geo)](https://postgis.net/docs/ST_AsText.html)
+        // [ST_GeomFromText(text, 4326)](https://postgis.net/docs/ST_GeomFromText.html)
+        //
+        // Example for testing:
+        /*
+WITH test AS (SELECT
+ ST_GeomFromText('LINESTRING(-71.160281 42.258729,-71.160837 42.259113,-71.161144 42.25932)',4269) AS geo,
+ ST_AsGeoJSON(ST_GeomFromText('LINESTRING(-71.160281 42.258729,-71.160837 42.259113,-71.161144 42.25932)',4269), 7, 0) AS json
+)
+SELECT geo, json
+FROM test;
+        */
+
+        @Suppress("UNUSED_PARAMETER", "NOTHING_TO_INLINE")
+        private inline fun exec(code: String, arg: dynamic): dynamic = js("plv8.execute('SELECT '+code+' as s',[arg])[0].s")
+
         /**
          * Decode a GeoJSON geometry from encoded bytes.
-         * @param bytes the bytes to decode.
+         * @param raw the bytes to decode.
          * @param flags the codec flags.
          * @return the GeoJSON geometry.
          * @since 3.0.0
          */
-        actual fun decodeGeometry(bytes: ByteArray?, flags: Int): SpGeometry? {
-            TODO("Not yet implemented")
+        actual fun decodeGeometry(raw: ByteArray?, flags: Int): SpGeometry? {
+            if (raw == null) return null
+            val encoding = flags.geoEncoding()
+            val json: String = when (encoding) {
+                TWKB_GZIP -> exec("ST_AsGeoJSON(ST_GeomFromTWKB(gunzip($1::bytea),7,1))", raw) as String
+                TWKB -> exec("ST_GeomFromTWKB($1::bytea)", raw) as String
+                EWKB_GZIP -> exec("ST_AsGeoJSON(ST_GeomFromEWKB(gunzip($1::bytea)))", raw) as String
+                EWKB -> exec("ST_GeomFromEWKB($1::bytea)", raw) as String
+                WKB_GZIP -> exec("ST_AsGeoJSON(ST_GeomFromWKB(gunzip($1::bytea),4326))", raw) as String
+                WKB -> exec("ST_GeomFromWKB($1::bytea, 4326)", raw) as String
+                GEO_JSON_GZIP -> Platform.gzipInflate(raw).decodeToString()
+                GEO_JSON -> raw.decodeToString()
+                else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown geometry encoding")
+            }
+            return (Platform.fromJSON(json) as PlatformMap).proxy(SpGeometry::class)
         }
 
         /**
@@ -191,8 +247,22 @@ parts && parts.length>0 ? (parts.length===1 ? plv8.quote_ident(parts[0]) : plv8.
          * @return the encoded GeoJSON geometry.
          * @since 3.0.0
          */
-        actual fun encodeGeometry(geometry: SpGeometry?, flags: Int): ByteArray {
-            TODO("Not yet implemented")
+        actual fun encodeGeometry(geometry: SpGeometry?, flags: Int): ByteArray? {
+            if (geometry == null) return null
+            val json = Platform.toJSON(geometry)
+            val encoding = flags.geoEncoding()
+            return when(encoding) {
+                TWKB_GZIP -> exec("gzip(ST_AsTWKB(ST_GeomFromGeoJSON(\$1), 7, 7, 0, false, false))", json) as ByteArray
+                TWKB -> exec("ST_AsTWKB(ST_GeomFromGeoJSON(\$1), 7, 7, 0, false, false)", json) as ByteArray
+                EWKB_GZIP -> exec("gzip(ST_AsEWKB(ST_GeomFromGeoJSON(\$1),'XDR'))", json) as ByteArray
+                EWKB -> exec("ST_AsEWKB(ST_GeomFromGeoJSON(\$1),'XDR')", json) as ByteArray
+                WKB_GZIP -> exec("gzip(ST_AsBinary(ST_GeomFromGeoJSON(\$1),'XDR'))", json) as ByteArray
+                WKB -> exec("ST_AsBinary(ST_GeomFromGeoJSON(\$1),'XDR')", json) as ByteArray
+                GEO_JSON_GZIP -> Platform.gzipDeflate(json.encodeToByteArray())
+                GEO_JSON -> json.encodeToByteArray()
+                else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown geometry encoding")
+            }
         }
+
     }
 }

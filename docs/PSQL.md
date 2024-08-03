@@ -24,22 +24,22 @@ All tables used in the Naksha PostgresQL implementation have the same general la
 
 | Column       | Type  | RO  | Modifiers | Description                                                                   |
 |--------------|-------|-----|-----------|-------------------------------------------------------------------------------|
-| created_at   | int8  | yes |           | `f.p.xyz->createdAt` - `COALESCE(created_at, updated_at)`                     |
+| col_id       | int8  | yes |           | `f.p.xyz->colId` - Unique collection id, lower 8-bit are partition number     |
 | updated_at   | int8  | yes | NOT NULL  | `f.p.xyz->updatedAt`                                                          |
+| created_at   | int8  | yes |           | `f.p.xyz->createdAt` - `COALESCE(created_at, updated_at)`                     |
 | author_ts    | int8  | yes |           | `f.p.xyz->authorTs` - `COALESCE(author_ts, updated_at)`                       |
 | txn_next     | int8  | yes |           | `f.p.xyz->nextVersion` - The next version, if there is any.                   |
 | txn          | int8  | yes | NOT NULL  | `f.p.xyz->version` - Transaction number.                                      |
 | ptxn         | int8  | yes |           | `f.p.xyz->prevVersion` - Transaction number of the previous state.            |
-| uid          | int4  | yes |           | Transaction local unique ID - `COALESCE(uid, 0)`                              |
+| rowid        | int8  | yes |           | Unique row identifier (col_id:64, tnx:64, uid:32)                             |
+| uid          | int4  | yes | NOT NULL  | Transaction local unique ID                                                   |
 | puid         | int4  | yes |           | Transaction local unique ID - `COALESCE(puid, 0)`                             |
 | hash         | int4  | yes |           | `f.p.xyz->hash` - Hash above feature, tags, geometry and geo_ref bytes (TBD). |
 | change_count | int4  | yes |           | `f.p.xyz->changeCount` - `COALESCE(version, 1)`                               |
 | geo_grid     | int4  | yes |           | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.              |
 | flags        | int4  | no  |           | Options like feature, geometry encoding, and the action.                      |
-| origin       | text  | no  |           | `f.p.xyz->origin` - Origin GUID from which forked; only set if forked.        |
 | app_id       | text  | yes | NOT NULL  | `f.p.xyz->appId`                                                              |
 | author       | text  | yes |           | `f.p.xyz->author` - `COALESCE(author, app_id)`                                |
-| type         | text  | yes |           | The **type** of the feature, `NULL` for collection.defaultType.               |
 | id           | text  | no  | NOT NULL  | `f.id` - The **id** of the feature.                                           |
 | tags         | bytea | no  |           | `f.p.xyz->tags` - Tags are labels attached to features to filter features.    |
 | geo          | bytea | no  |           | `f.geometry` - The geometry of the features.                                  |
@@ -193,44 +193,39 @@ In this section, we described why queries are done the way they are.
 ### Storage size
 First, calculate the size of each database row:
 
-| column       |   bytes | comment                                                  |
-|--------------|--------:|----------------------------------------------------------|
-| create_at    |       8 |                                                          |
-| update_at    |       8 |                                                          |
-| author_ts    |       8 |                                                          |
-| txn_next     |       8 |                                                          |
-| txn          |       8 |                                                          |
-| ptxn         |       8 |                                                          |
-|              |      48 |                                                          |
-| uid          |       4 |                                                          |
-| puid         |       4 |                                                          |
-| hash         |       4 |                                                          |
-| change_count |       4 |                                                          |
-| geo_grid     |       4 |                                                          |
-| flags        |       4 |                                                          |
-|              |      72 | 24 + 48                                                  |
-| id           |    ~ 60 | `urn:here::here:support.Violation:some-longer-unique-id` |
-| appId        |    ~ 20 |                                                          |
-| author       |    ~ 20 |                                                          |
-| type         |    ~ 20 |                                                          |
-|              |   ~ 172 | This is everything we normally need to search.           |
-| tags         |   ~ 300 | We need to build an index                                |
-| geo          |   ~ 200 | We need to build an index                                |
-| geo_ref      |    ~ 30 |                                                          |
-|              |   ~ 700 |                                                          |
-| feature      | ~ 2000+ |                                                          |
-
-In summary:
-- The amount of byte we need to actually identify a row uniquely are 12 (`txn` and `uid`)
-- To identify in which partition a feature is located we need as well the `id`
-  - If we encode the partition-number of a feature into `flags`, we are fine with only 16 byte from `txn`, `uid` and `flags`!
+| column       |   bytes | comment                                                         |
+|--------------|--------:|-----------------------------------------------------------------|
+| col_id       |       8 |                                                                 |
+| create_at    |       8 |                                                                 |
+| update_at    |       8 |                                                                 |
+| author_ts    |       8 |                                                                 |
+| txn_next     |       8 |                                                                 |
+| txn          |       8 |                                                                 |
+| ptxn         |       8 |                                                                 |
+|              |      56 | 7 x 8 byte = 56 byte                                            |
+| uid          |       4 |                                                                 |
+| puid         |       4 |                                                                 |
+| hash         |       4 |                                                                 |
+| change_count |       4 |                                                                 |
+| geo_grid     |       4 |                                                                 |
+| flags        |       4 |                                                                 |
+|              |      80 | 56 + 6 x 4 byte = 80 byte                                       |
+| id           |    ~ 64 | `urn:here::here:support.Violation:some-longer-unique-id`        |
+| appId        |    ~ 12 |                                                                 |
+| author       |    ~ 12 |                                                                 |
+|              |   ~ 168 | This is Metadata (with col_id, txn, and uid merged into rowid)! |
+| tags         |   ~ 300 | We need to build an index                                       |
+| geo          |   ~ 200 | We need to build an index                                       |
+| geo_ref      |    ~ 30 |                                                                 |
+|              |   ~ 700 |                                                                 |
+| feature      | ~ 2000+ |                                                                 |
 
 The first thing to consider is that most index queries will not be [index-only-scans](https://www.postgresql.org/docs/16/indexes-index-only-scans.html), most will be [index-bitmap-scans](https://www.postgresql.org/docs/current/indexes-bitmap-scans.html), for example, when the `geo` or `tags` columns are involved. This is because GIST rarely, and GIN never support index-only scans. Basically, we can summarize that there are three ways to use indices:
 
 - **index-only-scan**: Does only read the index itself.
   - The most efficient, but rarely usable, and only works when all columns are in the index and the [visibility-map](https://www.postgresql.org/docs/current/storage-vm.html) is up-to-date.
-  - In practise, we can forget them, except for special queries, like the index: `id ASC, txn DESC, uid DESC INCLUDE (flags, ptxn, puid)`
-  - In this situation we can read `txn`, `uid` and `flags` from it by `id` using index-only scan.
+  - In practise, we can forget them, except for special queries, like the index: `id ASC, txn DESC, uid DESC INCLUDE (col_id, ptxn, puid)`
+  - In this situation we can read `col_id`, `txn`, and `uid` from it by `id` using index-only scan.
   - So, when we have `id` and want to get the unique caching identifier only, we can use it.
   - This as well allows to query quickly the HEAD version and then get `n` previous versions using a CTE and the `id`, `ptxn`, `puid`.
 - **index-scan**: The _index-scan_ consists of two steps, first get the row location from the index, and second, gather the actual data from the HEAP.
@@ -258,48 +253,54 @@ We can conclude, we are left with two options:
 Both have advantages and disadvantages. However, assuming the medium size of the data we need is 512 byte (we estimated a maximum of 700 byte), we can conclude: Either we have everything in a row, but be less than 2 KiB, or we have only 512 byte per row on the HEAP, and the feature is TOASTed, so out of line.
 
 ### Data transfer size
-Assuming every row is not used only ones in a client, we should think about data transfer, because transferring all the data multiple times to the client is costly and inefficient. Therefore, when we limit the data to only `txn`, `uid`, and `flags`, we need to transfer only 16 byte per found tuple!
+Assuming every row is not used only ones in a client, we should think about data transfer, because transferring all the data multiple times to the client is costly and inefficient. Therefore, when we limit the data to only `col_id`, `txn`, and `uid`, we need to transfer only 20 byte per found tuple!
 
-This allows us to aggregate the results into a single byte-array, and compress it via `select gzip(string_agg(int8send(txn)||int4send(uid)||int4send(flags), null::bytea)) as raw from ...`. This returns the whole result-set as one `bytea` array. Note that these functions use _Big Endian_ byte order. If the storage does not support native GZIP functions, we should not compress it until we wrote our own compression function in `plrust`, and installed it. We can use a JavaScript version meanwhile, but it will be slower, it will be as fast as the native GZIP "C" function, so even in Aurora or RDS we will be able to use this technique in the future!
+This allows us to aggregate the results into a single byte-array, and compress it via `SELECT gzip(array_agg(int8send(col_id)||int8send(txn)||int4send(uid))) AS rowid FROM ...`. This returns the whole result-set as one `bytea` array, where each 20 byte hold one entry. Note that these functions use _Big Endian_ byte order. If the storage does not support native GZIP functions, we should not compress it until we wrote our own compression function in `plrust`, and installed it. We can use a JavaScript version meanwhile, but it will be slower, it will be as fast as the native GZIP "C" function, so even in Aurora or RDS we will be able to use this technique in the future!
 
-We could as well compress the above binary values plus one string by using ASCII-zero as delimiter, which must not be contained in strings. For example `select gzip(string_agg(int8send(txn)||int4send(uid)||int4send(uid)||id::bytea, '\x00'::bytea)) ...`. The resulting byte-array can be parsed by reading the first 16 byte and then everything until reaching ascii-zero or the end. Then we know, the next value starts.
+The big advantage here is that the result-set is transferred to the client as one BLOB (**B**inary **L**arge **OB**ject). This result-set can now be cached in memory, in external storage systems, and seeking in the result-set, or creating handles from it is easy. Apart from this, the actual payload can be cached in memory, which becomes more valuable, when the same features are part of multiple result-sets. It as well allows multi-level caching of data by just transferring exactly these identifiers, and only let the client request the data, when it needs it.
 
-The big advantage here is that the result-set is transferred to the client as a set of references in one BLOB (**B**inary **L**arge **OB**ject). This result-set can now be cached in memory and seeking in the result-set or creating handles from it is easy. Apart from this, the actual payload can be cached in memory, which becomes more valuable, when the same features are part of multiple result-sets. It as well allows multi-level caching of data by just transferring exactly these identifiers, and only let the client request the data, when it needs it.
+Note, we can as well compress the whole metadata, by using ASCII-zero as delimiter between the strings, which must not be contained in strings. For example `SELECT gzip(string_agg(int8send(col_id)||int8send(txn)||int4send(uid)||id::bytea||'\x00'::bytea||..., '\x00'::bytea)) ...`. The resulting byte-array can be parsed by reading the static bytes first, and then everything until reaching final terminating ascii-zero, or the end of the byte-stream. Actually, each string is simply zero-terminated (like in `C`).
+
+This is helpful to load all metadata into a binary. We can not read the whole row as pure binary, because we do not know if for example the geometry does not contain binary data, but we do not need this, because the rest of the data is anyway already compressed binary, out-of-the-box.
 
 ### What is the best result-set limit
 As discussed in the section before, we need to define what is the biggest result-set we want to utilise.
 
-As we said, that we can reduce the amount of data we transfer to 16-byte per row, and we can even compress it, this will not become our main problem. The main problem will be that PostgresQL has to read between 512 and 2048 byte per found row from the HEAP. This means for each one million results, between 512 MiB and 2 GiB of data need to be loaded into the cache. Reaching this one million result coordinates requires around 16 MiB (16 byte * 1,000,000), if we can GZIP, even less. However, PostgresQL has to keep 2 GiB of buffers in memory, and in the worst case to load them into memory. Assuming the database has a connection to the storage with 40 Gbps bandwidth, it can load 5 GiB of data per second, so loading the data into cache will consume between 100ms (for 512 MiB) and 400ms (for 2 GiB).
+As we said, that we can reduce the amount of data we transfer to 20-byte per row, and we can even compress it, this will not become our main problem. The main problem will be that PostgresQL has to read between 512 and 2048 byte per found row from the HEAP. Beware, Postgres will surely encode more than the metadata in the HEAP tuple, it will only TOAST what goes beyond 2 KiB! This means for each one million results, between 512 MiB and 2 GiB of data need to be loaded into the cache. Reaching this one million result coordinates requires around 20 MiB (20 byte * 1,000,000), but because we GZIP it, very likely ony 10 MiB. However, PostgresQL has to keep 2 GiB of buffers in memory, and in the worst case to load them into memory. Assuming the database has a connection to the storage with 40 Gbps bandwidth, it can load 5 GiB of data per second, so loading the data into cache will consume between 100ms (for 512 MiB) and 400ms (for 2 GiB).
 
 **Therefore, this document recommends to set the absolute limit for all queries to 1,000,000 (hard-cap). If more data is needed, a special streaming mode need to be provided, that reads from multiple partitions in parallel!**
 
-With a limit of 1,000,000 features as hard-cap, and for example 30 KiB topology, we already have a result-set of 2 GiB metadata, plus around 28 GiB uncompressed feature JSON. Compressed (in the storage), this normally goes down to 4 KiB per feature, so to around 4 GiB, which means 2 GiB metadata plus 4 GiB payload (6 GiB total). This clearly shows, that the data size is one of the biggest factors, and storing features as GZIP bytes is important, so that when they have to be loaded, they do not need any post-processing, like serialization from JSONB into a string.
+With a limit of 1,000,000 features as hard-cap, and for example 30 KiB topology, we already have a result-set of 2 GiB tuple, plus around 28 GiB uncompressed feature JSON (1,000,000 * 30 KiB). Compressed (in the storage), this normally goes down to 4 KiB per feature, so to around 4 GiB, which means 2 GiB tuple plus 4 GiB payload (6 GiB total). This clearly shows, that the data size is one of the biggest factors, and storing features as GZIP bytes is important, so that when they have to be loaded, they do not need any post-processing, like serialization from JSONB into a string.
 
-When the result-set becomes bigger, the best option is to just read the data as a stream and to filter it. This can be done by reading ordered from the `id` index mentioned above, so what we can seek through the index. When only reading the necessary reference tuple (16 byte of `txn`, `uid`, and `flags`) we are sure that we can perform an index-only scan. Doing so allows the client to utilise memory cache or other forms of caching.
+When the result-set becomes bigger, the best option is to just read the data as a stream and to filter it. This can be done by reading ordered from the `id` index mentioned above, so what we can seek through the index. When only reading the necessary reference tuple (20 byte of `col_id`, `txn`, and `uid`) we are sure that we can perform an index-only scan. Doing so allows the client to utilise memory cache or other forms of caching.
 
 ### Property Search
 As properties are stored in the `feature` they should never be searched in the database!
 
 This will always be very bad, as it requires to decode the `feature` column. Reading this column means for the topology example result-set, to read 4 GiB of compressed JSON, to decompress it into 28 GiB of JSON, then to parse it into JSONB, and eventually to filter it. Note that indexing will only help to some degree with that, and only for _btree_ indices, because often the HEAP tuple still has to be accessed.
 
-Doing this could potentially decrease the amount of data that has to be transferred to the client, yes, but it produces heavy load on the database side. Even if reducing the amount of rows by 80%, this means that instead of 6 GiB only 1.2 GiB of data have to be transferred. This still is a huge amount of data and will take on a standard single flow connection around 2 seconds to transfer it.
+With [JBON](JBON.md) format we potentially can decrease this effort drastically, because [JBON](JBON.md) plus GZIP can bring down the binary size drastically, and because [JBON](JBON.md) allows to extract paths without parsing JSON, but only with seeking in binary data, it requires much less memory and CPU, and can be part of a better solution.
 
-Actually, by moving this processing into the client, and only initially transferring the unique identification tuples (`txn`, `uid` and `flags`), it is possible to reduce the data size that is transferred to 16 MiB, and release the burden from the database, to load, decompress, parse, and filter the data.
+Extracting the JSON for search can potentially decrease the amount of data that has to be transferred to the client, yes, but it produces heavy load on the database side. Even if reducing the amount of rows by 80%, this means that instead of 6 GiB only 1.2 GiB of data have to be transferred. This still is a huge amount of data and will require, on a standard single flow 5 Gbps connection, around 2 seconds to transfer it.
 
-For each tuple the client has ones loaded, it does not need to read it again, it can even load it from alternative sources like a redis cache or S3. By doing so, it is able to read the data using multiple connections in parallel, which lifts the 5 Gbps limit of single flow connections in AWS.
+Actually, by moving this processing into the client, and only initially transferring the unique identification tuples (`col_id`, `txn`, and `uid`), it is possible to reduce the data size that is transferred to 20 MiB (possibly 10 MiB compressed), and release the burden from the database, to load, decompress, parse, and filter the data.
 
-Yes, a part of the search is now transferred to the client, everything that is not part of `tags`, `geometry` or other special columns, but we expect that the biggest goal of the database is to filter by exactly these attributes.
+For each tuple the client has loaded, it does not need to read it again, it can even load it from alternative sources like a redis cache or S3. By doing so, it is able to read the data using multiple connections in parallel, which lifts the 5 Gbps limit of single flow connections in AWS.
 
-**This is the reason, we split the search into three basic parts, search in geometry, search in tags, and filter by properties!**
+Yes, a part of the search job is now transferred to the client, everything that is not part of `tags`, `geometry` or metadata, but we expect that the biggest goal of the database is to pre-filter by exactly these attributes, so reducing the cardinality to make an efficient client side search possible.
+
+**This is the reason, we split the search into four basic parts, search in metadata, search in geometry, search in tags, and filter by properties!**
+
+When installing the Naksha-Hub on a [r6idn.metal](https://instances.vantage.sh/aws/ec2/r6idn.metal) instance, with 1 GiB memory, 200 Gbps network bandwidth, and 100 Gbps of EBS throughput, we can cache all this data as binaries on disk (L2 cache of the memory cache). With the right setup, we can attach 16 [EBS gp3 volumes](https://docs.aws.amazon.com/ebs/latest/userguide/general-purpose.html#gp3-ebs-volume-type), 1 TB size each, to the Hub. This cache will cost around $1800 per month (`1024 x $0.08 + 825 x $0.04 ~= $115/month x 16 = $1840`), but we can read with 12.5 GiB per second, it is restored after a reboot, and can store cache data very long term. In a nutshell, as reserved instance this costs around $3800 for the instance pus $1800 for the cache, so a total of $5600 a month. However, the search is done in the database, but the actual data is processed on the Hub itself. One such instance (with on in standby) will be enough to process all map data in real time.
 
 ### General Query Solution
 All database queries are generally split into the following phases:
 
-- Execute the query in the database, but read only the `txn`, `uid` and `flags` columns.
+- Execute the query in the database, but read only the `col_id`, `txn`, and `uid` columns.
   - If a soft-cap (_limit_) was provided by the client, and no handle or ordering requested, add it to the database query.
   - Otherwise, add the hard-cap (_1,000,000_) to the database query.
   - If the database supports it, compress the result bytea-array using GZIP.
-- After the client has a list of `txn`, `uid` and `flags` tuples, it knows which rows are needed, and can load them into a memory cache.
+- After the client has a list of `col_id`, `txn`, and `uid` tuples, it knows which rows are needed, and can load them into a memory cache.
   - Loading can be done from any resource, but as last resource from the database itself.
   - If loading from the database is done, one connection per partition can be used, because we know which row is in which partition.
   - This allows to load data parallel from the database and bypass the 5 Gbps single flow limit.

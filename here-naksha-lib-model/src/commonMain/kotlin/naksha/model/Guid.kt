@@ -11,40 +11,46 @@ import kotlin.jvm.JvmStatic
 /**
  * The Global Unique Identifier uniquely identifies a feature, world-wide. When [toString] is invoked, it is serialized into a [URN](https://datatracker.ietf.org/doc/html/rfc8141). It can be restored from a [URN](https://datatracker.ietf.org/doc/html/rfc8141). The format of the URN is:
  *
- * `urn:here:naksha:guid:{storage-id}:{map}:{collection-id}:{feature-id}:{year}:{month}:{day}:{seq}:{uid}:{flags}`
+ * `urn:here:naksha:guid:{storage-id}:{map-id}:{collection-id}:{feature-id}:{year}:{month}:{day}:{seq}:{uid}`
  * @since 3.0.0
  */
 @JsExport
 data class Guid(
     /**
-     * The identifier of the storage in which the object is stored.
+     * The storage-id of the storage in which the object is stored.
      */
     @JvmField
     val storageId: String,
 
     /**
-     * The map in which the object is stored, with an empty string representing the default map of the storage.
+     * The map-id of the map in which the object is stored, with an empty string representing the default map of the storage.
      */
     @JvmField
-    val map: String,
+    val mapId: String,
 
     /**
-     * The identifier of the collection in which the feature is stored.
+     * The collection-id of the collection in which the feature is stored.
      */
     @JvmField
     val collectionId: String,
 
     /**
-     * The identifier of the feature.
+     * The feature-id of the feature.
      */
     @JvmField
     val featureId: String,
 
     /**
-     * The local unique identifier of the state of the feature referred. This persists out of the `version` and the `uid`, which is the version local unique identifier.
+     * The version.
      */
     @JvmField
-    val rowId: RowId
+    val version: Version,
+
+    /**
+     * The local unique identifier.
+     */
+    @JvmField
+    val uid: Int
 ) {
     private lateinit var _string: String
 
@@ -55,7 +61,7 @@ data class Guid(
      */
     override fun toString(): String {
         if (!this::_string.isInitialized) {
-            _string = "urn:here:naksha:guid:$storageId:$map:$collectionId:$featureId:$rowId"
+            _string = "urn:here:naksha:guid:$storageId:$mapId:$collectionId:$featureId:$version:$uid"
         }
         return _string
     }
@@ -66,7 +72,7 @@ data class Guid(
         const val NAKSHA = 2
         const val GUID = 3
         const val STORAGE_ID = 4
-        const val MAP = 5
+        const val MAP_ID = 5
         const val COLLECTION_ID = 6
         const val FEATURE_ID = 7
         const val YEAR = 8
@@ -74,8 +80,7 @@ data class Guid(
         const val DAY = 10
         const val SEQ = 11
         const val UID = 12
-        const val FLAGS = 13
-        const val PARTS = 14
+        const val PARTS = 13
 
         @JsStatic
         @JvmStatic
@@ -89,11 +94,11 @@ data class Guid(
             ) throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Invalid GUID: $s")
             return Guid(
                 v[STORAGE_ID],
-                v[MAP],
+                v[MAP_ID],
                 v[COLLECTION_ID],
                 v[FEATURE_ID],
-                RowId(Version.of(v[YEAR].toInt(), v[MONTH].toInt(),v[DAY].toInt(), Int64(v[SEQ].toLong())),
-                    v[UID].toInt(), v[FLAGS].toInt())
+                Version.of(v[YEAR].toInt(), v[MONTH].toInt(), v[DAY].toInt(), Int64(v[SEQ].toLong())),
+                v[UID].toInt()
             )
         }
     }

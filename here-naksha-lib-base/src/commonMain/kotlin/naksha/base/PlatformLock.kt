@@ -19,7 +19,12 @@ import kotlin.js.JsExport
 @JsExport
 interface PlatformLock : AutoCloseable {
     /**
-     * Wait for the lock and then enter it.
+     * Wait for the lock and then enter it. To be used like:
+     * ```kotlin
+     * lock.acquire().use {
+     *   // Do something with the lock.
+     * }
+     * ```
      * @return this.
      */
     fun acquire(): PlatformLock

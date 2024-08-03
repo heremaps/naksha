@@ -11,6 +11,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.max
 import kotlin.math.min
 
 /**
@@ -48,21 +49,20 @@ class PsqlInstance : PgInstance {
         this.readOnly = readOnly
     }
 
-    internal class PooledPgConnection(
+    internal data class PooledPgConnection(
         val jdbcConn: org.postgresql.jdbc.PgConnection,
         val id: Long = connCounter.getAndDecrement(),
-        val session: AtomicReference<WeakReference<PsqlConnection>?> = AtomicReference(),
+        val connection: AtomicReference<WeakReference<PsqlConnection>?> = AtomicReference(),
         var e: Exception? = null
     ) {
         fun setSession(session: PsqlConnection): Boolean {
-            if (this.session.compareAndSet(null, session.weakRef)) {
+            if (this.connection.compareAndSet(null, session.weakRef)) {
                 e = Exception()
                 return true
             }
             return false
         }
     }
-
 
     /**
      * All open connections (the connection pool).
@@ -146,7 +146,11 @@ class PsqlInstance : PgInstance {
             return url
         }
 
-    // TODO: Implement session (aka connection) pool!
+    override var connectionLimit: Int = 1024
+        get() = field
+        set(value) {
+            field = min(8192, max(0, value))
+        }
 
     override fun openConnection(options: SessionOptions, readOnly: Boolean): PsqlConnection {
         if (this.readOnly) require(readOnly) { "Failed to open a write connection to read-replica" }
@@ -155,9 +159,9 @@ class PsqlInstance : PgInstance {
         val poolEnum = connectionPool.elements()
         while (poolEnum.hasMoreElements()) {
             val pooledConn = poolEnum.nextElement()
-            val sessionRef = pooledConn.session.get()
-            if (sessionRef != null) {
-                psqlConn = sessionRef.get()
+            val connectionRef = pooledConn.connection.get()
+            if (connectionRef != null) {
+                psqlConn = connectionRef.get()
                 if (psqlConn == null) {
                     logger.warn("Found PostgresQL database connection that was not closed: {}", pooledConn.e?.stackTraceToString())
                     connectionPool.remove(pooledConn.id, pooledConn)

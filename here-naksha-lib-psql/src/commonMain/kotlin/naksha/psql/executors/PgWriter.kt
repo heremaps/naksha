@@ -1,6 +1,7 @@
 package naksha.psql.executors
 
 import naksha.model.*
+import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
@@ -24,11 +25,11 @@ import kotlin.jvm.JvmField
  *
  * It does ignore optional settings within the [WriteRequest], it actually can be used for any simple list of write instructions, especially as well internally. Its performance is sub-optional, but fine for small amount of writes. It acts as a reference implementation that can be extended.
  */
-open class PgSimpleWriter(
+open class PgWriter(
     /**
      * The session to which this writer is linked.
      */
-    @JvmField val session: PgSession,
+    session: PgSession,
 
     /**
      * The write instructions to [execute].
@@ -39,9 +40,39 @@ open class PgSimpleWriter(
      * The connection to use, if not given, acquire the current session connection.
      */
     @JvmField val conn: PgConnection = session.usePgConnection()
-) {
+) : RowUpdater(session) {
+
+    //private val collectionWrites: WriteList
+
+    /**
+     * The write operations ordered by map, collection, partition-number.
+     */
+    private val orderedWrites: WriteList
+
+    init {
+        orderedWrites = writes.copy(false)
+        @Suppress("LeakingThis")
+        orderedWrites.sortedWith(this::compareEm)
+    }
+
+    // Sort write operations by map, collection, partition-number
+    private fun compareEm(a: Write?, b: Write?): Int {
+        if (a === b) return 0
+        if (b == null) return -1
+        if (a == null) return 1
+        return if (a.mapId == b.mapId) {
+            if (a.collectionId == b.collectionId) {
+                val a_part = partitionNumber(a.featureId())
+                val b_part = partitionNumber(b.featureId())
+                if (a_part == b_part) 0 else if (a_part < b_part) -1 else 1
+            } else if (a.collectionId < b.collectionId) -1 else 1
+        } else if (a.mapId < b.mapId) -1 else 1
+    }
 
     fun execute(): Response {
+
+        // TODO: Fetch all existing states, do we need?
+
         var map: String? = null
         var i = 0
         while (i < writes.size) {
@@ -51,10 +82,14 @@ open class PgSimpleWriter(
                 continue
             }
             if (map == null) {
-                map = write.map
-            } else if (map != write.map) {
-                throw NakshaException(ILLEGAL_ARGUMENT, "Writing into different maps not supported, found $map and ${write.map}")
+                map = write.mapId
+            } else if (map != write.mapId) {
+                throw NakshaException(ILLEGAL_ARGUMENT, "Writing into different maps not supported, found $map and ${write.mapId}")
             }
+
+            // TODO: If the XYZ namespace of the feature stores a different id in UUID
+            //       or a different collection, then we need to add the "Origin" tag!
+
             when (write.op) {
                 WriteOp.CREATE -> results += insert(write)
                 WriteOp.UPDATE -> results += update(write)
@@ -72,8 +107,8 @@ open class PgSimpleWriter(
     private val results = mutableListOf<Row>()
 
     private fun collectionOf(write: Write): PgCollection {
-        val map = write.map
-        val schema = session.storage[session.storage.mapToSchema(map)]
+        val map = write.mapId
+        val schema = session.storage[session.storage.mapIdToSchema(map)]
         if (!schema.exists()) throw NakshaException(MAP_NOT_FOUND, "No such map: $map")
         val collectionId = write.collectionId
         val collection = schema[collectionId]

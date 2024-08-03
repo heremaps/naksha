@@ -8,6 +8,7 @@ import naksha.base.Platform.PlatformCompanion.currentMillis
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil.PlatformUtilCompanion.HOUR
 import naksha.base.PlatformUtil.PlatformUtilCompanion.SECOND
+import naksha.model.ICollection
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
@@ -16,11 +17,11 @@ import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
+import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.objects.NakshaCollection
 import naksha.psql.PgStorageClass.Companion.Consistent
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
-import kotlin.jvm.JvmField
 
 /**
  * A collection is a set of database tables, that together form a logical feature store. This lower level implementation ensures that all collection information are cached, including statistical information, and that the cache is refreshed on demand from time to time.
@@ -35,22 +36,30 @@ import kotlin.jvm.JvmField
 @JsExport
 open class PgCollection internal constructor(
     /**
-     * The schema in which the collection is located.
+     * The map in which the collection is located.
      * @since 3.0.0
      */
-    @JvmField val schema: PgSchema,
+    override val map: PgMap,
 
     /**
-     * The unique identifier of the collection in the schema.
+     * The collection-id of the collection in the schema.
      * @since 3.0.0
      */
-    @JvmField val id: String
-) {
-    /**
-     * The map in which this collection is located. This is an alias for `schema.map`.
-     */
-    val map: String
-        get() = schema.map
+    override val id: String
+) : ICollection {
+
+    internal var _number: Int64? = null
+
+    override val number: Int64
+        get() {
+            var n = _number
+            if (n == null) {
+                if (!doExist()) throw NakshaException(COLLECTION_NOT_FOUND, "Collection $id does not exist")
+                n = _number
+                if (n == null) throw NakshaException(EXCEPTION, "Collection $id exist, but has no collection-number")
+            }
+            return n
+        }
 
     // We should update this, whenever we read from the storage, and find something that is newer.
     // Newer means, it has a higher version.
@@ -59,7 +68,7 @@ open class PgCollection internal constructor(
     /**
      * The reference to the latest [NakshaCollection].
      */
-    val nakshaCollection: NakshaCollection
+    override val nakshaCollection: NakshaCollection
         get() {
             if (!exists()) throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id)
             val c = _nakshaCollection.get() ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id)
@@ -81,12 +90,14 @@ open class PgCollection internal constructor(
      */
     private var _exists: Boolean = false
 
+    override fun exists(): Boolean = doExist()
+
     /**
      * Tests if this collection does exits.
      * @param connection the connection to use to query the database; _null_ if a new connection should be used.
      * @return _true_ if this collection does exist.
      */
-    fun exists(connection: PgConnection? = null): Boolean {
+    fun doExist(connection: PgConnection? = null): Boolean {
         refresh(connection)
         return _exists
     }
@@ -211,8 +222,8 @@ open class PgCollection internal constructor(
         storeMeta: Boolean,
         indices: List<PgIndex>
     ): PgCollection {
-        val s = schema.storage
-        val conn = connection ?: s.newConnection(schema.adminOptions())
+        val s = map.storage
+        val conn = connection ?: s.adminConnection(map.adminOptions())
         try {
             val NOW = Epoch()
             if (this.id == VIRT_TRANSACTIONS) {
@@ -336,13 +347,13 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
      * @param connection the connection to use to query the database; if _null_, then a new connection is used and auto-committed.
      */
     fun drop(connection: PgConnection? = null) {
-        val s = schema.storage
-        val conn = connection ?: s.newConnection(schema.adminOptions())
+        val s = map.storage
+        val conn = connection ?: s.adminConnection(map.adminOptions())
         try {
-            check(!PgTable.isInternal(id)) {
+            if(PgTable.isInternal(id)) {
                 throw NakshaException(ILLEGAL_ARGUMENT, "It is not allowed to modify internal tables", id = id)
             }
-            if (exists(conn)) {
+            if (doExist(conn)) {
                 drop_internal(conn)
             }
         } finally {
@@ -379,15 +390,15 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
                 // This is done. because actually the value was updated instantly before, there is no need to update again!
                 val updateAt = _updateAt
                 if (updateAt != null && currentMillis() < updateAt) return this
-                val s = schema.storage
-                val conn = connection ?: s.newConnection(schema.adminOptions())
+                val s = map.storage
+                val conn = connection ?: s.adminConnection(map.adminOptions())
                 var done: Boolean = false
                 var head: PgHead? = null
                 var deleted: PgDeleted? = null
                 var history: PgHistory? = null
                 var meta: PgMeta? = null
                 try {
-                    val cursor = PgRelation.select(conn, schema.name, id)
+                    val cursor = PgRelation.select(conn, map.schemaName, id)
                     cursor.use {
                         //
                         // NOTE: We ignore all unknown relations, that allows users to add some own indices and relations!

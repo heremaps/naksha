@@ -102,6 +102,12 @@ class XyzNs : AnyObject() {
     val uuid: String by STRING
 
     /**
+     * Returns the [uuid] as [Guid].
+     * @return the [uuid] as [Guid].
+     */
+    val guid: Guid = Guid.fromString(uuid)
+
+    /**
      * The universal unique identifier of the previous state of a feature.
      *
      * This field is populated by Interactive API, Data Hub, XYZ Hub and Naksha. Any values provided by the user are overwritten.
@@ -111,6 +117,16 @@ class XyzNs : AnyObject() {
      * - **Naksha**: This field is always set, but does not store a real UUID, but rather a GUID (global unique identifier).
      */
     val puuid: String? by STRING_NULL
+
+    /**
+     * Returns the [puuid] as [Guid].
+     * @return the [puuid] as [Guid].
+     */
+    val pguid: Guid?
+        get() {
+            val puuid = this.puuid
+            return if (puuid == null) null else Guid.fromString(puuid)
+        }
 
     /**
      * The universal unique identifier of the state of the feature that was used to merge with the previous state to produce this state.
@@ -207,7 +223,7 @@ class XyzNs : AnyObject() {
      *
      * This field is populated only by **Naksha**. Any values provided by the user are overwritten.
      */
-    var appId: String by STRING
+    val appId: String by STRING
 
     /**
      * The author of the feature. Not every change of feature is done by intention, the author is only set, when the change of the

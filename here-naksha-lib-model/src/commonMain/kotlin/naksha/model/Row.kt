@@ -1,6 +1,9 @@
 package naksha.model
 
+import naksha.base.Int64
+import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.objects.NakshaFeature
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -8,8 +11,6 @@ import kotlin.jvm.JvmField
 
 /**
  * A row represents a specific immutable state of a feature in a storage.
- *
- * It is not required that the storage stores the information exactly in this form, this is only the exchange format. The row itself is immutable, so that it can be cached. The [id] is a unique identifier for the row in the [storage], [map] and collection with the set [collectionId].
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
@@ -20,19 +21,9 @@ data class Row(
     @JvmField val storage: IStorage,
 
     /**
-     * The map in which the row is located.
+     * The row-number, a unique identifier for the row.
      */
-    @JvmField val map: String,
-
-    /**
-     * The collection-id of the collection in which the row is located.
-     */
-    @JvmField val collectionId: String,
-
-    /**
-     * The row-identifier.
-     */
-    @JvmField val id: RowId,
+    @JvmField val rowNumber: RowNumber,
 
     /**
      * The metadata, this is going into the [XYZ namespace][XyzNs], when decoding the [Row] into a [NakshaFeature].
@@ -67,8 +58,26 @@ data class Row(
      */
     @JvmField val attachment: ByteArray? = null
 ) {
-    override fun equals(other: Any?): Boolean = this === other
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        return other is Row && this.rowNumber == other.rowNumber
+    }
+
     override fun hashCode(): Int = super.hashCode()
+
+    val mapNumber: Int
+        get() = rowNumber.mapNumber()
+    val mapId: String?
+        get() = storage.getMapId(mapNumber)
+    val collectionNumber: Int64
+        get() = rowNumber.collectionNumber()
+    val collectionId: String?
+        get() {
+            val mapId = this.mapId ?: return null
+            val map = storage[mapId]
+            if (!map.exists()) return null
+            return map.getCollectionId(collectionNumber)
+        }
 
     /**
      * Maps row into a Naksha feature.
@@ -85,7 +94,15 @@ data class Row(
     fun toGuid(): Guid {
         var g = guid
         if (g == null) {
-            g = Guid(storage.id(), map, collectionId, meta.id, meta.rowId())
+            val mapNumber = meta.storeNumber.mapNumber()
+            val mapId = storage.getMapId(mapNumber) ?: throw NakshaException(MAP_NOT_FOUND, "Map #$mapNumber not found")
+            val map = storage[mapId]
+            val collectionNumber = meta.storeNumber.collectionNumber()
+            val collectionId = map.getCollectionId(collectionNumber) ?: throw NakshaException(
+                COLLECTION_NOT_FOUND,
+                "Collection #$collectionNumber not found"
+            )
+            g = Guid(storage.id(), mapId, collectionId, meta.id, Version(meta.version), meta.uid)
             guid = g
         }
         return g
@@ -101,30 +118,23 @@ data class Row(
      * @return a new row, where nothing is _null_.
      */
     fun merge(other: Row): Row {
-        if (storage != other.storage
-            || map != other.map
-            || collectionId != other.collectionId
-            || id != other.id
-            || meta != other.meta) throw NakshaException(ILLEGAL_ARGUMENT, "Can't merge two different rows")
+        if (storage != other.storage || rowNumber != other.rowNumber) {
+            throw NakshaException(ILLEGAL_ARGUMENT, "Can't merge two different rows")
+        }
         meta.nextVersion = meta.nextVersion ?: other.meta.nextVersion
         if (feature === other.feature
             && geo === other.geo
             && referencePoint === other.referencePoint
             && tags === other.tags
-            && attachment === other.attachment) return this
-        return Row(storage, map, collectionId, id, meta,
+            && attachment === other.attachment
+        ) return this
+        return Row(
+            storage, rowNumber, meta,
             feature ?: other.feature,
             geo ?: other.geo,
             referencePoint ?: other.referencePoint,
             tags ?: other.tags,
-            attachment ?: other.attachment)
-    }
-
-    companion object Row_C {
-        fun insertFeature(feature: NakshaFeature, options: SessionOptions? = null): Row {
-            val hash = Metadata.hash(feature, options?.excludePaths, options?.excludeFn)
-            val geoGrid = Metadata.geoGrid(feature.id, feature.geometry)
-            TODO("Finish me!")
-        }
+            attachment ?: other.attachment
+        )
     }
 }

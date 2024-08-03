@@ -43,7 +43,7 @@ open class ReadFeatures() : ReadRequest() {
     /**
      * The map from which to read.
      *
-     * If being an empty string, the default map is read, if being _null_, the [map from the context][naksha.model.NakshaContext.map] should be queried.
+     * If being an empty string, the default map is read, if being _null_, the [map from the context][naksha.model.NakshaContext.mapId] should be queried.
      * @since 3.0.0
      */
     var map by STRING_NULL

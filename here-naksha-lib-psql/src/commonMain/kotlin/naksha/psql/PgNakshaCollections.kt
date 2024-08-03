@@ -9,4 +9,4 @@ import kotlin.js.JsExport
  * The internal collections table.
  */
 @JsExport
-class PgNakshaCollections internal constructor(schema: PgSchema) : PgCollection(schema, Naksha.VIRT_COLLECTIONS), PgInternalCollection
+class PgNakshaCollections internal constructor(schema: PgMap) : PgCollection(schema, Naksha.VIRT_COLLECTIONS), PgInternalCollection

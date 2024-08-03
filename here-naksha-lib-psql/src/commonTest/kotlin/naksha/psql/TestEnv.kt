@@ -62,7 +62,7 @@ class TestEnv(dropSchema: Boolean, initStorage: Boolean, enableInfoLogs:Boolean 
         }
 
     fun dropSchema() {
-        val conn = storage.newConnection(options) { _, _ -> }
+        val conn = storage.newConnection(options, false) { _, _ -> }
         conn.use {
             conn.execute("DROP SCHEMA IF EXISTS ${quoteIdent(storage.defaultSchemaName)} CASCADE").close()
             conn.commit()

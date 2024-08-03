@@ -12,7 +12,7 @@ import kotlin.js.JsExport
  *
  */
 @JsExport
-class PgNakshaTransactions internal constructor(schema: PgSchema) : PgCollection(schema, Naksha.VIRT_TRANSACTIONS), PgInternalCollection {
+class PgNakshaTransactions internal constructor(schema: PgMap) : PgCollection(schema, Naksha.VIRT_TRANSACTIONS), PgInternalCollection {
 
     /**
      * The transactions table.

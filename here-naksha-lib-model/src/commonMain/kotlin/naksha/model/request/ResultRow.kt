@@ -5,7 +5,7 @@ package naksha.model.request
 import naksha.model.IStorage
 import naksha.model.Row
 import naksha.model.objects.NakshaFeature
-import naksha.model.RowId
+import naksha.model.RowNumber
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
@@ -24,9 +24,9 @@ open class ResultRow(
     @JvmField val storage: IStorage,
 
     /**
-     * The map in which the row is located.
+     * The map-id of the map in which the row is located.
      */
-    @JvmField val map: String,
+    @JvmField val mapId: String,
 
     /**
      * The collection-id of the collection in which the row is located.
@@ -36,7 +36,7 @@ open class ResultRow(
     /**
      * The row-identifier.
      */
-    @JvmField val rowId: RowId,
+    @JvmField val rowNumber: RowNumber,
 
     /**
      * The operation that was executed.

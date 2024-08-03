@@ -73,6 +73,12 @@ class PsqlConnection internal constructor(
      */
     override fun prepare(sql: String, typeNames: Array<String>?): PgPlan = PsqlPlan(PsqlQuery(sql), jdbc)
 
+    override var autoCommit: Boolean
+        get() = jdbc.autoCommit
+        set(value) {
+            jdbc.autoCommit = value
+        }
+
     /**
      * Commit all changes done in the current transaction.
      */
@@ -106,7 +112,7 @@ class PsqlConnection internal constructor(
             } else {
                 pgConnection.autoCommit = false
             }
-            instance.connectionPool[id]?.session?.compareAndSet(weakRef, null)
+            instance.connectionPool[id]?.connection?.compareAndSet(weakRef, null)
         }
     }
 
@@ -121,4 +127,6 @@ class PsqlConnection internal constructor(
             pgConnection.close()
         }
     }
+
+    override fun toUri(showPassword: Boolean): String = if (showPassword) jdbc.url else toString()
 }
