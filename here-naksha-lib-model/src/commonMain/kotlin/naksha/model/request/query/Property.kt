@@ -16,7 +16,7 @@ import kotlin.jvm.JvmStatic
  * The reference to a property within a feature.
  */
 @JsExport
-open class Property() : RowColumn(FEATURE) {
+open class Property() : TupleColumn(FEATURE) {
 
     /**
      * Create a property from a path given as variable argument list.

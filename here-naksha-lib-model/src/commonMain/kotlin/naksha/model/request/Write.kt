@@ -9,7 +9,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.NakshaException
 import naksha.model.objects.NakshaFeature
-import naksha.model.Row
+import naksha.model.Tuple
 import naksha.model.objects.NakshaCollection
 import kotlin.js.JsExport
 
@@ -25,7 +25,7 @@ open class Write : AnyObject() {
         private val STRING = NotNullProperty<Write, String>(String::class) { _, _ -> "" }
         private val STRING_NULL = NullableProperty<Write, String>(String::class)
         private val FEATURE_NULL = NullableProperty<Write, NakshaFeature>(NakshaFeature::class)
-        private val ROW_NULL = NullableProperty<Write, Row>(Row::class)
+        private val Tuple_NULL = NullableProperty<Write, Tuple>(Tuple::class)
         private val INT64_NULL = NullableProperty<Write, Int64>(Int64::class)
     }
 
@@ -75,7 +75,7 @@ open class Write : AnyObject() {
     /**
      * The new row to persists; if any.
      */
-    var row by ROW_NULL
+    var row by Tuple_NULL
 
     /**
      * Returns `feature.id`, `row.meta.id`, or `id` in that order.
@@ -261,30 +261,30 @@ open class Write : AnyObject() {
 
     /**
      * Create a new row.
-     * @param row the new row state.
+     * @param tuple the new row state.
      */
-    fun createRow(row: Row): Write {
-        this.mapId = row.mapId ?: throw NakshaException(MAP_NOT_FOUND, "Map of row '$row' not found")
-        this.collectionId = row.collectionId ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection of row '$row' not found")
+    fun createRow(tuple: Tuple): Write {
+        this.mapId = tuple.mapId ?: throw NakshaException(MAP_NOT_FOUND, "Map of row '$tuple' not found")
+        this.collectionId = tuple.collectionId ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection of row '$tuple' not found")
         this.op = WriteOp.CREATE
-        this.id = row.meta.id
+        this.id = tuple.meta.id
         this.version = null
         this.feature = null
-        this.row = row
+        this.row = tuple
         return this
     }
 
     /**
      * Update a row.
-     * @param row the new row state.
+     * @param tuple the new row state.
      * @param atomic if the operation should be performed atomic.
      */
-    fun updateRow(row: Row, atomic: Boolean = false): Write {
-        this.mapId = row.mapId ?: throw NakshaException(MAP_NOT_FOUND, "Map of row '$row' not found")
-        this.collectionId = row.collectionId ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection of row '$row' not found")
+    fun updateRow(tuple: Tuple, atomic: Boolean = false): Write {
+        this.mapId = tuple.mapId ?: throw NakshaException(MAP_NOT_FOUND, "Map of row '$tuple' not found")
+        this.collectionId = tuple.collectionId ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection of row '$tuple' not found")
         this.op = WriteOp.UPDATE
-        this.id = row.meta.id
-        this.version = if (atomic) row.meta.version else null
+        this.id = tuple.meta.id
+        this.version = if (atomic) tuple.meta.version else null
         this.feature = feature
         this.row = null
         return this
@@ -292,13 +292,13 @@ open class Write : AnyObject() {
 
     /**
      * Update or insert a row.
-     * @param row the new row state.
+     * @param tuple the new row state.
      */
-    fun upsertRow(row: Row): Write {
-        this.mapId = row.mapId ?: throw NakshaException(MAP_NOT_FOUND, "Map of row '$row' not found")
-        this.collectionId = row.collectionId ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection of row '$row' not found")
+    fun upsertRow(tuple: Tuple): Write {
+        this.mapId = tuple.mapId ?: throw NakshaException(MAP_NOT_FOUND, "Map of row '$tuple' not found")
+        this.collectionId = tuple.collectionId ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection of row '$tuple' not found")
         this.op = WriteOp.UPSERT
-        this.id = row.meta.id
+        this.id = tuple.meta.id
         this.version = null
         this.feature = feature
         this.row = null
@@ -307,15 +307,15 @@ open class Write : AnyObject() {
 
     /**
      * Delete a row.
-     * @param row the row state to delete.
+     * @param tuple the row state to delete.
      * @param atomic if the operation should be performed atomic.
      */
-    fun deleteRow(row: Row, atomic: Boolean = false): Write {
-        this.mapId = row.mapId ?: throw NakshaException(MAP_NOT_FOUND, "Map of row '$row' not found")
-        this.collectionId = row.collectionId ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection of row '$row' not found")
+    fun deleteRow(tuple: Tuple, atomic: Boolean = false): Write {
+        this.mapId = tuple.mapId ?: throw NakshaException(MAP_NOT_FOUND, "Map of row '$tuple' not found")
+        this.collectionId = tuple.collectionId ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection of row '$tuple' not found")
         this.op = WriteOp.DELETE
-        this.id = row.meta.id
-        this.version = if (atomic) row.meta.version else null
+        this.id = tuple.meta.id
+        this.version = if (atomic) tuple.meta.version else null
         this.feature = null
         this.row = null
         return this

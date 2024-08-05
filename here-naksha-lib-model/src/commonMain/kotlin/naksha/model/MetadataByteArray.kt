@@ -9,7 +9,6 @@ import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int8
-import naksha.model.request.ResultRowList
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -142,7 +141,7 @@ data class MetadataByteArray(@JvmField val storage: IStorage, @JvmField val bina
         return meta
     }
 
-    companion object RowIdStream_C {
+    companion object MetadataByteArray_C {
         private val ZERO_INT64 = Int64(0)
         private const val ZERO = 0.toByte()
 

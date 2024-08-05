@@ -10,7 +10,7 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 /**
- * Fine-grained control over which parts of [rows][naksha.model.Row] are needed in a result-set.
+ * Fine-grained control over which parts of [rows][naksha.model.Tuple] are needed in a result-set.
  */
 @JsExport
 open class ReturnColumns() : AnyObject() {
@@ -34,7 +34,7 @@ open class ReturnColumns() : AnyObject() {
         this.attachment = attachment
     }
 
-    companion object RowOptionsCompanion {
+    companion object ReturnColumns_C {
         /**
          * Create return-options with all columns being enabled.
          * @return new return-options with all columns being enabled.
@@ -44,8 +44,8 @@ open class ReturnColumns() : AnyObject() {
         fun all(): ReturnColumns = ReturnColumns(feature = true, geometry = true, refPoint = true, meta = true, tags = true, attachment = true)
 
         /**
-         * Create new return-options with all columns being disabled (only returns [naksha.model.RowNumber]).
-         * @return new return-options with all columns being disabled (only returns [naksha.model.RowNumber]).
+         * Create new return-options with all columns being disabled (only returns [naksha.model.TupleNumber]).
+         * @return new return-options with all columns being disabled (only returns [naksha.model.TupleNumber]).
          */
         @JvmStatic
         @JsStatic

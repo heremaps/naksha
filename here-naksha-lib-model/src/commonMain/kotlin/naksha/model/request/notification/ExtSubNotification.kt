@@ -21,7 +21,7 @@ open class ExtSubNotification() : SubNotification() {
     }
 
     companion object ExtSubNotification_C {
-        private val ROWS_BY_TXN = NotNullProperty<ExtSubNotification, RowsByTxn>(RowsByTxn::class)
+        private val ROWS_BY_TXN = NotNullProperty<ExtSubNotification, TuplesByTxn>(TuplesByTxn::class)
     }
 
     /**

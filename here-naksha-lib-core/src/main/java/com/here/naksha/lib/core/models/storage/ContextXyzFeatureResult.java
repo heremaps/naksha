@@ -20,13 +20,13 @@ package com.here.naksha.lib.core.models.storage;
 
 import java.util.List;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.ResultRow;
+import naksha.model.request.ResultTuple;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class ContextXyzFeatureResult extends ContextResult<NakshaFeature, NakshaFeature, NakshaFeature> {
 
-  public ContextXyzFeatureResult(@Nullable String handle, @NotNull List<ResultRow> rows) {
+  public ContextXyzFeatureResult(@Nullable String handle, @NotNull List<ResultTuple> rows) {
     super(handle, rows);
   }
 }

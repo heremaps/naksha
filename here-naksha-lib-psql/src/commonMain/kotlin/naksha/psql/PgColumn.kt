@@ -3,7 +3,7 @@
 package naksha.psql
 
 import naksha.base.JsEnum
-import naksha.model.request.query.RowColumn
+import naksha.model.request.query.TupleColumn
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -363,33 +363,33 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * Returns the [PgColumn] that matches to the official [RowColumn].
-         * @param rowColumn the [RowColumn] to resolve.
-         * @return the [PgColumn] that matches this [RowColumn]; if any.
+         * Returns the [PgColumn] that matches to the official [TupleColumn].
+         * @param tupleColumn the [TupleColumn] to resolve.
+         * @return the [PgColumn] that matches this [TupleColumn]; if any.
          */
         @JvmStatic
         @JsStatic
-        fun ofRowColumn(rowColumn: RowColumn): PgColumn? = when (rowColumn.name) {
-            RowColumn.UPDATED_AT -> updated_at
-            RowColumn.CREATED_AT -> created_at
-            RowColumn.AUTHOR_TS -> author_ts
-            RowColumn.NEXT_VERSION -> txn_next
-            RowColumn.VERSION -> txn
-            RowColumn.PREV_VERSION -> ptxn
-            RowColumn.UID -> uid
-            RowColumn.PUID -> puid
-            RowColumn.HASH -> hash
-            RowColumn.CHANGE_COUNT -> change_count
-            RowColumn.GEO_GRID -> geo_grid
-            RowColumn.FLAGS -> flags
-            RowColumn.ID -> id
-            RowColumn.APP_ID -> app_id
-            RowColumn.AUTHOR -> author
-            RowColumn.TYPE -> type
-            RowColumn.TAGS -> tags
-            RowColumn.REF_POINT -> ref_point
-            RowColumn.GEOMETRY -> geo
-            RowColumn.FEATURE -> feature
+        fun ofRowColumn(tupleColumn: TupleColumn): PgColumn? = when (tupleColumn.name) {
+            TupleColumn.UPDATED_AT -> updated_at
+            TupleColumn.CREATED_AT -> created_at
+            TupleColumn.AUTHOR_TS -> author_ts
+            TupleColumn.NEXT_VERSION -> txn_next
+            TupleColumn.VERSION -> txn
+            TupleColumn.PREV_VERSION -> ptxn
+            TupleColumn.UID -> uid
+            TupleColumn.PUID -> puid
+            TupleColumn.HASH -> hash
+            TupleColumn.CHANGE_COUNT -> change_count
+            TupleColumn.GEO_GRID -> geo_grid
+            TupleColumn.FLAGS -> flags
+            TupleColumn.ID -> id
+            TupleColumn.APP_ID -> app_id
+            TupleColumn.AUTHOR -> author
+            TupleColumn.TYPE -> type
+            TupleColumn.TAGS -> tags
+            TupleColumn.REF_POINT -> ref_point
+            TupleColumn.GEOMETRY -> geo
+            TupleColumn.FEATURE -> feature
             // attachment
             else -> null
         }

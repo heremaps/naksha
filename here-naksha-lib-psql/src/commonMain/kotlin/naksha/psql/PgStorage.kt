@@ -12,7 +12,7 @@ import naksha.model.NakshaContext.NakshaContextCompanion.DEFAULT_MAP_ID
 import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.model.NakshaVersion.Companion.LATEST
 import naksha.model.objects.NakshaFeature
-import naksha.model.request.ResultRow
+import naksha.model.request.ResultTuple
 import naksha.psql.PgUtil.PgUtilCompanion.VERSION
 import naksha.psql.PgUtil.PgUtilCompanion.CONTEXT
 import naksha.psql.PgUtil.PgUtilCompanion.ID
@@ -328,10 +328,10 @@ SELECT
      */
     override fun getMapId(mapNumber: Int): String? = mapNumberToId[mapNumber]
 
-    override fun rowToFeature(row: Row): NakshaFeature {
-        return if (row.feature != null) {
+    override fun rowToFeature(tuple: Tuple): NakshaFeature {
+        return if (tuple.feature != null) {
             // TODO: FIXME, we need the XYZ namespace
-            val featureReader = JbFeatureDecoder(JbDictManager()).mapBytes(row.feature!!).reader
+            val featureReader = JbFeatureDecoder(JbDictManager()).mapBytes(tuple.feature!!).reader
             val feature = JbMapDecoder().mapReader(featureReader).toAnyObject().proxy(NakshaFeature::class)
             feature
         } else {
@@ -339,7 +339,7 @@ SELECT
         }
     }
 
-    override fun featureToRow(feature: NakshaFeature): Row {
+    override fun featureToRow(feature: NakshaFeature): Tuple {
         val nakshaFeature = feature.proxy(NakshaFeature::class)
         TODO("Implement me")
     }
@@ -414,19 +414,19 @@ SELECT
         TODO("Not yet implemented")
     }
 
-    override fun getRowsByFeatureId(mapId: String, collectionId: String, featureIds: Array<String>, mode: String): List<Row?> {
+    override fun getRowsByFeatureId(mapId: String, collectionId: String, featureIds: Array<String>, mode: String): List<Tuple?> {
         TODO("Not yet implemented")
     }
 
-    override fun getRows(rowNumbers: Array<RowNumber>, mode: String): List<Row?> {
+    override fun getRows(tupleNumbers: Array<TupleNumber>, mode: String): List<Tuple?> {
         TODO("Not yet implemented")
     }
 
-    override fun fetchRows(rows: List<ResultRow?>, from: Int, to: Int, mode: String) {
+    override fun fetchRows(rows: List<ResultTuple?>, from: Int, to: Int, mode: String) {
         TODO("Not yet implemented")
     }
 
-    override fun fetchRow(row: ResultRow, mode: String) {
+    override fun fetchRow(row: ResultTuple, mode: String) {
         TODO("Not yet implemented")
     }
 

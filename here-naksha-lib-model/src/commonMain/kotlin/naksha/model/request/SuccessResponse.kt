@@ -26,9 +26,9 @@ open class SuccessResponse @Deprecated("Use secondary", ReplaceWith("SuccessResp
 
     companion object SuccessResponse_C {
         private val RESULT_SET_NULL = NullableProperty<SuccessResponse, ResultSet>(ResultSet::class)
-        private val ROWS = NotNullProperty<SuccessResponse, ResultRowList>(ResultRowList::class) { self, _ ->
+        private val ROWS = NotNullProperty<SuccessResponse, ResultTupleList>(ResultTupleList::class) { self, _ ->
             val rs = self.resultSet
-            rs?.result() ?: ResultRowList()
+            rs?.result() ?: ResultTupleList()
         }
         @Suppress("UNCHECKED_CAST")
         private val FEATURES = NotNullProperty<SuccessResponse, NakshaFeatureList>(NakshaFeatureList::class) { self, _ ->
@@ -36,7 +36,7 @@ open class SuccessResponse @Deprecated("Use secondary", ReplaceWith("SuccessResp
             val rs = self.resultSet
             if (rs != null) {
                 val rows = rs.result()
-                rs.storage().fetchRows(rows as List<ResultRow>)
+                rs.storage().fetchRows(rows as List<ResultTuple>)
                 for (row in rows) {
                     val f = row?.feature
                     if (f != null) features.add(f)

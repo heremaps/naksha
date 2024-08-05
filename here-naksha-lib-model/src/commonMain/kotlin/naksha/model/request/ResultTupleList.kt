@@ -15,8 +15,8 @@ import kotlin.jvm.JvmStatic
  * A list of result rows.
  */
 @JsExport
-class ResultRowList : ListProxy<ResultRow>(ResultRow::class) {
-    companion object ResultRowList_C {
+class ResultTupleList : ListProxy<ResultTuple>(ResultTuple::class) {
+    companion object ResultTupleList_C {
         /**
          * Read the given binary row array, and convert it into a result-row list.
          * @param storage the storage from which the binary was received.
@@ -25,8 +25,8 @@ class ResultRowList : ListProxy<ResultRow>(ResultRow::class) {
          */
         @JvmStatic
         @JsStatic
-        fun fromRowNumberArray(storage: IStorage, array: RowNumberByteArray): ResultRowList {
-            val list = ResultRowList()
+        fun fromRowNumberArray(storage: IStorage, array: TupleNumberByteArray): ResultTupleList {
+            val list = ResultTupleList()
             val length = array.size
             list.setCapacity(length)
             var i = 0
@@ -39,8 +39,8 @@ class ResultRowList : ListProxy<ResultRow>(ResultRow::class) {
                 val colId = map.getCollectionId(colNumber) ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection #$colNumber not found at index $i")
                 val rowCache = NakshaCache.rowCache(storage.id())
                 val row = rowCache[rowNumber]
-                val resultRow = ResultRow(storage, mapId, colId, rowNumber, ExecutedOp.READ, row?.meta?.id, row)
-                list.add(resultRow)
+                val resultTuple = ResultTuple(storage, mapId, colId, rowNumber, ExecutedOp.READ, row?.meta?.id, row)
+                list.add(resultTuple)
                 i++
             }
             return list

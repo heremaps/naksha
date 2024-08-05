@@ -3,9 +3,9 @@
 package naksha.model.request
 
 import naksha.model.IStorage
-import naksha.model.Row
+import naksha.model.Tuple
 import naksha.model.objects.NakshaFeature
-import naksha.model.RowNumber
+import naksha.model.TupleNumber
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
@@ -17,7 +17,7 @@ import kotlin.jvm.JvmField
  * Assume for example, there are 500,000 rows being part of a transaction, it is most often not useful to load all of them into memory, but we need at least the meta-information about all of them, so that they are part of the result-set, then normally a process steps through the result-set and stops, when enough have been processed.
  */
 @JsExport
-open class ResultRow(
+open class ResultTuple(
     /**
      * Reference to storage from which the row was received.
      */
@@ -36,7 +36,7 @@ open class ResultRow(
     /**
      * The row-identifier.
      */
-    @JvmField val rowNumber: RowNumber,
+    @JvmField val tupleNumber: TupleNumber,
 
     /**
      * The operation that was executed.
@@ -57,15 +57,15 @@ open class ResultRow(
      *
      * Can be _null_, when not yet fetched from the storage, use [IStorage.fetchRows] or when [op] is [PURGED][ExecutedOp.PURGED] or [RETAINED][ExecutedOp.RETAINED].
      */
-    @JvmField var row: Row?
+    @JvmField var tuple: Tuple?
 ) {
     /**
      * Returns the feature-id, if it is already known.
      *
-     * First reads the most reliable ID from the [row], if the row is not yet fetched, tries the [featureId] property.
+     * First reads the most reliable ID from the [tuple], if the row is not yet fetched, tries the [featureId] property.
      * @return the feature-id, if available.
      */
-    fun id() : String? = row?.meta?.id ?: featureId
+    fun id() : String? = tuple?.meta?.id ?: featureId
 
     /**
      * Convert the row into a feature, and cache the feature.
@@ -76,8 +76,8 @@ open class ResultRow(
     var feature: NakshaFeature? = null
         get() {
             if (field == null) {
-                if (row == null) storage.fetchRow(this)
-                if (row != null) field = row?.toNakshaFeature()
+                if (tuple == null) storage.fetchRow(this)
+                if (tuple != null) field = tuple?.toNakshaFeature()
             }
             return field
         }
@@ -87,5 +87,5 @@ open class ResultRow(
      *
      * @return a new copy of the row converted into a feature.
      */
-    fun newFeature(): NakshaFeature? = row?.toNakshaFeature()
+    fun newFeature(): NakshaFeature? = tuple?.toNakshaFeature()
 }

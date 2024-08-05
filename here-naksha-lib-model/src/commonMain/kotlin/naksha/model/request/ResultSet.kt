@@ -50,7 +50,7 @@ interface ResultSet {
      *
      * @return a sub-list from [offset] to [end] with all result-rows, that should be part of the success response.
      */
-    fun result(): ResultRowList
+    fun result(): ResultTupleList
 
     /**
      * Returns the size of the result, actually this is simply `result().size`.
@@ -59,12 +59,12 @@ interface ResultSet {
     fun resultSize(): Int = result().size
 
     /**
-     * Returns all [rows][Row] being part of the result-set, the rows may not have been read from the storage yet, and may require to invoke [IStorage.fetchRows]. Only the rows till [validationEnd] are validated (filtered), all others are in an unknown state, except [isComplete].
+     * Returns all [rows][Tuple] being part of the result-set, the rows may not have been read from the storage yet, and may require to invoke [IStorage.fetchRows]. Only the rows till [validationEnd] are validated (filtered), all others are in an unknown state, except [isComplete].
      *
      * To generate the features for an [SuccessResponse], simply read all rows from [offset] till [end] (or use the [result] method), and convert them into features. Beware that only the rows till [validationEnd] are reliable. All rows returned starting with the one at [validationEnd] are not yet validated, therefore some filters (like property query, lambdas) have not been applied yet.
      * @return the list of all rows being part of the result-set.
      */
-    fun rows(): ResultRowList
+    fun rows(): ResultTupleList
 
     /**
      * The position in the result-set that was not yet validated.
@@ -83,7 +83,7 @@ interface ResultSet {
     fun validateTill(end: Int)
 
     /**
-     * If _true_, the result-set is complete, that means all [rows][Row] of the result-set are available, they are ordered correctly, and filtered by given [filter-lambdas][ResultFilter].
+     * If _true_, the result-set is complete, that means all [rows][Tuple] of the result-set are available, they are ordered correctly, and filtered by given [filter-lambdas][ResultFilter].
      */
     fun isComplete(): Boolean
 

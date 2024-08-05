@@ -9,7 +9,7 @@ import naksha.model.Naksha.NakshaCompanion.FETCH_ID
 import naksha.model.Naksha.NakshaCompanion.FETCH_META
 import naksha.model.Naksha.NakshaCompanion.FETCH_CACHE
 import naksha.model.objects.NakshaFeature
-import naksha.model.request.ResultRow
+import naksha.model.request.ResultTuple
 import kotlin.js.JsExport
 
 /**
@@ -102,21 +102,21 @@ interface IStorage : AutoCloseable {
     fun dropMap(mapId: String)
 
     /**
-     * Convert the given [Row] into a [NakshaFeature].
+     * Convert the given [Tuple] into a [NakshaFeature].
      *
-     * @param row the row to convert.
+     * @param tuple the row to convert.
      * @return the feature generated from the row.
      * @since 3.0.0
      */
-    fun rowToFeature(row: Row): NakshaFeature
+    fun rowToFeature(tuple: Tuple): NakshaFeature
 
     /**
-     * Convert the given feature into a [Row].
+     * Convert the given feature into a [Tuple].
      * @param feature the feature to convert.
-     * @return the [Row] generated from the given feature.
+     * @return the [Tuple] generated from the given feature.
      * @since 3.0.0
      */
-    fun featureToRow(feature: NakshaFeature): Row
+    fun featureToRow(feature: NakshaFeature): Tuple
 
     /**
      * Returns the dictionary manager of the storage.
@@ -194,7 +194,7 @@ interface IStorage : AutoCloseable {
      * @return the list of the loaded rows, _null_, if the row was not found (or not in cache, when [cached-only][FETCH_CACHE]).
      * @since 3.0.0
      */
-    fun getRowsByFeatureId(mapId: String, collectionId: String, featureIds: Array<String>, mode: String = FETCH_ALL): List<Row?>
+    fun getRowsByFeatureId(mapId: String, collectionId: String, featureIds: Array<String>, mode: String = FETCH_ALL): List<Tuple?>
 
     /**
      * Load all rows with the given row identifiers.
@@ -206,12 +206,12 @@ interface IStorage : AutoCloseable {
      * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
      * - [cached-only][FETCH_CACHE] - only what is available in cache
      *
-     * @param rowNumbers a list of row-numbers of the rows to load.
+     * @param tupleNumbers a list of row-numbers of the rows to load.
      * @param mode the fetch mode.
      * @return the list of the loaded rows, _null_, if the row was not found (or not in cache, when [cached-only][FETCH_CACHE]).
      * @since 3.0.0
      */
-    fun getRows(rowNumbers: Array<RowNumber>, mode: String = FETCH_ALL): List<Row?>
+    fun getRows(tupleNumbers: Array<TupleNumber>, mode: String = FETCH_ALL): List<Tuple?>
 
     /**
      * Fetches a single result-row.
@@ -227,7 +227,7 @@ interface IStorage : AutoCloseable {
      * @param mode the fetch mode.
      * @since 3.0.0
      */
-    fun fetchRow(row: ResultRow, mode: String = FETCH_ALL)
+    fun fetchRow(row: ResultTuple, mode: String = FETCH_ALL)
 
     /**
      * Fetches all rows in the given result-rows.
@@ -245,7 +245,7 @@ interface IStorage : AutoCloseable {
      * @param mode the fetch mode.
      * @since 3.0.0
      */
-    fun fetchRows(rows: List<ResultRow?>, from:Int = 0, to:Int = rows.size, mode: String = FETCH_ALL)
+    fun fetchRows(rows: List<ResultTuple?>, from:Int = 0, to:Int = rows.size, mode: String = FETCH_ALL)
 
     /**
      * Shutdown the storage instance, blocks until the storage is down (all sessions are closed).

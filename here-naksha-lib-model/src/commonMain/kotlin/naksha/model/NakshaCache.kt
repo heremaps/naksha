@@ -14,22 +14,22 @@ import kotlin.jvm.JvmStatic
 @JsExport
 class NakshaCache private constructor() {
     companion object PgCache_C {
-        private val rowCaches = AtomicMap<String, WeakRef<RowCache>>()
+        private val tupleCaches = AtomicMap<String, WeakRef<TupleCache>>()
 
         /**
          * Returns the cache for all rows of a specific storage.
-         * @param storageId the identifier of the storage for which to return the [row-cache][RowCache].
-         * @return the [row-cache][RowCache] for the storage.
+         * @param storageId the identifier of the storage for which to return the [row-cache][TupleCache].
+         * @return the [row-cache][TupleCache] for the storage.
          */
         @JvmStatic
         @JsStatic
-        tailrec fun rowCache(storageId: String): RowCache {
-            var ref = rowCaches[storageId]
+        tailrec fun rowCache(storageId: String): TupleCache {
+            var ref = tupleCaches[storageId]
             var cache = ref?.deref()
             if (cache != null) return cache
-            cache = RowCache(storageId)
+            cache = TupleCache(storageId)
             ref = WeakRef(cache)
-            if (rowCaches.putIfAbsent(storageId, ref) == null) return cache
+            if (tupleCaches.putIfAbsent(storageId, ref) == null) return cache
             return rowCache(storageId)
         }
     }

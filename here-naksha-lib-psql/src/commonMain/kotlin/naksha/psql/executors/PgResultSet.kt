@@ -26,14 +26,14 @@ class PgResultSet(
     internal val map: String,
 
     /**
-     * The result-set as [naksha.model.RowNumber] array, read from the query.
+     * The result-set as [naksha.model.TupleNumber] array, read from the query.
      *
      * **Note**: After sorting, the array is replaced with the ordered version. This is quite important to acknowledge when saving the rows-ids to restore result-sets quickly when seeking in them!
      */
-    internal var rowNumberArray: RowNumberByteArray,
+    internal var tupleNumberArray: TupleNumberByteArray,
 
     /**
-     * Signal that the [rowNumberArray] is incomplete (not the full result set).
+     * Signal that the [tupleNumberArray] is incomplete (not the full result set).
      *
      * - This requires that [offset] is 0.
      * - This requires that [limit] is `rowIdArray.size`.
@@ -44,12 +44,12 @@ class PgResultSet(
     internal val incomplete: Boolean,
 
     /**
-     * How many entries in the [rowNumberArray] are already filtered.
+     * How many entries in the [tupleNumberArray] are already filtered.
      */
     internal var validTill: Int = 0,
 
     /**
-     * The offset where in the ordered, and filtered, result-set ([rowNumberArray]) to start reading.
+     * The offset where in the ordered, and filtered, result-set ([tupleNumberArray]) to start reading.
      */
     internal var offset: Int = 0,
 
@@ -60,10 +60,10 @@ class PgResultSet(
      * - If this is restored for a [ReadHandle][naksha.model.request.ReadHandle], then the limit will be restored from the handle, except the client changes the limit via request parameter.
      * - If this is the result of a [WriteRequest][naksha.model.request.WriteRequest], then the limit should be set to `rowIdArray.size`.
      */
-    internal val limit: Int = if (incomplete) rowNumberArray.size else 10_000,
+    internal val limit: Int = if (incomplete) tupleNumberArray.size else 10_000,
 
     /**
-     * The order to ensure, if _null_ the current order of [rowNumberArray] is good.
+     * The order to ensure, if _null_ the current order of [tupleNumberArray] is good.
      *
      * - If restored from a [ReadHandle] request, and from a cached result-set, then this will be _null_.
      * - If a `handle` is requested by the client, and this is the result of a query, then this parameter should be set to [OrderBy.deterministic]. In no case _null_ is acceptable in this case, because without an order it is not possible to generate a handle. This means as well, the result-set must not be [incomplete].
@@ -73,15 +73,15 @@ class PgResultSet(
     /**
      * Optional filters to run above the ordered results to remove or modify result-rows.
      *
-     * - If restored from a [ReadHandle] request, and from a cached result-set, then this may be _null_, but could be as well set, when the given [rowNumberArray] is not yet fully filtered.
+     * - If restored from a [ReadHandle] request, and from a cached result-set, then this may be _null_, but could be as well set, when the given [tupleNumberArray] is not yet fully filtered.
      * - If the client requested a query above the `properties` using an [IPropertyQuery][naksha.model.request.query.IPropertyQuery], then a method need to be created, and added as first result-filter in this filter list.
      */
     internal val filters: ResultFilterList? = null
 ) : ResultSet {
     /**
-     * The generated results rows, same size as [rowNumberArray].
+     * The generated results rows, same size as [tupleNumberArray].
      */
-    internal var all: ResultRowList
+    internal var all: ResultTupleList
 
     /**
      * The end of the result-set.
@@ -91,7 +91,7 @@ class PgResultSet(
     /**
      * The results between [offset] and [end].
      */
-    internal var result: ResultRowList? = null
+    internal var result: ResultTupleList? = null
 
     /**
      * The fetch that needs to be done, _null_ means validation is instant.
@@ -105,21 +105,21 @@ class PgResultSet(
     }
 
     // version
-    private fun order_txn_uid(a: ResultRow?, b: ResultRow?): Int {
+    private fun order_txn_uid(a: ResultTuple?, b: ResultTuple?): Int {
         if (a === b) return 0
         if (a == null) return 1
         if (b == null) return -1
 
-        val v = a.rowNumber.version.txn - b.rowNumber.version.txn
+        val v = a.tupleNumber.version.txn - b.tupleNumber.version.txn
         if (v < 0) return -1
         if (v > 0) return 1
-        val u = a.rowNumber.uid - b.rowNumber.uid
+        val u = a.tupleNumber.uid - b.tupleNumber.uid
         if (u < 0) return -1
         if (u > 0) return 1
         return 0
     }
 
-    private fun order_id_txn_uid(a: ResultRow?, b: ResultRow?): Int {
+    private fun order_id_txn_uid(a: ResultTuple?, b: ResultTuple?): Int {
         if (a === b) return 0
         if (a == null) return 1
         if (b == null) return -1
@@ -157,7 +157,7 @@ class PgResultSet(
     */
 
     init {
-        all = ResultRowList.fromRowNumberArray(storage, rowNumberArray)
+        all = ResultTupleList.fromRowNumberArray(storage, tupleNumberArray)
         if (orderBy == DETERMINISTIC || orderBy == VERSION) {
             fetchMode = null
             all.sortedWith(this::order_txn_uid)
@@ -178,10 +178,10 @@ class PgResultSet(
         if (!incomplete) {
             end = offset + limit
             // If limit is Int.MAX_VALUE, we get an overflow below zero, but we mean: everything!
-            if (end < 0 || end > rowNumberArray.size) end = rowNumberArray.size
+            if (end < 0 || end > tupleNumberArray.size) end = tupleNumberArray.size
             validateTill(end)
         } else {
-            end = rowNumberArray.size
+            end = tupleNumberArray.size
             validTill = end
         }
     }
@@ -196,16 +196,16 @@ class PgResultSet(
 
     override fun end(): Int = end
 
-    override fun result(): ResultRowList {
+    override fun result(): ResultTupleList {
         var result = this.result
         if (result == null) {
-            result = all.subList(offset, end).proxy(ResultRowList::class)
+            result = all.subList(offset, end).proxy(ResultTupleList::class)
             this.result = result
         }
         return result
     }
 
-    override fun rows(): ResultRowList = all
+    override fun rows(): ResultTupleList = all
 
     override fun validationEnd(): Int = validTill
 
@@ -250,7 +250,7 @@ class PgResultSet(
             if (available >= end) break
         }
 
-        val newList = ResultRowList()
+        val newList = ResultTupleList()
         newList.setCapacity(all.size - removed)
         // Copy everything that is not null
         while (i < all.size) {

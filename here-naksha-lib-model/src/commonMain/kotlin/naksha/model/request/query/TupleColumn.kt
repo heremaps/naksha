@@ -11,10 +11,10 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 /**
- * A reference to a column of a virtual [row][naksha.model.Row].
+ * A reference to a column of a virtual [tuple][naksha.model.Tuple].
  */
 @JsExport
-open class RowColumn() : AnyObject() {
+open class TupleColumn() : AnyObject() {
 
     /**
      * Create a column reference.
@@ -29,9 +29,9 @@ open class RowColumn() : AnyObject() {
     override fun hashCode(): Int = toString().hashCode()
     override fun equals(other: Any?): Boolean = toString() == other.toString()
 
-    companion object RowField_C {
+    companion object TupleColumn_C {
         /**
-         * The reference to the [feature-id][naksha.model.Row.id].
+         * The reference to the [feature-id][naksha.model.Tuple.id].
          *
          * Supported [query operations][AnyOp] are:
          * - [StringOp.EQUALS]
@@ -46,7 +46,7 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun id(): RowColumn = RowColumn(ID)
+        fun id(): TupleColumn = TupleColumn(ID)
 
         /**
          * The reference to the [creation timestamp][naksha.model.Metadata.createdAt].
@@ -65,7 +65,7 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun createAt(): RowColumn = RowColumn(CREATED_AT)
+        fun createAt(): TupleColumn = TupleColumn(CREATED_AT)
 
         /**
          * The reference to the [update timestamp][naksha.model.Metadata.updatedAt].
@@ -84,7 +84,7 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun updatedAt(): RowColumn = RowColumn(UPDATED_AT)
+        fun updatedAt(): TupleColumn = TupleColumn(UPDATED_AT)
 
         /**
          * The reference to the [encoding flags and actions][naksha.model.Metadata.flags].
@@ -102,7 +102,7 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun flags(): RowColumn = RowColumn(FLAGS)
+        fun flags(): TupleColumn = TupleColumn(FLAGS)
 
         /**
          * The reference to the [hash][naksha.model.Metadata.hash].
@@ -121,7 +121,7 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun hash(): RowColumn = RowColumn(HASH)
+        fun hash(): TupleColumn = TupleColumn(HASH)
 
         /**
          * The reference to the [change-count][naksha.model.Metadata.changeCount].
@@ -140,7 +140,7 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun changeCount(): RowColumn = RowColumn(CHANGE_COUNT)
+        fun changeCount(): TupleColumn = TupleColumn(CHANGE_COUNT)
 
         /**
          * The reference to the [next version][naksha.model.Metadata.nextVersion].
@@ -157,7 +157,7 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun nextVersion(): RowColumn = RowColumn(NEXT_VERSION)
+        fun nextVersion(): TupleColumn = TupleColumn(NEXT_VERSION)
 
         /**
          * The reference to the [version][naksha.model.Metadata.version] (_transaction number_).
@@ -176,7 +176,7 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun version(): RowColumn = RowColumn(VERSION)
+        fun version(): TupleColumn = TupleColumn(VERSION)
 
         /**
          * The reference to the [previous version][naksha.model.Metadata.prevVersion].
@@ -195,7 +195,7 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun prevVersion(): RowColumn = RowColumn(PREV_VERSION)
+        fun prevVersion(): TupleColumn = TupleColumn(PREV_VERSION)
 
         /**
          * The reference to the [transaction local identifier][naksha.model.Metadata.uid].
@@ -214,7 +214,7 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun uid(): RowColumn = RowColumn(UID)
+        fun uid(): TupleColumn = TupleColumn(UID)
 
         /**
          * The reference to the [previous transaction local identifier][naksha.model.Metadata.puid].
@@ -233,7 +233,7 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun puid(): RowColumn = RowColumn(PUID)
+        fun puid(): TupleColumn = TupleColumn(PUID)
 
         /**
          * The reference to the [reference point HERE tile identifier in level 15][naksha.model.Metadata.geoGrid].
@@ -254,7 +254,7 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun geoGrid(): RowColumn = RowColumn(GEO_GRID)
+        fun geoGrid(): TupleColumn = TupleColumn(GEO_GRID)
 
         /**
          * The property reference to the [author][naksha.model.Metadata.author].
@@ -274,7 +274,7 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun author(): RowColumn = RowColumn(AUTHOR)
+        fun author(): TupleColumn = TupleColumn(AUTHOR)
 
         /**
          * The property reference to the [type][naksha.model.Metadata.type].
@@ -294,7 +294,7 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun type(): RowColumn = RowColumn(TYPE)
+        fun type(): TupleColumn = TupleColumn(TYPE)
 
         /**
          * The property reference to the [author change timestamp][naksha.model.Metadata.authorTs].
@@ -313,7 +313,7 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun authorTs(): RowColumn = RowColumn(AUTHOR_TS)
+        fun authorTs(): TupleColumn = TupleColumn(AUTHOR_TS)
 
         /**
          * The property reference to the [author change timestamp][naksha.model.Metadata.appId].
@@ -333,10 +333,10 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun appId(): RowColumn = RowColumn(APP_ID)
+        fun appId(): TupleColumn = TupleColumn(APP_ID)
 
         /**
-         * The reference to the [feature][naksha.model.Row.feature].
+         * The reference to the [feature][naksha.model.Tuple.feature].
          *
          * This can only be queried using a special [property query][IPropertyQuery].
          */
@@ -348,10 +348,10 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun feature(): RowColumn = RowColumn(FEATURE)
+        fun feature(): TupleColumn = TupleColumn(FEATURE)
 
         /**
-         * The reference to the [geometry][naksha.model.Row.geo].
+         * The reference to the [geometry][naksha.model.Tuple.geo].
          *
          * This can only be queried using a special [spatial query][ISpatialQuery].
          */
@@ -363,10 +363,10 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun geometry(): RowColumn = RowColumn(GEOMETRY)
+        fun geometry(): TupleColumn = TupleColumn(GEOMETRY)
 
         /**
-         * The reference to the [reference point][naksha.model.Row.referencePoint].
+         * The reference to the [reference point][naksha.model.Tuple.referencePoint].
          *
          * This can only be queried using a special [spatial query][ISpatialQuery].
          */
@@ -378,10 +378,10 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun referencePoint(): RowColumn = RowColumn(REF_POINT)
+        fun referencePoint(): TupleColumn = TupleColumn(REF_POINT)
 
         /**
-         * The reference to the [tags][naksha.model.Row.tags].
+         * The reference to the [tags][naksha.model.Tuple.tags].
          *
          * This can only be queried using a special [tag query][ITagQuery].
          */
@@ -393,9 +393,9 @@ open class RowColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun tags(): RowColumn = RowColumn(TAGS)
+        fun tags(): TupleColumn = TupleColumn(TAGS)
 
-        private val STRING = NotNullProperty<RowColumn, String>(String::class) { _, _ -> "" }
+        private val STRING = NotNullProperty<TupleColumn, String>(String::class) { _, _ -> "" }
     }
 
     /**

@@ -10,11 +10,11 @@ import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 /**
- * A row represents a specific immutable state of a feature in a storage.
+ * A tuple represents a specific immutable state of a feature in a storage.
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-data class Row(
+data class Tuple(
     /**
      * Reference to specific storage implementation that allows to decode rows to feature.
      */
@@ -23,10 +23,10 @@ data class Row(
     /**
      * The row-number, a unique identifier for the row.
      */
-    @JvmField val rowNumber: RowNumber,
+    @JvmField val tupleNumber: TupleNumber,
 
     /**
-     * The metadata, this is going into the [XYZ namespace][XyzNs], when decoding the [Row] into a [NakshaFeature].
+     * The metadata, this is going into the [XYZ namespace][XyzNs], when decoding the [Tuple] into a [NakshaFeature].
      */
     @JvmField val meta: Metadata,
 
@@ -60,17 +60,17 @@ data class Row(
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        return other is Row && this.rowNumber == other.rowNumber
+        return other is Tuple && this.tupleNumber == other.tupleNumber
     }
 
     override fun hashCode(): Int = super.hashCode()
 
     val mapNumber: Int
-        get() = rowNumber.mapNumber()
+        get() = tupleNumber.mapNumber()
     val mapId: String?
         get() = storage.getMapId(mapNumber)
     val collectionNumber: Int64
-        get() = rowNumber.collectionNumber()
+        get() = tupleNumber.collectionNumber()
     val collectionId: String?
         get() {
             val mapId = this.mapId ?: return null
@@ -117,8 +117,8 @@ data class Row(
      * @param other the row to merge this with.
      * @return a new row, where nothing is _null_.
      */
-    fun merge(other: Row): Row {
-        if (storage != other.storage || rowNumber != other.rowNumber) {
+    fun merge(other: Tuple): Tuple {
+        if (storage != other.storage || tupleNumber != other.tupleNumber) {
             throw NakshaException(ILLEGAL_ARGUMENT, "Can't merge two different rows")
         }
         meta.nextVersion = meta.nextVersion ?: other.meta.nextVersion
@@ -128,8 +128,8 @@ data class Row(
             && tags === other.tags
             && attachment === other.attachment
         ) return this
-        return Row(
-            storage, rowNumber, meta,
+        return Tuple(
+            storage, tupleNumber, meta,
             feature ?: other.feature,
             geo ?: other.geo,
             referencePoint ?: other.referencePoint,

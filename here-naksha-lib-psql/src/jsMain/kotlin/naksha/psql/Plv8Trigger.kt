@@ -5,7 +5,7 @@ package naksha.psql
 
 import kotlinx.js.JsPlainObject
 import naksha.base.Int64
-import naksha.model.Row
+import naksha.model.Tuple
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -134,7 +134,7 @@ fun naksha_trigger_after(trigger: Plv8Trigger) : Plv8Row {
  *
  * Uses the current session, does not commit or rollback the current session.
  */
-internal fun saveInHst(collectionId: String, OLD: Row) {
+internal fun saveInHst(collectionId: String, OLD: Tuple) {
 //    if (isHistoryEnabled(collectionId)) {
 //        // TODO move it outside and run it once
 //        val collectionIdQuoted = quoteIdent("${collectionId}\$hst")
@@ -185,7 +185,7 @@ internal fun deleteFromDel(collectionId: String, id: String) {
  *
  * Uses the current session, does not commit or rollback the current session.
  */
-internal fun copyToDel(collectionId: String, OLD: Row) {
+internal fun copyToDel(collectionId: String, OLD: Tuple) {
 //    val collectionConfig = getCollectionConfig(collectionId)
 //    val autoPurge: Boolean? = collectionConfig.autoPurge
 //    if (autoPurge != true) {

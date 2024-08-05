@@ -8,7 +8,7 @@ import naksha.base.PlatformDataView
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.request.ResultRowList
+import naksha.model.request.ResultTupleList
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -37,7 +37,7 @@ import kotlin.jvm.JvmStatic
  * ```
  */
 @JsExport
-data class RowNumberByteArray(
+data class TupleNumberByteArray(
     /**
      * The storage from which the row-number was read.
      */
@@ -56,17 +56,17 @@ data class RowNumberByteArray(
         }
     }
 
-    companion object RowIdArray_C {
+    companion object TupleNumberByteArray_C {
         /**
-         * Return a [RowNumberByteArray] from a compressed byte-array.
+         * Return a [TupleNumberByteArray] from a compressed byte-array.
          * @param storage the storage from which the row-number is.
          * @param compressed the compressed row-number array.
-         * @return the [RowNumberByteArray].
+         * @return the [TupleNumberByteArray].
          */
         @JvmStatic
         @JsStatic
-        fun fromGzip(storage: IStorage, compressed: ByteArray): RowNumberByteArray
-            = RowNumberByteArray(storage, Platform.gzipInflate(compressed))
+        fun fromGzip(storage: IStorage, compressed: ByteArray): TupleNumberByteArray
+            = TupleNumberByteArray(storage, Platform.gzipInflate(compressed))
     }
 
     /**
@@ -83,10 +83,10 @@ data class RowNumberByteArray(
      * @param index the index.
      * @return the row-number or _null_, if out of bounds.
      */
-    operator fun get(index: Int): RowNumber? {
+    operator fun get(index: Int): TupleNumber? {
         val offset = offset(index)
         if (offset < 0 || offset > last) return null
-        return RowNumber(
+        return TupleNumber(
             dataview_get_int64(view, offset),
             Version(dataview_get_int64(view, offset + 8)),
             dataview_get_int32(view, offset + 16)
@@ -136,14 +136,14 @@ data class RowNumberByteArray(
      * Return this as native array.
      * @return an array of row-ids.
      */
-    fun toArray(): Array<RowNumber> = Array(binary.size) { get(it)!! }
+    fun toArray(): Array<TupleNumber> = Array(binary.size) { get(it)!! }
 
-    fun toResultRowList(storage: IStorage): ResultRowList = ResultRowList.fromRowNumberArray(storage, this)
+    fun toResultRowList(storage: IStorage): ResultTupleList = ResultTupleList.fromRowNumberArray(storage, this)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || this::class != other::class) return false
-        other as RowNumberByteArray
+        other as TupleNumberByteArray
         return binary.contentEquals(other.binary)
     }
     override fun hashCode(): Int = binary.contentHashCode()

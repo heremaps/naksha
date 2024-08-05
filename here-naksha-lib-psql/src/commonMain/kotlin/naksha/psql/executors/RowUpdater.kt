@@ -64,7 +64,7 @@ open class RowUpdater(
      * @param feature the feature to insert.
      * @return the metadata for this operation.
      */
-    fun xyzUpdate(collection: PgCollection, feature: NakshaFeature, OLD: Row): Metadata {
+    fun xyzUpdate(collection: PgCollection, feature: NakshaFeature, OLD: Tuple): Metadata {
         if (OLD.meta.nextVersion != null) {
             throw NakshaException(ILLEGAL_STATE, "The OLD row must not have a 'nextVersion'",
                 id = feature.id

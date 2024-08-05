@@ -11,11 +11,11 @@ import kotlin.jvm.JvmField
  *
  * The `uid` allows to order rows within a version, and to process the changes being part of a transaction in a deterministic order. The row identifier is stringified into: `{year}:{month}:{day}:{seq}:{uid}:{flags}`.
  *
- * Within a given storage, there are no two rows with the same [RowNumber], not even in different maps or collections.
+ * Within a given storage, there are no two rows with the same [TupleNumber], not even in different maps or collections.
  *
  */
 @JsExport
-data class RowNumber(
+data class TupleNumber(
     /**
      * The store-number (combination of map-, collection- and partition-number) of where the row is stored.
      */
@@ -30,7 +30,7 @@ data class RowNumber(
      * The unique identifier within the version (transaction).
      */
     @JvmField val uid: Int
-) : Comparable<RowNumber> {
+) : Comparable<TupleNumber> {
 
     /**
      * Returns the map-number of the map from where the row is.
@@ -46,7 +46,7 @@ data class RowNumber(
 
     override fun hashCode(): Int = version.hashCode() xor uid
 
-    override fun compareTo(other: RowNumber): Int {
+    override fun compareTo(other: TupleNumber): Int {
         val i64_diff = storeNumber.compact() - other.storeNumber.compact()
         if (i64_diff < 0) return -1
         if (i64_diff > 1) return 1
@@ -59,7 +59,7 @@ data class RowNumber(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        return other is RowNumber
+        return other is TupleNumber
             && storeNumber.compact() == other.storeNumber.compact()
             && version.txn == other.version.txn
             && uid == other.uid

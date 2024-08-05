@@ -26,7 +26,7 @@ open class Request : AnyObject() {
     /**
      * Options of what data is needed by the client.
      *
-     * The storage may ignore this information, however, the client is not guaranteed to receive those parts of a [row][naksha.model.Row] that it unselected in the [returnColumns].
+     * The storage may ignore this information, however, the client is not guaranteed to receive those parts of a [row][naksha.model.Tuple] that it unselected in the [returnColumns].
      */
     var returnColumns by RETURN_OPTIONS
 

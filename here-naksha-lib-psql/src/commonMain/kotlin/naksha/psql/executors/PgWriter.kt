@@ -104,7 +104,7 @@ open class PgWriter(
     }
 
     private lateinit var version: Version
-    private val results = mutableListOf<Row>()
+    private val results = mutableListOf<Tuple>()
 
     private fun collectionOf(write: Write): PgCollection {
         val map = write.mapId
@@ -116,25 +116,25 @@ open class PgWriter(
         return collection
     }
 
-    internal fun insert(write: Write) : Row {
+    internal fun insert(write: Write) : Tuple {
         val collection = collectionOf(write)
         TODO("Implement me")
     }
 
-    internal fun update(write: Write) : Row {
+    internal fun update(write: Write) : Tuple {
         TODO("Implement me")
     }
 
-    internal fun upsert(write: Write) : Row {
+    internal fun upsert(write: Write) : Tuple {
 
         TODO("Implement me")
     }
 
-    internal fun delete(write: Write) : Row {
+    internal fun delete(write: Write) : Tuple {
         TODO("Implement me")
     }
 
-    internal fun purge(write: Write) : Row {
+    internal fun purge(write: Write) : Tuple {
         TODO("Implement me")
     }
 }
