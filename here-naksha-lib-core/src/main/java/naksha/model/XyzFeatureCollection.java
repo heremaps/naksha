@@ -34,6 +34,7 @@ import com.here.naksha.lib.core.LazyParsableFeatureList.RawDeserializer;
 import com.here.naksha.lib.core.LazyParsableFeatureList.RawSerializer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import naksha.geo.SpBoundingBox;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.Response;
@@ -115,7 +116,8 @@ public class XyzFeatureCollection extends Response {
 
     for (final NakshaFeature feature : getFeatures()) {
       if (recalculateChildrenBoxes || feature.getBbox() == null) {
-        feature.updateBoundingBox();
+        feature.setBbox(new SpBoundingBox(
+            Objects.requireNonNull(feature.getGeometry()).getCoordinates()));
       }
 
       SpBoundingBox bbox = feature.getBbox();

@@ -51,7 +51,7 @@ class PluginCacheTest {
 
     @Override
     public @NotNull Response processEvent(@NotNull IEvent event) {
-      return new SuccessResponse(new ArrayList<>(),null);
+      return new SuccessResponse();
     }
   }
 

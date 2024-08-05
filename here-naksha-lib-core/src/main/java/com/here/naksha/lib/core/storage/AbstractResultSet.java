@@ -33,6 +33,7 @@ import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.io.ParseException;
 import org.locationtech.jts.io.WKBReader;
 import org.locationtech.jts.io.WKBWriter;
@@ -85,7 +86,7 @@ public abstract class AbstractResultSet<FEATURE extends NakshaFeature> implement
         throw new IllegalArgumentException("Parsing the jsondata returned null");
       }
       if (geo != null) {
-        final SpGeometry geometry = json.twkbReader.read(WKBReader.hexToBytes(geo));
+        final Geometry geometry = json.twkbReader.read(WKBReader.hexToBytes(geo));
         f.setGeometry(ProxyGeoUtil.toProxyGeometry(geometry));
       }
       return f;
@@ -132,7 +133,7 @@ public abstract class AbstractResultSet<FEATURE extends NakshaFeature> implement
     }
     feature.setGeometry(null);
     try {
-      final SpGeometry jtsGeometry = ProxyGeoUtil.toJtsGeometry(xyzGeometry);
+      final Geometry jtsGeometry = ProxyGeoUtil.toJtsGeometry(xyzGeometry);
       ProxyGeoUtil.toJtsGeometry(xyzGeometry);
       assure3d(jtsGeometry.getCoordinates());
       final byte[] geometryBytes = json.twkbWriter.write(jtsGeometry);
