@@ -18,8 +18,8 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import naksha.model.objects.NakshaFeature;
 import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.ApiStatus;
 
 /**

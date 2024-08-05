@@ -134,7 +134,7 @@ public interface JsonSerializable {
       return null;
     }
 
-    final String errorMessage = errorResponse.error.msg;
+    final String errorMessage = errorResponse.getError().getMsg();
     if (StringUtils.isEmpty(errorMessage)) {
       return errorResponse;
     }

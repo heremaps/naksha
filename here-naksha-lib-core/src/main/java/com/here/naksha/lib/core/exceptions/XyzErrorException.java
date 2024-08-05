@@ -33,7 +33,7 @@ public class XyzErrorException extends RuntimeException {
   }
 
   public XyzErrorException(@NotNull NakshaError nakshaError) {
-    this(nakshaError, nakshaError.msg, null);
+    this(nakshaError, nakshaError.getMsg(), null);
   }
 
   public XyzErrorException(@NotNull NakshaError nakshaError, @NotNull Throwable reason) {

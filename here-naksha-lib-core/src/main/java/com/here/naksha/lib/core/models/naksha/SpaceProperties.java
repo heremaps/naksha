@@ -21,8 +21,8 @@ package com.here.naksha.lib.core.models.naksha;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import naksha.geo.XyzProperties;
-import naksha.model.objects.NakshaCollection;
 import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaCollection;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.Nullable;
 

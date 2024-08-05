@@ -20,8 +20,8 @@ package com.here.naksha.lib.core.models.storage;
 
 import java.util.List;
 import naksha.model.NakshaContext;
-import naksha.model.objects.NakshaFeature;
 import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;

@@ -34,8 +34,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /** A list of features that should be modified. */
-public class FeatureModificationList<
-        FEATURE extends NakshaFeature, ENTRY extends FeatureModificationEntry<FEATURE>>
+public class FeatureModificationList<FEATURE extends NakshaFeature, ENTRY extends FeatureModificationEntry<FEATURE>>
     implements Iterable<ENTRY> {
 
   /**

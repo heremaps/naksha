@@ -34,7 +34,7 @@ public class Catalog extends NakshaFeature {
    *
    * @param id The ID; if {@code null}, then a random one is generated.
    */
-  public Catalog(@JsonProperty(ID) @NotNull String id) {
+  public Catalog(@JsonProperty("id") @NotNull String id) {
     super(id);
   }
 }

@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core;
 
-import static naksha.model.NakshaErrorCode.EXCEPTION;
+import static naksha.model.NakshaError.EXCEPTION;
 
 import com.here.naksha.lib.core.models.payload.Payload;
 import com.here.naksha.lib.core.util.NanoTime;
@@ -33,8 +33,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import naksha.base.Platform;
 import naksha.base.ToJsonOptions;
 import naksha.model.NakshaError;
-import naksha.model.request.Request;
 import naksha.model.request.ErrorResponse;
+import naksha.model.request.Request;
 import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -85,7 +85,7 @@ public class IoEventPipeline extends EventPipeline {
       throw new IllegalStateException("process must not be called multiple times");
     }
     Response response;
-    final Request<?> request;
+    final Request request;
     try {
       String requestString;
       final long START = NanoTime.now();
@@ -98,8 +98,8 @@ public class IoEventPipeline extends EventPipeline {
         throw new NullPointerException();
       }
       final long parsedInMillis = NanoTime.timeSince(START, TimeUnit.MILLISECONDS);
-      if (rawRequest instanceof Request<?>) {
-        request = (Request<?>) rawRequest;
+      if (rawRequest instanceof Request) {
+        request = (Request) rawRequest;
         log.atInfo()
             .setMessage("Event parsed in {}ms")
             .addArgument(parsedInMillis)

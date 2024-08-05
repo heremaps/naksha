@@ -19,25 +19,17 @@
 package com.here.naksha.lib.core.util.storage;
 
 import com.here.naksha.lib.core.models.storage.*;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import naksha.geo.MultiPointCoord;
 import naksha.geo.PointCoord;
 import naksha.geo.ProxyGeoUtil;
+import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.NakshaVersion;
 import naksha.model.request.*;
-import naksha.model.request.op.DeleteFeature;
-import naksha.model.request.op.InsertCollection;
-import naksha.model.request.op.InsertFeature;
-import naksha.model.request.op.UpdateFeature;
-import naksha.model.request.op.UpsertFeature;
 import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.geom.Geometry;
 
 @AvailableSince(NakshaVersion.v2_0_7)
@@ -51,10 +43,11 @@ public class RequestHelper {
    * @return ReadFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public static @NotNull ReadFeaturesProxyWrapper readFeaturesByIdRequest(
+  public static @NotNull ReadFeatures readFeaturesByIdRequest(
       final @NotNull String collectionName, final @NotNull String featureId) {
-    return (ReadFeaturesProxyWrapper)
-        new ReadFeaturesProxyWrapper().addCollectionId(collectionName).withOp(eq(id(), featureId));
+    final ReadFeatures readFeatures = new ReadFeatures(collectionName);
+    readFeatures.getFeatureIds().add(featureId);
+    return readFeatures;
   }
 
   /**
@@ -65,11 +58,11 @@ public class RequestHelper {
    * @return ReadFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public static @NotNull ReadFeaturesProxyWrapper readFeaturesByIdsRequest(
+  public static @NotNull ReadFeatures readFeaturesByIdsRequest(
       final @NotNull String collectionName, final @NotNull List<@NotNull String> featureIds) {
-    final POp[] ops = featureIds.stream().map(id -> eq(id(), id)).toArray(POp[]::new);
-    return (ReadFeaturesProxyWrapper)
-        new ReadFeaturesProxyWrapper().addCollectionId(collectionName).withOp(new LOp(OR, ops));
+    final ReadFeatures readFeatures = new ReadFeatures(collectionName);
+    readFeatures.getFeatureIds().addAll(featureIds);
+    return readFeatures;
   }
 
   /**
@@ -117,9 +110,8 @@ public class RequestHelper {
    */
   public static <FEATURE extends NakshaFeature> @NotNull WriteRequest updateFeatureRequest(
       final @NotNull String collectionName, final @NotNull FEATURE feature) {
-    final WriteRequest request = new WriteRequest();
-    request.ops.add(new UpdateFeature(collectionName, feature, false));
-    return request;
+    final Write write = new Write().updateFeature(null, collectionName, feature, false);
+    return new WriteRequest().add(write);
   }
 
   /**
@@ -133,8 +125,10 @@ public class RequestHelper {
   public static @NotNull <FEATURE extends NakshaFeature> WriteRequest updateFeaturesRequest(
       final @NotNull String collectionName, final @NotNull List<FEATURE> features) {
     final WriteRequest request = new WriteRequest();
+    final Write write = new Write();
     for (FEATURE feature : features) {
-      request.add(new UpdateFeature(collectionName, feature, false));
+      write.updateFeature(null, collectionName, feature, true);
+      request.add(write);
     }
     return request;
   }
@@ -150,8 +144,10 @@ public class RequestHelper {
   public static @NotNull <FEATURE extends NakshaFeature> WriteRequest upsertFeaturesRequest(
       final @NotNull String collectionName, final @NotNull List<FEATURE> features) {
     final WriteRequest request = new WriteRequest();
+    final Write write = new Write();
     for (FEATURE feature : features) {
-      request.add(new UpsertFeature(collectionName, feature, false));
+      write.upsertFeature(null, collectionName, feature);
+      request.add(write);
     }
     return request;
   }
@@ -166,8 +162,10 @@ public class RequestHelper {
   public static @NotNull WriteRequest deleteFeaturesByIdsRequest(
       final @NotNull String collectionName, final @NotNull List<String> ids) {
     final WriteRequest request = new WriteRequest();
+    final Write write = new Write();
     for (String id : ids) {
-      request.add(new DeleteFeature(collectionName, id, null));
+      write.deleteFeatureById(null, collectionName, id, null);
+      request.add(write);
     }
     return request;
   }
@@ -181,8 +179,8 @@ public class RequestHelper {
    */
   public static @NotNull WriteRequest deleteFeatureByIdRequest(
       final @NotNull String collectionName, final @NotNull String id) {
-    final WriteRequest request = new WriteRequest();
-    return request.add(new DeleteFeature(collectionName, id, null));
+    final Write write = new Write().deleteFeatureById(null, collectionName, id, null);
+    return new WriteRequest().add(write);
   }
 
   /**
@@ -258,9 +256,10 @@ public class RequestHelper {
       final @NotNull IfExists ifExistsAction,
       final @NotNull IfConflict ifConflictAction) {
     final WriteRequest request = new WriteRequest();
+    final Write write = new Write();
     for (final NakshaFeature feature : featureList) {
       assert feature != null;
-      request.add(new InsertFeature(collectionName, feature));
+      request.add(write.createFeature(null, collectionName, feature));
     }
     return request;
   }
@@ -272,8 +271,9 @@ public class RequestHelper {
   public static @NotNull WriteRequest createWriteCollectionsRequest(
       final @NotNull List<@NotNull NakshaCollection> collections) {
     final WriteRequest writeXyzCollections = new WriteRequest();
+    final Write write = new Write();
     for (final NakshaCollection collection : collections) {
-      writeXyzCollections.add(new InsertCollection(collection));
+      writeXyzCollections.add(write.createCollection(null, collection));
     }
     return writeXyzCollections;
   }
@@ -296,45 +296,45 @@ public class RequestHelper {
     return ProxyGeoUtil.toJtsMultiPoint(multiPoint);
   }
 
-  /**
-   * Helper function that returns instance of PRef or NonIndexedPRef depending on
-   * whether the propPath provided matches with standard (indexed) property search or not.
-   *
-   * @param propPath the JSON path to be used for property search
-   * @return PRef instance of PRef or NonIndexedPRef
-   */
-  public static @NotNull PRef pRefFromPropPath(final @NotNull String[] propPath) {
-    // check if we can use standard PRef (on indexed properties)
-    for (final String[] path : pRefPathMap().keySet()) {
-      if (Arrays.equals(path, propPath)) {
-        return pRefPathMap().get(path);
-      }
-    }
-    // fallback to non-standard PRef (non-indexed properties)
-    return PRef.nonIndexedPref(propPath);
-  }
-
-  public static void combineOperationsForRequestAs(
-      final @NotNull ReadFeatures request, final OpType opType, @Nullable Op... operations) {
-    if (operations == null) return;
-    List<Op> opList = null;
-    for (final Op crtOp : operations) {
-      if (crtOp == null) continue;
-      if (request.op == null) {
-        request.withOp(crtOp); // set operation directly if this was the only one operation
-        continue;
-      } else if (opList == null) {
-        opList = new ArrayList<>(); // we have more than one operation
-        opList.add(request.op); // save previously added operation
-      }
-      opList.add(crtOp); // keep appending every operation that is to be added to the request
-    }
-    if (opList == null) return;
-    // Add combined operations to request
-    if (opType == LOpType.AND) {
-      request.withOp(LOp.and(opList.toArray(Op[]::new)));
-    } else {
-      request.withOp(LOp.or(opList.toArray(Op[]::new)));
-    }
-  }
+  //  /**
+  //   * Helper function that returns instance of PRef or NonIndexedPRef depending on
+  //   * whether the propPath provided matches with standard (indexed) property search or not.
+  //   *
+  //   * @param propPath the JSON path to be used for property search
+  //   * @return PRef instance of PRef or NonIndexedPRef
+  //   */
+  //  public static @NotNull PRef pRefFromPropPath(final @NotNull String[] propPath) {
+  //    // check if we can use standard PRef (on indexed properties)
+  //    for (final String[] path : pRefPathMap().keySet()) {
+  //      if (Arrays.equals(path, propPath)) {
+  //        return pRefPathMap().get(path);
+  //      }
+  //    }
+  //    // fallback to non-standard PRef (non-indexed properties)
+  //    return PRef.nonIndexedPref(propPath);
+  //  }
+  //
+  //  public static void combineOperationsForRequestAs(
+  //      final @NotNull ReadFeatures request, final OpType opType, @Nullable Op... operations) {
+  //    if (operations == null) return;
+  //    List<Op> opList = null;
+  //    for (final Op crtOp : operations) {
+  //      if (crtOp == null) continue;
+  //      if (request.op == null) {
+  //        request.withOp(crtOp); // set operation directly if this was the only one operation
+  //        continue;
+  //      } else if (opList == null) {
+  //        opList = new ArrayList<>(); // we have more than one operation
+  //        opList.add(request.op); // save previously added operation
+  //      }
+  //      opList.add(crtOp); // keep appending every operation that is to be added to the request
+  //    }
+  //    if (opList == null) return;
+  //    // Add combined operations to request
+  //    if (opType == LOpType.AND) {
+  //      request.withOp(LOp.and(opList.toArray(Op[]::new)));
+  //    } else {
+  //      request.withOp(LOp.or(opList.toArray(Op[]::new)));
+  //    }
+  //  }
 }

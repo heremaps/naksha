@@ -268,7 +268,7 @@ public class Event extends Payload {
   public void setSpace(@NotNull Space space) {
     this.spaceId = space.getId();
     this.collection = space.getCollectionId();
-    this.params = space.getProperties().cloneDeep();
+    this.params = space.getProperties().copy(true);
     this.space = space;
   }
 

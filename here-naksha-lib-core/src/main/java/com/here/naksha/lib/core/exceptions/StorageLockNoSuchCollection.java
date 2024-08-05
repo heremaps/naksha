@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import static naksha.model.NakshaErrorCode.COLLECTION_NOT_FOUND;
+import static naksha.model.NakshaError.NOT_FOUND;
 
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
@@ -38,7 +38,7 @@ public class StorageLockNoSuchCollection extends StorageLockException {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   public StorageLockNoSuchCollection(@NotNull String collectionId, @NotNull String featureId) {
-    super(COLLECTION_NOT_FOUND, "Collection not found for locking");
+    super(NOT_FOUND, "Collection not found for locking");
     this.collectionId = collectionId;
     this.featureId = featureId;
   }

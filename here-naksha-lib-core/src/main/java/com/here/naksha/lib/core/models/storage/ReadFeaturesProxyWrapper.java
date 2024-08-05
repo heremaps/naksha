@@ -64,22 +64,6 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
   }
 
   public ReadFeaturesProxyWrapper shallowClone() {
-    ReadFeaturesProxyWrapper clone = new ReadFeaturesProxyWrapper();
-    // ReadFeatures fields
-    clone.op = this.op;
-    clone.readRequestType = this.readRequestType;
-    clone.queryParameters = this.queryParameters;
-    clone.limitVersions = this.limitVersions;
-    clone.orderBy = this.orderBy;
-    clone.collectionIds = this.collectionIds;
-    clone.limit = this.limit;
-    clone.queryDeleted = this.queryDeleted;
-    clone.queryHistory = this.queryHistory;
-
-    // ReadFeaturesProxyWrapper fields
-    clone.withReadRequestType(this.getReadRequestType());
-    clone.withQueryParameters(this.getQueryParameters());
-
-    return clone;
+    return this.copy(false);
   }
 }

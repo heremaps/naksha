@@ -18,8 +18,9 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
+import static naksha.model.NakshaError.EXCEPTION;
+
 import naksha.model.NakshaError;
-import naksha.model.NakshaErrorCode;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
@@ -38,7 +39,7 @@ public class StorageException extends RuntimeException {
    */
   @AvailableSince(NakshaVersion.v2_0_8)
   public StorageException(@NotNull NakshaError nakshaError) {
-    super(nakshaError.message);
+    super(nakshaError.getMsg());
     this.nakshaError = nakshaError;
   }
 
@@ -47,7 +48,7 @@ public class StorageException extends RuntimeException {
    *
    * @param errorCode The error code.
    */
-  public StorageException(@NotNull NakshaErrorCode errorCode, @NotNull String message) {
+  public StorageException(@NotNull String errorCode, @NotNull String message) {
     super(message);
     this.nakshaError = new NakshaError(errorCode, message, null, null);
   }
@@ -60,17 +61,6 @@ public class StorageException extends RuntimeException {
   @AvailableSince(NakshaVersion.v2_0_8)
   public StorageException(@NotNull String reason) {
     super(reason);
-  }
-
-  /**
-   * Create a new storage exception with the given reason.
-   *
-   * @param reason  The error reason.
-   * @param message An arbitrary error message.
-   */
-  @AvailableSince(NakshaVersion.v2_0_8)
-  public StorageException(@NotNull String reason, @Nullable String message) {
-    super(message == null ? reason : message);
   }
 
   /**
@@ -106,7 +96,7 @@ public class StorageException extends RuntimeException {
   @AvailableSince(NakshaVersion.v2_0_8)
   public @NotNull NakshaError toNakshaError() {
     if (nakshaError == null) {
-      nakshaError = new NakshaError(NakshaErrorCode.EXCEPTION, "Newly created unknown error", null, null);
+      nakshaError = new NakshaError(EXCEPTION, "Newly created unknown error", null, null);
     }
     return nakshaError;
   }

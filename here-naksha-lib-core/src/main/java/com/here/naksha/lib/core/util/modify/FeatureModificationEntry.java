@@ -242,7 +242,7 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeature> {
     if (diff == null) {
       return null;
     }
-    final FEATURE result = head.copy();
+    final FEATURE result = head.copy(true);
     Patcher.patch(result, diff);
     return result;
   }
@@ -260,13 +260,13 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeature> {
     }
 
     final Difference baseToHeadDiff = Patcher.getDifference(base, head);
-    if (baseToHeadDiff == null) {
-      // This is totally unexpected, base and head are logically the same, but have different uuids.
-      // Eventually this means, that we can just treat the input as a direct modification of the
-      // head.
-      input.getProperties().getXyz().setUuid(head.getProperties().getXyz().getUuid());
-      return input;
-    }
+//    if (baseToHeadDiff == null) {
+//      // This is totally unexpected, base and head are logically the same, but have different uuids.
+//      // Eventually this means, that we can just treat the input as a direct modification of the
+//      // head.
+//      input.getProperties().getXyz().setUuid(head.getProperties().getXyz().getUuid());
+//      return input;
+//    }
 
     // Perform a three-way-merge.
     final Difference baseToInputDiff = Patcher.getDifference(base, input);
@@ -276,7 +276,7 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeature> {
       return null;
     }
     final Difference mergedDiff = Patcher.mergeDifferences(baseToHeadDiff, baseToInputDiff, cr);
-    final FEATURE result = base.copy();
+    final FEATURE result = base.copy(true);
     Patcher.patch(result, mergedDiff);
     return result;
   }
