@@ -45,27 +45,27 @@ open class NakshaFeature() : AnyObject() {
     /**
      * The unique identifier of the feature.
      */
-    open var id by ID
+    var id by ID
 
     /**
      * The type of the feature.
      */
-    open var type by TYPE
+    var type by TYPE
 
     /**
      * The bounding box; if the feature has any.
      */
-    open var bbox by BBOX_NULL
+    var bbox by BBOX_NULL
 
     /**
      * The geometry of the feature, if it has any.
      */
-    open var geometry by GEOMETRY_NULL
+    var geometry by GEOMETRY_NULL
 
     /**
      * Reference point of the feature. Used for grid calculation.
      */
-    open var referencePoint by REFERENCE_POINT_NULL
+    var referencePoint by REFERENCE_POINT_NULL
 
     /**
      * The properties of the feature.
@@ -75,5 +75,5 @@ open class NakshaFeature() : AnyObject() {
     /**
      * The mom-type; if any.
      */
-    open var momType by STRING_NULL
+    var momType by STRING_NULL
 }

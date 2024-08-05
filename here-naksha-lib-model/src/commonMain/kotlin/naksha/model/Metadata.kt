@@ -117,6 +117,8 @@ data class Metadata(
          * @param feature the feature for which to calculate the geo-grid.
          * @return the geo-grid value.
          */
+        @JvmStatic
+        @JsStatic
         fun geoGrid(feature: NakshaFeature): Int {
             val c = feature.referencePoint ?: feature.geometry?.calculateCentroid()
             return if (c != null) HereTile(c.latitude, c.longitude).intKey else Fnv1a32.string(0, feature.id)

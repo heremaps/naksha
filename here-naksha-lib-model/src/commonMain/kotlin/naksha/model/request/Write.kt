@@ -25,7 +25,6 @@ open class Write : AnyObject() {
         private val STRING = NotNullProperty<Write, String>(String::class) { _, _ -> "" }
         private val STRING_NULL = NullableProperty<Write, String>(String::class)
         private val FEATURE_NULL = NullableProperty<Write, NakshaFeature>(NakshaFeature::class)
-        private val Tuple_NULL = NullableProperty<Write, Tuple>(Tuple::class)
         private val INT64_NULL = NullableProperty<Write, Int64>(Int64::class)
     }
 
@@ -73,19 +72,12 @@ open class Write : AnyObject() {
     var feature by FEATURE_NULL
 
     /**
-     * The new row to persists; if any.
-     */
-    var row by Tuple_NULL
-
-    /**
      * Returns `feature.id`, `row.meta.id`, or `id` in that order.
      * @return the of the feature or row.
      */
     fun featureId(): String? {
         val f = feature
         if (f != null) return f.id
-        val r = row
-        if (r != null) return r.meta.id
         return id
     }
 
@@ -102,7 +94,6 @@ open class Write : AnyObject() {
         this.id = feature.id
         this.version = null
         this.feature = feature
-        this.row = null
         return this
     }
 
@@ -120,7 +111,6 @@ open class Write : AnyObject() {
         this.id = feature.id
         this.version = if (atomic) feature.properties.xyz.version else null
         this.feature = feature
-        this.row = null
         return this
     }
 
@@ -137,7 +127,6 @@ open class Write : AnyObject() {
         this.id = feature.id
         this.version = null
         this.feature = feature
-        this.row = null
         return this
     }
 
@@ -155,7 +144,6 @@ open class Write : AnyObject() {
         this.id = feature.id
         this.version = if (atomic) feature.properties.xyz.version else null
         this.feature = null
-        this.row = null
         return this
     }
 
@@ -173,7 +161,6 @@ open class Write : AnyObject() {
         this.id = id
         this.version = version
         this.feature = null
-        this.row = null
         return this
     }
 
@@ -189,7 +176,6 @@ open class Write : AnyObject() {
         this.id = collection.id
         this.version = null
         this.feature = collection
-        this.row = null
         return this
     }
 
@@ -206,7 +192,6 @@ open class Write : AnyObject() {
         this.id = collection.id
         this.version = if (atomic) collection.properties.xyz.version else null
         this.feature = collection
-        this.row = null
         return this
     }
 
@@ -222,7 +207,6 @@ open class Write : AnyObject() {
         this.id = collection.id
         this.version = null
         this.feature = collection
-        this.row = null
         return this
     }
 
@@ -238,7 +222,6 @@ open class Write : AnyObject() {
         this.id = collection.id
         this.version = if (atomic) collection.properties.xyz.version else null
         this.feature = null
-        this.row = null
         return this
     }
 
@@ -255,69 +238,6 @@ open class Write : AnyObject() {
         this.id = collectionId
         this.version = version
         this.feature = null
-        this.row = null
-        return this
-    }
-
-    /**
-     * Create a new row.
-     * @param tuple the new row state.
-     */
-    fun createRow(tuple: Tuple): Write {
-        this.mapId = tuple.mapId ?: throw NakshaException(MAP_NOT_FOUND, "Map of row '$tuple' not found")
-        this.collectionId = tuple.collectionId ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection of row '$tuple' not found")
-        this.op = WriteOp.CREATE
-        this.id = tuple.meta.id
-        this.version = null
-        this.feature = null
-        this.row = tuple
-        return this
-    }
-
-    /**
-     * Update a row.
-     * @param tuple the new row state.
-     * @param atomic if the operation should be performed atomic.
-     */
-    fun updateRow(tuple: Tuple, atomic: Boolean = false): Write {
-        this.mapId = tuple.mapId ?: throw NakshaException(MAP_NOT_FOUND, "Map of row '$tuple' not found")
-        this.collectionId = tuple.collectionId ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection of row '$tuple' not found")
-        this.op = WriteOp.UPDATE
-        this.id = tuple.meta.id
-        this.version = if (atomic) tuple.meta.version else null
-        this.feature = feature
-        this.row = null
-        return this
-    }
-
-    /**
-     * Update or insert a row.
-     * @param tuple the new row state.
-     */
-    fun upsertRow(tuple: Tuple): Write {
-        this.mapId = tuple.mapId ?: throw NakshaException(MAP_NOT_FOUND, "Map of row '$tuple' not found")
-        this.collectionId = tuple.collectionId ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection of row '$tuple' not found")
-        this.op = WriteOp.UPSERT
-        this.id = tuple.meta.id
-        this.version = null
-        this.feature = feature
-        this.row = null
-        return this
-    }
-
-    /**
-     * Delete a row.
-     * @param tuple the row state to delete.
-     * @param atomic if the operation should be performed atomic.
-     */
-    fun deleteRow(tuple: Tuple, atomic: Boolean = false): Write {
-        this.mapId = tuple.mapId ?: throw NakshaException(MAP_NOT_FOUND, "Map of row '$tuple' not found")
-        this.collectionId = tuple.collectionId ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection of row '$tuple' not found")
-        this.op = WriteOp.DELETE
-        this.id = tuple.meta.id
-        this.version = if (atomic) tuple.meta.version else null
-        this.feature = null
-        this.row = null
         return this
     }
 
