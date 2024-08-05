@@ -34,8 +34,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Scanner;
 import naksha.model.NakshaError;
-import naksha.model.NakshaErrorCode;
-import naksha.model.response.ErrorResponse;
+import naksha.model.request.ErrorResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -135,13 +134,13 @@ public interface JsonSerializable {
       return null;
     }
 
-    final String errorMessage = errorResponse.error.message;
+    final String errorMessage = errorResponse.error.msg;
     if (StringUtils.isEmpty(errorMessage)) {
       return errorResponse;
     }
 
     boolean timeout = errorMessage.contains("timed out");
-    return new ErrorResponse(new NakshaError(NakshaErrorCode.STORAGE_NOT_INITIALIZED, errorMessage, null, null));
+    return new ErrorResponse(new NakshaError(NakshaError.UNINITIALIZED, errorMessage, null, null));
   }
 
   /**

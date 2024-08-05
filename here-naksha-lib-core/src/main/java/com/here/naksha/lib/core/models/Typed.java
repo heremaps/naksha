@@ -25,7 +25,7 @@ import com.here.naksha.lib.core.models.payload.Payload;
 import com.here.naksha.lib.core.models.payload.events.clustering.Clustering;
 import com.here.naksha.lib.core.models.payload.events.tweaks.Tweaks;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
-import naksha.model.NakshaFeatureProxy;
+import naksha.model.objects.NakshaFeature;
 
 /**
  * A base interface to be implemented by all types that are serializable and have a property "type" that holds the type of the object.
@@ -35,6 +35,6 @@ import naksha.model.NakshaFeatureProxy;
   @JsonSubTypes.Type(value = Payload.class),
   @JsonSubTypes.Type(value = Clustering.class),
   @JsonSubTypes.Type(value = Tweaks.class),
-  @JsonSubTypes.Type(value = NakshaFeatureProxy.class),
+  @JsonSubTypes.Type(value = NakshaFeature.class),
 })
 public interface Typed extends JsonSerializable {}

@@ -18,12 +18,12 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import naksha.model.NakshaFeatureProxy;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
- * Helper to simplify creation of ContextWriteFeatures request, using standard {@link NakshaFeatureProxy}
+ * Helper to simplify creation of ContextWriteFeatures request, using standard {@link NakshaFeature}
  * type for features, context and violations.
  */
 @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)

@@ -33,6 +33,19 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
     }
 
     /**
+     * Helper to return the value stored for the key, if the key does not exist or the value is not of the expected type, the alternative is returned.
+     * @param key the key to query.
+     * @param alternative the alternative to return, when the value is not of the expected type.
+     * @return the value.
+     */
+    fun <T : Any> getOr(key: K, alternative: T): T {
+        val data = platformObject()
+        val raw = map_get(data, key)
+        val value = box(raw, Platform.klassOf(alternative))
+        return if (value == null) alternative else value
+    }
+
+    /**
      * Helper to return the value of the key, if the key does not exist or the value is not of the expected type, the alternative is set
      * and returned.
      * @param key the key to query.

@@ -2,7 +2,8 @@
 
 package naksha.psql
 
-import naksha.model.NakshaErrorCode.StorageErrorCompanion.PARTITION_NOT_FOUND
+import naksha.model.NakshaError.NakshaErrorCompanion.PARTITION_NOT_FOUND
+import naksha.model.NakshaException
 import naksha.psql.PgUtil.PgUtilCompanion.partitionNumber
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -12,8 +13,12 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class PgDeleted(val head: PgHead) : PgTable(
-    head.collection, "${head.collection.id}\$del", head.storageClass, true,
-    partitionByColumn = head.partitionByColumn, partitionCount = head.partitionCount
+    head.collection,
+    "${head.collection.id}${PG_DEL}",
+    head.storageClass,
+    true,
+    partitionByColumn = head.partitionByColumn,
+    partitionCount = head.partitionCount
 ) {
     @JvmField
     val partitions: Array<PgDeletedPartition> = Array(head.partitions.size) { PgDeletedPartition(this, it) }
@@ -27,7 +32,7 @@ class PgDeleted(val head: PgHead) : PgTable(
         val partitions = this.partitions
         if (partitions.size == 0) return null
         val i = partitionNumber(featureId) % partitions.size
-        check(i >= partitions.size) { throwStorageException(PARTITION_NOT_FOUND, "Partition $i not found in table $name", id=name) }
+        check(i >= partitions.size) { throw NakshaException(PARTITION_NOT_FOUND, "Partition $i not found in table $name", id=name) }
         return partitions[i]
     }
 
@@ -36,12 +41,31 @@ class PgDeleted(val head: PgHead) : PgTable(
         for (partition in partitions) partition.create(conn)
     }
 
-    override fun addIndex(conn: PgConnection, index: PgIndex) {
+    override fun createIndex(conn: PgConnection, index: PgIndex) {
         if (this.partitionByColumn != null) {
-            for (partition in partitions) partition.addIndex(conn, index)
+            for (partition in partitions) partition.createIndex(conn, index)
         } else {
-            super.addIndex(conn, index)
+            super.createIndex(conn, index)
         }
+        if (index !in indices) indices += index
+    }
+
+    override fun addIndex(index: PgIndex) {
+        if (this.partitionByColumn != null) {
+            for (partition in partitions) partition.addIndex(index)
+        } else {
+            super.addIndex(index)
+        }
+        if (index !in indices) indices += index
+    }
+
+    override fun removeIndex(index: PgIndex) {
+        if (this.partitionByColumn != null) {
+            for (partition in partitions) partition.removeIndex(index)
+        } else {
+            super.removeIndex(index)
+        }
+        if (index in indices) indices -= index
     }
 
     override fun dropIndex(conn: PgConnection, index: PgIndex) {
@@ -50,5 +74,6 @@ class PgDeleted(val head: PgHead) : PgTable(
         } else {
             super.dropIndex(conn, index)
         }
+        if (index in indices) indices -= index
     }
 }

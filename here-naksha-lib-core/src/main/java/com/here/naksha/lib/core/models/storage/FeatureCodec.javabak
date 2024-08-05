@@ -36,7 +36,7 @@ import java.util.Objects;
 import javax.annotation.concurrent.NotThreadSafe;
 import naksha.jbon.JbDictDecoder;
 import naksha.jbon.JbDictManager;
-import naksha.jbon.JbFeatureDecoder;
+import naksha.jbon.JbRecordDecoder;
 import naksha.jbon.JbMapDecoder;
 import naksha.jbon.JvmEnv;
 import naksha.jbon.XyzEncoder;
@@ -589,10 +589,10 @@ public abstract class FeatureCodec<FEATURE, SELF extends FeatureCodec<FEATURE, S
         ? GZip.INSTANCE.gunzip(featureBytes)
         : featureBytes;
 
-    JbFeatureDecoder jbFeatureDecoder = new JbFeatureDecoder(new JbDictManager())
+    JbRecordDecoder jbRecordDecoder = new JbRecordDecoder(new JbDictManager())
         .mapBytes(uncompressedFeatureBytes, 0, uncompressedFeatureBytes.length);
     Map<String, Object> featureAsMap = (Map<String, Object>)
-        new JbMapDecoder().mapReader(jbFeatureDecoder.getReader()).toIMap();
+        new JbMapDecoder().mapReader(jbRecordDecoder.getReader()).toIMap();
     return JvmEnv.get().convert(featureAsMap, featureClass);
   }
 

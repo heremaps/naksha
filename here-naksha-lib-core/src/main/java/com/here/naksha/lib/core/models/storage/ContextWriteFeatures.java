@@ -20,7 +20,7 @@ package com.here.naksha.lib.core.models.storage;
 
 import java.util.List;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaFeatureProxy;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.NakshaVersion;
 import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.ApiStatus;
@@ -44,7 +44,7 @@ public abstract class ContextWriteFeatures extends WriteRequest {
    * The list of violations passed as part of Write request
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  private @Nullable List<@NotNull NakshaFeatureProxy> violations;
+  private @Nullable List<@NotNull NakshaFeature> violations;
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public @Nullable List<NakshaContext> getContext() {
@@ -57,12 +57,12 @@ public abstract class ContextWriteFeatures extends WriteRequest {
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public @Nullable List<NakshaFeatureProxy> getViolations() {
+  public @Nullable List<NakshaFeature> getViolations() {
     return violations;
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public void setViolations(@Nullable List<NakshaFeatureProxy> violations) {
+  public void setViolations(@Nullable List<NakshaFeature> violations) {
     this.violations = violations;
   }
 }

@@ -48,6 +48,14 @@ AS $$ BEGIN
   RETURN ${schemaLiteral};
 END $$;
 
+CREATE OR REPLACE FUNCTION naksha_default_schema() RETURNS text
+LANGUAGE 'plpgsql'
+IMMUTABLE
+PARALLEL SAFE
+AS $$ BEGIN
+  RETURN ${defaultSchemaLiteral};
+END $$;
+
 CREATE OR REPLACE FUNCTION naksha_start_session(app_name text, stream_id text, app_id text, author text)
 RETURNS void
 LANGUAGE 'plv8'
@@ -257,7 +265,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_geometry(flags int4, geo_bytes bytea) RETURNS geometry
+CREATE OR REPLACE FUNCTION naksha_geometry(flags int, geo_bytes bytea) RETURNS geometry
 LANGUAGE 'plpgsql'
 IMMUTABLE
 PARALLEL SAFE
@@ -654,4 +662,41 @@ AS $$
 BEGIN
   RETURN ((flags>>6)::bit(6))::int4;
 END;
+$$;
+
+CREATE OR REPLACE FUNCTION buf2bytes (in buffers int, in decimals int default 2, out bytes text)
+LANGUAGE 'sql'
+IMMUTABLE
+PARALLEL SAFE
+SET search_path FROM CURRENT
+AS $$
+  with settings as (
+    select current_setting('block_size')::numeric as bs
+  ), data as (
+    select
+      buffers::numeric * bs / 1024 as kib,
+      floor(log(1024, buffers::numeric * bs / 1024)) + 1 as log,
+      bs
+    from settings
+  ), prep as (
+    select
+      case
+        when log <= 8 then round((kib / 2 ^ (10 * (log - 1)))::numeric, decimals)
+        else buffers * bs
+      end as value,
+      case log -- see https://en.wikipedia.org/wiki/Byte#Multiple-byte_units
+        when 1 then 'KiB'
+        when 2 then 'MiB'
+        when 3 then 'GiB'
+        when 4 then 'TiB'
+        when 5 then 'PiB'
+        when 6 then 'EiB'
+        when 7 then 'ZiB'
+        when 8 then 'YiB'
+        else 'B'
+      end as unit
+    from data
+  )
+  select format('%s %s', value, unit)
+  from prep;
 $$;

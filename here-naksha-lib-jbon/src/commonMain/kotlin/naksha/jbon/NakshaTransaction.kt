@@ -2,7 +2,7 @@
 
 package naksha.jbon
 
-import naksha.base.ObjectProxy
+import naksha.base.AnyObject
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -11,9 +11,9 @@ import kotlin.js.JsExport
  */
 @JsExport
 @Deprecated("Please use new class from lib-model", level = DeprecationLevel.WARNING)
-class NakshaTransaction(dictManager: IDictManager) : JbFeatureDecoder(dictManager) {
+class NakshaTransaction(dictManager: IDictManager) : JbRecordDecoder(dictManager) {
     var modifiedFeatureCount: Int = 0
-    var collectionCounters: ObjectProxy = ObjectProxy() // TODO: If we stick with this class, make the map a Map<String, Int>!
+    var collectionCounters: AnyObject = AnyObject() // TODO: If we stick with this class, make the map a Map<String, Int>!
     var seqNumber: Int? = null
 
     fun addModifiedCount(count: Int) {
@@ -31,7 +31,7 @@ class NakshaTransaction(dictManager: IDictManager) : JbFeatureDecoder(dictManage
 
     fun toBytes(): ByteArray {
         // FIXME maybe we should keep all in header?
-        val map = ObjectProxy()
+        val map = AnyObject()
         map["modifiedFeatureCount"] = modifiedFeatureCount
         map["collectionCounters"] = collectionCounters
         map["seqNumber"] = seqNumber

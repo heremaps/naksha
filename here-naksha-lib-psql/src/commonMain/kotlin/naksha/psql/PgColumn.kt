@@ -3,6 +3,7 @@
 package naksha.psql
 
 import naksha.base.JsEnum
+import naksha.model.request.query.RowColumn
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -34,7 +35,7 @@ class PgColumn : JsEnum() {
      * The name of the column.
      */
     val name: String
-        get() = super.str
+        get() = super.text
 
     private var _type: PgType? = null
 
@@ -87,9 +88,10 @@ class PgColumn : JsEnum() {
 
         @JvmField
         @JsStatic
-        val created_at = def(PgColumn::class, "created_at") { self ->
+        val store_number = def(PgColumn::class, "store_number") { self ->
             self._i = 0
             self._type = PgType.INT64
+            self._extra = "NOT NULL"
         }
 
         @JvmField
@@ -102,114 +104,118 @@ class PgColumn : JsEnum() {
 
         @JvmField
         @JsStatic
-        val author_ts = def(PgColumn::class, "author_ts") { self ->
+        val created_at = def(PgColumn::class, "created_at") { self ->
             self._i = 2
             self._type = PgType.INT64
         }
 
         @JvmField
         @JsStatic
-        val txn_next = def(PgColumn::class, "txn_next") { self ->
+        val author_ts = def(PgColumn::class, "author_ts") { self ->
             self._i = 3
             self._type = PgType.INT64
         }
 
         @JvmField
         @JsStatic
-        val txn = def(PgColumn::class, "txn") { self ->
+        val txn_next = def(PgColumn::class, "txn_next") { self ->
             self._i = 4
+            self._type = PgType.INT64
+        }
+
+        @JvmField
+        @JsStatic
+        val txn = def(PgColumn::class, "txn") { self ->
+            self._i = 5
             self._type = PgType.INT64
             self._extra = "NOT NULL"
         }
 
         @JvmField
         @JsStatic
+        val ptxn = def(PgColumn::class, "ptxn") { self ->
+            self._i = 6
+            self._type = PgType.INT64
+        }
+
+        @JvmField
+        @JsStatic
         val uid = def(PgColumn::class, "uid") { self ->
-            self._i = 5
+            self._i = 7
             self._type = PgType.INT
+            self._extra = "NOT NULL"
         }
 
         @JvmField
         @JsStatic
         val puid = def(PgColumn::class, "puid") { self ->
-            self._i = 6
-            self._type = PgType.INT
-        }
-
-        @JvmField
-        @JsStatic
-        val hash = def(PgColumn::class, "hash") { self ->
-            self._i = 7
-            self._type = PgType.INT
-        }
-
-        @JvmField
-        @JsStatic
-        val change_count = def(PgColumn::class, "change_count") { self ->
             self._i = 8
             self._type = PgType.INT
         }
 
         @JvmField
         @JsStatic
-        val geo_grid = def(PgColumn::class, "geo_grid") { self ->
+        val change_count = def(PgColumn::class, "change_count") { self ->
             self._i = 9
             self._type = PgType.INT
+            self._extra = "NOT NULL DEFAULT 1"
+        }
+
+        @JvmField
+        @JsStatic
+        val hash = def(PgColumn::class, "hash") { self ->
+            self._i = 10
+            self._type = PgType.INT
+            self._extra = "NOT NULL"
+        }
+
+        @JvmField
+        @JsStatic
+        val geo_grid = def(PgColumn::class, "geo_grid") { self ->
+            self._i = 11
+            self._type = PgType.INT
+            self._extra = "NOT NULL"
         }
 
         /**
-         * The `flags` encode how data is stored in the `bytea` type columns.
-         *
+         * Flags.
          * ```
-         *       Reserved         R1  AE   TE    FE    GE
-         * [0000-0000-0000-0000]-[00][00][0000][0000][0000]
+         *  Reserved       PN       R0  AE   TE     FE    GE
+         * [0000-0000]-[0000-0000]-[00][00][0000]-[0000][0000]
          * ```
-         * - GE: [geometry][geo] and [reference point][geo_ref] encoding - bits: 0-3
-         * - FE: [feature] encoding - bits: 4-7
-         * - TE: [tags] encoding - bits: 8-11
+         * - GE: geometry (and reference point) encoding - bits: 0-3
+         * - FE: feature encoding - bits: 4-7
+         * - TE: tags encoding - bits: 8-11
          * - AE: action - bits: 12+13
-         * - R1: reserved - bits: 14+15
+         * - R0: reserved - bit: 14-15
+         * - PN: partition number - bits: 16-23
          * - ---
-         * - Reserved - bits: 16-31
+         * - Reserved - bits: 24-31
          *
          * Possible actions are:
-         * - [naksha.model.Action.CREATED]
-         * - [naksha.model.Action.UPDATED]
-         * - [naksha.model.Action.DELETED]
+         * - [naksha.model.ActionValues.CREATED]
+         * - [naksha.model.ActionValues.UPDATED]
+         * - [naksha.model.ActionValues.DELETED]
          */
         @JvmField
         @JsStatic
         val flags = def(PgColumn::class, "flags") { self ->
-            self._i = 10
+            self._i = 12
             self._type = PgType.INT
+            self._extra = "NOT NULL"
+        }
+
+        @JvmField
+        @JsStatic
+        val row_number = def(PgColumn::class, "row_number") { self ->
+            self._i = 13
+            self._type = PgType.BYTE_ARRAY
+            self._extra = "STORAGE PLAIN GENERATED ALWAYS AS (int8send(store_number)||int8send(txn)||int4send(uid)) STORED NOT NULL"
         }
 
         @JvmField
         @JsStatic
         val id = def(PgColumn::class, "id") { self ->
-            self._i = 11
-            self._type = PgType.STRING
-        }
-
-        @JvmField
-        @JsStatic
-        val origin = def(PgColumn::class, "origin") { self ->
-            self._i = 12
-            self._type = PgType.STRING
-            self._extra = "STORAGE PLAIN COLLATE \"C\""
-        }
-
-        @JvmField
-        @JsStatic
-        val app_id = def(PgColumn::class, "app_id") { self ->
-            self._i = 13
-            self._type = PgType.STRING
-            self._extra = "STORAGE PLAIN NOT NULL COLLATE \"C\""
-        }
-
-        @JvmField
-        @JsStatic
-        val author = def(PgColumn::class, "author") { self ->
             self._i = 14
             self._type = PgType.STRING
             self._extra = "STORAGE PLAIN COLLATE \"C\""
@@ -217,8 +223,32 @@ class PgColumn : JsEnum() {
 
         @JvmField
         @JsStatic
-        val type = def(PgColumn::class, "type") { self ->
+        val app_id = def(PgColumn::class, "app_id") { self ->
             self._i = 15
+            self._type = PgType.STRING
+            self._extra = "STORAGE PLAIN NOT NULL COLLATE \"C\""
+        }
+
+        @JvmField
+        @JsStatic
+        val author = def(PgColumn::class, "author") { self ->
+            self._i = 16
+            self._type = PgType.STRING
+            self._extra = "STORAGE PLAIN COLLATE \"C\""
+        }
+
+        @JvmField
+        @JsStatic
+        val type = def(PgColumn::class, "type") { self ->
+            self._i = 17
+            self._type = PgType.STRING
+            self._extra = "STORAGE PLAIN COLLATE \"C\""
+        }
+
+        @JvmField
+        @JsStatic
+        val origin = def(PgColumn::class, "origin") { self ->
+            self._i = 18
             self._type = PgType.STRING
             self._extra = "STORAGE PLAIN COLLATE \"C\""
         }
@@ -226,23 +256,23 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val tags = def(PgColumn::class, "tags") { self ->
-            self._i = 16
+            self._i = 19
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE PLAIN"
+            self._extra = "STORAGE EXTERNAL"
         }
 
         @JvmField
         @JsStatic
-        val geo_ref = def(PgColumn::class, "geo_ref") { self ->
-            self._i = 17
+        val ref_point = def(PgColumn::class, "ref_point") { self ->
+            self._i = 20
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE PLAIN"
+            self._extra = "STORAGE EXTERNAL"
         }
 
         @JvmField
         @JsStatic
         val geo = def(PgColumn::class, "geo") { self ->
-            self._i = 18
+            self._i = 21
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE EXTERNAL"
         }
@@ -250,9 +280,17 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val feature = def(PgColumn::class, "feature") { self ->
-            self._i = 19
+            self._i = 22
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE EXTERNAL"
+        }
+
+        @JvmField
+        @JsStatic
+        val attachment = def(PgColumn::class, "attachment") { self ->
+            self._i = 23
+            self._type = PgType.BYTE_ARRAY
+            self._extra = "STORAGE EXTENDED"
         }
 
         /**
@@ -269,22 +307,91 @@ class PgColumn : JsEnum() {
          *
          * See [storage-toast.html](https://www.postgresql.org/docs/current/storage-toast.html).
          */
-        //
         @JvmField
         @JsStatic
-        val columns = arrayOf(
-            created_at, updated_at, author_ts, txn_next, txn,
-            uid, puid, hash, change_count, geo_grid, flags,
-            id, origin, app_id, author, type,
-            tags, geo_ref, geo, feature
+        val allColumns = arrayOf(
+            store_number, updated_at, created_at, author_ts, txn_next, txn, ptxn,
+            uid, puid, change_count, hash, geo_grid, flags,
+            row_number, id, app_id, author, type, origin,
+            tags, ref_point, geo, feature, attachment
         )
+
+        /**
+         * All columns to generate [naksha.model.Metadata], but leaving the details away, so `geometry`, `referencePoint`, `tags`, `feature`, and `attachment`.
+         */
+        @JvmField
+        @JsStatic
+        val metaColumn = arrayOf(
+            row_number, // = store_number, txn, uid
+            puid, updated_at, created_at, author_ts, txn_next, ptxn,
+            change_count, hash, geo_grid, flags,
+            id, app_id, author, type, origin,
+        )
+
+        @JvmField
+        @JsStatic
+        val metaSelect= metaColumn.joinToString(",")
+
+        /**
+         * SQL selection of the metadata in binary form.
+         */
+        @JvmField
+        @JsStatic
+        val metaSelectToBinary = """(row_number
+||int4send(coalesce(puid, 0))
+||int8send(updated_at)
+||int8send(coalesce(created_at, updated_at))
+||int8send(coalesce(author_ts, updated_at))
+||int8send(coalesce(txn_next, 0::bigint))
+||int8send(coalesce(ptxn, 0::bigint))
+||int4send(change_count)
+||int4send(hash)
+||int4send(geo_grid)
+||int4send(flags)
+||id::bytea||'\x00'::bytea
+||app_id::bytea||'\x00'::bytea
+||coalesce(author,'')::bytea||'\x00'::bytea
+||coalesce(type,'')::bytea||'\x00'::bytea
+||coalesce(origin,'')::bytea||'\x00'::bytea
+)""".trimEnd()
 
         init {
             // This is only self-check code.
-            var i = 0
-            for (col in columns) {
-                check(col.i == i++) { "Invalid table state, column '${col.name}' should be at index ${col.i}, but found at $i" }
+            for ((i, col) in allColumns.withIndex()) {
+                check(i == col.i) { "Invalid columns, column '${col.name}' should be at index ${col.i}, but found at $i" }
             }
+        }
+
+        /**
+         * Returns the [PgColumn] that matches to the official [RowColumn].
+         * @param rowColumn the [RowColumn] to resolve.
+         * @return the [PgColumn] that matches this [RowColumn]; if any.
+         */
+        @JvmStatic
+        @JsStatic
+        fun ofRowColumn(rowColumn: RowColumn): PgColumn? = when (rowColumn.name) {
+            RowColumn.UPDATED_AT -> updated_at
+            RowColumn.CREATED_AT -> created_at
+            RowColumn.AUTHOR_TS -> author_ts
+            RowColumn.NEXT_VERSION -> txn_next
+            RowColumn.VERSION -> txn
+            RowColumn.PREV_VERSION -> ptxn
+            RowColumn.UID -> uid
+            RowColumn.PUID -> puid
+            RowColumn.HASH -> hash
+            RowColumn.CHANGE_COUNT -> change_count
+            RowColumn.GEO_GRID -> geo_grid
+            RowColumn.FLAGS -> flags
+            RowColumn.ID -> id
+            RowColumn.APP_ID -> app_id
+            RowColumn.AUTHOR -> author
+            RowColumn.TYPE -> type
+            RowColumn.TAGS -> tags
+            RowColumn.REF_POINT -> ref_point
+            RowColumn.GEOMETRY -> geo
+            RowColumn.FEATURE -> feature
+            // attachment
+            else -> null
         }
     }
 

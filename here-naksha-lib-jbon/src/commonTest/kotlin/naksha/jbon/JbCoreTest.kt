@@ -73,18 +73,18 @@ class JbCoreTest {
     }
 }""".trimIndent())
         assertTrue(raw is PlatformMap)
-        val map = raw.proxy(ObjectProxy::class)
+        val map = raw.proxy(AnyObject::class)
         assertEquals(2, map.size)
         assertTrue(map.containsKey("id"))
         assertEquals("foo", map["id"])
         assertTrue(map.containsKey("properties"))
-        assertTrue(map["properties"] is ObjectProxy)
-        val properties = map["properties"] as ObjectProxy
+        assertTrue(map["properties"] is AnyObject)
+        val properties = map["properties"] as AnyObject
         assertEquals(3, properties.size)
         assertEquals("Tim", properties["name"])
         assertEquals(99, properties["age"])
-        assertTrue(properties["array"] is AnyListProxy)
-        val array = properties["array"] as AnyListProxy
+        assertTrue(properties["array"] is AnyList)
+        val array = properties["array"] as AnyList
         assertEquals(5, array.size)
         assertEquals(1, array[0])
         assertEquals(2, array[1])
@@ -486,7 +486,7 @@ class JbCoreTest {
         assertFalse(dictReader.nextUnit())
 
         // Test the dictionary class.
-        val dict = JbDictDecoder().mapBinary(dictView, 0)
+        val dict = JbDictionary().mapBinary(dictView, 0)
         assertEquals(-1, dict.length())
         dict.loadAll()
         assertEquals(2, dict.length())
@@ -526,7 +526,7 @@ class JbCoreTest {
         val builder = JbEncoder()
         builder.encodeText("Hello World Hello Test")
         val featureBytes = builder.buildFeature(null, 0)
-        val feature = JbFeatureDecoder(dictManager)
+        val feature = JbRecordDecoder(dictManager)
         feature.mapBytes(featureBytes)
         val binary = feature.reader.binary
         // We expect the following layout:
@@ -764,7 +764,7 @@ class JbCoreTest {
         // = 21 byte total, 15-byte header (includes local dict), 6-byte content
         val mapData = builder.buildFeature(null)
         assertEquals(22, mapData.size)
-        val feature = JbFeatureDecoder(dictManager)
+        val feature = JbRecordDecoder(dictManager)
         feature.mapBytes(mapData)
         assertEquals(null, feature.id())
         assertTrue(feature.reader.isMap())
@@ -841,9 +841,44 @@ class JbCoreTest {
         val builder = JbEncoder()
         val featureJson = """{"id":"bar"}"""
         val featureMap = Platform.fromJSON(featureJson) as PlatformMap
-        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(ObjectProxy::class))
-        val feature = JbFeatureDecoder(dictManager)
+        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(AnyObject::class))
+        val feature = JbRecordDecoder(dictManager)
         feature.mapBytes(featureBytes)
         assertEquals("bar", feature.id())
+    }
+
+    @Test
+    fun testSelectPath() {
+        val builder = JbEncoder()
+        val featureJson = """{"id":"bar","properties":{"foo": "hello","bar":[0,1,2,3,4]}}"""
+        val featureMap = Platform.fromJSON(featureJson) as PlatformMap
+        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(AnyObject::class))
+        val feature = JbFeatureDecoder(dictManager)
+        feature.mapBytes(featureBytes)
+
+        assertEquals("hello", feature["properties", "foo"])
+        assertEquals(3, feature["properties", "bar", 3])
+
+        assertEquals("hello", feature.getJsonPath("properties.foo"))
+        assertEquals(3, feature.getJsonPath("properties.bar.3"))
+
+        assertTrue(feature.selectPath("properties", "foo"))
+        assertEquals("hello", feature.reader.decodeValue())
+
+        assertTrue(feature.selectPath("properties", "bar", 0))
+        assertEquals(0, feature.reader.decodeValue())
+
+        assertTrue(feature.selectPath("properties", "bar", 1))
+        assertEquals(1, feature.reader.decodeValue())
+
+        assertTrue(feature.selectPath("properties", "bar", 2))
+        assertEquals(2, feature.reader.decodeValue())
+
+        assertTrue(feature.selectPath("properties", "bar", 3))
+        assertEquals(3, feature.reader.decodeValue())
+
+        assertTrue(feature.selectPath("properties", "bar", 4))
+        assertEquals(4, feature.reader.decodeValue())
+
     }
 }

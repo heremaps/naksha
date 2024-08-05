@@ -21,7 +21,7 @@ package com.here.naksha.lib.core.models.storage;
 import java.util.List;
 import naksha.model.NakshaVersion;
 import naksha.model.request.ResultRow;
-import naksha.model.response.SuccessResponse;
+import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

@@ -21,10 +21,10 @@ package com.here.naksha.lib.core.util.storage;
 import static java.util.Collections.emptyList;
 
 import java.util.*;
-import naksha.model.NakshaFeatureProxy;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ResultRow;
-import naksha.model.response.ExecutedOp;
-import naksha.model.response.SuccessResponse;
+import naksha.model.request.ExecutedOp;
+import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -41,7 +41,7 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return list of features extracted from ReadResult
    */
-  public static <R extends NakshaFeatureProxy> List<R> readFeaturesFromResult(
+  public static <R extends NakshaFeature> List<R> readFeaturesFromResult(
       SuccessResponse result, Class<R> featureType) throws NoSuchElementException {
     return readFeaturesFromResult(result, featureType, 0, Long.MAX_VALUE);
   }
@@ -57,7 +57,7 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return list of features extracted from ReadResult
    */
-  public static <R extends NakshaFeatureProxy> List<R> readFeaturesFromResult(
+  public static <R extends NakshaFeature> List<R> readFeaturesFromResult(
       SuccessResponse result, Class<R> featureType, long offset, long limit) {
     final List<R> features = new ArrayList<>();
     final Iterator<ResultRow> iterator = result.rows.iterator();
@@ -116,7 +116,7 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return a map grouping the lists of features extracted from ReadResult
    */
-  public static <R extends NakshaFeatureProxy> Map<ExecutedOp, List<R>> readFeaturesGroupedByOp(
+  public static <R extends NakshaFeature> Map<ExecutedOp, List<R>> readFeaturesGroupedByOp(
       SuccessResponse result, Class<R> featureType, long limit) {
     final Iterator<ResultRow> iterator = result.rows.iterator();
     if (!iterator.hasNext()) {
@@ -152,7 +152,7 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return a map grouping the lists of features extracted from ReadResult
    */
-  public static <R extends NakshaFeatureProxy> Map<ExecutedOp, List<R>> readFeaturesGroupedByOp(
+  public static <R extends NakshaFeature> Map<ExecutedOp, List<R>> readFeaturesGroupedByOp(
       SuccessResponse result, Class<R> featureType) throws NoSuchElementException {
     return readFeaturesGroupedByOp(result, featureType, Long.MAX_VALUE);
   }

@@ -2,12 +2,20 @@
 
 package naksha.psql
 
-import naksha.base.Fnv1a32
-import naksha.base.Fnv1a64
-import naksha.base.Int64
-import naksha.model.NakshaError
-import naksha.model.NakshaErrorCode.StorageErrorCompanion.ILLEGAL_ID
-import naksha.model.StorageException
+import naksha.base.*
+import naksha.geo.SpGeometry
+import naksha.jbon.IDictManager
+import naksha.jbon.JbDictionary
+import naksha.jbon.JbEncoder
+import naksha.jbon.JbFeatureDecoder
+import naksha.model.*
+import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON
+import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON_GZIP
+import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON
+import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON_GZIP
+import naksha.model.objects.NakshaFeature
+import naksha.psql.PgPlatform.PgPlatformCompanion.quote_ident
+import naksha.psql.PgPlatform.PgPlatformCompanion.quote_literal
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -65,6 +73,11 @@ class PgUtil private constructor() {
         const val CONTEXT = "context"
 
         /**
+         * Special parameter, only recognized by the JVM storage implementation (`PsqlStorage`) to install the needed database SQL code in this version. The value is expected to be an instance of [naksha.model.NakshaVersion], a string in the same format or the binary form (64-bit integer).
+         */
+        const val VERSION: String = "version"
+
+        /**
          * Given as parameter for [PgStorage.initStorage], `id` used if the storage is uninitialized, initialize it with the given
          * storage identifier. If the storage is already initialized, reads the existing identifier and compares it with the given one.
          * If they do not match, throws an [IllegalStateException]. If not given a random new identifier is generated, when no identifier
@@ -80,24 +93,7 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun quoteLiteral(vararg parts: String): String {
-            val literal = PgPlatform.quote_literal(*parts)
-            if (literal != null) return literal
-
-            val sb = StringBuilder()
-            sb.append("E'")
-            for (part in parts) {
-                for (c in part) {
-                    when (c) {
-                        '\'' -> sb.append('\'').append('\'')
-                        '\\' -> sb.append('\\').append('\\')
-                        else -> sb.append(c)
-                    }
-                }
-            }
-            sb.append('\'')
-            return sb.toString()
-        }
+        fun quoteLiteral(vararg parts: String): String = quote_literal(*parts) ?: Naksha.quoteLiteral(*parts)
 
         /**
          * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all double quotes
@@ -107,24 +103,7 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun quoteIdent(vararg parts: String): String {
-            val ident = PgPlatform.quote_ident(*parts)
-            if (ident != null) return ident
-
-            val sb = StringBuilder()
-            sb.append('"')
-            for (part in parts) {
-                for (c in part) {
-                    when (c) {
-                        '"' -> sb.append('"').append('"')
-                        '\\' -> sb.append('\\').append('\\')
-                        else -> sb.append(c)
-                    }
-                }
-            }
-            sb.append('"')
-            return sb.toString()
-        }
+        fun quoteIdent(vararg parts: String): String = quote_ident(*parts) ?: Naksha.quoteIdent(*parts)
 
         /**
          * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the
@@ -154,7 +133,7 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun gridFromId(id: String): String {
+        fun geoHashFrom(id: String): String {
             val BASE32 = PgUtil.BASE32
             val sb = StringBuilder()
             var hash = Fnv1a32.string(Fnv1a32.start(), id)
@@ -186,60 +165,130 @@ class PgUtil private constructor() {
         fun lockId(name: String): Int64 = Fnv1a64.string(Fnv1a64.start(), name)
 
         /**
-         * Tests if the given **id** is a valid collection identifier, so matches:
-         *
-         * `[a-z][a-z0-9_:-]{31}`
-         *
-         * **Beware**: Collections must not contain upper-case letters, because PostgresQL does not make a difference between upper- and lower-cased letters in table names, so "aaa", "Aaa", "AAa", and "AAA" are the same table!
-         * @param id The collection identifier.
-         * @return _true_ if the collection identifier is valid; _false_ otherwise.
+         * Decode the Naksha feature.
+         * @param bytes the bytes to decode.
+         * @param flags the codec flags.
+         * @param dictManager the dictionary manager to use for decoding; if any.
+         * @return the Naksha feature.
+         * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
-        fun isValidCollectionId(id: String?): Boolean {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > 32) return false
-            var i = 0
-            var c = id[i++]
-            // First character must be a-z
-            if (c.code < 'a'.code || c.code > 'z'.code) return false
-            while (i < id.length) {
-                c = id[i++]
-                when (c.code) {
-                    in 'a'.code..'z'.code -> continue
-                    in '0'.code..'9'.code -> continue
-                    '_'.code, ':'.code, '-'.code -> continue
-                    else -> return false
-                }
+        fun decodeFeature(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): NakshaFeature? {
+            if (bytes == null) return null
+            var raw = bytes
+            if (flags.featureGzip()) raw = Platform.gzipInflate(bytes)
+            val encoding = flags.featureEncoding()
+            if (encoding == JBON || encoding == JBON_GZIP) {
+                val decoder = JbFeatureDecoder(dictManager)
+                decoder.mapBytes(raw)
+                return decoder.toAnyObject().proxy(NakshaFeature::class)
             }
-            return true
+            if (encoding == JSON || encoding == JSON_GZIP) {
+                val decoded = Platform.fromJSON(bytes.decodeToString())
+                if (decoded is PlatformMap) return decoded.proxy(NakshaFeature::class)
+            }
+            return null
         }
 
         /**
-         * Tests if the given **id** is a valid collection identifier, otherwise throws an [naksha.model.StorageException]
-         * @param id The collection identifier.
-         * @throws StorageException if the given identifier is invalid.
+         * Encodes the given [NakshaFeature] into bytes.
+         * @param feature the feature to encode.
+         * @param flags the codec flags.
+         * @param dict the dictionary to use for encoding; if any.
+         * @return the encoded feature.
+         * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
-        fun ensureValidCollectionId(id: String?) {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > 32) {
-                throw StorageException(NakshaError(ILLEGAL_ID, id = id))
+        fun encodeFeature(feature: NakshaFeature?, flags: Flags, dict: JbDictionary? = null): ByteArray? {
+            if (feature == null) return null
+            val encoding = flags.featureEncoding()
+            var byteArray: ByteArray? = null
+            if (encoding == JSON || encoding == JSON_GZIP) {
+                val encoded = Platform.toJSON(feature)
+                byteArray = encoded.encodeToByteArray()
+            } else if (encoding == JBON || encoding == JBON_GZIP) {
+                val encoder = JbEncoder(dict)
+                byteArray = encoder.buildFeatureFromMap(feature)
             }
-            var i = 0
-            var c = id[i++]
-            // First character must be a-z
-            if (c.code < 'a'.code || c.code > 'z'.code) {
-                throw StorageException(NakshaError(ILLEGAL_ID, id = id))
-            }
-            while (i < id.length) {
-                c = id[i++]
-                when (c.code) {
-                    in 'a'.code..'z'.code -> continue
-                    in '0'.code..'9'.code -> continue
-                    '_'.code, ':'.code, '-'.code -> continue
-                    else -> throw StorageException(NakshaError(ILLEGAL_ID, id = id))
-                }
-            }
+            if (flags.featureGzip() && byteArray != null) byteArray = Platform.gzipDeflate(byteArray)
+            return byteArray
         }
+
+        /**
+         * Decode the Naksha tags.
+         * @param bytes the bytes to decode.
+         * @param flags the codec flags.
+         * @param dictManager the dictionary manager to use for decoding; if any.
+         * @return the Naksha tags.
+         * @since 3.0.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun decodeTags(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): TagMap? {
+            if (bytes == null) return null
+            var raw = bytes
+            if (flags.tagsGzip()) raw = Platform.gzipInflate(bytes)
+            val encoding = flags.tagsEncoding()
+            if (encoding == JBON || encoding == JBON_GZIP) {
+                val decoder = JbFeatureDecoder(dictManager)
+                decoder.mapBytes(raw)
+                return decoder.toAnyObject().proxy(TagMap::class)
+            }
+            if (encoding == JSON || encoding == JSON_GZIP) {
+                val decoded = Platform.fromJSON(bytes.decodeToString())
+                if (decoded is PlatformMap) return decoded.proxy(TagMap::class)
+            }
+            return null
+        }
+
+        /**
+         * Encodes the given tags into bytes.
+         * @param tags the tags to encode.
+         * @param flags the codec flags.
+         * @param dict the dictionary to use for encoding; if any.
+         * @return the encoded tags.
+         * @since 3.0.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun encodeTags(tags: TagMap?, flags: Flags, dict: JbDictionary? = null): ByteArray? {
+            if (tags == null) return null
+            val encoding = flags.tagsEncoding()
+            var byteArray: ByteArray? = null
+            if (encoding == JSON || encoding == JSON_GZIP) {
+                val encoded = Platform.toJSON(tags)
+                byteArray = encoded.encodeToByteArray()
+            } else if (encoding == JBON || encoding == JBON_GZIP) {
+                val encoder = JbEncoder(dict)
+                byteArray = encoder.buildFeatureFromMap(tags)
+            }
+            if (flags.tagsGzip() && byteArray != null) byteArray = Platform.gzipDeflate(byteArray)
+            return byteArray
+
+        }
+
+        /**
+         * Decode a GeoJSON geometry from encoded bytes.
+         * @param bytes the bytes to decode.
+         * @param flags the codec flags.
+         * @return the geometry.
+         * @since 3.0.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun decodeGeometry(bytes: ByteArray?, flags: Flags): SpGeometry? = PgPlatform.decodeGeometry(bytes, flags)
+
+        /**
+         * Encodes the given GeoJSON geometry into bytes.
+         * @param geometry the geometry to encode.
+         * @param flags the codec flags.
+         * @return the encoded GeoJSON geometry.
+         * @since 3.0.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun encodeGeometry(geometry: SpGeometry?, flags: Flags): ByteArray? = PgPlatform.encodeGeometry(geometry, flags)
     }
 }

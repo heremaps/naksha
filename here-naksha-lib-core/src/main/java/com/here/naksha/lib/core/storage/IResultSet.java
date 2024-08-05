@@ -23,7 +23,7 @@ import static naksha.model.NakshaVersion.v2_0_5;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import naksha.model.NakshaFeatureProxy;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -35,7 +35,7 @@ import org.jetbrains.annotations.Nullable;
  */
 @Deprecated
 @AvailableSince(v2_0_5)
-public interface IResultSet<FEATURE extends NakshaFeatureProxy> extends AutoCloseable {
+public interface IResultSet<FEATURE extends NakshaFeature> extends AutoCloseable {
 
   /**
    * Load the next feature.

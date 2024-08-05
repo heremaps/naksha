@@ -20,7 +20,7 @@ package com.here.naksha.lib.core.storage;
 
 import static naksha.model.NakshaVersion.v2_0_5;
 
-import naksha.model.NakshaFeatureProxy;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 
@@ -31,7 +31,7 @@ import org.jetbrains.annotations.NotNull;
  */
 @Deprecated
 @AvailableSince(v2_0_5)
-public interface IFeatureWriter<FEATURE extends NakshaFeatureProxy> extends IFeatureReader<FEATURE> {
+public interface IFeatureWriter<FEATURE extends NakshaFeature> extends IFeatureReader<FEATURE> {
 
   /**
    * Perform the given operations as bulk operation and return the results.

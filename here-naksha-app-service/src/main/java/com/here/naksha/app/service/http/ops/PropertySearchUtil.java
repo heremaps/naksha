@@ -22,10 +22,9 @@ import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.*;
 import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.COMMA;
 import static com.here.naksha.lib.core.models.payload.events.QueryOperation.*;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.pRefFromPropPath;
+import static naksha.model.request.query.Property.PROPERTIES;
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.XyzFeature;
 import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.payload.events.QueryDelimiter;
 import com.here.naksha.lib.core.models.payload.events.QueryOperation;
@@ -34,8 +33,6 @@ import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.util.ValueList;
 import java.util.*;
 
-import naksha.model.POp;
-import naksha.model.ReadRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,7 +41,7 @@ public class PropertySearchUtil {
   private static final String NULL_PROP_VALUE = ".null";
 
   private static final String SHORT_PROP_PREFIX = "p.";
-  private static final String FULL_PROP_PREFIX = XyzFeature.PROPERTIES + ".";
+  private static final String FULL_PROP_PREFIX = PROPERTIES + ".";
   private static final String SHORT_XYZ_PROP_PREFIX = "f.";
   private static final String FULL_XYZ_PROP_PREFIX = FULL_PROP_PREFIX + XyzProperties.XYZ_NAMESPACE + ".";
   private static final String XYZ_PROP_ID = "f.id";

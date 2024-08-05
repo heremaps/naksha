@@ -8,7 +8,7 @@ import kotlin.js.JsExport
 @JsExport
 class JbPath(var dictManager: JbDictManager? = null, private var binaryView: BinaryView) {
     private var jmap: JbMapDecoder = JbMapDecoder()
-    private var feature: JbFeatureDecoder = JbFeatureDecoder(dictManager)
+    private var feature: JbRecordDecoder = JbRecordDecoder(dictManager)
 
     fun getBool(binary: ByteArray, path: String, alternative: Boolean? = null): Boolean? {
         val valueReader = readElement(binary, path)

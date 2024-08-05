@@ -20,15 +20,17 @@ package com.here.naksha.lib.handlers.util;
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import naksha.model.*;
-import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereDeltaNs;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.storage.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import naksha.model.mom.MomChangeState;
+import naksha.model.mom.MomReviewState;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import naksha.model.request.ResultRow;
-import naksha.model.response.ExecutedOp;
+import naksha.model.request.ExecutedOp;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,12 +41,12 @@ public final class HandlerUtil {
   private HandlerUtil() {}
 
   public static @NotNull ContextXyzFeatureResult createContextResultFromFeatureList(
-      final @NotNull List<NakshaFeatureProxy> features,
-      final @Nullable List<NakshaFeatureProxy> context,
-      final @Nullable List<NakshaFeatureProxy> violations) {
+      final @NotNull List<NakshaFeature> features,
+      final @Nullable List<NakshaFeature> context,
+      final @Nullable List<NakshaFeature> violations) {
     // Create list of ResultRow with input features
     final List<ResultRow> resultRows = new ArrayList<>();
-    for (final NakshaFeatureProxy feature : features) {
+    for (final NakshaFeature feature : features) {
       resultRows.add(new ResultRow(ExecutedOp.UPDATED,null,feature));
     }
     // Create ContextResult with cursor, context and violations
@@ -64,7 +66,7 @@ public final class HandlerUtil {
 
     // Add features in the request
     for (final Object obj : features) {
-      final NakshaFeatureProxy feature = checkInstanceOf(obj, NakshaFeatureProxy.class, "Unsupported feature type");
+      final NakshaFeature feature = checkInstanceOf(obj, NakshaFeature.class, "Unsupported feature type");
       cwf.add(EWriteOp.PUT, feature);
     }
     // add context to write request
@@ -171,11 +173,11 @@ public final class HandlerUtil {
     return checkInstanceOf(input, returnType, XyzError.NOT_IMPLEMENTED, errDescPrefix);
   }
 
-  public static void setDeltaReviewState(final @NotNull NakshaFeatureProxy feature, final @NotNull ReviewStateEnum reviewState) {
-    final NakshaPropertiesProxy properties = feature.getProperties();
-    final XyzProxy xyzNs = properties.getXyz();
+  public static void setDeltaReviewState(final @NotNull NakshaFeature feature, final @NotNull MomReviewState reviewState) {
+    final NakshaProperties properties = feature.getProperties();
+    final XyzNs xyzNs = properties.getXyz();
     final HereDeltaNs deltaNs = properties.del;
-    deltaNs.setChangeState(ChangeStateEnum.UPDATED);
+    deltaNs.setChangeState(MomChangeState.UPDATED);
     deltaNs.setReviewState(reviewState);
     final @NotNull List<@NotNull String> tags = tagsWithoutReviewState(xyzNs.getTags());
     tags.add(REVIEW_STATE_PREFIX + reviewState);

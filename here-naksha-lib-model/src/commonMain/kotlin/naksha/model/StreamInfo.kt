@@ -1,6 +1,13 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.model
 
-class StreamInfo {
+import kotlin.js.JsExport
+
+// TODO: Document me!
+
+@JsExport
+open class StreamInfo {
     var spaceId: String? = null
     var storageId: String? = null
     fun setSpaceIdIfMissing(spaceId: String?) {

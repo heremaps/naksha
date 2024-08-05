@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import naksha.model.NakshaFeatureProxy;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.NakshaVersion;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.net.InetAddress;
@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * The Naksha-Hub service configuration.
  */
 @JsonTypeName(value = "Config")
-public final class NakshaHubConfig extends NakshaFeatureProxy implements JsonSerializable {
+public final class NakshaHubConfig extends NakshaFeature implements JsonSerializable {
 
   private static final Logger logger = LoggerFactory.getLogger(NakshaHubConfig.class);
 

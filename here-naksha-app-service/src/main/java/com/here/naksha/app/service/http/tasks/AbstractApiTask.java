@@ -50,9 +50,9 @@ import io.vertx.ext.web.RoutingContext;
 import java.util.*;
 
 import naksha.model.ErrorResult;
-import naksha.model.response.ErrorResponse;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.response.NakshaError;
-import naksha.model.response.Response;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.geom.Geometry;
@@ -96,7 +96,7 @@ public abstract class AbstractApiTask<T extends Response>
     return verticle.sendErrorResponse(routingContext, NakshaError.NOT_IMPLEMENTED, "Unsupported operation!");
   }
 
-  protected <R extends NakshaFeatureProxy> @NotNull Response transformReadResultToXyzFeatureResponse(
+  protected <R extends NakshaFeature> @NotNull Response transformReadResultToXyzFeatureResponse(
       final @NotNull Result rdResult, final @NotNull Class<R> type) {
     return transformResultToXyzFeatureResponse(rdResult, type, NOT_FOUND_ON_NO_ELEMENTS, null);
   }

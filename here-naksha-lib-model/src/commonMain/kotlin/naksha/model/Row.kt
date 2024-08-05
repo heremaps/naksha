@@ -1,12 +1,16 @@
 package naksha.model
 
+import naksha.base.Int64
+import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
+import naksha.model.objects.NakshaFeature
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 /**
- * A row represents all information stored about a feature in a storage. It is not required that the storage stores the information
- * exactly in this form, this is only the exchange format.
+ * A row represents a specific immutable state of a feature in a storage.
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
@@ -14,126 +18,123 @@ data class Row(
     /**
      * Reference to specific storage implementation that allows to decode rows to feature.
      */
-    @JvmField
-    val storage: IStorage,
+    @JvmField val storage: IStorage,
 
     /**
-     * The feature id.
+     * The row-number, a unique identifier for the row.
      */
-    @JvmField
-    val id: String,
+    @JvmField val rowNumber: RowNumber,
 
     /**
-     * The GUID (global unique identifier) of the feature. When features are written, the value can be provided by the client (using the
-     * [XyzProxy]) to signal that an existing state was modified.
+     * The metadata, this is going into the [XYZ namespace][XyzNs], when decoding the [Row] into a [NakshaFeature].
      */
-    @JvmField
-    val guid: Guid? = null,
+    @JvmField val meta: Metadata,
 
     /**
-     * Feature type, extracted from `properties.featureType`, if this is no string, then `type` from the root is used, which normally is
-     * always `Feature` for _Geo-JSON_ features. The value _null_ indicates the type is the collection default type, it saves a lot of
-     * storage space, when all features in a collection are of the same type, to encode the type in the collection, when creating the
-     * collection. Beware, the default feature-type of a collection is an immutable property!
+     * Feature encoded with [FeatureEncoding] algorithm described by [Metadata.flags].
      */
-    @JvmField
-    val type: String? = null,
+    @JvmField val feature: ByteArray? = null,
 
     /**
-     * Metadata, this is going into the [XYZ namespace][XyzProxy], when decoding the [Row] into a [NakshaFeatureProxy].
-     * In response might be _null_ when proper request flag was set.
+     * Geometry encoded with [GeoEncoding] algorithm described by [Metadata.flags].
+     * Might be _null_, when the feature does not have a geometry.
      */
-    @JvmField
-    var meta: Metadata? = null,
+    @JvmField val geo: ByteArray? = null,
 
     /**
-     * The flags of the row, this bitmask stores how the geometry, reference-point, feature and tags are encoded, as well as the action.
-     * @see GeoEncoding
-     * @see FeatureEncoding
-     * @see TagsEncoding
-     * @see Action
+     * Geometry-Reference-Point, encoded with the [GeoEncoding] algorithm described by [Metadata.flags].
+     * Might be _null_, when the feature does not have a reference point.
      */
-    @JvmField
-    val flags: Flags,
+    @JvmField val referencePoint: ByteArray? = null,
 
     /**
-     * Feature encoded with [FeatureEncoding] algorithm described by [flags].
-     * In response might be _null_ when proper request flag was set.
+     * Tags encoded with [TagsEncoding] algorithm described by [Metadata.flags].
+     * Might be _null_, when the feature does not have any tags.
      */
-    @JvmField
-    val feature: ByteArray? = null,
+    @JvmField val tags: ByteArray? = null,
 
     /**
-     * Geometry encoded with [GeoEncoding] algorithm described by [flags].
-     * In response might be _null_ when proper request flag was set.
+     * An arbitrary binary attachment.
      */
-    @JvmField
-    val geo: ByteArray? = null,
-
-    /**
-     * Geometry-Reference-Point, encoded with the [GeoEncoding] algorithm described by [flags].
-     * In response might be _null_ when proper request flag was set.
-     */
-    @JvmField
-    val geoRef: ByteArray? = null,
-
-    /**
-     * Tags encoded with [TagsEncoding] algorithm described by [flags].
-     * In response might be _null_ when proper request flag was set.
-     */
-    @JvmField
-    val tags: ByteArray? = null
+    @JvmField val attachment: ByteArray? = null
 ) {
-    /**
-     * Maps row into memory model.
-     */
-    fun toMemoryModel(): NakshaFeatureProxy? {
-        return storage.rowToFeature(this)
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other == null || this::class != other::class) return false
-
-        other as Row
-
-        if (storage != other.storage) return false
-        if (guid != other.guid) return false
-        if (flags != other.flags) return false
-        if (id != other.id) return false
-        if (type != other.type) return false
-        if (meta != other.meta) return false
-        if (feature != null) {
-            if (other.feature == null) return false
-            if (!feature.contentEquals(other.feature)) return false
-        } else if (other.feature != null) return false
-        if (geo != null) {
-            if (other.geo == null) return false
-            if (!geo.contentEquals(other.geo)) return false
-        } else if (other.geo != null) return false
-        if (geoRef != null) {
-            if (other.geoRef == null) return false
-            if (!geoRef.contentEquals(other.geoRef)) return false
-        } else if (other.geoRef != null) return false
-        if (tags != null) {
-            if (other.tags == null) return false
-            if (!tags.contentEquals(other.tags)) return false
-        } else if (other.tags != null) return false
-
-        return true
+        return other is Row && this.rowNumber == other.rowNumber
     }
 
-    override fun hashCode(): Int {
-        var result = storage.hashCode()
-        result = 31 * result + (guid?.hashCode() ?: 0)
-        result = 31 * result + flags
-        result = 31 * result + id.hashCode()
-        result = 31 * result + (type?.hashCode() ?: 0)
-        result = 31 * result + (meta?.hashCode() ?: 0)
-        result = 31 * result + (feature?.contentHashCode() ?: 0)
-        result = 31 * result + (geo?.contentHashCode() ?: 0)
-        result = 31 * result + (geoRef?.contentHashCode() ?: 0)
-        result = 31 * result + (tags?.contentHashCode() ?: 0)
-        return result
+    override fun hashCode(): Int = super.hashCode()
+
+    val mapNumber: Int
+        get() = rowNumber.mapNumber()
+    val mapId: String?
+        get() = storage.getMapId(mapNumber)
+    val collectionNumber: Int64
+        get() = rowNumber.collectionNumber()
+    val collectionId: String?
+        get() {
+            val mapId = this.mapId ?: return null
+            val map = storage[mapId]
+            if (!map.exists()) return null
+            return map.getCollectionId(collectionNumber)
+        }
+
+    /**
+     * Maps row into a Naksha feature.
+     * @return this row as Naksha feature.
+     */
+    fun toNakshaFeature(): NakshaFeature = storage.rowToFeature(this)
+
+    private var guid: Guid? = null
+
+    /**
+     * Return the [Guid] for this row, requires that [meta] is not _null_, otherwise throws a [NakshaError.ILLEGAL_STATE].
+     * @return the [Guid] of this row.
+     */
+    fun toGuid(): Guid {
+        var g = guid
+        if (g == null) {
+            val mapNumber = meta.storeNumber.mapNumber()
+            val mapId = storage.getMapId(mapNumber) ?: throw NakshaException(MAP_NOT_FOUND, "Map #$mapNumber not found")
+            val map = storage[mapId]
+            val collectionNumber = meta.storeNumber.collectionNumber()
+            val collectionId = map.getCollectionId(collectionNumber) ?: throw NakshaException(
+                COLLECTION_NOT_FOUND,
+                "Collection #$collectionNumber not found"
+            )
+            g = Guid(storage.id(), mapId, collectionId, meta.id, Version(meta.version), meta.uid)
+            guid = g
+        }
+        return g
+    }
+
+    /**
+     * Merge two rows into a new one. If this row is up-to-date, the method returns this row again.
+     *
+     * This is basically done, when more details become available about a row.
+     *
+     * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given row is not the same.
+     * @param other the row to merge this with.
+     * @return a new row, where nothing is _null_.
+     */
+    fun merge(other: Row): Row {
+        if (storage != other.storage || rowNumber != other.rowNumber) {
+            throw NakshaException(ILLEGAL_ARGUMENT, "Can't merge two different rows")
+        }
+        meta.nextVersion = meta.nextVersion ?: other.meta.nextVersion
+        if (feature === other.feature
+            && geo === other.geo
+            && referencePoint === other.referencePoint
+            && tags === other.tags
+            && attachment === other.attachment
+        ) return this
+        return Row(
+            storage, rowNumber, meta,
+            feature ?: other.feature,
+            geo ?: other.geo,
+            referencePoint ?: other.referencePoint,
+            tags ?: other.tags,
+            attachment ?: other.attachment
+        )
     }
 }

@@ -2,112 +2,41 @@
 
 package naksha.model.request
 
-import naksha.base.fn.Fn1
+import naksha.base.NotNullProperty
+import naksha.base.AnyObject
 import kotlin.js.JsExport
-import kotlin.jvm.JvmField
 
 /**
  * Base request class.
+ * @since 3.0.0
  */
 @JsExport
-abstract class Request<SELF : Request<SELF>> {
-
-    /**
-     * true - no feature body will be returned in the response, nor as [ByteArray], nor as feature object.
-     */
-    @JvmField
-    var noFeature: Boolean = false
-
-    fun withNoFeature(): Request<SELF> {
-        this.noFeature = true
-        return this
+open class Request : AnyObject() {
+    companion object RequestCompanion {
+        private val RETURN_OPTIONS = NotNullProperty<Request, ReturnColumns>(ReturnColumns::class) { self, _ -> self.defaultRowOptions() }
+        private val RESULT_FILTER_LIST = NotNullProperty<Request, ResultFilterList>(ResultFilterList::class)
     }
 
     /**
-     *  true - no geometry will be returned in the response, nor as [ByteArray], nor in `feature.geo attribute`.
+     * The method being called to create the initial [returnColumns].
+     * @return the initial row options.
      */
-    @JvmField
-    var noGeometry: Boolean = false
-
-    fun withNoGeometry(): Request<SELF> {
-        this.noGeometry = true
-        return this
-    }
+    protected open fun defaultRowOptions() : ReturnColumns = ReturnColumns.all()
 
     /**
-     *  true - no geometry reference point will be returned in the response.
-     */
-    @JvmField
-    var noGeoRef: Boolean = false
-
-    fun withNoGeoRef(): Request<SELF> {
-        this.noGeoRef = true
-        return this
-    }
-
-    /**
-     * true - no metadata will be returned in the response, nor as [ByteArray], nor in `feature.properties.xyz` attribute.
-     */
-    @JvmField
-    var noMeta: Boolean = false
-
-    fun withNoMeta(): Request<SELF> {
-        this.noMeta = true
-        return this
-    }
-
-    /**
-     * true - no tags will be returned in the response, nor as [ByteArray], nor in `feature.properties.xyz.tags` attribute.
-     */
-    @JvmField
-    var noTags: Boolean = false
-
-    fun withNoTags(): Request<SELF> {
-        this.noTags = true
-        return this
-    }
-
-    /**
-     * The resultFilter is a list of lambdas, that are invoked by the storage for every row that should be added into the results of the
-     * response. The method can inspect the row and should return either the unmodified row, or a modified version to be added to the
-     * response or null, if the row should be removed from the response.
+     * Options of what data is needed by the client.
      *
-     * The filter lambdas are called in LIFO order (last in, first out). The output each the lambda is used as input for the next one.
-     * So,  only if all return a valid new row, the last returned row will be added to the response. This means, each filter can modify
-     * the row or cause it to be removed from the response.
-     *
-     * Beware that the filters are not serializable, therefore they can only be executed with a storage in the same process and not with
-     * foreign storages.
-     *
-     * - When [noFeature] is set, the feature is not read from the database (`row.feature` will be null).
-     * - When [noGeometry] is set, the geometry is not read from the database (`row.geometry` will be null).
-     * - When [noGeoRef] is set, the reference-point is not read from the database (`row.geo_ref` will be null).
-     * - When [noTags] is set, the tags are not read from the database (`row.tags` will be null).
-     * - When [noMeta] is set, no meta-data is read from the database (`row.meta` will be null).
-     *
-     * Beware: If the filters ([noFeature], [noGeometry], [noGeoRef], [noTags] or [noMeta]) are set, these values are not even read from
-     * the database and therefore the result-filters will not find these values either!
+     * The storage may ignore this information, however, the client is not guaranteed to receive those parts of a [row][naksha.model.Row] that it unselected in the [returnColumns].
      */
-    @JvmField
-    var resultFilter: MutableList<Fn1<ResultRow, ResultRow>> = mutableListOf()
-
-    fun addResultFilter(filter: Fn1<ResultRow, ResultRow>): Request<SELF> {
-        this.resultFilter.add(filter)
-        return this
-    }
+    var returnColumns by RETURN_OPTIONS
 
     /**
-     * Copy all properties of this request into the given target and return the target.
-     * @param copy the target to receive the copy.
-     * @return the given copy target.
+     * A list of lambdas, that should be invoked by the storage for every row that should be added into a [result-set][ResultSet]. The method can inspect the row, and should return either the unmodified row, a modified version to be added to the response, or _null_, if the row should be removed from the [result-set][ResultSet].
+     *
+     * The filter lambdas are called in LIFO order (last in, first out/called). The output of each lambda is used as input for the next one. Therefore, only if all filters return a valid new row, the last returned row will be added to the response. This means, each filter can modify the row, or cause it to be removed from the result-set.
+     *
+     * Adding filtering lambdas conflicts slightly with the [ReadRequest.limit], because the filter can remove an arbitrary amount of features, the storage will need to generate a full [result-set][ResultSet], and the to filter the [result-set][ResultSet] until it has enough results to fulfill the requested [ReadRequest.limit].
+     * @since 3.0.0
      */
-    open fun copyTo(copy: SELF): SELF {
-        copy.noFeature = this.noFeature
-        copy.noGeometry = this.noGeometry
-        copy.noGeoRef = this.noGeoRef
-        copy.noMeta = this.noMeta
-        copy.noTags = this.noTags
-        copy.resultFilter = this.resultFilter.toMutableList()
-        return copy
-    }
+    var resultFilters by RESULT_FILTER_LIST
 }

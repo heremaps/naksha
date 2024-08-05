@@ -1,5 +1,8 @@
 package naksha.psql
 
+import naksha.geo.SpGeometry
+import naksha.model.SessionOptions
+
 /**
  * PostgresQL utility and factory functions. They are implemented differently on every platform.
  */
@@ -69,9 +72,9 @@ expect class PgPlatform {
         /**
          * Creates a new PostgresQL storage engine. The [PgStorage] is implemented very differently on every platform.
          * @param cluster the PostgresQL server cluster to use.
-         * @param options the default options when opening new connections.
+         * @param schemaName the name of the schema.
          */
-        fun newStorage(cluster: PgCluster, options: PgOptions): PgStorage
+        fun newStorage(cluster: PgCluster, schemaName: String): PgStorage
 
         /**
          * Tests if this code is executed within a PostgresQL database using [PLV8 extension](https://plv8.github.io/).
@@ -101,7 +104,7 @@ expect class PgPlatform {
          * @return _true_ if a new test-storage was created; _false_ if there is already an existing storage.
          * @throws UnsupportedOperationException if this platform does not support running tests.
          */
-        fun initTestStorage(defaultOptions: PgOptions, params: Map<String, *>? = null): Boolean
+        fun initTestStorage(defaultOptions: SessionOptions, params: Map<String, *>? = null): Boolean
 
         /**
          * Returns the existing test-storage to execute tests. If no test storage exists yet, creates a new test storage.
@@ -116,5 +119,23 @@ expect class PgPlatform {
          * @throws UnsupportedOperationException if this platform does not support running tests.
          */
         fun newTestStorage(): PgStorage
+
+        /**
+         * Decode a GeoJSON geometry from encoded bytes.
+         * @param raw the bytes to decode.
+         * @param flags the codec flags.
+         * @return the GeoJSON geometry.
+         * @since 3.0.0
+         */
+        fun decodeGeometry(raw: ByteArray?, flags: Int): SpGeometry?
+
+        /**
+         * Encodes the given GeoJSON geometry into bytes.
+         * @param geometry the geometry to encode.
+         * @param flags the codec flags.
+         * @return the encoded GeoJSON geometry.
+         * @since 3.0.0
+         */
+        fun encodeGeometry(geometry: SpGeometry?, flags: Int): ByteArray?
     }
 }

@@ -18,25 +18,21 @@
  */
 package com.here.naksha.handler.activitylog;
 
-import static naksha.model.XyzFeature.ID;
-import static naksha.model.XyzFeature.PROPERTIES;
+import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog.ID;
 import static naksha.geo.XyzProperties.XYZ_ACTIVITY_LOG_NS;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.pRefFromPropPath;
+import static naksha.model.request.query.Property.PROPERTIES;
 
-import naksha.model.POp;
-import naksha.model.POpType;
-import naksha.model.PRef;
-import naksha.model.ReadFeatures;
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
-import java.util.List;
 import java.util.Optional;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.query.Property;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 class ActivityLogRequestTranslationUtil {
 
   private static final String[] ACTIVITY_LOG_ID_PATH = new String[] {PROPERTIES, XYZ_ACTIVITY_LOG_NS, ID};
-  static final PRef PREF_ACTIVITY_LOG_ID = pRefFromPropPath(ACTIVITY_LOG_ID_PATH);
+  static final Property PREF_ACTIVITY_LOG_ID = new Property(ACTIVITY_LOG_ID_PATH);
 
   private ActivityLogRequestTranslationUtil() {}
 

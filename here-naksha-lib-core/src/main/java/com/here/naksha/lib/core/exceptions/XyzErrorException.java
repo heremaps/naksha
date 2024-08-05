@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import static naksha.model.NakshaErrorCode.EXCEPTION;
+import static naksha.model.NakshaError.EXCEPTION;
 
 import naksha.model.NakshaError;
 import org.jetbrains.annotations.NotNull;
@@ -33,7 +33,7 @@ public class XyzErrorException extends RuntimeException {
   }
 
   public XyzErrorException(@NotNull NakshaError nakshaError) {
-    this(nakshaError, nakshaError.message, null);
+    this(nakshaError, nakshaError.msg, null);
   }
 
   public XyzErrorException(@NotNull NakshaError nakshaError, @NotNull Throwable reason) {

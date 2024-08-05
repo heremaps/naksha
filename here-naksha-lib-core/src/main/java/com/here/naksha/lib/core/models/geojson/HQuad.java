@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.models.geojson;
 
-import naksha.geo.BoundingBoxProxy;
+import naksha.geo.SpBoundingBox;
 
 public class HQuad {
 
@@ -89,7 +89,7 @@ public class HQuad {
       throw new IllegalArgumentException("Quadkey '" + quadkey + "' is invalid!");
   }
 
-  public BoundingBoxProxy getBoundingBox() {
+  public SpBoundingBox getBoundingBox() {
     double width = 360.0 / (1L << level);
     double heigth = level == 0 ? 180 : 360.0 / (1L << level);
 
@@ -98,7 +98,7 @@ public class HQuad {
     double east = width * (x + 1) - 180;
     double north = heigth * (y + 1) - 90;
 
-    return new BoundingBoxProxy(west, south, east, north);
+    return new SpBoundingBox(west, south, east, north);
   }
 
   @Override

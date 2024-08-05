@@ -31,7 +31,7 @@ import naksha.diff.Difference;
 import naksha.diff.MergeConflictException;
 import naksha.diff.Patcher;
 import naksha.model.EXyzAction;
-import naksha.model.NakshaFeatureProxy;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,7 +40,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * @param <FEATURE> the feature-type.
  */
-public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
+public class FeatureModificationEntry<FEATURE extends NakshaFeature> {
 
   /**
    * The input state of the caller.
@@ -242,7 +242,7 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
     if (diff == null) {
       return null;
     }
-    final FEATURE result = head.cloneDeep();
+    final FEATURE result = head.copy();
     Patcher.patch(result, diff);
     return result;
   }
@@ -276,7 +276,7 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
       return null;
     }
     final Difference mergedDiff = Patcher.mergeDifferences(baseToHeadDiff, baseToInputDiff, cr);
-    final FEATURE result = base.cloneDeep();
+    final FEATURE result = base.copy();
     Patcher.patch(result, mergedDiff);
     return result;
   }
