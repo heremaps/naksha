@@ -29,7 +29,7 @@ interface IStorage : AutoCloseable {
      * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
      * @since 2.0.8
      */
-    fun id(): String
+    val id: String
 
     /**
      * The admin options to use for internal processing.
@@ -57,28 +57,15 @@ interface IStorage : AutoCloseable {
     fun initStorage(params: Map<String, *>? = null)
 
     /**
-     * Returns the default map.
+     * The default map.
      * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * @return the default map.
      * @since 3.0.0
      */
-    fun defaultMap(): IMap
+    val defaultMap: IMap
 
     /**
-     * Initializes the given map in the storage. If the given map is already initialized, the method does nothing. This operation requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights.
-     *
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * - Throws [NakshaError.FORBIDDEN], if not called as super-user, and the storage is a new one.
-     * - Throws [NakshaError.MAP_NOT_SUPPORTED], if either this map, or generally maps are not supported.
-     * @param mapId the realm to initialize.
-     * @throws NakshaException if the initialization failed (e.g. the storage does not support multi-realms).
-     * @since 3.0.0
-     */
-    fun initMap(mapId: String)
-
-    /**
-     * Returns the map with the given identifier.
-     * @param mapId the map identifier.
+     * Returns the map admin object.
+     * @param mapId the map-id.
      * @return the map admin object.
      */
     operator fun get(mapId: String): IMap
@@ -89,17 +76,6 @@ interface IStorage : AutoCloseable {
      * @return the map-identifier or _null_, if no such map exists.
      */
     fun getMapId(mapNumber: Int): String?
-
-    /**
-     * Deletes the given map with all data in it. This operation requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights.
-     *
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * - Throws [NakshaError.FORBIDDEN], if the user has no super-user rights.
-     * - Throws [NakshaError.MAP_NOT_FOUND], may be thrown, if no such map exists or the storage silently does nothing.
-     * - Throws [NakshaError.MAP_NOT_SUPPORTED], if either this map, or generally maps are not supported.
-     * @since 3.0.0
-     */
-    fun dropMap(mapId: String)
 
     /**
      * Convert the given [Tuple] into a [NakshaFeature].

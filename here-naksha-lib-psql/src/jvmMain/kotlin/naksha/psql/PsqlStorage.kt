@@ -37,10 +37,10 @@ open class PsqlStorage(override val cluster: PsqlCluster, defaultSchemaName: Str
 
     override fun initStorage(params: Map<String, *>?) {
         super.initStorage(params)
-        if (_channel == null) _channel = "lib-psql-${id()}"
+        if (_channel == null) _channel = "lib-psql-${id}"
         if (!this::listener.isInitialized) listener = PsqlStorageListener(this)
     }
     override fun newSession(options: SessionOptions, readOnly: Boolean): PsqlSession = PsqlSession(this, options, readOnly)
-    override fun defaultMap(): PsqlMap = super.defaultMap() as PsqlMap
+    override val defaultMap: PsqlMap = super.defaultMap as PsqlMap
     override operator fun get(mapId: String): PsqlMap = super.get(mapId) as PsqlMap
 }

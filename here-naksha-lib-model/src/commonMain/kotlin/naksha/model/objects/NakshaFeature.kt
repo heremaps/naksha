@@ -45,7 +45,7 @@ open class NakshaFeature() : AnyObject() {
     /**
      * The unique identifier of the feature.
      */
-    var id by ID
+    open var id by ID
 
     /**
      * The type of the feature.

@@ -18,7 +18,7 @@ open class RowUpdater(
      * Returns the [flags][Flags] to use, when encoding new rows.
      * @return the [flags][Flags] to use, when encoding new rows.
      */
-    protected open fun flags(collection: NakshaCollection): Flags = collection.defaultFlags ?: session.storage.defaultFlags()
+    protected open fun flags(collection: NakshaCollection): Flags = collection.defaultFlags ?: session.storage.defaultFlags
 
     /**
      * Returns the encoding to store for the [feature-type][Metadata.type].

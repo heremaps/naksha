@@ -102,7 +102,7 @@ data class Tuple(
                 COLLECTION_NOT_FOUND,
                 "Collection #$collectionNumber not found"
             )
-            g = Guid(storage.id(), mapId, collectionId, meta.id, Version(meta.version), meta.uid)
+            g = Guid(storage.id, mapId, collectionId, meta.id, Version(meta.version), meta.uid)
             guid = g
         }
         return g

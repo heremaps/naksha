@@ -37,7 +37,7 @@ class ResultTupleList : ListProxy<ResultTuple>(ResultTuple::class) {
                 val mapId = storage.getMapId(mapNumber) ?: throw NakshaException(MAP_NOT_FOUND, "Map #$mapNumber not found at index $i")
                 val map = storage[mapId]
                 val colId = map.getCollectionId(colNumber) ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection #$colNumber not found at index $i")
-                val rowCache = NakshaCache.rowCache(storage.id())
+                val rowCache = NakshaCache.rowCache(storage.id)
                 val row = rowCache[rowNumber]
                 val resultTuple = ResultTuple(storage, mapId, colId, rowNumber, ExecutedOp.READ, row?.meta?.id, row)
                 list.add(resultTuple)

@@ -3,6 +3,7 @@
 package naksha.psql
 
 import naksha.base.*
+import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fn0
 import naksha.model.*
 import naksha.model.NakshaContext.NakshaContextCompanion.currentContext
@@ -46,7 +47,10 @@ open class PgMap(
      * The map-number of this map.
      */
     override val number: Int
-        get() = _number ?: throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
+        get() {
+            if (!exists()) throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
+            return _number ?: throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
+        }
 
     /**
      * The lock internally used to synchronize access.
@@ -58,9 +62,6 @@ open class PgMap(
      */
     private var _updateAt: Int64? = null
 
-    /**
-     * The schema
-     */
     internal var _oid: Int? = null
 
     /**
@@ -69,10 +70,19 @@ open class PgMap(
      */
     open val oid: Int
         get() {
-            if (_updateAt == null) refresh()
-            val _oid = this._oid
-            check(_oid != null) { "The schema '$schemaName' does not exist" }
-            return _oid
+            if (!exists()) throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
+            return _oid ?: throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
+        }
+
+    private var _collectionNumberSeqOid: Int? = null
+
+    /**
+     * The OID of the collection-number sequence.
+     */
+    open val collectionNumberSeqOid: Int
+        get() {
+            if (!exists()) throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
+            return _collectionNumberSeqOid ?: throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
         }
 
     /**
@@ -176,11 +186,18 @@ open class PgMap(
      */
     open fun refresh(connection: PgConnection? = null): PgMap {
         if (_updateAt == null || Platform.currentMillis() < _updateAt) {
+            logger.info("Refresh map '$id' ...")
             val conn = connOf(connection)
             try {
-                val cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(id)).fetch()
+                var cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(id)).fetch()
                 cursor.use {
                     _oid = cursor["oid"]
+                    // TODO: Right now we only support the default map, we need to change this!
+                    _number = 0
+                }
+                cursor = conn.execute("""SELECT oid FROM pg_class WHERE relname='$NAKSHA_COL_SEQ' AND relnamespace=${_oid}""").fetch()
+                cursor.use {
+                    _collectionNumberSeqOid = cursor["oid"]
                 }
             } finally {
                 closeOf(conn, connection, false)
@@ -191,7 +208,8 @@ open class PgMap(
     }
 
     protected fun updateUpdateAt() {
-        _updateAt = Platform.currentMillis() + PlatformUtil.HOUR
+        // TODO: Currently we only support the default map, so there is no need to ever update the cache!
+        _updateAt = Platform.currentMillis() + 365 * PlatformUtil.DAY
     }
 
     /**
@@ -210,7 +228,7 @@ open class PgMap(
      * @param connection the connection to use to query information from the database; if _null_, a new connection is used temporary.
      */
     open fun init(connection: PgConnection? = null) {
-        // Note: Implemented in PsqlSchema!
+        // Implemented in PsqlMap!
         throw NakshaException(UNSUPPORTED_OPERATION, "This environment does not allow to initialize the schema")
     }
 
@@ -228,6 +246,7 @@ open class PgMap(
         version: NakshaVersion = NakshaVersion.latest,
         override: Boolean = false
     ): String {
+        // Implemented in PsqlMap!
         throw NakshaException(UNSUPPORTED_OPERATION, "This environment does not allow to initialize the schema")
     }
 

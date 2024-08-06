@@ -125,9 +125,9 @@ open class PgStorage(
         get() = _postgresVersion ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
     private var _id: AtomicRef<String> = AtomicRef(null)
-    private var _txnSequenceOid: Int? = null
 
-    override fun id(): String = _id.get() ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+    override val id: String
+        get() = _id.get() ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
     override fun isInitialized(): Boolean = _id.get() != null
 
@@ -237,17 +237,23 @@ SELECT
                     _postgresVersion = NakshaVersion.of(v.substring(start + 1, end))
                 }
                 logger.info("Invoke init_internal for default schema '$defaultSchemaName'")
-                val schema = defaultMap()
-                val storage_id = schema.init_internal(initId, conn, version, override)
+                val defaultMap = defaultMap
+                val storage_id = defaultMap.init_internal(initId, conn, version, override)
                 _id.set(storage_id)
 
                 logger.info("Commit")
                 conn.commit()
 
-                logger.info("Load OID of transaction sequence counter (located only in default schema)")
-                cursor = conn.execute("SELECT oid FROM pg_class WHERE relname='$NAKSHA_TXN_SEQ' AND relnamespace=${schema.oid}").fetch()
+                logger.info("Load OID of sequence counter (located only in default schema)")
+                cursor = conn.execute("""SELECT oid, relname
+FROM pg_class
+WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defaultMap.oid}""")
                 cursor.use {
-                    _txnSequenceOid = cursor["oid"]
+                    while (cursor.next()) {
+                        val relname: String = cursor["relname"]
+                        if (NAKSHA_TXN_SEQ == relname) _txnSequenceOid = cursor["oid"]
+                        if (NAKSHA_MAP_SEQ == relname) _mapNumberSequenceOid = cursor["oid"]
+                    }
                 }
             }
         }
@@ -271,21 +277,33 @@ SELECT
      * Returns the default map.
      * @return the default map.
      */
-    override fun defaultMap(): PgMap = this[DEFAULT_MAP_ID]
+    override val defaultMap: PgMap
+        get() = this[DEFAULT_MAP_ID]
 
     /**
      * The default flags to use for the storage.
      * @return default flags to use for the storage.
      */
-    fun defaultFlags(): Flags = Flags()
+    val defaultFlags: Flags = Flags()
         .featureEncoding(FeatureEncoding.JBON_GZIP)
         .geoEncoding(GeoEncoding.TWKB_GZIP)
         .tagsEncoding(TagsEncoding.JBON_GZIP)
 
+    private var _txnSequenceOid: Int? = null
+
     /**
-     * Returns the OID of the transaction sequence.
+     * The OID of the transaction sequence.
      */
-    fun txnSequenceOid(): Int = _txnSequenceOid ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+    val txnSequenceOid: Int
+        get() = _txnSequenceOid ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+
+    private var _mapNumberSequenceOid: Int? = null
+
+    /**
+     * The OID of the map-number sequence.
+     */
+    val mapNumberSequenceOid: Int
+        get() = _mapNumberSequenceOid ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
     /**
      * Tests if this storage contains the given schema.
@@ -399,16 +417,6 @@ SELECT
      */
     internal open fun adminConnection(options: SessionOptions = adminOptions, init: Fx2<PgConnection, String>? = null): PgConnection
         = newConnection(options, false, init)
-
-    override fun initMap(mapId: String) {
-        val schema = mapIdToSchema(mapId)
-        this[schema].init()
-    }
-
-    override fun dropMap(mapId: String) {
-        val schema = mapIdToSchema(mapId)
-        if (schema in this) this[schema].drop()
-    }
 
     override fun validateHandle(handle: String, ttl: Int?): Boolean {
         TODO("Not yet implemented")

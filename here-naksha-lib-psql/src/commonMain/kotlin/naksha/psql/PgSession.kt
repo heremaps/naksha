@@ -153,7 +153,7 @@ open class PgSession(
             // Start a new transaction.
             val conn = usePgConnection()
             val QUERY = "SELECT nextval($1) as txn, (extract(epoch from transaction_timestamp())*1000)::int8 as time"
-            val cursor = conn.execute(QUERY, arrayOf(storage.txnSequenceOid())).fetch()
+            val cursor = conn.execute(QUERY, arrayOf(storage.txnSequenceOid)).fetch()
             cursor.use {
                 var txn: Int64 = cursor["txn"]
                 val txts: Int64 = cursor["time"]
@@ -164,7 +164,7 @@ open class PgSession(
                     logger.info("Transaction counter is in wrong day, acquire advisory lock")
                     conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
                     try {
-                        val c2 = conn.execute("SELECT nextval($1) as txn", arrayOf(storage.txnSequenceOid())).fetch()
+                        val c2 = conn.execute("SELECT nextval($1) as txn", arrayOf(storage.txnSequenceOid)).fetch()
                         c2.use {
                             txn = c2["txn"]
                             version = Version(txn)
@@ -174,7 +174,7 @@ open class PgSession(
                             // Rollover, we update sequence of the day.
                             version = Version.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(0))
                             txn = version.txn
-                            conn.execute("SELECT setval($1, $2)", arrayOf(storage.txnSequenceOid(), txn + 1)).close()
+                            conn.execute("SELECT setval($1, $2)", arrayOf(storage.txnSequenceOid, txn + 1)).close()
                         }
                         logger.info("Release advisory lock")
                         conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()

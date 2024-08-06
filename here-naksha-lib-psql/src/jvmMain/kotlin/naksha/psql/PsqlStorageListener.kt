@@ -7,7 +7,7 @@ import java.lang.ref.WeakReference
 import java.sql.Statement
 import java.util.concurrent.atomic.AtomicBoolean
 
-internal class PsqlStorageListener(storage: PsqlStorage) : Thread("lib-psql-listener@${storage.id()}"), AutoCloseable {
+internal class PsqlStorageListener(storage: PsqlStorage) : Thread("lib-psql-listener@${storage.id}"), AutoCloseable {
     private val channel = storage.channel
     private val storageRef: WeakReference<PsqlStorage> = WeakReference(storage)
     private val shutdown = AtomicBoolean(false)

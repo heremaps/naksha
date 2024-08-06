@@ -2,6 +2,7 @@
 
 package naksha.model
 
+import naksha.base.Int64
 import naksha.base.Platform
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
 import kotlin.js.JsExport
@@ -25,14 +26,35 @@ class Naksha private constructor() {
         const val VIRT_TRANSACTIONS = "naksha~transactions"
 
         /**
+         * The collection-number of the virtual collection in which transactions are stored.
+         */
+        @JvmStatic
+        @JsStatic
+        val VIRT_TRANSACTIONS_NUMBER = Int64(0)
+
+        /**
          * The identifier of the virtual collection in which the collections them-self are stored.
          */
         const val VIRT_COLLECTIONS = "naksha~collections"
 
         /**
+         * The collection-number of the virtual collection in which the collections them-self are stored.
+         */
+        @JvmStatic
+        @JsStatic
+        val VIRT_COLLECTIONS_NUMBER = Int64(1)
+
+        /**
          * The identifier of the virtual collection in which the dictionaries are stored.
          */
         const val VIRT_DICTIONARIES = "naksha~dictionaries"
+
+        /**
+         * The collection-number of the virtual collection in which the dictionaries are stored.
+         */
+        @JvmStatic
+        @JsStatic
+        val VIRT_DICTIONARIES_NUMBER = Int64(2)
 
         /**
          * Fetch only the `id`, other parts only from cache.

@@ -6,6 +6,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.model.NakshaVersion
 import naksha.model.NakshaException
 import naksha.model.Naksha
+import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_SUPPORTED
 import naksha.psql.PgIndex.PgIndexCompanion.app_id_updatedAt_id_txn_uid
 import naksha.psql.PgIndex.PgIndexCompanion.author_ts_id_txn_uid
 import naksha.psql.PgIndex.PgIndexCompanion.gist_geo_id_txn_uid
@@ -26,7 +27,7 @@ class PsqlMap internal constructor(storage: PgStorage, mapId: String, schemaName
         Naksha.verifyId(id)
         val conn = connection ?: storage.newConnection(storage.adminOptions, false) { _, _ -> }
         try {
-            init_internal(storage.id(), conn)
+            init_internal(storage.id, conn)
             // auto-commit, if this is a temporary connection, and no exception
             if (connection == null) conn.commit()
         } finally {
@@ -40,12 +41,13 @@ class PsqlMap internal constructor(storage: PgStorage, mapId: String, schemaName
         version: NakshaVersion,
         override: Boolean
     ): String {
+        if (!isDefault()) throw NakshaException(MAP_NOT_SUPPORTED, "Only default map supported")
+        _number = 0
         logger.info("Query database for identifier and version from {}, schema='{}'", conn, schemaName)
         conn.execute(
             """CREATE SCHEMA IF NOT EXISTS $nameQuoted;
 SET SESSION search_path TO $nameQuoted, public, topology;"""
         ).close()
-      // SELECT oid FROM pg_namespace WHERE nspname = $1
         var cursor = conn.execute(
             """
 SELECT oid, null AS pronamespace, 'schema' AS proname FROM pg_namespace WHERE nspname = $1
@@ -185,15 +187,17 @@ SELECT oid, pronamespace, proname FROM pg_proc WHERE pronamespace = (SELECT oid 
                 "storageIdLiteral" to quoteLiteral(storage_id),
             )
         )
+        // Note: We reserve the first 1000 collection sequences for internal collections with hard-coded
+        //       storage-numbers, because they have no entries in the naksha~collections table!
         logger.info("Create collection-id sequence ...")
-        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_COL_ID_SEQ AS ${PgType.INT64} CACHE 10;").close()
+        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_COL_SEQ AS ${PgType.INT64} START 1000 CACHE 1;").close()
 
         logger.info("Installation done ...")
         if (isDefault()) {
             logger.info("Creating the default schema, therefore create transaction sequences")
             conn.execute("""
-CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64} CACHE 10;
-CREATE SEQUENCE IF NOT EXISTS $NAKSHA_MAP_ID_SEQ AS ${PgType.INT64} CACHE 10;
+CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64} START 1 CACHE 10;
+CREATE SEQUENCE IF NOT EXISTS $NAKSHA_MAP_SEQ AS ${PgType.INT64} START 1 CACHE 1;
 """).close()
         }
         logger.info("Create internal collections: transactions, collections, and dictionaries")
@@ -231,7 +235,7 @@ CREATE SEQUENCE IF NOT EXISTS $NAKSHA_MAP_ID_SEQ AS ${PgType.INT64} CACHE 10;
             indices = listOf(id_txn_uid, tags_id_txn_uid)
         )
         logger.info("Done creating transactions, collections, and dictionaries")
-        updateUpdateAt()
+        refresh(conn)
         return storage_id
     }
 
