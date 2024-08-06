@@ -150,9 +150,9 @@ open class NakshaContext protected constructor() {
     /**
      * The map to use.
      *
-     * The map is read from the JWT `map` claim, but can be overridden by the client using the HTTP header `X-Map` or by using specially crafted requests which explicitly specify the map. If neither is available, the default is [DEFAULT_MAP_ID].
+     * The map-id is read from the JWT `mapId` claim, but can be overridden by the client using the HTTP header `X-Map-Id` or by using specially crafted requests which explicitly specify the map-id. If neither is available, the default is [DEFAULT_MAP_ID].
      *
-     * Note: In `lib-psql` the default map is mapped to the default schema configured within the storage driver. Other maps are simply stored in their own dedicated schemas with the same name (this only applies for the default PostgresQL storage implementation).
+     * Note: In `lib-psql` the default map is mapped to the default schema configured within the storage driver.
      * @since 3.0.0
      */
     open var mapId: String = DEFAULT_MAP_ID

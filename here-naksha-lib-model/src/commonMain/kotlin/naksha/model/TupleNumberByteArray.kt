@@ -18,28 +18,18 @@ import kotlin.jvm.JvmStatic
  * A helper that wraps a byte-array that contains one to n row-ids.
  * ```sql
  * SELECT r AS (
- *   SELECT rowid, ... FROM table1 WHERE ... LIMIT ...
+ *   SELECT tuple_number FROM table1 WHERE ... LIMIT ...
  *   UNION ALL
- *   SELECT rowid, ... FROM table2 WHERE ... LIMIT ...
+ *   SELECT tuple_number FROM table2 WHERE ... LIMIT ...
  *   ...
  * )
- * SELECT gzip(array_agg(rowid||int4send(c))) FROM r
- * ```
- * If only one collection is selected, this should be done:
- * ```sql
- * SELECT r AS (
- *   SELECT rowid FROM table1 WHERE ... LIMIT ...
- *   UNION ALL
- *   SELECT rowid FROM table2 WHERE ... LIMIT ...
- *   ...
- * )
- * SELECT gzip(array_agg(rowid)) FROM r
+ * SELECT gzip(array_agg(tuple_number)) FROM r
  * ```
  */
 @JsExport
 data class TupleNumberByteArray(
     /**
-     * The storage from which the row-number was read.
+     * The storage from which the tuple-number was read.
      */
     @JvmField val storage: IStorage,
 

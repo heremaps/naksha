@@ -36,7 +36,7 @@ open class SuccessResponse @Deprecated("Use secondary", ReplaceWith("SuccessResp
             val rs = self.resultSet
             if (rs != null) {
                 val rows = rs.result()
-                rs.storage().fetchRows(rows as List<ResultTuple>)
+                rs.storage().fetchTuples(rows as List<ResultTuple>)
                 for (row in rows) {
                     val f = row?.feature
                     if (f != null) features.add(f)

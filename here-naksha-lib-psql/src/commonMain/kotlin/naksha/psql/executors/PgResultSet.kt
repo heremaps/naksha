@@ -21,11 +21,6 @@ class PgResultSet(
     internal val storage: PgStorage,
 
     /**
-     * The map that generated this result-set.
-     */
-    internal val map: String,
-
-    /**
      * The result-set as [naksha.model.TupleNumber] array, read from the query.
      *
      * **Note**: After sorting, the array is replaced with the ordered version. This is quite important to acknowledge when saving the rows-ids to restore result-sets quickly when seeking in them!
@@ -164,7 +159,7 @@ class PgResultSet(
         } else if (orderBy == ID) {
             // We need to sort by ID, so we need the ids of all results!
             fetchMode = Naksha.FETCH_ID
-            storage.fetchRows(all, mode = Naksha.FETCH_ID)
+            storage.fetchTuples(all, mode = Naksha.FETCH_ID)
             all.sortedWith(this::order_id_txn_uid)
         } else if (orderBy != null) {
             throw NakshaException(ILLEGAL_ARGUMENT, "Unsupported orderBy: $orderBy")
@@ -231,7 +226,7 @@ class PgResultSet(
             if (i <= fetched_till) {
                 val available = i - removed
                 val to = min(((end - available + 50) * 1.1).toInt(), all.size)
-                storage.fetchRows(all, from = i, to = to, mode = fetchMode)
+                storage.fetchTuples(all, from = i, to = to, mode = fetchMode)
                 fetched_till = to
             }
             var row = all[i]

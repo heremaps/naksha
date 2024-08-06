@@ -305,12 +305,9 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
     val mapNumberSequenceOid: Int
         get() = _mapNumberSequenceOid ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
-    /**
-     * Tests if this storage contains the given schema.
-     * @param schemaName the name of the schema to test.
-     * @return _true_ if such a schema exists; _false_ otherwise.
-     */
-    operator fun contains(schemaName: String): Boolean = maps.containsKey(schemaName)
+    // TODO: This only works as long as we only support the standard-map, later we need to somehow pre-fetch all maps.
+    //       Maps are entities, that are anyway rare, the hard-cap is 4k, and even that would already be a lot for a storage!
+    override operator fun contains(mapId: String): Boolean = maps.containsKey(mapId)
 
     /**
      * Creates a new schema instance, internally called.
@@ -422,19 +419,19 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
         TODO("Not yet implemented")
     }
 
-    override fun getRowsByFeatureId(mapId: String, collectionId: String, featureIds: Array<String>, mode: String): List<Tuple?> {
+    override fun getLatestTuples(mapId: String, collectionId: String, featureIds: Array<String>, mode: String): List<Tuple?> {
         TODO("Not yet implemented")
     }
 
-    override fun getRows(tupleNumbers: Array<TupleNumber>, mode: String): List<Tuple?> {
+    override fun getTuples(tupleNumbers: Array<TupleNumber>, mode: String): List<Tuple?> {
         TODO("Not yet implemented")
     }
 
-    override fun fetchRows(rows: List<ResultTuple?>, from: Int, to: Int, mode: String) {
+    override fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int, to: Int, mode: String) {
         TODO("Not yet implemented")
     }
 
-    override fun fetchRow(row: ResultTuple, mode: String) {
+    override fun fetchTuple(resultTuple: ResultTuple, mode: String) {
         TODO("Not yet implemented")
     }
 

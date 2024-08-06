@@ -7,12 +7,11 @@ import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 /**
- * A row identifier, being a 128-bit value, persisting out of the [version][Version], a 32-bit integer unique identifies within the version, and the flags which contain the partition number.
+ * A [tuple][Tuple] identifier, being a 160-bit value, persisting out of the [store-number][StoreNumber] (where the [tuple][Tuple] is physically located), the [version][Version] (the transaction in which it was created), and a 32-bit integer unique identifies within the [version][Version].
  *
- * The `uid` allows to order rows within a version, and to process the changes being part of a transaction in a deterministic order. The row identifier is stringified into: `{year}:{month}:{day}:{seq}:{uid}:{flags}`.
+ * The tuple-number is stringified into: `{map-number}:{collection-number}:{year}:{month}:{day}:{seq}:{uid}:{partition-number}`.
  *
- * Within a given storage, there are no two rows with the same [TupleNumber], not even in different maps or collections.
- *
+ * Within a given storage, there are no two [tuples][Tuple] with the same [TupleNumber], not even in different maps or collections.
  */
 @JsExport
 data class TupleNumber(

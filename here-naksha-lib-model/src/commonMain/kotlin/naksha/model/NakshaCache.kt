@@ -23,14 +23,14 @@ class NakshaCache private constructor() {
          */
         @JvmStatic
         @JsStatic
-        tailrec fun rowCache(storageId: String): TupleCache {
+        tailrec fun tupleCache(storageId: String): TupleCache {
             var ref = tupleCaches[storageId]
             var cache = ref?.deref()
             if (cache != null) return cache
             cache = TupleCache(storageId)
             ref = WeakRef(cache)
             if (tupleCaches.putIfAbsent(storageId, ref) == null) return cache
-            return rowCache(storageId)
+            return tupleCache(storageId)
         }
     }
 }

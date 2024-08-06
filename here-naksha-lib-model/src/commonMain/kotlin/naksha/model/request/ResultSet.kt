@@ -46,7 +46,7 @@ interface ResultSet {
     /**
      * Creates a result from all [rows], that should be part of the success response.
      *
-     * **Note**: The storage will not fetch the rows of the result-rows, when there is no need to do this. Therefore, [IStorage.fetchRows] should be invoked ones for this result-row list.
+     * **Note**: The storage will not fetch the rows of the result-rows, when there is no need to do this. Therefore, [IStorage.fetchTuples] should be invoked ones for this result-row list.
      *
      * @return a sub-list from [offset] to [end] with all result-rows, that should be part of the success response.
      */
@@ -59,7 +59,7 @@ interface ResultSet {
     fun resultSize(): Int = result().size
 
     /**
-     * Returns all [rows][Tuple] being part of the result-set, the rows may not have been read from the storage yet, and may require to invoke [IStorage.fetchRows]. Only the rows till [validationEnd] are validated (filtered), all others are in an unknown state, except [isComplete].
+     * Returns all [rows][Tuple] being part of the result-set, the rows may not have been read from the storage yet, and may require to invoke [IStorage.fetchTuples]. Only the rows till [validationEnd] are validated (filtered), all others are in an unknown state, except [isComplete].
      *
      * To generate the features for an [SuccessResponse], simply read all rows from [offset] till [end] (or use the [result] method), and convert them into features. Beware that only the rows till [validationEnd] are reliable. All rows returned starting with the one at [validationEnd] are not yet validated, therefore some filters (like property query, lambdas) have not been applied yet.
      * @return the list of all rows being part of the result-set.

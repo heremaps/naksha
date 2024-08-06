@@ -42,7 +42,7 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        val VIRT_COLLECTIONS_NUMBER = Int64(1)
+        val VIRT_COLLECTIONS_NUMBER = Int64(0)
 
         /**
          * The identifier of the virtual collection in which the dictionaries are stored.
@@ -193,5 +193,14 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun partitionNumber(featureId: String?): Int = if (featureId == null) 0 else Platform.md5(featureId)[0].toInt() and 255
+
+        /**
+         * Tests if the given collection is an internal one.
+         * @param collectionId the collection-id to test.
+         * @return _true_ if this is an internal collection; _false_ otherwise.
+         */
+        @JsStatic
+        @JvmStatic
+        fun isInternal(collectionId: String?): Boolean = collectionId != null && collectionId.startsWith(VIRT_PREFIX)
     }
 }

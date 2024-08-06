@@ -1,14 +1,14 @@
 package naksha.psql.executors
 
+import naksha.base.Int64
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.partitionNumber
+import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
+import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
+import naksha.model.objects.NakshaCollection
 import naksha.model.request.*
-import naksha.psql.PgCollection
-import naksha.psql.PgConnection
-import naksha.psql.PgSession
+import naksha.psql.*
 import kotlin.jvm.JvmField
 
 // TODO: We need to fix NakshaBulkLoaderPlan to make this faster again !
@@ -25,7 +25,7 @@ import kotlin.jvm.JvmField
  *
  * It does ignore optional settings within the [WriteRequest], it actually can be used for any simple list of write instructions, especially as well internally. Its performance is sub-optional, but fine for small amount of writes. It acts as a reference implementation that can be extended.
  */
-open class PgWriter(
+class PgWriter(
     /**
      * The session to which this writer is linked.
      */
@@ -34,107 +34,194 @@ open class PgWriter(
     /**
      * The write instructions to [execute].
      */
-    @JvmField val writes: WriteList,
+    @JvmField val request: WriteRequest,
 
     /**
-     * The connection to use, if not given, acquire the current session connection.
+     * The connection to use.
      */
     @JvmField val conn: PgConnection = session.usePgConnection()
 ) : RowUpdater(session) {
 
-    //private val collectionWrites: WriteList
+    /**
+     * The writes to act upon.
+     */
+    private val writes = request.writes
 
     /**
-     * The write operations ordered by map, collection, partition-number.
+     * All writes that create, update or delete collections.
      */
-    private val orderedWrites: WriteList
+    private val collectionWrites: WriteExtList
+
+    /**
+     * The write operations ordered by:
+     * - map-id
+     * - collection-id
+     * - operation (CREATE, UPSERT, UPDATE, DELETE, PURGE, UNKNOWN)
+     * - partition-number
+     * - feature-id
+     *
+     * This is very important to prevent deadlocks in the database, all code that modifies features must use the same ordering!
+     */
+    private val orderedWrites: WriteExtList
+
+    /**
+     * The storage.
+     */
+    val storage: PgStorage = session.storage
+
+    /**
+     * The version of which this writer is part.
+     */
+    val version: Version
+        get() = session.version()
+
+    /**
+     * Returns the transaction number.
+     */
+    fun txn(): Int64 = version.txn
+
+    /**
+     * Returns a new `uid` for this write-operation.
+     */
+    fun newUid(): Int = session.uid.getAndAdd(1)
 
     init {
-        orderedWrites = writes.copy(false)
-        @Suppress("LeakingThis")
-        orderedWrites.sortedWith(this::compareEm)
-    }
+        // Split into collection modifications, and feature modifications.
+        val collectionWrites = WriteExtList()
+        val orderedWrites = WriteExtList()
+        orderedWrites.setCapacity(writes.getCapacity()) // Ensure we do not have to resize array-list too often in Java!
 
-    // Sort write operations by map, collection, partition-number
-    private fun compareEm(a: Write?, b: Write?): Int {
-        if (a === b) return 0
-        if (b == null) return -1
-        if (a == null) return 1
-        return if (a.mapId == b.mapId) {
-            if (a.collectionId == b.collectionId) {
-                val a_part = partitionNumber(a.featureId())
-                val b_part = partitionNumber(b.featureId())
-                if (a_part == b_part) 0 else if (a_part < b_part) -1 else 1
-            } else if (a.collectionId < b.collectionId) -1 else 1
-        } else if (a.mapId < b.mapId) -1 else 1
-    }
-
-    fun execute(): Response {
-
-        // TODO: Fetch all existing states, do we need?
-
-        var map: String? = null
+        val writes = this.writes
         var i = 0
         while (i < writes.size) {
             val write = writes[i]
-            if (write == null) {
-                i++
-                continue
-            }
-            if (map == null) {
-                map = write.mapId
-            } else if (map != write.mapId) {
-                throw NakshaException(ILLEGAL_ARGUMENT, "Writing into different maps not supported, found $map and ${write.mapId}")
-            }
-
-            // TODO: If the XYZ namespace of the feature stores a different id in UUID
-            //       or a different collection, then we need to add the "Origin" tag!
-
-            when (write.op) {
-                WriteOp.CREATE -> results += insert(write)
-                WriteOp.UPDATE -> results += update(write)
-                WriteOp.UPSERT -> results += upsert(write)
-                WriteOp.DELETE -> results += delete(write)
-                WriteOp.PURGE -> results += purge(write)
-                else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown write instruction #$i: ${write.op}")
-            }
+            val writeExt = write?.proxy(WriteExt::class)
+            writeExt?.i = i
+            // TODO: Add pre-processing here, if we need any.
+            if (writeExt?.collectionId == VIRT_COLLECTIONS) collectionWrites.add(writeExt) else orderedWrites.add(writeExt)
             i++
         }
-        TODO("Finish me")
+        orderedWrites.sortedWith(Write::sortCompare)
+
+        this.orderedWrites = orderedWrites
+        this.collectionWrites = collectionWrites
     }
 
-    private lateinit var version: Version
-    private val results = mutableListOf<Tuple>()
+    // We keep the references to prevent garbage collection
+    private val tuples = TupleList()
+    private val tupleNumbers = TupleNumberList()
 
-    private fun collectionOf(write: Write): PgCollection {
-        val map = write.mapId
-        val schema = session.storage[session.storage.mapIdToSchema(map)]
-        if (!schema.exists()) throw NakshaException(MAP_NOT_FOUND, "No such map: $map")
+    fun execute(): Response {
+        val tuples = this.tuples
+        val tupleNumbers = this.tupleNumbers
+        val tupleCache = NakshaCache.tupleCache(storage.id)
+
+        // First, process collections, no performance need here for now.
+        val collectionWrites = this.collectionWrites
+        for (write in collectionWrites) {
+            if (write == null) continue
+            val tuple = when (write.op) {
+                WriteOp.CREATE -> createCollection(mapOf(write), write)
+                WriteOp.UPSERT -> upsertCollection(mapOf(write), write)
+                WriteOp.UPDATE -> updateCollection(mapOf(write), write)
+                WriteOp.DELETE -> deleteCollection(mapOf(write), write)
+                WriteOp.PURGE -> purgeCollection(mapOf(write), write)
+                else -> throw NakshaException(UNSUPPORTED_OPERATION, "Unknown write-operation: '${write.op}'")
+            }
+            tuples[write.i] = tuple
+            tupleNumbers[write.i] = tuple.tupleNumber
+            tupleCache.store(tuple)
+        }
+
+        // Now, perform all feature operations.
+        // TODO: Fix NakshaBulkLoaderPlan, this is the "slow" path!
+        val orderedWrites = this.orderedWrites
+        for (write in orderedWrites) {
+            if (write == null) continue
+            val tuple = when (write.op) {
+                WriteOp.CREATE -> createFeature(collectionOf(write), write)
+                WriteOp.UPSERT -> upsertFeature(collectionOf(write), write)
+                WriteOp.UPDATE -> updateFeature(collectionOf(write), write)
+                WriteOp.DELETE -> deleteFeature(collectionOf(write), write)
+                WriteOp.PURGE -> purgeFeature(collectionOf(write), write)
+                else -> throw NakshaException(UNSUPPORTED_OPERATION, "Unknown write-operation: '${write.op}'")
+            }
+            tuples[write.i] = tuple
+            tupleNumbers[write.i] = tuple.tupleNumber
+            tupleCache.store(tuple)
+        }
+
+        // If everything was done perfectly, fine.
+        val tnba = TupleNumberByteArray(storage, tupleNumbers.toByteArray())
+        return SuccessResponse(
+            PgResultSet(
+                storage, tnba,
+                incomplete = false,
+                validTill = tnba.size,
+                offset = 0,
+                limit = tnba.size,
+                orderBy = null,
+                filters = request.resultFilters
+            )
+        )
+    }
+
+    private fun mapOf(write: WriteExt): PgMap {
+        val mapId = write.mapId
+        if (mapId !in storage) throw NakshaException(MAP_NOT_FOUND, "No such map: '$mapId'")
+        val map = storage[mapId]
+        if (!map.exists(conn)) throw NakshaException(MAP_NOT_FOUND, "No such map: '$mapId'")
+        return map
+    }
+
+    private fun collectionOf(write: WriteExt): PgCollection {
+        val map = mapOf(write)
         val collectionId = write.collectionId
-        val collection = schema[collectionId]
-        if (!collection.exists()) throw NakshaException(COLLECTION_NOT_FOUND, "No such collection: $collectionId")
+        val collection = map[collectionId]
+        if (!collection.exists(conn)) throw NakshaException(COLLECTION_NOT_FOUND, "No such collection: $collectionId")
         return collection
     }
 
-    internal fun insert(write: Write) : Tuple {
-        val collection = collectionOf(write)
+    internal fun createCollection(map: PgMap, write: WriteExt): Tuple {
+        // Note: write.collectionId is always naksha~collections!
+        val c = write.feature?.proxy(NakshaCollection::class)
+        val collectionId = write.featureId
+        TODO("Finish me")
+    }
+
+    internal fun updateCollection(map: PgMap, write: WriteExt): Tuple {
         TODO("Implement me")
     }
 
-    internal fun update(write: Write) : Tuple {
+    internal fun upsertCollection(map: PgMap, write: WriteExt): Tuple {
         TODO("Implement me")
     }
 
-    internal fun upsert(write: Write) : Tuple {
-
+    internal fun deleteCollection(map: PgMap, write: WriteExt): Tuple {
         TODO("Implement me")
     }
 
-    internal fun delete(write: Write) : Tuple {
+    internal fun purgeCollection(map: PgMap, write: WriteExt): Tuple {
         TODO("Implement me")
     }
 
-    internal fun purge(write: Write) : Tuple {
+    internal fun createFeature(collection: PgCollection, write: WriteExt): Tuple {
+        TODO("Implement me")
+    }
+
+    internal fun updateFeature(collection: PgCollection, write: WriteExt): Tuple {
+        TODO("Implement me")
+    }
+
+    internal fun upsertFeature(collection: PgCollection, write: WriteExt): Tuple {
+        TODO("Implement me")
+    }
+
+    internal fun deleteFeature(collection: PgCollection, write: WriteExt): Tuple {
+        TODO("Implement me")
+    }
+
+    internal fun purgeFeature(collection: PgCollection, write: WriteExt): Tuple {
         TODO("Implement me")
     }
 }

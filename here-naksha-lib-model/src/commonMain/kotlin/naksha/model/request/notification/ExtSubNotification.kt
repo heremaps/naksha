@@ -27,7 +27,7 @@ open class ExtSubNotification() : SubNotification() {
     /**
      * The result-rows being part of the transactions.
      *
-     * **Note**: Not all rows may have been fetched already, invoke [IStorage.fetchRows] to do this.
+     * **Note**: Not all rows may have been fetched already, invoke [IStorage.fetchTuples] to do this.
      */
     var rows by ROWS_BY_TXN
 }

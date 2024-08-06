@@ -10,11 +10,11 @@ import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 /**
- * A result row, when a row is part of some result returned by the storage.
+ * A [tuple][Tuple] as part of some result or intermediate thread local processing.
  *
- * Note that result-rows are not thread safe, they are helpful to cache the [NakshaFeature] instance, and when there is only an optional demand to physically read all the underlying data. So, a result-row basically means that there is a row being part of a result-set, but it might not yet have been loaded into memory.
+ * Note that result-tuple are not thread safe, they are helpful to cache individual states of [NakshaFeature] instances, and when there is only an optional demand to physically read all the underlying data. So, a result-tuple basically means that there is a tuple being part of a result-set, but it might not yet have been loaded into memory.
  *
- * Assume for example, there are 500,000 rows being part of a transaction, it is most often not useful to load all of them into memory, but we need at least the meta-information about all of them, so that they are part of the result-set, then normally a process steps through the result-set and stops, when enough have been processed.
+ * Assume for example, there are 500,000 tuples part of a transaction, it is most often not useful to load all of them into memory, but we need at least the meta-information about all of them, so that they are part of the result-set, then normally a process steps through the result-set and stops, when enough have been processed.
  */
 @JsExport
 open class ResultTuple(
@@ -24,17 +24,7 @@ open class ResultTuple(
     @JvmField val storage: IStorage,
 
     /**
-     * The map-id of the map in which the row is located.
-     */
-    @JvmField val mapId: String,
-
-    /**
-     * The collection-id of the collection in which the row is located.
-     */
-    @JvmField val collectionId: String,
-
-    /**
-     * The row-identifier.
+     * The tuple-number.
      */
     @JvmField val tupleNumber: TupleNumber,
 
@@ -46,7 +36,7 @@ open class ResultTuple(
     /**
      * The feature-id.
      *
-     * Can be _null_, when not yet fetched from the storage, use [IStorage.fetchRows].
+     * Can be _null_, when not yet fetched from the storage, use [IStorage.fetchTuples].
      *
      * When ordering by feature-id, the storage should load the feature identifiers together with the row identifiers. This operation will be slower than loading only the row identifiers, but still fast enough. However, at many places it is needed, like to create seekable views.
      */
@@ -55,10 +45,25 @@ open class ResultTuple(
     /**
      * If the row is already in the cache, the reference to the row.
      *
-     * Can be _null_, when not yet fetched from the storage, use [IStorage.fetchRows] or when [op] is [PURGED][ExecutedOp.PURGED] or [RETAINED][ExecutedOp.RETAINED].
+     * Can be _null_, when not yet fetched from the storage, use [IStorage.fetchTuples] or when [op] is [PURGED][ExecutedOp.PURGED] or [RETAINED][ExecutedOp.RETAINED].
      */
     @JvmField var tuple: Tuple?
 ) {
+    /**
+     * The map-id of the map in which the row is located.
+     */
+    val mapId: String?
+        get() = storage.getMapId(tupleNumber.mapNumber())
+
+    /**
+     * The collection-id of the collection in which the row is located.
+     */
+    val collectionId: String?
+        get() {
+            val mapId = mapId
+            return if (mapId != null) storage[mapId].getCollectionId(tupleNumber.collectionNumber()) else null
+        }
+
     /**
      * Returns the feature-id, if it is already known.
      *
@@ -76,7 +81,7 @@ open class ResultTuple(
     var feature: NakshaFeature? = null
         get() {
             if (field == null) {
-                if (tuple == null) storage.fetchRow(this)
+                if (tuple == null) storage.fetchTuple(this)
                 if (tuple != null) field = tuple?.toNakshaFeature()
             }
             return field

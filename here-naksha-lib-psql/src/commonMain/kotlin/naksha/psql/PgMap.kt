@@ -15,6 +15,7 @@ import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * Information about the database and connection, that need only to be queried ones per session.
@@ -84,6 +85,16 @@ open class PgMap(
             if (!exists()) throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
             return _collectionNumberSeqOid ?: throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
         }
+
+    /**
+     * Uses the given connection to acquire a new collection-number.
+     * @param conn the connection to use to acquire the number.
+     * @return the new collection number.
+     */
+    fun newCollectionNumber(conn: PgConnection): Int64 {
+        val cursor = conn.execute("SELECT nextval($1) as col_number", arrayOf(collectionNumberSeqOid)).fetch()
+        return cursor["col_number"]
+    }
 
     /**
      * Test if this is the default schema.
@@ -217,7 +228,18 @@ open class PgMap(
      * @return _true_ if the schema exists.
      */
     override fun exists(): Boolean {
-        if (_updateAt == null) refresh()
+        refresh()
+        return _oid != null
+    }
+
+    /**
+     * Tests if the schema exists.
+     * @param connection the connection to use.
+     * @return _true_ if the schema exists.
+     */
+    @JsName("existsUsing")
+    fun exists(connection: PgConnection?): Boolean {
+        refresh(connection)
         return _oid != null
     }
 

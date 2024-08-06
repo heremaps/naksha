@@ -25,6 +25,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.psql.PgStorageClass.Companion.Consistent
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * A collection is a set of database tables, that together form a logical feature store. This lower level implementation ensures that all collection information are cached, including statistical information, and that the cache is refreshed on demand from time to time.
@@ -55,7 +56,7 @@ open class PgCollection internal constructor(
 
     override val number: Int64
         get() {
-            if (!doExist()) throw NakshaException(COLLECTION_NOT_FOUND, "Collection $id does not exist")
+            if (!exists()) throw NakshaException(COLLECTION_NOT_FOUND, "Collection $id does not exist")
             return _number ?: throw NakshaException(EXCEPTION, "Collection $id exist, but has no collection-number")
         }
 
@@ -88,14 +89,15 @@ open class PgCollection internal constructor(
      */
     private var _exists: Boolean = false
 
-    override fun exists(): Boolean = doExist()
+    override fun exists(): Boolean = exists()
 
     /**
      * Tests if this collection does exits.
      * @param connection the connection to use to query the database; _null_ if a new connection should be used.
      * @return _true_ if this collection does exist.
      */
-    fun doExist(connection: PgConnection? = null): Boolean {
+    @JsName("existsUsing")
+    fun exists(connection: PgConnection? = null): Boolean {
         refresh(connection)
         return _exists
     }
@@ -353,7 +355,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
             if(PgTable.isInternal(id)) {
                 throw NakshaException(ILLEGAL_ARGUMENT, "It is not allowed to modify internal tables", id = id)
             }
-            if (doExist(conn)) {
+            if (exists(conn)) {
                 drop_internal(conn)
             }
         } finally {

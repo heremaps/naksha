@@ -5,13 +5,12 @@ package naksha.model.request
 import naksha.base.*
 import naksha.model.NakshaContext
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
-import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
-import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
-import naksha.model.NakshaException
+import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.objects.NakshaFeature
-import naksha.model.Tuple
 import naksha.model.objects.NakshaCollection
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmStatic
 
 /**
  * A write instruction for the storage.
@@ -20,6 +19,53 @@ import kotlin.js.JsExport
 open class Write : AnyObject() {
 
     companion object Write_C {
+        /**
+         * The method to order writes via [MutableList.sortedWith] by:
+         * - `map-id`
+         * - `collection-id`
+         * - `op` (CREATE, UPSERT, UPDATE, DELETE, PURGE, UNKNOWN)
+         * - `partition-number`
+         * - `feature-id`
+         *
+         * Example:
+         * ```kotlin
+         * val writes = WriteList()
+         * ... add writes
+         * writes.sortedWith(Write::sortCompare)
+         * ```
+         * It is very important that all code that modifies features, use the same ordering.
+         *
+         * **If writes are not order like this, this will lead to row-level locking in wrong order, causing deadlocks in the database!**
+         */
+        @JvmStatic
+        @JsStatic
+        fun sortCompare(a: Write?, b: Write?): Int {
+            if (a === b) return 0
+            if (b == null) return -1
+            if (a == null) return 1
+
+            // If only one of the two is a collection modification, order it before the other!
+            val a_colId = a.collectionId
+            val b_colId = b.collectionId
+            if (a_colId != b_colId) {
+                if (a_colId == VIRT_COLLECTIONS) return -1
+                if (b_colId == VIRT_COLLECTIONS) return 1
+            }
+
+            // Sorts by map-id, collection-id, operation, partition-number, feature-id
+            return if (a.mapId == b.mapId) {
+                if (a_colId == b_colId) {
+                    if (a.op == b.op) {
+                        val a_part = partitionNumber(a.featureId)
+                        val b_part = partitionNumber(b.featureId)
+                        if (a_part == b_part) {
+                            return (a.featureId ?: "").compareTo(b.featureId ?: "")
+                        } else if (a_part < b_part) -1 else 1
+                    } else a.op.compareTo(b.op)
+                } else if (a_colId < b_colId) -1 else 1
+            } else if (a.mapId < b.mapId) -1 else 1
+        }
+
         private val OP = NotNullEnum<Write, WriteOp>(WriteOp::class) { _, _ -> WriteOp.NULL }
         private val MAP_ID = NotNullProperty<Write, String>(String::class) { _, _ -> NakshaContext.currentContext().mapId }
         private val STRING = NotNullProperty<Write, String>(String::class) { _, _ -> "" }
@@ -72,14 +118,14 @@ open class Write : AnyObject() {
     var feature by FEATURE_NULL
 
     /**
-     * Returns `feature.id`, `row.meta.id`, or `id` in that order.
-     * @return the of the feature or row.
+     * Returns `feature.id` or `id` in that order.
      */
-    fun featureId(): String? {
-        val f = feature
-        if (f != null) return f.id
-        return id
-    }
+    val featureId: String?
+        get() {
+            val f = feature
+            if (f != null) return f.id
+            return id
+        }
 
     /**
      * Create a Naksha feature.

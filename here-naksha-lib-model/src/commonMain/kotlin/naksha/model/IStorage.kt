@@ -58,6 +58,7 @@ interface IStorage : AutoCloseable {
 
     /**
      * The default map.
+     *
      * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
      * @since 3.0.0
      */
@@ -65,13 +66,26 @@ interface IStorage : AutoCloseable {
 
     /**
      * Returns the map admin object.
+     *
+     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
      * @param mapId the map-id.
      * @return the map admin object.
      */
     operator fun get(mapId: String): IMap
 
     /**
+     * Tests if this storage contains the given map.
+     *
+     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
+     * @param mapId the map-id of the map to test for.
+     * @return _true_ if such a map exists; _false_ otherwise.
+     */
+    operator fun contains(mapId: String): Boolean
+
+    /**
      * Returns the map-identifier for the given map-number.
+     *
+     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
      * @param mapNumber the map-number.
      * @return the map-identifier or _null_, if no such map exists.
      */
@@ -80,6 +94,7 @@ interface IStorage : AutoCloseable {
     /**
      * Convert the given [Tuple] into a [NakshaFeature].
      *
+     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
      * @param tuple the row to convert.
      * @return the feature generated from the row.
      * @since 3.0.0
@@ -88,6 +103,8 @@ interface IStorage : AutoCloseable {
 
     /**
      * Convert the given feature into a [Tuple].
+     *
+     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
      * @param feature the feature to convert.
      * @return the [Tuple] generated from the given feature.
      * @since 3.0.0
@@ -154,7 +171,7 @@ interface IStorage : AutoCloseable {
     fun validateHandle(handle: String, ttl: Int? = null): Boolean
 
     /**
-     * Load all rows in the latest state with the given feature identifiers.
+     * Load the latest [tuples][Tuple] of the features with the given identifiers, from the given collection/map.
      *
      * The fetch modes are:
      * - [all][FETCH_ALL] (_**default**_) - all columns
@@ -167,13 +184,13 @@ interface IStorage : AutoCloseable {
      * @param collectionId the collection from to load.
      * @param featureIds a list of feature identifiers to load.
      * @param mode the fetch mode.
-     * @return the list of the loaded rows, _null_, if the row was not found (or not in cache, when [cached-only][FETCH_CACHE]).
+     * @return the list of the latest [tuples][Tuple], _null_, if no [tuple][Tuple] was not found.
      * @since 3.0.0
      */
-    fun getRowsByFeatureId(mapId: String, collectionId: String, featureIds: Array<String>, mode: String = FETCH_ALL): List<Tuple?>
+    fun getLatestTuples(mapId: String, collectionId: String, featureIds: Array<String>, mode: String = FETCH_ALL): List<Tuple?>
 
     /**
-     * Load all rows with the given row identifiers.
+     * Load specific [tuples][naksha.model.Tuple].
      *
      * The fetch modes are:
      * - [all][FETCH_ALL] (_**default**_) - all columns
@@ -182,15 +199,15 @@ interface IStorage : AutoCloseable {
      * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
      * - [cached-only][FETCH_CACHE] - only what is available in cache
      *
-     * @param tupleNumbers a list of row-numbers of the rows to load.
+     * @param tupleNumbers a list of [tuple-numbers][TupleNumber] of the rows to load.
      * @param mode the fetch mode.
-     * @return the list of the loaded rows, _null_, if the row was not found (or not in cache, when [cached-only][FETCH_CACHE]).
+     * @return the list of the loaded [tuples][Tuple], _null_, if the tuple was not found.
      * @since 3.0.0
      */
-    fun getRows(tupleNumbers: Array<TupleNumber>, mode: String = FETCH_ALL): List<Tuple?>
+    fun getTuples(tupleNumbers: Array<TupleNumber>, mode: String = FETCH_ALL): List<Tuple?>
 
     /**
-     * Fetches a single result-row.
+     * Fetches a single result-tuple.
      *
      * The fetch modes are:
      * - [all][FETCH_ALL] (_**default**_) - all columns
@@ -199,14 +216,14 @@ interface IStorage : AutoCloseable {
      * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
      * - [cached-only][FETCH_CACHE] - only what is available in cache
      *
-     * @param row the result-row into which to load the row.
+     * @param resultTuple the result-tuple into which to load the tuple.
      * @param mode the fetch mode.
      * @since 3.0.0
      */
-    fun fetchRow(row: ResultTuple, mode: String = FETCH_ALL)
+    fun fetchTuple(resultTuple: ResultTuple, mode: String = FETCH_ALL)
 
     /**
-     * Fetches all rows in the given result-rows.
+     * Fetches all tuples in the given result-tuples.
      *
      * The fetch modes are:
      * - [all][FETCH_ALL] (_**default**_) - all columns
@@ -215,13 +232,13 @@ interface IStorage : AutoCloseable {
      * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
      * - [cached-only][FETCH_CACHE] - only what is available in cache
      *
-     * @param rows a list of result-rows to fetch.
-     * @param from the index of the first result-row to fetch.
-     * @param to the index of the first result-row to ignore.
+     * @param resultTuples a list of result-tuples to fetch.
+     * @param from the index of the first result-tuples to fetch.
+     * @param to the index of the first result-tuples to ignore.
      * @param mode the fetch mode.
      * @since 3.0.0
      */
-    fun fetchRows(rows: List<ResultTuple?>, from:Int = 0, to:Int = rows.size, mode: String = FETCH_ALL)
+    fun fetchTuples(resultTuples: List<ResultTuple?>, from:Int = 0, to:Int = resultTuples.size, mode: String = FETCH_ALL)
 
     /**
      * Shutdown the storage instance, blocks until the storage is down (all sessions are closed).
