@@ -283,7 +283,7 @@ open class PgSession(
     override fun execute(request: Request): Response {
         when (request) {
             is WriteRequest -> {
-                PgWriter(this, request.writes)
+                //PgWriter(this, request.writes)
             }
 
             is ReadRequest -> {

@@ -197,10 +197,10 @@ open class PgMap(
      */
     open fun refresh(connection: PgConnection? = null): PgMap {
         if (_updateAt == null || Platform.currentMillis() < _updateAt) {
-            logger.info("Refresh map '$id' ...")
+            logger.info("Refresh map '$id' / schema: '$schemaName' ...")
             val conn = connOf(connection)
             try {
-                var cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(id)).fetch()
+                var cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schemaName)).fetch()
                 cursor.use {
                     _oid = cursor["oid"]
                     // TODO: Right now we only support the default map, we need to change this!

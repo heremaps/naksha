@@ -89,7 +89,7 @@ open class PgCollection internal constructor(
      */
     private var _exists: Boolean = false
 
-    override fun exists(): Boolean = exists()
+    override fun exists(): Boolean = exists(null)
 
     /**
      * Tests if this collection does exits.
