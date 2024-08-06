@@ -4,9 +4,7 @@ package naksha.model.request
 
 import naksha.base.ListProxy
 import naksha.model.*
-import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
@@ -18,14 +16,14 @@ import kotlin.jvm.JvmStatic
 class ResultTupleList : ListProxy<ResultTuple>(ResultTuple::class) {
     companion object ResultTupleList_C {
         /**
-         * Read the given binary row array, and convert it into a result-row list.
+         * Read the given binary tuple-number byte-array, and convert it into a result-tuple list.
          * @param storage the storage from which the binary was received.
-         * @param array the row binary.
-         * @return the given binary converted into a list of result-rows.
+         * @param array the tuple-number binary.
+         * @return the given binary converted into a list of result-tuples.
          */
         @JvmStatic
         @JsStatic
-        fun fromRowNumberArray(storage: IStorage, array: TupleNumberByteArray): ResultTupleList {
+        fun fromTupleNumberArray(storage: IStorage, array: TupleNumberByteArray): ResultTupleList {
             val list = ResultTupleList()
             val length = array.size
             list.setCapacity(length)

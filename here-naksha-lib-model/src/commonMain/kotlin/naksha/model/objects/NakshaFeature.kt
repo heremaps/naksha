@@ -28,6 +28,11 @@ open class NakshaFeature() : AnyObject() {
     }
 
     companion object {
+        /**
+         * The feature-type of this feature itself.
+         */
+        const val FEATURE_TYPE = "Feature"
+
         private val ID = NotNullProperty<NakshaFeature, String>(String::class) { _, _ -> PlatformUtil.randomString(12) }
         private val TYPE = NotNullProperty<NakshaFeature, String>(String::class) { self, _ -> self.defaultFeatureType() }
         private val BBOX_NULL = NullableProperty<NakshaFeature, SpBoundingBox>(SpBoundingBox::class)
@@ -40,7 +45,7 @@ open class NakshaFeature() : AnyObject() {
     /**
      * The default type to set, when the type is _null_.
      */
-    protected open fun defaultFeatureType(): String = "Feature"
+    protected open fun defaultFeatureType(): String = FEATURE_TYPE
 
     /**
      * The unique identifier of the feature.

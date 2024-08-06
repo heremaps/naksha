@@ -404,7 +404,11 @@ class PgColumn : JsEnum() {
         val metaSelect= metaColumn.joinToString(",")
 
         /**
-         * SQL selection of the metadata in binary form.
+         * SQL selection of the metadata in binary form, to be used like:
+         * ```sql
+         * SELECT string_agg($metaSelectToBinary, '\x00'::bytea)
+         * FROM {table} WHERE {condition}
+         * ```
          */
         @JvmField
         @JsStatic

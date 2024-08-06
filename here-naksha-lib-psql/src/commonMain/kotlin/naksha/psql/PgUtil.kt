@@ -13,6 +13,7 @@ import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON
 import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON_GZIP
 import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON
 import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON_GZIP
+import naksha.model.Tuple.Tuple_C.NOT_FETCHED
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_ident
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_literal
@@ -175,7 +176,7 @@ class PgUtil private constructor() {
         @JsStatic
         @JvmStatic
         fun decodeFeature(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): NakshaFeature? {
-            if (bytes == null) return null
+            if (bytes == null || bytes.isEmpty()) return null
             var raw = bytes
             if (flags.featureGzip()) raw = Platform.gzipInflate(bytes)
             val encoding = flags.featureEncoding()
@@ -227,7 +228,7 @@ class PgUtil private constructor() {
         @JsStatic
         @JvmStatic
         fun decodeTags(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): TagMap? {
-            if (bytes == null) return null
+            if (bytes == null || bytes.isEmpty()) return null
             var raw = bytes
             if (flags.tagsGzip()) raw = Platform.gzipInflate(bytes)
             val encoding = flags.tagsEncoding()

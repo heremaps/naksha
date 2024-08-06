@@ -22,9 +22,9 @@ data class Metadata(
     override val updatedAt: Int64,
     override val createdAt: Int64 = updatedAt,
     override val authorTs: Int64 = updatedAt,
-    override var nextVersion: Int64? = null,
-    override val version: Int64,
-    override val prevVersion: Int64? = null,
+    override var nextVersion: Version? = null,
+    override val version: Version,
+    override val prevVersion: Version? = null,
     override val uid: Int,
     override val puid: Int? = null,
     override val hash: Int = 0,
@@ -35,7 +35,7 @@ data class Metadata(
     override val appId: String,
     override val author: String?,
     override val type: String?,
-    override val origin: String?
+    override val origin: String? = null
 ) : IMetadata {
     private var tupleNumber: TupleNumber? = null
 
@@ -46,7 +46,7 @@ data class Metadata(
     fun rowId(): TupleNumber {
         var i = tupleNumber
         if (i == null) {
-            i = TupleNumber(storeNumber, Version(version), uid)
+            i = TupleNumber(storeNumber, version, uid)
             tupleNumber = i
         }
         return i

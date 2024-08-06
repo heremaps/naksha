@@ -3,6 +3,10 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.jbon.IDictManager
+import naksha.jbon.JbDictManager
+import naksha.jbon.JbDictionary
+import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 
 /**
@@ -44,4 +48,21 @@ interface IMap {
      * @return _true_ if the map exists.
      */
     fun exists(): Boolean
+
+    /**
+     * The dictionary manager of the map to decode features read from this map.
+     * @since 3.0.0
+     */
+    val dictManager: IDictManager
+
+    /**
+     * Returns the dictionary to use to encode the given feature.
+     *
+     * @param collectionId the collection for which to return the default encoding dictionary.
+     * @param feature the feature that should be encoded, may have an impact on the selected dictionary, but is optional.
+     * @return the encoding dictionary for the collection; if any.
+     * @since 3.0.0
+     */
+    fun encodingDict(collectionId: String, feature: NakshaFeature? = null): JbDictionary?
+
 }

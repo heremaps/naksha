@@ -14,7 +14,7 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 /**
- * Describes a sort order in a [result-set][naksha.model.request.ResultSet].
+ * Describes a sort order in a [result-set][naksha.model.request.IResultSet].
  *
  * **Warning**: Using custom ordering may not be supported by the storage. The best is to only use the pre-defined sort orders:
  * - [deterministic]

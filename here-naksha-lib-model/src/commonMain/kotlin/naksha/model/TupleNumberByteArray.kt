@@ -128,7 +128,7 @@ data class TupleNumberByteArray(
      */
     fun toArray(): Array<TupleNumber> = Array(binary.size) { get(it)!! }
 
-    fun toResultRowList(storage: IStorage): ResultTupleList = ResultTupleList.fromRowNumberArray(storage, this)
+    fun toResultRowList(storage: IStorage): ResultTupleList = ResultTupleList.fromTupleNumberArray(storage, this)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

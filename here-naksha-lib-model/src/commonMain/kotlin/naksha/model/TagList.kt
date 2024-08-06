@@ -160,4 +160,10 @@ open class TagList() : ListProxy<String>(String::class) {
         }
         return this
     }
+
+    /**
+     * Convert this tag-list into a tag-map.
+     * @return this tag-list as tag-map.
+     */
+    fun toTagMap(): TagMap = TagMap(this)
 }

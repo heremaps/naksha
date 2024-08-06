@@ -6,6 +6,7 @@ import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.request.*
+import naksha.psql.PgSession
 import naksha.psql.PgStorage
 import kotlin.js.JsExport
 import kotlin.math.min
@@ -18,7 +19,12 @@ class PgResultSet(
     /**
      * The storage that generated this result-set.
      */
-    internal val storage: PgStorage,
+    override val storage: PgStorage,
+
+    /**
+     * The session that produced this result-set.
+     */
+    override val session: PgSession,
 
     /**
      * The result-set as [naksha.model.TupleNumber] array, read from the query.
@@ -46,7 +52,7 @@ class PgResultSet(
     /**
      * The offset where in the ordered, and filtered, result-set ([tupleNumberArray]) to start reading.
      */
-    internal var offset: Int = 0,
+    override val offset: Int = 0,
 
     /**
      * The limit the client needs.
@@ -55,7 +61,7 @@ class PgResultSet(
      * - If this is restored for a [ReadHandle][naksha.model.request.ReadHandle], then the limit will be restored from the handle, except the client changes the limit via request parameter.
      * - If this is the result of a [WriteRequest][naksha.model.request.WriteRequest], then the limit should be set to `rowIdArray.size`.
      */
-    internal val limit: Int = if (incomplete) tupleNumberArray.size else 10_000,
+    override val limit: Int = if (incomplete) tupleNumberArray.size else 10_000,
 
     /**
      * The order to ensure, if _null_ the current order of [tupleNumberArray] is good.
@@ -72,26 +78,35 @@ class PgResultSet(
      * - If the client requested a query above the `properties` using an [IPropertyQuery][naksha.model.request.query.IPropertyQuery], then a method need to be created, and added as first result-filter in this filter list.
      */
     internal val filters: ResultFilterList? = null
-) : ResultSet {
+) : IResultSet {
     /**
      * The generated results rows, same size as [tupleNumberArray].
      */
     internal var all: ResultTupleList
 
-    /**
-     * The end of the result-set.
-     */
-    internal var end: Int
+    override var end: Int
+        internal set
+
+    override val hardCap: Int
+        get() = storage.hardCap
 
     /**
      * The results between [offset] and [end].
      */
-    internal var result: ResultTupleList? = null
+    private var _result: ResultTupleList? = null
 
-    /**
-     * The fetch that needs to be done, _null_ means validation is instant.
-     */
-    private var fetchMode: String? = null
+    override val result: ResultTupleList
+        get() {
+            var result = _result
+            if (result == null) {
+                result = all.subList(offset, end).proxy(ResultTupleList::class)
+                _result = result
+            }
+            return result
+        }
+
+    override val resultSize: Int
+        get() = result.size
 
     companion object ResultSet_C {
         private val DETERMINISTIC = OrderBy.deterministic()
@@ -151,17 +166,23 @@ class PgResultSet(
 
     */
 
+    /**
+     * The fetch that needs to be done, _null_ means validation is instant.
+     */
+    private var fetchMode: String? = null
+
     init {
-        all = ResultTupleList.fromRowNumberArray(storage, tupleNumberArray)
+        all = ResultTupleList.fromTupleNumberArray(storage, tupleNumberArray)
         if (orderBy == DETERMINISTIC || orderBy == VERSION) {
             fetchMode = null
-            all.sortedWith(this::order_txn_uid)
+            all.sortWith(this::order_txn_uid)
         } else if (orderBy == ID) {
             // We need to sort by ID, so we need the ids of all results!
             fetchMode = Naksha.FETCH_ID
-            storage.fetchTuples(all, mode = Naksha.FETCH_ID)
-            all.sortedWith(this::order_id_txn_uid)
+            session.fetchTuples(all, mode = Naksha.FETCH_ID)
+            all.sortWith(this::order_id_txn_uid)
         } else if (orderBy != null) {
+            // TODO: We may use Naksha.FETCH_META or FETCH_ALL to implement more advanced search methods!
             throw NakshaException(ILLEGAL_ARGUMENT, "Unsupported orderBy: $orderBy")
         }
         if (!filters.isNullOrEmpty()) {
@@ -181,28 +202,11 @@ class PgResultSet(
         }
     }
 
-    override fun storage(): IStorage = storage
+    override val tuples: ResultTupleList
+        get() = all
 
-    override fun limit(): Int = limit
-
-    override fun hardCap(): Int = storage.hardCap
-
-    override fun offset(): Int = offset
-
-    override fun end(): Int = end
-
-    override fun result(): ResultTupleList {
-        var result = this.result
-        if (result == null) {
-            result = all.subList(offset, end).proxy(ResultTupleList::class)
-            this.result = result
-        }
-        return result
-    }
-
-    override fun rows(): ResultTupleList = all
-
-    override fun validationEnd(): Int = validTill
+    override val validationEnd: Int
+        get() = validTill
 
     override fun validateTill(end: Int) {
         if (incomplete) throw NakshaException(ILLEGAL_STATE, "The result-set is incomplete, no further validation can be done")
@@ -226,7 +230,7 @@ class PgResultSet(
             if (i <= fetched_till) {
                 val available = i - removed
                 val to = min(((end - available + 50) * 1.1).toInt(), all.size)
-                storage.fetchTuples(all, from = i, to = to, mode = fetchMode)
+                session.fetchTuples(all, from = i, to = to, mode = fetchMode)
                 fetched_till = to
             }
             var row = all[i]
@@ -255,12 +259,12 @@ class PgResultSet(
         this.all = newList
         this.end = min(this.end, newList.size)
         this.validTill = min(end, newList.size)
-        this.result = null
+        this._result = null
     }
 
-    override fun isComplete(): Boolean = !incomplete && validTill >= rows().size
+    override fun isComplete(): Boolean = !incomplete && validTill >= tuples.size
 
-    override fun isPartial(): Boolean = !incomplete && validTill < rows().size
+    override fun isPartial(): Boolean = !incomplete && validTill < tuples.size
 
     override fun isIncomplete(): Boolean = incomplete
 

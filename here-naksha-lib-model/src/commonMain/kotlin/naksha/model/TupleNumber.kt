@@ -3,6 +3,9 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.base.Platform
+import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
+import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
@@ -87,4 +90,17 @@ data class TupleNumber(
      */
     fun toGuid(storageId: String, map: String, collectionId: String, featureId: String): Guid =
         Guid(storageId, map, collectionId, featureId, version, uid)
+
+    /**
+     * Convert this tuple into its binary form.
+     * @return the binary encoded tuple-number.
+     */
+    fun toByteArray(): ByteArray {
+        val byteArray = ByteArray(20)
+        val view = Platform.newDataView(byteArray)
+        dataview_set_int64(view, 0, storeNumber)
+        dataview_set_int64(view, 8, version.txn)
+        dataview_set_int32(view, 16, uid)
+        return byteArray
+    }
 }

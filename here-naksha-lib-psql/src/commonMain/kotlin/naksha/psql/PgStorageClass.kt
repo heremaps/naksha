@@ -19,7 +19,7 @@ class PgStorageClass : JsEnum() {
     override fun initClass() {
     }
 
-    companion object {
+    companion object PgStorageClass_C {
         /**
          * The storage class for collections that should be consistent.
          */
@@ -59,17 +59,13 @@ class PgStorageClass : JsEnum() {
         val Unknown = defIgnoreCase(PgStorageClass::class, "unknown")
 
         /**
-         * Detect storage class from `relpersistence` from `pg_class`.
-         * @param relpersistence the value as read from `pg_class`.
+         * Detect storage class from `relpersistence` from `pg_class` or by official names.
+         * @param value the value as read from `pg_class` or as defined in [naksha.model.objects.NakshaCollection].
          * @return detected storage class.
          */
         @JsStatic
         @JvmStatic
-        fun of(relpersistence: String): PgStorageClass = when (relpersistence) {
-            "u" -> Brittle
-            "t" -> Temporary
-            else -> Consistent
-        }
+        fun of(value: String?): PgStorageClass = get(value, PgStorageClass::class)
     }
 
     /**

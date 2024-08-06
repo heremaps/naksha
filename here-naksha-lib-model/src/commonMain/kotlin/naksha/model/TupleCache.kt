@@ -18,7 +18,7 @@ class TupleCache internal constructor(
      */
     @JvmField val storageId: String
 ) {
-    private val rows = AtomicMap<TupleNumber, WeakRef<Tuple>>()
+    private val tuples = AtomicMap<TupleNumber, WeakRef<Tuple>>()
 
     /**
      * Adds the given row into the cache.
@@ -35,7 +35,7 @@ class TupleCache internal constructor(
      * @param id the row identifier.
      * @return the row from the cache.
      */
-    operator fun get(id: TupleNumber): Tuple? = rows[id]?.deref()
+    operator fun get(id: TupleNumber): Tuple? = tuples[id]?.deref()
 
     /**
      * Store the given row.
@@ -46,19 +46,19 @@ class TupleCache internal constructor(
      */
     fun store(tuple: Tuple): Tuple {
         val row_number = tuple.tupleNumber
-        val existingRef = rows[row_number]
+        val existingRef = tuples[row_number]
         if (existingRef != null) {
             val existing = existingRef.deref()
             if (existing != null && existing.tupleNumber == row_number) {
                 val merged = existing.merge(tuple)
                 if (existing !== merged) {
-                    rows[row_number] = WeakRef(merged)
+                    tuples[row_number] = WeakRef(merged)
                     return merged
                 }
                 return existing
             }
         }
-        rows[row_number] = WeakRef(tuple)
+        tuples[row_number] = WeakRef(tuple)
         return tuple
     }
 
@@ -78,7 +78,7 @@ class TupleCache internal constructor(
      * Tests if the cache contains a row with the given id.
      * @param id the [row id][TupleNumber].
      */
-    operator fun contains(id: TupleNumber): Boolean = rows.containsKey(id)
+    operator fun contains(id: TupleNumber): Boolean = tuples.containsKey(id)
 
     /**
      * Remove (evict) the cached row.
@@ -86,7 +86,7 @@ class TupleCache internal constructor(
      * @return the removed [row][Tuple]; if any.
      */
     fun remove(id: TupleNumber): Tuple? {
-        val rowRef = rows.remove(id)
+        val rowRef = tuples.remove(id)
         return rowRef?.deref()
     }
 
@@ -94,8 +94,8 @@ class TupleCache internal constructor(
      * Performs a garbage collection, remove all rows from the cache, that have been garbage collected.
      */
     fun gc() {
-        for (e in rows) {
-            if (e.value.deref() == null) rows.remove(e.key, e.value)
+        for (e in tuples) {
+            if (e.value.deref() == null) tuples.remove(e.key, e.value)
         }
     }
 }

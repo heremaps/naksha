@@ -5,6 +5,8 @@ package naksha.psql
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fn0
+import naksha.jbon.IDictManager
+import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.NakshaContext.NakshaContextCompanion.currentContext
 import naksha.model.NakshaError.NakshaErrorCompanion.UNAUTHORIZED
@@ -13,6 +15,8 @@ import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
+import naksha.model.NakshaError.NakshaErrorCompanion.NOT_IMPLEMENTED
+import naksha.model.objects.NakshaFeature
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -242,6 +246,21 @@ open class PgMap(
         refresh(connection)
         return _oid != null
     }
+
+    // TODO: Implement support for dictionaries using naksha~dictionaries !
+    override val dictManager: IDictManager = object : IDictManager {
+        override fun putDictionary(dict: JbDictionary) {
+            throw NakshaException(NOT_IMPLEMENTED, "putDictionary is not supported by lib-psql yet")
+        }
+
+        override fun deleteDictionary(dict: JbDictionary): Boolean {
+            throw NakshaException(NOT_IMPLEMENTED, "putDictionary is not supported by lib-psql yet")
+        }
+
+        override fun getDictionary(id: String): JbDictionary? = null
+    }
+
+    override fun encodingDict(collectionId: String, feature: NakshaFeature?): JbDictionary? = null
 
     /**
      * Initialize the schema, creating all necessary database tables, installing modules, ....

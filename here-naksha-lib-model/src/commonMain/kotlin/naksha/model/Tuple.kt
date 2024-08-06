@@ -1,3 +1,5 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.model
 
 import naksha.base.Int64
@@ -5,14 +7,13 @@ import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.objects.NakshaFeature
-import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
  * A tuple represents a specific immutable state of a feature in a storage.
  */
-@OptIn(ExperimentalJsExport::class)
 @JsExport
 data class Tuple(
     /**
@@ -33,31 +34,40 @@ data class Tuple(
     /**
      * Feature encoded with [FeatureEncoding] algorithm described by [Metadata.flags].
      */
-    @JvmField val feature: ByteArray? = null,
+    @JvmField val feature: ByteArray? = NOT_FETCHED,
 
     /**
      * Geometry encoded with [GeoEncoding] algorithm described by [Metadata.flags].
      * Might be _null_, when the feature does not have a geometry.
      */
-    @JvmField val geo: ByteArray? = null,
+    @JvmField val geo: ByteArray? = NOT_FETCHED,
 
     /**
      * Geometry-Reference-Point, encoded with the [GeoEncoding] algorithm described by [Metadata.flags].
      * Might be _null_, when the feature does not have a reference point.
      */
-    @JvmField val referencePoint: ByteArray? = null,
+    @JvmField val referencePoint: ByteArray? = NOT_FETCHED,
 
     /**
      * Tags encoded with [TagsEncoding] algorithm described by [Metadata.flags].
      * Might be _null_, when the feature does not have any tags.
      */
-    @JvmField val tags: ByteArray? = null,
+    @JvmField val tags: ByteArray? = NOT_FETCHED,
 
     /**
      * An arbitrary binary attachment.
      */
-    @JvmField val attachment: ByteArray? = null
+    @JvmField val attachment: ByteArray? = NOT_FETCHED
 ) {
+    companion object Tuple_C {
+        /**
+         * If the value has not yet been fetched from the database or any other source.
+         */
+        @JvmField
+        @JsStatic
+        val NOT_FETCHED = ByteArray(0)
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         return other is Tuple && this.tupleNumber == other.tupleNumber
@@ -102,7 +112,7 @@ data class Tuple(
                 COLLECTION_NOT_FOUND,
                 "Collection #$collectionNumber not found"
             )
-            g = Guid(storage.id, mapId, collectionId, meta.id, Version(meta.version), meta.uid)
+            g = Guid(storage.id, mapId, collectionId, meta.id, meta.version, meta.uid)
             guid = g
         }
         return g
@@ -137,4 +147,14 @@ data class Tuple(
             attachment ?: other.attachment
         )
     }
+
+    /**
+     * Tests if the tuple is fetched complete.
+     * @return _true_, when the tuple is fully fetched; _false_ if parts are missing.
+     */
+    fun isComplete(): Boolean = feature !== NOT_FETCHED
+            && geo !== NOT_FETCHED
+            && referencePoint !== NOT_FETCHED
+            && tags !== NOT_FETCHED
+            && attachment !== NOT_FETCHED
 }

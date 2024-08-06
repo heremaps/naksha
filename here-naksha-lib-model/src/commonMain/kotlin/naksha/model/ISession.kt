@@ -2,10 +2,11 @@
 
 package naksha.model
 
-import naksha.model.request.ReadRequest
-import naksha.model.request.Request
-import naksha.model.request.WriteRequest
-import naksha.model.request.Response
+import naksha.model.Naksha.NakshaCompanion.FETCH_ALL
+import naksha.model.Naksha.NakshaCompanion.FETCH_CACHE
+import naksha.model.Naksha.NakshaCompanion.FETCH_ID
+import naksha.model.Naksha.NakshaCompanion.FETCH_META
+import naksha.model.request.*
 import kotlin.js.JsExport
 
 /**
@@ -74,4 +75,87 @@ interface ISession : AutoCloseable {
      * @since 2.0.7
      */
     override fun close()
+
+    /**
+     * Tests if the given handle is valid, and if it is, tries to extend its live-time to the given amount of milliseconds.
+     *
+     * Some handles may expire after some time. For example, when custom filters were applied, the generated result-set must be stored somewhere to guarantee that it is always the same (we can't store the filter code!), but we do not store this forever, so the handle does have an expiry. Some handles may not have an expiry, for example when the storage can reproduce them at any moment, using just the information from the handle.
+     *
+     * There is no guarantee that the life-time of the handle can be extended, especially when invoking this method on a read-only session.
+     * @param handle the handle to test.
+     * @param ttl if not _null_, the time-to-live of the handle should be extended by the given amount of milliseconds, if possible.
+     * @return _true_ if the handle is valid, _false_ otherwise.
+     * @since 3.0.0
+     */
+    fun validateHandle(handle: String, ttl: Int? = null): Boolean
+
+    /**
+     * Load the latest [tuples][Tuple] of the features with the given identifiers, from the given collection/map.
+     *
+     * The fetch modes are:
+     * - [all][FETCH_ALL] (_**default**_) - all columns
+     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
+     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
+     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
+     * - [cached-only][FETCH_CACHE] - only what is available in cache
+     *
+     * @param mapId the map from which to load.
+     * @param collectionId the collection from to load.
+     * @param featureIds a list of feature identifiers to load.
+     * @param mode the fetch mode.
+     * @return the list of the latest [tuples][Tuple], _null_, if no [tuple][Tuple] was not found.
+     * @since 3.0.0
+     */
+    fun getLatestTuples(mapId: String, collectionId: String, featureIds: Array<String>, mode: String = FETCH_ALL): List<Tuple?>
+
+    /**
+     * Load specific [tuples][naksha.model.Tuple].
+     *
+     * The fetch modes are:
+     * - [all][FETCH_ALL] (_**default**_) - all columns
+     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
+     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
+     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
+     * - [cached-only][FETCH_CACHE] - only what is available in cache
+     *
+     * @param tupleNumbers a list of [tuple-numbers][TupleNumber] of the rows to load.
+     * @param mode the fetch mode.
+     * @return the list of the loaded [tuples][Tuple], _null_, if the tuple was not found.
+     * @since 3.0.0
+     */
+    fun getTuples(tupleNumbers: Array<TupleNumber>, mode: String = FETCH_ALL): List<Tuple?>
+
+    /**
+     * Fetches a single result-tuple.
+     *
+     * The fetch modes are:
+     * - [all][FETCH_ALL] (_**default**_) - all columns
+     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
+     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
+     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
+     * - [cached-only][FETCH_CACHE] - only what is available in cache
+     *
+     * @param resultTuple the result-tuple into which to load the tuple.
+     * @param mode the fetch mode.
+     * @since 3.0.0
+     */
+    fun fetchTuple(resultTuple: ResultTuple, mode: String = FETCH_ALL)
+
+    /**
+     * Fetches all tuples in the given result-tuples.
+     *
+     * The fetch modes are:
+     * - [all][FETCH_ALL] (_**default**_) - all columns
+     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
+     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
+     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
+     * - [cached-only][FETCH_CACHE] - only what is available in cache
+     *
+     * @param resultTuples a list of result-tuples to fetch.
+     * @param from the index of the first result-tuples to fetch.
+     * @param to the index of the first result-tuples to ignore.
+     * @param mode the fetch mode.
+     * @since 3.0.0
+     */
+    fun fetchTuples(resultTuples: List<ResultTuple?>, from:Int = 0, to:Int = resultTuples.size, mode: String = FETCH_ALL)
 }

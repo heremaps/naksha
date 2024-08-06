@@ -37,21 +37,21 @@ interface IMetadata {
      *
      * If this is _null_, there is no guarantee that the state has not changed meanwhile, so this should be seen as the last known information, not an immutable value.
      */
-    var nextVersion: Int64?
+    var nextVersion: Version?
 
     /**
      * The version of the row.
      *
      * This is the transaction number of the transaction in which this row was created, so the transaction to which this row belongs.
      */
-    val version: Int64
+    val version: Version
 
     /**
      * The previous version.
      *
      * This is the transaction number of the transaction that contains the previous state of the feature; if _null_, the state should be [CREATED][Action.CREATED], if not _null_ [UPDATED][Action.CREATED] or [DELETED][Action.DELETED].
      */
-    val prevVersion: Int64?
+    val prevVersion: Version?
 
     /**
      * The transaction local identifier of this row.

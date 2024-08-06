@@ -2,10 +2,8 @@
 
 package naksha.model.request
 
-import naksha.model.IStorage
-import naksha.model.Tuple
+import naksha.model.*
 import naksha.model.objects.NakshaFeature
-import naksha.model.TupleNumber
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
@@ -81,7 +79,7 @@ open class ResultTuple(
     var feature: NakshaFeature? = null
         get() {
             if (field == null) {
-                if (tuple == null) storage.fetchTuple(this)
+                if (tuple == null) NakshaCache.tupleCache(storage.id)[tupleNumber]
                 if (tuple != null) field = tuple?.toNakshaFeature()
             }
             return field
