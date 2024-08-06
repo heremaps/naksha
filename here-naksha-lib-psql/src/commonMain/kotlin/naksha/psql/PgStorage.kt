@@ -17,6 +17,28 @@ import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.model.NakshaVersion.Companion.LATEST
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ResultTuple
+import naksha.psql.PgColumn.PgColumnCompanion.app_id
+import naksha.psql.PgColumn.PgColumnCompanion.attachment
+import naksha.psql.PgColumn.PgColumnCompanion.author
+import naksha.psql.PgColumn.PgColumnCompanion.author_ts
+import naksha.psql.PgColumn.PgColumnCompanion.change_count
+import naksha.psql.PgColumn.PgColumnCompanion.created_at
+import naksha.psql.PgColumn.PgColumnCompanion.feature
+import naksha.psql.PgColumn.PgColumnCompanion.flags
+import naksha.psql.PgColumn.PgColumnCompanion.geo
+import naksha.psql.PgColumn.PgColumnCompanion.geo_grid
+import naksha.psql.PgColumn.PgColumnCompanion.hash
+import naksha.psql.PgColumn.PgColumnCompanion.origin
+import naksha.psql.PgColumn.PgColumnCompanion.ptxn
+import naksha.psql.PgColumn.PgColumnCompanion.puid
+import naksha.psql.PgColumn.PgColumnCompanion.ref_point
+import naksha.psql.PgColumn.PgColumnCompanion.store_number
+import naksha.psql.PgColumn.PgColumnCompanion.tags
+import naksha.psql.PgColumn.PgColumnCompanion.txn
+import naksha.psql.PgColumn.PgColumnCompanion.txn_next
+import naksha.psql.PgColumn.PgColumnCompanion.type
+import naksha.psql.PgColumn.PgColumnCompanion.uid
+import naksha.psql.PgColumn.PgColumnCompanion.updated_at
 import naksha.psql.PgUtil.PgUtilCompanion.VERSION
 import naksha.psql.PgUtil.PgUtilCompanion.CONTEXT
 import naksha.psql.PgUtil.PgUtilCompanion.ID
@@ -542,7 +564,7 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
 
             val tuple = result.tuple
             // If we have enough info form cache.
-            if (tuple != null && (mode == FETCH_ID || mode == FETCH_META)) continue
+            if (tuple != null && (mode == FETCH_ID || mode == FETCH_META || tuple.isComplete())) continue
 
             // We need to fetch either meta or all.
             val colId = map.getCollectionId(tupleNumber.collectionNumber())
@@ -562,25 +584,70 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
             for (entry in toFetch) {
                 val colId = entry.key
                 val list = entry.value ?: continue
-                val tupleNumbers = Array<Any?>(list.size) { list[it]!!.tupleNumber.toByteArray() }
-                val SQL = if (mode == FETCH_META) {
-                    """SELECT string_agg(${PgColumn.metaSelectToBinary}::bytea,'\\x00'::bytea) as binary_meta
+                val tupleNumbers = Array<Any?>(list.size) { list[it].tupleNumber.toByteArray() }
+                val SQL = if (mode == FETCH_META) { """
+SELECT gzip(string_agg(${PgColumn.metaSelectToBinary}::bytea,'\\x00'::bytea)) as binary_meta
 FROM ${quoteIdent(colId)}
 WHERE tuple_number = ANY($1)
 """
-                } else {
-                    """SELECT ${PgColumn.allColumns.joinToString(",")}
+                } else { """
+SELECT ${PgColumn.allColumns.joinToString(",")}
 FROM ${quoteIdent(colId)}
-WHERE tuple_number = ANY(${'$'}1)"""
+WHERE tuple_number = ANY($1)"""
                 }
                 val cursor = conn.execute(SQL, tupleNumbers)
-                while (cursor.next()) {
+                cursor.use {
                     if (mode == FETCH_META) {
+                        cursor.fetch()
                         val binary_meta: ByteArray = cursor["binary_meta"]
                         val metaArray = MetadataByteArray(this, binary_meta)
+                        TODO("Implement metadata-only")
                     } else {
-                        // TODO: read columns
-                        val txn: Int64 = cursor["txn"]
+                        while (cursor.next()) {
+                            val _txn: Int64 = cursor[txn]
+                            val tupleNumber = TupleNumber(
+                                cursor[store_number],
+                                Version(_txn),
+                                cursor[uid]
+                            )
+                            val updatedAt: Int64 = cursor[updated_at]
+                            val createdAt = cursor.column(created_at) as Int64?
+                            val authorTs = cursor.column(author_ts) as Int64?
+                            val _txn_next = cursor.column(txn_next) as Int64?
+                            val _ptxn = cursor.column(ptxn) as Int64?
+                            val metadata = Metadata(
+                                storeNumber = tupleNumber.storeNumber,
+                                updatedAt = updatedAt,
+                                createdAt = createdAt ?: updatedAt,
+                                authorTs = authorTs ?: updatedAt,
+                                nextVersion = if (_txn_next != null) Version(_txn_next) else null,
+                                version = tupleNumber.version,
+                                prevVersion = if (_ptxn != null) Version(_ptxn) else null,
+                                uid = tupleNumber.uid,
+                                puid = cursor.column(puid) as Int?,
+                                hash = cursor[hash],
+                                changeCount = cursor[change_count],
+                                geoGrid = cursor[geo_grid],
+                                flags = cursor[flags],
+                                id = cursor[id],
+                                appId = cursor[app_id],
+                                author = cursor.column(author) as String?,
+                                type = cursor.column(type) as String?,
+                                origin = cursor.column(origin) as String?
+                            )
+                            val tuple = Tuple(
+                                storage = this,
+                                tupleNumber = tupleNumber,
+                                meta = metadata,
+                                feature = cursor[feature],
+                                geo = cursor[geo],
+                                referencePoint = cursor[ref_point],
+                                tags = cursor[tags],
+                                attachment = cursor[attachment]
+                            )
+                            tupleCache.store(tuple)
+                            list[cursor.rowNumber() - 1].tuple = tuple
+                        }
                     }
                 }
             }

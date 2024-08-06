@@ -3,6 +3,7 @@ package naksha.psql
 import naksha.base.AnyObject
 import naksha.base.Platform
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.reflect.KClass
 
 /**
@@ -59,6 +60,9 @@ interface PgCursor : AutoCloseable {
      */
     fun column(name: String): Any?
 
+    @JsName("getPgColumnOrNull")
+    fun column(column: PgColumn): Any? = column(column.name)
+
     /**
      * Returns the column value of the current row.
      * @param name the name of the column
@@ -82,6 +86,9 @@ interface PgCursor : AutoCloseable {
      * @throws NullPointerException if the value is null.
      */
     operator fun <T : Any> get(name: String): T
+
+    @JsName("getPgColumn")
+    operator fun <T : Any> get(column: PgColumn): T = get(column.name)
 
     /**
      * Convert the current row into a map, and return the corresponding proxy.
