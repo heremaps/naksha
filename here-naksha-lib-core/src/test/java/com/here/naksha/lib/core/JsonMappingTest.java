@@ -75,7 +75,7 @@ public class JsonMappingTest {
     final String json =
         "{\"type\":\"ErrorResponse\",\"error\":\"NotImplemented\",\"errorMessage\":\"Hello World!\"}";
     JvmObject jvmMap = (JvmObject) Platform.fromJSON(json, FromJsonOptions.getDEFAULT());
-    //TODO
+    //TODO(lib-core test)
 //    final ErrorResponse obj = jvmMap.proxy(Platform.klassOf(ErrorResponse.class));
 //    assertNotNull(obj);
 //    assertSame(NakshaErrorCode.NOT_IMPLEMENTED, obj.error.code);
