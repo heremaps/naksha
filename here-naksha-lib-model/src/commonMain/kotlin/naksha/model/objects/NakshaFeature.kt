@@ -28,6 +28,11 @@ open class NakshaFeature() : AnyObject() {
     }
 
     companion object {
+        /**
+         * The feature-type of this feature itself.
+         */
+        const val FEATURE_TYPE = "Feature"
+
         private val ID = NotNullProperty<NakshaFeature, String>(String::class) { _, _ -> PlatformUtil.randomString(12) }
         private val TYPE = NotNullProperty<NakshaFeature, String>(String::class) { self, _ -> self.defaultFeatureType() }
         private val BBOX_NULL = NullableProperty<NakshaFeature, SpBoundingBox>(SpBoundingBox::class)
@@ -40,7 +45,7 @@ open class NakshaFeature() : AnyObject() {
     /**
      * The default type to set, when the type is _null_.
      */
-    protected open fun defaultFeatureType(): String = "Feature"
+    protected open fun defaultFeatureType(): String = FEATURE_TYPE
 
     /**
      * The unique identifier of the feature.
@@ -50,22 +55,22 @@ open class NakshaFeature() : AnyObject() {
     /**
      * The type of the feature.
      */
-    open var type by TYPE
+    var type by TYPE
 
     /**
      * The bounding box; if the feature has any.
      */
-    open var bbox by BBOX_NULL
+    var bbox by BBOX_NULL
 
     /**
      * The geometry of the feature, if it has any.
      */
-    open var geometry by GEOMETRY_NULL
+    var geometry by GEOMETRY_NULL
 
     /**
      * Reference point of the feature. Used for grid calculation.
      */
-    open var referencePoint by REFERENCE_POINT_NULL
+    var referencePoint by REFERENCE_POINT_NULL
 
     /**
      * The properties of the feature.
@@ -75,5 +80,5 @@ open class NakshaFeature() : AnyObject() {
     /**
      * The mom-type; if any.
      */
-    open var momType by STRING_NULL
+    var momType by STRING_NULL
 }

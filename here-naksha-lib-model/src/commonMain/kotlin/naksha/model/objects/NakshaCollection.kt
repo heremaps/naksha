@@ -36,7 +36,7 @@ open class NakshaCollection() : NakshaFeature() {
         this.geoIndex = geoIndex ?: DEFAULT_GEO_INDEX
     }
 
-    override fun defaultFeatureType(): String = "naksha.Collection"
+    override fun defaultFeatureType(): String = FEATURE_TYPE
 
     /**
      * If partitions is given, then collection is internally partitioned in the storage, and optimised for large quantities of features. The default is no partitions, for around every 10 to 20 million features expected to be stored in a collection, one more partition should be requested, with a minimum of 2 partitions.
@@ -147,6 +147,10 @@ open class NakshaCollection() : NakshaFeature() {
     var estimatedDeletedFeatures: Int64 by ESTIMATED_DELETED_FEATURES
 
     companion object NakshaCollection_C {
+        /**
+         * The feature-type of this feature itself.
+         */
+        const val FEATURE_TYPE = "naksha.Collection"
 
         /**
          * partition count = 0 -> no partitions only head

@@ -21,13 +21,13 @@ open class ExtSubNotification() : SubNotification() {
     }
 
     companion object ExtSubNotification_C {
-        private val ROWS_BY_TXN = NotNullProperty<ExtSubNotification, RowsByTxn>(RowsByTxn::class)
+        private val ROWS_BY_TXN = NotNullProperty<ExtSubNotification, TuplesByTxn>(TuplesByTxn::class)
     }
 
     /**
      * The result-rows being part of the transactions.
      *
-     * **Note**: Not all rows may have been fetched already, invoke [IStorage.fetchRows] to do this.
+     * **Note**: Not all rows may have been fetched already, invoke [IStorage.fetchTuples] to do this.
      */
     var rows by ROWS_BY_TXN
 }

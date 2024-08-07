@@ -7,7 +7,7 @@ import naksha.psql.PgColumn.PgColumnCompanion.id as c_id
 import naksha.psql.PgColumn.PgColumnCompanion.txn as c_txn
 import naksha.psql.PgColumn.PgColumnCompanion.uid as c_uid
 import naksha.psql.PgColumn.PgColumnCompanion.flags as c_flags
-import naksha.psql.PgColumn.PgColumnCompanion.row_number as c_rowid
+import naksha.psql.PgColumn.PgColumnCompanion.tuple_number as c_tuple_number
 import naksha.psql.PgColumn.PgColumnCompanion.app_id as c_app_id
 import naksha.psql.PgColumn.PgColumnCompanion.author as c_author
 import naksha.psql.PgColumn.PgColumnCompanion.author_ts as c_author_ts
@@ -70,23 +70,23 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
          *
          * This index includes the `id` so that the following queries do actually perform an index-only access:
          * ```sql
-         * SELECT id, rowid
+         * SELECT id, tuple_number
          * FROM {table}
-         * WHERE rowid = (int8send(10)||int4send(0)||int4send(0));
+         * WHERE tuple_number = (int8send(10)||int8send(0)||int4send(0));
          *
-         * SELECT id, rowid
+         * SELECT id, tuple_number
          * FROM {table}
-         * WHERE rowid = ANY(array[
-         *   (int8send(10)||int4send(0)||int4send(0)),
+         * WHERE tuple_number = ANY(array[
+         *   (int8send(10)||int8send(0)||int4send(0)),
          *   ...
          * ]::bytea[]);
          *
          * -- This is how "fetch id only" works:
-         * SELECT gzip(string_agg(rowid||id::bytea,'\x00'::bytea))
+         * SELECT gzip(string_agg(tuple_number||id::bytea,'\x00'::bytea))
          * FROM {table}
-         * WHERE rowid = ANY($1::bytea[]);
+         * WHERE tuple_number = ANY($1::bytea[]);
          * ```
-         * This will result in an `Index Only Scan using "{table}$i_rowid_pkey"`, followed by an `Aggregate`.
+         * This will result in an `Index Only Scan using "{table}$i_tuple_number_pkey"`, followed by an `Aggregate`.
          *
          * However, when we have to load all data, the **index-only** scan turns into an **index-scan**.
          *
@@ -94,12 +94,12 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
          */
         @JvmField
         @JsStatic
-        val rowid_pkey = def(PgIndex::class, "rowid_pkey") { self ->
-            self.columns = listOf(c_rowid)
+        val tuple_number_pkey = def(PgIndex::class, "tuple_number_pkey") { self ->
+            self.columns = listOf(c_tuple_number)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_rowid DESC) INCLUDE($c_id)""",
+                        """btree ($c_tuple_number DESC) INCLUDE($c_id)""",
                         table, unique = true, addFillFactor = true
                     )
                 ).close()
@@ -118,7 +118,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_id text_pattern_ops DESC) INCLUDE ($c_rowid)""",
+                        """btree ($c_id text_pattern_ops DESC) INCLUDE ($c_tuple_number)""",
                         table, unique = true, addFillFactor = true
                     )
                 ).close()
@@ -137,7 +137,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_txn DESC) INCLUDE ($c_rowid)""",
+                        """btree ($c_txn DESC) INCLUDE ($c_tuple_number)""",
                         table, unique = true, addFillFactor = true
                     )
                 ).close()
@@ -156,7 +156,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_rowid)""",
+                        """btree ($c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number)""",
                         table, unique = true, addFillFactor = true
                     )
                 ).close()
@@ -175,7 +175,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_rowid)""",
+                        """btree ($c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number)""",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()
@@ -243,7 +243,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_geo_grid DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_rowid)",
+                        "btree ($c_geo_grid DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number)",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()
@@ -260,7 +260,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_app_id text_pattern_ops DESC, $c_updated_at DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_rowid)""",
+                        """btree ($c_app_id text_pattern_ops DESC, $c_updated_at DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number)""",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()
@@ -277,7 +277,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_author text_pattern_ops DESC, $c_author_ts DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_rowid)""",
+                        """btree ($c_author text_pattern_ops DESC, $c_author_ts DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number)""",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()

@@ -9,7 +9,6 @@ import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int8
-import naksha.model.request.ResultRowList
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -117,14 +116,17 @@ data class MetadataByteArray(@JvmField val storage: IStorage, @JvmField val bina
             val updated_at = dataview_get_int64(view, offset + UPDATED_AT)
             val created_at = dataview_get_int64(view, offset + CREATED_AT)
             val author_ts = dataview_get_int64(view, offset + AUTHOR_TS)
+            val next_txn = dataview_get_int64(view, offset + TXN_NEXT)
+            val txn = dataview_get_int64(view, offset + TXN)
+            val ptxn = dataview_get_int64(view, offset + PTXN)
             meta = Metadata(
                 storeNumber = dataview_get_int64(view, offset + STORE_NUMBER),
                 updatedAt = dataview_get_int64(view, offset + UPDATED_AT),
                 createdAt = if (created_at != ZERO_INT64) created_at else updated_at,
                 authorTs = if (author_ts != ZERO_INT64) author_ts else updated_at,
-                nextVersion = dataview_get_int64(view, offset + TXN_NEXT),
-                version = dataview_get_int64(view, offset + TXN),
-                prevVersion = dataview_get_int64(view, offset + PTXN),
+                nextVersion = if (next_txn == ZERO_INT64) null else Version(next_txn),
+                version = Version(txn),
+                prevVersion = if (ptxn == ZERO_INT64) null else Version(ptxn),
                 uid = dataview_get_int32(view, offset + UID),
                 puid = dataview_get_int32(view, offset + PUID),
                 hash = dataview_get_int32(view, offset + HASH),
@@ -142,7 +144,7 @@ data class MetadataByteArray(@JvmField val storage: IStorage, @JvmField val bina
         return meta
     }
 
-    companion object RowIdStream_C {
+    companion object MetadataByteArray_C {
         private val ZERO_INT64 = Int64(0)
         private const val ZERO = 0.toByte()
 

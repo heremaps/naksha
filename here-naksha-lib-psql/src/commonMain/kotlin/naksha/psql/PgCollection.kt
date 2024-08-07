@@ -15,13 +15,17 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
 import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
+import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_NUMBER
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
+import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES_NUMBER
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
+import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS_NUMBER
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.objects.NakshaCollection
-import naksha.psql.PgStorageClass.Companion.Consistent
+import naksha.psql.PgStorageClass.PgStorageClass_C.Consistent
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * A collection is a set of database tables, that together form a logical feature store. This lower level implementation ensures that all collection information are cached, including statistical information, and that the cache is refreshed on demand from time to time.
@@ -52,13 +56,8 @@ open class PgCollection internal constructor(
 
     override val number: Int64
         get() {
-            var n = _number
-            if (n == null) {
-                if (!doExist()) throw NakshaException(COLLECTION_NOT_FOUND, "Collection $id does not exist")
-                n = _number
-                if (n == null) throw NakshaException(EXCEPTION, "Collection $id exist, but has no collection-number")
-            }
-            return n
+            if (!exists()) throw NakshaException(COLLECTION_NOT_FOUND, "Collection $id does not exist")
+            return _number ?: throw NakshaException(EXCEPTION, "Collection $id exist, but has no collection-number")
         }
 
     // We should update this, whenever we read from the storage, and find something that is newer.
@@ -90,14 +89,15 @@ open class PgCollection internal constructor(
      */
     private var _exists: Boolean = false
 
-    override fun exists(): Boolean = doExist()
+    override fun exists(): Boolean = exists(null)
 
     /**
      * Tests if this collection does exits.
      * @param connection the connection to use to query the database; _null_ if a new connection should be used.
      * @return _true_ if this collection does exist.
      */
-    fun doExist(connection: PgConnection? = null): Boolean {
+    @JsName("existsUsing")
+    fun exists(connection: PgConnection? = null): Boolean {
         refresh(connection)
         return _exists
     }
@@ -183,6 +183,8 @@ open class PgCollection internal constructor(
     /**
      * Create the collection, if it does not yet exist.
      *
+     * Requires that the [NakshaCollection] has been updated before, because the method will invoke [refreshNakshaCollection] eventually, what will load the latest HEAD state, therefore the HEAD should have been updated before.
+     *
      * The method does auto-commit, if no [connection] was given; otherwise committing must be done explicitly.
      * @param connection the connection to use to query the database; if _null_, then a new connection is used.
      * @param partitions the number of partitions to create, must be a value between 1 and 256.
@@ -231,18 +233,18 @@ open class PgCollection internal constructor(
                 txn.create(conn)
                 txn.createYear(conn, NOW.year)
                 txn.createYear(conn, NOW.year + 1)
-                txn.createIndex(conn, PgIndex.rowid_pkey)
+                txn.createIndex(conn, PgIndex.tuple_number_pkey)
                 txn.createIndex(conn, PgIndex.txn_unique)
-                for (index in indices) if (index != PgIndex.rowid_pkey && index != PgIndex.txn_unique) txn.createIndex(conn, index)
+                for (index in indices) if (index != PgIndex.tuple_number_pkey && index != PgIndex.txn_unique) txn.createIndex(conn, index)
 
                 // We can have a meta table for transactions, but no history or deleted!
                 val meta: PgMeta?
                 if (storeMeta) {
                     meta = PgMeta(txn)
                     meta.create(conn)
-                    meta.createIndex(conn, PgIndex.rowid_pkey)
+                    meta.createIndex(conn, PgIndex.tuple_number_pkey)
                     meta.createIndex(conn, PgIndex.id_unique)
-                    for (index in indices) if (index != PgIndex.rowid_pkey && index != PgIndex.id_unique) meta.createIndex(conn, index)
+                    for (index in indices) if (index != PgIndex.tuple_number_pkey && index != PgIndex.id_unique) meta.createIndex(conn, index)
                 } else {
                     meta = null
                 }
@@ -251,24 +253,24 @@ open class PgCollection internal constructor(
             }
             val head = PgHead(this, storageClass, partitions)
             head.create(conn)
-            head.createIndex(conn, PgIndex.rowid_pkey)
+            head.createIndex(conn, PgIndex.tuple_number_pkey)
             head.createIndex(conn, PgIndex.id_unique)
-            for (index in indices) if (index != PgIndex.rowid_pkey && index != PgIndex.id_unique) head.createIndex(conn, index)
+            for (index in indices) if (index != PgIndex.tuple_number_pkey && index != PgIndex.id_unique) head.createIndex(conn, index)
 
             val deleted = if (storedDeleted) PgDeleted(head) else null
             if (deleted != null) {
                 deleted.create(conn)
-                deleted.createIndex(conn, PgIndex.rowid_pkey)
+                deleted.createIndex(conn, PgIndex.tuple_number_pkey)
                 deleted.createIndex(conn, PgIndex.id_unique)
-                for (index in indices) if (index != PgIndex.rowid_pkey && index != PgIndex.id_unique) deleted.createIndex(conn, index)
+                for (index in indices) if (index != PgIndex.tuple_number_pkey && index != PgIndex.id_unique) deleted.createIndex(conn, index)
             }
 
             val meta = if (storeMeta) PgMeta(head) else null
             if (meta != null) {
                 meta.create(conn)
-                meta.createIndex(conn, PgIndex.rowid_pkey)
+                meta.createIndex(conn, PgIndex.tuple_number_pkey)
                 meta.createIndex(conn, PgIndex.id_unique)
-                for (index in indices) if (index != PgIndex.rowid_pkey && index != PgIndex.id_unique) meta.createIndex(conn, index)
+                for (index in indices) if (index != PgIndex.tuple_number_pkey && index != PgIndex.id_unique) meta.createIndex(conn, index)
             }
 
             val history = if (storeHistory) PgHistory(head) else null
@@ -276,10 +278,10 @@ open class PgCollection internal constructor(
                 history.create(conn)
                 history.createYear(conn, NOW.year)
                 history.createYear(conn, NOW.year + 1)
-                history.createIndex(conn, PgIndex.rowid_pkey)
+                history.createIndex(conn, PgIndex.tuple_number_pkey)
                 history.createIndex(conn, PgIndex.id_txn_uid_unique)
                 for (index in indices) {
-                    if (index != PgIndex.rowid_pkey
+                    if (index != PgIndex.tuple_number_pkey
                         && index != PgIndex.id_txn_uid_unique
                         // We do not need this index, because it would only duplicate the stronger unique one!
                         && index != PgIndex.id_txn_uid) history.createIndex(conn, index)
@@ -353,7 +355,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
             if(PgTable.isInternal(id)) {
                 throw NakshaException(ILLEGAL_ARGUMENT, "It is not allowed to modify internal tables", id = id)
             }
-            if (doExist(conn)) {
+            if (exists(conn)) {
                 drop_internal(conn)
             }
         } finally {
@@ -392,7 +394,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
                 if (updateAt != null && currentMillis() < updateAt) return this
                 val s = map.storage
                 val conn = connection ?: s.adminConnection(map.adminOptions())
-                var done: Boolean = false
+                var done = false
                 var head: PgHead? = null
                 var deleted: PgDeleted? = null
                 var history: PgHistory? = null
@@ -536,17 +538,21 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
     }
 
     private fun refreshNakshaCollection(conn: PgConnection) {
+        // TODO: Read the store-number and extract the collection-number!
         when (id) {
             // TODO: Improve the details of the virtual collections
             //       They are invisible when reading all collections, by intention!
             //       However, when explicitly asked for, they can be accessed, but they can't be modified.
             VIRT_TRANSACTIONS -> {
+                _number = VIRT_TRANSACTIONS_NUMBER
                 _nakshaCollection.set(NakshaCollection(VIRT_TRANSACTIONS, 0))
             }
             VIRT_COLLECTIONS -> {
+                _number = VIRT_COLLECTIONS_NUMBER
                 _nakshaCollection.set(NakshaCollection(VIRT_COLLECTIONS, 0))
             }
             VIRT_DICTIONARIES -> {
+                _number = VIRT_DICTIONARIES_NUMBER
                 _nakshaCollection.set(NakshaCollection(VIRT_DICTIONARIES, 0))
             }
             else -> {

@@ -18,6 +18,7 @@ import naksha.model.GeoEncoding.GeoEncoding_C.TWKB_GZIP
 import naksha.model.GeoEncoding.GeoEncoding_C.WKB
 import naksha.model.GeoEncoding.GeoEncoding_C.WKB_GZIP
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.Tuple.Tuple_C.NOT_FETCHED
 import org.locationtech.jts.geom.GeometryFactory
 import org.locationtech.jts.geom.PrecisionModel
 import org.locationtech.jts.io.ByteOrderValues
@@ -178,7 +179,7 @@ actual class PgPlatform {
          */
         @JvmStatic
         actual fun decodeGeometry(raw: ByteArray?, flags: Int): SpGeometry? {
-            if (raw == null) return null
+            if (raw == null || raw.isEmpty()) return null
             val encoding = flags.geoEncoding()
             val rawBytes = if (encoding.geoGzip()) gzipInflate(raw) else raw
             return when(encoding) {

@@ -33,7 +33,7 @@ typealias StoreNumber = Int64
  * @param mapNum the map-number.
  * @param colNum the collection-number.
  */
-inline fun StoreNumber(colNum: Int64, mapNum: Int) =
+inline fun StoreNumber(mapNum: Int, colNum: Int64) =
     Int64((mapNum and MAP_NUM_VALUE_MASK) shl MAP_NUM_SHIFT) or
         ((colNum and COL_NUM_VALUE_MASK) shl COL_NUM_SHIFT)
 
@@ -43,7 +43,7 @@ inline fun StoreNumber(colNum: Int64, mapNum: Int) =
  * @param colNum the collection-number.
  * @param partitionNumber the partition-number.
  */
-inline fun StoreNumber(colNum: Int64, mapNum: Int, partitionNumber: Int) =
+inline fun StoreNumber(mapNum: Int, colNum: Int64, partitionNumber: Int) =
     Int64((mapNum and MAP_NUM_VALUE_MASK) shl MAP_NUM_SHIFT) or
         ((colNum and COL_NUM_VALUE_MASK) shl COL_NUM_SHIFT) or
         Int64(partitionNumber and PART_NUM_VALUE_MASK)

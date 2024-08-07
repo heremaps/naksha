@@ -3,16 +3,42 @@ package naksha.psql
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fx2
-import naksha.jbon.IDictManager
 import naksha.jbon.JbDictManager
 import naksha.jbon.JbFeatureDecoder
 import naksha.jbon.JbMapDecoder
 import naksha.model.*
+import naksha.model.Naksha.NakshaCompanion.FETCH_ALL
+import naksha.model.Naksha.NakshaCompanion.FETCH_ALL_NO_CACHE
+import naksha.model.Naksha.NakshaCompanion.FETCH_CACHE
+import naksha.model.Naksha.NakshaCompanion.FETCH_ID
+import naksha.model.Naksha.NakshaCompanion.FETCH_META
 import naksha.model.NakshaContext.NakshaContextCompanion.DEFAULT_MAP_ID
 import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.model.NakshaVersion.Companion.LATEST
 import naksha.model.objects.NakshaFeature
-import naksha.model.request.ResultRow
+import naksha.model.request.ResultTuple
+import naksha.psql.PgColumn.PgColumnCompanion.app_id
+import naksha.psql.PgColumn.PgColumnCompanion.attachment
+import naksha.psql.PgColumn.PgColumnCompanion.author
+import naksha.psql.PgColumn.PgColumnCompanion.author_ts
+import naksha.psql.PgColumn.PgColumnCompanion.change_count
+import naksha.psql.PgColumn.PgColumnCompanion.created_at
+import naksha.psql.PgColumn.PgColumnCompanion.feature
+import naksha.psql.PgColumn.PgColumnCompanion.flags
+import naksha.psql.PgColumn.PgColumnCompanion.geo
+import naksha.psql.PgColumn.PgColumnCompanion.geo_grid
+import naksha.psql.PgColumn.PgColumnCompanion.hash
+import naksha.psql.PgColumn.PgColumnCompanion.origin
+import naksha.psql.PgColumn.PgColumnCompanion.ptxn
+import naksha.psql.PgColumn.PgColumnCompanion.puid
+import naksha.psql.PgColumn.PgColumnCompanion.ref_point
+import naksha.psql.PgColumn.PgColumnCompanion.store_number
+import naksha.psql.PgColumn.PgColumnCompanion.tags
+import naksha.psql.PgColumn.PgColumnCompanion.txn
+import naksha.psql.PgColumn.PgColumnCompanion.txn_next
+import naksha.psql.PgColumn.PgColumnCompanion.type
+import naksha.psql.PgColumn.PgColumnCompanion.uid
+import naksha.psql.PgColumn.PgColumnCompanion.updated_at
 import naksha.psql.PgUtil.PgUtilCompanion.VERSION
 import naksha.psql.PgUtil.PgUtilCompanion.CONTEXT
 import naksha.psql.PgUtil.PgUtilCompanion.ID
@@ -125,14 +151,15 @@ open class PgStorage(
         get() = _postgresVersion ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
     private var _id: AtomicRef<String> = AtomicRef(null)
-    private var _txnSequenceOid: Int? = null
 
-    override fun id(): String = _id.get() ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+    override val id: String
+        get() = _id.get() ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
     override fun isInitialized(): Boolean = _id.get() != null
 
     private val maps: AtomicMap<String, WeakRef<out PgMap>> = Platform.newAtomicMap()
     private val mapNumberToId: AtomicMap<Int, String> = Platform.newAtomicMap()
+
     init {
         mapNumberToId[0] = ""
     }
@@ -237,17 +264,25 @@ SELECT
                     _postgresVersion = NakshaVersion.of(v.substring(start + 1, end))
                 }
                 logger.info("Invoke init_internal for default schema '$defaultSchemaName'")
-                val schema = defaultMap()
-                val storage_id = schema.init_internal(initId, conn, version, override)
+                val defaultMap = defaultMap
+                val storage_id = defaultMap.init_internal(initId, conn, version, override)
                 _id.set(storage_id)
 
                 logger.info("Commit")
                 conn.commit()
 
-                logger.info("Load OID of transaction sequence counter (located only in default schema)")
-                cursor = conn.execute("SELECT oid FROM pg_class WHERE relname='$NAKSHA_TXN_SEQ' AND relnamespace=${schema.oid}").fetch()
+                logger.info("Load OID of sequence counter (located only in default schema)")
+                cursor = conn.execute(
+                    """SELECT oid, relname
+FROM pg_class
+WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defaultMap.oid}"""
+                )
                 cursor.use {
-                    _txnSequenceOid = cursor["oid"]
+                    while (cursor.next()) {
+                        val relname: String = cursor["relname"]
+                        if (NAKSHA_TXN_SEQ == relname) _txnSequenceOid = cursor["oid"]
+                        if (NAKSHA_MAP_SEQ == relname) _mapNumberSequenceOid = cursor["oid"]
+                    }
                 }
             }
         }
@@ -271,28 +306,37 @@ SELECT
      * Returns the default map.
      * @return the default map.
      */
-    override fun defaultMap(): PgMap = this[DEFAULT_MAP_ID]
+    override val defaultMap: PgMap
+        get() = this[DEFAULT_MAP_ID]
 
     /**
      * The default flags to use for the storage.
      * @return default flags to use for the storage.
      */
-    fun defaultFlags(): Flags = Flags()
+    val defaultFlags: Flags = Flags()
         .featureEncoding(FeatureEncoding.JBON_GZIP)
         .geoEncoding(GeoEncoding.TWKB_GZIP)
         .tagsEncoding(TagsEncoding.JBON_GZIP)
 
-    /**
-     * Returns the OID of the transaction sequence.
-     */
-    fun txnSequenceOid(): Int = _txnSequenceOid ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+    private var _txnSequenceOid: Int? = null
 
     /**
-     * Tests if this storage contains the given schema.
-     * @param schemaName the name of the schema to test.
-     * @return _true_ if such a schema exists; _false_ otherwise.
+     * The OID of the transaction sequence.
      */
-    operator fun contains(schemaName: String): Boolean = maps.containsKey(schemaName)
+    val txnSequenceOid: Int
+        get() = _txnSequenceOid ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+
+    private var _mapNumberSequenceOid: Int? = null
+
+    /**
+     * The OID of the map-number sequence.
+     */
+    val mapNumberSequenceOid: Int
+        get() = _mapNumberSequenceOid ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+
+    // TODO: This only works as long as we only support the standard-map, later we need to somehow pre-fetch all maps.
+    //       Maps are entities, that are anyway rare, the hard-cap is 4k, and even that would already be a lot for a storage!
+    override operator fun contains(mapId: String): Boolean = maps.containsKey(mapId)
 
     /**
      * Creates a new schema instance, internally called.
@@ -328,10 +372,10 @@ SELECT
      */
     override fun getMapId(mapNumber: Int): String? = mapNumberToId[mapNumber]
 
-    override fun rowToFeature(row: Row): NakshaFeature {
-        return if (row.feature != null) {
+    override fun rowToFeature(tuple: Tuple): NakshaFeature {
+        return if (tuple.feature != null) {
             // TODO: FIXME, we need the XYZ namespace
-            val featureReader = JbFeatureDecoder(JbDictManager()).mapBytes(row.feature!!).reader
+            val featureReader = JbFeatureDecoder(JbDictManager()).mapBytes(tuple.feature!!).reader
             val feature = JbMapDecoder().mapReader(featureReader).toAnyObject().proxy(NakshaFeature::class)
             feature
         } else {
@@ -339,21 +383,14 @@ SELECT
         }
     }
 
-    override fun featureToRow(feature: NakshaFeature): Row {
+    override fun featureToRow(feature: NakshaFeature): Tuple {
         val nakshaFeature = feature.proxy(NakshaFeature::class)
         TODO("Implement me")
     }
 
-    // TODO: Fix me, the dictionary manager need to read/write form naksha~dictionaries !!!
-    private val dictManager = JbDictManager()
+    override fun newWriteSession(options: SessionOptions?): IWriteSession = newSession(options ?: SessionOptions.from(null), false)
 
-    override fun dictManager(map: String): IDictManager = dictManager
-
-    override fun newWriteSession(options: SessionOptions?): IWriteSession
-        = newSession(options ?: SessionOptions.from(null), false)
-
-    override fun newReadSession(options: SessionOptions?): IWriteSession
-        = newSession(options ?: SessionOptions.from(null), true)
+    override fun newReadSession(options: SessionOptions?): IWriteSession = newSession(options ?: SessionOptions.from(null), true)
 
     /**
      * Returns a new PostgresQL session.
@@ -397,37 +434,225 @@ SELECT
      * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the connection. It may just do the work or perform arbitrary additional work or supress initialization.
      * @return the admin connection, to be closed after usage (uses [adminOptions], and is always bound to master).
      */
-    internal open fun adminConnection(options: SessionOptions = adminOptions, init: Fx2<PgConnection, String>? = null): PgConnection
-        = newConnection(options, false, init)
+    internal open fun adminConnection(options: SessionOptions = adminOptions, init: Fx2<PgConnection, String>? = null): PgConnection =
+        newConnection(options, false, init)
 
-    override fun initMap(mapId: String) {
-        val schema = mapIdToSchema(mapId)
-        this[schema].init()
+    /**
+     * Tests if the given handle is valid, and if it is, tries to extend its live-time to the given amount of milliseconds.
+     *
+     * Some handles may expire after some time. For example, when custom filters were applied, the generated result-set must be stored somewhere to guarantee that it is always the same (we can't store the filter code!), but we do not store this forever, so the handle does have an expiry. Some handles may not have an expiry, for example when the storage can reproduce them at any moment, using just the information from the handle.
+     *
+     * There is no guarantee that the life-time of the handle can be extended, especially when invoking this method on a read-only session.
+     * @param conn the connection to use.
+     * @param handle the handle to test.
+     * @param ttl if not _null_, the time-to-live of the handle should be extended by the given amount of milliseconds, if possible.
+     * @return _true_ if the handle is valid, _false_ otherwise.
+     * @since 3.0.0
+     */
+    fun validateHandle(conn: PgConnection, handle: String, ttl: Int? = null): Boolean {
+        TODO("Implement validateHandle")
     }
 
-    override fun dropMap(mapId: String) {
-        val schema = mapIdToSchema(mapId)
-        if (schema in this) this[schema].drop()
+    /**
+     * Load the latest [tuples][Tuple] of the features with the given identifiers, from the given collection/map.
+     *
+     * The fetch modes are:
+     * - [all][FETCH_ALL] (_**default**_) - all columns
+     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
+     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
+     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
+     * - [cached-only][FETCH_CACHE] - only what is available in cache
+     *
+     * @param conn the connection to use.
+     * @param mapId the map from which to load.
+     * @param collectionId the collection from to load.
+     * @param featureIds a list of feature identifiers to load.
+     * @param mode the fetch mode.
+     * @return the list of the latest [tuples][Tuple], _null_, if no [tuple][Tuple] was not found.
+     * @since 3.0.0
+     */
+    fun getLatestTuples(
+        conn: PgConnection,
+        mapId: String,
+        collectionId: String,
+        featureIds: Array<String>,
+        mode: String = FETCH_ALL
+    ): List<Tuple?> {
+        TODO("Implement getLatestTuples")
     }
 
-    override fun validateHandle(handle: String, ttl: Int?): Boolean {
-        TODO("Not yet implemented")
+    /**
+     * Load specific [tuples][naksha.model.Tuple].
+     *
+     * The fetch modes are:
+     * - [all][FETCH_ALL] (_**default**_) - all columns
+     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
+     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
+     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
+     * - [cached-only][FETCH_CACHE] - only what is available in cache
+     *
+     * @param conn the connection to use.
+     * @param tupleNumbers a list of [tuple-numbers][TupleNumber] of the rows to load.
+     * @param mode the fetch mode.
+     * @return the list of the loaded [tuples][Tuple], _null_, if the tuple was not found.
+     * @since 3.0.0
+     */
+    fun getTuples(conn: PgConnection, tupleNumbers: Array<TupleNumber>, mode: String = FETCH_ALL): List<Tuple?> {
+        TODO("Implement getTuples")
     }
 
-    override fun getRowsByFeatureId(mapId: String, collectionId: String, featureIds: Array<String>, mode: String): List<Row?> {
-        TODO("Not yet implemented")
+    /**
+     * Fetches a single result-tuple.
+     *
+     * The fetch modes are:
+     * - [all][FETCH_ALL] (_**default**_) - all columns
+     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
+     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
+     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
+     * - [cached-only][FETCH_CACHE] - only what is available in cache
+     *
+     * @param conn the connection to use.
+     * @param resultTuple the result-tuple into which to load the tuple.
+     * @param mode the fetch mode.
+     * @since 3.0.0
+     */
+    fun fetchTuple(conn: PgConnection, resultTuple: ResultTuple, mode: String = FETCH_ALL) {
+        TODO("Implement fetchTuple")
     }
 
-    override fun getRows(rowNumbers: Array<RowNumber>, mode: String): List<Row?> {
-        TODO("Not yet implemented")
-    }
+    /**
+     * Fetches all tuples in the given result-tuples.
+     *
+     * The fetch modes are:
+     * - [all][FETCH_ALL] (_**default**_) - all columns
+     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
+     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
+     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
+     * - [cached-only][FETCH_CACHE] - only what is available in cache
+     *
+     * @param conn the connection to use.
+     * @param resultTuples a list of result-tuples to fetch.
+     * @param from the index of the first result-tuples to fetch.
+     * @param to the index of the first result-tuples to ignore.
+     * @param mode the fetch mode.
+     * @since 3.0.0
+     */
+    fun fetchTuples(
+        conn: PgConnection,
+        resultTuples: List<ResultTuple?>,
+        from: Int = 0,
+        to: Int = resultTuples.size,
+        mode: String = FETCH_ALL
+    ) {
+        // key = collectionId
+        // value = list of tuples to load
+        val toFetch = mutableMapOf<String, MutableList<ResultTuple>?>()
+        val tupleCache = NakshaCache.tupleCache(this.id)
+        var i = from
+        while (i < to) {
+            val result = resultTuples[i++] ?: continue
+            val tupleNumber = result.tupleNumber
+            val storeNumber = tupleNumber.storeNumber
+            val mapId = getMapId(storeNumber.mapNumber()) ?: continue
+            val map = get(mapId)
+            if (!map.exists()) continue
 
-    override fun fetchRows(rows: List<ResultRow?>, from: Int, to: Int, mode: String) {
-        TODO("Not yet implemented")
-    }
+            // Try cache first, except we should not use cache.
+            if (mode != FETCH_ALL_NO_CACHE) result.tuple = tupleCache[tupleNumber]
+            // If we should only try cache, done
+            if (mode == FETCH_CACHE) continue
 
-    override fun fetchRow(row: ResultRow, mode: String) {
-        TODO("Not yet implemented")
+            val tuple = result.tuple
+            // If we have enough info form cache.
+            if (tuple != null && (mode == FETCH_ID || mode == FETCH_META || tuple.isComplete())) continue
+
+            // We need to fetch either meta or all.
+            val colId = map.getCollectionId(tupleNumber.collectionNumber())
+            if (colId == null) {
+                // The collection of the tuple does not exist.
+                result.tuple = null
+                continue
+            }
+            var list = toFetch[colId]
+            if (list == null) {
+                list = mutableListOf()
+                toFetch[colId] = list
+            }
+            list.add(result)
+        }
+        if (toFetch.isNotEmpty()) {
+            for (entry in toFetch) {
+                val colId = entry.key
+                val list = entry.value ?: continue
+                val tupleNumbers = Array<Any?>(list.size) { list[it].tupleNumber.toByteArray() }
+                val SQL = if (mode == FETCH_META) { """
+SELECT gzip(string_agg(${PgColumn.metaSelectToBinary}::bytea,'\\x00'::bytea)) as binary_meta
+FROM ${quoteIdent(colId)}
+WHERE tuple_number = ANY($1)
+"""
+                } else { """
+SELECT ${PgColumn.allColumns.joinToString(",")}
+FROM ${quoteIdent(colId)}
+WHERE tuple_number = ANY($1)"""
+                }
+                val cursor = conn.execute(SQL, tupleNumbers)
+                cursor.use {
+                    if (mode == FETCH_META) {
+                        cursor.fetch()
+                        val binary_meta: ByteArray = cursor["binary_meta"]
+                        val metaArray = MetadataByteArray(this, binary_meta)
+                        TODO("Implement metadata-only")
+                    } else {
+                        while (cursor.next()) {
+                            val _txn: Int64 = cursor[txn]
+                            val tupleNumber = TupleNumber(
+                                cursor[store_number],
+                                Version(_txn),
+                                cursor[uid]
+                            )
+                            val updatedAt: Int64 = cursor[updated_at]
+                            val createdAt = cursor.column(created_at) as Int64?
+                            val authorTs = cursor.column(author_ts) as Int64?
+                            val _txn_next = cursor.column(txn_next) as Int64?
+                            val _ptxn = cursor.column(ptxn) as Int64?
+                            val metadata = Metadata(
+                                storeNumber = tupleNumber.storeNumber,
+                                updatedAt = updatedAt,
+                                createdAt = createdAt ?: updatedAt,
+                                authorTs = authorTs ?: updatedAt,
+                                nextVersion = if (_txn_next != null) Version(_txn_next) else null,
+                                version = tupleNumber.version,
+                                prevVersion = if (_ptxn != null) Version(_ptxn) else null,
+                                uid = tupleNumber.uid,
+                                puid = cursor.column(puid) as Int?,
+                                hash = cursor[hash],
+                                changeCount = cursor[change_count],
+                                geoGrid = cursor[geo_grid],
+                                flags = cursor[flags],
+                                id = cursor[id],
+                                appId = cursor[app_id],
+                                author = cursor.column(author) as String?,
+                                type = cursor.column(type) as String?,
+                                origin = cursor.column(origin) as String?
+                            )
+                            val tuple = Tuple(
+                                storage = this,
+                                tupleNumber = tupleNumber,
+                                meta = metadata,
+                                feature = cursor[feature],
+                                geo = cursor[geo],
+                                referencePoint = cursor[ref_point],
+                                tags = cursor[tags],
+                                attachment = cursor[attachment]
+                            )
+                            tupleCache.store(tuple)
+                            list[cursor.rowNumber() - 1].tuple = tuple
+                        }
+                    }
+                }
+            }
+        }
+        // TODO: Fetch from history, when tuples are not found in HEAD!
     }
 
     override fun close() {

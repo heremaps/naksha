@@ -32,7 +32,7 @@ open class Notification(): Request() {
         private val STORAGE = NotNullProperty<Notification, IStorage>(IStorage::class){ _,_ ->
             throw NakshaException(ILLEGAL_STATE, "The notification has no storage")
         }
-        private val STRING = NotNullProperty<Notification, String>(String::class) { self, _ -> self.storage.id() }
+        private val STRING = NotNullProperty<Notification, String>(String::class) { self, _ -> self.storage.id }
     }
 
     /**

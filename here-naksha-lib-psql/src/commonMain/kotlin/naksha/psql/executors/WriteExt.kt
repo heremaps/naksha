@@ -3,9 +3,9 @@ package naksha.psql.executors
 import naksha.base.NotNullProperty
 import naksha.model.request.Write
 
-internal class ExtendedWrite : Write() {
+internal class WriteExt : Write() {
     companion object ExtendedWrite_C {
-        private val INT_0 = NotNullProperty<ExtendedWrite, Int>(Int::class) { _, _ -> 0 }
+        private val INT_0 = NotNullProperty<WriteExt, Int>(Int::class) { _, _ -> 0 }
     }
 
     /**

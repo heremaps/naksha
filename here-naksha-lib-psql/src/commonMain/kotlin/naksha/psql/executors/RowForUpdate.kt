@@ -1,7 +1,7 @@
 package naksha.psql.executors
 
 import naksha.geo.SpGeometry
-import naksha.model.Row
+import naksha.model.Tuple
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.Write
 import naksha.psql.PgSession
@@ -25,7 +25,7 @@ internal data class RowForUpdate(
     /**
      * The old row, if any.
      */
-    var OLD: Row? = null
+    var OLD: Tuple? = null
 
     /**
      * The cached old geometry, extracted from the row; if any.
@@ -54,7 +54,7 @@ internal data class RowForUpdate(
     /**
      * The new row, if any.
      */
-    var NEW: Row? = null
+    var NEW: Tuple? = null
 
     /**
      * The cached new geometry.

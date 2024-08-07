@@ -153,7 +153,7 @@ open class PgSession(
             // Start a new transaction.
             val conn = usePgConnection()
             val QUERY = "SELECT nextval($1) as txn, (extract(epoch from transaction_timestamp())*1000)::int8 as time"
-            val cursor = conn.execute(QUERY, arrayOf(storage.txnSequenceOid())).fetch()
+            val cursor = conn.execute(QUERY, arrayOf(storage.txnSequenceOid)).fetch()
             cursor.use {
                 var txn: Int64 = cursor["txn"]
                 val txts: Int64 = cursor["time"]
@@ -164,7 +164,7 @@ open class PgSession(
                     logger.info("Transaction counter is in wrong day, acquire advisory lock")
                     conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
                     try {
-                        val c2 = conn.execute("SELECT nextval($1) as txn", arrayOf(storage.txnSequenceOid())).fetch()
+                        val c2 = conn.execute("SELECT nextval($1) as txn", arrayOf(storage.txnSequenceOid)).fetch()
                         c2.use {
                             txn = c2["txn"]
                             version = Version(txn)
@@ -174,7 +174,7 @@ open class PgSession(
                             // Rollover, we update sequence of the day.
                             version = Version.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(0))
                             txn = version.txn
-                            conn.execute("SELECT setval($1, $2)", arrayOf(storage.txnSequenceOid(), txn + 1)).close()
+                            conn.execute("SELECT setval($1, $2)", arrayOf(storage.txnSequenceOid, txn + 1)).close()
                         }
                         logger.info("Release advisory lock")
                         conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
@@ -282,17 +282,12 @@ open class PgSession(
 
     override fun execute(request: Request): Response {
         when (request) {
-            is WriteRequest -> {
-                PgWriter(this, request.writes)
-            }
-
+            is WriteRequest -> return PgWriter(this, request).execute()
             is ReadRequest -> {
                 TODO("ReadRequest not yet implemented")
             }
-
             else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown request")
         }
-        throw NakshaException(ILLEGAL_ARGUMENT, "Unknown request")
     }
 
     /**
@@ -354,6 +349,56 @@ open class PgSession(
             _closed = true
             pgConnection?.close()
             pgConnection = null
+        }
+    }
+
+    override fun validateHandle(handle: String, ttl: Int?): Boolean {
+        val connection = pgConnection
+        val conn = connection ?: storage.adminConnection(storage.adminOptions)
+        try {
+            return storage.validateHandle(conn, handle, ttl)
+        } finally {
+            if (connection == null) conn.close()
+        }
+    }
+
+    override fun getLatestTuples(mapId: String, collectionId: String, featureIds: Array<String>, mode: String): List<Tuple?> {
+        val connection = pgConnection
+        val conn = connection ?: storage.adminConnection(storage.adminOptions)
+        try {
+            return storage.getLatestTuples(conn, mapId, collectionId, featureIds, mode)
+        } finally {
+            if (connection == null) conn.close()
+        }
+    }
+
+    override fun getTuples(tupleNumbers: Array<TupleNumber>, mode: String): List<Tuple?> {
+        val connection = pgConnection
+        val conn = connection ?: storage.adminConnection(storage.adminOptions)
+        try {
+            return storage.getTuples(conn, tupleNumbers, mode)
+        } finally {
+            if (connection == null) conn.close()
+        }
+    }
+
+    override fun fetchTuple(resultTuple: ResultTuple, mode: String) {
+        val connection = pgConnection
+        val conn = connection ?: storage.adminConnection(storage.adminOptions)
+        try {
+            return storage.fetchTuple(conn, resultTuple, mode)
+        } finally {
+            if (connection == null) conn.close()
+        }
+    }
+
+    override fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int, to: Int, mode: String) {
+        val connection = pgConnection
+        val conn = connection ?: storage.adminConnection(storage.adminOptions)
+        try {
+            return storage.fetchTuples(conn, resultTuples, from, to, mode)
+        } finally {
+            if (connection == null) conn.close()
         }
     }
 }

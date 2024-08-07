@@ -22,8 +22,8 @@ import static java.util.Collections.emptyList;
 
 import java.util.*;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ResultTuple;
 import naksha.model.request.ExecutedOp;
-import naksha.model.request.ResultRow;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -41,8 +41,8 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return list of features extracted from ReadResult
    */
-  public static <R extends NakshaFeature> List<R> readFeaturesFromResult(SuccessResponse result, Class<R> featureType)
-      throws NoSuchElementException {
+  public static <R extends NakshaFeature> List<R> readFeaturesFromResult(
+      SuccessResponse result, Class<R> featureType) throws NoSuchElementException {
     return readFeaturesFromResult(result, featureType, 0, Long.MAX_VALUE);
   }
 
@@ -60,7 +60,7 @@ public class ResultHelper {
   public static <R extends NakshaFeature> List<R> readFeaturesFromResult(
       SuccessResponse result, Class<R> featureType, long offset, long limit) {
     final List<R> features = new ArrayList<>();
-    final Iterator<ResultRow> iterator = result.getRows().iterator();
+    final Iterator<ResultTuple> iterator = result.rows.iterator();
     int pos = 0;
     int cnt = 0;
     while (iterator.hasNext() && cnt < limit) {
@@ -87,19 +87,18 @@ public class ResultHelper {
    */
   public static <T> @Nullable T readFeatureFromResult(
       final @NotNull SuccessResponse result, final @NotNull Class<T> type) {
-    final List<ResultRow> rows = result.getRows();
+    final List<ResultTuple> rows = result.rows;
     if (rows.isEmpty()) {
       return null;
     }
-    assert rows.get(0) != null;
     return type.cast(rows.get(0).getFeature());
   }
 
   public static List<String> readIdsFromResult(final @NotNull SuccessResponse result) {
-    if (result.getRows().isEmpty()) {
+    if (result.rows.isEmpty()) {
       return emptyList();
     }
-    final Iterator<ResultRow> iterator = result.getRows().iterator();
+    final Iterator<ResultTuple> iterator = result.rows.iterator();
     final List<String> ids = new ArrayList<>();
     while (iterator.hasNext()) {
       ids.add(iterator.next().getFeature().getId());
@@ -119,7 +118,7 @@ public class ResultHelper {
    */
   public static <R extends NakshaFeature> Map<ExecutedOp, List<R>> readFeaturesGroupedByOp(
       SuccessResponse result, Class<R> featureType, long limit) {
-    final Iterator<ResultRow> iterator = result.getRows().iterator();
+    final Iterator<ResultTuple> iterator = result.rows.iterator();
     if (!iterator.hasNext()) {
       throw new NoSuchElementException("Empty SuccessResponse");
     }
@@ -128,12 +127,12 @@ public class ResultHelper {
     final List<R> deletedFeatures = new ArrayList<>();
     int cnt = 0;
     while (iterator.hasNext() && cnt++ < limit) {
-      ResultRow row = iterator.next();
-      if (row.op.like(ExecutedOp.CREATED)) {
+      ResultTuple row = iterator.next();
+      if (row.getOp().equals(ExecutedOp.CREATED)) {
         insertedFeatures.add(featureType.cast(row.getFeature()));
-      } else if (row.op.like(ExecutedOp.UPDATED)) {
+      } else if (row.getOp().equals(ExecutedOp.UPDATED)) {
         updatedFeatures.add(featureType.cast(row.getFeature()));
-      } else if (row.op.like(ExecutedOp.DELETED)) {
+      } else if (row.getOp().equals(ExecutedOp.DELETED)) {
         deletedFeatures.add(featureType.cast(row.getFeature()));
       }
     }

@@ -9,4 +9,4 @@ import kotlin.js.JsExport
  * Result filter type, which is a functional interface.
  */
 @JsExport
-interface ResultFilter : Fn1<ResultRow?, ResultRow>
+interface ResultFilter : Fn1<ResultTuple?, ResultTuple>

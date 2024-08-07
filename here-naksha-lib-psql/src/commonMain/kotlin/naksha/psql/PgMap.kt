@@ -3,7 +3,10 @@
 package naksha.psql
 
 import naksha.base.*
+import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fn0
+import naksha.jbon.IDictManager
+import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.NakshaContext.NakshaContextCompanion.currentContext
 import naksha.model.NakshaError.NakshaErrorCompanion.UNAUTHORIZED
@@ -12,8 +15,11 @@ import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
+import naksha.model.NakshaError.NakshaErrorCompanion.NOT_IMPLEMENTED
+import naksha.model.objects.NakshaFeature
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * Information about the database and connection, that need only to be queried ones per session.
@@ -46,7 +52,10 @@ open class PgMap(
      * The map-number of this map.
      */
     override val number: Int
-        get() = _number ?: throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
+        get() {
+            if (!exists()) throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
+            return _number ?: throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
+        }
 
     /**
      * The lock internally used to synchronize access.
@@ -58,9 +67,6 @@ open class PgMap(
      */
     private var _updateAt: Int64? = null
 
-    /**
-     * The schema
-     */
     internal var _oid: Int? = null
 
     /**
@@ -69,11 +75,30 @@ open class PgMap(
      */
     open val oid: Int
         get() {
-            if (_updateAt == null) refresh()
-            val _oid = this._oid
-            check(_oid != null) { "The schema '$schemaName' does not exist" }
-            return _oid
+            if (!exists()) throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
+            return _oid ?: throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
         }
+
+    private var _collectionNumberSeqOid: Int? = null
+
+    /**
+     * The OID of the collection-number sequence.
+     */
+    open val collectionNumberSeqOid: Int
+        get() {
+            if (!exists()) throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
+            return _collectionNumberSeqOid ?: throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
+        }
+
+    /**
+     * Uses the given connection to acquire a new collection-number.
+     * @param conn the connection to use to acquire the number.
+     * @return the new collection number.
+     */
+    fun newCollectionNumber(conn: PgConnection): Int64 {
+        val cursor = conn.execute("SELECT nextval($1) as col_number", arrayOf(collectionNumberSeqOid)).fetch()
+        return cursor["col_number"]
+    }
 
     /**
      * Test if this is the default schema.
@@ -176,11 +201,18 @@ open class PgMap(
      */
     open fun refresh(connection: PgConnection? = null): PgMap {
         if (_updateAt == null || Platform.currentMillis() < _updateAt) {
+            logger.info("Refresh map '$id' / schema: '$schemaName' ...")
             val conn = connOf(connection)
             try {
-                val cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(id)).fetch()
+                var cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schemaName)).fetch()
                 cursor.use {
                     _oid = cursor["oid"]
+                    // TODO: Right now we only support the default map, we need to change this!
+                    _number = 0
+                }
+                cursor = conn.execute("""SELECT oid FROM pg_class WHERE relname='$NAKSHA_COL_SEQ' AND relnamespace=${_oid}""").fetch()
+                cursor.use {
+                    _collectionNumberSeqOid = cursor["oid"]
                 }
             } finally {
                 closeOf(conn, connection, false)
@@ -191,7 +223,8 @@ open class PgMap(
     }
 
     protected fun updateUpdateAt() {
-        _updateAt = Platform.currentMillis() + PlatformUtil.HOUR
+        // TODO: Currently we only support the default map, so there is no need to ever update the cache!
+        _updateAt = Platform.currentMillis() + 365 * PlatformUtil.DAY
     }
 
     /**
@@ -199,9 +232,35 @@ open class PgMap(
      * @return _true_ if the schema exists.
      */
     override fun exists(): Boolean {
-        if (_updateAt == null) refresh()
+        refresh()
         return _oid != null
     }
+
+    /**
+     * Tests if the schema exists.
+     * @param connection the connection to use.
+     * @return _true_ if the schema exists.
+     */
+    @JsName("existsUsing")
+    fun exists(connection: PgConnection?): Boolean {
+        refresh(connection)
+        return _oid != null
+    }
+
+    // TODO: Implement support for dictionaries using naksha~dictionaries !
+    override val dictManager: IDictManager = object : IDictManager {
+        override fun putDictionary(dict: JbDictionary) {
+            throw NakshaException(NOT_IMPLEMENTED, "putDictionary is not supported by lib-psql yet")
+        }
+
+        override fun deleteDictionary(dict: JbDictionary): Boolean {
+            throw NakshaException(NOT_IMPLEMENTED, "putDictionary is not supported by lib-psql yet")
+        }
+
+        override fun getDictionary(id: String): JbDictionary? = null
+    }
+
+    override fun encodingDict(collectionId: String, feature: NakshaFeature?): JbDictionary? = null
 
     /**
      * Initialize the schema, creating all necessary database tables, installing modules, ....
@@ -210,7 +269,7 @@ open class PgMap(
      * @param connection the connection to use to query information from the database; if _null_, a new connection is used temporary.
      */
     open fun init(connection: PgConnection? = null) {
-        // Note: Implemented in PsqlSchema!
+        // Implemented in PsqlMap!
         throw NakshaException(UNSUPPORTED_OPERATION, "This environment does not allow to initialize the schema")
     }
 
@@ -228,6 +287,7 @@ open class PgMap(
         version: NakshaVersion = NakshaVersion.latest,
         override: Boolean = false
     ): String {
+        // Implemented in PsqlMap!
         throw NakshaException(UNSUPPORTED_OPERATION, "This environment does not allow to initialize the schema")
     }
 

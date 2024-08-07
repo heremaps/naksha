@@ -4,6 +4,7 @@ package naksha.model.request
 
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
+import naksha.model.ISession
 import naksha.model.objects.NakshaFeatureList
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -20,27 +21,23 @@ open class SuccessResponse @Deprecated("Use secondary", ReplaceWith("SuccessResp
      * @param rs the result-set from which to create a success response.
      */
     @JsName("ofResultSet")
-    constructor(rs: ResultSet) : this() {
+    constructor(rs: IResultSet) : this() {
         setRaw("resultSet", rs)
     }
 
     companion object SuccessResponse_C {
-        private val RESULT_SET_NULL = NullableProperty<SuccessResponse, ResultSet>(ResultSet::class)
-        private val ROWS = NotNullProperty<SuccessResponse, ResultRowList>(ResultRowList::class) { self, _ ->
+        private val RESULT_SET_NULL = NullableProperty<SuccessResponse, IResultSet>(IResultSet::class)
+        private val TUPLES = NotNullProperty<SuccessResponse, ResultTupleList>(ResultTupleList::class) { self, _ ->
             val rs = self.resultSet
-            rs?.result() ?: ResultRowList()
+            rs?.result ?: ResultTupleList()
         }
-        @Suppress("UNCHECKED_CAST")
         private val FEATURES = NotNullProperty<SuccessResponse, NakshaFeatureList>(NakshaFeatureList::class) { self, _ ->
             val features = NakshaFeatureList()
             val rs = self.resultSet
             if (rs != null) {
-                val rows = rs.result()
-                rs.storage().fetchRows(rows as List<ResultRow>)
-                for (row in rows) {
-                    val f = row?.feature
-                    if (f != null) features.add(f)
-                }
+                val tuples = rs.result
+                rs.session.fetchTuples(tuples)
+                for (tuple in tuples) features.add(tuple?.feature)
             }
             features
         }
@@ -49,10 +46,10 @@ open class SuccessResponse @Deprecated("Use secondary", ReplaceWith("SuccessResp
         }
     }
 
-    override fun resultSize(): Int = resultSet?.resultSize() ?: features.size
+    override fun resultSize(): Int = resultSet?.resultSize ?: features.size
 
     /**
-     * The [result-set][ResultSet] as returned by the storage.
+     * The [result-set][IResultSet] as returned by the storage.
      *
      * If this response is restored from a serialized one, it will not have a result-set.
      *
@@ -61,16 +58,18 @@ open class SuccessResponse @Deprecated("Use secondary", ReplaceWith("SuccessResp
     open val resultSet by RESULT_SET_NULL
 
     /**
-     * Return the result rows being part of the response.
+     * Return the result tuples being part of the response.
+     *
+     * **Warning**: This method does not fetch the [tuples][naksha.model.Tuple], this is for fine-grained control over this process, and not recommend, for standard clients.
      *
      * This property is not serializable.
      */
-    open val rows by ROWS
+    open val tuples by TUPLES
 
     /**
      * The result rows converted into features.
      *
-     * This property is generated when accessed for the first time. That means, before the client tries to serialize the response, it should read the features property ones.
+     * This property is generated when accessed for the first time. That means, before the client tries to serialize the response, it should read the features property ones. This method will ensure that all [tuples][naksha.model.Tuple] are fetched.
      */
     open var features by FEATURES
 
