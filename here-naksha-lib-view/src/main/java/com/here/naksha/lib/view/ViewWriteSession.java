@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import naksha.model.IStorageLock;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
+import naksha.model.NakshaFeatureProxy;
 import naksha.model.request.WriteFeature;
 import naksha.model.request.WriteRequest;
 import naksha.model.response.Response;
@@ -56,7 +57,7 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
 
   public ViewWriteSession init() {
     if (writeLayer == null) writeLayer = viewRef.getViewCollection().getTopPriorityLayer();
-    this.session = writeLayer.getStorage().newWriteSession(context, useMaster);
+    this.session = writeLayer.getStorage().newWriteSession(context);
     return this;
   }
   /**
@@ -65,13 +66,9 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
    * @param writeRequest
    * @return
    */
-  @Override
-  public @NotNull Response execute(@NotNull WriteFeature writeRequest) {
-    if (!(writeRequest instanceof WriteFeature)) {
-      throw new UnsupportedOperationException("Only WriteFeatures are supported.");
-    }
-    getSession();
-    ((WriteFeature) writeRequest).setCollectionId(writeLayer.getCollectionId());
+  public @NotNull Response execute(@NotNull WriteRequest writeRequest) {
+//    getSession();
+    writeRequest.setCollectionId(writeLayer.getCollectionId());
     return this.session.execute(writeRequest);
   }
 
@@ -93,18 +90,15 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
     throw new UnsupportedOperationException("bulk write on view is not yet supported");
   }
 
-  @Override
-  public void commit(boolean autoCloseCursors) {
-    getSession().commit(autoCloseCursors);
+  public void commit() {
+    getSession().commit();
   }
 
-  @Override
-  public void rollback(boolean autoCloseCursors) {
-    getSession().rollback(true);
+  public void rollback() {
+    getSession().rollback();
   }
 
-  @Override
-  public void close(boolean autoCloseCursors) {
+  public void close() {
     super.close();
     getSession().close();
   }
@@ -112,5 +106,11 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   private IWriteSession getSession() {
     if (this.session == null) init();
     return this.session;
+  }
+
+  @NotNull
+  @Override
+  public Response writeFeature(@NotNull NakshaFeatureProxy feature) {
+    return null;
   }
 }
