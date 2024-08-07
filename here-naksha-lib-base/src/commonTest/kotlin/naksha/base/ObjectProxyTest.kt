@@ -2,11 +2,11 @@ package naksha.base
 
 import kotlin.test.*
 
-class Foo : ObjectProxy() {
+class Foo : AnyObject() {
     companion object {
-        val NAME = NotNullProperty<Any, Foo, String>(String::class) { _, _ -> "Bernd" }
-        val AGE = NotNullProperty<Any, Foo, Int>(Int::class) { _, _ -> 0 }
-        val XYZ = NullableProperty<Any, Foo, String>(String::class, name = "@ns:com:here:xyz")
+        val NAME = NotNullProperty<Foo, String>(String::class) { _, _ -> "Bernd" }
+        val AGE = NotNullProperty<Foo, Int>(Int::class) { _, _ -> 0 }
+        val XYZ = NullableProperty<Foo, String>(String::class, name = "@ns:com:here:xyz")
     }
 
     var name: String by NAME
@@ -14,10 +14,10 @@ class Foo : ObjectProxy() {
     var xyz: String? by XYZ
 }
 
-class Bar : ObjectProxy() {
+class Bar : AnyObject() {
     companion object {
-        val FOO = NotNullProperty<Any, Bar, Foo>(Foo::class)
-        val FOO2 = NullableProperty<Any, Bar, Foo>(Foo::class)
+        val FOO = NotNullProperty<Bar, Foo>(Foo::class)
+        val FOO2 = NullableProperty<Bar, Foo>(Foo::class)
     }
 
     var foo: Foo by FOO

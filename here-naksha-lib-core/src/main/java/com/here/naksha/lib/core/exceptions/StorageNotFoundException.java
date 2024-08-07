@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import static naksha.model.NakshaErrorCode.NOT_FOUND;
+import static naksha.model.NakshaError.NOT_FOUND;
 
 import org.jetbrains.annotations.NotNull;
 

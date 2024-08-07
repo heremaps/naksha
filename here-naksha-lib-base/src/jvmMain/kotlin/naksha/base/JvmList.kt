@@ -21,8 +21,12 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
         internal val emptyArrayListElement = emptyArray<Any?>()
 
         @Suppress("NOTHING_TO_INLINE", "UNCHECKED_CAST")
-        private inline fun elementDataOf(list: ArrayList<Any?>): Array<Any?> =
+        private inline fun getElementDataOf(list: ArrayList<Any?>): Array<Any?> =
             unsafe.getObject(list, arrayList_elementDataOFFSET) as Array<Any?>
+
+        @Suppress("NOTHING_TO_INLINE")
+        private inline fun setElementDataOf(list: ArrayList<Any?>, array: Array<Any?>) =
+            unsafe.putObject(list, arrayList_elementDataOFFSET, array)
 
         private const val MAX_OPT_CAPACITY = Int.MAX_VALUE - 16
 
@@ -45,7 +49,7 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
      */
     protected fun elementData(): Array<Any?>? {
         val list = this.list
-        return if (list != null) elementDataOf(list) else null
+        return if (list != null) getElementDataOf(list) else null
     }
 
     /**
@@ -110,6 +114,26 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
         this.list = list
     }
 
+    /**
+     *
+     */
+    fun setCapacity(capacity: Int) {
+        check(capacity >= 0) { "capacity must be >= 0" }
+        var list = this.list
+        if (list == null) {
+            list = ArrayList(capacity)
+            this.list = list
+        } else {
+            val data = getElementDataOf(list)
+            if (data.size < capacity) {
+                val new_data = data.copyOf(capacity)
+                setElementDataOf(list, new_data)
+            }
+        }
+    }
+
+    fun getCapacity(): Int = elementData()?.size ?: 0
+
     open fun list(): ArrayList<Any?> {
         var list = this.list
         if (list == null) {
@@ -136,11 +160,11 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
                 val length = list.size
                 if (newLength > length) { // inflate list
                     list.ensureCapacity(optimalCapacity(newLength))
-                    Arrays.fill(elementDataOf(list), length, newLength, null)
+                    Arrays.fill(getElementDataOf(list), length, newLength, null)
                     unsafe.putInt(list, arrayList_sizeOFFSET, newLength)
                 } else if (newLength < length) { // deflate list, we know that newLength >= 1!
                     unsafe.putInt(list, arrayList_sizeOFFSET, newLength)
-                    Arrays.fill(elementDataOf(list), newLength, length, null)
+                    Arrays.fill(getElementDataOf(list), newLength, length, null)
                 }
             }
         }
@@ -231,6 +255,8 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
         d[index] = element
         return old
     }
+
+    override fun hashCode(): Int = super.hashCode()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

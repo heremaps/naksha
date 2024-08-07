@@ -2,11 +2,7 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.fromJSON
 import naksha.base.Platform.PlatformCompanion.isNil
-import naksha.base.Platform.PlatformCompanion.newDataView
-import naksha.base.Platform.PlatformCompanion.toJSON
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_byte_array
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
 import kotlin.js.JsExport
@@ -53,11 +49,18 @@ abstract class Proxy : PlatformObject {
                 // The only acceptable situation is that Any was requested.
                 // Then, return the standard types.
                 if (klass == Any::class) {
-                    if (data is PlatformMap) return data.proxy(ObjectProxy::class) as T
-                    if (data is PlatformList) return data.proxy(AnyListProxy::class) as T
+                    if (data is PlatformMap) return data.proxy(AnyObject::class) as T
+                    if (data is PlatformList) return data.proxy(AnyList::class) as T
                     if (data is PlatformDataView) return data.proxy(DataViewProxy::class) as T
                 }
             } else if (klass.isInstance(data)) return data as T
+            if (klass == Int64::class) when (raw) {
+                is Short -> Int64(raw.toInt())
+                is Int -> Int64(raw)
+                is Long -> Int64(raw)
+                is Float -> Int64(raw.toDouble())
+                is Double -> Int64(raw)
+            }
             return if (init != null) init.call() else alternative
         }
 
@@ -87,8 +90,8 @@ abstract class Proxy : PlatformObject {
                 // The only acceptable situation is that Any was requested.
                 // Then, return the standard types.
                 if (klass == Any::class) {
-                    if (data is PlatformMap) return data.proxy(ObjectProxy::class) as T
-                    if (data is PlatformList) return data.proxy(AnyListProxy::class) as T
+                    if (data is PlatformMap) return data.proxy(AnyObject::class) as T
+                    if (data is PlatformList) return data.proxy(AnyList::class) as T
                     if (data is PlatformDataView) return data.proxy(DataViewProxy::class) as T
                 }
             } else if (klass.isInstance(data)) return data as T
@@ -177,21 +180,21 @@ abstract class Proxy : PlatformObject {
     @Suppress("NON_EXPORTABLE_TYPE")
     fun <T : Proxy> proxy(klass: KClass<T>): T = Platform.proxy(platformObject(), klass)
 
+    override fun hashCode(): Int = platformObject().hashCode()
+
     override fun equals(other: Any?): Boolean {
-        Platform.logger.info("Proxy::equals")
         if (this === other) return true
-        if (other is PlatformObject) return platformObject() == other
-        if (other is Proxy) return platformObject() == other.platformObject()
-        Platform.logger.info("Proxy::equals -> false")
-        return false
+        return platformObject() == Platform.unbox(other)
     }
 
+    override fun toString(): String = platformObject().toString()
+
+    /**
+     * Create a copy of this object.
+     *
+     * @param recursive _true_ if this method should make a recursive copy; _false_ (default) and a shallow copy is made.
+     * @return a (optionally recursive) copy.
+     */
     @Suppress("UNCHECKED_CAST")
-    fun <SELF: Proxy> cloneDeep(): SELF {
-        val po = platformObject()
-        if (po is PlatformMap) return (fromJSON(toJSON(po)) as PlatformMap).proxy(this::class) as SELF
-        if (po is PlatformList) return (fromJSON(toJSON(po)) as PlatformList).proxy(this::class) as SELF
-        if (po is PlatformDataView) return newDataView(dataview_get_byte_array(po).copyOf()).proxy(this::class) as SELF
-        throw IllegalStateException("The platform object is in an unknown, possible invalid state")
-    }
+    fun <SELF : Proxy> copy(recursive: Boolean = false): SELF = Platform.copy(platformObject(), recursive).proxy(this::class) as SELF
 }

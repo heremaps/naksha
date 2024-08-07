@@ -18,26 +18,18 @@
  */
 package com.here.naksha.lib.core.util.storage;
 
-import static naksha.model.request.condition.LOpType.OR;
-import static naksha.model.request.condition.POp.eq;
-import static naksha.model.request.condition.PRef.id;
-import static naksha.model.request.condition.PRef.pRefPathMap;
-
 import com.here.naksha.lib.core.models.storage.*;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import naksha.geo.MultiPointCoord;
 import naksha.geo.PointCoord;
 import naksha.geo.ProxyGeoUtil;
-import naksha.model.NakshaCollectionProxy;
-import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
-import naksha.model.request.condition.*;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.geom.Geometry;
 
 @AvailableSince(NakshaVersion.v2_0_7)
@@ -51,10 +43,11 @@ public class RequestHelper {
    * @return ReadFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public static @NotNull ReadFeaturesProxyWrapper readFeaturesByIdRequest(
+  public static @NotNull ReadFeatures readFeaturesByIdRequest(
       final @NotNull String collectionName, final @NotNull String featureId) {
-    return (ReadFeaturesProxyWrapper)
-        new ReadFeaturesProxyWrapper().addCollectionId(collectionName).withOp(eq(id(), featureId));
+    final ReadFeatures readFeatures = new ReadFeatures(collectionName);
+    readFeatures.getFeatureIds().add(featureId);
+    return readFeatures;
   }
 
   /**
@@ -65,11 +58,11 @@ public class RequestHelper {
    * @return ReadFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public static @NotNull ReadFeaturesProxyWrapper readFeaturesByIdsRequest(
+  public static @NotNull ReadFeatures readFeaturesByIdsRequest(
       final @NotNull String collectionName, final @NotNull List<@NotNull String> featureIds) {
-    final POp[] ops = featureIds.stream().map(id -> eq(id(), id)).toArray(POp[]::new);
-    return (ReadFeaturesProxyWrapper)
-        new ReadFeaturesProxyWrapper().addCollectionId(collectionName).withOp(new LOp(OR, ops));
+    final ReadFeatures readFeatures = new ReadFeatures(collectionName);
+    readFeatures.getFeatureIds().addAll(featureIds);
+    return readFeatures;
   }
 
   /**
@@ -84,7 +77,7 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public static <FEATURE extends NakshaFeatureProxy> @NotNull WriteRequest createFeatureRequest(
+  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest createFeatureRequest(
       final @NotNull String collectionName, final @NotNull FEATURE feature, final boolean silentIfExists) {
     if (silentIfExists) {
       return createFeaturesRequest(collectionName, List.of(feature), IfExists.RETAIN, IfConflict.RETAIN);
@@ -103,7 +96,7 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public static <FEATURE extends NakshaFeatureProxy> @NotNull WriteRequest createFeatureRequest(
+  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest createFeatureRequest(
       final @NotNull String collectionName, final @NotNull FEATURE feature) {
     return createFeaturesRequest(collectionName, List.of(feature), IfExists.FAIL, IfConflict.FAIL);
   }
@@ -115,11 +108,10 @@ public class RequestHelper {
    * @param <FEATURE>      any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  public static <FEATURE extends NakshaFeatureProxy> @NotNull WriteRequest updateFeatureRequest(
+  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest updateFeatureRequest(
       final @NotNull String collectionName, final @NotNull FEATURE feature) {
-    final WriteRequest request = new WriteRequest();
-    request.ops.add(new UpdateFeature(collectionName, feature, false));
-    return request;
+    final Write write = new Write().updateFeature(null, collectionName, feature, false);
+    return new WriteRequest().add(write);
   }
 
   /**
@@ -130,11 +122,13 @@ public class RequestHelper {
    * @param <FEATURE>      any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  public static @NotNull <FEATURE extends NakshaFeatureProxy> WriteRequest updateFeaturesRequest(
+  public static @NotNull <FEATURE extends NakshaFeature> WriteRequest updateFeaturesRequest(
       final @NotNull String collectionName, final @NotNull List<FEATURE> features) {
     final WriteRequest request = new WriteRequest();
+    final Write write = new Write();
     for (FEATURE feature : features) {
-      request.add(new UpdateFeature(collectionName, feature, false));
+      write.updateFeature(null, collectionName, feature, true);
+      request.add(write);
     }
     return request;
   }
@@ -147,11 +141,13 @@ public class RequestHelper {
    * @param <FEATURE>      any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  public static @NotNull <FEATURE extends NakshaFeatureProxy> WriteRequest upsertFeaturesRequest(
+  public static @NotNull <FEATURE extends NakshaFeature> WriteRequest upsertFeaturesRequest(
       final @NotNull String collectionName, final @NotNull List<FEATURE> features) {
     final WriteRequest request = new WriteRequest();
+    final Write write = new Write();
     for (FEATURE feature : features) {
-      request.add(new WriteFeature(collectionName, feature, false));
+      write.upsertFeature(null, collectionName, feature);
+      request.add(write);
     }
     return request;
   }
@@ -166,8 +162,10 @@ public class RequestHelper {
   public static @NotNull WriteRequest deleteFeaturesByIdsRequest(
       final @NotNull String collectionName, final @NotNull List<String> ids) {
     final WriteRequest request = new WriteRequest();
+    final Write write = new Write();
     for (String id : ids) {
-      request.add(new DeleteFeature(collectionName, id, null));
+      write.deleteFeatureById(null, collectionName, id, null);
+      request.add(write);
     }
     return request;
   }
@@ -181,8 +179,8 @@ public class RequestHelper {
    */
   public static @NotNull WriteRequest deleteFeatureByIdRequest(
       final @NotNull String collectionName, final @NotNull String id) {
-    final WriteRequest request = new WriteRequest();
-    return request.add(new DeleteFeature(collectionName, id, null));
+    final Write write = new Write().deleteFeatureById(null, collectionName, id, null);
+    return new WriteRequest().add(write);
   }
 
   /**
@@ -197,7 +195,7 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public static <FEATURE extends NakshaFeatureProxy> @NotNull WriteRequest createFeatureRequest(
+  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest createFeatureRequest(
       final @NotNull String collectionName,
       final @NotNull List<FEATURE> featureList,
       final boolean silentIfExists) {
@@ -218,7 +216,7 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public static <FEATURE extends NakshaFeatureProxy> @NotNull WriteRequest createFeaturesRequest(
+  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest createFeaturesRequest(
       final @NotNull String collectionName, final @NotNull List<FEATURE> featureList) {
     return createFeaturesRequest(collectionName, featureList, IfExists.FAIL, IfConflict.FAIL);
   }
@@ -234,7 +232,7 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  public static <FEATURE extends NakshaFeatureProxy> @NotNull WriteRequest createFeatureRequest(
+  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest createFeatureRequest(
       final @NotNull String collectionName,
       final @NotNull FEATURE feature,
       final @NotNull IfExists ifExistsAction,
@@ -254,26 +252,28 @@ public class RequestHelper {
   @AvailableSince(NakshaVersion.v2_0_7)
   public static @NotNull WriteRequest createFeaturesRequest(
       final @NotNull String collectionName,
-      final @NotNull List<? extends NakshaFeatureProxy> featureList,
+      final @NotNull List<? extends NakshaFeature> featureList,
       final @NotNull IfExists ifExistsAction,
       final @NotNull IfConflict ifConflictAction) {
     final WriteRequest request = new WriteRequest();
-    for (final NakshaFeatureProxy feature : featureList) {
+    final Write write = new Write();
+    for (final NakshaFeature feature : featureList) {
       assert feature != null;
-      request.add(new InsertFeature(collectionName, feature));
+      request.add(write.createFeature(null, collectionName, feature));
     }
     return request;
   }
 
-  public static @NotNull WriteRequest createWriteCollectionsRequest(final @NotNull NakshaCollectionProxy collection) {
+  public static @NotNull WriteRequest createWriteCollectionsRequest(final @NotNull NakshaCollection collection) {
     return createWriteCollectionsRequest(List.of(collection));
   }
 
   public static @NotNull WriteRequest createWriteCollectionsRequest(
-      final @NotNull List<@NotNull NakshaCollectionProxy> collections) {
+      final @NotNull List<@NotNull NakshaCollection> collections) {
     final WriteRequest writeXyzCollections = new WriteRequest();
-    for (final NakshaCollectionProxy collection : collections) {
-      writeXyzCollections.add(new InsertCollection(collection));
+    final Write write = new Write();
+    for (final NakshaCollection collection : collections) {
+      writeXyzCollections.add(write.createCollection(null, collection));
     }
     return writeXyzCollections;
   }
@@ -296,45 +296,45 @@ public class RequestHelper {
     return ProxyGeoUtil.toJtsMultiPoint(multiPoint);
   }
 
-  /**
-   * Helper function that returns instance of PRef or NonIndexedPRef depending on
-   * whether the propPath provided matches with standard (indexed) property search or not.
-   *
-   * @param propPath the JSON path to be used for property search
-   * @return PRef instance of PRef or NonIndexedPRef
-   */
-  public static @NotNull PRef pRefFromPropPath(final @NotNull String[] propPath) {
-    // check if we can use standard PRef (on indexed properties)
-    for (final String[] path : pRefPathMap().keySet()) {
-      if (Arrays.equals(path, propPath)) {
-        return pRefPathMap().get(path);
-      }
-    }
-    // fallback to non-standard PRef (non-indexed properties)
-    return PRef.nonIndexedPref(propPath);
-  }
-
-  public static void combineOperationsForRequestAs(
-      final @NotNull ReadFeatures request, final OpType opType, @Nullable Op... operations) {
-    if (operations == null) return;
-    List<Op> opList = null;
-    for (final Op crtOp : operations) {
-      if (crtOp == null) continue;
-      if (request.op == null) {
-        request.withOp(crtOp); // set operation directly if this was the only one operation
-        continue;
-      } else if (opList == null) {
-        opList = new ArrayList<>(); // we have more than one operation
-        opList.add(request.op); // save previously added operation
-      }
-      opList.add(crtOp); // keep appending every operation that is to be added to the request
-    }
-    if (opList == null) return;
-    // Add combined operations to request
-    if (opType == LOpType.AND) {
-      request.withOp(LOp.and(opList.toArray(Op[]::new)));
-    } else {
-      request.withOp(LOp.or(opList.toArray(Op[]::new)));
-    }
-  }
+  //  /**
+  //   * Helper function that returns instance of PRef or NonIndexedPRef depending on
+  //   * whether the propPath provided matches with standard (indexed) property search or not.
+  //   *
+  //   * @param propPath the JSON path to be used for property search
+  //   * @return PRef instance of PRef or NonIndexedPRef
+  //   */
+  //  public static @NotNull PRef pRefFromPropPath(final @NotNull String[] propPath) {
+  //    // check if we can use standard PRef (on indexed properties)
+  //    for (final String[] path : pRefPathMap().keySet()) {
+  //      if (Arrays.equals(path, propPath)) {
+  //        return pRefPathMap().get(path);
+  //      }
+  //    }
+  //    // fallback to non-standard PRef (non-indexed properties)
+  //    return PRef.nonIndexedPref(propPath);
+  //  }
+  //
+  //  public static void combineOperationsForRequestAs(
+  //      final @NotNull ReadFeatures request, final OpType opType, @Nullable Op... operations) {
+  //    if (operations == null) return;
+  //    List<Op> opList = null;
+  //    for (final Op crtOp : operations) {
+  //      if (crtOp == null) continue;
+  //      if (request.op == null) {
+  //        request.withOp(crtOp); // set operation directly if this was the only one operation
+  //        continue;
+  //      } else if (opList == null) {
+  //        opList = new ArrayList<>(); // we have more than one operation
+  //        opList.add(request.op); // save previously added operation
+  //      }
+  //      opList.add(crtOp); // keep appending every operation that is to be added to the request
+  //    }
+  //    if (opList == null) return;
+  //    // Add combined operations to request
+  //    if (opType == LOpType.AND) {
+  //      request.withOp(LOp.and(opList.toArray(Op[]::new)));
+  //    } else {
+  //      request.withOp(LOp.or(opList.toArray(Op[]::new)));
+  //    }
+  //  }
 }

@@ -24,22 +24,22 @@ All tables used in the Naksha PostgresQL implementation have the same general la
 
 | Column       | Type  | RO  | Modifiers | Description                                                                   |
 |--------------|-------|-----|-----------|-------------------------------------------------------------------------------|
-| created_at   | int8  | yes |           | `f.p.xyz->createdAt` - `COALESCE(created_at, updated_at)`                     |
+| col_id       | int8  | yes |           | `f.p.xyz->colId` - Unique collection id, lower 8-bit are partition number     |
 | updated_at   | int8  | yes | NOT NULL  | `f.p.xyz->updatedAt`                                                          |
+| created_at   | int8  | yes |           | `f.p.xyz->createdAt` - `COALESCE(created_at, updated_at)`                     |
 | author_ts    | int8  | yes |           | `f.p.xyz->authorTs` - `COALESCE(author_ts, updated_at)`                       |
 | txn_next     | int8  | yes |           | `f.p.xyz->nextVersion` - The next version, if there is any.                   |
 | txn          | int8  | yes | NOT NULL  | `f.p.xyz->version` - Transaction number.                                      |
 | ptxn         | int8  | yes |           | `f.p.xyz->prevVersion` - Transaction number of the previous state.            |
-| uid          | int4  | yes |           | Transaction local unique ID - `COALESCE(uid, 0)`                              |
+| rowid        | int8  | yes |           | Unique row identifier (col_id:64, tnx:64, uid:32)                             |
+| uid          | int4  | yes | NOT NULL  | Transaction local unique ID                                                   |
 | puid         | int4  | yes |           | Transaction local unique ID - `COALESCE(puid, 0)`                             |
 | hash         | int4  | yes |           | `f.p.xyz->hash` - Hash above feature, tags, geometry and geo_ref bytes (TBD). |
 | change_count | int4  | yes |           | `f.p.xyz->changeCount` - `COALESCE(version, 1)`                               |
 | geo_grid     | int4  | yes |           | `f.p.xyz->grid` - HERE binary quad-key level 15 above `geo_ref`.              |
 | flags        | int4  | no  |           | Options like feature, geometry encoding, and the action.                      |
-| origin       | text  | no  |           | `f.p.xyz->origin` - Origin GUID from which forked; only set if forked.        |
 | app_id       | text  | yes | NOT NULL  | `f.p.xyz->appId`                                                              |
 | author       | text  | yes |           | `f.p.xyz->author` - `COALESCE(author, app_id)`                                |
-| type         | text  | yes |           | The **type** of the feature, `NULL` for collection.defaultType.               |
 | id           | text  | no  | NOT NULL  | `f.id` - The **id** of the feature.                                           |
 | tags         | bytea | no  |           | `f.p.xyz->tags` - Tags are labels attached to features to filter features.    |
 | geo          | bytea | no  |           | `f.geometry` - The geometry of the features.                                  |
@@ -112,7 +112,6 @@ Naksha PSQL-Storage will add two triggers to the HEAD table (or partitions) to e
 Naksha will implement a special PURGE operation, which will remove elements from the special deletion table (which is a special HEAD table).
 
 ## Transaction-Number [`txn`]
-
 All features stored by the Naksha storage engine are part of a transaction. The data is stored partitioned, because of the huge amount of data that normally need to be handled. To instantly know where a feature is located, so in which partition, we need to ensure that the unique identifier of a transaction holds the partition key. Partitioning is done using the _next transaction-number_.
 
 The transaction-number is a 64-bit integers, split into four parts:
@@ -124,15 +123,15 @@ The transaction-number is a 64-bit integers, split into four parts:
 
 The local **sequence-number** is stored in a sequence named `naksha_txn_seq`. Every day starts with the sequence-number reset to zero. The final 64-bit value is combined as:
 
-- 23-bit **year**, biased 0 and 8388607 {_shift-by 41_}.
+- 23-bit **year**, between 0 and 8388607 {_shift-by 41_}.
 - 4-bit **month**, between 1 (January) and 12 (December) {_shift-by 37_}.
 - 5-bit **day**, between 1 and 31 {_shift-by 32_}.
 - 32-bit **seq**uence number.
 
-This concept allows up to 4 billion transactions per day (between 0 and 2^32-1). It will overflow in browsers in the year 4096, because 
-in that year the transaction number needs 53-bit to be encoded, which is beyond the precision of a double floating point number. Should 
-there be more than 4 billion transaction in a single day, this will overflow into the next day and potentially into an invalid day, 
-should it happen at the last day of a given month. We ignore this situation, it seems currently impossible.
+This concept allows up to 4 billion transactions per day (between 0 and 4,294,967,295, _2^32-1_). It will overflow in browsers in the year 4096, because in that year the transaction number needs 53-bit to be encoded, which is beyond the precision of a double floating point number. Should there be more than 4 billion transaction in a single day, this will overflow into the next day and potentially into an invalid day, should it happen at the last day of a given month. We ignore this situation, it seems currently impossible. Check in the browser:
+
+- `((4095n << 41n)+(12n << 37n)+(31n << 32n)+4294967295n) <= BigInt(Number.MAX_SAFE_INTEGER)`: _true_
+- `(4096n << 41n) <= BigInt(Number.MAX_SAFE_INTEGER)`: _false_
 
 The human-readable (Javascript compatible) representation is as a string in the format:
 
@@ -188,56 +187,175 @@ The steps are:
 
 This results in an optimal partitioning, basically just a special feature that is stored within the meta-table of a collection. The properties of this features should hold a property `by_qrid`, which is a map like `Map<HereRefIdPrefix, FeatureCount>`.
 
-## Indices and Queries
-The indices are all created only directly on the partitions. To keep the documentation, we use the shortcut `xyz` as alias for `jsondata->'properties'->'@ns:com:here:xyz'`.
+## Queries
+In this section, we described why queries are done the way they are.
 
-* The index on `i` is created automatically, because it is a primary key.
-  * Used to search for a specific state of a feature, when given the **uuid** of the feature.
-  * The **uuid** contains the transaction time, this can be used to optimize the query to only look up the HEAD partition and one specific history partition.
-  * `SELECT * FROM ${table} WHERE i = i UNION ALL SELECT * FROM ${table}_hst WHERE txn >= naksha_txn($date,0) AND txn < naksha_txn($date+1, 0) AND i = $i`
-* `CREATE INDEX ... USING btree (id text_pattern_ops ASC, xyz.txn DESC, xyz.txn_next DESC)`
-  * Used to search features by **id**, optionally in a specific version.
-* `CREATE INDEX ... USING btree (xyz.mrid text_pattern_ops ASC, xyz.txn DESC, xyz.txn_next DESC) INCLUDE id`
-  * Used to search for all features using either customer or quad ref-ids.
-* `CREATE INDEX ... USING btree (xyz.qrid text_pattern_ops ASC, xyz.txn DESC, xyz.txn_next DESC) INCLUDE id`
-  * Used to search for features by quad-ref-ids.
-  * Used to calculate the optimal partitioning.
-* `CREATE INDEX ... USING gist[-sp] (geo, xyz.txn, xyz.txn_next)`
-  * Search for features intersecting a geometry, optionally in a specific version.
-  * We use `gist-sp` only when there are only point features in the collection.
-* `CREATE INDEX ... USING btree (xyz.action text_pattern_ops ASC, xyz.author text_pattern_ops DESC, xyz.txn DESC, xyz.txn_next)`
-  * Search for features with a specific action (CREATE, UPDATE or DELETE). Because the cardinality is very low, there are sub-indices.
-  * Search for features that were updated by a specific author, optionally limited to a specific version.
-* `CREATE INDEX ... USING gin (xyz.tags array_ops, xyz.txn, xyz.txn_next)`
-  * Used to search for tags, optionally in a specific version.
+### Storage size
+First, calculate the size of each database row:
 
-## History Queries
-The Naksha design allows history queries to directly find the correct features using index-only scans in a couple of tables. This design requires that the `txn_next` value it set for all history records. For example, looking for a specific feature in a specific version means to search for `jsondata->>'id'` match where the `txn` is the closest to the one requested. Assume the following states of the feature "foo":
+| column       |   bytes | comment                                                         |
+|--------------|--------:|-----------------------------------------------------------------|
+| col_id       |       8 |                                                                 |
+| create_at    |       8 |                                                                 |
+| update_at    |       8 |                                                                 |
+| author_ts    |       8 |                                                                 |
+| txn_next     |       8 |                                                                 |
+| txn          |       8 |                                                                 |
+| ptxn         |       8 |                                                                 |
+|              |      56 | 7 x 8 byte = 56 byte                                            |
+| uid          |       4 |                                                                 |
+| puid         |       4 |                                                                 |
+| hash         |       4 |                                                                 |
+| change_count |       4 |                                                                 |
+| geo_grid     |       4 |                                                                 |
+| flags        |       4 |                                                                 |
+|              |      80 | 56 + 6 x 4 byte = 80 byte                                       |
+| id           |    ~ 64 | `urn:here::here:support.Violation:some-longer-unique-id`        |
+| appId        |    ~ 12 |                                                                 |
+| author       |    ~ 12 |                                                                 |
+|              |   ~ 168 | This is Metadata (with col_id, txn, and uid merged into rowid)! |
+| tags         |   ~ 300 | We need to build an index                                       |
+| geo          |   ~ 200 | We need to build an index                                       |
+| geo_ref      |    ~ 30 |                                                                 |
+|              |   ~ 700 |                                                                 |
+| feature      | ~ 2000+ |                                                                 |
+
+The first thing to consider is that most index queries will not be [index-only-scans](https://www.postgresql.org/docs/16/indexes-index-only-scans.html), most will be [index-bitmap-scans](https://www.postgresql.org/docs/current/indexes-bitmap-scans.html), for example, when the `geo` or `tags` columns are involved. This is because GIST rarely, and GIN never support index-only scans. Basically, we can summarize that there are three ways to use indices:
+
+- **index-only-scan**: Does only read the index itself.
+  - The most efficient, but rarely usable, and only works when all columns are in the index and the [visibility-map](https://www.postgresql.org/docs/current/storage-vm.html) is up-to-date.
+  - In practise, we can forget them, except for special queries, like the index: `id ASC, txn DESC, uid DESC INCLUDE (col_id, ptxn, puid)`
+  - In this situation we can read `col_id`, `txn`, and `uid` from it by `id` using index-only scan.
+  - So, when we have `id` and want to get the unique caching identifier only, we can use it.
+  - This as well allows to query quickly the HEAD version and then get `n` previous versions using a CTE and the `id`, `ptxn`, `puid`.
+- **index-scan**: The _index-scan_ consists of two steps, first get the row location from the index, and second, gather the actual data from the HEAP.
+  - The pro is, that the index warms up the buffer cache, so that reading the data is hot, if all data is in the row.
+  - The con is, that all data of a row has to be loaded into memory, except for what is in TOAST (stored away).
+- **index-bitmap-scans**: Scans each needed index and prepare a bitmap in memory giving the locations of table rows that are reported as matching that index's conditions. The bitmaps are then ANDed and ORed together as needed by the query. Finally, the actual table rows are visited and returned. The table rows are visited in physical order, because that is how the bitmap is laid out.
+  - This requires to read all potential matching rows, so touches the HEAP.
+  - The pro is, that the index warms up the buffer cache, so that reading the data is hot, if all data is in the row.
+  - The con is, that all data of a row has to be loaded into memory, except for what is in TOAST (stored away).
+  - _This is most common use-case for Naksha, because it is the only way to combine indices, and the only supported way for GIN, and most GIST operations!_
+
+**As we can see, we basically always will have a filtration using indices, but ones potential rows are found, they need to be read into memory by PostgresQL.**
+
+This means:
+- When the indices are not able to reduce the cardinality to a size, that allows reading only a limited amount of data, this is useless.
+- The efficiency of this concept is highly dependent on how much data need to be loaded from HEAP, which means that TOASTing columns helps.
+- However, when reading the real data, TOASTing is not helpful, because more HEAP buffers need to be read!
+
+Sadly we're not the first ones that had the idea to limit the `toast_tuple_target` to a small one, and to try to TOAST away the rest of the data, so that the index access becomes more efficient. In a nutshell, there is a thread from 2022 about [Counterintuitive behavior when toast_tuple_target < TOAST_TUPLE_THRESHOLD](https://postgrespro.com/list/thread-id/2616639). The outcome is, that currently, because the `TOAST_TUPLE_THRESHOLD` is a compile time switch, and defaults to 2 Kib, there is no useful way to reduce the `toast_tuple_target` to a smaller value than 2 KiB, we can do, but it will not have any effect.
+
+We can conclude, we are left with two options:
+- We accept that each tuple is up to 2 KiB, and only let PostgresQL move the feature out of sight (TOAST), when being bigger than 2 KiB.
+- We split the table to reduce the size of a HEAP tuple to something like 256 byte or less.
+
+Both have advantages and disadvantages. However, assuming the medium size of the data we need is 512 byte (we estimated a maximum of 700 byte), we can conclude: Either we have everything in a row, but be less than 2 KiB, or we have only 512 byte per row on the HEAP, and the feature is TOASTed, so out of line.
+
+### Data transfer size
+Assuming every row is not used only ones in a client, we should think about data transfer, because transferring all the data multiple times to the client is costly and inefficient. Therefore, when we limit the data to only `col_id`, `txn`, and `uid`, we need to transfer only 20 byte per found tuple!
+
+This allows us to aggregate the results into a single byte-array, and compress it via `SELECT gzip(array_agg(int8send(col_id)||int8send(txn)||int4send(uid))) AS rowid FROM ...`. This returns the whole result-set as one `bytea` array, where each 20 byte hold one entry. Note that these functions use _Big Endian_ byte order. If the storage does not support native GZIP functions, we should not compress it until we wrote our own compression function in `plrust`, and installed it. We can use a JavaScript version meanwhile, but it will be slower, it will be as fast as the native GZIP "C" function, so even in Aurora or RDS we will be able to use this technique in the future!
+
+The big advantage here is that the result-set is transferred to the client as one BLOB (**B**inary **L**arge **OB**ject). This result-set can now be cached in memory, in external storage systems, and seeking in the result-set, or creating handles from it is easy. Apart from this, the actual payload can be cached in memory, which becomes more valuable, when the same features are part of multiple result-sets. It as well allows multi-level caching of data by just transferring exactly these identifiers, and only let the client request the data, when it needs it.
+
+Note, we can as well compress the whole metadata, by using ASCII-zero as delimiter between the strings, which must not be contained in strings. For example `SELECT gzip(string_agg(int8send(col_id)||int8send(txn)||int4send(uid)||id::bytea||'\x00'::bytea||..., '\x00'::bytea)) ...`. The resulting byte-array can be parsed by reading the static bytes first, and then everything until reaching final terminating ascii-zero, or the end of the byte-stream. Actually, each string is simply zero-terminated (like in `C`).
+
+This is helpful to load all metadata into a binary. We can not read the whole row as pure binary, because we do not know if for example the geometry does not contain binary data, but we do not need this, because the rest of the data is anyway already compressed binary, out-of-the-box.
+
+### What is the best result-set limit
+As discussed in the section before, we need to define what is the biggest result-set we want to utilise.
+
+As we said, that we can reduce the amount of data we transfer to 20-byte per row, and we can even compress it, this will not become our main problem. The main problem will be that PostgresQL has to read between 512 and 2048 byte per found row from the HEAP. Beware, Postgres will surely encode more than the metadata in the HEAP tuple, it will only TOAST what goes beyond 2 KiB! This means for each one million results, between 512 MiB and 2 GiB of data need to be loaded into the cache. Reaching this one million result coordinates requires around 20 MiB (20 byte * 1,000,000), but because we GZIP it, very likely ony 10 MiB. However, PostgresQL has to keep 2 GiB of buffers in memory, and in the worst case to load them into memory. Assuming the database has a connection to the storage with 40 Gbps bandwidth, it can load 5 GiB of data per second, so loading the data into cache will consume between 100ms (for 512 MiB) and 400ms (for 2 GiB).
+
+**Therefore, this document recommends to set the absolute limit for all queries to 1,000,000 (hard-cap). If more data is needed, a special streaming mode need to be provided, that reads from multiple partitions in parallel!**
+
+With a limit of 1,000,000 features as hard-cap, and for example 30 KiB topology, we already have a result-set of 2 GiB tuple, plus around 28 GiB uncompressed feature JSON (1,000,000 * 30 KiB). Compressed (in the storage), this normally goes down to 4 KiB per feature, so to around 4 GiB, which means 2 GiB tuple plus 4 GiB payload (6 GiB total). This clearly shows, that the data size is one of the biggest factors, and storing features as GZIP bytes is important, so that when they have to be loaded, they do not need any post-processing, like serialization from JSONB into a string.
+
+When the result-set becomes bigger, the best option is to just read the data as a stream and to filter it. This can be done by reading ordered from the `id` index mentioned above, so what we can seek through the index. When only reading the necessary reference tuple (20 byte of `col_id`, `txn`, and `uid`) we are sure that we can perform an index-only scan. Doing so allows the client to utilise memory cache or other forms of caching.
+
+### Property Search
+As properties are stored in the `feature` they should never be searched in the database!
+
+This will always be very bad, as it requires to decode the `feature` column. Reading this column means for the topology example result-set, to read 4 GiB of compressed JSON, to decompress it into 28 GiB of JSON, then to parse it into JSONB, and eventually to filter it. Note that indexing will only help to some degree with that, and only for _btree_ indices, because often the HEAP tuple still has to be accessed.
+
+With [JBON](JBON.md) format we potentially can decrease this effort drastically, because [JBON](JBON.md) plus GZIP can bring down the binary size drastically, and because [JBON](JBON.md) allows to extract paths without parsing JSON, but only with seeking in binary data, it requires much less memory and CPU, and can be part of a better solution.
+
+Extracting the JSON for search can potentially decrease the amount of data that has to be transferred to the client, yes, but it produces heavy load on the database side. Even if reducing the amount of rows by 80%, this means that instead of 6 GiB only 1.2 GiB of data have to be transferred. This still is a huge amount of data and will require, on a standard single flow 5 Gbps connection, around 2 seconds to transfer it.
+
+Actually, by moving this processing into the client, and only initially transferring the unique identification tuples (`col_id`, `txn`, and `uid`), it is possible to reduce the data size that is transferred to 20 MiB (possibly 10 MiB compressed), and release the burden from the database, to load, decompress, parse, and filter the data.
+
+For each tuple the client has loaded, it does not need to read it again, it can even load it from alternative sources like a redis cache or S3. By doing so, it is able to read the data using multiple connections in parallel, which lifts the 5 Gbps limit of single flow connections in AWS.
+
+Yes, a part of the search job is now transferred to the client, everything that is not part of `tags`, `geometry` or metadata, but we expect that the biggest goal of the database is to pre-filter by exactly these attributes, so reducing the cardinality to make an efficient client side search possible.
+
+**This is the reason, we split the search into four basic parts, search in metadata, search in geometry, search in tags, and filter by properties!**
+
+When installing the Naksha-Hub on a [r6idn.metal](https://instances.vantage.sh/aws/ec2/r6idn.metal) instance, with 1 GiB memory, 200 Gbps network bandwidth, and 100 Gbps of EBS throughput, we can cache all this data as binaries on disk (L2 cache of the memory cache). With the right setup, we can attach 16 [EBS gp3 volumes](https://docs.aws.amazon.com/ebs/latest/userguide/general-purpose.html#gp3-ebs-volume-type), 1 TB size each, to the Hub. This cache will cost around $1800 per month (`1024 x $0.08 + 825 x $0.04 ~= $115/month x 16 = $1840`), but we can read with 12.5 GiB per second, it is restored after a reboot, and can store cache data very long term. In a nutshell, as reserved instance this costs around $3800 for the instance pus $1800 for the cache, so a total of $5600 a month. However, the search is done in the database, but the actual data is processed on the Hub itself. One such instance (with on in standby) will be enough to process all map data in real time.
+
+### General Query Solution
+All database queries are generally split into the following phases:
+
+- Execute the query in the database, but read only the `col_id`, `txn`, and `uid` columns.
+  - If a soft-cap (_limit_) was provided by the client, and no handle or ordering requested, add it to the database query.
+  - Otherwise, add the hard-cap (_1,000,000_) to the database query.
+  - If the database supports it, compress the result bytea-array using GZIP.
+- After the client has a list of `col_id`, `txn`, and `uid` tuples, it knows which rows are needed, and can load them into a memory cache.
+  - Loading can be done from any resource, but as last resource from the database itself.
+  - If loading from the database is done, one connection per partition can be used, because we know which row is in which partition.
+  - This allows to load data parallel from the database and bypass the 5 Gbps single flow limit.
+- If additional filtering is needed, the filter can now be run above the result-set.
+- Finally, if ordering was requested, the result-set (which is just a list of rows), can be done in Java.
+- Eventually the search query is split into the one that was executed in the database, and the property search, and serialized into JSON, encoded into the _handle_, together with a cache-identifier.
+  - If the client wants to read more data, we should ensure that it reaches the same server.
+  - Another solution is to keep the rows cached in some REDIS, together with the generates result-set.
+  - In worst case, the result-set can be restored from the handle by decoding the query, and repeating it.
+
+### History Queries
+The Naksha design allows history queries to directly find the correct features using index-only scans in a couple of tables. This design requires that the `txn_next` value it set for all history records. For example, looking for a specific feature in a specific version means to search for an `id` match, where the `txn` is the closest to the one requested. Assume the following states of the feature "foo":
 
 **Note**: We partition the history based upon `txn_next`, not upon `txn`!
 
-* `{"id":"foo", "speedLimit":10, "txn":20230101000000000, "txn_next":20230102000000000}` partition: 2023_01_02 `txn_next >= 20230102000000000`
-* `{"id":"foo", "speedLimit":20, "txn":20230102000000000, "txn_next":20230102000010000}` partition: 2023_01_02 `txn_next >= 20230102000000000`
-* `{"id":"foo", "speedLimit":25, "txn":20230102000010000, "txn_next":20230104000000000}` partition: 2023_01_04 `txn_next >= 20230104000000000`
-* `{"id":"foo", "speedLimit":40, "txn":20230104000000000, "txn_next":20230115000000000}` partition: 2023_01_05 `txn_next >= 20230105000000000`
-* `{"id":"foo", "speedLimit":50, "txn":20230115000000000, "txn_next":0}` partition: HEAD
+* `{"id":"foo", "speedLimit":10, "txn":2023_01_01_000, "txn_next":2023_01_02_000}` partition: 2023_01_02 `txn_next >= 2023_01_02_000`
+* `{"id":"foo", "speedLimit":20, "txn":2023_01_02_000, "txn_next":2023_01_02_100}` partition: 2023_01_02 `txn_next >= 2023_01_02_000`
+* `{"id":"foo", "speedLimit":25, "txn":2023_01_02_100, "txn_next":2023_01_04_000}` partition: 2023_01_04 `txn_next >= 2023_01_04_000`
+* `{"id":"foo", "speedLimit":40, "txn":2023_01_04_000, "txn_next":2023_01_15_000}` partition: 2023_01_05 `txn_next >= 2023_01_05_000`
+* `{"id":"foo", "speedLimit":50, "txn":2023_01_15_000, "txn_next":0}` partition: HEAD
 
-This is a simplified example to basically show how the queries work. Assume we want to know the version that matches the transaction-number `20230103000000000` (so done on the 3'th January 2023). We expect to get back the version with **speedLimit** being `25` (`txn=20230102000010000`), because it is the latest version before the 3'th January, being the closest to the requested version.
+This is a simplified example to basically show how the queries work. Assume we want to know the version that matches the transaction-number `2023_01_03_000` (so done on the 3'th January 2023). We expect to get back the version with **speedLimit** being `25` (`txn=2023_01_02_100`), because it is the latest version before the 3'th January, being the closest to the requested version.
 
 ```sql
-SELECT * FROM ${table} WHERE xyz.txn <= 20230103000000000 AND jsondata->>'id' = 'foo'
+SELECT txn, uid, flags FROM ${table} WHERE txn <= '2023_01_03_000' AND id = 'foo'
 UNION ALL
-SELECT * FROM ${table}_hst WHERE xyz.txn <= 20230103000000000 AND txn_next > 20230103000000000 AND jsondata->>'id' = 'foo'
+SELECT txn, uid, flags FROM ${table}_hst WHERE txn <= '2023_01_03_000' AND txn_next > '2023_01_03_000' AND id = 'foo'
 ```
 
-The first query will only look into the HEAD table, but the feature there has a `txn` value being bigger than the searched one (`20230103000000000`). This query should hit the `id, txn, txn_next` index and return nothing.
+The first query will only look into the HEAD table, but the feature there has a `txn` value being bigger than the searched one (`2023_01_03_000`). This query should hit the `id, txn, uid` index and return nothing.
 
-The second query will look into all history tables that can contain features for the requested `txn_next`, so into the partitions 2023_01_04 and 2023_01_05. The queries should as well hit the `id, txn, txn_next` index of each history table.
+The second query will look into all history tables that can contain features for the requested `txn_next`, so into the partitions 2023_01_04 and 2023_01_05. The queries should hit the `id, txn, txn_next, uid` index of each history table.
 
-* 2023_01_05: The version of `foo` (`speedLimit=40`) stored here **does not** match, because `txn=20230104000000000` is bigger than the requested `20230103000000000`
-* 2023_01_04: The version of `foo` (`speedLimit=25`) stored here **does** match, because `txn=20230102000010000` is less than the requested `20230103000000000`
+* 2023_01_05: The version of `foo` (`speedLimit=40`) stored here **does not** match, because `txn=2023_01_04_000` is bigger than the requested `2023_01_03_000`
+* 2023_01_04: The version of `foo` (`speedLimit=25`) stored here **does** match, because `txn=2023_01_02_100` is less than the requested `2023_01_03_000`
 
-Therefore, the union of all the query returns only exactly one feature, the searched one (`foo,speedLimit=25`). This operation does use index-only scans, and is done in parallel for all potential partition.
+Therefore, the union of all the query returns only exactly one feature, the searched one (`foo,speedLimit=25`). This operation does use index-only scans, and is done in parallel for all potential partitions.
+
+**Note**: The queries given above can used as well in combination with other queries, for example, when geometry is searched, this can be combined, it will no longer use an _index-only_ scan, but still an _index-scan_ or _index-bitmap-scan_, and as we just learned, this is not that bad, when not reading all the data:
+
+```sql
+SELECT txn, uid, flags FROM ${table}
+WHERE txn <= '2023_01_03_000' AND id = 'foo' and ST_Intersects(geo, some_geometry)
+UNION ALL
+SELECT txn, uid, flags FROM ${table}_hst
+WHERE txn <= '2023_01_03_000' AND txn_next > '2023_01_03_000' AND id = 'foo' and ST_Intersects(geo, some_geometry)
+```
+
+### Visibility Map
+To really use _index-only_ scans, the visibility map of a table should be frozen and up-to-date. By installing the `pg_visibility` extension and reading the status we can find out the current situation, then eventually use VACUUM command to fix the situation:
+```sql
+CREATE EXTENSION pg_visibility;
+SELECT * FROM pg_visibility_map('{table}');
+VACUUM FREEZE ${table};
+```
 
 ## Internal tables
 For the PostgresQL implementation we follow the general concept of PostgresQL database and expose all internal data as collection, granting access to all these internal data to clients. All internal tables use the prefix `naksha~` followed by the unique identifier. All internal table can have additional indices and additional virtual columns, which are stored as part of the root properties of the feature, they will override externally set properties, therefore, clients should only use the `properties` of a transaction feature.

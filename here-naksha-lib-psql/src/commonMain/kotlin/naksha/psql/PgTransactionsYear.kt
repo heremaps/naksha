@@ -11,6 +11,6 @@ import kotlin.js.JsExport
  */
 @JsExport
 class PgTransactionsYear(val transactions: PgTransactions, year: Int) : PgTable(
-    transactions.collection, "${transactions.name}\$p$year", transactions.collection.storageClass, false,
+    transactions.collection, "${transactions.name}${PG_YEAR}$year", transactions.collection.storageClass, false,
     partitionOfTable = transactions, partitionOfValue = year
 )

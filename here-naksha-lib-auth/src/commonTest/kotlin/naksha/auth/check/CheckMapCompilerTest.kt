@@ -2,8 +2,8 @@ package naksha.auth.check
 
 import naksha.auth.check.CheckMapCompilerTest.CheckAssertion.Companion.assertThat
 import naksha.auth.UserRights
-import naksha.base.ObjectProxy
-import naksha.base.StringListProxy
+import naksha.base.AnyObject
+import naksha.base.StringList
 import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -43,7 +43,7 @@ class CheckMapCompilerTest {
     fun shouldCompileListCheckForUserRights() {
         // Given:
         val userRights = UserRights()
-            .withPropertyCheck("list", StringListProxy()
+            .withPropertyCheck("list", StringList()
                 .apply {
                     add("foo")
                     add("bar")
@@ -63,7 +63,7 @@ class CheckMapCompilerTest {
     @Test
     fun shouldReturnUndefinedCheckForUnknownValue() {
         // Given:
-        val userRights = UserRights().withPropertyCheck("unsupported_object", ObjectProxy())
+        val userRights = UserRights().withPropertyCheck("unsupported_object", AnyObject())
 
         // When:
         val checkMap = CheckCompiler.compile(userRights)

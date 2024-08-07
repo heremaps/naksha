@@ -1,6 +1,10 @@
 package naksha.psql
 
 import naksha.base.Platform
+import naksha.model.NakshaError
+import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
+import naksha.model.NakshaException
+import naksha.model.SessionOptions
 import kotlin.math.min
 
 /**
@@ -9,21 +13,25 @@ import kotlin.math.min
  * @property replicas a mutable list of read-replicas, can be changed at runtime.
  */
 class PsqlCluster(override val master: PgInstance, override var replicas: MutableList<PgInstance> = mutableListOf()) : PgCluster {
-    /**
-     * Open a PostgresQL connection from the connection pool of either [master], or a random [replica][replicas], dependent on the
-     * [options] given.
-     * @param options the connection options.
-     * @return the PostgresQL connection.
-     */
-    override fun newConnection(options: PgOptions): PsqlConnection {
-        if (!options.readOnly || options.useMaster || replicas.isEmpty()) {
-            val master = this.master
-            check(master is PsqlInstance) { "This implementation requires PsqlInstance's"}
-            return master.openConnection(options)
+    override val connectionLimit: Int
+        get() {
+            var limit = master.connectionLimit
+            for (instance in replicas) {
+                limit += instance.connectionLimit
+            }
+            return limit
         }
+
+    override fun newConnection(options: SessionOptions, readOnly: Boolean): PsqlConnection {
+        if (!readOnly || options.useMaster || replicas.isEmpty()) {
+            val master = this.master
+            if (master !is PsqlInstance) throw NakshaException(EXCEPTION, "This implementation requires PsqlInstance's")
+            return master.openConnection(options, readOnly)
+        }
+        // Read-Only connection.
         val i = min((Platform.random() * replicas.size).toInt(), replicas.size - 1)
         val pgInstance = replicas[i]
         check(pgInstance is PsqlInstance) { "This implementation requires PsqlInstance's"}
-        return pgInstance.openConnection(options)
+        return pgInstance.openConnection(options, true)
     }
 }

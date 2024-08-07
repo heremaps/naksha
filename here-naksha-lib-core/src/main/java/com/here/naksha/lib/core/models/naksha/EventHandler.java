@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 @AvailableSince(NakshaVersion.v2_0_3)
 @JsonTypeName(value = "EventHandler")
-public class EventHandler extends Plugin<IEventHandler, EventHandler> {
+public class EventHandler extends Plugin<IEventHandler> {
   private static final @NotNull Logger logger = LoggerFactory.getLogger(EventHandler.class);
 
   @AvailableSince(NakshaVersion.v2_0_7)
@@ -72,7 +72,7 @@ public class EventHandler extends Plugin<IEventHandler, EventHandler> {
    */
   @AvailableSince(NakshaVersion.v2_0_3)
   @JsonCreator
-  public EventHandler(@JsonProperty(CLASS_NAME) @NotNull String className, @JsonProperty(ID) @NotNull String id) {
+  public EventHandler(@JsonProperty(CLASS_NAME) @NotNull String className, @NotNull String id) {
     super(className, id);
   }
 

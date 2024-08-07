@@ -18,15 +18,6 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import java.util.List;
-import naksha.model.NakshaFeatureProxy;
-import naksha.model.request.ResultRow;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import naksha.model.objects.NakshaFeature;
 
-public class ContextXyzFeatureResult extends ContextResult<NakshaFeatureProxy, NakshaFeatureProxy, NakshaFeatureProxy> {
-
-  public ContextXyzFeatureResult(@Nullable String handle, @NotNull List<ResultRow> rows) {
-    super(handle, rows);
-  }
-}
+public class ContextXyzFeatureResult extends ContextResult<NakshaFeature, NakshaFeature, NakshaFeature> {}

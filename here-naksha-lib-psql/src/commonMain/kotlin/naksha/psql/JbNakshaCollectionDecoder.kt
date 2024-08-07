@@ -5,9 +5,8 @@ package naksha.psql
 import naksha.base.Int64
 import naksha.base.Platform
 import naksha.jbon.IDictManager
-import naksha.jbon.JbMapFeatureDecoder
-import naksha.model.NakshaCollectionProxy
-import naksha.model.NakshaCollectionProxy.Companion.PARTITION_COUNT_NONE
+import naksha.jbon.JbFeatureDecoder
+import naksha.model.objects.NakshaCollection
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -15,7 +14,8 @@ import kotlin.js.JsExport
  * A collection feature as defined in the Naksha architecture. This class will instantly read the well known properties.
  */
 @JsExport
-class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbMapFeatureDecoder(dictManager) {
+@Deprecated("Do we really need this anymore?", level = DeprecationLevel.WARNING)
+class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbFeatureDecoder(dictManager) {
     /**
      * The number of partitions. We use partitioning for tables that are expected to store more than ten million features. With eight
      * partitions we can split 10 million features into partitions of each 1.25 million, 100 million into 12.5 million per partition and
@@ -23,7 +23,7 @@ class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbMapFeatureDecoder
      *
      * This value must be a value of 2^n with n between 1 and 8 (2, 4, 8, 16, 32, 64, 128).
      */
-    private var _partitionCount = PARTITION_COUNT_NONE
+    private var _partitionCount = 0
     private var _geoIndex: String? = null
     private var _disableHistory = false
     private var _autoPurge = false
@@ -34,7 +34,7 @@ class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbMapFeatureDecoder
 
     override fun clear(): JbNakshaCollectionDecoder {
         super.clear()
-        _partitionCount = PARTITION_COUNT_NONE
+        _partitionCount = 0
         _geoIndex = null
         _disableHistory = false
         _autoPurge = false
@@ -64,10 +64,10 @@ class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbMapFeatureDecoder
     }
 
     fun partitionCount(): Int = _partitionCount
-    fun geoIndex(): String = _geoIndex ?: NakshaCollectionProxy.DEFAULT_GEO_INDEX
+    fun geoIndex(): String = _geoIndex ?: NakshaCollection.DEFAULT_GEO_INDEX
     fun disableHistory(): Boolean = _disableHistory
     fun autoPurge(): Boolean = _autoPurge
     fun maxAge(): Int64 = _maxAge ?: Platform.INT64_MAX_VALUE
-    fun estimatedFeatureCount(): Int64 = _estimatedFeatureCount ?: NakshaCollectionProxy.BEFORE_ESTIMATION
+    fun estimatedFeatureCount(): Int64 = _estimatedFeatureCount ?: NakshaCollection.BEFORE_ESTIMATION
     fun storageClass(): String = _storageClass ?: PgStorageClass.Consistent.toString()
 }

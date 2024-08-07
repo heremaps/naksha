@@ -229,6 +229,19 @@ abstract class JsEnum : CharSequence {
         fun <ENUM : JsEnum> get(value: Any?, enumKlass: KClass<out ENUM>): ENUM = __get(value, enumKlass, true)
 
         /**
+         * Returns an iterator above all defined enumeration value.
+         * @param ns the namespace as returned by [JsEnum.namespace], which is simply the base enumeration class.
+         * @return an iterator above all defined enumeration values.
+         */
+        @JvmStatic
+        @JsStatic
+        fun <ENUM : JsEnum> iterate(ns: KClass<out ENUM>): Iterator<ENUM> {
+            val map = definedMap[ns] ?: return emptyList<ENUM>().iterator()
+            @Suppress("UNCHECKED_CAST")
+            return map.values.iterator() as Iterator<ENUM>
+        }
+
+        /**
          * Returns the defined enumeration instance for the given value and namespace.
          * @param value the value for which to return the enumeration.
          * @param enumKlass the enumeration klass to query.
@@ -508,9 +521,9 @@ abstract class JsEnum : CharSequence {
     }
 
     /**
-     * The [value] converted to string, the same as [toString], just shorted notation in Kotlin.
+     * The enumeration [value] converted to string, the same as [toString], just nicer notation in Kotlin and JavaScript.
      */
-    val str: String
+    val text: String
         get() = toString()
 
     fun toJSON(): String = toString()

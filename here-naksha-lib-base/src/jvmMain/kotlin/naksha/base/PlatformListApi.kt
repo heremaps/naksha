@@ -18,6 +18,18 @@ actual class PlatformListApi {
         }
 
         @JvmStatic
+        actual fun array_get_capacity(array: PlatformList?): Int {
+            require(array is JvmList)
+            return array.getCapacity()
+        }
+
+        @JvmStatic
+        actual fun array_set_capacity(array: PlatformList?, capacity: Int) {
+            require(array is JvmList)
+            array.setCapacity(capacity)
+        }
+
+        @JvmStatic
         actual fun array_clear(array: PlatformList?) {
             (array as JvmList?)?.clear()
         }

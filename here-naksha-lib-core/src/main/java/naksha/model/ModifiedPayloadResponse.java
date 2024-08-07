@@ -18,7 +18,7 @@
  */
 package naksha.model;
 
-import naksha.model.response.Response;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 
 public abstract class ModifiedPayloadResponse extends Response {

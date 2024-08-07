@@ -2,7 +2,7 @@
 
 package naksha.jbon
 
-import naksha.base.ObjectProxy
+import naksha.base.AnyObject
 import naksha.base.MapProxy
 import naksha.base.Platform
 import kotlin.js.ExperimentalJsExport
@@ -14,7 +14,7 @@ import kotlin.js.JsExport
  */
 @JsExport
 class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
-    private lateinit var _tagsMap: ObjectProxy
+    private lateinit var _tagsMap: AnyObject
     private lateinit var _tagsArray: Array<String>
 
     override fun parseHeader() {
@@ -29,7 +29,7 @@ class XyzTags(var dictManager: IDictManager) : XyzStruct<XyzTags>() {
         }
 
         // Now all key-value pairs follow.
-        val map = ObjectProxy()
+        val map = AnyObject()
         val array = ArrayList<String>()
         while (reader.nextUnit()) {
             var key: String

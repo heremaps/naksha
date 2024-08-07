@@ -21,7 +21,7 @@ interface ILock: AutoCloseable {
 
     fun owner(): String
 
-    fun copyFeature(): NakshaLockProxy
+    fun copyFeature(): NakshaLock
 
-    fun updateFeature(lock: NakshaLockProxy)
+    fun updateFeature(lock: NakshaLock)
 }

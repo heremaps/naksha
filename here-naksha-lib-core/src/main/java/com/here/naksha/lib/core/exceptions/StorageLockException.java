@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import naksha.model.NakshaErrorCode;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
@@ -28,7 +27,7 @@ import org.jetbrains.annotations.Nullable;
 public class StorageLockException extends StorageException {
 
   @AvailableSince(NakshaVersion.v2_0_8)
-  public StorageLockException(@NotNull NakshaErrorCode code, @NotNull String message) {
+  public StorageLockException(@NotNull String code, @NotNull String message) {
     super(code, message);
   }
 

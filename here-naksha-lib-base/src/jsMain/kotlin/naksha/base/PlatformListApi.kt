@@ -15,6 +15,12 @@ actual class PlatformListApi {
         }
 
         @JsStatic
+        actual fun array_get_capacity(array: PlatformList?): Int = (array.asDynamic()?.length ?: 0).unsafeCast<Int>()
+
+        @JsStatic
+        actual fun array_set_capacity(array: PlatformList?, capacity: Int) {}
+
+        @JsStatic
         actual fun array_clear(array: PlatformList?) = array_set_length(array, 0)
 
         @JsStatic

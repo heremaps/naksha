@@ -4,6 +4,7 @@ import naksha.base.JsEnum
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
@@ -18,7 +19,7 @@ class PgStorageClass : JsEnum() {
     override fun initClass() {
     }
 
-    companion object {
+    companion object PgStorageClass_C {
         /**
          * The storage class for collections that should be consistent.
          */
@@ -56,6 +57,15 @@ class PgStorageClass : JsEnum() {
         @JsStatic
         @JvmField
         val Unknown = defIgnoreCase(PgStorageClass::class, "unknown")
+
+        /**
+         * Detect storage class from `relpersistence` from `pg_class` or by official names.
+         * @param value the value as read from `pg_class` or as defined in [naksha.model.objects.NakshaCollection].
+         * @return detected storage class.
+         */
+        @JsStatic
+        @JvmStatic
+        fun of(value: String?): PgStorageClass = get(value, PgStorageClass::class)
     }
 
     /**

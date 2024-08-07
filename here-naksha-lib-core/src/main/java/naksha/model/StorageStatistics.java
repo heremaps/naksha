@@ -20,7 +20,7 @@ package naksha.model;
 
 import java.util.Map;
 import naksha.model.StatisticsResponse.Value;
-import naksha.model.response.Response;
+import naksha.model.request.Response;
 
 public class StorageStatistics extends Response {
 
@@ -58,7 +58,7 @@ public class StorageStatistics extends Response {
   }
 
   @Override
-  public int size() {
+  public int resultSize() {
     return 0;
   }
 

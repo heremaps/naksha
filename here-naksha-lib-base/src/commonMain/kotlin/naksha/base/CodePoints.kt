@@ -58,6 +58,14 @@ class CodePoints {
 
         @JvmStatic
         @JsStatic
+        fun isHighSurrogate(c: Char): Boolean = c.isHighSurrogate()
+
+        @JvmStatic
+        @JsStatic
+        fun isLowSurrogate(c: Char): Boolean = c.isLowSurrogate()
+
+        @JvmStatic
+        @JsStatic
         fun highSurrogate(codePoint: Int): Char {
             return ((codePoint ushr 10) + HIGH_SURROGATE_ENCODE_OFFSET).toChar()
         }

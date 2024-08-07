@@ -18,6 +18,8 @@
  */
 package com.here.naksha.lib.core;
 
+import static naksha.model.NakshaError.EXCEPTION;
+
 import com.here.naksha.lib.core.models.payload.Event;
 import com.here.naksha.lib.core.models.payload.events.feature.LoadFeaturesEvent;
 import com.here.naksha.lib.core.models.payload.events.feature.ModifyFeaturesEvent;
@@ -25,10 +27,9 @@ import java.util.ArrayList;
 import java.util.List;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
-import naksha.model.NakshaErrorCode;
 import naksha.model.XyzResponseType;
-import naksha.model.response.ErrorResponse;
-import naksha.model.response.Response;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -62,8 +63,8 @@ public abstract class AbstractEventTask<EVENT extends Event> extends AbstractTas
   @Override
   @Deprecated
   protected @NotNull Response errorResponse(@NotNull Throwable throwable) {
-    return new ErrorResponse(new NakshaError(
-        NakshaErrorCode.EXCEPTION, "Unknown error", context().getStreamId(), throwable));
+    return new ErrorResponse(
+        new NakshaError(EXCEPTION, "Unknown error", context().getStreamId(), throwable));
   }
 
   /**

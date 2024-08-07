@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.Platform.PlatformCompanion.logger
+import naksha.model.SessionOptions
 import naksha.psql.PgPlatform.PgPlatformCompanion.TEST_URL
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy
@@ -12,7 +13,7 @@ import java.util.concurrent.atomic.AtomicReference
  * A special storage that optionally starts an own docker container.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cluster, optionsRef.get()) {
+class PsqlTestStorage private constructor(cluster: PsqlCluster, schemaName: String) : PsqlStorage(cluster, schemaName) {
 
     internal data class DockerContainerInfo(
         val container: GenericContainer<*>,
@@ -21,19 +22,19 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cl
     )
 
     companion object {
-        const val DEFAULT_APP_NAME = "naksha.psql.testApp"
-        const val DEFAULT_APP_ID = "naksha.psql.testAppId"
-        const val DEFAULT_APP_AUTHOR = "naksha.psql.testAuthor"
-        const val DEFAULT_SCHEMA = "naksha_psql_test"
 
         @JvmField
         internal val storage = AtomicReference<PsqlTestStorage?>()
 
         @JvmField
-        internal val DEFAULT_OPTIONS = PgOptions(DEFAULT_APP_NAME, DEFAULT_SCHEMA, DEFAULT_APP_ID, DEFAULT_APP_AUTHOR)
+        internal val DEFAULT_OPTIONS = SessionOptions(
+            appName = PgTest.TEST_APP_NAME,
+            appId = PgTest.TEST_APP_ID,
+            author = PgTest.TEST_APP_AUTHOR
+        )
 
         /**
-         * The default [PgOptions], used when creating a new test-storage.
+         * The default [SessionOptions], used when creating a new test-storage.
          */
         @JvmField
         val optionsRef = AtomicReference(DEFAULT_OPTIONS)
@@ -55,16 +56,17 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cl
         }
 
         @JvmStatic
-        internal fun newTestStorage(options: PgOptions = DEFAULT_OPTIONS, params: Map<String, *>? = null): PsqlTestStorage {
+        internal fun newTestStorage(options: SessionOptions = DEFAULT_OPTIONS, params: Map<String, *>? = null): PsqlTestStorage {
             storage.set(null)
             return getTestOrInitStorage(options, params)
         }
 
         @JvmStatic
-        internal fun getTestOrInitStorage(options: PgOptions = DEFAULT_OPTIONS, params: Map<String, *>? = null): PsqlTestStorage {
+        internal fun getTestOrInitStorage(options: SessionOptions = DEFAULT_OPTIONS, params: Map<String, *>? = null): PsqlTestStorage {
             var testStorage: PsqlTestStorage? = storage.get()
             while (testStorage == null) {
                 optionsRef.set(options)
+                var schemaName = PgTest.TEST_SCHEMA
 
                 // Process parameters and environment variables to modify other defaults.
                 var url: String? = null
@@ -84,7 +86,7 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cl
                         val raw = urlParams["schema"]
                         require(raw != null && raw.size == 1) { "URL parameter 'schema' is invalid" }
                         val schema = raw[0]
-                        if (schema.isNotEmpty()) optionsRef.set(optionsRef.get().copy(schema = schema))
+                        if (schema.isNotEmpty()) schemaName = schema
                     }
                     val app_id: String? = urlParams["appId"]?.get(0) ?: urlParams["app_id"]?.get(0)
                     if (app_id != null) optionsRef.set(optionsRef.get().copy(appId = app_id))
@@ -120,7 +122,7 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster) : PsqlStorage(cl
                         Runtime.getRuntime().addShutdownHook(containerInfo.shutdownThread)
                     }
                 }
-                testStorage = PsqlTestStorage(PsqlCluster(psqlInstance))
+                testStorage = PsqlTestStorage(PsqlCluster(psqlInstance), schemaName)
                 // The initialization is only successful, when there is still no existing storage.
                 if (!storage.compareAndSet(null, testStorage)) {
                     testStorage = null

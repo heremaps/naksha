@@ -37,7 +37,7 @@ import org.jetbrains.annotations.NotNull;
  */
 @AvailableSince(NakshaVersion.v2_0_0)
 @JsonTypeName(value = "Storage")
-public class Storage extends Plugin<IStorage, Storage> {
+public class Storage extends Plugin<IStorage> {
 
   @Deprecated
   @AvailableSince(NakshaVersion.v2_0_0)

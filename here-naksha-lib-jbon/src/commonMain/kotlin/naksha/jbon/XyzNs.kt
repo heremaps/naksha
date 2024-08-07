@@ -3,7 +3,7 @@
 package naksha.jbon
 
 import naksha.base.Int64
-import naksha.base.ObjectProxy
+import naksha.base.AnyObject
 import naksha.base.MapProxy
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -123,7 +123,7 @@ class XyzNs : XyzStruct<XyzNs>() {
      * @return the XYZ namespace as map.
      */
     fun toIMap(storageId: String, tags: Array<String>?): MapProxy<String, *> {
-        val map = ObjectProxy()
+        val map = AnyObject()
         map["createdAt"] = createdAt().toDouble()
         map["updatedAt"] = updatedAt().toDouble()
         map["txn"] = txn().toUuid(storageId).toString()

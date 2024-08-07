@@ -20,21 +20,21 @@ package com.here.naksha.lib.core.models.features;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import naksha.model.NakshaFeatureProxy;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * A catalog is simple a namespace that prefixes spaces.
  */
 @JsonTypeName(value = "Catalog")
-public class Catalog extends NakshaFeatureProxy {
+public class Catalog extends NakshaFeature {
 
   /**
    * Create a new empty feature.
    *
    * @param id The ID; if {@code null}, then a random one is generated.
    */
-  public Catalog(@JsonProperty(ID) @NotNull String id) {
+  public Catalog(@JsonProperty("id") @NotNull String id) {
     super(id);
   }
 }

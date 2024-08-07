@@ -1,7 +1,7 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.base.Platform
+import naksha.model.objects.NakshaCollection
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -11,7 +11,7 @@ class NakshaCollectionProxyTest {
     @Test
     fun shouldCreateObjectWithSecondaryConstructor() {
         // when
-        val collection = NakshaCollectionProxy(
+        val collection = NakshaCollection(
             id = "ID",
             partitions = 3,
             autoPurge = true,

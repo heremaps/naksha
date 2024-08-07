@@ -1,8 +1,9 @@
 package naksha.psql
 
-import naksha.base.ObjectProxy
+import naksha.base.AnyObject
 import naksha.base.Platform
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.reflect.KClass
 
 /**
@@ -59,6 +60,9 @@ interface PgCursor : AutoCloseable {
      */
     fun column(name: String): Any?
 
+    @JsName("getPgColumnOrNull")
+    fun column(column: PgColumn): Any? = column(column.name)
+
     /**
      * Returns the column value of the current row.
      * @param name the name of the column
@@ -83,13 +87,16 @@ interface PgCursor : AutoCloseable {
      */
     operator fun <T : Any> get(name: String): T
 
+    @JsName("getPgColumn")
+    operator fun <T : Any> get(column: PgColumn): T = get(column.name)
+
     /**
      * Convert the current row into a map, and return the corresponding proxy.
      * @param klass the proxy type to map.
      * @return the proxy about the row.
      * @throws IllegalStateException if the cursor is not positioned above a valid row, [isRow] returns _false_.
      */
-    fun <T : ObjectProxy> map(@Suppress("NON_EXPORTABLE_TYPE") klass: KClass<T>): T
+    fun <T : AnyObject> map(@Suppress("NON_EXPORTABLE_TYPE") klass: KClass<T>): T
 
     /**
      * Closes the cursor.

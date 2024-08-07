@@ -87,7 +87,7 @@ class HereTileTest {
         fun assertHereTileTruncate(expected: String, quadKey: String) {
             val tile = HereTile(quadKey)
             val level = expected.length
-            val newHereTile = tile.hereTileTruncate(level)
+            val newHereTile = tile.truncateTo(level)
             assertEquals(expected, newHereTile.quadKey())
             val expectedNewHereTile = HereTile(expected)
             assertEquals(expectedNewHereTile, newHereTile)
@@ -164,7 +164,7 @@ class HereTileTest {
     @Test
     fun testDistinctPrefix() {
         fun distinctPrefix(level: Int, grids: List<HereTile>): List<HereTile> {
-            return grids.map { it.hereTileTruncate(level) }.distinct()
+            return grids.map { it.truncateTo(level) }.distinct()
         }
 
         val grids = listOf("021001030313131", "021001030313132", "121001030313132", "121001000000000").map(::HereTile)

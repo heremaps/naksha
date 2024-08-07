@@ -75,7 +75,7 @@ abstract class JbStructDecoder<SELF : JbStructDecoder<SELF>> {
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    protected open fun map(binary: BinaryView, leadInOffset: Int, localDict: JbDictDecoder?, globalDict: JbDictDecoder?): SELF {
+    protected open fun map(binary: BinaryView, leadInOffset: Int, localDict: JbDictionary?, globalDict: JbDictionary?): SELF {
         clear()
         reader.mapBinary(binary, leadInOffset, binary.end, localDict, globalDict)
         check(reader.isStruct()) { "Mapping failed, the view does not contain a structure at the given offset" }
@@ -95,7 +95,7 @@ abstract class JbStructDecoder<SELF : JbStructDecoder<SELF>> {
      * Returns the local dictionary or throws an [IllegalStateException].
      * @return The local dictionary.
      */
-    fun localDict(): JbDictDecoder {
+    fun localDict(): JbDictionary {
         val localDict = reader.localDict
         check(localDict != null)
         return localDict
@@ -133,7 +133,7 @@ abstract class JbStructDecoder<SELF : JbStructDecoder<SELF>> {
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    fun mapBinary(binary: BinaryView, offset: Int = 0, localDict: JbDictDecoder? = null, globalDict: JbDictDecoder? = null): SELF {
+    fun mapBinary(binary: BinaryView, offset: Int = 0, localDict: JbDictionary? = null, globalDict: JbDictionary? = null): SELF {
         map(binary, offset, localDict, globalDict)
         return this as SELF
     }

@@ -37,10 +37,10 @@ class PolygonProxyTest {
         // when
         val parsedJson = Platform.fromJSON(polygonJson)
         assertIs<PlatformObject>(parsedJson)
-        val geometry = Platform.proxy(parsedJson, PolygonGeometry::class)
+        val geometry = Platform.proxy(parsedJson, SpPolygon::class)
 
         // then
-        assertEquals(GeoType.Polygon.toString(), geometry.type)
+        assertEquals(SpType.Polygon.toString(), geometry.type)
         val polygon = geometry.asPolygon()
         assertEquals(1, polygon.getCoordinates().size)
         val polygonCoords = polygon.getCoordinates()
