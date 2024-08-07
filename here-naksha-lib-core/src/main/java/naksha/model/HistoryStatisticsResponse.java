@@ -21,7 +21,7 @@ package naksha.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.payload.events.info.GetStatisticsEvent;
-import naksha.model.response.Response;
+import naksha.model.request.Response;
 
 /** The response that is sent for a {@link GetStatisticsEvent}. */
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -159,7 +159,7 @@ public class HistoryStatisticsResponse extends Response {
   }
 
   @Override
-  public int size() {
+  public int resultSize() {
     return 0;
   }
 }

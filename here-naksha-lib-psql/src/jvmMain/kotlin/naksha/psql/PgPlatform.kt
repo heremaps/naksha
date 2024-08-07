@@ -1,28 +1,54 @@
 package naksha.psql
 
+import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.fromJSON
+import naksha.base.Platform.PlatformCompanion.gzipDeflate
+import naksha.base.Platform.PlatformCompanion.gzipInflate
+import naksha.base.PlatformMap
+import naksha.geo.ProxyGeoUtil
+import naksha.geo.ProxyGeoUtil.toJtsGeometry
+import naksha.geo.SpGeometry
+import naksha.model.*
+import naksha.model.GeoEncoding.GeoEncoding_C.EWKB
+import naksha.model.GeoEncoding.GeoEncoding_C.EWKB_GZIP
+import naksha.model.GeoEncoding.GeoEncoding_C.GEO_JSON
+import naksha.model.GeoEncoding.GeoEncoding_C.GEO_JSON_GZIP
+import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
+import naksha.model.GeoEncoding.GeoEncoding_C.TWKB_GZIP
+import naksha.model.GeoEncoding.GeoEncoding_C.WKB
+import naksha.model.GeoEncoding.GeoEncoding_C.WKB_GZIP
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.Tuple.Tuple_C.NOT_FETCHED
+import org.locationtech.jts.geom.GeometryFactory
+import org.locationtech.jts.geom.PrecisionModel
+import org.locationtech.jts.io.ByteOrderValues
+import org.locationtech.jts.io.WKBReader
+import org.locationtech.jts.io.WKBWriter
+import org.locationtech.jts.io.twkb.TWKBReader
+import org.locationtech.jts.io.twkb.TWKBWriter
 import java.security.MessageDigest
+
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class PgPlatform {
     actual companion object PgPlatformCompanion {
-        /**
-         * Special parameter only for JVM storage to install the needed database SQL code in this version. The value is expected to be a
-         * [naksha.model.NakshaVersion].
-         */
-        const val VERSION: String = "version"
 
         /**
          * A parameter that can be given to [getTestStorage] to not start a docker container, but to connect the test storage against an
-         * existing database with this URL. This parameter is as well auto-detect from the environment variable named
-         * `NAKSHA_TEST_PSQL_DB_URL`.
+         * existing database with this URL.
+         *
+         * If not given, this parameter is auto-detected from the environment variable named `NAKSHA_TEST_PSQL_DB_URL`.
+         *
+         * @see PgTest
          */
         const val TEST_URL = "test_url"
 
         /**
-         * A parameter that can be given to [getTestStorage] to not start a docker container, but to connect against the given instance.
+         * A parameter that can be given to [getTestStorage] to not start a docker container, but to connect against the given instance. The value must be a [PgInstance].
+         *
+         * @see PgTest
          */
-        @JvmField
-        var TEST_INSTANCE = "test_instance"
+        const val TEST_INSTANCE = "test_instance"
 
         @JvmStatic
         internal actual fun quote_literal(vararg parts: String): String? = null
@@ -102,15 +128,10 @@ actual class PgPlatform {
             throw UnsupportedOperationException("PgUtil.getPlv8: This is no PLV8 extension")
         }
 
-        /**
-         * Creates a new PostgresQL storage engine.
-         * @param cluster the PostgresQL server cluster to use.
-         * @param options the default options when opening new connections.
-         */
         @JvmStatic
-        actual fun newStorage(cluster: PgCluster, options: PgOptions): PgStorage {
+        actual fun newStorage(cluster: PgCluster, schemaName: String): PgStorage {
             require(cluster is PsqlCluster) { "The Java PSQL storage only works with PsqlCluster instances, please use PgUtil.newCluster" }
-            return PsqlStorage(cluster, options)
+            return PsqlStorage(cluster, schemaName)
         }
 
         /**
@@ -128,7 +149,7 @@ actual class PgPlatform {
          * @return _true_ if a new test-storage was created; _false_ if there is already an existing storage.
          */
         @JvmStatic
-        actual fun initTestStorage(defaultOptions: PgOptions, params: Map<String, *>?): Boolean {
+        actual fun initTestStorage(defaultOptions: SessionOptions, params: Map<String, *>?): Boolean {
             var testStorage = PsqlTestStorage.storage.get()
             if (testStorage != null) return false
             testStorage = PsqlTestStorage.getTestOrInitStorage(defaultOptions, params)
@@ -148,5 +169,62 @@ actual class PgPlatform {
          */
         @JvmStatic
         actual fun newTestStorage(): PgStorage = PsqlTestStorage.newTestStorage()
+
+        /**
+         * Decode a GeoJSON geometry from encoded bytes.
+         * @param raw the bytes to decode.
+         * @param flags the codec flags.
+         * @return the GeoJSON geometry.
+         * @since 3.0.0
+         */
+        @JvmStatic
+        actual fun decodeGeometry(raw: ByteArray?, flags: Int): SpGeometry? {
+            if (raw == null || raw.isEmpty()) return null
+            val encoding = flags.geoEncoding()
+            val rawBytes = if (encoding.geoGzip()) gzipInflate(raw) else raw
+            return when(encoding) {
+                TWKB, TWKB_GZIP -> {
+                    val reader = TWKBReader(GeometryFactory(PrecisionModel(), 4326))
+                    val jtsGeometry = reader.read(rawBytes)
+                    ProxyGeoUtil.toProxyGeometry(jtsGeometry)
+                }
+                WKB, WKB_GZIP, EWKB, EWKB_GZIP -> {
+                    val reader = WKBReader(GeometryFactory(PrecisionModel(), 4326))
+                    val jtsGeometry = reader.read(rawBytes)
+                    ProxyGeoUtil.toProxyGeometry(jtsGeometry)
+                }
+                GEO_JSON, GEO_JSON_GZIP -> (fromJSON(rawBytes.decodeToString()) as PlatformMap).proxy(SpGeometry::class)
+                else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown geometry encoding")
+            }
+        }
+
+        /**
+         * Encodes the given GeoJSON geometry into bytes.
+         * @param geometry the geometry to encode.
+         * @param flags the codec flags.
+         * @return the encoded GeoJSON geometry.
+         * @since 3.0.0
+         */
+        actual fun encodeGeometry(geometry: SpGeometry?, flags: Int): ByteArray? {
+            if (geometry == null) return null
+            val encoding = flags.geoEncoding()
+            val bytes = when(encoding) {
+                TWKB, TWKB_GZIP -> {
+                    val writer = TWKBWriter()
+                    writer.setXYPrecision(7)
+                    writer.setEncodeZ(true)
+                    writer.setZPrecision(7)
+                    writer.setEncodeM(false)
+                    writer.write(toJtsGeometry(geometry))
+                }
+                WKB, WKB_GZIP, EWKB, EWKB_GZIP -> {
+                    val writer = WKBWriter(3, ByteOrderValues.BIG_ENDIAN, true)
+                    writer.write(toJtsGeometry(geometry))
+                }
+                GEO_JSON, GEO_JSON_GZIP -> Platform.toJSON(geometry).encodeToByteArray()
+                else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown geometry encoding")
+            }
+            return if (encoding.geoGzip()) gzipDeflate(bytes) else bytes
+        }
     }
 }

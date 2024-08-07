@@ -12,6 +12,11 @@ import kotlin.reflect.KFunction
 expect class Platform {
     companion object PlatformCompanion {
         /**
+         * The platform specific value of undefined.
+         */
+        val UNDEFINED: Any
+
+        /**
          * The default symbol used for all proxies for which no explicit symbol is returned by the symbol resolvers.
          */
         val DEFAULT_SYMBOL: Symbol
@@ -397,6 +402,29 @@ expect class Platform {
         fun initializeKlass(klass: KClass<*>)
 
         /**
+         * Ask the platform to make a copy of the given platform object.
+         *
+         * This method supports copy of:
+         * - [PlatformMap]
+         * - [PlatformList]
+         * - [PlatformDataView]
+         * - [Boolean]
+         * - [Short]
+         * - [Int]
+         * - [Int64]
+         * - [Float]
+         * - [Double]
+         * - [String]
+         *
+         * No other types are supported.
+         *
+         * @param obj the object to make a copy of.
+         * @param recursive _true_ if the copy should be made recursive; _false_ if a shallow copy should be made.
+         * @return the copy.
+         */
+        fun <T> copy(obj: T?, recursive: Boolean) : T?
+
+        /**
          * Serialize the given value to JSON.
          * @param obj The object to serialize.
          * @return The JSON.
@@ -470,42 +498,46 @@ expect class Platform {
         fun canBeInt32(value: Double): Boolean
 
         /**
-         * Compress bytes.
-         * @param raw The bytes to compress.
-         * @param offset The offset of the first byte to compress.
-         * @param size The amount of bytes to compress.
-         * @return The deflated (compressed) bytes.
+         * Tests if this code is executed within a PostgresQL database using [PLV8 extension](https://plv8.github.io/).
+         * @return _true_ if this code is executed within PostgresQL database using [PLV8 extension](https://plv8.github.io/).
          */
-        fun lz4Deflate(raw: ByteArray, offset: Int = 0, size: Int = Int.MAX_VALUE): ByteArray
+        fun isPlv8(): Boolean
 
         /**
-         * Decompress bytes.
-         * @param compressed The bytes to decompress.
-         * @param bufferSize The amount of bytes that are decompressed, if unknown, set 0.
-         * @param offset The offset of the first byte to decompress.
-         * @param size The amount of bytes to decompress.
-         * @return The inflated (decompress) bytes.
+         * Calculates the MD5 hash about the given text.
+         *
+         * @param text the text to hash.
+         * @return the MD5 hash, being a byte-array with size 16 (128-bit).
          */
-        fun lz4Inflate(compressed: ByteArray, bufferSize: Int = 0, offset: Int = 0, size: Int = Int.MAX_VALUE): ByteArray
+        fun md5(text: String): ByteArray
 
         /**
          * Compress bytes.
-         * @param raw The bytes to compress.
-         * @param offset The offset of the first byte to compress.
-         * @param size The amount of bytes to compress.
-         * @return The deflated (compressed) bytes.
+         * @param raw the bytes to compress.
+         * @return the deflated (compressed) bytes.
          */
-        fun gzipDeflate(raw: ByteArray, offset: Int = 0, size: Int = Int.MAX_VALUE): ByteArray
+        fun lz4Deflate(raw: ByteArray): ByteArray
 
         /**
          * Decompress bytes.
-         * @param compressed The bytes to decompress.
-         * @param bufferSize The amount of bytes that are decompressed, if unknown, set 0.
-         * @param offset The offset of the first byte to decompress.
-         * @param size The amount of bytes to decompress.
-         * @return The inflated (decompress) bytes.
+         * @param compressed the compressed bytes.
+         * @return the inflated (decompress) bytes.
          */
-        fun gzipInflate(compressed: ByteArray, bufferSize: Int = 0, offset: Int = 0, size: Int = Int.MAX_VALUE): ByteArray
+        fun lz4Inflate(compressed: ByteArray): ByteArray
+
+        /**
+         * Compress bytes.
+         * @param raw the bytes to compress.
+         * @return the deflated (compressed) bytes.
+         */
+        fun gzipDeflate(raw: ByteArray): ByteArray
+
+        /**
+         * Decompress bytes.
+         * @param compressed the bytes to decompress.
+         * @return the inflated (decompress) bytes.
+         */
+        fun gzipInflate(compressed: ByteArray): ByteArray
 
         /**
          * Create a stack-trace as string for debugging purpose.

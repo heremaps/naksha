@@ -124,8 +124,8 @@ open class JbDecoder {
             offset: Int,
             end: Int,
             sb: StringBuilder,
-            globalDict: JbDictDecoder? = null,
-            localDict: JbDictDecoder? = null
+            globalDict: JbDictionary? = null,
+            localDict: JbDictionary? = null
         ) {
             var i = offset
             while (i < end) {
@@ -193,8 +193,8 @@ open class JbDecoder {
          * @return The platform native map.
          */
         @JvmStatic
-        internal fun readMap(jbMapDecoder: JbMapDecoder): ObjectProxy {
-            val imap = ObjectProxy()
+        internal fun readMap(jbMapDecoder: JbMapDecoder): AnyObject {
+            val imap = AnyObject()
             while (jbMapDecoder.next()) {
                 imap[jbMapDecoder.key()] = jbMapDecoder.value().decodeValue()
             }
@@ -231,12 +231,12 @@ open class JbDecoder {
     /**
      * The local dictionary to be used when decoding text or references.
      */
-    var localDict: JbDictDecoder? = null
+    var localDict: JbDictionary? = null
 
     /**
      * The global dictionary to be used when decoding text or references.
      */
-    var globalDict: JbDictDecoder? = null
+    var globalDict: JbDictionary? = null
 
     /**
      * The current offset in the binary, can't become bigger than [end].
@@ -290,7 +290,7 @@ open class JbDecoder {
      * @param globalDict The global dictionary to use, if any.
      * @return this.
      */
-    open fun mapBinary(binary: BinaryView, pos: Int = binary.pos, end: Int = binary.end, localDict: JbDictDecoder? = null, globalDict: JbDictDecoder? = null): JbDecoder {
+    open fun mapBinary(binary: BinaryView, pos: Int = binary.pos, end: Int = binary.end, localDict: JbDictionary? = null, globalDict: JbDictionary? = null): JbDecoder {
         check(pos <= end)
         clear()
         this.binary = binary
@@ -323,7 +323,7 @@ open class JbDecoder {
      * @param localDict The local dictionary to map, if any.
      * @param globalDict The global dictionary to use, if any.
      */
-    open fun mapBytes(bytes: ByteArray, offset: Int = 0, length: Int = bytes.size, localDict: JbDictDecoder? = null, globalDict: JbDictDecoder? = null) {
+    open fun mapBytes(bytes: ByteArray, offset: Int = 0, length: Int = bytes.size, localDict: JbDictionary? = null, globalDict: JbDictionary? = null) {
         clear()
         this.binary = Binary(bytes, offset, length)
         this.localDict = localDict

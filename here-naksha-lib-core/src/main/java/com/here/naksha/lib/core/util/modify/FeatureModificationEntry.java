@@ -31,7 +31,7 @@ import naksha.diff.Difference;
 import naksha.diff.MergeConflictException;
 import naksha.diff.Patcher;
 import naksha.model.EXyzAction;
-import naksha.model.NakshaFeatureProxy;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,7 +40,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * @param <FEATURE> the feature-type.
  */
-public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
+public class FeatureModificationEntry<FEATURE extends NakshaFeature> {
 
   /**
    * The input state of the caller.
@@ -242,7 +242,7 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
     if (diff == null) {
       return null;
     }
-    final FEATURE result = head.cloneDeep();
+    final FEATURE result = head.copy(true);
     Patcher.patch(result, diff);
     return result;
   }
@@ -260,13 +260,13 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
     }
 
     final Difference baseToHeadDiff = Patcher.getDifference(base, head);
-    if (baseToHeadDiff == null) {
-      // This is totally unexpected, base and head are logically the same, but have different uuids.
-      // Eventually this means, that we can just treat the input as a direct modification of the
-      // head.
-      input.getProperties().getXyz().setUuid(head.getProperties().getXyz().getUuid());
-      return input;
-    }
+    //    if (baseToHeadDiff == null) {
+    //      // This is totally unexpected, base and head are logically the same, but have different uuids.
+    //      // Eventually this means, that we can just treat the input as a direct modification of the
+    //      // head.
+    //      input.getProperties().getXyz().setUuid(head.getProperties().getXyz().getUuid());
+    //      return input;
+    //    }
 
     // Perform a three-way-merge.
     final Difference baseToInputDiff = Patcher.getDifference(base, input);
@@ -276,7 +276,7 @@ public class FeatureModificationEntry<FEATURE extends NakshaFeatureProxy> {
       return null;
     }
     final Difference mergedDiff = Patcher.mergeDifferences(baseToHeadDiff, baseToInputDiff, cr);
-    final FEATURE result = base.cloneDeep();
+    final FEATURE result = base.copy(true);
     Patcher.patch(result, mergedDiff);
     return result;
   }

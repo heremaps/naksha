@@ -78,9 +78,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.regex.Pattern;
 
-import naksha.model.response.ErrorResponse;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ErrorResponse;
 import naksha.model.response.NakshaError;
-import naksha.model.response.Response;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -608,7 +609,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
       }
       if (response instanceof XyzFeatureCollection fc && responseType == HttpResponseType.FEATURE) {
         // If we should only send back a single feature.
-        final List<? extends NakshaFeatureProxy> features = fc.getFeatures();
+        final List<? extends NakshaFeature> features = fc.getFeatures();
         if (features.size() == 0) {
           sendEmptyResponse(routingContext, OK);
           return response;

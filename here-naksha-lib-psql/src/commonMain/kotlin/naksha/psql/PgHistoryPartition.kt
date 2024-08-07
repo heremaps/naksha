@@ -11,6 +11,6 @@ import kotlin.js.JsExport
  */
 @JsExport
 class PgHistoryPartition(val year: PgHistoryYear, index: Int) : PgTable(
-    year.collection, "${year.name}_p${PgUtil.partitionPosix(index)}", year.storageClass, false,
+    year.collection, "${year.name}${PG_PART}${PgUtil.partitionPosix(index)}", year.storageClass, false,
     partitionOfTable = year, partitionOfValue = index
 )

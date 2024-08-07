@@ -33,8 +33,8 @@ import com.here.naksha.lib.core.lambdas.Fe3;
 import com.here.naksha.lib.core.models.PluginCache.EventHandlerConstructorByConfig;
 import com.here.naksha.lib.core.models.PluginCache.EventHandlerConstructorByTarget;
 import com.here.naksha.lib.core.models.PluginCache.ExtensionConstructorByClassNameMap;
-import naksha.model.response.Response;
-import naksha.model.response.SuccessResponse;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -51,7 +51,7 @@ class PluginCacheTest {
 
     @Override
     public @NotNull Response processEvent(@NotNull IEvent event) {
-      return new SuccessResponse(new ArrayList<>(),null);
+      return new SuccessResponse();
     }
   }
 

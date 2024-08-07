@@ -1,6 +1,8 @@
 package naksha.model
 
-const val DEFAULT_REALM = "public"
+// This will be exposed
+// - in JavaScript at the namespace: naksha.model.{name}
+// - jn Java at the class naksha.model.StaticKt
 
 const val ACTION_CREATE = 0
 const val ACTION_UPDATE = 1

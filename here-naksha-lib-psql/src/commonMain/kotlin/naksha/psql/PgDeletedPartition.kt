@@ -1,3 +1,5 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
 import kotlin.js.JsExport
@@ -9,6 +11,6 @@ import kotlin.js.JsExport
  */
 @JsExport
 class PgDeletedPartition(val deleted: PgDeleted, index: Int) : PgTable(
-    deleted.collection, "${deleted.name}_p${PgUtil.partitionPosix(index)}", deleted.storageClass, true,
+    deleted.collection, "${deleted.name}${PG_PART}${PgUtil.partitionPosix(index)}", deleted.storageClass, true,
     partitionOfTable = deleted, partitionOfValue = index
 )

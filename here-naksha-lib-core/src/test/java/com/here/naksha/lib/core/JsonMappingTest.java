@@ -31,9 +31,7 @@ import java.io.IOException;
 
 import naksha.base.*;
 import naksha.model.NakshaError;
-import naksha.model.NakshaErrorCode;
-import naksha.model.NakshaFeatureProxy;
-import naksha.model.response.ErrorResponse;
+import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("unused")
@@ -44,7 +42,7 @@ public class JsonMappingTest {
     final String json =
         "{\"type\":\"Feature\", \"id\": \"xyz123\", \"properties\":{\"x\":5}, \"otherProperty\": \"123\"}";
     JvmMap jvmMap = (JvmMap) Platform.fromJSON(json, FromJsonOptions.getDEFAULT());
-    final NakshaFeatureProxy obj = jvmMap.proxy(Platform.klassOf(NakshaFeatureProxy.class));
+    final NakshaFeature obj = jvmMap.proxy(Platform.klassOf(NakshaFeature.class));
     assertNotNull(obj);
 
     assertEquals(5, (int) obj.getProperties().get("x"));
@@ -55,7 +53,7 @@ public class JsonMappingTest {
   public void testSerializeFeature() throws Exception {
       final String raw = "{\"type\":\"Feature\", \"id\": \"xyz123\", \"properties\":{\"x\":5}}";
       JvmMap jvmMap = (JvmMap) Platform.fromJSON(raw, FromJsonOptions.getDEFAULT());
-      final NakshaFeatureProxy obj = jvmMap.proxy(Platform.klassOf(NakshaFeatureProxy.class));      assertNotNull(obj);
+      final NakshaFeature obj = jvmMap.proxy(Platform.klassOf(NakshaFeature.class));      assertNotNull(obj);
 
       obj.getProperties().put("y", 7);
       String result = Platform.toJSON(obj, ToJsonOptions.getDEFAULT());
@@ -77,7 +75,7 @@ public class JsonMappingTest {
     final String json =
         "{\"type\":\"ErrorResponse\",\"error\":\"NotImplemented\",\"errorMessage\":\"Hello World!\"}";
     JvmObject jvmMap = (JvmObject) Platform.fromJSON(json, FromJsonOptions.getDEFAULT());
-    //TODO
+    //TODO(lib-core test)
 //    final ErrorResponse obj = jvmMap.proxy(Platform.klassOf(ErrorResponse.class));
 //    assertNotNull(obj);
 //    assertSame(NakshaErrorCode.NOT_IMPLEMENTED, obj.error.code);

@@ -58,6 +58,34 @@ class PlatformUtil {
         val FLOAT_MIN: Double = Platform.toDoubleRawBits(Int64(0x36a0000000000000L))
 
         /**
+         * A second in milliseconds.
+         */
+        @JsStatic
+        @JvmField
+        val SECOND = Int64(1000)
+
+        /**
+         * A minute in milliseconds.
+         */
+        @JsStatic
+        @JvmField
+        val MINUTE = Int64(60 * 1000)
+
+        /**
+         * An hour in milliseconds.
+         */
+        @JsStatic
+        @JvmField
+        val HOUR = Int64(60 * 60 * 1000)
+
+        /**
+         * A day in milliseconds.
+         */
+        @JsStatic
+        @JvmField
+        val DAY = Int64(24 * 60 * 60 * 1000)
+
+        /**
          * The default size of a view. This is used at various placed.
          */
         @JsStatic
@@ -100,5 +128,28 @@ class PlatformUtil {
             return sb.toString()
         }
 
+        /**
+         * Calculates a hash code above all given values.
+         * @param values the value above which to calculate a hash-code.
+         * @return the calculated hash-code.
+         */
+        @JvmStatic
+        @JsStatic
+        fun hashCodeOf(vararg values: Any?): Int = hashCodeOf(0, *values)
+
+        private fun hashCodeOf(hashInput: Int, vararg values: Any?): Int {
+            var hash = hashInput
+            for (v in values) {
+                when (v) {
+                    null -> hash *= 31
+                    is ByteArray -> hash = hash * 31 + v.contentHashCode()
+                    is Array<*> -> for (e in v) hash = hashCodeOf(e)
+                    is List<*> -> for (e in v) hash = hashCodeOf(e)
+                    is Map<*,*> -> for (e in v) hash = hashCodeOf(e.value)
+                    else -> hash = hash * 31 + v.hashCode()
+                }
+            }
+            return hash
+        }
     }
 }

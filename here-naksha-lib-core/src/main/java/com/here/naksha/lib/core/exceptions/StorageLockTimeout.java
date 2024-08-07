@@ -18,7 +18,8 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import naksha.model.NakshaErrorCode;
+import static naksha.model.NakshaError.TIMEOUT;
+
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
@@ -35,7 +36,7 @@ public class StorageLockTimeout extends StorageLockException {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   public StorageLockTimeout() {
-    super(NakshaErrorCode.TIMEOUT, "Storage lock timeout");
+    super(TIMEOUT, "Storage lock timeout");
     this.collectionId = null;
     this.featureId = null;
   }
@@ -45,7 +46,7 @@ public class StorageLockTimeout extends StorageLockException {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   public StorageLockTimeout(@NotNull String collectionId, @NotNull String featureId) {
-    super(NakshaErrorCode.TIMEOUT, "Storage lock timeout");
+    super(TIMEOUT, "Storage lock timeout");
     this.collectionId = collectionId;
     this.featureId = featureId;
   }

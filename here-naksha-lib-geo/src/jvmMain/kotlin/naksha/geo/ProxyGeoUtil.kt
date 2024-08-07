@@ -8,13 +8,13 @@ object ProxyGeoUtil {
     private val factory: GeometryFactory = GeometryFactory(PrecisionModel(), 4326)
 
     /**
-     * Converts JTS [Geometry] into [GeometryProxy]
+     * Converts JTS [Geometry] into [SpGeometry]
      *
      * @param jtsGeometry
-     * @return [GeometryProxy]
+     * @return [SpGeometry]
      */
     @JvmStatic
-    fun toProxyGeometry(jtsGeometry: Geometry): GeometryProxy {
+    fun toProxyGeometry(jtsGeometry: Geometry): SpGeometry {
         return when (jtsGeometry) {
             is Point -> toPoint(jtsGeometry)
             is MultiPoint -> toMultiPoint(jtsGeometry)
@@ -28,18 +28,18 @@ object ProxyGeoUtil {
     }
 
     /**
-     * Converts JTS [GeometryCollection] into [GeometryCollectionProxy]
+     * Converts JTS [GeometryCollection] into [SpGeometryCollection]
      *
      * @param jtsGeometry - JTS [GeometryCollection]
-     * @return [GeometryCollectionProxy]
+     * @return [SpGeometryCollection]
      */
-    fun toGeometryCollection(jtsGeometry: GeometryCollection): GeometryCollectionProxy {
-        val geometries = GeometriesProxy()
+    fun toGeometryCollection(jtsGeometry: GeometryCollection): SpGeometryCollection {
+        val geometries = SpGeometryList()
         for (i in 0..<jtsGeometry.numGeometries) {
             val proxyGeometry = toProxyGeometry(jtsGeometry.getGeometryN(i))
             geometries.add(proxyGeometry)
         }
-        return GeometryCollectionProxy(geometries)
+        return SpGeometryCollection(geometries)
     }
 
     /**
@@ -60,25 +60,25 @@ object ProxyGeoUtil {
     }
 
     /**
-     * Converts JTS [Point] into [PointGeometry]
+     * Converts JTS [Point] into [SpPoint]
      *
      * @param jtsPoint - JTS [Point]
-     * @return [PointGeometry]
+     * @return [SpPoint]
      */
     @JvmStatic
-    fun toPoint(jtsPoint: Point): PointGeometry {
-        return PointGeometry().withCoordinates(toPointCoord(jtsPoint.coordinate))
+    fun toPoint(jtsPoint: Point): SpPoint {
+        return SpPoint().withCoordinates(toPointCoord(jtsPoint.coordinate))
     }
 
     /**
-     * Converts JTS [MultiPoint] into [MultiPointGeometry]
+     * Converts JTS [MultiPoint] into [SpMultiPoint]
      *
      * @param jtsMultiPoint - JTS [MultiPoint]
-     * @return [MultiPointGeometry]
+     * @return [SpMultiPoint]
      */
     @JvmStatic
-    fun toMultiPoint(jtsMultiPoint: MultiPoint): MultiPointGeometry {
-        return MultiPointGeometry().withCoordinates(toMultiPointCoord(jtsMultiPoint.coordinates))
+    fun toMultiPoint(jtsMultiPoint: MultiPoint): SpMultiPoint {
+        return SpMultiPoint().withCoordinates(toMultiPointCoord(jtsMultiPoint.coordinates))
     }
 
     /**
@@ -93,14 +93,14 @@ object ProxyGeoUtil {
     }
 
     /**
-     * Converts JTS [LineString] into [LineStringGeometry]
+     * Converts JTS [LineString] into [SpLineString]
      *
      * @param jtsLineString - JTS [LineString]
-     * @return [LineStringGeometry]
+     * @return [SpLineString]
      */
     @JvmStatic
-    fun toLineString(jtsLineString: LineString): LineStringGeometry {
-        return LineStringGeometry().withCoordinates(toLineStringCoord(jtsLineString.coordinates))
+    fun toLineString(jtsLineString: LineString): SpLineString {
+        return SpLineString().withCoordinates(toLineStringCoord(jtsLineString.coordinates))
     }
 
     /**
@@ -126,18 +126,18 @@ object ProxyGeoUtil {
     }
 
     /**
-     * Converts JTS [Polygon] into [PolygonGeometry]
+     * Converts JTS [Polygon] into [SpPolygon]
      *
      * @param jtsPolygon - JTS [Polygon]
-     * @return [PolygonGeometry]
+     * @return [SpPolygon]
      */
     @JvmStatic
-    fun toPolygon(jtsPolygon: Polygon): PolygonGeometry {
+    fun toPolygon(jtsPolygon: Polygon): SpPolygon {
         val polygonRings = mutableListOf(jtsPolygon.exteriorRing)
         for (i in 0..<jtsPolygon.numInteriorRing) {
             polygonRings.add(jtsPolygon.getInteriorRingN(i))
         }
-        return PolygonGeometry().withCoordinates(toPolygonCoord(polygonRings.toTypedArray()))
+        return SpPolygon().withCoordinates(toPolygonCoord(polygonRings.toTypedArray()))
     }
 
     /**
@@ -152,17 +152,17 @@ object ProxyGeoUtil {
     }
 
     /**
-     * Converts JTS [MultiLineString] into [MultiLineStringGeometry]
+     * Converts JTS [MultiLineString] into [SpMultiLineString]
      *
      * @param jtsMultiLineString - JTS [MultiLineString]
-     * @return [MultiLineStringGeometry]
+     * @return [SpMultiLineString]
      */
     @JvmStatic
-    fun toMultiLineString(jtsMultiLineString: MultiLineString): MultiLineStringGeometry {
+    fun toMultiLineString(jtsMultiLineString: MultiLineString): SpMultiLineString {
         val lineStrings = Array(jtsMultiLineString.numGeometries) {
             toLineStringCoord(jtsMultiLineString.getGeometryN(it).coordinates)
         }
-        return MultiLineStringGeometry().withCoordinates(toMultiLineStringCoord(lineStrings))
+        return SpMultiLineString().withCoordinates(toMultiLineStringCoord(lineStrings))
     }
 
     @JvmStatic
@@ -171,21 +171,21 @@ object ProxyGeoUtil {
     }
 
     /**
-     * Converts JTS [MultiPolygon] into [MultiPolygonGeometry]
+     * Converts JTS [MultiPolygon] into [SpMultiPolygon]
      *
      * @param jtsMultiPolygon - JTS [MultiPolygon]
-     * @return [MultiPolygonGeometry]
+     * @return [SpMultiPolygon]
      */
     @JvmStatic
-    fun toMultiPolygon(jtsMultiPolygon: MultiPolygon): MultiPolygonGeometry {
+    fun toMultiPolygon(jtsMultiPolygon: MultiPolygon): SpMultiPolygon {
         val polygons = Array(jtsMultiPolygon.numGeometries) {
             toPolygon(jtsMultiPolygon.getGeometryN(it) as Polygon)
         }
-        return MultiPolygonGeometry().withCoordinates(toMultiPolygonCoord(polygons))
+        return SpMultiPolygon().withCoordinates(toMultiPolygonCoord(polygons))
     }
 
     @JvmStatic
-    fun toMultiPolygonCoord(polygons: Array<PolygonGeometry>): MultiPolygonCoord {
+    fun toMultiPolygonCoord(polygons: Array<SpPolygon>): MultiPolygonCoord {
         return MultiPolygonCoord(*polygons.map { it.getCoordinates() }.toTypedArray())
     }
 
@@ -211,40 +211,40 @@ object ProxyGeoUtil {
      * @throws [RuntimeException] when proxy has null coordinates
      */
     @JvmStatic
-    fun toJtsGeometry(geometry: GeometryProxy): Geometry {
+    fun toJtsGeometry(geometry: SpGeometry): Geometry {
         return when (geometry.type) {
-            GeoType.Point.toString() -> toJtsPoint(geometry.asPoint())
-            GeoType.MultiPoint.toString() -> toJtsMultiPoint(geometry.asMultiPoint())
-            GeoType.LineString.toString() -> toJtsLineString(geometry.asLineString())
-            GeoType.MultiLineString.toString() -> toJtsMultiLineString(geometry.asMultiLineString())
-            GeoType.Polygon.toString() -> toJtsPolygon(geometry.asPolygon())
-            GeoType.MultiPolygon.toString() -> toJtsMultiPolygon(geometry.asMultiPolygon())
-            GeoType.GeometryCollection.toString() -> toJtsGeometryCollection(geometry.asGeometryCollection())
+            SpType.Point.toString() -> toJtsPoint(geometry.asPoint())
+            SpType.MultiPoint.toString() -> toJtsMultiPoint(geometry.asMultiPoint())
+            SpType.LineString.toString() -> toJtsLineString(geometry.asLineString())
+            SpType.MultiLineString.toString() -> toJtsMultiLineString(geometry.asMultiLineString())
+            SpType.Polygon.toString() -> toJtsPolygon(geometry.asPolygon())
+            SpType.MultiPolygon.toString() -> toJtsMultiPolygon(geometry.asMultiPolygon())
+            SpType.GeometryCollection.toString() -> toJtsGeometryCollection(geometry.asGeometryCollection())
             else -> throw IllegalArgumentException("Unknown proxy type ${geometry::class.simpleName}")
         }
     }
 
     /**
-     * Converts [GeometryCollectionProxy] to JTS [GeometryCollection]
+     * Converts [SpGeometryCollection] to JTS [GeometryCollection]
      *
-     * @param geometryCollection [GeometryCollectionProxy] to convert
+     * @param geometryCollection [SpGeometryCollection] to convert
      * @return [GeometryCollection]
      */
-    private fun toJtsGeometryCollection(geometryCollection: GeometryCollectionProxy): GeometryCollection =
+    private fun toJtsGeometryCollection(geometryCollection: SpGeometryCollection): GeometryCollection =
         geometryCollection.geometries
             ?.map { toJtsGeometry(it!!) }
             ?.let { GeometryCollection(it.toTypedArray(), factory) }
             ?: GeometryCollection(emptyArray(), factory)
 
     /**
-     * Converts [PointGeometry] to JTS [Point]
+     * Converts [SpPoint] to JTS [Point]
      *
-     * @param geometry [PointGeometry] to convert
+     * @param geometry [SpPoint] to convert
      * @return [Point]
      * @throws [RuntimeException] when proxy has null coordinates
      */
     @JvmStatic
-    fun toJtsPoint(geometry: PointGeometry): Point = toJtsPoint(geometry.getCoordinates())
+    fun toJtsPoint(geometry: SpPoint): Point = toJtsPoint(geometry.getCoordinates())
 
     /**
      * Converts [PointCoord] to JTS [Point]
@@ -256,14 +256,14 @@ object ProxyGeoUtil {
     fun toJtsPoint(coords: PointCoord): Point = factory.createPoint(toJtsCoordinate(coords))
 
     /**
-     * Converts [MultiPointGeometry] to JTS [MultiPoint]
+     * Converts [SpMultiPoint] to JTS [MultiPoint]
      *
-     * @param geometry [MultiPointGeometry] to convert
+     * @param geometry [SpMultiPoint] to convert
      * @return [MultiPoint]
      * @throws [RuntimeException] when proxy has null coordinates
      */
     @JvmStatic
-    fun toJtsMultiPoint(geometry: MultiPointGeometry): MultiPoint = toJtsMultiPoint(geometry.getCoordinates())
+    fun toJtsMultiPoint(geometry: SpMultiPoint): MultiPoint = toJtsMultiPoint(geometry.getCoordinates())
 
     /**
      * Converts [MultiPointCoord] to JTS [MultiPoint]
@@ -279,13 +279,13 @@ object ProxyGeoUtil {
     }
 
     /**
-     * Converts [LineStringGeometry] to JTS [LineString]
+     * Converts [SpLineString] to JTS [LineString]
      *
-     * @param geometry [LineStringGeometry] to convert
+     * @param geometry [SpLineString] to convert
      * @return [LineString]
      */
     @JvmStatic
-    fun toJtsLineString(geometry: LineStringGeometry): LineString = toJtsLineString(geometry.getCoordinates())
+    fun toJtsLineString(geometry: SpLineString): LineString = toJtsLineString(geometry.getCoordinates())
 
     /**
      * Converts [LineStringCoord] to JTS [LineString]
@@ -301,14 +301,14 @@ object ProxyGeoUtil {
     }
 
     /**
-     * Converts [PolygonGeometry] to JTS [Polygon]
+     * Converts [SpPolygon] to JTS [Polygon]
      *
-     * @param geometry [PolygonGeometry] to convert
+     * @param geometry [SpPolygon] to convert
      * @return [Polygon]
      * @throws [RuntimeException] when proxy has null coordinates
      */
     @JvmStatic
-    fun toJtsPolygon(geometry: PolygonGeometry): Polygon = toJtsPolygon(geometry.getCoordinates())
+    fun toJtsPolygon(geometry: SpPolygon): Polygon = toJtsPolygon(geometry.getCoordinates())
 
     /**
      * Converts [PolygonCoord] to JTS [Polygon]
@@ -338,14 +338,14 @@ object ProxyGeoUtil {
     }
 
     /**
-     * Converts [MultiLineStringGeometry] to JTS [MultiLineString]
+     * Converts [SpMultiLineString] to JTS [MultiLineString]
      *
-     * @param geometry [MultiLineStringGeometry] to convert
+     * @param geometry [SpMultiLineString] to convert
      * @return [MultiLineString]
      * @throws [RuntimeException] when proxy has null coordinates
      */
     @JvmStatic
-    fun toJtsMultiLineString(geometry: MultiLineStringGeometry): MultiLineString =
+    fun toJtsMultiLineString(geometry: SpMultiLineString): MultiLineString =
         toJtsMultiLineString(geometry.getCoordinates())
 
     /**
@@ -365,14 +365,14 @@ object ProxyGeoUtil {
     }
 
     /**
-     * Converts [MultiPolygonGeometry] to JTS [MultiPolygon]
+     * Converts [SpMultiPolygon] to JTS [MultiPolygon]
      *
-     * @param geometry [MultiPolygonGeometry] to convert
+     * @param geometry [SpMultiPolygon] to convert
      * @return [MultiPolygon]
      * @throws [RuntimeException] when proxy has null coordinates
      */
     @JvmStatic
-    fun toJtsMultiPolygon(geometry: MultiPolygonGeometry): MultiPolygon = toJtsMultiPolygon(geometry.getCoordinates())
+    fun toJtsMultiPolygon(geometry: SpMultiPolygon): MultiPolygon = toJtsMultiPolygon(geometry.getCoordinates())
 
     /**
      * Converts [MultiPolygonCoord] to JTS [MultiPolygon]

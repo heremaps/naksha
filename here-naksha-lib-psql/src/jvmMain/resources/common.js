@@ -66,7 +66,8 @@
         "kotlin": {
           "var KtList = {getInstance: Companion_getInstance_0};": "var KtList = KtList_0;",
           "var KtMap = {getInstance: Companion_getInstance_1};": "var KtMap = KtMap_0;",
-          "var KtMutableList = {getInstance: Companion_getInstance_2};": "var KtMutableList = KtMutableList_0;"
+          "var KtMutableList = {getInstance: Companion_getInstance_2};": "var KtMutableList = KtMutableList_0;",
+          "var KtMutableMap = {getInstance: Companion_getInstance_3};": "var KtMutableMap = KtMutableMap_0;"
         }
       }
       let patches = patchesByModuleName[moduleName];

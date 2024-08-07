@@ -18,11 +18,11 @@
  */
 package com.here.naksha.lib.core;
 
-import static naksha.model.NakshaErrorCode.NOT_IMPLEMENTED;
+import static naksha.model.NakshaError.NOT_IMPLEMENTED;
 
 import naksha.model.NakshaError;
-import naksha.model.response.ErrorResponse;
-import naksha.model.response.Response;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

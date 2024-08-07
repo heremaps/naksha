@@ -52,10 +52,10 @@ inline fun Double.toInt64RawBits(value: Double): Int64 = Platform.toInt64RawBits
 inline fun Double.toLongRawBits(value: Double): Long = Platform.toInt64RawBits(value).toLong()
 inline fun Long.toInt64(): Int64 = Platform.longToInt64(this)
 
-inline fun <K: Any, V:Any> AtomicMap(): AtomicMap<K, V> = Platform.newAtomicMap()
+inline fun <K : Any, V : Any> AtomicMap(): AtomicMap<K, V> = Platform.newAtomicMap()
 inline fun AtomicInt(initialValue: Int = 0): AtomicInt = Platform.newAtomicInt(initialValue)
-inline fun <T: Any> AtomicRef(referee: T): AtomicRef<T> = Platform.newAtomicRef(referee)
-inline fun <T: Any> WeakRef(referee: T): WeakRef<T> = Platform.newWeakRef(referee)
+inline fun <T : Any> AtomicRef(referee: T?): AtomicRef<T> = Platform.newAtomicRef(referee)
+inline fun <T : Any> WeakRef(referee: T): WeakRef<T> = Platform.newWeakRef(referee)
 
 /**
  * Create a proxy or return the existing proxy.
@@ -67,4 +67,23 @@ inline fun <T : Proxy> PlatformObject?.proxy(klass: KClass<T>): T {
     require(this != null)
     require(this is PlatformMap || this is PlatformList || this is PlatformDataView)
     return Platform.proxy(this, klass)
+}
+
+/**
+ * Remove the given element from the array, if it was contained in the array.
+ * @param element the element to remove.
+ * @return the new array or this, if the element was not part of the array.
+ */
+inline operator fun <reified T> Array<T>.minus(element: T?): Array<T> {
+    val i = indexOf(element)
+    if (i < 0) return this
+    var si = 0
+    val newArray = arrayOfNulls<T>(size - 1)
+    var ni = 0
+    while (si < size) {
+        if (si != i) newArray[ni++] = this[si]
+        si++
+    }
+    @Suppress("UNCHECKED_CAST")
+    return newArray as Array<T>
 }

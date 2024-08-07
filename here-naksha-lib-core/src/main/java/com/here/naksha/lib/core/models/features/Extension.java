@@ -21,8 +21,8 @@ package com.here.naksha.lib.core.models.features;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -32,7 +32,8 @@ import org.jetbrains.annotations.Nullable;
  */
 @AvailableSince(NakshaVersion.v2_0_3)
 @JsonTypeName
-public class Extension extends NakshaFeatureProxy {
+public class Extension extends NakshaFeature {
+  public static final String ID = "id";
   public static final String URL = "url";
   public static final String VERSION = "version";
   public static final String INIT_CLASS_NAME = "initClassName";

@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import naksha.geo.XyzProperties;
-import naksha.model.NakshaFeatureProxy;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
@@ -42,6 +41,8 @@ import org.jetbrains.annotations.Nullable;
 @SuppressWarnings("unused")
 @JsonTypeName(value = "Space")
 public final class Space extends EventTarget<Space> implements Typed {
+
+  public static final String COLLECTION_ID = "id";
 
   /**
    * Create new space initialized with the given identifier.
@@ -168,8 +169,7 @@ public final class Space extends EventTarget<Space> implements Typed {
     String collectionIdFromProps = null;
     Object collectionProps = getProperties().get(SpaceProperties.XYZ_COLLECTION);
     if (collectionProps != null) {
-      collectionIdFromProps =
-          ((Map) collectionProps).get(NakshaFeatureProxy.ID).toString();
+      collectionIdFromProps = ((Map) collectionProps).get(COLLECTION_ID).toString();
     }
     return collectionIdFromProps != null ? collectionIdFromProps : getId();
   }

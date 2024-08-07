@@ -3,10 +3,10 @@ package naksha.psql
 //import naksha.jbon.XYZ_OP_CREATE
 //import naksha.base.Int64
 //import naksha.model.*
-//import naksha.model.request.InsertRow
+//import naksha.model.request.op.InsertRow
 //import naksha.model.request.WriteRequest
 //import naksha.model.Row
-//import naksha.model.response.SuccessResponse
+//import naksha.model.request.SuccessResponse
 //import naksha.psql.write.RowUpdater
 //import naksha.psql.write.WriteRequestExecutor
 //import org.junit.jupiter.api.Assertions.assertInstanceOf

@@ -52,13 +52,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import naksha.model.NakshaVersion;
+import naksha.model.request.ErrorResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * The base class of all events that are sent by the Hub to a {@link IEventHandler handler}. All events extend this event. All
  * {@link IEventHandler handler} can be sure to receive events that extend this class and need to respond with an object extending the
- * {@link naksha.model.response.ErrorResponse} class.
+ * {@link ErrorResponse} class.
  *
  * <p>An event can be serialized and send to another instance to be processed there, this is decided
  * by the {@link EventPipeline}. When a handler sends an event {@link IEvent#sendUpstream() upstream}, the handler itself does not
@@ -267,7 +268,7 @@ public class Event extends Payload {
   public void setSpace(@NotNull Space space) {
     this.spaceId = space.getId();
     this.collection = space.getCollectionId();
-    this.params = space.getProperties().cloneDeep();
+    this.params = space.getProperties().copy(true);
     this.space = space;
   }
 

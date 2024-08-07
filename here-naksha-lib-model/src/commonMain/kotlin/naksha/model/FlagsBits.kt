@@ -1,12 +1,11 @@
-@file:Suppress("OPT_IN_USAGE")
+@file:Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate")
 
 package naksha.model
 
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
 
 /**
- * Collection of bits definitions for the `flags`. The flags store the encoding in the storage, it stores how the binaries are encoded:
+ * Collection of bit definitions for the `flags`. The flags store the encoding in the storage, it stores how the binaries are encoded:
  * ```
  *       Reserved         R1  AE   TE    FE    GE
  * [0000-0000-0000-0000]-[00][00][0000][0000][0000]
@@ -23,6 +22,9 @@ import kotlin.js.JsStatic
 open class FlagsBits {
     companion object FlagsBitsCompanion {
         // --------------------------------------< Geometry >-------------------------------------
+        // NOTE: We keep geometry encoding in the lowest bits by intention!
+        //       This allows us to test if the geometry need to be unzipped by just masking the
+        //       lowest bit, and if it is set, it is compressed!
 
         /**
          * The bits to shift the value in the [Flags].
@@ -124,5 +126,6 @@ open class FlagsBits {
          * The bitmask to AND combine with [Flags] to clear the value from the [Flags].
          */
         const val ACTION_CLEAR = ACTION_MASK.inv()
+
     }
 }

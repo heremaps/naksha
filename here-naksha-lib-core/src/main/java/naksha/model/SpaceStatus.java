@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.List;
 import java.util.Map;
-import naksha.model.response.Response;
+import naksha.model.request.Response;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "SpaceStatus")
@@ -122,7 +122,7 @@ public class SpaceStatus extends Response {
   }
 
   @Override
-  public int size() {
+  public int resultSize() {
     return 0;
   }
 

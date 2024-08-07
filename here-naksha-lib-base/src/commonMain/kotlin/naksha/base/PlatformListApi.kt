@@ -7,6 +7,8 @@ expect class PlatformListApi {
     companion object PlatformListApiCompanion {
         fun array_get_length(array: PlatformList?): Int
         fun array_set_length(array: PlatformList?, length: Int)
+        fun array_get_capacity(array: PlatformList?): Int
+        fun array_set_capacity(array: PlatformList?, capacity: Int)
         fun array_clear(array: PlatformList?)
         fun array_get(array: PlatformList?, i: Int): Any?
         fun array_set(array: PlatformList?, i: Int, value: Any?): Any?

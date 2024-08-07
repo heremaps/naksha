@@ -80,7 +80,7 @@ All units start with a **lead-in** byte, which describes the type of the unit. T
       - `3`: Reserved
     - If variant structure (vv: 1=byte, 2=short, 3=int)
       - Followed by one byte, two byte or four byte integer storing the variant, big-endian encoded.
-      - `0`: Feature
+      - `0`: Record
       - `1`: XYZ
       - `2`: Custom
       - `3`: Reserved
@@ -171,15 +171,15 @@ After the header, the content follows. The content is simply a sequence of units
 
 ### Reserved (3)
 
-### Feature (0+variant)
-A JBON feature is a container for any other JBON unit. It is mainly used to link the embedded unit to a dedicated global and local dictionary. The format looks like:
+### Record (0+variant)
+A JBON record is a container for any other JBON unit. It is mainly used to link the embedded unit to a dedicated global and local dictionary. The format looks like:
 
 - The **id** of the global dictionary to be used (**string**), can be _null_.
-- The **id** of the feature, **string**, **text** or _null_.
+- The **id** of the record, **string**, **text** or _null_.
 - The embedded local dictionary.
 - The embedded JBON object (the root object).
 
-A feature can't create references to other features, only into a global dictionaries with unique identifiers. From an encoder perspective this is all.
+A record can't create references to other records, only into a global dictionaries with unique identifiers. From an encoder perspective this is all.
 
 ### Xyz (1+variant)
 This type is reserved for XYZ interactions. It is a flat object, optimized to be very small, with the following layout:
@@ -206,10 +206,10 @@ The information that the database manages and what is delivered by the database.
 Notes: Tags are now a dedicated map, but when exposed, they are joined by an equal sign, the _null_ is default and causes the equal sign to disappear. So the tag "foo" becomes "tag=null" and when converting back "tag=null" is converted into "tag". Any other value, not being _null_, will be encoded into the tag. We do not allow equal signs otherwise, so only one equal sign is allowed in a tag. We do this, because we add an GIN index on the tags and allows key-value search at low level.
 
 #### XyzOp (variant:1)
-The information that clients should send to the database to write features or collections. This has to be provided together with a new feature.
+The information that clients should send to the database to write records or collections. This has to be provided together with a new record.
 
 - **op** (integer) - The requested operation (CREATE, UPDATE, UPSERT, DELETE or PURGE).
-- **id** (string) - The feature-id.
+- **id** (string) - The record-id.
 - **uuid** (string or _null_) - If not _null_, then the operation is atomic and the state must be this one (only UPDATE, DELETE and PURGE).
 - **grid** (string or _null_) - If the geo-reference-id is calculated by the client.
 
@@ -282,7 +282,7 @@ Specifically the **string** type does actually allow to de-duplicate parts of a 
 - string-reference into global dictionary for `urn:here::here:Topology` (2 byte)
 - the string `58626681` (8 byte)
 
-This result in a total of 11 byte for a 32 character UTF-8 encoded string (compression around 65%). In other words, it saves 21 byte per feature, which means for 100 million features of this type we need instead of 2.98gb of storage only 1.03gb. This is only one value.
+This result in a total of 11 byte for a 32 character UTF-8 encoded string (compression around 65%). In other words, it saves 21 byte per record, which means for 100 million records of this type we need instead of 2.98gb of storage only 1.03gb. This is only one value.
 
 Generally, every byte we save, decreases the topology data size by around 95mb, while at the same time allows to use the data without any need to decompress or decode them, we can just seek into the data.
 

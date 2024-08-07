@@ -1,9 +1,6 @@
-@file:Suppress("NOTHING_TO_INLINE")
-
 package naksha.psql
 
-import naksha.model.NakshaErrorCode
-import naksha.model.StorageException
+import naksha.model.Naksha
 import naksha.psql.PgType.Companion.BYTE_ARRAY
 import naksha.psql.PgType.Companion.INT
 import naksha.psql.PgType.Companion.INT64
@@ -11,30 +8,61 @@ import naksha.psql.PgType.Companion.SHORT
 import naksha.psql.PgType.Companion.STRING
 
 /**
- * The index of the main table in [PgCollection] or the main connection in [PgTx].
+ * `$`: The separation string used to flag internal tables.
  */
-const val MAIN = -1
+internal const val PG_S = "\$"
 
 /**
- * Throw a storage exception.
+ * ``: The identifier for the HEAD-table, no prefix.
  */
-internal inline fun throwStorageException(
-    code: NakshaErrorCode,
-    message: String = code.defaultMessage,
-    id: String? = null,
-    cause: Throwable? = null
-): Nothing {
-    throw StorageException(code, message, id, cause)
-}
+internal const val PG_HEAD = ""
+
+/**
+ * `$del`: The identifier for the DELETION-table.
+ */
+internal const val PG_DEL = "${PG_S}del"
+
+/**
+ * `$hst`: The identifier for the HISTORY-table.
+ */
+internal const val PG_HST = "${PG_S}hst"
+
+/**
+ * `$meta`: The identifier for the META-table.
+ */
+internal const val PG_META = "${PG_S}meta"
+
+/**
+ * `$i_`: The prefix used for indices, followed by the index identifier, e.g. `$i_id_txn_uid`
+ */
+internal const val PG_IDX = "${PG_S}i_"
+
+/**
+ * `$p_`: The prefix used for numerated partitions, the final value is `$p???` with `?` being `[0-9]`.
+ */
+internal const val PG_PART = "${PG_S}p"
+
+/**
+ * `$y_`: The prefix used for yearly partitions, the final value is `$y????` with `?` being `[0-9]`.
+ */
+internal const val PG_YEAR = "${PG_S}y"
+
+/**
+ * The prefix used for all internal tables.
+ */
+internal const val PG_INTERNAL_PREFIX = Naksha.VIRT_PREFIX
 
 internal const val NAKSHA_TXN_SEQ = "naksha_txn_seq"
+internal const val NAKSHA_MAP_SEQ = "naksha_map_seq"
+internal const val NAKSHA_COL_SEQ = "naksha_col_seq"
+
 internal const val MAX_POSTGRES_TOAST_TUPLE_TARGET = 32736
 internal const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 2048
 
-internal const val TRANSACTIONS_COL = "naksha~transactions"
+internal const val TRANSACTIONS_COL = Naksha.VIRT_TRANSACTIONS
 
-internal const val NKC_TABLE = "naksha~collections"
-internal const val NKC_TABLE_ESC = "\"naksha~collections\""
+internal const val NKC_TABLE = Naksha.VIRT_TRANSACTIONS
+internal const val NKC_TABLE_ESC = "\"${Naksha.VIRT_TRANSACTIONS}\""
 internal const val NKC_PARTITION_COUNT = "partitionCount"
 internal const val NKC_ID = "id"
 internal const val NKC_GEO_INDEX = "geoIndex"
@@ -88,26 +116,26 @@ internal val COL_ALL: String = arrayOf(
     COL_FNVA1
 ).joinToString(",")
 internal val COL_ALL_TYPES: Array<String> = arrayOf(
-    INT64.str,
-    INT64.str,
-    INT.str,
-    INT64.str,
-    INT.str,
-    INT.str,
-    SHORT.str,
-    INT64.str,
-    INT64.str,
-    INT64.str,
-    STRING.str,
-    STRING.str,
-    INT.str,
-    STRING.str,
-    BYTE_ARRAY.str,
-    BYTE_ARRAY.str,
-    BYTE_ARRAY.str,
-    BYTE_ARRAY.str,
-    STRING.str,
-    INT.str)
+    INT64.text,
+    INT64.text,
+    INT.text,
+    INT64.text,
+    INT.text,
+    INT.text,
+    SHORT.text,
+    INT64.text,
+    INT64.text,
+    INT64.text,
+    STRING.text,
+    STRING.text,
+    INT.text,
+    STRING.text,
+    BYTE_ARRAY.text,
+    BYTE_ARRAY.text,
+    BYTE_ARRAY.text,
+    BYTE_ARRAY.text,
+    STRING.text,
+    INT.text)
 private fun createJoiner(): (_: String) -> String {
     var i = 0
     return {

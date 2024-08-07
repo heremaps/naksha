@@ -29,7 +29,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
-import naksha.model.NakshaFeatureProxy;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
@@ -52,18 +52,18 @@ class PatcherTest {
 
   @Test
   void basic() {
-    final NakshaFeatureProxy f1 =
-        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_1.json"), NakshaFeatureProxy.class);
+    final NakshaFeature f1 =
+        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_1.json"), NakshaFeature.class);
     assertNotNull(f1);
 
-    final NakshaFeatureProxy f2 =
-        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_2.json"), NakshaFeatureProxy.class);
+    final NakshaFeature f2 =
+        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_2.json"), NakshaFeature.class);
     assertNotNull(f2);
 
     final Difference diff = Patcher.getDifference(f1, f2);
     assertNotNull(diff);
 
-    final NakshaFeatureProxy f1_patched_to_f2 = Patcher.patch(f1, diff);
+    final NakshaFeature f1_patched_to_f2 = Patcher.patch(f1, diff);
     assertNotNull(f1_patched_to_f2);
 
     final Difference newDiff = Patcher.getDifference(f1_patched_to_f2, f2);
@@ -190,12 +190,12 @@ class PatcherTest {
 
   @Test
   void testIgnoreAll() {
-    final NakshaFeatureProxy f1 =
-        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_1.json"), NakshaFeatureProxy.class);
+    final NakshaFeature f1 =
+        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_1.json"), NakshaFeature.class);
     assertNotNull(f1);
 
-    final NakshaFeatureProxy f2 =
-        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_2.json"), NakshaFeatureProxy.class);
+    final NakshaFeature f2 =
+        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_2.json"), NakshaFeature.class);
     assertNotNull(f2);
 
     final Difference diff = Patcher.getDifference(f1, f2, PatcherTest::ignoreAll);
@@ -219,12 +219,12 @@ class PatcherTest {
 
   @Test
   void testXyzNamespace() {
-    final NakshaFeatureProxy f1 =
-        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_1.json"), NakshaFeatureProxy.class);
+    final NakshaFeature f1 =
+        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_1.json"), NakshaFeature.class);
     assertNotNull(f1);
 
-    final NakshaFeatureProxy f2 =
-        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_2.json"), NakshaFeatureProxy.class);
+    final NakshaFeature f2 =
+        JsonSerializable.deserialize(IoHelp.readResource("patcher/feature_2.json"), NakshaFeature.class);
     assertNotNull(f2);
 
     final Difference rawDiff = Patcher.getDifference(f1, f2, PatcherTest::ignoreXyzProps);

@@ -20,13 +20,19 @@ class PgKind : JsEnum() {
     }
 
     companion object {
+        /**
+         * Ordinary table.
+         */
         @JsStatic
         @JvmField
         val OrdinaryTable = def(PgKind::class, "r")
 
+        /**
+         * Partitioned table, so the table has is partitioned via PARTITION BY, the children will be [OrdinaryTable]'s, except they're partitioned again, only then another [PartitionedTable] is found. Generally, the lowest level of partitioning should always be an [OrdinaryTable].
+         */
         @JsStatic
         @JvmField
-        val PartitionTable = def(PgKind::class, "p")
+        val PartitionedTable = def(PgKind::class, "p")
 
         @JsStatic
         @JvmField
@@ -59,5 +65,14 @@ class PgKind : JsEnum() {
         @JsStatic
         @JvmField
         val CompositeType = def(PgKind::class, "c")
+
+        /**
+         * Returns the kind as read from `relkind` from `pg_class` table.
+         * @param kind the `relkind` as read form `pg_class`.
+         * @return the kind.
+         */
+        @JsStatic
+        @JvmStatic
+        fun of(kind: String?): PgKind = JsEnum.get(kind, PgKind::class)
     }
 }

@@ -7,7 +7,7 @@ import naksha.auth.attribute.ResourceAttributes
 import naksha.auth.check.CheckCompiler
 import naksha.base.ListProxy
 import naksha.base.MapProxy
-import naksha.base.ObjectProxy
+import naksha.base.AnyObject
 import kotlin.js.JsExport
 
 /**
@@ -137,7 +137,7 @@ class UserAction : ListProxy<UserRights>(UserRights::class) {
  * The difference is, [UserRights] hold checks, while [ResourceAttributes] hold raw values that these checks
  * are being run against.
  */
-class UserRights : ObjectProxy() {
+class UserRights : AnyObject() {
 
     /**
      * [UserRights] matches [ResourceAttributes] when all of it's compiled checks hold true against resource values.
