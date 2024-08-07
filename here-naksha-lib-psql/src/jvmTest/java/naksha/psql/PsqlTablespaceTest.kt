@@ -16,6 +16,8 @@
 //import kotlin.test.assertTrue
 //
 //class PsqlTablespaceTest {
+// TODO check if still relevant
+
 //    private val env = TestEnv(dropSchema = false, initStorage = false)
 //    private var dockerContainerInfo: GenericContainer<*>? = null
 //

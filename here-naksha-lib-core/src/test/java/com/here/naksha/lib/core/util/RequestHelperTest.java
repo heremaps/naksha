@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class RequestHelperTest {
 
+    //TODO(lib-core test) see if this test is still relevant now that PRef is no longer available (replaced with Property?)
 //    @Test
 //    public void testPRefFromStandardPath() {
 //        final PRef pref = RequestHelper.pRefFromPropPath(new String[]{"properties","@ns:com:here:xyz","tags"});

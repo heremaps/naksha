@@ -11,7 +11,7 @@ public class ReadFeaturesTest {
 
 //  @Test
 //  void testShallowCopy() throws JsonProcessingException {
-//  TODO uncomment when ReadRequest is support in PgSession
+//  TODO(lib-core test) uncomment when ReadRequest is support in PgSession
 //    // given
 //    ReadFeatures readFeatures = new ReadFeatures();
 //    Json jsonGenerator = Json.get();
