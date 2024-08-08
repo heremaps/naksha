@@ -93,20 +93,6 @@ public class AmazonS3Helper implements FileClient {
     }
   }
 
-  public List<String> listKeysInBucket(String url) {
-    S3Uri fileUri = getS3Uri(url);
-    String delimiter = "/";
-
-    ListObjectsRequest.Builder listObjectsRequestBuilder =
-        ListObjectsRequest.builder().bucket(fileUri.bucket().get()).delimiter(delimiter);
-
-    if (fileUri.key().isPresent())
-      listObjectsRequestBuilder.prefix(fileUri.key().get());
-
-    ListObjectsResponse response = getS3Client().listObjects(listObjectsRequestBuilder.build());
-    return response.commonPrefixes().stream().map(cm -> cm.prefix()).toList();
-  }
-
   public S3Uri getS3Uri(String url) {
     URI uri = URI.create(url);
     return getS3Client().utilities().parseUri(uri);
