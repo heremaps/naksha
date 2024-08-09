@@ -38,6 +38,10 @@ import java.util.Set;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
+import naksha.model.request.query.AnyOp;
+import naksha.model.request.query.IPropertyQuery;
+import naksha.model.request.query.PQuery;
+import naksha.model.request.query.Property;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -185,21 +189,15 @@ public class ViewReadSession implements IReadSession {
 
   private boolean isRequestOnlyById(ReadRequest request) {
     if (request instanceof ReadFeatures) {
-      ReadFeatures readFeatures = (ReadFeatures) request;
-      if (readFeatures.op instanceof SOp) {
-        return false;
+      final ReadFeatures readFeatures = (ReadFeatures) request;
+      final IPropertyQuery propertyQuery = readFeatures.getQuery().getProperties();
+      if (propertyQuery instanceof PQuery) {
+        final PQuery query = ((PQuery) propertyQuery);
+        return query.getProperty().getPath().contains(Property.ID)
+            && query.getOp().equals(AnyOp.getIS_ANY_OF());
       }
-      return isPropertyOpIdOnly((POp) readFeatures.op);
-    } else {
-      return false;
     }
-  }
-
-  private boolean isPropertyOpIdOnly(POp pOp) {
-    if (pOp == null) {
-      return false;
-    }
-    return (pOp.getOp() == EQ.INSTANCE) && PRef.id().equals(pOp.getPropertyRef());
+    return false;
   }
 
   @Override
@@ -268,6 +266,6 @@ public class ViewReadSession implements IReadSession {
   @NotNull
   @Override
   public Response executeParallel(@NotNull Request request) {
-    return IReadSession.super.executeParallel(request);
+    return execute(request);
   }
 }
