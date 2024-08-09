@@ -60,6 +60,7 @@ public class View implements IView {
     this.viewLayerCollection = viewLayerCollection;
   }
 
+  //TODO implement all below methods
   @Override
   public void initStorage(@Nullable Map<String, ?> params) {
     //    storage.init();

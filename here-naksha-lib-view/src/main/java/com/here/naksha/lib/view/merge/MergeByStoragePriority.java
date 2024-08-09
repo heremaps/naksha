@@ -31,7 +31,7 @@ public class MergeByStoragePriority implements MergeOperation {
   public NakshaFeature apply(@NotNull List<ViewLayerFeature> sameFeatureFromEachStorage) {
     return sameFeatureFromEachStorage.stream()
         .min(Comparator.comparing(ViewLayerFeature::getStoragePriority))
-        .map(ViewLayerFeature::getRow)
+        .map(ViewLayerFeature::getFeature)
         .get();
   }
 }

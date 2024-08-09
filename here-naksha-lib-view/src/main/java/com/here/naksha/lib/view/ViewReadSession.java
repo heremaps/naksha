@@ -178,60 +178,6 @@ public class ViewReadSession implements IReadSession {
     return result;
   }
 
-  public boolean isMasterConnect() {
-    return false;
-  }
-
-  //  public @NotNull NakshaContext getNakshaContext() {
-  //    return subSessions.values().stream()
-  //        .findAny()
-  //        .map(IReadSession::getNakshaContext)
-  //        .orElseThrow();
-  //  }
-  //
-  //  @Override
-  //  public int getFetchSize() {
-  //    return subSessions.values().stream()
-  //        .findAny()
-  //        .map(IReadSession::getFetchSize)
-  //        .orElseThrow();
-  //  }
-
-  //  @Override
-  //  public void setFetchSize(int size) {
-  //    subSessions.values().forEach(session -> session.setFetchSize(size));
-  //  }
-  //
-  //  @Override
-  //  public long getStatementTimeout(@NotNull TimeUnit timeUnit) {
-  //    return subSessions.values().stream()
-  //        .findAny()
-  //        .map(session -> session.getStatementTimeout(timeUnit))
-  //        .orElseThrow();
-  //  }
-
-  //  @Override
-  //  public void setStatementTimeout(long timeout, @NotNull TimeUnit timeUnit) {
-  //    subSessions.values().forEach(session -> session.setStatementTimeout(timeout, timeUnit));
-  //  }
-  //
-  //  @Override
-  //  public long getLockTimeout(@NotNull TimeUnit timeUnit) {
-  //    return subSessions.values().stream()
-  //        .findAny()
-  //        .map(session -> session.getLockTimeout(timeUnit))
-  //        .orElseThrow();
-  //  }
-  //
-  //  @Override
-  //  public void setLockTimeout(long timeout, @NotNull TimeUnit timeUnit) {
-  //    subSessions.values().forEach(session -> session.setLockTimeout(timeout, timeUnit));
-  //  }
-
-  //  public @NotNull Response process(@NotNull Notification<?> notification) {
-  //    return new ErrorResult(XyzError.NOT_IMPLEMENTED, "process");
-  //  }
-
   @Override
   public void close() {
     subSessions.values().forEach(ISession::close);

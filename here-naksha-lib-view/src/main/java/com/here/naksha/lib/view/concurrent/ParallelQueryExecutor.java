@@ -35,6 +35,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
+import naksha.base.StringList;
 import naksha.model.IReadSession;
 import naksha.model.NakshaContext;
 import naksha.model.objects.NakshaFeature;
@@ -88,14 +89,13 @@ public class ParallelQueryExecutor {
   }
 
   private @NotNull Long getTimeout(@NotNull List<LayerReadRequest> requests) {
-    Optional<Long> maxSessionTimeout = requests.stream()
-        .map(it -> it.getSession().getStatementTimeout(TimeUnit.MILLISECONDS))
-        .max(Long::compareTo);
+    Optional<Integer> maxSessionTimeout =
+        requests.stream().map(it -> it.getSession().getStmtTimeout()).max(Integer::compareTo);
 
     if (maxSessionTimeout.isEmpty() || maxSessionTimeout.get() == 0) {
       return defaultTimeoutMillis;
     } else {
-      return maxSessionTimeout.get();
+      return Long.valueOf(maxSessionTimeout.get());
     }
   }
 
@@ -108,8 +108,10 @@ public class ParallelQueryExecutor {
     final String collectionId = layer.getCollectionId();
 
     // prepare request
-    ReadFeatures clonedRequest = request; // TODO shallow clone
-    clonedRequest.addCollectionId(collectionId);
+    ReadFeatures clonedRequest = request.copy(false);
+    final StringList idsList = new StringList();
+    idsList.add(collectionId);
+    clonedRequest.setCollectionIds(idsList);
 
     SuccessResponse cursor = (SuccessResponse) session.execute(clonedRequest);
 
