@@ -5,6 +5,7 @@ package naksha.model.request
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.model.ISession
+import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaFeatureList
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -23,6 +24,11 @@ open class SuccessResponse @Deprecated("Use secondary", ReplaceWith("SuccessResp
     @JsName("ofResultSet")
     constructor(rs: IResultSet) : this() {
         setRaw("resultSet", rs)
+    }
+
+    @JsName("ofFeatures")
+    constructor(features: List<NakshaFeature>) : this() {
+        this.features.addAll(features)
     }
 
     companion object SuccessResponse_C {

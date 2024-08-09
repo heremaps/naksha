@@ -20,7 +20,7 @@ package com.here.naksha.lib.view.missing;
 
 import com.here.naksha.lib.view.MissingIdResolver;
 import com.here.naksha.lib.view.ViewLayer;
-import com.here.naksha.lib.view.ViewLayerRow;
+import com.here.naksha.lib.view.ViewLayerFeature;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -42,19 +42,18 @@ public class ObligatoryLayersResolver implements MissingIdResolver {
   }
 
   @Override
-  public @Nullable List<Pair<ViewLayer, String>> layersToSearch(@NotNull List<ViewLayerRow> multiFeature) {
+  public @Nullable List<Pair<ViewLayer, String>> layersToSearch(@NotNull List<ViewLayerFeature> multiFeature) {
 
     if (multiFeature.isEmpty()) {
       return null;
     }
 
     List<ViewLayer> layersHavingFeature =
-        multiFeature.stream().map(ViewLayerRow::getViewLayerRef).collect(Collectors.toList());
+        multiFeature.stream().map(ViewLayerFeature::getViewLayerRef).collect(Collectors.toList());
 
     List<Pair<ViewLayer, String>> missingObligatoryLayers = obligatoryLayers.stream()
         .filter(obligatoryLayer -> !layersHavingFeature.contains(obligatoryLayer))
-        .map(layer ->
-            Pair.of(layer, multiFeature.get(0).getRow().getFeature().getId()))
+        .map(layer -> Pair.of(layer, multiFeature.get(0).getFeature().getId()))
         .collect(Collectors.toList());
 
     return missingObligatoryLayers;

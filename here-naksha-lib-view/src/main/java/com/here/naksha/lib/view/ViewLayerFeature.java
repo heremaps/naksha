@@ -18,19 +18,19 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.model.request.ResultRow;
+import naksha.model.objects.NakshaFeature;
 
-public class ViewLayerRow {
+public class ViewLayerFeature {
 
-  private final ResultRow row;
+  private final NakshaFeature feature;
 
   // priority 0 - is highest
   private final int storagePriority;
 
   private final ViewLayer viewLayerRef;
 
-  public ViewLayerRow(ResultRow row, int storagePriority, ViewLayer viewLayerRef) {
-    this.row = row;
+  public ViewLayerFeature(NakshaFeature feature, int storagePriority, ViewLayer viewLayerRef) {
+    this.feature = feature;
     this.storagePriority = storagePriority;
     this.viewLayerRef = viewLayerRef;
   }
@@ -43,7 +43,7 @@ public class ViewLayerRow {
     return viewLayerRef;
   }
 
-  public ResultRow getRow() {
-    return row;
+  public NakshaFeature getFeature() {
+    return feature;
   }
 }

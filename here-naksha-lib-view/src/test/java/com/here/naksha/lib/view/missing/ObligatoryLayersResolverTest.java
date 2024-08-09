@@ -6,7 +6,7 @@ import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import naksha.model.IStorage;
 import com.here.naksha.lib.view.MissingIdResolver;
 import com.here.naksha.lib.view.ViewLayer;
-import com.here.naksha.lib.view.ViewLayerRow;
+import com.here.naksha.lib.view.ViewLayerFeature;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
 
@@ -32,8 +32,8 @@ public class ObligatoryLayersResolverTest {
     ViewLayer otherLayer = new ViewLayer(storage, "collection1");
 
     XyzFeatureCodec feature = factory.newInstance();
-    List<ViewLayerRow> singleRowFeatures = new ArrayList<>();
-    singleRowFeatures.add(new ViewLayerRow(feature, 0, otherLayer));
+    List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
+    singleRowFeatures.add(new ViewLayerFeature(feature, 0, otherLayer));
 
     MissingIdResolver missingIdsResolver = new ObligatoryLayersResolver<>(Set.of(obligatoryLayer));
 
@@ -53,8 +53,8 @@ public class ObligatoryLayersResolverTest {
     ViewLayer otherLayer = new ViewLayer(storage, "collection1");
 
     XyzFeatureCodec feature = factory.newInstance();
-    List<ViewLayerRow<XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
-    singleRowFeatures.add(new ViewLayerRow(feature, 0, obligatoryLayer));
+    List<ViewLayerFeature<XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
+    singleRowFeatures.add(new ViewLayerFeature(feature, 0, obligatoryLayer));
 
     MissingIdResolver missingIdsResolver = new ObligatoryLayersResolver<>(Set.of(obligatoryLayer));
 

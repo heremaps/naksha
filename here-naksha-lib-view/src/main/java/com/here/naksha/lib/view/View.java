@@ -21,9 +21,8 @@ package com.here.naksha.lib.view;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import java.util.Map;
 import naksha.base.Int64;
-import naksha.base.PlatformMap;
-import naksha.jbon.IDictManager;
 import naksha.model.*;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,78 +46,23 @@ public class View implements IView {
   }
 
   @Override
-  public @NotNull ViewReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new ViewReadSession(this, context, useMaster);
+  public @NotNull ViewReadSession newReadSession(@Nullable SessionOptions options) {
+    return new ViewReadSession(this, options);
   }
 
   @Override
-  public @NotNull ViewWriteSession newWriteSession(@Nullable NakshaContext context) {
-    return new ViewWriteSession(this, context, true);
+  public @NotNull ViewWriteSession newWriteSession(@Nullable SessionOptions options) {
+    return new ViewWriteSession(this, options);
   }
-
-  //  @Override
-  //  public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
-  //    throw new NotImplementedException();
-  //  }
-
-  //  @Override
-  //  public void initStorage() {
-  //    throw new UnsupportedOperationException("init all individual storages first");
-  //  }
-
-  //  @Override
-  //  public void startMaintainer() {
-  //    throw new NotImplementedException();
-  //  }
-  //
-  //  @Override
-  //  public void maintainNow() {
-  //    throw new NotImplementedException();
-  //  }
-  //
-  //  @Override
-  //  public void stopMaintainer() {
-  //    throw new NotImplementedException();
-  //  }
 
   @Override
   public void setViewLayerCollection(ViewLayerCollection viewLayerCollection) {
     this.viewLayerCollection = viewLayerCollection;
   }
 
-  @NotNull
-  @Override
-  public String id() {
-    return storage.getId();
-  }
-
   @Override
   public void initStorage(@Nullable Map<String, ?> params) {
     //    storage.init();
-  }
-
-  @Override
-  public void initRealm(@NotNull String realm) {}
-
-  @Override
-  public void dropRealm(@NotNull String realm) {}
-
-  @NotNull
-  @Override
-  public NakshaFeatureProxy rowToFeature(@NotNull Row row) {
-    return null;
-  }
-
-  @NotNull
-  @Override
-  public Row featureToRow(@NotNull PlatformMap feature) {
-    return null;
-  }
-
-  @NotNull
-  @Override
-  public IDictManager dictManager(@NotNull NakshaContext nakshaContext) {
-    return null;
   }
 
   @NotNull
@@ -129,4 +73,56 @@ public class View implements IView {
 
   @Override
   public void close() {}
+
+  @NotNull
+  @Override
+  public Tuple featureToRow(@NotNull NakshaFeature feature) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public NakshaFeature rowToFeature(@NotNull Tuple tuple) {
+    return null;
+  }
+
+  @Nullable
+  @Override
+  public String getMapId(int mapNumber) {
+    return "";
+  }
+
+  @Override
+  public boolean contains(@NotNull String mapId) {
+    return false;
+  }
+
+  @NotNull
+  @Override
+  public IMap get(@NotNull String mapId) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public IMap getDefaultMap() {
+    return null;
+  }
+
+  @Override
+  public boolean isInitialized() {
+    return false;
+  }
+
+  @NotNull
+  @Override
+  public SessionOptions getAdminOptions() {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public String getId() {
+    return "";
+  }
 }

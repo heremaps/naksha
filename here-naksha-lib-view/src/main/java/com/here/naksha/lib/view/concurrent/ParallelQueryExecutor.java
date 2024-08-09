@@ -24,7 +24,7 @@ import static java.util.stream.Collectors.toList;
 
 import com.here.naksha.lib.view.View;
 import com.here.naksha.lib.view.ViewLayer;
-import com.here.naksha.lib.view.ViewLayerRow;
+import com.here.naksha.lib.view.ViewLayerFeature;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -37,9 +37,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import naksha.model.IReadSession;
 import naksha.model.NakshaContext;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
-import naksha.model.request.ResultRow;
-import naksha.model.response.SuccessResponse;
+import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,13 +53,13 @@ public class ParallelQueryExecutor {
     this.viewRef = viewRef;
   }
 
-  public Map<String, List<ViewLayerRow>> queryInParallel(@NotNull List<LayerReadRequest> requests) {
-    List<Future<List<ViewLayerRow>>> futures = new ArrayList<>();
+  public Map<String, List<ViewLayerFeature>> queryInParallel(@NotNull List<LayerReadRequest> requests) {
+    List<Future<List<ViewLayerFeature>>> futures = new ArrayList<>();
 
     for (LayerReadRequest layerReadRequest : requests) {
-      QueryTask<List<ViewLayerRow>> singleTask = new QueryTask<>(null, NakshaContext.currentContext());
+      QueryTask<List<ViewLayerFeature>> singleTask = new QueryTask<>(null, NakshaContext.currentContext());
 
-      Future<List<ViewLayerRow>> futureResult = singleTask.start(() -> executeSingle(
+      Future<List<ViewLayerFeature>> futureResult = singleTask.start(() -> executeSingle(
               layerReadRequest.getViewLayer(),
               layerReadRequest.getSession(),
               layerReadRequest.getRequest())
@@ -73,8 +73,8 @@ public class ParallelQueryExecutor {
   }
 
   @NotNull
-  private Map<String, List<ViewLayerRow>> getCollectedResults(
-      List<Future<List<ViewLayerRow>>> tasks, Long timeoutMillis) {
+  private Map<String, List<ViewLayerFeature>> getCollectedResults(
+      List<Future<List<ViewLayerFeature>>> tasks, Long timeoutMillis) {
     return tasks.stream()
         .map(future -> {
           try {
@@ -84,7 +84,7 @@ public class ParallelQueryExecutor {
           }
         })
         .flatMap(Collection::stream)
-        .collect(groupingBy(viewRow -> viewRow.getRow().getFeature().getId()));
+        .collect(groupingBy(viewRow -> viewRow.getFeature().getId()));
   }
 
   private @NotNull Long getTimeout(@NotNull List<LayerReadRequest> requests) {
@@ -99,7 +99,7 @@ public class ParallelQueryExecutor {
     }
   }
 
-  private Stream<ViewLayerRow> executeSingle(
+  private Stream<ViewLayerFeature> executeSingle(
       @NotNull ViewLayer layer, @NotNull IReadSession session, @NotNull ReadFeatures request) {
     final long startTime = System.currentTimeMillis();
     String status = "OK";
@@ -113,7 +113,7 @@ public class ParallelQueryExecutor {
 
     SuccessResponse cursor = (SuccessResponse) session.execute(clonedRequest);
 
-    List<ResultRow> featureList = cursor.rows;
+    List<NakshaFeature> featureList = cursor.getFeatures();
     log.info(
         "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",
         NakshaContext.currentContext().getStreamId(),
@@ -122,6 +122,6 @@ public class ParallelQueryExecutor {
         status,
         System.currentTimeMillis() - startTime,
         featureCnt);
-    return featureList.stream().map(row -> new ViewLayerRow(row, layerPriority, layer));
+    return featureList.stream().map(row -> new ViewLayerFeature(row, layerPriority, layer));
   }
 }

@@ -19,19 +19,19 @@
 package com.here.naksha.lib.view.merge;
 
 import com.here.naksha.lib.view.MergeOperation;
-import com.here.naksha.lib.view.ViewLayerRow;
+import com.here.naksha.lib.view.ViewLayerFeature;
 import java.util.Comparator;
 import java.util.List;
-import naksha.model.request.ResultRow;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 
 public class MergeByStoragePriority implements MergeOperation {
 
   @Override
-  public ResultRow apply(@NotNull List<ViewLayerRow> sameFeatureFromEachStorage) {
+  public NakshaFeature apply(@NotNull List<ViewLayerFeature> sameFeatureFromEachStorage) {
     return sameFeatureFromEachStorage.stream()
-        .min(Comparator.comparing(ViewLayerRow::getStoragePriority))
-        .map(ViewLayerRow::getRow)
+        .min(Comparator.comparing(ViewLayerFeature::getStoragePriority))
+        .map(ViewLayerFeature::getRow)
         .get();
   }
 }

@@ -18,16 +18,12 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.exceptions.StorageLockException;
-import com.here.naksha.lib.core.models.storage.*;
-import java.util.concurrent.TimeUnit;
-import naksha.model.IStorageLock;
 import naksha.model.IWriteSession;
-import naksha.model.NakshaContext;
-import naksha.model.NakshaFeatureProxy;
-import naksha.model.request.WriteFeature;
+import naksha.model.SessionOptions;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
-import naksha.model.response.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,13 +35,11 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
 
   IWriteSession session;
   ViewLayer writeLayer;
-  final NakshaContext context;
-  final boolean useMaster;
+  SessionOptions options;
 
-  public ViewWriteSession(@NotNull View viewRef, @Nullable NakshaContext context, boolean useMaster) {
-    super(viewRef, context, useMaster);
-    this.context = context;
-    this.useMaster = useMaster;
+  public ViewWriteSession(@NotNull View viewRef, @Nullable SessionOptions options) {
+    super(viewRef, options);
+    this.options = options;
   }
 
   public ViewWriteSession withWriteLayer(ViewLayer viewLayer) {
@@ -57,7 +51,7 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
 
   public ViewWriteSession init() {
     if (writeLayer == null) writeLayer = viewRef.getViewCollection().getTopPriorityLayer();
-    this.session = writeLayer.getStorage().newWriteSession(context);
+    this.session = writeLayer.getStorage().newWriteSession(options);
     return this;
   }
   /**
@@ -66,28 +60,12 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
    * @param writeRequest
    * @return
    */
-  public @NotNull Response execute(@NotNull WriteRequest writeRequest) {
-//    getSession();
-    writeRequest.setCollectionId(writeLayer.getCollectionId());
+  @Override
+  public @NotNull Response execute(@NotNull Request writeRequest) {
+    final Write write = new Write();
+    write.setCollectionId(writeLayer.getCollectionId());
+    ((WriteRequest) writeRequest).add(write);
     return this.session.execute(writeRequest);
-  }
-
-  @Override
-  public @NotNull IStorageLock lockFeature(
-      @NotNull String collectionId, @NotNull String featureId, long timeout, @NotNull TimeUnit timeUnit)
-      throws StorageLockException {
-    return getSession().lockFeature(collectionId, featureId, timeout, timeUnit);
-  }
-
-  @Override
-  public @NotNull IStorageLock lockStorage(@NotNull String lockId, long timeout, @NotNull TimeUnit timeUnit)
-      throws StorageLockException {
-    return getSession().lockStorage(lockId, timeout, timeUnit);
-  }
-
-  @Override
-  public @NotNull Response executeBulkWriteFeatures(@NotNull WriteRequest writeRequest) {
-    throw new UnsupportedOperationException("bulk write on view is not yet supported");
   }
 
   public void commit() {
@@ -106,11 +84,5 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   private IWriteSession getSession() {
     if (this.session == null) init();
     return this.session;
-  }
-
-  @NotNull
-  @Override
-  public Response writeFeature(@NotNull NakshaFeatureProxy feature) {
-    return null;
   }
 }

@@ -63,5 +63,5 @@ public interface MissingIdResolver {
    * @return
    */
   @Nullable
-  List<Pair<ViewLayer, String>> layersToSearch(@NotNull List<ViewLayerRow> multipleResults);
+  List<Pair<ViewLayer, String>> layersToSearch(@NotNull List<ViewLayerFeature> multipleResults);
 }
