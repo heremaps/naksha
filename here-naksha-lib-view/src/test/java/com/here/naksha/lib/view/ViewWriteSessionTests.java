@@ -1,6 +1,13 @@
 package com.here.naksha.lib.view;
 
 import com.here.naksha.lib.core.models.storage.*;
+import naksha.geo.PointCoord;
+import naksha.geo.SpPoint;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
+import naksha.model.request.WriteRequest;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -42,16 +49,13 @@ public class ViewWriteSessionTests extends PsqlTests {
   void createCollection() {
     assertNotNull(storage);
     assertNotNull(session);
-    final WriteXyzCollections request = new WriteXyzCollections();
-    request.add(EWriteOp.CREATE, new XyzCollection(COLLECTION_0, 1, false, true));
-    request.add(EWriteOp.CREATE, new XyzCollection(COLLECTION_1, 1, false, true));
-    try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
-        session.execute(request).getXyzCollectionCursor()) {
-      assertNotNull(cursor);
-      assertTrue(cursor.hasNext());
-    } finally {
-      session.commit(true);
-    }
+    final WriteRequest request = new WriteRequest();
+    final Write write = new Write();
+    request.add(write.createCollection(null, new NakshaCollection(COLLECTION_0, 1, null, false, true, null)));
+    request.add(write.createCollection(null, new NakshaCollection(COLLECTION_1, 1, null, false, true, null)));
+    SuccessResponse response = (SuccessResponse) session.execute(request);
+    assertNotNull(response.getTuples());
+    session.commit();
   }
 
   @Test
@@ -60,25 +64,22 @@ public class ViewWriteSessionTests extends PsqlTests {
   void addFeatures() {
     assertNotNull(storage);
     assertNotNull(session);
-    PsqlFeatureGenerator fg = new PsqlFeatureGenerator();
-    final WriteXyzFeatures requestTest0 = new WriteXyzFeatures(COLLECTION_0);
+    final WriteRequest requestTest0 = new WriteRequest();
 
-    final XyzFeature feature = fg.newRandomFeature();
-    feature.setGeometry(new XyzPoint(0d, 0d));
+    final NakshaFeature feature = new NakshaFeature();
+    feature.setGeometry(new SpPoint(new PointCoord(0d,0d)));
     feature.setId("feature_id_view0");
-    requestTest0.add(EWriteOp.PUT, feature);
+    requestTest0.add(new Write().updateFeature(null,COLLECTION_0,feature,false));
 
-    try {
       session.execute(requestTest0);
-    } finally {
-      session.commit(true);
-    }
+      session.commit();
+
   }
 
   @Test
   @Order(16)
   @EnabledIf("runTest")
-  void readAndWrite_UsingViewWriteSession() throws NoCursor {
+  void readAndWrite_UsingViewWriteSession() {
     assertNotNull(storage);
 
     ViewLayer layer0 = new ViewLayer(storage, COLLECTION_0);
