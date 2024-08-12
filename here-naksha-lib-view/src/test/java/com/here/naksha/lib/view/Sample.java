@@ -18,26 +18,25 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.model.NakshaFeatureProxy;
-import naksha.model.request.ResultRow;
-import naksha.model.response.ExecutedOp;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ExecutedOp;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class Sample {
 
-  public static List<ResultRow> sampleXyzResponse(int size) {
-    List<ResultRow> returnList = new ArrayList<>();
+  public static List<NakshaFeature> sampleXyzResponse(int size) {
+    List<NakshaFeature> returnList = new ArrayList<>();
     for (int i = 0; i < size; i++) {
-      returnList.add(new ResultRow(ExecutedOp.UPDATED, null, new NakshaFeatureProxy("id" + i)));
+      returnList.add(new NakshaFeature("id" + i));
     }
     return returnList;
   }
-  public static List<ResultRow> sampleXyzWriteResponse(int size, ExecutedOp op) {
-    List<ResultRow> returnList = new ArrayList<>();
+  public static List<NakshaFeature> sampleXyzWriteResponse(int size, ExecutedOp op) {
+    List<NakshaFeature> returnList = new ArrayList<>();
     for (int i = 0; i < size; i++) {
-      returnList.add(new ResultRow(op, null, new NakshaFeatureProxy("id" + i)));
+      returnList.add(new NakshaFeature("id" + i));
     }
     return returnList;
   }

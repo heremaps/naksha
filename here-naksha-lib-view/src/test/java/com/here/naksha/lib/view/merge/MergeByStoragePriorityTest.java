@@ -1,9 +1,7 @@
 package com.here.naksha.lib.view.merge;
 
-import naksha.model.XyzFeature;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import com.here.naksha.lib.view.ViewLayerFeature;
+import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -15,24 +13,23 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class MergeByStoragePriorityTest {
 
-  XyzFeatureCodecFactory factory = XyzFeatureCodecFactory.get();
-  MergeByStoragePriority<XyzFeature, XyzFeatureCodec> mergeStrategy = new MergeByStoragePriority<>();
+  MergeByStoragePriority mergeStrategy = new MergeByStoragePriority();
 
   @Test
   void checkPriorityMerge() {
     // given
-    List<ViewLayerFeature<XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
+    List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
 
-    XyzFeatureCodec f1 = factory.newInstance();
-    XyzFeatureCodec f2 = factory.newInstance();
-    XyzFeatureCodec f3 = factory.newInstance();
+    NakshaFeature f1 = new NakshaFeature();
+    NakshaFeature f2 = new NakshaFeature();
+    NakshaFeature f3 = new NakshaFeature();
 
-    singleRowFeatures.add(new ViewLayerFeature<>(f1, 1, null));
-    singleRowFeatures.add(new ViewLayerFeature<>(f2, 0, null));
-    singleRowFeatures.add(new ViewLayerFeature<>(f3, 2, null));
+    singleRowFeatures.add(new ViewLayerFeature(f1, 1, null));
+    singleRowFeatures.add(new ViewLayerFeature(f2, 0, null));
+    singleRowFeatures.add(new ViewLayerFeature(f3, 2, null));
 
     // when
-    XyzFeatureCodec outputFeature = mergeStrategy.apply(singleRowFeatures);
+    NakshaFeature outputFeature = mergeStrategy.apply(singleRowFeatures);
 
     // then
     assertSame(f2,  outputFeature);
@@ -41,18 +38,18 @@ public class MergeByStoragePriorityTest {
   @Test
   void checkSamePriorityMerge() {
     // given
-    List<ViewLayerFeature<XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
+    List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
 
-    XyzFeatureCodec f1 = factory.newInstance();
-    XyzFeatureCodec f2 = factory.newInstance();
-    XyzFeatureCodec f3 = factory.newInstance();
+    NakshaFeature f1 = new NakshaFeature();
+    NakshaFeature f2 = new NakshaFeature();
+    NakshaFeature f3 = new NakshaFeature();
 
-    singleRowFeatures.add(new ViewLayerFeature<>(f1, 0, null));
-    singleRowFeatures.add(new ViewLayerFeature<>(f2, 0, null));
-    singleRowFeatures.add(new ViewLayerFeature<>(f3, 2, null));
+    singleRowFeatures.add(new ViewLayerFeature(f1, 0, null));
+    singleRowFeatures.add(new ViewLayerFeature(f2, 0, null));
+    singleRowFeatures.add(new ViewLayerFeature(f3, 2, null));
 
     // when
-    XyzFeatureCodec outputFeature = mergeStrategy.apply(singleRowFeatures);
+    NakshaFeature outputFeature = mergeStrategy.apply(singleRowFeatures);
 
     // then should pick first on list
     assertSame(f1,  outputFeature);
@@ -61,7 +58,7 @@ public class MergeByStoragePriorityTest {
   @Test
   void checkEmptyMerge() {
     // given
-    List<ViewLayerFeature<XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
+    List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
 
     // expect
     assertThrows(NoSuchElementException.class, () -> mergeStrategy.apply(singleRowFeatures));

@@ -28,12 +28,8 @@ import com.here.naksha.lib.view.concurrent.LayerReadRequest;
 import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
-import naksha.model.request.InsertFeature;
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.ResultRow;
-import naksha.model.response.ExecutedOp;
-import naksha.model.response.Response;
-import naksha.model.response.SuccessResponse;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.*;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.invocation.InvocationOnMock;
@@ -56,6 +52,10 @@ public class ViewTest {
 
   private NakshaContext nc = NakshaContext.currentContext().withAppId("VIEW_API_TEST").withAuthor("VIEW_API_AUTHOR");
 
+  private SessionOptions sessionOptions = new SessionOptions();
+
+  private final Write write = new Write();
+
   private final static String TOPO = "topologies";
 
   @Test
@@ -68,8 +68,8 @@ public class ViewTest {
     ViewLayer topologiesCS = new ViewLayer(storage, "topologies");
 
     // each layer is going to return 3 same records
-    List<ResultRow> results = sampleXyzResponse(3);
-    when(storage.newReadSession(nc, false)).thenReturn(new MockReadSession(results));
+    List<NakshaFeature> results = sampleXyzResponse(3);
+    when(storage.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS, buildingsDS, topologiesCS);
 
@@ -79,14 +79,14 @@ public class ViewTest {
     MissingIdResolver skipFetchingResolver = new IgnoreMissingResolver();
 
     // when
-    ViewReadSession readSession = view.newReadSession(nc, false);
+    ViewReadSession readSession = view.newReadSession(sessionOptions);
     ReadFeatures readFeatures = new ReadFeatures();
     Response result = readSession.execute(
         readFeatures, customMergeOperation, skipFetchingResolver);
     assertInstanceOf(SuccessResponse.class,result);
 
     // then
-    List<ResultRow> allFeatures = ((SuccessResponse) result).rows;
+    List<NakshaFeature> allFeatures = ((SuccessResponse) result).getFeatures();
     assertEquals(3, allFeatures.size());
     assertTrue(allFeatures.containsAll(results));
   }
@@ -100,41 +100,38 @@ public class ViewTest {
     ViewLayer topologiesDS = new ViewLayer(storage, "topologies");
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection(VIEW_COLLECTION, topologiesDS);
     View view = new View(viewLayerCollection);
-    when(storage.newWriteSession(nc)).thenReturn(session);
+    when(storage.newWriteSession(sessionOptions)).thenReturn(session);
 
     final LayerWriteFeatureRequest request = new LayerWriteFeatureRequest();
-    final NakshaFeatureProxy feature = new NakshaFeatureProxy("id0");
-    request.add(new InsertFeature(VIEW_COLLECTION,feature));
+    final NakshaFeature feature = new NakshaFeature("id0");
+    request.add(write.createFeature(null,VIEW_COLLECTION,feature));
 
-    when(session.execute(request)).thenReturn(new SuccessResponse(sampleXyzWriteResponse(1, ExecutedOp.CREATED),null));
-    ViewWriteSession writeSession = view.newWriteSession(nc, true);
-
-    try (ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-        writeSession.execute(request).getXyzFeatureCursor()) {
-      assertTrue(cursor.hasNext());
-      cursor.next();
-      assertEquals(feature.getId(), cursor.getFeature().getId());
-      assertEquals(cursor.getOp(), EExecutedOp.CREATED);
-    } finally {
-      writeSession.commit(true);
-    }
+    when(session.execute(request)).thenReturn(new SuccessResponse(sampleXyzWriteResponse(1, ExecutedOp.CREATED)));
+    ViewWriteSession writeSession = view.newWriteSession(sessionOptions);
+    Response response = writeSession.execute(request);
+    assertInstanceOf(SuccessResponse.class,response);
+    SuccessResponse successResponse = (SuccessResponse) response;
+    assertEquals(feature.getId(), successResponse.getFeatures().get(0).getId());
+    assertEquals(ExecutedOp.CREATED, successResponse.getTuples().get(0).op);
+    writeSession.commit();
   }
 
   @Test
   void testDeleteApiNotation() {
+    final String VIEW_COLLECTION = "myCollection";
     IStorage storage = mock(IStorage.class);
     IWriteSession session = mock(IWriteSession.class);
 
     ViewLayer topologiesDS = new ViewLayer(storage, "topologies");
-    ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS);
+    ViewLayerCollection viewLayerCollection = new ViewLayerCollection(VIEW_COLLECTION, topologiesDS);
     View view = new View(viewLayerCollection);
-    when(storage.newWriteSession(nc, true)).thenReturn(session);
+    when(storage.newWriteSession(sessionOptions)).thenReturn(session);
 
     final LayerWriteFeatureRequest request = new LayerWriteFeatureRequest();
-    final NakshaFeatureProxy feature = new NakshaFeatureProxy("id0");
-    request.add(EWriteOp.DELETE, feature);
+    final NakshaFeature feature = new NakshaFeature("id0");
+    request.add(write.deleteFeature(null,VIEW_COLLECTION,feature,false));
 
-    when(session.execute(request)).thenReturn(new SuccessResponse(sampleXyzWriteResponse(1, ExecutedOp.DELETED),null));
+    when(session.execute(request)).thenReturn(new SuccessResponse(sampleXyzWriteResponse(1, ExecutedOp.DELETED)));
     ViewWriteSession writeSession = view.newWriteSession(nc, true);
 
     try (ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =

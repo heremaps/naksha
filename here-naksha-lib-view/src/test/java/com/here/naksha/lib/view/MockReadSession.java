@@ -22,17 +22,20 @@ import naksha.model.IReadSession;
 import java.util.List;
 import java.util.Map;
 
+import naksha.model.Tuple;
+import naksha.model.TupleNumber;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.request.Request;
-import naksha.model.request.ResultRow;
-import naksha.model.response.Response;
+import naksha.model.request.Response;
+import naksha.model.request.ResultTuple;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class MockReadSession implements IReadSession {
 
-  List<ResultRow> results;
+  List<NakshaFeature> results;
 
-  public MockReadSession(List<ResultRow> results) {
+  public MockReadSession(List<NakshaFeature> results) {
     this.results = results;
   }
 
@@ -41,26 +44,14 @@ public class MockReadSession implements IReadSession {
 
   @NotNull
   @Override
-  public Response execute(@NotNull Request<?> request) {
+  public Response execute(@NotNull Request request) {
     return null;
   }
 
   @NotNull
   @Override
-  public Response executeParallel(@NotNull Request<?> request) {
+  public Response executeParallel(@NotNull Request request) {
     return null;
-  }
-
-  @Nullable
-  @Override
-  public ResultRow getFeatureById(@NotNull String id) {
-    return null;
-  }
-
-  @NotNull
-  @Override
-  public Map<String, ResultRow> getFeaturesByIds(@NotNull List<String> ids) {
-    return Map.of();
   }
 
   @Override
@@ -93,19 +84,46 @@ public class MockReadSession implements IReadSession {
 
   }
 
+  @Override
+  public boolean isClosed() {
+    return false;
+  }
+
   @NotNull
   @Override
-  public String getRealm() {
+  public String getMap() {
     return "";
   }
 
   @Override
-  public void setRealm(@NotNull String s) {
+  public void setMap(@NotNull String s) {
 
   }
 
   @Override
-  public boolean isClosed() {
+  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
     return false;
+  }
+
+  @NotNull
+  @Override
+  public List<Tuple> getLatestTuples(@NotNull String mapId, @NotNull String collectionId, @NotNull String[] featureIds, @NotNull String mode) {
+    return List.of();
+  }
+
+  @NotNull
+  @Override
+  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, @NotNull String mode) {
+    return List.of();
+  }
+
+  @Override
+  public void fetchTuple(@NotNull ResultTuple resultTuple, @NotNull String mode) {
+
+  }
+
+  @Override
+  public void fetchTuples(@NotNull List<? extends ResultTuple> resultTuples, int from, int to, @NotNull String mode) {
+
   }
 }
