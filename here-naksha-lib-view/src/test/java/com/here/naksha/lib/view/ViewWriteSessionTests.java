@@ -1,14 +1,6 @@
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.exceptions.NoCursor;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzPoint;
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.*;
-import com.here.naksha.lib.psql.PsqlFeatureGenerator;
-import naksha.model.POp;
-import naksha.model.PRef;
-import naksha.model.ReadFeatures;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -47,7 +39,7 @@ public class ViewWriteSessionTests extends PsqlTests {
   @Test
   @Order(14)
   @EnabledIf("runTest")
-  void createCollection() throws NoCursor {
+  void createCollection() {
     assertNotNull(storage);
     assertNotNull(session);
     final WriteXyzCollections request = new WriteXyzCollections();

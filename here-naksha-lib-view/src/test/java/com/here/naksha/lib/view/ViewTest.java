@@ -30,15 +30,16 @@ import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
+import naksha.model.request.query.AnyOp;
+import naksha.model.request.query.POr;
+import naksha.model.request.query.PQuery;
+import naksha.model.request.query.Property;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
 
 import static com.here.naksha.lib.view.Sample.sampleXyzResponse;
@@ -132,16 +133,14 @@ public class ViewTest {
     request.add(write.deleteFeature(null,VIEW_COLLECTION,feature,false));
 
     when(session.execute(request)).thenReturn(new SuccessResponse(sampleXyzWriteResponse(1, ExecutedOp.DELETED)));
-    ViewWriteSession writeSession = view.newWriteSession(nc, true);
+    ViewWriteSession writeSession = view.newWriteSession(sessionOptions);
 
-    try (ForwardCursor<XyzFeature, XyzFeatureCodec> cursor =
-        writeSession.execute(request).getXyzFeatureCursor()) {
-      assertTrue(cursor.next());
-      assertEquals(feature.getId(), cursor.getId());
-      assertEquals(cursor.getOp(), EExecutedOp.DELETED);
-    } finally {
-      writeSession.commit(true);
-    }
+    Response response = writeSession.execute(request);
+    assertInstanceOf(SuccessResponse.class,response);
+    SuccessResponse successResponse = (SuccessResponse) response;
+    assertEquals(feature.getId(), successResponse.getFeatures().get(0).getId());
+    assertEquals(ExecutedOp.DELETED, successResponse.getTuples().get(0).op);
+    writeSession.commit();
   }
 
   @Test
@@ -155,9 +154,9 @@ public class ViewTest {
     ViewLayer topologiesDS = new ViewLayer(topologiesStorage, "topologies");
     ViewLayer buildingsDS = new ViewLayer(buildingsStorage, "buildings");
 
-    List<ResultRow> results = sampleXyzResponse(3);
-    when(topologiesStorage.newReadSession(nc, false)).thenReturn(new MockReadSession(results));
-    when(buildingsStorage.newReadSession(nc, false)).thenReturn(readSession);
+    List<NakshaFeature> results = sampleXyzResponse(3);
+    when(topologiesStorage.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
+    when(buildingsStorage.newReadSession(sessionOptions)).thenReturn(readSession);
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS, buildingsDS);
     View view = new View(viewLayerCollection);
@@ -172,33 +171,34 @@ public class ViewTest {
     IStorage topologiesStorage_1 = mock(IStorage.class);
     IStorage topologiesStorage_2 = mock(IStorage.class);
     IReadSession readSession = mock(IReadSession.class);
-    when(readSession.execute(any())).thenReturn(new SuccessResponse(emptyList(),null));
+    when(readSession.execute(any())).thenReturn(new SuccessResponse(emptyList()));
 
     ViewLayer topologiesDS_1 = new ViewLayer(topologiesStorage_1, TOPO);
     ViewLayer topologiesDS_2 = new ViewLayer(topologiesStorage_2, TOPO);
 
-    List<ResultRow> results = sampleXyzResponse(3);
-    when(topologiesStorage_1.newReadSession(nc, false)).thenReturn(readSession);
-    when(topologiesStorage_2.newReadSession(nc, false)).thenReturn(new MockReadSession(results));
+    List<NakshaFeature> results = sampleXyzResponse(3);
+    when(topologiesStorage_1.newReadSession(sessionOptions)).thenReturn(readSession);
+    when(topologiesStorage_2.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS_1, topologiesDS_2);
     View view = new View(viewLayerCollection);
 
     // when only by id
     ReadFeatures request1 = RequestHelper.readFeaturesByIdsRequest(TOPO, List.of("1"));
-    try (ForwardCursor<XyzFeature, XyzFeatureCodec> cursor = view.newReadSession(nc, false).execute(request1).getXyzFeatureCursor()) {
-      assertTrue(cursor.next());
-    }
+    SuccessResponse response = (SuccessResponse) view.newReadSession(nc, false).execute(request1);
+    assertNotNull(response.getTuples());
     // then
     verify(readSession, times(1)).execute(any());
 
     // when not only by id
     clearInvocations(readSession);
     ReadFeatures request2 = new ReadFeatures();
-    request2.setPropertyOp(or(eq(id(), 1), eq(app_id(), "app")));
-    try (ForwardCursor<XyzFeature, XyzFeatureCodec> cursor = view.newReadSession(nc, false).execute(request2).getXyzFeatureCursor()) {
-      assertTrue(cursor.next());
-    }
+    POr propQuery = new POr(new PQuery(new Property(Property.ID), AnyOp.getIS_ANY_OF(), new int[]{1}), new PQuery(new Property(Property.APP_ID), AnyOp.getIS_ANY_OF(), new String[]{"app"}));
+    RequestQuery requestQuery = new RequestQuery();
+    requestQuery.setProperties(propQuery);
+    request2.setQuery(requestQuery);
+    SuccessResponse response2 = (SuccessResponse) view.newReadSession(nc, false).execute(request2);
+    assertNotNull(response2.getTuples());
     verify(readSession, times(2)).execute(any());
   }
 
@@ -214,10 +214,10 @@ public class ViewTest {
     IReadSession buildReadSession = mock(IReadSession.class);
 
     when(topoReadSession.execute(any())).thenThrow(new RuntimeException(new TimeoutException()));
-    when(buildReadSession.execute(any())).thenReturn(new SuccessResponse(sampleXyzResponse(1),null));
+    when(buildReadSession.execute(any())).thenReturn(new SuccessResponse(sampleXyzResponse(1)));
 
-    when(topologiesStorage.newReadSession(nc, false)).thenReturn(buildReadSession);
-    when(buildingsStorage.newReadSession(nc, false)).thenReturn(topoReadSession);
+    when(topologiesStorage.newReadSession(sessionOptions)).thenReturn(buildReadSession);
+    when(buildingsStorage.newReadSession(sessionOptions)).thenReturn(topoReadSession);
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS, buildingsDS);
     View view = new View(viewLayerCollection);
@@ -244,7 +244,7 @@ public class ViewTest {
 
     List<SimpleTask> tasks = new ArrayList<>();
     try (MockedConstruction<ParallelQueryExecutor> queryExecutor = mockConstruction(ParallelQueryExecutor.class, (mock, context) -> {
-      when(mock.queryInParallel(any(), any())).thenAnswer(new Answer<Object>() {
+      when(mock.queryInParallel(any())).thenAnswer(new Answer<Object>() {
         @Override
         public Object answer(InvocationOnMock invocation) throws Throwable {
           List<LayerReadRequest> requests = invocation.getArgument(0);
@@ -261,7 +261,7 @@ public class ViewTest {
       });
     })) {
 
-      ViewReadSession viewReadSession = view.newReadSession(nc, false);
+      ViewReadSession viewReadSession = view.newReadSession(sessionOptions);
       Throwable ex = assertThrows(TooManyTasks.class, () -> viewReadSession.execute(new ReadFeatures()));
       assertTrue(ex.getMessage().contains("Maximum number of concurrent tasks"));
     }
