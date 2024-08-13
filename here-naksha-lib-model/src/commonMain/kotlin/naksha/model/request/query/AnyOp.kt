@@ -5,6 +5,7 @@ package naksha.model.request.query
 import naksha.base.JsEnum
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
@@ -28,7 +29,7 @@ open class AnyOp : JsEnum() {
          * @since 3.0.0
          */
         @JsStatic
-        @JvmStatic
+        @JvmField
         val EXISTS = def(AnyOp::class, "exists")
 
         /**
@@ -36,7 +37,7 @@ open class AnyOp : JsEnum() {
          * @since 3.0.0
          */
         @JsStatic
-        @JvmStatic
+        @JvmField
         val IS_ANY_OF = def(AnyOp::class, "anyOf")
 
         /**
@@ -44,7 +45,7 @@ open class AnyOp : JsEnum() {
          * @since 3.0.0
          */
         @JsStatic
-        @JvmStatic
+        @JvmField
         val IS_NULL = def(AnyOp::class, "isNull")
 
         /**
@@ -52,7 +53,7 @@ open class AnyOp : JsEnum() {
          * @since 3.0.0
          */
         @JsStatic
-        @JvmStatic
+        @JvmField
         val IS_NOT_NULL = def(AnyOp::class, "isNotNull")
 
         /**
@@ -60,7 +61,7 @@ open class AnyOp : JsEnum() {
          * @since 3.0.0
          */
         @JsStatic
-        @JvmStatic
+        @JvmField
         val IS_TRUE = def(AnyOp::class, "isTrue")
 
         /**
@@ -68,7 +69,7 @@ open class AnyOp : JsEnum() {
          * @since 3.0.0
          */
         @JsStatic
-        @JvmStatic
+        @JvmField
         val IS_FALSE = def(AnyOp::class, "isFalse")
 
         /**
@@ -95,7 +96,7 @@ open class AnyOp : JsEnum() {
          * @since 3.0.0
          */
         @JsStatic
-        @JvmStatic
+        @JvmField
         val CONTAINS = def(AnyOp::class, "contains")
     }
 }
