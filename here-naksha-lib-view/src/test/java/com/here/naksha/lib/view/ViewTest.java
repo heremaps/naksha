@@ -21,7 +21,6 @@ package com.here.naksha.lib.view;
 import com.here.naksha.lib.core.*;
 import com.here.naksha.lib.core.exceptions.TooManyTasks;
 import com.here.naksha.lib.core.exceptions.UncheckedException;
-import com.here.naksha.lib.core.models.storage.*;
 import naksha.model.*;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.view.concurrent.LayerReadRequest;

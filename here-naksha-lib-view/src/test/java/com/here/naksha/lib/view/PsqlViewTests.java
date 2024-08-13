@@ -19,6 +19,9 @@
 package com.here.naksha.lib.view;
 
 import com.here.naksha.lib.core.models.storage.EWriteOp;
+import naksha.geo.ICoordinates;
+import naksha.geo.PointCoord;
+import naksha.geo.SpPoint;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
@@ -32,6 +35,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -83,30 +88,30 @@ class PsqlViewTests extends PsqlTests {
   void addFeatures() {
     assertNotNull(storage);
     assertNotNull(session);
-    final WriteXyzFeatures requestTest0 = new WriteXyzFeatures(COLLECTION_0);
-    final WriteXyzFeatures requestTest1 = new WriteXyzFeatures(COLLECTION_1);
-    final WriteXyzFeatures requestTest2 = new WriteXyzFeatures(COLLECTION_2);
+    ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
+    final WriteRequest requestTest0 = new WriteRequest();
+    final WriteRequest requestTest1 = new WriteRequest();
+    final WriteRequest requestTest2 = new WriteRequest();
+    final SpPoint point = new SpPoint(new PointCoord(0d, 0d));
+    final SpPoint point1 = new SpPoint(new PointCoord(1d, 1d));
+    final SpPoint point2 = new SpPoint(new PointCoord(2d, 2d));
     for (int i = 0; i < 10; i++) {
-      final XyzFeature feature = fg.newRandomFeature();
-      feature.setGeometry(new XyzPoint(0d, 0d));
-      requestTest0.add(EWriteOp.PUT, feature);
+      final NakshaFeature feature = new NakshaFeature(String.valueOf(threadLocalRandom.nextInt()));
+      feature.setGeometry(point);
+      requestTest0.add(write.updateFeature(null, COLLECTION_0, feature, false));
 
-      XyzFeature featureEdited1 = feature.deepClone();
-      featureEdited1.setGeometry(new XyzPoint(1d, 1d));
-      requestTest1.add(EWriteOp.PUT, featureEdited1);
+      NakshaFeature featureEdited1 = feature.copy(true);
+      featureEdited1.setGeometry(point1);
+      requestTest1.add(write.updateFeature(null, COLLECTION_1, featureEdited1, false));
 
-      XyzFeature featureEdited2 = feature.deepClone();
-      featureEdited2.setGeometry(new XyzPoint(2d, 2d));
-      requestTest2.add(EWriteOp.PUT, featureEdited2);
+      NakshaFeature featureEdited2 = feature.copy(true);
+      featureEdited2.setGeometry(point2);
+      requestTest2.add(write.updateFeature(null, COLLECTION_2, featureEdited2, false));
     }
-
-    try {
       session.execute(requestTest0);
       session.execute(requestTest1);
       session.execute(requestTest2);
-    } finally {
-      session.commit(true);
-    }
+      session.commit();
   }
 
 
@@ -130,22 +135,24 @@ class PsqlViewTests extends PsqlTests {
     ReadFeatures requestAll = new ReadFeatures();
 
     // when
-    List<XyzFeatureCodec> features = queryView(view, requestAll);
-    List<XyzFeatureCodec> features1 = queryView(viewReversed, requestAll);
+    List<NakshaFeature> features = queryView(view, requestAll);
+    List<NakshaFeature> features1 = queryView(viewReversed, requestAll);
 
     // then
     assertEquals(10, features.size());
-    assertEquals(0d, features.get(0).getGeometry().getCoordinate().x);
+    PointCoord coordinates = (PointCoord) features.get(0).getGeometry().getCoordinates();
+    assertEquals(0d, coordinates.getLongitude());
 
     assertEquals(10, features1.size());
-    assertEquals(1d, features1.get(0).getGeometry().getCoordinate().x);
-    session.commit(true);
+    PointCoord coordinates1 = (PointCoord) features1.get(0).getGeometry().getCoordinates();
+    assertEquals(1d, coordinates1.getLongitude());
+    session.commit();
   }
 
   @Test
   @Order(41)
   @EnabledIf("runTest")
-  void viewQueryTest_fetchMissing() throws NoCursor {
+  void viewQueryTest_fetchMissing() {
     assertNotNull(storage);
     assertNotNull(session);
 
