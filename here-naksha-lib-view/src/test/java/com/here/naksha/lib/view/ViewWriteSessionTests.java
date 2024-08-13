@@ -1,6 +1,5 @@
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.models.storage.*;
 import naksha.geo.PointCoord;
 import naksha.geo.SpPoint;
 import naksha.model.SessionOptions;
@@ -43,6 +42,7 @@ public class ViewWriteSessionTests extends PsqlTests {
 
   static final String COLLECTION_0 = "test_view0";
   static final String COLLECTION_1 = "test_view1";
+  static final Write write = new Write();
 
 
   @Test
@@ -93,7 +93,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     ViewWriteSession writeSession = view.newWriteSession(new SessionOptions());
       ReadFeatures readRequest = new ReadFeatures();
     final RequestQuery requestQuery = new RequestQuery();
-    requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF,"feature_id_view0"));
+    requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new String[]{"feature_id_view0"}));
     readRequest.setQuery(requestQuery);
     Response response = writeSession.execute(readRequest);
     assertInstanceOf(SuccessResponse.class,response);
@@ -101,41 +101,39 @@ public class ViewWriteSessionTests extends PsqlTests {
       List<NakshaFeature> features = successResponse.getFeatures();
 
       assertEquals(1, features.size());
-      assertEquals(0d, features.get(0).getGeometry().getCoordinate().x);
+    PointCoord coordinates = (PointCoord) features.get(0).getGeometry().getCoordinates();
+    assertEquals(0d, coordinates.getLongitude());
 
       //Update fetched feature using viewwritesession
       final LayerWriteFeatureRequest writeRequest = new LayerWriteFeatureRequest();
       features.stream().forEach(feature -> {
-        XyzFeature editedFeature = feature.encodeFeature(true).getFeature();
-        editedFeature.setGeometry(new XyzPoint(1d, 1d));
-        editedFeature.getProperties().put("testProperty", "test");
-        writeRequest.add(EWriteOp.PUT, editedFeature);
+        feature.setGeometry(new SpPoint(new PointCoord(1d,1d)));
+        feature.getProperties().put("testProperty", "test");
+        writeRequest.add(write.updateFeature(feature));
       });
-      try (ForwardCursor<XyzFeature, XyzFeatureCodec> writeCursor =
-          writeSession.execute(writeRequest).getXyzFeatureCursor()) {
-        assertTrue(writeCursor.hasNext());
-        writeCursor.next();
-        XyzFeature feature = writeCursor.getFeature();
-        assertEquals(1d, feature.getGeometry().getJTSGeometry().getCoordinate().x);
+    SuccessResponse response1 = (SuccessResponse) writeSession.execute(writeRequest);
+    assertNotNull(response1.getTuples().get(0));
+        NakshaFeature feature = response1.getFeatures().get(0);
+        assertEquals(1d, ((PointCoord) feature.getGeometry().getCoordinates()).getLongitude());
         assertTrue(feature.getProperties().containsKey("testProperty"));
         assertEquals("test", feature.getProperties().get("testProperty").toString());
-        assertSame(EExecutedOp.UPDATED, writeCursor.getOp());
+        assertSame(ExecutedOp.UPDATED, response1.getTuples().get(0).op);
 
-        writeSession.commit(true);
-      }
+        writeSession.commit();
+
 
       //Check if the feature updated in expected storage collection
       ViewLayerCollection readViewCollection = new ViewLayerCollection("ReadLayer", layer0);
       view = new View(readViewCollection);
 
-      List<XyzFeatureCodec> list = queryView(view, readRequest);
-      assertTrue(list.size() == 1);
-      XyzFeature updatedFeature = list.get(0).encodeFeature(true).getFeature();
-      assertEquals(1d, updatedFeature.getGeometry().getJTSGeometry().getCoordinate().x);
+      List<NakshaFeature> list = queryView(view, readRequest);
+      assertEquals(1, list.size());
+      NakshaFeature updatedFeature = list.get(0);
+      assertEquals(1d, ((PointCoord) updatedFeature.getGeometry().getCoordinates()).getLongitude());
       assertTrue(updatedFeature.getProperties().containsKey("testProperty"));
       assertEquals("test", updatedFeature.getProperties().get("testProperty").toString());
 
-      session.commit(true);
+      session.commit();
 
   }
 
@@ -151,10 +149,12 @@ public class ViewWriteSessionTests extends PsqlTests {
     View view = new View(viewLayerCollection);
 
     ReadFeatures readRequest = new ReadFeatures();
-    readRequest.setPropertyOp(POp.eq(PRef.id(), "feature_id_view0"));
+    final RequestQuery requestQuery = new RequestQuery();
+    requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new String[]{"feature_id_view0"}));
+    readRequest.setQuery(requestQuery);
 
-    List<XyzFeatureCodec> list = queryView(view, readRequest);
-    assertTrue(list.size() == 0);
+    List<NakshaFeature> list = queryView(view, readRequest);
+    assertTrue(list.isEmpty());
   }
 
   @Test
@@ -170,28 +170,27 @@ public class ViewWriteSessionTests extends PsqlTests {
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("Layers", layer0, layer1);
     View view = new View(viewLayerCollection);
 
-    try (ViewWriteSession writeSession = view.newWriteSession(nakshaContext, true).withWriteLayer(layer1).init()) {
+    ViewWriteSession writeSession = view.newWriteSession(null).withWriteLayer(layer1).init();
       LayerWriteFeatureRequest writeRequest = new LayerWriteFeatureRequest();
-      final XyzFeature feature = new XyzFeature(FEATURE_ID);
-      feature.setGeometry(new XyzPoint(0d, 0d));
-      writeRequest.add(EWriteOp.PUT, feature);
+      final NakshaFeature feature = new NakshaFeature(FEATURE_ID);
+      feature.setGeometry(new SpPoint(new PointCoord(0d, 0d)));
+      writeRequest.add(write.updateFeature(feature));
 
-      try (ForwardCursor<XyzFeature, XyzFeatureCodec> writeCursor =
-          writeSession.execute(writeRequest).getXyzFeatureCursor()) {
-        assertTrue(writeCursor.hasNext());
-        writeCursor.next();
-        assertSame(EExecutedOp.CREATED, writeCursor.getOp());
-      }
-      writeSession.commit(true);
+    SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
+    assertNotNull(response.getTuples().get(0));
+    assertSame(ExecutedOp.CREATED, response.getTuples().get(0).op);
+      writeSession.commit();
 
       //check if the newly added feature found on layer
       ReadFeatures readRequest = new ReadFeatures();
-      readRequest.setPropertyOp(POp.eq(PRef.id(), FEATURE_ID));
+    final RequestQuery requestQuery = new RequestQuery();
+    requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new String[]{FEATURE_ID}));
+      readRequest.setQuery(requestQuery);
 
-      List<XyzFeatureCodec> list = queryView(view, readRequest);
+      List<NakshaFeature> list = queryView(view, readRequest);
       assertTrue(list.size() == 1);
-    }
-    session.commit(true);
+
+    session.commit();
   }
 
   @Test
@@ -207,22 +206,23 @@ public class ViewWriteSessionTests extends PsqlTests {
     View view = new View(viewLayerCollection);
 
     ViewWriteSession writeSession = view.newWriteSession(new SessionOptions());      LayerWriteFeatureRequest writeRequest = new LayerWriteFeatureRequest();
-      final NakshaFeature feature = new NakshaFeature(FEATURE_ID);
-      writeRequest.add(EWriteOp.DELETE, feature);
+      writeRequest.add(write.deleteFeatureById(null,FEATURE_ID,null));
 
-      try (ForwardCursor<XyzFeature, XyzFeatureCodec> writeCursor =
-          writeSession.execute(writeRequest).getXyzFeatureCursor()) {
-        assertTrue(writeCursor.next());
-        assertSame(EExecutedOp.DELETED, writeCursor.getOp());
-        assertEquals(FEATURE_ID, writeCursor.getId());
-      }
-      writeSession.commit(true);
+    SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
+
+    assertNotNull(response.getTuples().get(0));
+    assertSame(ExecutedOp.DELETED, response.getTuples().get(0).op);
+        assertEquals(FEATURE_ID, response.getFeatures().get(0).getId());
+
+      writeSession.commit();
 
       //check if the newly added feature found on layer
       ReadFeatures readRequest = new ReadFeatures();
-      readRequest.setPropertyOp(POp.eq(PRef.id(), FEATURE_ID));
+    final RequestQuery requestQuery = new RequestQuery();
+    requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new String[]{FEATURE_ID}));
+      readRequest.setQuery(requestQuery);
 
-      List<XyzFeatureCodec> list = queryView(view, readRequest);
+      List<NakshaFeature> list = queryView(view, readRequest);
       assertTrue(list.size() == 0);
     session.commit();
   }
