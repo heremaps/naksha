@@ -161,7 +161,7 @@ public class ViewTest {
     View view = new View(viewLayerCollection);
 
     // expect
-    assertThrows(UncheckedException.class, () -> view.newReadSession(nc, false).execute(new ReadFeatures()));
+    assertThrows(UncheckedException.class, () -> view.newReadSession(null).execute(new ReadFeatures()));
   }
 
   @Test
@@ -184,7 +184,7 @@ public class ViewTest {
 
     // when only by id
     ReadFeatures request1 = RequestHelper.readFeaturesByIdsRequest(TOPO, List.of("1"));
-    SuccessResponse response = (SuccessResponse) view.newReadSession(nc, false).execute(request1);
+    SuccessResponse response = (SuccessResponse) view.newReadSession(null).execute(request1);
     assertNotNull(response.getTuples());
     // then
     verify(readSession, times(1)).execute(any());
@@ -196,7 +196,7 @@ public class ViewTest {
     RequestQuery requestQuery = new RequestQuery();
     requestQuery.setProperties(propQuery);
     request2.setQuery(requestQuery);
-    SuccessResponse response2 = (SuccessResponse) view.newReadSession(nc, false).execute(request2);
+    SuccessResponse response2 = (SuccessResponse) view.newReadSession(null).execute(request2);
     assertNotNull(response2.getTuples());
     verify(readSession, times(2)).execute(any());
   }
@@ -221,7 +221,7 @@ public class ViewTest {
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS, buildingsDS);
     View view = new View(viewLayerCollection);
 
-    Throwable exception = assertThrows(UncheckedException.class, () -> view.newReadSession(nc, false).execute(new ReadFeatures()));
+    Throwable exception = assertThrows(UncheckedException.class, () -> view.newReadSession(null).execute(new ReadFeatures()));
     assertTrue(exception.getMessage().contains("TimeoutException"));
     verify(topoReadSession, times(1)).execute(any());
     verify(buildReadSession, times(1)).execute(any());

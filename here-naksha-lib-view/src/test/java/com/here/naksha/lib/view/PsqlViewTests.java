@@ -19,15 +19,13 @@
 package com.here.naksha.lib.view;
 
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-import naksha.geo.ICoordinates;
 import naksha.geo.PointCoord;
-import naksha.geo.SpGeometry;
 import naksha.geo.SpPoint;
-import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
 import naksha.model.request.query.SpIntersects;
+import naksha.model.request.query.SpOr;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -37,7 +35,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -200,7 +197,15 @@ class PsqlViewTests extends PsqlTests {
     View view = new View(viewLayerCollection);
 
     ReadFeatures getByPoint = new ReadFeatures();
-    getByPoint.setSpatialOp(SOp.or(intersects(new XyzPoint(0d, 0d)), intersects(new XyzPoint(2d, 2d))));
+    RequestQuery requestQuery = new RequestQuery();
+    SpIntersects spIntersects = new SpIntersects();
+    spIntersects.setGeometry(new SpPoint(new PointCoord(0d,0d)));
+    SpOr spOr = new SpOr();
+    spOr.add(spIntersects);
+    spIntersects.setGeometry(new SpPoint(new PointCoord(2d,2d)));
+    spOr.add(spIntersects);
+    requestQuery.setSpatial(spOr);
+    getByPoint.setQuery(requestQuery);
 
     // when
     List<NakshaFeature> features = queryView(view, getByPoint);
@@ -218,24 +223,22 @@ class PsqlViewTests extends PsqlTests {
   void viewQueryTest_returnFromMiddleLayerIfFeatureIsMissingInTopLayer() {
     assertNotNull(storage);
     assertNotNull(session);
+    ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
 
     // given feature in COLLECTION 1 and 2 (but not in 0)
-    PsqlFeatureGenerator fg = new PsqlFeatureGenerator();
-    final WriteXyzFeatures requestTest1 = new WriteXyzFeatures(COLLECTION_1);
-    final WriteXyzFeatures requestTest2 = new WriteXyzFeatures(COLLECTION_2);
-    final XyzFeature feature = fg.newRandomFeature();
-    feature.setGeometry(new XyzPoint(11d, 11d));
-    requestTest1.add(EWriteOp.CREATE, feature);
+    final WriteRequest requestTest1 = new WriteRequest();
+    final WriteRequest requestTest2 = new WriteRequest();
+    final NakshaFeature feature = new NakshaFeature(String.valueOf(threadLocalRandom.nextInt()));
+    feature.setGeometry(new SpPoint(new PointCoord(11d, 11d)));
+    requestTest1.add(write.createFeature(null, COLLECTION_1, feature));
 
-    XyzFeature featureEdited2 = feature.deepClone();
-    featureEdited2.setGeometry(new XyzPoint(22d, 22d));
-    requestTest2.add(EWriteOp.CREATE, featureEdited2);
-    try {
+    NakshaFeature featureEdited2 = feature.copy(true);
+    featureEdited2.setGeometry(new SpPoint(new PointCoord(22d, 22d)));
+    requestTest2.add(write.createFeature(null, COLLECTION_2, featureEdited2));
       session.execute(requestTest1);
       session.execute(requestTest2);
-    } finally {
-      session.commit(true);
-    }
+      session.commit();
+
 
     // given view
     ViewLayer layer0 = new ViewLayer(storage, COLLECTION_0);
@@ -247,7 +250,15 @@ class PsqlViewTests extends PsqlTests {
 
     // when requesting for feature from COLLECTION 0, 1 and 2
     ReadFeatures getByPoint = new ReadFeatures();
-    getByPoint.setSpatialOp(SOp.or(intersects(new XyzPoint(11d, 11d)), intersects(new XyzPoint(22d, 22d))));;
+    RequestQuery requestQuery = new RequestQuery();
+    SpIntersects spIntersects = new SpIntersects();
+    spIntersects.setGeometry(new SpPoint(new PointCoord(11d,11d)));
+    SpOr spOr = new SpOr();
+    spOr.add(spIntersects);
+    spIntersects.setGeometry(new SpPoint(new PointCoord(22d,22d)));
+    spOr.add(spIntersects);
+    requestQuery.setSpatial(spOr);
+    getByPoint.setQuery(requestQuery);
     List<NakshaFeature> features = queryView(view, getByPoint);
 
     // then should get result from COLLECTION_1 as it's next in priority and feature doesn't exist in COLLECTION_0 which is top priority layer.
@@ -258,7 +269,7 @@ class PsqlViewTests extends PsqlTests {
   }
 
   private List<NakshaFeature> queryView(View view, ReadFeatures request) {
-    Response response = view.newReadSession().execute(request);
+    Response response = view.newReadSession(null).execute(request);
     assertInstanceOf(SuccessResponse.class,response);
     SuccessResponse successResponse = (SuccessResponse) response;
     return successResponse.getFeatures();
