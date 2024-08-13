@@ -19,6 +19,7 @@
 package com.here.naksha.lib.view;
 
 import naksha.model.NakshaContext;
+import naksha.model.SessionOptions;
 import naksha.psql.PgPlatform;
 import naksha.psql.PgStorage;
 import org.jetbrains.annotations.NotNull;
@@ -62,7 +63,7 @@ abstract class PsqlTests {
 
   static final String TEST_APP_ID = "test_app";
   static final String TEST_AUTHOR = "test_author";
-  static final PgStorage storage = PgPlatform.newTestStorage();
+  static PgStorage storage = PgPlatform.newTestStorage();
   static @Nullable NakshaContext nakshaContext;
   static @Nullable ViewWriteSession session;
 
@@ -86,7 +87,7 @@ abstract class PsqlTests {
   @EnabledIf("runTest")
   void startWriteSession() {
     assertNotNull(storage);
-    session = storage.newWriteSession(nakshaContext, true);
+    session = storage.newWriteSession(new SessionOptions());
     assertNotNull(session);
   }
 

@@ -18,24 +18,11 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.exceptions.NoCursor;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzPoint;
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.ForwardCursor;
-import naksha.model.ReadFeatures;
-import naksha.model.SOp;
-import com.here.naksha.lib.core.models.storage.SeekableCursor;
-import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
-import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.psql.PsqlFeatureGenerator;
-import com.here.naksha.lib.psql.PsqlStorage;
-import com.here.naksha.lib.psql.PsqlStorage.Params;
-import com.here.naksha.lib.psql.PsqlStorageConfig;
-import com.here.naksha.lib.psql.PsqlWriteSession;
+import naksha.model.SessionOptions;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.*;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -46,15 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import static naksha.model.SOp.intersects;
-import static com.here.naksha.lib.psql.PsqlStorageConfig.configFromFileOrEnv;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -81,24 +60,21 @@ class PsqlViewTests extends PsqlTests {
   static final String COLLECTION_0 = "test_view0";
   static final String COLLECTION_1 = "test_view1";
   static final String COLLECTION_2 = "test_view2";
+  static final Write write = new Write();
 
   @Test
   @Order(30)
   @EnabledIf("runTest")
-  void createCollection() throws NoCursor {
+  void createCollection() {
     assertNotNull(storage);
     assertNotNull(session);
-    final WriteXyzCollections request = new WriteXyzCollections();
-    request.add(EWriteOp.CREATE, new XyzCollection(COLLECTION_0, 1, false, true));
-    request.add(EWriteOp.CREATE, new XyzCollection(COLLECTION_1, 1, false, true));
-    request.add(EWriteOp.CREATE, new XyzCollection(COLLECTION_2, 1, false, true));
-    try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
-             session.execute(request).getXyzCollectionCursor()) {
-      assertNotNull(cursor);
-      assertTrue(cursor.hasNext());
-    } finally {
-      session.commit(true);
-    }
+    final WriteRequest request = new WriteRequest();
+    request.add(write.createCollection(null, new NakshaCollection(COLLECTION_0, 1, null, false, true, null)));
+    request.add(write.createCollection(null, new NakshaCollection(COLLECTION_1, 1, null, false, true, null)));
+    request.add(write.createCollection(null, new NakshaCollection(COLLECTION_2, 1, null, false, true, null)));
+    SuccessResponse response = (SuccessResponse) session.execute(request);
+    assertNotNull(response.getTuples());
+    session.commit();
   }
 
   @Test
@@ -107,7 +83,6 @@ class PsqlViewTests extends PsqlTests {
   void addFeatures() {
     assertNotNull(storage);
     assertNotNull(session);
-    PsqlFeatureGenerator fg = new PsqlFeatureGenerator();
     final WriteXyzFeatures requestTest0 = new WriteXyzFeatures(COLLECTION_0);
     final WriteXyzFeatures requestTest1 = new WriteXyzFeatures(COLLECTION_1);
     final WriteXyzFeatures requestTest2 = new WriteXyzFeatures(COLLECTION_2);
@@ -138,7 +113,7 @@ class PsqlViewTests extends PsqlTests {
   @Test
   @Order(41)
   @EnabledIf("runTest")
-  void viewQueryTest_pickTopLayerResult() throws NoCursor {
+  void viewQueryTest_pickTopLayerResult() {
     assertNotNull(storage);
     assertNotNull(session);
 
@@ -264,16 +239,13 @@ class PsqlViewTests extends PsqlTests {
     // then should get result from COLLECTION_1 as it's next in priority and feature doesn't exist in COLLECTION_0 which is top priority layer.
     assertEquals(1, features.size());
     assertEquals(11d, features.get(0).getGeometry().getCoordinate().x);
-    session.commit(true);
+    session.commit();
   }
 
-  private List<XyzFeatureCodec> queryView(View view, ReadFeatures request) throws NoCursor {
-    ViewReadSession readSession = view.newReadSession(nakshaContext, false);
-    try (final SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
-             readSession.execute(request).getXyzSeekableCursor()) {
-      return cursor.asList();
-    } finally {
-      readSession.close();
-    }
+  private List<NakshaFeature> queryView(View view, ReadFeatures request) {
+    Response response = view.newReadSession().execute(request);
+    assertInstanceOf(SuccessResponse.class,response);
+    SuccessResponse successResponse = (SuccessResponse) response;
+    return successResponse.getFeatures();
   }
 }

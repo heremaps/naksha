@@ -193,7 +193,7 @@ public class ViewTest {
     // when not only by id
     clearInvocations(readSession);
     ReadFeatures request2 = new ReadFeatures();
-    POr propQuery = new POr(new PQuery(new Property(Property.ID), AnyOp.getIS_ANY_OF(), new int[]{1}), new PQuery(new Property(Property.APP_ID), AnyOp.getIS_ANY_OF(), new String[]{"app"}));
+    POr propQuery = new POr(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new int[]{1}), new PQuery(new Property(Property.APP_ID), AnyOp.IS_ANY_OF, new String[]{"app"}));
     RequestQuery requestQuery = new RequestQuery();
     requestQuery.setProperties(propQuery);
     request2.setQuery(requestQuery);

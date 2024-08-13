@@ -93,7 +93,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     ViewWriteSession writeSession = view.newWriteSession(new SessionOptions());
       ReadFeatures readRequest = new ReadFeatures();
     final RequestQuery requestQuery = new RequestQuery();
-    requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.getIS_ANY_OF(),"feature_id_view0"));
+    requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF,"feature_id_view0"));
     readRequest.setQuery(requestQuery);
     Response response = writeSession.execute(readRequest);
     assertInstanceOf(SuccessResponse.class,response);

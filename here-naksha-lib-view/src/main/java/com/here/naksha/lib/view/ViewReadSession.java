@@ -194,7 +194,7 @@ public class ViewReadSession implements IReadSession {
       if (propertyQuery instanceof PQuery) {
         final PQuery query = ((PQuery) propertyQuery);
         return query.getProperty().getPath().contains(Property.ID)
-            && query.getOp().equals(AnyOp.getIS_ANY_OF());
+            && query.getOp().equals(AnyOp.IS_ANY_OF);
       }
     }
     return false;
