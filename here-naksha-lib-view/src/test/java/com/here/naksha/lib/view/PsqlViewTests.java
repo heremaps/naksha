@@ -21,11 +21,13 @@ package com.here.naksha.lib.view;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import naksha.geo.ICoordinates;
 import naksha.geo.PointCoord;
+import naksha.geo.SpGeometry;
 import naksha.geo.SpPoint;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
+import naksha.model.request.query.SpIntersects;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -164,23 +166,28 @@ class PsqlViewTests extends PsqlTests {
     View view = new View(viewLayerCollection);
 
     ReadFeatures getByPoint = new ReadFeatures();
-    getByPoint.setSpatialOp(intersects(new XyzPoint(1d, 1d)));
+    RequestQuery requestQuery = new RequestQuery();
+    SpIntersects spIntersects = new SpIntersects();
+    spIntersects.setGeometry(new SpPoint(new PointCoord(1d,1d)));
+    requestQuery.setSpatial(spIntersects);
+    getByPoint.setQuery(requestQuery);
 
     // when
-    List<XyzFeatureCodec> features = queryView(view, getByPoint);
+    List<NakshaFeature> features = queryView(view, getByPoint);
 
     // then
     assertEquals(10, features.size());
     // feature fetched in second query from obligatory storage
-    assertEquals(0d, features.get(0).getGeometry().getCoordinate().x);
+    SpPoint geometry = (SpPoint) features.get(0).getGeometry();
+    assertEquals(0d, geometry.getCoordinates().getLongitude());
 
-    session.commit(true);
+    session.commit();
   }
 
   @Test
   @Order(41)
   @EnabledIf("runTest")
-  void viewQueryTest_missingMiddleLayerInSpacialQuery() throws NoCursor {
+  void viewQueryTest_missingMiddleLayerInSpacialQuery() {
     assertNotNull(storage);
     assertNotNull(session);
 
@@ -196,19 +203,19 @@ class PsqlViewTests extends PsqlTests {
     getByPoint.setSpatialOp(SOp.or(intersects(new XyzPoint(0d, 0d)), intersects(new XyzPoint(2d, 2d))));
 
     // when
-    List<XyzFeatureCodec> features = queryView(view, getByPoint);
+    List<NakshaFeature> features = queryView(view, getByPoint);
 
     // then
     assertEquals(10, features.size());
-    assertEquals(0d, features.get(0).getGeometry().getCoordinate().x);
-
-    session.commit(true);
+    SpPoint geometry = (SpPoint) features.get(0).getGeometry();
+    assertEquals(0d, geometry.getCoordinates().getLongitude());
+    session.commit();
   }
 
   @Test
   @Order(41)
   @EnabledIf("runTest")
-  void viewQueryTest_returnFromMiddleLayerIfFeatureIsMissingInTopLayer() throws NoCursor {
+  void viewQueryTest_returnFromMiddleLayerIfFeatureIsMissingInTopLayer() {
     assertNotNull(storage);
     assertNotNull(session);
 
@@ -241,11 +248,12 @@ class PsqlViewTests extends PsqlTests {
     // when requesting for feature from COLLECTION 0, 1 and 2
     ReadFeatures getByPoint = new ReadFeatures();
     getByPoint.setSpatialOp(SOp.or(intersects(new XyzPoint(11d, 11d)), intersects(new XyzPoint(22d, 22d))));;
-    List<XyzFeatureCodec> features = queryView(view, getByPoint);
+    List<NakshaFeature> features = queryView(view, getByPoint);
 
     // then should get result from COLLECTION_1 as it's next in priority and feature doesn't exist in COLLECTION_0 which is top priority layer.
     assertEquals(1, features.size());
-    assertEquals(11d, features.get(0).getGeometry().getCoordinate().x);
+    SpPoint geometry = (SpPoint) features.get(0).getGeometry();
+    assertEquals(11d, geometry.getCoordinates().getLongitude());
     session.commit();
   }
 
