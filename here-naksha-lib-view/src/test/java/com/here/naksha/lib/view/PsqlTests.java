@@ -79,7 +79,7 @@ abstract class PsqlTests {
   @EnabledIf("runTest")
   void initStorage() {
     assertNotNull(storage);
-    storage.initStorage();
+    storage.initStorage(null);
   }
 
   @Test
@@ -87,7 +87,7 @@ abstract class PsqlTests {
   @EnabledIf("runTest")
   void startWriteSession() {
     assertNotNull(storage);
-    session = storage.newWriteSession(new SessionOptions());
+    session = (ViewWriteSession) storage.newWriteSession(new SessionOptions());
     assertNotNull(session);
   }
 
