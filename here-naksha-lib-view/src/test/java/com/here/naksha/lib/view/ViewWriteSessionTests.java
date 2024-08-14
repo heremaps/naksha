@@ -228,7 +228,7 @@ public class ViewWriteSessionTests extends PsqlTests {
   }
 
   private List<NakshaFeature> queryView(View view, ReadFeatures request) {
-    Response response = view.newReadSession().execute(request);
+    Response response = view.newReadSession(null).execute(request);
     assertInstanceOf(SuccessResponse.class,response);
     SuccessResponse successResponse = (SuccessResponse) response;
     return successResponse.getFeatures();
