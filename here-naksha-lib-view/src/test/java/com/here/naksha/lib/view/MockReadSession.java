@@ -20,7 +20,6 @@ package com.here.naksha.lib.view;
 
 import naksha.model.IReadSession;
 import java.util.List;
-import java.util.Map;
 
 import naksha.model.Tuple;
 import naksha.model.TupleNumber;
@@ -28,6 +27,7 @@ import naksha.model.objects.NakshaFeature;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.ResultTuple;
+import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,7 +45,7 @@ public class MockReadSession implements IReadSession {
   @NotNull
   @Override
   public Response execute(@NotNull Request request) {
-    return null;
+    return new SuccessResponse(results);
   }
 
   @NotNull
@@ -54,34 +54,40 @@ public class MockReadSession implements IReadSession {
     return null;
   }
 
+  private int socketTimeout = 0;
+
   @Override
   public int getSocketTimeout() {
-    return 0;
+    return socketTimeout;
   }
 
   @Override
   public void setSocketTimeout(int i) {
-
+    socketTimeout = i;
   }
+
+  private int stmtTimeout = 0;
 
   @Override
   public int getStmtTimeout() {
-    return 0;
+    return stmtTimeout;
   }
 
   @Override
   public void setStmtTimeout(int i) {
-
+    stmtTimeout = i;
   }
+
+  private int lockTimeout = 0;
 
   @Override
   public int getLockTimeout() {
-    return 0;
+    return lockTimeout;
   }
 
   @Override
   public void setLockTimeout(int i) {
-
+    lockTimeout = i;
   }
 
   @Override
@@ -89,15 +95,17 @@ public class MockReadSession implements IReadSession {
     return false;
   }
 
+  private String map = "";
+
   @NotNull
   @Override
   public String getMap() {
-    return "";
+    return map;
   }
 
   @Override
   public void setMap(@NotNull String s) {
-
+    map = s;
   }
 
   @Override

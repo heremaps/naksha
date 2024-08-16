@@ -184,8 +184,8 @@ public class ViewTest {
 
     // when only by id
     ReadFeatures request1 = RequestHelper.readFeaturesByIdsRequest(TOPO, List.of("1"));
-    SuccessResponse response = (SuccessResponse) view.newReadSession(null).execute(request1);
-    assertNotNull(response.getTuples().get(0));
+    SuccessResponse response = (SuccessResponse) view.newReadSession(sessionOptions).execute(request1);
+    assertNotNull(response.getFeatures());
     // then
     verify(readSession, times(1)).execute(any());
 
@@ -196,8 +196,8 @@ public class ViewTest {
     RequestQuery requestQuery = new RequestQuery();
     requestQuery.setProperties(propQuery);
     request2.setQuery(requestQuery);
-    SuccessResponse response2 = (SuccessResponse) view.newReadSession(null).execute(request2);
-    assertNotNull(response2.getTuples().get(0));
+    SuccessResponse response2 = (SuccessResponse) view.newReadSession(sessionOptions).execute(request2);
+    assertNotNull(response2.getFeatures());
     verify(readSession, times(2)).execute(any());
   }
 

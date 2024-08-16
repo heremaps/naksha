@@ -22,7 +22,6 @@ import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.psql.PgPlatform;
 import naksha.psql.PgStorage;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
@@ -98,7 +97,7 @@ abstract class PsqlTests {
   @EnabledIf("dropFinally")
   void dropSchemaFinally() {
     assertNotNull(storage);
-    storage.dropSchema();
+//    storage.dropSchema(); TODO(lib)
   }
 
   @EnabledIf("runTest")

@@ -191,6 +191,10 @@ public class ViewReadSession implements IReadSession {
     if (request instanceof ReadFeatures) {
       final ReadFeatures readFeatures = (ReadFeatures) request;
       final IPropertyQuery propertyQuery = readFeatures.getQuery().getProperties();
+      if (!readFeatures.getFeatureIds().isEmpty()
+          && readFeatures.getQuery().isEmpty()) {
+        return true;
+      }
       if (propertyQuery instanceof PQuery) {
         final PQuery query = ((PQuery) propertyQuery);
         return query.getProperty().getPath().contains(Property.ID)
