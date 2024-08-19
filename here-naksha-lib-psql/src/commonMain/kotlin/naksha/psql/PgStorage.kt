@@ -34,6 +34,7 @@ import naksha.psql.PgColumn.PgColumnCompanion.puid
 import naksha.psql.PgColumn.PgColumnCompanion.ref_point
 import naksha.psql.PgColumn.PgColumnCompanion.store_number
 import naksha.psql.PgColumn.PgColumnCompanion.tags
+import naksha.psql.PgColumn.PgColumnCompanion.tuple_number
 import naksha.psql.PgColumn.PgColumnCompanion.txn
 import naksha.psql.PgColumn.PgColumnCompanion.txn_next
 import naksha.psql.PgColumn.PgColumnCompanion.type
@@ -372,7 +373,7 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
      */
     override fun getMapId(mapNumber: Int): String? = mapNumberToId[mapNumber]
 
-    override fun rowToFeature(tuple: Tuple): NakshaFeature {
+    override fun tupleToFeature(tuple: Tuple): NakshaFeature {
         return if (tuple.feature != null) {
             // TODO: FIXME, we need the XYZ namespace
             val featureReader = JbFeatureDecoder(JbDictManager()).mapBytes(tuple.feature!!).reader
@@ -383,7 +384,7 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
         }
     }
 
-    override fun featureToRow(feature: NakshaFeature): Tuple {
+    override fun featureToTuple(feature: NakshaFeature): Tuple {
         val nakshaFeature = feature.proxy(NakshaFeature::class)
         TODO("Implement me")
     }
@@ -610,6 +611,7 @@ WHERE tuple_number = ANY($1)"""
                                 Version(_txn),
                                 cursor[uid]
                             )
+                            val maybeBetterTupleNumber = cursor[tuple_number]
                             val updatedAt: Int64 = cursor[updated_at]
                             val createdAt = cursor.column(created_at) as Int64?
                             val authorTs = cursor.column(author_ts) as Int64?

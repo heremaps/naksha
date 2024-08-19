@@ -3,13 +3,7 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.jbon.IDictManager
-import naksha.model.Naksha.NakshaCompanion.FETCH_ALL
-import naksha.model.Naksha.NakshaCompanion.FETCH_ID
-import naksha.model.Naksha.NakshaCompanion.FETCH_META
-import naksha.model.Naksha.NakshaCompanion.FETCH_CACHE
 import naksha.model.objects.NakshaFeature
-import naksha.model.request.ResultTuple
 import kotlin.js.JsExport
 
 /**
@@ -95,11 +89,11 @@ interface IStorage : AutoCloseable {
      * Convert the given [Tuple] into a [NakshaFeature].
      *
      * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * @param tuple the row to convert.
-     * @return the feature generated from the row.
+     * @param tuple the tuple to convert.
+     * @return the feature generated from the tuple.
      * @since 3.0.0
      */
-    fun rowToFeature(tuple: Tuple): NakshaFeature
+    fun tupleToFeature(tuple: Tuple): NakshaFeature
 
     /**
      * Convert the given feature into a [Tuple].
@@ -109,7 +103,7 @@ interface IStorage : AutoCloseable {
      * @return the [Tuple] generated from the given feature.
      * @since 3.0.0
      */
-    fun featureToRow(feature: NakshaFeature): Tuple
+    fun featureToTuple(feature: NakshaFeature): Tuple
 
     // TODO: We should move this into IWriteSession so that we can implement it using an advisory lock!
     //       We have all kind of security measurements already in PgSession, for example we manage a
