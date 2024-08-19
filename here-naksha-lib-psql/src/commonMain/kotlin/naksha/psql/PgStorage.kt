@@ -74,7 +74,7 @@ open class PgStorage(
     private var _adminOptions: SessionOptions? = null
     override var adminOptions: SessionOptions
         get() = _adminOptions ?: SessionOptions(
-            mapId = mapIdToSchema(defaultSchemaName),
+            mapId = schemaToMapId(defaultSchemaName),
             appName = "lib-psql/$LATEST",
             appId = NakshaContext.defaultAppId.get() ?: "lib-psql",
             author = null,
