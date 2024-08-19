@@ -38,8 +38,8 @@ import java.util.stream.Stream;
 import naksha.base.StringList;
 import naksha.model.IReadSession;
 import naksha.model.NakshaContext;
-import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
+import naksha.model.request.ResultTuple;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -115,7 +115,7 @@ public class ParallelQueryExecutor {
 
     SuccessResponse cursor = (SuccessResponse) session.execute(clonedRequest);
 
-    List<NakshaFeature> featureList = cursor.getFeatures();
+    List<ResultTuple> featureList = cursor.getTuples();
     log.info(
         "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",
         NakshaContext.currentContext().getStreamId(),

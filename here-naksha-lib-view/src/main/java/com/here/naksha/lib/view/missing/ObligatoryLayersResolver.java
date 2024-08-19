@@ -53,7 +53,7 @@ public class ObligatoryLayersResolver implements MissingIdResolver {
 
     List<Pair<ViewLayer, String>> missingObligatoryLayers = obligatoryLayers.stream()
         .filter(obligatoryLayer -> !layersHavingFeature.contains(obligatoryLayer))
-        .map(layer -> Pair.of(layer, multiFeature.get(0).getFeature().getId()))
+        .map(layer -> Pair.of(layer, multiFeature.get(0).getTuple().featureId))
         .collect(Collectors.toList());
 
     return missingObligatoryLayers;

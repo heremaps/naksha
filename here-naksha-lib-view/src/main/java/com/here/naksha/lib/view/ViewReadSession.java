@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import naksha.model.*;
-import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.IPropertyQuery;
@@ -150,7 +149,7 @@ public class ViewReadSession implements IReadSession {
     Merging: [ <featureId_1, [Layer0_Feature1, Layer1_Feature1, Layer2_Feature1]> ]
     into final result:  [ Feature1 ]
      */
-    List<NakshaFeature> mergedRows =
+    List<ResultTuple> mergedRows =
         multiLayerRows.values().stream().map(mergeOperation::apply).collect(toList());
 
     return new ViewSuccessResult(mergedRows, null);

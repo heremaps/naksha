@@ -1,10 +1,14 @@
 package com.here.naksha.lib.view.missing;
 
-import naksha.model.IStorage;
+import naksha.base.JvmInt64;
+import naksha.model.*;
 import com.here.naksha.lib.view.MissingIdResolver;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerFeature;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ExecutedOp;
+import naksha.model.request.ResultTuple;
+import naksha.psql.PgUtil;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
 
@@ -27,8 +31,14 @@ public class ObligatoryLayersResolverTest {
     ViewLayer obligatoryLayer = new ViewLayer(storage, "collection1");
     ViewLayer otherLayer = new ViewLayer(storage, "collection1");
     final NakshaFeature feature = new NakshaFeature();
+    byte[] bytesFeature = PgUtil.encodeFeature(feature, 0, null);
+    final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), Version.fromDouble(3.0),0);
+    Metadata metadata = mock(Metadata.class);
+    Tuple tuple = new Tuple(storage, tupleNum, metadata, bytesFeature, null, null, null, null);
+    ResultTuple resultTuple = new ResultTuple(storage, tupleNum, ExecutedOp.READ, feature.getId(), tuple);
+
     List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
-    singleRowFeatures.add(new ViewLayerFeature(feature, 0, otherLayer));
+    singleRowFeatures.add(new ViewLayerFeature(resultTuple, 0, otherLayer));
 
     MissingIdResolver missingIdsResolver = new ObligatoryLayersResolver(Set.of(obligatoryLayer));
 
@@ -45,10 +55,15 @@ public class ObligatoryLayersResolverTest {
     // given
     IStorage storage = mock(IStorage.class);
     ViewLayer obligatoryLayer = new ViewLayer(storage, "collection1");
-    ViewLayer otherLayer = new ViewLayer(storage, "collection1");
+      final NakshaFeature feature = new NakshaFeature();
+    byte[] bytesFeature = PgUtil.encodeFeature(feature, 0, null);
+    final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), Version.fromDouble(3.0),0);
+    Metadata metadata = mock(Metadata.class);
+    Tuple tuple = new Tuple(storage, tupleNum, metadata, bytesFeature, null, null, null, null);
+    ResultTuple resultTuple = new ResultTuple(storage, tupleNum, ExecutedOp.READ, "checkPriorityMerge1", tuple);
 
     List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
-    singleRowFeatures.add(new ViewLayerFeature(new NakshaFeature(), 0, obligatoryLayer));
+    singleRowFeatures.add(new ViewLayerFeature(resultTuple, 0, obligatoryLayer));
 
     MissingIdResolver missingIdsResolver = new ObligatoryLayersResolver(Set.of(obligatoryLayer));
 

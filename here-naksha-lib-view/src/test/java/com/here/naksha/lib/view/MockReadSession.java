@@ -23,7 +23,6 @@ import java.util.List;
 
 import naksha.model.Tuple;
 import naksha.model.TupleNumber;
-import naksha.model.objects.NakshaFeature;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.ResultTuple;
@@ -33,9 +32,9 @@ import org.jetbrains.annotations.Nullable;
 
 public class MockReadSession implements IReadSession {
 
-  List<NakshaFeature> results;
+  List<ResultTuple> results;
 
-  public MockReadSession(List<NakshaFeature> results) {
+  public MockReadSession(List<ResultTuple> results) {
     this.results = results;
   }
 

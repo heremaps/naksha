@@ -68,7 +68,7 @@ public class ViewTest {
     ViewLayer topologiesCS = new ViewLayer(storage, "topologies");
 
     // each layer is going to return 3 same records
-    List<NakshaFeature> results = sampleXyzResponse(3);
+    List<ResultTuple> results = sampleXyzResponse(3, storage);
     when(storage.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS, buildingsDS, topologiesCS);
@@ -95,18 +95,24 @@ public class ViewTest {
   void testWriteApiNotation() {
     final String VIEW_COLLECTION = "myCollection";
     IStorage storage = mock(IStorage.class);
+    IMap map = mock(IMap.class);
     IWriteSession session = mock(IWriteSession.class);
 
     ViewLayer topologiesDS = new ViewLayer(storage, "topologies");
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection(VIEW_COLLECTION, topologiesDS);
     View view = new View(viewLayerCollection);
     when(storage.newWriteSession(sessionOptions)).thenReturn(session);
+    when(storage.getMapId(any(Integer.class))).thenReturn(VIEW_COLLECTION);
+    when(storage.getId()).thenReturn("Mock Storage");
+    when(storage.get(any())).thenReturn(map);
+    when(map.getCollectionId(any())).thenReturn("Mock Collection");
 
     final LayerWriteFeatureRequest request = new LayerWriteFeatureRequest();
     final NakshaFeature feature = new NakshaFeature("id0");
     request.add(write.createFeature(null,VIEW_COLLECTION,feature));
+    when(storage.rowToFeature(any())).thenReturn(feature);
 
-    when(session.execute(request)).thenReturn(new SuccessResponse(sampleXyzWriteResponse(1, ExecutedOp.CREATED)));
+    when(session.execute(request)).thenReturn(new SuccessResponse(sampleXyzWriteResponse(1, storage, ExecutedOp.CREATED)));
     ViewWriteSession writeSession = view.newWriteSession(sessionOptions);
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class,response);
@@ -131,7 +137,7 @@ public class ViewTest {
     final NakshaFeature feature = new NakshaFeature("id0");
     request.add(write.deleteFeature(null,VIEW_COLLECTION,feature,false));
 
-    when(session.execute(request)).thenReturn(new SuccessResponse(sampleXyzWriteResponse(1, ExecutedOp.DELETED)));
+    when(session.execute(request)).thenReturn(new SuccessResponse(sampleXyzWriteResponse(1, storage, ExecutedOp.DELETED)));
     ViewWriteSession writeSession = view.newWriteSession(sessionOptions);
 
     Response response = writeSession.execute(request);
@@ -153,7 +159,7 @@ public class ViewTest {
     ViewLayer topologiesDS = new ViewLayer(topologiesStorage, "topologies");
     ViewLayer buildingsDS = new ViewLayer(buildingsStorage, "buildings");
 
-    List<NakshaFeature> results = sampleXyzResponse(3);
+    List<ResultTuple> results = sampleXyzResponse(3,topologiesStorage);
     when(topologiesStorage.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
     when(buildingsStorage.newReadSession(sessionOptions)).thenReturn(readSession);
 
@@ -175,7 +181,7 @@ public class ViewTest {
     ViewLayer topologiesDS_1 = new ViewLayer(topologiesStorage_1, TOPO);
     ViewLayer topologiesDS_2 = new ViewLayer(topologiesStorage_2, TOPO);
 
-    List<NakshaFeature> results = sampleXyzResponse(3);
+    List<ResultTuple> results = sampleXyzResponse(3, topologiesStorage_2);
     when(topologiesStorage_1.newReadSession(sessionOptions)).thenReturn(readSession);
     when(topologiesStorage_2.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
 
@@ -213,7 +219,7 @@ public class ViewTest {
     IReadSession buildReadSession = mock(IReadSession.class);
 
     when(topoReadSession.execute(any())).thenThrow(new RuntimeException(new TimeoutException()));
-    when(buildReadSession.execute(any())).thenReturn(new SuccessResponse(sampleXyzResponse(1)));
+    when(buildReadSession.execute(any())).thenReturn(new SuccessResponse(sampleXyzResponse(1, buildingsStorage)));
 
     when(topologiesStorage.newReadSession(sessionOptions)).thenReturn(buildReadSession);
     when(buildingsStorage.newReadSession(sessionOptions)).thenReturn(topoReadSession);

@@ -26,9 +26,10 @@ open class SuccessResponse @Deprecated("Use secondary", ReplaceWith("SuccessResp
         setRaw("resultSet", rs)
     }
 
-    @JsName("ofFeatures")
-    constructor(features: List<NakshaFeature>) : this() {
-        this.features.addAll(features)
+    @JsName("ofTuples")
+    constructor(tuples: List<ResultTuple>) : this() {
+        this.tuples.addAll(tuples)
+        this.features.addAll(tuples.map { it.feature })
     }
 
     companion object SuccessResponse_C {

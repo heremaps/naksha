@@ -40,6 +40,7 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   public ViewWriteSession(@NotNull View viewRef, @Nullable SessionOptions options) {
     super(viewRef, options);
     this.options = options;
+    init();
   }
 
   public ViewWriteSession withWriteLayer(ViewLayer viewLayer) {
