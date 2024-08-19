@@ -82,7 +82,6 @@ public class ExtensionCache {
       }
       publishIntoCache(result, extensionConfig);
     });
-
     // Removing existing extension which has been removed from the configuration.
     List<String> extIds = extensionConfig.getExtensions().stream()
         .map(extension -> extension.getEnv() + ":" + extension.getId())
