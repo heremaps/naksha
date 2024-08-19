@@ -109,9 +109,9 @@ final class PostgresConnection extends CloseableResource<PostgresInstance> {
     if (config.readOnly) {
       props.setProperty(PGProperty.READ_ONLY.getName(), "true");
     }
-    // TODO : set to debug
+    // TODO : can be changed to debug later, when timeout issues have settled (and logs are too noisy)
     log.info(
-        "Using connectTimeout={}ms, socketTimeout={}ms, cancelSignalTimeout={}ms",
+        "Init connection using connectTimeout={}ms, socketTimeout={}ms, cancelSignalTimeout={}ms",
         connTimeoutInMillis,
         sockedReadTimeoutInMillis,
         cancelSignalTimeoutInMillis);
