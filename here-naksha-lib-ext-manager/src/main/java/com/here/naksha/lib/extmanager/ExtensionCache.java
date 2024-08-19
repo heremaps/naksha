@@ -85,8 +85,8 @@ public class ExtensionCache {
 
     // Removing existing extension which has been removed from the configuration.
     List<String> extIds = extensionConfig.getExtensions().stream()
-            .map(extension -> extension.getEnv() + ":" + extension.getId())
-            .toList();
+        .map(extension -> extension.getEnv() + ":" + extension.getId())
+        .toList();
 
     for (String key : loaderCache.keySet()) {
       if (!extIds.contains(key)) {
@@ -123,7 +123,7 @@ public class ExtensionCache {
           logger.error(
               "Failed to instantiate class {} for extension {} ",
               extension.getInitClassName(),
-                  extensionIdWthEnv,
+              extensionIdWthEnv,
               e);
           return;
         }
@@ -131,13 +131,13 @@ public class ExtensionCache {
       if (!isNullOrEmpty(extension.getInitClassName()))
         logger.info(
             "Extension {} initialization using initClassName {} done successfully.",
-                extensionIdWthEnv,
+            extensionIdWthEnv,
             extension.getInitClassName());
-      loaderCache.put(extension.getId(), new KVPair<Extension, ClassLoader>(extension, loader));
-      PluginCache.removeExtensionCache(extension.getId());
+      loaderCache.put(extensionIdWthEnv, new KVPair<Extension, ClassLoader>(extension, loader));
+      PluginCache.removeExtensionCache(extensionIdWthEnv);
       logger.info(
           "Extension id={}, version={} is successfully loaded into the cache, using Jar at {} for env={}.",
-              extensionIdWthEnv,
+          extensionIdWthEnv,
           extension.getVersion(),
           extension.getUrl().substring(extension.getUrl().lastIndexOf("/") + 1),
           extension.getEnv());
