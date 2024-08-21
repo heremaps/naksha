@@ -8,6 +8,7 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.jbon.JbMapDecoder
 import naksha.jbon.JbFeatureDecoder
 import naksha.model.*
+import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.request.*
@@ -282,11 +283,38 @@ open class PgSession(
 
     override fun execute(request: Request): Response {
         when (request) {
-            is WriteRequest -> return PgWriter(this, request).execute()
+            is WriteRequest -> {
+                saveTransactionIntoDb(true) // with transaction start time
+                val response = PgWriter(this, request).execute()
+                saveTransactionIntoDb() // with updated counts
+                return response
+            }
             is ReadRequest -> {
                 TODO("ReadRequest not yet implemented")
             }
             else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown request")
+        }
+    }
+
+    private var isTransactionStored = false
+    private fun saveTransactionIntoDb(create : Boolean = false) {
+        // FIXME instead of create/update we can use upsert when ready
+        if (isTransactionStored && create) {
+            return
+        } else if (isTransactionStored) {
+            val updateTxReq = WriteRequest()
+            val updateTx = Write()
+            updateTxReq.add(updateTx)
+            updateTx.updateFeature(null, VIRT_TRANSACTIONS, transaction())
+            // FIXME uncomment when counts and update ready
+//            PgWriter(this, updateTxReq).execute()
+        } else {
+            val writeTxReq = WriteRequest()
+            val writeTx = Write()
+            writeTxReq.add(writeTx)
+            writeTx.createFeature(null, VIRT_TRANSACTIONS, transaction())
+            PgWriter(this, writeTxReq).execute()
+            isTransactionStored = true
         }
     }
 

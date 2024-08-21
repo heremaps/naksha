@@ -40,7 +40,7 @@ class Naksha private constructor() {
         /**
          * The identifier of the virtual collection quoted to be used in queries.
          */
-        val VIRT_COLLECTIONS_QUOTED = quoteIdent("naksha~collections")
+        val VIRT_COLLECTIONS_QUOTED = quoteIdent(VIRT_COLLECTIONS)
 
         /**
          * The collection-number of the virtual collection in which the collections them-self are stored.

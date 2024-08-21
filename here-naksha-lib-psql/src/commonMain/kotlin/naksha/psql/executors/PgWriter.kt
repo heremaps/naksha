@@ -365,7 +365,7 @@ class PgWriter(
             ILLEGAL_ARGUMENT,
             "CREATE without feature"
         )
-        val tupleNumber = newCollectionTupleNumber(collection)
+        val tupleNumber = newFeatureTupleNumber(collection, feature.id)
         val tuple = tuple(tupleNumber, feature, write.attachment, feature.id, flags(collection.nakshaCollection))
 
         executeInsert(quoteIdent(collection.id), tuple, feature)

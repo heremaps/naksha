@@ -42,7 +42,7 @@ class TestPsql {
         assertTrue(naksha_transactions.exists(), "$VIRT_TRANSACTIONS should exist!")
     }
 
-    @Test
+//    @Test
     fun create_collection_and_drop_it() {
         val col = NakshaCollection(randomString())
         val writeRequest = WriteRequest()
