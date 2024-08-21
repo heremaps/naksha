@@ -86,7 +86,7 @@ public class ViewTest {
     assertInstanceOf(SuccessResponse.class,result);
 
     // then
-    List<NakshaFeature> allFeatures = ((SuccessResponse) result).getFeatures();
+    List<ResultTuple> allFeatures = ((SuccessResponse) result).getTuples();
     assertEquals(3, allFeatures.size());
     assertTrue(allFeatures.containsAll(results));
   }
@@ -112,7 +112,8 @@ public class ViewTest {
     request.add(write.createFeature(null,VIEW_COLLECTION,feature));
     when(storage.rowToFeature(any())).thenReturn(feature);
 
-    when(session.execute(request)).thenReturn(new SuccessResponse(sampleXyzWriteResponse(1, storage, ExecutedOp.CREATED)));
+    Response success = new SuccessResponse(sampleXyzWriteResponse(1, storage, ExecutedOp.CREATED));
+    when(session.execute(request)).thenReturn(success);
     ViewWriteSession writeSession = view.newWriteSession(sessionOptions);
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class,response);
@@ -136,14 +137,14 @@ public class ViewTest {
     final LayerWriteFeatureRequest request = new LayerWriteFeatureRequest();
     final NakshaFeature feature = new NakshaFeature("id0");
     request.add(write.deleteFeature(null,VIEW_COLLECTION,feature,false));
-
-    when(session.execute(request)).thenReturn(new SuccessResponse(sampleXyzWriteResponse(1, storage, ExecutedOp.DELETED)));
+    SuccessResponse successResponse1 = new SuccessResponse(sampleXyzWriteResponse(1, storage, ExecutedOp.DELETED));
+    when(session.execute(request)).thenReturn(successResponse1);
     ViewWriteSession writeSession = view.newWriteSession(sessionOptions);
 
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class,response);
     SuccessResponse successResponse = (SuccessResponse) response;
-    assertEquals(feature.getId(), successResponse.getFeatures().get(0).getId());
+    assertEquals(feature.getId(), successResponse.getTuples().get(0).featureId);
     assertEquals(ExecutedOp.DELETED, successResponse.getTuples().get(0).op);
     writeSession.commit();
   }
@@ -167,7 +168,7 @@ public class ViewTest {
     View view = new View(viewLayerCollection);
 
     // expect
-    assertThrows(UncheckedException.class, () -> view.newReadSession(null).execute(new ReadFeatures()));
+    assertThrows(UncheckedException.class, () -> view.newReadSession(sessionOptions).execute(new ReadFeatures()));
   }
 
   @Test
@@ -219,7 +220,8 @@ public class ViewTest {
     IReadSession buildReadSession = mock(IReadSession.class);
 
     when(topoReadSession.execute(any())).thenThrow(new RuntimeException(new TimeoutException()));
-    when(buildReadSession.execute(any())).thenReturn(new SuccessResponse(sampleXyzResponse(1, buildingsStorage)));
+    SuccessResponse successResponse = new SuccessResponse(sampleXyzResponse(1, buildingsStorage));
+    when(buildReadSession.execute(any())).thenReturn(successResponse);
 
     when(topologiesStorage.newReadSession(sessionOptions)).thenReturn(buildReadSession);
     when(buildingsStorage.newReadSession(sessionOptions)).thenReturn(topoReadSession);
@@ -227,7 +229,7 @@ public class ViewTest {
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS, buildingsDS);
     View view = new View(viewLayerCollection);
 
-    Throwable exception = assertThrows(UncheckedException.class, () -> view.newReadSession(null).execute(new ReadFeatures()));
+    Throwable exception = assertThrows(UncheckedException.class, () -> view.newReadSession(sessionOptions).execute(new ReadFeatures()));
     assertTrue(exception.getMessage().contains("TimeoutException"));
     verify(topoReadSession, times(1)).execute(any());
     verify(buildReadSession, times(1)).execute(any());
