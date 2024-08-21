@@ -611,7 +611,6 @@ WHERE tuple_number = ANY($1)"""
                                 Version(_txn),
                                 cursor[uid]
                             )
-                            val maybeBetterTupleNumber = cursor[tuple_number]
                             val updatedAt: Int64 = cursor[updated_at]
                             val createdAt = cursor.column(created_at) as Int64?
                             val authorTs = cursor.column(author_ts) as Int64?

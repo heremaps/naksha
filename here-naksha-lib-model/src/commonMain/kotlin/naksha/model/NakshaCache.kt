@@ -27,6 +27,9 @@ class NakshaCache private constructor() {
             var ref = tupleCaches[storageId]
             var cache = ref?.deref()
             if (cache != null) return cache
+            if (ref != null) {
+                tupleCaches.remove(storageId, ref)
+            }
             cache = TupleCache(storageId)
             ref = WeakRef(cache)
             if (tupleCaches.putIfAbsent(storageId, ref) == null) return cache

@@ -6,6 +6,7 @@ import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadCollections
 import naksha.model.request.SuccessResponse
 import naksha.model.request.Write
@@ -100,4 +101,29 @@ class TestPsql {
 //        }
 //    }
 
+    @Test
+    fun create_collection_and_insert_feature() {
+        val col = NakshaCollection("test_${randomString().lowercase()}")
+        val writeRequest = WriteRequest()
+        writeRequest.writes += Write().createCollection(null, col)
+        var session = env.storage.newWriteSession()
+        session.use {
+            val response = session.execute(writeRequest)
+            assertIs<SuccessResponse>(response)
+            session.commit()
+        }
+        // insert feature to collection
+        val feature = NakshaFeature()
+        feature.id = "feature1"
+        val writeFeaturesReq = WriteRequest()
+        val writeFeature = Write()
+        writeFeaturesReq.add(writeFeature)
+        writeFeature.createFeature(null, col.id, feature)
+        session = env.storage.newWriteSession()
+        session.use {
+            val response = session.execute(writeFeaturesReq)
+            assertIs<SuccessResponse>(response)
+            session.commit()
+        }
+    }
 }

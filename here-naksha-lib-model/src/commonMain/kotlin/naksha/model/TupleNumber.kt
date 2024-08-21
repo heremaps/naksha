@@ -4,6 +4,8 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.base.Platform
+import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
+import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
 import kotlin.js.JsExport
@@ -102,5 +104,21 @@ data class TupleNumber(
         dataview_set_int64(view, 8, version.txn)
         dataview_set_int32(view, 16, uid)
         return byteArray
+    }
+
+    companion object TupleNumberCompanion {
+        /**
+         * Convert byteArray form of tuple into [TupleNumber]
+         * @param byteArray tupleNumber in byteArray form
+         * @return [TupleNumber] object
+         */
+        fun fromByteArray(byteArray: ByteArray): TupleNumber {
+            val view = Platform.newDataView(byteArray)
+            return TupleNumber(
+                dataview_get_int64(view, 0),
+                Version(dataview_get_int64(view, 8)),
+                dataview_get_int32(view, 16),
+            )
+        }
     }
 }

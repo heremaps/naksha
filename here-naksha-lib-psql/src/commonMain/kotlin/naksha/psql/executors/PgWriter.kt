@@ -2,9 +2,12 @@ package naksha.psql.executors
 
 import naksha.base.Int64
 import naksha.base.PlatformUtil
+import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
+import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
+import naksha.model.Naksha.NakshaCompanion.quoteIdent
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
@@ -251,20 +254,12 @@ class PgWriter(
             "CREATE without feature"
         )
         val colId = write.featureId ?: PlatformUtil.randomString()
-        val tuple = tuple(map, feature, write.attachment, colId)
-        val transaction = session.transaction()
+        val collectionNumber = newCollectionNumber(map)
+        val tupleNumber = newCollectionTupleNumber(map, collectionNumber)
+        val tuple = tuple(tupleNumber, feature, write.attachment, colId, storage.defaultFlags, map.encodingDict(colId, feature))
 
-        // TODO: Insert the tuple into naksha~collections !
-        val writeColF = WriteExt()
-        val nc = PgNakshaCollections(map)
-        //
-        conn.execute(
-            sql = """ INSERT INTO $VIRT_COLLECTIONS (${PgColumn.allColumns.joinToString(",")})
-                      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-                      """.trimIndent(),
-            args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
-        )
-
+        // insert row into naksha~collections before creating tables
+        executeInsert(VIRT_COLLECTIONS_QUOTED, tuple, feature)
 
         // Create the tables
         val collection = map[colId]
@@ -316,20 +311,19 @@ class PgWriter(
     }
 
     private fun tuple(
-        map: PgMap,
-        feature: NakshaCollection,
+        tupleNumber: TupleNumber,
+        feature: NakshaFeature,
         attachment: ByteArray?,
-        colId: String
+        featureId: String,
+        flags: Flags,
+        encodingDict: JbDictionary? = null
     ): Tuple {
-        val collectionNumber = newCollectionNumber(map)
-        val tupleNumber = newCollectionTupleNumber(map, collectionNumber)
-        val encodingDict = map.encodingDict(colId, feature)
         return Tuple(
             storage = storage,
             tupleNumber = tupleNumber,
-            geo = PgUtil.encodeGeometry(feature.geometry, storage.defaultFlags),
-            referencePoint = PgUtil.encodeGeometry(feature.referencePoint, storage.defaultFlags),
-            feature = PgUtil.encodeFeature(feature, storage.defaultFlags, encodingDict),
+            geo = PgUtil.encodeGeometry(feature.geometry, flags),
+            referencePoint = PgUtil.encodeGeometry(feature.referencePoint, flags),
+            feature = PgUtil.encodeFeature(feature, flags, encodingDict),
             tags = PgUtil.encodeTags(
                 feature.properties.xyz.tags?.toTagMap(),
                 storage.defaultFlags,
@@ -343,8 +337,8 @@ class PgWriter(
                 updatedAt = updateTime(),
                 author = session.options.author,
                 appId = session.options.appId,
-                flags = flags(feature),
-                id = colId,
+                flags = flags,
+                id = featureId,
                 type = NakshaCollection.FEATURE_TYPE
             )
         )
@@ -367,10 +361,26 @@ class PgWriter(
     }
 
     internal fun createFeature(collection: PgCollection, write: WriteExt): Tuple {
-        //val tupleNumber = TupleNumber(StoreNumber())
+        val feature = write.feature?.proxy(NakshaFeature::class) ?: throw NakshaException(
+            ILLEGAL_ARGUMENT,
+            "CREATE without feature"
+        )
+        val tupleNumber = newCollectionTupleNumber(collection)
+        val tuple = tuple(tupleNumber, feature, write.attachment, feature.id, flags(collection.nakshaCollection))
 
+        executeInsert(quoteIdent(collection.id), tuple, feature)
+        return tuple
+    }
 
-        TODO("Implement me")
+    internal fun executeInsert(quotedCollectionId: String, tuple: Tuple, feature: NakshaFeature): Tuple {
+        val transaction = session.transaction()
+        conn.execute(
+            sql = """ INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})
+                      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+                      """.trimIndent(),
+            args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
+        )
+        return tuple
     }
 
     internal fun updateFeature(collection: PgCollection, write: WriteExt): Tuple {

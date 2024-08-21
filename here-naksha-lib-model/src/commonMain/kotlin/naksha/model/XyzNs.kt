@@ -105,7 +105,7 @@ class XyzNs : AnyObject() {
      * Returns the [uuid] as [Guid].
      * @return the [uuid] as [Guid].
      */
-    val guid: Guid = Guid.fromString(uuid)
+    val guid: Guid by lazy { Guid.fromString(uuid) }
 
     /**
      * The universal unique identifier of the previous state of a feature.
