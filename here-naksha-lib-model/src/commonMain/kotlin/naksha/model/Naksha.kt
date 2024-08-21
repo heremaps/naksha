@@ -59,30 +59,6 @@ class Naksha private constructor() {
         @JsStatic
         val VIRT_DICTIONARIES_NUMBER = Int64(2)
 
-        /**
-         * Fetch only the `id`, other parts only from cache.
-         */
-        const val FETCH_ID = "id"
-
-        /**
-         * Fetch the [metadata][Metadata], other parts only from cache.
-         */
-        const val FETCH_META = "meta"
-
-        /**
-         * Fetch all columns.
-         */
-        const val FETCH_ALL = "all"
-
-        /**
-         * Fetch all columns, do not use the cache.
-         */
-        const val FETCH_ALL_NO_CACHE = "all-no-cache"
-
-        /**
-         * Only load form cache.
-         */
-        const val FETCH_CACHE = "cache"
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:

@@ -2,7 +2,9 @@
 
 package naksha.model.request
 
+import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
+import naksha.model.FetchMode
 import kotlin.js.JsExport
 
 /**
@@ -10,13 +12,16 @@ import kotlin.js.JsExport
  * @since 3.0.0
  */
 @JsExport
-open class ReadRequest: Request() {
+open class ReadRequest : Request() {
     companion object ReadRequestCompanion {
         private val INT_NULL = NullableProperty<ReadRequest, Int>(Int::class)
-        private val BOOLEAN = NullableProperty<ReadRequest, Boolean>(Boolean::class) { _,_ -> false }
+        private val BOOLEAN =
+            NullableProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
+        private val FETCH_MODE =
+            NotNullProperty<Request, FetchMode>(FetchMode::class) { _, _ -> FetchMode.FETCH_ALL }
     }
 
-    override fun defaultRowOptions() : ReturnColumns = ReturnColumns.all()
+    override fun defaultRowOptions(): ReturnColumns = ReturnColumns.all()
 
     /**
      * A soft-cap, so the amount of rows the client needs.
@@ -41,4 +46,9 @@ open class ReadRequest: Request() {
      * @since 3.0.0
      */
     var returnHandle by BOOLEAN
+
+    /**
+     * How do we want the fetch to be performed
+     */
+    var fetchMode by FETCH_MODE
 }

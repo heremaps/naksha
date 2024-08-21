@@ -67,7 +67,6 @@ class PgWriter(
 
     /**
      * Returns the [flags][Flags] to use, when encoding new rows.
-     * @return the [flags][Flags] to use, when encoding new rows.
      */
     fun flags(collection: NakshaCollection): Flags =
         collection.defaultFlags ?: session.storage.defaultFlags
@@ -256,7 +255,14 @@ class PgWriter(
         val colId = write.featureId ?: PlatformUtil.randomString()
         val collectionNumber = newCollectionNumber(map)
         val tupleNumber = newCollectionTupleNumber(map, collectionNumber)
-        val tuple = tuple(tupleNumber, feature, write.attachment, colId, storage.defaultFlags, map.encodingDict(colId, feature))
+        val tuple = tuple(
+            tupleNumber,
+            feature,
+            write.attachment,
+            colId,
+            storage.defaultFlags,
+            map.encodingDict(colId, feature)
+        )
 
         // insert row into naksha~collections before creating tables
         executeInsert(VIRT_COLLECTIONS_QUOTED, tuple, feature)
@@ -372,7 +378,11 @@ class PgWriter(
         return tuple
     }
 
-    internal fun executeInsert(quotedCollectionId: String, tuple: Tuple, feature: NakshaFeature): Tuple {
+    internal fun executeInsert(
+        quotedCollectionId: String,
+        tuple: Tuple,
+        feature: NakshaFeature
+    ): Tuple {
         val transaction = session.transaction()
         conn.execute(
             sql = """ INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})

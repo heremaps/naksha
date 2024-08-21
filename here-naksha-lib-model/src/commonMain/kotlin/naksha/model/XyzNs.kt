@@ -5,6 +5,7 @@ package naksha.model
 import naksha.base.*
 import kotlin.DeprecationLevel.WARNING
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
@@ -13,6 +14,7 @@ import kotlin.jvm.JvmStatic
  */
 @JsExport
 class XyzNs : AnyObject() {
+
     companion object XyzNsCompanion {
         private val ACTION = NotNullEnum<XyzNs, Action>(Action::class) { _, _ -> Action.CREATED }
         private val STRING = NotNullProperty<XyzNs, String>(String::class) { _, name ->

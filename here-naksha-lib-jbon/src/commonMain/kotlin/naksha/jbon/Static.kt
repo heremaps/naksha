@@ -74,6 +74,9 @@ internal const val ENC_STRUCT_VARIANT_RESERVED = 0b11
 // Public types.
 const val CLASS_MASK = 0b1111_0000
 const val CLASS_SCALAR = 0b0001_0000
+                    //   0b   1_0101
+                    // ------------
+                    //        1_0101
 const val CLASS_STRING = 0b0010_0000
 const val CLASS_STRUCT = 0b0100_0000
 

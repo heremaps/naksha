@@ -14,6 +14,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
 import naksha.model.objects.Transaction
+import naksha.psql.executors.PgReader
 import naksha.psql.executors.PgWriter
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -285,12 +286,14 @@ open class PgSession(
         when (request) {
             is WriteRequest -> {
                 saveTransactionIntoDb(true) // with transaction start time
+                //TODO(Kuba): PgWriter wciska Xyz
                 val response = PgWriter(this, request).execute()
                 saveTransactionIntoDb() // with updated counts
                 return response
             }
             is ReadRequest -> {
-                TODO("ReadRequest not yet implemented")
+                val response = PgReader(this, request).execute()
+                return response
             }
             else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown request")
         }
@@ -390,7 +393,7 @@ open class PgSession(
         }
     }
 
-    override fun getLatestTuples(mapId: String, collectionId: String, featureIds: Array<String>, mode: String): List<Tuple?> {
+    override fun getLatestTuples(mapId: String, collectionId: String, featureIds: Array<String>, mode: FetchMode): List<Tuple?> {
         val connection = pgConnection
         val conn = connection ?: storage.adminConnection(storage.adminOptions)
         try {
@@ -400,7 +403,7 @@ open class PgSession(
         }
     }
 
-    override fun getTuples(tupleNumbers: Array<TupleNumber>, mode: String): List<Tuple?> {
+    override fun getTuples(tupleNumbers: Array<TupleNumber>, mode: FetchMode): List<Tuple?> {
         val connection = pgConnection
         val conn = connection ?: storage.adminConnection(storage.adminOptions)
         try {
@@ -410,7 +413,7 @@ open class PgSession(
         }
     }
 
-    override fun fetchTuple(resultTuple: ResultTuple, mode: String) {
+    override fun fetchTuple(resultTuple: ResultTuple, mode: FetchMode) {
         val connection = pgConnection
         val conn = connection ?: storage.adminConnection(storage.adminOptions)
         try {
@@ -420,7 +423,7 @@ open class PgSession(
         }
     }
 
-    override fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int, to: Int, mode: String) {
+    override fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int, to: Int, mode: FetchMode) {
         val connection = pgConnection
         val conn = connection ?: storage.adminConnection(storage.adminOptions)
         try {
