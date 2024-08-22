@@ -81,6 +81,7 @@ public class ViewTest {
     // when
     ViewReadSession readSession = view.newReadSession(sessionOptions);
     ReadFeatures readFeatures = new ReadFeatures();
+    readFeatures.setQueryHistory(true);
     Response result = readSession.execute(
         readFeatures, customMergeOperation, skipFetchingResolver);
     assertInstanceOf(SuccessResponse.class,result);
