@@ -223,13 +223,14 @@ public class ViewTest {
     SuccessResponse successResponse = new SuccessResponse(sampleXyzResponse(1, buildingsStorage));
     when(buildReadSession.execute(any())).thenReturn(successResponse);
 
-    when(topologiesStorage.newReadSession(sessionOptions)).thenReturn(buildReadSession);
-    when(buildingsStorage.newReadSession(sessionOptions)).thenReturn(topoReadSession);
+    when(topologiesStorage.newReadSession(sessionOptions)).thenReturn(topoReadSession);
+    when(buildingsStorage.newReadSession(sessionOptions)).thenReturn(buildReadSession);
 
-    ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS, buildingsDS);
+    ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", buildingsDS, topologiesDS);
     View view = new View(viewLayerCollection);
-
-    Throwable exception = assertThrows(UncheckedException.class, () -> view.newReadSession(sessionOptions).execute(new ReadFeatures()));
+    final ReadFeatures readFeatures = new ReadFeatures();
+    readFeatures.setQueryHistory(true);
+    Throwable exception = assertThrows(UncheckedException.class, () -> view.newReadSession(sessionOptions).execute(readFeatures));
     assertTrue(exception.getMessage().contains("TimeoutException"));
     verify(topoReadSession, times(1)).execute(any());
     verify(buildReadSession, times(1)).execute(any());
