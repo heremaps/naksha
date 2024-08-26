@@ -113,7 +113,7 @@ class HttpStorageReadExecute {
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
-  private static Result executeIterate(
+  private static Response executeIterate(
       @NotNull NakshaContext context, ReadFeaturesProxyWrapper readRequest, RequestSender requestSender) {
     String queryParamsString = keysToKeyValuesStrings(readRequest, LIMIT);
 

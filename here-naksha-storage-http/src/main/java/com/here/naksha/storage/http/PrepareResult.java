@@ -37,6 +37,7 @@ import naksha.model.NakshaError;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
+import naksha.model.request.ResultTuple;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -55,8 +56,8 @@ class PrepareResult {
       Class<T> httpResponseType,
       Function<T, List<NakshaFeature>> typedResponseToFeatureList) {
 
-    XyzError error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
-    if (error != null) return new ErrorResponse(error, "Response http status code: " + httpResponse.statusCode());
+    String error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
+    if (error != null) return new ErrorResponse(new NakshaError(error, "Response http status code: " + httpResponse.statusCode(),null,null));
 
     T resultFeatures = JsonSerializable.deserialize(prepareBody(httpResponse), httpResponseType);
     return prepareResult(typedResponseToFeatureList.apply(resultFeatures));
@@ -86,11 +87,9 @@ class PrepareResult {
 
   static SuccessResponse createHttpResultFromFeatureList(
       final @NotNull List<NakshaFeature> features) {
-    // Create ForwardCursor with input features
-    final List<XyzFeatureCodec> codecs = new ArrayList<>();
-    final XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
-    for (final XyzFeature feature : features) {
-      final XyzFeatureCodec codec = codecFactory.newInstance();
+    final List<ResultTuple> tuples = new ArrayList<>();
+    for (final NakshaFeature feature : features) {
+      tuples.add(new ResultTuple());
       codec.setOp(EExecutedOp.READ);
       codec.setFeature(feature);
       codec.setId(feature.getId());
@@ -98,7 +97,7 @@ class PrepareResult {
     }
 
     final HeapCacheCursor<XyzFeature, XyzFeatureCodec> cursor = new HeapCacheCursor<>(codecFactory, codecs, null);
-    return new HttpSuccessResponse<>(cursor);
+    return new SuccessResponse(cursor);
   }
 
   /**
