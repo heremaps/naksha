@@ -22,14 +22,7 @@ import static com.here.naksha.common.http.apis.ApiParamsConst.*;
 import static com.here.naksha.storage.http.PrepareResult.prepareResult;
 import static java.lang.String.format;
 
-import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.XyzFeature;
-import naksha.model.XyzFeatureCollection;
-import naksha.model.ErrorResult;
-import naksha.model.POp;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
-import com.here.naksha.lib.core.models.storage.Result;
 import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
 import java.util.Arrays;
@@ -37,6 +30,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.XyzFeatureCollection;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +46,7 @@ class HttpStorageReadExecute {
   private static final String HDR_STREAM_ID = "Stream-Id";
 
   @NotNull
-  static Result execute(@NotNull NakshaContext context, ReadFeaturesProxyWrapper request, RequestSender sender) {
+  static Response execute(@NotNull NakshaContext context, ReadFeaturesProxyWrapper request, RequestSender sender) {
 
     return switch (request.getReadRequestType()) {
       case GET_BY_ID -> executeFeatureById(context, request, sender);
@@ -58,7 +57,7 @@ class HttpStorageReadExecute {
     };
   }
 
-  private static Result executeFeatureById(
+  private static Response executeFeatureById(
       @NotNull NakshaContext context, ReadFeaturesProxyWrapper readRequest, RequestSender requestSender) {
     String featureId = readRequest.getQueryParameter(FEATURE_ID);
 
@@ -70,10 +69,10 @@ class HttpStorageReadExecute {
       // For Error 404 (not found) on single feature GetById request, we need to return empty result
       return prepareResult(Collections.emptyList());
     }
-    return prepareResult(response, XyzFeature.class, List::of);
+    return prepareResult(response, NakshaFeature.class, List::of);
   }
 
-  private static Result executeFeaturesById(
+  private static Response executeFeaturesById(
       @NotNull NakshaContext context, ReadFeaturesProxyWrapper readRequest, RequestSender requestSender) {
     List<String> featureIds = readRequest.getQueryParameter(FEATURE_IDS);
     String queryParamsString = FEATURE_IDS + "=" + String.join(",", featureIds);
@@ -85,7 +84,7 @@ class HttpStorageReadExecute {
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
-  private static Result executeFeatureByBBox(
+  private static Response executeFeatureByBBox(
       @NotNull NakshaContext context, ReadFeaturesProxyWrapper readRequest, RequestSender requestSender) {
     String queryParamsString = keysToKeyValuesStrings(readRequest, WEST, NORTH, EAST, SOUTH, LIMIT);
 
@@ -96,14 +95,14 @@ class HttpStorageReadExecute {
     return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
-  private static Result executeFeaturesByTile(
+  private static Response executeFeaturesByTile(
       @NotNull NakshaContext context, ReadFeaturesProxyWrapper readRequest, RequestSender requestSender) {
     String queryParamsString = keysToKeyValuesStrings(readRequest, MARGIN, LIMIT);
     String tileType = readRequest.getQueryParameter(TILE_TYPE);
     String tileId = readRequest.getQueryParameter(TILE_ID);
 
     if (tileType != null && !tileType.equals(TILE_TYPE_QUADKEY))
-      return new ErrorResult(XyzError.NOT_IMPLEMENTED, "Tile type other than " + TILE_TYPE_QUADKEY);
+      return new ErrorResponse(NakshaError.NOT_IMPLEMENTED, "Tile type other than " + TILE_TYPE_QUADKEY);
 
     HttpResponse<byte[]> response = requestSender.sendRequest(
         format(
