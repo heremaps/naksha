@@ -105,34 +105,33 @@ public class ViewWriteSessionTests extends PsqlTests {
     assertEquals(0d, coordinates.getLongitude());
 
       //Update fetched feature using viewwritesession
-    // TODO(lib)
-//      final LayerWriteFeatureRequest writeRequest = new LayerWriteFeatureRequest();
-//      features.stream().forEach(feature -> {
-//        feature.setGeometry(new SpPoint(new PointCoord(1d,1d)));
-//        feature.getProperties().put("testProperty", "test");
-//        writeRequest.add(write.updateFeature(feature));
-//      });
-//    SuccessResponse response1 = (SuccessResponse) writeSession.execute(writeRequest);
-//    assertNotNull(response1.getTuples().get(0));
-//        NakshaFeature feature = response1.getFeatures().get(0);
-//        assertEquals(1d, ((PointCoord) feature.getGeometry().getCoordinates()).getLongitude());
-//        assertTrue(feature.getProperties().containsKey("testProperty"));
-//        assertEquals("test", feature.getProperties().get("testProperty").toString());
-//        assertSame(ExecutedOp.UPDATED, response1.getTuples().get(0).op);
-//
-//        writeSession.commit();
-//
-//
-//      //Check if the feature updated in expected storage collection
-//      ViewLayerCollection readViewCollection = new ViewLayerCollection("ReadLayer", layer0);
-//      view = new View(readViewCollection);
-//
-//      List<NakshaFeature> list = queryView(view, readRequest);
-//      assertEquals(1, list.size());
-//      NakshaFeature updatedFeature = list.get(0);
-//      assertEquals(1d, ((PointCoord) updatedFeature.getGeometry().getCoordinates()).getLongitude());
-//      assertTrue(updatedFeature.getProperties().containsKey("testProperty"));
-//      assertEquals("test", updatedFeature.getProperties().get("testProperty").toString());
+      final LayerWriteFeatureRequest writeRequest = new LayerWriteFeatureRequest();
+      features.stream().forEach(feature -> {
+        feature.setGeometry(new SpPoint(new PointCoord(1d,1d)));
+        feature.getProperties().put("testProperty", "test");
+        writeRequest.add(write.updateFeature(null, viewLayerCollection.getTopPriorityLayer().getCollectionId(), feature, false));
+      });
+    SuccessResponse response1 = (SuccessResponse) writeSession.execute(writeRequest);
+    assertNotNull(response1.getTuples().get(0));
+        NakshaFeature feature = response1.getFeatures().get(0);
+        assertEquals(1d, ((PointCoord) feature.getGeometry().getCoordinates()).getLongitude());
+        assertTrue(feature.getProperties().containsKey("testProperty"));
+        assertEquals("test", feature.getProperties().get("testProperty").toString());
+        assertSame(ExecutedOp.UPDATED, response1.getTuples().get(0).op);
+
+        writeSession.commit();
+
+
+      //Check if the feature updated in expected storage collection
+      ViewLayerCollection readViewCollection = new ViewLayerCollection("ReadLayer", layer0);
+      view = new View(readViewCollection);
+
+      List<NakshaFeature> list = queryView(view, readRequest);
+      assertEquals(1, list.size());
+      NakshaFeature updatedFeature = list.get(0);
+      assertEquals(1d, ((PointCoord) updatedFeature.getGeometry().getCoordinates()).getLongitude());
+      assertTrue(updatedFeature.getProperties().containsKey("testProperty"));
+      assertEquals("test", updatedFeature.getProperties().get("testProperty").toString());
 
       session.commit();
 
@@ -171,26 +170,25 @@ public class ViewWriteSessionTests extends PsqlTests {
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("Layers", layer0, layer1);
     View view = new View(viewLayerCollection);
 
-    //TODO(lib)
-//    ViewWriteSession writeSession = view.newWriteSession(null).withWriteLayer(layer1).init();
-//      LayerWriteFeatureRequest writeRequest = new LayerWriteFeatureRequest();
-//      final NakshaFeature feature = new NakshaFeature(FEATURE_ID);
-//      feature.setGeometry(new SpPoint(new PointCoord(0d, 0d)));
-//      writeRequest.add(write.updateFeature(feature));
-//
-//    SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
-//    assertNotNull(response.getTuples().get(0));
-//    assertSame(ExecutedOp.CREATED, response.getTuples().get(0).op);
-//      writeSession.commit();
-//
-//      //check if the newly added feature found on layer
-//      ReadFeatures readRequest = new ReadFeatures();
-//    final RequestQuery requestQuery = new RequestQuery();
-//    requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new String[]{FEATURE_ID}));
-//      readRequest.setQuery(requestQuery);
-//
-//      List<NakshaFeature> list = queryView(view, readRequest);
-//      assertTrue(list.size() == 1);
+    ViewWriteSession writeSession = view.newWriteSession(null).withWriteLayer(layer1).init();
+      LayerWriteFeatureRequest writeRequest = new LayerWriteFeatureRequest();
+      final NakshaFeature feature = new NakshaFeature(FEATURE_ID);
+      feature.setGeometry(new SpPoint(new PointCoord(0d, 0d)));
+      writeRequest.add(write.updateFeature(null, viewLayerCollection.getTopPriorityLayer().getCollectionId(), feature, false));
+
+    SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
+    assertNotNull(response.getTuples().get(0));
+    assertSame(ExecutedOp.CREATED, response.getTuples().get(0).op);
+      writeSession.commit();
+
+      //check if the newly added feature found on layer
+      ReadFeatures readRequest = new ReadFeatures();
+    final RequestQuery requestQuery = new RequestQuery();
+    requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new String[]{FEATURE_ID}));
+      readRequest.setQuery(requestQuery);
+
+      List<NakshaFeature> list = queryView(view, readRequest);
+      assertTrue(list.size() == 1);
 
     session.commit();
   }
@@ -206,26 +204,25 @@ public class ViewWriteSessionTests extends PsqlTests {
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("Layers", layer1, layer0);
     View view = new View(viewLayerCollection);
-    //TODO(lib)
-//    ViewWriteSession writeSession = view.newWriteSession(new SessionOptions());      LayerWriteFeatureRequest writeRequest = new LayerWriteFeatureRequest();
-//      writeRequest.add(write.deleteFeatureById(null,FEATURE_ID,null));
-//
-//    SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
-//
-//    assertNotNull(response.getTuples().get(0));
-//    assertSame(ExecutedOp.DELETED, response.getTuples().get(0).op);
-//        assertEquals(FEATURE_ID, response.getFeatures().get(0).getId());
-//
-//      writeSession.commit();
-//
-//      //check if the newly added feature found on layer
-//      ReadFeatures readRequest = new ReadFeatures();
-//    final RequestQuery requestQuery = new RequestQuery();
-//    requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new String[]{FEATURE_ID}));
-//      readRequest.setQuery(requestQuery);
-//
-//      List<NakshaFeature> list = queryView(view, readRequest);
-//      assertTrue(list.size() == 0);
+    ViewWriteSession writeSession = view.newWriteSession(new SessionOptions());      LayerWriteFeatureRequest writeRequest = new LayerWriteFeatureRequest();
+      writeRequest.add(write.deleteFeatureById(null, viewLayerCollection.getTopPriorityLayer().getCollectionId() , FEATURE_ID,null));
+
+    SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
+
+    assertNotNull(response.getTuples().get(0));
+    assertSame(ExecutedOp.DELETED, response.getTuples().get(0).op);
+        assertEquals(FEATURE_ID, response.getFeatures().get(0).getId());
+
+      writeSession.commit();
+
+      //check if the newly added feature found on layer
+      ReadFeatures readRequest = new ReadFeatures();
+    final RequestQuery requestQuery = new RequestQuery();
+    requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new String[]{FEATURE_ID}));
+      readRequest.setQuery(requestQuery);
+
+      List<NakshaFeature> list = queryView(view, readRequest);
+      assertTrue(list.size() == 0);
     session.commit();
   }
 
