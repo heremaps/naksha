@@ -18,14 +18,15 @@
  */
 package com.here.naksha.storage.http;
 
-import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.storage.*;
-import java.util.concurrent.TimeUnit;
-import naksha.model.ErrorResult;
-import naksha.model.IReadSession;
-import naksha.model.NakshaContext;
-import naksha.model.ReadRequest;
-import org.apache.commons.lang3.NotImplementedException;
+
+import java.util.List;
+
+import naksha.model.*;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.ResultTuple;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -49,61 +50,99 @@ public final class HttpStorageReadSession implements IReadSession {
     this.requestSender = requestSender;
   }
 
-  @Override
-  public boolean isMasterConnect() {
-    return useMaster;
-  }
-
-  @Override
   public @NotNull NakshaContext getNakshaContext() {
     return context;
   }
 
   @Override
-  public int getFetchSize() {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public void setFetchSize(int size) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public long getStatementTimeout(@NotNull TimeUnit timeUnit) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public void setStatementTimeout(long timeout, @NotNull TimeUnit timeUnit) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public long getLockTimeout(@NotNull TimeUnit timeUnit) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public void setLockTimeout(long timeout, @NotNull TimeUnit timeUnit) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
+  public @NotNull Response execute(@NotNull Request readRequest) {
     try {
       return HttpStorageReadExecute.execute(context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
     } catch (Exception e) {
       log.warn("We got exception while executing Read request.", e);
-      return new ErrorResult(XyzError.EXCEPTION, e.getMessage(), e);
+      return new ErrorResponse(NakshaError.EXCEPTION, e.getMessage(), null, e);
     }
   }
 
   @Override
-  public @NotNull Result process(@NotNull Notification<?> notification) {
-    throw new NotImplementedException();
+  public void close() {}
+
+  @Override
+  public int getSocketTimeout() {
+    return 0;
   }
 
   @Override
-  public void close() {}
+  public void setSocketTimeout(int i) {
+
+  }
+
+  @Override
+  public int getStmtTimeout() {
+    return 0;
+  }
+
+  @Override
+  public void setStmtTimeout(int i) {
+
+  }
+
+  @Override
+  public int getLockTimeout() {
+    return 0;
+  }
+
+  @Override
+  public void setLockTimeout(int i) {
+
+  }
+
+  @NotNull
+  @Override
+  public String getMap() {
+    return "";
+  }
+
+  @Override
+  public void setMap(@NotNull String s) {
+
+  }
+
+  @Override
+  public boolean isClosed() {
+    return false;
+  }
+
+  @Override
+  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
+    return false;
+  }
+
+  @NotNull
+  @Override
+  public List<Tuple> getLatestTuples(@NotNull String mapId, @NotNull String collectionId, @NotNull String[] featureIds, @NotNull String mode) {
+    return List.of();
+  }
+
+  @NotNull
+  @Override
+  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, @NotNull String mode) {
+    return List.of();
+  }
+
+  @Override
+  public void fetchTuple(@NotNull ResultTuple resultTuple, @NotNull String mode) {
+
+  }
+
+  @Override
+  public void fetchTuples(@NotNull List<? extends ResultTuple> resultTuples, int from, int to, @NotNull String mode) {
+
+  }
+
+  @NotNull
+  @Override
+  public Response executeParallel(@NotNull Request request) {
+    return IReadSession.super.executeParallel(request);
+  }
 }

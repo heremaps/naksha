@@ -32,7 +32,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
-
 import naksha.model.NakshaError;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
@@ -57,7 +56,9 @@ class PrepareResult {
       Function<T, List<NakshaFeature>> typedResponseToFeatureList) {
 
     String error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
-    if (error != null) return new ErrorResponse(new NakshaError(error, "Response http status code: " + httpResponse.statusCode(),null,null));
+    if (error != null)
+      return new ErrorResponse(
+          new NakshaError(error, "Response http status code: " + httpResponse.statusCode(), null, null));
 
     T resultFeatures = JsonSerializable.deserialize(prepareBody(httpResponse), httpResponseType);
     return prepareResult(typedResponseToFeatureList.apply(resultFeatures));
@@ -85,8 +86,7 @@ class PrepareResult {
     }
   }
 
-  static SuccessResponse createHttpResultFromFeatureList(
-      final @NotNull List<NakshaFeature> features) {
+  static SuccessResponse createHttpResultFromFeatureList(final @NotNull List<NakshaFeature> features) {
     final List<ResultTuple> tuples = new ArrayList<>();
     for (final NakshaFeature feature : features) {
       tuples.add(new ResultTuple());

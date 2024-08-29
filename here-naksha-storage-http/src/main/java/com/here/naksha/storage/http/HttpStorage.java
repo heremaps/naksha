@@ -24,11 +24,15 @@ import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
+
+import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
-import naksha.model.IReadSession;
-import naksha.model.IStorage;
-import naksha.model.NakshaContext;
+
+import naksha.base.Int64;
+import naksha.base.Platform;
+import naksha.model.*;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -51,31 +55,91 @@ public class HttpStorage implements IStorage {
             properties.getSocketTimeout()));
   }
 
-  @Override
   public @NotNull IReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
     return new HttpStorageReadSession(context, useMaster, requestSender);
   }
 
+  private static @NotNull HttpStorageProperties getProperties(@NotNull Storage storage) {
+    return JsonSerializable.convert(storage.getProperties(), HttpStorageProperties.class);
+  }
+
   @Override
-  public void initStorage() {
+  public void close() {
+
+  }
+
+  @NotNull
+  @Override
+  public IReadSession newReadSession(@Nullable SessionOptions options) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public IWriteSession newWriteSession(@Nullable SessionOptions options) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
+    return IStorage.super.enterLock(id, waitMillis);
+  }
+
+  @NotNull
+  @Override
+  public Tuple featureToRow(@NotNull NakshaFeature feature) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public NakshaFeature rowToFeature(@NotNull Tuple tuple) {
+    return null;
+  }
+
+  @Nullable
+  @Override
+  public String getMapId(int mapNumber) {
+    return "";
+  }
+
+  @Override
+  public boolean contains(@NotNull String mapId) {
+    return false;
+  }
+
+  @NotNull
+  @Override
+  public IMap get(@NotNull String mapId) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public IMap getDefaultMap() {
+    return null;
+  }
+
+  @Override
+  public void initStorage(@Nullable Map<String, ?> params) {
     log.debug("HttpStorage.initStorage called");
   }
 
   @Override
-  public void startMaintainer() {}
-
-  @Override
-  public void maintainNow() {}
-
-  @Override
-  public void stopMaintainer() {}
-
-  @Override
-  public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
-    return new FutureTask<>(() -> onShutdown != null ? onShutdown.call(this) : null);
+  public boolean isInitialized() {
+    return false;
   }
 
-  private static @NotNull HttpStorageProperties getProperties(@NotNull Storage storage) {
-    return JsonSerializable.convert(storage.getProperties(), HttpStorageProperties.class);
+  @NotNull
+  @Override
+  public SessionOptions getAdminOptions() {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public String getId() {
+    return "";
   }
 }
