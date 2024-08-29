@@ -2,10 +2,6 @@
 
 package naksha.model
 
-import naksha.model.Naksha.NakshaCompanion.FETCH_ALL
-import naksha.model.Naksha.NakshaCompanion.FETCH_CACHE
-import naksha.model.Naksha.NakshaCompanion.FETCH_ID
-import naksha.model.Naksha.NakshaCompanion.FETCH_META
 import naksha.model.request.*
 import kotlin.js.JsExport
 
@@ -106,7 +102,7 @@ interface ISession : AutoCloseable {
      * @return the list of the latest [tuples][Tuple], _null_, if no [tuple][Tuple] was not found.
      * @since 3.0.0
      */
-    fun getLatestTuples(mapId: String, collectionId: String, featureIds: Array<String>, mode: String = FETCH_ALL): List<Tuple?>
+    fun getLatestTuples(mapId: String, collectionId: String, featureIds: Array<String>, mode: FetchMode = FetchMode.FETCH_ALL): List<Tuple?>
 
     /**
      * Load specific [tuples][naksha.model.Tuple].
@@ -123,7 +119,7 @@ interface ISession : AutoCloseable {
      * @return the list of the loaded [tuples][Tuple], _null_, if the tuple was not found.
      * @since 3.0.0
      */
-    fun getTuples(tupleNumbers: Array<TupleNumber>, mode: String = FETCH_ALL): List<Tuple?>
+    fun getTuples(tupleNumbers: Array<TupleNumber>, mode: FetchMode = FetchMode.FETCH_ALL): List<Tuple?>
 
     /**
      * Fetches a single result-tuple.
@@ -139,7 +135,7 @@ interface ISession : AutoCloseable {
      * @param mode the fetch mode.
      * @since 3.0.0
      */
-    fun fetchTuple(resultTuple: ResultTuple, mode: String = FETCH_ALL)
+    fun fetchTuple(resultTuple: ResultTuple, mode: FetchMode = FetchMode.FETCH_ALL)
 
     /**
      * Fetches all tuples in the given result-tuples.
@@ -157,5 +153,5 @@ interface ISession : AutoCloseable {
      * @param mode the fetch mode.
      * @since 3.0.0
      */
-    fun fetchTuples(resultTuples: List<ResultTuple?>, from:Int = 0, to:Int = resultTuples.size, mode: String = FETCH_ALL)
+    fun fetchTuples(resultTuples: List<ResultTuple?>, from:Int = 0, to:Int = resultTuples.size, mode: FetchMode = FetchMode.FETCH_ALL)
 }

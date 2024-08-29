@@ -3,6 +3,8 @@
 package naksha.psql.executors
 
 import naksha.model.*
+import naksha.model.FetchMode.FETCH_ALL
+import naksha.model.FetchMode.FETCH_ID
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.request.*
@@ -169,7 +171,7 @@ class PgResultSet(
     /**
      * The fetch that needs to be done, _null_ means validation is instant.
      */
-    private var fetchMode: String? = null
+    private var fetchMode: FetchMode? = null
 
     init {
         all = ResultTupleList.fromTupleNumberArray(storage, tupleNumberArray)
@@ -178,8 +180,8 @@ class PgResultSet(
             all.sortWith(this::order_txn_uid)
         } else if (orderBy == ID) {
             // We need to sort by ID, so we need the ids of all results!
-            fetchMode = Naksha.FETCH_ID
-            session.fetchTuples(all, mode = Naksha.FETCH_ID)
+            fetchMode = FETCH_ID
+            session.fetchTuples(all, mode = FETCH_ID)
             all.sortWith(this::order_id_txn_uid)
         } else if (orderBy != null) {
             // TODO: We may use Naksha.FETCH_META or FETCH_ALL to implement more advanced search methods!
@@ -189,7 +191,7 @@ class PgResultSet(
             // Filters need the full feature, the good thing about the filters,
             // they are applied after sorting, therefore they do not need to load
             // all features, if there is a reasonable limit!
-            fetchMode = Naksha.FETCH_ALL
+            fetchMode = FETCH_ALL
         }
         if (!incomplete) {
             end = offset + limit

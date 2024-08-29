@@ -22,7 +22,7 @@ open class NakshaCollection() : NakshaFeature() {
     @JsName("of")
     constructor(
         id: String,
-        partitions: Int = 0,
+        partitions: Int = 1,
         storageClass: String? = null,
         autoPurge: Boolean = false,
         disableHistory: Boolean = false,
