@@ -231,4 +231,85 @@ class TestPsql {
         assertThatAnyObject(retrievedFeature.geometry!!)
             .isIdenticalTo(feature.geometry!!)
     }
+
+    @Test
+    fun insert_and_update(){
+        // Given: Create collection request
+        val col = NakshaCollection("test_${randomString().lowercase()}")
+        val writeCollectionRequest = WriteRequest()
+        writeCollectionRequest.writes += Write().createCollection(null, col)
+
+        // And: create feature in collection request
+        val originalFeature = NakshaFeature().apply { id = "feature_1"
+            properties = NakshaProperties().apply {
+                featureType = "some_feature_type"
+            }
+        }
+        val writeFeaturesReq = WriteRequest().add(
+            Write().createFeature(null, col.id, originalFeature)
+        )
+
+        // And:
+        val featureToUpdate = NakshaFeature().apply {
+            id = originalFeature.id
+            properties = NakshaProperties().apply {
+                featureType = "new_feature_type"
+            }
+        }
+        val updateFeaturesReq = WriteRequest().add(
+            Write().updateFeature(null, col.id, featureToUpdate)
+        )
+
+        // When: executing collection write request
+        env.storage.newWriteSession().use { session: IWriteSession ->
+            val response = session.execute(writeCollectionRequest)
+            assertIs<SuccessResponse>(response)
+            session.commit()
+        }
+
+        // And: executing feature write request
+        env.storage.newWriteSession().use { session: IWriteSession ->
+            val response = session.execute(writeFeaturesReq)
+            assertIs<SuccessResponse>(response)
+            session.commit()
+        }
+
+        // And: Executing feature update request
+        env.storage.newWriteSession().use { session: IWriteSession ->
+            val response = session.execute(updateFeaturesReq)
+            assertIs<SuccessResponse>(response)
+            session.commit()
+        }
+
+        // Then: feature is retrievable from the collection
+        val retrievedFeature = env.storage.newReadSession().use { session: IReadSession ->
+            val response = session.execute(
+                ReadFeatures().apply {
+                    collectionIds += col.id
+                    featureIds += originalFeature.id
+                }
+            )
+            assertIs<SuccessResponse>(response)
+            val features = response.features
+            assertEquals(1, features.size)
+            features[0]!!
+        }
+
+        // And:
+        assertThatFeature(retrievedFeature)
+            .isIdenticalTo(
+                other = originalFeature,
+                ignoreProps = true // we ignore properties because we want to examine them later
+            )
+            .hasPropertiesThat { retrievedProperties ->
+                retrievedProperties
+                    .hasFeatureType(featureToUpdate.properties.featureType)
+                    .hasXyzThat { retrievedXyz ->
+                        retrievedXyz
+                            .hasProperty("appId", TEST_APP_ID)
+                            .hasProperty("author", TEST_APP_AUTHOR!!)
+                            .hasProperty("action", Action.CREATED)
+                    }
+            }
+    }
 }

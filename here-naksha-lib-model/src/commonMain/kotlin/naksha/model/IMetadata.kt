@@ -16,17 +16,17 @@ interface IMetadata {
     /**
      * The epoch milliseconds when the feature was last updated (modified).
      */
-    val updatedAt: Int64
+    val updatedAt: Int64?
 
     /**
      * The epoch milliseconds when the feature was created.
      */
-    val createdAt: Int64
+    val createdAt: Int64?
 
     /**
      * The epoch milliseconds when the author changed.
      */
-    val authorTs: Int64
+    val authorTs: Int64?
 
     /**
      * The next version, if a newer one is known.
