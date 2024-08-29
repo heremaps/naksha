@@ -111,7 +111,7 @@ public class ViewTest {
     final LayerWriteFeatureRequest request = new LayerWriteFeatureRequest();
     final NakshaFeature feature = new NakshaFeature("id0");
     request.add(write.createFeature(null,VIEW_COLLECTION,feature));
-    when(storage.rowToFeature(any())).thenReturn(feature);
+    when(storage.tupleToFeature(any())).thenReturn(feature);
 
     Response success = new SuccessResponse(sampleXyzWriteResponse(1, storage, ExecutedOp.CREATED));
     when(session.execute(request)).thenReturn(success);
