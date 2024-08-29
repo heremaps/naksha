@@ -38,10 +38,13 @@ class Naksha private constructor() {
         const val VIRT_COLLECTIONS = "naksha~collections"
 
         /**
+         * The identifier of the virtual collection quoted to be used in queries.
+         */
+        val VIRT_COLLECTIONS_QUOTED = quoteIdent(VIRT_COLLECTIONS)
+
+        /**
          * The collection-number of the virtual collection in which the collections them-self are stored.
          */
-        @JvmStatic
-        @JsStatic
         val VIRT_COLLECTIONS_NUMBER = Int64(0)
 
         /**
@@ -56,30 +59,6 @@ class Naksha private constructor() {
         @JsStatic
         val VIRT_DICTIONARIES_NUMBER = Int64(2)
 
-        /**
-         * Fetch only the `id`, other parts only from cache.
-         */
-        const val FETCH_ID = "id"
-
-        /**
-         * Fetch the [metadata][Metadata], other parts only from cache.
-         */
-        const val FETCH_META = "meta"
-
-        /**
-         * Fetch all columns.
-         */
-        const val FETCH_ALL = "all"
-
-        /**
-         * Fetch all columns, do not use the cache.
-         */
-        const val FETCH_ALL_NO_CACHE = "all-no-cache"
-
-        /**
-         * Only load form cache.
-         */
-        const val FETCH_CACHE = "cache"
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:

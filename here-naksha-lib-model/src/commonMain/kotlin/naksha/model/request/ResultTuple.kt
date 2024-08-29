@@ -47,6 +47,7 @@ open class ResultTuple(
      */
     @JvmField var tuple: Tuple?
 ) {
+
     /**
      * The map-id of the map in which the row is located.
      */

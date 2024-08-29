@@ -18,24 +18,13 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.exceptions.NoCursor;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzPoint;
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.ForwardCursor;
-import naksha.model.ReadFeatures;
-import naksha.model.SOp;
-import com.here.naksha.lib.core.models.storage.SeekableCursor;
-import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
-import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.psql.PsqlFeatureGenerator;
-import com.here.naksha.lib.psql.PsqlStorage;
-import com.here.naksha.lib.psql.PsqlStorage.Params;
-import com.here.naksha.lib.psql.PsqlStorageConfig;
-import com.here.naksha.lib.psql.PsqlWriteSession;
+import naksha.geo.PointCoord;
+import naksha.geo.SpPoint;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.*;
+import naksha.model.request.query.SpIntersects;
+import naksha.model.request.query.SpOr;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -45,17 +34,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
-import static naksha.model.SOp.intersects;
-import static com.here.naksha.lib.psql.PsqlStorageConfig.configFromFileOrEnv;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Base class for all PostgresQL tests that require some test database.
@@ -81,24 +62,21 @@ class PsqlViewTests extends PsqlTests {
   static final String COLLECTION_0 = "test_view0";
   static final String COLLECTION_1 = "test_view1";
   static final String COLLECTION_2 = "test_view2";
+  static final Write write = new Write();
 
   @Test
   @Order(30)
   @EnabledIf("runTest")
-  void createCollection() throws NoCursor {
+  void createCollection() {
     assertNotNull(storage);
     assertNotNull(session);
-    final WriteXyzCollections request = new WriteXyzCollections();
-    request.add(EWriteOp.CREATE, new XyzCollection(COLLECTION_0, 1, false, true));
-    request.add(EWriteOp.CREATE, new XyzCollection(COLLECTION_1, 1, false, true));
-    request.add(EWriteOp.CREATE, new XyzCollection(COLLECTION_2, 1, false, true));
-    try (final ForwardCursor<XyzCollection, XyzCollectionCodec> cursor =
-             session.execute(request).getXyzCollectionCursor()) {
-      assertNotNull(cursor);
-      assertTrue(cursor.hasNext());
-    } finally {
-      session.commit(true);
-    }
+    final WriteRequest request = new WriteRequest();
+    request.add(write.createCollection(null, new NakshaCollection(COLLECTION_0, 1, null, false, true, null)));
+    request.add(write.createCollection(null, new NakshaCollection(COLLECTION_1, 1, null, false, true, null)));
+    request.add(write.createCollection(null, new NakshaCollection(COLLECTION_2, 1, null, false, true, null)));
+    SuccessResponse response = (SuccessResponse) session.execute(request);
+    assertNotNull(response.getTuples());
+    session.commit();
   }
 
   @Test
@@ -107,38 +85,37 @@ class PsqlViewTests extends PsqlTests {
   void addFeatures() {
     assertNotNull(storage);
     assertNotNull(session);
-    PsqlFeatureGenerator fg = new PsqlFeatureGenerator();
-    final WriteXyzFeatures requestTest0 = new WriteXyzFeatures(COLLECTION_0);
-    final WriteXyzFeatures requestTest1 = new WriteXyzFeatures(COLLECTION_1);
-    final WriteXyzFeatures requestTest2 = new WriteXyzFeatures(COLLECTION_2);
+    ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
+    final WriteRequest requestTest0 = new WriteRequest();
+    final WriteRequest requestTest1 = new WriteRequest();
+    final WriteRequest requestTest2 = new WriteRequest();
+    final SpPoint point = new SpPoint(new PointCoord(0d, 0d));
+    final SpPoint point1 = new SpPoint(new PointCoord(1d, 1d));
+    final SpPoint point2 = new SpPoint(new PointCoord(2d, 2d));
     for (int i = 0; i < 10; i++) {
-      final XyzFeature feature = fg.newRandomFeature();
-      feature.setGeometry(new XyzPoint(0d, 0d));
-      requestTest0.add(EWriteOp.PUT, feature);
+      final NakshaFeature feature = new NakshaFeature(String.valueOf(threadLocalRandom.nextInt()));
+      feature.setGeometry(point);
+      requestTest0.add(write.updateFeature(null, COLLECTION_0, feature, false));
 
-      XyzFeature featureEdited1 = feature.deepClone();
-      featureEdited1.setGeometry(new XyzPoint(1d, 1d));
-      requestTest1.add(EWriteOp.PUT, featureEdited1);
+      NakshaFeature featureEdited1 = feature.copy(true);
+      featureEdited1.setGeometry(point1);
+      requestTest1.add(write.updateFeature(null, COLLECTION_1, featureEdited1, false));
 
-      XyzFeature featureEdited2 = feature.deepClone();
-      featureEdited2.setGeometry(new XyzPoint(2d, 2d));
-      requestTest2.add(EWriteOp.PUT, featureEdited2);
+      NakshaFeature featureEdited2 = feature.copy(true);
+      featureEdited2.setGeometry(point2);
+      requestTest2.add(write.updateFeature(null, COLLECTION_2, featureEdited2, false));
     }
-
-    try {
       session.execute(requestTest0);
       session.execute(requestTest1);
       session.execute(requestTest2);
-    } finally {
-      session.commit(true);
-    }
+      session.commit();
   }
 
 
   @Test
   @Order(41)
   @EnabledIf("runTest")
-  void viewQueryTest_pickTopLayerResult() throws NoCursor {
+  void viewQueryTest_pickTopLayerResult() {
     assertNotNull(storage);
     assertNotNull(session);
 
@@ -155,22 +132,24 @@ class PsqlViewTests extends PsqlTests {
     ReadFeatures requestAll = new ReadFeatures();
 
     // when
-    List<XyzFeatureCodec> features = queryView(view, requestAll);
-    List<XyzFeatureCodec> features1 = queryView(viewReversed, requestAll);
+    List<NakshaFeature> features = queryView(view, requestAll);
+    List<NakshaFeature> features1 = queryView(viewReversed, requestAll);
 
     // then
     assertEquals(10, features.size());
-    assertEquals(0d, features.get(0).getGeometry().getCoordinate().x);
+    PointCoord coordinates = (PointCoord) features.get(0).getGeometry().getCoordinates();
+    assertEquals(0d, coordinates.getLongitude());
 
     assertEquals(10, features1.size());
-    assertEquals(1d, features1.get(0).getGeometry().getCoordinate().x);
-    session.commit(true);
+    PointCoord coordinates1 = (PointCoord) features1.get(0).getGeometry().getCoordinates();
+    assertEquals(1d, coordinates1.getLongitude());
+    session.commit();
   }
 
   @Test
   @Order(41)
   @EnabledIf("runTest")
-  void viewQueryTest_fetchMissing() throws NoCursor {
+  void viewQueryTest_fetchMissing() {
     assertNotNull(storage);
     assertNotNull(session);
 
@@ -182,23 +161,28 @@ class PsqlViewTests extends PsqlTests {
     View view = new View(viewLayerCollection);
 
     ReadFeatures getByPoint = new ReadFeatures();
-    getByPoint.setSpatialOp(intersects(new XyzPoint(1d, 1d)));
+    RequestQuery requestQuery = new RequestQuery();
+    SpIntersects spIntersects = new SpIntersects();
+    spIntersects.setGeometry(new SpPoint(new PointCoord(1d,1d)));
+    requestQuery.setSpatial(spIntersects);
+    getByPoint.setQuery(requestQuery);
 
     // when
-    List<XyzFeatureCodec> features = queryView(view, getByPoint);
+    List<NakshaFeature> features = queryView(view, getByPoint);
 
     // then
     assertEquals(10, features.size());
     // feature fetched in second query from obligatory storage
-    assertEquals(0d, features.get(0).getGeometry().getCoordinate().x);
+    SpPoint geometry = (SpPoint) features.get(0).getGeometry();
+    assertEquals(0d, geometry.getCoordinates().getLongitude());
 
-    session.commit(true);
+    session.commit();
   }
 
   @Test
   @Order(41)
   @EnabledIf("runTest")
-  void viewQueryTest_missingMiddleLayerInSpacialQuery() throws NoCursor {
+  void viewQueryTest_missingMiddleLayerInSpacialQuery() {
     assertNotNull(storage);
     assertNotNull(session);
 
@@ -211,42 +195,48 @@ class PsqlViewTests extends PsqlTests {
     View view = new View(viewLayerCollection);
 
     ReadFeatures getByPoint = new ReadFeatures();
-    getByPoint.setSpatialOp(SOp.or(intersects(new XyzPoint(0d, 0d)), intersects(new XyzPoint(2d, 2d))));
+    RequestQuery requestQuery = new RequestQuery();
+    SpIntersects spIntersects = new SpIntersects();
+    spIntersects.setGeometry(new SpPoint(new PointCoord(0d,0d)));
+    SpOr spOr = new SpOr();
+    spOr.add(spIntersects);
+    spIntersects.setGeometry(new SpPoint(new PointCoord(2d,2d)));
+    spOr.add(spIntersects);
+    requestQuery.setSpatial(spOr);
+    getByPoint.setQuery(requestQuery);
 
     // when
-    List<XyzFeatureCodec> features = queryView(view, getByPoint);
+    List<NakshaFeature> features = queryView(view, getByPoint);
 
     // then
     assertEquals(10, features.size());
-    assertEquals(0d, features.get(0).getGeometry().getCoordinate().x);
-
-    session.commit(true);
+    SpPoint geometry = (SpPoint) features.get(0).getGeometry();
+    assertEquals(0d, geometry.getCoordinates().getLongitude());
+    session.commit();
   }
 
   @Test
   @Order(41)
   @EnabledIf("runTest")
-  void viewQueryTest_returnFromMiddleLayerIfFeatureIsMissingInTopLayer() throws NoCursor {
+  void viewQueryTest_returnFromMiddleLayerIfFeatureIsMissingInTopLayer() {
     assertNotNull(storage);
     assertNotNull(session);
+    ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
 
     // given feature in COLLECTION 1 and 2 (but not in 0)
-    PsqlFeatureGenerator fg = new PsqlFeatureGenerator();
-    final WriteXyzFeatures requestTest1 = new WriteXyzFeatures(COLLECTION_1);
-    final WriteXyzFeatures requestTest2 = new WriteXyzFeatures(COLLECTION_2);
-    final XyzFeature feature = fg.newRandomFeature();
-    feature.setGeometry(new XyzPoint(11d, 11d));
-    requestTest1.add(EWriteOp.CREATE, feature);
+    final WriteRequest requestTest1 = new WriteRequest();
+    final WriteRequest requestTest2 = new WriteRequest();
+    final NakshaFeature feature = new NakshaFeature(String.valueOf(threadLocalRandom.nextInt()));
+    feature.setGeometry(new SpPoint(new PointCoord(11d, 11d)));
+    requestTest1.add(write.createFeature(null, COLLECTION_1, feature));
 
-    XyzFeature featureEdited2 = feature.deepClone();
-    featureEdited2.setGeometry(new XyzPoint(22d, 22d));
-    requestTest2.add(EWriteOp.CREATE, featureEdited2);
-    try {
+    NakshaFeature featureEdited2 = feature.copy(true);
+    featureEdited2.setGeometry(new SpPoint(new PointCoord(22d, 22d)));
+    requestTest2.add(write.createFeature(null, COLLECTION_2, featureEdited2));
       session.execute(requestTest1);
       session.execute(requestTest2);
-    } finally {
-      session.commit(true);
-    }
+      session.commit();
+
 
     // given view
     ViewLayer layer0 = new ViewLayer(storage, COLLECTION_0);
@@ -258,22 +248,28 @@ class PsqlViewTests extends PsqlTests {
 
     // when requesting for feature from COLLECTION 0, 1 and 2
     ReadFeatures getByPoint = new ReadFeatures();
-    getByPoint.setSpatialOp(SOp.or(intersects(new XyzPoint(11d, 11d)), intersects(new XyzPoint(22d, 22d))));;
-    List<XyzFeatureCodec> features = queryView(view, getByPoint);
+    RequestQuery requestQuery = new RequestQuery();
+    SpIntersects spIntersects = new SpIntersects();
+    spIntersects.setGeometry(new SpPoint(new PointCoord(11d,11d)));
+    SpOr spOr = new SpOr();
+    spOr.add(spIntersects);
+    spIntersects.setGeometry(new SpPoint(new PointCoord(22d,22d)));
+    spOr.add(spIntersects);
+    requestQuery.setSpatial(spOr);
+    getByPoint.setQuery(requestQuery);
+    List<NakshaFeature> features = queryView(view, getByPoint);
 
     // then should get result from COLLECTION_1 as it's next in priority and feature doesn't exist in COLLECTION_0 which is top priority layer.
     assertEquals(1, features.size());
-    assertEquals(11d, features.get(0).getGeometry().getCoordinate().x);
-    session.commit(true);
+    SpPoint geometry = (SpPoint) features.get(0).getGeometry();
+    assertEquals(11d, geometry.getCoordinates().getLongitude());
+    session.commit();
   }
 
-  private List<XyzFeatureCodec> queryView(View view, ReadFeatures request) throws NoCursor {
-    ViewReadSession readSession = view.newReadSession(nakshaContext, false);
-    try (final SeekableCursor<XyzFeature, XyzFeatureCodec> cursor =
-             readSession.execute(request).getXyzSeekableCursor()) {
-      return cursor.asList();
-    } finally {
-      readSession.close();
-    }
+  private List<NakshaFeature> queryView(View view, ReadFeatures request) {
+    Response response = view.newReadSession(null).execute(request);
+    assertInstanceOf(SuccessResponse.class,response);
+    SuccessResponse successResponse = (SuccessResponse) response;
+    return successResponse.getFeatures();
   }
 }

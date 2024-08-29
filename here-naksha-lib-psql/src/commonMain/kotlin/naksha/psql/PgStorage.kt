@@ -4,14 +4,8 @@ import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fx2
 import naksha.jbon.JbDictManager
-import naksha.jbon.JbFeatureDecoder
-import naksha.jbon.JbMapDecoder
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.FETCH_ALL
-import naksha.model.Naksha.NakshaCompanion.FETCH_ALL_NO_CACHE
-import naksha.model.Naksha.NakshaCompanion.FETCH_CACHE
-import naksha.model.Naksha.NakshaCompanion.FETCH_ID
-import naksha.model.Naksha.NakshaCompanion.FETCH_META
+import naksha.model.FetchMode.*
 import naksha.model.NakshaContext.NakshaContextCompanion.DEFAULT_MAP_ID
 import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.model.NakshaVersion.Companion.LATEST
@@ -39,11 +33,11 @@ import naksha.psql.PgColumn.PgColumnCompanion.txn_next
 import naksha.psql.PgColumn.PgColumnCompanion.type
 import naksha.psql.PgColumn.PgColumnCompanion.uid
 import naksha.psql.PgColumn.PgColumnCompanion.updated_at
-import naksha.psql.PgUtil.PgUtilCompanion.VERSION
 import naksha.psql.PgUtil.PgUtilCompanion.CONTEXT
 import naksha.psql.PgUtil.PgUtilCompanion.ID
 import naksha.psql.PgUtil.PgUtilCompanion.OPTIONS
 import naksha.psql.PgUtil.PgUtilCompanion.OVERRIDE
+import naksha.psql.PgUtil.PgUtilCompanion.VERSION
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -254,7 +248,8 @@ SELECT
                         tupleSize
                     }
                     // Note: Temporary and Brittle tables are both created in the temp-tablespace!
-                    _brittleTableSpace = if (cursor.column("temp_oid") is Int) TEMPORARY_TABLESPACE else null
+                    _brittleTableSpace =
+                        if (cursor.column("temp_oid") is Int) TEMPORARY_TABLESPACE else null
                     _tempTableSpace = _brittleTableSpace
                     _gzipExtension = cursor.column("gzip_oid") is Int
                     // "PostgreSQL 15.5 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 7.3.1 20180712 (Red Hat 7.3.1-6), 64-bit"
@@ -300,7 +295,8 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
      * @param schema the schema name.
      * @return the map-id.
      */
-    fun schemaToMapId(schema: String): String = if (schema == defaultSchemaName) defaultSchemaName else schema
+    fun schemaToMapId(schema: String): String =
+        if (schema == defaultSchemaName) defaultSchemaName else schema
 
     /**
      * Returns the default map.
@@ -332,7 +328,10 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
      * The OID of the map-number sequence.
      */
     val mapNumberSequenceOid: Int
-        get() = _mapNumberSequenceOid ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+        get() = _mapNumberSequenceOid ?: throw NakshaException(
+            UNINITIALIZED,
+            "Storage uninitialized"
+        )
 
     // TODO: This only works as long as we only support the standard-map, later we need to somehow pre-fetch all maps.
     //       Maps are entities, that are anyway rare, the hard-cap is 4k, and even that would already be a lot for a storage!
@@ -341,7 +340,8 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
     /**
      * Creates a new schema instance, internally called.
      */
-    protected open fun newMap(storage: PgStorage, mapId: String): PgMap = PgMap(storage, mapId, mapIdToSchema(mapId))
+    protected open fun newMap(storage: PgStorage, mapId: String): PgMap =
+        PgMap(storage, mapId, mapIdToSchema(mapId))
 
     /**
      * Returns the map wrapper.
@@ -372,25 +372,54 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
      */
     override fun getMapId(mapNumber: Int): String? = mapNumberToId[mapNumber]
 
-    override fun rowToFeature(tuple: Tuple): NakshaFeature {
+    override fun tupleToFeature(tuple: Tuple): NakshaFeature {
         return if (tuple.feature != null) {
             // TODO: FIXME, we need the XYZ namespace
-            val featureReader = JbFeatureDecoder(JbDictManager()).mapBytes(tuple.feature!!).reader
-            val feature = JbMapDecoder().mapReader(featureReader).toAnyObject().proxy(NakshaFeature::class)
-            feature
+            val feature = PgUtil.decodeFeature(tuple.feature, tuple.meta.flags, JbDictManager())
+            feature?.properties?.xyz = xyzFrom(tuple.meta, decodedTags = null) // TODOL: tag list
+            return feature ?: throw NakshaException(
+                NakshaError(
+                    NakshaError.EXCEPTION,
+                    "Could not deserialize feature for tuple number: ${tuple.tupleNumber}"
+                )
+            )
         } else {
             TODO("We will always have at least the id, which is formally enough to generate an empty feature!")
         }
     }
 
-    override fun featureToRow(feature: NakshaFeature): Tuple {
+    private fun xyzFrom(meta: Metadata, decodedTags: TagList?): XyzNs {
+        meta
+        return AnyObject().apply {
+            setRaw("uuid", meta.uid)
+            setRaw("puuid", meta.puid)
+            // setRaw("muuid", ?) TODO
+            setRaw("createdAt", meta.createdAt)
+            setRaw("updatedAt", meta.updatedAt)
+            // setRaw("space", ?) TODO
+            setRaw("tags", decodedTags)
+            setRaw("version", meta.version.txn)
+            setRaw("changeCount", meta.changeCount)
+            setRaw("action", meta.action())
+            setRaw("appId", meta.appId)
+            setRaw("author", meta.author)
+            setRaw("authorTs", meta.authorTs)
+            setRaw("hash", meta.hash)
+            setRaw("origin", meta.origin)
+            setRaw("geoGrid", meta.geoGrid)
+        }.proxy(XyzNs::class)
+    }
+
+    override fun featureToTuple(feature: NakshaFeature): Tuple {
         val nakshaFeature = feature.proxy(NakshaFeature::class)
         TODO("Implement me")
     }
 
-    override fun newWriteSession(options: SessionOptions?): IWriteSession = newSession(options ?: SessionOptions.from(null), false)
+    override fun newWriteSession(options: SessionOptions?): IWriteSession =
+        newSession(options ?: SessionOptions.from(null), false)
 
-    override fun newReadSession(options: SessionOptions?): IWriteSession = newSession(options ?: SessionOptions.from(null), true)
+    override fun newReadSession(options: SessionOptions?): IWriteSession =
+        newSession(options ?: SessionOptions.from(null), true)
 
     /**
      * Returns a new PostgresQL session.
@@ -400,7 +429,8 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
      * @param readOnly if the session should be read-only.
      * @return the session.
      */
-    open fun newSession(options: SessionOptions, readOnly: Boolean): PgSession = PgSession(this, options, readOnly)
+    open fun newSession(options: SessionOptions, readOnly: Boolean): PgSession =
+        PgSession(this, options, readOnly)
 
     /**
      * Opens a new PostgresQL database connection.
@@ -415,10 +445,15 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
      * @param readOnly if the connection should be read-only.
      * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the connection. It may just do the work or perform arbitrary additional work or supress initialization.
      */
-    open fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>? = null): PgConnection {
+    open fun newConnection(
+        options: SessionOptions,
+        readOnly: Boolean,
+        init: Fx2<PgConnection, String>? = null
+    ): PgConnection {
         val conn = cluster.newConnection(options, readOnly)
         // TODO: Do we need more initialization work here?
-        val query = "SET SESSION search_path TO ${quoteIdent(mapIdToSchema(options.mapId))}, public, topology;\n"
+        val query =
+            "SET SESSION search_path TO ${quoteIdent(mapIdToSchema(options.mapId))}, public, topology;\n"
         if (init != null) init.call(conn, query) else conn.execute(query).close()
         return conn
     }
@@ -434,7 +469,10 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
      * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the connection. It may just do the work or perform arbitrary additional work or supress initialization.
      * @return the admin connection, to be closed after usage (uses [adminOptions], and is always bound to master).
      */
-    internal open fun adminConnection(options: SessionOptions = adminOptions, init: Fx2<PgConnection, String>? = null): PgConnection =
+    internal open fun adminConnection(
+        options: SessionOptions = adminOptions,
+        init: Fx2<PgConnection, String>? = null
+    ): PgConnection =
         newConnection(options, false, init)
 
     /**
@@ -476,7 +514,7 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
         mapId: String,
         collectionId: String,
         featureIds: Array<String>,
-        mode: String = FETCH_ALL
+        mode: FetchMode = FETCH_ALL
     ): List<Tuple?> {
         TODO("Implement getLatestTuples")
     }
@@ -497,7 +535,11 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
      * @return the list of the loaded [tuples][Tuple], _null_, if the tuple was not found.
      * @since 3.0.0
      */
-    fun getTuples(conn: PgConnection, tupleNumbers: Array<TupleNumber>, mode: String = FETCH_ALL): List<Tuple?> {
+    fun getTuples(
+        conn: PgConnection,
+        tupleNumbers: Array<TupleNumber>,
+        mode: FetchMode = FETCH_ALL
+    ): List<Tuple?> {
         TODO("Implement getTuples")
     }
 
@@ -516,7 +558,7 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
      * @param mode the fetch mode.
      * @since 3.0.0
      */
-    fun fetchTuple(conn: PgConnection, resultTuple: ResultTuple, mode: String = FETCH_ALL) {
+    fun fetchTuple(conn: PgConnection, resultTuple: ResultTuple, mode: FetchMode = FETCH_ALL) {
         TODO("Implement fetchTuple")
     }
 
@@ -542,7 +584,7 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
         resultTuples: List<ResultTuple?>,
         from: Int = 0,
         to: Int = resultTuples.size,
-        mode: String = FETCH_ALL
+        mode: FetchMode = FetchMode.FETCH_ALL
     ) {
         // key = collectionId
         // value = list of tuples to load
@@ -585,12 +627,14 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
                 val colId = entry.key
                 val list = entry.value ?: continue
                 val tupleNumbers = Array<Any?>(list.size) { list[it].tupleNumber.toByteArray() }
-                val SQL = if (mode == FETCH_META) { """
+                val SQL = if (mode == FETCH_META) {
+                    """
 SELECT gzip(string_agg(${PgColumn.metaSelectToBinary}::bytea,'\\x00'::bytea)) as binary_meta
 FROM ${quoteIdent(colId)}
 WHERE tuple_number = ANY($1)
 """
-                } else { """
+                } else {
+                    """
 SELECT ${PgColumn.allColumns.joinToString(",")}
 FROM ${quoteIdent(colId)}
 WHERE tuple_number = ANY($1)"""

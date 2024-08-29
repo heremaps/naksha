@@ -18,10 +18,11 @@
  */
 package com.here.naksha.lib.view;
 
+import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
-import com.here.naksha.lib.psql.*;
-import com.here.naksha.lib.psql.PsqlStorage.Params;
-import org.jetbrains.annotations.NotNull;
+import naksha.model.SessionOptions;
+import naksha.psql.PgPlatform;
+import naksha.psql.PgStorage;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
@@ -29,7 +30,6 @@ import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.here.naksha.lib.psql.PsqlStorageConfig.configFromFileOrEnv;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
@@ -42,13 +42,6 @@ abstract class PsqlTests {
   static final Logger log = LoggerFactory.getLogger(PsqlTests.class);
 
   /**
-   * The test database, if any is available.
-   */
-  @SuppressWarnings("unused")
-  static final @NotNull PsqlStorageConfig config =
-          configFromFileOrEnv("test_psql_db.url", "NAKSHA_TEST_PSQL_DB_URL", "naksha_view_test_schema");
-
-  /**
    * Prevents that the test drops the schema at the start.
    */
   static final boolean DROP_INITIALLY = true;
@@ -57,11 +50,6 @@ abstract class PsqlTests {
    * If the test drop the database at the end (false by default, to verify results).
    */
   static final boolean DROP_FINALLY = false;
-
-  /**
-   * Logging level.
-   */
-  static final EPsqlLogLevel LOG_LEVEL = EPsqlLogLevel.VERBOSE;
 
   abstract boolean enabled();
 
@@ -75,64 +63,33 @@ abstract class PsqlTests {
 
   static final String TEST_APP_ID = "test_app";
   static final String TEST_AUTHOR = "test_author";
-  static @Nullable PsqlStorage storage;
+  static PgStorage storage = PgPlatform.newTestStorage();
   static @Nullable NakshaContext nakshaContext;
-  static @Nullable PsqlWriteSession session;
-  static @NotNull PsqlFeatureGenerator fg;
+  static @Nullable IWriteSession session;
 
   @BeforeAll
   static void beforeTest() {
     NakshaContext.currentContext().setAuthor("PsqlStorageTest");
     NakshaContext.currentContext().setAppId("naksha-lib-view-unit-tests");
-    nakshaContext = new NakshaContext().withAppId(TEST_APP_ID).withAuthor(TEST_AUTHOR);
-    fg = new PsqlFeatureGenerator();
-  }
-
-  private String schema;
-  /**
-   * The test-schema to use, can be overridden to switch the schema.
-   */
-  @NotNull
-  String schema() {
-    assertNotNull(schema);
-    return schema;
-  }
-
-  @Test
-  @Order(10)
-  @EnabledIf("runTest")
-  void createStorage() {
-    storage = new PsqlStorage(config).withParams(new Params().pg_hint_plan(false).pg_stat_statements(false));
-    schema = storage.getSchema();
-    if (!schema.equals(schema())) {
-      storage.setSchema(schema());
-    }
-    // Enable this code line to get debug output from the database!
-    // storage.setLogLevel(EPsqlLogLevel.DEBUG);
-  }
-
-  @Test
-  @Order(11)
-  @EnabledIf("dropInitially")
-  void dropSchemaIfExists() {
+    nakshaContext = NakshaContext.currentContext().withAppId(TEST_APP_ID).withAuthor(TEST_AUTHOR);
     assertNotNull(storage);
-    storage.dropSchema();
+    storage.initStorage(null);
   }
 
-  @Test
-  @Order(12)
-  @EnabledIf("runTest")
-  void initStorage() {
-    assertNotNull(storage);
-    storage.initStorage();
-  }
+//  @Test
+//  @Order(12)
+//  @EnabledIf("runTest")
+//  void initStorage() {
+//    assertNotNull(storage);
+//    storage.initStorage(null);
+//  }
 
   @Test
   @Order(13)
   @EnabledIf("runTest")
   void startWriteSession() {
     assertNotNull(storage);
-    session = storage.newWriteSession(nakshaContext, true);
+    session = storage.newWriteSession(new SessionOptions());
     assertNotNull(session);
   }
 
@@ -143,7 +100,7 @@ abstract class PsqlTests {
   @EnabledIf("dropFinally")
   void dropSchemaFinally() {
     assertNotNull(storage);
-    storage.dropSchema();
+//    storage.dropSchema(); TODO(lib)
   }
 
   @EnabledIf("runTest")

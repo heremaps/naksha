@@ -8,11 +8,13 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.jbon.JbMapDecoder
 import naksha.jbon.JbFeatureDecoder
 import naksha.model.*
+import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
 import naksha.model.objects.Transaction
+import naksha.psql.executors.PgReader
 import naksha.psql.executors.PgWriter
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -282,11 +284,39 @@ open class PgSession(
 
     override fun execute(request: Request): Response {
         when (request) {
-            is WriteRequest -> return PgWriter(this, request).execute()
+            is WriteRequest -> {
+                saveTransactionIntoDb(true) // with transaction start time
+                val response = PgWriter(this, request).execute()
+                saveTransactionIntoDb() // with updated counts
+                return response
+            }
             is ReadRequest -> {
-                TODO("ReadRequest not yet implemented")
+                val response = PgReader(this, request).execute()
+                return response
             }
             else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown request")
+        }
+    }
+
+    private var isTransactionStored = false
+    private fun saveTransactionIntoDb(create : Boolean = false) {
+        // FIXME instead of create/update we can use upsert when ready
+        if (isTransactionStored && create) {
+            return
+        } else if (isTransactionStored) {
+            val updateTxReq = WriteRequest()
+            val updateTx = Write()
+            updateTxReq.add(updateTx)
+            updateTx.updateFeature(null, VIRT_TRANSACTIONS, transaction())
+            // FIXME uncomment when counts and update ready
+//            PgWriter(this, updateTxReq).execute()
+        } else {
+            val writeTxReq = WriteRequest()
+            val writeTx = Write()
+            writeTxReq.add(writeTx)
+            writeTx.createFeature(null, VIRT_TRANSACTIONS, transaction())
+            PgWriter(this, writeTxReq).execute()
+            isTransactionStored = true
         }
     }
 
@@ -362,7 +392,7 @@ open class PgSession(
         }
     }
 
-    override fun getLatestTuples(mapId: String, collectionId: String, featureIds: Array<String>, mode: String): List<Tuple?> {
+    override fun getLatestTuples(mapId: String, collectionId: String, featureIds: Array<String>, mode: FetchMode): List<Tuple?> {
         val connection = pgConnection
         val conn = connection ?: storage.adminConnection(storage.adminOptions)
         try {
@@ -372,7 +402,7 @@ open class PgSession(
         }
     }
 
-    override fun getTuples(tupleNumbers: Array<TupleNumber>, mode: String): List<Tuple?> {
+    override fun getTuples(tupleNumbers: Array<TupleNumber>, mode: FetchMode): List<Tuple?> {
         val connection = pgConnection
         val conn = connection ?: storage.adminConnection(storage.adminOptions)
         try {
@@ -382,7 +412,7 @@ open class PgSession(
         }
     }
 
-    override fun fetchTuple(resultTuple: ResultTuple, mode: String) {
+    override fun fetchTuple(resultTuple: ResultTuple, mode: FetchMode) {
         val connection = pgConnection
         val conn = connection ?: storage.adminConnection(storage.adminOptions)
         try {
@@ -392,7 +422,7 @@ open class PgSession(
         }
     }
 
-    override fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int, to: Int, mode: String) {
+    override fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int, to: Int, mode: FetchMode) {
         val connection = pgConnection
         val conn = connection ?: storage.adminConnection(storage.adminOptions)
         try {

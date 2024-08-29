@@ -1,9 +1,13 @@
 package com.here.naksha.lib.view.merge;
 
-import naksha.model.XyzFeature;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
-import com.here.naksha.lib.view.ViewLayerRow;
+import com.here.naksha.lib.view.ViewLayerFeature;
+import naksha.base.JvmInt64;
+import naksha.model.*;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ExecutedOp;
+import naksha.model.request.ResultTuple;
+import naksha.psql.PgUtil;
+import org.apache.logging.log4j.core.config.plugins.convert.TypeConverters.ByteArrayConverter;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -12,56 +16,88 @@ import java.util.NoSuchElementException;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
 
 public class MergeByStoragePriorityTest {
 
-  XyzFeatureCodecFactory factory = XyzFeatureCodecFactory.get();
-  MergeByStoragePriority<XyzFeature, XyzFeatureCodec> mergeStrategy = new MergeByStoragePriority<>();
+  MergeByStoragePriority mergeStrategy = new MergeByStoragePriority();
 
   @Test
   void checkPriorityMerge() {
     // given
-    List<ViewLayerRow<XyzFeature, XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
+    List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
+    IStorage storage = mock(IStorage.class);
 
-    XyzFeatureCodec f1 = factory.newInstance();
-    XyzFeatureCodec f2 = factory.newInstance();
-    XyzFeatureCodec f3 = factory.newInstance();
+    NakshaFeature f1 = new NakshaFeature();
+    NakshaFeature f2 = new NakshaFeature();
+    NakshaFeature f3 = new NakshaFeature();
 
-    singleRowFeatures.add(new ViewLayerRow<>(f1, 1, null));
-    singleRowFeatures.add(new ViewLayerRow<>(f2, 0, null));
-    singleRowFeatures.add(new ViewLayerRow<>(f3, 2, null));
+    byte[] bytesF1 = PgUtil.encodeFeature(f1, 0, null);
+    byte[] bytesF2 = PgUtil.encodeFeature(f2, 0, null);
+    byte[] bytesF3 = PgUtil.encodeFeature(f3, 0, null);
+
+    final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), Version.fromDouble(3.0),0);
+    Metadata metadata = mock(Metadata.class);
+
+    Tuple tu1 = new Tuple(storage, tupleNum, metadata, bytesF1, null, null, null, null);
+    Tuple tu2 = new Tuple(storage, tupleNum, metadata, bytesF2, null, null, null, null);
+    Tuple tu3 = new Tuple(storage, tupleNum, metadata, bytesF3, null, null, null, null);
+
+    ResultTuple t1 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, "checkPriorityMerge1", tu1);
+    ResultTuple t2 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, "checkPriorityMerge1", tu2);
+    ResultTuple t3 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, "checkPriorityMerge1", tu3);
+
+    singleRowFeatures.add(new ViewLayerFeature(t1, 1, null));
+    singleRowFeatures.add(new ViewLayerFeature(t2, 0, null));
+    singleRowFeatures.add(new ViewLayerFeature(t3, 2, null));
 
     // when
-    XyzFeatureCodec outputFeature = mergeStrategy.apply(singleRowFeatures);
+    NakshaFeature outputFeature = mergeStrategy.apply(singleRowFeatures).getFeature();
 
     // then
-    assertSame(f2,  outputFeature);
+    assertSame(t2.getFeature(),  outputFeature);
   }
 
   @Test
   void checkSamePriorityMerge() {
     // given
-    List<ViewLayerRow<XyzFeature, XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
+    List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
+    IStorage storage = mock(IStorage.class);
 
-    XyzFeatureCodec f1 = factory.newInstance();
-    XyzFeatureCodec f2 = factory.newInstance();
-    XyzFeatureCodec f3 = factory.newInstance();
+    NakshaFeature f1 = new NakshaFeature();
+    NakshaFeature f2 = new NakshaFeature();
+    NakshaFeature f3 = new NakshaFeature();
 
-    singleRowFeatures.add(new ViewLayerRow<>(f1, 0, null));
-    singleRowFeatures.add(new ViewLayerRow<>(f2, 0, null));
-    singleRowFeatures.add(new ViewLayerRow<>(f3, 2, null));
+    byte[] bytesF1 = PgUtil.encodeFeature(f1, 0, null);
+    byte[] bytesF2 = PgUtil.encodeFeature(f2, 0, null);
+    byte[] bytesF3 = PgUtil.encodeFeature(f3, 0, null);
+
+    final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), Version.fromDouble(3.0),0);
+    Metadata metadata = mock(Metadata.class);
+
+    Tuple tu1 = new Tuple(storage, tupleNum, metadata, bytesF1, null, null, null, null);
+    Tuple tu2 = new Tuple(storage, tupleNum, metadata, bytesF2, null, null, null, null);
+    Tuple tu3 = new Tuple(storage, tupleNum, metadata, bytesF3, null, null, null, null);
+
+    ResultTuple t1 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, "checkPriorityMerge1", tu1);
+    ResultTuple t2 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, "checkPriorityMerge1", tu2);
+    ResultTuple t3 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, "checkPriorityMerge1", tu3);
+
+    singleRowFeatures.add(new ViewLayerFeature(t1, 0, null));
+    singleRowFeatures.add(new ViewLayerFeature(t2, 0, null));
+    singleRowFeatures.add(new ViewLayerFeature(t3, 2, null));
 
     // when
-    XyzFeatureCodec outputFeature = mergeStrategy.apply(singleRowFeatures);
+    NakshaFeature outputFeature = mergeStrategy.apply(singleRowFeatures).getFeature();
 
     // then should pick first on list
-    assertSame(f1,  outputFeature);
+    assertSame(t1.getFeature(),  outputFeature);
   }
 
   @Test
   void checkEmptyMerge() {
     // given
-    List<ViewLayerRow<XyzFeature, XyzFeatureCodec>> singleRowFeatures = new ArrayList<>();
+    List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
 
     // expect
     assertThrows(NoSuchElementException.class, () -> mergeStrategy.apply(singleRowFeatures));

@@ -18,18 +18,11 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.lambdas.Fe1;
-import com.here.naksha.lib.core.models.naksha.Storage;
-import naksha.model.IStorage;
-import java.util.concurrent.Future;
-import org.apache.commons.lang3.NotImplementedException;
+import naksha.model.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class View implements IView {
-
-  private Storage storage;
+public class View {
 
   private ViewLayerCollection viewLayerCollection;
 
@@ -37,51 +30,18 @@ public class View implements IView {
     this.viewLayerCollection = viewLayerCollection;
   }
 
-  public View(Storage storage) {
-    this.storage = storage;
-  }
-
-  @Override
   public ViewLayerCollection getViewCollection() {
     return viewLayerCollection;
   }
 
-  @Override
-  public @NotNull ViewReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new ViewReadSession(this, context, useMaster);
+  public @NotNull ViewReadSession newReadSession(@Nullable SessionOptions options) {
+    return new ViewReadSession(this, options);
   }
 
-  @Override
-  public @NotNull ViewWriteSession newWriteSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new ViewWriteSession(this, context, useMaster);
+  public @NotNull ViewWriteSession newWriteSession(@Nullable SessionOptions options) {
+    return new ViewWriteSession(this, options);
   }
 
-  @Override
-  public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public void initStorage() {
-    throw new UnsupportedOperationException("init all individual storages first");
-  }
-
-  @Override
-  public void startMaintainer() {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public void maintainNow() {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public void stopMaintainer() {
-    throw new NotImplementedException();
-  }
-
-  @Override
   public void setViewLayerCollection(ViewLayerCollection viewLayerCollection) {
     this.viewLayerCollection = viewLayerCollection;
   }

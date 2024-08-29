@@ -18,6 +18,6 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
+import naksha.model.request.WriteRequest;
 
-public class LayerWriteFeatureRequest extends WriteXyzFeatures {}
+public class LayerWriteFeatureRequest extends WriteRequest {}

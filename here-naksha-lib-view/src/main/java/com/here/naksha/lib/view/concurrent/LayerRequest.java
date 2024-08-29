@@ -18,9 +18,9 @@
  */
 package com.here.naksha.lib.view.concurrent;
 
-import naksha.model.ReadFeatures;
-import naksha.model.IReadSession;
 import com.here.naksha.lib.view.ViewLayer;
+import naksha.model.IReadSession;
+import naksha.model.request.ReadFeatures;
 
 public class LayerRequest {
 

@@ -17,12 +17,12 @@ import kotlin.jvm.JvmField
 @JsExport
 data class Tuple(
     /**
-     * Reference to specific storage implementation that allows to decode rows to feature.
+     * Reference to specific storage implementation that allows to decode tuple to feature.
      */
     @JvmField val storage: IStorage,
 
     /**
-     * The row-number, a unique identifier for the row.
+     * The tuple-number, a unique identifier for the tuple.
      */
     @JvmField val tupleNumber: TupleNumber,
 
@@ -90,16 +90,16 @@ data class Tuple(
         }
 
     /**
-     * Maps row into a Naksha feature.
-     * @return this row as Naksha feature.
+     * Maps tuple into a Naksha feature.
+     * @return this tuple as Naksha feature.
      */
-    fun toNakshaFeature(): NakshaFeature = storage.rowToFeature(this)
+    fun toNakshaFeature(): NakshaFeature = storage.tupleToFeature(this)
 
     private var guid: Guid? = null
 
     /**
-     * Return the [Guid] for this row, requires that [meta] is not _null_, otherwise throws a [NakshaError.ILLEGAL_STATE].
-     * @return the [Guid] of this row.
+     * Return the [Guid] for this tuple, requires that [meta] is not _null_, otherwise throws a [NakshaError.ILLEGAL_STATE].
+     * @return the [Guid] of this tuple.
      */
     fun toGuid(): Guid {
         var g = guid
@@ -119,13 +119,13 @@ data class Tuple(
     }
 
     /**
-     * Merge two rows into a new one. If this row is up-to-date, the method returns this row again.
+     * Merge two tuples into a new one. If this tuple is up-to-date, the method returns this tuple again.
      *
-     * This is basically done, when more details become available about a row.
+     * This is basically done, when more details become available about a tuple.
      *
-     * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given row is not the same.
-     * @param other the row to merge this with.
-     * @return a new row, where nothing is _null_.
+     * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given tuple is not the same.
+     * @param other the tuple to merge this with.
+     * @return a new tuple, where nothing is _null_.
      */
     fun merge(other: Tuple): Tuple {
         if (storage != other.storage || tupleNumber != other.tupleNumber) {

@@ -18,12 +18,13 @@
  */
 package com.here.naksha.lib.heapcache;
 
-import naksha.model.XyzFeature;
+
+import naksha.model.NakshaFeatureProxy;
 
 public interface CacheChangeListener {
-  void onCacheEntryAdded(String key, XyzFeature feature);
+  void onCacheEntryAdded(String key, NakshaFeatureProxy feature);
 
-  void onCacheEntryUpdated(String key, XyzFeature feature);
+  void onCacheEntryUpdated(String key, NakshaFeatureProxy feature);
 
   void onCacheEntryRemoved(String key);
 }

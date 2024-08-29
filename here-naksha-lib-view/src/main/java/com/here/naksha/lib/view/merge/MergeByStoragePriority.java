@@ -18,21 +18,20 @@
  */
 package com.here.naksha.lib.view.merge;
 
-import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.view.MergeOperation;
-import com.here.naksha.lib.view.ViewLayerRow;
+import com.here.naksha.lib.view.ViewLayerFeature;
 import java.util.Comparator;
 import java.util.List;
+import naksha.model.request.ResultTuple;
 import org.jetbrains.annotations.NotNull;
 
-public class MergeByStoragePriority<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
-    implements MergeOperation<FEATURE, CODEC> {
+public class MergeByStoragePriority implements MergeOperation {
 
   @Override
-  public CODEC apply(@NotNull List<ViewLayerRow<FEATURE, CODEC>> sameFeatureFromEachStorage) {
+  public ResultTuple apply(@NotNull List<ViewLayerFeature> sameFeatureFromEachStorage) {
     return sameFeatureFromEachStorage.stream()
-        .min(Comparator.comparing(ViewLayerRow::getStoragePriority))
-        .map(ViewLayerRow::getRow)
+        .min(Comparator.comparing(ViewLayerFeature::getStoragePriority))
+        .map(ViewLayerFeature::getTuple)
         .get();
   }
 }

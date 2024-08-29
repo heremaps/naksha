@@ -1,5 +1,6 @@
 //package naksha.psql.executors
 //
+//import naksha.model.Naksha.NakshaCompanion.quoteIdent
 //import naksha.psql.PgConnection
 //import naksha.psql.PgPlan
 //import naksha.psql.PgSchema

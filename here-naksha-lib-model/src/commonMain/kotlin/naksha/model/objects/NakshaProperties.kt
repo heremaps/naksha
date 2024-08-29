@@ -24,7 +24,7 @@ open class NakshaProperties : AnyObject() {
         const val DELTA_KEY = "@ns:com:here:delta"
         const val META_KEY = "@ns:com:here:meta"
 
-        private val XYZ = NotNullProperty<NakshaProperties, XyzNs>(XyzNs::class, name = XYZ_KEY) { _, _ -> XyzNs() }
+        private val XYZ = NotNullProperty<NakshaProperties, XyzNs>(XyzNs::class, name = XYZ_KEY)
         private val DELTA_PROXY_NULL = NullableProperty<NakshaProperties, MomDeltaNs>(MomDeltaNs::class, name = META_KEY)
         private val REFERENCES = NullableProperty<NakshaProperties, MomReferenceList>(MomReferenceList::class)
         private val STRING_NULL = NullableProperty<NakshaProperties, String>(String::class)
