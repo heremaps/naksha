@@ -20,17 +20,13 @@ package com.here.naksha.storage.http;
 
 import static com.here.naksha.storage.http.RequestSender.KeyProperties;
 
-import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
 
 import java.util.Map;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
 
 import naksha.base.Int64;
-import naksha.base.Platform;
+import naksha.base.JvmProxyUtil;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
@@ -60,7 +56,7 @@ public class HttpStorage implements IStorage {
   }
 
   private static @NotNull HttpStorageProperties getProperties(@NotNull Storage storage) {
-    return JsonSerializable.convert(storage.getProperties(), HttpStorageProperties.class);
+    return JvmProxyUtil.box(storage.getProperties(), HttpStorageProperties.class);
   }
 
   @Override
@@ -85,19 +81,6 @@ public class HttpStorage implements IStorage {
   public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
     return IStorage.super.enterLock(id, waitMillis);
   }
-
-  @NotNull
-  @Override
-  public Tuple featureToRow(@NotNull NakshaFeature feature) {
-    return null;
-  }
-
-  @NotNull
-  @Override
-  public NakshaFeature rowToFeature(@NotNull Tuple tuple) {
-    return null;
-  }
-
   @Nullable
   @Override
   public String getMapId(int mapNumber) {
@@ -141,5 +124,17 @@ public class HttpStorage implements IStorage {
   @Override
   public String getId() {
     return "";
+  }
+
+  @NotNull
+  @Override
+  public NakshaFeature tupleToFeature(@NotNull Tuple tuple) {
+    return null;
+  }
+
+  @NotNull
+  @Override
+  public Tuple featureToTuple(@NotNull NakshaFeature feature) {
+    return null;
   }
 }
