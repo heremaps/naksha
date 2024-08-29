@@ -4,9 +4,7 @@ import naksha.model.Flags
 import naksha.model.XyzNs
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaProperties
-import naksha.psql.util.CommonProxyComparisons
-import naksha.psql.util.CommonProxyComparisons.assertAnyObjectsEqual
-import naksha.psql.util.ProxyBuilder
+import naksha.psql.assertions.CommonProxyAssertions.assertAnyObjectsEqual
 import naksha.psql.util.ProxyBuilder.make
 import kotlin.test.Test
 import kotlin.test.assertNotNull

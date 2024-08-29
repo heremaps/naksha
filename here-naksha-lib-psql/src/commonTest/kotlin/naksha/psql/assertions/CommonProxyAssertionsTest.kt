@@ -1,4 +1,4 @@
-package naksha.psql.util
+package naksha.psql.assertions
 
 import naksha.base.AnyObject
 import naksha.model.XyzNs
@@ -7,7 +7,7 @@ import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaProperties
 import kotlin.test.Test
 
-class CommonProxyComparisonsTest {
+class CommonProxyAssertionsTest {
 
     @Test
     fun shouldTreatSameObjectsAsEqual(){
@@ -25,7 +25,7 @@ class CommonProxyComparisonsTest {
         val right = left.copy<NakshaFeature>(true)
 
         // Then
-        CommonProxyComparisons.assertAnyObjectsEqual(left, right)
+        CommonProxyAssertions.assertAnyObjectsEqual(left, right)
     }
 
     @Test
@@ -49,6 +49,6 @@ class CommonProxyComparisonsTest {
         }
 
         // Then:
-        CommonProxyComparisons.assertAnyObjectsEqual(left, right)
+        CommonProxyAssertions.assertAnyObjectsEqual(left, right)
     }
 }

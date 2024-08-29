@@ -2,21 +2,19 @@ package naksha.psql
 
 import naksha.base.*
 import naksha.base.PlatformUtil.PlatformUtilCompanion.randomString
+import naksha.model.Action
 import naksha.model.IReadSession
 import naksha.model.IWriteSession
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
-import naksha.model.XyzNs
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaProperties
 import naksha.model.request.*
+import naksha.psql.PgTest.PgTest_C.TEST_APP_AUTHOR
 import naksha.psql.PgTest.PgTest_C.TEST_APP_ID
-import naksha.psql.util.CommonProxyComparisons
-import naksha.psql.util.CommonProxyComparisons.assertAnyObjectsEqual
-import naksha.psql.util.ProxyBuilder
-import naksha.psql.util.ProxyBuilder.make
+import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import kotlin.test.*
 
 /**
@@ -154,10 +152,20 @@ class TestPsql {
         }
 
         // And:
-        assertEquals(feature.id, retrievedFeature.id)
-        assertEquals(feature.properties?.featureType, retrievedFeature.properties?.featureType)
-        // TODO (Jakub): ignore more granurarly and switch to the line below, instead of the check above
-//        assertAnyObjectsEqual(feature, retrievedFeature, ignorePaths = setOf(NakshaProperties.XYZ_KEY))
+        assertThatFeature(retrievedFeature)
+            .isIdenticalTo(
+                other = feature,
+                ignoreProps = true // we ignore properties because Xyz is not defined by client
+            )
+            .hasPropertiesThat { retrievedProperties ->
+                retrievedProperties
+                    .hasFeatureType(feature.properties.featureType)
+                    .hasXyzThat { retrievedXyz ->
+                        retrievedXyz
+                            .hasProperty("appId", TEST_APP_ID)
+                            .hasProperty("author", TEST_APP_AUTHOR!!)
+                            .hasProperty("action", Action.CREATED)
+                    }
+            }
     }
-
 }
