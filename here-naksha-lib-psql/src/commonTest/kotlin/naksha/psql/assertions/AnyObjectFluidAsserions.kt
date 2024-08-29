@@ -12,6 +12,9 @@ class AnyObjectFluidAssertions private constructor(val subject: AnyObject) {
             assertEquals(value, subject[key])
         }
 
+    fun isEmpty(): AnyObjectFluidAssertions =
+        apply { subject.isEmpty() }
+
     companion object {
         fun assertThatAnyObject(subject: AnyObject): AnyObjectFluidAssertions =
             AnyObjectFluidAssertions(subject)
