@@ -4,6 +4,7 @@ package naksha.model.request
 
 import naksha.base.NotNullProperty
 import naksha.base.AnyObject
+import naksha.model.FetchMode
 import kotlin.js.JsExport
 
 /**

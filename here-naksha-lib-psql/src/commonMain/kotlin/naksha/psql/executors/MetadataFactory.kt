@@ -2,12 +2,12 @@
 //
 //import naksha.model.*
 //import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-//import naksha.model.objects.NakshaCollection
 //import naksha.model.objects.NakshaFeature
+//import naksha.model.request.query.TupleColumn.TupleColumn_C.flags
 //import naksha.psql.*
 //import kotlin.jvm.JvmField
 //
-//open class RowUpdater(
+//open class MetadataFactory(
 //    /**
 //     * The session to which this writer is linked.
 //     */
@@ -20,24 +20,24 @@
 //     * @param feature the feature to insert.
 //     * @return the metadata for this operation.
 //     */
-//    fun xyzInsert(collection: PgCollection, feature: NakshaFeature): Metadata {
+//    fun metadataForInsert(tupleNumber: TupleNumber): Metadata {
 //        val version = session.version()
 //        val versionTime = session.versionTime()
-////        return Metadata(
-////            createdAt = versionTime,
-////            updatedAt = versionTime,
-////            authorTs = versionTime,
-////            version = version.txn,
-////            uid = session.uid.getAndAdd(1),
-////            hash = Metadata.hash(feature, session.options.excludePaths, session.options.excludeFn),
-////            geoGrid = Metadata.geoGrid(feature),
-////            flags = flags(collection.nakshaCollection),
-////            appId = session.options.appId,
-////            author = session.options.actor,
-////            type = featureType(collection, feature),
-////            origin = feature.properties.xyz.origin,
-////            id = feature.id
-////        )
+//        return Metadata(
+//            createdAt = versionTime,
+//            updatedAt = versionTime,
+//            authorTs = versionTime,
+//            version = version,
+//            uid = session.uid.getAndAdd(1),
+//            hash = Metadata.hash(feature, session.options.excludePaths, session.options.excludeFn),
+//            geoGrid = Metadata.geoGrid(feature),
+//            flags = flags(collection.nakshaCollection),
+//            appId = session.options.appId,
+//            author = session.options.actor,
+//            type = featureType(collection, feature),
+//            origin = feature.properties.xyz.origin,
+//            id = feature.id
+//        )
 //        TODO("Finish me!")
 //    }
 //

@@ -16,11 +16,13 @@ import naksha.model.NakshaException
 import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_NUMBER
+import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES_NUMBER
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS_NUMBER
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
+import naksha.model.TupleNumber
 import naksha.model.objects.NakshaCollection
 import naksha.psql.PgStorageClass.PgStorageClass_C.Consistent
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
@@ -210,7 +212,7 @@ open class PgCollection internal constructor(
         }
         Naksha.verifyId(id)
         check(partitions in 1..256) {
-            throw NakshaException(ILLEGAL_ARGUMENT, "Invalid amount of partitions requested, must be 0 to 256, was: $partitions")
+            throw NakshaException(ILLEGAL_ARGUMENT, "Invalid amount of partitions requested, must be 1 to 256, was: $partitions")
         }
         return create_internal(connection, partitions, storageClass, storeHistory, storedDeleted, storeMeta, indices)
     }
@@ -386,12 +388,12 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
      * @throws NakshaException if any error happened.
      */
     open fun refresh(connection: PgConnection? = null, noCache: Boolean = false): PgCollection {
-        if (noCache || _updateAt == null || currentMillis() >= _updateAt) {
+        if (noCache || _updateAt == null || currentMillis() >= _updateAt || _number == null) {
             lock.acquire().use {
                 // If another thread was faster and updated the values, we ignore noCache
                 // This is done. because actually the value was updated instantly before, there is no need to update again!
                 val updateAt = _updateAt
-                if (updateAt != null && currentMillis() < updateAt) return this
+                if (updateAt != null && currentMillis() < updateAt && _number != null) return this
                 val s = map.storage
                 val conn = connection ?: s.adminConnection(map.adminOptions())
                 var done = false
@@ -556,8 +558,15 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
                 _nakshaCollection.set(NakshaCollection(VIRT_DICTIONARIES, 0))
             }
             else -> {
-                // TODO: Read from collections table the latest head version and add into _nakshaCollection
-                // _nakshaCollection.set(?)
+                conn.execute("select feature, flags, tuple_number from $VIRT_COLLECTIONS_QUOTED where id=$1", arrayOf(id)).use {
+                    if (it.next()) {
+                        _number = TupleNumber.fromByteArray( it["tuple_number"]).collectionNumber()
+                        // TODO do we need a full object with meta here?
+                        _nakshaCollection.set(
+                            PgUtil.decodeFeature(it["feature"], it["flags"])?.proxy(NakshaCollection::class)
+                        )
+                    }
+                }
             }
         }
     }

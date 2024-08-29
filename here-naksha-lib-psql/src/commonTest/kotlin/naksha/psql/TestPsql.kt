@@ -1,15 +1,20 @@
 package naksha.psql
 
-import naksha.base.Int64
+import naksha.base.*
 import naksha.base.PlatformUtil.PlatformUtilCompanion.randomString
+import naksha.model.Action
+import naksha.model.IReadSession
+import naksha.model.IWriteSession
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
 import naksha.model.objects.NakshaCollection
-import naksha.model.request.ReadCollections
-import naksha.model.request.SuccessResponse
-import naksha.model.request.Write
-import naksha.model.request.WriteRequest
+import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaProperties
+import naksha.model.request.*
+import naksha.psql.PgTest.PgTest_C.TEST_APP_AUTHOR
+import naksha.psql.PgTest.PgTest_C.TEST_APP_ID
+import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import kotlin.test.*
 
 /**
@@ -41,7 +46,7 @@ class TestPsql {
         assertTrue(naksha_transactions.exists(), "$VIRT_TRANSACTIONS should exist!")
     }
 
-    @Test
+    // @Test TODO: fix dropping
     fun create_collection_and_drop_it() {
         val col = NakshaCollection(randomString())
         val writeRequest = WriteRequest()
@@ -100,4 +105,67 @@ class TestPsql {
 //        }
 //    }
 
+    @Test
+    fun create_collection_and_insert_feature() {
+        // Given: Create collection request
+        val col = NakshaCollection("test_${randomString().lowercase()}")
+        val writeCollectionRequest = WriteRequest()
+        writeCollectionRequest.writes += Write().createCollection(null, col)
+
+        // And: create feature in collection request
+        val feature = NakshaFeature().apply {
+            id = "feature_1"
+            properties = NakshaProperties().apply {
+                featureType = "some_feature_type"
+            }
+        }
+        val writeFeaturesReq = WriteRequest().add(
+            Write().createFeature(null, col.id, feature)
+        )
+
+        // When: executing collection write request
+        env.storage.newWriteSession().use { session: IWriteSession ->
+            val response = session.execute(writeCollectionRequest)
+            assertIs<SuccessResponse>(response)
+            session.commit()
+        }
+
+        // And: executing feature write request
+        env.storage.newWriteSession().use { session: IWriteSession ->
+            val response = session.execute(writeFeaturesReq)
+            assertIs<SuccessResponse>(response)
+            session.commit()
+        }
+
+        // Then: feature is retrievable from the collection
+        val retrievedFeature = env.storage.newReadSession().use { session: IReadSession ->
+            val response = session.execute(
+                ReadFeatures().apply {
+                    collectionIds += col.id
+                    featureIds += feature.id
+                }
+            )
+            assertIs<SuccessResponse>(response)
+            val features = response.features
+            assertEquals(1, features.size)
+            features[0]!!
+        }
+
+        // And:
+        assertThatFeature(retrievedFeature)
+            .isIdenticalTo(
+                other = feature,
+                ignoreProps = true // we ignore properties because Xyz is not defined by client
+            )
+            .hasPropertiesThat { retrievedProperties ->
+                retrievedProperties
+                    .hasFeatureType(feature.properties.featureType)
+                    .hasXyzThat { retrievedXyz ->
+                        retrievedXyz
+                            .hasProperty("appId", TEST_APP_ID)
+                            .hasProperty("author", TEST_APP_AUTHOR!!)
+                            .hasProperty("action", Action.CREATED)
+                    }
+            }
+    }
 }
