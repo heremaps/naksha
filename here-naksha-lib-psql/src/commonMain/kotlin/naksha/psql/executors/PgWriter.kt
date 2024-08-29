@@ -246,7 +246,7 @@ class PgWriter(
         return collection
     }
 
-    internal fun createCollection(map: PgMap, write: WriteExt): Tuple {
+    private fun createCollection(map: PgMap, write: WriteExt): Tuple {
         // Note: write.collectionId is always naksha~collections!
         val feature = write.feature?.proxy(NakshaCollection::class) ?: throw NakshaException(
             ILLEGAL_ARGUMENT,
@@ -394,6 +394,8 @@ class PgWriter(
     }
 
     internal fun updateFeature(collection: PgCollection, write: WriteExt): Tuple {
+        val transaction = session.transaction()
+
         TODO("Implement me")
     }
 

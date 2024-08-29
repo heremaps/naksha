@@ -286,7 +286,6 @@ open class PgSession(
         when (request) {
             is WriteRequest -> {
                 saveTransactionIntoDb(true) // with transaction start time
-                //TODO(Kuba): PgWriter wciska Xyz
                 val response = PgWriter(this, request).execute()
                 saveTransactionIntoDb() // with updated counts
                 return response
