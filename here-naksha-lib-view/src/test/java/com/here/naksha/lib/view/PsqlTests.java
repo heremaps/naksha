@@ -74,21 +74,6 @@ abstract class PsqlTests {
     nakshaContext = NakshaContext.currentContext().withAppId(TEST_APP_ID).withAuthor(TEST_AUTHOR);
     assertNotNull(storage);
     storage.initStorage(null);
-  }
-
-//  @Test
-//  @Order(12)
-//  @EnabledIf("runTest")
-//  void initStorage() {
-//    assertNotNull(storage);
-//    storage.initStorage(null);
-//  }
-
-  @Test
-  @Order(13)
-  @EnabledIf("runTest")
-  void startWriteSession() {
-    assertNotNull(storage);
     session = storage.newWriteSession(new SessionOptions());
     assertNotNull(session);
   }
