@@ -94,15 +94,15 @@ class PsqlViewTests extends PsqlTests {
     for (int i = 0; i < 10; i++) {
       final NakshaFeature feature = new NakshaFeature(String.valueOf(threadLocalRandom.nextInt()));
       feature.setGeometry(point);
-      requestTest0.add(new Write().updateFeature(null, COLLECTION_0, feature, false));
+      requestTest0.add(new Write().createFeature(null, COLLECTION_0, feature));
 
       NakshaFeature featureEdited1 = feature.copy(true);
       featureEdited1.setGeometry(point1);
-      requestTest1.add(new Write().updateFeature(null, COLLECTION_1, featureEdited1, false));
+      requestTest1.add(new Write().createFeature(null, COLLECTION_1, featureEdited1));
 
       NakshaFeature featureEdited2 = feature.copy(true);
       featureEdited2.setGeometry(point2);
-      requestTest2.add(new Write().updateFeature(null, COLLECTION_2, featureEdited2, false));
+      requestTest2.add(new Write().createFeature(null, COLLECTION_2, featureEdited2));
     }
       session.execute(requestTest0);
       session.execute(requestTest1);
@@ -115,6 +115,8 @@ class PsqlViewTests extends PsqlTests {
   @Order(41)
   @EnabledIf("runTest")
   void viewQueryTest_pickTopLayerResult() {
+//    createCollection();
+//    addFeatures();
     assertNotNull(storage);
     assertNotNull(session);
 
@@ -129,6 +131,7 @@ class PsqlViewTests extends PsqlTests {
     View viewReversed = new View(viewLayerCollectionReversedOrder);
 
     ReadFeatures requestAll = new ReadFeatures();
+    requestAll.setQueryHistory(false);
 
     // when
     List<NakshaFeature> features = queryView(view, requestAll);
