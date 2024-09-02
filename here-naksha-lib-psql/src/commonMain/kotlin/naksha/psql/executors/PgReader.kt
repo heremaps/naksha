@@ -55,10 +55,12 @@ class PgReader(
         val query = ReadQueryBuilder().build(request)
         val connection = session.usePgConnection()
         val cursor = connection.execute(query.rawSql)
-        cursor.fetch()
-        val rawTupleNumber = cursor.column(tuple_number)
-        if (rawTupleNumber is ByteArray) {
-            val tupleNumberBytes = TupleNumberByteArray(storage, rawTupleNumber)
+        var allBytes: ByteArray = byteArrayOf()
+        while(cursor.next()){
+            val bytes: ByteArray = cursor.column(tuple_number) as ByteArray
+            allBytes += bytes
+        }
+            val tupleNumberBytes = TupleNumberByteArray(storage, allBytes)
             return SuccessResponse(
                 PgResultSet(
                     storage,
@@ -72,10 +74,7 @@ class PgReader(
                     filters = request.resultFilters
                 )
             )
-        } else {
-            return ErrorResponse(NakshaException(EXCEPTION, "expected $tuple_number as byte_array"))
         }
-    }
 
     fun plan(): PgPlan {
         TODO()
