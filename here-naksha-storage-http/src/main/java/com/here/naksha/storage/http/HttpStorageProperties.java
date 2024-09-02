@@ -21,9 +21,6 @@ package com.here.naksha.storage.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
-
-import com.here.naksha.lib.core.util.json.JsonSerializable;
-import naksha.geo.XyzProperties;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;

@@ -19,9 +19,7 @@
 package com.here.naksha.storage.http;
 
 import com.here.naksha.lib.core.models.storage.*;
-
 import java.util.List;
-
 import naksha.model.*;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
@@ -73,9 +71,7 @@ public final class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public void setSocketTimeout(int i) {
-
-  }
+  public void setSocketTimeout(int i) {}
 
   @Override
   public int getStmtTimeout() {
@@ -83,9 +79,7 @@ public final class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public void setStmtTimeout(int i) {
-
-  }
+  public void setStmtTimeout(int i) {}
 
   @Override
   public int getLockTimeout() {
@@ -93,9 +87,7 @@ public final class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public void setLockTimeout(int i) {
-
-  }
+  public void setLockTimeout(int i) {}
 
   @NotNull
   @Override
@@ -104,9 +96,7 @@ public final class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public void setMap(@NotNull String s) {
-
-  }
+  public void setMap(@NotNull String s) {}
 
   @Override
   public boolean isClosed() {
@@ -120,7 +110,8 @@ public final class HttpStorageReadSession implements IReadSession {
 
   @NotNull
   @Override
-  public List<Tuple> getLatestTuples(@NotNull String mapId, @NotNull String collectionId, @NotNull String[] featureIds, @NotNull String mode) {
+  public List<Tuple> getLatestTuples(
+      @NotNull String mapId, @NotNull String collectionId, @NotNull String[] featureIds, @NotNull String mode) {
     return List.of();
   }
 
@@ -131,14 +122,11 @@ public final class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public void fetchTuple(@NotNull ResultTuple resultTuple, @NotNull String mode) {
-
-  }
+  public void fetchTuple(@NotNull ResultTuple resultTuple, @NotNull String mode) {}
 
   @Override
-  public void fetchTuples(@NotNull List<? extends ResultTuple> resultTuples, int from, int to, @NotNull String mode) {
-
-  }
+  public void fetchTuples(
+      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, @NotNull String mode) {}
 
   @NotNull
   @Override

@@ -22,9 +22,7 @@ import static com.here.naksha.storage.http.RequestSender.KeyProperties;
 
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
-
 import java.util.Map;
-
 import naksha.base.Int64;
 import naksha.base.JvmProxyUtil;
 import naksha.model.*;
@@ -60,9 +58,7 @@ public class HttpStorage implements IStorage {
   }
 
   @Override
-  public void close() {
-
-  }
+  public void close() {}
 
   @NotNull
   @Override
@@ -76,11 +72,6 @@ public class HttpStorage implements IStorage {
     return null;
   }
 
-  @NotNull
-  @Override
-  public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
-    return IStorage.super.enterLock(id, waitMillis);
-  }
   @Nullable
   @Override
   public String getMapId(int mapNumber) {
@@ -136,5 +127,11 @@ public class HttpStorage implements IStorage {
   @Override
   public Tuple featureToTuple(@NotNull NakshaFeature feature) {
     return null;
+  }
+
+  @NotNull
+  @Override
+  public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
+    throw new NakshaException(NakshaError.NOT_IMPLEMENTED, "enterLock", null, null);
   }
 }

@@ -102,7 +102,8 @@ class HttpStorageReadExecute {
     String tileId = readRequest.getQueryParameter(TILE_ID);
 
     if (tileType != null && !tileType.equals(TILE_TYPE_QUADKEY))
-      return new ErrorResponse(NakshaError.NOT_IMPLEMENTED, "Tile type other than " + TILE_TYPE_QUADKEY);
+      return new ErrorResponse(new NakshaError(
+          NakshaError.NOT_IMPLEMENTED, "Tile type other than " + TILE_TYPE_QUADKEY, null, null));
 
     HttpResponse<byte[]> response = requestSender.sendRequest(
         format(
