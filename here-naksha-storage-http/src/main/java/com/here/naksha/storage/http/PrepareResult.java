@@ -20,25 +20,14 @@ package com.here.naksha.storage.http;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
-import com.here.naksha.lib.core.models.Typed;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 import naksha.model.NakshaError;
-import naksha.model.objects.NakshaFeature;
-import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
-import naksha.model.request.ResultTuple;
-import naksha.model.request.SuccessResponse;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -46,34 +35,34 @@ import org.jetbrains.annotations.Nullable;
  */
 class PrepareResult {
 
-  static Response prepareResult(List<NakshaFeature> featureList) {
-    return createHttpResultFromFeatureList(featureList);
-  }
+  //  static Response prepareResult(List<NakshaFeature> featureList) {
+  //    return createHttpResultFromFeatureList(featureList);
+  //  }
 
-  static <T extends Typed> Response prepareResult(
-      HttpResponse<byte[]> httpResponse,
-      Class<T> httpResponseType,
-      Function<T, List<NakshaFeature>> typedResponseToFeatureList) {
+  //  static <T extends Typed> Response prepareResult(
+  //      HttpResponse<byte[]> httpResponse,
+  //      Class<T> httpResponseType,
+  //      Function<T, List<NakshaFeature>> typedResponseToFeatureList) {
+  //
+  //    String error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
+  //    if (error != null)
+  //      return new ErrorResponse(
+  //          new NakshaError(error, "Response http status code: " + httpResponse.statusCode(), null, null));
+  //
+  //    T resultFeatures = JsonSerializable.deserialize(prepareBody(httpResponse), httpResponseType);
+  //    return prepareResult(typedResponseToFeatureList.apply(resultFeatures));
+  //  }
 
-    String error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
-    if (error != null)
-      return new ErrorResponse(
-          new NakshaError(error, "Response http status code: " + httpResponse.statusCode(), null, null));
-
-    T resultFeatures = JsonSerializable.deserialize(prepareBody(httpResponse), httpResponseType);
-    return prepareResult(typedResponseToFeatureList.apply(resultFeatures));
-  }
-
-  private static String prepareBody(HttpResponse<byte[]> response) {
-    List<String> contentEncodingList = response.headers().allValues("content-encoding");
-    if (contentEncodingList.isEmpty()) return new String(response.body(), StandardCharsets.UTF_8);
-    if (contentEncodingList.size() > 1)
-      throw new IllegalArgumentException("There are more than one Content-Encoding value in response");
-    String contentEncoding = contentEncodingList.get(0);
-
-    if (contentEncoding.equalsIgnoreCase("gzip")) return gzipDecode(response.body());
-    else throw new IllegalArgumentException("Encoding " + contentEncoding + " not recognized");
-  }
+  //  private static String prepareBody(HttpResponse<byte[]> response) {
+  //    List<String> contentEncodingList = response.headers().allValues("content-encoding");
+  //    if (contentEncodingList.isEmpty()) return new String(response.body(), StandardCharsets.UTF_8);
+  //    if (contentEncodingList.size() > 1)
+  //      throw new IllegalArgumentException("There are more than one Content-Encoding value in response");
+  //    String contentEncoding = contentEncodingList.get(0);
+  //
+  //    if (contentEncoding.equalsIgnoreCase("gzip")) return gzipDecode(response.body());
+  //    else throw new IllegalArgumentException("Encoding " + contentEncoding + " not recognized");
+  //  }
 
   private static String gzipDecode(byte[] encoded) {
     try (ByteArrayInputStream bis = new ByteArrayInputStream(encoded);
@@ -86,19 +75,19 @@ class PrepareResult {
     }
   }
 
-  static SuccessResponse createHttpResultFromFeatureList(final @NotNull List<NakshaFeature> features) {
-    final List<ResultTuple> tuples = new ArrayList<>();
-    for (final NakshaFeature feature : features) {
-      tuples.add(new ResultTuple());
-      codec.setOp(EExecutedOp.READ);
-      codec.setFeature(feature);
-      codec.setId(feature.getId());
-      codecs.add(codec);
-    }
-
-    final HeapCacheCursor<XyzFeature, XyzFeatureCodec> cursor = new HeapCacheCursor<>(codecFactory, codecs, null);
-    return new SuccessResponse(cursor);
-  }
+  //  static SuccessResponse createHttpResultFromFeatureList(final @NotNull List<NakshaFeature> features) {
+  //    final List<ResultTuple> tuples = new ArrayList<>();
+  //    for (final NakshaFeature feature : features) {
+  //      tuples.add(new ResultTuple());
+  //      codec.setOp(EExecutedOp.READ);
+  //      codec.setFeature(feature);
+  //      codec.setId(feature.getId());
+  //      codecs.add(codec);
+  //    }
+  //
+  //    final HeapCacheCursor<XyzFeature, XyzFeatureCodec> cursor = new HeapCacheCursor<>(codecFactory, codecs, null);
+  //    return new SuccessResponse(cursor);
+  //  }
 
   /**
    * @return null if http status is success (200-299)

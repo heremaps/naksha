@@ -19,7 +19,6 @@
 package com.here.naksha.storage.http;
 
 import static com.here.naksha.common.http.apis.ApiParamsConst.*;
-import static com.here.naksha.storage.http.PrepareResult.prepareResult;
 import static java.lang.String.format;
 
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
