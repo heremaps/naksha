@@ -79,10 +79,11 @@ class UpdateFeature(
 
     private fun metaFromRow(row: PgCursorUtil.ReadOnlyRow): Metadata {
         val tupleNumber: TupleNumber = TupleNumber.fromByteArray(row[PgColumn.tuple_number])
+        val updatedAt: Int64 = row.column(PgColumn.updated_at) as? Int64 ?: Int64(0)
         return Metadata(
             storeNumber = tupleNumber.storeNumber,
-            updatedAt = row.column(PgColumn.updated_at) as? Int64,
-            createdAt = row.column(PgColumn.created_at) as? Int64,
+            updatedAt = updatedAt,
+            createdAt = row.column(PgColumn.created_at) as? Int64 ?: updatedAt,
             authorTs = row[PgColumn.author_ts],
             nextVersion = maybeVersion(row.column(PgColumn.txn_next)),
             version = tupleNumber.version,

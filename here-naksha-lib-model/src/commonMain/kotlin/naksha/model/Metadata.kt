@@ -19,9 +19,9 @@ import kotlin.jvm.JvmStatic
 @JsExport
 data class Metadata(
     override val storeNumber: StoreNumber,
-    override val updatedAt: Int64?,
-    override val createdAt: Int64? = updatedAt,
-    override val authorTs: Int64? = updatedAt,
+    override val updatedAt: Int64,
+    override val createdAt: Int64 = updatedAt,
+    override val authorTs: Int64 = updatedAt,
     override var nextVersion: Version? = null,
     override val version: Version,
     override val prevVersion: Version? = null,

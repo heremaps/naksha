@@ -4,7 +4,6 @@ import naksha.model.*
 import naksha.model.Metadata.Metadata_C.hash
 import naksha.model.Naksha.NakshaCompanion.quoteIdent
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.Transaction
 import naksha.model.request.Write
 import naksha.psql.PgCollection
 import naksha.psql.PgColumn
