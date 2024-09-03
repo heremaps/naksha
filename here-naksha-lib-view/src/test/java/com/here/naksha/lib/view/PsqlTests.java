@@ -63,7 +63,7 @@ abstract class PsqlTests {
 
   static final String TEST_APP_ID = "test_app";
   static final String TEST_AUTHOR = "test_author";
-  static PgStorage storage = PgPlatform.newTestStorage();
+  static PgStorage storage;
   static @Nullable NakshaContext nakshaContext;
   static @Nullable IWriteSession session;
 
@@ -72,9 +72,10 @@ abstract class PsqlTests {
     NakshaContext.currentContext().setAuthor("PsqlStorageTest");
     NakshaContext.currentContext().setAppId("naksha-lib-view-unit-tests");
     nakshaContext = NakshaContext.currentContext().withAppId(TEST_APP_ID).withAuthor(TEST_AUTHOR);
-    assertNotNull(storage);
+    storage = PgPlatform.newTestStorage();
     storage.initStorage(null);
     session = storage.newWriteSession(new SessionOptions());
+    assertNotNull(storage);
     assertNotNull(session);
   }
 

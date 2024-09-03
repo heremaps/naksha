@@ -115,8 +115,6 @@ class PsqlViewTests extends PsqlTests {
   @Order(41)
   @EnabledIf("runTest")
   void viewQueryTest_pickTopLayerResult() {
-//    createCollection();
-//    addFeatures();
     assertNotNull(storage);
     assertNotNull(session);
 
