@@ -60,8 +60,9 @@ class PgReader(
             val bytes: ByteArray = cursor.column(tuple_number) as ByteArray
             allBytes += bytes
         }
-            val tupleNumberBytes = TupleNumberByteArray(storage, allBytes)
-            return SuccessResponse(
+        cursor.close()
+        val tupleNumberBytes = TupleNumberByteArray(storage, allBytes)
+        return SuccessResponse(
                 PgResultSet(
                     storage,
                     session,
@@ -73,8 +74,8 @@ class PgReader(
                     orderBy = null,
                     filters = request.resultFilters
                 )
-            )
-        }
+        )
+    }
 
     fun plan(): PgPlan {
         TODO()
