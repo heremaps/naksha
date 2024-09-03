@@ -2,6 +2,8 @@ package naksha.psql
 
 import naksha.base.*
 import naksha.base.PlatformUtil.PlatformUtilCompanion.randomString
+import naksha.geo.PointCoord
+import naksha.geo.SpPoint
 import naksha.model.Action
 import naksha.model.IReadSession
 import naksha.model.IWriteSession
@@ -14,6 +16,8 @@ import naksha.model.objects.NakshaProperties
 import naksha.model.request.*
 import naksha.psql.PgTest.PgTest_C.TEST_APP_AUTHOR
 import naksha.psql.PgTest.PgTest_C.TEST_APP_ID
+import naksha.psql.assertions.AnyObjectFluidAssertions
+import naksha.psql.assertions.AnyObjectFluidAssertions.Companion.assertThatAnyObject
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import kotlin.test.*
 
@@ -175,6 +179,56 @@ class TestPsql {
                         }
                 }
         }
+    }
 
+    @Test
+    fun returns_saved_geometry() {
+        // Given: Create collection request
+        val col = NakshaCollection("test_${randomString().lowercase()}")
+        val writeCollectionRequest = WriteRequest()
+        writeCollectionRequest.writes += Write().createCollection(null, col)
+
+        // And: create feature with geo
+        val writeFeaturesReq = WriteRequest()
+        val feature = NakshaFeature().apply {
+            id = "test_feature"
+            geometry = SpPoint(PointCoord(1.0,2.0, 0.0))
+        }
+        writeFeaturesReq.add(
+            Write().createFeature(null, col.id, feature)
+        )
+
+        // When: executing collection write request
+        env.storage.newWriteSession().use { session: IWriteSession ->
+            val response = session.execute(writeCollectionRequest)
+            assertIs<SuccessResponse>(response)
+            session.commit()
+        }
+
+        // And: executing feature write request
+        env.storage.newWriteSession().use { session: IWriteSession ->
+            val response = session.execute(writeFeaturesReq)
+            assertIs<SuccessResponse>(response)
+            session.commit()
+        }
+
+        // Then: feature is retrievable from the collection
+        val retrievedFeature = env.storage.newReadSession().use { session: IReadSession ->
+            val response = session.execute(
+                ReadFeatures().apply {
+                    collectionIds += col.id
+                    featureIds += feature.id
+                }
+            )
+            assertIs<SuccessResponse>(response)
+            val features = response.features
+            assertEquals(1, features.size)
+            features[0]!!
+        }
+
+        // And:
+        assertNotNull(retrievedFeature.geometry)
+        assertThatAnyObject(retrievedFeature.geometry!!)
+            .isIdenticalTo(feature.geometry!!)
     }
 }

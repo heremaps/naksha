@@ -374,15 +374,20 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
 
     override fun tupleToFeature(tuple: Tuple): NakshaFeature {
         return if (tuple.feature != null) {
-            // TODO: FIXME, we need the XYZ namespace
             val feature = PgUtil.decodeFeature(tuple.feature, tuple.meta.flags, JbDictManager())
-            feature?.properties?.xyz = xyzFrom(tuple.meta, decodedTags = null) // TODOL: tag list
-            return feature ?: throw NakshaException(
-                NakshaError(
-                    NakshaError.EXCEPTION,
-                    "Could not deserialize feature for tuple number: ${tuple.tupleNumber}"
+            if(feature == null){
+                throw NakshaException(
+                    NakshaError(
+                        NakshaError.EXCEPTION,
+                        "Could not deserialize feature for tuple number: ${tuple.tupleNumber}"
+                    )
                 )
-            )
+            }
+            feature.properties.xyz = xyzFrom(tuple.meta, decodedTags = null) // TODO: tag list
+            tuple.geo?.let { geoBytes ->
+                feature.geometry = PgUtil.decodeGeometry(geoBytes, tuple.meta.flags)
+            }
+            return feature
         } else {
             TODO("We will always have at least the id, which is formally enough to generate an empty feature!")
         }
