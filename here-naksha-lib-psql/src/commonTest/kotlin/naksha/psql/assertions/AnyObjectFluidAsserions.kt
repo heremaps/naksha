@@ -1,10 +1,15 @@
 package naksha.psql.assertions
 
 import naksha.base.AnyObject
+import naksha.psql.assertions.CommonProxyAssertions.assertAnyObjectsEqual
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class AnyObjectFluidAssertions private constructor(val subject: AnyObject) {
+
+    fun isIdenticalTo(other: AnyObject){
+        assertAnyObjectsEqual(subject, other)
+    }
 
     fun hasProperty(key: String, value: Any): AnyObjectFluidAssertions =
         apply {
