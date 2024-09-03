@@ -16,6 +16,8 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.psql.*
+import naksha.psql.executors.write.InsertFeature
+import naksha.psql.executors.write.UpdateFeature
 import kotlin.jvm.JvmField
 
 // TODO: We need to fix NakshaBulkLoaderPlan to make this faster again !
@@ -194,9 +196,9 @@ class PgWriter(
                 }
             } else {
                 when (write.op) {
-                    WriteOp.CREATE -> createFeature(collectionOf(write), write)
+                    WriteOp.CREATE -> InsertFeature(session).execute(collectionOf(write), write)
                     WriteOp.UPSERT -> upsertFeature(collectionOf(write), write)
-                    WriteOp.UPDATE -> updateFeature(collectionOf(write), write)
+                    WriteOp.UPDATE -> UpdateFeature(session).execute(collectionOf(write), write)
                     WriteOp.DELETE -> deleteFeature(collectionOf(write), write)
                     WriteOp.PURGE -> purgeFeature(collectionOf(write), write)
                     else -> throw NakshaException(
