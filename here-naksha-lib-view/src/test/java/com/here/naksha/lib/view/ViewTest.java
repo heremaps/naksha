@@ -108,14 +108,14 @@ public class ViewTest {
     when(storage.get(any())).thenReturn(map);
     when(map.getCollectionId(any())).thenReturn("Mock Collection");
 
-    final LayerWriteFeatureRequest request = new LayerWriteFeatureRequest();
+    final WriteRequest request = new WriteRequest();
     final NakshaFeature feature = new NakshaFeature("id0");
     request.add(write.createFeature(null,VIEW_COLLECTION,feature));
     when(storage.tupleToFeature(any())).thenReturn(feature);
 
     Response success = new SuccessResponse(sampleXyzWriteResponse(1, storage, ExecutedOp.CREATED));
     when(session.execute(request)).thenReturn(success);
-    ViewWriteSession writeSession = view.newWriteSession(sessionOptions);
+    ViewWriteSession writeSession = view.newWriteSession(sessionOptions).init();
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class,response);
     SuccessResponse successResponse = (SuccessResponse) response;
@@ -135,12 +135,12 @@ public class ViewTest {
     View view = new View(viewLayerCollection);
     when(storage.newWriteSession(sessionOptions)).thenReturn(session);
 
-    final LayerWriteFeatureRequest request = new LayerWriteFeatureRequest();
+    final WriteRequest request = new WriteRequest();
     final NakshaFeature feature = new NakshaFeature("id0");
     request.add(write.deleteFeature(null,VIEW_COLLECTION,feature,false));
     SuccessResponse successResponse1 = new SuccessResponse(sampleXyzWriteResponse(1, storage, ExecutedOp.DELETED));
     when(session.execute(request)).thenReturn(successResponse1);
-    ViewWriteSession writeSession = view.newWriteSession(sessionOptions);
+    ViewWriteSession writeSession = view.newWriteSession(sessionOptions).init();
 
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class,response);

@@ -22,8 +22,6 @@ import naksha.model.IWriteSession;
 import naksha.model.SessionOptions;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
-import naksha.model.request.Write;
-import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,7 +38,6 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   public ViewWriteSession(@NotNull View viewRef, @Nullable SessionOptions options) {
     super(viewRef, options);
     this.options = options;
-    init();
   }
 
   public ViewWriteSession withWriteLayer(ViewLayer viewLayer) {
@@ -56,16 +53,13 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
     return this;
   }
   /**
-   * Executes write on one (top by default storage).
+   * Executes write.
    *
    * @param writeRequest
    * @return
    */
   @Override
   public @NotNull Response execute(@NotNull Request writeRequest) {
-    final Write write = new Write();
-    write.setCollectionId(writeLayer.getCollectionId());
-    ((WriteRequest) writeRequest).add(write);
     return this.session.execute(writeRequest);
   }
 

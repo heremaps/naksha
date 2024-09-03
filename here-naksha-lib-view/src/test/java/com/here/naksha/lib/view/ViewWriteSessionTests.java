@@ -88,7 +88,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("Layers", layer0, layer1);
     View view = new View(viewLayerCollection);
 
-    ViewWriteSession writeSession = view.newWriteSession(new SessionOptions());
+    ViewWriteSession writeSession = view.newWriteSession(new SessionOptions()).init();
       ReadFeatures readRequest = new ReadFeatures();
     final RequestQuery requestQuery = new RequestQuery();
     requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new String[]{"feature_id_view0"}));
@@ -103,7 +103,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     assertEquals(0d, coordinates.getLongitude());
 
       //Update fetched feature using viewwritesession
-      final LayerWriteFeatureRequest writeRequest = new LayerWriteFeatureRequest();
+      final WriteRequest writeRequest = new WriteRequest();
       features.stream().forEach(feature -> {
         feature.setGeometry(new SpPoint(new PointCoord(1d,1d)));
         feature.getProperties().put("testProperty", "test");
@@ -159,8 +159,6 @@ public class ViewWriteSessionTests extends PsqlTests {
   @Order(18)
   @EnabledIf("runTest")
   void writeFeatureOnSelectedLayer() {
-//    createCollection();
-//    addFeatures();
     assertNotNull(storage);
     final String FEATURE_ID = "feature_id_view1";
 
@@ -171,7 +169,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     View view = new View(viewLayerCollection);
 
     ViewWriteSession writeSession = view.newWriteSession(null).withWriteLayer(layer1).init();
-      LayerWriteFeatureRequest writeRequest = new LayerWriteFeatureRequest();
+      WriteRequest writeRequest = new WriteRequest();
       final NakshaFeature feature = new NakshaFeature(FEATURE_ID);
       feature.setGeometry(new SpPoint(new PointCoord(0d, 0d)));
       writeRequest.add(new Write().createFeature(null, viewLayerCollection.getTopPriorityLayer().getCollectionId(), feature));
@@ -204,8 +202,9 @@ public class ViewWriteSessionTests extends PsqlTests {
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("Layers", layer1, layer0);
     View view = new View(viewLayerCollection);
-    ViewWriteSession writeSession = view.newWriteSession(new SessionOptions());      LayerWriteFeatureRequest writeRequest = new LayerWriteFeatureRequest();
-      writeRequest.add(new Write().deleteFeatureById(null, viewLayerCollection.getTopPriorityLayer().getCollectionId() , FEATURE_ID,null));
+    ViewWriteSession writeSession = view.newWriteSession(new SessionOptions()).init();
+    WriteRequest writeRequest = new WriteRequest();
+    writeRequest.add(new Write().deleteFeatureById(null, viewLayerCollection.getTopPriorityLayer().getCollectionId() , FEATURE_ID,null));
 
     SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
 
