@@ -112,16 +112,22 @@ class TestPsql {
         val writeCollectionRequest = WriteRequest()
         writeCollectionRequest.writes += Write().createCollection(null, col)
 
-        // And: create feature in collection request
-        val feature = NakshaFeature().apply {
-            id = "feature_1"
-            properties = NakshaProperties().apply {
-                featureType = "some_feature_type"
+        // And: create features in collection request
+        val featuresToAdd = AnyObject()
+        val writeFeaturesReq = WriteRequest()
+        // add some features
+        for (i in 1..10) {
+            val feature = NakshaFeature().apply {
+                id = "feature_$i"
+                properties = NakshaProperties().apply {
+                    featureType = "some_feature_type"
+                }
             }
+            writeFeaturesReq.add(
+                Write().createFeature(null, col.id, feature)
+            )
+            featuresToAdd.put(feature.id, feature)
         }
-        val writeFeaturesReq = WriteRequest().add(
-            Write().createFeature(null, col.id, feature)
-        )
 
         // When: executing collection write request
         env.storage.newWriteSession().use { session: IWriteSession ->
@@ -138,34 +144,37 @@ class TestPsql {
         }
 
         // Then: feature is retrievable from the collection
-        val retrievedFeature = env.storage.newReadSession().use { session: IReadSession ->
+        val retrievedFeatures = env.storage.newReadSession().use { session: IReadSession ->
             val response = session.execute(
                 ReadFeatures().apply {
                     collectionIds += col.id
-                    featureIds += feature.id
                 }
             )
             assertIs<SuccessResponse>(response)
             val features = response.features
-            assertEquals(1, features.size)
-            features[0]!!
+            assertEquals(10, features.size)
+            features
         }
 
         // And:
-        assertThatFeature(retrievedFeature)
-            .isIdenticalTo(
-                other = feature,
-                ignoreProps = true // we ignore properties because Xyz is not defined by client
-            )
-            .hasPropertiesThat { retrievedProperties ->
-                retrievedProperties
-                    .hasFeatureType(feature.properties.featureType)
-                    .hasXyzThat { retrievedXyz ->
-                        retrievedXyz
-                            .hasProperty("appId", TEST_APP_ID)
-                            .hasProperty("author", TEST_APP_AUTHOR!!)
-                            .hasProperty("action", Action.CREATED)
-                    }
-            }
+        retrievedFeatures.forEach {
+            val originalFeature = featuresToAdd.get(it!!.id) as NakshaFeature
+            assertThatFeature(it)
+                .isIdenticalTo(
+                    other = originalFeature,
+                    ignoreProps = true // we ignore properties because Xyz is not defined by client
+                )
+                .hasPropertiesThat { retrievedProperties ->
+                    retrievedProperties
+                        .hasFeatureType(originalFeature.properties.featureType)
+                        .hasXyzThat { retrievedXyz ->
+                            retrievedXyz
+                                .hasProperty("appId", TEST_APP_ID)
+                                .hasProperty("author", TEST_APP_AUTHOR!!)
+                                .hasProperty("action", Action.CREATED)
+                        }
+                }
+        }
+
     }
 }
