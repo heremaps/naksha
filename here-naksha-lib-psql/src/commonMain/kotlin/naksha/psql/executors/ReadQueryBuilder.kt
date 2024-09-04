@@ -1,6 +1,9 @@
 package naksha.psql.read
 
 import naksha.model.FetchMode.*
+import naksha.model.Flags
+import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
+import naksha.model.geoEncoding
 import naksha.model.request.*
 import naksha.model.request.query.*
 import naksha.psql.*
@@ -34,20 +37,21 @@ internal class ReadQueryBuilder {
 
         queryBuilder.append("SELECT $tuple_number FROM (")
         for (table in quotedTablesToQuery.withIndex()) {
-            val whereSql = resolveFeaturesWhere(req, allQueriesParams)
 
             queryBuilder.append("\n(")
             queryBuilder.append("SELECT $columnsToFetch")
             queryBuilder.append(" FROM ${table.value}")
-            if (whereSql.isNotEmpty()) {
-                queryBuilder.append(" WHERE $whereSql")
+            whereClause(req, allQueriesParams)?.let { rawWhere ->
+                queryBuilder.append(rawWhere)
             }
             queryBuilder.append(")")
             if (table.index < quotedTablesToQuery.size - 1) {
                 queryBuilder.append("\nUNION ALL")
             }
         }
-        queryBuilder.append("\n) LIMIT ${req.limit}")
+        if (req.limit != null) {
+            queryBuilder.append("\n) LIMIT ${req.limit}")
+        }
 
         return SqlReadQuery(queryBuilder.toString(), allQueriesParams)
     }
@@ -67,32 +71,33 @@ internal class ReadQueryBuilder {
         }
     }
 
-    private fun resolveFeaturesWhere(
-        req: ReadFeatures,
-        allQueriesParams: MutableList<Any?>
-    ): String {
-        val whereSql = StringBuilder()
-        // TODO: Fix me !!!
-        //resolveOps(whereSql, allQueriesParams, req.op)
-
-        return whereSql.toString()
+    private fun whereClause(req: ReadFeatures, allQueriesParams: MutableList<Any?>): String? {
+        if (req.query.isEmpty()) return null
+        val whereClauseBuilder = WhereClauseBuilder(allQueriesParams)
+        req.query.spatial
+        req.query["spatial"]?.let { spatialQuery -> // TODO: why .spatial isn't working?
+            when (spatialQuery) {
+                is SpIntersects -> intersectsClause(spatialQuery, whereClauseBuilder)
+                else -> throw UnsupportedOperationException("We don't support ${spatialQuery::class} yet")
+            }
+        }
+        req.query.tags?.let {
+            throw UnsupportedOperationException("We don't support tags query yet")
+        }
+        req.query.properties?.let {
+            throw UnsupportedOperationException("We don't support properties query yet")
+        }
+        return whereClauseBuilder.buildRawWhere()
     }
 
-    /**
-     * Prepares WHERE query using requested Ops.
-     *
-     * @param whereSql - sql to add new conditions to
-     * @param paramsList - list of params to add conditions values to
-     */
-    private fun resolveOps(whereSql: StringBuilder, paramsList: MutableList<Any?>, op: AnyOp?) {
-        if (op == null) return
-
-        // TODO: Fix me !!!
-//        when (op) {
-//            is LOp -> addLOp(whereSql, paramsList, op)
-//            is PropertyQuery -> addPOp(whereSql, paramsList, op)
-//            is SpatialOuery -> addSop(whereSql, paramsList, op)
-//        }
+    private fun intersectsClause(intersects: SpIntersects, builder: WhereClauseBuilder) {
+        val geoBytes = PgUtil.encodeGeometry(intersects.geometry, Flags().geoEncoding(TWKB))
+            ?: throw IllegalArgumentException("Unable to encode geometry with TWKB")
+        val placeholder = builder.addArgAndGetPlaceholder(geoBytes)
+        // naksha geometry in second arg is not necesary - use end-function
+        builder.addSubClause(
+            "ST_Intersects(naksha_geometry(${PgColumn.flags.name}, ${PgColumn.geo.name}), naksha_geometry($TWKB, $placeholder)))"
+        )
     }
 
     /**
@@ -202,6 +207,9 @@ internal class ReadQueryBuilder {
      * @return table names to be queries
      */
     private fun ReadFeatures.getQuotedTablesToQuery(): List<String> {
+        require(collectionIds.isNotEmpty()) {
+            "ReadFeatures must define at least one collection to query"
+        }
         val tables = mutableListOf<String>()
         for (collection in collectionIds.filterNotNull()) {
             tables.add(quoteIdent(collection))
@@ -224,4 +232,22 @@ internal class ReadQueryBuilder {
     }
 
     private fun MutableList<*>.nextPlaceHolder() = "${"$"}${this.size + 1}"
+}
+
+private class WhereClauseBuilder(val allQueriesParams: MutableList<Any?>) {
+    private val subClauses = mutableListOf<String>()
+
+    fun addSubClause(subClause: String) {
+        subClauses.add(subClause)
+    }
+
+    fun addArgAndGetPlaceholder(arg: Any): String {
+        allQueriesParams.add(arg)
+        return "\$${allQueriesParams.size}" // psql starts indexing from 1
+    }
+
+    fun buildRawWhere(): String? {
+        if (subClauses.isEmpty()) return null
+        return "WHERE ${subClauses.joinToString(separator = " AND ")}"
+    }
 }

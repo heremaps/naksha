@@ -54,7 +54,8 @@ class PgReader(
     private fun readFeatures(): Response {
         val query = ReadQueryBuilder().build(request)
         val connection = session.usePgConnection()
-        val cursor = connection.execute(query.rawSql)
+        //
+        val cursor = connection.execute(query.rawSql, query.params?.toTypedArray())
         var allBytes: ByteArray = byteArrayOf()
         while(cursor.next()){
             val bytes: ByteArray = cursor.column(tuple_number) as ByteArray

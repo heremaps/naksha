@@ -32,7 +32,7 @@ open class SpIntersects() : AnyObject(), ISpatialQuery {
      * @property transformation the optional transformation to apply to the given geometry.
      */
     @JsName("of")
-    constructor(geometry: SpGeometry, transformation: SpTransformation) :this() {
+    constructor(geometry: SpGeometry, transformation: SpTransformation? = null) :this() {
         this.geometry = geometry
         this.transformation = transformation
     }
