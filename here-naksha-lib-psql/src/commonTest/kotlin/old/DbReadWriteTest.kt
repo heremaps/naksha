@@ -1,4 +1,4 @@
-package naksha.psql
+package old
 //
 //import naksha.psql.PsqlTestStorage.Companion.context
 //import naksha.psql.PsqlTestStorage.Companion.adminConnection
