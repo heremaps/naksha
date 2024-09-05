@@ -19,6 +19,7 @@
 package com.here.naksha.storage.http;
 
 import static com.here.naksha.common.http.apis.ApiParamsConst.*;
+import static com.here.naksha.storage.http.PrepareResult.prepareResult;
 import static java.lang.String.format;
 
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
@@ -35,6 +36,7 @@ import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,7 +68,7 @@ class HttpStorageReadExecute {
 
     if (response.statusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
       // For Error 404 (not found) on single feature GetById request, we need to return empty result
-      return prepareResult(Collections.emptyList());
+      return new SuccessResponse(Collections.emptyList());
     }
     return prepareResult(response, NakshaFeature.class, List::of);
   }

@@ -110,27 +110,30 @@ public final class HttpStorageReadSession implements IReadSession {
 
   @NotNull
   @Override
-  public List<Tuple> getLatestTuples(
-      @NotNull String mapId, @NotNull String collectionId, @NotNull String[] featureIds, @NotNull String mode) {
-    return List.of();
-  }
-
-  @NotNull
-  @Override
-  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, @NotNull String mode) {
-    return List.of();
-  }
-
-  @Override
-  public void fetchTuple(@NotNull ResultTuple resultTuple, @NotNull String mode) {}
-
-  @Override
-  public void fetchTuples(
-      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, @NotNull String mode) {}
-
-  @NotNull
-  @Override
   public Response executeParallel(@NotNull Request request) {
     return IReadSession.super.executeParallel(request);
   }
+
+  @NotNull
+  @Override
+  public List<Tuple> getLatestTuples(
+      @NotNull String mapId,
+      @NotNull String collectionId,
+      @NotNull String[] featureIds,
+      @NotNull FetchMode mode) {
+    return List.of();
+  }
+
+  @NotNull
+  @Override
+  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, @NotNull FetchMode mode) {
+    return List.of();
+  }
+
+  @Override
+  public void fetchTuple(@NotNull ResultTuple resultTuple, @NotNull FetchMode mode) {}
+
+  @Override
+  public void fetchTuples(
+      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, @NotNull FetchMode mode) {}
 }
