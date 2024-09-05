@@ -368,18 +368,6 @@ class PgWriter(
         TODO("Implement me")
     }
 
-    internal fun createFeature(collection: PgCollection, write: WriteExt): Tuple {
-        val feature = write.feature?.proxy(NakshaFeature::class) ?: throw NakshaException(
-            ILLEGAL_ARGUMENT,
-            "CREATE without feature"
-        )
-        val tupleNumber = newFeatureTupleNumber(collection, feature.id)
-        val tuple = tuple(tupleNumber, feature, write.attachment, feature.id, flags(collection.nakshaCollection))
-
-        executeInsert(quoteIdent(collection.id), tuple, feature)
-        return tuple
-    }
-
     internal fun executeInsert(
         quotedCollectionId: String,
         tuple: Tuple,
@@ -391,14 +379,8 @@ class PgWriter(
                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
                       """.trimIndent(),
             args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
-        )
+        ).close()
         return tuple
-    }
-
-    internal fun updateFeature(collection: PgCollection, write: WriteExt): Tuple {
-        val transaction = session.transaction()
-
-        TODO("Implement me")
     }
 
     internal fun upsertFeature(collection: PgCollection, write: WriteExt): Tuple {

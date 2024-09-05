@@ -184,7 +184,7 @@ class UpdateFeature(
                 prevUid = previousMetadata.uid,
                 changeCount = previousMetadata.changeCount + 1
             )
-        )
+        ).close()
         return tuple
     }
 
