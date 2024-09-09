@@ -29,10 +29,7 @@ import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
-import naksha.model.request.query.AnyOp;
-import naksha.model.request.query.POr;
-import naksha.model.request.query.PQuery;
-import naksha.model.request.query.Property;
+import naksha.model.request.query.*;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.invocation.InvocationOnMock;
@@ -200,7 +197,7 @@ public class ViewTest {
     // when not only by id
     clearInvocations(readSession);
     ReadFeatures request2 = new ReadFeatures();
-    POr propQuery = new POr(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new int[]{1}), new PQuery(new Property(Property.APP_ID), AnyOp.IS_ANY_OF, new String[]{"app"}));
+    POr propQuery = new POr(new PQuery(new Property(Property.ID), StringOp.EQUALS, "1"), new PQuery(new Property(Property.APP_ID), StringOp.EQUALS, "app"));
     RequestQuery requestQuery = new RequestQuery();
     requestQuery.setProperties(propQuery);
     request2.setQuery(requestQuery);
