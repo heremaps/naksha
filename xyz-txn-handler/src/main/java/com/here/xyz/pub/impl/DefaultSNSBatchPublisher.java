@@ -63,15 +63,8 @@ public class DefaultSNSBatchPublisher implements IPublisher {
                 final int msgLength = msg.length();
                 final Map<String, MessageAttributeValue> msgAttrMap = populateMessageAttributeMap(txnData, sub, spaceId);
 
-                // Prepare PublishBatchEntry for current message
-                final PublishBatchRequestEntry batchEntry = PublishBatchRequestEntry.builder()
-                        .message(msg)
-                        .messageAttributes(msgAttrMap)
-                        .id(MSG_ID_PREFIX + batchEntryCounter)
-                        .build();
-
-                // publish batch if payload limit reached
-                if (msgLength+aggrBatchPayloadSize > MAX_ALLOWED_PAYLOAD_SIZE && batchEntries.size()>0) {
+                // publish accumulated batch if payload limit reached
+                if (msgLength+aggrBatchPayloadSize > MAX_ALLOWED_PAYLOAD_SIZE && !batchEntries.isEmpty()) {
                     // publish current batch
                     publishBatchEntriesAndCheckResult(batchEntries, snsTopic, snsClient, txnList, subId, publishedRecCnt, MSG_ID_PREFIX, pubCfg, pubDTO);
                     // update batch variables
@@ -81,6 +74,12 @@ public class DefaultSNSBatchPublisher implements IPublisher {
                     batchEntryCounter = 0;
                 }
 
+                // Prepare PublishBatchEntry for current message
+                final PublishBatchRequestEntry batchEntry = PublishBatchRequestEntry.builder()
+                        .message(msg)
+                        .messageAttributes(msgAttrMap)
+                        .id(MSG_ID_PREFIX + batchEntryCounter)
+                        .build();
                 // add current message to the batch
                 batchEntries.add(batchEntry);
                 aggrBatchPayloadSize += msgLength;
