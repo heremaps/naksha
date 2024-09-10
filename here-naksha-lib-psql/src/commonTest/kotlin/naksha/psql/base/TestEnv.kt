@@ -1,27 +1,26 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package naksha.psql
+package naksha.psql.base
 
 import naksha.base.PlatformUtil
 import naksha.model.NakshaContext
 import naksha.model.SessionOptions
+import naksha.psql.*
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmField
 
 /**
  * Abstract class for all tests using connection to db.
  */
 @Suppress("MemberVisibilityCanBePrivate")
 @JsExport
-class TestEnv(dropSchema: Boolean, initStorage: Boolean, enableInfoLogs:Boolean = false) {
+class TestEnv(dropSchema: Boolean, initStorage: Boolean, enableInfoLogs: Boolean = false) {
     init {
         PlatformUtil.ENABLE_INFO = enableInfoLogs
     }
 
     companion object TestBasicsCompanion {
-   }
+    }
 
     val storage = PgPlatform.newTestStorage()
 
@@ -64,7 +63,8 @@ class TestEnv(dropSchema: Boolean, initStorage: Boolean, enableInfoLogs:Boolean 
     fun dropSchema() {
         val conn = storage.newConnection(options, false) { _, _ -> }
         conn.use {
-            conn.execute("DROP SCHEMA IF EXISTS ${quoteIdent(storage.defaultSchemaName)} CASCADE").close()
+            conn.execute("DROP SCHEMA IF EXISTS ${quoteIdent(storage.defaultSchemaName)} CASCADE")
+                .close()
             conn.commit()
         }
     }
