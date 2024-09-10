@@ -58,6 +58,7 @@ jobs:
           name: ${{ env.GITHUB_CODEDEPLOY_ARTIFACT_NAME }}
           path: ${{ env.CODEDEPLOY_DIR }}
           if-no-files-found: error
+          include-hidden-files: true
       - name: Identify and save Application version
         id: save-app-version
         run: |
