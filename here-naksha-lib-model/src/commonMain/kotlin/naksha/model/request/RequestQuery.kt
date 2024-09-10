@@ -16,6 +16,7 @@ import kotlin.js.JsExport
  * - [naksha.model.request.query.SpOr] - logical OR for spatial conditions
  * - [naksha.model.request.query.TagOr] - logical OR for tag conditions
  * - [naksha.model.request.query.POr] - logical OR for property conditions
+ * - [naksha.model.request.query.MetaOr] - logical OR for metadata conditions
  *
  * @since 3.0.0
  */
@@ -27,27 +28,32 @@ open class RequestQuery : AnyObject() {
         private val SPATIAL_QUERY_NULL = NullableProperty<RequestQuery, ISpatialQuery>(ISpatialQuery::class)
         private val TAG_QUERY_NULL = NullableProperty<RequestQuery, ITagQuery>(ITagQuery::class)
         private val PROPERTIES_QUERY_NULL = NullableProperty<RequestQuery, IPropertyQuery>(IPropertyQuery::class)
+        private val METADATA_QUERY_NULL = NullableProperty<RequestQuery, IMetaQuery>(IMetaQuery::class)
     }
 
     /**
-     * Search for features that match the given spatial query.
-     *
-     * This condition excludes features
+     * Search for features matching the given spatial query.
      * @since 3.0.0
      */
     var spatial by SPATIAL_QUERY_NULL
 
     /**
-     * Search for features that match the given tag query.
+     * Search for features matching the given tag query.
      * @since 3.0.0
      */
     var tags by TAG_QUERY_NULL
 
     /**
-     * Search for features match the given property query.
+     * Search for features matching the given property query.
      * @since 3.0.0
      */
     var properties by PROPERTIES_QUERY_NULL
+
+    /**
+     * Search for features matching the given metadata query.
+     * @since 3.0.0
+     */
+    var metadata by METADATA_QUERY_NULL
 
     /**
      * Search for features that have a reference point in one of the given tiles.

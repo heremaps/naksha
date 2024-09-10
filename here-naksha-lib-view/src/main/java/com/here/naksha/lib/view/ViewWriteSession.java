@@ -18,13 +18,12 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.exceptions.StorageLockException;
 import com.here.naksha.lib.core.models.storage.*;
+import java.util.concurrent.TimeUnit;
 import naksha.model.IStorageLock;
 import naksha.model.IWriteSession;
-import java.util.concurrent.TimeUnit;
-
+import naksha.model.NakshaContext;
 import naksha.model.WriteFeatures;
 import naksha.model.WriteRequest;
 import org.jetbrains.annotations.NotNull;
