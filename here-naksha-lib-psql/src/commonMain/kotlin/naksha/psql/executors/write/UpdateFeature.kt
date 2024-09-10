@@ -15,12 +15,13 @@ import naksha.psql.executors.write.PgCursorUtil.collectAndClose
 import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
 import naksha.psql.executors.write.WriteFeatureUtils.resolveFlags
 import naksha.psql.executors.write.WriteFeatureUtils.tuple
+import kotlin.jvm.JvmStatic
 
-class UpdateFeature(
+open class UpdateFeature(
     val session: PgSession
 ) {
 
-    fun execute(collection: PgCollection, write: Write): Tuple {
+    open fun execute(collection: PgCollection, write: Write): Tuple {
         val feature = write.feature?.proxy(NakshaFeature::class) ?: throw NakshaException(
             NakshaError.ILLEGAL_ARGUMENT,
             "UPDATE without feature"
@@ -51,10 +52,10 @@ class UpdateFeature(
 
         removeFeatureFromDel(collection, feature.id)
         collection.history?.let { hstTable ->
-            insertPreviousVersionToHst(
+            insertHeadVersionToHst(
                 hstTable = hstTable,
                 headTable = collection.head,
-                nextVersion = newVersion
+                versionInHead = newVersion
             )
         }
         updateFeatureInHead(collection, tuple, feature, newVersion, previousMetadata)
@@ -62,7 +63,7 @@ class UpdateFeature(
     }
 
 
-    private fun fetchCurrentMeta(collection: PgCollection, featureId: String): Metadata {
+    protected fun fetchCurrentMeta(collection: PgCollection, featureId: String): Metadata {
         val quotedHeadName = quoteIdent(collection.head.name)
         val sql = """SELECT ${PgColumn.metaSelect}
                      FROM $quotedHeadName
@@ -123,10 +124,10 @@ class UpdateFeature(
         }
     }
 
-    private fun insertPreviousVersionToHst(
+    protected fun insertHeadVersionToHst(
         hstTable: PgTable,
         headTable: PgTable,
-        nextVersion: Version
+        versionInHead: Version
     ) {
         val hstTableName = quoteIdent(hstTable.name)
         val headTableName = quoteIdent(headTable.name)
@@ -138,7 +139,7 @@ class UpdateFeature(
                 INSERT INTO $hstTableName(${PgColumn.txn_next.name},$columnsWithoutNext)
                 SELECT $1,$columnsWithoutNext FROM $headTableName
             """.trimIndent(),
-            args = arrayOf(nextVersion.txn)
+            args = arrayOf(versionInHead.txn)
         ).close()
     }
 
@@ -200,6 +201,7 @@ class UpdateFeature(
     }
 
     companion object {
-        private val quotedIdColumn: String = quoteIdent(PgColumn.id.name)
+        @JvmStatic
+        protected val quotedIdColumn: String = quoteIdent(PgColumn.id.name)
     }
 }

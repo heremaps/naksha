@@ -80,7 +80,7 @@ internal object WriteFeatureUtils {
     internal fun tuple(
         storage: PgStorage,
         tupleNumber: TupleNumber,
-        feature: NakshaFeature,
+        feature: NakshaFeature?,
         metadata: Metadata,
         attachment: ByteArray?,
         flags: Flags,
@@ -89,11 +89,11 @@ internal object WriteFeatureUtils {
         return Tuple(
             storage = storage,
             tupleNumber = tupleNumber,
-            geo = PgUtil.encodeGeometry(feature.geometry, flags),
-            referencePoint = PgUtil.encodeGeometry(feature.referencePoint, flags),
+            geo = PgUtil.encodeGeometry(feature?.geometry, flags),
+            referencePoint = PgUtil.encodeGeometry(feature?.referencePoint, flags),
             feature = PgUtil.encodeFeature(feature, flags, encodingDict),
             tags = PgUtil.encodeTags(
-                feature.properties.xyz.tags?.toTagMap(),
+                feature?.properties?.xyz?.tags?.toTagMap(),
                 storage.defaultFlags,
                 encodingDict
             ),
