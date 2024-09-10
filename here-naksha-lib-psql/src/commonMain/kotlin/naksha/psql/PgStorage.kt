@@ -551,17 +551,11 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
     /**
      * Fetches a single result-tuple.
      *
-     * The fetch modes are:
-     * - [all][FETCH_ALL] (_**default**_) - all columns
-     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
-     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
-     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
-     * - [cached-only][FETCH_CACHE] - only what is available in cache
-     *
      * @param conn the connection to use.
      * @param resultTuple the result-tuple into which to load the tuple.
      * @param mode the fetch mode.
      * @since 3.0.0
+     * @see ISession.fetchTuple
      */
     fun fetchTuple(conn: PgConnection, resultTuple: ResultTuple, mode: FetchMode = FETCH_ALL) {
         TODO("Implement fetchTuple")
@@ -570,19 +564,13 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
     /**
      * Fetches all tuples in the given result-tuples.
      *
-     * The fetch modes are:
-     * - [all][FETCH_ALL] (_**default**_) - all columns
-     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
-     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
-     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
-     * - [cached-only][FETCH_CACHE] - only what is available in cache
-     *
      * @param conn the connection to use.
      * @param resultTuples a list of result-tuples to fetch.
      * @param from the index of the first result-tuples to fetch.
      * @param to the index of the first result-tuples to ignore.
      * @param mode the fetch mode.
      * @since 3.0.0
+     * @see ISession.fetchTuples
      */
     fun fetchTuples(
         conn: PgConnection,

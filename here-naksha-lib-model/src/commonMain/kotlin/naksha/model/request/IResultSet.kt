@@ -55,7 +55,7 @@ interface IResultSet {
     /**
      * Return the requested result, generated from all [tuples] that are part of the result-set.
      *
-     * **Note**: The storage will not fetch the tuples of the result-set. The client need to invoke [IStorage.fetchTuples] to be sure that the [tuples][Tuple] are available. This is automatically done, when invoking [SuccessResponse.features].
+     * **Note**: The storage will not fetch the tuples of the result-set. The client need to invoke [ISession.fetchTuples] to be sure that the [tuples][Tuple] are available. This is automatically done, when invoking [SuccessResponse.features].
      *
      * @return a sub-list from [offset] to [end] with all result-tuples, that should be part of the success response.
      */
@@ -68,7 +68,7 @@ interface IResultSet {
     val resultSize: Int
 
     /**
-     * Returns all [tuples][Tuple] being part of the result-set, the tuples may not have been read from the storage yet, and may require to invoke [IStorage.fetchTuples]. Only the tuples till [validationEnd] are validated (filtered), all others are in an unknown state, except [isComplete].
+     * Returns all [tuples][Tuple] being part of the result-set, the tuples may not have been read from the storage yet, and may require to invoke [ISession.fetchTuples]. Only the tuples till [validationEnd] are validated (filtered), all others are in an unknown state, except [isComplete].
      *
      * To generate the features for an [SuccessResponse], simply read all tuples from [offset] till [end] (or use the [result] method), and convert them into features. Beware that only the tuples till [validationEnd] are reliable. All tuples returned starting with the one at [validationEnd] are not yet validated, therefore some filters (like property query, lambdas) have not been applied yet.
      * @return the list of all tuples being part of the result-set.

@@ -1,4 +1,4 @@
-package naksha.psql
+package old
 //
 //import naksha.psql.PsqlInstance
 //import kotlin.test.Test
