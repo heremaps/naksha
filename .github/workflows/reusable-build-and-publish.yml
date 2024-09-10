@@ -48,7 +48,7 @@ jobs:
           cp -p $SERVICE_JAR_DIR/xyz-hub-service.jar $CODEDEPLOY_DIR/contents/xyz-hub/
       - name: List CodeDeploy artifact content
         run: |
-          ls -lR $CODEDEPLOY_DIR
+          ls -lRa $CODEDEPLOY_DIR
       - name: Save pipeline artifact name
         id: save-artifact-name
         run: echo "name=${{ env.GITHUB_CODEDEPLOY_ARTIFACT_NAME }}" >> "$GITHUB_OUTPUT"
