@@ -1,3 +1,7 @@
+## Naksha_1.1.2
+
+- Fixed batch-size failure issue for SNS publishing where one of the message fails during publish, then we optimize by continuing from that failure instead of re-processing entire batch 
+
 ## Naksha_1.1.1
 
 - Introduced new query parameter `rlock` to indicate whether API transaction should `WAIT` or `ABORT` when there is DB row-level lock found during Updates.
