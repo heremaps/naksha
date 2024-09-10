@@ -26,15 +26,14 @@ public class DefaultSNSBatchPublisher implements IPublisher {
 
     // Convert and publish transactions to desired SNS Topic
     @Override
-    public PublishEntryDTO publishTransactions(final PubConfig pubCfg, final Subscription sub,
+    public void publishTransactions(final PubConfig pubCfg, final Subscription sub,
                                                final List<PubTransactionData> txnList,
-                                               final long lastStoredTxnId, final long lastStoredTxnRecId) throws Exception {
+                                               final PublishEntryDTO pubDTO) throws Exception {
         final String subId = sub.getId();
         final String spaceId = sub.getSource();
         final String snsTopic = PubUtil.getSnsTopicARN(sub);
         final long lotStartTS = System.currentTimeMillis();
         // local counters
-        final PublishEntryDTO pubDTO = new PublishEntryDTO(lastStoredTxnId, lastStoredTxnRecId);
         int publishedRecCnt = 0;
         // Variables for batch publish
         final int TXN_LIST_SIZE = txnList.size();
@@ -106,8 +105,6 @@ public class DefaultSNSBatchPublisher implements IPublisher {
             logger.info("Transaction publish stats for SNS [{}] [format => eventType,subId,spaceId,msgCount,timeTakenMs,lastTxnId,lastTxnRecId] - {} {} {} {} {} {} {}",
                     snsTopic, PubLogConstants.LOG_EVT_TXN_PUBLISH_STATS, subId, spaceId, publishedRecCnt, lotTimeTaken, pubDTO.getLastTxnId(), pubDTO.getLastTxnRecId());
         }
-
-        return pubDTO;
     }
 
 
