@@ -46,14 +46,12 @@ public class PubTxnListHandler implements Runnable{
                 return;
             }
             // Handover transactions to appropriate Publisher (e.g. DefaultSNSPublisher)
-            PublishEntryDTO lastTxn = null;
+            final PublishEntryDTO lastTxn = new PublishEntryDTO(lastTxnId, lastTxnRecId);
             try {
-                lastTxn = PubUtil.getPubInstance(sub).publishTransactions(pubCfg, sub, txnList, lastTxnId, lastTxnRecId);
+                PubUtil.getPubInstance(sub).publishTransactions(pubCfg, sub, txnList, lastTxn);
             } finally {
-                if (lastTxn != null) {
-                    // Update last txn_id in AdminDB::xyz_config::xyz_txn_pub table
-                    PubDatabaseHandler.saveLastTxnId(adminDBConnParams, subId, lastTxn);
-                }
+                // Update last txn_id in AdminDB::xyz_config::xyz_txn_pub table
+                PubDatabaseHandler.saveLastTxnId(adminDBConnParams, subId, lastTxn);
             }
         } catch (Exception ex) {
             logger.error("{} - Exception in publisher job for subId={}, spaceId={}. ",

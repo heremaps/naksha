@@ -8,8 +8,8 @@ import com.here.xyz.pub.models.PublishEntryDTO;
 import java.util.List;
 
 public interface IPublisher {
-    PublishEntryDTO publishTransactions(final PubConfig pubCfg, final Subscription sub,
+    void publishTransactions(final PubConfig pubCfg, final Subscription sub,
                                         final List<PubTransactionData> txnList,
-                                        final long lastTxnId, final long lastTxnRecId) throws Exception;
+                                        final PublishEntryDTO pubDTO) throws Exception;
 
 }
