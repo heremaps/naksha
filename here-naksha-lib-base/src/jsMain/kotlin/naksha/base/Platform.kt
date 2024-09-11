@@ -344,11 +344,10 @@ actual class Platform {
         @JsStatic
         actual fun isProxyKlass(klass: KClass<*>): Boolean = isAssignable(klass, Proxy::class)
 
-        // TODO: Find the constructor in namespace of module.
         @Suppress("NON_EXPORTABLE_TYPE")
         @JsStatic
-        actual fun <T : Any> klassFor(constructor: KFunction<T>): KClass<out T> =
-            js("""require('module_name').package.full.path.ClassName""").unsafeCast<KClass<T>>()
+        actual fun <T : Any> klassFor(constructor: KFunction<T>): KClass<out T>
+            = (js("Object.create(constructor.prototype)") as T)::class
 
         @Suppress("UNCHECKED_CAST", "NON_EXPORTABLE_TYPE")
         @JsStatic
