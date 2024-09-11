@@ -34,7 +34,7 @@ class DeleteFeature(session: PgSession) : UpdateFeature(session) {
 
         val previousMetadata = fetchCurrentMeta(collection, featureId)
         val tupleNumber = newFeatureTupleNumber(collection, featureId, session)
-        val flags = resolveFlags(collection, session).action(ACTION_DELETE)
+        val flags = resolveFlags(collection, session).action(Action.DELETED)
         val tuple = tuple(
             session.storage,
             tupleNumber,
