@@ -55,7 +55,8 @@ open class UpdateFeature(
             insertHeadVersionToHst(
                 hstTable = hstTable,
                 headTable = collection.head,
-                versionInHead = newVersion
+                versionInHead = newVersion,
+                featureId = feature.id
             )
         }
         updateFeatureInHead(collection, tuple, feature, newVersion, previousMetadata)
@@ -127,7 +128,8 @@ open class UpdateFeature(
     protected fun insertHeadVersionToHst(
         hstTable: PgTable,
         headTable: PgTable,
-        versionInHead: Version
+        versionInHead: Version,
+        featureId: String
     ) {
         val hstTableName = quoteIdent(hstTable.name)
         val headTableName = quoteIdent(headTable.name)
@@ -138,6 +140,7 @@ open class UpdateFeature(
             sql = """
                 INSERT INTO $hstTableName(${PgColumn.txn_next.name},$columnsWithoutNext)
                 SELECT $1,$columnsWithoutNext FROM $headTableName
+                WHERE $quotedIdColumn='$featureId'
             """.trimIndent(),
             args = arrayOf(versionInHead.txn)
         ).close()
