@@ -52,17 +52,19 @@ class PgReader(
     }
 
     private fun readFeatures(): Response {
-        val query = ReadQueryBuilder().build(request)
+        val query = ReadQueryBuilder(storage).build(request)
         val connection = session.usePgConnection()
-        val cursor = connection.execute(query.rawSql)
-        var allBytes: ByteArray = byteArrayOf()
-        while(cursor.next()){
-            val bytes: ByteArray = cursor.column(tuple_number) as ByteArray
-            allBytes += bytes
-        }
-        cursor.close()
-        val tupleNumberBytes = TupleNumberByteArray(storage, allBytes)
-        return SuccessResponse(
+        // TODO: Use prepare, add arguments!
+        val plan = connection.prepare(query.sqlQuery, query.paramTypes.toTypedArray())
+        plan.use {
+            val allBytes: ByteArray?
+            val cursor = plan.execute(query.params.toTypedArray())
+            cursor.use {
+                allBytes = if (cursor.next()) cursor.column("rs") as ByteArray else null
+            }
+            if (allBytes == null) throw NakshaException(EXCEPTION, "Failed to execute query for unknown reason")
+            val tupleNumberBytes = TupleNumberByteArray.fromGzip(storage, allBytes)
+            return SuccessResponse(
                 PgResultSet(
                     storage,
                     session,
@@ -74,15 +76,11 @@ class PgReader(
                     orderBy = null,
                     filters = request.resultFilters
                 )
-        )
+            )
+        }
     }
 
     fun plan(): PgPlan {
-        TODO()
-        conn.prepare(
-            """
-            SELECT
-        """.trimIndent()
-        )
+        TODO("Do we need this?")
     }
 }

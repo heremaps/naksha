@@ -89,11 +89,12 @@ interface ISession : AutoCloseable {
      * Load the latest [tuples][Tuple] of the features with the given identifiers, from the given collection/map.
      *
      * The fetch modes are:
-     * - [all][FETCH_ALL] (_**default**_) - all columns
-     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
-     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
-     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
-     * - [cached-only][FETCH_CACHE] - only what is available in cache
+     * - [all][FetchMode.FETCH_ALL] (_**default**_) - all columns
+     * - [all-no-cache][FetchMode.FETCH_ALL_NO_CACHE] - all columns, but do not access cache (but cache is updated)
+     * - [id][FetchMode.FETCH_ID] - id and row-id, rest from cache, if available
+     * - [meta][FetchMode.FETCH_META] - metadata and row-id, rest from cache, if available
+     * - [all-but-feature][FetchMode.FETCH_ALL_BUT_FEATURE] - all, except for the payload
+     * - [cached-only][FetchMode.FETCH_CACHE] - only what is available in cache
      *
      * @param mapId the map from which to load.
      * @param collectionId the collection from to load.
@@ -108,11 +109,12 @@ interface ISession : AutoCloseable {
      * Load specific [tuples][naksha.model.Tuple].
      *
      * The fetch modes are:
-     * - [all][FETCH_ALL] (_**default**_) - all columns
-     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
-     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
-     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
-     * - [cached-only][FETCH_CACHE] - only what is available in cache
+     * - [all][FetchMode.FETCH_ALL] (_**default**_) - all columns
+     * - [all-no-cache][FetchMode.FETCH_ALL_NO_CACHE] - all columns, but do not access cache (but cache is updated)
+     * - [id][FetchMode.FETCH_ID] - id and row-id, rest from cache, if available
+     * - [meta][FetchMode.FETCH_META] - metadata and row-id, rest from cache, if available
+     * - [all-but-feature][FetchMode.FETCH_ALL_BUT_FEATURE] - all, except for the payload
+     * - [cached-only][FetchMode.FETCH_CACHE] - only what is available in cache
      *
      * @param tupleNumbers a list of [tuple-numbers][TupleNumber] of the rows to load.
      * @param mode the fetch mode.

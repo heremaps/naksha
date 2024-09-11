@@ -34,7 +34,7 @@ open class ResultTuple(
     /**
      * The feature-id.
      *
-     * Can be _null_, when not yet fetched from the storage, use [IStorage.fetchTuples].
+     * Can be _null_, when not yet fetched from the storage, use [ISession.fetchTuples].
      *
      * When ordering by feature-id, the storage should load the feature identifiers together with the row identifiers. This operation will be slower than loading only the row identifiers, but still fast enough. However, at many places it is needed, like to create seekable views.
      */
@@ -43,7 +43,7 @@ open class ResultTuple(
     /**
      * If the row is already in the cache, the reference to the row.
      *
-     * Can be _null_, when not yet fetched from the storage, use [IStorage.fetchTuples] or when [op] is [PURGED][ExecutedOp.PURGED] or [RETAINED][ExecutedOp.RETAINED].
+     * Can be _null_, when not yet fetched from the storage, use [ISession.fetchTuples] or when [op] is [PURGED][ExecutedOp.PURGED] or [RETAINED][ExecutedOp.RETAINED].
      */
     @JvmField var tuple: Tuple?
 ) {

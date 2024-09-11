@@ -14,6 +14,8 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
+// TODO: Maybe we may add a middle-ground: gzip(string_agg($tuple_number||$id::bytea,'\x00'::bytea))
+
 /**
  * A helper that wraps a byte-array that contains a metadata byte-array.
  * ```sql

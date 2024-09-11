@@ -1,15 +1,18 @@
 package naksha.psql.read
 
 import naksha.model.FetchMode.*
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaException
 import naksha.model.request.*
 import naksha.model.request.query.*
 import naksha.psql.*
+import naksha.psql.PgColumn.PgColumnCompanion.id
 import naksha.psql.PgColumn.PgColumnCompanion.tuple_number
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 
-internal class ReadQueryBuilder {
+internal class ReadQueryBuilder(val storage: PgStorage) {
 
-    data class SqlReadQuery(val rawSql: String, val params: MutableList<Any?>?)
+    data class ReadQuery(val sqlQuery: String, val paramTypes: MutableList<String>, val params: MutableList<Any?>)
 
     /**
      * Builds SQL request based on given ReadRequest.
@@ -17,7 +20,7 @@ internal class ReadQueryBuilder {
      * @param req - read request
      * @return <SQL query string, list of params for query>
      */
-    fun build(req: Request): SqlReadQuery {
+    fun build(req: Request): ReadQuery {
         return when (req) {
             is ReadCollections -> buildReadFeatures(req.toReadFeatures())
             is ReadFeatures -> buildReadFeatures(req)
@@ -25,52 +28,32 @@ internal class ReadQueryBuilder {
         }
     }
 
-    private fun buildReadFeatures(req: ReadFeatures): SqlReadQuery {
+    private fun buildReadFeatures(req: ReadFeatures): ReadQuery {
         val queryBuilder = StringBuilder()
-        val columnsToFetch = resolveColumns(req)
 
-        val allQueriesParams = mutableListOf<Any?>()
         val quotedTablesToQuery = req.getQuotedTablesToQuery()
+        val paramTypes = mutableListOf<String>()
+        val paramValues = mutableListOf<Any?>()
 
-        queryBuilder.append("SELECT $tuple_number FROM (")
+        val LAST = quotedTablesToQuery.size - 1
+        val WHERE = resolveFeaturesWhere(req, paramTypes, paramValues)
+        val REQ_LIMIT = if (req.limit != null && req.orderBy == null && req.returnHandle != true) req.limit else null
+        queryBuilder.append("SELECT gzip(bytea_agg($tuple_number)) AS rs FROM (SELECT $tuple_number FROM (\n")
         for (table in quotedTablesToQuery.withIndex()) {
-            val whereSql = resolveFeaturesWhere(req, allQueriesParams)
-
-            queryBuilder.append("\n(")
-            queryBuilder.append("SELECT $columnsToFetch")
-            queryBuilder.append(" FROM ${table.value}")
-            if (whereSql.isNotEmpty()) {
-                queryBuilder.append(" WHERE $whereSql")
-            }
+            queryBuilder.append("\t(SELECT $tuple_number, $id FROM ${table.value}")
+            if (WHERE.isNotEmpty()) queryBuilder.append(" WHERE $WHERE")
+            if (REQ_LIMIT != null) queryBuilder.append(" LIMIT $REQ_LIMIT")
             queryBuilder.append(")")
-            if (table.index < quotedTablesToQuery.size - 1) {
-                queryBuilder.append("\nUNION ALL")
-            }
+            if (table.index < LAST) queryBuilder.append(" UNION ALL\n")
         }
-        queryBuilder.append("\n) LIMIT ${req.limit}")
-
-        return SqlReadQuery(queryBuilder.toString(), allQueriesParams)
+        queryBuilder.append("\n) ORDER BY $id, $tuple_number")
+        val HARD_LIMIT = req.limit ?: storage.hardCap
+        queryBuilder.append(if (HARD_LIMIT > 0 ) ") LIMIT $HARD_LIMIT;" else ")")
+        val SQL = queryBuilder.toString()
+        return ReadQuery(SQL, paramTypes, paramValues)
     }
 
-    /**
-     * Returns SQL columns asked by user.
-     *
-     * @param req
-     * @return comma delimited column names
-     */
-    private fun resolveColumns(req: ReadRequest): String {
-        return when (req.fetchMode) {
-            FETCH_ID -> "$PgColumn.id"
-            FETCH_ALL -> PgColumn.allColumns.joinToString(", ")
-            FETCH_META -> PgColumn.metaColumn.joinToString(", ")
-            else -> TODO()
-        }
-    }
-
-    private fun resolveFeaturesWhere(
-        req: ReadFeatures,
-        allQueriesParams: MutableList<Any?>
-    ): String {
+    private fun resolveFeaturesWhere(req: ReadFeatures, paramTypes: MutableList<String>, paramValues: MutableList<Any?>): String {
         val whereSql = StringBuilder()
         // TODO: Fix me !!!
         //resolveOps(whereSql, allQueriesParams, req.op)
@@ -196,19 +179,18 @@ internal class ReadQueryBuilder {
     }
 
     /**
-     * Return all tables to query, if the request was for collection "foo" with history, then ["foo", "foo$hst"]
-     * will be deleted
+     * Return all tables to query, if the request was for collection "foo" with history, then ["foo", "foo$hst"].
      *
      * @return table names to be queries
      */
     private fun ReadFeatures.getQuotedTablesToQuery(): List<String> {
         val tables = mutableListOf<String>()
-        for (collection in collectionIds.filterNotNull()) {
-            tables.add(quoteIdent(collection))
-            if (queryDeleted)
-                tables.add(quoteIdent("$collection\$del"))
-            if (queryHistory)
-                tables.add(quoteIdent("$collection\$hst"))
+        for (index in collectionIds.indices) {
+            val collectionId = collectionIds[index] ?: throw NakshaException(ILLEGAL_ARGUMENT, "Collection must not be null at index $index")
+            // TODO: Fix me, we need to verify if such a collection exists and then use the in-memory representation!
+            tables.add(quoteIdent(collectionId))
+            if (queryDeleted) tables.add(quoteIdent("$collectionId\$del"))
+            if (queryHistory) tables.add(quoteIdent("$collectionId\$hst"))
         }
         return tables
     }

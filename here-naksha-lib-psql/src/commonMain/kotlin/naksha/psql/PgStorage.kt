@@ -85,10 +85,10 @@ open class PgStorage(
             _adminOptions = value.copy(mapId = mapIdToSchema(defaultSchemaName))
         }
 
-    /**
-     * The hard-cap (limit) of the storage. No result-set every should become bigger than this amount of features.
-     */
-    var hardCap: Int = 1_000_000
+    override var hardCap: Int = 1_000_000
+        set(value) {
+            field = if (value < 0) Int.MAX_VALUE else value
+        }
 
     protected var _pageSize: Int? = null
 
@@ -457,8 +457,7 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
     ): PgConnection {
         val conn = cluster.newConnection(options, readOnly)
         // TODO: Do we need more initialization work here?
-        val query =
-            "SET SESSION search_path TO ${quoteIdent(mapIdToSchema(options.mapId))}, public, topology;\n"
+        val query = "SET SESSION search_path TO ${quoteIdent(mapIdToSchema(options.mapId))}, public, topology;\n"
         if (init != null) init.call(conn, query) else conn.execute(query).close()
         return conn
     }
