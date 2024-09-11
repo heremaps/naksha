@@ -7,7 +7,9 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
 import naksha.model.request.Write
 import naksha.psql.PgCollection
+import naksha.psql.PgColumn
 import naksha.psql.PgSession
+import naksha.psql.PgTable
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.executors.PgReader
 import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
@@ -31,15 +33,6 @@ class DeleteFeature(session: PgSession) : UpdateFeature(session) {
         }
 
         val previousMetadata = fetchCurrentMeta(collection, featureId)
-        // If hst table enabled, copy head state into hst
-        collection.history?.let { hstTable ->
-            insertHeadVersionToHst(
-                hstTable = hstTable,
-                headTable = collection.head,
-                versionInHead = previousMetadata.version
-            )
-        }
-
         val tupleNumber = newFeatureTupleNumber(collection, featureId, session)
         val flags = resolveFlags(collection, session).action(ACTION_DELETE)
         val tuple = tuple(
@@ -50,6 +43,36 @@ class DeleteFeature(session: PgSession) : UpdateFeature(session) {
             write.attachment,
             flags
         )
+        val newVersion = Version(previousMetadata.version.txn + 1)
+        // If hst table enabled
+        collection.history?.let { hstTable ->
+            // copy head state into hst with txn_next === txn
+            insertHeadVersionToHst(
+                hstTable = hstTable,
+                headTable = collection.head,
+                versionInHst = previousMetadata.version,
+                featureId = featureId,
+            )
+            // also copy head state into hst with txn_next === txn and action DELETED as a tombstone state
+            insertTombstoneVersionToTable(
+                destinationTable = hstTable,
+                headTable = collection.head,
+                versionInDes = newVersion,
+                flagsWithDeleted = flags,
+                featureId = featureId,
+            )
+        }
+
+        // If del table enabled, copy head state into del, with action DELETED and txn_next === txn as a tombstone state
+        collection.deleted?.let { delTable ->
+            insertTombstoneVersionToTable(
+                destinationTable = delTable,
+                headTable = collection.head,
+                versionInDes = newVersion,
+                flagsWithDeleted = flags,
+                featureId = featureId,
+            )
+        }
 
         removeFeatureFromHead(collection, featureId)
         return tuple
@@ -89,5 +112,28 @@ class DeleteFeature(session: PgSession) : UpdateFeature(session) {
             id = featureId,
             type = NakshaFeature.FEATURE_TYPE
         )
+    }
+
+    private fun insertTombstoneVersionToTable(
+        destinationTable: PgTable,
+        headTable: PgTable,
+        versionInDes: Version,
+        flagsWithDeleted: Flags,
+        featureId: String
+    ) {
+        val headTableName = quoteIdent(headTable.name)
+        val desTableName = quoteIdent(destinationTable.name)
+        val columnsWithoutNextFlags = PgColumn.allWritableColumns
+            .filterNot { it == PgColumn.txn_next }
+            .filterNot { it == PgColumn.flags }
+            .joinToString(separator = ",")
+        session.usePgConnection().execute(
+            sql = """
+                INSERT INTO $desTableName(${PgColumn.txn_next.name},${PgColumn.flags.name},$columnsWithoutNextFlags)
+                SELECT $1,$2,$columnsWithoutNextFlags FROM $headTableName
+                WHERE $quotedIdColumn='$featureId'
+            """.trimIndent(),
+            args = arrayOf(versionInDes.txn, flagsWithDeleted)
+        ).close()
     }
 }

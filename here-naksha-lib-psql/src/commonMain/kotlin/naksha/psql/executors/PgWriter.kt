@@ -16,6 +16,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.psql.*
+import naksha.psql.executors.write.DeleteFeature
 import naksha.psql.executors.write.InsertFeature
 import naksha.psql.executors.write.UpdateFeature
 import kotlin.jvm.JvmField
@@ -199,7 +200,7 @@ class PgWriter(
                     WriteOp.CREATE -> InsertFeature(session).execute(collectionOf(write), write)
                     WriteOp.UPSERT -> upsertFeature(collectionOf(write), write)
                     WriteOp.UPDATE -> UpdateFeature(session).execute(collectionOf(write), write)
-                    WriteOp.DELETE -> deleteFeature(collectionOf(write), write)
+                    WriteOp.DELETE -> DeleteFeature(session).execute(collectionOf(write), write)
                     WriteOp.PURGE -> purgeFeature(collectionOf(write), write)
                     else -> throw NakshaException(
                         UNSUPPORTED_OPERATION,
@@ -384,10 +385,6 @@ class PgWriter(
     }
 
     internal fun upsertFeature(collection: PgCollection, write: WriteExt): Tuple {
-        TODO("Implement me")
-    }
-
-    internal fun deleteFeature(collection: PgCollection, write: WriteExt): Tuple {
         TODO("Implement me")
     }
 
