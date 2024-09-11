@@ -64,8 +64,7 @@ PARALLEL UNSAFE
 SET search_path FROM CURRENT
 AS $$
   if (typeof require !== "function") {
-    var commonjs2_init = plv8.find_function("commonjs2_init");
-    commonjs2_init();
+    plv8.find_function("es_modules_init")();
     if (typeof require !== "function") {
       plv8.elog(ERROR, "Failed to initialize module system");
     }
@@ -507,6 +506,33 @@ AS $$
   return xyzTags.tagsMap();
 $$;
 
+CREATE OR REPLACE FUNCTION naksha_jbon_feature_to_json(jbon bytea) RETURNS json
+LANGUAGE 'plv8'
+IMMUTABLE
+PARALLEL SAFE
+SET search_path FROM CURRENT
+AS $$
+  if (typeof require !== "function") {
+    plv8.find_function("es_modules_init")();
+    if (typeof require !== "function") {
+      plv8.elog(ERROR, "Failed to initialize module system");
+    }
+  }
+  const { Platform } = require("naksha_base");
+  const { JbFeatureDecoder } = require("naksha_jbon");
+  let decoder = new JbFeatureDecoder();
+  decoder.mapBytes(jbon);
+  return Platform.toJSON(decoder.toAnyObject());
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_jbon_feature_to_jsonb(jbon bytea) RETURNS jsonb
+LANGUAGE 'plpgsql'
+IMMUTABLE
+PARALLEL SAFE
+AS $$ BEGIN
+  RETURN naksha_jbon_feature_to_json(jbon)::jsonb;
+END $$;
+
 CREATE OR REPLACE FUNCTION naksha_tags(flags int, tags bytea) RETURNS jsonb
 LANGUAGE 'plv8'
 IMMUTABLE
@@ -630,16 +656,28 @@ AS $$
   return session.xyzNsFromRow(collection_id, map)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_feature(feature bytea, flags int4) RETURNS bytea LANGUAGE 'plpgsql' STRICT IMMUTABLE AS $$
+CREATE OR REPLACE FUNCTION naksha_feature(feature bytea, flags int4) RETURNS json
+LANGUAGE 'plpgsql'
+STRICT
+IMMUTABLE
+AS $$
 DECLARE
-    encoding int4;
+  encoding int4;
+  gzip boolean;
 BEGIN
-    encoding = naksha_feature_encoding(flags);
-    if encoding = 2 or encoding = 4 then
-      RETURN gunzip(feature);
-    else
-      RETURN feature;
-    end if;
+  encoding = (flags >> 4) & 15;
+  gzip = (encoding & 1) = 1;
+  if (gzip) then
+    feature = gunzip(feature);
+    encoding = encoding & 14;
+  end if;
+  if (encoding = 0) then -- JBON
+    return naksha_jbon_feature_to_json(feature);
+  elsif (encoding = 2) then -- JSON
+    return feature::text::json;
+  end if;
+  -- Unknown encoding
+  return null;
 END $$;
 
 CREATE OR REPLACE FUNCTION naksha_geo_type(flags int4) RETURNS int4
@@ -700,3 +738,17 @@ AS $$
   select format('%s %s', value, unit)
   from prep;
 $$;
+
+CREATE OR REPLACE FUNCTION bytea_concat(a bytea, b bytea) RETURNS bytea
+LANGUAGE 'plpgsql'
+IMMUTABLE
+PARALLEL SAFE
+AS $$ BEGIN
+  RETURN a || b;
+END $$;
+
+CREATE AGGREGATE bytea_agg(bytea) (
+    SFUNC = bytea_concat,
+    STYPE = bytea,
+    INITCOND = ''
+);
