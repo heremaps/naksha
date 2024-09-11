@@ -125,15 +125,16 @@ class DeleteFeature(session: PgSession) : UpdateFeature(session) {
         val desTableName = quoteIdent(destinationTable.name)
         val columnsWithoutNextFlags = PgColumn.allWritableColumns
             .filterNot { it == PgColumn.txn_next }
+            .filterNot { it == PgColumn.txn }
             .filterNot { it == PgColumn.flags }
             .joinToString(separator = ",")
         session.usePgConnection().execute(
             sql = """
-                INSERT INTO $desTableName(${PgColumn.txn_next.name},${PgColumn.flags.name},$columnsWithoutNextFlags)
-                SELECT $1,$2,$columnsWithoutNextFlags FROM $headTableName
+                INSERT INTO $desTableName(${PgColumn.txn_next.name},${PgColumn.txn.name},${PgColumn.flags.name},$columnsWithoutNextFlags)
+                SELECT $1,$2,$3,$columnsWithoutNextFlags FROM $headTableName
                 WHERE $quotedIdColumn='$featureId'
             """.trimIndent(),
-            args = arrayOf(versionInDes.txn, flagsWithDeleted)
+            args = arrayOf(versionInDes.txn, versionInDes.txn, flagsWithDeleted)
         ).close()
     }
 }
