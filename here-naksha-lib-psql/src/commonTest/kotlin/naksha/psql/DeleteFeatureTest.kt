@@ -28,7 +28,7 @@ class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c")) 
         // When: Writing initial version of feature
         executeWrite(writeInitialFeature)
 
-        // And: Updating feature
+        // And: Deleting feature
         executeWrite(deleteFeaturesReq)
 
         // And: Retrieving feature by id

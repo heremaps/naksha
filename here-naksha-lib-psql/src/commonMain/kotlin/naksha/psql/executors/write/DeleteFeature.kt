@@ -18,9 +18,7 @@ import naksha.psql.executors.write.WriteFeatureUtils.tuple
 
 class DeleteFeature(session: PgSession) : UpdateFeature(session) {
     override fun execute(collection: PgCollection, write: Write): Tuple {
-        val featureId = write.featureId
-        require(featureId != null) {"No feature ID provided"}
-
+        val featureId = write.featureId ?: throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "No feature ID provided")
         var feature = write.feature
         if (feature == null) {
             val readFeatures = ReadFeatures(collection.id)
@@ -32,7 +30,6 @@ class DeleteFeature(session: PgSession) : UpdateFeature(session) {
             }
         }
 
-        val previousMetadata = fetchCurrentMeta(collection, featureId)
         val tupleNumber = newFeatureTupleNumber(collection, featureId, session)
         val flags = resolveFlags(collection, session).action(Action.DELETED)
         val tuple = tuple(
@@ -43,38 +40,42 @@ class DeleteFeature(session: PgSession) : UpdateFeature(session) {
             write.attachment,
             flags
         )
-        val newVersion = Version(previousMetadata.version.txn + 1)
-        // If hst table enabled
-        collection.history?.let { hstTable ->
-            // copy head state into hst with txn_next === txn
-            insertHeadVersionToHst(
-                hstTable = hstTable,
-                headTable = collection.head,
-                versionInHst = previousMetadata.version,
-                featureId = featureId,
-            )
-            // also copy head state into hst with txn_next === txn and action DELETED as a tombstone state
-            insertTombstoneVersionToTable(
-                destinationTable = hstTable,
-                headTable = collection.head,
-                versionInDes = newVersion,
-                flagsWithDeleted = flags,
-                featureId = featureId,
-            )
-        }
+        // Only modify head, hst and del tables if feature exists
+        if (feature != null) {
+            val previousMetadata = fetchCurrentMeta(collection, featureId)
+            val newVersion = Version(previousMetadata.version.txn + 1)
+            // If hst table enabled
+            collection.history?.let { hstTable ->
+                // copy head state into hst with txn_next === txn
+                insertHeadToHst(
+                    hstTable = hstTable,
+                    headTable = collection.head,
+                    txnNextVersion = previousMetadata.version,
+                    featureId = featureId,
+                )
+                // also copy head state into hst with txn_next === txn and action DELETED as a tombstone state
+                insertTombstoneVersionToTable(
+                    destinationTable = hstTable,
+                    headTable = collection.head,
+                    versionInDes = newVersion,
+                    flagsWithDeleted = flags,
+                    featureId = featureId,
+                )
+            }
 
-        // If del table enabled, copy head state into del, with action DELETED and txn_next === txn as a tombstone state
-        collection.deleted?.let { delTable ->
-            insertTombstoneVersionToTable(
-                destinationTable = delTable,
-                headTable = collection.head,
-                versionInDes = newVersion,
-                flagsWithDeleted = flags,
-                featureId = featureId,
-            )
-        }
+            // If del table enabled, copy head state into del, with action DELETED and txn_next === txn as a tombstone state
+            collection.deleted?.let { delTable ->
+                insertTombstoneVersionToTable(
+                    destinationTable = delTable,
+                    headTable = collection.head,
+                    versionInDes = newVersion,
+                    flagsWithDeleted = flags,
+                    featureId = featureId,
+                )
+            }
 
-        removeFeatureFromHead(collection, featureId)
+            removeFeatureFromHead(collection, featureId)
+        }
         return tuple
     }
 

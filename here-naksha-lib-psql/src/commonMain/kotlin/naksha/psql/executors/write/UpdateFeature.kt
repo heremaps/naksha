@@ -52,10 +52,10 @@ open class UpdateFeature(
 
         removeFeatureFromDel(collection, feature.id)
         collection.history?.let { hstTable ->
-            insertHeadVersionToHst(
+            insertHeadToHst(
                 hstTable = hstTable,
                 headTable = collection.head,
-                versionInHst = newVersion,
+                txnNextVersion = newVersion,
                 featureId = feature.id
             )
         }
@@ -125,10 +125,10 @@ open class UpdateFeature(
         }
     }
 
-    protected fun insertHeadVersionToHst(
+    protected fun insertHeadToHst(
         hstTable: PgTable,
         headTable: PgTable,
-        versionInHst: Version,
+        txnNextVersion: Version,
         featureId: String
     ) {
         val hstTableName = quoteIdent(hstTable.name)
@@ -142,7 +142,7 @@ open class UpdateFeature(
                 SELECT $1,$columnsWithoutNext FROM $headTableName
                 WHERE $quotedIdColumn='$featureId'
             """.trimIndent(),
-            args = arrayOf(versionInHst.txn)
+            args = arrayOf(txnNextVersion.txn)
         ).close()
     }
 
