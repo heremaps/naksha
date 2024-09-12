@@ -70,7 +70,8 @@ class InsertFeature(
             val quotedIdColumn = quoteIdent(PgColumn.id.name)
             session.usePgConnection()
                 .execute(
-                    sql = "DELETE FROM $quotedDelTable WHERE $quotedIdColumn='$featureId'"
+                    sql = "DELETE FROM $quotedDelTable WHERE $quotedIdColumn=$1",
+                    args = arrayOf(featureId)
                 ).close()
         }
     }

@@ -133,9 +133,9 @@ class DeleteFeature(session: PgSession) : UpdateFeature(session) {
             sql = """
                 INSERT INTO $desTableName(${PgColumn.txn_next.name},${PgColumn.txn.name},${PgColumn.flags.name},$columnsWithoutNextFlags)
                 SELECT $1,$2,$3,$columnsWithoutNextFlags FROM $headTableName
-                WHERE $quotedIdColumn='$featureId'
+                WHERE ${PgColumn.id} = $4
             """.trimIndent(),
-            args = arrayOf(versionInDes.txn, versionInDes.txn, flagsWithDeleted)
+            args = arrayOf(versionInDes.txn, versionInDes.txn, flagsWithDeleted, featureId)
         ).close()
     }
 }

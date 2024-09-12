@@ -140,9 +140,9 @@ open class UpdateFeature(
             sql = """
                 INSERT INTO $hstTableName(${PgColumn.txn_next.name},$columnsWithoutNext)
                 SELECT $1,$columnsWithoutNext FROM $headTableName
-                WHERE $quotedIdColumn='$featureId'
+                WHERE $quotedIdColumn = $2
             """.trimIndent(),
-            args = arrayOf(txnNextVersion.txn)
+            args = arrayOf(txnNextVersion.txn,featureId)
         ).close()
     }
 
@@ -179,7 +179,7 @@ open class UpdateFeature(
     ): Tuple {
         val conn = session.usePgConnection()
         conn.execute(
-            sql = updateStatement(collection.head.name, feature.id),
+            sql = updateStatement(collection.head.name),
             args = WriteFeatureUtils.allColumnValues(
                 tuple = tuple,
                 feature = feature,
@@ -187,19 +187,19 @@ open class UpdateFeature(
                 prevTxn = previousMetadata.version.txn,
                 prevUid = previousMetadata.uid,
                 changeCount = previousMetadata.changeCount + 1
-            )
+            ).plus(feature.id)
         ).close()
         return tuple
     }
 
-    private fun updateStatement(headTableName: String, featureId: String): String {
+    private fun updateStatement(headTableName: String): String {
         val columnEqualsVariable = PgColumn.allWritableColumns.mapIndexed { index, pgColumn ->
             "${pgColumn.name}=\$${index + 1}"
         }.joinToString(separator = ",")
         val quotedHeadTable = quoteIdent(headTableName)
         return """ UPDATE $quotedHeadTable
                    SET $columnEqualsVariable
-                   WHERE $quotedIdColumn='$featureId'
+                   WHERE $quotedIdColumn=$${PgColumn.allWritableColumns.size+1}
                    """.trimIndent()
     }
 
