@@ -45,17 +45,17 @@ open class UpdateFeature(
             session.storage,
             tupleNumber,
             feature,
-            metadataForNewVersion(previousMetadata, newVersion, feature, flags),
+            metadataForNewVersion(previousMetadata, previousMetadata.version, feature, flags),
             write.attachment,
             flags
         )
 
         removeFeatureFromDel(collection, feature.id)
         collection.history?.let { hstTable ->
-            insertHeadToHst(
-                hstTable = hstTable,
+            insertHeadToTable(
+                destinationTable = hstTable,
                 headTable = collection.head,
-                txnNextVersion = newVersion,
+                tupleNumber = tupleNumber,
                 featureId = feature.id
             )
         }
@@ -125,24 +125,42 @@ open class UpdateFeature(
         }
     }
 
-    protected fun insertHeadToHst(
-        hstTable: PgTable,
+    protected fun insertHeadToTable(
+        destinationTable: PgTable,
         headTable: PgTable,
-        txnNextVersion: Version,
+        tupleNumber: TupleNumber? = null,
+        flags: Flags? = null,
         featureId: String
     ) {
-        val hstTableName = quoteIdent(hstTable.name)
+        val desTableName = quoteIdent(destinationTable.name)
         val headTableName = quoteIdent(headTable.name)
-        val columnsWithoutNext = PgColumn.allWritableColumns
+        val otherColumns = PgColumn.allWritableColumns
+            .asSequence()
             .filterNot { it == PgColumn.txn_next }
+            .filterNot { it == PgColumn.txn }
+            .filterNot { it == PgColumn.uid }
+            .filterNot { it == PgColumn.flags }
             .joinToString(separator = ",")
         session.usePgConnection().execute(
             sql = """
-                INSERT INTO $hstTableName(${PgColumn.txn_next.name},$columnsWithoutNext)
-                SELECT $1,$columnsWithoutNext FROM $headTableName
-                WHERE $quotedIdColumn = $2
+                INSERT INTO $desTableName(
+                ${PgColumn.txn_next.name},
+                ${PgColumn.txn.name},
+                ${PgColumn.uid.name},
+                ${PgColumn.flags.name},
+                $otherColumns)
+                SELECT COALESCE($1, ${PgColumn.txn}),
+                COALESCE($1, ${PgColumn.txn}),
+                COALESCE($2, ${PgColumn.uid}),
+                COALESCE($3, ${PgColumn.flags}),
+                $otherColumns FROM $headTableName
+                WHERE $quotedIdColumn = $4
             """.trimIndent(),
-            args = arrayOf(txnNextVersion.txn,featureId)
+            args = arrayOf(
+                tupleNumber?.version?.txn,
+                tupleNumber?.uid, //TODO newly generated, not this
+                flags,
+                featureId)
         ).close()
     }
 

@@ -42,34 +42,31 @@ class DeleteFeature(session: PgSession) : UpdateFeature(session) {
         )
         // Only modify head, hst and del tables if feature exists
         if (feature != null) {
-            val previousMetadata = fetchCurrentMeta(collection, featureId)
-            val newVersion = Version(previousMetadata.version.txn + 1)
             // If hst table enabled
             collection.history?.let { hstTable ->
                 // copy head state into hst with txn_next === txn
-                insertHeadToHst(
-                    hstTable = hstTable,
-                    headTable = collection.head,
-                    txnNextVersion = previousMetadata.version,
-                    featureId = featureId,
-                )
-                // also copy head state into hst with txn_next === txn and action DELETED as a tombstone state
-                insertTombstoneVersionToTable(
+                insertHeadToTable(
                     destinationTable = hstTable,
                     headTable = collection.head,
-                    versionInDes = newVersion,
-                    flagsWithDeleted = flags,
+                    featureId = featureId
+                )
+                // also copy head state into hst with txn_next === txn and action DELETED as a tombstone state
+                insertHeadToTable(
+                    destinationTable = hstTable,
+                    headTable = collection.head,
+                    tupleNumber = tupleNumber,
+                    flags = flags,
                     featureId = featureId,
                 )
             }
 
             // If del table enabled, copy head state into del, with action DELETED and txn_next === txn as a tombstone state
             collection.deleted?.let { delTable ->
-                insertTombstoneVersionToTable(
+                insertHeadToTable(
                     destinationTable = delTable,
                     headTable = collection.head,
-                    versionInDes = newVersion,
-                    flagsWithDeleted = flags,
+                    tupleNumber = tupleNumber,
+                    flags = flags,
                     featureId = featureId,
                 )
             }
@@ -113,29 +110,5 @@ class DeleteFeature(session: PgSession) : UpdateFeature(session) {
             id = featureId,
             type = NakshaFeature.FEATURE_TYPE
         )
-    }
-
-    private fun insertTombstoneVersionToTable(
-        destinationTable: PgTable,
-        headTable: PgTable,
-        versionInDes: Version,
-        flagsWithDeleted: Flags,
-        featureId: String
-    ) {
-        val headTableName = quoteIdent(headTable.name)
-        val desTableName = quoteIdent(destinationTable.name)
-        val columnsWithoutNextFlags = PgColumn.allWritableColumns
-            .filterNot { it == PgColumn.txn_next }
-            .filterNot { it == PgColumn.txn }
-            .filterNot { it == PgColumn.flags }
-            .joinToString(separator = ",")
-        session.usePgConnection().execute(
-            sql = """
-                INSERT INTO $desTableName(${PgColumn.txn_next.name},${PgColumn.txn.name},${PgColumn.flags.name},$columnsWithoutNextFlags)
-                SELECT $1,$2,$3,$columnsWithoutNextFlags FROM $headTableName
-                WHERE ${PgColumn.id} = $4
-            """.trimIndent(),
-            args = arrayOf(versionInDes.txn, versionInDes.txn, flagsWithDeleted, featureId)
-        ).close()
     }
 }
