@@ -19,8 +19,8 @@ import naksha.psql.executors.write.WriteFeatureUtils.tuple
 class DeleteFeature(session: PgSession) : UpdateFeature(session) {
     override fun execute(collection: PgCollection, write: Write): Tuple {
         val featureId = write.featureId ?: throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "No feature ID provided")
-        var feature = write.feature
-        if (feature == null) {
+
+        var feature:NakshaFeature = null
             val readFeatures = ReadFeatures(collection.id)
             readFeatures.featureIds.add(featureId)
             val response = PgReader(session, readFeatures).execute().proxy(SuccessResponse::class)
@@ -28,7 +28,7 @@ class DeleteFeature(session: PgSession) : UpdateFeature(session) {
             {
                 feature = response.features.first()
             }
-        }
+        session.storage.getLatestTuples()
 
         val tupleNumber = newFeatureTupleNumber(collection, featureId, session)
         val flags = resolveFlags(collection, session).action(Action.DELETED)

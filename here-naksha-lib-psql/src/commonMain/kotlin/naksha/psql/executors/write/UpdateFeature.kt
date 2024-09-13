@@ -20,7 +20,9 @@ import kotlin.jvm.JvmStatic
 open class UpdateFeature(
     val session: PgSession
 ) {
-
+    //TODO this implementation currently do not support atomic updates!
+    // In other words, it ignores if version is set in the Write operation,
+    // which requires that the current HEAD state is exactly in this version.
     open fun execute(collection: PgCollection, write: Write): Tuple {
         val feature = write.feature?.proxy(NakshaFeature::class) ?: throw NakshaException(
             NakshaError.ILLEGAL_ARGUMENT,
@@ -55,7 +57,6 @@ open class UpdateFeature(
             insertHeadToTable(
                 destinationTable = hstTable,
                 headTable = collection.head,
-                tupleNumber = tupleNumber,
                 featureId = feature.id
             )
         }
@@ -125,6 +126,18 @@ open class UpdateFeature(
         }
     }
 
+    //                          hst table
+    //                     txn_next       txn          uid                     flags
+    // CREATED/UPDATED     new (1)        old        unchanged from head     unchanged from head
+    // DELETED             new (1)       new (1)      new                   with deleted action bits
+    // (1) denotes the same value, taken from current txn / version of current PgSession
+    /**
+     * Persist the feature entry in HEAD table into the destination table (HST or DEL).
+     * @param tupleNumber if intend to insert a tombstone DELETED state, provide this tuple number
+     *                    of the tombstone state, with new uid and current session txn
+     * @param flags the new flags. If intend to insert a tombstone DELETED state,
+     *              provide the old flags but with action DELETED.
+     */
     protected fun insertHeadToTable(
         destinationTable: PgTable,
         headTable: PgTable,
@@ -149,16 +162,17 @@ open class UpdateFeature(
                 ${PgColumn.uid.name},
                 ${PgColumn.flags.name},
                 $otherColumns)
-                SELECT COALESCE($1, ${PgColumn.txn}),
-                COALESCE($1, ${PgColumn.txn}),
-                COALESCE($2, ${PgColumn.uid}),
-                COALESCE($3, ${PgColumn.flags}),
+                SELECT $1,
+                COALESCE($2, ${PgColumn.txn}),
+                COALESCE($3, ${PgColumn.uid}),
+                COALESCE($4, ${PgColumn.flags}),
                 $otherColumns FROM $headTableName
-                WHERE $quotedIdColumn = $4
+                WHERE $quotedIdColumn = $5
             """.trimIndent(),
             args = arrayOf(
+                session.transaction(),
                 tupleNumber?.version?.txn,
-                tupleNumber?.uid, //TODO newly generated, not this
+                tupleNumber?.uid,
                 flags,
                 featureId)
         ).close()

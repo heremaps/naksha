@@ -80,7 +80,7 @@ internal object WriteFeatureUtils {
     internal fun tuple(
         storage: PgStorage,
         tupleNumber: TupleNumber,
-        feature: NakshaFeature?,
+        feature: NakshaFeature,
         metadata: Metadata,
         attachment: ByteArray?,
         flags: Flags,
