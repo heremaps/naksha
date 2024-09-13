@@ -7,7 +7,6 @@ import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
-import naksha.model.Naksha.NakshaCompanion.quoteIdent
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
@@ -183,13 +182,13 @@ class PgWriter(
         // First, process collections, no performance need here for now.
         for (write in orderedWrites) {
             if (write == null) continue
-            val tuple = if (write.collectionId == VIRT_COLLECTIONS) {
+            val tupleNumber: TupleNumber = if (write.collectionId == VIRT_COLLECTIONS) {
                 when (write.op) {
-                    WriteOp.CREATE -> createCollection(mapOf(write), write)
-                    WriteOp.UPSERT -> upsertCollection(mapOf(write), write)
-                    WriteOp.UPDATE -> updateCollection(mapOf(write), write)
-                    WriteOp.DELETE -> deleteCollection(mapOf(write), write)
-                    WriteOp.PURGE -> purgeCollection(mapOf(write), write)
+                    WriteOp.CREATE -> returnTuple(write, createCollection(mapOf(write), write))
+                    WriteOp.UPSERT -> returnTuple(write, upsertCollection(mapOf(write), write))
+                    WriteOp.UPDATE -> returnTuple(write, updateCollection(mapOf(write), write))
+                    WriteOp.DELETE -> returnTuple(write, deleteCollection(mapOf(write), write))
+                    WriteOp.PURGE -> returnTuple(write, purgeCollection(mapOf(write), write))
                     else -> throw NakshaException(
                         UNSUPPORTED_OPERATION,
                         "Unknown write-operation: '${write.op}'"
@@ -197,20 +196,18 @@ class PgWriter(
                 }
             } else {
                 when (write.op) {
-                    WriteOp.CREATE -> InsertFeature(session).execute(collectionOf(write), write)
-                    WriteOp.UPSERT -> upsertFeature(collectionOf(write), write)
-                    WriteOp.UPDATE -> UpdateFeature(session).execute(collectionOf(write), write)
-                    WriteOp.DELETE -> DeleteFeature(session).execute(collectionOf(write), write)
-                    WriteOp.PURGE -> purgeFeature(collectionOf(write), write)
+                    WriteOp.CREATE -> InsertFeature(this).execute(collectionOf(write), write)
+                    WriteOp.UPSERT -> returnTuple(write, upsertFeature(collectionOf(write), write))
+                    WriteOp.UPDATE -> returnTuple(write, UpdateFeature(session).execute(collectionOf(write), write))
+                    WriteOp.DELETE -> returnTuple(write, DeleteFeature(session).execute(collectionOf(write), write))
+                    WriteOp.PURGE -> returnTuple(write, purgeFeature(collectionOf(write), write))
                     else -> throw NakshaException(
                         UNSUPPORTED_OPERATION,
                         "Unknown write-operation: '${write.op}'"
                     )
                 }
             }
-            tuples[write.i] = tuple
-            tupleNumbers[write.i] = tuple.tupleNumber
-            tupleCache.store(tuple)
+            tupleNumbers[write.i] = tupleNumber
         }
 
         // If everything was done perfectly, fine.
@@ -228,6 +225,12 @@ class PgWriter(
                 filters = request.resultFilters
             )
         )
+    }
+
+    fun returnTuple(write: WriteExt, tuple: Tuple): TupleNumber {
+        tuples[write.i] = tuple
+        tupleCache.store(tuple)
+        return tuple.tupleNumber
     }
 
     private fun mapOf(write: WriteExt): PgMap {
