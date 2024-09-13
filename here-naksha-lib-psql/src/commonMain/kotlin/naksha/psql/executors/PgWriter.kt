@@ -198,8 +198,8 @@ class PgWriter(
                 when (write.op) {
                     WriteOp.CREATE -> InsertFeature(this).execute(collectionOf(write), write)
                     WriteOp.UPSERT -> returnTuple(write, upsertFeature(collectionOf(write), write))
-                    WriteOp.UPDATE -> returnTuple(write, UpdateFeature(session).execute(collectionOf(write), write))
-                    WriteOp.DELETE -> returnTuple(write, DeleteFeature(session).execute(collectionOf(write), write))
+                    WriteOp.UPDATE -> UpdateFeature(this).execute(collectionOf(write), write)
+                    WriteOp.DELETE -> DeleteFeature(this).execute(collectionOf(write), write)
                     WriteOp.PURGE -> returnTuple(write, purgeFeature(collectionOf(write), write))
                     else -> throw NakshaException(
                         UNSUPPORTED_OPERATION,

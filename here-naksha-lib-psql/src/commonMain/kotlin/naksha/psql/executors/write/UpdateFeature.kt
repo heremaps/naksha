@@ -5,25 +5,28 @@ import naksha.model.*
 import naksha.model.Metadata.Metadata_C.geoGrid
 import naksha.model.Metadata.Metadata_C.hash
 import naksha.model.objects.NakshaFeature
-import naksha.model.request.Write
 import naksha.psql.PgCollection
 import naksha.psql.PgColumn
-import naksha.psql.PgSession
 import naksha.psql.PgTable
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
+import naksha.psql.executors.PgWriter
+import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.PgCursorUtil.collectAndClose
 import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
 import naksha.psql.executors.write.WriteFeatureUtils.resolveFlags
 import naksha.psql.executors.write.WriteFeatureUtils.tuple
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 open class UpdateFeature(
-    val session: PgSession
+    @JvmField val writer: PgWriter
 ) {
+    val session = writer.session
+
     //TODO this implementation currently do not support atomic updates!
     // In other words, it ignores if version is set in the Write operation,
     // which requires that the current HEAD state is exactly in this version.
-    open fun execute(collection: PgCollection, write: Write): Tuple {
+    open fun execute(collection: PgCollection, write: WriteExt): TupleNumber {
         val feature = write.feature?.proxy(NakshaFeature::class) ?: throw NakshaException(
             NakshaError.ILLEGAL_ARGUMENT,
             "UPDATE without feature"
@@ -61,7 +64,7 @@ open class UpdateFeature(
             )
         }
         updateFeatureInHead(collection, tuple, feature, newVersion, previousMetadata)
-        return tuple
+        return writer.returnTuple(write, tuple)
     }
 
 
