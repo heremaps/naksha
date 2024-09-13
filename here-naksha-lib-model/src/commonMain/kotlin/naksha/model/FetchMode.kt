@@ -21,7 +21,7 @@ enum class FetchMode(val raw: String) {
     FETCH_META("meta"),
 
     /**
-     * Fetch all data except for the [feature][Tuple.feature].
+     * Fetch all data except for the [feature][Tuple.feature], and [attachment][Tuple.attachment].
      */
     FETCH_ALL_BUT_FEATURE("all-but-feature"),
 
