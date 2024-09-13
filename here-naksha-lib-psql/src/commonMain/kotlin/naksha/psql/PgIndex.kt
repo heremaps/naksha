@@ -29,7 +29,7 @@ import kotlin.reflect.KClass
  * WITH geo AS (
  *   SELECT id
  *   FROM table
- *   WHERE st_intersects(naksha_geometry(flags,geo), ?)
+ *   WHERE st_intersects(naksha_geometry(geo,flags), ?)
  * )
  * WITH tags AS (
  *   SELECT id
@@ -192,7 +192,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gist (naksha_geometry($c_flags,$c_geo), $c_id, $c_txn, $c_uid)""",
+                        """gist (naksha_geometry($c_geo, $c_flags), $c_id, $c_txn, $c_uid)""",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()
@@ -209,7 +209,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """sp-gist (naksha_geometry($c_flags,$c_geo), $c_id, $c_txn, $c_uid)""",
+                        """sp-gist (naksha_geometry($c_geo, $c_flags), $c_id, $c_txn, $c_uid)""",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()

@@ -289,6 +289,7 @@ open class PgSession(
             is WriteRequest -> {
                 transaction()
                 val response = PgWriter(this, request).execute()
+                // var response = PgBulkWriter(this, request)...?
                 return response
             }
 
