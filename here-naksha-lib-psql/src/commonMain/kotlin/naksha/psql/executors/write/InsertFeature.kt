@@ -15,6 +15,7 @@ import naksha.psql.executors.write.WriteFeatureUtils.tuple
 
 class InsertFeature(
     val session: PgSession,
+    val writeExecutor: WriteExecutor
 ) {
 
     //TODO: consider changing type to some result
@@ -38,8 +39,8 @@ class InsertFeature(
             flags
         )
 
-        removeFeatureFromDel(collection, feature.id)
-        executeInsert(quoteIdent(collection.id), tuple, feature)
+        writeExecutor.removeFeatureFromDel(collection, feature.id)
+        writeExecutor.executeInsert(collection, tuple, feature)
         return tuple
     }
 
@@ -62,32 +63,5 @@ class InsertFeature(
             id = feature.id,
             type = NakshaFeature.FEATURE_TYPE
         )
-    }
-
-    private fun removeFeatureFromDel(collection: PgCollection, featureId: String) {
-        collection.deleted?.let { delTable ->
-            val quotedDelTable = quoteIdent(delTable.name)
-            val quotedIdColumn = quoteIdent(PgColumn.id.name)
-            session.usePgConnection()
-                .execute(
-                    sql = "DELETE FROM $quotedDelTable WHERE $quotedIdColumn='$featureId'"
-                )
-        }
-    }
-
-    private fun executeInsert(
-        quotedCollectionId: String,
-        tuple: Tuple,
-        feature: NakshaFeature
-    ): Tuple {
-        val transaction = session.transaction()
-        val conn = session.usePgConnection()
-        conn.execute(
-            sql = """ INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})
-                      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
-                      """.trimIndent(),
-            args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
-        )
-        return tuple
     }
 }

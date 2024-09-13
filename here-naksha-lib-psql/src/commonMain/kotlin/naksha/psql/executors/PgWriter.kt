@@ -18,6 +18,7 @@ import naksha.model.request.*
 import naksha.psql.*
 import naksha.psql.executors.write.InsertFeature
 import naksha.psql.executors.write.UpdateFeature
+import naksha.psql.executors.write.WriteExecutor
 import kotlin.jvm.JvmField
 
 // TODO: We need to fix NakshaBulkLoaderPlan to make this faster again !
@@ -44,6 +45,11 @@ class PgWriter(
      * The write instructions to [execute].
      */
     @JvmField val request: WriteRequest,
+
+    /**
+     * The write executor implementation: instant execution or bulk execution, etc.
+     */
+    @JvmField val writeExecutor: WriteExecutor,
 ) {
 
     /**
@@ -196,7 +202,7 @@ class PgWriter(
                 }
             } else {
                 when (write.op) {
-                    WriteOp.CREATE -> InsertFeature(session).execute(collectionOf(write), write)
+                    WriteOp.CREATE -> InsertFeature(session, writeExecutor).execute(collectionOf(write), write)
                     WriteOp.UPSERT -> upsertFeature(collectionOf(write), write)
                     WriteOp.UPDATE -> UpdateFeature(session).execute(collectionOf(write), write)
                     WriteOp.DELETE -> deleteFeature(collectionOf(write), write)
@@ -212,6 +218,7 @@ class PgWriter(
             tupleCache.store(tuple)
         }
 
+        writeExecutor.finish()
         // If everything was done perfectly, fine.
         val tupleNumberByteArray = TupleNumberByteArray(storage, tupleNumbers.toByteArray())
         return SuccessResponse(

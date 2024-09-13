@@ -17,6 +17,8 @@ import naksha.model.request.WriteRequest
 import naksha.model.objects.Transaction
 import naksha.psql.executors.PgReader
 import naksha.psql.executors.PgWriter
+import naksha.psql.executors.write.BulkWriteExecutor
+import naksha.psql.executors.write.InstantWriteExecutor
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
@@ -288,7 +290,7 @@ open class PgSession(
         when (request) {
             is WriteRequest -> {
                 transaction()
-                val response = PgWriter(this, request).execute()
+                val response = PgWriter(this, request, BulkWriteExecutor(this)).execute()
                 return response
             }
 
@@ -323,7 +325,7 @@ open class PgSession(
             val writeTx = Write()
             writeTxReq.add(writeTx)
             writeTx.createFeature(null, VIRT_TRANSACTIONS, transaction())
-            PgWriter(this, writeTxReq).execute()
+            PgWriter(this, writeTxReq, InstantWriteExecutor(this)).execute()
             isTransactionStored = true
         }
     }
