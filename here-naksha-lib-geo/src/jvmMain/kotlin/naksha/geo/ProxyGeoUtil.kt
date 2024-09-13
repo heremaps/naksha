@@ -212,14 +212,14 @@ object ProxyGeoUtil {
      */
     @JvmStatic
     fun toJtsGeometry(geometry: SpGeometry): Geometry {
-        return when (geometry.type) {
-            SpType.Point.toString() -> toJtsPoint(geometry.asPoint())
-            SpType.MultiPoint.toString() -> toJtsMultiPoint(geometry.asMultiPoint())
-            SpType.LineString.toString() -> toJtsLineString(geometry.asLineString())
-            SpType.MultiLineString.toString() -> toJtsMultiLineString(geometry.asMultiLineString())
-            SpType.Polygon.toString() -> toJtsPolygon(geometry.asPolygon())
-            SpType.MultiPolygon.toString() -> toJtsMultiPolygon(geometry.asMultiPolygon())
-            SpType.GeometryCollection.toString() -> toJtsGeometryCollection(geometry.asGeometryCollection())
+        return when (geometry) {
+            is SpPoint -> toJtsPoint(geometry)
+            is SpMultiPoint -> toJtsMultiPoint(geometry)
+            is SpLineString -> toJtsLineString(geometry)
+            is SpMultiLineString -> toJtsMultiLineString(geometry)
+            is SpPolygon -> toJtsPolygon(geometry)
+            is SpMultiPolygon -> toJtsMultiPolygon(geometry)
+            is SpGeometryCollection -> toJtsGeometryCollection(geometry)
             else -> throw IllegalArgumentException("Unknown proxy type ${geometry::class.simpleName}")
         }
     }
