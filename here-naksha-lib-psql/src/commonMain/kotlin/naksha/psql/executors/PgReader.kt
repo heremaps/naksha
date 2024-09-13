@@ -37,18 +37,6 @@ class PgReader(
         get() = session.version()
 
     fun execute(): Response {
-        return when (request) {
-            is ReadFeatures -> readFeatures()
-            is ReadCollections -> readCollections()
-            else -> throw UnsupportedOperationException("Not implemented handling of: ${request::class}")
-        }
-    }
-
-    private fun readCollections(): Response {
-        TODO()
-    }
-
-    private fun readFeatures(): Response {
         val query = PgQuery(session, request)
         val connection = session.usePgConnection()
         // TODO: Use prepare, add arguments!
@@ -75,9 +63,5 @@ class PgReader(
                 )
             )
         }
-    }
-
-    fun plan(): PgPlan {
-        TODO("Do we need this?")
     }
 }
