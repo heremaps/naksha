@@ -173,7 +173,7 @@ open class UpdateFeature(
                 WHERE $quotedIdColumn = $5
             """.trimIndent(),
             args = arrayOf(
-                session.transaction(),
+                session.transaction().txn,
                 tupleNumber?.version?.txn,
                 tupleNumber?.uid,
                 flags,
