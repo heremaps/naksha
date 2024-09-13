@@ -20,26 +20,22 @@ class DeleteFeature(session: PgSession) : UpdateFeature(session) {
     override fun execute(collection: PgCollection, write: Write): Tuple {
         val featureId = write.featureId ?: throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "No feature ID provided")
 
-        var feature:NakshaFeature = null
-            val readFeatures = ReadFeatures(collection.id)
-            readFeatures.featureIds.add(featureId)
-            val response = PgReader(session, readFeatures).execute().proxy(SuccessResponse::class)
-            if (!response.features.isEmpty())
-            {
-                feature = response.features.first()
-            }
-        session.storage.getLatestTuples()
+        val tuples = session.storage.getLatestTuples(
+            conn = session.usePgConnection(),
+            mapId = session.map,
+            collectionId = collection.id,
+            featureIds = arrayOf(featureId)
+        )
+
+        if (tuples.isEmpty()) {
+            TODO("feature does not exist in head, should somehow return delete success but with a tuple")
+        }
+
+        val tuple = tuples.first()
 
         val tupleNumber = newFeatureTupleNumber(collection, featureId, session)
         val flags = resolveFlags(collection, session).action(Action.DELETED)
-        val tuple = tuple(
-            session.storage,
-            tupleNumber,
-            feature,
-            metadata(tupleNumber, feature, featureId, flags),
-            write.attachment,
-            flags
-        )
+
         // Only modify head, hst and del tables if feature exists
         if (feature != null) {
             // If hst table enabled

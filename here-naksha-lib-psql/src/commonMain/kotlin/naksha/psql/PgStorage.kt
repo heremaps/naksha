@@ -521,6 +521,9 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
         mode: FetchMode = FETCH_ALL
     ): List<Tuple?> {
         TODO("Implement getLatestTuples")
+        // val readFeatures = ReadFeatures(collection.id)
+        // readFeatures.featureIds.add(featureId)
+        // val response = PgReader(session, readFeatures).execute().proxy(SuccessResponse::class)
     }
 
     /**
