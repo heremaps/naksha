@@ -1,28 +1,72 @@
 (() => {
   if (typeof globalThis["require"] !== "function") {
+    let exportsByModuleName = {
+      "joda": {
+        "ArithmeticException": "ArithmeticException",
+        "ChronoField": "ChronoField",
+        "ChronoLocalDate": "ChronoLocalDate",
+        "ChronoLocalDateTime": "ChronoLocalDateTime",
+        "ChronoUnit": "ChronoUnit",
+        "ChronoZonedDateTime": "ChronoZonedDateTime",
+        "Clock": "Clock",
+        "DateTimeException": "DateTimeException",
+        "DateTimeFormatter": "DateTimeFormatter",
+        "DateTimeFormatterBuilder": "DateTimeFormatterBuilder",
+        "DateTimeParseException": "DateTimeParseException",
+        "DayOfWeek": "DayOfWeek",
+        "DecimalStyle": "DecimalStyle",
+        "Duration": "Duration",
+        "IllegalArgumentException": "IllegalArgumentException",
+        "IllegalStateException": "IllegalStateException",
+        "Instant": "Instant",
+        "IsoChronology": "IsoChronology",
+        "IsoFields": "IsoFields",
+        "LocalDate": "LocalDate",
+        "LocalDateTime": "LocalDateTime",
+        "LocalTime": "LocalTime",
+        "Month": "Month",
+        "MonthDay": "MonthDay",
+        "NullPointerException": "NullPointerException",
+        "OffsetDateTime": "OffsetDateTime",
+        "OffsetTime": "OffsetTime",
+        "Period": "Period",
+        "ResolverStyle": "ResolverStyle",
+        "SignStyle": "SignStyle",
+        "Temporal": "Temporal",
+        "TemporalAccessor": "TemporalAccessor",
+        "TemporalAdjuster": "TemporalAdjuster",
+        "TemporalAdjusters": "TemporalAdjusters",
+        "TemporalAmount": "TemporalAmount",
+        "TemporalField": "TemporalField",
+        "TemporalQueries": "TemporalQueries",
+        "TemporalQuery": "TemporalQuery",
+        "TemporalUnit": "TemporalUnit",
+        "TextStyle": "TextStyle",
+        "UnsupportedTemporalTypeException": "UnsupportedTemporalTypeException",
+        "ValueRange": "ValueRange",
+        "Year": "Year",
+        "YearConstants": "YearConstants",
+        "YearMonth": "YearMonth",
+        "ZoneId": "ZoneId",
+        "ZoneOffset": "ZoneOffset",
+        "ZoneOffsetTransition": "ZoneOffsetTransition",
+        "ZoneRegion": "ZoneRegion",
+        "ZoneRules": "ZoneRules",
+        "ZoneRulesProvider": "ZoneRulesProvider",
+        "ZonedDateTime": "ZonedDateTime",
+        "_": "_",
+        "convert": "convert",
+        "nativeJs": "nativeJs",
+        "use": "use"
+      }
+    }
     function wrapSource(source, moduleName) {
       let patchedImport = false
       let patchedExport = false
-
-      // Function to transform import statements
-      function transformImports(imports, path) {
-        // noinspection JSUnusedLocalSymbols
-        let importMap = imports.split(',')
-        .map(part => part.trim().split(/\s+as\s+/))
-        .map(([name, alias]) => alias)
-        .filter(Boolean) // Remove empty entries
-        .join(', ');
-        // TODO: KtCompiler
-        if (!patchedImport
-            && moduleName === 'naksha_psql'
-            && path === "./kotlin-kotlin-stdlib.mjs"
-            && importMap.indexOf("copyOf") < 0
-        ) {
-          info("Apply patch for naksha_psql, import 'copyOf' from kotlin standard library")
-          importMap += ", copyOf"
-          patchedImport = true
-        }
-        return `const { ${importMap} } = require('${path}');`;
+      let moduleExports = exportsByModuleName[moduleName]
+      if (!moduleExports) {
+        moduleExports = {}
+        exportsByModuleName[moduleName] = moduleExports
       }
 
       // Function to transform export statements
@@ -31,7 +75,12 @@
         let exportMap = exports.replace(/,\s*$/, '').split(',')
         .map(part => part.trim().split(/\s+as\s+/))
         .filter(Boolean) // Remove empty entries
-        .map(([name, alias]) => '"' + name + '": ' + name)
+        .map(([name, alias]) => {
+          if (moduleExports[alias]) error(`Duplicate export: '${name}' as '${alias}' in module '${moduleName}'`)
+          moduleExports[alias] = name
+          // info(`Export '${name}' as '${alias}' in '${moduleName}'`)
+          return '"' + name + '": ' + name
+        })
         .filter(Boolean) // Remove empty entries
         .join(', ');
         // TODO: KtCompiler
@@ -47,13 +96,52 @@
         return exports;
       }
 
-      // Transform import statements
-      source = source.replace(/import\s*{\s*([^}]+)\s*}\s*from\s*['"]([^'"]+)['"];/g, (match, imports, path) => {
-        return transformImports(imports, path);
-      });
+      // Function to transform import statements
+      function transformImports(imports, path) {
+        require(path)
+        let moduleName = toName[path] || path
+        let moduleExports = exportsByModuleName[moduleName] || {}
+        // noinspection JSUnusedLocalSymbols
+        let renaming = {}
+        let importMap = imports.split(',')
+        .map(part => part.trim().split(/\s+as\s+/))
+        .map(([name, alias]) => {
+          if (name) {
+            let exportName = moduleExports[name]
+            if (exportName == null) error(`Failed to import missing symbol '${name}' from module '${moduleName}'`)
+            if (exportName !== alias) renaming[alias] = exportName
+          }
+          return alias
+        })
+        .filter(Boolean) // Remove empty entries
+        .join(', ');
+        // TODO: KtCompiler
+        if (!patchedImport
+            && moduleName === 'naksha_psql'
+            && path === "./kotlin-kotlin-stdlib.mjs"
+            && importMap.indexOf("copyOf") < 0
+        ) {
+          info("Apply patch for naksha_psql, import 'copyOf' from kotlin standard library")
+          importMap += ", copyOf"
+          patchedImport = true
+        }
+        let EXP_SYM = `__${moduleName}__`
+        let r = `let ${EXP_SYM} = require('${path}');`
+        for (let key in renaming) {
+          let alias = renaming[key]
+          r += `${EXP_SYM}["${key}"] = ${EXP_SYM}["${alias}"];`
+        }
+        r += `const { ${importMap} } = ${EXP_SYM};`
+        return r
+      }
+
       // Transform export statements
       source = source.replace(/export\s*{\s*([^}]+)\s*};/g, (match, exports) => {
         return transformExports(exports);
+      });
+      // Transform import statements
+      source = source.replace(/import\s*{\s*([^}]+)\s*}\s*from\s*['"]([^'"]+)['"];/g, (match, imports, path) => {
+        return transformImports(imports, path);
       });
       return source;
     }

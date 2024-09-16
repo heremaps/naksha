@@ -36,6 +36,13 @@ interface IStorage : AutoCloseable {
     val adminOptions: SessionOptions
 
     /**
+     * The hard-cap (limit) of the storage. No result-set every should become bigger than this amount of features.
+     *
+     * Setting the value is optionally support, storages may throw an [NakshaError.UNSUPPORTED_OPERATION] exception, when trying to modify the hard-cap, or they may only allow certain values and throw an [NakshaError.ILLEGAL_ARGUMENT] exception, if the value too big. A negative value is changed into [Int.MAX_VALUE], which means no hard-cap (if supported by the storage).
+     */
+    var hardCap: Int
+
+    /**
      * Tests if this storage is initialized, so [initStorage] has been called.
      * @return _true_ if this storage is initialized; _false_ otherwise.
      */

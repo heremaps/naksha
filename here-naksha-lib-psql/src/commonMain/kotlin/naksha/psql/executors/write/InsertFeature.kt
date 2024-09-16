@@ -8,17 +8,21 @@ import naksha.model.request.Write
 import naksha.psql.PgCollection
 import naksha.psql.PgColumn
 import naksha.psql.PgSession
+import naksha.psql.executors.PgWriter
+import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.WriteFeatureUtils.allColumnValues
 import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
 import naksha.psql.executors.write.WriteFeatureUtils.resolveFlags
 import naksha.psql.executors.write.WriteFeatureUtils.tuple
+import kotlin.jvm.JvmField
 
 class InsertFeature(
-    val session: PgSession,
+    @JvmField val writer: PgWriter
 ) {
+    val session = writer.session
 
     //TODO: consider changing type to some result
-    fun execute(collection: PgCollection, write: Write): Tuple {
+    fun execute(collection: PgCollection, write: WriteExt): TupleNumber {
         val feature = write.feature?.proxy(NakshaFeature::class) ?: throw NakshaException(
             NakshaError.ILLEGAL_ARGUMENT,
             "CREATE without feature"
@@ -40,7 +44,7 @@ class InsertFeature(
 
         removeFeatureFromDel(collection, feature.id)
         executeInsert(quoteIdent(collection.id), tuple, feature)
-        return tuple
+        return writer.returnTuple(write, tuple)
     }
 
     private fun metadata(
@@ -70,8 +74,9 @@ class InsertFeature(
             val quotedIdColumn = quoteIdent(PgColumn.id.name)
             session.usePgConnection()
                 .execute(
-                    sql = "DELETE FROM $quotedDelTable WHERE $quotedIdColumn='$featureId'"
-                )
+                    sql = "DELETE FROM $quotedDelTable WHERE $quotedIdColumn=$1",
+                    args = arrayOf(featureId)
+                ).close()
         }
     }
 
@@ -87,7 +92,7 @@ class InsertFeature(
                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
                       """.trimIndent(),
             args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
-        )
+        ).close()
         return tuple
     }
 }

@@ -43,6 +43,21 @@
     const { Platform, PlatformUtil } = require("naksha_base");
     const { PgUtil } = require("naksha_psql");
     const { JbEncoder, JbDecoder, JbFeatureDecoder } = require("naksha_jbon");
+
+    function encodeFeature(json) {
+      if (!json) json = '{"id":"foo","properties":{"name":"Bar"}}'
+      let raw = Platform.fromJSON(json)
+      let klass = Platform.klassFor(base.AnyObject)
+      let map = Platform.proxy(raw, klass)
+      let enc = new JbEncoder();
+      let f = enc.buildFeatureFromMap(map)
+      return f
+    }
+    function decodeFeature(f) {
+      let dec = new JbFeatureDecoder()
+      dec.mapBytes(f)
+      return dec.toAnyObject()
+    }
   </script>
 </head>
 <body>

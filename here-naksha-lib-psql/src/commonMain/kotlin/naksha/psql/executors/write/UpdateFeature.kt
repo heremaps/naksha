@@ -5,22 +5,28 @@ import naksha.model.*
 import naksha.model.Metadata.Metadata_C.geoGrid
 import naksha.model.Metadata.Metadata_C.hash
 import naksha.model.objects.NakshaFeature
-import naksha.model.request.Write
 import naksha.psql.PgCollection
 import naksha.psql.PgColumn
-import naksha.psql.PgSession
 import naksha.psql.PgTable
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
+import naksha.psql.executors.PgWriter
+import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.PgCursorUtil.collectAndClose
 import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
 import naksha.psql.executors.write.WriteFeatureUtils.resolveFlags
 import naksha.psql.executors.write.WriteFeatureUtils.tuple
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
 
-class UpdateFeature(
-    val session: PgSession
+open class UpdateFeature(
+    @JvmField val writer: PgWriter
 ) {
+    val session = writer.session
 
-    fun execute(collection: PgCollection, write: Write): Tuple {
+    //TODO this implementation currently do not support atomic updates!
+    // In other words, it ignores if version is set in the Write operation,
+    // which requires that the current HEAD state is exactly in this version.
+    open fun execute(collection: PgCollection, write: WriteExt): TupleNumber {
         val feature = write.feature?.proxy(NakshaFeature::class) ?: throw NakshaException(
             NakshaError.ILLEGAL_ARGUMENT,
             "UPDATE without feature"
@@ -44,25 +50,25 @@ class UpdateFeature(
             session.storage,
             tupleNumber,
             feature,
-            metadataForNewVersion(previousMetadata, newVersion, feature, flags),
+            metadataForNewVersion(previousMetadata, previousMetadata.version, feature, flags),
             write.attachment,
             flags
         )
 
         removeFeatureFromDel(collection, feature.id)
         collection.history?.let { hstTable ->
-            insertPreviousVersionToHst(
-                hstTable = hstTable,
+            insertHeadToTable(
+                destinationTable = hstTable,
                 headTable = collection.head,
-                nextVersion = newVersion
+                featureId = feature.id
             )
         }
         updateFeatureInHead(collection, tuple, feature, newVersion, previousMetadata)
-        return tuple
+        return writer.returnTuple(write, tuple)
     }
 
 
-    private fun fetchCurrentMeta(collection: PgCollection, featureId: String): Metadata {
+    protected fun fetchCurrentMeta(collection: PgCollection, featureId: String): Metadata {
         val quotedHeadName = quoteIdent(collection.head.name)
         val sql = """SELECT ${PgColumn.metaSelect}
                      FROM $quotedHeadName
@@ -123,22 +129,55 @@ class UpdateFeature(
         }
     }
 
-    private fun insertPreviousVersionToHst(
-        hstTable: PgTable,
+    //                          hst table
+    //                     txn_next       txn          uid                     flags
+    // CREATED/UPDATED     new (1)        old        unchanged from head     unchanged from head
+    // DELETED             new (1)       new (1)      new                   with deleted action bits
+    // (1) denotes the same value, taken from current txn / version of current PgSession
+    /**
+     * Persist the feature entry in HEAD table into the destination table (HST or DEL).
+     * @param tupleNumber if intend to insert a tombstone DELETED state, provide this tuple number
+     *                    of the tombstone state, with new uid and current session txn
+     * @param flags the new flags. If intend to insert a tombstone DELETED state,
+     *              provide the old flags but with action DELETED.
+     */
+    protected fun insertHeadToTable(
+        destinationTable: PgTable,
         headTable: PgTable,
-        nextVersion: Version
+        tupleNumber: TupleNumber? = null,
+        flags: Flags? = null,
+        featureId: String
     ) {
-        val hstTableName = quoteIdent(hstTable.name)
+        val desTableName = quoteIdent(destinationTable.name)
         val headTableName = quoteIdent(headTable.name)
-        val columnsWithoutNext = PgColumn.allWritableColumns
+        val otherColumns = PgColumn.allWritableColumns
+            .asSequence()
             .filterNot { it == PgColumn.txn_next }
+            .filterNot { it == PgColumn.txn }
+            .filterNot { it == PgColumn.uid }
+            .filterNot { it == PgColumn.flags }
             .joinToString(separator = ",")
         session.usePgConnection().execute(
             sql = """
-                INSERT INTO $hstTableName(${PgColumn.txn_next.name},$columnsWithoutNext)
-                SELECT $1,$columnsWithoutNext FROM $headTableName
+                INSERT INTO $desTableName(
+                ${PgColumn.txn_next.name},
+                ${PgColumn.txn.name},
+                ${PgColumn.uid.name},
+                ${PgColumn.flags.name},
+                $otherColumns)
+                SELECT $1,
+                COALESCE($2, ${PgColumn.txn}),
+                COALESCE($3, ${PgColumn.uid}),
+                COALESCE($4, ${PgColumn.flags}),
+                $otherColumns FROM $headTableName
+                WHERE $quotedIdColumn = $5
             """.trimIndent(),
-            args = arrayOf(nextVersion.txn)
+            args = arrayOf(
+                session.transaction().txn,
+                tupleNumber?.version?.txn,
+                tupleNumber?.uid,
+                flags,
+                featureId)
         ).close()
     }
 
@@ -175,7 +214,7 @@ class UpdateFeature(
     ): Tuple {
         val conn = session.usePgConnection()
         conn.execute(
-            sql = updateStatement(collection.head.name, feature.id),
+            sql = updateStatement(collection.head.name),
             args = WriteFeatureUtils.allColumnValues(
                 tuple = tuple,
                 feature = feature,
@@ -183,23 +222,24 @@ class UpdateFeature(
                 prevTxn = previousMetadata.version.txn,
                 prevUid = previousMetadata.uid,
                 changeCount = previousMetadata.changeCount + 1
-            )
-        )
+            ).plus(feature.id)
+        ).close()
         return tuple
     }
 
-    private fun updateStatement(headTableName: String, featureId: String): String {
+    private fun updateStatement(headTableName: String): String {
         val columnEqualsVariable = PgColumn.allWritableColumns.mapIndexed { index, pgColumn ->
             "${pgColumn.name}=\$${index + 1}"
         }.joinToString(separator = ",")
         val quotedHeadTable = quoteIdent(headTableName)
         return """ UPDATE $quotedHeadTable
                    SET $columnEqualsVariable
-                   WHERE $quotedIdColumn='$featureId'
+                   WHERE $quotedIdColumn=$${PgColumn.allWritableColumns.size+1}
                    """.trimIndent()
     }
 
     companion object {
-        private val quotedIdColumn: String = quoteIdent(PgColumn.id.name)
+        @JvmStatic
+        protected val quotedIdColumn: String = quoteIdent(PgColumn.id.name)
     }
 }

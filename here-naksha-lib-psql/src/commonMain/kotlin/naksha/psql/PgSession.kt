@@ -11,6 +11,7 @@ import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
 import naksha.model.objects.Transaction
@@ -80,10 +81,8 @@ open class PgSession(
         check(!_closed) { "Connection closed" }
         var conn = pgConnection
         if (conn == null) {
-            txBeforeStart()
             conn = storage.newConnection(options, readOnly, this::initConnection)
             pgConnection = conn
-            txAfterStart(conn)
         }
         return conn
     }
@@ -94,6 +93,7 @@ open class PgSession(
      * @param query the query to executed, can be modified, when overriding this method.
      */
     open fun initConnection(conn: PgConnection, query: String) {
+        // This is the same as the default implementation, when init is null, see PgStorage::newConnection
         conn.execute(query).close()
     }
 
@@ -180,11 +180,12 @@ open class PgSession(
                         }
                         logger.info("Release advisory lock")
                         conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
-                    } catch(e: Throwable) {
+                    } catch (e: Throwable) {
                         logger.error("Fatal exception while holding an advisory lock, terminating connection: {}", e)
                         // This must not happen, to release the advisory lock, we need to terminate the connection!
                         conn.terminate()
-                        throw NakshaException(EXCEPTION,
+                        throw NakshaException(
+                            EXCEPTION,
                             "Failed to increment 'txn', exception while holding advisory lock, terminating connection"
                         )
                     }
@@ -268,38 +269,46 @@ open class PgSession(
 //    }
 
     /**
-     * Return the current state of the transaction.
+     * Return the current transaction, if no transaction started yet, starts a new one.
      *
-     * If no transaction started yet, starts a new one.
-     * @return the current state of the transaction.
+     * @return the current transaction.
      */
     fun transaction(): Transaction {
-        var t = transaction
-        if (t == null) {
-            t = Transaction(version().txn)
-            transaction = t
+        var tx = transaction
+        if (tx == null) {
+            txBeforeStart()
+            tx = Transaction(version().txn)
+            transaction = tx
+            txAfterStart(tx)
         }
-        return t
+        return tx
     }
 
     override fun execute(request: Request): Response {
         when (request) {
             is WriteRequest -> {
-                saveTransactionIntoDb(true) // with transaction start time
+                transaction()
                 val response = PgWriter(this, request).execute()
-                saveTransactionIntoDb() // with updated counts
+                // var response = PgBulkWriter(this, request)...?
                 return response
             }
+
             is ReadRequest -> {
                 val response = PgReader(this, request).execute()
+                if (transaction == null) {
+                    // If this read was performed on a blank session, without a pending transaction, then we can release the connection.
+                    pgConnection?.close()
+                    pgConnection = null
+                }
                 return response
             }
+
             else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown request")
         }
     }
 
     private var isTransactionStored = false
-    private fun saveTransactionIntoDb(create : Boolean = false) {
+    private fun saveTransactionIntoDb(create: Boolean = false) {
         // FIXME instead of create/update we can use upsert when ready
         if (isTransactionStored && create) {
             return
@@ -321,45 +330,72 @@ open class PgSession(
     }
 
     /**
-     * Invoked before a new transaction starts. This is before even the transaction number has been acquired, called by [usePgConnection].
+     * Invoked before a new transaction starts. This is before even the transaction number has been acquired, called by [transaction].
      */
     open protected fun txBeforeStart() {}
 
     /**
      * Invoked after a new transaction has been started, so a connection and a transaction number are available, called by
-     * [usePgConnection].
+     * [transaction].
+     * @param tx the transaction that has been started.
      */
-    open protected fun txAfterStart(conn: PgConnection) {}
+    open protected fun txAfterStart(tx: Transaction) {}
 
     /**
      * Invoked before a transaction is committed (called by [commit]).
+     * @param tx the transaction that has been finished.
      */
-    open protected fun txOnCommit(session: PgConnection) {}
+    open protected fun txOnCommit(tx: Transaction) {}
 
     /**
      * Invoked before a transaction is rolled-back (called by [rollback]).
+     * @param tx the transaction that has been rolled back.
      */
-    open protected fun txOnRollback(session: PgConnection) {}
+    open protected fun txOnRollback(tx: Transaction) {}
 
     override fun commit() {
         val conn = pgConnection
-        check(!_closed) { "Connection closed" }
+        if (_closed) throw NakshaException(ILLEGAL_STATE, "Connection closed")
         if (conn != null) {
-            txOnCommit(conn)
-            this.pgConnection = null
+            val tx = transaction
+            if (tx != null) {
+                try {
+                    saveTransactionIntoDb(true)
+                } catch (e: Throwable) {
+                    throw NakshaException(EXCEPTION, "Failed to save transaction", cause = e)
+                }
+                try {
+                    txOnCommit(tx)
+                } catch (e: Throwable) {
+                    throw NakshaException(EXCEPTION, "Commit handler failed", cause = e)
+                }
+            }
+            this.transaction = null
             try {
                 conn.commit()
-            } finally {
+            } catch (e: Throwable) {
+                throw NakshaException(EXCEPTION, "Failed to commit", cause = e)
+            }
+            this.pgConnection = null
+            try {
                 conn.close()
+            } catch (ignore: Throwable) {
             }
         }
     }
 
     override fun rollback() {
         val conn = pgConnection
-        check(!_closed) { "Connection closed" }
+        if (_closed) throw NakshaException(ILLEGAL_STATE, "Connection closed")
         if (conn != null) {
-            txOnRollback(conn)
+            val tx = transaction
+            if (tx != null) try {
+                txOnRollback(tx)
+            } catch (e: Throwable) {
+                logger.info("Unexpected exception in txOnRollback handler: {}", e)
+            } finally {
+                this.transaction = null
+            }
             this.pgConnection = null
             try {
                 conn.rollback()

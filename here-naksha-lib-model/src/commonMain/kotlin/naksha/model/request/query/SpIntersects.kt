@@ -6,6 +6,8 @@ import naksha.base.AnyObject
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.geo.SpGeometry
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.model.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -32,14 +34,16 @@ open class SpIntersects() : AnyObject(), ISpatialQuery {
      * @property transformation the optional transformation to apply to the given geometry.
      */
     @JsName("of")
-    constructor(geometry: SpGeometry, transformation: SpTransformation) :this() {
+    constructor(geometry: SpGeometry, transformation: SpTransformation? = null) :this() {
         this.geometry = geometry
         this.transformation = transformation
     }
 
     companion object SpIntersectsCompanion {
-        private val GEOMETRY = NotNullProperty<SpIntersects, SpGeometry>(SpGeometry::class)
-        private val TRANSFORMATION = NullableProperty<SpIntersects, SpTransformation>(SpTransformation::class)
+        private val GEOMETRY = NotNullProperty<SpIntersects, SpGeometry>(SpGeometry::class) {
+          _,_ -> throw NakshaException(ILLEGAL_STATE, "geometry must not be null")
+        }
+        private val TRANSFORMATION_NULL = NullableProperty<SpIntersects, SpTransformation>(SpTransformation::class)
     }
 
     /**
@@ -50,5 +54,5 @@ open class SpIntersects() : AnyObject(), ISpatialQuery {
     /**
      * The optional transformation to apply to the given geometry, before using it.
      */
-    var transformation by TRANSFORMATION
+    var transformation by TRANSFORMATION_NULL
 }

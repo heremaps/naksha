@@ -1,14 +1,11 @@
 package naksha.psql.executors
 
-import naksha.model.NakshaError
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaException
 import naksha.model.TupleNumberByteArray
 import naksha.model.Version
 import naksha.model.request.*
 import naksha.psql.*
-import naksha.psql.PgColumn.PgColumnCompanion.tuple_number
-import naksha.psql.read.ReadQueryBuilder
 import kotlin.jvm.JvmField
 
 class PgReader(
@@ -40,29 +37,19 @@ class PgReader(
         get() = session.version()
 
     fun execute(): Response {
-        return when (request) {
-            is ReadFeatures -> readFeatures()
-            is ReadCollections -> readCollections()
-            else -> throw UnsupportedOperationException("Not implemented handling of: ${request::class}")
-        }
-    }
-
-    private fun readCollections(): Response {
-        TODO()
-    }
-
-    private fun readFeatures(): Response {
-        val query = ReadQueryBuilder().build(request)
+        val query = PgQuery(session, request)
         val connection = session.usePgConnection()
-        val cursor = connection.execute(query.rawSql)
-        var allBytes: ByteArray = byteArrayOf()
-        while(cursor.next()){
-            val bytes: ByteArray = cursor.column(tuple_number) as ByteArray
-            allBytes += bytes
-        }
-        cursor.close()
-        val tupleNumberBytes = TupleNumberByteArray(storage, allBytes)
-        return SuccessResponse(
+        // TODO: Use prepare, add arguments!
+        val plan = connection.prepare(query.sql, query.paramTypes)
+        plan.use {
+            val allBytes: ByteArray?
+            val cursor = plan.execute(query.paramValues)
+            cursor.use {
+                allBytes = if (cursor.next()) cursor.column("rs") as ByteArray else null
+            }
+            if (allBytes == null) throw NakshaException(EXCEPTION, "Failed to execute query for unknown reason")
+            val tupleNumberBytes = TupleNumberByteArray.fromGzip(storage, allBytes)
+            return SuccessResponse(
                 PgResultSet(
                     storage,
                     session,
@@ -74,15 +61,7 @@ class PgReader(
                     orderBy = null,
                     filters = request.resultFilters
                 )
-        )
-    }
-
-    fun plan(): PgPlan {
-        TODO()
-        conn.prepare(
-            """
-            SELECT
-        """.trimIndent()
-        )
+            )
+        }
     }
 }
