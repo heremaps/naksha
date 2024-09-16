@@ -1,5 +1,6 @@
 package com.here.naksha.lib.view;
 
+import naksha.base.StringList;
 import naksha.geo.PointCoord;
 import naksha.geo.SpPoint;
 import naksha.model.Action;
@@ -78,9 +79,9 @@ public class ViewWriteSessionTests extends PsqlTests {
 
     ViewWriteSession writeSession = view.newWriteSession(new SessionOptions()).init();
       ReadFeatures readRequest = new ReadFeatures();
-    final RequestQuery requestQuery = new RequestQuery();
-    requestQuery.setProperties(new PQuery(new Property(Property.ID), StringOp.EQUALS, "feature_id_view0"));
-    readRequest.setQuery(requestQuery);
+      StringList featureIds = new StringList();
+      featureIds.add("feature_id_view0");
+    readRequest.setFeatureIds(featureIds);
     Response response = writeSession.execute(readRequest);
     assertInstanceOf(SuccessResponse.class,response);
     SuccessResponse successResponse = (SuccessResponse) response;
@@ -135,9 +136,9 @@ public class ViewWriteSessionTests extends PsqlTests {
     View view = new View(viewLayerCollection);
 
     ReadFeatures readRequest = new ReadFeatures();
-    final RequestQuery requestQuery = new RequestQuery();
-    requestQuery.setProperties(new PQuery(new Property(Property.ID), StringOp.EQUALS, "feature_id_view0"));
-    readRequest.setQuery(requestQuery);
+    StringList featureIds = new StringList();
+    featureIds.add("feature_id_view0");
+    readRequest.setFeatureIds(featureIds);
 
     List<NakshaFeature> list = queryView(view, readRequest);
     assertTrue(list.isEmpty());
@@ -169,9 +170,9 @@ public class ViewWriteSessionTests extends PsqlTests {
 
       //check if the newly added feature found on layer
       ReadFeatures readRequest = new ReadFeatures();
-    final RequestQuery requestQuery = new RequestQuery();
-    requestQuery.setProperties(new PQuery(new Property(Property.ID), StringOp.EQUALS, FEATURE_ID));
-      readRequest.setQuery(requestQuery);
+    StringList featureIds = new StringList();
+    featureIds.add(FEATURE_ID);
+    readRequest.setFeatureIds(featureIds);
 
       List<NakshaFeature> list = queryView(view, readRequest);
       assertEquals(1, list.size());
@@ -204,12 +205,11 @@ public class ViewWriteSessionTests extends PsqlTests {
 
       //check if the newly added feature found on layer
       ReadFeatures readRequest = new ReadFeatures();
-    final RequestQuery requestQuery = new RequestQuery();
-    requestQuery.setProperties(new PQuery(new Property(Property.ID), StringOp.EQUALS, FEATURE_ID));
-      readRequest.setQuery(requestQuery);
-
-      List<NakshaFeature> list = queryView(view, readRequest);
-      assertEquals(0, list.size());
+    StringList list = new StringList();
+    list.add(FEATURE_ID);
+    readRequest.setFeatureIds(list);
+      List<NakshaFeature> response1 = queryView(view, readRequest);
+      assertEquals(0, response1.size());
     session.commit();
   }
 
