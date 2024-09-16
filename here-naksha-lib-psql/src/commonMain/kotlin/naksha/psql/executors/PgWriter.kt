@@ -7,7 +7,6 @@ import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
-import naksha.model.Naksha.NakshaCompanion.quoteIdent
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
@@ -16,6 +15,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.psql.*
+import naksha.psql.executors.write.DeleteFeature
 import naksha.psql.executors.write.InsertFeature
 import naksha.psql.executors.write.UpdateFeature
 import kotlin.jvm.JvmField
@@ -182,13 +182,13 @@ class PgWriter(
         // First, process collections, no performance need here for now.
         for (write in orderedWrites) {
             if (write == null) continue
-            val tuple = if (write.collectionId == VIRT_COLLECTIONS) {
+            val tupleNumber: TupleNumber = if (write.collectionId == VIRT_COLLECTIONS) {
                 when (write.op) {
-                    WriteOp.CREATE -> createCollection(mapOf(write), write)
-                    WriteOp.UPSERT -> upsertCollection(mapOf(write), write)
-                    WriteOp.UPDATE -> updateCollection(mapOf(write), write)
-                    WriteOp.DELETE -> deleteCollection(mapOf(write), write)
-                    WriteOp.PURGE -> purgeCollection(mapOf(write), write)
+                    WriteOp.CREATE -> returnTuple(write, createCollection(mapOf(write), write))
+                    WriteOp.UPSERT -> returnTuple(write, upsertCollection(mapOf(write), write))
+                    WriteOp.UPDATE -> returnTuple(write, updateCollection(mapOf(write), write))
+                    WriteOp.DELETE -> returnTuple(write, deleteCollection(mapOf(write), write))
+                    WriteOp.PURGE -> returnTuple(write, purgeCollection(mapOf(write), write))
                     else -> throw NakshaException(
                         UNSUPPORTED_OPERATION,
                         "Unknown write-operation: '${write.op}'"
@@ -196,20 +196,18 @@ class PgWriter(
                 }
             } else {
                 when (write.op) {
-                    WriteOp.CREATE -> InsertFeature(session).execute(collectionOf(write), write)
-                    WriteOp.UPSERT -> upsertFeature(collectionOf(write), write)
-                    WriteOp.UPDATE -> UpdateFeature(session).execute(collectionOf(write), write)
-                    WriteOp.DELETE -> deleteFeature(collectionOf(write), write)
-                    WriteOp.PURGE -> purgeFeature(collectionOf(write), write)
+                    WriteOp.CREATE -> InsertFeature(this).execute(collectionOf(write), write)
+                    WriteOp.UPSERT -> returnTuple(write, upsertFeature(collectionOf(write), write))
+                    WriteOp.UPDATE -> UpdateFeature(this).execute(collectionOf(write), write)
+                    WriteOp.DELETE -> DeleteFeature(this).execute(collectionOf(write), write)
+                    WriteOp.PURGE -> returnTuple(write, purgeFeature(collectionOf(write), write))
                     else -> throw NakshaException(
                         UNSUPPORTED_OPERATION,
                         "Unknown write-operation: '${write.op}'"
                     )
                 }
             }
-            tuples[write.i] = tuple
-            tupleNumbers[write.i] = tuple.tupleNumber
-            tupleCache.store(tuple)
+            tupleNumbers[write.i] = tupleNumber
         }
 
         // If everything was done perfectly, fine.
@@ -227,6 +225,12 @@ class PgWriter(
                 filters = request.resultFilters
             )
         )
+    }
+
+    fun returnTuple(write: WriteExt, tuple: Tuple): TupleNumber {
+        tuples[write.i] = tuple
+        tupleCache.store(tuple)
+        return tuple.tupleNumber
     }
 
     private fun mapOf(write: WriteExt): PgMap {
@@ -368,18 +372,6 @@ class PgWriter(
         TODO("Implement me")
     }
 
-    internal fun createFeature(collection: PgCollection, write: WriteExt): Tuple {
-        val feature = write.feature?.proxy(NakshaFeature::class) ?: throw NakshaException(
-            ILLEGAL_ARGUMENT,
-            "CREATE without feature"
-        )
-        val tupleNumber = newFeatureTupleNumber(collection, feature.id)
-        val tuple = tuple(tupleNumber, feature, write.attachment, feature.id, flags(collection.nakshaCollection))
-
-        executeInsert(quoteIdent(collection.id), tuple, feature)
-        return tuple
-    }
-
     internal fun executeInsert(
         quotedCollectionId: String,
         tuple: Tuple,
@@ -391,21 +383,11 @@ class PgWriter(
                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
                       """.trimIndent(),
             args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
-        )
+        ).close()
         return tuple
     }
 
-    internal fun updateFeature(collection: PgCollection, write: WriteExt): Tuple {
-        val transaction = session.transaction()
-
-        TODO("Implement me")
-    }
-
     internal fun upsertFeature(collection: PgCollection, write: WriteExt): Tuple {
-        TODO("Implement me")
-    }
-
-    internal fun deleteFeature(collection: PgCollection, write: WriteExt): Tuple {
         TODO("Implement me")
     }
 

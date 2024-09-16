@@ -9,7 +9,6 @@ import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import naksha.psql.base.PgTestBase
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
