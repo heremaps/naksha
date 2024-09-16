@@ -2,6 +2,7 @@ package com.here.naksha.lib.view;
 
 import naksha.geo.PointCoord;
 import naksha.geo.SpPoint;
+import naksha.model.Action;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
@@ -9,13 +10,12 @@ import naksha.model.request.*;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
+import naksha.model.request.query.StringOp;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.EnabledIf;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -24,20 +24,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ViewWriteSessionTests extends PsqlTests {
 
-  static final Logger log = LoggerFactory.getLogger(ViewWriteSessionTests.class);
-
   final boolean enabled() {
     return true;
-  }
-
-  @Override
-  final boolean dropInitially() {
-    return runTest() && DROP_INITIALLY;
-  }
-
-  @Override
-  final boolean dropFinally() {
-    return runTest() && DROP_FINALLY;
   }
 
   static final String COLLECTION_0 = "test_view_write_session_0";
@@ -91,7 +79,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     ViewWriteSession writeSession = view.newWriteSession(new SessionOptions()).init();
       ReadFeatures readRequest = new ReadFeatures();
     final RequestQuery requestQuery = new RequestQuery();
-    requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new String[]{"feature_id_view0"}));
+    requestQuery.setProperties(new PQuery(new Property(Property.ID), StringOp.EQUALS, "feature_id_view0"));
     readRequest.setQuery(requestQuery);
     Response response = writeSession.execute(readRequest);
     assertInstanceOf(SuccessResponse.class,response);
@@ -115,7 +103,7 @@ public class ViewWriteSessionTests extends PsqlTests {
         assertEquals(1d, ((PointCoord) feature.getGeometry().getCoordinates()).getLongitude());
         assertTrue(feature.getProperties().containsKey("testProperty"));
         assertEquals("test", feature.getProperties().get("testProperty").toString());
-        assertSame(ExecutedOp.UPDATED, response1.getTuples().get(0).op);
+        assertSame(Action.UPDATED, response1.getTuples().get(0).tuple.meta.action());
 
         writeSession.commit();
 
@@ -176,7 +164,7 @@ public class ViewWriteSessionTests extends PsqlTests {
 
     SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
     assertNotNull(response.getTuples().get(0));
-    assertSame(ExecutedOp.CREATED, response.getTuples().get(0).op);
+    assertSame(Action.CREATED, response.getTuples().get(0).tuple.meta.action());
       writeSession.commit();
 
       //check if the newly added feature found on layer
@@ -186,7 +174,7 @@ public class ViewWriteSessionTests extends PsqlTests {
       readRequest.setQuery(requestQuery);
 
       List<NakshaFeature> list = queryView(view, readRequest);
-      assertTrue(list.size() == 1);
+      assertEquals(1, list.size());
 
     session.commit();
   }
@@ -209,7 +197,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
 
     assertNotNull(response.getTuples().get(0));
-    assertSame(ExecutedOp.DELETED, response.getTuples().get(0).op);
+    assertSame(Action.DELETED, response.getTuples().get(0).tuple.meta.action());
         assertEquals(FEATURE_ID, response.getFeatures().get(0).getId());
 
       writeSession.commit();

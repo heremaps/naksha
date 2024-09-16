@@ -57,10 +57,6 @@ abstract class PsqlTests {
     return enabled();
   }
 
-  abstract boolean dropInitially();
-
-  abstract boolean dropFinally();
-
   static final String TEST_APP_ID = "test_app";
   static final String TEST_AUTHOR = "test_author";
   static PgStorage storage;
@@ -80,14 +76,6 @@ abstract class PsqlTests {
   }
 
   // Custom stuff between 50 and 9000
-
-  @Test
-  @Order(9999)
-  @EnabledIf("dropFinally")
-  void dropSchemaFinally() {
-    assertNotNull(storage);
-//    storage.dropSchema(); TODO(lib)
-  }
 
   @EnabledIf("runTest")
   @AfterAll
