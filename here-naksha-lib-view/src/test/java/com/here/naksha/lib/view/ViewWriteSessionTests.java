@@ -136,7 +136,7 @@ public class ViewWriteSessionTests extends PsqlTests {
 
     ReadFeatures readRequest = new ReadFeatures();
     final RequestQuery requestQuery = new RequestQuery();
-    requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new String[]{"feature_id_view0"}));
+    requestQuery.setProperties(new PQuery(new Property(Property.ID), StringOp.EQUALS, "feature_id_view0"));
     readRequest.setQuery(requestQuery);
 
     List<NakshaFeature> list = queryView(view, readRequest);
@@ -160,7 +160,7 @@ public class ViewWriteSessionTests extends PsqlTests {
       WriteRequest writeRequest = new WriteRequest();
       final NakshaFeature feature = new NakshaFeature(FEATURE_ID);
       feature.setGeometry(new SpPoint(new PointCoord(0d, 0d)));
-      writeRequest.add(new Write().createFeature(null, viewLayerCollection.getTopPriorityLayer().getCollectionId(), feature));
+      writeRequest.add(new Write().createFeature(null, COLLECTION_1, feature));
 
     SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
     assertNotNull(response.getTuples().get(0));
@@ -170,7 +170,7 @@ public class ViewWriteSessionTests extends PsqlTests {
       //check if the newly added feature found on layer
       ReadFeatures readRequest = new ReadFeatures();
     final RequestQuery requestQuery = new RequestQuery();
-    requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new String[]{FEATURE_ID}));
+    requestQuery.setProperties(new PQuery(new Property(Property.ID), StringOp.EQUALS, FEATURE_ID));
       readRequest.setQuery(requestQuery);
 
       List<NakshaFeature> list = queryView(view, readRequest);
@@ -205,11 +205,11 @@ public class ViewWriteSessionTests extends PsqlTests {
       //check if the newly added feature found on layer
       ReadFeatures readRequest = new ReadFeatures();
     final RequestQuery requestQuery = new RequestQuery();
-    requestQuery.setProperties(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new String[]{FEATURE_ID}));
+    requestQuery.setProperties(new PQuery(new Property(Property.ID), StringOp.EQUALS, FEATURE_ID));
       readRequest.setQuery(requestQuery);
 
       List<NakshaFeature> list = queryView(view, readRequest);
-      assertTrue(list.size() == 0);
+      assertEquals(0, list.size());
     session.commit();
   }
 
