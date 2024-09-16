@@ -53,6 +53,11 @@ abstract class Proxy : PlatformObject {
                     if (data is PlatformList) return data.proxy(AnyList::class) as T
                     if (data is PlatformDataView) return data.proxy(DataViewProxy::class) as T
                 }
+                // If there is an existing instance that fits our needs, return it.
+                // Special handling, when the given klass is an interface.
+                val symbol = Symbols.of(klass)
+                val existing = Symbols.get(data, symbol)
+                if (klass.isInstance(existing)) return existing as T
             } else if (klass.isInstance(data)) return data as T
             if (klass == Int64::class) when (raw) {
                 is Short -> Int64(raw.toInt())

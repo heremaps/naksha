@@ -47,7 +47,13 @@ class BulkWriteExecutor(
     }
 
     override fun finish() {
-        deleteFromDel.forEach { it.value.executeBatch() }
-        insertToHead.forEach { it.value.executeBatch() }
+        deleteFromDel.forEach {
+            it.value.executeBatch()
+            it.value.close()
+        }
+        insertToHead.forEach {
+            it.value.executeBatch()
+            it.value.close()
+        }
     }
 }

@@ -680,25 +680,33 @@ BEGIN
   return null;
 END $$;
 
-CREATE OR REPLACE FUNCTION naksha_geo_type(flags int4) RETURNS int4
+CREATE OR REPLACE FUNCTION naksha_geometry(geo bytea, flags int) RETURNS geometry
 LANGUAGE 'plpgsql'
 IMMUTABLE
 PARALLEL SAFE
 SET search_path FROM CURRENT
 AS $$
+DECLARE
+  encoding int4;
+  gzip boolean;
 BEGIN
-  RETURN (flags::bit(6))::int4;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION naksha_feature_encoding(flags int4) RETURNS int4
-LANGUAGE 'plpgsql'
-IMMUTABLE
-PARALLEL SAFE
-SET search_path FROM CURRENT
-AS $$
-BEGIN
-  RETURN ((flags>>6)::bit(6))::int4;
+  encoding = flags & 15;
+  gzip = (encoding & 1) = 1;
+  if (gzip) then
+    geo = gunzip(geo);
+    encoding = encoding & 14;
+  end if;
+  if (encoding = 0) then
+    RETURN ST_GeomFromTWKB(geo);
+  elsif (encoding = 2) then
+    RETURN ST_GeomFromWKB(geo);
+  elsif (encoding = 4) then
+    RETURN ST_GeomFromEWKB(geo);
+  elsif (encoding = 6) then
+    RETURN ST_GeomFromGeoJSON(geo::text);
+  end if;
+  -- Unknown encoding
+  return null;
 END;
 $$;
 

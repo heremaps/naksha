@@ -1,14 +1,15 @@
 package naksha.psql
 
+import naksha.geo.SpBoundingBox
 import naksha.model.Action
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
+import naksha.model.request.query.SpIntersects
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import naksha.psql.base.PgTestBase
 import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeatures
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -56,5 +57,22 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
                         }
                 }
         }
+
+        // Read only one feature by ID.
+        val expectFeature = featuresToCreate[0]
+        val featuresByIdResponse = executeRead(ReadFeatures().apply {
+            collectionIds += collection!!.id
+            featureIds.add(expectFeature.id)
+        })
+        assertEquals(1, featuresByIdResponse.size)
+        assertEquals(expectFeature.id, featuresByIdResponse.features[0]!!.id)
+
+        // Read only one feature by bounding box.
+        val featuresByBBox = executeRead(ReadFeatures().apply {
+            collectionIds += collection!!.id
+            query.spatial = SpIntersects(SpBoundingBox(expectFeature.geometry).addMargin(0.0000001).toPolygon())
+        })
+        assertEquals(1, featuresByBBox.features.size)
+        assertEquals(expectFeature.id, featuresByBBox.features[0]!!.id)
     }
 }

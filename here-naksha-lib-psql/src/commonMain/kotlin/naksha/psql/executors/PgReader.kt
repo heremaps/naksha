@@ -1,14 +1,11 @@
 package naksha.psql.executors
 
-import naksha.model.NakshaError
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaException
 import naksha.model.TupleNumberByteArray
 import naksha.model.Version
 import naksha.model.request.*
 import naksha.psql.*
-import naksha.psql.PgColumn.PgColumnCompanion.tuple_number
-import naksha.psql.read.ReadQueryBuilder
 import kotlin.jvm.JvmField
 
 class PgReader(
@@ -40,25 +37,13 @@ class PgReader(
         get() = session.version()
 
     fun execute(): Response {
-        return when (request) {
-            is ReadFeatures -> readFeatures()
-            is ReadCollections -> readCollections()
-            else -> throw UnsupportedOperationException("Not implemented handling of: ${request::class}")
-        }
-    }
-
-    private fun readCollections(): Response {
-        TODO()
-    }
-
-    private fun readFeatures(): Response {
-        val query = ReadQueryBuilder(storage).build(request)
+        val query = PgQuery(session, request)
         val connection = session.usePgConnection()
         // TODO: Use prepare, add arguments!
-        val plan = connection.prepare(query.sqlQuery, query.paramTypes.toTypedArray())
+        val plan = connection.prepare(query.sql, query.paramTypes)
         plan.use {
             val allBytes: ByteArray?
-            val cursor = plan.execute(query.params.toTypedArray())
+            val cursor = plan.execute(query.paramValues)
             cursor.use {
                 allBytes = if (cursor.next()) cursor.column("rs") as ByteArray else null
             }
@@ -78,9 +63,5 @@ class PgReader(
                 )
             )
         }
-    }
-
-    fun plan(): PgPlan {
-        TODO("Do we need this?")
     }
 }
