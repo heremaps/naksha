@@ -15,10 +15,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.psql.*
-import naksha.psql.executors.write.DeleteFeature
-import naksha.psql.executors.write.InsertFeature
-import naksha.psql.executors.write.UpdateFeature
-import naksha.psql.executors.write.WriteExecutor
+import naksha.psql.executors.write.*
 import kotlin.jvm.JvmField
 
 // TODO: We need to fix NakshaBulkLoaderPlan to make this faster again !
@@ -185,6 +182,8 @@ class PgWriter(
         val tuples = this.tuples
         val tupleNumbers = this.tupleNumbers
 
+        val previousMetadataProvider = ExisingMetadataProvider(session, orderedWrites)
+
         // First, process collections, no performance need here for now.
         for (write in orderedWrites) {
             if (write == null) continue
@@ -201,12 +200,18 @@ class PgWriter(
                     )
                 }
             } else {
+                val collection = collectionOf(write)
                 when (write.op) {
-                    WriteOp.CREATE -> InsertFeature(this, writeExecutor).execute(collectionOf(write), write)
-                    WriteOp.UPSERT -> returnTuple(write, upsertFeature(collectionOf(write), write))
-                    WriteOp.UPDATE -> UpdateFeature(this).execute(collectionOf(write), write)
-                    WriteOp.DELETE -> DeleteFeature(this).execute(collectionOf(write), write)
-                    WriteOp.PURGE -> returnTuple(write, purgeFeature(collectionOf(write), write))
+                    WriteOp.CREATE -> InsertFeature(this, writeExecutor).execute(collection, write)
+                    WriteOp.UPSERT ->
+                        if (write.id == null || previousMetadataProvider.get(collection.head.name, write.id!!) == null) {
+                            InsertFeature(this, writeExecutor).execute(collection, write)
+                        } else {
+                            UpdateFeature(this, previousMetadataProvider, writeExecutor).execute(collection, write)
+                        }
+                    WriteOp.UPDATE -> UpdateFeature(this, previousMetadataProvider, writeExecutor).execute(collection, write)
+                    WriteOp.DELETE -> DeleteFeature(this, previousMetadataProvider, writeExecutor).execute(collection, write)
+                    WriteOp.PURGE -> TODO()
                     else -> throw NakshaException(
                         UNSUPPORTED_OPERATION,
                         "Unknown write-operation: '${write.op}'"
@@ -392,13 +397,5 @@ class PgWriter(
             args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
         ).close()
         return tuple
-    }
-
-    internal fun upsertFeature(collection: PgCollection, write: WriteExt): Tuple {
-        TODO("Implement me")
-    }
-
-    internal fun purgeFeature(collection: PgCollection, write: WriteExt): Tuple {
-        TODO("Implement me")
     }
 }

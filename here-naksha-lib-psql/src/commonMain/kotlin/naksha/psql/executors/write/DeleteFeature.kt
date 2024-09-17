@@ -4,6 +4,7 @@ import naksha.model.*
 import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
 import naksha.psql.PgCollection
+import naksha.psql.PgColumn
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.executors.PgReader
 import naksha.psql.executors.PgWriter
@@ -12,8 +13,10 @@ import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
 import naksha.psql.executors.write.WriteFeatureUtils.resolveFlags
 
 class DeleteFeature(
-    writer: PgWriter
-) : UpdateFeature(writer) {
+    writer: PgWriter,
+    exisingMetadataProvider: ExisingMetadataProvider,
+    writeExecutor: WriteExecutor
+) : UpdateFeature(writer, exisingMetadataProvider, writeExecutor) {
     override fun execute(collection: PgCollection, write: WriteExt): TupleNumber {
         val featureId = write.featureId ?: throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "No feature ID provided")
 
@@ -29,15 +32,10 @@ class DeleteFeature(
             // If hst table enabled
             collection.history?.let { hstTable ->
                 // copy head state into hst with txn_next === txn
-                insertHeadToTable(
-                    destinationTable = hstTable,
-                    headTable = collection.head,
-                    featureId = featureId
-                )
+                writeExecutor.copyHeadToHst(collection = collection, featureId = featureId)
                 // also copy head state into hst with txn_next === txn and action DELETED as a tombstone state
-                insertHeadToTable(
-                    destinationTable = hstTable,
-                    headTable = collection.head,
+                writeExecutor.copyHeadToHst(
+                    collection = collection,
                     tupleNumber = tupleNumber,
                     flags = flags,
                     featureId = featureId,
@@ -46,9 +44,8 @@ class DeleteFeature(
 
             // If del table enabled, copy head state into del, with action DELETED and txn_next === txn as a tombstone state
             collection.deleted?.let { delTable ->
-                insertHeadToTable(
-                    destinationTable = delTable,
-                    headTable = collection.head,
+                writeExecutor.copyHeadToDel(
+                    collection = collection,
                     tupleNumber = tupleNumber,
                     flags = flags,
                     featureId = featureId,
@@ -66,7 +63,7 @@ class DeleteFeature(
             val quotedHeadTable = quoteIdent(headTable.name)
             session.usePgConnection()
                 .execute(
-                    sql = "DELETE FROM $quotedHeadTable WHERE $quotedIdColumn=$1",
+                    sql = "DELETE FROM $quotedHeadTable WHERE ${PgColumn.id.quoted()}=$1",
                     args = arrayOf(featureId)
                 ).close()
         }

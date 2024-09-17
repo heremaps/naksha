@@ -3,6 +3,7 @@
 package naksha.psql
 
 import naksha.base.JsEnum
+import naksha.model.quoteId
 import naksha.model.request.query.TupleColumn
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -75,6 +76,8 @@ class PgColumn : JsEnum() {
             return field
         }
         private set
+
+    fun quoted() = quoteId(this.name)
 
     companion object PgColumnCompanion {
         /**

@@ -18,7 +18,7 @@ import kotlin.jvm.JvmField
 
 class InsertFeature(
     @JvmField val writer: PgWriter,
-    val writeExecutor: WriteExecutor
+    private val writeExecutor: WriteExecutor
 ) {
     val session = writer.session
 

@@ -1,8 +1,9 @@
 package naksha.psql.executors.write
 
-import naksha.model.Tuple
+import naksha.model.*
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
+import naksha.psql.PgTable
 
 interface WriteExecutor {
 
@@ -15,4 +16,16 @@ interface WriteExecutor {
     )
 
     fun finish()
+
+    fun copyHeadToHst(collection: PgCollection, tupleNumber: TupleNumber? = null, flags: Flags? = null, featureId: String)
+
+    fun copyHeadToDel(collection: PgCollection, tupleNumber: TupleNumber? = null, flags: Flags? = null, featureId: String)
+
+    fun updateFeatureInHead(
+        collection: PgCollection,
+        tuple: Tuple,
+        feature: NakshaFeature,
+        newVersion: Version,
+        previousMetadata: Metadata
+    )
 }
