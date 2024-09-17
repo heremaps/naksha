@@ -8,10 +8,6 @@ import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
-import naksha.model.request.query.AnyOp;
-import naksha.model.request.query.PQuery;
-import naksha.model.request.query.Property;
-import naksha.model.request.query.StringOp;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -19,6 +15,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.EnabledIf;
 
 import java.util.List;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -198,7 +195,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
 
     assertNotNull(response.getTuples().get(0));
-    assertSame(Action.DELETED, response.getTuples().get(0).tuple.meta.action());
+    assertSame(Action.DELETED, Objects.requireNonNull(response.getTuples().get(0).tuple).meta.action());
         assertEquals(FEATURE_ID, response.getFeatures().get(0).getId());
 
       writeSession.commit();

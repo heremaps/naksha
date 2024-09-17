@@ -77,7 +77,6 @@ abstract class PsqlTests {
 
   // Custom stuff between 50 and 9000
 
-  @EnabledIf("runTest")
   @AfterAll
   static void afterTest() {
     if (session != null) {

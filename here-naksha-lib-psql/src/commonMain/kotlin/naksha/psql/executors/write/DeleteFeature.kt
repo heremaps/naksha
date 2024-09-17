@@ -10,6 +10,7 @@ import naksha.psql.executors.PgWriter
 import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
 import naksha.psql.executors.write.WriteFeatureUtils.resolveFlags
+import naksha.psql.executors.write.WriteFeatureUtils.tuple
 
 class DeleteFeature(
     writer: PgWriter
@@ -26,6 +27,16 @@ class DeleteFeature(
 
         // Only modify head, hst and del tables if feature exists
         if (response.features.isNotEmpty()) {
+            val currentMeta = fetchCurrentMeta(collection, featureId).copy(flags = flags)
+            val tuple =
+                tuple(
+                    session.storage,
+                    tupleNumber,
+                    response.features.first()!!,
+                    currentMeta,
+                    write.attachment,
+                    flags
+                )
             // If hst table enabled
             collection.history?.let { hstTable ->
                 // copy head state into hst with txn_next === txn
@@ -56,6 +67,7 @@ class DeleteFeature(
             }
 
             removeFeatureFromHead(collection, featureId)
+            return writer.returnTuple(write,tuple)
         }
         return tupleNumber
     }
