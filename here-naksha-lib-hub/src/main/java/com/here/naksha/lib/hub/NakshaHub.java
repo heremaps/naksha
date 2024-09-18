@@ -307,8 +307,8 @@ public class NakshaHub implements INaksha {
     try (IReadSession readSession = getAdminStorage().newReadSession(nakshaContext, false)) {
       rdResult = readSession.execute(request);
     } catch (Exception e) {
-      logger.error("Failed reading from collections {}. ", request.getCollections(), e);
-      throw new RuntimeException("Failed to execute single read session", e);
+      logger.error("Failed during reading extension handler configurations from collections {}. ", request.getCollections(), e);
+      throw new RuntimeException("Failed reading extension handler configurations", e);
     }
     final List<EventHandler> eventHandlers;
     try {
