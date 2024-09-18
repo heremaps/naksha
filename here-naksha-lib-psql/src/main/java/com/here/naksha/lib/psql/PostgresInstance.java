@@ -160,7 +160,12 @@ public class PostgresInstance extends ClosableRootResource {
     }
     // No idle connection found, create a new one.
     return new PsqlConnection(
-        this, connTimeoutInMillis, cancelSignalTimeoutInMillis, getOptimalBufferSize(), getOptimalBufferSize());
+        this,
+        connTimeoutInMillis,
+        sockedReadTimeoutInMillis,
+        cancelSignalTimeoutInMillis,
+        getOptimalBufferSize(),
+        getOptimalBufferSize());
   }
 
   /**
@@ -209,5 +214,14 @@ public class PostgresInstance extends ClosableRootResource {
   PostgresInstance withMaxBandwidthInGbit(long maxBandwidthInGbit) {
     setMaxBandwidthInGbit(maxBandwidthInGbit);
     return this;
+  }
+
+  @Override
+  public void logStats(Logger log) {
+    super.logStats(log);
+    log.info(
+        "[Instance connectionPool stats => instance,count] - InstanceConnectionPoolCount {} {}",
+        this,
+        connectionPool.size());
   }
 }
