@@ -4,6 +4,7 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.base.Platform
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -146,17 +147,21 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun quoteIdent(vararg parts: String): String {
+            if (parts.isEmpty()) throw NakshaException(ILLEGAL_ARGUMENT, "The given parts must not be empty")
+            var quoted = false
             val sb = StringBuilder()
             sb.append('"')
             for (part in parts) {
                 for (c in part) {
                     when (c) {
-                        '"' -> sb.append('"').append('"')
-                        '\\' -> sb.append('\\').append('\\')
-                        else -> sb.append(c)
+                        in 'a'..'z', in 'A'..'Z', in '0'..'9','_' -> sb.append(c)
+                        '"' -> { quoted = true; sb.append('"').append('"') }
+                        '\\' -> { quoted = true; sb.append('\\').append('\\') }
+                        else -> { quoted = true; sb.append(c) }
                     }
                 }
             }
+            if (!quoted) return if (parts.size == 1) return parts[0] else sb.substring(1)
             sb.append('"')
             return sb.toString()
         }
