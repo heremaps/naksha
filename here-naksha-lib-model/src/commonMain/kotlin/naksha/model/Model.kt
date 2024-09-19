@@ -27,32 +27,3 @@ fun isValidId(id: String?): Boolean {
     }
     return true
 }
-
-/**
- * Quote the given identifier.
- * @param id the identifier.
- */
-fun quoteId(id: String): String {
-    val sb = StringBuilder(id.length)
-    var i = 0
-    while (i < id.length) {
-        when (val c = id[i++]) {
-            ':' -> sb.append('|')
-            '|' -> sb.append('|').append('|')
-            else -> sb.append(c)
-        }
-    }
-    return sb.toString()
-}
-
-fun unquoteId(id: String): String {
-    val sb = StringBuilder(id.length)
-    var i = 0
-    while (i < id.length) {
-        val c = id[i++]
-        require(c != ':') { "Invalid character found, there should be no colon in an quoted identifier!" }
-        if (c == '|') if (i < id.length || id[i] != '|') { sb.append(':'); i++ } else sb.append('|') else sb.append(c)
-    }
-    return sb.toString()
-}
-
