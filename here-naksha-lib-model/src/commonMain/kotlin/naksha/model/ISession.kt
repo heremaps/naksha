@@ -139,7 +139,11 @@ interface ISession : AutoCloseable {
      * @param mode the fetch mode.
      * @since 3.0.0
      */
-    fun fetchTuple(resultTuple: ResultTuple, mode: FetchMode = FetchMode.FETCH_ALL)
+    @Deprecated(
+        message = "Avoid using this methods, try to fetch all needed data at ones using fetchTuples instead",
+        replaceWith = ReplaceWith("fetchTuples(listOf(resultTuple), mode = mode)")
+    )
+    fun fetchTuple(resultTuple: ResultTuple, mode: FetchMode = FetchMode.FETCH_ALL) = fetchTuples(listOf(resultTuple), mode = mode)
 
     /**
      * Fetches all tuples in the given result-tuples.
@@ -158,7 +162,7 @@ interface ISession : AutoCloseable {
      * @param mode the fetch mode.
      * @since 3.0.0
      */
-    fun fetchTuples(resultTuples: List<ResultTuple?>, from:Int = 0, to:Int = resultTuples.size, mode: FetchMode = FetchMode.FETCH_ALL)
+    fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int = 0, to: Int = resultTuples.size, mode: FetchMode = FetchMode.FETCH_ALL)
 
     /**
      * Returns transaction object of the current session.

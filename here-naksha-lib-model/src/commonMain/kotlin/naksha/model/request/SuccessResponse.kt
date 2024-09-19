@@ -4,8 +4,6 @@ package naksha.model.request
 
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.model.ISession
-import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaFeatureList
 import kotlin.js.JsExport
 import kotlin.js.JsName

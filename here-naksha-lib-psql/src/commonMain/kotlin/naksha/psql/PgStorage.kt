@@ -551,19 +551,6 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
     }
 
     /**
-     * Fetches a single result-tuple.
-     *
-     * @param conn the connection to use.
-     * @param resultTuple the result-tuple into which to load the tuple.
-     * @param mode the fetch mode.
-     * @since 3.0.0
-     * @see ISession.fetchTuple
-     */
-    fun fetchTuple(conn: PgConnection, resultTuple: ResultTuple, mode: FetchMode = FETCH_ALL) {
-        TODO("Implement fetchTuple")
-    }
-
-    /**
      * Fetches all tuples in the given result-tuples.
      *
      * @param conn the connection to use.

@@ -449,16 +449,6 @@ open class PgSession(
         }
     }
 
-    override fun fetchTuple(resultTuple: ResultTuple, mode: FetchMode) {
-        val connection = pgConnection
-        val conn = connection ?: storage.adminConnection(storage.adminOptions)
-        try {
-            return storage.fetchTuple(conn, resultTuple, mode)
-        } finally {
-            if (connection == null) conn.close()
-        }
-    }
-
     override fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int, to: Int, mode: FetchMode) {
         val connection = pgConnection
         val conn = connection ?: storage.adminConnection(storage.adminOptions)
