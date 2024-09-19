@@ -18,14 +18,12 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.exceptions.StorageLockException;
-import com.here.naksha.lib.core.models.storage.*;
-import java.util.concurrent.TimeUnit;
-import naksha.model.IStorageLock;
 import naksha.model.IWriteSession;
-import naksha.model.NakshaContext;
-import naksha.model.WriteFeatures;
-import naksha.model.WriteRequest;
+import naksha.model.SessionOptions;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.Write;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -37,13 +35,11 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
 
   IWriteSession session;
   ViewLayer writeLayer;
-  final NakshaContext context;
-  final boolean useMaster;
+  SessionOptions options;
 
-  public ViewWriteSession(@NotNull View viewRef, @Nullable NakshaContext context, boolean useMaster) {
-    super(viewRef, context, useMaster);
-    this.context = context;
-    this.useMaster = useMaster;
+  public ViewWriteSession(@NotNull View viewRef, @Nullable SessionOptions options) {
+    super(viewRef, options);
+    this.options = options;
   }
 
   public ViewWriteSession withWriteLayer(ViewLayer viewLayer) {
@@ -55,55 +51,34 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
 
   public ViewWriteSession init() {
     if (writeLayer == null) writeLayer = viewRef.getViewCollection().getTopPriorityLayer();
-    this.session = writeLayer.getStorage().newWriteSession(context, useMaster);
+    this.session = writeLayer.getStorage().newWriteSession(options);
     return this;
   }
   /**
-   * Executes write on one (top by default storage).
+   * Executes write.
    *
    * @param writeRequest
    * @return
    */
   @Override
-  public @NotNull Result execute(@NotNull WriteRequest<?, ?, ?> writeRequest) {
-    if (!(writeRequest instanceof WriteFeatures)) {
-      throw new UnsupportedOperationException("Only WriteFeatures are supported.");
+  public @NotNull Response execute(@NotNull Request writeRequest) {
+    if (writeRequest instanceof WriteRequest) {
+      for (Write write : ((WriteRequest) writeRequest).getWrites()) {
+        write.setCollectionId(writeLayer.getCollectionId());
+      }
     }
-    getSession();
-    ((WriteFeatures) writeRequest).setCollectionId(writeLayer.getCollectionId());
     return this.session.execute(writeRequest);
   }
 
-  @Override
-  public @NotNull IStorageLock lockFeature(
-      @NotNull String collectionId, @NotNull String featureId, long timeout, @NotNull TimeUnit timeUnit)
-      throws StorageLockException {
-    return getSession().lockFeature(collectionId, featureId, timeout, timeUnit);
+  public void commit() {
+    getSession().commit();
   }
 
-  @Override
-  public @NotNull IStorageLock lockStorage(@NotNull String lockId, long timeout, @NotNull TimeUnit timeUnit)
-      throws StorageLockException {
-    return getSession().lockStorage(lockId, timeout, timeUnit);
+  public void rollback() {
+    getSession().rollback();
   }
 
-  @Override
-  public @NotNull Result executeBulkWriteFeatures(@NotNull WriteRequest<?, ?, ?> writeRequest) {
-    throw new UnsupportedOperationException("bulk write on view is not yet supported");
-  }
-
-  @Override
-  public void commit(boolean autoCloseCursors) {
-    getSession().commit(autoCloseCursors);
-  }
-
-  @Override
-  public void rollback(boolean autoCloseCursors) {
-    getSession().rollback(true);
-  }
-
-  @Override
-  public void close(boolean autoCloseCursors) {
+  public void close() {
     super.close();
     getSession().close();
   }

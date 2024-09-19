@@ -18,68 +18,120 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.models.storage.Notification;
-import naksha.model.ReadRequest;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
+import naksha.model.FetchMode;
 import naksha.model.IReadSession;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+
+import naksha.model.Tuple;
+import naksha.model.TupleNumber;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.ResultTuple;
+import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class MockReadSession implements IReadSession {
 
-  List<XyzFeatureCodec> results;
+  List<ResultTuple> results;
 
-  public MockReadSession(List<XyzFeatureCodec> results) {
+  public MockReadSession(List<ResultTuple> results) {
     this.results = results;
   }
 
   @Override
-  public boolean isMasterConnect() {
+  public void close() {}
+
+  @NotNull
+  @Override
+  public Response execute(@NotNull Request request) {
+    return new SuccessResponse(results);
+  }
+
+  @NotNull
+  @Override
+  public Response executeParallel(@NotNull Request request) {
+    return null;
+  }
+
+  private int socketTimeout = 0;
+
+  @Override
+  public int getSocketTimeout() {
+    return socketTimeout;
+  }
+
+  @Override
+  public void setSocketTimeout(int i) {
+    socketTimeout = i;
+  }
+
+  private int stmtTimeout = 0;
+
+  @Override
+  public int getStmtTimeout() {
+    return stmtTimeout;
+  }
+
+  @Override
+  public void setStmtTimeout(int i) {
+    stmtTimeout = i;
+  }
+
+  private int lockTimeout = 0;
+
+  @Override
+  public int getLockTimeout() {
+    return lockTimeout;
+  }
+
+  @Override
+  public void setLockTimeout(int i) {
+    lockTimeout = i;
+  }
+
+  @Override
+  public boolean isClosed() {
     return false;
   }
 
+  private String map = "";
+
+  @NotNull
   @Override
-  public @NotNull NakshaContext getNakshaContext() {
-    return null;
+  public String getMap() {
+    return map;
   }
 
   @Override
-  public int getFetchSize() {
-    return 0;
+  public void setMap(@NotNull String s) {
+    map = s;
   }
 
   @Override
-  public void setFetchSize(int size) {}
+  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
+    return false;
+  }
 
+  @NotNull
   @Override
-  public long getStatementTimeout(@NotNull TimeUnit timeUnit) {
-    return 0;
+  public List<Tuple> getLatestTuples(@NotNull String mapId, @NotNull String collectionId, @NotNull String[] featureIds, @NotNull FetchMode mode) {
+    return List.of();
+  }
+
+  @NotNull
+  @Override
+  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, @NotNull FetchMode mode) {
+    return List.of();
   }
 
   @Override
-  public void setStatementTimeout(long timeout, @NotNull TimeUnit timeUnit) {}
+  public void fetchTuple(@NotNull ResultTuple resultTuple, @NotNull FetchMode mode) {
 
-  @Override
-  public long getLockTimeout(@NotNull TimeUnit timeUnit) {
-    return 0;
   }
 
   @Override
-  public void setLockTimeout(long timeout, @NotNull TimeUnit timeUnit) {}
+  public void fetchTuples(@NotNull List<? extends ResultTuple> resultTuples, int from, int to, @NotNull FetchMode mode) {
 
-  @Override
-  public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
-    return new MockResult<>(results);
   }
-
-  @Override
-  public @NotNull Result process(@NotNull Notification<?> notification) {
-    return null;
-  }
-
-  @Override
-  public void close() {}
 }

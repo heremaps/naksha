@@ -18,13 +18,14 @@
  */
 package com.here.naksha.lib.heapcache;
 
-import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.util.ILike;
 import com.here.naksha.lib.core.util.fib.FibMapEntry;
+import com.here.naksha.lib.core.util.fib.FibSet;
+import naksha.model.NakshaFeatureProxy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class CacheEntry extends FibMapEntry<String, XyzFeature> {
+public class CacheEntry extends FibMapEntry<String, NakshaFeatureProxy> {
 
   /**
    * Create a new entry for a {@link FibSet}.
