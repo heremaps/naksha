@@ -132,7 +132,7 @@ class BulkWriteExecutor(
             plan = conn.prepare(
                 sql = """ UPDATE $quotedHeadTable
                    SET $columnEqualsVariable
-                   WHERE ${PgColumn.id.quoted()}=$${PgColumn.allWritableColumns.size + 1}
+                   WHERE ${PgColumn.id.ident}=$${PgColumn.allWritableColumns.size + 1}
                    """.trimIndent(),
                 PgColumn.allWritableColumns.map { it.type.text }.toTypedArray()
             )
@@ -191,7 +191,7 @@ class BulkWriteExecutor(
                 COALESCE($3, ${PgColumn.uid}),
                 COALESCE($4, ${PgColumn.flags}),
                 $copyColumnNames FROM $headTableName
-                WHERE ${PgColumn.id.quoted()} = $5
+                WHERE ${PgColumn.id.ident} = $5
             """.trimIndent(),
             columns.map { it.type.text }.toTypedArray()
         )
@@ -199,7 +199,7 @@ class BulkWriteExecutor(
 
     private fun executeDelete(quotedTable: String, idsToDelete: Set<String>) {
         session.usePgConnection()
-            .execute("DELETE FROM $quotedTable WHERE ${PgColumn.id.quoted()} = ANY($1)", arrayOf(idsToDelete.toTypedArray()))
+            .execute("DELETE FROM $quotedTable WHERE ${PgColumn.id.ident} = ANY($1)", arrayOf(idsToDelete.toTypedArray()))
             .close()
     }
 }

@@ -3,7 +3,6 @@
 package naksha.psql
 
 import naksha.base.JsEnum
-import naksha.model.quoteId
 import naksha.model.request.query.TupleColumn
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -77,7 +76,13 @@ class PgColumn : JsEnum() {
         }
         private set
 
-    fun quoted() = quoteId(this.name)
+    /**
+     * The SQL quoted identifier.
+     *
+     * The same result (just slower) can be archived using `PgUtil.quoteIdent(col.name)`.
+     * @return the SQL quoted identifier (with optional double quotes).
+     */
+    val ident: String = PgUtil.quoteIdent(this.name)
 
     companion object PgColumnCompanion {
         /**

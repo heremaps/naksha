@@ -50,7 +50,7 @@ class ExistingMetadataProvider(
         val quotedHeadName = quoteIdent(collectionHeadName)
         val sql = """SELECT ${PgColumn.metaSelect}
                      FROM $quotedHeadName
-                     WHERE ${PgColumn.id.quoted()} = ANY($1)
+                     WHERE ${PgColumn.id.ident} = ANY($1)
             """.trimMargin()
         val fetchedMetadata = session.usePgConnection()
             .execute(sql, arrayOf(featureIds.toTypedArray()))

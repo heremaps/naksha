@@ -75,7 +75,7 @@ class InstantWriteExecutor(
         val quotedHeadTable = PgUtil.quoteIdent(headTableName)
         return """ UPDATE $quotedHeadTable
                    SET $columnEqualsVariable
-                   WHERE ${PgColumn.id.quoted()}=$${PgColumn.allWritableColumns.size + 1}
+                   WHERE ${PgColumn.id.ident}=$${PgColumn.allWritableColumns.size + 1}
                    """.trimIndent()
     }
 
@@ -84,7 +84,7 @@ class InstantWriteExecutor(
             val quotedHeadTable = PgUtilCompanion.quoteIdent(headTable.name)
             session.usePgConnection()
                 .execute(
-                    sql = "DELETE FROM $quotedHeadTable WHERE ${PgColumn.id.quoted()}=$1",
+                    sql = "DELETE FROM $quotedHeadTable WHERE ${PgColumn.id.ident}=$1",
                     args = arrayOf(featureId)
                 ).close()
         }
@@ -135,7 +135,7 @@ class InstantWriteExecutor(
                 COALESCE($3, ${PgColumn.uid}),
                 COALESCE($4, ${PgColumn.flags}),
                 $otherColumns FROM $headTableName
-                WHERE ${PgColumn.id.quoted()} = $5
+                WHERE ${PgColumn.id.ident} = $5
             """.trimIndent(),
             args = arrayOf(
                 session.transaction().txn,
