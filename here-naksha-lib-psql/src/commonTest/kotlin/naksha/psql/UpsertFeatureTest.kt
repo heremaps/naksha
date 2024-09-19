@@ -13,61 +13,60 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) {
+class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c")) {
 
     @Test
     fun shouldPerformSimpleUpdateAndUpsert() {
         // Given: Initial state of feature
         val initialFeature = NakshaFeature().apply {
             id = "feature_1"
-            properties = NakshaProperties().apply {
-                featureType = "some_feature_type"
-            }
         }
         val writeInitialFeature = WriteRequest().add(
-            Write().createFeature(null, collection!!.id, initialFeature)
+            Write().upsertFeature(null, collection!!.id, initialFeature)
         )
 
-        // And: Updated state of feature
-        val featureToUpdate = NakshaFeature().apply {
-            id = initialFeature.id
-            properties = NakshaProperties().apply {
-                featureType = "new_feature_type"
-            }
-        }
-        val updateFeaturesReq = WriteRequest().add(
-            Write().updateFeature(null, collection.id, featureToUpdate)
+        val upsertFeaturesReq = WriteRequest().add(
+            Write().upsertFeature(null, collection.id, initialFeature)
         )
 
         // When: Writing initial version of feature
         executeWrite(writeInitialFeature)
 
-        // And: Updating feature
-        executeWrite(updateFeaturesReq)
+        executeWrite(upsertFeaturesReq)
 
         // And: Retrieving feature by id
-        val retrievedFeature = executeRead(ReadFeatures().apply {
+        val retrievedFeatures = executeRead(ReadFeatures().apply {
             collectionIds += collection.id
             featureIds += initialFeature.id
-        }).let { response ->
-            val responseFeatures = response.features
-            assertEquals(1, responseFeatures.size)
-            responseFeatures[0]!!
-        }
+            queryHistory = true
+        }).features.sortedBy { it!!.properties.xyz.version.toLong() }
 
         // Then
-        assertThatFeature(retrievedFeature)
+        assertThatFeature(retrievedFeatures[0]!!)
             .isIdenticalTo(
                 other = initialFeature,
                 ignoreProps = true // we ignore properties because we want to examine them later
             )
             .hasPropertiesThat { retrievedProperties ->
                 retrievedProperties
-                    .hasFeatureType(featureToUpdate.properties.featureType)
+                    .hasFeatureType(initialFeature.properties.featureType)
                     .hasXyzThat { retrievedXyz ->
                         retrievedXyz
-                            .hasProperty("appId", PgTest.TEST_APP_ID)
-                            .hasProperty("author", PgTest.TEST_APP_AUTHOR!!)
+                            .hasProperty("action", Action.CREATED)
+                            .hasProperty("changeCount", 1)
+                    }
+            }
+
+        assertThatFeature(retrievedFeatures[1]!!)
+            .isIdenticalTo(
+                other = initialFeature,
+                ignoreProps = true // we ignore properties because we want to examine them later
+            )
+            .hasPropertiesThat { retrievedProperties ->
+                retrievedProperties
+                    .hasFeatureType(initialFeature.properties.featureType)
+                    .hasXyzThat { retrievedXyz ->
+                        retrievedXyz
                             .hasProperty("action", Action.UPDATED)
                             .hasProperty("changeCount", 2)
                     }
