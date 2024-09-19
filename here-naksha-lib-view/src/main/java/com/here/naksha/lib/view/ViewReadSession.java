@@ -23,13 +23,6 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
-import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.storage.FeatureCodec;
-import com.here.naksha.lib.core.models.storage.FeatureCodecFactory;
-import com.here.naksha.lib.core.models.storage.HeapCacheCursor;
-import com.here.naksha.lib.core.models.storage.Notification;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import com.here.naksha.lib.view.concurrent.LayerReadRequest;
 import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
@@ -42,16 +35,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import naksha.model.ErrorResult;
-import naksha.model.IReadSession;
-import naksha.model.ISession;
-import naksha.model.NakshaContext;
-import naksha.model.POp;
-import naksha.model.POpType;
-import naksha.model.PRef;
-import naksha.model.ReadFeatures;
-import naksha.model.ReadRequest;
+import naksha.model.*;
+import naksha.model.request.*;
+import naksha.model.request.query.AnyOp;
+import naksha.model.request.query.IPropertyQuery;
+import naksha.model.request.query.PQuery;
+import naksha.model.request.query.Property;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -82,30 +71,34 @@ public class ViewReadSession implements IReadSession {
 
   protected Map<ViewLayer, IReadSession> subSessions;
 
-  protected ViewReadSession(@NotNull View viewRef, @Nullable NakshaContext context, boolean useMaster) {
+  protected ViewReadSession(@NotNull View viewRef, @Nullable SessionOptions options) {
     this.viewRef = viewRef;
     this.subSessions = new LinkedHashMap<>();
     for (ViewLayer layer : viewRef.getViewCollection().getLayers()) {
-      subSessions.put(layer, layer.getStorage().newReadSession(context, useMaster));
+      subSessions.put(layer, layer.getStorage().newReadSession(options));
     }
     this.parallelQueryExecutor = new ParallelQueryExecutor(viewRef);
   }
 
   @Override
-  public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
-    return execute(
-        readRequest,
-        XyzFeatureCodecFactory.get(),
-        new MergeByStoragePriority<>(),
-        new ObligatoryLayersResolver<>(
-            Set.of(viewRef.getViewCollection().getTopPriorityLayer())));
+  public @NotNull Response execute(@NotNull Request readRequest) {
+    if (!(readRequest instanceof ReadFeatures)) {
+      throw new UnsupportedOperationException("Only ReadFeatures are supported.");
+    }
+    return execute((ReadRequest) readRequest);
   }
 
-  public <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>> Result execute(
-      @NotNull ReadRequest<?> request,
-      FeatureCodecFactory<FEATURE, CODEC> codecFactory,
-      @NotNull MergeOperation<FEATURE, CODEC> mergeOperation,
-      @NotNull MissingIdResolver<FEATURE, CODEC> missingIdResolver) {
+  public @NotNull Response execute(@NotNull ReadRequest readRequest) {
+    return execute(
+        readRequest,
+        new MergeByStoragePriority(),
+        new ObligatoryLayersResolver(Set.of(viewRef.getViewCollection().getTopPriorityLayer())));
+  }
+
+  public Response execute(
+      @NotNull ReadRequest request,
+      @NotNull MergeOperation mergeOperation,
+      @NotNull MissingIdResolver missingIdResolver) {
 
     if (!(request instanceof ReadFeatures)) {
       throw new UnsupportedOperationException("Only ReadFeatures are supported.");
@@ -123,8 +116,7 @@ public class ViewReadSession implements IReadSession {
     List<LayerReadRequest> layerReadRequests = subSessions.entrySet().stream()
         .map(entry -> new LayerReadRequest((ReadFeatures) request, entry.getKey(), entry.getValue()))
         .collect(toList());
-    Map<String, List<ViewLayerRow<FEATURE, CODEC>>> multiLayerRows =
-        parallelQueryExecutor.queryInParallel(layerReadRequests, codecFactory);
+    Map<String, List<ViewLayerFeature>> multiLayerRows = parallelQueryExecutor.queryInParallel(layerReadRequests);
 
     /*
     If one of the features is missing on one or few layers, we use getMissingFeatures and missingIdResolver to try to fetch it again by id.
@@ -139,9 +131,9 @@ public class ViewReadSession implements IReadSession {
     ]
     or it might be empty if feature is not there
      */
-    Map<String, List<ViewLayerRow<FEATURE, CODEC>>> fetchedById = isRequestOnlyById(request)
+    Map<String, List<ViewLayerFeature>> fetchedById = isRequestOnlyById(request)
         ? Collections.emptyMap()
-        : getMissingFeatures(multiLayerRows, missingIdResolver, codecFactory);
+        : getMissingFeatures(multiLayerRows, missingIdResolver);
 
     /*
     putting all together:
@@ -157,21 +149,16 @@ public class ViewReadSession implements IReadSession {
     Merging: [ <featureId_1, [Layer0_Feature1, Layer1_Feature1, Layer2_Feature1]> ]
     into final result:  [ Feature1 ]
      */
-    List<CODEC> mergedRows =
+    List<ResultTuple> mergedRows =
         multiLayerRows.values().stream().map(mergeOperation::apply).collect(toList());
 
-    HeapCacheCursor<FEATURE, CODEC> heapCacheCursor = new HeapCacheCursor<>(codecFactory, mergedRows, null);
-
-    return new ViewSuccessResult(heapCacheCursor, null);
+    return new ViewSuccessResult(mergedRows, null);
   }
 
-  private <FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
-      Map<String, List<ViewLayerRow<FEATURE, CODEC>>> getMissingFeatures(
-          @NotNull Map<String, List<ViewLayerRow<FEATURE, CODEC>>> multiLayerRows,
-          @NotNull MissingIdResolver<FEATURE, CODEC> missingIdResolver,
-          @NotNull FeatureCodecFactory<FEATURE, CODEC> codecFactory) {
+  private Map<String, List<ViewLayerFeature>> getMissingFeatures(
+      @NotNull Map<String, List<ViewLayerFeature>> multiLayerRows, @NotNull MissingIdResolver missingIdResolver) {
 
-    Map<String, List<ViewLayerRow<FEATURE, CODEC>>> result = new HashMap<>();
+    Map<String, List<ViewLayerFeature>> result = new HashMap<>();
     if (!missingIdResolver.skip()) {
       // Prepare map of <Layer_x, [FeatureId_x, ..., FeatureId_z]> features and layers you want to search by id.
       // to query only once each layer
@@ -189,66 +176,9 @@ public class ViewReadSession implements IReadSession {
               subSessions.get(entry.getKey())))
           .collect(toList());
 
-      result = parallelQueryExecutor.queryInParallel(missingFeaturesRequests, codecFactory);
+      result = parallelQueryExecutor.queryInParallel(missingFeaturesRequests);
     }
     return result;
-  }
-
-  @Override
-  public boolean isMasterConnect() {
-    return false;
-  }
-
-  @Override
-  public @NotNull NakshaContext getNakshaContext() {
-    return subSessions.values().stream()
-        .findAny()
-        .map(IReadSession::getNakshaContext)
-        .orElseThrow();
-  }
-
-  @Override
-  public int getFetchSize() {
-    return subSessions.values().stream()
-        .findAny()
-        .map(IReadSession::getFetchSize)
-        .orElseThrow();
-  }
-
-  @Override
-  public void setFetchSize(int size) {
-    subSessions.values().forEach(session -> session.setFetchSize(size));
-  }
-
-  @Override
-  public long getStatementTimeout(@NotNull TimeUnit timeUnit) {
-    return subSessions.values().stream()
-        .findAny()
-        .map(session -> session.getStatementTimeout(timeUnit))
-        .orElseThrow();
-  }
-
-  @Override
-  public void setStatementTimeout(long timeout, @NotNull TimeUnit timeUnit) {
-    subSessions.values().forEach(session -> session.setStatementTimeout(timeout, timeUnit));
-  }
-
-  @Override
-  public long getLockTimeout(@NotNull TimeUnit timeUnit) {
-    return subSessions.values().stream()
-        .findAny()
-        .map(session -> session.getLockTimeout(timeUnit))
-        .orElseThrow();
-  }
-
-  @Override
-  public void setLockTimeout(long timeout, @NotNull TimeUnit timeUnit) {
-    subSessions.values().forEach(session -> session.setLockTimeout(timeout, timeUnit));
-  }
-
-  @Override
-  public @NotNull Result process(@NotNull Notification<?> notification) {
-    return new ErrorResult(XyzError.NOT_IMPLEMENTED, "process");
   }
 
   @Override
@@ -256,24 +186,92 @@ public class ViewReadSession implements IReadSession {
     subSessions.values().forEach(ISession::close);
   }
 
-  private boolean isRequestOnlyById(ReadRequest<?> request) {
+  private boolean isRequestOnlyById(ReadRequest request) {
     if (request instanceof ReadFeatures) {
-      ReadFeatures readFeatures = (ReadFeatures) request;
-      POp propertyOp = readFeatures.getPropertyOp();
-      return readFeatures.getSpatialOp() == null && isPropertyOpIdOnly(propertyOp);
-    } else {
-      return false;
+      final ReadFeatures readFeatures = (ReadFeatures) request;
+      final IPropertyQuery propertyQuery = readFeatures.getQuery().getProperties();
+      if (!readFeatures.getFeatureIds().isEmpty()
+          && readFeatures.getQuery().isEmpty()) {
+        return true;
+      }
+      if (propertyQuery instanceof PQuery) {
+        final PQuery query = ((PQuery) propertyQuery);
+        return query.getProperty().getPath().contains(Property.ID)
+            && query.getOp().equals(AnyOp.IS_ANY_OF);
+      }
     }
+    return false;
   }
 
-  private boolean isPropertyOpIdOnly(POp pOp) {
-    if (pOp == null) {
-      return false;
-    }
-    if (pOp.children() == null) {
-      return pOp.op() == POpType.EQ && PRef.id().equals(pOp.getPropertyRef());
-    } else {
-      return pOp.children().stream().allMatch(this::isPropertyOpIdOnly);
-    }
+  @Override
+  public int getSocketTimeout() {
+    return 0;
   }
+
+  @Override
+  public void setSocketTimeout(int i) {}
+
+  @Override
+  public int getStmtTimeout() {
+    return 0;
+  }
+
+  @Override
+  public void setStmtTimeout(int i) {}
+
+  @Override
+  public int getLockTimeout() {
+    return 0;
+  }
+
+  @Override
+  public void setLockTimeout(int i) {}
+
+  @Override
+  public boolean isClosed() {
+    return false;
+  }
+
+  @NotNull
+  @Override
+  public String getMap() {
+    return "";
+  }
+
+  @Override
+  public void setMap(@NotNull String s) {}
+
+  @Override
+  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
+    return false;
+  }
+
+  @NotNull
+  @Override
+  public Response executeParallel(@NotNull Request request) {
+    return execute(request);
+  }
+
+  @NotNull
+  @Override
+  public List<Tuple> getLatestTuples(
+      @NotNull String mapId,
+      @NotNull String collectionId,
+      @NotNull String[] featureIds,
+      @NotNull FetchMode mode) {
+    return List.of();
+  }
+
+  @NotNull
+  @Override
+  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, @NotNull FetchMode mode) {
+    return List.of();
+  }
+
+  @Override
+  public void fetchTuple(@NotNull ResultTuple resultTuple, @NotNull FetchMode mode) {}
+
+  @Override
+  public void fetchTuples(
+      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, @NotNull FetchMode mode) {}
 }

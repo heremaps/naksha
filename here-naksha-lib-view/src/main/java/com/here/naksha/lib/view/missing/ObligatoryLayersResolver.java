@@ -18,10 +18,9 @@
  */
 package com.here.naksha.lib.view.missing;
 
-import com.here.naksha.lib.core.models.storage.FeatureCodec;
 import com.here.naksha.lib.view.MissingIdResolver;
 import com.here.naksha.lib.view.ViewLayer;
-import com.here.naksha.lib.view.ViewLayerRow;
+import com.here.naksha.lib.view.ViewLayerFeature;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -29,8 +28,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ObligatoryLayersResolver<FEATURE, CODEC extends FeatureCodec<FEATURE, CODEC>>
-    implements MissingIdResolver<FEATURE, CODEC> {
+public class ObligatoryLayersResolver implements MissingIdResolver {
 
   private final Set<ViewLayer> obligatoryLayers;
 
@@ -44,19 +42,18 @@ public class ObligatoryLayersResolver<FEATURE, CODEC extends FeatureCodec<FEATUR
   }
 
   @Override
-  public @Nullable List<Pair<ViewLayer, String>> layersToSearch(
-      @NotNull List<ViewLayerRow<FEATURE, CODEC>> multiFeature) {
+  public @Nullable List<Pair<ViewLayer, String>> layersToSearch(@NotNull List<ViewLayerFeature> multiFeature) {
 
     if (multiFeature.isEmpty()) {
       return null;
     }
 
     List<ViewLayer> layersHavingFeature =
-        multiFeature.stream().map(ViewLayerRow::getViewLayerRef).collect(Collectors.toList());
+        multiFeature.stream().map(ViewLayerFeature::getViewLayerRef).collect(Collectors.toList());
 
     List<Pair<ViewLayer, String>> missingObligatoryLayers = obligatoryLayers.stream()
         .filter(obligatoryLayer -> !layersHavingFeature.contains(obligatoryLayer))
-        .map(layer -> Pair.of(layer, multiFeature.get(0).getRow().getId()))
+        .map(layer -> Pair.of(layer, multiFeature.get(0).getTuple().featureId))
         .collect(Collectors.toList());
 
     return missingObligatoryLayers;

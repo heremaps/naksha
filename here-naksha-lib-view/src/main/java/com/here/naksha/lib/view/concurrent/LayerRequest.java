@@ -20,7 +20,7 @@ package com.here.naksha.lib.view.concurrent;
 
 import com.here.naksha.lib.view.ViewLayer;
 import naksha.model.IReadSession;
-import naksha.model.ReadFeatures;
+import naksha.model.request.ReadFeatures;
 
 public class LayerRequest {
 
