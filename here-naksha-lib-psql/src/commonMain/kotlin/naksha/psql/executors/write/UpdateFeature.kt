@@ -5,9 +5,6 @@ import naksha.model.Metadata.Metadata_C.geoGrid
 import naksha.model.Metadata.Metadata_C.hash
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
-import naksha.psql.PgColumn
-import naksha.psql.PgTable
-import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.executors.PgWriter
 import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
@@ -17,7 +14,7 @@ import kotlin.jvm.JvmField
 
 open class UpdateFeature(
     @JvmField val writer: PgWriter,
-    private val exisingMetadataProvider: ExisingMetadataProvider,
+    private val existingMetadataProvider: ExistingMetadataProvider,
     protected val writeExecutor: WriteExecutor
 ) {
     val session = writer.session
@@ -33,7 +30,7 @@ open class UpdateFeature(
         require(feature.id == write.featureId) {
             "Feature id in payload (${feature.id}) and write request (${write.featureId}) are different"
         }
-        val previousMetadata = exisingMetadataProvider.get(collection.head.name, write.id!!)
+        val previousMetadata = existingMetadataProvider.get(collection.head.name, write.id!!)
         require(previousMetadata != null) {
             "Trying update feature that not exists in head: ${write.id}"
         }

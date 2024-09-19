@@ -75,8 +75,19 @@ class InstantWriteExecutor(
         val quotedHeadTable = PgUtil.quoteIdent(headTableName)
         return """ UPDATE $quotedHeadTable
                    SET $columnEqualsVariable
-                   WHERE ${PgColumn.id.quoted()}=$${PgColumn.allWritableColumns.size+1}
+                   WHERE ${PgColumn.id.quoted()}=$${PgColumn.allWritableColumns.size + 1}
                    """.trimIndent()
+    }
+
+    override fun removeFeatureFromHead(collection: PgCollection, featureId: String) {
+        collection.head.let { headTable ->
+            val quotedHeadTable = PgUtilCompanion.quoteIdent(headTable.name)
+            session.usePgConnection()
+                .execute(
+                    sql = "DELETE FROM $quotedHeadTable WHERE ${PgColumn.id.quoted()}=$1",
+                    args = arrayOf(featureId)
+                ).close()
+        }
     }
 
     override fun finish() {

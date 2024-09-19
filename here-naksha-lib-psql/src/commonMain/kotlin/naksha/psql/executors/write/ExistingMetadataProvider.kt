@@ -8,14 +8,16 @@ import naksha.model.Version
 import naksha.model.request.WriteOp.WriteOp_C.DELETE
 import naksha.model.request.WriteOp.WriteOp_C.UPDATE
 import naksha.model.request.WriteOp.WriteOp_C.UPSERT
-import naksha.psql.PgCollection
 import naksha.psql.PgColumn
 import naksha.psql.PgSession
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.PgCursorUtil.collectAndClose
 
-class ExisingMetadataProvider(
+/**
+ * TODO FIXME This class is a local (request) cache, and it should be garbage-collected later. It might make sense to replace it with global feature cache (tuple cache) if it should keep all features' versions.
+ */
+class ExistingMetadataProvider(
     private val session: PgSession,
     writes: ListProxy<WriteExt>
 ) {

@@ -182,7 +182,7 @@ class PgWriter(
         val tuples = this.tuples
         val tupleNumbers = this.tupleNumbers
 
-        val previousMetadataProvider = ExisingMetadataProvider(session, orderedWrites)
+        val previousMetadataProvider = ExistingMetadataProvider(session, orderedWrites)
 
         // First, process collections, no performance need here for now.
         for (write in orderedWrites) {

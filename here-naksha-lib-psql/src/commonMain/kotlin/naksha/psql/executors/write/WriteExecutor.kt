@@ -3,7 +3,6 @@ package naksha.psql.executors.write
 import naksha.model.*
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
-import naksha.psql.PgTable
 
 interface WriteExecutor {
 
@@ -20,6 +19,8 @@ interface WriteExecutor {
     fun copyHeadToHst(collection: PgCollection, tupleNumber: TupleNumber? = null, flags: Flags? = null, featureId: String)
 
     fun copyHeadToDel(collection: PgCollection, tupleNumber: TupleNumber? = null, flags: Flags? = null, featureId: String)
+
+    fun removeFeatureFromHead(collection: PgCollection, featureId: String)
 
     fun updateFeatureInHead(
         collection: PgCollection,

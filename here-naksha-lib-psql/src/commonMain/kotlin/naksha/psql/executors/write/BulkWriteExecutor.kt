@@ -13,23 +13,30 @@ class BulkWriteExecutor(
     val session: PgSession,
 ) : WriteExecutor {
 
-    private var deleteFromDel: MutableMap<PgCollection, PgPlan> = mutableMapOf()
+    private var deleteFromDel: MutableMap<PgCollection, MutableSet<String>> = mutableMapOf()
+    private var deleteFromHead: MutableMap<PgCollection, MutableSet<String>> = mutableMapOf()
     private var insertToHead: MutableMap<PgCollection, PgPlan> = mutableMapOf()
     private var updateHead: MutableMap<PgCollection, PgPlan> = mutableMapOf()
     private var copyHeadToHst: MutableMap<PgCollection, PgPlan> = mutableMapOf()
     private var copyHeadToDel: MutableMap<PgCollection, PgPlan> = mutableMapOf()
 
     override fun removeFeatureFromDel(collection: PgCollection, featureId: String) {
-        if (!deleteFromDel.containsKey(collection)) {
-            collection.deleted?.let { delTable ->
-                val quotedDelTable = quoteIdent(delTable.name)
-                val quotedIdColumn = quoteIdent(PgColumn.id.name)
-                val plan = session.usePgConnection()
-                    .prepare("DELETE FROM $quotedDelTable WHERE $quotedIdColumn=$1", arrayOf(PgColumn.id.type.text))
-                deleteFromDel[collection] = plan
-            }
+        collection.deleted ?: return
+        var idsToDel = deleteFromDel[collection]
+        if (idsToDel == null) {
+            idsToDel = mutableSetOf()
+            deleteFromDel[collection] = idsToDel
         }
-        deleteFromDel[collection]!!.addBatch(arrayOf(featureId))
+        idsToDel.add(featureId)
+    }
+
+    override fun removeFeatureFromHead(collection: PgCollection, featureId: String) {
+        var idsToDel = deleteFromHead[collection]
+        if (idsToDel == null) {
+            idsToDel = mutableSetOf()
+            deleteFromHead[collection] = idsToDel
+        }
+        idsToDel.add(featureId)
     }
 
     override fun executeInsert(
@@ -37,9 +44,10 @@ class BulkWriteExecutor(
         tuple: Tuple,
         feature: NakshaFeature
     ) {
-        if (!insertToHead.containsKey(collection)) {
+        var plan = insertToHead[collection]
+        if (plan == null) {
             val quotedCollectionId = quoteIdent(collection.id)
-            val plan = session.usePgConnection().prepare(
+            plan = session.usePgConnection().prepare(
                 """INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})
                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
                       """.trimIndent(),
@@ -69,10 +77,14 @@ class BulkWriteExecutor(
         flags: Flags?,
         featureId: String
     ) {
-        if (!copyHeadToHst.containsKey(collection)) {
-            copyHeadToHst[collection] = createCopyPlan(collection.head.quotedName, collection.history!!.quotedName)
+        collection.history ?: return
+
+        var plan = copyHeadToHst[collection]
+        if (plan == null) {
+            plan = createCopyPlan(collection.head.quotedName, collection.history!!.quotedName)
+            copyHeadToHst[collection] = plan
         }
-        copyHeadToHst[collection]!!.addBatch(
+        plan.addBatch(
             args = arrayOf(
                 session.transaction().txn,
                 tupleNumber?.version?.txn,
@@ -84,10 +96,14 @@ class BulkWriteExecutor(
     }
 
     override fun copyHeadToDel(collection: PgCollection, tupleNumber: TupleNumber?, flags: Flags?, featureId: String) {
-        if (!copyHeadToDel.containsKey(collection)) {
-            copyHeadToDel[collection] = createCopyPlan(collection.head.quotedName, collection.deleted!!.quotedName)
+        collection.deleted ?: return
+
+        var plan = copyHeadToDel[collection]
+        if (plan == null) {
+            plan = createCopyPlan(collection.head.quotedName, collection.deleted!!.quotedName)
+            copyHeadToDel[collection] = plan
         }
-        copyHeadToDel[collection]!!.addBatch(
+        plan.addBatch(
             args = arrayOf(
                 session.transaction().txn,
                 tupleNumber?.version?.txn,
@@ -105,14 +121,15 @@ class BulkWriteExecutor(
         newVersion: Version,
         previousMetadata: Metadata
     ) {
-        if (!updateHead.containsKey(collection)) {
+        var plan = updateHead[collection]
+        if (plan == null) {
             val columnEqualsVariable = PgColumn.allWritableColumns.mapIndexed { index, pgColumn ->
                 "${pgColumn.name}=\$${index + 1}"
             }.joinToString(separator = ",")
             val quotedHeadTable = collection.head.quotedName
 
             val conn = session.usePgConnection()
-            val plan = conn.prepare(
+            plan = conn.prepare(
                 sql = """ UPDATE $quotedHeadTable
                    SET $columnEqualsVariable
                    WHERE ${PgColumn.id.quoted()}=$${PgColumn.allWritableColumns.size + 1}
@@ -121,7 +138,7 @@ class BulkWriteExecutor(
             )
             updateHead[collection] = plan
         }
-        updateHead[collection]!!.addBatch(
+        plan.addBatch(
             args = allColumnValues(
                 tuple = tuple,
                 feature = feature,
@@ -135,16 +152,19 @@ class BulkWriteExecutor(
 
     override fun finish() {
         deleteFromDel.forEach {
+            executeDelete(it.key.deleted!!.quotedName, it.value)
+        }
+        copyHeadToDel.forEach {
             it.value.use { stmt -> stmt.executeBatch() }
         }
         copyHeadToHst.forEach {
             it.value.use { stmt -> stmt.executeBatch() }
         }
-        copyHeadToDel.forEach {
-            it.value.use { stmt -> stmt.executeBatch() }
-        }
         updateHead.forEach {
             it.value.use { stmt -> stmt.executeBatch() }
+        }
+        deleteFromHead.forEach {
+            executeDelete(it.key.head.quotedName, it.value)
         }
         insertToHead.forEach {
             it.value.use { stmt -> stmt.executeBatch() }
@@ -175,5 +195,11 @@ class BulkWriteExecutor(
             """.trimIndent(),
             columns.map { it.type.text }.toTypedArray()
         )
+    }
+
+    private fun executeDelete(quotedTable: String, idsToDelete: Set<String>) {
+        session.usePgConnection()
+            .execute("DELETE FROM $quotedTable WHERE ${PgColumn.id.quoted()} = ANY($1)", arrayOf(idsToDelete.toTypedArray()))
+            .close()
     }
 }
