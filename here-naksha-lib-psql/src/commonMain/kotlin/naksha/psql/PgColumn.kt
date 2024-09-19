@@ -76,13 +76,23 @@ class PgColumn : JsEnum() {
         }
         private set
 
+    private var _ident: String? = null
+
     /**
      * The SQL quoted identifier.
      *
      * The same result (just slower) can be archived using `PgUtil.quoteIdent(col.name)`.
      * @return the SQL quoted identifier (with optional double quotes).
      */
-    val ident: String = PgUtil.quoteIdent(this.name)
+    val ident: String
+        get() {
+            var ident = this._ident
+            if (ident == null) {
+                ident = PgUtil.quoteIdent(this.name)
+                this._ident = ident
+            }
+            return ident
+        }
 
     companion object PgColumnCompanion {
         /**

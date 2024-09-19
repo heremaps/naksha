@@ -198,8 +198,7 @@ class BulkWriteExecutor(
     }
 
     private fun executeDelete(quotedTable: String, idsToDelete: Set<String>) {
-        session.usePgConnection()
-            .execute("DELETE FROM $quotedTable WHERE ${PgColumn.id.ident} = ANY($1)", arrayOf(idsToDelete.toTypedArray()))
-            .close()
+        val SQL = "DELETE FROM $quotedTable WHERE ${PgColumn.id.ident} = ANY($1)"
+        session.usePgConnection().execute(SQL, arrayOf(idsToDelete.toTypedArray())).close()
     }
 }
