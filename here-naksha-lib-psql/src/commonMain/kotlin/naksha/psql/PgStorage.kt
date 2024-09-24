@@ -609,7 +609,7 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
             for (entry in toFetch) {
                 val colId = entry.key
                 val list = entry.value ?: continue
-                val tupleNumbers = Array<Any?>(list.size) { list[it].tupleNumber.toByteArray() }
+                val tupleNumbers = Array(list.size) { list[it].tupleNumber.toByteArray() }
                 val SQL = if (mode == FETCH_META) {
                     """
 SELECT gzip(string_agg(${PgColumn.metaSelectToBinary}::bytea,'\\x00'::bytea)) AS binary_meta
@@ -619,7 +619,7 @@ WHERE tuple_number = ANY($1)
                 } else {
                     "SELECT $ALL_COLUMNS FROM ${quoteIdent(colId)} WHERE tuple_number = ANY($1)"
                 }
-                val cursor = conn.execute(SQL, tupleNumbers)
+                val cursor = conn.execute(SQL, arrayOf(tupleNumbers))
                 cursor.use {
                     if (mode == FETCH_META) {
                         cursor.fetch()

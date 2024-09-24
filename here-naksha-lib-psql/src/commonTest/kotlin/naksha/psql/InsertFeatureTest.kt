@@ -2,6 +2,7 @@ package naksha.psql
 
 import naksha.geo.SpBoundingBox
 import naksha.model.Action
+import naksha.model.NakshaCache
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
@@ -57,6 +58,8 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
                         }
                 }
         }
+
+        NakshaCache.tupleCache(env.storage.id).clear()
 
         // Read only one feature by ID.
         val expectFeature = featuresToCreate[0]
