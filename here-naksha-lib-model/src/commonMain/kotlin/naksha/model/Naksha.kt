@@ -8,6 +8,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
@@ -27,9 +28,16 @@ class Naksha private constructor() {
         const val VIRT_TRANSACTIONS = "naksha~transactions"
 
         /**
+         * The quoted identifier of the virtual collection in which transactions are stored.
+         */
+        @JvmField
+        @JsStatic
+        val VIRT_TRANSACTIONS_QUOTED = quoteIdent(VIRT_TRANSACTIONS)
+
+        /**
          * The collection-number of the virtual collection in which transactions are stored.
          */
-        @JvmStatic
+        @JvmField
         @JsStatic
         val VIRT_TRANSACTIONS_NUMBER = Int64(0)
 
@@ -39,8 +47,10 @@ class Naksha private constructor() {
         const val VIRT_COLLECTIONS = "naksha~collections"
 
         /**
-         * The identifier of the virtual collection quoted to be used in queries.
+         * The quoted identifier of the virtual collections collection to be used in queries.
          */
+        @JvmField
+        @JsStatic
         val VIRT_COLLECTIONS_QUOTED = quoteIdent(VIRT_COLLECTIONS)
 
         /**
@@ -56,10 +66,16 @@ class Naksha private constructor() {
         /**
          * The collection-number of the virtual collection in which the dictionaries are stored.
          */
-        @JvmStatic
+        @JvmField
         @JsStatic
         val VIRT_DICTIONARIES_NUMBER = Int64(2)
 
+        /**
+         * The quoted identifier of the virtual collection in which the dictionaries are stored.
+         */
+        @JvmField
+        @JsStatic
+        val VIRT_DICTIONARIES_QUOTED = quoteIdent(VIRT_DICTIONARIES)
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:
