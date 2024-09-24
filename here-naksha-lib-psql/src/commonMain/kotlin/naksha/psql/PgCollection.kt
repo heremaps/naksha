@@ -1,19 +1,14 @@
 package naksha.psql
 
-import naksha.base.AtomicRef
-import naksha.base.Epoch
-import naksha.base.Int64
-import naksha.base.Platform
+import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.currentMillis
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil.PlatformUtilCompanion.HOUR
 import naksha.base.PlatformUtil.PlatformUtilCompanion.SECOND
-import naksha.model.ICollection
+import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaException
-import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_NUMBER
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
@@ -21,8 +16,8 @@ import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES_NUMBER
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS_NUMBER
+import naksha.model.NakshaCache.PgCache_C.tupleCache
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
-import naksha.model.TupleNumber
 import naksha.model.objects.NakshaCollection
 import naksha.psql.PgStorageClass.PgStorageClass_C.Consistent
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
@@ -53,6 +48,12 @@ open class PgCollection internal constructor(
      */
     override val id: String
 ) : ICollection {
+
+    /**
+     * A weak reference to this collection, the same being used internally.
+     */
+    @Suppress("LeakingThis")
+    val weakRef = WeakRef(this)
 
     internal var _number: Int64? = null
 
@@ -251,6 +252,7 @@ open class PgCollection internal constructor(
                     meta = null
                 }
                 update(txn, null, null, meta)
+                refreshNakshaCollection(conn)
                 return this
             }
             val head = PgHead(this, storageClass, partitions)
@@ -290,6 +292,7 @@ open class PgCollection internal constructor(
                 }
             }
             update(head, deleted, history, meta)
+            refreshNakshaCollection(conn)
         } finally {
             if (connection == null) {
                 conn.commit()
@@ -378,6 +381,8 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
         if (meta != null) SQL += "DROP TABLE IF EXISTS ${meta.quotedName} CASCADE;"
         logger.info("Drop collection {}: {}", id, SQL)
         conn.execute(SQL).close()
+        map.collections.remove(id, weakRef)
+        map.collectionIdByNumber.remove(number, id)
     }
 
     /**
@@ -558,13 +563,16 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
                 _nakshaCollection.set(NakshaCollection(VIRT_DICTIONARIES, 0))
             }
             else -> {
-                conn.execute("select feature, flags, tuple_number from $VIRT_COLLECTIONS_QUOTED where id=$1", arrayOf(id)).use {
-                    if (it.next()) {
-                        _number = TupleNumber.fromByteArray( it["tuple_number"]).collectionNumber()
-                        // TODO do we need a full object with meta here?
-                        _nakshaCollection.set(
-                            PgUtil.decodeFeature(it["feature"], it["flags"])?.proxy(NakshaCollection::class)
-                        )
+                conn.execute("SELECT ${PgStorage.ALL_COLUMNS} FROM $VIRT_COLLECTIONS_QUOTED WHERE id=$1", arrayOf(id)).use { cursor ->
+                    if (cursor.next()) {
+                        val storage = map.storage
+                        val readTuple = PgStorage.loadTupleFromAllColumns(storage, cursor)
+                        val tuple = tupleCache(storage.id).store(readTuple)
+                        val feature = storage.tupleToFeature(tuple).proxy(NakshaCollection::class)
+                        _nakshaCollection.set(feature)
+                        val collectionNumber = tuple.tupleNumber.storeNumber.collectionNumber()
+                        _number = collectionNumber
+                        map.collectionIdByNumber[collectionNumber] = id
                     }
                 }
             }

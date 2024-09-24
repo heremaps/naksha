@@ -113,7 +113,7 @@ open class PgMap(
     /**
      * A concurrent hash map with all managed collections of this schema.
      */
-    internal val collections: AtomicMap<String, WeakRef<out PgCollection>> = Platform.newAtomicMap()
+    internal val collections: AtomicMap<String, WeakRef<PgCollection>> = Platform.newAtomicMap()
     internal val collectionIdByNumber: AtomicMap<Int64, String> = Platform.newAtomicMap()
 
     /**
@@ -165,12 +165,11 @@ open class PgMap(
             if (existingRef != null) collection = existingRef.deref()
             if (collection != null) return collection as T
             collection = constructor.call()
-            val collectionRef = Platform.newWeakRef(collection)
             if (existingRef != null) {
-                if (collections.replace(id, existingRef, collectionRef)) return collection
+                if (collections.replace(id, existingRef, collection.weakRef)) return collection
                 // Conflict, another thread concurrently modified the cache.
             } else {
-                collections.putIfAbsent(id, collectionRef) ?: return collection
+                collections.putIfAbsent(id, collection.weakRef) ?: return collection
                 // Conflict, there is an existing reference, another thread concurrently access the cache.
             }
         }
