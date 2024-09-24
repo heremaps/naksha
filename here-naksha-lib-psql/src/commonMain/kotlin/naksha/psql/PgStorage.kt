@@ -22,6 +22,7 @@ import naksha.psql.PgColumn.PgColumnCompanion.flags
 import naksha.psql.PgColumn.PgColumnCompanion.geo
 import naksha.psql.PgColumn.PgColumnCompanion.geo_grid
 import naksha.psql.PgColumn.PgColumnCompanion.hash
+import naksha.psql.PgColumn.PgColumnCompanion.id
 import naksha.psql.PgColumn.PgColumnCompanion.origin
 import naksha.psql.PgColumn.PgColumnCompanion.ptxn
 import naksha.psql.PgColumn.PgColumnCompanion.puid
@@ -387,7 +388,7 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
             tuple.geo?.let { geoBytes ->
                 feature.geometry = PgUtil.decodeGeometry(geoBytes, tuple.meta.flags)
             }
-            return feature
+            feature
         } else {
             TODO("We will always have at least the id, which is formally enough to generate an empty feature!")
         }
@@ -611,15 +612,12 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
                 val tupleNumbers = Array<Any?>(list.size) { list[it].tupleNumber.toByteArray() }
                 val SQL = if (mode == FETCH_META) {
                     """
-SELECT gzip(string_agg(${PgColumn.metaSelectToBinary}::bytea,'\\x00'::bytea)) as binary_meta
+SELECT gzip(string_agg(${PgColumn.metaSelectToBinary}::bytea,'\\x00'::bytea)) AS binary_meta
 FROM ${quoteIdent(colId)}
 WHERE tuple_number = ANY($1)
 """
                 } else {
-                    """
-SELECT ${PgColumn.allColumns.joinToString(",")}
-FROM ${quoteIdent(colId)}
-WHERE tuple_number = ANY($1)"""
+                    "SELECT $ALL_COLUMNS FROM ${quoteIdent(colId)} WHERE tuple_number = ANY($1)"
                 }
                 val cursor = conn.execute(SQL, tupleNumbers)
                 cursor.use {
@@ -630,47 +628,7 @@ WHERE tuple_number = ANY($1)"""
                         TODO("Implement metadata-only")
                     } else {
                         while (cursor.next()) {
-                            val _txn: Int64 = cursor[txn]
-                            val tupleNumber = TupleNumber(
-                                cursor[store_number],
-                                Version(_txn),
-                                cursor[uid]
-                            )
-                            val updatedAt: Int64 = cursor[updated_at]
-                            val createdAt = cursor.column(created_at) as Int64?
-                            val authorTs = cursor.column(author_ts) as Int64?
-                            val _txn_next = cursor.column(txn_next) as Int64?
-                            val _ptxn = cursor.column(ptxn) as Int64?
-                            val metadata = Metadata(
-                                storeNumber = tupleNumber.storeNumber,
-                                updatedAt = updatedAt,
-                                createdAt = createdAt ?: updatedAt,
-                                authorTs = authorTs ?: updatedAt,
-                                nextVersion = if (_txn_next != null) Version(_txn_next) else null,
-                                version = tupleNumber.version,
-                                prevVersion = if (_ptxn != null) Version(_ptxn) else null,
-                                uid = tupleNumber.uid,
-                                puid = cursor.column(puid) as Int?,
-                                hash = cursor[hash],
-                                changeCount = cursor[change_count],
-                                geoGrid = cursor[geo_grid],
-                                flags = cursor[flags],
-                                id = cursor[id],
-                                appId = cursor[app_id],
-                                author = cursor.column(author) as String?,
-                                type = cursor.column(type) as String?,
-                                origin = cursor.column(origin) as String?
-                            )
-                            val tuple = Tuple(
-                                storage = this,
-                                tupleNumber = tupleNumber,
-                                meta = metadata,
-                                feature = cursor[feature],
-                                geo = cursor[geo],
-                                referencePoint = cursor[ref_point],
-                                tags = cursor[tags],
-                                attachment = cursor[attachment]
-                            )
+                            val tuple = loadTupleFromAllColumns(this, cursor)
                             tupleCache.store(tuple)
                             list[cursor.rowNumber() - 1].tuple = tuple
                         }
@@ -679,6 +637,64 @@ WHERE tuple_number = ANY($1)"""
             }
         }
         // TODO: Fetch from history, when tuples are not found in HEAD!
+    }
+
+    companion object PgStorage_C {
+
+        /**
+         * All columns to be added into a SELECT query, already quoted, if needed.
+         */
+        internal val ALL_COLUMNS = PgColumn.allColumns.joinToString(",")
+
+        /**
+         * Helper method to read a [Tuple] from a [PgCursor] that is located above a row where [ALL_COLUMNS] are selected.
+         * @param storage the storage from which to read.
+         * @param cursor the cursor to read.
+         * @return the read tuple.
+         */
+        internal fun loadTupleFromAllColumns(storage: PgStorage, cursor: PgCursor): Tuple {
+            val _txn: Int64 = cursor[txn]
+            val tupleNumber = TupleNumber(
+                cursor[store_number],
+                Version(_txn),
+                cursor[uid]
+            )
+            val updatedAt: Int64 = cursor[updated_at]
+            val createdAt = cursor.column(created_at) as Int64?
+            val authorTs = cursor.column(author_ts) as Int64?
+            val _txn_next = cursor.column(txn_next) as Int64?
+            val _ptxn = cursor.column(ptxn) as Int64?
+            val metadata = Metadata(
+                storeNumber = tupleNumber.storeNumber,
+                updatedAt = updatedAt,
+                createdAt = createdAt ?: updatedAt,
+                authorTs = authorTs ?: updatedAt,
+                nextVersion = if (_txn_next != null) Version(_txn_next) else null,
+                version = tupleNumber.version,
+                prevVersion = if (_ptxn != null) Version(_ptxn) else null,
+                uid = tupleNumber.uid,
+                puid = cursor.column(puid) as Int?,
+                hash = cursor[hash],
+                changeCount = cursor[change_count],
+                geoGrid = cursor[geo_grid],
+                flags = cursor[flags],
+                id = cursor[id],
+                appId = cursor[app_id],
+                author = cursor.column(author) as String?,
+                type = cursor.column(type) as String?,
+                origin = cursor.column(origin) as String?
+            )
+            return Tuple(
+                storage = storage,
+                tupleNumber = tupleNumber,
+                meta = metadata,
+                feature = cursor.column(feature) as ByteArray?,
+                geo = cursor.column(geo) as ByteArray?,
+                referencePoint = cursor.column(ref_point) as ByteArray?,
+                tags = cursor.column(tags) as ByteArray?,
+                attachment = cursor.column(attachment) as ByteArray?
+            )
+        }
     }
 
     override fun close() {
