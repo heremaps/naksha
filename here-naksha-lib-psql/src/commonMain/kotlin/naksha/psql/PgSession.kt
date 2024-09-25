@@ -275,7 +275,7 @@ open class PgSession(
      *
      * @return the current transaction.
      */
-    fun transaction(): Transaction {
+    override fun transaction(): Transaction {
         var tx = transaction
         if (tx == null) {
             txBeforeStart()

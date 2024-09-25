@@ -163,4 +163,9 @@ interface ISession : AutoCloseable {
      * @since 3.0.0
      */
     fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int = 0, to: Int = resultTuples.size, mode: FetchMode = FetchMode.FETCH_ALL)
+
+    /**
+     * Current transaction data.
+     */
+    fun transaction(): Transaction
 }
