@@ -22,10 +22,15 @@ class DropCollection(private val session: PgSession) {
             NakshaError.ILLEGAL_ARGUMENT,
             "DROP without collectionId (expected in write's 'featureId')"
         )
-        val pgCollection = PgCollection(map, collectionId)
+        val pgCollection = map[collectionId]
         val tupleNumber = collectionTupleNumber(pgCollection)
         val conn = session.usePgConnection()
         try {
+            /**
+             * TODO:
+             *      The code below does not cover writing deleted collection to history
+             *      This will be addressed in: CASL-537
+             */
             pgCollection.drop(conn)
             removeCollectionFromVirtualCollections(collectionId, conn)
             conn.commit()
