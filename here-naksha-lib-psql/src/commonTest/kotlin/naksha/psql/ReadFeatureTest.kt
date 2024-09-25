@@ -1,12 +1,15 @@
 package naksha.psql
 
 import naksha.geo.PointCoord
+import naksha.geo.SpBoundingBox
 import naksha.geo.SpPoint
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
+import naksha.model.request.query.SpIntersects
 import naksha.psql.assertions.AnyObjectFluidAssertions.Companion.assertThatAnyObject
 import naksha.psql.base.PgTestBase
+import naksha.psql.util.ProxyFeatureGenerator
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -48,5 +51,28 @@ class ReadFeatureTest : PgTestBase(NakshaCollection("read_feature_test_c")) {
         assertNotNull(retrievedFeature.geometry)
         assertThatAnyObject(retrievedFeature.geometry!!)
             .isIdenticalTo(feature.geometry!!)
+    }
+
+    @Test
+    fun shouldReadFeatureByBbox() {
+        // Given: features to create
+        val featureToCreate = ProxyFeatureGenerator.generateRandomFeature()
+        val writeFeaturesReq = WriteRequest().apply {
+            add(Write().createFeature(null, collection!!.id, featureToCreate))
+        }
+
+        // When: executing feature write request
+        executeWrite(writeFeaturesReq)
+
+        // And: execute read by bounding box.
+        val featuresByBBox = executeRead(ReadFeatures().apply {
+            collectionIds += collection!!.id
+            query.spatial =
+                SpIntersects(SpBoundingBox(featureToCreate.geometry).addMargin(0.0000001).toPolygon())
+        })
+
+        // Then:
+        assertEquals(1, featuresByBBox.features.size)
+        assertEquals(featureToCreate.id, featuresByBBox.features[0]!!.id)
     }
 }

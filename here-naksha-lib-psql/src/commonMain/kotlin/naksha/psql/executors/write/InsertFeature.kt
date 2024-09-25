@@ -17,13 +17,12 @@ import naksha.psql.executors.write.WriteFeatureUtils.tuple
 import kotlin.jvm.JvmField
 
 class InsertFeature(
-    @JvmField val writer: PgWriter,
+    private val session: PgSession,
     private val writeExecutor: WriteExecutor
 ) {
-    val session = writer.session
 
     //TODO: consider changing type to some result
-    fun execute(collection: PgCollection, write: WriteExt): TupleNumber {
+    fun execute(collection: PgCollection, write: WriteExt): Tuple {
         val feature = write.feature?.proxy(NakshaFeature::class) ?: throw NakshaException(
             NakshaError.ILLEGAL_ARGUMENT,
             "CREATE without feature"
@@ -45,7 +44,7 @@ class InsertFeature(
 
         writeExecutor.removeFeatureFromDel(collection, feature.id)
         writeExecutor.executeInsert(collection, tuple, feature)
-        return writer.returnTuple(write, tuple)
+        return tuple
     }
 
     private fun metadata(

@@ -5,6 +5,7 @@ import naksha.model.Metadata.Metadata_C.geoGrid
 import naksha.model.Metadata.Metadata_C.hash
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
+import naksha.psql.PgSession
 import naksha.psql.executors.PgWriter
 import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
@@ -12,17 +13,16 @@ import naksha.psql.executors.write.WriteFeatureUtils.resolveFlags
 import naksha.psql.executors.write.WriteFeatureUtils.tuple
 import kotlin.jvm.JvmField
 
-open class UpdateFeature(
-    @JvmField val writer: PgWriter,
+class UpdateFeature(
+    private val session: PgSession,
     private val existingMetadataProvider: ExistingMetadataProvider,
-    protected val writeExecutor: WriteExecutor
+    private val writeExecutor: WriteExecutor
 ) {
-    val session = writer.session
 
     //TODO this implementation currently do not support atomic updates!
     // In other words, it ignores if version is set in the Write operation,
     // which requires that the current HEAD state is exactly in this version.
-    open fun execute(collection: PgCollection, write: WriteExt): TupleNumber {
+    fun execute(collection: PgCollection, write: WriteExt): Tuple {
         val feature = write.feature?.proxy(NakshaFeature::class) ?: throw NakshaException(
             NakshaError.ILLEGAL_ARGUMENT,
             "UPDATE without feature"
@@ -61,7 +61,7 @@ open class UpdateFeature(
             )
         }
         writeExecutor.updateFeatureInHead(collection, tuple, feature, newVersion, previousMetadata)
-        return writer.returnTuple(write, tuple)
+        return tuple
     }
 
 

@@ -76,7 +76,6 @@ internal object WriteFeatureUtils {
     internal fun resolveFlags(collection: PgCollection, session: PgSession): Flags =
         collection.nakshaCollection.defaultFlags ?: session.storage.defaultFlags
 
-
     internal fun tuple(
         storage: PgStorage,
         tupleNumber: TupleNumber,
