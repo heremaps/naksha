@@ -21,9 +21,9 @@ class PropertyFilterTest {
             uid = 0,
             version = version,
         )
-        IStorage
+        val storage = MockStorage("",SessionOptions(),0,)
         val tuple = Tuple(
-            mockStorage,
+            storage = storage,
             tupleNumber = tupleNumber,
             Metadata(
                 storeNumber = storeNumber,
@@ -50,7 +50,9 @@ class PropertyFilterTest {
 
         override fun initStorage(params: Map<String, *>?) {}
 
-        override fun get(mapId: String): IMap {}
+        override fun get(mapId: String): IMap {
+            throw UnsupportedOperationException()
+        }
 
         override fun contains(mapId: String): Boolean = false
 
@@ -58,11 +60,17 @@ class PropertyFilterTest {
 
         override fun tupleToFeature(tuple: Tuple): NakshaFeature = NakshaFeature()
 
-        override fun featureToTuple(feature: NakshaFeature): Tuple {}
+        override fun featureToTuple(feature: NakshaFeature): Tuple {
+            throw UnsupportedOperationException()
+        }
 
-        override fun newWriteSession(options: SessionOptions?): IWriteSession {}
+        override fun newWriteSession(options: SessionOptions?): IWriteSession {
+            throw UnsupportedOperationException()
+        }
 
-        override fun newReadSession(options: SessionOptions?): IReadSession {}
+        override fun newReadSession(options: SessionOptions?): IReadSession {
+            throw UnsupportedOperationException()
+        }
 
         override fun close() {}
 
