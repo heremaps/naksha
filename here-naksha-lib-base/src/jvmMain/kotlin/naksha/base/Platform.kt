@@ -197,7 +197,8 @@ actual class Platform {
         actual fun intern(s: String, cd: Boolean): String = s
 
         @JvmStatic
-        actual fun isAssignable(source: KClass<*>, target: KClass<*>): Boolean = source.java.isAssignableFrom(target.java)
+        actual fun isAssignable(source: KClass<*>, target: KClass<*>): Boolean =
+            source.java.isAssignableFrom(target.java)
 
         @JvmStatic
         actual fun isProxyKlass(klass: KClass<*>): Boolean = Proxy::class.isSuperclassOf(klass)
@@ -234,7 +235,7 @@ actual class Platform {
         actual fun <K : Any, V : Any> newAtomicMap(): AtomicMap<K, V> = JvmAtomicMap()
 
         @JvmStatic
-        actual fun <R: Any> newAtomicRef(startValue: R?): AtomicRef<R> = JvmAtomicRef(startValue)
+        actual fun <R : Any> newAtomicRef(startValue: R?): AtomicRef<R> = JvmAtomicRef(startValue)
 
         @JvmStatic
         actual fun newAtomicInt(startValue: Int): AtomicInt = JvmAtomicInt(startValue)
@@ -246,7 +247,8 @@ actual class Platform {
         actual fun newByteArray(size: Int): ByteArray = ByteArray(size)
 
         @JvmStatic
-        actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PlatformDataView = JvmDataView(byteArray, offset, size)
+        actual fun newDataView(byteArray: ByteArray, offset: Int, size: Int): PlatformDataView =
+            JvmDataView(byteArray, offset, size)
 
         @JvmStatic
         actual fun <T : Any> newWeakRef(referent: T): WeakRef<T> = JvmWeakRef(referent)
@@ -267,7 +269,8 @@ actual class Platform {
          * @return The [JvmObject] or _null_.
          */
         @JvmStatic
-        fun toJvmObject(o: Any?): JvmObject? = if (o is Proxy) o.platformObject() as? JvmObject else if (o is JvmObject) o else null
+        fun toJvmObject(o: Any?): JvmObject? =
+            if (o is Proxy) o.platformObject() as? JvmObject else if (o is JvmObject) o else null
 
         @JvmStatic
         actual fun toInt(value: Any): Int = when (value) {
@@ -301,7 +304,8 @@ actual class Platform {
         }
 
         @JvmStatic
-        actual fun toInt64RawBits(d: Double): Int64 = longToInt64(java.lang.Double.doubleToRawLongBits(d))
+        actual fun toInt64RawBits(d: Double): Int64 =
+            longToInt64(java.lang.Double.doubleToRawLongBits(d))
 
         @JvmStatic
         actual fun longToInt64(value: Long): Int64 {
@@ -326,10 +330,12 @@ actual class Platform {
         actual fun isNumber(o: Any?): Boolean = o is Number
 
         @JvmStatic
-        actual fun isScalar(o: Any?): Boolean = o == null || o is Number || o is String || o is Boolean
+        actual fun isScalar(o: Any?): Boolean =
+            o == null || o is Number || o is String || o is Boolean
 
         @JvmStatic
-        actual fun isInteger(o: Any?): Boolean = o is Byte || o is Short || o is Int || o is Long || o is JvmInt64
+        actual fun isInteger(o: Any?): Boolean =
+            o is Byte || o is Short || o is Int || o is Long || o is JvmInt64
 
         @JvmStatic
         actual fun isDouble(o: Any?): Boolean = o is Double
@@ -341,11 +347,13 @@ actual class Platform {
         actual fun hashCodeOf(o: Any?): Int = throw UnsupportedOperationException()
 
         @JvmStatic
-        actual fun <T : Any> newInstanceOf(klass: KClass<out T>): T = klass.primaryConstructor?.call() ?: throw IllegalArgumentException()
+        actual fun <T : Any> newInstanceOf(klass: KClass<out T>): T =
+            klass.primaryConstructor?.call() ?: throw IllegalArgumentException()
 
         @JvmStatic
         @Suppress("UNCHECKED_CAST")
-        actual fun <T : Any> allocateInstance(klass: KClass<out T>): T = unsafe.allocateInstance(klass.java) as T
+        actual fun <T : Any> allocateInstance(klass: KClass<out T>): T =
+            unsafe.allocateInstance(klass.java) as T
 
         @JvmStatic
         actual fun initializeKlass(klass: KClass<*>) {
@@ -373,6 +381,7 @@ actual class Platform {
                     }
                     copy as T
                 }
+
                 is JvmList -> {
                     val copy = JvmList(obj.size)
                     for (value in obj) {
@@ -381,6 +390,7 @@ actual class Platform {
                     }
                     copy as T
                 }
+
                 else -> obj
             }
         }
@@ -504,7 +514,11 @@ actual class Platform {
          */
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
-        actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
+        actual fun <T : Proxy> proxy(
+            pobject: PlatformObject,
+            klass: KClass<T>,
+            doNotOverride: Boolean
+        ): T {
             require(pobject is JvmObject)
             val symbol = Symbols.of(klass)
             var proxy = pobject.getSymbol(symbol)
@@ -512,9 +526,33 @@ actual class Platform {
                 if (klass.isInstance(proxy)) return proxy as T
                 if (doNotOverride) throw IllegalStateException("The symbol $symbol is already bound to incompatible type")
             }
-            proxy = klass.primaryConstructor!!.call()
+
+            val constructor: KFunction<T> = primaryNonArgConstructorOf(klass)
+                ?: firstNonArgConstructorOf(klass)
+                ?: throw IllegalArgumentException("Unable to find primary or non-arg constructor for class: ${klass.qualifiedName}")
+            proxy = constructor.call()
             proxy.bind(pobject, symbol)
             return proxy
+        }
+
+        /**
+         * Returns primary non-arg constructor of [klass]
+         * If primary constructor of [klass] does require some parameters, an exception is thrown. Proxy-based classes should not require any args for primary constructor.
+         */
+        private fun <T : Proxy> primaryNonArgConstructorOf(klass: KClass<T>): KFunction<T>? {
+            return klass.primaryConstructor?.also { primaryConstructor ->
+                require(primaryConstructor.parameters.isEmpty()) { "Primary constructor of Proxy classes can't have any arguments, invalid class: ${klass.qualifiedName}" }
+            }
+        }
+
+        /**
+         * Returns first non-arg constructor for [klass] or null, if none matches.
+         * This is mainly to address Java proxies, as Java spec does not define 'primary constructor' (whereas Kotlin does).
+         */
+        private fun <T : Proxy> firstNonArgConstructorOf(klass: KClass<T>): KFunction<T>? {
+            return klass.constructors.firstOrNull { constructor: KFunction<T> ->
+                constructor.parameters.isEmpty()
+            }
         }
 
         /**
@@ -545,7 +583,8 @@ actual class Platform {
          * @return The thread local.
          */
         @JvmStatic
-        actual fun <T> newThreadLocal(initializer: (() -> T)?): PlatformThreadLocal<T> = JvmThreadLocal(initializer)
+        actual fun <T> newThreadLocal(initializer: (() -> T)?): PlatformThreadLocal<T> =
+            JvmThreadLocal(initializer)
 
         /**
          * The nano-time when the class is initialized.
@@ -557,13 +596,15 @@ actual class Platform {
          * The epoch microseconds when the class is initialized.
          */
         @JvmField
-        internal val epochMicros = (System.currentTimeMillis() * 1000) + ((startNanos / 1000) % 1000)
+        internal val epochMicros =
+            (System.currentTimeMillis() * 1000) + ((startNanos / 1000) % 1000)
 
         /**
          * The epoch nanoseconds when the class is initialized.
          */
         @JvmField
-        internal val epochNanos = (System.currentTimeMillis() * 1_000_000) + (startNanos % 1_000_000)
+        internal val epochNanos =
+            (System.currentTimeMillis() * 1_000_000) + (startNanos % 1_000_000)
 
         /**
          * Returns the current epoch milliseconds.
@@ -577,13 +618,15 @@ actual class Platform {
          * @return current epoch microseconds.
          */
         @JvmStatic
-        actual fun currentMicros(): Int64 = longToInt64(epochMicros + ((System.nanoTime() - startNanos) / 1000))
+        actual fun currentMicros(): Int64 =
+            longToInt64(epochMicros + ((System.nanoTime() - startNanos) / 1000))
 
         /**
          * Returns the current epoch nanoseconds.
          * @return current epoch nanoseconds.
          */
-        actual fun currentNanos(): Int64 = longToInt64(epochNanos + (System.nanoTime() - startNanos))
+        actual fun currentNanos(): Int64 =
+            longToInt64(epochNanos + (System.nanoTime() - startNanos))
 
         /**
          * Generates a new random number between 0 and 1 (therefore with 53-bit random bits).
@@ -674,7 +717,8 @@ actual class Platform {
             val compressor = lz4Factory.fastCompressor()
             val maxCompressedLength = compressor.maxCompressedLength(raw.size)
             val compressed = ByteArray(maxCompressedLength)
-            val compressedLength = compressor.compress(raw, 0, raw.size, compressed, 0, maxCompressedLength)
+            val compressedLength =
+                compressor.compress(raw, 0, raw.size, compressed, 0, maxCompressedLength)
             return compressed.copyOf(compressedLength)
         }
 
@@ -688,7 +732,8 @@ actual class Platform {
             // TODO: Simple multiplication of the compressed by 12 is not optimal!
             val decompressor = lz4Factory.fastDecompressor()
             val restored = ByteArray(compressed.size * 12)
-            val decompressedLength = decompressor.decompress(compressed, 0, restored, 0, restored.size)
+            val decompressedLength =
+                decompressor.decompress(compressed, 0, restored, 0, restored.size)
             if (decompressedLength < restored.size) {
                 return restored.copyOf(decompressedLength)
             }
@@ -714,7 +759,8 @@ actual class Platform {
         actual fun stackTrace(t: Throwable): String = t.stackTraceToString()
 
         @JvmStatic
-        actual fun normalize(value: String, form: NormalizerForm): String = Normalizer.normalize(value, Normalizer.Form.valueOf(form.name))
+        actual fun normalize(value: String, form: NormalizerForm): String =
+            Normalizer.normalize(value, Normalizer.Form.valueOf(form.name))
 
         init {
             initialize()
