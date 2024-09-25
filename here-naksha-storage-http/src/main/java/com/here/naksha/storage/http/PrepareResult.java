@@ -41,13 +41,13 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Builds a {@link Result} from {@link HttpResponse}
  */
-class PrepareResult {
+public class PrepareResult {
 
-  static Result prepareResult(List<XyzFeature> featureList) {
+  public static Result prepareResult(List<XyzFeature> featureList) {
     return createHttpResultFromFeatureList(featureList);
   }
 
-  static <T extends Typed> Result prepareResult(
+  public static <T extends Typed> Result prepareResult(
       HttpResponse<byte[]> httpResponse,
       Class<T> httpResponseType,
       Function<T, List<XyzFeature>> typedResponseToFeatureList) {

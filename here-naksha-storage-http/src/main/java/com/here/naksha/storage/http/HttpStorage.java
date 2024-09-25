@@ -39,9 +39,10 @@ public class HttpStorage implements IStorage {
   private static final Logger log = LoggerFactory.getLogger(HttpStorage.class);
 
   private final RequestSender requestSender;
+  private final HttpStorageProperties properties;
 
   public HttpStorage(@NotNull Storage storage) {
-    HttpStorageProperties properties = HttpStorage.getProperties(storage);
+    properties = HttpStorage.getProperties(storage);
     requestSender = RequestSenderCache.getInstance()
         .getSenderWith(new KeyProperties(
             storage.getId(),
@@ -53,7 +54,7 @@ public class HttpStorage implements IStorage {
 
   @Override
   public @NotNull IReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new HttpStorageReadSession(context, useMaster, requestSender);
+    return new HttpStorageReadSession(context, useMaster, requestSender, properties.getProtocol());
   }
 
   @Override
