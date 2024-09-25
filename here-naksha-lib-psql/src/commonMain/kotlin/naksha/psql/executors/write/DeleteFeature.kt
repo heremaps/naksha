@@ -4,6 +4,7 @@ import naksha.model.*
 import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
 import naksha.psql.PgCollection
+import naksha.psql.PgSession
 import naksha.psql.executors.PgReader
 import naksha.psql.executors.PgWriter
 import naksha.psql.executors.WriteExt
@@ -11,11 +12,10 @@ import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
 import naksha.psql.executors.write.WriteFeatureUtils.resolveFlags
 
 class DeleteFeature(
-    writer: PgWriter,
-    existingMetadataProvider: ExistingMetadataProvider,
-    writeExecutor: WriteExecutor
-) : UpdateFeature(writer, existingMetadataProvider, writeExecutor) {
-    override fun execute(collection: PgCollection, write: WriteExt): TupleNumber {
+    private val session: PgSession,
+    private val writeExecutor: WriteExecutor
+) {
+    fun execute(collection: PgCollection, write: WriteExt): TupleNumber {
         val featureId = write.featureId ?: throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "No feature ID provided")
 
         val tupleNumber = newFeatureTupleNumber(collection, featureId, session)
