@@ -16,10 +16,10 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.storage.http;
+package com.here.naksha.storage.http.ffw;
 
 import static com.here.naksha.common.http.apis.ApiParamsConst.*;
-import static com.here.naksha.storage.http.PrepareResult.prepareResult;
+import static com.here.naksha.storage.http.PrepareResult.*;
 import static java.lang.String.format;
 
 import com.here.naksha.lib.core.NakshaContext;
@@ -30,6 +30,7 @@ import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import com.here.naksha.lib.core.models.storage.Result;
+import com.here.naksha.storage.http.RequestSender;
 import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
 import java.util.Arrays;
@@ -41,13 +42,13 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class HttpStorageReadExecute {
+public class FfwInterfaceReadExecute {
 
-  private static final Logger log = LoggerFactory.getLogger(HttpStorageReadExecute.class);
   private static final String HDR_STREAM_ID = "Stream-Id";
 
   @NotNull
-  static Result execute(@NotNull NakshaContext context, ReadFeaturesProxyWrapper request, RequestSender sender) {
+  public static Result execute(
+      @NotNull NakshaContext context, ReadFeaturesProxyWrapper request, RequestSender sender) {
 
     return switch (request.getReadRequestType()) {
       case GET_BY_ID -> executeFeatureById(context, request, sender);

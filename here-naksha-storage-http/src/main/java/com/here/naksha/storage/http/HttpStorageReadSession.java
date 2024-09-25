@@ -22,6 +22,8 @@ import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
+import com.here.naksha.storage.http.connector.ConnectorInterfaceReadExecute;
+import com.here.naksha.storage.http.ffw.FfwInterfaceReadExecute;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
@@ -41,10 +43,18 @@ public final class HttpStorageReadSession implements IReadSession {
   @NotNull
   private final RequestSender requestSender;
 
-  HttpStorageReadSession(@Nullable NakshaContext context, boolean useMaster, @NotNull RequestSender requestSender) {
+  @NotNull
+  private final HttpInterface httpInterface;
+
+  HttpStorageReadSession(
+      @Nullable NakshaContext context,
+      boolean useMaster,
+      @NotNull RequestSender requestSender,
+      @NotNull HttpInterface httpInterface) {
     this.context = context == null ? NakshaContext.currentContext() : context;
     this.useMaster = useMaster;
     this.requestSender = requestSender;
+    this.httpInterface = httpInterface;
   }
 
   @Override
@@ -90,7 +100,13 @@ public final class HttpStorageReadSession implements IReadSession {
   @Override
   public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
     try {
-      return HttpStorageReadExecute.execute(context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
+      return switch (httpInterface) {
+        case ffwAdapter -> FfwInterfaceReadExecute.execute(
+            context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
+        case dataHubConnector -> ConnectorInterfaceReadExecute.execute(
+            (ReadFeaturesProxyWrapper) readRequest, requestSender);
+      };
+
     } catch (Exception e) {
       log.warn("We got exception while executing Read request.", e);
       return new ErrorResult(XyzError.EXCEPTION, e.getMessage(), e);
