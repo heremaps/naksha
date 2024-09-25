@@ -52,6 +52,8 @@ kotlin {
                 implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
+                implementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+                implementation("org.mockito:mockito-core:5.13.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
             }
         }
