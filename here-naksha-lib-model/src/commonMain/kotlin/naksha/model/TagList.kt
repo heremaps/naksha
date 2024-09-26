@@ -21,7 +21,7 @@ open class TagList() : ListProxy<String>(String::class) {
      */
     @JsName("of")
     constructor(vararg tags: String): this() {
-        addAndNormalizeTags(*tags)
+        addTags(listOf(*tags), false)
     }
 
     companion object TagList_C {
