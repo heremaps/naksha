@@ -68,6 +68,11 @@ kotlin {
             }
             resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }
+        jvmTest {
+            dependencies {
+                implementation("org.mockito:mockito-core:5.8.0")
+            }
+        }
         jsMain {
             dependencies {
                 implementation(kotlin("stdlib-js"))
