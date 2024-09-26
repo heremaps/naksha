@@ -1,12 +1,11 @@
 package naksha.psql
 
-import naksha.geo.SpBoundingBox
 import naksha.model.Action
+import naksha.model.TagList
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.model.request.query.SpIntersects
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import naksha.psql.base.PgTestBase
 import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
@@ -19,7 +18,7 @@ import kotlin.test.assertNotNull
 class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) {
 
     @AfterTest
-    fun cleanUp(){
+    fun cleanUp() {
         dropCollection()
     }
 
@@ -27,6 +26,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
     fun shouldInsertSingleFeature() {
         // Given: features to create
         val featureToCreate = generateRandomFeature()
+        featureToCreate.properties.xyz.addTag("wicked", false)
         val writeFeaturesReq = WriteRequest().apply {
             add(Write().createFeature(null, collection!!.id, featureToCreate))
         }
@@ -60,6 +60,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
                             .hasProperty("author", PgTest.TEST_APP_AUTHOR!!)
                             .hasProperty("action", Action.CREATED)
                     }
+                    .hasTags(TagList("wicked"))
             }
     }
 

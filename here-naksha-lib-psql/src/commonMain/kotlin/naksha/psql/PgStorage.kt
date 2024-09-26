@@ -384,7 +384,8 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
                     )
                 )
             }
-            feature.properties.xyz = xyzFrom(tuple.meta, decodedTags = null) // TODO: tag list
+            val decodedTags = PgUtil.decodeTags(tuple.tags, tuple.meta.flags)
+            feature.properties.xyz = xyzFrom(tuple.meta, decodedTags = decodedTags?.toTagList())
             tuple.geo?.let { geoBytes ->
                 feature.geometry = PgUtil.decodeGeometry(geoBytes, tuple.meta.flags)
             }

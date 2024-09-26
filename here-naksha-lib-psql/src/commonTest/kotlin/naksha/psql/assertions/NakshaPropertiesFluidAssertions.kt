@@ -1,6 +1,7 @@
 package naksha.psql.assertions
 
 import naksha.base.AnyList
+import naksha.model.TagList
 import naksha.model.XyzNs
 import naksha.model.mom.MomDeltaNs
 import naksha.model.mom.MomReferenceList
@@ -32,6 +33,14 @@ class NakshaPropertiesFluidAssertions private constructor(val subject: NakshaPro
             CommonProxyAssertions.assertAnyListsEqual(
                 references?.proxy(AnyList::class),
                 subject.references?.proxy(AnyList::class)
+            )
+        }
+
+    fun hasTags(tags: TagList?): NakshaPropertiesFluidAssertions =
+        apply {
+            CommonProxyAssertions.assertAnyListsEqual(
+                tags?.proxy(AnyList::class),
+                subject.xyz.tags?.proxy(AnyList::class)
             )
         }
 
