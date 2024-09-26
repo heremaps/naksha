@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import kotlin.reflect.full.IllegalCallableAccessException;
 import org.junit.jupiter.api.Test;
 
 class JavaProxyTest {
@@ -32,7 +33,7 @@ class JavaProxyTest {
     ProxyParent parent = new ProxyParent();
 
     // When:
-    var child = parent.proxy(Platform.klassOf(ProxyParent.class));
+    var child = parent.proxy(Platform.klassOf(ProxyChild.class));
 
     // Then:
     assertNotNull(child);
@@ -50,9 +51,26 @@ class JavaProxyTest {
     });
   }
 
+  @Test
+  void shouldFailForProxyWithUnsifficientVisibility() {
+    // Given:
+    ProxyParent parent = new ProxyParent();
+
+    // Then:
+    assertThrows(IllegalCallableAccessException.class, () -> {
+      parent.proxy(Platform.klassOf(ProxyChildWithoutPublicConstructor.class));
+    });
+  }
+
   static class ProxyParent extends AnyObject {}
 
-  static class ProxyChild extends ProxyParent {}
+  public static class ProxyChild extends ProxyParent {}
+
+  public static class ProxyChildWithoutPublicConstructor extends ProxyParent {
+    ProxyChildWithoutPublicConstructor() {
+      // hello from package-private
+    }
+  }
 
   static class ProxyChildWithoutNonArgConstructor extends ProxyParent {
     ProxyChildWithoutNonArgConstructor(String unusedParam) {}
