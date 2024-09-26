@@ -175,12 +175,15 @@ actual class Platform {
         @JvmField
         internal val initialized = AtomicBoolean(false)
 
+        private val nonArgsConstuctorsCache: AtomicMap<KClass<out Proxy>, KFunction<out Proxy>>
+
         init {
             val unsafeConstructor = Unsafe::class.java.getDeclaredConstructor()
             unsafeConstructor.isAccessible = true
             unsafe = unsafeConstructor.newInstance()
             val someByteArray = ByteArray(8)
             baseOffset = unsafe.arrayBaseOffset(someByteArray.javaClass)
+            nonArgsConstuctorsCache = AtomicMap()
         }
 
         @JvmStatic
@@ -513,9 +516,18 @@ actual class Platform {
                 if (doNotOverride) throw IllegalStateException("The symbol $symbol is already bound to incompatible type")
             }
 
-            proxy = nonArgConstructorFor(klass).call()
+            proxy = resolveConstructorFor(klass).call()
             proxy.bind(pobject, symbol)
             return proxy
+        }
+
+        private fun <T: Proxy> resolveConstructorFor(klass: KClass<T>): KFunction<T>{
+            var constructor = nonArgsConstuctorsCache[klass]
+            if(constructor == null){
+                constructor = nonArgConstructorFor(klass)
+                nonArgsConstuctorsCache[klass] = constructor
+            }
+            return constructor as KFunction<T>
         }
 
         /**
