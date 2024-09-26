@@ -20,6 +20,7 @@ package com.here.naksha.lib.view;
 
 import naksha.model.IWriteSession;
 import naksha.model.SessionOptions;
+import naksha.model.objects.Transaction;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.Write;
@@ -28,8 +29,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * It writes same value to all storages, the result must not be combined, to let clients know if operation succeeded in
- * each storage or not.
+ * It writes value only to top priority layer (storage).
  */
 public class ViewWriteSession extends ViewReadSession implements IWriteSession {
 
@@ -68,6 +68,11 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
       }
     }
     return this.session.execute(writeRequest);
+  }
+
+  @Override
+  public @NotNull Transaction transaction() {
+    return this.session.transaction();
   }
 
   public void commit() {
