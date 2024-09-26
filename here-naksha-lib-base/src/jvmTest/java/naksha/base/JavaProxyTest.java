@@ -20,8 +20,8 @@ package naksha.base;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class JavaProxyTest {
@@ -29,21 +29,32 @@ class JavaProxyTest {
   @Test
   void shouldAllowProxyingInJava() {
     // Given:
-    ProxyChild child = new ProxyChild();
+    ProxyParent parent = new ProxyParent();
 
     // When:
-    var parent = child.proxy(Platform.klassOf(ProxyParent.class));
+    var child = parent.proxy(Platform.klassOf(ProxyParent.class));
 
     // Then:
-    assertNotNull(parent);
-    assertInstanceOf(ProxyParent.class, parent);
+    assertNotNull(child);
+    assertInstanceOf(ProxyChild.class, child);
   }
 
-  static class ProxyParent extends AnyObject {
+  @Test
+  void shouldFailForProxyWithoutNonArgConstructor() {
+    // Given:
+    ProxyParent parent = new ProxyParent();
 
+    // Then:
+    assertThrows(IllegalArgumentException.class, () -> {
+      parent.proxy(Platform.klassOf(ProxyChildWithoutNonArgConstructor.class));
+    });
   }
 
-  static class ProxyChild extends ProxyParent {
+  static class ProxyParent extends AnyObject {}
 
+  static class ProxyChild extends ProxyParent {}
+
+  static class ProxyChildWithoutNonArgConstructor extends ProxyParent {
+    ProxyChildWithoutNonArgConstructor(String unusedParam) {}
   }
 }
