@@ -231,12 +231,12 @@ class PgUtil private constructor() {
             var raw = bytes
             if (flags.tagsGzip()) raw = Platform.gzipInflate(bytes)
             val encoding = flags.tagsEncoding()
-            if (encoding == JBON || encoding == JBON_GZIP) {
+            if (encoding == TagsEncoding.JBON || encoding == TagsEncoding.JBON_GZIP) {
                 val decoder = JbFeatureDecoder(dictManager)
                 decoder.mapBytes(raw)
                 return decoder.toAnyObject().proxy(TagMap::class)
             }
-            if (encoding == JSON || encoding == JSON_GZIP) {
+            if (encoding == TagsEncoding.JSON || encoding == TagsEncoding.JSON_GZIP) {
                 val decoded = Platform.fromJSON(bytes.decodeToString())
                 if (decoded is PlatformMap) return decoded.proxy(TagMap::class)
             }
@@ -257,10 +257,10 @@ class PgUtil private constructor() {
             if (tags == null) return null
             val encoding = flags.tagsEncoding()
             var byteArray: ByteArray? = null
-            if (encoding == JSON || encoding == JSON_GZIP) {
+            if (encoding == TagsEncoding.JSON || encoding == TagsEncoding.JSON_GZIP) {
                 val encoded = Platform.toJSON(tags)
                 byteArray = encoded.encodeToByteArray()
-            } else if (encoding == JBON || encoding == JBON_GZIP) {
+            } else if (encoding == TagsEncoding.JBON || encoding == TagsEncoding.JBON_GZIP) {
                 val encoder = JbEncoder(dict)
                 byteArray = encoder.buildFeatureFromMap(tags)
             }

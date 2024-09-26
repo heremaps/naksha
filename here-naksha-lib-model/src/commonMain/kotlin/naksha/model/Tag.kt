@@ -2,9 +2,10 @@
 
 package naksha.model
 
-import naksha.base.Int64
+import naksha.base.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
@@ -15,9 +16,20 @@ import kotlin.jvm.JvmStatic
  * @property value the value of the tag; _null_, Boolean, String or Double.
  */
 @JsExport
-data class Tag(val tag: String, val key: String, val value: Any?) {
+class Tag(): AnyObject() {
+
+    @JsName("of")
+    constructor(tag: String, key: String, value: Any?): this() {
+        this.tag = tag
+        this.key = key
+        this.value = value
+    }
 
     companion object Tag_C {
+        private val TAG = NotNullProperty<Tag, String>(String::class)
+        private val KEY = NotNullProperty<Tag, String>(String::class)
+        private val VALUE = NullableProperty<Tag, Any>(Any::class)
+
         @JvmStatic
         @JsStatic
         fun parse(tag: String): Tag {
@@ -58,6 +70,10 @@ data class Tag(val tag: String, val key: String, val value: Any?) {
             else -> throw NakshaException(ILLEGAL_ARGUMENT, "Tag values can only be String, Boolean or Double")
         }
     }
+
+    var tag by TAG
+    var key by KEY
+    var value by VALUE
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
