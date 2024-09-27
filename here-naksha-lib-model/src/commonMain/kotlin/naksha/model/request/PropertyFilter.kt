@@ -1,5 +1,6 @@
 package naksha.model.request
 
+import naksha.base.AnyObject
 import naksha.base.Platform
 import naksha.jbon.JbFeatureDecoder
 import naksha.model.request.query.*
@@ -56,14 +57,30 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
                 if (queryProperty !is Array<*>) return false
                 return queryProperty.contains(featureProperty)
             }
-            AnyOp.CONTAINS -> {}
+            AnyOp.CONTAINS -> return resolveContains(featureProperty, queryProperty)
             StringOp.EQUALS -> return (featureProperty is String) && (queryProperty is String) && (featureProperty.toString() == queryProperty.toString())
             StringOp.STARTS_WITH -> return (featureProperty is String) && (queryProperty is String) && (featureProperty.startsWith(queryProperty.toString()))
-            DoubleOp.EQ -> return (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble().equals(queryProperty.toDouble()))
+            DoubleOp.EQ -> return (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() == queryProperty.toDouble())
             DoubleOp.GT -> return (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() > queryProperty.toDouble())
             DoubleOp.LT -> return (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() < queryProperty.toDouble())
             DoubleOp.GTE -> return (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() >= queryProperty.toDouble())
             DoubleOp.LTE -> return (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() <= queryProperty.toDouble())
+        }
+        return false
+    }
+
+    private fun resolveContains(featureProperty: Any?, queryProperty: Any?) : Boolean {
+        if (featureProperty == null) return queryProperty == null
+        if (Platform.isScalar(featureProperty)) return featureProperty.toString() == queryProperty.toString()
+        when (featureProperty) {
+            is Array<*> -> {
+                if (queryProperty !is Array<*>) return false
+                return featureProperty.intersect(queryProperty.toSet()).size == queryProperty.size
+            }
+            is AnyObject -> {
+                if (queryProperty !is AnyObject) return false
+                return featureProperty.containsValue(queryProperty)
+            }
         }
         return false
     }
