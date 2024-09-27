@@ -5,38 +5,64 @@ package naksha.model
 import kotlin.js.JsExport
 
 /**
- * The fetch modes supported by fetch operations.
+ * The fetch modes supported by [fetchTuples][ISession.fetchTuples] operations.
  */
 @JsExport
-enum class FetchMode(val raw: String) {
+class FetchMode private constructor() {
+    companion object FetchMode_C {
+        /**
+         * Fetch the `id`.
+         */
+        const val FETCH_ID: FetchBits = 1
 
-    /**
-     * Fetch only the `id`, other parts only from cache.
-     */
-    FETCH_ID("id"),
+        /**
+         * Fetch the [metadata][Tuple.meta], which includes the `id`.
+         */
+        const val FETCH_META: FetchBits = 2
 
-    /**
-     * Fetch the [metadata][Metadata], other parts only from cache.
-     */
-    FETCH_META("meta"),
+        /**
+         * Fetch the [feature][Tuple.feature].
+         */
+        const val FETCH_FEATURE: FetchBits = 4
 
-    /**
-     * Fetch all data except for the [feature][Tuple.feature], and [attachment][Tuple.attachment].
-     */
-    FETCH_ALL_BUT_FEATURE("all-but-feature"),
+        /**
+         * Fetch the [geometry][Tuple.geo].
+         */
+        const val FETCH_GEOMETRY: FetchBits = 8
 
-    /**
-     * Fetch all columns.
-     */
-    FETCH_ALL("all"),
+        /**
+         * Fetch the [reference-point][Tuple.referencePoint].
+         */
+        const val FETCH_REFERENCE_POINT: FetchBits = 16
 
-    /**
-     * Fetch all columns, do not use the cache.
-     */
-    FETCH_ALL_NO_CACHE("all-no-cache"),
+        /**
+         * Fetch the [tags][Tuple.tags].
+         */
+        const val FETCH_TAGS: FetchBits = 32
 
-    /**
-     * Only load form cache.
-     */
-    FETCH_CACHE("cache")
+        /**
+         * Fetch the [attachment][Tuple.attachment].
+         */
+        const val FETCH_ATTACHMENT: FetchBits = 64
+
+        /**
+         * Fetch the full [Tuple].
+         */
+        const val FETCH_ALL: FetchBits = 127
+
+        /**
+         * Fetch the full [Tuple], do not use cache.
+         */
+        const val FETCH_ALL_NO_CACHE: FetchBits = 255
+
+        /**
+         * Fetch only from cache, can't be combined with other fetch-modes!
+         */
+        const val FETCH_CACHE: FetchBits = 0
+
+        /**
+         * Do not fetch from cache.
+         */
+        const val FETCH_NO_CACHE: FetchBits = 256
+    }
 }

@@ -566,7 +566,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
                 conn.execute("SELECT ${PgStorage.ALL_COLUMNS} FROM $VIRT_COLLECTIONS_QUOTED WHERE id=$1", arrayOf(id)).use { cursor ->
                     if (cursor.next()) {
                         val storage = map.storage
-                        val readTuple = PgStorage.loadTupleFromAllColumns(storage, cursor)
+                        val readTuple = PgStorage.readTupleFromCursor(storage, cursor)
                         val tuple = tupleCache(storage.id).store(readTuple)
                         val feature = storage.tupleToFeature(tuple).proxy(NakshaCollection::class)
                         _nakshaCollection.set(feature)

@@ -142,7 +142,7 @@ public class ViewTest {
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class,response);
     SuccessResponse successResponse = (SuccessResponse) response;
-    assertEquals(feature.getId(), successResponse.getTuples().get(0).featureId);
+    assertEquals(feature.getId(), successResponse.getTuples().get(0).id());
     assertEquals(ExecutedOp.DELETED, successResponse.getTuples().get(0).op);
     writeSession.commit();
   }

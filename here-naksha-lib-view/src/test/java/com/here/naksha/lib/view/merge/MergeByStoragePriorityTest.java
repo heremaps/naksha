@@ -39,13 +39,13 @@ public class MergeByStoragePriorityTest {
     final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), Version.fromDouble(3.0),0);
     Metadata metadata = mock(Metadata.class);
 
-    Tuple tu1 = new Tuple(storage, tupleNum, metadata, bytesF1, null, null, null, null);
-    Tuple tu2 = new Tuple(storage, tupleNum, metadata, bytesF2, null, null, null, null);
-    Tuple tu3 = new Tuple(storage, tupleNum, metadata, bytesF3, null, null, null, null);
+    Tuple tu1 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF1, null, null, null, null);
+    Tuple tu2 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF2, null, null, null, null);
+    Tuple tu3 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF3, null, null, null, null);
 
-    ResultTuple t1 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, "checkPriorityMerge1", tu1);
-    ResultTuple t2 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, "checkPriorityMerge1", tu2);
-    ResultTuple t3 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, "checkPriorityMerge1", tu3);
+    ResultTuple t1 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, tu1);
+    ResultTuple t2 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, tu2);
+    ResultTuple t3 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, tu3);
 
     singleRowFeatures.add(new ViewLayerFeature(t1, 1, null));
     singleRowFeatures.add(new ViewLayerFeature(t2, 0, null));
@@ -75,13 +75,13 @@ public class MergeByStoragePriorityTest {
     final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), Version.fromDouble(3.0),0);
     Metadata metadata = mock(Metadata.class);
 
-    Tuple tu1 = new Tuple(storage, tupleNum, metadata, bytesF1, null, null, null, null);
-    Tuple tu2 = new Tuple(storage, tupleNum, metadata, bytesF2, null, null, null, null);
-    Tuple tu3 = new Tuple(storage, tupleNum, metadata, bytesF3, null, null, null, null);
+    Tuple tu1 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF1, null, null, null, null);
+    Tuple tu2 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF2, null, null, null, null);
+    Tuple tu3 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF3, null, null, null, null);
 
-    ResultTuple t1 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, "checkPriorityMerge1", tu1);
-    ResultTuple t2 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, "checkPriorityMerge1", tu2);
-    ResultTuple t3 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, "checkPriorityMerge1", tu3);
+    ResultTuple t1 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, tu1);
+    ResultTuple t2 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, tu2);
+    ResultTuple t3 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, tu3);
 
     singleRowFeatures.add(new ViewLayerFeature(t1, 0, null));
     singleRowFeatures.add(new ViewLayerFeature(t2, 0, null));

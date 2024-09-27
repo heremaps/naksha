@@ -431,27 +431,84 @@ class PgColumn : JsEnum() {
         val metaSelect= metaColumn.joinToString(",")
 
         /**
-         * SQL selection of the metadata in binary form, to be used like:
+         * All columns that are necessary to select a full tuple, which basically is the same as [allColumns], but without the duplicates being [store_number], [txn] and [uid], because they are already part of the [tuple_number] and can be decoded from there.
+         */
+        @JvmField
+        @JsStatic
+        val fullColumns = allColumns.filter { it !== store_number && it !== txn && it !== uid }
+
+        @JvmField
+        @JsStatic
+        val fullSelect= fullColumns.joinToString(",")
+
+        /**
+         * A select that selects [tuple_number], [flags], and [id] plus one ASCII-0 as terminator, being an `bytea`, this is the minimal information needed in a [ResultTuple][naksha.model.request.ResultTuple]
+         *
+         * This can now be aggregated, if this is all that is needed when reading, like:
          * ```sql
-         * SELECT string_agg($metaSelectToBinary, '\x00'::bytea)
-         * FROM {table} WHERE {condition}
+         * SELECT gzip(byte_agg($selectMinBinary)) AS meta_min_all FROM ...
+         * ```
+         * Otherwise, it can be select as a single column:
+         * ```sql
+         * SELECT $selectMinBinary AS meta_min, ... FROM ...
          * ```
          */
         @JvmField
         @JsStatic
-        val metaSelectToBinary = """($tuple_number
-||int4send(coalesce($puid, 0))
+        // Note: The tuple-number is: int8send(store_number)||int8send(txn)||int4send(uid)
+        // The fixed size header is:
+        //   8+8+4 tuple_number
+        //   +4 flags
+        //   = 24 byte
+        val selectMinMetaBinary = """($tuple_number||int4send($flags)||$id::bytea||'\x00'::bytea)"""
+
+        /**
+         * A select that selects all metadata as one binary (`bytea`).
+         *
+         * This can now be aggregated, if this is all that is needed when reading, like:
+         * ```sql
+         * SELECT gzip(byte_agg($selectMetaBinary)) AS meta_all FROM ...
+         * ```
+         * Otherwise, it can be select as a single column:
+         * ```sql
+         * SELECT $selectMetaBinary AS meta, ... FROM ...
+         * ```
+         *
+         * This binary contains, in order:
+         * - `tuple_number` - 20 byte (`store_number`, `txn`, `uid`)
+         * - `flags` - int32-be
+         * - `updated_at` - int64-be
+         * - `created_at` - int64-be
+         * - `author_ts` - int64-be
+         * - `txn_next` - int64-be
+         * - `ptxn` - int64-be
+         * - `puid` - int32-be
+         * - `change_count` - int32-be
+         * - `hash` - int32-be
+         * - `geo_grid` - int32-be
+         * - `= 76 byte`
+         * - `id` - zero terminated UTF-8 encoded string
+         * - `app_id` - zero terminated UTF-8 encoded string
+         * - `author` - zero terminated UTF-8 encoded string
+         * - `type` - zero terminated UTF-8 encoded string
+         * - `origin` - zero terminated UTF-8 encoded string
+         * - _if aggregated, next entry starts after the last ASCII-0_
+         */
+        @JvmField
+        @JsStatic
+        val selectMetaBinary = """($tuple_number
+||int4send($flags)
 ||int8send($updated_at)
-||int8send(coalesce($created_at, $updated_at))
-||int8send(coalesce($author_ts, $updated_at))
+||int8send(coalesce($created_at, 0::bigint))
+||int8send(coalesce($author_ts, 0::bigint))
 ||int8send(coalesce($txn_next, 0::bigint))
 ||int8send(coalesce($ptxn, 0::bigint))
-||int4send($change_count)
-||int4send($hash)
-||int4send($geo_grid)
-||int4send($flags)
+||int4send(coalesce($puid, 0))
+||int4send(coalesce($change_count, 1))
+||int4send(coalesce($hash, 0))
+||int4send(coalesce($geo_grid,0))
 ||$id::bytea||'\x00'::bytea
-||$app_id::bytea||'\x00'::bytea
+||coalesce($app_id,'')::bytea||'\x00'::bytea
 ||coalesce($author,'')::bytea||'\x00'::bytea
 ||coalesce($type,'')::bytea||'\x00'::bytea
 ||coalesce($origin,'')::bytea||'\x00'::bytea
@@ -492,7 +549,7 @@ class PgColumn : JsEnum() {
             TupleColumn.REF_POINT -> ref_point
             TupleColumn.GEOMETRY -> geo
             TupleColumn.FEATURE -> feature
-            // attachment
+            TupleColumn.ATTACHMENT -> attachment
             else -> null
         }
     }

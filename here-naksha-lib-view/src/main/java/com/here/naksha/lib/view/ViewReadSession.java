@@ -255,26 +255,13 @@ public class ViewReadSession implements IReadSession {
 
   @NotNull
   @Override
-  public List<Tuple> getLatestTuples(
-      @NotNull String mapId,
-      @NotNull String collectionId,
-      @NotNull String[] featureIds,
-      @NotNull FetchMode mode) {
+  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
     return List.of();
   }
-
-  @NotNull
-  @Override
-  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, @NotNull FetchMode mode) {
-    return List.of();
-  }
-
-  @Override
-  public void fetchTuple(@NotNull ResultTuple resultTuple, @NotNull FetchMode mode) {}
 
   @Override
   public void fetchTuples(
-      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, @NotNull FetchMode mode) {}
+      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {}
 
   @Override
   public @NotNull Transaction transaction() {

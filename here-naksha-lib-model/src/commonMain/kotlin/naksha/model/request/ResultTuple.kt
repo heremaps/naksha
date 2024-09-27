@@ -32,15 +32,6 @@ open class ResultTuple(
     @JvmField var op: ExecutedOp,
 
     /**
-     * The feature-id.
-     *
-     * Can be _null_, when not yet fetched from the storage, use [ISession.fetchTuples].
-     *
-     * When ordering by feature-id, the storage should load the feature identifiers together with the row identifiers. This operation will be slower than loading only the row identifiers, but still fast enough. However, at many places it is needed, like to create seekable views.
-     */
-    @JvmField var featureId: String?,
-
-    /**
      * If the row is already in the cache, the reference to the row.
      *
      * Can be _null_, when not yet fetched from the storage, use [ISession.fetchTuples] or when [op] is [PURGED][ExecutedOp.PURGED] or [RETAINED][ExecutedOp.RETAINED].
@@ -64,12 +55,10 @@ open class ResultTuple(
         }
 
     /**
-     * Returns the feature-id, if it is already known.
-     *
-     * First reads the most reliable ID from the [tuple], if the row is not yet fetched, tries the [featureId] property.
+     * Returns the feature-id, if available.
      * @return the feature-id, if available.
      */
-    fun id() : String? = tuple?.meta?.id ?: featureId
+    fun id() : String? = tuple?.id
 
     /**
      * Convert the row into a feature, and cache the feature.

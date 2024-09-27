@@ -429,31 +429,21 @@ open class PgSession(
         }
     }
 
-    override fun getLatestTuples(mapId: String, collectionId: String, featureIds: Array<String>, mode: FetchMode): List<Tuple?> {
+    override fun getTuples(tupleNumbers: Array<TupleNumber>, fetchFromHistory: Boolean, mode: FetchBits): List<Tuple?> {
         val connection = pgConnection
         val conn = connection ?: storage.adminConnection(storage.adminOptions)
         try {
-            return storage.getLatestTuples(conn, mapId, collectionId, featureIds, mode)
+            return storage.getTuples(conn, tupleNumbers, fetchFromHistory, mode)
         } finally {
             if (connection == null) conn.close()
         }
     }
 
-    override fun getTuples(tupleNumbers: Array<TupleNumber>, mode: FetchMode): List<Tuple?> {
+    override fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int, to: Int, fetchFromHistory: Boolean, mode: FetchBits) {
         val connection = pgConnection
         val conn = connection ?: storage.adminConnection(storage.adminOptions)
         try {
-            return storage.getTuples(conn, tupleNumbers, mode)
-        } finally {
-            if (connection == null) conn.close()
-        }
-    }
-
-    override fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int, to: Int, mode: FetchMode) {
-        val connection = pgConnection
-        val conn = connection ?: storage.adminConnection(storage.adminOptions)
-        try {
-            return storage.fetchTuples(conn, resultTuples, from, to, mode)
+            return storage.fetchTuples(conn, resultTuples, from, to, fetchFromHistory, mode)
         } finally {
             if (connection == null) conn.close()
         }

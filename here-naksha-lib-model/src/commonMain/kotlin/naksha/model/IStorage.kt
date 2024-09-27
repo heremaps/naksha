@@ -5,6 +5,7 @@ package naksha.model
 import naksha.base.Int64
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * Any entity implementing the [IStorage] interface represents some data-sink, and comes with an implementation that grants access to the data. The storage normally is a singleton that opens many sessions in parallel.
@@ -73,6 +74,16 @@ interface IStorage : AutoCloseable {
      * @return the map admin object.
      */
     operator fun get(mapId: String): IMap
+
+    /**
+     * Returns the map admin object.
+     *
+     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
+     * @param mapNumber the map-number.
+     * @return the map admin object, _null_, if no such map exists.
+     */
+    @JsName("getByNumber")
+    operator fun get(mapNumber: Int): IMap?
 
     /**
      * Tests if this storage contains the given map.

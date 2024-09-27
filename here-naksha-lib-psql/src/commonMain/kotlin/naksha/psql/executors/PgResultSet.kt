@@ -3,10 +3,10 @@
 package naksha.psql.executors
 
 import naksha.model.*
-import naksha.model.FetchMode.FETCH_ALL
-import naksha.model.FetchMode.FETCH_ID
+import naksha.model.FetchMode.FetchMode_C.FETCH_ALL
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.model.request.*
 import naksha.psql.PgSession
 import naksha.psql.PgStorage
@@ -59,11 +59,11 @@ class PgResultSet(
     /**
      * The limit the client needs.
      *
-     * - If the client set the _limit_ to _null_, then a default value is used (currently 10,000)
+     * - If the client set the _limit_ to _null_, then a default value is used (currently 100,000)
      * - If this is restored for a [ReadHandle][naksha.model.request.ReadHandle], then the limit will be restored from the handle, except the client changes the limit via request parameter.
      * - If this is the result of a [WriteRequest][naksha.model.request.WriteRequest], then the limit should be set to `rowIdArray.size`.
      */
-    override val limit: Int = if (incomplete) tupleNumberArray.size else 10_000,
+    override val limit: Int = if (incomplete) tupleNumberArray.size else 100_000,
 
     /**
      * The order to ensure, if _null_ the current order of [tupleNumberArray] is good.
@@ -136,8 +136,8 @@ class PgResultSet(
         if (a == null) return 1
         if (b == null) return -1
 
-        val afid = a.featureId
-        val bfid = b.featureId
+        val afid = a.id()
+        val bfid = b.id()
         if (afid != bfid) {
             if (afid == null) return 1
             if (bfid == null) return -1
@@ -168,30 +168,13 @@ class PgResultSet(
 
     */
 
-    /**
-     * The fetch that needs to be done, _null_ means validation is instant.
-     */
-    private var fetchMode: FetchMode? = null
-
     init {
         all = ResultTupleList.fromTupleNumberArray(storage, tupleNumberArray)
-        if (orderBy == DETERMINISTIC || orderBy == VERSION) {
-            fetchMode = null
-            all.sortWith(this::order_txn_uid)
-        } else if (orderBy == ID) {
-            // We need to sort by ID, so we need the ids of all results!
-            fetchMode = FETCH_ID
-            session.fetchTuples(all, mode = FETCH_ID)
-            all.sortWith(this::order_id_txn_uid)
-        } else if (orderBy != null) {
-            // TODO: We may use Naksha.FETCH_META or FETCH_ALL to implement more advanced search methods!
-            throw NakshaException(ILLEGAL_ARGUMENT, "Unsupported orderBy: $orderBy")
-        }
-        if (!filters.isNullOrEmpty()) {
-            // Filters need the full feature, the good thing about the filters,
-            // they are applied after sorting, therefore they do not need to load
-            // all features, if there is a reasonable limit!
-            fetchMode = FETCH_ALL
+        if (orderBy != null && orderBy != DETERMINISTIC && orderBy != ID) {
+            throw NakshaException(UNSUPPORTED_OPERATION, "Currently ordering and filtering is not supported")
+            // load all tuples (we need them for custom order)
+            // order the result-set
+            // regenerate the tuple-number-array
         }
         if (!incomplete) {
             end = offset + limit
@@ -210,13 +193,12 @@ class PgResultSet(
     override val validationEnd: Int
         get() = validTill
 
+    // We expect that the results are already in correct order and we only have to filter.
     override fun validateTill(end: Int) {
         if (incomplete) throw NakshaException(ILLEGAL_STATE, "The result-set is incomplete, no further validation can be done")
         if (isComplete() || end <= validTill) return
 
-        val fetchMode = this.fetchMode
-        val filters = this.filters
-        if (filters.isNullOrEmpty() || fetchMode == null) {
+        if (filters.isNullOrEmpty()) {
             this.validTill = all.size
             return
         }
@@ -232,7 +214,7 @@ class PgResultSet(
             if (i <= fetched_till) {
                 val available = i - removed
                 val to = min(((end - available + 50) * 1.1).toInt(), all.size)
-                session.fetchTuples(all, from = i, to = to, mode = fetchMode)
+                session.fetchTuples(all, from = i, to = to, mode = FETCH_ALL)
                 fetched_till = to
             }
             var row = all[i]

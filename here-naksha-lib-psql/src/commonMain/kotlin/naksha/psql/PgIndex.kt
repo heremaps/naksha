@@ -2,9 +2,13 @@ package naksha.psql
 
 import naksha.base.JsEnum
 import naksha.base.fn.Fx2
+import naksha.model.request.query.SortOrder
+import naksha.model.request.query.SortOrder.SortOrderCompanion.ASCENDING
+import naksha.model.request.query.SortOrder.SortOrderCompanion.DESCENDING
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.PgColumn.PgColumnCompanion.id as c_id
 import naksha.psql.PgColumn.PgColumnCompanion.txn as c_txn
+import naksha.psql.PgColumn.PgColumnCompanion.txn_next as c_txn_next
 import naksha.psql.PgColumn.PgColumnCompanion.uid as c_uid
 import naksha.psql.PgColumn.PgColumnCompanion.flags as c_flags
 import naksha.psql.PgColumn.PgColumnCompanion.tuple_number as c_tuple_number
@@ -13,6 +17,7 @@ import naksha.psql.PgColumn.PgColumnCompanion.author as c_author
 import naksha.psql.PgColumn.PgColumnCompanion.author_ts as c_author_ts
 import naksha.psql.PgColumn.PgColumnCompanion.updated_at as c_updated_at
 import naksha.psql.PgColumn.PgColumnCompanion.geo as c_geo
+import naksha.psql.PgColumn.PgColumnCompanion.ref_point as c_ref_point
 import naksha.psql.PgColumn.PgColumnCompanion.geo_grid as c_geo_grid
 import naksha.psql.PgColumn.PgColumnCompanion.tags as c_tags
 import kotlin.js.JsExport
@@ -96,10 +101,12 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         @JsStatic
         val tuple_number_pkey = def(PgIndex::class, "tuple_number_pkey") { self ->
             self.columns = listOf(c_tuple_number)
+            self.naturalOrder = listOf(DESCENDING)
+            self.includes = listOf(c_id, c_flags)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_tuple_number DESC) INCLUDE($c_id)""",
+                        """btree ($c_tuple_number DESC) INCLUDE($c_id, $c_flags)""",
                         table, unique = true, addFillFactor = true
                     )
                 ).close()
@@ -115,10 +122,12 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         @JsStatic
         val id_unique = def(PgIndex::class, "id_unique") { self ->
             self.columns = listOf(c_id)
+            self.naturalOrder = listOf(DESCENDING)
+            self.includes = listOf(c_tuple_number, c_flags)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_id text_pattern_ops DESC) INCLUDE ($c_tuple_number)""",
+                        """btree ($c_id text_pattern_ops DESC) INCLUDE ($c_tuple_number, $c_flags)""",
                         table, unique = true, addFillFactor = true
                     )
                 ).close()
@@ -134,10 +143,12 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         @JsStatic
         val txn_unique = def(PgIndex::class, "txn_unique") { self ->
             self.columns = listOf(c_txn)
+            self.naturalOrder = listOf(DESCENDING)
+            self.includes = listOf(c_id, c_tuple_number, c_flags)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_txn DESC) INCLUDE ($c_tuple_number)""",
+                        """btree ($c_txn DESC) INCLUDE ($c_id, $c_tuple_number, $c_flags)""",
                         table, unique = true, addFillFactor = true
                     )
                 ).close()
@@ -153,10 +164,12 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         @JsStatic
         val id_txn_uid_unique = def(PgIndex::class, "id_txn_uid_unique") { self ->
             self.columns = listOf(c_id, c_txn, c_uid)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING, ASCENDING)
+            self.includes = listOf(c_tuple_number, c_flags)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number)""",
+                        """btree ($c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number, $c_flags)""",
                         table, unique = true, addFillFactor = true
                     )
                 ).close()
@@ -172,10 +185,12 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         @JsStatic
         val id_txn_uid = def(PgIndex::class, "id_txn_uid") { self ->
             self.columns = listOf(c_id, c_txn, c_uid)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING, ASCENDING)
+            self.includes = listOf(c_tuple_number, c_flags)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number)""",
+                        """btree ($c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number, $c_flags)""",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()
@@ -187,12 +202,12 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
          */
         @JvmField
         @JsStatic
-        val gist_geo_id_txn_uid = def(PgIndex::class, "gist_geo_id_txn_uid") { self ->
-            self.columns = listOf(c_geo, c_id, c_txn, c_uid)
+        val gist_geo = def(PgIndex::class, "gist_geo") { self ->
+            self.columns = listOf(c_geo, c_id, c_txn, c_uid, c_txn_next, c_tuple_number, c_flags)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gist (naksha_geometry($c_geo, $c_flags), $c_id, $c_txn, $c_uid)""",
+                        """gist (naksha_geometry($c_geo, $c_flags), $c_id, $c_txn, $c_uid, $c_txn_next, $c_tuple_number, $c_flags)""",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()
@@ -200,16 +215,16 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         }
 
         /**
-         * [SP-GIST](https://www.postgresql.org/docs/current/spgist.html) index above [PgColumn.geo], [PgColumn.id], [PgColumn.txn] and [PgColumn.uid], better for point-only collections. For more details, please read in [gist_geo_id_txn_uid].
+         * [SP-GIST](https://www.postgresql.org/docs/current/spgist.html) index above [PgColumn.geo], [PgColumn.id], [PgColumn.txn] and [PgColumn.uid], better for point-only collections. For more details, please read in [gist_geo].
          */
         @JvmField
         @JsStatic
-        val spgist_geo_id_txn_uid = def(PgIndex::class, "spgist_geo_id_txn_uid") { self ->
-            self.columns = listOf(PgColumn.geo, PgColumn.id, PgColumn.txn, PgColumn.uid)
+        val spgist_ref_point = def(PgIndex::class, "spgist_ref_point") { self ->
+            self.columns = listOf(c_ref_point, c_id, c_txn, c_uid, c_tuple_number, c_flags)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """sp-gist (naksha_geometry($c_geo, $c_flags), $c_id, $c_txn, $c_uid)""",
+                        """sp-gist (naksha_ref_point($c_ref_point), $c_id, $c_txn, $c_uid, $c_tuple_number, $c_flags)""",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()
@@ -222,11 +237,11 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         @JvmField
         @JsStatic
         val tags_id_txn_uid = def(PgIndex::class, "tags_id_txn_uid") { self ->
-            self.columns = listOf(c_tags, c_id, c_txn, c_uid)
+            self.columns = listOf(c_tags, c_id, c_txn, c_uid, c_tuple_number, c_flags)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gin (naksha_tags($c_flags,$c_tags), $c_id, $c_txn, $c_uid)""",
+                        """gin (naksha_tags($c_flags,$c_tags), $c_id, $c_txn, $c_uid, $c_tuple_number, $c_flags)""",
                         table, unique = false, addFillFactor = false
                     )
                 ).close()
@@ -240,10 +255,12 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         @JsStatic
         val geo_grid_id_txn_uid = def(PgIndex::class, "geo_grid_id_txn_uid") { self ->
             self.columns = listOf(c_geo_grid, c_id, c_txn, c_uid)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING, DESCENDING, ASCENDING)
+            self.includes = listOf(c_tuple_number, c_flags)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_geo_grid DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number)",
+                        "btree ($c_geo_grid DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number, $c_flags)",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()
@@ -257,10 +274,12 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         @JsStatic
         val app_id_updatedAt_id_txn_uid = def(PgIndex::class, "app_id_updatedAt_id_txn_uid") { self ->
             self.columns = listOf(c_app_id, c_updated_at, c_id, c_txn, c_uid)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING, DESCENDING, DESCENDING, ASCENDING)
+            self.includes = listOf(c_tuple_number, c_flags)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_app_id text_pattern_ops DESC, $c_updated_at DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number)""",
+                        """btree ($c_app_id text_pattern_ops DESC, $c_updated_at DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number, $c_flags)""",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()
@@ -274,10 +293,12 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         @JsStatic
         val author_ts_id_txn_uid = def(PgIndex::class, "author_ts_id_txn_uid") { self ->
             self.columns = listOf(c_author, c_author_ts, c_id, c_txn, c_uid)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING, DESCENDING, DESCENDING, ASCENDING)
+            self.includes = listOf(c_tuple_number, c_flags)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_author text_pattern_ops DESC, $c_author_ts DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number)""",
+                        """btree ($c_author text_pattern_ops DESC, $c_author_ts DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number, $c_flags)""",
                         table, unique = false, addFillFactor = true
                     )
                 ).close()
@@ -334,7 +355,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         @JsStatic
         var DEFAULT_INDICES = listOf(
             id_txn_uid,
-            gist_geo_id_txn_uid,
+            gist_geo,
             geo_grid_id_txn_uid,
             tags_id_txn_uid,
             app_id_updatedAt_id_txn_uid,
@@ -353,9 +374,25 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
     }
 
     /**
-     * The columns (in order) which are part of the index. This is more informational purpose, because the index can be much more complicated, for example it could be a partial index.
+     * The columns (in order) which are part of the index.
+     *
+     * This is only informational purpose, because the index can be much more complicated, for example it could be a partial index, and it does not contain columns only included in the index, see [includes].
      */
     var columns: List<PgColumn> = emptyList()
+        private set
+
+    /**
+     * The natural sort order of the index, should hold one entry for each one in [columns].
+     *
+     * **Note**: If the sort-order is empty, but [columns] is not, this means that the index does not support sorting, e.g. `GIN` or `GIST` indices.
+     */
+    var naturalOrder: List<SortOrder> = emptyList()
+        private set
+
+    /**
+     * The columns being included only in the index.
+     */
+    var includes: List<PgColumn> = emptyList()
         private set
 
     protected var createFn: Fx2<PgConnection, PgTable>? = null

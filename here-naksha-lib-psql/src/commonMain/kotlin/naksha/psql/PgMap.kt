@@ -111,9 +111,12 @@ open class PgMap(
     open val nameQuoted = quoteIdent(schemaName)
 
     /**
-     * A concurrent hash map with all managed collections of this schema.
+     * A concurrent hash map with all cached collections by their `id`.
      */
     internal val collections: AtomicMap<String, WeakRef<PgCollection>> = Platform.newAtomicMap()
+    /**
+     * A concurrent hash map with all cached collection-identifiers by their `number`.
+     */
     internal val collectionIdByNumber: AtomicMap<Int64, String> = Platform.newAtomicMap()
 
     /**
@@ -134,11 +137,6 @@ open class PgMap(
      */
     open fun collections(): PgNakshaCollections = getCollection(VIRT_COLLECTIONS) { PgNakshaCollections(this) }
 
-    /**
-     * Returns a shared cached [PgCollection] wrapper. This method is internally called, when a storage or realm are initialized to create all internal collections.
-     * @param collectionId the collection-id.
-     * @return the shared and cached [PgCollection] wrapper.
-     */
     override operator fun get(collectionId: String): PgCollection = getCollection(collectionId) {
         when (collectionId) {
             VIRT_DICTIONARIES -> PgNakshaDictionaries(this)
@@ -146,6 +144,11 @@ open class PgMap(
             VIRT_TRANSACTIONS -> PgNakshaTransactions(this)
             else -> PgCollection(this, collectionId)
         }
+    }
+
+    override fun get(collectionNumber: Int64): PgCollection? {
+        val id = getCollectionId(collectionNumber) ?: return null
+        return this[id]
     }
 
     override fun getCollectionId(collectionNumber: Int64): String? = collectionIdByNumber[collectionNumber]

@@ -87,78 +87,23 @@ interface ISession : AutoCloseable {
     fun validateHandle(handle: String, ttl: Int? = null): Boolean
 
     /**
-     * Load the latest [tuples][Tuple] of the features with the given identifiers, from the given collection/map.
-     *
-     * The fetch modes are:
-     * - [all][FetchMode.FETCH_ALL] (_**default**_) - all columns
-     * - [all-no-cache][FetchMode.FETCH_ALL_NO_CACHE] - all columns, but do not access cache (but cache is updated)
-     * - [id][FetchMode.FETCH_ID] - id and row-id, rest from cache, if available
-     * - [meta][FetchMode.FETCH_META] - metadata and row-id, rest from cache, if available
-     * - [all-but-feature][FetchMode.FETCH_ALL_BUT_FEATURE] - all, except for the payload
-     * - [cached-only][FetchMode.FETCH_CACHE] - only what is available in cache
-     *
-     * @param mapId the map from which to load.
-     * @param collectionId the collection from to load.
-     * @param featureIds a list of feature identifiers to load.
-     * @param mode the fetch mode.
-     * @return the list of the latest [tuples][Tuple], _null_, if no [tuple][Tuple] was not found.
-     * @since 3.0.0
-     */
-    fun getLatestTuples(mapId: String, collectionId: String, featureIds: Array<String>, mode: FetchMode = FetchMode.FETCH_ALL): List<Tuple?>
-
-    /**
      * Load specific [tuples][naksha.model.Tuple].
      *
-     * The fetch modes are:
-     * - [all][FetchMode.FETCH_ALL] (_**default**_) - all columns
-     * - [all-no-cache][FetchMode.FETCH_ALL_NO_CACHE] - all columns, but do not access cache (but cache is updated)
-     * - [id][FetchMode.FETCH_ID] - id and row-id, rest from cache, if available
-     * - [meta][FetchMode.FETCH_META] - metadata and row-id, rest from cache, if available
-     * - [all-but-feature][FetchMode.FETCH_ALL_BUT_FEATURE] - all, except for the payload
-     * - [cached-only][FetchMode.FETCH_CACHE] - only what is available in cache
-     *
-     * @param tupleNumbers a list of [tuple-numbers][TupleNumber] of the rows to load.
+     * @param tupleNumbers a list of [tuple-numbers][TupleNumber] of the features to load.
+     * @param fetchFromHistory if the history should be queried.
      * @param mode the fetch mode.
-     * @return the list of the loaded [tuples][Tuple], _null_, if the tuple was not found.
+     * @return the list of the loaded [tuples][Tuple], contains _null_, if the tuple was not found.
      * @since 3.0.0
      */
-    fun getTuples(tupleNumbers: Array<TupleNumber>, mode: FetchMode = FetchMode.FETCH_ALL): List<Tuple?>
-
-    /**
-     * Fetches a single result-tuple.
-     *
-     * The fetch modes are:
-     * - [all][FetchMode.FETCH_ALL] (_**default**_) - all columns
-     * - [all-no-cache][FetchMode.FETCH_ALL_NO_CACHE] - all columns, but do not access cache (but cache is updated)
-     * - [id][FetchMode.FETCH_ID] - id and row-id, rest from cache, if available
-     * - [meta][FetchMode.FETCH_META] - metadata and row-id, rest from cache, if available
-     * - [all-but-feature][FetchMode.FETCH_ALL_BUT_FEATURE] - all, except for the payload
-     * - [cached-only][FetchMode.FETCH_CACHE] - only what is available in cache
-     *
-     * @param resultTuple the result-tuple into which to load the tuple.
-     * @param mode the fetch mode.
-     * @since 3.0.0
-     */
-    @Deprecated(
-        message = "Avoid using this methods, try to fetch all needed data at ones using fetchTuples instead",
-        replaceWith = ReplaceWith("fetchTuples(listOf(resultTuple), mode = mode)")
-    )
-    fun fetchTuple(resultTuple: ResultTuple, mode: FetchMode = FetchMode.FETCH_ALL) = fetchTuples(listOf(resultTuple), mode = mode)
+    fun getTuples(tupleNumbers: Array<TupleNumber>, fetchFromHistory:Boolean = false, mode: FetchBits = FetchMode.FETCH_ALL): List<Tuple?>
 
     /**
      * Fetches all tuples in the given result-tuples.
      *
-     * The fetch modes are:
-     * - [all][FetchMode.FETCH_ALL] (_**default**_) - all columns
-     * - [all-no-cache][FetchMode.FETCH_ALL_NO_CACHE] - all columns, but do not access cache (but cache is updated)
-     * - [id][FetchMode.FETCH_ID] - id and row-id, rest from cache, if available
-     * - [meta][FetchMode.FETCH_META] - metadata and row-id, rest from cache, if available
-     * - [all-but-feature][FetchMode.FETCH_ALL_BUT_FEATURE] - all, except for the payload
-     * - [cached-only][FetchMode.FETCH_CACHE] - only what is available in cache
-     *
      * @param resultTuples a list of result-tuples to fetch.
      * @param from the index of the first result-tuples to fetch.
      * @param to the index of the first result-tuples to ignore.
+     * @param fetchFromHistory if the history should be queried.
      * @param mode the fetch mode.
      * @since 3.0.0
      */

@@ -10,6 +10,7 @@ import naksha.model.NakshaContext.NakshaContextCompanion.DEFAULT_MAP_ID
 import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.model.NakshaVersion.Companion.LATEST
 import naksha.model.objects.NakshaFeature
+import naksha.model.request.ExecutedOp
 import naksha.model.request.ResultTuple
 import naksha.psql.PgColumn.PgColumnCompanion.app_id
 import naksha.psql.PgColumn.PgColumnCompanion.attachment
@@ -29,6 +30,7 @@ import naksha.psql.PgColumn.PgColumnCompanion.puid
 import naksha.psql.PgColumn.PgColumnCompanion.ref_point
 import naksha.psql.PgColumn.PgColumnCompanion.store_number
 import naksha.psql.PgColumn.PgColumnCompanion.tags
+import naksha.psql.PgColumn.PgColumnCompanion.tuple_number
 import naksha.psql.PgColumn.PgColumnCompanion.txn
 import naksha.psql.PgColumn.PgColumnCompanion.txn_next
 import naksha.psql.PgColumn.PgColumnCompanion.type
@@ -344,11 +346,6 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
     protected open fun newMap(storage: PgStorage, mapId: String): PgMap =
         PgMap(storage, mapId, mapIdToSchema(mapId))
 
-    /**
-     * Returns the map wrapper.
-     * @param mapId the map-id.
-     * @return the map wrapper.
-     */
     override operator fun get(mapId: String): PgMap {
         val maps = this.maps
         while (true) {
@@ -366,45 +363,34 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
         }
     }
 
-    /**
-     * Translate the schema name into a map name.
-     * @param mapNumber the `map-id` as encoded in [StoreNumber].
-     * @return the map name.
-     */
+    override operator fun get(mapNumber: Int): PgMap? {
+        val id = getMapId(mapNumber) ?: return null
+        return this[id]
+    }
+
     override fun getMapId(mapNumber: Int): String? = mapNumberToId[mapNumber]
 
     override fun tupleToFeature(tuple: Tuple): NakshaFeature {
-        return if (tuple.feature != null) {
-            val feature = PgUtil.decodeFeature(tuple.feature, tuple.meta.flags, JbDictManager())
-            if(feature == null){
-                throw NakshaException(
-                    NakshaError(
-                        NakshaError.EXCEPTION,
-                        "Could not deserialize feature for tuple number: ${tuple.tupleNumber}"
-                    )
-                )
-            }
-            val decodedTags = PgUtil.decodeTags(tuple.tags, tuple.meta.flags)
-            feature.properties.xyz = xyzFrom(tuple.meta, decodedTags = decodedTags?.toTagList())
-            tuple.geo?.let { geoBytes ->
-                feature.geometry = PgUtil.decodeGeometry(geoBytes, tuple.meta.flags)
-            }
-            feature
-        } else {
-            TODO("We will always have at least the id, which is formally enough to generate an empty feature!")
-        }
+        val feature = if (tuple.fetchBits.feature() && tuple.feature != null) {
+            PgUtil.decodeFeature(tuple.feature, tuple.flags, dictionaryManager) ?: NakshaFeature()
+        } else NakshaFeature()
+        val meta = tuple.meta
+        if (meta != null) feature.properties.xyz = xyzFrom(meta)
+        val tags = tuple.tags
+        if (tags != null) feature.properties.xyz.tags = PgUtil.decodeTags(tuple.tags, tuple.flags, dictionaryManager)?.toTagList()
+        val geo = tuple.geo
+        if (geo != null) feature.geometry = PgUtil.decodeGeometry(geo, tuple.flags)
+        val attachment = tuple.attachment
+        if (attachment != null) feature.attachment = attachment
+        return feature
     }
 
-    private fun xyzFrom(meta: Metadata, decodedTags: TagList?): XyzNs {
-        meta
+    private fun xyzFrom(meta: Metadata): XyzNs {
         return AnyObject().apply {
             setRaw("uuid", meta.uid)
             setRaw("puuid", meta.puid)
-            // setRaw("muuid", ?) TODO
             setRaw("createdAt", meta.createdAt)
             setRaw("updatedAt", meta.updatedAt)
-            // setRaw("space", ?) TODO
-            setRaw("tags", decodedTags)
             setRaw("version", meta.version.txn)
             setRaw("changeCount", meta.changeCount)
             setRaw("action", meta.action())
@@ -498,48 +484,11 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
     }
 
     /**
-     * Load the latest [tuples][Tuple] of the features with the given identifiers, from the given collection/map.
-     *
-     * The fetch modes are:
-     * - [all][FETCH_ALL] (_**default**_) - all columns
-     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
-     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
-     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
-     * - [cached-only][FETCH_CACHE] - only what is available in cache
-     *
-     * @param conn the connection to use.
-     * @param mapId the map from which to load.
-     * @param collectionId the collection from to load.
-     * @param featureIds a list of feature identifiers to load.
-     * @param mode the fetch mode.
-     * @return the list of the latest [tuples][Tuple], _null_, if no [tuple][Tuple] was not found.
-     * @since 3.0.0
-     */
-    fun getLatestTuples(
-        conn: PgConnection,
-        mapId: String,
-        collectionId: String,
-        featureIds: Array<String>,
-        mode: FetchMode = FETCH_ALL
-    ): List<Tuple?> {
-        TODO("Implement getLatestTuples")
-        // val readFeatures = ReadFeatures(collection.id)
-        // readFeatures.featureIds.add(featureId)
-        // val response = PgReader(session, readFeatures).execute().proxy(SuccessResponse::class)
-    }
-
-    /**
      * Load specific [tuples][naksha.model.Tuple].
-     *
-     * The fetch modes are:
-     * - [all][FETCH_ALL] (_**default**_) - all columns
-     * - [all-no-cache][FETCH_ALL] - all columns, but do not access cache (but cache is updated)
-     * - [id][FETCH_ID] - id and row-id, rest from cache, if available
-     * - [meta][FETCH_META] - metadata and row-id, rest from cache, if available
-     * - [cached-only][FETCH_CACHE] - only what is available in cache
      *
      * @param conn the connection to use.
      * @param tupleNumbers a list of [tuple-numbers][TupleNumber] of the rows to load.
+     * @param fetchFromHistory if the history should be queried.
      * @param mode the fetch mode.
      * @return the list of the loaded [tuples][Tuple], _null_, if the tuple was not found.
      * @since 3.0.0
@@ -547,9 +496,12 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
     fun getTuples(
         conn: PgConnection,
         tupleNumbers: Array<TupleNumber>,
-        mode: FetchMode = FETCH_ALL
+        fetchFromHistory: Boolean = false,
+        mode: FetchBits = FetchMode.FETCH_ALL
     ): List<Tuple?> {
-        TODO("Implement getTuples")
+        val loader = PgTupleLoader(this, fetchFromHistory, conn)
+        for (tupleNumber in tupleNumbers) loader.add(tupleNumber, mode)
+        return loader.execute()
     }
 
     /**
@@ -559,6 +511,7 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
      * @param resultTuples a list of result-tuples to fetch.
      * @param from the index of the first result-tuples to fetch.
      * @param to the index of the first result-tuples to ignore.
+     * @param fetchFromHistory if the history should be queried.
      * @param mode the fetch mode.
      * @since 3.0.0
      * @see ISession.fetchTuples
@@ -568,76 +521,19 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
         resultTuples: List<ResultTuple?>,
         from: Int = 0,
         to: Int = resultTuples.size,
-        mode: FetchMode = FetchMode.FETCH_ALL
+        fetchFromHistory: Boolean = false,
+        mode: FetchBits = FetchMode.FETCH_ALL
     ) {
-        // key = collectionId
-        // value = list of tuples to load
-        val toFetch = mutableMapOf<String, MutableList<ResultTuple>?>()
-        val tupleCache = NakshaCache.tupleCache(this.id)
-        var i = from
-        while (i < to) {
-            val result = resultTuples[i++] ?: continue
-            val tupleNumber = result.tupleNumber
-            val storeNumber = tupleNumber.storeNumber
-            val mapId = getMapId(storeNumber.mapNumber()) ?: continue
-            val map = get(mapId)
-            if (!map.exists()) continue
-
-            // Try cache first, except we should not use cache.
-            if (mode != FETCH_ALL_NO_CACHE) result.tuple = tupleCache[tupleNumber]
-            // If we should only try cache, done
-            if (mode == FETCH_CACHE) continue
-
-            val tuple = result.tuple
-            // If we have enough info form cache.
-            if (tuple != null && (mode == FETCH_ID || mode == FETCH_META || tuple.isComplete())) continue
-
-            // We need to fetch either meta or all.
-            val colId = map.getCollectionId(tupleNumber.collectionNumber())
-            if (colId == null) {
-                // The collection of the tuple does not exist.
-                result.tuple = null
-                continue
-            }
-            var list = toFetch[colId]
-            if (list == null) {
-                list = mutableListOf()
-                toFetch[colId] = list
-            }
-            list.add(result)
-        }
-        if (toFetch.isNotEmpty()) {
-            for (entry in toFetch) {
-                val colId = entry.key
-                val list = entry.value ?: continue
-                val tupleNumbers = Array(list.size) { list[it].tupleNumber.toByteArray() }
-                val SQL = if (mode == FETCH_META) {
-                    """
-SELECT gzip(string_agg(${PgColumn.metaSelectToBinary}::bytea,'\\x00'::bytea)) AS binary_meta
-FROM ${quoteIdent(colId)}
-WHERE tuple_number = ANY($1)
-"""
-                } else {
-                    "SELECT $ALL_COLUMNS FROM ${quoteIdent(colId)} WHERE tuple_number = ANY($1)"
-                }
-                val cursor = conn.execute(SQL, arrayOf(tupleNumbers))
-                cursor.use {
-                    if (mode == FETCH_META) {
-                        cursor.fetch()
-                        val binary_meta: ByteArray = cursor["binary_meta"]
-                        val metaArray = MetadataByteArray(this, binary_meta)
-                        TODO("Implement metadata-only")
-                    } else {
-                        while (cursor.next()) {
-                            val tuple = loadTupleFromAllColumns(this, cursor)
-                            tupleCache.store(tuple)
-                            list[cursor.rowNumber() - 1].tuple = tuple
-                        }
-                    }
-                }
+        val loader = PgTupleLoader(this, fetchFromHistory, conn)
+        for (rt in resultTuples) loader.add(rt, mode)
+        val all = loader.execute()
+        for (i in all.indices) {
+            val rt = resultTuples[i]
+            if (rt != null) {
+                rt.op = ExecutedOp.READ
+                rt.tuple = all[i]
             }
         }
-        // TODO: Fetch from history, when tuples are not found in HEAD!
     }
 
     companion object PgStorage_C {
@@ -645,50 +541,78 @@ WHERE tuple_number = ANY($1)
         /**
          * All columns to be added into a SELECT query, already quoted, if needed.
          */
-        internal val ALL_COLUMNS = PgColumn.allColumns.joinToString(",")
+        @Deprecated(message = "Please directly use PgColumn.fullSelect", replaceWith = ReplaceWith("PgColumn.fullSelect"))
+        internal val ALL_COLUMNS = PgColumn.fullSelect
 
         /**
-         * Helper method to read a [Tuple] from a [PgCursor] that is located above a row where [ALL_COLUMNS] are selected.
+         * Helper method to read a [Tuple] from a [PgCursor].
+         *
+         * It automatically detects which parts have been selected, but requires that at least:
+         * - either [tuple_number][PgColumn.tuple_number] or [txn][PgColumn.txn], [store_number][PgColumn.store_number] and [uid][PgColumn.uid]
+         * - [flags][PgColumn.flags]
+         * - [id][PgColumn.id]
+         *
+         * Have been selected, because otherwise it is not possible to construct the [Tuple], which requires the `tuple-number`, `id` and `flags`. Without the `flags` decoding of parts is not possible.
          * @param storage the storage from which to read.
          * @param cursor the cursor to read.
          * @return the read tuple.
          */
-        internal fun loadTupleFromAllColumns(storage: PgStorage, cursor: PgCursor): Tuple {
-            val _txn: Int64 = cursor[txn]
-            val tupleNumber = TupleNumber(
-                cursor[store_number],
-                Version(_txn),
-                cursor[uid]
-            )
-            val updatedAt: Int64 = cursor[updated_at]
-            val createdAt = cursor.column(created_at) as Int64?
-            val authorTs = cursor.column(author_ts) as Int64?
-            val _txn_next = cursor.column(txn_next) as Int64?
-            val _ptxn = cursor.column(ptxn) as Int64?
-            val metadata = Metadata(
-                storeNumber = tupleNumber.storeNumber,
-                updatedAt = updatedAt,
-                createdAt = createdAt ?: updatedAt,
-                authorTs = authorTs ?: updatedAt,
-                nextVersion = if (_txn_next != null) Version(_txn_next) else null,
-                version = tupleNumber.version,
-                prevVersion = if (_ptxn != null) Version(_ptxn) else null,
-                uid = tupleNumber.uid,
-                puid = cursor.column(puid) as Int?,
-                hash = cursor[hash],
-                changeCount = cursor[change_count],
-                geoGrid = cursor[geo_grid],
-                flags = cursor[flags],
-                id = cursor[id],
-                appId = cursor[app_id],
-                author = cursor.column(author) as String?,
-                type = cursor.column(type) as String?,
-                origin = cursor.column(origin) as String?
-            )
+        internal fun readTupleFromCursor(storage: PgStorage, cursor: PgCursor): Tuple {
+            val tupleNumberByteArray: ByteArray? = cursor.column(tuple_number) as ByteArray?
+            val tupleNumber = if (tupleNumberByteArray != null) TupleNumber.fromByteArray(tupleNumberByteArray) else {
+                val _txn: Int64 = cursor[txn]
+                TupleNumber(
+                    cursor[store_number],
+                    Version(_txn),
+                    cursor[uid]
+                )
+            }
+
+            // We always need at least tuple-number and id
+            var fetchBits: FetchBits = FetchMode.FETCH_ID
+            val id: String = cursor[id]
+            val flags: Flags = cursor[flags]
+
+            val updatedAt: Int64? = cursor.column(updated_at) as Int64?
+            val metadata = if (updatedAt != null) {
+                fetchBits = fetchBits.withMeta()
+                val createdAt = cursor.column(created_at) as Int64?
+                val authorTs = cursor.column(author_ts) as Int64?
+                val _txn_next = cursor.column(txn_next) as Int64?
+                val _ptxn = cursor.column(ptxn) as Int64?
+                Metadata(
+                    storeNumber = tupleNumber.storeNumber,
+                    updatedAt = updatedAt,
+                    createdAt = createdAt ?: updatedAt,
+                    authorTs = authorTs ?: updatedAt,
+                    nextVersion = if (_txn_next != null) Version(_txn_next) else null,
+                    version = tupleNumber.version,
+                    prevVersion = if (_ptxn != null) Version(_ptxn) else null,
+                    uid = tupleNumber.uid,
+                    puid = cursor.column(puid) as Int?,
+                    hash = cursor[hash],
+                    changeCount = cursor[change_count],
+                    geoGrid = cursor[geo_grid],
+                    flags = flags,
+                    id = id,
+                    appId = cursor[app_id],
+                    author = cursor.column(author) as String?,
+                    type = cursor.column(type) as String?,
+                    origin = cursor.column(origin) as String?
+                )
+            } else null
+            if (feature in cursor) fetchBits = fetchBits.withFeature()
+            if (geo in cursor) fetchBits = fetchBits.withGeometry()
+            if (ref_point in cursor) fetchBits = fetchBits.withReferencePoint()
+            if (tags in cursor) fetchBits = fetchBits.withTags()
+            if (attachment in cursor) fetchBits = fetchBits.withAttachment()
             return Tuple(
                 storage = storage,
                 tupleNumber = tupleNumber,
+                fetchBits = fetchBits,
                 meta = metadata,
+                id = id,
+                flags = flags,
                 feature = cursor.column(feature) as ByteArray?,
                 geo = cursor.column(geo) as ByteArray?,
                 referencePoint = cursor.column(ref_point) as ByteArray?,
@@ -700,4 +624,7 @@ WHERE tuple_number = ANY($1)
 
     override fun close() {
     }
+
+    @Suppress("LeakingThis")
+    internal val dictionaryManager = PgDictManager(this)
 }

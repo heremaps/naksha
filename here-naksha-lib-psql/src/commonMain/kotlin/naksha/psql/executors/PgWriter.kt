@@ -1,11 +1,15 @@
 package naksha.psql.executors
 
 import naksha.base.Int64
+import naksha.base.PlatformUtil
+import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
+import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.model.objects.NakshaCollection
@@ -113,7 +117,7 @@ class PgWriter(
      * @param collectionNumber the collection-number of the collection.
      * @return a new tuple-number.
      */
-    fun collectionTupleNumber(map: PgMap, collectionNumber: Int64): TupleNumber =
+    fun newCollectionTupleNumber(map: PgMap, collectionNumber: Int64): TupleNumber =
         TupleNumber(StoreNumber(map.number, collectionNumber, 0), version, newUid())
 
     /**
@@ -121,7 +125,7 @@ class PgWriter(
      * @param collection the collection for which to return a new tuple-number.
      * @return a new tuple-number.
      */
-    fun collectionTupleNumber(collection: PgCollection): TupleNumber =
+    fun newCollectionTupleNumber(collection: PgCollection): TupleNumber =
         TupleNumber(StoreNumber(collection.map.number, collection.number, 0), version, newUid())
 
     /**

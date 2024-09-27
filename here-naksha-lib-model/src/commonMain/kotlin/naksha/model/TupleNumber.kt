@@ -109,15 +109,16 @@ data class TupleNumber(
     companion object TupleNumberCompanion {
         /**
          * Convert byteArray form of tuple into [TupleNumber]
-         * @param byteArray tupleNumber in byteArray form
-         * @return [TupleNumber] object
+         * @param byteArray tupleNumber in byteArray.
+         * @param offset the offset to read from.
+         * @return the decoded [TupleNumber].
          */
-        fun fromByteArray(byteArray: ByteArray): TupleNumber {
+        fun fromByteArray(byteArray: ByteArray, offset: Int=0): TupleNumber {
             val view = Platform.newDataView(byteArray)
             return TupleNumber(
-                dataview_get_int64(view, 0),
-                Version(dataview_get_int64(view, 8)),
-                dataview_get_int32(view, 16),
+                dataview_get_int64(view, offset),
+                Version(dataview_get_int64(view, offset+8)),
+                dataview_get_int32(view, offset+16),
             )
         }
     }

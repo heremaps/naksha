@@ -395,6 +395,21 @@ open class TupleColumn() : AnyObject() {
         @JsStatic
         fun tags(): TupleColumn = TupleColumn(TAGS)
 
+        /**
+         * The reference to the [attachment][naksha.model.Tuple.attachment].
+         *
+         * This can only be queried using a special [property query][IPropertyQuery].
+         */
+        const val ATTACHMENT = "attachment"
+
+        /**
+         * Returns a new row-column for [ATTACHMENT].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun attachment(): TupleColumn = TupleColumn(ATTACHMENT)
+
         private val STRING = NotNullProperty<TupleColumn, String>(String::class) { _, _ -> "" }
     }
 
