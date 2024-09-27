@@ -860,8 +860,8 @@ open class JbDecoder {
     fun isXyz(): Boolean = unitType() == TYPE_XYZ
 
     /**
-     * Read the current unit as _null_, [Boolean], [Int], [Int64], [Double], [String], [JbMapDecoder], [JbArrayDecoder] or [Array].
-     * @return the current unit as _null_, [Boolean], [Int], [Int64], [Double], [String], [JbMapDecoder], [JbArrayDecoder] or [Array].
+     * Read the current unit.
+     * @return _null_, [Boolean], [Int], [Int64], [Double], [String], [AnyObject] or [Array].
      * @throws IllegalStateException If the reader position or the unit-type is invalid.
      */
     fun decodeValue(): Any? {
