@@ -7,57 +7,113 @@ import naksha.model.request.ExecutedOp
 import naksha.model.request.PropertyFilter
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ResultTuple
-import naksha.model.request.query.PQuery
-import naksha.model.request.query.Property
-import naksha.model.request.query.StringOp
+import naksha.model.request.query.*
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
-import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class PropertyFilterTest {
 
+    companion object {
+        lateinit var resultTuple : ResultTuple
+
+        @JvmStatic
+        @BeforeAll
+        fun setupTuple(): Unit {
+            // create the feature
+            val feature = NakshaFeature()
+            feature.properties["foo"] = "bar"
+            feature.properties["number"] = 1.1
+
+            // build tuple containing the feature
+            val encoder = JbEncoder()
+            val byteArray = encoder.buildFeatureFromMap(feature)
+            val storeNumber = StoreNumber(0, Int64(0))
+            val version = Version(0)
+            val flag = Flags(0)
+            val tupleNumber = TupleNumber(
+                storeNumber = storeNumber,
+                uid = 0,
+                version = version,
+            )
+            val mockStorage = mock<IStorage>()
+            val tuple = Tuple(
+                storage = mockStorage,
+                tupleNumber = tupleNumber,
+                Metadata(
+                    storeNumber = storeNumber,
+                    updatedAt = Int64(0),
+                    uid = 0,
+                    id = "",
+                    appId = "",
+                    author = null,
+                    version = version,
+                    type = null,
+                    flags = flag,
+                ),
+                byteArray
+            )
+            resultTuple = ResultTuple(
+                storage = mockStorage,
+                tupleNumber = tupleNumber,
+                op = ExecutedOp.READ,
+                featureId = null,
+                tuple = tuple
+            )
+        }
+    }
+
     @Test
     fun testFilter() {
-        val feature = NakshaFeature()
-        feature.properties["foo"] = "bar"
-        val encoder = JbEncoder()
-        val byteArray = encoder.buildFeatureFromMap(feature)
-        val storeNumber = StoreNumber(0, Int64(0))
-        val version = Version(0)
-        val flag = Flags(0)
-        val tupleNumber = TupleNumber(
-            storeNumber = storeNumber,
-            uid = 0,
-            version = version,
-        )
-        val mockStorage = mock<IStorage>()
-        val tuple = Tuple(
-            storage = mockStorage,
-            tupleNumber = tupleNumber,
-            Metadata(
-                storeNumber = storeNumber,
-                updatedAt = Int64(0),
-                uid = 0,
-                id = "",
-                appId = "",
-                author = null,
-                version = version,
-                type = null,
-                flags = flag,
-                ),
-            byteArray
-        )
-        val resulTuple = ResultTuple(
-            storage = mockStorage,
-            tupleNumber = tupleNumber,
-            op = ExecutedOp.READ,
-            featureId = null,
-            tuple = tuple
-        )
+        // the filter
         val request = ReadFeatures()
-        request.query.properties = PQuery(Property("foo"),StringOp.EQUALS,"bar")
         val filter = PropertyFilter(request)
-        val outputTuple = filter.call(resulTuple)
-        assertEquals(resulTuple,outputTuple)
+
+        // test string op
+        request.query.properties = PQuery(Property("foo"),StringOp.EQUALS,"bar")
+        assertEquals(resultTuple,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("foo"),StringOp.EQUALS,"foooooo")
+        assertEquals(null,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("foo"),StringOp.STARTS_WITH,"b")
+        assertEquals(resultTuple,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("foo"),StringOp.STARTS_WITH,"a")
+        assertEquals(null,filter.call(resultTuple))
+
+        // test double op
+        request.query.properties = PQuery(Property("number"),DoubleOp.EQ,1.1)
+        assertEquals(resultTuple,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("number"),DoubleOp.GT,1)
+        assertEquals(resultTuple,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("number"),DoubleOp.LT,1.1)
+        assertEquals(null,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("number"),DoubleOp.GTE,2)
+        assertEquals(null,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("number"),DoubleOp.LTE,1.1)
+        assertEquals(resultTuple,filter.call(resultTuple))
+
+        // mixed ops
+        request.query.properties = PAnd(
+            PQuery(Property("number"),DoubleOp.LTE,1.1),
+            PQuery(Property("foo"),StringOp.EQUALS,"bar")
+        )
+        assertEquals(resultTuple,filter.call(resultTuple))
+        request.query.properties = PAnd(
+            PQuery(Property("number"),DoubleOp.LTE,0),
+            PQuery(Property("foo"),StringOp.EQUALS,"bar")
+        )
+        assertEquals(null,filter.call(resultTuple))
+        request.query.properties = POr(
+            PQuery(Property("number"),DoubleOp.EQ,1.1),
+            PQuery(Property("foo"),StringOp.EQUALS,"foooo")
+        )
+        assertEquals(resultTuple,filter.call(resultTuple))
+        request.query.properties = POr(
+            PQuery(Property("number"),DoubleOp.EQ,0),
+            PQuery(Property("foo"),StringOp.EQUALS,"foooo")
+        )
+        assertEquals(null,filter.call(resultTuple))
+        request.query.properties = PNot(PQuery(Property("foo"),StringOp.STARTS_WITH,"a"))
+        assertEquals(resultTuple,filter.call(resultTuple))
     }
 }

@@ -36,7 +36,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
                 }
                 return false
             }
-            is PNot -> return !resolvePropsQuery(pQuery, decoder)
+            is PNot -> return !resolvePropsQuery(pQuery.query, decoder)
             is PQuery -> {
                 val propFromFeature = decoder[PROPERTIES,pQuery.property.path.first()!!]
                 val op = pQuery.op
