@@ -658,8 +658,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION naksha_feature(feature bytea, flags int4) RETURNS json
 LANGUAGE 'plpgsql'
-STRICT
-IMMUTABLE
+IMMUTABLE PARALLEL SAFE STRICT
 AS $$
 DECLARE
   encoding int4;
@@ -682,8 +681,7 @@ END $$;
 
 CREATE OR REPLACE FUNCTION naksha_geometry(geo bytea, flags int) RETURNS geometry
 LANGUAGE 'plpgsql'
-IMMUTABLE
-PARALLEL SAFE
+IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
 DECLARE
@@ -707,6 +705,16 @@ BEGIN
   end if;
   -- Unknown encoding
   return null;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_ref_point(ref_point bytea) RETURNS geometry
+LANGUAGE 'plpgsql'
+IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+BEGIN
+  RETURN ST_GeomFromTWKB(geo);
 END;
 $$;
 
