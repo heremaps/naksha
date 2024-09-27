@@ -5,9 +5,12 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.JsonNode
 import naksha.base.Platform.PlatformCompanion.longToInt64
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 object CustomDeserializer : JsonDeserializer<Any>() {
 
+    @OptIn(ExperimentalEncodingApi::class)
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Any? {
         val value = p.codec.readTree<JsonNode>(p)
         if (value.isLong) {
@@ -31,6 +34,15 @@ object CustomDeserializer : JsonDeserializer<Any>() {
                     "dec" -> return longToInt64(number.toLong())
                     "oct" -> return longToInt64(number.removePrefix("0").toLong(8))
                     "bin" -> return longToInt64(number.removePrefix("0b").toLong(2))
+                }
+            }
+            if (asText.startsWith("data:application/octet-stream;") && Platform.fromJsonOptions.get().parseDataUrl) {
+                val data = asText.split(";")[1]
+                val parts = data.split(",")
+                val encoding = parts[0]
+                val string = parts[1]
+                when (encoding) {
+                    "base64" -> return Base64.UrlSafe.decode(string)
                 }
             }
             return asText
