@@ -29,10 +29,9 @@ class PropertyFilterTest {
             feature.properties["number"] = 1.1
             nestedJson["bool"] = true
             nestedJson["nullProps"] = null
-//            val innerJson = AnyObject()
-//            innerJson["a"] = 1
-//            nestedJson["array"] = arrayOf("one", "two", "three", innerJson)
-            nestedJson["array"] = arrayOf("one", "two", "three")
+            val innerJson = AnyObject()
+            innerJson["a"] = 1
+            nestedJson["array"] = arrayOf("one", "two", "three", innerJson)
             feature.properties["json"] = nestedJson
             // build tuple containing the feature
             val encoder = JbEncoder()

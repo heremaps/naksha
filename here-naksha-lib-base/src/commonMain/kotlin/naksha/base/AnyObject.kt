@@ -12,16 +12,7 @@ import kotlin.js.JsExport
 @JsExport
 open class AnyObject : MapProxy<String, Any>(String::class, Any::class) {
     fun contentDeepEquals(other: AnyObject): Boolean {
-        if (this.size != other.size) return false
-        for ((key, value1) in this.entries) {
-            val value2 = other[key]
-            if (value1 is Array<*> && value2 is Array<*>) {
-                if (!value1.contentDeepEquals(value2)) return false
-            } else if (value1 != value2) {
-                return false
-            }
-        }
-        return true
+        return Platform.deepEquals(this, other)
     }
 }
 

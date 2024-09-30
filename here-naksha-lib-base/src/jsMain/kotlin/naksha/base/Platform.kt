@@ -780,5 +780,9 @@ return obj;
         init {
             initialize()
         }
+
+        actual fun deepEquals(obj1: Any?, obj2: Any?): Boolean {
+            TODO("Not yet implemented")
+        }
     }
 }

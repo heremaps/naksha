@@ -115,6 +115,8 @@ expect class Platform {
          */
         val logger: PlatformLogger
 
+        fun deepEquals(obj1: Any?, obj2: Any?): Boolean
+
         /**
          * Tests if the given value is _null_ or _undefined_.
          * @param any The value to test.
