@@ -2,6 +2,7 @@ package naksha.psql
 
 import naksha.geo.SpBoundingBox
 import naksha.model.Action
+import naksha.model.NakshaCache
 import naksha.model.TagList
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.ReadFeatures

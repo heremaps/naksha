@@ -23,6 +23,7 @@ import java.util.List;
 
 import naksha.model.Tuple;
 import naksha.model.TupleNumber;
+import naksha.model.objects.Transaction;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.ResultTuple;
@@ -121,5 +122,11 @@ public class MockReadSession implements IReadSession {
   @Override
   public void fetchTuples(@NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
 
+  }
+
+  @NotNull
+  @Override
+  public Transaction transaction() {
+    return null;
   }
 }

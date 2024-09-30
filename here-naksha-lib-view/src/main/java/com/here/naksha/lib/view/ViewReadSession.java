@@ -265,6 +265,7 @@ public class ViewReadSession implements IReadSession {
 
   @Override
   public @NotNull Transaction transaction() {
-    throw new UnsupportedOperationException("Views have multiple individual transactions and doesn't support common parent transaction.");
+    throw new UnsupportedOperationException(
+        "Views have multiple individual transactions and doesn't support common parent transaction.");
   }
 }

@@ -57,6 +57,7 @@ class CreateCollection(
         return Tuple(
             storage = session.storage,
             tupleNumber = tupleNumber,
+            fetchBits = FetchMode.FETCH_ALL,
             geo = PgUtil.encodeGeometry(feature.geometry, flags),
             referencePoint = PgUtil.encodeGeometry(feature.referencePoint, flags),
             feature = PgUtil.encodeFeature(feature, flags, encodingDict),
