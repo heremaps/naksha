@@ -4,9 +4,7 @@ import naksha.base.Epoch
 import naksha.model.SessionOptions
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
-import naksha.model.request.SuccessResponse
-import naksha.model.request.Write
-import naksha.model.request.WriteRequest
+import naksha.model.request.*
 import naksha.psql.base.PgTestBase
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -87,6 +85,12 @@ class PartitioningTest : PgTestBase() {
             assertTrue { result is SuccessResponse }
             assertEquals(1, (result as SuccessResponse).tuples.size)
         }
+
+        // also - should be able to read
+        val readRequest = ReadFeatures(partitionedCollection.id)
+        readRequest.featureIds.add("f1")
+        val readResponse = storage.newWriteSession().execute(readRequest) as SuccessResponse
+        assertEquals(1, readResponse.features.size)
     }
 
     @Test
