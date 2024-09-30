@@ -81,7 +81,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
             }
             is AnyObject -> {
                 if (queryProperty !is AnyObject) return false
-                return featureProperty == queryProperty
+                return featureProperty.contentDeepEquals(queryProperty)
             }
         }
         return false
