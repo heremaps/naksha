@@ -1,5 +1,6 @@
 package naksha.model
 
+import naksha.base.AnyObject
 import naksha.base.Int64
 import naksha.jbon.JbEncoder
 import naksha.model.objects.NakshaFeature
@@ -12,11 +13,13 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class PropertyFilterTest {
 
     companion object {
         lateinit var resultTuple : ResultTuple
+        val nestedJson = AnyObject()
 
         @JvmStatic
         @BeforeAll
@@ -25,7 +28,10 @@ class PropertyFilterTest {
             val feature = NakshaFeature()
             feature.properties["foo"] = "bar"
             feature.properties["number"] = 1.1
-
+            nestedJson["bool"] = true
+            nestedJson["nullProps"] = null
+            nestedJson["array"] = arrayOf("one", "two", "three")
+            feature.properties["json"] = nestedJson
             // build tuple containing the feature
             val encoder = JbEncoder()
             val byteArray = encoder.buildFeatureFromMap(feature)
@@ -114,6 +120,41 @@ class PropertyFilterTest {
         )
         assertEquals(null,filter.call(resultTuple))
         request.query.properties = PNot(PQuery(Property("foo"),StringOp.STARTS_WITH,"a"))
+        assertEquals(resultTuple,filter.call(resultTuple))
+    }
+
+    @Test
+    fun testAnyOps() {
+        // the filter
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+
+        request.query.properties = PQuery(Property("json"),AnyOp.EXISTS,null)
+        assertEquals(resultTuple,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("json","ololo"),AnyOp.EXISTS,null)
+        assertEquals(null,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("json","bool"),AnyOp.IS_TRUE,null)
+        assertEquals(resultTuple,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("json","bool"),AnyOp.IS_FALSE,null)
+        assertEquals(null,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("json","nullProps"),AnyOp.IS_NULL,null)
+        assertEquals(resultTuple,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("json","nullProps"),AnyOp.IS_NOT_NULL,null)
+        assertEquals(null,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("foo"),AnyOp.IS_ANY_OF, listOf("bar","barz"))
+        assertEquals(resultTuple,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("foo"),AnyOp.IS_ANY_OF, arrayOf("hoho","haha"))
+        assertEquals(null,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("number"),AnyOp.CONTAINS, 1.1)
+        assertEquals(resultTuple,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("json","bool"),AnyOp.CONTAINS, true)
+        assertEquals(resultTuple,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("json","array"),AnyOp.CONTAINS, arrayOf("two", "three"))
+        assertEquals(resultTuple,filter.call(resultTuple))
+        request.query.properties = PQuery(Property("json","array"),AnyOp.CONTAINS, arrayOf("four", "three"))
+        assertEquals(null,filter.call(resultTuple))
+
+        request.query.properties = PQuery(Property("json"),AnyOp.CONTAINS, nestedJson.copy(true))
         assertEquals(resultTuple,filter.call(resultTuple))
     }
 }

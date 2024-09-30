@@ -38,7 +38,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
             }
             is PNot -> return !resolvePropsQuery(pQuery.query, decoder)
             is PQuery -> {
-                val propFromFeature = decoder[PROPERTIES,pQuery.property.path.first()!!]
+                val propFromFeature = decoder.get(PROPERTIES,*pQuery.property.path.filterNotNull().toTypedArray())
                 val op = pQuery.op
                 return resolveEachOp(op,propFromFeature,pQuery.value)
             }
@@ -54,8 +54,9 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
             AnyOp.IS_TRUE -> return featureProperty == true
             AnyOp.IS_FALSE -> return featureProperty == false
             AnyOp.IS_ANY_OF -> {
-                if (queryProperty !is Array<*>) return false
-                return queryProperty.contains(featureProperty)
+                if (queryProperty is Array<*>) return queryProperty.contains(featureProperty)
+                if (queryProperty is List<*>) return queryProperty.contains(featureProperty)
+                return false
             }
             AnyOp.CONTAINS -> return resolveContains(featureProperty, queryProperty)
             StringOp.EQUALS -> return (featureProperty is String) && (queryProperty is String) && (featureProperty.toString() == queryProperty.toString())
@@ -74,12 +75,13 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
         if (Platform.isScalar(featureProperty)) return featureProperty.toString() == queryProperty.toString()
         when (featureProperty) {
             is Array<*> -> {
-                if (queryProperty !is Array<*>) return false
-                return featureProperty.intersect(queryProperty.toSet()).size == queryProperty.size
+                if (queryProperty is Array<*>) return featureProperty.intersect(queryProperty.toSet()).size == queryProperty.size
+                if (queryProperty is List<*>) return featureProperty.intersect(queryProperty).size == queryProperty.size
+                return false
             }
             is AnyObject -> {
                 if (queryProperty !is AnyObject) return false
-                return featureProperty.containsValue(queryProperty)
+                return featureProperty == queryProperty
             }
         }
         return false

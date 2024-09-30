@@ -374,7 +374,7 @@ actual class Platform {
                     copy as T
                 }
                 is JvmList -> {
-                    val copy = JvmList(obj.size)
+                    val copy = JvmList()
                     for (value in obj) {
                         if (recursive) copy.add(copy(value, true))
                         else copy.add(value)
