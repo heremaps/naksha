@@ -162,7 +162,7 @@ open class TupleColumn() : AnyObject() {
         /**
          * The reference to the [version][naksha.model.Metadata.version] (_transaction number_).
          *
-         * This value is exposed through [naksha.model.XyzNs.version].
+         * This value is exposed through [naksha.model.XyzNs.txn].
          *
          * Supported [query operations][AnyOp] are:
          * - [QueryNumber.*][DoubleOp]
