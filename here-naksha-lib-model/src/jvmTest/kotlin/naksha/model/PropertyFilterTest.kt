@@ -22,7 +22,7 @@ class PropertyFilterTest {
 
         @JvmStatic
         @BeforeAll
-        fun setupTuple(): Unit {
+        fun setupTuple() {
             // create the feature
             val feature = NakshaFeature()
             feature.properties["foo"] = "bar"

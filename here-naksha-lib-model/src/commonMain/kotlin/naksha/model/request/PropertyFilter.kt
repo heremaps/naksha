@@ -24,18 +24,8 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
     private fun resolvePropsQuery(pQuery: IPropertyQuery?, decoder: JbFeatureDecoder) : Boolean {
         when (pQuery) {
             null -> return true
-            is PAnd -> {
-                pQuery.forEach {
-                    if (!resolvePropsQuery(it, decoder)) return false
-                }
-                return true
-            }
-            is POr -> {
-                pQuery.forEach {
-                    if (resolvePropsQuery(it, decoder)) return true
-                }
-                return false
-            }
+            is PAnd -> return pQuery.all { resolvePropsQuery(it, decoder) }
+            is POr -> return pQuery.any { resolvePropsQuery(it, decoder) }
             is PNot -> return !resolvePropsQuery(pQuery.query, decoder)
             is PQuery -> {
                 val propFromFeature = decoder.get(PROPERTIES,*pQuery.property.path.filterNotNull().toTypedArray())
@@ -43,31 +33,34 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
                 return resolveEachOp(op,propFromFeature,pQuery.value)
             }
         }
-        return false
+        throw IllegalArgumentException("Unknown query type for: $pQuery")
+        //TODO instead of throwing exceptions, implement a call-back handler customizable
+        //TODO to, for example, log the instance where an unknown query is used, so as not
+        //TODO to disrupt the flow of the request
     }
 
     private fun resolveEachOp(op: AnyOp, featureProperty: Any?, queryProperty: Any?) : Boolean {
-        when (op) {
-            AnyOp.EXISTS -> return featureProperty != Platform.UNDEFINED
-            AnyOp.IS_NULL -> return featureProperty == null
-            AnyOp.IS_NOT_NULL -> return featureProperty != null
-            AnyOp.IS_TRUE -> return featureProperty == true
-            AnyOp.IS_FALSE -> return featureProperty == false
+        return when (op) {
+            AnyOp.EXISTS -> featureProperty != Platform.UNDEFINED
+            AnyOp.IS_NULL -> featureProperty == null
+            AnyOp.IS_NOT_NULL -> featureProperty != null
+            AnyOp.IS_TRUE -> featureProperty == true
+            AnyOp.IS_FALSE -> featureProperty == false
             AnyOp.IS_ANY_OF -> {
-                if (queryProperty is Array<*>) return queryProperty.contains(featureProperty)
-                if (queryProperty is List<*>) return queryProperty.contains(featureProperty)
-                return false
+                if (queryProperty is Array<*>) queryProperty.contains(featureProperty)
+                if (queryProperty is List<*>) queryProperty.contains(featureProperty)
+                false
             }
-            AnyOp.CONTAINS -> return resolveContains(featureProperty, queryProperty)
-            StringOp.EQUALS -> return (featureProperty is String) && (queryProperty is String) && (featureProperty.toString() == queryProperty.toString())
-            StringOp.STARTS_WITH -> return (featureProperty is String) && (queryProperty is String) && (featureProperty.startsWith(queryProperty.toString()))
-            DoubleOp.EQ -> return (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() == queryProperty.toDouble())
-            DoubleOp.GT -> return (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() > queryProperty.toDouble())
-            DoubleOp.LT -> return (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() < queryProperty.toDouble())
-            DoubleOp.GTE -> return (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() >= queryProperty.toDouble())
-            DoubleOp.LTE -> return (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() <= queryProperty.toDouble())
+            AnyOp.CONTAINS -> resolveContains(featureProperty, queryProperty)
+            StringOp.EQUALS -> (featureProperty is String) && (queryProperty is String) && (featureProperty.toString() == queryProperty.toString())
+            StringOp.STARTS_WITH -> (featureProperty is String) && (queryProperty is String) && (featureProperty.startsWith(queryProperty.toString()))
+            DoubleOp.EQ -> (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() == queryProperty.toDouble())
+            DoubleOp.GT -> (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() > queryProperty.toDouble())
+            DoubleOp.LT -> (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() < queryProperty.toDouble())
+            DoubleOp.GTE -> (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() >= queryProperty.toDouble())
+            DoubleOp.LTE -> (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() <= queryProperty.toDouble())
+            else -> throw IllegalArgumentException("Unknown op type for: $op")
         }
-        return false
     }
 
     private fun resolveContains(featureProperty: Any?, queryProperty: Any?) : Boolean {
