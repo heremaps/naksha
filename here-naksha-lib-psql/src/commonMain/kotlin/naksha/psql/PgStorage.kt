@@ -391,7 +391,7 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
             setRaw("puuid", meta.puid.toString())
             setRaw("createdAt", meta.createdAt)
             setRaw("updatedAt", meta.updatedAt)
-            setRaw("version", meta.version.txn)
+            setRaw("txn", meta.version.txn)
             setRaw("changeCount", meta.changeCount)
             setRaw("action", meta.action())
             setRaw("appId", meta.appId)

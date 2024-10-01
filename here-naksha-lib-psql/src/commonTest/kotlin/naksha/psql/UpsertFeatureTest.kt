@@ -3,15 +3,12 @@ package naksha.psql
 import naksha.model.Action
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.NakshaProperties
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import naksha.psql.base.PgTestBase
-import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
 
 class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c")) {
 
@@ -39,7 +36,7 @@ class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c")) 
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true
-        }).features.sortedBy { it!!.properties.xyz.version.toLong() }
+        }).features.sortedBy { it!!.properties.xyz.txn.toLong() }
 
         // Then
         assertThatFeature(retrievedFeatures[0]!!)

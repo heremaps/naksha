@@ -5,7 +5,6 @@ package naksha.model
 import naksha.base.*
 import kotlin.DeprecationLevel.WARNING
 import kotlin.js.JsExport
-import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
@@ -195,7 +194,7 @@ class XyzNs : AnyObject() {
     var tags: TagList? by TAGS
 
     /**
-     * The version of the feature.
+     * The version of the feature - temporarily we use `txn` as name, because version is expected to be Int, not Int64.
      *
      * Multiple features could be part of a single version if they have been edited in one transaction. This field is populated by
      * Interactive API, Data Hub, XYZ Hub and Naksha. Any values provided by the user are overwritten.
@@ -204,7 +203,7 @@ class XyzNs : AnyObject() {
      * - **XYZ Hub**: This field is set when history or UUID is enabled for the space.
      * - **Naksha**: This field stores the transaction-number (`txn`).
      */
-    val version: Int64 by INT64
+    val txn: Int64 by INT64
 
     /**
      * The change-count, so how often the feature has been changed since it was created. The value starts with 1.
