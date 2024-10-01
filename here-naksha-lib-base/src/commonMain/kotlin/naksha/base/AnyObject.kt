@@ -10,10 +10,6 @@ import kotlin.js.JsExport
  */
 @Suppress("unused", "OPT_IN_USAGE")
 @JsExport
-open class AnyObject : MapProxy<String, Any>(String::class, Any::class) {
-    fun contentDeepEquals(other: AnyObject): Boolean {
-        return Platform.deepEquals(this, other)
-    }
-}
+open class AnyObject : MapProxy<String, Any>(String::class, Any::class)
 
 

@@ -32,23 +32,6 @@ import kotlin.reflect.full.primaryConstructor
 actual class Platform {
     actual companion object PlatformCompanion {
 
-        @JvmStatic
-        actual fun deepEquals(obj1: Any?, obj2: Any?): Boolean {
-            if (obj1 === obj2) return true  // Same reference, or both null
-            if (obj1 == null || obj2 == null) return false  // One is null, the other is not
-            if (obj1::class != obj2::class) return false  // Different types
-
-            return when (obj1) {
-                is Array<*> -> obj1.contentDeepEquals(obj2 as? Array<*>)
-                is List<*> -> obj1.size == (obj2 as? List<*>)?.size && obj1.zip(obj2).all { (e1, e2) -> deepEquals(e1, e2) }
-                is Map<*, *> -> {
-                    if (obj2 !is Map<*, *>) return false
-                    obj1.size == obj2.size && obj1.all { (k, v) -> deepEquals(v, obj2[k]) }
-                }
-                else -> obj1 == obj2  // Primitive types, or any other objects
-            }
-        }
-
         @JvmField
         internal val module = SimpleModule().apply {
             addAbstractTypeMapping(Map::class.java, JvmMap::class.java)
