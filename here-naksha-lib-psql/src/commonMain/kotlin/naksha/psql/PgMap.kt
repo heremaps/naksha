@@ -7,15 +7,21 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fn0
 import naksha.jbon.IDictManager
 import naksha.jbon.JbDictionary
-import naksha.model.*
-import naksha.model.NakshaContext.NakshaContextCompanion.currentContext
-import naksha.model.NakshaError.NakshaErrorCompanion.UNAUTHORIZED
-import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
+import naksha.model.IMap
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
+import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_NUMBER
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
+import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES_NUMBER
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
+import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS_NUMBER
+import naksha.model.NakshaContext.NakshaContextCompanion.currentContext
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.NOT_IMPLEMENTED
+import naksha.model.NakshaError.NakshaErrorCompanion.UNAUTHORIZED
+import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
+import naksha.model.NakshaException
+import naksha.model.NakshaVersion
+import naksha.model.SessionOptions
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
@@ -114,6 +120,7 @@ open class PgMap(
      * A concurrent hash map with all cached collections by their `id`.
      */
     internal val collections: AtomicMap<String, WeakRef<PgCollection>> = Platform.newAtomicMap()
+
     /**
      * A concurrent hash map with all cached collection-identifiers by their `number`.
      */
@@ -151,7 +158,14 @@ open class PgMap(
         return this[id]
     }
 
-    override fun getCollectionId(collectionNumber: Int64): String? = collectionIdByNumber[collectionNumber]
+    override fun getCollectionId(collectionNumber: Int64): String? {
+        return collectionIdByNumber[collectionNumber] ?: when (collectionNumber) {
+            VIRT_TRANSACTIONS_NUMBER -> VIRT_TRANSACTIONS
+            VIRT_DICTIONARIES_NUMBER -> VIRT_DICTIONARIES
+            VIRT_COLLECTIONS_NUMBER -> VIRT_COLLECTIONS
+            else -> null
+        }
+    }
 
     /**
      * Returns a shared cached [PgCollection] wrapper. This method is internally called, when a storage or realm are initialized to create all internal collections.

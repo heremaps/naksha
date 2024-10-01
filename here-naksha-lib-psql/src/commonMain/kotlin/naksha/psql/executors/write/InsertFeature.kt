@@ -1,6 +1,7 @@
 package naksha.psql.executors.write
 
 import naksha.model.*
+import naksha.model.Metadata.Metadata_C.geoGrid
 import naksha.model.Metadata.Metadata_C.hash
 import naksha.model.Naksha.NakshaCompanion.quoteIdent
 import naksha.model.objects.NakshaFeature
@@ -64,7 +65,8 @@ class InsertFeature(
             appId = session.options.appId,
             flags = flags,
             id = feature.id,
-            type = NakshaFeature.FEATURE_TYPE
+            type = NakshaFeature.FEATURE_TYPE,
+            geoGrid = geoGrid(feature)
         )
     }
 }

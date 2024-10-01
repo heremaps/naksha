@@ -387,8 +387,8 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
 
     private fun xyzFrom(meta: Metadata): XyzNs {
         return AnyObject().apply {
-            setRaw("uuid", meta.uid)
-            setRaw("puuid", meta.puid)
+            setRaw("uuid", meta.uid.toString())
+            setRaw("puuid", meta.puid.toString())
             setRaw("createdAt", meta.createdAt)
             setRaw("updatedAt", meta.updatedAt)
             setRaw("version", meta.version.txn)
