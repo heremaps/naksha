@@ -298,4 +298,12 @@ class PropertyFilterTest {
         request.query.properties = PQuery(Property("json"),AnyOp.CONTAINS, nestedJson.copy(true))
         assertEquals(resultTuple,filter.call(resultTuple))
     }
+
+    @Test
+    fun nullQuery() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        request.query.properties = null
+        assertEquals(resultTuple,filter.call(resultTuple))
+    }
 }
