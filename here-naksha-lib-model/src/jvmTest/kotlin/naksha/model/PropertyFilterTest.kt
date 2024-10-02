@@ -268,17 +268,33 @@ class PropertyFilterTest {
     }
 
     @Test
-    fun testAnyOps() {
-        // the filter
+    fun valueContainsBoolean() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
         request.query.properties = PQuery(Property("json","bool"),AnyOp.CONTAINS, true)
         assertEquals(resultTuple,filter.call(resultTuple))
+    }
+
+    @Test
+    fun valueArrayContainsString() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
         request.query.properties = PQuery(Property("json","array"),AnyOp.CONTAINS, arrayOf("two", "three"))
         assertEquals(resultTuple,filter.call(resultTuple))
+    }
+
+    @Test
+    fun valueArrayNotContainsString() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
         request.query.properties = PQuery(Property("json","array"),AnyOp.CONTAINS, arrayOf("four", "three"))
         assertEquals(null,filter.call(resultTuple))
+    }
 
+    @Test
+    fun valueContainsJson() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
         request.query.properties = PQuery(Property("json"),AnyOp.CONTAINS, nestedJson.copy(true))
         assertEquals(resultTuple,filter.call(resultTuple))
     }

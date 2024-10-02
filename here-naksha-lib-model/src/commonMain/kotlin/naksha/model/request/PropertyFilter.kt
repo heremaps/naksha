@@ -47,8 +47,8 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
             AnyOp.IS_TRUE -> featureProperty == true
             AnyOp.IS_FALSE -> featureProperty == false
             AnyOp.IS_ANY_OF -> {
-                if (queryProperty is Array<*>) queryProperty.contains(featureProperty)
-                if (queryProperty is List<*>) queryProperty.contains(featureProperty)
+                if (queryProperty is Array<*>) return queryProperty.contains(featureProperty)
+                if (queryProperty is List<*>) return queryProperty.contains(featureProperty)
                 false
             }
             AnyOp.CONTAINS -> resolveContains(featureProperty, queryProperty)
