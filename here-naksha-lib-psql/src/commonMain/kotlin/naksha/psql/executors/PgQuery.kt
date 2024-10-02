@@ -52,7 +52,10 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
         sql = when (request) {
             is ReadCollections -> readCollections(request)
             is ReadFeatures -> readFeatures(request)
-            else -> throw NakshaException(UNSUPPORTED_OPERATION, "The given read-request is unknown")
+            else -> throw NakshaException(
+                UNSUPPORTED_OPERATION,
+                "The given read-request is unknown"
+            )
         }
         paramTypes = types.toTypedArray()
         paramValues = values.toTypedArray()
@@ -75,7 +78,10 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
     private fun ReadFeatures.getQuotedTablesToQuery(): List<String> {
         val tables = mutableListOf<String>()
         for (index in collectionIds.indices) {
-            val collectionId = collectionIds[index] ?: throw NakshaException(ILLEGAL_ARGUMENT, "Collection must not be null at index $index")
+            val collectionId = collectionIds[index] ?: throw NakshaException(
+                ILLEGAL_ARGUMENT,
+                "Collection must not be null at index $index"
+            )
             // TODO: Fix me, we need to verify if such a collection exists and then use the in-memory representation!
             tables.add(quoteIdent(collectionId))
             if (queryDeleted) tables.add(quoteIdent("$collectionId\$del"))
@@ -86,16 +92,23 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
 
     private fun readFeatures(req: ReadFeatures): String {
         if (req.versions < 1) {
-            throw NakshaException(ILLEGAL_ARGUMENT, "It is not possible to request less than one version of each feature")
+            throw NakshaException(
+                ILLEGAL_ARGUMENT,
+                "It is not possible to request less than one version of each feature"
+            )
         }
         if (req.versions > 1 && !req.queryHistory) {
-            throw NakshaException(ILLEGAL_ARGUMENT, "When multiple versions of features are requested, queryHistory is mandatory")
+            throw NakshaException(
+                ILLEGAL_ARGUMENT,
+                "When multiple versions of features are requested, queryHistory is mandatory"
+            )
         }
         val queryBuilder = StringBuilder()
-        val REQ_LIMIT = if (req.limit != null && req.orderBy == null && req.returnHandle != true) req.limit else null
+        val REQ_LIMIT =
+            if (req.limit != null && req.orderBy == null && req.returnHandle != true) req.limit else null
         queryBuilder.append("SELECT gzip(bytea_agg($tuple_number)) AS rs FROM (SELECT $tuple_number FROM (\n")
         val quotedTablesToQuery = req.getQuotedTablesToQuery()
-        val where = where_create(req)
+        val where = whereCreate(req)
         for (table in quotedTablesToQuery.withIndex()) {
             queryBuilder.append("\t(SELECT $tuple_number, $id FROM ${table.value}")
             if (where.isNotEmpty()) queryBuilder.append(" WHERE $where")
@@ -105,27 +118,96 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
         }
         queryBuilder.append("\n) ORDER BY $id, $tuple_number")
         val HARD_LIMIT = req.limit ?: session.storage.hardCap
-        queryBuilder.append(if (HARD_LIMIT > 0 ) ") LIMIT $HARD_LIMIT;" else ")")
+        queryBuilder.append(if (HARD_LIMIT > 0) ") LIMIT $HARD_LIMIT;" else ")")
         return queryBuilder.toString()
     }
 
-    private fun where_create(req: ReadFeatures): String {
+    private fun whereCreate(req: ReadFeatures): String {
         val where = StringBuilder()
-        where_featureId(req, where)
-        where_guids(req, where)
-        where_version(req, where)
+        whereFeatureid(req, where)
+        whereGuids(req, where)
+        whereVersion(req, where)
+        req.query.metadata?.let {
+            whereMetadata(req, it, where)
+        }
         val query = req.query
         val spatial = query.spatial
         if (spatial != null) {
             if (where.isNotEmpty()) where.append(" AND ")
             where.append("(")
-            where_query_spatial(req, spatial, where)
+            whereQuerySpatial(req, spatial, where)
             where.append(")")
         }
         return where.toString()
     }
 
-    private fun where_featureId(req: ReadFeatures, where: StringBuilder) {
+    private fun whereMetadata(req: ReadFeatures, metaQuery: IMetaQuery, where: StringBuilder) {
+        when (metaQuery) {
+            is MetaNot -> {
+                where.append("NOT ")
+                whereMetadata(req, metaQuery.query, where)
+            }
+
+            is MetaAnd -> {
+                metaQuery.filterNotNull().forEachIndexed { index, subQuery ->
+                    if (index > 0) {
+                        where.append("AND ")
+                    }
+                    whereMetadata(req, subQuery, where)
+                }
+            }
+
+            is MetaOr -> {
+                metaQuery.filterNotNull().forEachIndexed { index, subQuery ->
+                    if (index > 0) {
+                        where.append("OR ")
+                    }
+                    whereMetadata(req, subQuery, where)
+                }
+            }
+
+            is MetaQuery -> {
+                val arg = types.size + 1
+                types.add(PgType.BYTE_ARRAY.toString())
+                values.add(metaQuery.value)
+                val resolvedQuery = when (val op = metaQuery.op) {
+                    is StringOp -> resolveStringOp(op, metaQuery.column, "\$$arg")
+                    is DoubleOp -> resolveDoubleOp(op, metaQuery.column, "\$$arg")
+                    else -> throw NakshaException(
+                        ILLEGAL_ARGUMENT,
+                        "Unknown op type: ${op::class.qualifiedName}"
+                    )
+                }
+                where.append(resolvedQuery)
+            }
+
+            else -> throw NakshaException(
+                ILLEGAL_ARGUMENT,
+                "Unknown metadata query type: ${metaQuery::class.qualifiedName}"
+            )
+        }
+    }
+
+    private fun resolveStringOp(stringOp: StringOp, column: TupleColumn, valuePlaceholder: String): String {
+        return when (stringOp) {
+            StringOp.EQUALS -> "${column.name} = $valuePlaceholder"
+            StringOp.STARTS_WITH -> "starts_with(${column.name}, $valuePlaceholder)"
+            else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown StringOp: $stringOp")
+        }
+    }
+
+    private fun resolveDoubleOp(doubleOp: DoubleOp, column: TupleColumn, valuePlaceholder: String): String {
+        return when (doubleOp) {
+            DoubleOp.EQ -> "${column.name} = $valuePlaceholder"
+            DoubleOp.GT -> "${column.name} > $valuePlaceholder"
+            DoubleOp.GTE -> "${column.name} >= $valuePlaceholder"
+            DoubleOp.LT -> "${column.name} < $valuePlaceholder"
+            DoubleOp.LTE -> "${column.name} <= $valuePlaceholder"
+            else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown DoubleOp: $doubleOp")
+        }
+    }
+
+    private fun whereFeatureid(req: ReadFeatures, where: StringBuilder) {
         if (req.featureIds.size > 0) {
             val featureIds = req.featureIds.filterNotNull()
             if (featureIds.isNotEmpty()) {
@@ -138,7 +220,7 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
         }
     }
 
-    private fun where_guids(req: ReadFeatures, where: StringBuilder) {
+    private fun whereGuids(req: ReadFeatures, where: StringBuilder) {
         if (req.guids.isNotEmpty()) {
             val guids = req.guids.filterNotNull()
             if (guids.isNotEmpty()) {
@@ -146,7 +228,7 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
                     val guid = guids[i]
                     if (where.isNotEmpty()) where.append(" AND ")
                     val arg = types.size + 1
-                    where.append("($id = \$$arg AND $txn = \$${arg+1} AND $uid = \$${arg+2})")
+                    where.append("($id = \$$arg AND $txn = \$${arg + 1} AND $uid = \$${arg + 2})")
                     types.add(PgType.STRING.toString())
                     values.add(guid.featureId)
                     types.add(PgType.INT64.toString())
@@ -158,42 +240,53 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
         }
     }
 
-    private fun where_version(req: ReadFeatures, where: StringBuilder) {
+    private fun whereVersion(req: ReadFeatures, where: StringBuilder) {
         // TODO: req.version and req.minVersion
     }
 
-    private tailrec fun where_query_spatial(req: ReadFeatures, spatial: ISpatialQuery, where: StringBuilder) {
+    private tailrec fun whereQuerySpatial(
+        req: ReadFeatures,
+        spatial: ISpatialQuery,
+        where: StringBuilder
+    ) {
         when (spatial) {
             is SpNot -> {
                 where.append("NOT ")
-                where_query_spatial(req, spatial.query, where)
+                whereQuerySpatial(req, spatial.query, where)
             }
+
             is SpAnd -> {
                 for (i in spatial.indices) {
-                    val sub_spatial = spatial[i]
-                    if (sub_spatial != null) {
+                    val subSpatial = spatial[i]
+                    if (subSpatial != null) {
                         if (i > 0) where.append("AND ")
-                        where_query_spatial(req, sub_spatial, where)
+                        whereQuerySpatial(req, subSpatial, where)
                     }
                 }
             }
+
             is SpOr -> {
                 for (i in spatial.indices) {
-                    val sub_spatial = spatial[i]
-                    if (sub_spatial != null) {
+                    val subSpatial = spatial[i]
+                    if (subSpatial != null) {
                         if (i > 0) where.append("OR ")
-                        where_query_spatial(req, sub_spatial, where)
+                        whereQuerySpatial(req, subSpatial, where)
                     }
                 }
             }
+
             is SpIntersects -> {
                 // TODO: Add transformations!
-                val twkb = PgUtil.encodeGeometry(spatial.geometry, Flags().geoGzipOff().geoEncoding(GeoEncoding.TWKB))
+                val twkb = PgUtil.encodeGeometry(
+                    spatial.geometry,
+                    Flags().geoGzipOff().geoEncoding(GeoEncoding.TWKB)
+                )
                 val arg = types.size + 1
                 where.append("ST_Intersects(naksha_geometry($geo, $flags), ST_GeomFromTWKB(\$$arg))")
                 types.add(PgType.BYTE_ARRAY.toString())
                 values.add(twkb)
             }
+
             else -> throw NakshaException(ILLEGAL_ARGUMENT, "Invalid spatial query found: $spatial")
         }
     }
