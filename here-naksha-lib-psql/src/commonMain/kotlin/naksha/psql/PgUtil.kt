@@ -4,10 +4,7 @@ package naksha.psql
 
 import naksha.base.*
 import naksha.geo.SpGeometry
-import naksha.jbon.IDictManager
-import naksha.jbon.JbDictionary
-import naksha.jbon.JbEncoder
-import naksha.jbon.JbFeatureDecoder
+import naksha.jbon.*
 import naksha.model.*
 import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON
 import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON_GZIP
@@ -262,7 +259,8 @@ class PgUtil private constructor() {
                 byteArray = encoded.encodeToByteArray()
             } else if (encoding == TagsEncoding.JBON || encoding == TagsEncoding.JBON_GZIP) {
                 val encoder = JbEncoder(dict)
-                byteArray = encoder.buildFeatureFromMap(tags)
+                encoder.encodeMap(tags)
+                byteArray = encoder.buildFeature(null, FEATURE_VARIANT_TAGS)
             }
             if (flags.tagsGzip() && byteArray != null) byteArray = Platform.gzipDeflate(byteArray)
             return byteArray
