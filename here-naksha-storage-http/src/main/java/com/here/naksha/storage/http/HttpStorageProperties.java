@@ -77,10 +77,10 @@ public class HttpStorageProperties extends XyzProperties {
   }
 
   public HttpStorageProperties(
-          @JsonProperty(value = URL, required = true) @NotNull String url,
-          @JsonProperty(CONNECTION_TIMEOUT) @Nullable Long connectTimeout,
-          @JsonProperty(SOCKET_TIMEOUT) @Nullable Long socketTimeout,
-          @JsonProperty(HEADERS) @Nullable Map<String, String> headers) {
+      @JsonProperty(value = URL, required = true) @NotNull String url,
+      @JsonProperty(CONNECTION_TIMEOUT) @Nullable Long connectTimeout,
+      @JsonProperty(SOCKET_TIMEOUT) @Nullable Long socketTimeout,
+      @JsonProperty(HEADERS) @Nullable Map<String, String> headers) {
     this(url, connectTimeout, socketTimeout, headers, DEFAULT_XYZ_PROTOCOL);
   }
 

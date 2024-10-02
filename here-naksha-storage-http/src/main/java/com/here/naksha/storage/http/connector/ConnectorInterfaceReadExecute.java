@@ -20,6 +20,7 @@ package com.here.naksha.storage.http.connector;
 
 import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_IDS;
 
+import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.payload.Event;
@@ -36,15 +37,16 @@ import org.jetbrains.annotations.NotNull;
 public class ConnectorInterfaceReadExecute {
 
   @NotNull
-  public static Result execute(ReadFeaturesProxyWrapper request, RequestSender sender) {
+  public static Result execute(NakshaContext context, ReadFeaturesProxyWrapper request, RequestSender sender) {
     return switch (request.getReadRequestType()) {
-      case GET_BY_IDS -> executeFeaturesByIds(request, sender);
+      case GET_BY_IDS -> executeFeaturesByIds(context, request, sender);
       default -> throw new IllegalStateException("Unexpected value: " + request.getReadRequestType());
     };
   }
 
-  private static Result executeFeaturesByIds(ReadFeaturesProxyWrapper request, RequestSender sender) {
-    Event event = createFeaturesByIdsEvent(request);
+  private static Result executeFeaturesByIds(
+      NakshaContext context, ReadFeaturesProxyWrapper request, RequestSender sender) {
+    Event event = createFeaturesByIdsEvent(request, context.getStreamId());
 
     String jsonEvent = JsonSerializable.serialize(event);
     HttpResponse<byte[]> httpResponse = post(sender, jsonEvent);
@@ -52,13 +54,14 @@ public class ConnectorInterfaceReadExecute {
     return PrepareResult.prepareResult(httpResponse, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
-  private static Event createFeaturesByIdsEvent(ReadFeaturesProxyWrapper request) {
+  private static Event createFeaturesByIdsEvent(ReadFeaturesProxyWrapper request, String streamId) {
     String dataHubSpaceName = request.getCollections().get(0);
     Space dataHubSpace = new Space(dataHubSpaceName);
     List<String> id = request.getQueryParameter(FEATURE_IDS);
     Event getFeaturesByIdEvent = new GetFeaturesByIdEvent().withIds(id);
 
     getFeaturesByIdEvent.setSpace(dataHubSpace);
+    getFeaturesByIdEvent.setStreamId(streamId);
     return getFeaturesByIdEvent;
   }
 

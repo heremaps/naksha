@@ -104,7 +104,7 @@ public final class HttpStorageReadSession implements IReadSession {
         case ffwAdapter -> FfwInterfaceReadExecute.execute(
             context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
         case dataHubConnector -> ConnectorInterfaceReadExecute.execute(
-            (ReadFeaturesProxyWrapper) readRequest, requestSender);
+            context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
       };
 
     } catch (Exception e) {
