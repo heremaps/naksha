@@ -44,9 +44,21 @@
     const { PgUtil } = require("naksha_psql");
     const { JbEncoder, JbDecoder, JbFeatureDecoder } = require("naksha_jbon");
 
+    function encodeTags(json) {
+      if (!json) json = '{"name":"foo","age":48}'
+      let raw = json;
+      if (typeof raw === "string") raw = Platform.fromJSON(json);
+      let klass = Platform.klassFor(base.AnyObject)
+      let map = Platform.proxy(raw, klass)
+      let enc = new JbEncoder();
+      enc.encodeMap(map, false);
+      let f = enc.buildFeature(null, jbon.FEATURE_VARIANT_TAGS)
+      return f
+    }
     function encodeFeature(json) {
       if (!json) json = '{"id":"foo","properties":{"name":"Bar"}}'
-      let raw = Platform.fromJSON(json)
+      let raw = json;
+      if (typeof raw === "string") raw = Platform.fromJSON(json);
       let klass = Platform.klassFor(base.AnyObject)
       let map = Platform.proxy(raw, klass)
       let enc = new JbEncoder();
@@ -57,6 +69,11 @@
       let dec = new JbFeatureDecoder()
       dec.mapBytes(f)
       return dec.toAnyObject()
+    }
+    function decodeTags(f) {
+      let dec = new JbFeatureDecoder()
+      dec.mapBytes(f)
+      return dec.toMap()
     }
   </script>
 </head>
