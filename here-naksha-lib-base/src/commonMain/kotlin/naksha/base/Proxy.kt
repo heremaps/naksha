@@ -202,4 +202,12 @@ abstract class Proxy : PlatformObject {
      */
     @Suppress("UNCHECKED_CAST")
     fun <SELF : Proxy> copy(recursive: Boolean = false): SELF = Platform.copy(platformObject(), recursive).proxy(this::class) as SELF
+
+    /**
+     * Recursively compare this object with another, checking for values instead of just referential.
+     * This is needed because for arrays, the == operation compares whether the arrays are the same object.
+     * This will work for any nested structures of maps, lists, and arrays.
+     */
+    fun contentDeepEquals(other: Proxy): Boolean = PlatformUtil.deepEquals(this, other)
+
 }
