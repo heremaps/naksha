@@ -35,7 +35,7 @@ open class PgHead protected constructor(
     constructor(c: PgCollection, storageClass: PgStorageClass, partCount: Int) : this(
         c, "${c.id}${PG_HEAD}", storageClass, true,
         partitionCount = if (partCount <= 1) 0 else partCount,
-        partitionBy = if (partCount >= 2) PgColumn.id else null
+        partitionBy = if (partCount >= 2) PgColumn.store_number else null
     )
 
     /**

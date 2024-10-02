@@ -72,16 +72,16 @@ All units start with a **lead-in** byte, which describes the type of the unit. T
     - If the size is not embedded (61-63), then followed by 1, 2 or 4 byte unsigned biased integer (biased by 60), big-endian encoded.
 - `11`: struct
   - `11ss_vvtt` = Struct (ss: 0=empty, 1=uint8, 2=uint16, 3=uint32)
-    - Followed by one byte, two byte or four byte unsigned content size, big-endian encoded.
-    - If standard structure (vv=0, variant=null)
+    - If not empty, followed by one byte, two byte or four byte unsigned integer storing the content size, big-endian encoded.
+    - If structure without variant (vv=0, variant=null)
       - `0`: Array
       - `1`: Map
       - `2`: Dictionary
       - `3`: Reserved
-    - If variant structure (vv: 1=byte, 2=short, 3=int)
-      - Followed by one byte, two byte or four byte integer storing the variant, big-endian encoded.
-      - `0`: Record
-      - `1`: XYZ
+    - If structure with variant (vv: 1=byte, 2=short, 3=int)
+      - Followed by one byte, two byte or four byte unsigned integer storing the variant, big-endian encoded.
+      - `0`: Feature
+      - `1`: Naksha
       - `2`: Custom
       - `3`: Reserved
 
@@ -145,11 +145,14 @@ The code-points are variable encoded. The leading byte of every code-point signa
 **Note**: The `ss`-bits improve the compression greatly, because the encoder will split strings by default at a space or underscore. Exactly where these splits happen, we do not need to encode the separator characters. The reason to cut at these two characters is that most often street-names or other human text uses the space as separator, while for constants in programming most often the underscore is used as separator (TYPE_A, TYPE_B, ...). Additionally, we have room for one more split characters to be defined by experience in the future.
 
 ## Structures
-All other special types are structures. The header stores the outer size of the structure, so the bytes following the **header**.
+The header stores the outer size of the structure, so the bytes following the **header**.
 
-Note that there are two basic kind of structures. Those with a subtype (variant) and those without. The first 8 structure types are without variant, the last 8 are with variant. The variant is encoded as integer directly after the structure header. The variant is used to define subtypes for structures to relax the namespace, because there are actually only 16 generic structure types available.
+Note that there are two basic kind of structures. Those with a subtype (variant) and those without. The first 4 structure types are without variant, the last 4 are with variant. The variant is encoded as integer directly after the structure header. The variant is used to define subtypes for structures to relax the namespace, because there are actually only 8 generic structure types available.
 
-For this reason the JBON specification defines one custom variant, that is shared by all users of JBON, and should be used to encode arbitrary (application specific) structures. This allows applications to define their own structures and allows to define up to 2 billion own custom structure.
+For this reason the JBON specification defines one custom structure, that is shared by all users of JBON, and should be used to encode arbitrary (application specific) structures. This allows applications to define their own structures and allows to define up to 2 billion own custom structure.
+
+## Structures without Variant
+These structures are normally only within variant structures, because do not have any special header that allows to link them to dictionaries. 
 
 ### Array (0)
 The array is just a sequence of units encoded.
@@ -171,72 +174,30 @@ After the header, the content follows. The content is simply a sequence of units
 
 ### Reserved (3)
 
-### Record (0+variant)
-A JBON record is a container for any other JBON unit. It is mainly used to link the embedded unit to a dedicated global and local dictionary. The format looks like:
+## Structures with Variant (_subtype_)
+These structures are final ones, they combine dictionary and headers with actual content. Normally, all internal structures and values are embedded into one of these structures.
+
+### Feature (_0 + variant_)
+A JBON feature is a container for any other JBON unit. It is mainly used to link the embedded unit to a dedicated global and local dictionary. The format looks like:
 
 - The **id** of the global dictionary to be used (**string**), can be _null_.
-- The **id** of the record, **string**, **text** or _null_.
+- The **id** of the feature, **string**, **text** or _null_.
 - The embedded local dictionary.
 - The embedded JBON object (the root object).
 
-A record can't create references to other records, only into a global dictionaries with unique identifiers. From an encoder perspective this is all.
+A feature can't create references to other features, only into a global dictionaries with unique identifiers. From an encoder perspective this is all.
 
-### Xyz (1+variant)
-This type is reserved for XYZ interactions. It is a flat object, optimized to be very small, with the following layout:
+#### Feature Variants
+- `0`: Unknown variant.
+- `1`: GeoJSON feature.
+- `2`: Naksha Tags.
+- `3 .. 1048575`: Reserved for Naksha (up to 2^24).
+- `1048576 .. 4294967295`: Available for custom variants.
 
-- Variant as **integer** (either **int5**, **int8**, **int16** or **int32**).
-- ... content dependent on the variant
-
-#### XyzNs (variant:0)
-The information that the database manages and what is delivered by the database.
-
-- **createdAt** (timestamp)
-- **updatedAt** (timestamp) - _null_, if being the same as **createdAt**
-- **txn** (BigInt64)
-- **action** (integer), constants for CREATE (0), UPDATE (1) and DELETE (2)
-- **version** (integer)
-- **author_ts** (timestamp) - _null_, if being the same as **updatedAt**, which can be the same as **createdAt**
-- **extend** (double)
-- **puuid** (string or _null_)
-- **uuid** (string)
-- **app_id** (string)
-- **author** (string)
-- **grid** (string) SELECT ST_GeoHash(ST_Centroid(geo),7);
-
-Notes: Tags are now a dedicated map, but when exposed, they are joined by an equal sign, the _null_ is default and causes the equal sign to disappear. So the tag "foo" becomes "tag=null" and when converting back "tag=null" is converted into "tag". Any other value, not being _null_, will be encoded into the tag. We do not allow equal signs otherwise, so only one equal sign is allowed in a tag. We do this, because we add an GIN index on the tags and allows key-value search at low level.
-
-#### XyzOp (variant:1)
-The information that clients should send to the database to write records or collections. This has to be provided together with a new record.
-
-- **op** (integer) - The requested operation (CREATE, UPDATE, UPSERT, DELETE or PURGE).
-- **id** (string) - The record-id.
-- **uuid** (string or _null_) - If not _null_, then the operation is atomic and the state must be this one (only UPDATE, DELETE and PURGE).
-- **grid** (string or _null_) - If the geo-reference-id is calculated by the client.
-
-#### XyzTags (variant:2)
-The tags, basically just a normal JBON map, but the values must only be **null**, **boolean**, **string** or **float64**. The map is preceded by the **id** of the global dictionary to be used, can be **null**, so actually being:
-
-- **id** (string or _null_) of the global dictionary to use.
-- Now the tags follow, split into a key and value part:
-  - **string** or **string-reference** - The key or reference to the key to index.
-  - **null**, **boolean**, **string**, **string-reference**, **integer** or **float**. If an integer is stored, it must be exposed as floating point number.
-
-Tags do not support integers directly, but as floating pointer numbers support up to 53-bit precision with integer values, a limited amount of integer support is available.
-
-**Note**: Externally _tags_ are only arrays of strings, therefore to convert external to internal representation the equal sign is used to split individual tag-strings. If a colon is set in-front of the equal sign, a value conversion is done, so _"foo=12"_ results in the value being a string "12", while _"foo:=12"_ results in a value being a floating point number _12_. Please read more about tags in the [documentation](../docs/TAGS.md).
-
-#### XyzTxDetails (variant:3, draft)
-Details about a transaction:
-
-- **collections** - A map where the key is the collection identifier and the value is an integer bit-mask with what happened.
-
-### Custom-Variant (2+variant)
-An undefined type that any application can use for internal binary encodings. It is a flat object, optimized to be very small, with the following layout:
-
-- Variant as **integer** (either **int5**, **int8**, **int16** or **int32**).
-- ... content dependent on the variant
-
-### Reserved (3+variant)
+### Reserved (_1 + variant_)
+### Reserved (_2 + variant_)
+### Custom-Variant (_3 + variant_)
+An undefined type that any application can use for internal binary encodings.
 
 ## Extended Proposals
 Encoding a GeoJSON position. This is a proposal for a complex value that persists out of longitude, latitude and an optional altitude.

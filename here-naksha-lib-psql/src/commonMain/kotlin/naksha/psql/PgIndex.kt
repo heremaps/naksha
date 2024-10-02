@@ -241,7 +241,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gin (naksha_tags($c_flags,$c_tags), $c_id, $c_txn, $c_uid, $c_tuple_number, $c_flags)""",
+                        """gin (naksha_tags($c_tags,$c_flags), $c_id, $c_txn, $c_uid, $c_tuple_number, $c_flags)""",
                         table, unique = false, addFillFactor = false
                     )
                 ).close()

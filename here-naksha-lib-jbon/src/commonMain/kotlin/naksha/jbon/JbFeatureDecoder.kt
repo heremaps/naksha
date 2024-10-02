@@ -139,7 +139,7 @@ open class JbFeatureDecoder(dictManager: IDictManager? = null) : JbRecordDecoder
      */
     fun toMap(): AnyObject {
         val feature = _map.toAnyObject()
-        if ("id" in feature) feature.setRaw("id", id())
+        if (id() != null && "id" !in feature) feature.setRaw("id", id())
         return feature
     }
 

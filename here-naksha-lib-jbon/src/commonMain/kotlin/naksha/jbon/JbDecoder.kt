@@ -39,7 +39,6 @@ open class JbDecoder {
             TYPE_MAP -> "struct-map"
             TYPE_DICTIONARY -> "struct-dictionary"
             TYPE_FEATURE -> "struct-feature"
-            TYPE_XYZ -> "struct-xyz"
             TYPE_CUSTOM -> "struct-custom"
             else -> "undefined"
         }
@@ -852,12 +851,6 @@ open class JbDecoder {
      * @return _true_ if the current type is an array; _false_ otherwise.
      */
     fun isArray(): Boolean = unitType() == TYPE_ARRAY
-
-    /**
-     * Test if the current offset is at the lead-in of an XYZ special.
-     * @return true if the current offset is at the lead-in of an XYZ special; false otherwise.
-     */
-    fun isXyz(): Boolean = unitType() == TYPE_XYZ
 
     /**
      * Read the current unit.
