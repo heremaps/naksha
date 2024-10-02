@@ -2,7 +2,9 @@
 
 package naksha.geo
 
-import naksha.base.*
+import naksha.base.AnyObject
+import naksha.base.NotNullProperty
+import naksha.base.PlatformList
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -15,7 +17,18 @@ open class SpGeometry() : AnyObject() {
     }
 
     companion object GeometryProxyCompanion {
-        private val TYPE = NullableProperty<SpGeometry, String>(String::class)
+        private val TYPE = NotNullProperty<SpGeometry, String>(String::class) { self, name ->
+            when (self) {
+                is SpPoint -> SpType.Point
+                is SpMultiPoint -> SpType.MultiPoint
+                is SpLineString -> SpType.LineString
+                is SpMultiLineString -> SpType.MultiLineString
+                is SpPolygon -> SpType.Polygon
+                is SpMultiPolygon -> SpType.MultiPolygon
+                is SpGeometryCollection -> SpType.GeometryCollection
+                else -> throw IllegalArgumentException("Unknown proxy type ${self::class.simpleName}")
+            }.toString()
+        }
     }
 
     /**
@@ -66,7 +79,7 @@ open class SpGeometry() : AnyObject() {
      * @param coordinates the coordinates to set.
      */
     fun setCoordinates(coordinates: ICoordinates) {
-        val type = when(coordinates) {
+        val type = when (coordinates) {
             is PointCoord -> SpType.Point
             is MultiPointCoord -> SpType.MultiPoint
             is LineStringCoord -> SpType.LineString
@@ -85,7 +98,7 @@ open class SpGeometry() : AnyObject() {
      * @return the centroid (center of mass) of the geometry.
      */
     fun calculateCentroid(): SpPoint // TODO: Improve this implementation!
-        = SpBoundingBox(getCoordinates()).center()
+            = SpBoundingBox(getCoordinates()).center()
 
     fun asPoint(): SpPoint = proxy(SpPoint::class)
     fun asMultiPoint(): SpMultiPoint = proxy(SpMultiPoint::class)

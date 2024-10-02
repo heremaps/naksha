@@ -319,4 +319,20 @@ class JtsTest {
         assertEquals(jtsFromJson, jtsFromProxy)
         assertEquals(Platform.toJSON(proxyFromJts), Platform.toJSON(proxyGeometryFromJson))
     }
+
+    @Test
+    fun testUnknownType(){
+        // given
+        val json = """{"coordinates":[1.0, 2.0]}"""
+
+        // when
+        val proxyPoint = (Platform.fromJSON(json) as JvmMap).proxy(SpPoint::class)
+        val jtsFromProxy = ProxyGeoUtil.toJtsGeometry(proxyPoint)
+
+        // then
+        assertEquals(SpType.Point.toString(), proxyPoint.type)
+        assertEquals(Point.TYPENAME_POINT, jtsFromProxy.geometryType)
+        assertEquals(1.0, jtsFromProxy.coordinates.get(0).x)
+        assertEquals(2.0, jtsFromProxy.coordinates.get(0).y)
+    }
 }

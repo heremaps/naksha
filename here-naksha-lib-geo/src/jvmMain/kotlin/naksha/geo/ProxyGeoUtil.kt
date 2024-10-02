@@ -213,13 +213,13 @@ object ProxyGeoUtil {
     @JvmStatic
     fun toJtsGeometry(geometry: SpGeometry): Geometry {
         return when (geometry.type) {
-            Point.TYPENAME_POINT -> toJtsPoint(geometry.asPoint())
-            Point.TYPENAME_MULTIPOINT -> toJtsMultiPoint(geometry.asMultiPoint())
-            Point.TYPENAME_LINESTRING -> toJtsLineString(geometry.asLineString())
-            Point.TYPENAME_MULTILINESTRING -> toJtsMultiLineString(geometry.asMultiLineString())
-            Point.TYPENAME_POLYGON -> toJtsPolygon(geometry.asPolygon())
-            Point.TYPENAME_MULTIPOLYGON -> toJtsMultiPolygon(geometry.asMultiPolygon())
-            Point.TYPENAME_GEOMETRYCOLLECTION -> toJtsGeometryCollection(geometry.asGeometryCollection())
+            SpType.Point.toString() -> toJtsPoint(geometry.asPoint())
+            SpType.MultiPoint.toString() -> toJtsMultiPoint(geometry.asMultiPoint())
+            SpType.LineString.toString() -> toJtsLineString(geometry.asLineString())
+            SpType.MultiLineString.toString() -> toJtsMultiLineString(geometry.asMultiLineString())
+            SpType.Polygon.toString() -> toJtsPolygon(geometry.asPolygon())
+            SpType.MultiPolygon.toString() -> toJtsMultiPolygon(geometry.asMultiPolygon())
+            SpType.GeometryCollection.toString() -> toJtsGeometryCollection(geometry.asGeometryCollection())
             else -> throw IllegalArgumentException("Unknown proxy type ${geometry::class.simpleName}")
         }
     }
