@@ -11,6 +11,11 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
         const val PROPERTIES = "properties"
     }
 
+    /**
+     * Check if the feature matches the query
+     * @param resultTuple the tuple containing the feature
+     * @return the tuple back if matches, else return null
+     */
     override fun filter(resultTuple: ResultTuple): ResultTuple? {
         val pSearch = req.query.properties ?: return resultTuple
         if (resultTuple.tuple == null) return null
