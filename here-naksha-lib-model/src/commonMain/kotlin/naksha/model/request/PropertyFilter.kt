@@ -11,13 +11,13 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
         const val PROPERTIES = "properties"
     }
 
-    override fun call(a1: ResultTuple): ResultTuple? {
-        val pSearch = req.query.properties ?: return a1
-        if (a1.tuple == null) return null
-        if (a1.tuple!!.feature == null) return null
+    override fun filter(resultTuple: ResultTuple): ResultTuple? {
+        val pSearch = req.query.properties ?: return resultTuple
+        if (resultTuple.tuple == null) return null
+        val feature = resultTuple.tuple?.feature ?: return null
         val decoder = JbFeatureDecoder()
-        decoder.mapBytes(a1.tuple!!.feature!!)
-        if (resolvePropsQuery(pSearch, decoder)) return a1
+        decoder.mapBytes(feature)
+        if (resolvePropsQuery(pSearch, decoder)) return resultTuple
         return null
     }
 

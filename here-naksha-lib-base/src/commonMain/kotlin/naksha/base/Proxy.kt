@@ -208,7 +208,6 @@ abstract class Proxy : PlatformObject {
      * This is needed because for arrays, the == operation compares whether the arrays are the same object.
      * This will work for any nested structures of maps, lists, and arrays.
      */
-    fun contentDeepEquals(other: Proxy): Boolean {
-        return PlatformUtil.deepEquals(this, other)
-    }
+    fun contentDeepEquals(other: Proxy): Boolean = PlatformUtil.deepEquals(this, other)
+
 }

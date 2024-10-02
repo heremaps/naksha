@@ -2,6 +2,7 @@
 
 package naksha.model.request
 
+import naksha.base.fn.Fn
 import naksha.base.fn.Fn1
 import kotlin.js.JsExport
 
@@ -9,4 +10,6 @@ import kotlin.js.JsExport
  * Result filter type, which is a functional interface.
  */
 @JsExport
-interface ResultFilter : Fn1<ResultTuple?, ResultTuple>
+interface ResultFilter : Fn {
+    fun filter(resultTuple: ResultTuple): ResultTuple?
+}
