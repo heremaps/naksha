@@ -2,6 +2,7 @@ package naksha.psql.base
 
 import naksha.base.AtomicInt
 import naksha.base.AtomicMap
+import naksha.model.SessionOptions
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.ReadRequest
 import naksha.model.request.SuccessResponse
@@ -32,8 +33,8 @@ abstract class PgTestBase(val collection: NakshaCollection? = null) {
     protected fun useConnection(): PgConnection =
         env.pgSession.usePgConnection()
 
-    protected fun executeWrite(request: WriteRequest): SuccessResponse {
-        return env.storage.newWriteSession().use { session ->
+    protected fun executeWrite(request: WriteRequest, sessionOptions: SessionOptions? = null): SuccessResponse {
+        return env.storage.newWriteSession(sessionOptions).use { session ->
             val response = session.execute(request)
             assertIs<SuccessResponse>(response)
             session.commit()
@@ -41,8 +42,8 @@ abstract class PgTestBase(val collection: NakshaCollection? = null) {
         }
     }
 
-    protected fun executeRead(request: ReadRequest): SuccessResponse {
-        return env.storage.newReadSession().use { session ->
+    protected fun executeRead(request: ReadRequest, sessionOptions: SessionOptions? = null): SuccessResponse {
+        return env.storage.newReadSession(sessionOptions).use { session ->
             val response = session.execute(request)
             assertIs<SuccessResponse>(response)
             session.commit()

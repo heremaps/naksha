@@ -175,7 +175,7 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
                     is DoubleOp -> resolveDoubleOp(op, metaQuery.column, "\$$arg")
                     else -> throw NakshaException(
                         ILLEGAL_ARGUMENT,
-                        "Unknown op type: ${op::class.qualifiedName}"
+                        "Unknown op type: ${op::class.simpleName}"
                     )
                 }
                 where.append(resolvedQuery)
@@ -183,15 +183,15 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
 
             else -> throw NakshaException(
                 ILLEGAL_ARGUMENT,
-                "Unknown metadata query type: ${metaQuery::class.qualifiedName}"
+                "Unknown metadata query type: ${metaQuery::class.simpleName}"
             )
         }
     }
 
     private fun resolveStringOp(stringOp: StringOp, column: TupleColumn, valuePlaceholder: String): String {
         return when (stringOp) {
-            StringOp.EQUALS -> "${column.name} = $valuePlaceholder"
-            StringOp.STARTS_WITH -> "starts_with(${column.name}, $valuePlaceholder)"
+            StringOp.EQUALS -> "${column.name} = $valuePlaceholder "
+            StringOp.STARTS_WITH -> "starts_with(${column.name}, $valuePlaceholder) "
             else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown StringOp: $stringOp")
         }
     }
