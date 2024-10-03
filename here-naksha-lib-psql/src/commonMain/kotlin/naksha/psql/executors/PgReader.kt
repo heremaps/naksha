@@ -6,6 +6,7 @@ import naksha.model.TupleNumberByteArray
 import naksha.model.Version
 import naksha.model.request.*
 import naksha.psql.*
+import naksha.psql.executors.query.PgQueryBuilder
 import kotlin.jvm.JvmField
 
 class PgReader(
@@ -37,13 +38,13 @@ class PgReader(
         get() = session.version()
 
     fun execute(): Response {
-        val query = PgQuery(session, request)
+        val query = PgQueryBuilder(session, request).build()
         val connection = session.usePgConnection()
         // TODO: Use prepare, add arguments!
-        val plan = connection.prepare(query.sql, query.paramTypes)
+        val plan = connection.prepare(query.sql, query.argTypes)
         plan.use {
             val allBytes: ByteArray?
-            val cursor = plan.execute(query.paramValues)
+            val cursor = plan.execute(query.argValues)
             cursor.use {
                 allBytes = if (cursor.next()) cursor.column("rs") as ByteArray else null
             }
