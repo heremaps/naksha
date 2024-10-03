@@ -4,10 +4,8 @@ import naksha.base.AtomicInt
 import naksha.base.AtomicMap
 import naksha.model.SessionOptions
 import naksha.model.objects.NakshaCollection
-import naksha.model.request.ReadRequest
-import naksha.model.request.SuccessResponse
-import naksha.model.request.Write
-import naksha.model.request.WriteRequest
+import naksha.model.objects.NakshaFeature
+import naksha.model.request.*
 import naksha.psql.PgConnection
 import naksha.psql.PgStorage
 import naksha.psql.base.CollectionsInitializer.dropCollectionFor
@@ -33,7 +31,30 @@ abstract class PgTestBase(val collection: NakshaCollection? = null) {
     protected fun useConnection(): PgConnection =
         env.pgSession.usePgConnection()
 
-    protected fun executeWrite(request: WriteRequest, sessionOptions: SessionOptions? = null): SuccessResponse {
+    protected fun insertFeature(feature: NakshaFeature, sessionOptions: SessionOptions? = null) =
+        insertFeatures(listOf(feature), sessionOptions)
+
+    protected fun insertFeatures(
+        features: List<NakshaFeature>,
+        sessionOptions: SessionOptions? = null
+    ) {
+        val writeReq = WriteRequest()
+        features.forEach {
+            writeReq.add(
+                Write().createFeature(
+                    map = null,
+                    collectionId = collection!!.id,
+                    it
+                )
+            )
+        }
+        executeWrite(writeReq, sessionOptions)
+    }
+
+    protected fun executeWrite(
+        request: WriteRequest,
+        sessionOptions: SessionOptions? = null
+    ): SuccessResponse {
         return env.storage.newWriteSession(sessionOptions).use { session ->
             val response = session.execute(request)
             assertIs<SuccessResponse>(response)
@@ -42,7 +63,10 @@ abstract class PgTestBase(val collection: NakshaCollection? = null) {
         }
     }
 
-    protected fun executeRead(request: ReadRequest, sessionOptions: SessionOptions? = null): SuccessResponse {
+    protected fun executeRead(
+        request: ReadRequest,
+        sessionOptions: SessionOptions? = null
+    ): SuccessResponse {
         return env.storage.newReadSession(sessionOptions).use { session ->
             val response = session.execute(request)
             assertIs<SuccessResponse>(response)
@@ -90,7 +114,7 @@ private object CollectionsInitializer {
         }
     }
 
-    fun <T: PgTestBase> dropCollectionFor(testSuite: T){
+    fun <T : PgTestBase> dropCollectionFor(testSuite: T) {
         require(testSuite.collection != null)
         val deleteCollectionRequest = WriteRequest().add(
             Write().deleteCollectionById(

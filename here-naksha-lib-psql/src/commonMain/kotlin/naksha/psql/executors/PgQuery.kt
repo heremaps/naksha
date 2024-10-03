@@ -2,21 +2,19 @@ package naksha.psql.executors
 
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ReadRequest
 import naksha.model.request.query.*
-import naksha.psql.NKC_TABLE
+import naksha.psql.*
 import naksha.psql.PgColumn.PgColumnCompanion.flags
 import naksha.psql.PgColumn.PgColumnCompanion.geo
 import naksha.psql.PgColumn.PgColumnCompanion.id
 import naksha.psql.PgColumn.PgColumnCompanion.tuple_number
 import naksha.psql.PgColumn.PgColumnCompanion.txn
 import naksha.psql.PgColumn.PgColumnCompanion.uid
-import naksha.psql.PgSession
-import naksha.psql.PgType
-import naksha.psql.PgUtil
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 
 /**
@@ -124,7 +122,7 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
 
     private fun whereCreate(req: ReadFeatures): String {
         val where = StringBuilder()
-        whereFeatureid(req, where)
+        whereFeatureId(req, where)
         whereGuids(req, where)
         whereVersion(req, where)
         req.query.metadata?.let {
@@ -144,14 +142,14 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
     private fun whereMetadata(req: ReadFeatures, metaQuery: IMetaQuery, where: StringBuilder) {
         when (metaQuery) {
             is MetaNot -> {
-                where.append("NOT ")
+                where.append(" NOT ")
                 whereMetadata(req, metaQuery.query, where)
             }
 
             is MetaAnd -> {
                 metaQuery.filterNotNull().forEachIndexed { index, subQuery ->
                     if (index > 0) {
-                        where.append("AND ")
+                        where.append(" AND ")
                     }
                     whereMetadata(req, subQuery, where)
                 }
@@ -160,19 +158,21 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
             is MetaOr -> {
                 metaQuery.filterNotNull().forEachIndexed { index, subQuery ->
                     if (index > 0) {
-                        where.append("OR ")
+                        where.append(" OR ")
                     }
                     whereMetadata(req, subQuery, where)
                 }
             }
 
             is MetaQuery -> {
-                val arg = types.size + 1
-                types.add(PgType.BYTE_ARRAY.toString())
-                values.add(metaQuery.value)
+                val pgColumn = PgColumn.ofRowColumn(metaQuery.column) ?: throw NakshaException(
+                    ILLEGAL_STATE,
+                    "Couldn't find PgColumn for TupleColumn: ${metaQuery.column.name}"
+                )
+                val placeholder = placeholderFor(metaQuery.value, pgColumn.type)
                 val resolvedQuery = when (val op = metaQuery.op) {
-                    is StringOp -> resolveStringOp(op, metaQuery.column, "\$$arg")
-                    is DoubleOp -> resolveDoubleOp(op, metaQuery.column, "\$$arg")
+                    is StringOp -> resolveStringOp(op, pgColumn, placeholder)
+                    is DoubleOp -> resolveDoubleOp(op, pgColumn, placeholder)
                     else -> throw NakshaException(
                         ILLEGAL_ARGUMENT,
                         "Unknown op type: ${op::class.simpleName}"
@@ -188,15 +188,23 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
         }
     }
 
-    private fun resolveStringOp(stringOp: StringOp, column: TupleColumn, valuePlaceholder: String): String {
+    private fun resolveStringOp(
+        stringOp: StringOp,
+        column: PgColumn,
+        valuePlaceholder: String
+    ): String {
         return when (stringOp) {
-            StringOp.EQUALS -> "${column.name} = $valuePlaceholder "
-            StringOp.STARTS_WITH -> "starts_with(${column.name}, $valuePlaceholder) "
+            StringOp.EQUALS -> "${column.name} = $valuePlaceholder"
+            StringOp.STARTS_WITH -> "starts_with(${column.name}, $valuePlaceholder)"
             else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown StringOp: $stringOp")
         }
     }
 
-    private fun resolveDoubleOp(doubleOp: DoubleOp, column: TupleColumn, valuePlaceholder: String): String {
+    private fun resolveDoubleOp(
+        doubleOp: DoubleOp,
+        column: PgColumn,
+        valuePlaceholder: String
+    ): String {
         return when (doubleOp) {
             DoubleOp.EQ -> "${column.name} = $valuePlaceholder"
             DoubleOp.GT -> "${column.name} > $valuePlaceholder"
@@ -207,15 +215,13 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
         }
     }
 
-    private fun whereFeatureid(req: ReadFeatures, where: StringBuilder) {
+    private fun whereFeatureId(req: ReadFeatures, where: StringBuilder) {
         if (req.featureIds.size > 0) {
             val featureIds = req.featureIds.filterNotNull()
             if (featureIds.isNotEmpty()) {
                 if (where.isNotEmpty()) where.append(" AND ")
-                val arg = types.size + 1
-                types.add(PgType.STRING_ARRAY.toString())
-                values.add(featureIds.toTypedArray())
-                where.append("$id = ANY(\$$arg)")
+                val placeholder = placeholderFor(featureIds.toTypedArray(), PgType.STRING_ARRAY)
+                where.append("$id = ANY($placeholder)")
             }
         }
     }
@@ -227,14 +233,10 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
                 for (i in guids.indices) {
                     val guid = guids[i]
                     if (where.isNotEmpty()) where.append(" AND ")
-                    val arg = types.size + 1
-                    where.append("($id = \$$arg AND $txn = \$${arg + 1} AND $uid = \$${arg + 2})")
-                    types.add(PgType.STRING.toString())
-                    values.add(guid.featureId)
-                    types.add(PgType.INT64.toString())
-                    values.add(guid.version.txn)
-                    types.add(PgType.INT.toString())
-                    values.add(guid.uid)
+                    val idPlaceholder = placeholderFor(guid.featureId, PgType.STRING)
+                    val txnPlaceholder = placeholderFor(guid.version.txn, PgType.INT64)
+                    val uidPlaceholder = placeholderFor(guid.uid, PgType.INT)
+                    where.append("($id = $idPlaceholder AND $txn = $txnPlaceholder AND $uid = $uidPlaceholder)")
                 }
             }
         }
@@ -281,13 +283,17 @@ internal class PgQuery(val session: PgSession, val request: ReadRequest) {
                     spatial.geometry,
                     Flags().geoGzipOff().geoEncoding(GeoEncoding.TWKB)
                 )
-                val arg = types.size + 1
-                where.append("ST_Intersects(naksha_geometry($geo, $flags), ST_GeomFromTWKB(\$$arg))")
-                types.add(PgType.BYTE_ARRAY.toString())
-                values.add(twkb)
+                val placeholder = placeholderFor(twkb, PgType.BYTE_ARRAY)
+                where.append("ST_Intersects(naksha_geometry($geo, $flags), ST_GeomFromTWKB($placeholder))")
             }
 
             else -> throw NakshaException(ILLEGAL_ARGUMENT, "Invalid spatial query found: $spatial")
         }
+    }
+
+    private fun placeholderFor(value: Any?, type: PgType): String {
+        values.add(value)
+        types.add(type.toString())
+        return "\$${types.size}"
     }
 }

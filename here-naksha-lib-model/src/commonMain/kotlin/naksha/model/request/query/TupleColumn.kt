@@ -65,7 +65,7 @@ open class TupleColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun createAt(): TupleColumn = TupleColumn(CREATED_AT)
+        fun createdAt(): TupleColumn = TupleColumn(CREATED_AT)
 
         /**
          * The reference to the [update timestamp][naksha.model.Metadata.updatedAt].

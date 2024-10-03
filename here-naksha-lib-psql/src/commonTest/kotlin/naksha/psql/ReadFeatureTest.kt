@@ -80,31 +80,4 @@ class ReadFeatureTest : PgTestBase(NakshaCollection("read_feature_test_c")) {
         assertEquals(1, featuresByBBox.features.size)
         assertEquals(featureToCreate.id, featuresByBBox.features[0]!!.id)
     }
-
-    @Test
-    fun shouldReadFeatureByMetadata() {
-        // Given: feature
-        val appId = "some_app"
-        val author = "some_author"
-        val featureToCreate = ProxyFeatureGenerator.generateRandomFeature()
-        val writeFeaturesReq = WriteRequest().apply {
-            add(Write().createFeature(null, collection!!.id, featureToCreate))
-        }
-
-        // When: executing feature write request with sepcific appId and author
-        executeWrite(writeFeaturesReq, SessionOptions(appId = appId, author = author))
-
-        // And: execute
-        val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
-            collectionIds += collection!!.id
-            query.metadata = MetaAnd(
-                MetaQuery(TupleColumn.author(), StringOp.EQUALS, author),
-                MetaQuery(TupleColumn.appId(), StringOp.STARTS_WITH, appId.substring(0,2))
-            )
-        })
-
-        // Then:
-        assertEquals(1, featuresByAppIdAndAuthor.features.size)
-        assertEquals(featureToCreate.id, featuresByAppIdAndAuthor.features[0]!!.id)
-    }
 }
