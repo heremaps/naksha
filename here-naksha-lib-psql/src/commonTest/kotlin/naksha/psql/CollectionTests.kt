@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Proxy
 import naksha.model.Naksha
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.ReadFeatures
@@ -9,8 +10,9 @@ import naksha.psql.base.PgTestBase
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import kotlin.test.assertTrue
 
-class DropCollectionTest : PgTestBase(collection = null) {
+class CollectionTests : PgTestBase(collection = null) {
 
     @Test
     fun shouldDropCollection() {
@@ -52,5 +54,31 @@ class DropCollectionTest : PgTestBase(collection = null) {
         assertFails("ERROR: relation \"${collection.id}\" does not exist") {
             executeRead(readAllFromCollection)
         }
+    }
+
+    @Test
+    fun collectionShouldBeCreated() {
+        val collection = NakshaCollection("create_collection_test")
+        executeWrite(
+            WriteRequest().add(
+                Write().createCollection(null, collection)
+            )
+        )
+
+        collection.indices
+        val cursor = useConnection().execute(
+            sql = """ SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_name = $1
+            """.trimIndent(),
+            args = arrayOf(collection.id)
+        )
+        val columns = mutableListOf<String>()
+        while (cursor.next()) {
+            columns.add(cursor["column_name"])
+        }
+        assertEquals(PgColumn.allColumns.size, columns.size)
+        assertTrue(PgColumn.allColumns.all { column -> columns.contains(column.name) })
+        cursor.close()
     }
 }
