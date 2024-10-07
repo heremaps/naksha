@@ -21,7 +21,7 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         whereVersion()
         whereMetadata()
         whereSpatial()
-        return if(where.isBlank()){
+        return if (where.isBlank()) {
             null
         } else {
             WhereClause(sql = " WHERE $where ", argValues = argValues, argTypes = argTypes)
@@ -122,28 +122,26 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
                 where.append(" AND ")
             }
             where.append("(")
-            whereNestedMetadata(request, metaQuery, where)
+            whereNestedMetadata(metaQuery)
             where.append(")")
         }
     }
 
-    private tailrec fun whereNestedMetadata(
-        request: ReadFeatures,
-        metaQuery: IMetaQuery,
-        where: StringBuilder
-    ) {
+    private tailrec fun whereNestedMetadata(metaQuery: IMetaQuery) {
         when (metaQuery) {
             is MetaNot -> {
                 where.append(" NOT ")
-                whereNestedMetadata(request, metaQuery.query, where)
+                whereNestedMetadata(metaQuery.query)
             }
 
             is MetaAnd -> {
                 metaQuery.filterNotNull().forEachIndexed { index, subQuery ->
+                    if (index == 0){
+                        where.append(" ( ")
+                    }
                     if (index > 0) {
                         where.append(" AND ")
                     }
-                    whereNestedMetadata(request, subQuery, where)
                 }
             }
 
@@ -152,7 +150,7 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
                     if (index > 0) {
                         where.append(" OR ")
                     }
-                    whereNestedMetadata(request, subQuery, where)
+                    whereNestedMetadata(subQuery)
                 }
             }
 
