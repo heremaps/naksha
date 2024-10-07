@@ -216,7 +216,7 @@ open class PgMap(
      * @return this.
      */
     open fun refresh(connection: PgConnection? = null): PgMap {
-        if (_updateAt == null || Platform.currentMillis() < _updateAt) {
+        if (_updateAt == null || Platform.currentMillis() > _updateAt) {
             logger.info("Refresh map '$id' / schema: '$schemaName' ...")
             val conn = connOf(connection)
             try {
