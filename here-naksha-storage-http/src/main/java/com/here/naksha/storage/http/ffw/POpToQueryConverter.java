@@ -52,14 +52,14 @@ public class POpToQueryConverter {
 
   private POpToQueryConverter() {}
 
-  static String p0pToQuery(POp pOp) {
+  static String pOpToQuery(POp pOp) {
     if (pOp.op() == AND) return and(pOp);
     else return pOpToMultiValueComparison(pOp).resolve();
   }
 
   private static String and(POp pOp) {
     assertHasAtLeastOneChildren(pOp);
-    return pOp.children().stream().map(POpToQueryConverter::p0pToQuery).collect(Collectors.joining(AND_DELIMITER));
+    return pOp.children().stream().map(POpToQueryConverter::pOpToQuery).collect(Collectors.joining(AND_DELIMITER));
   }
 
   private static MultiValueComparison pOpToMultiValueComparison(POp pOp) {

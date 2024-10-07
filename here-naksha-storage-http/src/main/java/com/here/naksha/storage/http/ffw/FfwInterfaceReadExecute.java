@@ -129,7 +129,7 @@ public class FfwInterfaceReadExecute {
    */
   private static String getPOpQueryOrEmpty(ReadFeaturesProxyWrapper readRequest) {
     POp pOp = readRequest.getQueryParameter(PROPERTY_SEARCH_OP);
-    return pOp == null ? "" : "&" + POpToQueryConverter.p0pToQuery(pOp);
+    return pOp == null ? "" : "&" + POpToQueryConverter.pOpToQuery(pOp);
   }
 
   /**
