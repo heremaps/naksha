@@ -221,7 +221,7 @@ class PgResultSet(
             for (f in filters) {
                 if (f == null) continue
                 if (row == null) continue
-                row = f.call(row)
+                row = f.filter(row)
                 if (row == null) {
                     removed++
                     break
