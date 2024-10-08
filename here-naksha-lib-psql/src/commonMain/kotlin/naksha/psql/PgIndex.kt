@@ -354,7 +354,6 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         @JvmField
         @JsStatic
         var DEFAULT_INDICES = listOf(
-            id_txn_uid,
             gist_geo,
             geo_grid_id_txn_uid,
             tags_id_txn_uid,
