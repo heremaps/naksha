@@ -65,7 +65,7 @@ class InsertFeature(
             appId = session.options.appId,
             flags = flags,
             id = feature.id,
-            type = NakshaFeature.FEATURE_TYPE,
+            type = feature.type,
             geoGrid = geoGrid(feature)
         )
     }
