@@ -176,7 +176,7 @@ open class PgSession(
                         if (version.year() != txDate.year || version.month() != txDate.monthNumber || version.day() != txDate.dayOfMonth) {
                             logger.info("Transaction counter is still at wrong day, rollover to next day")
                             // Rollover, we update sequence of the day.
-                            version = Version.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(0))
+                            version = Version.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(1))
                             txn = version.txn
                             conn.execute("SELECT setval($1, $2)", arrayOf(storage.txnSequenceOid, txn + 1)).close()
                         }
