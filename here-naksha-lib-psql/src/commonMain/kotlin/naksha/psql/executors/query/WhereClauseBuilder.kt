@@ -24,7 +24,7 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         return if (where.isBlank()) {
             null
         } else {
-            WhereClause(sql = " WHERE $where ", argValues = argValues, argTypes = argTypes)
+            WhereClause(sql = "WHERE $where", argValues = argValues, argTypes = argTypes)
         }
     }
 
@@ -64,9 +64,10 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
     private fun whereSpatial() {
         request.query.spatial?.let { spatialQuery ->
             if (where.isNotEmpty()) {
-                where.append(" AND ")
+                where.append(" AND (")
+            } else {
+                where.append(" (")
             }
-            where.append("(")
             whereNestedSpatial(spatialQuery)
             where.append(")")
         }
@@ -109,9 +110,10 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
     private fun whereMetadata() {
         request.query.metadata?.let { metaQuery ->
             if (where.isNotEmpty()) {
-                where.append(" AND ")
+                where.append(" AND (")
+            } else {
+                where.append(" (")
             }
-            where.append("(")
             whereNestedMetadata(metaQuery)
             where.append(")")
         }
@@ -129,12 +131,10 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
                 subClauseResolver = this::whereNestedMetadata
             )
 
-            is MetaOr -> {
-                or(
-                    subClauses = metaQuery.filterNotNull(),
-                    subClauseResolver = this::whereNestedMetadata
-                )
-            }
+            is MetaOr -> or(
+                subClauses = metaQuery.filterNotNull(),
+                subClauseResolver = this::whereNestedMetadata
+            )
 
             is MetaQuery -> {
                 val pgColumn = PgColumn.ofRowColumn(metaQuery.column) ?: throw NakshaException(
@@ -161,9 +161,9 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
     }
 
     private fun <T : IQuery> not(subClause: T, subClauseResolver: (T) -> Unit) {
-        where.append(" NOT ( ")
+        where.append(" NOT (")
         subClauseResolver(subClause)
-        where.append(" ) ")
+        where.append(") ")
     }
 
     private fun <T : IQuery> and(subClauses: List<T>, subClauseResolver: (T) -> Unit) =
@@ -177,14 +177,14 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         subClauses: List<T>,
         subClauseResolver: (T) -> Unit
     ) {
-        where.append(" ( ")
+        where.append(" (")
         subClauses.forEachIndexed { index, subClause ->
             if (index > 0) {
                 where.append(" $operand ")
             }
             subClauseResolver(subClause)
         }
-        where.append(" ) ")
+        where.append(") ")
     }
 
     private fun placeholderForArg(value: Any?, type: PgType): String {
