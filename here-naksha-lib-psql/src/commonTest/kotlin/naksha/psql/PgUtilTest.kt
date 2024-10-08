@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.model.Flags
-import naksha.model.Version
 import naksha.model.XyzNs
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaProperties
