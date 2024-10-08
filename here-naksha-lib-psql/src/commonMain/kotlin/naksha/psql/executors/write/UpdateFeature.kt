@@ -43,7 +43,7 @@ class UpdateFeature(
 
         val tupleNumber = newFeatureTupleNumber(collection, feature.id, session)
         val flags = resolveFlags(collection, session)
-        val newVersion = Version(previousMetadata.version.txn + 1)
+        val newVersion = session.version()
         val tuple = tuple(
             session.storage,
             tupleNumber,

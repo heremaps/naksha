@@ -29,7 +29,9 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
     fun shouldInsertSingleFeature() {
         // Given: features to create
         val featureToCreate = generateRandomFeature()
-        featureToCreate.properties.xyz.addTag("wicked", false)
+        val xyz = featureToCreate.properties.xyz
+        xyz.tags?.clear()
+        xyz.addTag("wicked", false)
         val writeFeaturesReq = WriteRequest().apply {
             add(Write().createFeature(null, collection!!.id, featureToCreate))
         }
