@@ -1,6 +1,9 @@
 package naksha.psql
 
-import naksha.base.Proxy
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import naksha.model.Naksha
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.ReadFeatures
@@ -57,15 +60,13 @@ class CollectionTests : PgTestBase(collection = null) {
     }
 
     @Test
-    fun collectionShouldBeCreated() {
-        val collection = NakshaCollection("create_collection_test")
+    fun collectionShouldHasAllDbColumns() {
+        val collection = NakshaCollection("check_db_columns_test")
         executeWrite(
             WriteRequest().add(
                 Write().createCollection(null, collection)
             )
         )
-
-        collection.indices
         val cursor = useConnection().execute(
             sql = """ SELECT column_name
                     FROM information_schema.columns
@@ -79,6 +80,40 @@ class CollectionTests : PgTestBase(collection = null) {
         }
         assertEquals(PgColumn.allColumns.size, columns.size)
         assertTrue(PgColumn.allColumns.all { column -> columns.contains(column.name) })
+        cursor.close()
+    }
+
+    @Test
+    fun collectionShouldHasAllDbIndices() {
+        val collection = NakshaCollection("check_db_indices_test")
+        executeWrite(
+            WriteRequest().add(
+                Write().createCollection(null, collection)
+            )
+        )
+        val currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
+        checkAllDefaultIndicesCreatedForTable(collection.id)
+        checkAllDefaultIndicesCreatedForTable(collection.id+"\$meta")
+        checkAllDefaultIndicesCreatedForTable(collection.id+"\$del")
+        checkAllDefaultIndicesCreatedForTable(collection.id+"\$hst\$y"+currentYear)
+        checkAllDefaultIndicesCreatedForTable(collection.id+"\$hst\$y"+(currentYear+1))
+        checkAllDefaultIndicesCreatedForTable(collection.id+"\$meta")
+    }
+
+    private fun checkAllDefaultIndicesCreatedForTable(tableName: String) {
+        val cursor = useConnection().execute(
+            sql = """ SELECT indexname
+                    FROM pg_indexes
+                    WHERE tablename = $1;
+            """.trimIndent(),
+            args = arrayOf(tableName)
+        )
+        val indices = mutableListOf<String>()
+        while (cursor.next()) {
+            indices.add(cursor["indexname"])
+        }
+        assertTrue(PgIndex.DEFAULT_INDICES.size <= indices.size)
+        assertTrue(PgIndex.DEFAULT_INDICES.all { index -> indices.any { addedIndex -> addedIndex.contains(index)}})
         cursor.close()
     }
 }
