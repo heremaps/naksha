@@ -74,30 +74,20 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
 
     private tailrec fun whereNestedSpatial(spatial: ISpatialQuery) {
         when (spatial) {
-            is SpNot -> {
-                where.append("NOT ")
-                whereNestedSpatial(spatial.query)
-            }
+            is SpNot -> not(
+                subClause = spatial.query,
+                subClauseResolver = this::whereNestedSpatial
+            )
 
-            is SpAnd -> {
-                for (i in spatial.indices) {
-                    val subSpatial = spatial[i]
-                    if (subSpatial != null) {
-                        if (i > 0) where.append("AND ")
-                        whereNestedSpatial(subSpatial)
-                    }
-                }
-            }
+            is SpAnd -> and(
+                subClauses = spatial.filterNotNull(),
+                subClauseResolver = this::whereNestedSpatial
+            )
 
-            is SpOr -> {
-                for (i in spatial.indices) {
-                    val subSpatial = spatial[i]
-                    if (subSpatial != null) {
-                        if (i > 0) where.append("OR ")
-                        whereNestedSpatial(subSpatial)
-                    }
-                }
-            }
+            is SpOr -> or(
+                subClauses = spatial.filterNotNull(),
+                subClauseResolver = this::whereNestedSpatial
+            )
 
             is SpIntersects -> {
                 // TODO: Add transformations!
@@ -129,29 +119,21 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
 
     private tailrec fun whereNestedMetadata(metaQuery: IMetaQuery) {
         when (metaQuery) {
-            is MetaNot -> {
-                where.append(" NOT ")
-                whereNestedMetadata(metaQuery.query)
-            }
+            is MetaNot -> not(
+                subClause = metaQuery.query,
+                subClauseResolver = this::whereNestedMetadata
+            )
 
-            is MetaAnd -> {
-                metaQuery.filterNotNull().forEachIndexed { index, subQuery ->
-                    if (index == 0){
-                        where.append(" ( ")
-                    }
-                    if (index > 0) {
-                        where.append(" AND ")
-                    }
-                }
-            }
+            is MetaAnd -> and(
+                subClauses = metaQuery.filterNotNull(),
+                subClauseResolver = this::whereNestedMetadata
+            )
 
             is MetaOr -> {
-                metaQuery.filterNotNull().forEachIndexed { index, subQuery ->
-                    if (index > 0) {
-                        where.append(" OR ")
-                    }
-                    whereNestedMetadata(subQuery)
-                }
+                or(
+                    subClauses = metaQuery.filterNotNull(),
+                    subClauseResolver = this::whereNestedMetadata
+                )
             }
 
             is MetaQuery -> {
@@ -176,6 +158,33 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
                 "Unknown metadata query type: ${metaQuery::class.simpleName}"
             )
         }
+    }
+
+    private fun <T : IQuery> not(subClause: T, subClauseResolver: (T) -> Unit) {
+        where.append(" NOT ( ")
+        subClauseResolver(subClause)
+        where.append(" ) ")
+    }
+
+    private fun <T : IQuery> and(subClauses: List<T>, subClauseResolver: (T) -> Unit) =
+        multiClause("AND", subClauses, subClauseResolver)
+
+    private fun <T : IQuery> or(subClauses: List<T>, subClauseResolver: (T) -> Unit) =
+        multiClause("OR", subClauses, subClauseResolver)
+
+    private fun <T : IQuery> multiClause(
+        operand: String,
+        subClauses: List<T>,
+        subClauseResolver: (T) -> Unit
+    ) {
+        where.append(" ( ")
+        subClauses.forEachIndexed { index, subClause ->
+            if (index > 0) {
+                where.append(" $operand ")
+            }
+            subClauseResolver(subClause)
+        }
+        where.append(" ) ")
     }
 
     private fun placeholderForArg(value: Any?, type: PgType): String {
