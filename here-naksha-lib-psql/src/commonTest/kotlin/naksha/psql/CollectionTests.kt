@@ -1,19 +1,16 @@
 package naksha.psql
 
 import kotlinx.datetime.Clock
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import naksha.model.Naksha
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.base.PgTestBase
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFails
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class CollectionTests : PgTestBase(collection = null) {
 
@@ -93,11 +90,11 @@ class CollectionTests : PgTestBase(collection = null) {
         )
         val currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
         checkAllDefaultIndicesCreatedForTable(collection.id)
-        checkAllDefaultIndicesCreatedForTable(collection.id+"\$meta")
-        checkAllDefaultIndicesCreatedForTable(collection.id+"\$del")
-        checkAllDefaultIndicesCreatedForTable(collection.id+"\$hst\$y"+currentYear)
-        checkAllDefaultIndicesCreatedForTable(collection.id+"\$hst\$y"+(currentYear+1))
-        checkAllDefaultIndicesCreatedForTable(collection.id+"\$meta")
+        checkAllDefaultIndicesCreatedForTable("${collection.id}\$meta")
+        checkAllDefaultIndicesCreatedForTable("${collection.id}\$del")
+        checkAllDefaultIndicesCreatedForTable("${collection.id}\$hst\$y$currentYear")
+        checkAllDefaultIndicesCreatedForTable("${collection.id}\$hst\$y${currentYear + 1}")
+        checkAllDefaultIndicesCreatedForTable("${collection.id}\$meta")
     }
 
     private fun checkAllDefaultIndicesCreatedForTable(tableName: String) {
@@ -115,5 +112,107 @@ class CollectionTests : PgTestBase(collection = null) {
         assertTrue(PgIndex.DEFAULT_INDICES.size <= indices.size)
         assertTrue(PgIndex.DEFAULT_INDICES.all { index -> indices.any { addedIndex -> addedIndex.contains(index)}})
         cursor.close()
+    }
+
+    @Test
+    fun collectionShouldHasNoHistoryDBTable() {
+        val collectionName = "check_no_hst_table_test"
+        val collection = NakshaCollection(collectionName)
+        collection.disableHistory = true
+        executeWrite(
+            WriteRequest().add(
+                Write().createCollection(null, collection)
+            )
+        )
+        val hstTableName = "$collectionName\$hst"
+        val cursor = useConnection().execute(
+            sql = """ SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = $1 
+                    )
+            """.trimIndent(),
+            args = arrayOf(hstTableName)
+        )
+        // Check that hst table was not created
+        assertFalse(cursor.fetch()["exists"])
+        cursor.close()
+        // Check that creating, updating and deleting features still work
+        val feature = NakshaFeature()
+        val readFeature = ReadFeatures()
+        readFeature.collectionIds.add(collectionName)
+        readFeature.featureIds.add(feature.id)
+        executeWrite(
+            WriteRequest().add(
+                Write().createFeature(null, collectionName,feature)
+            )
+        )
+        val insertedFeatureResponse = executeRead(readFeature)
+        assertEquals(1,insertedFeatureResponse.features.size)
+        feature.properties["foo"] = "bar"
+        executeWrite(
+            WriteRequest().add(
+                Write().updateFeature(null, collectionName,feature)
+            )
+        )
+        val updatedFeatureResponse = executeRead(readFeature)
+        assertEquals("bar", updatedFeatureResponse.features[0]?.properties!!["foo"])
+        executeWrite(
+            WriteRequest().add(
+                Write().deleteFeatureById(null, collectionName,feature.id)
+            )
+        )
+        val deletedFeatureResponse = executeRead(readFeature)
+        assertEquals(0, deletedFeatureResponse.features.size)
+    }
+
+    @Test
+    fun collectionShouldHasNoDeleteDBTable() {
+        val collectionName = "check_no_del_table_test"
+        val collection = NakshaCollection(collectionName)
+        collection.autoPurge = true
+        executeWrite(
+            WriteRequest().add(
+                Write().createCollection(null, collection)
+            )
+        )
+        val delTableName = "$collectionName\$del"
+        val cursor = useConnection().execute(
+            sql = """ SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = $1 
+                    )
+            """.trimIndent(),
+            args = arrayOf(delTableName)
+        )
+        // Check that del table was not created
+        assertFalse(cursor.fetch()["exists"])
+        cursor.close()
+        // Check that creating, updating and deleting features still work
+        val feature = NakshaFeature()
+        val readFeature = ReadFeatures()
+        readFeature.collectionIds.add(collectionName)
+        readFeature.featureIds.add(feature.id)
+        executeWrite(
+            WriteRequest().add(
+                Write().createFeature(null, collectionName,feature)
+            )
+        )
+        val insertedFeatureResponse = executeRead(readFeature)
+        assertEquals(1,insertedFeatureResponse.features.size)
+        feature.properties["foo"] = "bar"
+        executeWrite(
+            WriteRequest().add(
+                Write().updateFeature(null, collectionName,feature)
+            )
+        )
+        val updatedFeatureResponse = executeRead(readFeature)
+        assertEquals("bar", updatedFeatureResponse.features[0]?.properties!!["foo"])
+        executeWrite(
+            WriteRequest().add(
+                Write().deleteFeatureById(null, collectionName,feature.id)
+            )
+        )
+        val deletedFeatureResponse = executeRead(readFeature)
+        assertEquals(0, deletedFeatureResponse.features.size)
     }
 }

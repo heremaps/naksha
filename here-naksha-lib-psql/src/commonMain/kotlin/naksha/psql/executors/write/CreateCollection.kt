@@ -42,7 +42,9 @@ class CreateCollection(
             connection = session.usePgConnection(),
             partitions = feature.partitions,
             storageClass = PgStorageClass.of(feature.storageClass),
-            indices = PgIndex.DEFAULT_INDICES
+            indices = PgIndex.DEFAULT_INDICES,
+            storeHistory = !feature.disableHistory,
+            storedDeleted = !feature.autoPurge
         )
         return tuple
     }
