@@ -10,7 +10,7 @@ servers:
   - url: "https://naksha-v2.ext.mapcreator.here.com/"
     description: "PRD"
 info:
-  title: "Naskha Hub-API"
+  title: "Naksha Hub-API"
   description: "Naksha Hub-API is a REST API to provide simple access to geo data."
   version: "2.1.4"
 
