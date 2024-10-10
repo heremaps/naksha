@@ -24,7 +24,7 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         return if (where.isBlank()) {
             null
         } else {
-            WhereClause(sql = "WHERE $where", argValues = argValues, argTypes = argTypes)
+            WhereClause(sql = " WHERE $where", argValues = argValues, argTypes = argTypes)
         }
     }
 
