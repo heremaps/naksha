@@ -23,8 +23,6 @@ open class NakshaCollection() : NakshaFeature() {
         id: String,
         partitions: Int = 1,
         storageClass: String? = null,
-        autoPurge: Boolean = false,
-        disableHistory: Boolean = false,
         geoIndex: String? = null,
         storeDeleted: StoreMode = StoreMode.ON,
         storeHistory: StoreMode = StoreMode.ON,
@@ -33,8 +31,6 @@ open class NakshaCollection() : NakshaFeature() {
         this.id = id
         this.storageClass = storageClass
         this.partitions = partitions
-        this.autoPurge = autoPurge
-        this.disableHistory = disableHistory
         this.geoIndex = geoIndex ?: DEFAULT_GEO_INDEX
         this.storeDeleted = storeDeleted
         this.storeHistory = storeHistory
@@ -118,25 +114,10 @@ open class NakshaCollection() : NakshaFeature() {
     var encodeDict by STRING_NULL
 
     /**
-     * _true_ - disables history of features' modifications.
-     * This setting has no effect if [storeHistory] is set to [Policy.OFF].
-     */
-    @Deprecated("Please use `storeHistory` instead", level = DeprecationLevel.WARNING)
-    var disableHistory by DISABLE_HISTORY
-
-    /**
      * If [StoreMode.OFF] there will be no history table in the database for features in this collection,
      * which boosts performance in certain operations.
      */
     var storeHistory by STORE_HISTORY
-
-    /**
-     * If autoPurge is enabled, deleted features are automatically purged and no shadow state is kept available.
-     * Note that if [disableHistory] is false, the deleted features will still be around in the history. This mainly effects lib-view.
-     * This setting has no effect if [storeDeleted] is set to [Policy.OFF].
-     */
-    @Deprecated("Please use `storeDeleted` instead", level = DeprecationLevel.WARNING)
-    var autoPurge by AUTO_PURGE
 
     /**
      * If [StoreMode.OFF] there will be no table in the database for deleted features from this collection,
@@ -220,15 +201,21 @@ open class NakshaCollection() : NakshaFeature() {
         private val DEFAULT_TYPE = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> "Feature" }
         private val DEFAULT_FLAGS = NullableProperty<NakshaCollection, Flags>(Flags::class)
         private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)
-        private val DISABLE_HISTORY = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
-        private val AUTO_PURGE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val INDICES = NotNullProperty<NakshaCollection, StringList>(StringList::class)
         private val MAX_AGE = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> Int64(-1) }
         private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 10_485_760 }
         private val ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> BEFORE_ESTIMATION }
         private val ESTIMATED_DELETED_FEATURES =  NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> BEFORE_ESTIMATION }
-        private val STORE_HISTORY = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { _, _ -> StoreMode.ON }
-        private val STORE_DELETED = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { _, _ -> StoreMode.ON }
+        private val STORE_HISTORY = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { self, _ ->
+            // For downward compatibility with Naksha version 2
+            val old = self.getRaw("disableHistory")
+            if (old == true) StoreMode.SUSPEND else StoreMode.ON
+        }
+        private val STORE_DELETED = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { self, _ ->
+            // For downward compatibility with Naksha version 2
+            val old = self.getRaw("autoPurge")
+            if (old == true) StoreMode.SUSPEND else StoreMode.ON
+        }
         private val STORE_META = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { _, _ -> StoreMode.ON }
     }
 }

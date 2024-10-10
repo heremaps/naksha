@@ -2,9 +2,9 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.StoreMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class NakshaCollectionProxyTest {
 
@@ -14,8 +14,8 @@ class NakshaCollectionProxyTest {
         val collection = NakshaCollection(
             id = "ID",
             partitions = 3,
-            autoPurge = true,
-            disableHistory = true
+            storeDeleted = StoreMode.SUSPEND,
+            storeHistory = StoreMode.OFF
         )
         collection.maxAge = Int64(42)
 
@@ -23,7 +23,7 @@ class NakshaCollectionProxyTest {
         assertEquals("ID", collection.id)
         assertEquals(3, collection.partitions)
         assertEquals(42, collection.maxAge.toInt())
-        assertTrue(collection.autoPurge)
-        assertTrue(collection.disableHistory)
+        assertEquals(StoreMode.SUSPEND, collection.storeDeleted)
+        assertEquals(StoreMode.OFF, collection.storeHistory)
     }
 }
