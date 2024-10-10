@@ -7,7 +7,10 @@ import kotlin.jvm.JvmField
 import kotlin.reflect.KClass
 
 /**
- *
+ * How the data should be stored for certain components of [NakshaCollection].
+ * [ON] data should be stored.
+ * [SUSPEND] newer data should not be collected, older data still available.
+ * [OFF] all data is wiped and no new data collected.
  */
 @JsExport
 class StoreMode: JsEnum() {
