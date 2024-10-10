@@ -21,6 +21,7 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         whereVersion()
         whereMetadata()
         whereSpatial()
+        whereTags()
         return if (where.isBlank()) {
             null
         } else {
@@ -143,8 +144,8 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
                 )
                 val placeholder = placeholderForArg(metaQuery.value, pgColumn.type)
                 val resolvedQuery = when (val op = metaQuery.op) {
-                    is StringOp -> resolveStringOp(op, pgColumn, placeholder)
-                    is DoubleOp -> resolveDoubleOp(op, pgColumn, placeholder)
+                    is StringOp -> resolveStringOp(op, pgColumn.name, placeholder)
+                    is DoubleOp -> resolveDoubleOp(op, pgColumn.name, placeholder)
                     else -> throw NakshaException(
                         NakshaError.ILLEGAL_ARGUMENT,
                         "Unknown op type: ${op::class.simpleName}"
@@ -159,6 +160,62 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
             )
         }
     }
+
+    private fun whereTags() {
+        request.query.tags?.let { tagQuery ->
+            if (where.isNotEmpty()) {
+                where.append(" AND (")
+            } else {
+                where.append(" (")
+            }
+            whereNestedTags(tagQuery)
+            where.append(")")
+        }
+    }
+
+    private tailrec fun whereNestedTags(tagQuery: ITagQuery){
+        when(tagQuery){
+            is TagNot -> not(tagQuery.query, this::whereNestedTags)
+            is TagOr -> or(tagQuery.filterNotNull(), this::whereNestedTags)
+            is TagAnd -> and(tagQuery.filterNotNull(), this::whereNestedTags)
+            is TagQuery -> resolveSingleTagQuery(tagQuery)
+        }
+    }
+
+    private fun resolveSingleTagQuery(tagQuery: TagQuery){
+        when(tagQuery){
+            is TagExists -> {
+                where.append("$tagsAsJsonb ? ${tagQuery.name}")
+            }
+            is TagValueIsNull -> {
+                where.append("${tagValue(tagQuery)} = null")
+            }
+            is TagValueIsBool -> {
+                if(tagQuery.value){
+                    where.append(tagValue(tagQuery))
+                } else {
+                    where.append("not(${tagValue(tagQuery)}})")
+                }
+            }
+            is TagValueIsDouble -> {
+                val valuePlaceholder = placeholderForArg(tagQuery.value, PgType.DOUBLE)
+                val doubleOp = resolveDoubleOp(tagQuery.op, tagValue(tagQuery), valuePlaceholder)
+                where.append(doubleOp)
+            }
+            is TagValueIsString -> {
+                val valuePlaceholder = placeholderForArg(tagQuery.value, PgType.STRING)
+                val stringEquals = resolveStringOp(StringOp.EQUALS, tagValue(tagQuery), valuePlaceholder)
+                where.append(stringEquals)
+            }
+            is TagValueMatches -> {
+                val regexPlaceholder = placeholderForArg(tagQuery.regex, PgType.STRING)
+                where.append("$tagsAsJsonb @? '$[?(@.${tagQuery.name}=~/$regexPlaceholder/)]")
+            }
+        }
+    }
+
+    private fun tagValue(tagQuery: TagQuery): String =
+        "$tagsAsJsonb->>${tagQuery.name}"
 
     private fun <T : IQuery> not(subClause: T, subClauseResolver: (T) -> Unit) {
         where.append(" NOT (")
@@ -195,12 +252,12 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
 
     private fun resolveStringOp(
         stringOp: StringOp,
-        column: PgColumn,
-        valuePlaceholder: String
+        leftOperand: String,
+        rightOperand: String
     ): String {
         return when (stringOp) {
-            StringOp.EQUALS -> "${column.name} = $valuePlaceholder"
-            StringOp.STARTS_WITH -> "starts_with(${column.name}, $valuePlaceholder)"
+            StringOp.EQUALS -> "$leftOperand = $rightOperand"
+            StringOp.STARTS_WITH -> "starts_with($leftOperand, $rightOperand)"
             else -> throw NakshaException(
                 NakshaError.ILLEGAL_ARGUMENT,
                 "Unknown StringOp: $stringOp"
@@ -210,19 +267,23 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
 
     private fun resolveDoubleOp(
         doubleOp: DoubleOp,
-        column: PgColumn,
-        valuePlaceholder: String
+        leftOperand: String,
+        rightOperand: String
     ): String {
         return when (doubleOp) {
-            DoubleOp.EQ -> "${column.name} = $valuePlaceholder"
-            DoubleOp.GT -> "${column.name} > $valuePlaceholder"
-            DoubleOp.GTE -> "${column.name} >= $valuePlaceholder"
-            DoubleOp.LT -> "${column.name} < $valuePlaceholder"
-            DoubleOp.LTE -> "${column.name} <= $valuePlaceholder"
+            DoubleOp.EQ -> "$leftOperand = $rightOperand"
+            DoubleOp.GT -> "$leftOperand > $rightOperand"
+            DoubleOp.GTE -> "$leftOperand >= $rightOperand"
+            DoubleOp.LT -> "$leftOperand < $rightOperand"
+            DoubleOp.LTE -> "$leftOperand <= $rightOperand"
             else -> throw NakshaException(
                 NakshaError.ILLEGAL_ARGUMENT,
                 "Unknown DoubleOp: $doubleOp"
             )
         }
+    }
+    
+    companion object {
+        private val tagsAsJsonb = "naksha_tags(${PgColumn.tags}, ${PgColumn.flags})::jsonb"
     }
 }
