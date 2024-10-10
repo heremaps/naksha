@@ -2,10 +2,7 @@
 
 package naksha.model.objects
 
-import naksha.base.Int64
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
-import naksha.base.StringList
+import naksha.base.*
 import naksha.model.Flags
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -18,7 +15,9 @@ import kotlin.jvm.JvmStatic
 @JsExport
 open class NakshaCollection() : NakshaFeature() {
 
-    // TODO: Add documentation!
+    /**
+     * Create a Naksha collection with settings.
+     */
     @JsName("of")
     constructor(
         id: String,
@@ -26,7 +25,10 @@ open class NakshaCollection() : NakshaFeature() {
         storageClass: String? = null,
         autoPurge: Boolean = false,
         disableHistory: Boolean = false,
-        geoIndex: String? = null
+        geoIndex: String? = null,
+        storeDeleted: StoreMode = StoreMode.ON,
+        storeHistory: StoreMode = StoreMode.ON,
+        storeMeta: StoreMode = StoreMode.ON,
     ) : this() {
         this.id = id
         this.storageClass = storageClass
@@ -34,6 +36,9 @@ open class NakshaCollection() : NakshaFeature() {
         this.autoPurge = autoPurge
         this.disableHistory = disableHistory
         this.geoIndex = geoIndex ?: DEFAULT_GEO_INDEX
+        this.storeDeleted = storeDeleted
+        this.storeHistory = storeHistory
+        this.storeMeta = storeMeta
     }
 
     override fun defaultFeatureType(): String = FEATURE_TYPE
@@ -114,14 +119,36 @@ open class NakshaCollection() : NakshaFeature() {
 
     /**
      * _true_ - disables history of features' modifications.
+     * This setting has no effect if [storeHistory] is set to [Policy.OFF].
      */
+    @Deprecated("Please use `storeHistory` instead", level = DeprecationLevel.WARNING)
     var disableHistory by DISABLE_HISTORY
+
+    /**
+     * If [StoreMode.OFF] there will be no history table in the database for features in this collection,
+     * which boosts performance in certain operations.
+     */
+    var storeHistory by STORE_HISTORY
 
     /**
      * If autoPurge is enabled, deleted features are automatically purged and no shadow state is kept available.
      * Note that if [disableHistory] is false, the deleted features will still be around in the history. This mainly effects lib-view.
+     * This setting has no effect if [storeDeleted] is set to [Policy.OFF].
      */
+    @Deprecated("Please use `storeDeleted` instead", level = DeprecationLevel.WARNING)
     var autoPurge by AUTO_PURGE
+
+    /**
+     * If [StoreMode.OFF] there will be no table in the database for deleted features from this collection,
+     * which boosts performance in certain operations.
+     */
+    var storeDeleted by STORE_DELETED
+
+    /**
+     * If [StoreMode.OFF] there will be no meta table in the database for statistics of features in this collection,
+     * which boosts performance in certain operations.
+     */
+    var storeMeta by STORE_META
 
     /**
      * The indices list contains the list of indices to add to the collection.
@@ -200,5 +227,8 @@ open class NakshaCollection() : NakshaFeature() {
         private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 10_485_760 }
         private val ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> BEFORE_ESTIMATION }
         private val ESTIMATED_DELETED_FEATURES =  NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> BEFORE_ESTIMATION }
+        private val STORE_HISTORY = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { _, _ -> StoreMode.ON }
+        private val STORE_DELETED = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { _, _ -> StoreMode.ON }
+        private val STORE_META = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { _, _ -> StoreMode.ON }
     }
 }

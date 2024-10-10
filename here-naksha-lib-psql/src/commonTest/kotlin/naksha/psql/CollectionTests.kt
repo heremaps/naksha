@@ -6,6 +6,7 @@ import kotlinx.datetime.toLocalDateTime
 import naksha.model.Naksha
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.StoreMode
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -117,8 +118,10 @@ class CollectionTests : PgTestBase(collection = null) {
     @Test
     fun collectionShouldHasNoHistoryDBTable() {
         val collectionName = "check_no_hst_table_test"
-        val collection = NakshaCollection(collectionName)
-        collection.disableHistory = true
+        val collection = NakshaCollection(
+            id = collectionName,
+            storeHistory = StoreMode.OFF
+        )
         executeWrite(
             WriteRequest().add(
                 Write().createCollection(null, collection)
@@ -168,8 +171,10 @@ class CollectionTests : PgTestBase(collection = null) {
     @Test
     fun collectionShouldHasNoDeleteDBTable() {
         val collectionName = "check_no_del_table_test"
-        val collection = NakshaCollection(collectionName)
-        collection.autoPurge = true
+        val collection = NakshaCollection(
+            id = collectionName,
+            storeDeleted = StoreMode.OFF
+            )
         executeWrite(
             WriteRequest().add(
                 Write().createCollection(null, collection)
