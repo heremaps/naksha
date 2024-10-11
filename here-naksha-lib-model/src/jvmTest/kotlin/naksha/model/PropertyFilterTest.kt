@@ -38,7 +38,6 @@ class PropertyFilterTest {
             val byteArray = encoder.buildFeatureFromMap(feature)
             val storeNumber = StoreNumber(0, Int64(0))
             val version = Version(0)
-            val flag = Flags(0)
             val tupleNumber = TupleNumber(
                 storeNumber = storeNumber,
                 uid = 0,
@@ -48,24 +47,16 @@ class PropertyFilterTest {
             val tuple = Tuple(
                 storage = mockStorage,
                 tupleNumber = tupleNumber,
-                Metadata(
-                    storeNumber = storeNumber,
-                    updatedAt = Int64(0),
-                    uid = 0,
-                    id = "",
-                    appId = "",
-                    author = null,
-                    version = version,
-                    type = null,
-                    flags = flag,
-                ),
-                byteArray
+                fetchBits = 0,
+                meta = null,
+                feature = byteArray,
+                id = feature.id,
+                flags = Flags(0)
             )
             resultTuple = ResultTuple(
                 storage = mockStorage,
                 tupleNumber = tupleNumber,
                 op = ExecutedOp.READ,
-                featureId = null,
                 tuple = tuple
             )
         }
