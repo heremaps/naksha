@@ -29,6 +29,9 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+    strategy:
+      matrix:
+        naksha-modules: [here-naksha-lib-view]
     steps:
       - run: echo "[${{ github.triggering_actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }}/PR# [${{ github.ref_name }}]"
       - run: echo "🎉 This job is running on a ${{ runner.os }} server hosted by GitHub!"
@@ -50,8 +53,6 @@ jobs:
         ## original run clause for project wise
 #        run: gradle shadowJar jacocoTestReport jacocoTestCoverageVerification
         ## current v3 target: base, model, core, psql, view
-        naksha-modules:
-          - here-naksha-lib-view
         run: gradle :${{ naksha-modules }}:build :${{ naksha-modules }}:jacocoTestReport :${{ naksha-modules }}:jacocoTestCoverageVerification
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v4
