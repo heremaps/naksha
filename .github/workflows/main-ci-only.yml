@@ -1,4 +1,4 @@
-name: CI-Only Workflow
+name: CI-Only Workflow for V3 branches
 
 # Trigger for specified criteria (specifically for PRs against stable branches)
 on:
