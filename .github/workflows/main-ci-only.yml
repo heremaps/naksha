@@ -18,4 +18,4 @@ permissions:
 jobs:
   ### Job to Build and Publish artifacts
   Build-and-Publish:
-    uses: ./.github/workflows/reusable-build-and-publish.yml
+    uses: ./.github/workflows/reusable-build-and-publish-v3s.yml
