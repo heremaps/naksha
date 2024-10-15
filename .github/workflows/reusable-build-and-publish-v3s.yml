@@ -31,7 +31,7 @@ jobs:
           - 5432:5432
     strategy:
       matrix:
-        naksha-modules: [here-naksha-lib-view]
+        naksha-modules: ["here-naksha-lib-view"]
     steps:
       - run: echo "[${{ github.triggering_actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }}/PR# [${{ github.ref_name }}]"
       - run: echo "🎉 This job is running on a ${{ runner.os }} server hosted by GitHub!"
