@@ -23,7 +23,7 @@ interface IDictManager {
      * @param dict The dictionary to delete.
      * @return _true_ if the dictionary was deleted; _false_ if this dictionary is not stored in the manager.
      */
-    fun deleteDictionary(dict: JbDictionary) : Boolean
+    fun deleteDictionary(dict: JbDictionary): Boolean
 
     /**
      * Retrieve the dictionary with the given identifier.
@@ -33,8 +33,21 @@ interface IDictManager {
     fun getDictionary(id: String): JbDictionary?
 
     /**
+     * The best dictionary to encode the given feature.
+     * @param feature the feature to encode; _null_ if no specific one is available.
+     * @param context the context in which the encoding happens; _null_ if none is available.
+     * @return best dictionary to use for encoding; _null_ if none is available.
+     */
+    fun getEncodingDictionary(feature: Any? = null, context: Any? = null): JbDictionary? = null
+
+    /**
      * The default dictionary to use for encoding.
      * @return default dictionary to use for encoding; _null_ if none is available.
      */
-    fun defaultDict(): String? = null
+    @Deprecated(
+        message = "Please use getEncodingDictionary",
+        replaceWith = ReplaceWith("getEncodingDictionary(feature)"),
+        level = DeprecationLevel.WARNING
+    )
+    fun defaultDict(): String? = getEncodingDictionary()?.id()
 }
