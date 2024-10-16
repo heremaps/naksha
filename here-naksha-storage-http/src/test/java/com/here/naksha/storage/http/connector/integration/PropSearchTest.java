@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static com.here.naksha.storage.http.connector.integration.Commons.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PropSearchTest {
@@ -79,7 +80,8 @@ public class PropSearchTest {
 
         String params = BBOX_PATH_AND_PARAMS + "p.prop1=cs=1";
         Response nakshaResponse = naksha().urlEncodingEnabled(false).get(params);
-        Response dataHubResponse = dataHub().urlEncodingEnabled(false).get(params);
+        assertEquals(nakshaResponse.jsonPath().getString("type"),"ErrorResponse");
+        assertEquals(nakshaResponse.jsonPath().getString("error"),"Exception");
         System.out.println();
     }
 
