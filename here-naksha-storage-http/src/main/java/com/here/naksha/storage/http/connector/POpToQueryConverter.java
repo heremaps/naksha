@@ -25,6 +25,7 @@ import static com.here.naksha.lib.core.models.storage.POpType.*;
 
 import com.here.naksha.lib.core.models.payload.events.PropertyQuery;
 import com.here.naksha.lib.core.models.payload.events.PropertyQueryAnd;
+import com.here.naksha.lib.core.models.storage.OpType;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.POpType;
 import java.util.*;
@@ -35,7 +36,7 @@ public class POpToQueryConverter {
   public static final String NULL = null;
   public static final String PATH_SEGMENT_DELIMITER = ".";
 
-  private static final Map<POpType, PropertyQuery.QueryOperation> SIMPLE_LEAF_OPERATORS = Map.of(
+  private static final Map<OpType, PropertyQuery.QueryOperation> SIMPLE_LEAF_OPERATORS = Map.of(
       POpType.EQ, EQUALS,
       POpType.GT, GREATER_THAN,
       POpType.GTE, GREATER_THAN_OR_EQUALS,
