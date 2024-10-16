@@ -23,11 +23,13 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import com.here.naksha.lib.core.models.Typed;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.payload.responses.ErrorResponse;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -55,8 +57,14 @@ public class PrepareResult {
     XyzError error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
     if (error != null) return new ErrorResult(error, "Response http status code: " + httpResponse.statusCode());
 
-    T resultFeatures = JsonSerializable.deserialize(prepareBody(httpResponse), httpResponseType);
-    return prepareResult(typedResponseToFeatureList.apply(resultFeatures));
+    String preapredBody = prepareBody(httpResponse);
+    try {
+      T resultFeatures = JsonSerializable.deserialize(preapredBody, httpResponseType);
+      return prepareResult(typedResponseToFeatureList.apply(resultFeatures));
+    } catch (UncheckedIOException e) {
+      ErrorResponse errorResponse = JsonSerializable.deserialize(preapredBody, ErrorResponse.class);
+      return new ErrorResult(errorResponse.getError(), "Error response : " + errorResponse.getErrorMessage());
+    }
   }
 
   private static String prepareBody(HttpResponse<byte[]> response) {
