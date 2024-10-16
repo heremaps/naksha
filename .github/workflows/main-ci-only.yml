@@ -1,4 +1,4 @@
-name: CI-Only Workflow
+name: CI-Only Workflow for V3 branches
 
 # Trigger for specified criteria (specifically for PRs against stable branches)
 on:
@@ -9,7 +9,7 @@ on:
       - reopened
       - synchronize
     branches:
-      - v3
+      - 'v3*'
 
 permissions:
   checks: write         # for junit reporting
@@ -18,4 +18,4 @@ permissions:
 jobs:
   ### Job to Build and Publish artifacts
   Build-and-Publish:
-    uses: ./.github/workflows/reusable-build-and-publish.yml
+    uses: ./.github/workflows/reusable-build-and-publish-v3s.yml

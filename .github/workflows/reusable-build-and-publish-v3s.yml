@@ -29,6 +29,9 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+    strategy:
+      matrix:
+        naksha-modules: ["here-naksha-lib-view"]
     steps:
       - run: echo "[${{ github.triggering_actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }}/PR# [${{ github.ref_name }}]"
       - run: echo "🎉 This job is running on a ${{ runner.os }} server hosted by GitHub!"
@@ -47,7 +50,10 @@ jobs:
           gradle-version: 8.2
       ### Build, Test, Coverage Verification
       - name: Build fat jar, Run Unit tests, Verify code coverage
-        run: gradle shadowJar jacocoTestReport jacocoTestCoverageVerification
+        ## original run clause for project wise
+#        run: gradle shadowJar jacocoTestReport jacocoTestCoverageVerification
+        ## current v3 target: base, model, core, psql, view
+        run: gradle :${{ matrix.naksha-modules }}:build :${{ matrix.naksha-modules }}:jacocoTestReport :${{ matrix.naksha-modules }}:jacocoTestCoverageVerification
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v4
         if: success() || failure() # always run even if the previous step fails
@@ -71,17 +77,17 @@ jobs:
         run: |
           ls -l $SERVICE_JAR_DIR/*
       ### Upload as pipeline artifact
-      - name: Prepare artifact content
-        run: |
-          mkdir $ARTIFACT_DIR
-          cp -p $SERVICE_JAR_DIR/naksha-*-all.jar $ARTIFACT_DIR/
-      - name: List artifact content
-        run: |
-          ls -lR $ARTIFACT_DIR
-      - name: Save artifact content
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.GITHUB_ARTIFACT_NAME }}
-          path: ${{ env.ARTIFACT_DIR }}
-          if-no-files-found: error
+#      - name: Prepare artifact content
+#        run: |
+#          mkdir $ARTIFACT_DIR
+#          cp -p $SERVICE_JAR_DIR/naksha-*-all.jar $ARTIFACT_DIR/
+#      - name: List artifact content
+#        run: |
+#          ls -lR $ARTIFACT_DIR
+#      - name: Save artifact content
+#        uses: actions/upload-artifact@v3
+#        with:
+#          name: ${{ env.GITHUB_ARTIFACT_NAME }}
+#          path: ${{ env.ARTIFACT_DIR }}
+#          if-no-files-found: error
       - run: echo "🍏 This job's status is ${{ job.status }}."

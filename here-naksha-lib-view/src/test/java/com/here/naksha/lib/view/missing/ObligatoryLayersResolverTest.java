@@ -34,7 +34,7 @@ public class ObligatoryLayersResolverTest {
     byte[] bytesFeature = PgUtil.encodeFeature(feature, 0, null);
     final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), Version.fromDouble(3.0),0);
     Metadata metadata = mock(Metadata.class);
-    Tuple tuple = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesFeature, null, null, null, null);
+    Tuple tuple = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, feature.getId(), metadata.getFlags(), bytesFeature, null, null, null, null);
     ResultTuple resultTuple = new ResultTuple(storage, tupleNum, ExecutedOp.READ, tuple);
 
     List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
@@ -59,7 +59,7 @@ public class ObligatoryLayersResolverTest {
     byte[] bytesFeature = PgUtil.encodeFeature(feature, 0, null);
     final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), Version.fromDouble(3.0),0);
     Metadata metadata = mock(Metadata.class);
-    Tuple tuple = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesFeature, null, null, null, null);
+    Tuple tuple = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, feature.getId(), metadata.getFlags(), bytesFeature, null, null, null, null);
     ResultTuple resultTuple = new ResultTuple(storage, tupleNum, ExecutedOp.READ, tuple);
 
     List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();

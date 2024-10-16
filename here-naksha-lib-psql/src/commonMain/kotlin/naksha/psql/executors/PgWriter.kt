@@ -16,6 +16,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.psql.*
+import naksha.psql.executors.TupleCachingUtils.cachedTupleNumber
 import naksha.psql.executors.write.*
 import kotlin.jvm.JvmField
 
@@ -188,17 +189,23 @@ class PgWriter(
                 when (write.op) {
                     WriteOp.CREATE -> cachedTupleNumber(
                         write,
-                        CreateCollection(session).execute(mapOf(write), write)
+                        CreateCollection(session).execute(mapOf(write), write),
+                        tuples,
+                        tupleCache
                     )
 
                     WriteOp.UPSERT -> cachedTupleNumber(
                         write,
-                        upsertCollection(mapOf(write), write)
+                        upsertCollection(mapOf(write), write),
+                        tuples,
+                        tupleCache
                     )
 
                     WriteOp.UPDATE -> cachedTupleNumber(
                         write,
-                        updateCollection(mapOf(write), write)
+                        updateCollection(mapOf(write), write),
+                        tuples,
+                        tupleCache
                     )
 
                     WriteOp.DELETE, WriteOp.PURGE -> DropCollection(session).execute(
@@ -216,7 +223,9 @@ class PgWriter(
                 when (write.op) {
                     WriteOp.CREATE -> cachedTupleNumber(
                         write,
-                        InsertFeature(session, writeExecutor).execute(collection, write)
+                        InsertFeature(session, writeExecutor).execute(collection, write),
+                        tuples,
+                        tupleCache
                     )
 
                     WriteOp.UPSERT ->
@@ -227,7 +236,9 @@ class PgWriter(
                         ) {
                             cachedTupleNumber(
                                 write,
-                                InsertFeature(session, writeExecutor).execute(collection, write)
+                                InsertFeature(session, writeExecutor).execute(collection, write),
+                                tuples,
+                                tupleCache
                             )
                         } else {
                             cachedTupleNumber(
@@ -236,7 +247,9 @@ class PgWriter(
                                     session,
                                     previousMetadataProvider,
                                     writeExecutor
-                                ).execute(collection, write)
+                                ).execute(collection, write),
+                                tuples,
+                                tupleCache
                             )
                         }
 
@@ -245,12 +258,16 @@ class PgWriter(
                         UpdateFeature(session, previousMetadataProvider, writeExecutor).execute(
                             collection,
                             write
-                        )
+                        ),
+                        tuples,
+                        tupleCache
                     )
 
                     WriteOp.DELETE -> DeleteFeature(session, writeExecutor).execute(
                         collection,
-                        write
+                        write,
+                        tuples,
+                        tupleCache
                     )
 
                     WriteOp.PURGE -> TODO()
@@ -279,12 +296,6 @@ class PgWriter(
                 filters = request.resultFilters
             )
         )
-    }
-
-    private fun cachedTupleNumber(write: WriteExt, tuple: Tuple): TupleNumber {
-        tuples[write.i] = tuple
-        tupleCache.store(tuple)
-        return tuple.tupleNumber
     }
 
     private fun mapOf(write: WriteExt): PgMap {
