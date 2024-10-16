@@ -721,6 +721,20 @@ return obj;
         }
 
         /**
+         * Calculates the MD5 hash about the given text.
+         *
+         * @param text the text to hash.
+         * @return the MD5 hash, being a byte-array with size 16 (128-bit).
+         */
+        @JsName("md5Bytes")
+        @JsStatic
+        actual fun md5(bytes: ByteArray): ByteArray {
+            if (isPlv8()) return js("plv8.execute(\"SELECT digest(\$1,'md5') as i\",[bytes])[0].i").unsafeCast<ByteArray>()
+            // TODO: Use SubtleCrypto-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto
+            throw UnsupportedOperationException("md5 is not implemented in the current environment")
+        }
+
+        /**
          * Compress bytes.
          * @param raw the bytes to compress.
          * @return the deflated (compressed) bytes.

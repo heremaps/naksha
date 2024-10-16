@@ -684,6 +684,14 @@ actual class Platform {
             return digest.digest()
         }
 
+        @JvmStatic
+        actual fun md5(bytes: ByteArray): ByteArray {
+            val digest = md5Digest.get()
+            digest.reset()
+            digest.update(bytes)
+            return digest.digest()
+        }
+
         @JvmField
         internal val lz4Factory: LZ4Factory = LZ4Factory.fastestInstance()
 

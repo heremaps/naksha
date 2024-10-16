@@ -512,6 +512,14 @@ expect class Platform {
         fun md5(text: String): ByteArray
 
         /**
+         * Calculates the MD5 hash about the given byte-array.
+         *
+         * @param bytes the byte-array to hash.
+         * @return the MD5 hash, being a byte-array with size 16 (128-bit).
+         */
+        fun md5(bytes: ByteArray): ByteArray
+
+        /**
          * Compress bytes.
          * @param raw the bytes to compress.
          * @return the deflated (compressed) bytes.
