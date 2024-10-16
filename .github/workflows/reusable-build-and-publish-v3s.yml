@@ -90,4 +90,4 @@ jobs:
 #          name: ${{ env.GITHUB_ARTIFACT_NAME }}
 #          path: ${{ env.ARTIFACT_DIR }}
 #          if-no-files-found: error
-#      - run: echo "🍏 This job's status is ${{ job.status }}."
+      - run: echo "🍏 This job's status is ${{ job.status }}."
