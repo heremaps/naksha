@@ -12,7 +12,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static com.here.naksha.lib.core.models.storage.POp.*;
 import static com.here.naksha.storage.http.connector.POpToQueryConverter.*;
-import static com.here.naksha.storage.http.connector.POpToQueryConverter.pOpToQuery;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

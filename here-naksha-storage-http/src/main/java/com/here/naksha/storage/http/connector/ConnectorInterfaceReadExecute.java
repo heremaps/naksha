@@ -104,10 +104,6 @@ public class ConnectorInterfaceReadExecute {
     //    String tileType = request.getQueryParameter(TILE_TYPE);
     //    String tileId = request.getQueryParameter(TILE_ID);
     //
-    //    if (tileType != null && !tileType.equals(TILE_TYPE_QUADKEY))
-    //      throw new NotImplementedException("Tile type other than " + TILE_TYPE_QUADKEY);
-
-    //
     //    GetFeaturesByTileEvent getFeaturesByTileEvent = new GetFeaturesByTileEvent();
     //    getFeaturesByTileEvent.setHereTileFlag(false);
     //    getFeaturesByTileEvent.setMargin(margin.intValue());

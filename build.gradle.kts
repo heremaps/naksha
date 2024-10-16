@@ -366,9 +366,12 @@ project(":here-naksha-storage-http") {
         implementation(commons_lang3)
 
         testImplementation(mockito)
+        testImplementation("io.rest-assured:rest-assured:5.5.0")
+    }
+    tasks.withType<Test> {
+        exclude("**/integration/**")
     }
     setOverallCoverage(0.0) // only increasing allowed!
-
 }
 
 
