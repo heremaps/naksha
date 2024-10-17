@@ -3,75 +3,82 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
- * A tuple represents a specific immutable state of a feature in a storage.
+ * A tuple represents a specific immutable state of a feature.
+ * @since 3.0.0
  */
 @JsExport
 data class Tuple(
     /**
-     * Reference to specific storage implementation that allows to decode tuple to feature.
-     */
-    @JvmField val storage: IStorage,
-
-    /**
      * The tuple-number, a unique identifier for the tuple.
+     *
+     * If the client wants to create a tuple for internal purpose or to write a new state into a storage, then it should use [TupleNumber.UNDEFINED].
+     * @since 3.0.0
      */
     @JvmField val tupleNumber: TupleNumber,
 
     /**
      * The bits about which parts of the tuple have been fetched.
+     *
+     * If the client wants to create a tuple for internal purpose or to write a new state into a storage, then it should use [FetchMode.FETCH_ALL].
+     * @since 3.0.0
      */
     @JvmField val fetchBits: FetchBits,
 
     /**
      * The metadata, this is going into the [XYZ namespace][XyzNs], when decoding the [Tuple] into a [NakshaFeature].
+     * @since 3.0.0
      */
     @JvmField val meta: Metadata? = null,
 
     /**
      * The `id` of the feature.
+     * @since 3.0.0
      */
     @JvmField val id: String = meta?.id ?: throw NakshaException(ILLEGAL_ARGUMENT, "Either meta or id must be provided"),
 
     /**
      * The `flags` of the feature.
+     * @since 3.0.0
      */
     @JvmField val flags: Flags = meta?.flags ?: throw NakshaException(ILLEGAL_ARGUMENT, "Either meta or flags must be provided"),
 
     /**
      * Feature encoded with [FeatureEncoding] algorithm described by [Metadata.flags].
+     * @since 3.0.0
      */
     @JvmField val feature: ByteArray? = null,
 
     /**
      * Geometry encoded with [GeoEncoding] algorithm described by [Metadata.flags].
      * Might be _null_, when the feature does not have a geometry.
+     * @since 3.0.0
      */
     @JvmField val geo: ByteArray? = null,
 
     /**
      * Geometry-Reference-Point, encoded with the [GeoEncoding] algorithm described by [Metadata.flags].
      * Might be _null_, when the feature does not have a reference point.
+     * @since 3.0.0
      */
     @JvmField val referencePoint: ByteArray? = null,
 
     /**
      * Tags encoded with [TagsEncoding] algorithm described by [Metadata.flags].
      * Might be _null_, when the feature does not have any tags.
+     * @since 3.0.0
      */
     @JvmField val tags: ByteArray? = null,
 
     /**
      * An arbitrary binary attachment.
+     * @since 3.0.0
      */
     @JvmField val attachment: ByteArray? = null
 ) : ITuple {
@@ -82,25 +89,55 @@ data class Tuple(
 
     override fun hashCode(): Int = super.hashCode()
 
-    val mapNumber: Int
-        get() = tupleNumber.mapNumber()
-    val mapId: String?
-        get() = storage.getMapId(mapNumber)
-    val collectionNumber: Int64
-        get() = tupleNumber.collectionNumber()
-    val collectionId: String?
-        get() {
-            val mapId = this.mapId ?: return null
-            val map = storage[mapId]
-            if (!map.exists()) return null
-            return map.getCollectionId(collectionNumber)
-        }
+    /**
+     * Return the number of the storage in which the tuple is stored.
+     *
+     * This is an alias for `tupleNumber.storageNumber`.
+     * @since 3.0.0
+     */
+    val storageNumber: Int64
+        get() = tupleNumber.storageNumber
 
     /**
-     * Maps tuple into a Naksha feature.
+     * Return the number of the map in which the tuple is stored.
+     *
+     * This is an alias for `tupleNumber.mapNumber()`.
+     * @since 3.0.0
+     */
+    val mapNumber: Int
+        get() = tupleNumber.mapNumber()
+
+    /**
+     * Return the number of the collection in which the tuple is stored.
+     *
+     * This is an alias for `tupleNumber.collectionNumber()`.
+     * @since 3.0.0
+     */
+    val collectionNumber: Int
+        get() = tupleNumber.collectionNumber()
+
+    /**
+     * Return the partition-number in the tuple is stored.
+     *
+     * This is an alias for `tupleNumber.partitionNumber()`.
+     * @since 3.0.0
+     */
+    val partitionNumber: Int
+        get() = tupleNumber.partitionNumber()
+
+    /**
+     * Convert the tuple into a [Naksha feature][NakshaFeature], using the [NakshaCache] to query for the [tuple-codec][ITupleCodec].
+     *
+     * There is no caching involved, every call of this method will perform another convertion.
+     *
+     * - Throws [NakshaError.ILLEGAL_STATE], if the storage-number of the tuple can't be resolved into a [codec][ITupleCodec].
      * @return this tuple as Naksha feature.
      */
-    fun toNakshaFeature(): NakshaFeature = storage.tupleToFeature(this)
+    fun toNakshaFeature(): NakshaFeature {
+        val tupleCodec = NakshaCache.getTupleCodec(tupleNumber.storageNumber)
+            ?: throw NakshaException(ILLEGAL_STATE, "Failed to find tuple-codec in NakshaCache for storage-number ${tupleNumber.storageNumber}")
+        return tupleCodec.tupleToFeature(this)
+    }
 
     private var guid: Guid? = null
 
@@ -111,16 +148,7 @@ data class Tuple(
     fun toGuid(): Guid {
         var g = guid
         if (g == null) {
-            val meta = this.meta ?: throw NakshaException(ILLEGAL_STATE, "Without metadata it is not possible to generate the GUID from a tuple")
-            val mapNumber = meta.storeNumber.mapNumber()
-            val mapId = storage.getMapId(mapNumber) ?: throw NakshaException(MAP_NOT_FOUND, "Map #$mapNumber not found")
-            val map = storage[mapId]
-            val collectionNumber = meta.storeNumber.collectionNumber()
-            val collectionId = map.getCollectionId(collectionNumber) ?: throw NakshaException(
-                COLLECTION_NOT_FOUND,
-                "Collection #$collectionNumber not found"
-            )
-            g = Guid(storage.id, mapId, collectionId, meta.id, meta.version, meta.uid)
+            g = Guid(id, tupleNumber)
             guid = g
         }
         return g
@@ -136,7 +164,7 @@ data class Tuple(
      * @return a new tuple, where nothing is _null_.
      */
     fun merge(other: Tuple): Tuple {
-        if (storage != other.storage || tupleNumber != other.tupleNumber || id != other.id) {
+        if (tupleNumber != other.tupleNumber || id != other.id) {
             throw NakshaException(ILLEGAL_ARGUMENT, "Can't merge two different tuples")
         }
         val meta = this.meta
@@ -149,8 +177,7 @@ data class Tuple(
 
         // There must be a difference, we need to create a new merged tuple.
         return Tuple(
-            storage,
-            tupleNumber,
+             tupleNumber,
             fetchBits or other.fetchBits,
             meta ?: other.meta,
             id,

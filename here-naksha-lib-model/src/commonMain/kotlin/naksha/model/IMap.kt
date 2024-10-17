@@ -2,76 +2,87 @@
 
 package naksha.model
 
-import naksha.base.Int64
-import naksha.jbon.IDictManager
-import naksha.jbon.JbDictManager
-import naksha.jbon.JbDictionary
-import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
-import kotlin.js.JsName
 
 /**
  * Abstract interface to a map administrative object.
+ *
+ * The [ITupleCodec] of a map normally accepts as context either an [ICollection], the collection-number ([Int64][naksha.base.Int64]), or the -id ([String]) of the collection into which to store the given feature.
+ * @since 3.0.0
  */
+@v30_experimental
 @JsExport
-interface IMap {
+interface IMap : ITupleCodec {
     /**
-     * The storage in which the collection is located.
+     * The storage in which the map is located.
+     * @since 3.0.0
      */
     val storage: IStorage
 
     /**
      * The identifier of the map.
+     * @since 3.0.0
      */
     val id: String
 
     /**
-     * The map-number, a value between 0 and 4095 (_2^12-1_).
+     * The map-number, needed for example in [StoreNumber].
+     * - Throws [NakshaError.MAP_NOT_FOUND] if the map does not exist.
+     * @since 3.0.0
      */
     val number: Int
 
     /**
-     * Returns the collection admin object, for the collection with the given identifier.
+     * Returns the admin object for the collection with the given identifier.
+     *
+     * Does not perform network operations. If no such collection is yet loaded from storage, creates a virtual admin object, that allows the management of the collection, like to query if such a collection exists already, or to create the collection. Creating a collection will keep it in the cache, and grant it a unique collection-number, provided by the storage.
      * @param collectionId the collection-identifier.
      * @return the collection admin object.
+     * @since 3.0.0
      */
     operator fun get(collectionId: String): ICollection
 
     /**
-     * Returns the collection admin object, for the collection with the given number.
+     * Returns the admin object for the collection with the given number.
+     *
+     * The method will perform network operations, when it has yet no knowledge about a collection with such a number.
      * @param collectionNumber the collection-number.
-     * @return the collection admin object.
+     * @param session the session to query the storage; _null_ if an internal admin-session should be used.
+     * @return the collection admin object; _null_ if no such collection exists.
+     * @since 3.0.0
      */
-    @JsName("getByNumber")
-    operator fun get(collectionNumber: Int64): ICollection?
+    fun getCollection(collectionNumber: Int, session: ISession? = null): ICollection?
 
     /**
      * Returns the collection-identifier for the given collection-number.
+     *
+     * The method will perform network operations, when it has yet no knowledge about a collection with such a number.
      * @param collectionNumber the collection-number.
+     * @param session the session to query the storage; _null_ if an internal admin-session should be used.
      * @return the collection-identifier or _null_, if no such collection exists.
+     * @since 3.0.0
      */
-    fun getCollectionId(collectionNumber: Int64): String?
+    fun getCollectionId(collectionNumber: Int, session: ISession? = null): String?
 
     /**
      * Tests if this map exists.
+     * @param session the session to use to query the storage; _null_ if an internal admin-session should be used.
      * @return _true_ if the map exists.
-     */
-    fun exists(): Boolean
-
-    /**
-     * The dictionary manager of the map to decode features read from this map.
      * @since 3.0.0
      */
-    val dictManager: IDictManager
+    fun exists(session: ISession? = null): Boolean
 
     /**
-     * Returns the dictionary to use to encode the given feature.
-     *
-     * @param collectionId the collection for which to return the default encoding dictionary.
-     * @param feature the feature that should be encoded, may have an impact on the selected dictionary, but is optional.
-     * @return the encoding dictionary for the collection; if any.
+     * Create the map, if it does not yet exist.
+     * @param session the session to use to create the map in the storage; _null_ if an internal admin-session should be used, with auto-commit.
      * @since 3.0.0
      */
-    fun encodingDict(collectionId: String, feature: NakshaFeature? = null): JbDictionary?
+    fun create(session: IWriteSession? = null)
 
+    /**
+     * Delete the map and all collection within it.
+     * @param session the session to use to create the map in the storage; _null_ if an internal admin-session should be used, with auto-commit.
+     * @since 3.0.0
+     */
+    fun delete(session: IWriteSession? = null)
 }

@@ -212,6 +212,20 @@ open class NakshaError() : AnyObject() {
          */
         const val MAP_NOT_FOUND = "MapNotFound"
 
+        /**
+         * A [ITupleCodec] does not exist, but is expected to exist.
+         *
+         * @since 3.0.0
+         */
+        const val TUPLE_CODEC_NOT_FOUND = "TupleCodecNotFound"
+
+        /**
+         * A [IStorage] does not exist, but is expected to exist.
+         *
+         * @since 3.0.0
+         */
+        const val STORAGE_NOT_FOUND = "StorageNotFound"
+
         private val CODE = NotNullProperty<NakshaError, String>(String::class) { _, _ -> EXCEPTION }
         private val MSG = NotNullProperty<NakshaError, String>(String::class) { self, _ -> self.code }
         private val ID = NullableProperty<NakshaError, String>(String::class)

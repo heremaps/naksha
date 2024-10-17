@@ -12,6 +12,7 @@ import kotlin.jvm.JvmStatic
 /**
  * Optional options when acquiring a new session.
  *
+ * @constructor Creates a new session, if a default should be created, simply use [from], example `SessionOptions.from(null)`, which will create session options using the defaults setup in the current [NakshaContext] (this is the right thing to do, in most of the cases, and matches the default values in the Kotlin constructor).
  * @since 3.0.0
  */
 @JsExport

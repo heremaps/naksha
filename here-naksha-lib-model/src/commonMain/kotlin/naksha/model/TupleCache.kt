@@ -3,27 +3,31 @@
 package naksha.model
 
 import naksha.base.AtomicMap
+import naksha.base.Int64
 import naksha.base.WeakRef
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 /**
- * A cache for rows.
+ * A cache for [Tuple]'s.
+ * @since 3.0.0
  */
 @JsExport
 class TupleCache internal constructor(
     /**
-     * The storage identifier for which this cache holds rows.
+     * The storage-number for which this cache holds tuples.
+     * @since 3.0.0
      */
-    @JvmField val storageId: String
+    @JvmField val storageNumber: Int64
 ) {
     private val tuples = AtomicMap<TupleNumber, WeakRef<Tuple>>()
 
     /**
-     * Adds the given row into the cache.
-     * @param tuple the row to add.
-     * @return this
+     * Adds the given [Tuple] into the cache.
+     * @param tuple the [Tuple] to add.
+     * @return this.
+     * @since 3.0.0
      */
     fun add(tuple: Tuple): TupleCache {
         store(tuple)
@@ -32,40 +36,45 @@ class TupleCache internal constructor(
 
     /**
      * Returns the existing row from the cache; if any.
-     * @param id the row identifier.
-     * @return the row from the cache.
+     * @param tupleNumber the [TupleNumber].
+     * @return the [Tuple] from the cache.
+     * @since 3.0.0
      */
-    operator fun get(id: TupleNumber): Tuple? = tuples[id]?.deref()
+    operator fun get(tupleNumber: TupleNumber): Tuple? = tuples[tupleNumber]?.deref()
 
     /**
-     * Store the given row.
+     * Store the given [Tuple].
      *
-     * This method automatically merges any row being already in the cache with the given row. This is necessary, because the row being in the cache may be more complete than the new one given.
-     * @param tuple the row to store in the cache.
-     * @return either the existing row, the given one or a merge row.
+     * This method automatically merges any [Tuple] being already in the cache with the given [Tuple]. This is necessary, because the [Tuple] being in the cache may be more complete than the new one given.
+     * @param tuple the [Tuple] to store in the cache.
+     * @return either the existing [Tuple], the given one, or a merge [Tuple].
+     * @since 3.0.0
      */
     fun store(tuple: Tuple): Tuple {
-        val row_number = tuple.tupleNumber
-        val existingRef = tuples[row_number]
+        val tuple_number = tuple.tupleNumber
+        // Do not cache undefined tuples, they are created in the client and not yet stored.
+        if (TupleNumber.UNDEFINED == tuple_number) return tuple
+        val existingRef = tuples[tuple_number]
         if (existingRef != null) {
             val existing = existingRef.deref()
-            if (existing != null && existing.tupleNumber == row_number) {
+            if (existing != null && existing.tupleNumber == tuple_number) {
                 val merged = existing.merge(tuple)
                 if (existing !== merged) {
-                    tuples[row_number] = WeakRef(merged)
+                    tuples[tuple_number] = WeakRef(merged)
                     return merged
                 }
                 return existing
             }
         }
-        tuples[row_number] = WeakRef(tuple)
+        tuples[tuple_number] = WeakRef(tuple)
         return tuple
     }
 
     /**
-     * Store the given row.
-     * @param tupleNumber the row-number, must match [Tuple.tupleNumber], otherwise an [ILLEGAL_ARGUMENT] is raised.
+     * Store the given [Tuple].
+     * @param tupleNumber the [TupleNumber], must match [Tuple.tupleNumber], otherwise an [ILLEGAL_ARGUMENT] is raised.
      * @param tuple the row to store.
+     * @since 3.0.0
      */
     operator fun set(tupleNumber: TupleNumber, tuple: Tuple) {
         if (tupleNumber != tuple.tupleNumber) {
@@ -75,30 +84,35 @@ class TupleCache internal constructor(
     }
 
     /**
-     * Tests if the cache contains a row with the given id.
-     * @param id the [row id][TupleNumber].
+     * Tests if the cache contains a [Tuple] with the given id.
+     * @param tupleNumber the [TupleNumber] to check for.
+     * @return _true_ if the [Tuple] is contained in cache; _false_ otherwise.
+     * @since 3.0.0
      */
-    operator fun contains(id: TupleNumber): Boolean = tuples.containsKey(id)
+    operator fun contains(tupleNumber: TupleNumber): Boolean = tuples.containsKey(tupleNumber)
 
     /**
-     * Remove (evict) the cached row.
-     * @param id the [TupleNumber] of the row to remove.
-     * @return the removed [row][Tuple]; if any.
+     * Remove (evict) the cached [Tuple].
+     * @param tupleNumber the [TupleNumber] of the [Tuple] to remove.
+     * @return the removed [Tuple]; if any.
+     * @since 3.0.0
      */
-    fun remove(id: TupleNumber): Tuple? {
-        val rowRef = tuples.remove(id)
+    fun remove(tupleNumber: TupleNumber): Tuple? {
+        val rowRef = tuples.remove(tupleNumber)
         return rowRef?.deref()
     }
 
     /**
      * Removes all cache entries.
+     * @since 3.0.0
      */
     fun clear() {
         for (e in tuples) tuples.remove(e.key, e.value)
     }
 
     /**
-     * Performs a garbage collection, remove all rows from the cache, that have been garbage collected.
+     * Performs a garbage collection, remove all weak-references to [Tuple]s from the cache, that have been garbage collected.
+     * @since 3.0.0
      */
     fun gc() {
         for (e in tuples) {

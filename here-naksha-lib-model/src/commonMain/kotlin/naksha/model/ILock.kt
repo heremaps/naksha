@@ -15,8 +15,9 @@ import kotlin.js.JsExport
  * However, it is possible to increment the maxOwners property to create shared locks.
  * Beware that shared locks can cause conflicts, which are always resolved optimistically.
  */
-@OptIn(ExperimentalJsExport::class, ExperimentalStdlibApi::class)
+@OptIn(ExperimentalJsExport::class)
 @JsExport
+@v30_experimental
 interface ILock: AutoCloseable {
 
     fun owner(): String

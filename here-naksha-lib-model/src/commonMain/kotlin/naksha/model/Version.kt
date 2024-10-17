@@ -10,9 +10,29 @@ import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
- * Wrapper for a version number.
+ * Wrapper for a version.
  *
- * Every version persists out of _year_, _month_, and _day_ when the change started, and a unique sequence number within that day. The version number is encoded in a way, so that it can be stored either as 64-bit integer, or as double (it does only use 52 bit).
+ * The version is a transaction-number, being a 56-bit integer, split into four parts:
+ * - Year: The year in which the transactions started (e.g. 2024).
+ * - Month: The month of the year in which the transaction started (1 to 12, e.g. 9 for September).
+ * - Day: The day of the month in which the transaction started (1 to 31).
+ * - Seq: The local sequence-number in this day.
+ *
+ * Every day starts with the sequence-number reset to zero. The final 64-bit value is combined as:
+ * - 23-bit year, between 0 and 8388607 {shift-by 41}.
+ * - 4-bit month, between 1 (January) and 12 (December) {shift-by 37}.
+ * - 5-bit day, between 1 and 31 {shift-by 32}.
+ * - 32-bit unsigned sequence number.
+ *
+ * This concept allows up to 4 billion transactions per day (between 0 and 4,294,967,295, 2^32-1). It will overflow in browsers in the year 4096, because in that year the transaction number needs 53-bit to be encoded, which is beyond the precision of a double floating point number. Should there be more than 4 billion transaction in a single day, this will overflow into the next day and potentially into an invalid day, should it happen at the last day of a given month. We ignore this situation, it seems currently impossible. Check in the browser:
+ *
+ * ```
+ * ((4095n << 41n)+(12n << 37n)+(31n << 32n)+4294967295n) <= BigInt(Number.MAX_SAFE_INTEGER) : true
+ * (4096n << 41n) <= BigInt(Number.MAX_SAFE_INTEGER): false
+ * ```
+ *
+ * The human-readable representation as a string ([toString]) is: `{year}:{month}:{day}:{seq}`
+ *
  * @property txn the transaction number, a 64-bit integer.
  */
 @JsExport
@@ -37,13 +57,45 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
         fun fromDouble(v: Double) : Version = Version(Int64(v))
 
         /**
-         * Creates the version wrapper from the feature identifier of a [naksha.model.objects.Transaction].
-         * @param transactionId the [id][naksha.model.objects.Transaction.id] of the [transaction][naksha.model.objects.Transaction].
+         * Creates the version number from a string representation, being either a pure decimal number of the transaction-number (so a 64-bit unsigned integer) or the stringified human-readable variant.
+         * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given string is of an invalid format.
+         * @param s the string representation.
          * @return the version.
          */
         @JsStatic
         @JvmStatic
-        fun fromId(transactionId: String) : Version = Version(Int64(transactionId.toLong()))
+        fun fromString(s: String) : Version {
+            try {
+                if (s.indexOf(':') >= 0) {
+                    val parts = s.split(':')
+                    if (parts.size != 4) throw Exception("Too many parts")
+                    return of(parts[0].toInt(), parts[1].toInt(), parts[0].toInt(), Int64(parts[0].toLong()))
+                } else {
+                    return Version(Int64(s.toLong()))
+                }
+            } catch (e: Exception) {
+                throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Invalid version string: $s")
+            }
+        }
+
+        /**
+         * Create a version from its parts.
+         * @param year the year to encode, between 0 and 8388608 (23-bit).
+         * @param month the month to encode, between 1 and 12 (4-bit).
+         * @param day the day to encode, between 1 and 31 (5-bit).
+         * @param seq the sequence number with in the day, between 0 and 4294967295 (32-bit).
+         */
+        @JvmStatic
+        @JsStatic
+        fun of(year: Int, month: Int, day: Int, seq: Int64): Version =
+            Version((Int64(year) shl 41) or (Int64(month) shl 37) or (Int64(day) shl 32) + seq)
+
+        /**
+         * The undefined version, being used when new [Tuple]'s are created.
+         */
+        @JvmField
+        @JsStatic
+        val UNDEFINED = Version(0L)
 
         /**
          * The minimum value of the sequence, so just zero.
@@ -65,19 +117,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
         @JvmField
         @JsStatic
         val SEQ_NEXT = Int64(0x0000_0001_0000_0000)
-
-        /**
-         * Create a version from its parts.
-         * @param year the year to encode, between 0 and 8388608 (23-bit).
-         * @param month the month to encode, between 1 and 12 (4-bit).
-         * @param day the day to encode, between 1 and 31 (5-bit).
-         * @param seq the sequence number with in the day, between 0 and 4294967295 (32-bit).
-         */
-        @JvmStatic
-        @JsStatic
-        fun of(year: Int, month: Int, day: Int, seq: Int64): Version =
-            Version((Int64(year) shl 41) or (Int64(month) shl 37) or (Int64(day) shl 32) + seq)
-    }
+     }
 
     private var _year = -1
 
@@ -142,10 +182,4 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
         if (!this::_string.isInitialized) _string = "${year()}:${month()}:${day()}:${seq()}"
         return _string
     }
-
-    /**
-     * Convert the version into a transaction identifier.
-     * @return the transaction identifier of this version.
-     */
-    fun toId(): String = txn.toString()
 }

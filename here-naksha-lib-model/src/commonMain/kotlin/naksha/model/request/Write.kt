@@ -53,26 +53,28 @@ open class Write : AnyObject() {
             return if (map_diff == 0) {
                 val a_colId = if (a.collectionId == VIRT_COLLECTIONS) a.featureId ?: "" else a.collectionId
                 val b_colId = if (b.collectionId == VIRT_COLLECTIONS) b.featureId ?: "" else b.collectionId
-                val col_diff = a_colId.compareTo(b_colId)
-                if (col_diff == 0) {
-                    val a_featureId = a.featureId ?: ""
-                    val b_featureId = b.featureId ?: ""
-                    val a_part = partitionNumber(a_featureId)
-                    val b_part = partitionNumber(b_featureId)
-                    val part_diff = a_part.compareTo(b_part)
-                    if (part_diff == 0) {
-                        val id_diff = a_featureId.compareTo(b_featureId)
-                        if (id_diff == 0) {
-                            return a.op.compareTo(b.op)
-                        } else id_diff
-                    } else part_diff
-                } else col_diff
+                if (a_colId !== b_colId) {
+                    if (a_colId == null) return 1
+                    if (b_colId == null) return -1
+                    val col_diff = a_colId.compareTo(b_colId)
+                    if (col_diff != 0) return col_diff
+                }
+                val a_featureId = a.featureId ?: ""
+                val b_featureId = b.featureId ?: ""
+                val a_part = partitionNumber(a_featureId)
+                val b_part = partitionNumber(b_featureId)
+                val part_diff = a_part.compareTo(b_part)
+                if (part_diff == 0) {
+                    val id_diff = a_featureId.compareTo(b_featureId)
+                    if (id_diff == 0) {
+                        return a.op.compareTo(b.op)
+                    } else id_diff
+                } else part_diff
             } else map_diff
         }
 
         private val OP = NotNullEnum<Write, WriteOp>(WriteOp::class) { _, _ -> WriteOp.NULL }
         private val MAP_ID = NotNullProperty<Write, String>(String::class) { _, _ -> NakshaContext.currentContext().mapId }
-        private val STRING = NotNullProperty<Write, String>(String::class) { _, _ -> "" }
         private val STRING_NULL = NullableProperty<Write, String>(String::class)
         private val FEATURE_NULL = NullableProperty<Write, NakshaFeature>(NakshaFeature::class)
         private val INT64_NULL = NullableProperty<Write, Int64>(Int64::class)
@@ -86,16 +88,17 @@ open class Write : AnyObject() {
     var op by OP
 
     /**
-     * The map in which the collection is stored, if being an empty string, the default map is used.
+     * The map in which the collection is stored, if being an empty string, the [map of the current-context][NakshaContext.mapId] is used.
      * @since 3.0.0
      */
     var mapId by MAP_ID
 
     /**
      * The identifier of the collection into which to write.
+     *
      * @since 3.0.0
      */
-    var collectionId by STRING
+    var collectionId by STRING_NULL
 
     /**
      * The identifier of the target to modify.

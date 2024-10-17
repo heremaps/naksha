@@ -3,8 +3,15 @@
 package naksha.model.request
 
 import naksha.base.JsEnum
+import naksha.model.ACTION_CREATE
+import naksha.model.ACTION_DELETE
+import naksha.model.ACTION_UPDATE
+import naksha.model.Action
 import kotlin.js.JsExport
+import kotlin.js.JsName
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
@@ -48,6 +55,37 @@ class ExecutedOp : JsEnum() {
          */
         @JvmField
         val RETAINED = defIgnoreCase(ExecutedOp::class, "RETAINED")
+
+        /**
+         * Returns an [ExecutedOp] from the given action.
+         * @param action the action.
+         * @return the best matching [ExecutedOp].
+         * @since 3.0.0
+         */
+        @JvmStatic
+        @JsStatic
+        @JsName("fromActionEnum")
+        fun fromAction(action: Action): ExecutedOp = when(action) {
+            Action.CREATED -> CREATED
+            Action.UPDATED -> UPDATED
+            Action.DELETED -> DELETED
+            else -> READ
+        }
+
+        /**
+         * Returns an [ExecutedOp] from the given action.
+         * @param action the action.
+         * @return the best matching [ExecutedOp].
+         * @since 3.0.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun fromAction(action: Int): ExecutedOp = when(action) {
+            ACTION_CREATE -> CREATED
+            ACTION_UPDATE -> UPDATED
+            ACTION_DELETE -> DELETED
+            else -> READ
+        }
     }
 
     @Suppress("NON_EXPORTABLE_TYPE")

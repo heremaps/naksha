@@ -13,22 +13,26 @@ import kotlin.jvm.JvmStatic
 
 /**
  * Utility singleton.
+ * @since 3.0.0
  */
 @JsExport
 class Naksha private constructor() {
     companion object NakshaCompanion {
         /**
          * The prefix for virtual (internal) collections.
+         * @since 3.0.0
          */
         const val VIRT_PREFIX = "naksha~"
 
         /**
          * The identifier of the virtual collection in which transactions are stored.
+         * @since 3.0.0
          */
         const val VIRT_TRANSACTIONS = "naksha~transactions"
 
         /**
          * The quoted identifier of the virtual collection in which transactions are stored.
+         * @since 3.0.0
          */
         @JvmField
         @JsStatic
@@ -36,6 +40,7 @@ class Naksha private constructor() {
 
         /**
          * The collection-number of the virtual collection in which transactions are stored.
+         * @since 3.0.0
          */
         @JvmField
         @JsStatic
@@ -43,11 +48,13 @@ class Naksha private constructor() {
 
         /**
          * The identifier of the virtual collection in which the collections them-self are stored.
+         * @since 3.0.0
          */
         const val VIRT_COLLECTIONS = "naksha~collections"
 
         /**
          * The quoted identifier of the virtual collections collection to be used in queries.
+         * @since 3.0.0
          */
         @JvmField
         @JsStatic
@@ -55,16 +62,21 @@ class Naksha private constructor() {
 
         /**
          * The collection-number of the virtual collection in which the collections them-self are stored.
+         * @since 3.0.0
          */
+        @JvmField
+        @JsStatic
         val VIRT_COLLECTIONS_NUMBER = Int64(0)
 
         /**
          * The identifier of the virtual collection in which the dictionaries are stored.
+         * @since 3.0.0
          */
         const val VIRT_DICTIONARIES = "naksha~dictionaries"
 
         /**
          * The collection-number of the virtual collection in which the dictionaries are stored.
+         * @since 3.0.0
          */
         @JvmField
         @JsStatic
@@ -72,6 +84,7 @@ class Naksha private constructor() {
 
         /**
          * The quoted identifier of the virtual collection in which the dictionaries are stored.
+         * @since 3.0.0
          */
         @JvmField
         @JsStatic
@@ -85,6 +98,7 @@ class Naksha private constructor() {
          * **Beware**: Identifiers must not contain upper-case letters, because many storages does not make a difference between upper- and lower-cased letters.
          * @param id the identifier.
          * @return _true_ if the identifier is valid; _false_ otherwise.
+         * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
@@ -109,10 +123,12 @@ class Naksha private constructor() {
         /**
          * Tests if the given **id** is a valid identifier, otherwise throws an [NakshaError.ILLEGAL_ID].
          * @param id the identifier to test.
+         * @return the given identifier, tested.
+         * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
-        fun verifyId(id: String?) {
+        fun verifyId(id: String?): String {
             if (id.isNullOrEmpty() || "naksha" == id || id.length > 32) {
                 throw NakshaException(ILLEGAL_ID, "The given identifier is null, empty or has more than 32 characters", id = id)
             }
@@ -130,12 +146,14 @@ class Naksha private constructor() {
                     else -> throw NakshaException(ILLEGAL_ID, "Invalid character at index $i: '$c', expected [a-z0-9_:-]", id = id)
                 }
             }
+            return id
         }
 
         /**
          * Quotes a string literal, this means to replace all single quotes (`'`) with two single quotes (`''`). This encloses the string with quotation characters, when needed.
          * @param parts the literal parts to merge and quote.
          * @return The quoted literal.
+         * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
@@ -159,6 +177,7 @@ class Naksha private constructor() {
          * Quotes an identifier, this means to replace all double quotes (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
          * @param parts the identifier parts to merge and quote.
          * @return the quoted identifier.
+         * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
@@ -189,6 +208,7 @@ class Naksha private constructor() {
          *
          * @param featureId the feature id.
          * @return the partition number of the feature, a value between 0 and 255.
+         * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
@@ -198,6 +218,7 @@ class Naksha private constructor() {
          * Tests if the given collection is an internal one.
          * @param collectionId the collection-id to test.
          * @return _true_ if this is an internal collection; _false_ otherwise.
+         * @since 3.0.0
          */
         @JsStatic
         @JvmStatic

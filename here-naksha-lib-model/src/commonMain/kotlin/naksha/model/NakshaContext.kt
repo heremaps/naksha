@@ -16,31 +16,34 @@ import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
- * The Naksha Context, a thread-local, that stores credentials, and other thread local information. The main purpose is to ensure that all
- * entities can perform authorization. It is normally created, when a new request is started, using the static [newInstance] factory method
- * and then attached to the current thread.
+ * The Naksha Context is a thread-local that stores credentials, and shared request information. The main purpose is to ensure that all entities can perform authorization. It is normally created, when a new request is started, using the static [newInstance] factory method, and then attached to the current thread.
  * @since 2.0.5
  * @see newInstance
+ * @see attachToCurrentThread
  */
 @JsExport
 open class NakshaContext protected constructor() {
     /**
      * The time in milliseconds to wait for the TCP handshake.
+     * @since 3.0.0
      */
     open var connectTimeout: Int = defaultConnectTimeout.get()
 
     /**
      * The time in milliseconds to wait for the TCP socket when reading or writing from it.
+     * @since 3.0.0
      */
     open val socketTimeout: Int = defaultSocketTimeout.get()
 
     /**
      * The statement-timeout in milliseconds, this means how long to wait for each CREATE, UPDATE or DELETE to be executed.
+     * @since 3.0.0
      */
     open val stmtTimeout: Int = defaultStmtTimeout.get()
 
     /**
      * The lock-timeout in milliseconds, when the storage has to use locking.
+     * @since 3.0.0
      */
     open val lockTimeout: Int = defaultLockTimeout.get()
 
@@ -48,6 +51,7 @@ open class NakshaContext protected constructor() {
 
     /**
      * The application name, like the user-agent.
+     * @since 2.0.7
      */
     open var appName: String
         get() = _appName ?: defaultAppName.get() ?: DEFAULT_APP_NAME
@@ -59,6 +63,7 @@ open class NakshaContext protected constructor() {
 
     /**
      * The application identifier of the client that acts. It is used at many places, for authorization, ownership of features and logging.
+     * @since 2.0.7
      */
     open var appId: String
         get() = _appId ?: defaultAppId.get() ?: DEFAULT_APP_ID
@@ -70,12 +75,14 @@ open class NakshaContext protected constructor() {
      * Returns the appId or the given alternative.
      * @param alternative the alternative to return, when no appId is available.
      * @return the appId.
+     * @since 2.0.7
      */
     open fun getAppIdOr(alternative: String): String = _appId ?: alternative
 
     /**
      * Returns the appId or throws a [NakshaError.ILLEGAL_STATE].
      * @return the appId.
+     * @since 2.0.7
      */
     open fun getAppIdOrThrow(msgFn: Fn0<String>? = null): String =
         _appId ?: throw NakshaException(ILLEGAL_STATE, msgFn?.call() ?: "The current context has no appId")
@@ -84,19 +91,18 @@ open class NakshaContext protected constructor() {
      * Changes the application-identifier and returns the [NakshaContext].
      * @param appId the new app-id.
      * @return this.
+     * @since 2.0.7
      */
     open fun withAppId(appId: String): NakshaContext {
         this._appId = appId
         return this
     }
 
-    /**
-     * The internal field of the **streamId** setter and getter.
-     */
     private var _streamId: String? = null
 
     /**
      * The stream-identifier being used in logging to group log entries that belong to the same request.
+     * @since 2.0.7
      */
     open var streamId: String
         get() {
@@ -115,15 +121,13 @@ open class NakshaContext protected constructor() {
      * Changes the stream-id and returns the [NakshaContext].
      * @param streamId the new stream-id.
      * @return this.
+     * @since 2.0.7
      */
     open fun withStreamId(streamId: String): NakshaContext {
         this.streamId = streamId
         return this
     }
 
-    /**
-     * The internal field of the **author** getter and setter.
-     */
     private var _author: String? = null
 
     /**
@@ -141,11 +145,14 @@ open class NakshaContext protected constructor() {
      * Changes the author and returns the [NakshaContext].
      * @param author the new author.
      * @return this.
+     * @since 2.0.7
      */
     open fun withAuthor(author: String?): NakshaContext {
         this.author = author
         return this
     }
+
+    private var _mapId: String? = null
 
     /**
      * The map to use.
@@ -155,12 +162,17 @@ open class NakshaContext protected constructor() {
      * Note: In `lib-psql` the default map is mapped to the default schema configured within the storage driver.
      * @since 3.0.0
      */
-    open var mapId: String = DEFAULT_MAP_ID
+    open var mapId: String
+        get() = _mapId ?: defaultMapId.get() ?: DEFAULT_MAP_ID
+        set(value) {
+            _mapId = value
+        }
 
     /**
      * Change the current map.
      * @param map the map to select.
      * @return this.
+     * @since 3.0.0
      */
     open fun withMap(map: String): NakshaContext {
         this.mapId = map
@@ -172,6 +184,17 @@ open class NakshaContext protected constructor() {
      * @since 2.0.7
      */
     open var su: Boolean = false
+
+    /**
+     * Set the super-user flag.
+     * @param su enable or disable super-user flag.
+     * @return this
+     * @since 3.0.0
+     */
+    open fun withSu(su: Boolean): NakshaContext {
+        this.su = su
+        return this
+    }
 
     /**
      * The User-Rights-Matrix for authentication.
@@ -328,9 +351,9 @@ open class NakshaContext protected constructor() {
     @Suppress("OPT_IN_USAGE")
     companion object NakshaContextCompanion {
         /**
-         * The default map, being an empty string.
+         * The default map-identifier used by Naksha.
          */
-        const val DEFAULT_MAP_ID = ""
+        const val DEFAULT_MAP_ID = "unimap"
 
         /**
          * The immutable default app-name to be used, if nothing else is available (defined at build time).
@@ -341,6 +364,12 @@ open class NakshaContext protected constructor() {
          * The immutable default app-id to be used, if nothing else is available (defined at build time).
          */
         const val DEFAULT_APP_ID = "anonymous"
+
+        /**
+         * The default map-identifier to use.
+         */
+        @JvmField
+        val defaultMapId = AtomicRef(DEFAULT_MAP_ID)
 
         /**
          * The default application name to use.
@@ -395,8 +424,8 @@ open class NakshaContext protected constructor() {
         val defaultLockTimeout = AtomicInt(10_000)
 
         /**
-         * Returns the current map.
-         * @return the current map.
+         * Returns the map-id to use by default.
+         * @return the map-id to use by default.
          */
         @JvmStatic
         @JsStatic
@@ -447,7 +476,10 @@ open class NakshaContext protected constructor() {
         var currentRef: Fn0<NakshaContext> = Fn0(threadLocal::get)
 
         /**
-         * Creates a new Naksha Context.
+         * Creates and initializes a new [NakshaContext]. This method does not bind the new context to the current thread, if this is wanted, [attachToCurrentThread] should be called, like:
+         * ```
+         * val context = NakshaContext.newInstance("app","user").attachToCurrentThread()
+         * ```
          * @param appId The application-id for which to create the context.
          * @param author The author.
          * @param su If the user is a permanent super-user.
@@ -468,9 +500,8 @@ open class NakshaContext protected constructor() {
         }
 
         /**
-         * Returns the current context. If no context exists, creates a new context and binds it to the thread-local.
-         * Note that when a new context is created, any reading of the [appId] will raise a [IllegalStateException].
-         * @return The current context.
+         * Returns the current context from the current thread. If no context is yet attached, it creates a new context, and binds it to the current thread, returning it.
+         * @return The context of the current thread.
          */
         @Suppress("NON_FINAL_MEMBER_IN_OBJECT")
         @JvmStatic

@@ -3,54 +3,35 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.model.request.query.TupleColumn.TupleColumn_C.VERSION
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
- * The Global Unique Identifier uniquely identifies a feature, world-wide. When [toString] is invoked, it is serialized into a [URN](https://datatracker.ietf.org/doc/html/rfc8141). It can be restored from a [URN](https://datatracker.ietf.org/doc/html/rfc8141). The format of the URN is:
+ * The Global Unique Identifier of a feature.
  *
- * `urn:here:naksha:guid:{storage-id}:{map-id}:{collection-id}:{feature-id}:{year}:{month}:{day}:{seq}:{uid}`
+ * When [toString] is invoked, it is serialized into a [URN](https://datatracker.ietf.org/doc/html/rfc8141). It can be restored from a [URN](https://datatracker.ietf.org/doc/html/rfc8141) using the static helper [fromString]. The format of the URN is:
+ *
+ * `urn:here:naksha:guid:{feature-id}:{storage}:{map}:{collection}:{partition}:{year}:{month}:{day}:{seq}:{uid}:{flags}`
  * @since 3.0.0
  */
 @JsExport
 data class Guid(
     /**
-     * The storage-id of the storage in which the object is stored.
-     */
-    @JvmField
-    val storageId: String,
-
-    /**
-     * The map-id of the map in which the object is stored, with an empty string representing the default map of the storage.
-     */
-    @JvmField
-    val mapId: String,
-
-    /**
-     * The collection-id of the collection in which the feature is stored.
-     */
-    @JvmField
-    val collectionId: String,
-
-    /**
      * The feature-id of the feature.
+     * @since 3.0.0
      */
     @JvmField
     val featureId: String,
 
     /**
-     * The version.
+     * The tuple-number.
+     * @since 3.0.0
      */
     @JvmField
-    val version: Version,
-
-    /**
-     * The local unique identifier.
-     */
-    @JvmField
-    val uid: Int
+    val tupleNumber: TupleNumber
 ) {
     private lateinit var _string: String
 
@@ -61,7 +42,7 @@ data class Guid(
      */
     override fun toString(): String {
         if (!this::_string.isInitialized) {
-            _string = "urn:here:naksha:guid:$storageId:$mapId:$collectionId:$featureId:$version:$uid"
+             _string = "urn:here:naksha:guid:$featureId:$tupleNumber"
         }
         return _string
     }
@@ -71,35 +52,49 @@ data class Guid(
         const val HERE = 1
         const val NAKSHA = 2
         const val GUID = 3
-        const val STORAGE_ID = 4
-        const val MAP_ID = 5
-        const val COLLECTION_ID = 6
-        const val FEATURE_ID = 7
-        const val YEAR = 8
-        const val MONTH = 9
-        const val DAY = 10
-        const val SEQ = 11
-        const val UID = 12
-        const val PARTS = 13
+        const val FEATURE_ID = 4
+        const val STORAGE_NUMBER = 5
+        const val MAP_NUMBER = 6
+        const val COLLECTION_NUMBER = 7
+        const val PARTITION_NUMBER = 8
+        const val YEAR = 9
+        const val MONTH = 10
+        const val DAY = 11
+        const val SEQ = 12
+        const val UID = 13
+        const val FLAGS = 14
+        const val PARTS = 15
 
+        /**
+         * Restore a [Guid] from the given URN (string).
+         * @param urn the URN from which to deserialize the [Guid].
+         * @return the deserialized [Guid].
+         */
         @JsStatic
         @JvmStatic
-        fun fromString(s: String): Guid {
-            val v = s.split(':')
+        fun fromString(urn: String): Guid {
+            val v = urn.split(':')
             if (v.size != PARTS
                 || v[URN] != "urn"
                 || v[HERE] != "here"
                 || v[NAKSHA] != "naksha"
                 || v[GUID] != "guid"
-            ) throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Invalid GUID: $s")
-            return Guid(
-                v[STORAGE_ID],
-                v[MAP_ID],
-                v[COLLECTION_ID],
-                v[FEATURE_ID],
-                Version.of(v[YEAR].toInt(), v[MONTH].toInt(), v[DAY].toInt(), Int64(v[SEQ].toLong())),
-                v[UID].toInt()
-            )
+            ) throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Invalid GUID: $urn")
+            val featureId = v[FEATURE_ID]
+            val storageNumber = Int64(v[STORAGE_NUMBER].toLong(10))
+            val mapNumber = v[MAP_NUMBER].toInt(10)
+            val colNumber = v[COLLECTION_NUMBER].toInt(10)
+            val partNumber = v[PARTITION_NUMBER].toInt(10)
+            val storeNumber = StoreNumber().mapNumber(mapNumber).collectionNumber(colNumber).partitionNumber(partNumber)
+            val year = v[YEAR].toInt(10)
+            val month = v[MONTH].toInt(10)
+            val day = v[DAY].toInt(10)
+            val seq = Int64(v[SEQ].toLong())
+            val version = Version.of(year, month, day, seq)
+            val uid = v[UID].toInt()
+            val flags = v[FLAGS].toInt().storageNumber(false)
+            val tupleNumber = TupleNumber(storageNumber, storeNumber, version, uid, flags)
+            return Guid(featureId, tupleNumber)
         }
     }
 }

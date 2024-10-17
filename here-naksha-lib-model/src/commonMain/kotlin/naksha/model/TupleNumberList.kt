@@ -2,6 +2,7 @@
 
 package naksha.model
 
+import naksha.base.Int64
 import naksha.base.ListProxy
 import naksha.base.Platform
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
@@ -19,7 +20,8 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
      */
     fun toByteArray(): ByteArray {
         val length = this.size
-        val SIZE = length * 20
+        if (length == 0) return byteArrayOf()
+        val SIZE = length * 32
         val bytes = ByteArray(SIZE)
         val view = Platform.newDataView(bytes)
         var end = 0
@@ -28,7 +30,9 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
             dataview_set_int64(view, end, tupleNumber.storeNumber)
             dataview_set_int64(view, end + 8, tupleNumber.version.txn)
             dataview_set_int32(view, end + 16, tupleNumber.uid)
-            end += 20
+            dataview_set_int32(view, end + 20, tupleNumber.flags.storageNumber(true))
+            dataview_set_int64(view, end + 24, tupleNumber.storageNumber)
+            end += 32
         }
         return if (end == bytes.size) bytes else bytes.copyOf(end)
     }

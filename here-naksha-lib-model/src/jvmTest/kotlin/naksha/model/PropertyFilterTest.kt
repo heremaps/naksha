@@ -11,7 +11,6 @@ import naksha.model.request.ResultTuple
 import naksha.model.request.query.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.mock
 import kotlin.test.assertEquals
 
 class PropertyFilterTest {
@@ -35,20 +34,17 @@ class PropertyFilterTest {
             feature.properties["json"] = nestedJson
             // build tuple containing the feature
             val encoder = JbEncoder()
-            val byteArray = encoder.buildFeatureFromMap(feature)
-            val storeNumber = StoreNumber(0, Int64(0))
+            val featureBytes = encoder.buildFeatureFromMap(feature)
+            val storageNumber = Int64(1)
+            val storeNumber = StoreNumber(0, 0)
             val version = Version(0)
-            val flag = Flags(0)
-            val tupleNumber = TupleNumber(
-                storeNumber = storeNumber,
-                uid = 0,
-                version = version,
-            )
-            val mockStorage = mock<IStorage>()
+            val flags = Flags()
+            val tupleNumber = TupleNumber(storageNumber, storeNumber, version,0, flags)
             val tuple = Tuple(
-                storage = mockStorage,
                 tupleNumber = tupleNumber,
-                Metadata(
+                fetchBits = FetchMode.FETCH_ALL,
+                meta = Metadata(
+                    storageNumber = storageNumber,
                     storeNumber = storeNumber,
                     updatedAt = Int64(0),
                     uid = 0,
@@ -57,15 +53,13 @@ class PropertyFilterTest {
                     author = null,
                     version = version,
                     type = null,
-                    flags = flag,
+                    flags = flags,
                 ),
-                byteArray
+                feature = featureBytes
             )
             resultTuple = ResultTuple(
-                storage = mockStorage,
                 tupleNumber = tupleNumber,
                 op = ExecutedOp.READ,
-                featureId = null,
                 tuple = tuple
             )
         }

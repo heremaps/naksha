@@ -127,5 +127,36 @@ open class FlagsBits {
          */
         const val ACTION_CLEAR = ACTION_MASK.inv()
 
+        // --------------------------------------< STORAGE-NUMBER >-------------------------------
+
+        /**
+         * The bits to shift the value in the [Flags].
+         */
+        const val SN_SHIFT = 14
+
+        /**
+         * The bits used to encode the value in [Flags].
+         */
+        const val SN_BITS = 1
+
+        /**
+         * The bitmask to AND combine with [Flags] to read the value from [Flags].
+         */
+        const val SN_MASK = ((1 shl SN_BITS) - 1) shl SN_SHIFT
+
+        /**
+         * The bitmask to AND combine with [Flags] to clear the value from the [Flags].
+         */
+        const val SN_CLEAR = SN_MASK.inv()
+
+        /**
+         * The encoded value of _true_.
+         */
+        const val SN_ON = 1 shl SN_SHIFT
+
+        /**
+         * The encoded value of _false_.
+         */
+        const val SN_OFF = 0 shl SN_SHIFT
     }
 }
