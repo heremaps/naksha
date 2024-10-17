@@ -9,7 +9,6 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
@@ -111,7 +110,8 @@ data class Tuple(
     fun toGuid(): Guid {
         var g = guid
         if (g == null) {
-            val meta = this.meta ?: throw NakshaException(ILLEGAL_STATE, "Without metadata it is not possible to generate the GUID from a tuple")
+            val meta =
+                this.meta ?: throw NakshaException(ILLEGAL_STATE, "Without metadata it is not possible to generate the GUID from a tuple")
             val mapNumber = meta.storeNumber.mapNumber()
             val mapId = storage.getMapId(mapNumber) ?: throw NakshaException(MAP_NOT_FOUND, "Map #$mapNumber not found")
             val map = storage[mapId]
@@ -170,4 +170,14 @@ data class Tuple(
     fun isComplete(): Boolean = fetchBits.isComplete()
 
     override fun toTuple(): Tuple = this
+
+    /**
+     * @return previous tuple number if available
+     */
+    fun getPrevTupleNumber(): TupleNumber? =
+        if (meta?.puid != null && meta.prevVersion != null) {
+            TupleNumber(storeNumber = tupleNumber.storeNumber, version = meta.prevVersion, uid = meta.puid)
+        } else {
+            null
+        }
 }

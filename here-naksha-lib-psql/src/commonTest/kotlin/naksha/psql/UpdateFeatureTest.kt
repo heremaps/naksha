@@ -9,9 +9,9 @@ import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import naksha.psql.base.PgTestBase
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) {
 
@@ -46,17 +46,17 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
         executeWrite(updateFeaturesReq)
 
         // And: Retrieving feature by id
-        val retrievedFeature = executeRead(ReadFeatures().apply {
+        val retrievedTuples = executeRead(ReadFeatures().apply {
             collectionIds += collection.id
             featureIds += initialFeature.id
-        }).let { response ->
-            val responseFeatures = response.features
-            assertEquals(1, responseFeatures.size)
-            responseFeatures[0]!!
-        }
+            queryHistory = true
+        }).tuples
+
+        val retrievedUpdatedTuple = retrievedTuples.first { it?.tuple?.meta?.action() == Action.UPDATED }!!
+        val retrievedHstCreatedTuple = retrievedTuples.first { it?.tuple?.meta?.action() == Action.CREATED }!!
 
         // Then
-        assertThatFeature(retrievedFeature)
+        assertThatFeature(retrievedUpdatedTuple.feature!!)
             .isIdenticalTo(
                 other = initialFeature,
                 ignoreProps = true // we ignore properties because we want to examine them later
@@ -72,5 +72,12 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
                             .hasProperty("changeCount", 2)
                     }
             }
+
+        // also should have proper version in hst
+        assertNotEquals(retrievedUpdatedTuple.tupleNumber.version, retrievedHstCreatedTuple.tupleNumber.version)
+        assertEquals(retrievedUpdatedTuple.tuple?.meta?.prevVersion, retrievedHstCreatedTuple.tupleNumber.version)
+        assertEquals(retrievedUpdatedTuple.tuple?.meta?.version, retrievedUpdatedTuple.tupleNumber.version)
+        assertEquals(retrievedHstCreatedTuple.tuple?.meta?.version, retrievedHstCreatedTuple.tupleNumber.version)
+        assertEquals(retrievedHstCreatedTuple.tuple?.meta?.nextVersion, retrievedUpdatedTuple.tupleNumber.version)
     }
 }
