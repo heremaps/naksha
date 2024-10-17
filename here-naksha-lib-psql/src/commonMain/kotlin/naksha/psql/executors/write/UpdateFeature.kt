@@ -6,12 +6,10 @@ import naksha.model.Metadata.Metadata_C.hash
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
 import naksha.psql.PgSession
-import naksha.psql.executors.PgWriter
 import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
 import naksha.psql.executors.write.WriteFeatureUtils.resolveFlags
 import naksha.psql.executors.write.WriteFeatureUtils.tuple
-import kotlin.jvm.JvmField
 
 class UpdateFeature(
     private val session: PgSession,
@@ -43,12 +41,11 @@ class UpdateFeature(
 
         val tupleNumber = newFeatureTupleNumber(collection, feature.id, session)
         val flags = resolveFlags(collection, session)
-        val newVersion = session.version()
         val tuple = tuple(
             session.storage,
             tupleNumber,
             feature,
-            metadataForNewVersion(previousMetadata, newVersion, feature, flags),
+            metadataForNewVersion(previousMetadata, tupleNumber, feature, flags),
             write.attachment,
             flags
         )
@@ -60,14 +57,14 @@ class UpdateFeature(
                 featureId = feature.id
             )
         }
-        writeExecutor.updateFeatureInHead(collection, tuple, feature, newVersion, previousMetadata)
+        writeExecutor.updateFeatureInHead(collection, tuple, feature, tupleNumber.version, previousMetadata)
         return tuple
     }
 
 
     private fun metadataForNewVersion(
         previousMetadata: Metadata,
-        newVersion: Version,
+        newTupleNumber: TupleNumber,
         feature: NakshaFeature,
         flags: Flags
     ): Metadata {
@@ -75,9 +72,9 @@ class UpdateFeature(
         return previousMetadata.copy(
             updatedAt = versionTime,
             authorTs = if (session.options.author == null) previousMetadata.authorTs else versionTime,
-            version = newVersion,
+            version = newTupleNumber.version,
             prevVersion = previousMetadata.version,
-            uid = session.uid.getAndAdd(1),
+            uid = newTupleNumber.uid,
             puid = previousMetadata.puid,
             hash = hash(feature, session.options.excludePaths, session.options.excludeFn),
             changeCount = previousMetadata.changeCount + 1,
