@@ -174,10 +174,14 @@ data class Tuple(
     /**
      * @return previous tuple number if available
      */
-    fun getPrevTupleNumber(): TupleNumber? =
-        if (meta?.puid != null && meta.prevVersion != null) {
-            TupleNumber(storeNumber = tupleNumber.storeNumber, version = meta.prevVersion, uid = meta.puid)
+    fun getPrevTupleNumber(): TupleNumber? {
+        val puid = meta?.puid
+        val prevVersion = meta?.prevVersion
+        return if (puid != null && prevVersion != null) {
+            TupleNumber(storeNumber = tupleNumber.storeNumber, version = prevVersion, uid = puid)
         } else {
             null
         }
+    }
+
 }
