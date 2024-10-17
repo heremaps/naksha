@@ -44,7 +44,7 @@ public class PatcherUtils {
     while (iterator.hasNext()) {
     Difference next = iterator.next();
     if (next == null) continue;
-    next = removeAllRemoveOp(next);
+    next = removeAllRemoveOpExceptForList(next);
     if (next == null) iterator.remove();
     }
     return listdiff;

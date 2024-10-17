@@ -178,7 +178,7 @@ class PatcherTest {
     final XyzFeature patchedFeature = Patcher.patch(existing, diffNoRemoveOp);
     assertNotNull(patchedFeature);
 
-    JSONAssert.assertEquals(expected.toString(), patchedFeature.toString(), JSONCompareMode.STRICT_ORDER);
+    JSONAssert.assertEquals(expected.toString(), patchedFeature.toString(), JSONCompareMode.STRICT);
   }
 
   @Test

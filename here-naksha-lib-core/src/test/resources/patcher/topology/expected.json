@@ -17,6 +17,15 @@
     50.02386
   ],
   "properties": {
+    "isLongHaul": [
+      {
+        "range": {
+          "endOffset": 1.0,
+          "startOffset": 0.0
+        },
+        "value": false
+      }
+    ],
     "isMotorway": [
       {
         "range": {
@@ -61,7 +70,15 @@
           "updateSource": "INJECTION_TMOB"
         }
       }
-    ]
+    ],
+    "referencePoint": {
+      "type": "Point",
+      "coordinates": [
+        14.20667,
+        50.02379,
+        416.38
+      ]
+    }
   },
   "geometry": {
     "type": "LineString",
