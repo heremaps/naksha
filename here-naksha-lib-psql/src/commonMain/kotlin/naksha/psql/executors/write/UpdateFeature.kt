@@ -48,7 +48,7 @@ class UpdateFeature(
             session.storage,
             tupleNumber,
             feature,
-            metadataForNewVersion(previousMetadata, previousMetadata.version, feature, flags),
+            metadataForNewVersion(previousMetadata, newVersion, feature, flags),
             write.attachment,
             flags
         )
