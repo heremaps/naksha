@@ -623,6 +623,9 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
         break;
       }
       // Failed, conflict, repeat
+      log.info(
+              "Concurrency conflict while incrementing instance level threadCount from {}. Will retry...",
+              threadCount);
     }
   }
 
@@ -659,6 +662,9 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
       if (counter == null) {
         Long existing = actorUsageMap.putIfAbsent(actorId, 1L);
         if (existing != null) {
+          log.info(
+                  "Concurrency conflict while initializing threadCount to 1 for actorId [{}]. Will retry...",
+                  actorId);
           continue; // Repeat, conflict with other thread
         }
         return;
@@ -679,6 +685,10 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
         break;
       }
       // Failed, conflict, repeat
+      log.info(
+              "Concurrency conflict while incrementing actor level threadCount from {} for actorId [{}]. Will retry...",
+              counter,
+              actorId);
     }
   }
 
@@ -703,6 +713,9 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
           log.error("Invalid actor usage value for actor: " + actorId + " value: " + current);
         }
         if (!actorUsageMap.remove(actorId, current)) {
+          log.info(
+                  "Concurrency conflict while removing actor level threadCount for actorId [{}]. Will retry...",
+                  actorId);
           continue;
         }
         break;
@@ -710,6 +723,10 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
         break;
       }
       // Failed, repeat, conflict with other thread
+      log.info(
+              "Concurrency conflict while decrementing actor level threadCount from {} for actorId [{}]. Will retry...",
+              current,
+              actorId);
     }
   }
 }
