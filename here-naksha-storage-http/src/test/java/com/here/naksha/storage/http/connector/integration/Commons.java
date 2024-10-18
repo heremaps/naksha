@@ -15,6 +15,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.hasKey;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -51,13 +52,20 @@ public class Commons {
     }
 
     static List<String> responseToIds(Response response){
+        response.
+                then().assertThat().body("$",hasKey("features"))
+                .and().log().ifValidationFails();
         return response.body().jsonPath().getList("features").stream().map(e -> ((Map) e).get("id").toString()).toList();
     }
 
     static void createFromJsonFile(String pathInIntegrationResources) throws URISyntaxException {
         String pathInResources = "com/here/naksha/storage/http/connector/integration/" + pathInIntegrationResources;
         URI feature1 = ClassLoader.getSystemResource(pathInResources).toURI();
-        dataHub().body(new File(feature1)).post("features").then().statusCode(200);
+        dataHub().with().body(new File(feature1))
+                .when().post("features")
+                .then()
+                .assertThat().statusCode(200)
+                .and().log().ifValidationFails();
     }
 
     static void createFromJsonFileFormatted(String pathInIntegrationResources, String... args)  {
@@ -65,9 +73,19 @@ public class Commons {
             String pathInResources = "com/here/naksha/storage/http/connector/integration/" + pathInIntegrationResources;
             Path featureTemplatePath = Path.of(ClassLoader.getSystemResource(pathInResources).toURI());
             String body = Files.readString(featureTemplatePath).formatted(args);
-            dataHub().body(body).post("features").then().statusCode(200);
+            dataHub().with().body(body)
+                    .when().post("features")
+                    .then()
+                    .assertThat().statusCode(200)
+                    .and().log().ifValidationFails();
         } catch (URISyntaxException | IOException e) {
             fail(e);
         }
+    }
+
+    static boolean responseHasExactShortIds(List<String> expectedShortIds, Response response) {
+        List<String> expectedIds = expectedShortIds.stream().map(e -> "urn:here::here:landmark3d.Landmark3dPhotoreal:" + e).toList();
+        List<String> responseIds = responseToIds(response);
+        return expectedIds.equals(responseIds);
     }
 }
