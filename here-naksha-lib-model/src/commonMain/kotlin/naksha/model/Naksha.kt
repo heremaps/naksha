@@ -78,6 +78,11 @@ class Naksha private constructor() {
         val VIRT_DICTIONARIES_QUOTED = quoteIdent(VIRT_DICTIONARIES)
 
         /**
+         * Maximum collectionId name length allowed to give by clients. Rest of "free" characters are reserved for partitioning suffix.
+         */
+        private const val MAX_COLLECTION_ID_NAME_LENGTH = 44
+
+        /**
          * Tests if the given **id** is a valid identifier, so matches:
          *
          * `[a-z][a-z0-9_:-]{31}`
@@ -89,7 +94,7 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun isValidId(id: String?): Boolean {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > 32) return false
+            if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_COLLECTION_ID_NAME_LENGTH) return false
             var i = 0
             var c = id[i++]
             // First character must be a-z
@@ -113,8 +118,12 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun verifyId(id: String?) {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > 32) {
-                throw NakshaException(ILLEGAL_ID, "The given identifier is null, empty or has more than 32 characters", id = id)
+            if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_COLLECTION_ID_NAME_LENGTH) {
+                throw NakshaException(
+                    ILLEGAL_ID,
+                    "The given identifier is null, empty or has more than $MAX_COLLECTION_ID_NAME_LENGTH characters",
+                    id = id
+                )
             }
             var i = 0
             var c = id[i++]
@@ -170,10 +179,18 @@ class Naksha private constructor() {
             for (part in parts) {
                 for (c in part) {
                     when (c) {
-                        in 'a'..'z', in 'A'..'Z', in '0'..'9','_' -> sb.append(c)
-                        '"' -> { quoted = true; sb.append('"').append('"') }
-                        '\\' -> { quoted = true; sb.append('\\').append('\\') }
-                        else -> { quoted = true; sb.append(c) }
+                        in 'a'..'z', in 'A'..'Z', in '0'..'9', '_' -> sb.append(c)
+                        '"' -> {
+                            quoted = true; sb.append('"').append('"')
+                        }
+
+                        '\\' -> {
+                            quoted = true; sb.append('\\').append('\\')
+                        }
+
+                        else -> {
+                            quoted = true; sb.append(c)
+                        }
                     }
                 }
             }
