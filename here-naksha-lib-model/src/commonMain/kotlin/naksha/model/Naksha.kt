@@ -80,7 +80,7 @@ class Naksha private constructor() {
         /**
          * Maximum collectionId name length allowed to give by clients. Rest of "free" characters are reserved for partitioning suffix.
          */
-        private const val MAX_COLLECTION_ID_NAME_LENGTH = 45
+        private const val MAX_ID_LENGTH = 45
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:
@@ -94,7 +94,7 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun isValidId(id: String?): Boolean {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_COLLECTION_ID_NAME_LENGTH) return false
+            if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_ID_LENGTH) return false
             var i = 0
             var c = id[i++]
             // First character must be a-z
@@ -118,8 +118,8 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun verifyId(id: String?) {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_COLLECTION_ID_NAME_LENGTH) {
-                throw NakshaException(ILLEGAL_ID, "The given identifier is null, empty or has more than $MAX_COLLECTION_ID_NAME_LENGTH characters", id = id)
+            if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_ID_LENGTH) {
+                throw NakshaException(ILLEGAL_ID, "The given identifier is null, empty or has more than $MAX_ID_LENGTH characters", id = id)
             }
             var i = 0
             var c = id[i++]
