@@ -3,6 +3,8 @@
 package naksha.model
 
 import naksha.base.*
+import naksha.base.NormalizerForm.NFD
+import naksha.base.NormalizerForm.NFKC
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -16,10 +18,10 @@ import kotlin.jvm.JvmStatic
  * @property value the value of the tag; _null_, Boolean, String or Double.
  */
 @JsExport
-class Tag(): AnyObject() {
+class Tag() : AnyObject() {
 
     @JsName("of")
-    constructor(tag: String, key: String, value: Any?): this() {
+    constructor(tag: String, key: String, value: Any?) : this() {
         this.tag = tag
         this.key = key
         this.value = value
@@ -32,42 +34,19 @@ class Tag(): AnyObject() {
 
         @JvmStatic
         @JsStatic
-        fun parse(tag: String): Tag {
-            val i = tag.indexOf('=')
-            val key: String
-            val value: Any?
-            if (i > 1) {
-                if (tag[i-1] == ':') { // :=
-                    key = tag.substring(0, i-1).trim()
-                    val raw = tag.substring(i + 1).trim()
-                    value = if ("true".equals(raw, ignoreCase = true)) {
-                        true
-                    } else if ("false".equals(raw, ignoreCase = true)) {
-                        false
-                    } else {
-                        raw. toDouble()
-                    }
-                } else {
-                    key = tag.substring(0, i).trim()
-                    value = tag.substring(i + 1).trim()
-                }
-            } else {
-                key = tag
-                value = null
+        fun of(normalizedKey: String, normalizedValue: Any?): Tag = when (normalizedValue) {
+            null -> Tag(normalizedKey, normalizedKey, null)
+            is String -> Tag("$normalizedKey=$normalizedValue", normalizedKey, normalizedValue)
+            is Boolean -> Tag("$normalizedKey:=$normalizedValue", normalizedKey, normalizedValue)
+            is Number -> {
+                val doubleValue = normalizedValue.toDouble()
+                Tag("$normalizedKey:=$doubleValue", normalizedKey, doubleValue)
             }
-            return Tag(tag, key, value)
-        }
 
-        @JvmStatic
-        @JsStatic
-        fun of(key: String, value: Any?): Tag = when(value) {
-            // TODO: Fix normalization!
-            null -> Tag(key, key, null)
-            is String -> Tag("$key=$value", key, value)
-            is Boolean, Double -> Tag("$key:=$value", key, value)
-            is Number -> of(key, value.toDouble())
-            is Int64 -> of(key, value.toDouble())
-            else -> throw NakshaException(ILLEGAL_ARGUMENT, "Tag values can only be String, Boolean or Double")
+            else -> throw NakshaException(
+                ILLEGAL_ARGUMENT,
+                "Tag values can only be String, Boolean or Number"
+            )
         }
     }
 
@@ -81,6 +60,7 @@ class Tag(): AnyObject() {
         if (other is Tag) return tag == other.tag
         return false
     }
+
     override fun hashCode(): Int = tag.hashCode()
     override fun toString(): String = tag
 }

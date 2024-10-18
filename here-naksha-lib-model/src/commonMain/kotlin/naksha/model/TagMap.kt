@@ -3,7 +3,6 @@
 package naksha.model
 
 import naksha.base.MapProxy
-import naksha.model.request.query.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -11,16 +10,14 @@ import kotlin.js.JsName
 //       Improve me!
 
 @JsExport
-open class TagMap() : MapProxy<String, Tag>(String::class, Tag::class) {
+open class TagMap() : MapProxy<String, Any>(String::class, Any::class) {
 
     @Suppress("LeakingThis")
     @JsName("of")
-    constructor(tagList: TagList) : this(){
-        for (s in tagList) {
-            if (s == null) continue
-            val tag = Tag.parse(s)
-            put(tag.key, tag)
-        }
+    constructor(tagList: TagList) : this() {
+        tagList.filterNotNull()
+            .map { TagNormalizer.splitNormalizedTag(it) }
+            .forEach { tag -> put(tag.key, tag.value) }
     }
 
     /**
@@ -29,9 +26,8 @@ open class TagMap() : MapProxy<String, Tag>(String::class, Tag::class) {
      */
     fun toTagList(): TagList {
         val list = TagList()
-        for (e in this) {
-            val tag = e.value?.tag
-            if (tag != null) list.add(tag)
+        forEach { (key, value) ->
+            list.add(Tag.of(key, value).tag)
         }
         return list
     }

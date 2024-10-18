@@ -173,8 +173,8 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         }
     }
 
-    private tailrec fun whereNestedTags(tagQuery: ITagQuery){
-        when(tagQuery){
+    private tailrec fun whereNestedTags(tagQuery: ITagQuery) {
+        when (tagQuery) {
             is TagNot -> not(tagQuery.query, this::whereNestedTags)
             is TagOr -> or(tagQuery.filterNotNull(), this::whereNestedTags)
             is TagAnd -> and(tagQuery.filterNotNull(), this::whereNestedTags)
@@ -182,40 +182,64 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         }
     }
 
-    private fun resolveSingleTagQuery(tagQuery: TagQuery){
-        when(tagQuery){
+    private fun resolveSingleTagQuery(tagQuery: TagQuery) {
+        when (tagQuery) {
             is TagExists -> {
-                where.append("$tagsAsJsonb ? ${tagQuery.name}")
+                where.append("$tagsAsJsonb ?? '${tagQuery.name}'")
             }
+
             is TagValueIsNull -> {
                 where.append("${tagValue(tagQuery)} = null")
             }
+
             is TagValueIsBool -> {
-                if(tagQuery.value){
-                    where.append(tagValue(tagQuery))
+                if (tagQuery.value) {
+                    where.append(tagValue(tagQuery, PgType.BOOLEAN))
                 } else {
-                    where.append("not(${tagValue(tagQuery)}})")
+                    where.append("not(${tagValue(tagQuery, PgType.BOOLEAN)}})")
                 }
             }
+
             is TagValueIsDouble -> {
                 val valuePlaceholder = placeholderForArg(tagQuery.value, PgType.DOUBLE)
-                val doubleOp = resolveDoubleOp(tagQuery.op, tagValue(tagQuery), valuePlaceholder)
+                val doubleOp = resolveDoubleOp(
+                    tagQuery.op,
+                    tagValue(tagQuery, PgType.DOUBLE),
+                    valuePlaceholder
+                )
                 where.append(doubleOp)
             }
+
             is TagValueIsString -> {
                 val valuePlaceholder = placeholderForArg(tagQuery.value, PgType.STRING)
-                val stringEquals = resolveStringOp(StringOp.EQUALS, tagValue(tagQuery), valuePlaceholder)
-                where.append(stringEquals)
+                val stringEquals = resolveStringOp(
+                    StringOp.EQUALS,
+                    tagValue(tagQuery, PgType.STRING),
+                    valuePlaceholder
+                )
+                where.append(stringEquals) // naksha_tags(tags, flags)::jsonb->>foo = $1
             }
+
             is TagValueMatches -> {
-                val regexPlaceholder = placeholderForArg(tagQuery.regex, PgType.STRING)
-                where.append("$tagsAsJsonb @? '$[?(@.${tagQuery.name}=~/$regexPlaceholder/)]")
+                /*
+                SELECT *
+                FROM read_by_tags_test
+                WHERE naksha_tags(tags, flags) @? '$.year ? (@ like_regex "^202\\d$")'
+                 */
+//                val regex = Regex.escape(tagQuery.regex)
+                val regex = tagQuery.regex
+                where.append("$tagsAsJsonb @?? '\$.${tagQuery.name} ? (@ like_regex \"${regex}\")'")
             }
         }
     }
 
-    private fun tagValue(tagQuery: TagQuery): String =
-        "$tagsAsJsonb->>${tagQuery.name}"
+    private fun tagValue(tagQuery: TagQuery, castTo: PgType? = null): String {
+        return when (castTo) {
+            null -> "$tagsAsJsonb->'${tagQuery.name}'"
+            PgType.STRING -> "$tagsAsJsonb->>'${tagQuery.name}'"
+            else -> "($tagsAsJsonb->'${tagQuery.name}')::${castTo.value}"
+        }
+    }
 
     private fun <T : IQuery> not(subClause: T, subClauseResolver: (T) -> Unit) {
         where.append(" NOT (")
@@ -282,8 +306,8 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
             )
         }
     }
-    
+
     companion object {
-        private val tagsAsJsonb = "naksha_tags(${PgColumn.tags}, ${PgColumn.flags})::jsonb"
+        private val tagsAsJsonb = "naksha_tags(${PgColumn.tags}, ${PgColumn.flags})"
     }
 }
