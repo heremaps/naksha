@@ -80,7 +80,7 @@ class Naksha private constructor() {
         /**
          * Maximum collectionId name length allowed to give by clients. Rest of "free" characters are reserved for partitioning suffix.
          */
-        private const val MAX_COLLECTION_ID_NAME_LENGTH = 44
+        private const val MAX_COLLECTION_ID_NAME_LENGTH = 45
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:

@@ -12,10 +12,10 @@ class NakshaTest {
         // expect
         var collectionId = collectionIdOf(1)
         assertTrue(collectionId) { Naksha.isValidId(collectionId) }
-        collectionId = collectionIdOf(44)
+        collectionId = collectionIdOf(45)
         assertTrue(collectionId) { Naksha.isValidId(collectionId) }
 
-        collectionId = collectionIdOf(45)
+        collectionId = collectionIdOf(46)
         assertFalse(collectionId) { Naksha.isValidId(collectionId) }
         assertFalse(collectionId) { Naksha.isValidId("") }
     }
