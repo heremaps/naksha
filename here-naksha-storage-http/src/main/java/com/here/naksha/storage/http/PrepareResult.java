@@ -22,6 +22,7 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
 import com.here.naksha.lib.core.models.Typed;
 import com.here.naksha.lib.core.models.XyzError;
+import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.io.ByteArrayInputStream;
@@ -34,8 +35,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
+
 import naksha.model.ErrorResult;
-import naksha.model.XyzFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

@@ -21,13 +21,6 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
         stmt.execute()
         return PsqlCursor(stmt, false)
     }
-    /**
-     * TODO: remove
-     *
-     * SELECT gzip(bytea_agg(tuple_number)) AS rs FROM (SELECT tuple_number FROM (
-     * 	(SELECT tuple_number, id FROM read_by_tags_test WHERE  (naksha_tags(tags, flags)::jsonb->>foo = '''bar'''))
-     * ) ORDER BY id, tuple_number) LIMIT 1000000
-     */
 
     /**
      * Adds the prepared statement with the given arguments into batch-execution queue. This requires a mutation query like UPDATE or

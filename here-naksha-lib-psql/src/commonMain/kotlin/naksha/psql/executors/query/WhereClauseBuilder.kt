@@ -217,16 +217,10 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
                     tagValue(tagQuery, PgType.STRING),
                     valuePlaceholder
                 )
-                where.append(stringEquals) // naksha_tags(tags, flags)::jsonb->>foo = $1
+                where.append(stringEquals)
             }
 
             is TagValueMatches -> {
-                /*
-                SELECT *
-                FROM read_by_tags_test
-                WHERE naksha_tags(tags, flags) @? '$.year ? (@ like_regex "^202\\d$")'
-                 */
-//                val regex = Regex.escape(tagQuery.regex)
                 val regex = tagQuery.regex
                 where.append("$tagsAsJsonb @?? '\$.${tagQuery.name} ? (@ like_regex \"${regex}\")'")
             }
