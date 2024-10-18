@@ -3,6 +3,7 @@
 package naksha.model
 
 import naksha.base.*
+import naksha.model.TagNormalizer.normalizeTag
 import kotlin.DeprecationLevel.WARNING
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -29,66 +30,7 @@ class XyzNs : AnyObject() {
         private val INT64_NULL = NullableProperty<XyzNs, Int64>(Int64::class)
         private val TAGS = NullableProperty<XyzNs, TagList>(TagList::class)
 
-        private var AS_IS: CharArray = CharArray(128 - 32) { (it + 32).toChar() }
-        private var TO_LOWER: CharArray = CharArray(128 - 32) { (it + 32).toChar().lowercaseChar() }
 
-        /**
-         * A method to normalize a list of tags.
-         *
-         * @param tags a list of tags.
-         * @return the same list, just that the content is normalized.
-         */
-        @JvmStatic
-        @JsStatic
-        fun normalizeTags(tags: TagList?): TagList? {
-            if (!tags.isNullOrEmpty()) {
-                for ((idx, tag) in tags.withIndex()) {
-                    if (tag != null) {
-                        tags[idx] = normalizeTag(tag)
-                    }
-                }
-            }
-            return tags
-        }
-
-        /**
-         * A method to normalize and lower case a tag.
-         *
-         * @param tag the tag.
-         * @return the normalized and lower cased version of it.
-         */
-        @JvmStatic
-        @JsStatic
-        fun normalizeTag(tag: String): String {
-            if (tag.isEmpty()) {
-                return tag
-            }
-            val first = tag[0]
-            // All tags starting with an at-sign, will not be modified in any way.
-            if (first == '@') {
-                return tag
-            }
-
-            // Normalize the tag.
-            val normalized: String = Platform.normalize(tag, NormalizerForm.NFD)
-
-            // All tags starting with a tilde, sharp, or the deprecated "ref_" / "sourceID_" prefix will not
-            // be lower cased.
-            val MAP: CharArray =
-                if (first == '~' || first == '#' || normalized.startsWith("ref_") || normalized.startsWith("sourceID_"))
-                    AS_IS
-                else
-                    TO_LOWER
-            val sb = StringBuilder(normalized.length)
-            for (element in normalized) {
-                // Note: This saves one branch, and the array-size check, because 0 - 32 will become 65504.
-                val c = (element.code - 32).toChar()
-                if (c.code < MAP.size) {
-                    sb.append(MAP[c.code])
-                }
-            }
-            return sb.toString()
-        }
     }
 
     /**
