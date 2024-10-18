@@ -119,11 +119,7 @@ class Naksha private constructor() {
         @JvmStatic
         fun verifyId(id: String?) {
             if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_COLLECTION_ID_NAME_LENGTH) {
-                throw NakshaException(
-                    ILLEGAL_ID,
-                    "The given identifier is null, empty or has more than $MAX_COLLECTION_ID_NAME_LENGTH characters",
-                    id = id
-                )
+                throw NakshaException(ILLEGAL_ID, "The given identifier is null, empty or has more than $MAX_COLLECTION_ID_NAME_LENGTH characters", id = id)
             }
             var i = 0
             var c = id[i++]
@@ -180,17 +176,9 @@ class Naksha private constructor() {
                 for (c in part) {
                     when (c) {
                         in 'a'..'z', in 'A'..'Z', in '0'..'9', '_' -> sb.append(c)
-                        '"' -> {
-                            quoted = true; sb.append('"').append('"')
-                        }
-
-                        '\\' -> {
-                            quoted = true; sb.append('\\').append('\\')
-                        }
-
-                        else -> {
-                            quoted = true; sb.append(c)
-                        }
+                        '"' -> { quoted = true; sb.append('"').append('"') }
+                        '\\' -> { quoted = true; sb.append('\\').append('\\') }
+                        else -> { quoted = true; sb.append(c) }
                     }
                 }
             }
