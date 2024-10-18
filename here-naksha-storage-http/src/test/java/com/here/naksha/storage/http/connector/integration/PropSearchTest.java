@@ -93,9 +93,5 @@ public class PropSearchTest {
         assertTrue(responseHasExactShortIds(shortIds, dataHubResponse));
     }
 
-    boolean responseHasExactShortIds(List<String> expectedShortIds, Response response) {
-        List<String> expectedIds = expectedShortIds.stream().map(e -> "urn:here::here:landmark3d.Landmark3dPhotoreal:" + e).toList();
-        List<String> responseIds = responseToIds(response);
-        return expectedIds.equals(responseIds);
-    }
+
 }

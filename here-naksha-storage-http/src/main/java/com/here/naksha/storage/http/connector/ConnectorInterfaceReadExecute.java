@@ -21,6 +21,7 @@ package com.here.naksha.storage.http.connector;
 import static com.here.naksha.common.http.apis.ApiParamsConst.*;
 
 import com.here.naksha.lib.core.NakshaContext;
+import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.naksha.Space;
@@ -28,7 +29,10 @@ import com.here.naksha.lib.core.models.payload.Event;
 import com.here.naksha.lib.core.models.payload.events.PropertyQueryOr;
 import com.here.naksha.lib.core.models.payload.events.feature.GetFeaturesByBBoxEvent;
 import com.here.naksha.lib.core.models.payload.events.feature.GetFeaturesByIdEvent;
+import com.here.naksha.lib.core.models.payload.events.feature.GetFeaturesByTileEvent;
+import com.here.naksha.lib.core.models.payload.events.feature.QueryEvent;
 import com.here.naksha.lib.core.models.storage.POp;
+import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
@@ -83,36 +87,52 @@ public class ConnectorInterfaceReadExecute {
         request.getQueryParameter(NORTH));
     Long limit = request.getQueryParameter(LIMIT);
     boolean clip = request.getQueryParameter(CLIP_GEO);
-    POp propertyOp = request.getPropertyOp();
 
     GetFeaturesByBBoxEvent getFeaturesByBBoxEvent = new GetFeaturesByBBoxEvent();
     getFeaturesByBBoxEvent.setLimit(limit);
     getFeaturesByBBoxEvent.setBbox(bBox);
     getFeaturesByBBoxEvent.setClip(clip);
+    setPropertyOp(request, getFeaturesByBBoxEvent);
+
+    return getFeaturesByBBoxEvent;
+  }
+
+  static void setPropertyOp(ReadFeatures request, QueryEvent getFeaturesByBBoxEvent) {
+    POp propertyOp = request.getPropertyOp();
     if (propertyOp != null) {
       PropertyQueryOr propertiesQuery = new PropertyQueryOr();
       propertiesQuery.add(POpToQueryConverter.pOpToQuery(propertyOp));
       getFeaturesByBBoxEvent.setPropertiesQuery(propertiesQuery);
     }
-
-    return getFeaturesByBBoxEvent;
-  }
-
-  private static Event createFeaturesByTileEvent(ReadFeaturesProxyWrapper request) throws NotImplementedException {
-    //    Long margin = request.getQueryParameter(MARGIN);
-    //    Long limit = request.getQueryParameter(LIMIT);
-    //    String tileType = request.getQueryParameter(TILE_TYPE);
-    //    String tileId = request.getQueryParameter(TILE_ID);
-    //
-    //    GetFeaturesByTileEvent getFeaturesByTileEvent = new GetFeaturesByTileEvent();
-    //    getFeaturesByTileEvent.setHereTileFlag(false);
-    //    getFeaturesByTileEvent.setMargin(margin.intValue());
-    //    getFeaturesByTileEvent.setLimit(limit);
-
-    throw new NotImplementedException();
   }
 
   private static HttpResponse<byte[]> post(RequestSender sender, String body) {
     return sender.sendRequest("", true, null, "POST", body);
+  }
+
+  private static Event createFeaturesByTileEvent(ReadFeaturesProxyWrapper readRequest) {
+    String tileType = readRequest.getQueryParameter(TILE_TYPE);
+    if (TILE_TYPE_QUADKEY.equals(tileType)) {
+      long margin = readRequest.getQueryParameter(MARGIN);
+      long limit = readRequest.getQueryParameter(LIMIT);
+      String tileId = readRequest.getQueryParameter(TILE_ID);
+      boolean clip = readRequest.getQueryParameter(CLIP_GEO);
+
+      GetFeaturesByTileEvent event = new GetFeaturesByTileEvent();
+      event.setMargin((int) margin); // TODO-a
+      event.setLimit(limit);
+      event.setClip(clip);
+      setPropertyOp(readRequest, event);
+
+      WebMercatorTile tileAddress = WebMercatorTile.forQuadkey(tileId);
+      event.setBbox(tileAddress.getExtendedBBox(event.getMargin()));
+      event.setLevel(tileAddress.level);
+      event.setX(tileAddress.x);
+      event.setY(tileAddress.y);
+      event.setQuadkey(tileAddress.asQuadkey());
+      return event;
+    } else {
+      throw new NotImplementedException("Tile type other than " + TILE_TYPE_QUADKEY);
+    }
   }
 }
