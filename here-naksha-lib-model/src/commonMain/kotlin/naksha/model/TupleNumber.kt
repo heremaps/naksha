@@ -4,12 +4,9 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.base.Platform
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
 import kotlin.js.JsExport
-import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
@@ -57,7 +54,6 @@ data class TupleNumber(
      */
     @JvmField val flags: Flags
 ) : Comparable<TupleNumber> {
-
     /**
      * Returns the map-number of the map in which the tuple is stored.
      * @return the map-number.
@@ -113,7 +109,6 @@ data class TupleNumber(
      */
     override fun toString(): String {
         if (!this::_string.isInitialized) {
-            val flags = this.flags.storageNumber(false)
             val sn = storeNumber
             _string = "${storageNumber}:${sn.mapNumber()}:${sn.collectionNumber()}:${sn.partitionNumber()}:$version:$uid:$flags"
         }
@@ -129,79 +124,54 @@ data class TupleNumber(
     fun toGuid(featureId: String): Guid = Guid(featureId, this)
 
     /**
-     * Convert this tuple into its binary form, embedding the tuple-number into it.
-     * @return the binary encoded tuple-number including the storage-number (so 256-bit).
+     * Encode this [tuple-number][TupleNumber] into its 256-bit binary encoding; this binary encoding is compatible with the [TupleNumberByteArray].
+     * @return the 256-bit binary encoded [tuple-number][TupleNumber].
      * @since 3.0.0
      */
     fun toByteArray(): ByteArray {
         val byteArray = ByteArray(32)
         val view = Platform.newDataView(byteArray)
+        dataview_set_int64(view, 0, storageNumber) // lead-in
+        dataview_set_int64(view, 8, storeNumber)
+        dataview_set_int64(view, 16, version.txn)
+        dataview_set_int32(view, 24, uid)
+        dataview_set_int32(view, 28, flags)
+        return byteArray
+    }
+
+    /**
+     * Convert this tuple into its 160-bit binary encoding; the only use-case for this method is to use the tuple-number to query the database.
+     *
+     * @return the 160-bit binary encoded tuple-number.
+     * @since 3.0.0
+     */
+    fun toQuery(): ByteArray {
+        val byteArray = ByteArray(20)
+        val view = Platform.newDataView(byteArray)
         dataview_set_int64(view, 0, storeNumber)
         dataview_set_int64(view, 8, version.txn)
         dataview_set_int32(view, 16, uid)
-        dataview_set_int32(view, 20, flags.storageNumber(true))
-        dataview_set_int64(view, 24, storageNumber)
         return byteArray
     }
 
     companion object TupleNumber_C {
         /**
-         * When a [Tuple] is created in the client at runtime, and not yet located in any storage, it should have this virtual tuple-number.
+         * The undefined [TupleNumber], to be used when a [tuple-number][TupleNumber] is invalid. This happens for various reasons, for example when a [Tuple] is created in the client at runtime, and not yet located in any storage, it does not yet have a tuple-number.
          */
         val UNDEFINED = TupleNumber(Int64(0), StoreNumber(), Version(0L), 0, 0)
 
         /**
-         * Tests if the given binary encoded [tuple-number][TupleNumber] encodes a storage-number.
-         * @param byteArray the byte-array of encoded tuple-numbers.
-         * @param offset the offset to read from.
-         * @return _true_ if the encoded [TupleNumber] does encode the storage-number.
-         * @since 3.0.0
-         */
-        @JvmStatic
-        @JsStatic
-        fun containsStorageNumber(byteArray: ByteArray, offset: Int = 0): Boolean {
-            val view = Platform.newDataView(byteArray)
-            val flags = dataview_get_int32(view, offset + 20)
-            return flags.storageNumber()
-        }
-
-        /**
-         * Decodes a binary encoded [tuple-number][TupleNumber] from the given byte-array, expecting that the storage-number is encoded in the byte-array.
-         * @param byteArray the byte-array of encoded tuple-numbers.
-         * @param offset the offset to read from.
-         * @return the decoded [TupleNumber].
-         * @since 3.0.0
-         */
-        @JvmStatic
-        @JsStatic
-        @JsName("fromMixedByteArray")
-        fun fromByteArray(byteArray: ByteArray, offset: Int = 0): TupleNumber {
-            val view = Platform.newDataView(byteArray)
-            val storeNumber = dataview_get_int64(view, offset)
-            val version = Version(dataview_get_int64(view, offset + 8))
-            val uid = dataview_get_int32(view, offset + 16)
-            val flags = dataview_get_int32(view, offset + 20)
-            val storageNumber = dataview_get_int64(view, offset + 24)
-            return TupleNumber(storageNumber, storeNumber, version, uid, flags)
-        }
-
-        /**
          * Decodes a binary encoded [tuple-number][TupleNumber] from the given byte-array.
-         * @param storageNumber the storage-number to add into the [TupleNumber].
          * @param byteArray the byte-array of encoded tuple-numbers.
-         * @param offset the offset to read from.
-         * @return the decoded [TupleNumber].
+         * @param index the index, not the offset, only useful when a [tuple-number byte-array][TupleNumberByteArray] is given.
+         * @return the decoded [TupleNumber] or [TupleNumber.UNDEFINED], if no valid one can be read.
          * @since 3.0.0
          */
         @JvmStatic
         @JsStatic
-        fun fromByteArray(storageNumber: Int64, byteArray: ByteArray, offset: Int = 0): TupleNumber {
-            val view = Platform.newDataView(byteArray)
-            val storeNumber = dataview_get_int64(view, offset)
-            val version = Version(dataview_get_int64(view, offset + 8))
-            val uid = dataview_get_int32(view, offset + 16)
-            val flags = dataview_get_int32(view, offset + 20)
-            return TupleNumber(storageNumber, storeNumber, version, uid, flags)
+        fun fromByteArray(byteArray: ByteArray, index: Int = 0): TupleNumber {
+            if (byteArray.size < 32) return UNDEFINED
+            return TupleNumberByteArray(byteArray)[index] ?: UNDEFINED
         }
     }
 }

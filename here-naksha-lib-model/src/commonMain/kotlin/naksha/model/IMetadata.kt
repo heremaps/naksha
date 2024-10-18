@@ -48,7 +48,7 @@ interface IMetadata {
      * If this is _null_, there is no guarantee that the state has not changed meanwhile, so this should be seen as the last known information, not an immutable value.
      * @since 3.0.0
      */
-    var nextVersion: Version?
+    val nextVersion: Version?
 
     /**
      * The version of the row.

@@ -10,10 +10,6 @@ import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_MASK
 import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_CLEAR
 import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_GZIP_BIT
 import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_MASK
-import naksha.model.FlagsBits.FlagsBitsCompanion.SN_CLEAR
-import naksha.model.FlagsBits.FlagsBitsCompanion.SN_MASK
-import naksha.model.FlagsBits.FlagsBitsCompanion.SN_OFF
-import naksha.model.FlagsBits.FlagsBitsCompanion.SN_ON
 import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_CLEAR
 import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_GZIP_BIT
 import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_MASK
@@ -21,15 +17,14 @@ import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_MASK
 /**
  * Type alias for the flags encoding in the storage, it stores how the binaries are encoded:
  * ```
- *       Reserved          SN   AE   TE    FE    GE
- * [0000-0000-0000-0000-0][0][00][0000]-[0000][0000]
+ *       Reserved           AE   TE    FE    GE
+ * [0000-0000-0000-0000-00][00][0000]-[0000][0000]
  * ```
  * - GE: geometry encoding - bits: 0-3
  * - FE: feature encoding - bits: 4-7
  * - TE: tags encoding - bits: 8-11
  * - AE: action - bits: 12+13
- * - SN: storage-number - bits: 14
- * - Reserved: reserved - bit: 15-31
+ * - Reserved: reserved - bit: 14-31
  */
 typealias Flags = Int
 
@@ -50,6 +45,8 @@ inline fun Flags(flags: Int = 0): Flags = flags
  */
 inline fun Flags(geoEncoding: Int, featureEncoding: Int, tagsEncoding: Int, action: Int): Flags =
     geoEncoding or featureEncoding or tagsEncoding or action
+
+
 
 /**
  * Decodes the geometry encoding from flags.
@@ -82,6 +79,8 @@ inline fun Flags.geoGzipOn(): Flags = this or GEO_GZIP_BIT
  */
 inline fun Flags.geoGzipOff(): Flags = this and GEO_GZIP_BIT.inv()
 
+
+
 /**
  * Returns the feature encoding.
  * @return the feature encoding.
@@ -112,6 +111,8 @@ inline fun Flags.featureGzipOn(): Flags = this or FEATURE_GZIP_BIT
  * @return the new flags.
  */
 inline fun Flags.featureGzipOff(): Flags = this and FEATURE_GZIP_BIT.inv()
+
+
 
 /**
  * Returns the tags encoding.
@@ -144,6 +145,8 @@ inline fun Flags.tagsGzipOn(): Flags = this or TAGS_GZIP_BIT
  */
 inline fun Flags.tagsGzipOff(): Flags = this and TAGS_GZIP_BIT.inv()
 
+
+
 /**
  * Returns the action encoding.
  * @return the action encoding.
@@ -174,16 +177,3 @@ inline fun Flags.action(encoding: Int): Flags = (this and ACTION_CLEAR) or (enco
  * @return the new flags.
  */
 inline fun Flags.action(action: Action): Flags = (this and ACTION_CLEAR) or (action.action and ACTION_MASK)
-
-/**
- * Updates if the storage-number is encoding in a tuple-number, following the _flags_.
- * @param sn _true_ if the storage-number is encoded in a tuple-number.
- * @return the new flags.
- */
-inline fun Flags.storageNumber(sn: Boolean): Flags = (this and SN_CLEAR) or (if (sn) SN_ON else SN_OFF)
-
-/**
- * Tests if the storage-number is encoded in a tuple-number, following the _flags_.
- * @return _true_ if the storage-number is encoded in a tuple-number.
- */
-inline fun Flags.storageNumber(): Boolean = (this and SN_MASK) == SN_ON

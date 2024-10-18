@@ -42,9 +42,7 @@ class Naksha private constructor() {
          * The collection-number of the virtual collection in which transactions are stored.
          * @since 3.0.0
          */
-        @JvmField
-        @JsStatic
-        val VIRT_TRANSACTIONS_NUMBER = Int64(0)
+        const val VIRT_TRANSACTIONS_NUMBER = 0
 
         /**
          * The identifier of the virtual collection in which the collections them-self are stored.
@@ -64,9 +62,7 @@ class Naksha private constructor() {
          * The collection-number of the virtual collection in which the collections them-self are stored.
          * @since 3.0.0
          */
-        @JvmField
-        @JsStatic
-        val VIRT_COLLECTIONS_NUMBER = Int64(0)
+        const val VIRT_COLLECTIONS_NUMBER = 1
 
         /**
          * The identifier of the virtual collection in which the dictionaries are stored.
@@ -78,9 +74,7 @@ class Naksha private constructor() {
          * The collection-number of the virtual collection in which the dictionaries are stored.
          * @since 3.0.0
          */
-        @JvmField
-        @JsStatic
-        val VIRT_DICTIONARIES_NUMBER = Int64(2)
+        const val VIRT_DICTIONARIES_NUMBER = 2
 
         /**
          * The quoted identifier of the virtual collection in which the dictionaries are stored.

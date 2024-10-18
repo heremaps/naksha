@@ -95,7 +95,7 @@ interface ISession : AutoCloseable {
      * @return the list of the loaded [tuples][Tuple], contains _null_, if the tuple was not found.
      * @since 3.0.0
      */
-    fun getTuples(tupleNumbers: Array<TupleNumber>, fetchFromHistory:Boolean = false, mode: FetchBits = FetchMode.FETCH_ALL): List<Tuple?>
+    fun getTuples(tupleNumbers: Array<TupleNumber>, fetchFromHistory:Boolean = false, mode: FetchMode = FETCH_ALL): List<Tuple?>
 
     /**
      * Fetches all tuples in the given result-tuples.
@@ -107,7 +107,7 @@ interface ISession : AutoCloseable {
      * @param mode the fetch mode.
      * @since 3.0.0
      */
-    fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int = 0, to: Int = resultTuples.size, fetchFromHistory: Boolean = false, mode: FetchBits = FetchMode.FETCH_ALL)
+    fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int = 0, to: Int = resultTuples.size, fetchFromHistory: Boolean = false, mode: FetchMode = FETCH_ALL)
 
     /**
      * Current transaction data.

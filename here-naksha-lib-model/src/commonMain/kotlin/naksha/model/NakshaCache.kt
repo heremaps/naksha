@@ -176,7 +176,7 @@ class NakshaCache private constructor() {
         /**
          * Store the given tuple in the cache.
          * @param tuple the [Tuple] to store.
-         * @return the cached [Tuple], which may not be the one give, but a merged version.
+         * @return the cached [Tuple], which may not be the one given, but a merged version.
          * @since 3.0.0
          */
         @JvmStatic
@@ -250,11 +250,11 @@ class NakshaCache private constructor() {
          */
         @JvmStatic
         @JsStatic
-        operator fun get(tupleNumber: TupleNumber): Tuple? = useTupleCache(tupleNumber.storageNumber)[tupleNumber]
+        operator fun get(tupleNumber: TupleNumber): Tuple? = tupleCacheByStorageNumber[tupleNumber.storageNumber]?.deref()?.get(tupleNumber)
 
         /**
          * Store the given tuple in the cache.
-         * @param tupleNumber the [TupleNumber] of the tuple, basically [Tuple.tupleNumber].
+         * @param tupleNumber the [TupleNumber] of the tuple.
          * @param tuple the [Tuple] to store.
          * @return the cached [Tuple], which may not be the one give, but a merged version.
          * @since 3.0.0
@@ -262,7 +262,7 @@ class NakshaCache private constructor() {
         @JvmStatic
         @JsStatic
         operator fun set(tupleNumber: TupleNumber, tuple: Tuple): Tuple {
-            if (tupleNumber != tuple.tupleNumber) {
+            if (tupleNumber != tuple.meta.tupleNumber()) {
                 throw NakshaException(ILLEGAL_ARGUMENT, "Given key does not match tuple.tupleNumber")
             }
             return useTupleCache(tupleNumber.storageNumber).store(tuple)

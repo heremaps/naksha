@@ -7,17 +7,15 @@ import kotlin.js.JsExport
 /**
  * Collection of bit definitions for the `flags`. The flags store the encoding in the storage, it stores how the binaries are encoded:
  * ```
- *       Reserved         R1  AE   TE    FE    GE
- * [0000-0000-0000-0000]-[00][00][0000][0000][0000]
+ *       Reserved           AE   TE    FE    GE
+ * [0000-0000-0000-0000-00][00][0000]-[0000][0000]
  * ```
- * - GE: geometry (and reference point) encoding - bits: 0-3
+ * - GE: geometry encoding - bits: 0-3
  * - FE: feature encoding - bits: 4-7
  * - TE: tags encoding - bits: 8-11
  * - AE: action - bits: 12+13
- * - R1: reserved - bits: 14+15
- * - ---
- * - Reserved - bits: 16-31
-*/
+ * - Reserved: reserved - bit: 14-31
+ */
 @JsExport
 open class FlagsBits {
     companion object FlagsBitsCompanion {
@@ -126,37 +124,5 @@ open class FlagsBits {
          * The bitmask to AND combine with [Flags] to clear the value from the [Flags].
          */
         const val ACTION_CLEAR = ACTION_MASK.inv()
-
-        // --------------------------------------< STORAGE-NUMBER >-------------------------------
-
-        /**
-         * The bits to shift the value in the [Flags].
-         */
-        const val SN_SHIFT = 14
-
-        /**
-         * The bits used to encode the value in [Flags].
-         */
-        const val SN_BITS = 1
-
-        /**
-         * The bitmask to AND combine with [Flags] to read the value from [Flags].
-         */
-        const val SN_MASK = ((1 shl SN_BITS) - 1) shl SN_SHIFT
-
-        /**
-         * The bitmask to AND combine with [Flags] to clear the value from the [Flags].
-         */
-        const val SN_CLEAR = SN_MASK.inv()
-
-        /**
-         * The encoded value of _true_.
-         */
-        const val SN_ON = 1 shl SN_SHIFT
-
-        /**
-         * The encoded value of _false_.
-         */
-        const val SN_OFF = 0 shl SN_SHIFT
     }
 }

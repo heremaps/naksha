@@ -45,7 +45,7 @@ open class ResultTuple(
      * @return the feature-id, if available.
      * @since 3.0.0
      */
-    fun id() : String? = tuple?.id
+    fun id() : String? = tuple?.meta?.id
 
     /**
      * Convert the tuple into a feature, and cache the feature.

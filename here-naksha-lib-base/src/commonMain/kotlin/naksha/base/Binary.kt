@@ -80,6 +80,13 @@ open class Binary() : BinaryView {
     @Suppress("UNUSED_PARAMETER")
     companion object BinaryCompanion {
         /**
+         * The byte-array that represents undefined.
+         */
+        @JvmField
+        @JsStatic
+        val UNDEFINED = ByteArray(0)
+
+        /**
          * The default empty byte-array.
          */
         @JvmField

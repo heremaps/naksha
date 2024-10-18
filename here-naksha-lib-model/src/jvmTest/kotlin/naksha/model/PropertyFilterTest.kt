@@ -41,8 +41,6 @@ class PropertyFilterTest {
             val flags = Flags()
             val tupleNumber = TupleNumber(storageNumber, storeNumber, version,0, flags)
             val tuple = Tuple(
-                tupleNumber = tupleNumber,
-                fetchBits = FetchMode.FETCH_ALL,
                 meta = Metadata(
                     storageNumber = storageNumber,
                     storeNumber = storeNumber,
@@ -55,7 +53,8 @@ class PropertyFilterTest {
                     type = null,
                     flags = flags,
                 ),
-                feature = featureBytes
+                feature = featureBytes,
+                state = FETCH_ALL,
             )
             resultTuple = ResultTuple(
                 tupleNumber = tupleNumber,

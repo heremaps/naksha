@@ -51,13 +51,13 @@ class TupleCache internal constructor(
      * @since 3.0.0
      */
     fun store(tuple: Tuple): Tuple {
-        val tuple_number = tuple.tupleNumber
+        val tuple_number = tuple.meta.tupleNumber()
         // Do not cache undefined tuples, they are created in the client and not yet stored.
         if (TupleNumber.UNDEFINED == tuple_number) return tuple
         val existingRef = tuples[tuple_number]
         if (existingRef != null) {
             val existing = existingRef.deref()
-            if (existing != null && existing.tupleNumber == tuple_number) {
+            if (existing != null && existing.meta.tupleNumber() == tuple_number) {
                 val merged = existing.merge(tuple)
                 if (existing !== merged) {
                     tuples[tuple_number] = WeakRef(merged)
@@ -77,8 +77,8 @@ class TupleCache internal constructor(
      * @since 3.0.0
      */
     operator fun set(tupleNumber: TupleNumber, tuple: Tuple) {
-        if (tupleNumber != tuple.tupleNumber) {
-            throw NakshaException(ILLEGAL_ARGUMENT, "The given row-id ($tupleNumber) does not match the one of the given row (${tuple.tupleNumber}")
+        if (tupleNumber != tuple.meta.tupleNumber()) {
+            throw NakshaException(ILLEGAL_ARGUMENT, "The given tuple-number ($tupleNumber) does not match the one of the given tuple (${tuple.meta.tupleNumber()}")
         }
         store(tuple)
     }

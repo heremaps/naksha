@@ -19,9 +19,9 @@ class XyzNs : AnyObject() {
         const val PUUID = "puuid"
         const val CREATED_AT = "createdAt"
         const val UPDATED_AT = "updatedAt"
-        const val SPACE = "space"
+        // const val SPACE = "space"
         const val TAGS = "tags"
-        const val TXN = "txn"
+        const val NEXT = "next"
         const val CHANGE_COUNT = "changeCount"
         const val ACTION = "action"
         const val APP_ID = "appId"
@@ -41,6 +41,37 @@ class XyzNs : AnyObject() {
         private val _TAGS = NotNullProperty<XyzNs, TagList>(TagList::class) { _, _ -> TagList() }
         private var AS_IS: CharArray = CharArray(128 - 32) { (it + 32).toChar() }
         private var TO_LOWER: CharArray = CharArray(128 - 32) { (it + 32).toChar().lowercaseChar() }
+
+        /**
+         * Create the XZY-namespace from the given [Metadata].
+         * @param meta the [Metadata]
+         * @return the [XYZ namespace][XyzNs].
+         */
+        @JvmStatic
+        @JsStatic
+        fun fromMetadata(meta: Metadata): XyzNs {
+            val tn = meta.tupleNumber()
+            val guid = Guid(meta.id, tn)
+            val pguid = if (meta.prevVersion != null && meta.puid != null)
+                Guid(meta.id, TupleNumber(tn.storageNumber, tn.storeNumber, meta.prevVersion, meta.puid, Flags()))
+                else null
+            return AnyObject().apply {
+                setRaw(UUID, guid.toString())
+                if (pguid != null) setRaw(PUUID, pguid.toString())
+                if (meta.createdAt != meta.updatedAt) setRaw(CREATED_AT, meta.createdAt)
+                setRaw(UPDATED_AT, meta.updatedAt)
+                val nextVersion = meta.nextVersion
+                if (nextVersion != null) setRaw(NEXT, nextVersion.txn)
+                setRaw(CHANGE_COUNT, meta.changeCount)
+                setRaw(ACTION, meta.action().toString())
+                setRaw(APP_ID, meta.appId)
+                if (meta.author != null) setRaw(AUTHOR, meta.author)
+                if (meta.authorTs != meta.updatedAt) setRaw(AUTHOR_TS, meta.authorTs)
+                setRaw(HASH, meta.hash)
+                if (meta.origin != null) setRaw(ORIGIN, meta.origin)
+                setRaw(GEO_GRID, meta.geoGrid)
+            }.proxy(XyzNs::class)
+        }
 
         /**
          * A method to normalize a list of tags.
@@ -231,7 +262,7 @@ class XyzNs : AnyObject() {
     var tags: TagList by _TAGS
 
     /**
-     * The version of the feature - temporarily we use `txn` as name, because version is expected to be Int, not Int64.
+     * The version of the feature.
      *
      * Multiple features could be part of a single version if they have been edited in one transaction. This field is populated by
      * Interactive API, Data Hub, XYZ Hub and Naksha. Any values provided by the user are overwritten.
@@ -240,7 +271,17 @@ class XyzNs : AnyObject() {
      * - **XYZ Hub**: This field is set when history or UUID is enabled for the space.
      * - **Naksha**: This field stores the transaction-number (`txn`).
      */
-    val txn: Int64? by _INT64_NULL
+    val version: Int64?
+        get() {
+            val raw = getRaw("version")
+            if (raw is Int64) return raw
+            return guid?.tupleNumber?.version?.txn
+        }
+
+    /**
+     * The version of the next state, if known.
+     */
+    val next: Int64? by _INT64_NULL
 
     /**
      * The change-count, so how often the feature has been changed since it was created. The value starts with 1.
@@ -280,7 +321,12 @@ class XyzNs : AnyObject() {
      * The value is a valid Unix timestamp which is the number of milliseconds since January 1st, 1970, leap seconds are ignored. This
      * field is populated only by **Naksha**. Any values provided by the user are overwritten.
      */
-    val authorTs: Int64? by _INT64_NULL
+    val authorTs: Int64
+        get() {
+            val raw = getRaw("authorTs")
+            if (raw is Int64) return raw
+            return updatedAt
+        }
 
     /**
      * The hash above the feature, calculated server side.

@@ -92,7 +92,7 @@ data class Guid(
             val seq = Int64(v[SEQ].toLong())
             val version = Version.of(year, month, day, seq)
             val uid = v[UID].toInt()
-            val flags = v[FLAGS].toInt().storageNumber(false)
+            val flags = v[FLAGS].toInt()
             val tupleNumber = TupleNumber(storageNumber, storeNumber, version, uid, flags)
             return Guid(featureId, tupleNumber)
         }

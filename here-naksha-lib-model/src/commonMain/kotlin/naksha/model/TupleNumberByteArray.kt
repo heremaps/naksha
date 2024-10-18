@@ -8,26 +8,27 @@ import naksha.base.PlatformDataView
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.request.ExecutedOp
 import naksha.model.request.ResultTupleList
 import naksha.model.request.ResultTupleList.ResultTupleList_C.fromTupleNumberArray
 import kotlin.js.JsExport
-import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
- * A helper that wraps a byte-array that contains one to n tuple-numbers, all either with storage-number or without. This implementation does not allow mixing tuple-numbers with, and without storage-number, so it requires that all encodings are of the same size.
+ * A helper that wraps a byte-array that contains binary encoded [tuple-numbers][TupleNumber].
+ *
+ * There are two forms of the byte-array. Either the lead-in (the first 64-bit) is `-1` (so all bits are set), then the [storage-number][TupleNumber.storageNumber] is encoded individually for each [tuple-number][TupleNumber], resulting in 256-bit encoding (32 byte) per [tuple-number][TupleNumber]. Otherwise, the storage-number is shared by all [tuple-numbers][TupleNumber], and stored in the first 64-bits, then each encoded [tuple-number][TupleNumber] is only 192-bit (24 byte).
+ *
+ * The second encoding is mostly the result from selecting [tuple-numbers][TupleNumber] from the database, for example like:
  * ```sql
- * SELECT r AS (
- *   SELECT tuple_number FROM table1 WHERE ... LIMIT ...
+ * SELECT gzip(int8send(naksha_storage_number())||bytea_agg(tuple_number||int4send(flags)) AS rs FROM (SELECT tuple_number FROM (
+ *   (SELECT tuple_number, id FROM {collection} WHERE {condition})
  *   UNION ALL
- *   SELECT tuple_number FROM table2 WHERE ... LIMIT ...
+ *   (SELECT tuple_number, id FROM {collection} WHERE {condition})
  *   ...
- * )
- * SELECT gzip(bytea_agg(tuple_number)) FROM r LIMIT 1000000
+ * ) ORDER BY id, tuple_number) LIMIT 1000000;
  * ```
  * @since 3.0.0
  */
@@ -38,70 +39,30 @@ data class TupleNumberByteArray(
      * @see [fromGzip]
      * @since 3.0.0
      */
-    @JvmField val binary: ByteArray,
+    @JvmField val binary: ByteArray
+) {
+    private val view: PlatformDataView = Platform.newDataView(binary)
+    private val storageNumber: Int64 = if (binary.size >= 8) dataview_get_int64(view, 0) else FULL_VARIANT
+    private val entrySize: Int = if (storageNumber >= 0) 24 else 32
+    init {
+        // Ensure that no invalid state is produced!
+        if (binary.isNotEmpty() && ((binary.size - 8) % entrySize != 0)) {
+            throw NakshaException(ILLEGAL_ARGUMENT, "Invalid tuple-number array, must be a multiple of $entrySize byte plus 8")
+        }
+        if (storageNumber < -1) {
+            throw NakshaException(ILLEGAL_ARGUMENT, "Invalid tuple-number array, lead-in is invalid number: $storageNumber")
+        }
+    }
+    private val last: Int = if (binary.size < entrySize) 0 else binary.size - entrySize
 
     /**
-     * The storage-number to use, if the byte-array does not encode any.
-     * - Throws [NakshaError.ILLEGAL_ARGUMENT] If the storage-number is _null_, and no storage-number is encoded in the given byte-array, or the given array is not of a valid size.
+     * The amount of [tuple-numbers][TupleNumber] in the array.
      * @since 3.0.0
      */
-    @JvmField val storageNumber: Int64? = null
-) {
-    /**
-     * Create a tuple-number byte-array wrapper that comes from a specific storage.
-     * @param binary the byte-array to wrap.
-     * @param storage the storage that returned the byte-array.
-     */
-    @JsName("fromStorage")
-    constructor(binary: ByteArray, storage: IStorage): this(binary, storage.number)
-
-    private val view: PlatformDataView = Platform.newDataView(binary)
-    private val entrySize: Int = if (binary.size >= 24) {
-        val first_flags = dataview_get_int32(view, 20)
-        if (first_flags.storageNumber()) 32 else 24
-    } else 32
-    init {
-        if (binary.size % entrySize != 0) {
-            throw NakshaException(ILLEGAL_ARGUMENT, "Invalid tuple-number array, must be a multiple of $entrySize byte")
-        }
-        if (entrySize == 24 && storageNumber == null) {
-            throw NakshaException(ILLEGAL_ARGUMENT, "Invalid tuple-number array, does not encode storage-number")
-        }
-    }
-    private val last: Int = binary.size - entrySize
-    private fun storageNum(): Int64
-        = storageNumber ?: throw NakshaException(ILLEGAL_STATE, "No storage-number in encoding and constructor argument")
-
-    companion object TupleNumberByteArray_C {
-        /**
-         * Return a [TupleNumberByteArray] from a compressed byte-array.
-         * @param storage the storage from which the tuple-number is.
-         * @param compressed the compressed tuple-number array.
-         * @return the [TupleNumberByteArray].
-         * @since 3.0.0
-         */
-        @JvmStatic
-        @JsStatic
-        fun fromGzip(storage: IStorage, compressed: ByteArray): TupleNumberByteArray
-            = TupleNumberByteArray(Platform.gzipInflate(compressed), storage.number)
-    }
-
-    /**
-     * Returns the amount of row-ids in the array.
-     */
-    val size: Int
-        get() = binary.size / entrySize
+    val size: Int = if (binary.size < 8) 0 else (binary.size - 8) / entrySize
 
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun offset(index: Int): Int = index * entrySize
-
-    /**
-     * Tests if this byte-array encodes individual storage-numbers for each tuple-number, so each tuple-number is encoded in 256-bit, or all tuple-numbers are encoded storage local, that means they are encoded in 192-bit.
-     *
-     * If each tuple-number has an own storage-number, then the result-set comes possibly from different storages, but this is not guaranteed.
-     * @return _true_ if the underlying binary contains the storage-numbers; _false_ all come from the same storage.
-     */
-    fun encodesStorageNumber(): Boolean = entrySize == 32
+    private inline fun offset(index: Int): Int = 8 + index * entrySize
 
     /**
      * Returns the tuple-number from the given index.
@@ -116,8 +77,8 @@ data class TupleNumberByteArray(
         val version = Version(dataview_get_int64(view, offset + 8))
         val uid = dataview_get_int32(view, offset + 16)
         val flags = dataview_get_int32(view, offset + 20)
-        val storageNumber = if (entrySize == 32) dataview_get_int64(view, offset + 24) else storageNum()
-        return TupleNumber(storageNumber, storeNumber, version, uid, flags.storageNumber(false))
+        val storageNumber = if (entrySize == 32) dataview_get_int64(view, offset + 24) else storageNumber
+        return TupleNumber(storageNumber, storeNumber, version, uid, flags)
     }
 
     /**
@@ -129,7 +90,7 @@ data class TupleNumberByteArray(
     fun getStorageNumber(index: Int): Int64? {
         val offset = offset(index)
         if (offset < 0 || offset > last) return null
-        return if (entrySize == 32) dataview_get_int64(view, offset + 24) else storageNum()
+        return if (entrySize == 32) dataview_get_int64(view, offset + 24) else storageNumber
     }
 
     /**
@@ -219,4 +180,24 @@ data class TupleNumberByteArray(
     }
     override fun hashCode(): Int = binary.contentHashCode()
     override fun toString(): String = binary.contentToString()
+
+    companion object TupleNumberByteArray_C {
+        /**
+         * The encoding in the lead-in, when the storage-number is not shared, but coded individually for each [tuple-number][TupleNumber].
+         * @since 3.0.0
+         */
+        @JvmStatic
+        @JsStatic
+        val FULL_VARIANT = Int64(-1)
+
+        /**
+         * Return a [TupleNumberByteArray] from a compressed byte-array.
+         * @param compressed the compressed tuple-number array.
+         * @return the [TupleNumberByteArray].
+         * @since 3.0.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun fromGzip(compressed: ByteArray): TupleNumberByteArray = TupleNumberByteArray(Platform.gzipInflate(compressed))
+    }
 }

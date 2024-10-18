@@ -4,7 +4,7 @@ package naksha.model.request
 
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.model.FetchBits
+import naksha.model.FETCH_ALL
 import naksha.model.FetchMode
 import kotlin.js.JsExport
 
@@ -19,7 +19,7 @@ open class ReadRequest : Request() {
         private val BOOLEAN =
             NullableProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
         private val FETCH_MODE =
-            NotNullProperty<Request, FetchBits>(FetchBits::class) { _, _ -> FetchMode.FETCH_ALL }
+            NotNullProperty<Request, FetchMode>(FetchMode::class) { _, _ -> FETCH_ALL }
     }
 
     override fun defaultRowOptions(): ReturnColumns = ReturnColumns.all()
