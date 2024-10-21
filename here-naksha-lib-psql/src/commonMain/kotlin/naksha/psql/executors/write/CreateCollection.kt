@@ -7,6 +7,7 @@ import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.StoreMode
 import naksha.psql.*
 import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.WriteCollectionUtils.tupleOfCollection
@@ -43,7 +44,11 @@ class CreateCollection(
         collection.create(
             connection = session.usePgConnection(),
             partitions = feature.partitions,
-            storageClass = PgStorageClass.of(feature.storageClass)
+            storageClass = PgStorageClass.of(feature.storageClass),
+            indices = PgIndex.DEFAULT_INDICES,
+            storeHistory = feature.storeHistory != StoreMode.OFF,
+            storedDeleted = feature.storeDeleted != StoreMode.OFF,
+            storeMeta = feature.storeMeta != StoreMode.OFF
         )
         return tuple
     }

@@ -48,7 +48,7 @@ class PropertyFilterTest {
             val tuple = Tuple(
                 storage = mockStorage,
                 tupleNumber = tupleNumber,
-                Metadata(
+                meta = Metadata(
                     storeNumber = storeNumber,
                     updatedAt = Int64(0),
                     uid = 0,
@@ -59,13 +59,13 @@ class PropertyFilterTest {
                     type = null,
                     flags = flag,
                 ),
-                byteArray
+                feature = byteArray,
+                fetchBits = FetchBits().withId().withFeature().withMeta()
             )
             resultTuple = ResultTuple(
                 storage = mockStorage,
                 tupleNumber = tupleNumber,
                 op = ExecutedOp.READ,
-                featureId = null,
                 tuple = tuple
             )
         }

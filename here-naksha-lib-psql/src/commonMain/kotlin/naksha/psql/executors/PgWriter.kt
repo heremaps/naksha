@@ -1,15 +1,10 @@
 package naksha.psql.executors
 
 import naksha.base.Int64
-import naksha.base.PlatformUtil
-import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.model.objects.NakshaCollection
@@ -196,10 +191,11 @@ class PgWriter(
                         upsertCollection(mapOf(write), write)
                     )
 
-                    WriteOp.UPDATE -> cachedTupleNumber(
-                        write,
-                        updateCollection(mapOf(write), write)
-                    )
+                    WriteOp.UPDATE -> {
+                        val updatedTuple = updateCollection(mapOf(write), write)
+                        updatePrevTupleCache(updatedTuple)
+                        cachedTupleNumber(write, updatedTuple)
+                    }
 
                     WriteOp.DELETE, WriteOp.PURGE -> DropCollection(session).execute(
                         mapOf(write),
@@ -230,23 +226,10 @@ class PgWriter(
                                 InsertFeature(session, writeExecutor).execute(collection, write)
                             )
                         } else {
-                            cachedTupleNumber(
-                                write,
-                                UpdateFeature(
-                                    session,
-                                    previousMetadataProvider,
-                                    writeExecutor
-                                ).execute(collection, write)
-                            )
+                            updateFeature(collection, previousMetadataProvider, write)
                         }
 
-                    WriteOp.UPDATE -> cachedTupleNumber(
-                        write,
-                        UpdateFeature(session, previousMetadataProvider, writeExecutor).execute(
-                            collection,
-                            write
-                        )
-                    )
+                    WriteOp.UPDATE -> updateFeature(collection, previousMetadataProvider, write)
 
                     WriteOp.DELETE -> DeleteFeature(session, writeExecutor).execute(
                         collection,
@@ -285,6 +268,30 @@ class PgWriter(
         tuples[write.i] = tuple
         tupleCache.store(tuple)
         return tuple.tupleNumber
+    }
+
+    /**
+     * Updates previous version of tuple in cache - based on its previous txn.
+     */
+    private fun updatePrevTupleCache(newTuple: Tuple) {
+        val prevTupleNumber = newTuple.getPrevTupleNumber()
+        if (prevTupleNumber != null) {
+            val prevTuple = tupleCache[prevTupleNumber]
+            if (prevTuple != null) {
+                val updatedMeta = prevTuple.meta?.copy(nextVersion = newTuple.meta?.version)
+                tupleCache[prevTupleNumber] = prevTuple.copy(meta = updatedMeta)
+            }
+        }
+    }
+
+    private fun updateFeature(collection: PgCollection, previousMetadataProvider: ExistingMetadataProvider, write: WriteExt): TupleNumber {
+        val updatedTuple = UpdateFeature(
+            session,
+            previousMetadataProvider,
+            writeExecutor
+        ).execute(collection, write)
+        updatePrevTupleCache(updatedTuple)
+        return cachedTupleNumber(write, updatedTuple)
     }
 
     private fun mapOf(write: WriteExt): PgMap {
