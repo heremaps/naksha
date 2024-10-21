@@ -5,7 +5,7 @@ package naksha.model
 import naksha.base.ListProxy
 import naksha.base.NormalizerForm
 import naksha.base.Platform
-import naksha.model.TagNormalizer.normalizeTag
+import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic

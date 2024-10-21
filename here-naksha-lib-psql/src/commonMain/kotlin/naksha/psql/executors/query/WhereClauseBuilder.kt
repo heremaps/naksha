@@ -75,7 +75,7 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         }
     }
 
-    private tailrec fun whereNestedSpatial(spatial: ISpatialQuery) {
+    private fun whereNestedSpatial(spatial: ISpatialQuery) {
         when (spatial) {
             is SpNot -> not(
                 subClause = spatial.query,
@@ -122,7 +122,7 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         }
     }
 
-    private tailrec fun whereNestedMetadata(metaQuery: IMetaQuery) {
+    private fun whereNestedMetadata(metaQuery: IMetaQuery) {
         when (metaQuery) {
             is MetaNot -> not(
                 subClause = metaQuery.query,
@@ -176,7 +176,7 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         }
     }
 
-    private tailrec fun whereNestedTags(tagQuery: ITagQuery) {
+    private fun whereNestedTags(tagQuery: ITagQuery) {
         when (tagQuery) {
             is TagNot -> not(tagQuery.query, this::whereNestedTags)
             is TagOr -> or(tagQuery.filterNotNull(), this::whereNestedTags)

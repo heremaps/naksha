@@ -3,7 +3,7 @@
 package naksha.model
 
 import naksha.base.*
-import naksha.model.TagNormalizer.normalizeTag
+import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
 import kotlin.DeprecationLevel.WARNING
 import kotlin.js.JsExport
 import kotlin.js.JsStatic

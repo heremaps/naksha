@@ -4,8 +4,8 @@ import naksha.base.NormalizerForm
 import naksha.base.NormalizerForm.NFD
 import naksha.base.NormalizerForm.NFKC
 import naksha.base.Platform
-import naksha.model.TagNormalizer.normalizeTag
-import naksha.model.TagNormalizer.splitNormalizedTag
+import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
+import naksha.model.TagNormalizer.TagNormalizer_C.splitNormalizedTag
 
 /**
  * An object used for Tag normalization and splitting.
@@ -34,7 +34,7 @@ import naksha.model.TagNormalizer.splitNormalizedTag
  *
  * By default, (if no special prefix is found) tag is normalized with NFD, lowercased, cleaned of non-ASCII and splittable.
  */
-object TagNormalizer {
+class TagNormalizer private constructor() {
     private data class TagProcessingPolicy(
         val normalizerForm: NormalizerForm,
         val removeNonAscii: Boolean,
@@ -42,67 +42,88 @@ object TagNormalizer {
         val split: Boolean
     )
 
-    private val DEFAULT_POLICY = TagProcessingPolicy(NFD, removeNonAscii = true, lowercase = true, split = true)
-    private val PREFIX_TO_POLICY = mapOf(
-        "@" to TagProcessingPolicy(NFKC, removeNonAscii = false, lowercase = false, split = true),
-        "ref_" to TagProcessingPolicy(NFKC, removeNonAscii = false, lowercase = false, split = false),
-        "sourceID" to TagProcessingPolicy(NFKC, removeNonAscii = false, lowercase = false, split = false),
-        "~" to TagProcessingPolicy(NFD, removeNonAscii = true, lowercase = false, split = true),
-        "#" to TagProcessingPolicy(NFD, removeNonAscii = true, lowercase = false, split = true)
-    )
+    companion object TagNormalizer_C {
+        private val DEFAULT_POLICY =
+            TagProcessingPolicy(NFD, removeNonAscii = true, lowercase = true, split = true)
+        private val PREFIX_TO_POLICY = mapOf(
+            "@" to TagProcessingPolicy( NFKC, removeNonAscii = false, lowercase = false, split = true),
+            "ref_" to TagProcessingPolicy( NFKC, removeNonAscii = false, lowercase = false, split = false),
+            "sourceID" to TagProcessingPolicy( NFKC, removeNonAscii = false, lowercase = false, split = false),
+            "~" to TagProcessingPolicy(NFD, removeNonAscii = true, lowercase = false, split = true),
+            "#" to TagProcessingPolicy(NFD, removeNonAscii = true, lowercase = false, split = true)
+        )
 
-    private val PRINTABLE_ASCII_CODES = 32..128
+        private val AS_IS: CharArray = CharArray(128 - 32) { (it + 32).toChar() }
+        private val TO_LOWER: CharArray = CharArray(128 - 32) { (it + 32).toChar().lowercaseChar() }
 
-    /**
-     * Main method for raw tag normalization. See[TagNormalizer] doc for more
-     */
-    fun normalizeTag(tag: String): String {
-        val policy = policyFor(tag)
-        var normalized = Platform.normalize(tag, policy.normalizerForm)
-        normalized = if (policy.lowercase) normalized.lowercase() else normalized
-        normalized = if (policy.removeNonAscii) removeNonAscii(normalized) else normalized
-        return normalized
-    }
-
-    /**
-     * Main method for normalized tag splitting. See[TagNormalizer] doc for more
-     */
-    fun splitNormalizedTag(normalizedTag: String): Pair<String, Any?> {
-        if (!policyFor(normalizedTag).split) {
-            return normalizedTag to null
-        }
-        val i = normalizedTag.indexOf('=')
-        val key: String
-        val value: Any?
-        if (i > 1) {
-            if (normalizedTag[i - 1] == ':') { // :=
-                key = normalizedTag.substring(0, i - 1).trim()
-                val raw = normalizedTag.substring(i + 1).trim()
-                value = if ("true".equals(raw, ignoreCase = true)) {
-                    true
-                } else if ("false".equals(raw, ignoreCase = true)) {
-                    false
+        /**
+         * Main method for raw tag normalization. See[TagNormalizer] doc for more
+         */
+        fun normalizeTag(tag: String): String {
+            val policy = policyFor(tag)
+            val normalized = Platform.normalize(tag, policy.normalizerForm)
+            return if (policy.lowercase) {
+                if (policy.removeNonAscii) {
+                    removeNonAscii(normalized, TO_LOWER)
                 } else {
-                    raw.toDouble()
+                    normalized.lowercase()
+                }
+            } else if (policy.removeNonAscii){
+                removeNonAscii(normalized, AS_IS)
+            } else {
+                normalized
+            }
+        }
+
+        private fun removeNonAscii(input: String, outputCharacterSet: CharArray): String {
+            val sb = StringBuilder()
+            for (element in input) {
+                val c = (element.code - 32).toChar()
+                if (c.code < outputCharacterSet.size) {
+                    sb.append(outputCharacterSet[c.code])
+                }
+            }
+            return sb.toString()
+        }
+
+
+        /**
+         * Main method for normalized tag splitting. See[TagNormalizer] doc for more
+         */
+        fun splitNormalizedTag(normalizedTag: String): Pair<String, Any?> {
+            if (!policyFor(normalizedTag).split) {
+                return normalizedTag to null
+            }
+            val i = normalizedTag.indexOf('=')
+            val key: String
+            val value: Any?
+            if (i > 1) {
+                if (normalizedTag[i - 1] == ':') { // :=
+                    key = normalizedTag.substring(0, i - 1).trim()
+                    val raw = normalizedTag.substring(i + 1).trim()
+                    value = if ("true".equals(raw, ignoreCase = true)) {
+                        true
+                    } else if ("false".equals(raw, ignoreCase = true)) {
+                        false
+                    } else {
+                        raw.toDouble()
+                    }
+                } else {
+                    key = normalizedTag.substring(0, i).trim()
+                    value = normalizedTag.substring(i + 1).trim()
                 }
             } else {
-                key = normalizedTag.substring(0, i).trim()
-                value = normalizedTag.substring(i + 1).trim()
+                key = normalizedTag
+                value = null
             }
-        } else {
-            key = normalizedTag
-            value = null
+            return key to value
         }
-        return key to value
-    }
 
-    private fun removeNonAscii(text: String) =
-        text.filter { it.code in PRINTABLE_ASCII_CODES }
-
-    private fun policyFor(tag: String): TagProcessingPolicy {
-        return PREFIX_TO_POLICY.entries
-            .firstOrNull { (prefix, _) -> tag.startsWith(prefix, ignoreCase = true) }
-            ?.value
-            ?: DEFAULT_POLICY
+        private fun policyFor(tag: String): TagProcessingPolicy {
+            for ((prefix, policy) in PREFIX_TO_POLICY) {
+                if (tag.startsWith(prefix)) return policy
+            }
+            return DEFAULT_POLICY
+        }
     }
 }

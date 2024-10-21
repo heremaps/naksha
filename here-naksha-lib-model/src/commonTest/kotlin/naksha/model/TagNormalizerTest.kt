@@ -1,6 +1,5 @@
-package naksha.psql
+package naksha.model
 
-import naksha.model.TagNormalizer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
