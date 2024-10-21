@@ -295,5 +295,21 @@ class NakshaCache private constructor() {
             val cache = ref?.deref() ?: return null
             return cache.remove(tupleNumber)
         }
+
+        /**
+         * A helper to clear caches, this method should be called by the host ones in a while, like ones every 15 minutes, using a dedicated background job. It helps to remove garbage from the caches (remainders that are not weak-references, when the counterparts have been collection).
+         *
+         * @since 3.0.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun gc() {
+            for ((key, cache_ref) in tupleCacheByStorageNumber) {
+                val cache = cache_ref.deref()
+                if (cache == null) {
+                    tupleCacheByStorageNumber.remove(key, cache_ref)
+                } else cache.gc()
+            }
+        }
     }
 }
