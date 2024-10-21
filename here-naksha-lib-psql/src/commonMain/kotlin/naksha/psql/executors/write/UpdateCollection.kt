@@ -1,8 +1,5 @@
 package naksha.psql.executors.write
 
-import naksha.base.Int64
-import naksha.base.PlatformUtil
-import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
 import naksha.model.objects.NakshaCollection
@@ -11,8 +8,9 @@ import naksha.psql.*
 import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.WriteCollectionUtils.tupleOfCollection
 import naksha.psql.executors.write.WriteFeatureUtils.allColumnValues
+import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
 
-class CreateCollection(
+class UpdateCollection(
     private val session: PgSession
 ) {
 
@@ -20,14 +18,21 @@ class CreateCollection(
         // Note: write.collectionId is always naksha~collections!
         val feature = write.feature?.proxy(NakshaCollection::class) ?: throw NakshaException(
             NakshaError.ILLEGAL_ARGUMENT,
-            "CREATE without feature"
+            "UPDATE without collection as feature"
         )
-        val colId = write.featureId ?: PlatformUtil.randomString()
-        val collectionNumber = newCollectionNumber(map)
-        val tupleNumber = newCollectionTupleNumber(map, collectionNumber)
+        require(write.featureId != null) {
+            "Feature id not given"
+        }
+        val colId = write.featureId!!
+//        val cursor = readTupleInVirtualCollection(colId)
+//        cursor.get<String>("")
         val tuple = tupleOfCollection(
             session = session,
-            tupleNumber = tupleNumber,
+            tupleNumber = newFeatureTupleNumber(
+                map.collections(),
+                colId,
+                session
+            ),
             feature = feature,
             attachment = write.attachment,
             featureId = colId,
@@ -35,8 +40,8 @@ class CreateCollection(
             encodingDict = map.encodingDict(colId, feature)
         )
 
-        // insert row into naksha~collections before creating tables
-        executeInsert(VIRT_COLLECTIONS_QUOTED, tuple, feature)
+        // update the entry in naksha~collections
+        updateVirtualCollection(tuple, feature)
 
         // Create the tables
         val collection = map[colId]
@@ -48,39 +53,28 @@ class CreateCollection(
         return tuple
     }
 
-    private fun executeInsert(
-        quotedCollectionId: String,
+//    private fun readTupleInVirtualCollection(collectionId: String): PgCursor {
+//        val conn = session.usePgConnection()
+//        val cursor = conn.execute(
+//            sql = """ SELECT (${PgColumn.allColumns.joinToString(",")}) FROM $VIRT_COLLECTIONS_QUOTED
+//                WHERE ${PgColumn.id} = '${collectionId}'
+//                      """.trimIndent(),
+//        )
+//        conn.close()
+//        return cursor
+//    }
+
+    private fun updateVirtualCollection(
         tuple: Tuple,
         feature: NakshaFeature
     ) {
         val transaction = session.transaction()
         val conn = session.usePgConnection()
         conn.execute(
-            sql = """ INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})
+            sql = """ INSERT INTO $VIRT_COLLECTIONS_QUOTED(${PgColumn.allWritableColumns.joinToString(",")})
                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
                       """.trimIndent(),
             args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
         ).close()
     }
-
-    /**
-     * Creates a new tuple-number for a new collection (to be created).
-     * @param map the map in which the collection is stored.
-     * @param collectionNumber the collection-number of the collection.
-     * @return a new tuple-number.
-     */
-    private fun newCollectionTupleNumber(map: PgMap, collectionNumber: Int64): TupleNumber =
-        TupleNumber(StoreNumber(map.number, collectionNumber, 0), session.version(), newUid())
-
-    /**
-     * Generate a new collection-number.
-     * @param map the map in which to create a new map.
-     * @return the new collection-number of the new collection.
-     */
-    fun newCollectionNumber(map: PgMap): Int64 = map.newCollectionNumber(session.usePgConnection())
-
-    /**
-     * Returns a new `uid` for a new tuple.
-     */
-    private fun newUid(): Int = session.uid.getAndAdd(1)
 }
