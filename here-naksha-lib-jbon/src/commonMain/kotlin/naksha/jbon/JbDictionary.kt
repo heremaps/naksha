@@ -2,6 +2,15 @@ package naksha.jbon
 
 import kotlin.js.JsExport
 
+// TODO: Implement IDict
+// TODO: Create a JbDictBuilder, that implements IDictBuilder and change JbEncoder to use an IDictBuilder for the local dictionary!
+// TODO: We should improve the JbEncoder, so that it can better compress using global and local dictionaries.
+// TODO: We should be able to detect not only strings, but as well objects in dictionaries.
+// TODO: We need to add compression level to encoder, if high, we should try to insert whole objects into local dictionaries.
+// TODO: We need a training mode, so that we can create an dictionary build, then use the encoder to try to insert all objects
+//       into the global dictionary, count the number of times we find them, then eventually, reorder the global dictionary and
+//       compact it, so that we get the best compression.
+
 /**
  * A dictionary reader.
  * @constructor Create a new dictionary reader.

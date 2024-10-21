@@ -6,24 +6,27 @@ import naksha.base.AtomicMap
 import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.WeakRef
+import naksha.jbon.IDictManager
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
-import naksha.model.NakshaError.NakshaErrorCompanion.TUPLE_CODEC_NOT_FOUND
+import naksha.model.NakshaError.NakshaErrorCompanion.DICT_MANAGER_NOT_FOUND
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 /**
- * All kind of global caches.
+ * A global cache that holds [storages][IStorage], [dictionary-managers][IDictManager], and [Tuple].
+ *
+ * As long as a [tuples][Tuple] does not require a global (shared) dictionary, it can be decoded and encoded using [decodeTuple][Naksha.decodeTuple] or [encodeTuple][Naksha.encodeTuple] without any further needs. As soon as a [Tuple] requires a global (shared) dictionary, or a [Tuple] should be encoded optimised for a specific [storage][IStorage], the encoder/decoder will query for the [dictionary-manager][IDictManager] in this cache via [getDictManager] or [useDictManager]. In the case of encoding, a missing [dictionary-manager][IDictManager] will only increase the size of the encoding with no other harm. When decoding, a missing [dictionary-manager][IDictManager] will raise an [DICT_MANAGER_NOT_FOUND] exception. So, if a [Tuple] is read from some cache, and the corresponding origin [storage][IStorage] is not available, then the managing application should register some own [dictionary-manager][IDictManager], so that the corresponding dictionary can be read from the cache too.
  * @since 3.0.0
  */
 @JsExport
 class NakshaCache private constructor() {
     companion object PgCache_C {
         private val lock = Platform.newLock()
-        private val tupleCodecByStoreNumber = AtomicMap<Int64, ITupleCodec>()
+        private val dictManagerByStoreNumber = AtomicMap<Int64, IDictManager>()
         private val storagesById = AtomicMap<String, IStorage>()
         private val storagesByNumber = AtomicMap<Int64, IStorage>()
         private val tupleCacheByStorageNumber = AtomicMap<Int64, WeakRef<TupleCache>>()
@@ -111,67 +114,64 @@ class NakshaCache private constructor() {
             ?: throw NakshaException(STORAGE_NOT_FOUND, "No storage found for storage-number: $storageNumber", id=storageNumber.toString())
 
         /**
-         * Add the given [ITupleCodec] into the cache, so that tuples loaded from this storage can be encoded and decoded.
-         * @param storageNumber the storage-number for which to add a specific [ITupleCodec].
-         * @param tupleCodec the [ITupleCodec] to add.
-         * @return the given [ITupleCodec].
+         * Add the given [dictionary-manager][IDictManager] into the cache, so that tuples loaded from this storage can be encoded and decoded.
+         * @param storageNumber the storage-number for which to add a specific [dictionary-manager][IDictManager].
+         * @param dictManager the [dictionary-manager][IDictManager] to add.
+         * @return the given [dictionary-manager][IDictManager].
          * @since 3.0.0
          */
         @JvmStatic
         @JsStatic
-        fun addTupleCodec(storageNumber: Int64, tupleCodec: ITupleCodec): ITupleCodec {
+        fun addDictManager(storageNumber: Int64, dictManager: IDictManager): IDictManager {
             lock.acquire().use {
-                val existing = tupleCodecByStoreNumber.putIfAbsent(storageNumber, tupleCodec)
+                val existing = dictManagerByStoreNumber.putIfAbsent(storageNumber, dictManager)
                 if (existing != null) {
-                    if (existing === tupleCodec) return tupleCodec // This codec was already added.
-                    throw NakshaException(ILLEGAL_STATE, "Another codec is already registered for the same storage-number: $storageNumber")
+                    if (existing === dictManager) return dictManager // This codec was already added.
+                    throw NakshaException(ILLEGAL_STATE, "Another dictionary-manager is already registered for the same storage-number: $storageNumber")
                 }
-                tupleCodecByStoreNumber[storageNumber] = tupleCodec
+                dictManagerByStoreNumber[storageNumber] = dictManager
             }
+            return dictManager
+        }
+
+        /**
+         * Remove the given [dictionary-manager][IDictManager] from the cache.
+         * @param storageNumber the storage-number for which the [IDictManager] was added.
+         * @param tupleCodec the [dictionary-manager][IDictManager] to remove.
+         * @return the given [dictionary-manager][IDictManager].
+         */
+        @JvmStatic
+        @JsStatic
+        fun removeDictManager(storageNumber: Int64, tupleCodec: IDictManager): IDictManager {
+            dictManagerByStoreNumber.remove(storageNumber, tupleCodec)
             return tupleCodec
         }
 
         /**
-         * Remove the given [ITupleCodec] from the cache.
-         * @param storageNumber the storage-number for which the [ITupleCodec] was added.
-         * @param tupleCodec the [ITupleCodec] to remove.
-         * @return the given [ITupleCodec].
-         */
-        @JvmStatic
-        @JsStatic
-        fun removeTupleCodec(storageNumber: Int64, tupleCodec: ITupleCodec): ITupleCodec {
-            tupleCodecByStoreNumber.remove(storageNumber, tupleCodec)
-            return tupleCodec
-        }
-
-        /**
-         * Returns the tuple-codec for the given storage-number.
+         * Returns the [dictionary-manager][IDictManager] for the given storage-number.
          * @param storageNumber the storage-number.
-         * @return the [ITupleCodec], if any is available.
+         * @return the [IDictManager], if any is available.
          * @since 3.0.0
          */
         @JvmStatic
         @JsStatic
-        fun getTupleCodec(storageNumber: Int64): ITupleCodec? {
-            val codec = getStorage(storageNumber)
-            return codec ?: tupleCodecByStoreNumber[storageNumber]
-        }
+        fun getDictManager(storageNumber: Int64): IDictManager? = dictManagerByStoreNumber[storageNumber]
 
         /**
-         * Returns the tuple-codec for the given storage-number.
-         * - Throws [NakshaError.TUPLE_CODEC_NOT_FOUND], if no such codec is found.
+         * Returns the [dictionary-manager][IDictManager] for the given storage-number. If no dedicated [dictionary-manager][IDictManager] is registered, queries for the [storage][IStorage] and returns this. If neither is available, throws an [NakshaError.DICT_MANAGER_NOT_FOUND].
+         *
+         * To not throw an exception, this can be replaced with:
+         *
+         * `getDictManager(storageNumber) ?: getStorage(storageNumber)`
          * @param storageNumber the storage-number.
-         * @return the [ITupleCodec], if any is available.
+         * @return the [IDictManager], if any is available.
          * @since 3.0.0
          */
         @JvmStatic
         @JsStatic
-        fun useTupleCodec(storageNumber: Int64): ITupleCodec {
-            val codec = getStorage(storageNumber)
-            return codec
-                ?: tupleCodecByStoreNumber[storageNumber]
-                ?: throw NakshaException(TUPLE_CODEC_NOT_FOUND, "No codec for storage-number $storageNumber")
-        }
+        fun useDictManager(storageNumber: Int64): IDictManager =
+            dictManagerByStoreNumber[storageNumber] ?: getStorage(storageNumber)
+            ?: throw NakshaException(DICT_MANAGER_NOT_FOUND, "No dictionary-manager for storage-number $storageNumber")
 
         /**
          * Store the given tuple in the cache.

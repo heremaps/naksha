@@ -57,12 +57,14 @@ kotlin {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(project(":here-naksha-lib-base"))
                 implementation("org.locationtech.jts:jts-core:1.19.0")
+                implementation("org.locationtech.jts.io:jts-io-common:1.19.0")
             }
             resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }
         jvmTest {
             dependencies {
                 implementation(kotlin("test"))
+                implementation("org.locationtech.jts:jts-core:1.19.0")
                 implementation("org.locationtech.jts.io:jts-io-common:1.19.0")
                 implementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
                 runtimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")

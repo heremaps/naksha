@@ -5,8 +5,10 @@ import naksha.geo.SpBoundingBox
 import naksha.geo.SpFeature
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
+import naksha.model.Naksha
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaException
+import naksha.model.Tuple
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic

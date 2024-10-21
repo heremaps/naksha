@@ -2,17 +2,18 @@
 
 package naksha.model
 
+import naksha.jbon.IDictManager
 import kotlin.js.JsExport
 
 /**
  * Abstract interface to a map administrative object.
  *
- * The [ITupleCodec] of a map normally accepts as context either an [ICollection], the collection-number ([Int64][naksha.base.Int64]), or the -id ([String]) of the collection into which to store the given feature.
+ * The [IDictManager] of a map normally accepts in [getEncodingDictionary(feature, context)][IDictManager.getEncodingDictionary] either an [ICollection], the [number][ICollection.number], or the [id][ICollection.id] of the collection as context.
  * @since 3.0.0
  */
 @v30_experimental
 @JsExport
-interface IMap : ITupleCodec {
+interface IMap : IDictManager {
     /**
      * The storage in which the map is located.
      * @since 3.0.0

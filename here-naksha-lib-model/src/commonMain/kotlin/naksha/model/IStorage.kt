@@ -3,6 +3,7 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.jbon.IDictManager
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -11,12 +12,12 @@ import kotlin.js.JsName
  *
  * Storages operate on maps. A map is an isolated data sink within the same storage (like an own database schema, an own S3 bucket, an own SQLite database, an own directory or file, aso.). Some implementations only support one map, but if multiple maps are supported, a map is a fully separated storage entity. Each map has its own collections, while the transaction log, dictionaries, and other administrative information are stored in an own virtual map named `naksha~admin`. Some storages allow to access multiple maps from one session, others may limit a session to a single map.
  *
- * The [ITupleCodec] implementation of a storage normally accepts as context [IMap] or [ICollection]. Providing a map-number, map-id, collection-number or collection-id would be ambiguous, because it would not be clear if a map is referred to, or a collection. The implementation may automatically resolve such ambiguity in any way or simply ignore such a context. Therefore, it is recommended to provide the instances, rather than the number or id.
+ * The [IDictManager] implementation of a storage normally accepts for [getEncodingDictionary(feature, context)][IDictManager.getEncodingDictionary] [IMap] or [ICollection] as context. Providing a map-number, map-id, collection-number or collection-id would be ambiguous, because it would not be clear if a map is referred to, or a collection. The implementation may automatically resolve such ambiguity in any way or simply ignore such a context. Therefore, it is recommended to provide the instances, rather than the number or id.
  *
  * @since 2.0.7
  */
 @JsExport
-interface IStorage : ITupleCodec, AutoCloseable {
+interface IStorage : IDictManager, AutoCloseable {
 
     /**
      * The storage-number, managed by environment, optionally stored in the storage, must always be the same for the same physical storage.

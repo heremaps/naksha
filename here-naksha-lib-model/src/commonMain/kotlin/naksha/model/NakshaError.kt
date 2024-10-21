@@ -213,11 +213,11 @@ open class NakshaError() : AnyObject() {
         const val MAP_NOT_FOUND = "MapNotFound"
 
         /**
-         * A [ITupleCodec] does not exist, but is expected to exist.
+         * A [dictionary-manager][naksha.jbon.IDictManager] does not exist, but is expected to exist.
          *
          * @since 3.0.0
          */
-        const val TUPLE_CODEC_NOT_FOUND = "TupleCodecNotFound"
+        const val DICT_MANAGER_NOT_FOUND = "DictManagerNotFound"
 
         /**
          * A [IStorage] does not exist, but is expected to exist.

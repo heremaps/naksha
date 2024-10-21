@@ -112,6 +112,7 @@ data class Metadata(
          * @param xyz the [XYZ namespace][XyzNs].
          * @return the [Metadata] created from it.
          * @since 3.0.0
+         * @see [XyzNs.fromMetadata]
          */
         @JvmStatic
         @JsStatic

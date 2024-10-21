@@ -3,6 +3,7 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.model.NakshaError.NakshaErrorCompanion.DICT_MANAGER_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.NakshaFeature
@@ -57,10 +58,10 @@ data class Tuple(
     /**
      * The bits about which parts of the tuple have been fetched.
      *
-     * If the client wants to create a tuple for internal purpose or to write a new state into a storage, then it should use [FETCH_ALL].
+     * If the client wants to create a tuple for internal purpose or to write a new state into a storage, then it should use [IS_COMPLETE].
      * @since 3.0.0
      */
-    @JvmField val state: FetchMode,
+    @JvmField val state: FetchState,
 ) : ITuple {
 
     override fun equals(other: Any?): Boolean {
@@ -69,6 +70,13 @@ data class Tuple(
     }
 
     override fun hashCode(): Int = super.hashCode()
+
+    /**
+     * Return the [tuple-number][TupleNumber] of the [Tuple].
+     * @since 3.0.0
+     */
+    val tupleNumber: TupleNumber
+        get() = meta.tupleNumber()
 
     /**
      * Return the number of the storage in which the tuple is stored.
@@ -99,23 +107,18 @@ data class Tuple(
         get() = meta.storeNumber.partitionNumber()
 
     /**
-     * Convert the tuple into a [Naksha feature][NakshaFeature], using the [NakshaCache] to query for the [tuple-codec][ITupleCodec].
+     * Convert the tuple into a [Naksha feature][NakshaFeature], using the [NakshaCache] to query for the [dictionary-manager][naksha.jbon.IDictManager].
      *
      * There is no caching involved, every call of this method will perform another convertion.
-     *
-     * - Throws [NakshaError.ILLEGAL_STATE], if the storage-number of the tuple can't be resolved into a [codec][ITupleCodec].
      * @return this tuple as Naksha feature.
+     * @see [Naksha.decodeTuple]
      */
-    fun toNakshaFeature(): NakshaFeature {
-        val tupleCodec = NakshaCache.getTupleCodec(meta.storageNumber)
-            ?: throw NakshaException(ILLEGAL_STATE, "Failed to find tuple-codec in NakshaCache for storage-number ${meta.storageNumber}")
-        return tupleCodec.tupleToFeature(this)
-    }
+    fun toNakshaFeature(): NakshaFeature = Naksha.decodeTuple(this)
 
     private var guid: Guid? = null
 
     /**
-     * Return the [Guid] for this tuple, requires that [meta] is not _null_, otherwise throws a [NakshaError.ILLEGAL_STATE].
+     * Return the [Guid] for this tuple, requires that [fetchMeta] is not _null_, otherwise throws a [NakshaError.ILLEGAL_STATE].
      * @return the [Guid] of this tuple.
      */
     fun toGuid(): Guid {
@@ -143,10 +146,10 @@ data class Tuple(
         if (meta != other.meta) throw NakshaException(ILLEGAL_ARGUMENT, "Can't merge two different tuples")
         val meta = this.meta
         val nextVersion = meta.nextVersion ?: other.meta.nextVersion
-        if (state.isComplete() && meta.nextVersion == nextVersion) {
+        if (state.fetchAll() && meta.nextVersion == nextVersion) {
             return this
         }
-        if (other.state.isComplete() && other.meta.nextVersion == nextVersion) {
+        if (other.state.fetchAll() && other.meta.nextVersion == nextVersion) {
             return other
         }
         val newMeta = if (meta.nextVersion == nextVersion) {
@@ -171,7 +174,7 @@ data class Tuple(
      * Tests if the tuple is fetched completely.
      * @return _true_, when the tuple is fully fetched; _false_ if parts are missing.
      */
-    fun isComplete(): Boolean = state.isComplete()
+    fun isComplete(): Boolean = state.fetchAll()
 
     override fun toTuple(): Tuple = this
 }

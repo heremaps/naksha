@@ -46,6 +46,7 @@ class XyzNs : AnyObject() {
          * Create the XZY-namespace from the given [Metadata].
          * @param meta the [Metadata]
          * @return the [XYZ namespace][XyzNs].
+         * @see [Metadata.fromXyzNs]
          */
         @JvmStatic
         @JsStatic

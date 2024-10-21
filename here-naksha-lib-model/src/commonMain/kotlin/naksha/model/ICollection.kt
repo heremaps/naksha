@@ -2,6 +2,7 @@
 
 package naksha.model
 
+import naksha.jbon.IDictManager
 import naksha.model.objects.NakshaCollection
 import kotlin.js.JsExport
 
@@ -10,12 +11,12 @@ import kotlin.js.JsExport
  *
  * When you need to manage a collection, you should create a [naksha.model.request.WriteRequest].
  *
- * The [ITupleCodec] of a collection normally ignores the context, because the context is quite clear.
+ * The [IDictManager] of a collection normally ignores the context, when calling [getEncodingDictionary(feature, context)][IDictManager.getEncodingDictionary] because the context is quite clear.
  * @since 3.0.0
  */
 @v30_experimental
 @JsExport
-interface ICollection : ITupleCodec {
+interface ICollection : IDictManager {
     /**
      * The map in which the collection is located.
      * @since 3.0.0
