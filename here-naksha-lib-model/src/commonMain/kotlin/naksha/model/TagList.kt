@@ -3,7 +3,9 @@
 package naksha.model
 
 import naksha.base.ListProxy
-import naksha.model.XyzNs.XyzNsCompanion.normalizeTag
+import naksha.base.NormalizerForm
+import naksha.base.Platform
+import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -22,21 +24,6 @@ open class TagList() : ListProxy<String>(String::class) {
     @JsName("of")
     constructor(vararg tags: String): this() {
         addTags(listOf(*tags), false)
-    }
-
-    companion object TagList_C {
-        /**
-         * Create a tag list from the given array; the tags are normalized.
-         * @param tags the tags.
-         * @return the tag-list.
-         */
-        @JvmStatic
-        @JsStatic
-        fun fromArray(tags: Array<String>): TagList {
-            val list = TagList()
-            list.addAndNormalizeTags(*tags)
-            return list
-        }
     }
 
     /**
@@ -161,9 +148,44 @@ open class TagList() : ListProxy<String>(String::class) {
         return this
     }
 
+
     /**
      * Convert this tag-list into a tag-map.
      * @return this tag-list as tag-map.
      */
     fun toTagMap(): TagMap = TagMap(this)
+
+    companion object TagList_C {
+        /**
+         * Create a tag list from the given array; the tags are normalized.
+         * @param tags the tags.
+         * @return the tag-list.
+         */
+        @JvmStatic
+        @JsStatic
+        fun fromArray(tags: Array<String>): TagList {
+            val list = TagList()
+            list.addAndNormalizeTags(*tags)
+            return list
+        }
+
+        /**
+         * A method to normalize a list of tags.
+         *
+         * @param tags a list of tags.
+         * @return the same list, just that the content is normalized.
+         */
+        @JvmStatic
+        @JsStatic
+        fun normalizeTags(tags: TagList?): TagList? {
+            if (!tags.isNullOrEmpty()) {
+                for ((idx, tag) in tags.withIndex()) {
+                    if (tag != null) {
+                        tags[idx] = normalizeTag(tag)
+                    }
+                }
+            }
+            return tags
+        }
+    }
 }

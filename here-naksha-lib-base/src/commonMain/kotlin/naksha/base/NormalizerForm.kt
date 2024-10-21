@@ -4,7 +4,7 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * Please refer []Unicode Normalization Forms](https://www.unicode.org/reports/tr15/#Norm_Forms)
+ * Please refer [Unicode Normalization Forms](https://www.unicode.org/reports/tr15/#Norm_Forms)
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
