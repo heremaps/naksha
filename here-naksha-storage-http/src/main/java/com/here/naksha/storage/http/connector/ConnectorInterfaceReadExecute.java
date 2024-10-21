@@ -27,10 +27,7 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollecti
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.payload.Event;
 import com.here.naksha.lib.core.models.payload.events.PropertyQueryOr;
-import com.here.naksha.lib.core.models.payload.events.feature.GetFeaturesByBBoxEvent;
-import com.here.naksha.lib.core.models.payload.events.feature.GetFeaturesByIdEvent;
-import com.here.naksha.lib.core.models.payload.events.feature.GetFeaturesByTileEvent;
-import com.here.naksha.lib.core.models.payload.events.feature.QueryEvent;
+import com.here.naksha.lib.core.models.payload.events.feature.*;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
@@ -57,6 +54,7 @@ public class ConnectorInterfaceReadExecute {
           case GET_BY_IDS -> createFeaturesByIdsEvent(request);
           case GET_BY_BBOX -> createFeatureByBBoxEvent(request);
           case GET_BY_TILE -> createFeaturesByTileEvent(request);
+          case ITERATE -> createIterateEvent(request);
           default -> throw new IllegalStateException("Unexpected value: " + request.getReadRequestType());
         };
 
@@ -67,6 +65,10 @@ public class ConnectorInterfaceReadExecute {
     HttpResponse<byte[]> httpResponse = post(sender, jsonEvent);
 
     return PrepareResult.prepareResult(httpResponse, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
+  }
+
+  private static Event createIterateEvent(ReadFeaturesProxyWrapper request) {
+    return new IterateFeaturesEvent();
   }
 
   private static Event createFeaturesByIdsEvent(ReadFeaturesProxyWrapper request) {
@@ -119,7 +121,7 @@ public class ConnectorInterfaceReadExecute {
       boolean clip = readRequest.getQueryParameter(CLIP_GEO);
 
       GetFeaturesByTileEvent event = new GetFeaturesByTileEvent();
-      event.setMargin((int) margin); // TODO-a
+      event.setMargin((int) margin);
       event.setLimit(limit);
       event.setClip(clip);
       setPropertyOp(readRequest, event);
