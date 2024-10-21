@@ -65,11 +65,10 @@ class TagNormalizerTest {
         tagsToBeSplit.forEach { rawTag ->
             val expectedKey = rawTag.split(":")[0]
             val normalized = TagNormalizer.normalizeTag(rawTag)
-            val tag = TagNormalizer.splitNormalizedTag(normalized)
+            val (tagKey, tagValue) = TagNormalizer.splitNormalizedTag(normalized)
 
-            assertEquals(expectedKey, tag.key)
-            assertEquals(1235.0, tag.value)
-            assertEquals(rawTag, tag.tag)
+            assertEquals(expectedKey, tagKey)
+            assertEquals(1235.0, tagValue)
         }
     }
 
@@ -82,11 +81,10 @@ class TagNormalizerTest {
 
         tagsNotToBeSplit.forEach { rawTag ->
             val normalized = TagNormalizer.normalizeTag(rawTag)
-            val tag = TagNormalizer.splitNormalizedTag(normalized)
+            val (tagKey, tagValue) = TagNormalizer.splitNormalizedTag(normalized)
 
-            assertEquals(rawTag, tag.key)
-            assertEquals(null, tag.value)
-            assertEquals(rawTag, tag.tag)
+            assertEquals(rawTag, tagKey)
+            assertEquals(null, tagValue)
         }
     }
 }

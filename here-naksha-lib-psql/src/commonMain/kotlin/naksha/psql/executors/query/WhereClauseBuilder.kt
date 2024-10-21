@@ -63,7 +63,8 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
     }
 
     private fun whereSpatial() {
-        request.query.spatial?.let { spatialQuery ->
+        val spatialQuery = request.query.spatial
+        if (spatialQuery != null) {
             if (where.isNotEmpty()) {
                 where.append(" AND (")
             } else {
@@ -109,7 +110,8 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
     }
 
     private fun whereMetadata() {
-        request.query.metadata?.let { metaQuery ->
+        val metaQuery = request.query.metadata
+        if(metaQuery != null){
             if (where.isNotEmpty()) {
                 where.append(" AND (")
             } else {
@@ -162,7 +164,8 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
     }
 
     private fun whereTags() {
-        request.query.tags?.let { tagQuery ->
+        val tagQuery = request.query.tags
+        if(tagQuery != null){
             if (where.isNotEmpty()) {
                 where.append(" AND (")
             } else {

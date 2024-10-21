@@ -17,9 +17,7 @@ import naksha.model.TagNormalizer.splitNormalizedTag
  *
  * Normalization form used in step #1 and subsequent conditional steps depend on tag prefix.
  *
- *
  * Process of splitting happens in [splitNormalizedTag] method.
- * It is about splitting the normalized tag to [key, value] pair in form of [Tag]
  * Note that not all tags can be split, it depends on their prefix.
  *
  * Summarised per-prefix behavior:
@@ -69,9 +67,9 @@ object TagNormalizer {
     /**
      * Main method for normalized tag splitting. See[TagNormalizer] doc for more
      */
-    fun splitNormalizedTag(normalizedTag: String): Tag {
+    fun splitNormalizedTag(normalizedTag: String): Pair<String, Any?> {
         if (!policyFor(normalizedTag).split) {
-            return Tag.of(normalizedKey = normalizedTag, normalizedValue = null)
+            return normalizedTag to null
         }
         val i = normalizedTag.indexOf('=')
         val key: String
@@ -95,7 +93,7 @@ object TagNormalizer {
             key = normalizedTag
             value = null
         }
-        return Tag(normalizedTag, key, value)
+        return key to value
     }
 
     private fun removeNonAscii(text: String) =
