@@ -563,7 +563,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
                 _nakshaCollection.set(NakshaCollection(VIRT_DICTIONARIES, 0))
             }
             else -> {
-                conn.execute("SELECT ${PgStorage.ALL_COLUMNS} FROM $VIRT_COLLECTIONS_QUOTED WHERE id=$1", arrayOf(id)).use { cursor ->
+                conn.execute("SELECT ${PgColumn.fullSelect} FROM $VIRT_COLLECTIONS_QUOTED WHERE id=$1", arrayOf(id)).use { cursor ->
                     if (cursor.next()) {
                         val storage = map.storage
                         val readTuple = PgStorage.readTupleFromCursor(storage, cursor)

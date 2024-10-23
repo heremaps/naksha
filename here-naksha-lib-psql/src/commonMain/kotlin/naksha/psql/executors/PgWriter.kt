@@ -192,7 +192,7 @@ class PgWriter(
                     )
 
                     WriteOp.UPDATE -> {
-                        val updatedTuple = updateCollection(mapOf(write), write)
+                        val updatedTuple = UpdateCollection(session).execute(mapOf(write), write)
                         updatePrevTupleCache(updatedTuple)
                         cachedTupleNumber(write, updatedTuple)
                     }
@@ -311,10 +311,6 @@ class PgWriter(
             "No such collection: $collectionId"
         )
         return collection
-    }
-
-    internal fun updateCollection(map: PgMap, write: WriteExt): Tuple {
-        TODO("Implement me")
     }
 
     internal fun upsertCollection(map: PgMap, write: WriteExt): Tuple {

@@ -21,7 +21,7 @@ class UpdateCollection(
             "UPDATE without collection as feature"
         )
         require(write.featureId != null) {
-            "Feature id not given"
+            "Collection id not given"
         }
         val colId = write.featureId!!
 //        val cursor = readTupleInVirtualCollection(colId)
@@ -42,14 +42,6 @@ class UpdateCollection(
 
         // update the entry in naksha~collections
         updateVirtualCollection(tuple, feature)
-
-        // Create the tables
-        val collection = map[colId]
-        collection.create(
-            connection = session.usePgConnection(),
-            partitions = feature.partitions,
-            storageClass = PgStorageClass.of(feature.storageClass)
-        )
         return tuple
     }
 
@@ -71,10 +63,33 @@ class UpdateCollection(
         val transaction = session.transaction()
         val conn = session.usePgConnection()
         conn.execute(
-            sql = """ INSERT INTO $VIRT_COLLECTIONS_QUOTED(${PgColumn.allWritableColumns.joinToString(",")})
-                      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+            sql = """ UPDATE $VIRT_COLLECTIONS_QUOTED
+                      SET $1 = $24,
+                          $2 = $25,
+                          $3 = $26,
+                          $4 = $27,
+                          $5 = $28,
+                          $6 = $29,
+                          $7 = $30,
+                          $8 = $31,
+                          $9 = $32,
+                          $10 = $33,
+                          $11 = $34,
+                          $12 = $35,
+                          $13 = $36,
+                          $14 = $37,
+                          $15 = $38,
+                          $16 = $39,
+                          $17 = $40,
+                          $18 = $41,
+                          $19 = $42,
+                          $20 = $43,
+                          $21 = $44,
+                          $22 = $45,
+                          $23 = $46
+                      WHERE ${PgColumn.id} = '${feature.id}'
                       """.trimIndent(),
-            args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
+            args = arrayOf(*PgColumn.allWritableColumns.toTypedArray(),*allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn))
         ).close()
     }
 }

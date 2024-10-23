@@ -37,7 +37,7 @@ class CreateCollection(
         )
 
         // insert row into naksha~collections before creating tables
-        executeInsert(VIRT_COLLECTIONS_QUOTED, tuple, feature)
+        executeInsert(tuple, feature)
 
         // Create the tables
         val collection = map[colId]
@@ -54,14 +54,13 @@ class CreateCollection(
     }
 
     private fun executeInsert(
-        quotedCollectionId: String,
         tuple: Tuple,
         feature: NakshaFeature
     ) {
         val transaction = session.transaction()
         val conn = session.usePgConnection()
         conn.execute(
-            sql = """ INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})
+            sql = """ INSERT INTO $VIRT_COLLECTIONS_QUOTED(${PgColumn.allWritableColumns.joinToString(",")})
                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
                       """.trimIndent(),
             args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
