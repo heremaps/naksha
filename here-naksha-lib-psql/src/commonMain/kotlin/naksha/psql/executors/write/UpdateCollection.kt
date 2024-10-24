@@ -62,34 +62,17 @@ class UpdateCollection(
     ) {
         val transaction = session.transaction()
         val conn = session.usePgConnection()
+        val statement = StringBuilder("""UPDATE $VIRT_COLLECTIONS_QUOTED SET """)
+        PgColumn.allWritableColumns.forEachIndexed {
+            index, column ->
+                statement.append(column).append(" = $").append(index+1)
+                if (index+1 < PgColumn.allWritableColumns.size) statement.append(",")
+                statement.append("\n")
+        }
+        statement.append("WHERE ${PgColumn.id} = '${feature.id}'")
         conn.execute(
-            sql = """ UPDATE $VIRT_COLLECTIONS_QUOTED
-                      SET $1 = $24,
-                          $2 = $25,
-                          $3 = $26,
-                          $4 = $27,
-                          $5 = $28,
-                          $6 = $29,
-                          $7 = $30,
-                          $8 = $31,
-                          $9 = $32,
-                          $10 = $33,
-                          $11 = $34,
-                          $12 = $35,
-                          $13 = $36,
-                          $14 = $37,
-                          $15 = $38,
-                          $16 = $39,
-                          $17 = $40,
-                          $18 = $41,
-                          $19 = $42,
-                          $20 = $43,
-                          $21 = $44,
-                          $22 = $45,
-                          $23 = $46
-                      WHERE ${PgColumn.id} = '${feature.id}'
-                      """.trimIndent(),
-            args = arrayOf(*PgColumn.allWritableColumns.toTypedArray(),*allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn))
+            sql = statement.toString().trimIndent(),
+            args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
         ).close()
     }
 }
