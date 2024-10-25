@@ -97,7 +97,7 @@ class TagNormalizer private constructor() {
             val i = normalizedTag.indexOf('=')
             val key: String
             val value: Any?
-            if (i > 1) {
+            if (i >= 1) {
                 if (normalizedTag[i - 1] == ':') { // :=
                     key = normalizedTag.substring(0, i - 1).trim()
                     val raw = normalizedTag.substring(i + 1).trim()

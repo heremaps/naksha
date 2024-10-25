@@ -3,6 +3,7 @@ package naksha.psql
 import naksha.base.Int64
 import java.sql.Connection
 import java.sql.PreparedStatement
+import java.sql.SQLType
 import java.util.ArrayList
 import java.util.HashMap
 

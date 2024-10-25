@@ -68,6 +68,27 @@ class ReadFeaturesByTagsTest : PgTestBase(NakshaCollection("read_by_tags_test"))
     }
 
     @Test
+    fun shouldReturnFeaturesByBoolean(){
+        // Given:
+        val enabledFeatureA = randomFeatureWithTags("flag:=true")
+        val enabledFeatureB = randomFeatureWithTags("flag:=true")
+        val disabledFeature = randomFeatureWithTags("flag:=false")
+
+        // When:
+        insertFeatures(enabledFeatureA, enabledFeatureB, disabledFeature)
+
+        // And:
+        val enabledFeatures = executeTagsQuery(
+            TagValueIsBool(name = "flag", value = true)
+        ).features
+
+        // Then:
+        assertEquals(2, enabledFeatures.size)
+        val fetchedIds = enabledFeatures.map { it!!.id }
+        assertTrue(fetchedIds.containsAll(listOf(enabledFeatureA.id, enabledFeatureB.id)))
+    }
+
+    @Test
     fun shouldReturnFeaturesByTagRegex() {
         // Given:
         val featureFrom2024 = randomFeatureWithTags("year=2024")
@@ -148,7 +169,6 @@ class ReadFeaturesByTagsTest : PgTestBase(NakshaCollection("read_by_tags_test"))
 
         // And:
         insertFeatures(activeJohn, activeNick, inactiveJohn, oldAdmin, invalidUserWithoutId)
-
 
         // When:
         val activeJohnsOrAdmin = TagOr(

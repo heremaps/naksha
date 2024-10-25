@@ -6,7 +6,7 @@ import kotlin.test.assertEquals
 class TagNormalizerTest {
 
     @Test
-    fun shouldRemoveNonAscii(){
+    fun shouldRemoveNonAscii() {
         val tagsToBeClearedFromAscii = mapOf(
             "p®¡©e=100£" to "pe=100",                  // regular tag
             "~twice_¼=single_½" to "~twice_=single_",  // starting with '~'
@@ -19,7 +19,7 @@ class TagNormalizerTest {
     }
 
     @Test
-    fun shouldLeaveNonAsciiAsIs(){
+    fun shouldLeaveNonAsciiAsIs() {
         val tagsWithAsciiToBePreserved = listOf(
             "@p®¡©e=100£",         // starting with '@'
             "ref_p®¡©e=100£",      // starting with 'ref_'
@@ -32,13 +32,13 @@ class TagNormalizerTest {
     }
 
     @Test
-    fun shouldLowercase(){
+    fun shouldLowercase() {
         val tag = "Some_Tag:=1235"
         assertEquals(tag.lowercase(), TagNormalizer.normalizeTag(tag))
     }
 
     @Test
-    fun shouldNotLowercase(){
+    fun shouldNotLowercase() {
         val tagsNotToBeLowercased = listOf(
             "@Some_Tag:=1235",
             "ref_Some_Tag:=1235",
@@ -53,7 +53,7 @@ class TagNormalizerTest {
     }
 
     @Test
-    fun shouldSplit(){
+    fun shouldSplit() {
         val tagsToBeSplit = listOf(
             "@some_tag:=1235",
             "~some_tag:=1235",
@@ -72,7 +72,7 @@ class TagNormalizerTest {
     }
 
     @Test
-    fun shouldNotSplit(){
+    fun shouldNotSplit() {
         val tagsNotToBeSplit = listOf(
             "ref_some_tag:=1235",
             "sourceIDsome_tag:=1235"
@@ -85,5 +85,21 @@ class TagNormalizerTest {
             assertEquals(rawTag, tagKey)
             assertEquals(null, tagValue)
         }
+    }
+
+    @Test
+    fun shouldSplitSingleCharTags() {
+        // Given
+        val tagToBeSplit = "a=b"
+
+        // When:
+        val normalized = TagNormalizer.normalizeTag(tagToBeSplit)
+
+       // And:
+        val (key, value) = TagNormalizer.splitNormalizedTag(normalized)
+
+        // Then
+        assertEquals("a", key)
+        assertEquals("b", value)
     }
 }

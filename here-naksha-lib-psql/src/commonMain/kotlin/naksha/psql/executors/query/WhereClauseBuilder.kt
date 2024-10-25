@@ -111,7 +111,7 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
 
     private fun whereMetadata() {
         val metaQuery = request.query.metadata
-        if(metaQuery != null){
+        if (metaQuery != null) {
             if (where.isNotEmpty()) {
                 where.append(" AND (")
             } else {
@@ -165,7 +165,7 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
 
     private fun whereTags() {
         val tagQuery = request.query.tags
-        if(tagQuery != null){
+        if (tagQuery != null) {
             if (where.isNotEmpty()) {
                 where.append(" AND (")
             } else {
@@ -188,49 +188,51 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
     private fun resolveSingleTagQuery(tagQuery: TagQuery) {
         when (tagQuery) {
             is TagExists -> {
-                where.append("$tagsAsJsonb ?? '${tagQuery.name}'")
+                val tagNamePlaceholder = placeholderForArg(tagQuery.name, PgType.STRING)
+                where.append("$tagsAsJsonb ?? $tagNamePlaceholder")
             }
 
             is TagValueIsNull -> {
-                where.append("${tagValue(tagQuery)} = null")
+                val tagValuePlaceholder = placeholderForArg(selectTagValue(tagQuery), PgType.STRING)
+                where.append("$tagValuePlaceholder IS NULL")
             }
 
             is TagValueIsBool -> {
                 if (tagQuery.value) {
-                    where.append(tagValue(tagQuery, PgType.BOOLEAN))
+                    where.append(selectTagValue(tagQuery, PgType.BOOLEAN))
                 } else {
-                    where.append("not(${tagValue(tagQuery, PgType.BOOLEAN)}})")
+                    where.append("not(${selectTagValue(tagQuery, PgType.BOOLEAN)})")
                 }
             }
 
             is TagValueIsDouble -> {
-                val valuePlaceholder = placeholderForArg(tagQuery.value, PgType.DOUBLE)
+                val queryValuePlaceholder = placeholderForArg(tagQuery.value, PgType.DOUBLE)
                 val doubleOp = resolveDoubleOp(
                     tagQuery.op,
-                    tagValue(tagQuery, PgType.DOUBLE),
-                    valuePlaceholder
+                    selectTagValue(tagQuery, PgType.DOUBLE),
+                    queryValuePlaceholder
                 )
                 where.append(doubleOp)
             }
 
             is TagValueIsString -> {
-                val valuePlaceholder = placeholderForArg(tagQuery.value, PgType.STRING)
+                val queryValuePlaceholder = placeholderForArg(tagQuery.value, PgType.STRING)
                 val stringEquals = resolveStringOp(
                     StringOp.EQUALS,
-                    tagValue(tagQuery, PgType.STRING),
-                    valuePlaceholder
+                    selectTagValue(tagQuery, PgType.STRING),
+                    queryValuePlaceholder
                 )
                 where.append(stringEquals)
             }
 
             is TagValueMatches -> {
-                val regex = tagQuery.regex
-                where.append("$tagsAsJsonb @?? '\$.${tagQuery.name} ? (@ like_regex \"${regex}\")'")
+                val jsonPathPlaceholder = placeholderForArg("\$.${tagQuery.name} ? (@ like_regex \"${tagQuery.regex}\")", PgType.STRING)
+                where.append("$tagsAsJsonb @?? $jsonPathPlaceholder::jsonpath")
             }
         }
     }
 
-    private fun tagValue(tagQuery: TagQuery, castTo: PgType? = null): String {
+    private fun selectTagValue(tagQuery: TagQuery, castTo: PgType? = null): String {
         return when (castTo) {
             null -> "$tagsAsJsonb->'${tagQuery.name}'"
             PgType.STRING -> "$tagsAsJsonb->>'${tagQuery.name}'"
