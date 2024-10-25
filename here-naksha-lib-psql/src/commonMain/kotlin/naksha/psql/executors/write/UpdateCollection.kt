@@ -24,8 +24,6 @@ class UpdateCollection(
             "Collection id not given"
         }
         val colId = write.featureId!!
-//        val cursor = readTupleInVirtualCollection(colId)
-//        cursor.get<String>("")
         val tuple = tupleOfCollection(
             session = session,
             tupleNumber = newFeatureTupleNumber(
@@ -44,17 +42,6 @@ class UpdateCollection(
         updateVirtualCollection(tuple, feature)
         return tuple
     }
-
-//    private fun readTupleInVirtualCollection(collectionId: String): PgCursor {
-//        val conn = session.usePgConnection()
-//        val cursor = conn.execute(
-//            sql = """ SELECT (${PgColumn.allColumns.joinToString(",")}) FROM $VIRT_COLLECTIONS_QUOTED
-//                WHERE ${PgColumn.id} = '${collectionId}'
-//                      """.trimIndent(),
-//        )
-//        conn.close()
-//        return cursor
-//    }
 
     private fun updateVirtualCollection(
         tuple: Tuple,
