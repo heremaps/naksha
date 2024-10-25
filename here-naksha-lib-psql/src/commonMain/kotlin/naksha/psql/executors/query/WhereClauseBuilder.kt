@@ -233,10 +233,11 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
     }
 
     private fun selectTagValue(tagQuery: TagQuery, castTo: PgType? = null): String {
+        val tagKeyPlaceholder = placeholderForArg(tagQuery.name, PgType.STRING)
         return when (castTo) {
-            null -> "$tagsAsJsonb->'${tagQuery.name}'"
-            PgType.STRING -> "$tagsAsJsonb->>'${tagQuery.name}'"
-            else -> "($tagsAsJsonb->'${tagQuery.name}')::${castTo.value}"
+            null -> "$tagsAsJsonb->$tagKeyPlaceholder"
+            PgType.STRING -> "$tagsAsJsonb->>$tagKeyPlaceholder"
+            else -> "($tagsAsJsonb->$tagKeyPlaceholder)::${castTo.value}"
         }
     }
 
