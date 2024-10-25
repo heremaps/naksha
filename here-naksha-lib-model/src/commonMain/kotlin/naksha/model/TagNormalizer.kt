@@ -6,6 +6,7 @@ import naksha.base.NormalizerForm.NFKC
 import naksha.base.Platform
 import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
 import naksha.model.TagNormalizer.TagNormalizer_C.splitNormalizedTag
+import kotlin.js.JsExport
 
 /**
  * An object used for Tag normalization and splitting.
@@ -34,21 +35,15 @@ import naksha.model.TagNormalizer.TagNormalizer_C.splitNormalizedTag
  *
  * By default, (if no special prefix is found) tag is normalized with NFD, lowercased, cleaned of non-ASCII and splittable.
  */
+@JsExport
 class TagNormalizer private constructor() {
-    private data class TagProcessingPolicy(
-        val normalizerForm: NormalizerForm,
-        val removeNonAscii: Boolean,
-        val lowercase: Boolean,
-        val split: Boolean
-    )
 
     companion object TagNormalizer_C {
-        private val DEFAULT_POLICY =
-            TagProcessingPolicy(NFD, removeNonAscii = true, lowercase = true, split = true)
+        private val DEFAULT_POLICY = TagProcessingPolicy(NFD, removeNonAscii = true, lowercase = true, split = true)
         private val PREFIX_TO_POLICY = mapOf(
-            "@" to TagProcessingPolicy( NFKC, removeNonAscii = false, lowercase = false, split = true),
-            "ref_" to TagProcessingPolicy( NFKC, removeNonAscii = false, lowercase = false, split = false),
-            "sourceID" to TagProcessingPolicy( NFKC, removeNonAscii = false, lowercase = false, split = false),
+            "@" to TagProcessingPolicy(NFKC, removeNonAscii = false, lowercase = false, split = true),
+            "ref_" to TagProcessingPolicy(NFKC, removeNonAscii = false, lowercase = false, split = false),
+            "sourceID" to TagProcessingPolicy(NFKC, removeNonAscii = false, lowercase = false, split = false),
             "~" to TagProcessingPolicy(NFD, removeNonAscii = true, lowercase = false, split = true),
             "#" to TagProcessingPolicy(NFD, removeNonAscii = true, lowercase = false, split = true)
         )
@@ -90,7 +85,7 @@ class TagNormalizer private constructor() {
         /**
          * Main method for normalized tag splitting. See[TagNormalizer] doc for more
          */
-        fun splitNormalizedTag(normalizedTag: String): Pair<String, Any?> {
+        internal fun splitNormalizedTag(normalizedTag: String): Pair<String, Any?> {
             if (!policyFor(normalizedTag).split) {
                 return normalizedTag to null
             }
@@ -127,3 +122,10 @@ class TagNormalizer private constructor() {
         }
     }
 }
+
+private data class TagProcessingPolicy(
+    val normalizerForm: NormalizerForm,
+    val removeNonAscii: Boolean,
+    val lowercase: Boolean,
+    val split: Boolean
+)
