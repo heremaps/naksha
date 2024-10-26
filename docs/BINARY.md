@@ -127,16 +127,15 @@ The metadata is encoded like following:
 - updated_at: u48
 - created_at: u48 (optional, flags bit)
 - author_ts: u48 (optional, flags bit)
+- changeCount: u32
 - hash: u32
 - geoGrid: u32
-- changeCount: u32
 - { previous tuple-number, optional, flags bit }
 - id: cstring
 - appid: cstring
 - author: cstring
 - type: cstring
 - origin: cstring
-- EOF (end of metadata): u8 (ascii-0)
 
 Each metadata encodes at its start the tuple-number in 224-bit (28-byte).
 
@@ -347,7 +346,7 @@ WITH source AS (
   ) as meta, ref_point, geo, tags, feature, attachment
   FROM source
 ), tuple_objects_without_header AS (
-  -- Create a Tuple-Objects without header.
+  -- Create Tuple-Objects without header.
   SELECT bytea_agg(
      int4send((octet_length(meta) << 16)|octet_length(coalesce(ref_point,''::bytea)))
      ||int4send(octet_length(coalesce(geo,''::bytea)))
@@ -362,7 +361,7 @@ WITH source AS (
      ||coalesce(attachment,''::bytea)
     ) as obj
 ), result AS (
-  -- Join all tuple-objects, adding the headers, count amount of tuples.
+  -- Join all Tuple-Objects, adding the headers, count the amount of tuples.
   SELECT sum(1)::int as len, bytea_agg(
     int4send((3 << 28)|1) -- type 3, length 1
     ||int4send(8 + octet_length(obj)) -- size
@@ -388,10 +387,10 @@ This document formalizes the binary representation of the in-memory data, so tha
 ### Partitioning
 It is strongly recommended to start partitioning early on, said otherwise, it is not recommended to store more than 10 million features per partition. If it is expected to store up to a billion features in a certain collection, it is recommended to create around 100 partitions. More partitions improve the performance when multiple clients concurrently access the collection. While partitioning does have a positive effect on parallel read and write performance, it negatively effects single threaded performance. Having too many partitions will as well decrease the query (search) performance. Having too few partitions however, will have a bad effect on read, write, and query performance. It is important to select the right number of partitions.
 
-### Conclusion
-The concept is designed so that every mobile phone, every car, every device, can be an own storage, and that users can split each storage logically into many maps. For example, a car company could acquire a storage-number from Naksha for every car-model they have, then manage all cars of this model as individual maps. On the other hand, they can create a new storage-number for every car, and synchronize this with a car identifier, or they share a storage-number for all consumers, so that each consumer has an own map in a virtual consumer storage, still each consumer can create billions of collections with data.
+### Conceptual
+The concept was designed so that every mobile phone, every car, every device, can be an own storage, and that users can split each storage logically into many maps. For example, a car company could acquire a storage-number from Naksha for every car-model they have, then manage all cars of this model as individual maps. On the other hand, they can create a new storage-number for every car, and synchronize this with a car identifier, or they share a storage-number for all consumers, so that each consumer has an own map in a virtual consumer storage, still each consumer can create billions of collections with data.
 
-The concept is to link all productive entities together into one cloud, where it is always clear which data record comes from which device, but to decouple the devices, so that a device does not need to synchronize with other devices, before it modifies map data. For example, a car can collect data in a collection locally, and then synchronize it back, when there is a good and cheap internet connection available into the cloud, fetching new map data from the cloud.
+The concept is to link all productive entities together into one virtual huge cloud, where it is always clear which data record comes from which source, but to decouple the sources, so that a device does not need to synchronize with other devices, before it modifies map data. For example, a car can collect data in a local collection, and then synchronize it back, when there is a good and cheap internet connection available into the cloud, fetching new map data from the cloud. As all data is versioned, the car can keep track of the last version it had, then fetch just the difference between its version, and the latest version in the cloud. When uploading, the same is done inverse, it queries what data the cloud has, calculate the difference to its local data, and only upload the difference. This as well allows rebasing of local modifications.
 
 ### Storage-Numbers
 All storage-numbers between `0` and `9223372036854775807` are reserved for private usage, which means every vendor (like [HERE Technologies](https://www.here.com/)) can make an own dedicated namespace, and privately distribute storage-numbers to devices, services, or whatever.
