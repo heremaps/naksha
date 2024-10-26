@@ -313,7 +313,7 @@ This has another big advantage in a multi-service environment. It allows to calc
 
 Now, finally, lets have a look on how the tuples are eventually fetched from the database, when the client really need them, and can't find them in any cache (we do not allow cross map selection):
 
-```postgresql
+```sql
 WITH source AS (
   -- Select all tuples needed from all collections.
   -- We can read all tuples using paging
