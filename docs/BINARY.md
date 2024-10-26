@@ -297,13 +297,15 @@ SELECT gzip( -- compress the binary
  bytea_agg(int4send(col_num)||tuple_number) -- aggregate all tuple-number
 ) AS rs FROM result;
 ```
-Note, it strongly recommended to increment the `work_mem` to `1G`, so that we can be sure that all the selections, and the sort, can be done in memory. Postgres will need the memory only for a short moment, because we eventually create one big byte-array. This basically means, while the data is in transfer, Postgres only need to keep this compressed binary in memory. Postgres does not need to keep a cursor hanging around, with multiple round trips to be done by the client to fetch all the rows, as there is only one row and one column returns, it's an all at ones operation!
+Note, it is strongly recommended to increment the `work_mem` to `1G`, so that we can be sure that all the selections, and the sort, can be done in memory. Postgres will need the memory only for a short moment, because we eventually create one big byte-array. This basically means, while the data is in transfer, Postgres only need to keep this compressed binary in memory. Postgres does not need to keep a cursor hanging around, with multiple round trips to be done by the client to fetch all the rows, as there is only one row and one column returns, it's an all at ones operation!
 
 **We transfer up to 16.7 millions rows at ones!**
 
 Beware, as we order by feature-id, and the same feature-id always produce the same partition-number, this means, the partition-number in the tuple-number does not affect ordering. This only works, because numbers are stored in [Big-Endian byte-order](https://en.wikipedia.org/wiki/Endianness).
 
 This query allows to search for tuples in HEAD, HISTORY, DELETED, and in multiple collections at the same time. It does not allow to query multiple maps at ones. The query returns the results compressed, and compression will have a big impact on size, because we know that at least the collection-number repeats itself often, and we know that very likely the version, and partition-number, will repeat them self as well. Testing showed that GZIP reduces the result to less than 25% of the original, sometimes even less. This means that for the maximum of 16,777,215 features in a result-set, we have a raw size of 256 MiB, which can be compressed down to less than 64 MiB, case dependent. As the results are ordered, we can store the result-set in some cache, and then allow iteration using a handle.
+
+The time this data need to be transferred to a client depends on the bandwidth, but knowing that in AWS a [single connection is limited to 5 Gbps](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-network-bandwidth.html), we can make an educated guess. Assuming the maximum result size with 16.7 million found features, compressed down to 64 MiB, this will take around `(64*2^20)/(5*2^27)*1000` milliseconds, so 100ms. This time seems to be okay, but we need to add some time for Postgres to collect the data, and to create the binary. We can assume that eventually such a big result can take up to 500 millis, or more. Still a very good number, compared to the shire size of the result. 
 
 If the client does not need all results, the limit can be decreased from the _16,777,215_ to whatever is needed. Technically, we could even seek in the result, using _offset_ and _limit_, but this can become very expensive, more expensive than transferring just all tuple-numbers at ones, cache the result-set in Java, and eventually implement the seeking in Java (optionally copy the result-set into some cache).
 
@@ -318,7 +320,7 @@ WITH source AS (
   -- Then we order by tuple_number, and use offset/limit here!
   -- This must only be done in a single table, but nothing else changes.
   -- Note that using tuple_number will perform an index scan, its ordered already.
-  (SELECT ${col_number} as col_num, * FROM ${col_name} WHERE $1 = ANY(tuple_number))
+  (SELECT ${col_number} as col_num, * FROM ${col_name} WHERE tuple_number = ANY($1))
   UNION ALL
   ...
 ), meta_with_rest AS (
@@ -376,7 +378,7 @@ SELECT gzip(bytea_agg(
     ||all_obj
 )) FROM result
 ```
-This is again highly efficient, because, even while Postgres has to perform a couple of byte-array aggregations, that cost some CPU and memory, eventually we only return one row with one column, compressed. This reduced not only the amount of byte transferred, it as well avoids that a client has to perform multiple reads, therefore avoids that Postgres need to create a cursor, and letting the client fetch row by row.
+This is again highly efficient, because, even while Postgres has to perform a couple of byte-array aggregations, that cost some CPU time and memory, eventually we only return one row with one column, compressed. This reduced not only the amount of byte transferred, it as well avoids that a client has to perform multiple reads, therefore avoids that Postgres need to create a cursor, and letting the client fetch row by row.
 
 As shown here, the query, and tuple loading from the database, is solved efficiently.
 
