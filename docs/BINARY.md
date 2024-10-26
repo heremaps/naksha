@@ -244,8 +244,6 @@ The following query is how Naksha `lib-psql` will perform a search in the databa
 WITH query AS (
  (SELECT ${col_number} as col_num, id, tuple_number FROM ${col_name} WHERE ...)
  UNION ALL
- (SELECT ${col_number} as col_num, id, tuple_number FROM ${col_name} WHERE ...)
- UNION ALL
  ...
 ), result AS (
   SELECT col_num, tuple_number
@@ -265,14 +263,48 @@ This query guarantees, that all tuples are ordered by collection, feature-id, ve
 
 We need to limit the result to `2^24-1`, because this is the maximum length we can encode in the binary. This leads to a maximum result size of `20 + (16777215 * 16)`, which is 256 MiB, what as well protects us in producing or reading too big result-sets.
 
-If the HISTORY need to be queried too, then every feature will be found multiple times in different versions. To reduce this to the latest _n_ versions, we modify the query into:
-
+If the HISTORY need to be queried too, then there are two basic cases. A specific version is requested, then only the selects need to be changed: 
 ```sql
 WITH query AS (
- (SELECT ${col_number} as col_num, id, tuple_number, txn FROM ${col_name} WHERE ...)
- UNION ALL
- (SELECT ${col_number} as col_num, id, tuple_number, txn FROM ${col_name} WHERE ...)
- UNION ALL
+  -- Select from HEAD.
+  (SELECT ${col_number} as col_num, id, tuple_number FROM ${col_name} 
+   WHERE txn <= $1 AND ...)
+  UNION ALL
+  -- Select from HISTORY.
+  (SELECT ${col_number} as col_num, id, tuple_number FROM ${col_name_hst} 
+    WHERE txn <= $1 AND txn_next > $1 AND ...)
+  UNION ALL
+  ...
+), result AS (
+  SELECT col_num, tuple_number
+  FROM query
+  ORDER BY col_num, id, tuple_number
+  LIMIT 16777215
+)
+SELECT gzip( -- compress the binary
+ int4send((2 << 24)|sum(1)::int)|| -- type (2), subtype (0), length
+ int4send(20 + sum(1)::int*16)|| -- size
+ int8send(${storage_number})|| -- shared storage-number
+ int4send(${map_number})|| -- shared map-number
+ bytea_agg(int4send(col_num)||tuple_number) -- aggregate all tuple-number
+) AS rs FROM result;
+```
+This works, because we search in HEAD for features with a `txn` less than/equal to the searched _version_. If there is such a feature, there can't be any other tuple, that has a `next_version` greater than the searched _version_, because the HEAD feature is the latest one, and it has `next_version` being `0`. Then we search in HISTORY for the feature, that has a `txn` less than/equal to the searched _version_, and at the same time has a newer tuple greater than the searched version (`next_version`), which means, that it can't be in HEAD.
+
+Therefore, the HEAD and HISTORY queries together guarantee that there can only be one feature that fulfills this condition, either in HEAD or in HISTORY. In a nutshell, ever feature is only found exactly ones in the searched _version_.
+
+However, if the client wants multiple tuples before the given _version_, we need to fetch multiple tuples, order them by version, then select the latest _n_ versions. To be able to do this, we modify the query into:
+
+```sql
+-- Select from HEAD.
+WITH query AS (
+(SELECT ${col_number} as col_num, id, tuple_number FROM ${col_name} 
+ WHERE txn <= $1 AND ...)
+UNION ALL
+-- Select from HISTORY
+(SELECT ${col_number} as col_num, id, tuple_number FROM ${col_name}$hst 
+  WHERE txn <= $1 AND ...) -- we do not limit by 'AND txn_next > $1' 
+UNION ALL
  ...
 ), query_with_v AS (
   SELECT
