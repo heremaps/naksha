@@ -34,6 +34,9 @@ abstract class PgTestBase(val collection: NakshaCollection? = null) {
     protected fun insertFeature(feature: NakshaFeature, sessionOptions: SessionOptions? = null) =
         insertFeatures(listOf(feature), sessionOptions)
 
+    protected fun insertFeatures(vararg features: NakshaFeature) =
+        insertFeatures(listOf(*features))
+
     protected fun insertFeatures(
         features: List<NakshaFeature>,
         sessionOptions: SessionOptions? = null
