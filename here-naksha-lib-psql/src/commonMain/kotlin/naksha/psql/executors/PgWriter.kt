@@ -193,6 +193,8 @@ class PgWriter(
 
                     WriteOp.UPDATE -> {
                         val updatedTuple = UpdateCollection(session).execute(mapOf(write), write)
+                            ?: //TODO rollback?
+                            return ErrorResponse(COLLECTION_NOT_FOUND, write.featureId ?: "Unknown null collection requested to be updated")
                         updatePrevTupleCache(updatedTuple)
                         cachedTupleNumber(write, updatedTuple)
                     }

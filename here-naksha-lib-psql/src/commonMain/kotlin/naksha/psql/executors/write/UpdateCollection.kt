@@ -14,7 +14,7 @@ class UpdateCollection(
     private val session: PgSession
 ) {
 
-    fun execute(map: PgMap, write: WriteExt): Tuple {
+    fun execute(map: PgMap, write: WriteExt): Tuple? {
         // Note: write.collectionId is always naksha~collections!
         val feature = write.feature?.proxy(NakshaCollection::class) ?: throw NakshaException(
             NakshaError.ILLEGAL_ARGUMENT,
@@ -39,14 +39,13 @@ class UpdateCollection(
         )
 
         // update the entry in naksha~collections
-        updateVirtualCollection(tuple, feature)
-        return tuple
+        return updateVirtualCollection(tuple, feature)
     }
 
     private fun updateVirtualCollection(
         tuple: Tuple,
         feature: NakshaFeature
-    ) {
+    ): Tuple? {
         val transaction = session.transaction()
         val conn = session.usePgConnection()
         val statement = StringBuilder("""UPDATE $VIRT_COLLECTIONS_QUOTED SET """)
@@ -57,9 +56,13 @@ class UpdateCollection(
                 statement.append("\n")
         }
         statement.append("WHERE ${PgColumn.id} = '${feature.id}'")
-        conn.execute(
+        val cursor = conn.execute(
             sql = statement.toString().trimIndent(),
             args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
-        ).close()
+        )
+        val affectedRows = cursor.affectedRows()
+        cursor.close()
+        if (affectedRows == 0) return null
+        return tuple
     }
 }

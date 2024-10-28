@@ -6,6 +6,7 @@ import kotlinx.datetime.toLocalDateTime
 import naksha.base.Int64
 import naksha.base.proxy
 import naksha.model.Naksha
+import naksha.model.NakshaError
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
@@ -247,5 +248,19 @@ class CollectionTests : PgTestBase(collection = null) {
         }
         val colRead = executeRead(selectCollectionFromVirt).features[0]!!.proxy(NakshaCollection::class)
         assertEquals(StoreMode.SUSPEND, colRead.storeDeleted)
+    }
+
+    @Test
+    fun updateNotExistingCollection() {
+        val collectionName = "not_existing_collection_test"
+        val collection = NakshaCollection(id = collectionName)
+        // update collection
+        collection.storeDeleted = StoreMode.SUSPEND
+        val response = executeWriteErrorResponse(
+            WriteRequest().add(
+                Write().updateCollection(null, collection)
+            )
+        )
+        assertEquals(NakshaError.COLLECTION_NOT_FOUND, response.error.code)
     }
 }
