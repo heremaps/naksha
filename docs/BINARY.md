@@ -10,8 +10,8 @@ This is very important, because this allows us to order by tuple-number, which w
 Naksha manages features, they are stored in **storages**.
 
 - There are up to _9,223,372,036,854,775,806_ (`2^63-2`) **storages** per environment.
-- Each storage holds up to _4,294,967,295_ (`2^32-1`) **maps**.
-- Each map holds up to _4,294,967,295_ (`2^32-1`) **collections**.
+- Each storage holds up to _4,294,967,296_ (`2^32-2`) **maps**.
+- Each map holds up to _4,294,967,040_ (`2^32-256`) **collections**.
 - Each collection holds up to _4,294,967,296_ (`2^32`) **features**.
 
 The maximum number of features per collection can be increased by partitioning the collection. Therefore, the total number of features in a single collection can be increased to 1,099,511,627,776 (`2^40`). The total number of features in administration can be even bigger, when history is considered.
@@ -24,22 +24,22 @@ The lifecycle of a feature is tracked from its creation to its deletion. Each mo
 ## Binary Header
 When data is binary encoded in-memory, a header is not needed, as it is clear what is encoded, therefore this header is not mandatory. However, when not encoded in-memory, the binary encoding needs headers to know what is encoded. For this purpose, Naksha binary defines a common object/array header as being:
 
-- has-extensions: u1
-- type: u3
-- subtype: u4
-- length: u24 (BE encoded)
-- size: u32 (BE encoded)
-- { type-specific-header ... }
+- has-extension: u1 {u32 read shr 31 & 1}
+- type: u3 {u32 read shr 28 & 7}
+- subtype: u4 {u32 read shr 24 & 15}
+- length: u24 {u32 read & 16777215}
+- size: u32
 - { extensions ... }
+- { type-specific-header ... }
 - { payload ... }
 
 The length describes the amount of elements encoded, the size is the total size in byte, that belong to this binary. This includes the header size itself, an empty object/array has a minimal header of 16-byte, the size is therefore 16. A size less than 16 is an invalid header. The type is one of the following values:
 
 - `0`: Tuple-Number-Array
-- `1`: Metadata-Object
-- `2`: Metadata-Array
-- `3`: Tuple-Object
-- `4`: Tuple-Array
+- `1`: Metadata-Binary-Object
+- `2`: Metadata-Binary-Array
+- `3`: Tuple-Binary-Object
+- `4`: Tuple-Binary-Array
 - `5..7`: Reserved
 
 The subtype is dependent on the type, and the possible values are described when the types are described. Each type can have additional _type-specific-header_ values, they are described with the type.
@@ -47,9 +47,21 @@ The subtype is dependent on the type, and the possible values are described when
 ### Extensions
 Extensions have been added as optional header information. They are here to allow extra headers with context information, as well as allowing applications to store own arbitrary metadata. The extension block has a single small header, being:
 
-- type: u8
-- size: u24
+- std-type: u8
+- std-size: u24
 - total-size: u32
+
+So, the header extends to:
+
+- has-extension: u1 {u32 read shr 31 & 1}
+- type: u3 {u32 read shr 28 & 7}
+- subtype: u4 {u32 read shr 24 & 15}
+- length: u24 {u32 read & 16777215}
+- size: u32
+- std-type: u8 (_0_) {u32 read shr 24 & 255}
+- std-size: u24 {u32 read & 16777215}
+- total-size: u32
+- { customer extensions ... }
 
 The first extension is called the _standard-extension_. Its meaning is part of this document, currently the only defined type is `0`, which means that there is no _standard-extension_, therefore _size_ must be `0` as well.
 
@@ -59,7 +71,7 @@ The _total-size_ stores the total size of the extension segment, including this 
 
 Readers of the binary, that are unaware of the extensions, will simply ignore this information, and skip over the extensions by adding the _total-size_ of the extensions to known header size.
 
-For example, when tiles are encoded, their payload is maybe a _Tuple-Array_, but additionally there may be an extension header that describes the tile-id, and other details, maybe a map between feature-id and the offset where the feature is encoded, to quicker find entries. Readers can use the data without these details, they may just not have all necessary information to act optimal.
+For example, when tiles are encoded, their payload is maybe a _Tuple-Binary-Array_, but additionally there may be an extension header that describes the tile-id, and other details, maybe a map between feature-id and the offset where the feature is encoded, to quicker find entries. Readers can use the data without these details, they may just not have all necessary information to act optimal.
 
 Each custom extension in the extension section, must have a simple header being, so allow multiple different custom extension in a binary:
 
@@ -81,7 +93,7 @@ As said, a **Tuple** is an immutable state of a feature. To address tuples, uniq
 - partition-number: u8
 - uid: u32
 
-When multiple tuple-numbers are encoded in an array, then the optional values (storage-, map-, and collection-number) can be shared in the header, so the array header can declare for each of them a shared value that is valid for all encoded tuple-numbers. This can reduce the storage size. If encoded standalone, all values need to be encoded, which makes a tuple-number a 224-bit value (28-byte). In an array, each tuple-number can be reduced to 92-bit (12-byte), when they come from the same storage, map and collection.
+When tuple-numbers are encoded, they are always encoded in an array, and the values storage-, map-, and collection-number, can be shared in the header, so the array header can declare for each of them a shared value that is valid for all encoded tuple-numbers. This can reduce the storage size. If encoded standalone, all values need to be encoded, which makes a tuple-number a 224-bit value (28-byte). In an array, each tuple-number can be reduced to 92-bit (12-byte), when they come from the same storage, map and collection.
 
 The **storage-number**, **map-number**, and **collection-number** are just unique identifiers of the storage, map, and collection in which all tuples of the feature, to which this tuple-number belongs, are stored.
 
@@ -93,7 +105,7 @@ The **version** encodes the year, month, and day when the transaction started (U
 
 The **uid** is the transaction local unique state identifier, if multiple new states are created within a single transaction. It is forbidden to generate multiple states of the same feature within a single transaction, the reason is the meaning of the _next-version_ property, see below. Tuples are generated in order, so they can be timely ordered by _uid_. This allows to order all changes by _version_ and _uid_ to get a reliable order, which is important for paging algorithm or to split big transactions into chunks.
 
-## Tuple-Number-Array
+## Tuple-Number-Binary-Array
 When tuple-numbers are persisted, they are always encoded in arrays, even when only a single tuple-number need to be stored. They are encoded like following:
 
 - has-extension: u1 {u32 read shr 31 & 1}
@@ -101,10 +113,10 @@ When tuple-numbers are persisted, they are always encoded in arrays, even when o
 - subtype: u4 {u32 read shr 24 & 15}
 - length: u24 {u32 read & 16777215}
 - size: u32
+- { extensions ... }
 - **storage-number**: u64 (optional, only when subtype > 0)
 - **map-number**: u32 (optional, only when subtype > 1)
 - **collection-number**: u32 (optional, only when subtype > 2)
-- { extensions ... }
 - { tuple-numbers ... }
 
 The subtype is defined as:
@@ -139,7 +151,7 @@ The metadata is encoded like following:
 
 Each metadata encodes at its start the tuple-number in 224-bit (28-byte).
 
-## Metadata-Object
+## Metadata-Binary-Object
 Each tuple has a pre-defined set of metadata. Optionally, metadata can have an object header like:
 
 - has-extension: u1 {u32 read shr 31 & 1}
@@ -152,7 +164,7 @@ Each tuple has a pre-defined set of metadata. Optionally, metadata can have an o
 
 This object header is normally not used, except the metadata need to appear in any binary, where the type need to be detected at runtime.
 
-## Metadata-Array
+## Metadata-Binary-Array
 When multiple metadata are stored in an array, the binary object has a header that is encoded like following:
 
 - has-extension: u1 {u32 read shr 31 & 1}
@@ -160,15 +172,15 @@ When multiple metadata are stored in an array, the binary object has a header th
 - subtype: u4 {u32 read shr 24 & 15}
 - length: u24 {u32 read & 16777215}
 - size: u32
+- _{ extensions ... }_
 - **storage-number**: u64 (BE read, optional, only when subtype > 0)
 - **map-number**: u32 (BE read, optional, only when subtype > 1)
 - **collection-number**: u32 (BE read, optional, only when subtype > 2)
-- _{ extensions ... }_
 - _{ metadata ... }_
 
 **Note**: The array does not store metadata-objects, only the metadata, so without object header!
 
-The subtype is defined the same way it is done for the [Tuple-Number-Array](#Tuple-Number-Array):
+The subtype is defined the same way it is done for the [Tuple-Number-Binary-Array](#Tuple-Number-Binary-Array):
 
 - `0`: All tuple-numbers are full encoded (224-bit, 28-byte, encoding).
 - `1`: The storage-number is shared, and stored in the header (160-bit, 20-byte encoding).
@@ -177,7 +189,7 @@ The subtype is defined the same way it is done for the [Tuple-Number-Array](#Tup
 
 This means, the tuple-number at the start of each encoded metadata can be reduced to only 96-bit (12-byte), which saves some memory for bigger arrays.
 
-## Tuple-Object
+## Tuple-Binary-Object
 Encoding a full tuple requires header, because it is a complex object. Each tuple is encoded like:
 
 - has-extension: u1 {u32 read shr 31 & 1}
@@ -185,13 +197,13 @@ Encoding a full tuple requires header, because it is a complex object. Each tupl
 - subtype: u4 _(`0`)_ {u32 read shr 24 & 15}
 - length: u24 _(`1`)_ {u32 read & 16777215}
 - size: u32
+- _{ extensions ... }_
 - **metadata_size**: u16
 - **ref_point_size**: u16
 - **geometry_size**: u32
 - **tags_size**: u32
 - **feature_size**: u32
 - **attachment_size**: u32
-- _{ extensions ... }_
 - _{ metadata }_
 - _{ reference-point }_
 - _{ geometry }_
@@ -201,7 +213,7 @@ Encoding a full tuple requires header, because it is a complex object. Each tupl
 
 **Note**: The tuple does not store metadata-object, only the metadata, so without object header!
 
-## Tuple-Array
+## Tuple-Binary-Array
 If multiple tuples should be encoded in a single byte-stream, they should have yet another header, being:
 
 - has-extension: u1 {u32 read shr 31 & 1}
@@ -217,7 +229,7 @@ Note that this array allows iteration, but not direct seeking, so basically the 
 It is recommended to not compress the individual parts of a tuple, when converting into the binary form, but rather to compress the whole array eventually, to increase the compression rate.
 
 ## Dictionaries
-There is no specific format for dictionaries, they can be encoded either as [Tuple-Array](#Tuple-Array), or as features. If encoded as features, the recommendation is to encode them as:
+There is no specific format for dictionaries, they can be encoded either as [Tuple-Binary-Array](#Tuple-Binary-Array), or as features. If encoded as features, the recommendation is to encode them as:
 
 ```js
 dict = {
@@ -378,7 +390,7 @@ WITH source AS (
   ) as meta, ref_point, geo, tags, feature, attachment
   FROM source
 ), tuple_objects_without_header AS (
-  -- Create Tuple-Objects without header.
+  -- Create Tuple-Binary-Objects without header.
   SELECT bytea_agg(
      int4send((octet_length(meta) << 16)|octet_length(coalesce(ref_point,''::bytea)))
      ||int4send(octet_length(coalesce(geo,''::bytea)))
@@ -393,7 +405,7 @@ WITH source AS (
      ||coalesce(attachment,''::bytea)
     ) as obj
 ), result AS (
-  -- Join all Tuple-Objects, adding the headers, count the amount of tuples.
+  -- Join all Tuple-Binary-Objects, adding the headers, count the amount of tuples.
   SELECT sum(1)::int as len, bytea_agg(
     int4send((3 << 28)|1) -- type 3, length 1
     ||int4send(8 + octet_length(obj)) -- size
@@ -402,7 +414,7 @@ WITH source AS (
   FROM tuple_objects_without_header
   LIMIT 16777215
 )
--- Create the Tuple-Array, compress it.
+-- Create the Tuple-Binary-Array, compress it.
 SELECT gzip(bytea_agg(
     int4send((4 << 28)|len) -- type 4
     ||int4send(8 + octet_length(all_obj)) -- size
