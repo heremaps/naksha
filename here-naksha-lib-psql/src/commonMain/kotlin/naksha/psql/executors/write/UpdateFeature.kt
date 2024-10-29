@@ -20,23 +20,21 @@ class UpdateFeature(
     //TODO this implementation currently do not support atomic updates!
     // In other words, it ignores if version is set in the Write operation,
     // which requires that the current HEAD state is exactly in this version.
-    fun execute(collection: PgCollection, write: WriteExt): Tuple {
+    fun execute(collection: PgCollection, write: WriteExt): Triple<Tuple?, String, String> {
         val feature = write.feature?.proxy(NakshaFeature::class) ?: throw NakshaException(
             NakshaError.ILLEGAL_ARGUMENT,
             "UPDATE without feature"
         )
-        require(feature.id == write.featureId) {
-            "Feature id in payload (${feature.id}) and write request (${write.featureId}) are different"
+        if (feature.id != write.featureId) {
+            return Triple(null, NakshaError.ILLEGAL_ARGUMENT,"Feature id in payload (${feature.id}) and write request (${write.featureId}) are different")
         }
         val previousMetadata = existingMetadataProvider.get(collection.head.name, write.id!!)
-        require(previousMetadata != null) {
-            "Trying update feature that not exists in head: ${write.id}"
+            ?: return Triple(null, NakshaError.FEATURE_NOT_FOUND, "Trying update feature that not exists in head: ${write.id}")
+        if (feature.id != previousMetadata.id) {
+            return Triple(null, NakshaError.ILLEGAL_ARGUMENT, "Feature id (${feature.id}) differs from previous metadata (${previousMetadata.id})")
         }
-        require(feature.id == previousMetadata.id) {
-            "Feature id (${feature.id}) differs from previous metadata (${previousMetadata.id})"
-        }
-        require(previousMetadata.nextVersion == null) {
-            "Previous metadata shouldn't have 'nextVersion' but it does (${previousMetadata.nextVersion})"
+        if (previousMetadata.nextVersion != null) {
+            return Triple(null, NakshaError.ILLEGAL_ARGUMENT, "Previous metadata shouldn't have 'nextVersion' but it does (${previousMetadata.nextVersion})")
         }
 
         val tupleNumber = newFeatureTupleNumber(collection, feature.id, session)
@@ -58,7 +56,7 @@ class UpdateFeature(
             )
         }
         writeExecutor.updateFeatureInHead(collection, tuple, feature, tupleNumber.version, previousMetadata)
-        return tuple
+        return Triple(tuple,"","")
     }
 
 
@@ -85,6 +83,4 @@ class UpdateFeature(
             id = feature.id
         )
     }
-
-
 }

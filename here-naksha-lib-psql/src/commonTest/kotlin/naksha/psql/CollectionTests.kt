@@ -262,5 +262,6 @@ class CollectionTests : PgTestBase(collection = null) {
             )
         )
         assertEquals(NakshaError.COLLECTION_NOT_FOUND, response.error.code)
+        assertTrue(response.error.msg.contains(collectionName))
     }
 }

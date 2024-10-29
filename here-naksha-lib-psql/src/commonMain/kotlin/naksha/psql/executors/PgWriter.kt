@@ -228,10 +228,26 @@ class PgWriter(
                                 InsertFeature(session, writeExecutor).execute(collection, write)
                             )
                         } else {
-                            updateFeature(collection, previousMetadataProvider, write)
+                            val updatedTupleResult = UpdateFeature(
+                                session,
+                                previousMetadataProvider,
+                                writeExecutor
+                            ).execute(collection, write)
+                            if (updatedTupleResult.first == null) return ErrorResponse(updatedTupleResult.second,updatedTupleResult.third)
+                            updatePrevTupleCache(updatedTupleResult.first!!)
+                            cachedTupleNumber(write, updatedTupleResult.first!!)
                         }
 
-                    WriteOp.UPDATE -> updateFeature(collection, previousMetadataProvider, write)
+                    WriteOp.UPDATE -> {
+                        val updatedTupleResult = UpdateFeature(
+                            session,
+                            previousMetadataProvider,
+                            writeExecutor
+                        ).execute(collection, write)
+                        if (updatedTupleResult.first == null) return ErrorResponse(updatedTupleResult.second,updatedTupleResult.third)
+                        updatePrevTupleCache(updatedTupleResult.first!!)
+                        cachedTupleNumber(write, updatedTupleResult.first!!)
+                    }
 
                     WriteOp.DELETE -> DeleteFeature(session, writeExecutor).execute(
                         collection,
@@ -284,16 +300,6 @@ class PgWriter(
                 tupleCache[prevTupleNumber] = prevTuple.copy(meta = updatedMeta)
             }
         }
-    }
-
-    private fun updateFeature(collection: PgCollection, previousMetadataProvider: ExistingMetadataProvider, write: WriteExt): TupleNumber {
-        val updatedTuple = UpdateFeature(
-            session,
-            previousMetadataProvider,
-            writeExecutor
-        ).execute(collection, write)
-        updatePrevTupleCache(updatedTuple)
-        return cachedTupleNumber(write, updatedTuple)
     }
 
     private fun mapOf(write: WriteExt): PgMap {
