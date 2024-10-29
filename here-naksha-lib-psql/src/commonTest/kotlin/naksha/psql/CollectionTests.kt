@@ -3,8 +3,6 @@ package naksha.psql
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import naksha.base.Int64
-import naksha.base.proxy
 import naksha.model.Naksha
 import naksha.model.NakshaError
 import naksha.model.objects.NakshaCollection
@@ -263,5 +261,28 @@ class CollectionTests : PgTestBase(collection = null) {
         )
         assertEquals(NakshaError.COLLECTION_NOT_FOUND, response.error.code)
         assertTrue(response.error.msg.contains(collectionName))
+    }
+
+    @Test
+    fun shouldUpsertCollection() {
+        val collectionName = "upsert_collection_test"
+        val collection = NakshaCollection(id = collectionName)
+        // create collection using upsert
+        val response = executeWrite(
+            WriteRequest().add(
+                Write().upsertCollection(null, collection)
+            )
+        )
+        val createdCollection = response.features[0]!!.proxy(NakshaCollection::class)
+        assertEquals(StoreMode.ON, createdCollection.storeDeleted)
+        collection.storeDeleted = StoreMode.SUSPEND
+        // update collection using upsert
+        val updateResponse = executeWrite(
+            WriteRequest().add(
+                Write().upsertCollection(null, collection)
+            )
+        )
+        val updatedCollection = updateResponse.features[0]!!.proxy(NakshaCollection::class)
+        assertEquals(StoreMode.SUSPEND, updatedCollection.storeDeleted)
     }
 }
