@@ -5,6 +5,7 @@ import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
+import naksha.model.NakshaError.NakshaErrorCompanion.CONFLICT
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.model.objects.NakshaCollection
@@ -186,10 +187,23 @@ class PgWriter(
                         CreateCollection(session).execute(mapOf(write), write)
                     )
 
-                    WriteOp.UPSERT -> cachedTupleNumber(
-                        write,
-                        upsertCollection(mapOf(write), write)
-                    )
+                    WriteOp.UPSERT ->
+                        if (write.id == null || previousMetadataProvider.get(
+                                VIRT_COLLECTIONS,
+                                write.id!!
+                            ) == null )
+                        {
+                                cachedTupleNumber(
+                                    write,
+                                    CreateCollection(session).execute(mapOf(write), write))
+                            }
+                            else {
+                            val updatedTuple = UpdateCollection(session).execute(mapOf(write), write)
+                                ?:
+                                return ErrorResponse(CONFLICT, "Collection does not exist but was processed for update during upserting: ${write.id}")
+                            updatePrevTupleCache(updatedTuple)
+                            cachedTupleNumber(write, updatedTuple)
+                        }
 
                     WriteOp.UPDATE -> {
                         val updatedTuple = UpdateCollection(session).execute(mapOf(write), write)
@@ -319,9 +333,5 @@ class PgWriter(
             "No such collection: $collectionId"
         )
         return collection
-    }
-
-    internal fun upsertCollection(map: PgMap, write: WriteExt): Tuple {
-        TODO("Implement me")
     }
 }
