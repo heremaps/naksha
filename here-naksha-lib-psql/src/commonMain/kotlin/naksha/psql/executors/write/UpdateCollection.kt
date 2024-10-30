@@ -2,6 +2,7 @@ package naksha.psql.executors.write
 
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.psql.*
@@ -23,7 +24,8 @@ class UpdateCollection(
         require(write.featureId != null) {
             "Collection id not given"
         }
-        val colId = write.featureId!!
+        val colId = write.featureId
+        if (colId == null) throw NakshaException(ILLEGAL_ARGUMENT, "Collection has no id")
         val tuple = tupleOfCollection(
             session = session,
             tupleNumber = newFeatureTupleNumber(
@@ -55,10 +57,10 @@ class UpdateCollection(
                 if (index+1 < PgColumn.allWritableColumns.size) statement.append(",")
                 statement.append("\n")
         }
-        statement.append("WHERE ${PgColumn.id} = '${feature.id}'")
+        statement.append("WHERE ${PgColumn.id} = $").append(PgColumn.allWritableColumns.size+1)
         val cursor = conn.execute(
             sql = statement.toString().trimIndent(),
-            args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
+            args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn).plus(feature.id)
         )
         val affectedRows = cursor.affectedRows()
         cursor.close()
