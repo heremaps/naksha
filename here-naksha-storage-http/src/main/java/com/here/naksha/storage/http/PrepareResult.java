@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Builds a {@link Result} from {@link HttpResponse}
@@ -54,20 +53,30 @@ public class PrepareResult {
       Class<T> httpResponseType,
       Function<T, List<XyzFeature>> typedResponseToFeatureList) {
 
-    XyzError error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
-    if (error != null) return new ErrorResult(error, "Response http status code: " + httpResponse.statusCode());
+    int httpStatusCode = httpResponse.statusCode();
+    if (!isSuccessStatus(httpStatusCode)) {
+      XyzError error = mapHttpStatusCodeToError(httpStatusCode);
+      return new ErrorResult(error, "Response http status code: " + httpResponse.statusCode());
+    }
 
-    String preapredBody = prepareBody(httpResponse);
+    String body = getDecodedBody(httpResponse);
     try {
-      T resultFeatures = JsonSerializable.deserialize(preapredBody, httpResponseType);
+      T resultFeatures = JsonSerializable.deserialize(body, httpResponseType);
       return prepareResult(typedResponseToFeatureList.apply(resultFeatures));
-    } catch (UncheckedIOException e) {
-      ErrorResponse errorResponse = JsonSerializable.deserialize(preapredBody, ErrorResponse.class);
+    }
+    // Some storages may return success status code but contain ErrorResponse.
+    // UncheckedIOException is thrown then because ErrorResponse cannot be cast to expected httpResponseType.
+    catch (UncheckedIOException e) {
+      ErrorResponse errorResponse = JsonSerializable.deserialize(body, ErrorResponse.class);
       return new ErrorResult(errorResponse.getError(), "Error response : " + errorResponse.getErrorMessage());
     }
   }
 
-  private static String prepareBody(HttpResponse<byte[]> response) {
+  /**
+   * Decodes byte[] body into String basing on "content-encoding"
+   * or UTF-8 if no encoding provided.
+   */
+  private static String getDecodedBody(HttpResponse<byte[]> response) {
     List<String> contentEncodingList = response.headers().allValues("content-encoding");
     if (contentEncodingList.isEmpty()) return new String(response.body(), StandardCharsets.UTF_8);
     if (contentEncodingList.size() > 1)
@@ -106,11 +115,11 @@ public class PrepareResult {
     return new HttpSuccessResult<>(cursor);
   }
 
-  /**
-   * @return null if http status is success (200-299)
-   */
-  private static @Nullable XyzError mapHttpStatusToErrorOrNull(final int httpStatus) {
-    if (httpStatus >= 200 && httpStatus <= 299) return null;
+  private static boolean isSuccessStatus(final int httpStatus) {
+    return (httpStatus >= 200 && httpStatus <= 299);
+  }
+
+  private static @NotNull XyzError mapHttpStatusCodeToError(final int httpStatus) {
     return switch (httpStatus) {
       case HttpURLConnection.HTTP_INTERNAL_ERROR -> XyzError.EXCEPTION;
       case HttpURLConnection.HTTP_NOT_IMPLEMENTED -> XyzError.NOT_IMPLEMENTED;
@@ -123,7 +132,7 @@ public class PrepareResult {
       case 429 -> XyzError.TOO_MANY_REQUESTS;
       case HttpURLConnection.HTTP_GATEWAY_TIMEOUT -> XyzError.TIMEOUT;
       case HttpURLConnection.HTTP_NOT_FOUND -> XyzError.NOT_FOUND;
-      default -> throw new IllegalArgumentException("Not known http error status returned: " + httpStatus);
+      default -> throw new IllegalArgumentException("Http status code is not a known error code: " + httpStatus);
     };
   }
 }

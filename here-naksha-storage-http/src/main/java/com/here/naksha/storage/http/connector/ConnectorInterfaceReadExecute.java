@@ -55,7 +55,6 @@ public class ConnectorInterfaceReadExecute {
           case GET_BY_BBOX -> createFeatureByBBoxEvent(request);
           case GET_BY_TILE -> createFeaturesByTileEvent(request);
           case ITERATE -> createIterateEvent(request);
-          default -> throw new IllegalStateException("Unexpected value: " + request.getReadRequestType());
         };
 
     event.setSpace(dataHubSpace);
@@ -68,7 +67,10 @@ public class ConnectorInterfaceReadExecute {
   }
 
   private static Event createIterateEvent(ReadFeaturesProxyWrapper request) {
-    return new IterateFeaturesEvent();
+    long limit = request.getQueryParameter(LIMIT);
+    IterateFeaturesEvent event = new IterateFeaturesEvent();
+    event.setLimit(limit);
+    return event;
   }
 
   private static Event createFeaturesByIdsEvent(ReadFeaturesProxyWrapper request) {
@@ -87,7 +89,7 @@ public class ConnectorInterfaceReadExecute {
         request.getQueryParameter(SOUTH),
         request.getQueryParameter(EAST),
         request.getQueryParameter(NORTH));
-    Long limit = request.getQueryParameter(LIMIT);
+    long limit = request.getQueryParameter(LIMIT);
     boolean clip = request.getQueryParameter(CLIP_GEO);
 
     GetFeaturesByBBoxEvent getFeaturesByBBoxEvent = new GetFeaturesByBBoxEvent();
