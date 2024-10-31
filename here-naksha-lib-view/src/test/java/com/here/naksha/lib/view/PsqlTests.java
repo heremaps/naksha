@@ -57,13 +57,9 @@ abstract class PsqlTests {
     return enabled();
   }
 
-  abstract boolean dropInitially();
-
-  abstract boolean dropFinally();
-
   static final String TEST_APP_ID = "test_app";
   static final String TEST_AUTHOR = "test_author";
-  static PgStorage storage = PgPlatform.newTestStorage();
+  static PgStorage storage;
   static @Nullable NakshaContext nakshaContext;
   static @Nullable IWriteSession session;
 
@@ -72,38 +68,15 @@ abstract class PsqlTests {
     NakshaContext.currentContext().setAuthor("PsqlStorageTest");
     NakshaContext.currentContext().setAppId("naksha-lib-view-unit-tests");
     nakshaContext = NakshaContext.currentContext().withAppId(TEST_APP_ID).withAuthor(TEST_AUTHOR);
-    assertNotNull(storage);
+    storage = PgPlatform.newTestStorage();
     storage.initStorage(null);
-  }
-
-//  @Test
-//  @Order(12)
-//  @EnabledIf("runTest")
-//  void initStorage() {
-//    assertNotNull(storage);
-//    storage.initStorage(null);
-//  }
-
-  @Test
-  @Order(13)
-  @EnabledIf("runTest")
-  void startWriteSession() {
-    assertNotNull(storage);
     session = storage.newWriteSession(new SessionOptions());
+    assertNotNull(storage);
     assertNotNull(session);
   }
 
   // Custom stuff between 50 and 9000
 
-  @Test
-  @Order(9999)
-  @EnabledIf("dropFinally")
-  void dropSchemaFinally() {
-    assertNotNull(storage);
-//    storage.dropSchema(); TODO(lib)
-  }
-
-  @EnabledIf("runTest")
   @AfterAll
   static void afterTest() {
     if (session != null) {

@@ -312,7 +312,7 @@ abstract class JsEnum : CharSequence {
                             e = ref.deref()
                             if (e == null) {
                                 // Just cleanup, this means, there is simply no such enumeration value.
-                                if (!tempMap.remove(ns, ref)) continue
+                                if (!tempMap.remove(key, ref)) continue
                             } else {
                                 check(enumKlass.isInstance(e)) {
                                     // TODO: KotlinCompilerBug: We know at this point, that "e" is not null!

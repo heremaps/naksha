@@ -39,6 +39,7 @@ open class NakshaFeature() : AnyObject() {
         private val GEOMETRY_NULL = NullableProperty<NakshaFeature, SpGeometry>(SpGeometry::class)
         private val REFERENCE_POINT_NULL = NullableProperty<NakshaFeature, SpPoint>(SpPoint::class)
         private val PROPERTIES = NotNullProperty<NakshaFeature, NakshaProperties>(NakshaProperties::class)
+        private val ATTACHMENT_NULL = NullableProperty<NakshaFeature, ByteArray>(ByteArray::class)
         private val STRING_NULL = NullableProperty<NakshaFeature, String>(String::class)
     }
 
@@ -76,6 +77,11 @@ open class NakshaFeature() : AnyObject() {
      * The properties of the feature.
      */
     open var properties by PROPERTIES
+
+    /**
+     * The attachment of the feature.
+     */
+    open var attachment by ATTACHMENT_NULL
 
     /**
      * The mom-type; if any.

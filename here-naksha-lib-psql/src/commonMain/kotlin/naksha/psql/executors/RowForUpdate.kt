@@ -38,7 +38,7 @@ internal data class RowForUpdate(
                 if (old != null) {
                     val old_g = old.geo
                     if (old_g != null) {
-                        g = PgUtil.decodeGeometry(old_g, old.meta.flags)
+                        g = PgUtil.decodeGeometry(old_g, old.flags)
                         field = g
                     }
                 }

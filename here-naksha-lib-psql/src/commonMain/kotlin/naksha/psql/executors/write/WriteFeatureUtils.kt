@@ -3,6 +3,7 @@ package naksha.psql.executors.write
 import naksha.base.Int64
 import naksha.jbon.JbDictionary
 import naksha.model.*
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
 import naksha.psql.PgSession
@@ -43,11 +44,12 @@ internal object WriteFeatureUtils {
         prevUid: Int? = null, // puid is null for first version
         changeCount: Int = 1 // change_count is '1' for the first version
     ): Array<Any?> {
+        val meta = tuple.meta ?: throw NakshaException(ILLEGAL_STATE, "Tuple does not have metadata")
         return arrayOf(
             tuple.tupleNumber.storeNumber,
-            tuple.meta.updatedAt,
-            tuple.meta.createdAt,
-            tuple.meta.authorTs,
+            meta.updatedAt,
+            meta.createdAt,
+            meta.authorTs,
             nextTxn,
             txn,
             prevTxn,
@@ -56,12 +58,12 @@ internal object WriteFeatureUtils {
             changeCount,
             Metadata.hash(feature),
             Metadata.geoGrid(feature),
-            tuple.meta.flags,
+            meta.flags,
             feature.id,
-            tuple.meta.appId,
-            tuple.meta.author,
-            tuple.meta.type,
-            tuple.meta.origin,
+            meta.appId,
+            meta.author,
+            meta.type,
+            meta.origin,
             tuple.tags,
             tuple.referencePoint,
             tuple.geo,
@@ -76,7 +78,6 @@ internal object WriteFeatureUtils {
     internal fun resolveFlags(collection: PgCollection, session: PgSession): Flags =
         collection.nakshaCollection.defaultFlags ?: session.storage.defaultFlags
 
-
     internal fun tuple(
         storage: PgStorage,
         tupleNumber: TupleNumber,
@@ -89,8 +90,9 @@ internal object WriteFeatureUtils {
         return Tuple(
             storage = storage,
             tupleNumber = tupleNumber,
-            geo = PgUtil.encodeGeometry(feature.geometry, flags),
-            referencePoint = PgUtil.encodeGeometry(feature.referencePoint, flags),
+            fetchBits = FetchMode.FETCH_ALL,
+            geo = PgUtil.encodeGeometry(feature?.geometry, flags),
+            referencePoint = PgUtil.encodeGeometry(feature?.referencePoint, flags),
             feature = PgUtil.encodeFeature(feature, flags, encodingDict),
             tags = PgUtil.encodeTags(
                 feature.properties.xyz.tags?.toTagMap(),

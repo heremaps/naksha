@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import naksha.model.*;
+import naksha.model.objects.Transaction;
 import naksha.model.request.*;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.IPropertyQuery;
@@ -254,24 +255,17 @@ public class ViewReadSession implements IReadSession {
 
   @NotNull
   @Override
-  public List<Tuple> getLatestTuples(
-      @NotNull String mapId,
-      @NotNull String collectionId,
-      @NotNull String[] featureIds,
-      @NotNull FetchMode mode) {
+  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
     return List.of();
   }
-
-  @NotNull
-  @Override
-  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, @NotNull FetchMode mode) {
-    return List.of();
-  }
-
-  @Override
-  public void fetchTuple(@NotNull ResultTuple resultTuple, @NotNull FetchMode mode) {}
 
   @Override
   public void fetchTuples(
-      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, @NotNull FetchMode mode) {}
+      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {}
+
+  @Override
+  public @NotNull Transaction transaction() {
+    throw new UnsupportedOperationException(
+        "Views have multiple individual transactions and doesn't support common parent transaction.");
+  }
 }

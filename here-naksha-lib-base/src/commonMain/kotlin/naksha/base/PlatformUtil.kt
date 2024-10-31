@@ -151,5 +151,25 @@ class PlatformUtil {
             }
             return hash
         }
+
+        /**
+         * Recursively compare this object with another, checking for values instead of just referential.
+         * This is needed because for arrays, the == operation compares whether the arrays are the same object.
+         * This will work for any nested structures of maps, lists, and arrays.
+         */
+        @JvmStatic
+        @JsStatic
+        fun deepEquals(obj1: Any?, obj2: Any?): Boolean {
+            if (obj1 === obj2) return true  // Same reference, or both null
+            if (obj1 == null || obj2 == null) return false  // One is null, the other is not
+            if (obj1::class != obj2::class) return false  // Different types
+
+            return when (obj1) {
+                is Array<*> -> obj1.contentDeepEquals(obj2 as Array<*>)
+                is List<*> -> obj1.size == (obj2 as List<*>).size && obj1.indices.all { index -> deepEquals(obj1[index], obj2[index]) }
+                is Map<*, *> -> obj1.size == (obj2 as Map<*,*>).size && obj1.all { (k, v) -> deepEquals(v, obj2[k]) }
+                else -> obj1 == obj2  // Primitive types, or any other objects
+            }
+        }
     }
 }

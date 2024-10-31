@@ -18,7 +18,6 @@ import naksha.model.GeoEncoding.GeoEncoding_C.TWKB_GZIP
 import naksha.model.GeoEncoding.GeoEncoding_C.WKB
 import naksha.model.GeoEncoding.GeoEncoding_C.WKB_GZIP
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.Tuple.Tuple_C.NOT_FETCHED
 import org.locationtech.jts.geom.GeometryFactory
 import org.locationtech.jts.geom.PrecisionModel
 import org.locationtech.jts.io.ByteOrderValues

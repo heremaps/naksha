@@ -7,6 +7,7 @@ import naksha.base.NullableProperty
 import naksha.base.AnyObject
 import naksha.model.request.query.TupleColumn
 import naksha.model.request.query.SortOrder
+import naksha.model.request.query.SortOrder.SortOrderCompanion.ANY
 import naksha.model.request.query.SortOrder.SortOrderCompanion.DESCENDING
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -88,6 +89,12 @@ open class OrderBy() : AnyObject() {
      * Optionally next order, so after ordering by this property, order those that are equal by the given one. If _null_, the order will be random when the properties are equal.
      */
     var next by ORDER_BY_NULL
+
+    /**
+     * Tests if this represents deterministic ordering, which means that no specific column is selected (`null`), the order is [Any], and no other conditions are given ([next] = `null`).
+     * @return _true_ if this represents the deterministic order; _false_ otherwise.
+     */
+    fun isDeterministic(): Boolean = column == null && order == ANY && next == null
 
     override fun equals(other: Any?): Boolean {
         if (other !is OrderBy) return false

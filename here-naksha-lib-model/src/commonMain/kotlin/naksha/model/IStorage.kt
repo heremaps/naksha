@@ -5,6 +5,7 @@ package naksha.model
 import naksha.base.Int64
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * Any entity implementing the [IStorage] interface represents some data-sink, and comes with an implementation that grants access to the data. The storage normally is a singleton that opens many sessions in parallel.
@@ -34,6 +35,13 @@ interface IStorage : AutoCloseable {
      * @since 3.0.0
      */
     val adminOptions: SessionOptions
+
+    /**
+     * The hard-cap (limit) of the storage. No result-set every should become bigger than this amount of features.
+     *
+     * Setting the value is optionally support, storages may throw an [NakshaError.UNSUPPORTED_OPERATION] exception, when trying to modify the hard-cap, or they may only allow certain values and throw an [NakshaError.ILLEGAL_ARGUMENT] exception, if the value too big. A negative value is changed into [Int.MAX_VALUE], which means no hard-cap (if supported by the storage).
+     */
+    var hardCap: Int
 
     /**
      * Tests if this storage is initialized, so [initStorage] has been called.
@@ -66,6 +74,16 @@ interface IStorage : AutoCloseable {
      * @return the map admin object.
      */
     operator fun get(mapId: String): IMap
+
+    /**
+     * Returns the map admin object.
+     *
+     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
+     * @param mapNumber the map-number.
+     * @return the map admin object, _null_, if no such map exists.
+     */
+    @JsName("getByNumber")
+    operator fun get(mapNumber: Int): IMap?
 
     /**
      * Tests if this storage contains the given map.

@@ -85,7 +85,7 @@ public class ParallelQueryExecutor {
           }
         })
         .flatMap(Collection::stream)
-        .collect(groupingBy(viewRow -> viewRow.getTuple().featureId));
+        .collect(groupingBy(viewRow -> viewRow.getTuple().id()));
   }
 
   private @NotNull Long getTimeout(@NotNull List<LayerReadRequest> requests) {

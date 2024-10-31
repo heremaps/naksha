@@ -103,7 +103,7 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster, schemaName: Stri
                         // Otherwise, start a docker container.
                         val password = "password"
                         val container = GenericContainer("hcr.data.here.com/naksha/postgres:${architecture()}-latest")
-                            .withExposedPorts(5432)
+                        container.portBindings = listOf("44585:5432") // host : container
                         container.addEnv("PGPASSWORD", password)
                         container.setWaitStrategy(
                             LogMessageWaitStrategy()

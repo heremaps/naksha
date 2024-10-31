@@ -7,15 +7,21 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fn0
 import naksha.jbon.IDictManager
 import naksha.jbon.JbDictionary
-import naksha.model.*
-import naksha.model.NakshaContext.NakshaContextCompanion.currentContext
-import naksha.model.NakshaError.NakshaErrorCompanion.UNAUTHORIZED
-import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
+import naksha.model.IMap
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
+import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_NUMBER
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
+import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES_NUMBER
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
+import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS_NUMBER
+import naksha.model.NakshaContext.NakshaContextCompanion.currentContext
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.NOT_IMPLEMENTED
+import naksha.model.NakshaError.NakshaErrorCompanion.UNAUTHORIZED
+import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
+import naksha.model.NakshaException
+import naksha.model.NakshaVersion
+import naksha.model.SessionOptions
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
@@ -111,9 +117,13 @@ open class PgMap(
     open val nameQuoted = quoteIdent(schemaName)
 
     /**
-     * A concurrent hash map with all managed collections of this schema.
+     * A concurrent hash map with all cached collections by their `id`.
      */
-    internal val collections: AtomicMap<String, WeakRef<out PgCollection>> = Platform.newAtomicMap()
+    internal val collections: AtomicMap<String, WeakRef<PgCollection>> = Platform.newAtomicMap()
+
+    /**
+     * A concurrent hash map with all cached collection-identifiers by their `number`.
+     */
     internal val collectionIdByNumber: AtomicMap<Int64, String> = Platform.newAtomicMap()
 
     /**
@@ -134,11 +144,6 @@ open class PgMap(
      */
     open fun collections(): PgNakshaCollections = getCollection(VIRT_COLLECTIONS) { PgNakshaCollections(this) }
 
-    /**
-     * Returns a shared cached [PgCollection] wrapper. This method is internally called, when a storage or realm are initialized to create all internal collections.
-     * @param collectionId the collection-id.
-     * @return the shared and cached [PgCollection] wrapper.
-     */
     override operator fun get(collectionId: String): PgCollection = getCollection(collectionId) {
         when (collectionId) {
             VIRT_DICTIONARIES -> PgNakshaDictionaries(this)
@@ -148,7 +153,19 @@ open class PgMap(
         }
     }
 
-    override fun getCollectionId(collectionNumber: Int64): String? = collectionIdByNumber[collectionNumber]
+    override fun get(collectionNumber: Int64): PgCollection? {
+        val id = getCollectionId(collectionNumber) ?: return null
+        return this[id]
+    }
+
+    override fun getCollectionId(collectionNumber: Int64): String? {
+        return collectionIdByNumber[collectionNumber] ?: when (collectionNumber) {
+            VIRT_TRANSACTIONS_NUMBER -> VIRT_TRANSACTIONS
+            VIRT_DICTIONARIES_NUMBER -> VIRT_DICTIONARIES
+            VIRT_COLLECTIONS_NUMBER -> VIRT_COLLECTIONS
+            else -> null
+        }
+    }
 
     /**
      * Returns a shared cached [PgCollection] wrapper. This method is internally called, when a storage or realm are initialized to create all internal collections.
@@ -165,12 +182,11 @@ open class PgMap(
             if (existingRef != null) collection = existingRef.deref()
             if (collection != null) return collection as T
             collection = constructor.call()
-            val collectionRef = Platform.newWeakRef(collection)
             if (existingRef != null) {
-                if (collections.replace(id, existingRef, collectionRef)) return collection
+                if (collections.replace(id, existingRef, collection.weakRef)) return collection
                 // Conflict, another thread concurrently modified the cache.
             } else {
-                collections.putIfAbsent(id, collectionRef) ?: return collection
+                collections.putIfAbsent(id, collection.weakRef) ?: return collection
                 // Conflict, there is an existing reference, another thread concurrently access the cache.
             }
         }
@@ -200,19 +216,21 @@ open class PgMap(
      * @return this.
      */
     open fun refresh(connection: PgConnection? = null): PgMap {
-        if (_updateAt == null || Platform.currentMillis() < _updateAt) {
+        if (_updateAt == null || Platform.currentMillis() > _updateAt) {
             logger.info("Refresh map '$id' / schema: '$schemaName' ...")
             val conn = connOf(connection)
             try {
                 var cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schemaName)).fetch()
-                cursor.use {
-                    _oid = cursor["oid"]
-                    // TODO: Right now we only support the default map, we need to change this!
-                    _number = 0
-                }
-                cursor = conn.execute("""SELECT oid FROM pg_class WHERE relname='$NAKSHA_COL_SEQ' AND relnamespace=${_oid}""").fetch()
-                cursor.use {
-                    _collectionNumberSeqOid = cursor["oid"]
+                if (cursor.isRow()) {
+                    cursor.use {
+                        _oid = cursor["oid"]
+                        // TODO: Right now we only support the default map, we need to change this!
+                        _number = 0
+                    }
+                    cursor = conn.execute("""SELECT oid FROM pg_class WHERE relname='$NAKSHA_COL_SEQ' AND relnamespace=${_oid}""").fetch()
+                    cursor.use {
+                        _collectionNumberSeqOid = cursor["oid"]
+                    }
                 }
             } finally {
                 closeOf(conn, connection, false)
@@ -301,7 +319,7 @@ open class PgMap(
         check(currentContext().su) { throw NakshaException(UNAUTHORIZED, "Only superusers may drop schemata") }
         val conn = connOf(connection)
         try {
-            conn.execute("DROP SCHEMA ${quoteIdent(id)}").close()
+            conn.execute("DROP SCHEMA ${quoteIdent(id)} CASCADE").close()
         } finally {
             closeOf(conn, connection, true)
         }

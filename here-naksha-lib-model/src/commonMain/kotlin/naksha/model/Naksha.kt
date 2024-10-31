@@ -4,9 +4,11 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.base.Platform
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
@@ -26,9 +28,16 @@ class Naksha private constructor() {
         const val VIRT_TRANSACTIONS = "naksha~transactions"
 
         /**
+         * The quoted identifier of the virtual collection in which transactions are stored.
+         */
+        @JvmField
+        @JsStatic
+        val VIRT_TRANSACTIONS_QUOTED = quoteIdent(VIRT_TRANSACTIONS)
+
+        /**
          * The collection-number of the virtual collection in which transactions are stored.
          */
-        @JvmStatic
+        @JvmField
         @JsStatic
         val VIRT_TRANSACTIONS_NUMBER = Int64(0)
 
@@ -38,8 +47,10 @@ class Naksha private constructor() {
         const val VIRT_COLLECTIONS = "naksha~collections"
 
         /**
-         * The identifier of the virtual collection quoted to be used in queries.
+         * The quoted identifier of the virtual collections collection to be used in queries.
          */
+        @JvmField
+        @JsStatic
         val VIRT_COLLECTIONS_QUOTED = quoteIdent(VIRT_COLLECTIONS)
 
         /**
@@ -55,10 +66,21 @@ class Naksha private constructor() {
         /**
          * The collection-number of the virtual collection in which the dictionaries are stored.
          */
-        @JvmStatic
+        @JvmField
         @JsStatic
         val VIRT_DICTIONARIES_NUMBER = Int64(2)
 
+        /**
+         * The quoted identifier of the virtual collection in which the dictionaries are stored.
+         */
+        @JvmField
+        @JsStatic
+        val VIRT_DICTIONARIES_QUOTED = quoteIdent(VIRT_DICTIONARIES)
+
+        /**
+         * Maximum collectionId name length allowed to give by clients. Rest of "free" characters are reserved for partitioning suffix.
+         */
+        private const val MAX_ID_LENGTH = 45
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:
@@ -72,7 +94,7 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun isValidId(id: String?): Boolean {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > 32) return false
+            if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_ID_LENGTH) return false
             var i = 0
             var c = id[i++]
             // First character must be a-z
@@ -96,8 +118,8 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun verifyId(id: String?) {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > 32) {
-                throw NakshaException(ILLEGAL_ID, "The given identifier is null, empty or has more than 32 characters", id = id)
+            if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_ID_LENGTH) {
+                throw NakshaException(ILLEGAL_ID, "The given identifier is null, empty or has more than $MAX_ID_LENGTH characters", id = id)
             }
             var i = 0
             var c = id[i++]
@@ -146,17 +168,21 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun quoteIdent(vararg parts: String): String {
+            if (parts.isEmpty()) throw NakshaException(ILLEGAL_ARGUMENT, "The given parts must not be empty")
+            var quoted = false
             val sb = StringBuilder()
             sb.append('"')
             for (part in parts) {
                 for (c in part) {
                     when (c) {
-                        '"' -> sb.append('"').append('"')
-                        '\\' -> sb.append('\\').append('\\')
-                        else -> sb.append(c)
+                        in 'a'..'z', in 'A'..'Z', in '0'..'9', '_' -> sb.append(c)
+                        '"' -> { quoted = true; sb.append('"').append('"') }
+                        '\\' -> { quoted = true; sb.append('\\').append('\\') }
+                        else -> { quoted = true; sb.append(c) }
                     }
                 }
             }
+            if (!quoted) return if (parts.size == 1) return parts[0] else sb.substring(1)
             sb.append('"')
             return sb.toString()
         }

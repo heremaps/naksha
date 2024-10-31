@@ -4,16 +4,12 @@ package naksha.psql
 
 import naksha.base.*
 import naksha.geo.SpGeometry
-import naksha.jbon.IDictManager
-import naksha.jbon.JbDictionary
-import naksha.jbon.JbEncoder
-import naksha.jbon.JbFeatureDecoder
+import naksha.jbon.*
 import naksha.model.*
 import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON
 import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON_GZIP
 import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON
 import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON_GZIP
-import naksha.model.Tuple.Tuple_C.NOT_FETCHED
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_ident
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_literal
@@ -232,12 +228,12 @@ class PgUtil private constructor() {
             var raw = bytes
             if (flags.tagsGzip()) raw = Platform.gzipInflate(bytes)
             val encoding = flags.tagsEncoding()
-            if (encoding == JBON || encoding == JBON_GZIP) {
+            if (encoding == TagsEncoding.JBON || encoding == TagsEncoding.JBON_GZIP) {
                 val decoder = JbFeatureDecoder(dictManager)
                 decoder.mapBytes(raw)
                 return decoder.toAnyObject().proxy(TagMap::class)
             }
-            if (encoding == JSON || encoding == JSON_GZIP) {
+            if (encoding == TagsEncoding.JSON || encoding == TagsEncoding.JSON_GZIP) {
                 val decoded = Platform.fromJSON(bytes.decodeToString())
                 if (decoded is PlatformMap) return decoded.proxy(TagMap::class)
             }
@@ -258,12 +254,13 @@ class PgUtil private constructor() {
             if (tags == null) return null
             val encoding = flags.tagsEncoding()
             var byteArray: ByteArray? = null
-            if (encoding == JSON || encoding == JSON_GZIP) {
+            if (encoding == TagsEncoding.JSON || encoding == TagsEncoding.JSON_GZIP) {
                 val encoded = Platform.toJSON(tags)
                 byteArray = encoded.encodeToByteArray()
-            } else if (encoding == JBON || encoding == JBON_GZIP) {
+            } else if (encoding == TagsEncoding.JBON || encoding == TagsEncoding.JBON_GZIP) {
                 val encoder = JbEncoder(dict)
-                byteArray = encoder.buildFeatureFromMap(tags)
+                encoder.encodeMap(tags)
+                byteArray = encoder.buildFeature(null, FEATURE_VARIANT_TAGS)
             }
             if (flags.tagsGzip() && byteArray != null) byteArray = Platform.gzipDeflate(byteArray)
             return byteArray

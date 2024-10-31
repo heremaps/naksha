@@ -162,3 +162,18 @@ internal const val RET_ERR_MSG = "err_msg"
 
 
 var TEMPORARY_TABLESPACE = "temp"
+
+/**
+ * Search for the occurrence of the given byte-value.
+ * @param value the value to search, but be convertable to `byte` (the method will invoke `toByte()`)
+ * @param start the first byte to test.
+ * @param end the first byte not to test.
+ * @return either the index of the [value] or -1, if not found.
+ */
+internal fun ByteArray.indexOf(value: Int, start: Int = 0, end: Int = size): Int {
+    val VALUE = value.toByte()
+    for (i in start until end) {
+        if (this[i] == VALUE) return i
+    }
+    return -1
+}

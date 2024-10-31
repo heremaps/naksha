@@ -91,6 +91,13 @@ class TupleCache internal constructor(
     }
 
     /**
+     * Removes all cache entries.
+     */
+    fun clear() {
+        for (e in tuples) tuples.remove(e.key, e.value)
+    }
+
+    /**
      * Performs a garbage collection, remove all rows from the cache, that have been garbage collected.
      */
     fun gc() {

@@ -25,7 +25,7 @@ open class Request : AnyObject() {
     protected open fun defaultRowOptions() : ReturnColumns = ReturnColumns.all()
 
     /**
-     * Options of what data is needed by the [resultFilters].
+     * Options of what data is needed by the [resultFilters] and the client (defaults for [SuccessResponse.features]).
      *
      * The columns of a [tuple][naksha.model.Tuple] that are needed in the [resultFilters]. Actually, if any [resultFilters] are set, this causes the API to invoke [naksha.model.ISession.fetchTuples] before delivering the [ResultTuple] to the [resultFilters].
      */

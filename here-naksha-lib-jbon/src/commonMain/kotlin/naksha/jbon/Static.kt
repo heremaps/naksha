@@ -91,12 +91,16 @@ const val TYPE_STRING = CLASS_STRING or 0b0000
 const val TYPE_ARRAY = CLASS_STRUCT or 0b0000
 const val TYPE_MAP = CLASS_STRUCT or 0b0001
 const val TYPE_DICTIONARY = CLASS_STRUCT or 0b0010
-const val TYPE_RESERVED1 = CLASS_STRUCT or 0b0111
+const val TYPE_RESERVED = CLASS_STRUCT or 0b0111
 // with variant
 const val TYPE_FEATURE = CLASS_STRUCT or 0b0100
-const val TYPE_XYZ = CLASS_STRUCT or 0b0101
-const val TYPE_CUSTOM = CLASS_STRUCT or 0b0110
-const val TYPE_RESERVED2 = CLASS_STRUCT or 0b0111
+const val TYPE_RESERVED1 = CLASS_STRUCT or 0b0101
+const val TYPE_RESERVED2 = CLASS_STRUCT or 0b0110
+const val TYPE_CUSTOM = CLASS_STRUCT or 0b0111
+
+const val FEATURE_VARIANT_UNKNOWN = 0
+const val FEATURE_VARIANT_GEO_JSON = 1
+const val FEATURE_VARIANT_TAGS = 2
 
 /**
  * A special type returned when the offset in a reader is invalid or for any other error.

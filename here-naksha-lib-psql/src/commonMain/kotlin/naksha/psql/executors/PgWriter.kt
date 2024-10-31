@@ -1,23 +1,18 @@
 package naksha.psql.executors
 
 import naksha.base.Int64
-import naksha.base.PlatformUtil
-import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
-import naksha.model.Naksha.NakshaCompanion.quoteIdent
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.CONFLICT
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.psql.*
-import naksha.psql.executors.write.InsertFeature
-import naksha.psql.executors.write.UpdateFeature
+import naksha.psql.executors.write.*
 import kotlin.jvm.JvmField
 
 // TODO: We need to fix NakshaBulkLoaderPlan to make this faster again !
@@ -44,6 +39,11 @@ class PgWriter(
      * The write instructions to [execute].
      */
     @JvmField val request: WriteRequest,
+
+    /**
+     * The write executor implementation: instant execution or bulk execution, etc.
+     */
+    @JvmField val writeExecutor: WriteExecutor,
 ) {
 
     /**
@@ -172,46 +172,108 @@ class PgWriter(
     private val tupleCache = NakshaCache.tupleCache(storage.id)
     private val tuples = TupleList()
     private val tupleNumbers = TupleNumberList()
-    private var resultSet: PgResultSet? = null
 
     fun execute(): Response {
-        val tupleCache = this.tupleCache
-        val tuples = this.tuples
         val tupleNumbers = this.tupleNumbers
+        val previousMetadataProvider = ExistingMetadataProvider(session, orderedWrites)
 
         // First, process collections, no performance need here for now.
-        for (write in orderedWrites) {
-            if (write == null) continue
-            val tuple = if (write.collectionId == VIRT_COLLECTIONS) {
-                when (write.op) {
-                    WriteOp.CREATE -> createCollection(mapOf(write), write)
-                    WriteOp.UPSERT -> upsertCollection(mapOf(write), write)
-                    WriteOp.UPDATE -> updateCollection(mapOf(write), write)
-                    WriteOp.DELETE -> deleteCollection(mapOf(write), write)
-                    WriteOp.PURGE -> purgeCollection(mapOf(write), write)
-                    else -> throw NakshaException(
-                        UNSUPPORTED_OPERATION,
-                        "Unknown write-operation: '${write.op}'"
-                    )
+        try {
+            for (write in orderedWrites) {
+                if (write == null) continue
+                val tupleNumber: TupleNumber = if (write.collectionId == VIRT_COLLECTIONS) {
+                    when (write.op) {
+                        WriteOp.CREATE -> cachedTupleNumber(
+                            write,
+                            CreateCollection(session).execute(mapOf(write), write)
+                        )
+
+                        WriteOp.UPSERT -> {
+                            val id = write.id
+                            if (id == null || previousMetadataProvider.get(
+                                    VIRT_COLLECTIONS,
+                                    id
+                                ) == null
+                            ) {
+                                cachedTupleNumber(
+                                    write,
+                                    CreateCollection(session).execute(mapOf(write), write)
+                                )
+                            } else {
+                                val updatedTuple = UpdateCollection(session).execute(mapOf(write), write)
+                                    ?: return ErrorResponse(
+                                        CONFLICT,
+                                        "Collection does not exist but was processed for update during upserting: ${write.id}"
+                                    )
+                                updatePrevTupleCache(updatedTuple)
+                                cachedTupleNumber(write, updatedTuple)
+                            }
+                        }
+                        WriteOp.UPDATE -> {
+                            val updatedTuple = UpdateCollection(session).execute(mapOf(write), write)
+                                ?: //TODO rollback?
+                                return ErrorResponse(
+                                    COLLECTION_NOT_FOUND,
+                                    write.featureId ?: "Unknown null collection requested to be updated"
+                                )
+                            updatePrevTupleCache(updatedTuple)
+                            cachedTupleNumber(write, updatedTuple)
+                        }
+
+                        WriteOp.DELETE, WriteOp.PURGE -> DropCollection(session).execute(
+                            mapOf(write),
+                            write
+                        )
+
+                        else -> throw NakshaException(
+                            UNSUPPORTED_OPERATION,
+                            "Unknown write-operation: '${write.op}'"
+                        )
+                    }
+                } else {
+                    val collection = collectionOf(write)
+                    when (write.op) {
+                        WriteOp.CREATE -> cachedTupleNumber(
+                            write,
+                            InsertFeature(session, writeExecutor).execute(collection, write)
+                        )
+
+                        WriteOp.UPSERT -> {
+                            val id = write.id
+                            if (id == null || previousMetadataProvider.get(collection.head.name, id) == null)
+                            {
+                                cachedTupleNumber(
+                                    write,
+                                    InsertFeature(session, writeExecutor).execute(collection, write)
+                                )
+                            } else {
+                                updateFeature(collection, previousMetadataProvider, write)
+                            }
+                        }
+                        WriteOp.UPDATE -> {
+                            updateFeature(collection,previousMetadataProvider, write)
+                        }
+
+                        WriteOp.DELETE -> DeleteFeature(session, writeExecutor).execute(
+                            collection,
+                            write
+                        )
+
+                        WriteOp.PURGE -> TODO()
+                        else -> throw NakshaException(
+                            UNSUPPORTED_OPERATION,
+                            "Unknown write-operation: '${write.op}'"
+                        )
+                    }
                 }
-            } else {
-                when (write.op) {
-                    WriteOp.CREATE -> InsertFeature(session).execute(collectionOf(write), write)
-                    WriteOp.UPSERT -> upsertFeature(collectionOf(write), write)
-                    WriteOp.UPDATE -> UpdateFeature(session).execute(collectionOf(write), write)
-                    WriteOp.DELETE -> deleteFeature(collectionOf(write), write)
-                    WriteOp.PURGE -> purgeFeature(collectionOf(write), write)
-                    else -> throw NakshaException(
-                        UNSUPPORTED_OPERATION,
-                        "Unknown write-operation: '${write.op}'"
-                    )
-                }
+                tupleNumbers[write.i] = tupleNumber
             }
-            tuples[write.i] = tuple
-            tupleNumbers[write.i] = tuple.tupleNumber
-            tupleCache.store(tuple)
+        }
+        catch (e: NakshaException) {
+            return ErrorResponse(e)
         }
 
+        writeExecutor.finish()
         // If everything was done perfectly, fine.
         val tupleNumberByteArray = TupleNumberByteArray(storage, tupleNumbers.toByteArray())
         return SuccessResponse(
@@ -227,6 +289,36 @@ class PgWriter(
                 filters = request.resultFilters
             )
         )
+    }
+
+    private fun cachedTupleNumber(write: WriteExt, tuple: Tuple): TupleNumber {
+        tuples[write.i] = tuple
+        tupleCache.store(tuple)
+        return tuple.tupleNumber
+    }
+
+    private fun updateFeature(collection: PgCollection, previousMetadataProvider: ExistingMetadataProvider, write: WriteExt): TupleNumber {
+        val updatedTuple = UpdateFeature(
+            session,
+            previousMetadataProvider,
+            writeExecutor
+        ).execute(collection, write)
+        updatePrevTupleCache(updatedTuple)
+        return cachedTupleNumber(write, updatedTuple)
+    }
+
+    /**
+     * Updates previous version of tuple in cache - based on its previous txn.
+     */
+    private fun updatePrevTupleCache(newTuple: Tuple) {
+        val prevTupleNumber = newTuple.getPrevTupleNumber()
+        if (prevTupleNumber != null) {
+            val prevTuple = tupleCache[prevTupleNumber]
+            if (prevTuple != null) {
+                val updatedMeta = prevTuple.meta?.copy(nextVersion = newTuple.meta?.version)
+                tupleCache[prevTupleNumber] = prevTuple.copy(meta = updatedMeta)
+            }
+        }
     }
 
     private fun mapOf(write: WriteExt): PgMap {
@@ -246,170 +338,5 @@ class PgWriter(
             "No such collection: $collectionId"
         )
         return collection
-    }
-
-    private fun createCollection(map: PgMap, write: WriteExt): Tuple {
-        // Note: write.collectionId is always naksha~collections!
-        val feature = write.feature?.proxy(NakshaCollection::class) ?: throw NakshaException(
-            ILLEGAL_ARGUMENT,
-            "CREATE without feature"
-        )
-        val colId = write.featureId ?: PlatformUtil.randomString()
-        val collectionNumber = newCollectionNumber(map)
-        val tupleNumber = newCollectionTupleNumber(map, collectionNumber)
-        val tuple = tuple(
-            tupleNumber,
-            feature,
-            write.attachment,
-            colId,
-            storage.defaultFlags,
-            map.encodingDict(colId, feature)
-        )
-
-        // insert row into naksha~collections before creating tables
-        executeInsert(VIRT_COLLECTIONS_QUOTED, tuple, feature)
-
-        // Create the tables
-        val collection = map[colId]
-        collection.create(
-            conn,
-            feature.partitions,
-            PgStorageClass.of(feature.storageClass)
-        )
-        return tuple
-    }
-
-    /**
-    Generates values matching [naksha.psql.PgColumn.allColumns] array
-     */
-    private fun allColumnValues(
-        tuple: Tuple,
-        feature: NakshaFeature,
-        prevTxn: Int64? = null, // prev_txn is null for first version
-        txn: Int64,
-        nextTxn: Int64? = null, // prev_txn is null for newest version
-        prevUid: Int? = null, // puid is null for first version
-        changeCount: Int = 1 // change_count is '1' for the first version
-    ): Array<Any?> {
-        return arrayOf(
-            tuple.tupleNumber.storeNumber,
-            tuple.meta.updatedAt,
-            tuple.meta.createdAt,
-            tuple.meta.authorTs,
-            nextTxn,
-            txn,
-            prevTxn,
-            tuple.tupleNumber.uid,
-            prevUid,
-            changeCount,
-            Metadata.hash(feature),
-            Metadata.geoGrid(feature),
-            tuple.meta.flags,
-            feature.id,
-            tuple.meta.appId,
-            tuple.meta.author,
-            tuple.meta.type,
-            tuple.meta.origin,
-            tuple.tags,
-            tuple.referencePoint,
-            tuple.geo,
-            tuple.feature,
-            tuple.attachment
-        )
-    }
-
-    private fun tuple(
-        tupleNumber: TupleNumber,
-        feature: NakshaFeature,
-        attachment: ByteArray?,
-        featureId: String,
-        flags: Flags,
-        encodingDict: JbDictionary? = null
-    ): Tuple {
-        return Tuple(
-            storage = storage,
-            tupleNumber = tupleNumber,
-            geo = PgUtil.encodeGeometry(feature.geometry, flags),
-            referencePoint = PgUtil.encodeGeometry(feature.referencePoint, flags),
-            feature = PgUtil.encodeFeature(feature, flags, encodingDict),
-            tags = PgUtil.encodeTags(
-                feature.properties.xyz.tags?.toTagMap(),
-                storage.defaultFlags,
-                encodingDict
-            ),
-            attachment = attachment,
-            meta = Metadata(
-                storeNumber = tupleNumber.storeNumber,
-                version = tupleNumber.version,
-                uid = tupleNumber.uid,
-                updatedAt = updateTime(),
-                author = session.options.author,
-                appId = session.options.appId,
-                flags = flags,
-                id = featureId,
-                type = NakshaCollection.FEATURE_TYPE
-            )
-        )
-    }
-
-    internal fun updateCollection(map: PgMap, write: WriteExt): Tuple {
-        TODO("Implement me")
-    }
-
-    internal fun upsertCollection(map: PgMap, write: WriteExt): Tuple {
-        TODO("Implement me")
-    }
-
-    internal fun deleteCollection(map: PgMap, write: WriteExt): Tuple {
-        TODO("Implement me")
-    }
-
-    internal fun purgeCollection(map: PgMap, write: WriteExt): Tuple {
-        TODO("Implement me")
-    }
-
-    internal fun createFeature(collection: PgCollection, write: WriteExt): Tuple {
-        val feature = write.feature?.proxy(NakshaFeature::class) ?: throw NakshaException(
-            ILLEGAL_ARGUMENT,
-            "CREATE without feature"
-        )
-        val tupleNumber = newFeatureTupleNumber(collection, feature.id)
-        val tuple = tuple(tupleNumber, feature, write.attachment, feature.id, flags(collection.nakshaCollection))
-
-        executeInsert(quoteIdent(collection.id), tuple, feature)
-        return tuple
-    }
-
-    internal fun executeInsert(
-        quotedCollectionId: String,
-        tuple: Tuple,
-        feature: NakshaFeature
-    ): Tuple {
-        val transaction = session.transaction()
-        conn.execute(
-            sql = """ INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})
-                      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
-                      """.trimIndent(),
-            args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
-        )
-        return tuple
-    }
-
-    internal fun updateFeature(collection: PgCollection, write: WriteExt): Tuple {
-        val transaction = session.transaction()
-
-        TODO("Implement me")
-    }
-
-    internal fun upsertFeature(collection: PgCollection, write: WriteExt): Tuple {
-        TODO("Implement me")
-    }
-
-    internal fun deleteFeature(collection: PgCollection, write: WriteExt): Tuple {
-        TODO("Implement me")
-    }
-
-    internal fun purgeFeature(collection: PgCollection, write: WriteExt): Tuple {
-        TODO("Implement me")
     }
 }

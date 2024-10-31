@@ -9,7 +9,7 @@ import naksha.model.Naksha
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_SUPPORTED
 import naksha.psql.PgIndex.PgIndexCompanion.app_id_updatedAt_id_txn_uid
 import naksha.psql.PgIndex.PgIndexCompanion.author_ts_id_txn_uid
-import naksha.psql.PgIndex.PgIndexCompanion.gist_geo_id_txn_uid
+import naksha.psql.PgIndex.PgIndexCompanion.gist_geo
 import naksha.psql.PgIndex.PgIndexCompanion.id_txn_uid
 import naksha.psql.PgIndex.PgIndexCompanion.tags_id_txn_uid
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
@@ -208,7 +208,7 @@ CREATE SEQUENCE IF NOT EXISTS $NAKSHA_MAP_SEQ AS ${PgType.INT64} START 1 CACHE 1
             storeMeta = true,
             indices = listOf(
                 id_txn_uid,
-                gist_geo_id_txn_uid,
+                gist_geo,
                 tags_id_txn_uid,
                 app_id_updatedAt_id_txn_uid,
                 author_ts_id_txn_uid
@@ -221,7 +221,7 @@ CREATE SEQUENCE IF NOT EXISTS $NAKSHA_MAP_SEQ AS ${PgType.INT64} START 1 CACHE 1
             storeMeta = true,
             indices = listOf(
                 id_txn_uid,
-                gist_geo_id_txn_uid,
+                gist_geo,
                 tags_id_txn_uid,
                 app_id_updatedAt_id_txn_uid,
                 author_ts_id_txn_uid

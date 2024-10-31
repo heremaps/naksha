@@ -835,7 +835,6 @@ open class JbEncoder(var global: JbDictionary? = null) : Binary() {
      * @return The JBON representation of the feature, the XYZ-namespace and the geometry.
      */
     fun buildFeatureFromMap(map: MapProxy<String, *>): ByteArray {
-        // TODO: Make the ignore configurable!
         clear()
         val id: String? = map.getAs("id", String::class)
         xyz = null
@@ -853,7 +852,7 @@ open class JbEncoder(var global: JbDictionary? = null) : Binary() {
             }
         }
         endMap(start)
-        return buildFeature(id)
+        return buildFeature(id, FEATURE_VARIANT_GEO_JSON)
     }
 
     /**
@@ -938,12 +937,12 @@ open class JbEncoder(var global: JbDictionary? = null) : Binary() {
     }
 
     /**
-     * Creates a feature out of this builder and the current local dictionary.
+     * Creates a feature out of this builder, and the current local dictionary.
      * @param id The unique identifier of the feature, may be null.
      * @param variant The variant to write.
      * @return The feature.
      */
-    fun buildFeature(id: String? = null, variant: Int = 0): ByteArray {
+    fun buildFeature(id: String? = null, variant: Int = FEATURE_VARIANT_UNKNOWN): ByteArray {
         // The content (was already written).
         val startOfFeaturePayload = 0
         check(end > 0) { "Can't build empty feature" }

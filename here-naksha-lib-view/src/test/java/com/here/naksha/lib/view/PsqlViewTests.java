@@ -51,18 +51,9 @@ class PsqlViewTests extends PsqlTests {
     return true;
   }
 
-  final boolean dropInitially() {
-    return runTest() && DROP_INITIALLY;
-  }
-
-  final boolean dropFinally() {
-    return runTest() && DROP_FINALLY;
-  }
-
   static final String COLLECTION_0 = "test_view0";
   static final String COLLECTION_1 = "test_view1";
   static final String COLLECTION_2 = "test_view2";
-  static final Write write = new Write();
 
   @Test
   @Order(30)
@@ -71,9 +62,9 @@ class PsqlViewTests extends PsqlTests {
     assertNotNull(storage);
     assertNotNull(session);
     final WriteRequest request = new WriteRequest();
-    request.add(write.createCollection(null, new NakshaCollection(COLLECTION_0, 1, null, false, true, null)));
-    request.add(write.createCollection(null, new NakshaCollection(COLLECTION_1, 1, null, false, true, null)));
-    request.add(write.createCollection(null, new NakshaCollection(COLLECTION_2, 1, null, false, true, null)));
+    request.add(new Write().createCollection(null, new NakshaCollection(COLLECTION_0, 1, null, false, true, null)));
+    request.add(new Write().createCollection(null, new NakshaCollection(COLLECTION_1, 1, null, false, true, null)));
+    request.add(new Write().createCollection(null, new NakshaCollection(COLLECTION_2, 1, null, false, true, null)));
     SuccessResponse response = (SuccessResponse) session.execute(request);
     assertNotNull(response.getTuples());
     session.commit();
@@ -95,15 +86,15 @@ class PsqlViewTests extends PsqlTests {
     for (int i = 0; i < 10; i++) {
       final NakshaFeature feature = new NakshaFeature(String.valueOf(threadLocalRandom.nextInt()));
       feature.setGeometry(point);
-      requestTest0.add(write.updateFeature(null, COLLECTION_0, feature, false));
+      requestTest0.add(new Write().createFeature(null, COLLECTION_0, feature));
 
       NakshaFeature featureEdited1 = feature.copy(true);
       featureEdited1.setGeometry(point1);
-      requestTest1.add(write.updateFeature(null, COLLECTION_1, featureEdited1, false));
+      requestTest1.add(new Write().createFeature(null, COLLECTION_1, featureEdited1));
 
       NakshaFeature featureEdited2 = feature.copy(true);
       featureEdited2.setGeometry(point2);
-      requestTest2.add(write.updateFeature(null, COLLECTION_2, featureEdited2, false));
+      requestTest2.add(new Write().createFeature(null, COLLECTION_2, featureEdited2));
     }
       session.execute(requestTest0);
       session.execute(requestTest1);
@@ -130,6 +121,7 @@ class PsqlViewTests extends PsqlTests {
     View viewReversed = new View(viewLayerCollectionReversedOrder);
 
     ReadFeatures requestAll = new ReadFeatures();
+    requestAll.setQueryHistory(false);
 
     // when
     List<NakshaFeature> features = queryView(view, requestAll);
@@ -228,11 +220,11 @@ class PsqlViewTests extends PsqlTests {
     final WriteRequest requestTest2 = new WriteRequest();
     final NakshaFeature feature = new NakshaFeature(String.valueOf(threadLocalRandom.nextInt()));
     feature.setGeometry(new SpPoint(new PointCoord(11d, 11d)));
-    requestTest1.add(write.createFeature(null, COLLECTION_1, feature));
+    requestTest1.add(new Write().createFeature(null, COLLECTION_1, feature));
 
     NakshaFeature featureEdited2 = feature.copy(true);
     featureEdited2.setGeometry(new SpPoint(new PointCoord(22d, 22d)));
-    requestTest2.add(write.createFeature(null, COLLECTION_2, featureEdited2));
+    requestTest2.add(new Write().createFeature(null, COLLECTION_2, featureEdited2));
       session.execute(requestTest1);
       session.execute(requestTest2);
       session.commit();
@@ -253,8 +245,9 @@ class PsqlViewTests extends PsqlTests {
     spIntersects.setGeometry(new SpPoint(new PointCoord(11d,11d)));
     SpOr spOr = new SpOr();
     spOr.add(spIntersects);
-    spIntersects.setGeometry(new SpPoint(new PointCoord(22d,22d)));
-    spOr.add(spIntersects);
+    SpIntersects spIntersects2 = new SpIntersects();
+    spIntersects2.setGeometry(new SpPoint(new PointCoord(22d,22d)));
+    spOr.add(spIntersects2);
     requestQuery.setSpatial(spOr);
     getByPoint.setQuery(requestQuery);
     List<NakshaFeature> features = queryView(view, getByPoint);

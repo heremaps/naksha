@@ -56,8 +56,8 @@ public class Sample {
     List<ResultTuple> returnList = new ArrayList<>();
     for (int i = 0; i < size; i++) {
       byte[] bytesFeature = PgUtil.encodeFeature(new NakshaFeature(), 0, null);
-      Tuple tuple = new Tuple(storage, tupleNum, metadata, bytesFeature, null, null, null, null);
-      returnList.add(new ResultTuple(storage, tupleNum, ExecutedOp.READ,"id" + i, tuple));
+      Tuple tuple = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesFeature, null, null, null, null);
+      returnList.add(new ResultTuple(storage, tupleNum, ExecutedOp.READ, tuple));
     }
     return returnList;
   }
@@ -65,8 +65,8 @@ public class Sample {
     List<ResultTuple> returnList = new ArrayList<>();
     for (int i = 0; i < size; i++) {
       byte[] bytesFeature = PgUtil.encodeFeature(new NakshaFeature(), 0, null);
-      Tuple tuple = new Tuple(storage, tupleNum, metadata, bytesFeature, null, null, null, null);
-      returnList.add(new ResultTuple(storage, tupleNum, op,"id" + i, tuple));
+      Tuple tuple = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesFeature, null, null, null, null);
+      returnList.add(new ResultTuple(storage, tupleNum, op,tuple));
     }
     return returnList;
   }

@@ -18,12 +18,12 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.model.FetchMode;
 import naksha.model.IReadSession;
 import java.util.List;
 
 import naksha.model.Tuple;
 import naksha.model.TupleNumber;
+import naksha.model.objects.Transaction;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.ResultTuple;
@@ -115,23 +115,18 @@ public class MockReadSession implements IReadSession {
 
   @NotNull
   @Override
-  public List<Tuple> getLatestTuples(@NotNull String mapId, @NotNull String collectionId, @NotNull String[] featureIds, @NotNull FetchMode mode) {
+  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
     return List.of();
+  }
+
+  @Override
+  public void fetchTuples(@NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
+
   }
 
   @NotNull
   @Override
-  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, @NotNull FetchMode mode) {
-    return List.of();
-  }
-
-  @Override
-  public void fetchTuple(@NotNull ResultTuple resultTuple, @NotNull FetchMode mode) {
-
-  }
-
-  @Override
-  public void fetchTuples(@NotNull List<? extends ResultTuple> resultTuples, int from, int to, @NotNull FetchMode mode) {
-
+  public Transaction transaction() {
+    return null;
   }
 }

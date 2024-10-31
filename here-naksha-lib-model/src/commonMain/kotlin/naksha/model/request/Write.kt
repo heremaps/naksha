@@ -171,7 +171,7 @@ open class Write : AnyObject() {
         this.collectionId = collectionId
         this.op = WriteOp.UPDATE
         this.id = feature.id
-        this.version = if (atomic) feature.properties.xyz.version else null
+        this.version = if (atomic) feature.properties.xyz.txn else null
         this.feature = feature
         return this
     }
@@ -206,7 +206,7 @@ open class Write : AnyObject() {
         this.collectionId = collectionId
         this.op = WriteOp.DELETE
         this.id = feature.id
-        this.version = if (atomic) feature.properties.xyz.version else null
+        this.version = if (atomic) feature.properties.xyz.txn else null
         this.feature = null
         return this
     }
@@ -257,7 +257,7 @@ open class Write : AnyObject() {
         this.collectionId = VIRT_COLLECTIONS
         this.op = WriteOp.UPDATE
         this.id = collection.id
-        this.version = if (atomic) collection.properties.xyz.version else null
+        this.version = if (atomic) collection.properties.xyz.txn else null
         this.feature = collection
         return this
     }
@@ -289,7 +289,7 @@ open class Write : AnyObject() {
         this.mapId = map ?: NakshaContext.mapId()
         this.op = WriteOp.DELETE
         this.id = collection.id
-        this.version = if (atomic) collection.properties.xyz.version else null
+        this.version = if (atomic) collection.properties.xyz.txn else null
         this.feature = null
         return this
     }

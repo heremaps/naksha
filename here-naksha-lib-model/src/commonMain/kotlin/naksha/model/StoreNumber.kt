@@ -21,7 +21,7 @@ import naksha.model.Naksha.NakshaCompanion.partitionNumber
  *  R[ MN ][       CN        ][PN]
  *  0[000]-[0000-0000-0000-00][00]
  * ```
- * - PN: partition number (_8-bit_) - bits: 0-7
+ * - PN: partition number (_8-bit_) - bits: 0-7 _(BE index 7)_
  * - CN: collection-number (_40-bit_) - bits: 8-47
  * - MN: the map-number (_12-bit_) - bits: 48-59
  * - R: Reserved (_4-bit_) - bits 60-63

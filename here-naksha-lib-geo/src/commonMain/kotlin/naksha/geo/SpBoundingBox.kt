@@ -20,8 +20,20 @@ class SpBoundingBox() : ListProxy<Double>(Double::class) {
         addAll(arrayOf(west, south, southWestAlt, east, north, northEastAlt))
     }
 
+    @JsName("fromGeometry")
+    constructor(geometry: SpGeometry?) : this() {
+        when (val coord = geometry?.getCoordinates()) {
+            is PointCoord -> setToPoint(coord.getLongitude(),coord.getLatitude())
+            is MultiPointCoord -> addMultiPoint(coord)
+            is LineStringCoord -> addLineString(coord)
+            is MultiLineStringCoord -> addMultiLineString(coord)
+            is MultiPolygonCoord -> addMultiPolygon(coord)
+            is PolygonCoord -> addPolygon(coord)
+        }
+    }
+
     @JsName("fromCoord")
-    constructor(coord: ICoordinates) : this() {
+    constructor(coord: ICoordinates?) : this() {
         when (coord) {
             is PointCoord -> setToPoint(coord.getLongitude(),coord.getLatitude())
             is MultiPointCoord -> addMultiPoint(coord)
@@ -115,6 +127,14 @@ class SpBoundingBox() : ListProxy<Double>(Double::class) {
         return this
     }
 
+    fun addMargin(margin: Double): SpBoundingBox {
+        return this
+            .withMinLongitude(getMinLongitude() - margin)
+            .withMaxLongitude(getMaxLongitude() + margin)
+            .withMinLatitude(getMinLatitude() - margin)
+            .withMaxLatitude(getMaxLatitude() + margin)
+    }
+
     fun minLonIndex(): Int = 0
     fun minLatIndex(): Int = 1
     fun minAltIndex(): Int? = if (size == 6) 2 else null
@@ -172,6 +192,12 @@ class SpBoundingBox() : ListProxy<Double>(Double::class) {
         }
         return this
     }
+
+    /**
+     * Convert this bounding box into a polygon.
+     * @return this bounding box as polygon.
+     */
+    fun toPolygon(): SpPolygon = SpPolygon(this)
 
     fun getMinLongitude(): Double = get(minLonIndex()) ?: 0.0
     fun getWestLongitude(): Double = getMinLongitude()

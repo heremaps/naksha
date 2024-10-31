@@ -53,6 +53,15 @@ interface PgCursor : AutoCloseable {
     operator fun contains(name: String): Boolean
 
     /**
+     * Tests if the current row has the given colum.
+     * @param column the column
+     * @return _true_ if the current row contains the column.
+     * @throws IllegalStateException if the cursor is not positioned above a valid row, [isRow] returns _false_.
+     */
+    @JsName("has")
+    operator fun contains(column: PgColumn): Boolean = contains(column.name)
+
+    /**
      * Returns the column value of the current row.
      * @param name the name of the column
      * @return the value of the column; _null_ if the value is _null_ or no such column exists.

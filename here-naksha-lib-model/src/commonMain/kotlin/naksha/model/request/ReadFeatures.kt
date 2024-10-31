@@ -69,6 +69,8 @@ open class ReadFeatures() : ReadRequest() {
      *
      * The defaults to 1, which means only the latest version, being closest to the given maximal [version] should be returned, if no [version] given, the latest version is meant.
      *
+     * This parameter is ignored for queries to a _GUID_, because a _GUID_ already identifies an exact version. The query requires that [queryHistory] is _true_, if this value is not _1_ (the default) and [queryHistory] is _false_, the request will be rejected with [naksha.model.NakshaError.ILLEGAL_ARGUMENT].
+     *
      * If multiple versions are requested, the execution may become drastically slower, therefore this feature should be used with care!
      * @since 3.0.0
      */

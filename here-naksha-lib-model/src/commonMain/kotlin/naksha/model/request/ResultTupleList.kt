@@ -32,7 +32,7 @@ class ResultTupleList : ListProxy<ResultTuple>(ResultTuple::class) {
                 val tupleNumber = array[i] ?: throw NakshaException(ILLEGAL_STATE, "Invalid tuple-number at index $i")
                 val tupleCache = NakshaCache.tupleCache(storage.id)
                 val tuple = tupleCache[tupleNumber]
-                val resultTuple = ResultTuple(storage, tupleNumber, ExecutedOp.READ, tuple?.meta?.id, tuple)
+                val resultTuple = ResultTuple(storage, tupleNumber, ExecutedOp.READ, tuple)
                 list.add(resultTuple)
                 i++
             }

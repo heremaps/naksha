@@ -29,10 +29,7 @@ import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
-import naksha.model.request.query.AnyOp;
-import naksha.model.request.query.POr;
-import naksha.model.request.query.PQuery;
-import naksha.model.request.query.Property;
+import naksha.model.request.query.*;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.invocation.InvocationOnMock;
@@ -108,14 +105,14 @@ public class ViewTest {
     when(storage.get(any())).thenReturn(map);
     when(map.getCollectionId(any())).thenReturn("Mock Collection");
 
-    final LayerWriteFeatureRequest request = new LayerWriteFeatureRequest();
+    final WriteRequest request = new WriteRequest();
     final NakshaFeature feature = new NakshaFeature("id0");
     request.add(write.createFeature(null,VIEW_COLLECTION,feature));
     when(storage.tupleToFeature(any())).thenReturn(feature);
 
     Response success = new SuccessResponse(sampleXyzWriteResponse(1, storage, ExecutedOp.CREATED));
     when(session.execute(request)).thenReturn(success);
-    ViewWriteSession writeSession = view.newWriteSession(sessionOptions);
+    ViewWriteSession writeSession = view.newWriteSession(sessionOptions).init();
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class,response);
     SuccessResponse successResponse = (SuccessResponse) response;
@@ -135,17 +132,17 @@ public class ViewTest {
     View view = new View(viewLayerCollection);
     when(storage.newWriteSession(sessionOptions)).thenReturn(session);
 
-    final LayerWriteFeatureRequest request = new LayerWriteFeatureRequest();
+    final WriteRequest request = new WriteRequest();
     final NakshaFeature feature = new NakshaFeature("id0");
     request.add(write.deleteFeature(null,VIEW_COLLECTION,feature,false));
     SuccessResponse successResponse1 = new SuccessResponse(sampleXyzWriteResponse(1, storage, ExecutedOp.DELETED));
     when(session.execute(request)).thenReturn(successResponse1);
-    ViewWriteSession writeSession = view.newWriteSession(sessionOptions);
+    ViewWriteSession writeSession = view.newWriteSession(sessionOptions).init();
 
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class,response);
     SuccessResponse successResponse = (SuccessResponse) response;
-    assertEquals(feature.getId(), successResponse.getTuples().get(0).featureId);
+    assertEquals(feature.getId(), successResponse.getTuples().get(0).id());
     assertEquals(ExecutedOp.DELETED, successResponse.getTuples().get(0).op);
     writeSession.commit();
   }
@@ -200,7 +197,7 @@ public class ViewTest {
     // when not only by id
     clearInvocations(readSession);
     ReadFeatures request2 = new ReadFeatures();
-    POr propQuery = new POr(new PQuery(new Property(Property.ID), AnyOp.IS_ANY_OF, new int[]{1}), new PQuery(new Property(Property.APP_ID), AnyOp.IS_ANY_OF, new String[]{"app"}));
+    POr propQuery = new POr(new PQuery(new Property(Property.ID), StringOp.EQUALS, "1"), new PQuery(new Property(Property.APP_ID), StringOp.EQUALS, "app"));
     RequestQuery requestQuery = new RequestQuery();
     requestQuery.setProperties(propQuery);
     request2.setQuery(requestQuery);

@@ -76,7 +76,7 @@ data class PgRelation(
         if (i > 0) {
             i += PG_PART.length
             if (i + 3 <= name.length) try {
-                n = name.substring(i, 3).toInt(10)
+                n = name.substring(i, i + 3).toInt(10)
             } catch (_: Exception) {}
         }
         this._partNumber = n
@@ -99,7 +99,7 @@ data class PgRelation(
         if (i > 0) {
             i += PG_YEAR.length
             if (i + 4 <= name.length) try {
-                n = name.substring(i, 4).toInt(10)
+                n = name.substring(i, i + 4).toInt(10)
             } catch (_: Exception) {}
         }
         this._year = n

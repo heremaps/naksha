@@ -18,7 +18,7 @@ class FlagsTest {
         // expect default values
         assertEquals(GeoEncoding.TWKB, flags.geoEncoding())
         assertEquals(FeatureEncoding.JBON, flags.featureEncoding())
-        assertEquals(TagsEncoding.JSON, flags.tagsEncoding())
+        assertEquals(TagsEncoding.JBON, flags.tagsEncoding())
         assertEquals(ActionValues.CREATED, flags.action())
     }
 

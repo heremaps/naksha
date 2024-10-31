@@ -65,7 +65,7 @@ open class TupleColumn() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun createAt(): TupleColumn = TupleColumn(CREATED_AT)
+        fun createdAt(): TupleColumn = TupleColumn(CREATED_AT)
 
         /**
          * The reference to the [update timestamp][naksha.model.Metadata.updatedAt].
@@ -162,7 +162,7 @@ open class TupleColumn() : AnyObject() {
         /**
          * The reference to the [version][naksha.model.Metadata.version] (_transaction number_).
          *
-         * This value is exposed through [naksha.model.XyzNs.version].
+         * This value is exposed through [naksha.model.XyzNs.txn].
          *
          * Supported [query operations][AnyOp] are:
          * - [QueryNumber.*][DoubleOp]
@@ -394,6 +394,21 @@ open class TupleColumn() : AnyObject() {
         @JvmStatic
         @JsStatic
         fun tags(): TupleColumn = TupleColumn(TAGS)
+
+        /**
+         * The reference to the [attachment][naksha.model.Tuple.attachment].
+         *
+         * This can only be queried using a special [property query][IPropertyQuery].
+         */
+        const val ATTACHMENT = "attachment"
+
+        /**
+         * Returns a new row-column for [ATTACHMENT].
+         * @return a new row-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun attachment(): TupleColumn = TupleColumn(ATTACHMENT)
 
         private val STRING = NotNullProperty<TupleColumn, String>(String::class) { _, _ -> "" }
     }

@@ -8,6 +8,7 @@ import naksha.jbon.JbDictManager
 import naksha.jbon.JbDictionary
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * Abstract interface to a map administrative object.
@@ -35,6 +36,14 @@ interface IMap {
      * @return the collection admin object.
      */
     operator fun get(collectionId: String): ICollection
+
+    /**
+     * Returns the collection admin object, for the collection with the given number.
+     * @param collectionNumber the collection-number.
+     * @return the collection admin object.
+     */
+    @JsName("getByNumber")
+    operator fun get(collectionNumber: Int64): ICollection?
 
     /**
      * Returns the collection-identifier for the given collection-number.
