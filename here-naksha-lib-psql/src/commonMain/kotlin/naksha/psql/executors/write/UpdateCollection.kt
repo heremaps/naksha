@@ -21,9 +21,6 @@ class UpdateCollection(
             NakshaError.ILLEGAL_ARGUMENT,
             "UPDATE without collection as feature"
         )
-        require(write.featureId != null) {
-            "Collection id not given"
-        }
         val colId = write.featureId
         if (colId == null) throw NakshaException(ILLEGAL_ARGUMENT, "Collection has no id")
         val tuple = tupleOfCollection(
