@@ -25,18 +25,14 @@ class UpdateFeature(
             NakshaError.ILLEGAL_ARGUMENT,
             "UPDATE without feature"
         )
-        require(feature.id == write.featureId) {
-            "Feature id in payload (${feature.id}) and write request (${write.featureId}) are different"
-        }
+        if (feature.id != write.featureId) throw NakshaException(NakshaError.ILLEGAL_ARGUMENT,"Feature id in payload (${feature.id}) and write request (${write.featureId}) are different")
         val previousMetadata = existingMetadataProvider.get(collection.head.name, write.id!!)
-        require(previousMetadata != null) {
-            "Trying update feature that not exists in head: ${write.id}"
+            ?: throw NakshaException(NakshaError.FEATURE_NOT_FOUND, "Trying update feature that not exists in head: ${write.id}")
+        if (feature.id != previousMetadata.id) {
+            throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Feature id (${feature.id}) differs from previous metadata (${previousMetadata.id})")
         }
-        require(feature.id == previousMetadata.id) {
-            "Feature id (${feature.id}) differs from previous metadata (${previousMetadata.id})"
-        }
-        require(previousMetadata.nextVersion == null) {
-            "Previous metadata shouldn't have 'nextVersion' but it does (${previousMetadata.nextVersion})"
+        if (previousMetadata.nextVersion != null) {
+            throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Previous metadata shouldn't have 'nextVersion' but it does (${previousMetadata.nextVersion})")
         }
 
         val tupleNumber = newFeatureTupleNumber(collection, feature.id, session)
@@ -85,6 +81,4 @@ class UpdateFeature(
             id = feature.id
         )
     }
-
-
 }

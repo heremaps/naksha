@@ -66,6 +66,18 @@ abstract class PgTestBase(val collection: NakshaCollection? = null) {
         }
     }
 
+    protected fun executeWriteErrorResponse(
+        request: WriteRequest,
+        sessionOptions: SessionOptions? = null
+    ): ErrorResponse {
+        return env.storage.newWriteSession(sessionOptions).use { session ->
+            val response = session.execute(request)
+            assertIs<ErrorResponse>(response)
+            session.commit()
+            response
+        }
+    }
+
     protected fun executeRead(
         request: ReadRequest,
         sessionOptions: SessionOptions? = null

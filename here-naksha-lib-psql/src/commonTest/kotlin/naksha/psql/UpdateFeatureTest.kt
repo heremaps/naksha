@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.model.Action
+import naksha.model.NakshaError
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaProperties
@@ -134,5 +135,18 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
         assertEquals(0, updatedTuple.tupleNumber.uid)
         assertEquals(0, previousTuple.tupleNumber.uid)
         assertNotEquals(previousTuple.meta?.authorTs, updatedTuple.meta?.authorTs)
+    }
+
+    @Test
+    fun updateNotExistingFeature() {
+        val featureId = "feature_not_existing"
+        val feature = NakshaFeature().apply { id = featureId }
+        val response = executeWriteErrorResponse(
+            WriteRequest().add(
+                Write().updateFeature(null, collection!!.id, feature)
+            )
+        )
+        assertEquals(NakshaError.FEATURE_NOT_FOUND, response.error.code)
+        assertTrue(response.error.msg.contains(featureId))
     }
 }

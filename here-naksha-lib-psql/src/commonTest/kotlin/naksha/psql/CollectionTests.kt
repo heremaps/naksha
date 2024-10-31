@@ -4,6 +4,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import naksha.model.Naksha
+import naksha.model.NakshaError
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
@@ -219,5 +220,69 @@ class CollectionTests : PgTestBase(collection = null) {
         )
         val deletedFeatureResponse = executeRead(readFeature)
         assertEquals(0, deletedFeatureResponse.features.size)
+    }
+
+    @Test
+    fun updateCollection() {
+        val collectionName = "update_collection_test"
+        val collection = NakshaCollection(id = collectionName)
+        executeWrite(
+            WriteRequest().add(
+                Write().createCollection(null, collection)
+            )
+        )
+        // update collection
+        collection.storeDeleted = StoreMode.SUSPEND
+        val response = executeWrite(
+            WriteRequest().add(
+                Write().updateCollection(null, collection)
+            )
+        )
+        val responseCollection = response.features[0]!!.proxy(NakshaCollection::class)
+        assertEquals(StoreMode.SUSPEND, responseCollection.storeDeleted)
+        val selectCollectionFromVirt = ReadFeatures().apply {
+            collectionIds += Naksha.VIRT_COLLECTIONS
+            featureIds += collection.id
+        }
+        val colRead = executeRead(selectCollectionFromVirt).features[0]!!.proxy(NakshaCollection::class)
+        assertEquals(StoreMode.SUSPEND, colRead.storeDeleted)
+    }
+
+    @Test
+    fun updateNotExistingCollection() {
+        val collectionName = "not_existing_collection_test"
+        val collection = NakshaCollection(id = collectionName)
+        // update collection
+        collection.storeDeleted = StoreMode.SUSPEND
+        val response = executeWriteErrorResponse(
+            WriteRequest().add(
+                Write().updateCollection(null, collection)
+            )
+        )
+        assertEquals(NakshaError.COLLECTION_NOT_FOUND, response.error.code)
+        assertTrue(response.error.msg.contains(collectionName))
+    }
+
+    @Test
+    fun shouldUpsertCollection() {
+        val collectionName = "upsert_collection_test"
+        val collection = NakshaCollection(id = collectionName)
+        // create collection using upsert
+        val response = executeWrite(
+            WriteRequest().add(
+                Write().upsertCollection(null, collection)
+            )
+        )
+        val createdCollection = response.features[0]!!.proxy(NakshaCollection::class)
+        assertEquals(StoreMode.ON, createdCollection.storeDeleted)
+        collection.storeDeleted = StoreMode.SUSPEND
+        // update collection using upsert
+        val updateResponse = executeWrite(
+            WriteRequest().add(
+                Write().upsertCollection(null, collection)
+            )
+        )
+        val updatedCollection = updateResponse.features[0]!!.proxy(NakshaCollection::class)
+        assertEquals(StoreMode.SUSPEND, updatedCollection.storeDeleted)
     }
 }

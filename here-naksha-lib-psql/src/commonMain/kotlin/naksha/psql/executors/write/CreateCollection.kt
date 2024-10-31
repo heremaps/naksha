@@ -10,6 +10,7 @@ import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
 import naksha.psql.*
 import naksha.psql.executors.WriteExt
+import naksha.psql.executors.write.WriteCollectionUtils.tupleOfCollection
 import naksha.psql.executors.write.WriteFeatureUtils.allColumnValues
 
 class CreateCollection(
@@ -25,7 +26,8 @@ class CreateCollection(
         val colId = write.featureId ?: PlatformUtil.randomString()
         val collectionNumber = newCollectionNumber(map)
         val tupleNumber = newCollectionTupleNumber(map, collectionNumber)
-        val tuple = tuple(
+        val tuple = tupleOfCollection(
+            session = session,
             tupleNumber = tupleNumber,
             feature = feature,
             attachment = write.attachment,
@@ -35,7 +37,7 @@ class CreateCollection(
         )
 
         // insert row into naksha~collections before creating tables
-        executeInsert(VIRT_COLLECTIONS_QUOTED, tuple, feature)
+        executeInsert(tuple, feature)
 
         // Create the tables
         val collection = map[colId]
@@ -51,55 +53,18 @@ class CreateCollection(
         return tuple
     }
 
-    private fun tuple(
-        tupleNumber: TupleNumber,
-        feature: NakshaFeature,
-        attachment: ByteArray?,
-        featureId: String,
-        flags: Flags,
-        encodingDict: JbDictionary? = null
-    ): Tuple {
-        return Tuple(
-            storage = session.storage,
-            tupleNumber = tupleNumber,
-            fetchBits = FetchMode.FETCH_ALL,
-            geo = PgUtil.encodeGeometry(feature.geometry, flags),
-            referencePoint = PgUtil.encodeGeometry(feature.referencePoint, flags),
-            feature = PgUtil.encodeFeature(feature, flags, encodingDict),
-            tags = PgUtil.encodeTags(
-                feature.properties.xyz.tags?.toTagMap(),
-                session.storage.defaultFlags,
-                encodingDict
-            ),
-            attachment = attachment,
-            meta = Metadata(
-                storeNumber = tupleNumber.storeNumber,
-                version = tupleNumber.version,
-                uid = tupleNumber.uid,
-                updatedAt = session.versionTime(),
-                author = session.options.author,
-                appId = session.options.appId,
-                flags = flags,
-                id = featureId,
-                type = NakshaCollection.FEATURE_TYPE
-            )
-        )
-    }
-
     private fun executeInsert(
-        quotedCollectionId: String,
         tuple: Tuple,
         feature: NakshaFeature
-    ): Tuple {
+    ) {
         val transaction = session.transaction()
         val conn = session.usePgConnection()
         conn.execute(
-            sql = """ INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})
+            sql = """ INSERT INTO $VIRT_COLLECTIONS_QUOTED(${PgColumn.allWritableColumns.joinToString(",")})
                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
                       """.trimIndent(),
             args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
         ).close()
-        return tuple
     }
 
     /**
