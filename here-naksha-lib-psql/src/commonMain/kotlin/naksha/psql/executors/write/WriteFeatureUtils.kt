@@ -95,7 +95,7 @@ internal object WriteFeatureUtils {
             referencePoint = PgUtil.encodeGeometry(feature?.referencePoint, flags),
             feature = PgUtil.encodeFeature(feature, flags, encodingDict),
             tags = PgUtil.encodeTags(
-                feature?.properties?.xyz?.tags?.toTagMap(),
+                feature.properties.xyz.tags?.toTagMap(),
                 storage.defaultFlags,
                 encodingDict
             ),

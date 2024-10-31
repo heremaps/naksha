@@ -221,14 +221,16 @@ open class PgMap(
             val conn = connOf(connection)
             try {
                 var cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schemaName)).fetch()
-                cursor.use {
-                    _oid = cursor["oid"]
-                    // TODO: Right now we only support the default map, we need to change this!
-                    _number = 0
-                }
-                cursor = conn.execute("""SELECT oid FROM pg_class WHERE relname='$NAKSHA_COL_SEQ' AND relnamespace=${_oid}""").fetch()
-                cursor.use {
-                    _collectionNumberSeqOid = cursor["oid"]
+                if (cursor.isRow()) {
+                    cursor.use {
+                        _oid = cursor["oid"]
+                        // TODO: Right now we only support the default map, we need to change this!
+                        _number = 0
+                    }
+                    cursor = conn.execute("""SELECT oid FROM pg_class WHERE relname='$NAKSHA_COL_SEQ' AND relnamespace=${_oid}""").fetch()
+                    cursor.use {
+                        _collectionNumberSeqOid = cursor["oid"]
+                    }
                 }
             } finally {
                 closeOf(conn, connection, false)
@@ -317,7 +319,7 @@ open class PgMap(
         check(currentContext().su) { throw NakshaException(UNAUTHORIZED, "Only superusers may drop schemata") }
         val conn = connOf(connection)
         try {
-            conn.execute("DROP SCHEMA ${quoteIdent(id)}").close()
+            conn.execute("DROP SCHEMA ${quoteIdent(id)} CASCADE").close()
         } finally {
             closeOf(conn, connection, true)
         }
