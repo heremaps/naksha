@@ -6,17 +6,19 @@ This folder contains docker configurations needed to build Naksha-Hub docker and
 ### Prepare
 Before you can start building the image, install docker, for example [Docker Desktop](https://docs.docker.com/desktop/install/).
 
-The first step is to export environment variables, and then login to your docker registry (**DR**), example of HERE registry:
+1. The first step is to export environment variables, and then login to your docker registry (**DR**), example of HERE registry:
 
 ```bash
 export DR_USER='<here-user>'
 export DR_PWD='<encrypted-password>'
-export DR_HOST="hcr.data.here.com"
-export DR_NAKSHA_POSTGRES="$DR_HOST/naksha/postgres"
+export DR_HOST="hcr.data.here.com" #Do not set if publishing to Docker Hub
+export DR_NAKSHA_POSTGRES="$DR_HOST/naksha/postgres" #For Docker Hub use "heremaps/naksha-custom-postgres"
 docker login -u="$DR_USER" -p="$DR_PWD" $DR_HOST
 ```
 
 **Note**: If you feel saver, enter the password on CLI. The rest of the instructions are no longer environment dependent.
+
+2. To build images supporting multi-platforms (ARM, AMD,...), enable containerd image store, or use a custom docker builder https://docs.docker.com/build/building/multi-platform/
 
 The PostgresQL docker will be build in multiple steps:
 
@@ -48,40 +50,23 @@ cd deployment/docker/postgres
 
 # Build base image and push
 cd naksha-pg-0-base
-docker build --platform=linux/arm64 --push -t "$DR_NAKSHA_POSTGRES:base-arm64-${BASE_VER}" .
-docker build --platform=linux/amd64 --push -t "$DR_NAKSHA_POSTGRES:base-amd64-${BASE_VER}" .
+docker build --platform=linux/arm64,linux/amd64 -t "$DR_NAKSHA_POSTGRES:base-${BASE_VER}" .
 cd ..
 
 # Build postgis image and push
 cd naksha-pg-1-postgis
-docker build --platform=linux/arm64 \
-       --build-arg="ARCH=arm64" \
+docker build --platform=linux/arm64,linux/amd64 \
        --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
        --build-arg="VERSION=${BASE_VER}" \
-       --push \
-       -t "${DR_NAKSHA_POSTGRES}:postgis-arm64-${POSTGIS_VER}" .
-docker build --platform=linux/amd64 \
-       --build-arg="ARCH=amd64" \
-       --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
-       --build-arg="VERSION=${BASE_VER}" \
-       --push \
-       -t "${DR_NAKSHA_POSTGRES}:postgis-amd64-${POSTGIS_VER}" .
+       -t "${DR_NAKSHA_POSTGRES}:postgis-${POSTGIS_VER}" .
 cd ..
 
 # Build plv8 image and push
 cd naksha-pg-2-plv8
-docker build --platform=linux/arm64 \
-       --build-arg="ARCH=arm64" \
+docker build --platform=linux/arm64,linux/amd64 \
        --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
        --build-arg="VERSION=${POSTGIS_VER}" \
-       --push \
-       -t "${DR_NAKSHA_POSTGRES}:plv8-arm64-${PLV8_VER}" .
-docker build --platform=linux/amd64 \
-       --build-arg="ARCH=amd64" \
-       --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
-       --build-arg="VERSION=${POSTGIS_VER}" \
-       --push \
-       -t "${DR_NAKSHA_POSTGRES}:plv8-amd64-${PLV8_VER}" .
+       -t "${DR_NAKSHA_POSTGRES}:plv8-${PLV8_VER}" .
 cd ..
 
 # Build miscellaneous image and push

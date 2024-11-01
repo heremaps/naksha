@@ -1,7 +1,6 @@
 ARG DR_NAKSHA_POSTGRES=hcr.data.here.com/naksha/postgres
-ARG ARCH
 ARG VERSION
-FROM ${DR_NAKSHA_POSTGRES}:base-${ARCH}-${VERSION}
+FROM ${DR_NAKSHA_POSTGRES}:base-${VERSION}
 
 #
 # Install Geos (https://libgeos.org/usage/download/)
@@ -25,6 +24,7 @@ RUN yum install -y libxml2 libxml2-devel cmake \
     && cd /tmp/ \
     && git clone https://github.com/OSGeo/PROJ.git \
     && cd PROJ \
+    && git checkout 9.4 \
     && mkdir build \
     && cd build \
     && cmake .. \
