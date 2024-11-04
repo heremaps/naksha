@@ -46,11 +46,9 @@ import software.amazon.awssdk.core.exception.SdkClientException;
  */
 public class ExtensionCache {
   private static final @NotNull Logger logger = LoggerFactory.getLogger(ExtensionCache.class);
-  private static final ConcurrentHashMap<String, KVPair<Extension, ClassLoader>> loaderCache =
-      new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<String, ValueTuple> loaderCache = new ConcurrentHashMap<>();
   private static final Map<String, FileClient> jarClientMap = new HashMap<>();
   private final @NotNull INaksha naksha;
-  private Map<String, IExtensionInit> instanceCache = new ConcurrentHashMap<>();
 
   static {
     jarClientMap.put(JarClientType.S3.getType(), new AmazonS3Helper());
@@ -66,7 +64,6 @@ public class ExtensionCache {
    * Also it removes existing mapping from cache which is not available in config store anymore
    */
   protected void buildExtensionCache(ExtensionConfig extensionConfig) {
-    IExtensionInit instance = null;
     List<Future<KVPair<Extension, File>>> futures = extensionConfig.getExtensions().stream()
         .filter(extension -> !this.isLoaderMappingExist(extension))
         .map(extension -> {
@@ -92,32 +89,8 @@ public class ExtensionCache {
 
     for (String key : loaderCache.keySet()) {
       if (!extIds.contains(key)) {
-        KVPair<Extension, ClassLoader> kvPair = loaderCache.get(key);
-        Object instanceObj = kvPair.getValue();
-        Extension extension = kvPair.getKey();
-        final String extensionIdWthEnv = extension.getEnv() + ":" + extension.getId();
-        if (!isNullOrEmpty(extension.getInitClassName())) {
-          if (instanceObj instanceof IExtensionInit initInstance) {
-            try {
-              initInstance.close();
-              instance = initInstance;
-              logger.info("Extension {} closed successfully.", extensionIdWthEnv);
-            } catch (Exception e) {
-              logger.error("Failed to close extension {}", extensionIdWthEnv, e);
-            }
-          } else {
-            logger.error("Instance is not of type IExtensionInit for extension {}", extensionIdWthEnv);
-          }
+        removeExtensionFromCache(key);
         }
-        synchronized (this) {
-          if (instance != null) {
-            instanceCache.remove(key);
-          }
-          loaderCache.remove(key);
-          PluginCache.removeExtensionCache(key);
-          logger.info("Extension {} removed from cache.", key);
-        }
-      }
     }
     logger.info("Extension cache size " + loaderCache.size());
   }
@@ -162,13 +135,10 @@ public class ExtensionCache {
             "Extension {} initialization using initClassName {} done successfully.",
             extensionIdWthEnv,
             extension.getInitClassName());
-      synchronized (this) {
-        if (instance != null) {
-          instanceCache.put(extensionIdWthEnv, instance);
-        }
-        loaderCache.put(extensionIdWthEnv, new KVPair<Extension, ClassLoader>(extension, loader));
-        PluginCache.removeExtensionCache(extensionIdWthEnv);
-      }
+
+      loaderCache.put(extensionIdWthEnv, new KVPair<Extension, ClassLoader>(extension, loader));
+      PluginCache.removeExtensionCache(extensionIdWthEnv);
+
       logger.info(
           "Extension id={}, version={} is successfully loaded into the cache, using Jar at {} for env={}.",
           extensionIdWthEnv,
@@ -178,12 +148,34 @@ public class ExtensionCache {
     }
   }
 
+  private void removeExtensionFromCache(String extensionId) {
+    ValueTuple valueTuple = loaderCache.get(extensionId);
+    if (valueTuple != null) {
+      IExtensionInit instance = valueTuple.getInstance();
+      Extension extension = valueTuple.getExtension();
+      final String extensionIdWithEnv = extension.getEnv() + ":" + extension.getId();
+
+      if (instance != null) {
+        try {
+          instance.close();
+          logger.info("Extension {} closed successfully.", extensionIdWithEnv);
+        } catch (Exception e) {
+          logger.error("Failed to close extension {}", extensionIdWithEnv, e);
+        }
+      }
+
+      loaderCache.remove(extensionId);
+      PluginCache.removeExtensionCache(extensionId);
+      logger.info("Extension {} removed from cache.", extensionId);
+    }
+  }
+
   private boolean isLoaderMappingExist(Extension extension) {
     final String extensionIdWthEnv = extension.getEnv() + ":" + extension.getId();
-    KVPair<Extension, ClassLoader> existingMapping = loaderCache.get(extensionIdWthEnv);
+    ValueTuple existingMapping = loaderCache.get(extensionIdWthEnv);
     if (existingMapping == null) return false;
 
-    final Extension exExtension = existingMapping.getKey();
+    final Extension exExtension = existingMapping.getExtension();
     final String exInitClassName =
         isNullOrEmpty(exExtension.getInitClassName()) ? "" : exExtension.getInitClassName();
     final String initClassName = isNullOrEmpty(extension.getInitClassName()) ? "" : extension.getInitClassName();
@@ -218,8 +210,8 @@ public class ExtensionCache {
   }
 
   protected ClassLoader getClassLoaderById(@NotNull String extensionId) {
-    KVPair<Extension, ClassLoader> mappedLoader = loaderCache.get(extensionId);
-    return mappedLoader == null ? null : mappedLoader.getValue();
+    ValueTuple mappedLoader = loaderCache.get(extensionId);
+    return mappedLoader == null ? null : mappedLoader.getClassLoader();
   }
 
   public int getCacheLength() {
@@ -227,7 +219,7 @@ public class ExtensionCache {
   }
 
   public List<Extension> getCachedExtensions() {
-    return loaderCache.values().stream().map(KVPair::getKey).toList();
+    return loaderCache.values().stream().map(ValueTuple::getExtension).toList();
   }
 
   private boolean isNullOrEmpty(String value) {
