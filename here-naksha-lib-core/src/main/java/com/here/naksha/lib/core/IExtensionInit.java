@@ -26,10 +26,8 @@ import com.here.naksha.lib.core.models.features.Extension;
 public interface IExtensionInit {
 
   /**
-   * Initializes the extension with the specified hub and extension parameters.
-   * This method should be called to set up any necessary resources or configurations
-   * required by the extension to operate correctly.
-   *
+   * This method should be called to set up any necessary configurations
+   * Extension configuration supplied as part of deployment pipeline for respective Extension and sub-env.
    * @param hub The hub instance to be used by the extension.
    * @param extension The extension instance being initialized.
    */
