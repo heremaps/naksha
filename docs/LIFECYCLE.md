@@ -66,9 +66,7 @@ The following explains what _actions_ are assigned to which _operations_. Note, 
 ### Foreign Features
 Generally, a feature is called **_foreign feature_**, when its ID changes, or when it is copied from one storage, map, or collection into another one. We always keep track of foreign features using the `origin` property in the XYZ namespace, which will store the _GUID_ of the origin, so from where the feature comes. This can be the same storage, map, and collection, if only the ID changed, but it can be as well be a complete different storage.
 
-The `origin` is a sticky value, so when updating the feature, the `origin` stays the same, until it is overridden.
-
-This is not the case for `target`, `prev_tn`, or `base_tn`, they are always changes, when new _Tuple_ are created.
+The `origin`, and `target` are sticky, so when updating the feature, the `origin`, and `target` stay the same.
 
 This is actually important for [rebasing](#rebased).
 
@@ -86,7 +84,7 @@ When a feature is updated by the client, the `action` is set to `UPDATED` by the
 
 If a client wants to update a feature, it should read the feature, then modify it, and then send the modified feature back, without changing the XYZ namespace, except for the `tags`. When it does this, the change is performed atomically safe, because the `uuid` will hint the server which version was modified by the client, and is expected as current _HEAD_. If the feature was updated meanwhile by another client, the _server_ can try to perform an [auto-merge](#auto_merged--updated), otherwise it will respond with a conflict. This is what the low-level _storage_ will always do, no _storage_ does implement the auto-merging, because it would be unnecessary code replication, complicate the storage implementation, and actually will not allow business use-cast adjustment.
 
-The client is allowed to set the `origin` to any value he wants, e.g. to signal that information from another origin were integrated into the feature. This is an informal merge, and not recommended.
+An `UPDATE` will never have `origin` being set.
 
 ### AUTO_MERGED / UPDATED
 For all updates, the exact behavior is like following:
@@ -99,11 +97,11 @@ In this situation an automatic [three-way-merge](https://en.wikipedia.org/wiki/M
 
 Note, the _server_ may allow to influence the merging algorithm, but this requires knowledge about the data, so-called domain knowledge. For example, even while normally auto-merging a name change done by two clients concurrently is impossible (`bar` and `foo` are not addable), there can be a rule to simply use the latest value, or there can be some other rules that allow to automatically resolve conflicts. However, they are strongly dependent on domain knowledge, and therefore need to be done by the _server_ using some extension, and customized auto-merge handler.
 
- This technically allows later to calculate back, what the client (and or merge code) actually modified. For this, the difference between _CURRENT_ and _BASE_ (`base_tn`) is calculated, and then the difference between _HEAD_ (`prev_tn`) and _BASE_ is subtracted, resulting in a patch that can be applied to _BASE_ (`base_tn`) to receive the original _NEW_ state the client had in memory and wanted to persist. This difference will as well document which properties were changed by the client.
+This technically allows later to calculate back, what the client (and or merge code) actually modified. For this, the difference between _CURRENT_ and _BASE_ (`base_tn`) is calculated, and then the difference between _HEAD_ (`prev_tn`) and _BASE_ is subtracted, resulting in a patch that can be applied to _BASE_ (`base_tn`) to receive the original _NEW_ state the client had in memory and wanted to persist. This difference will as well document which properties were changed by the client.
 
 Eventually the action will always be `UPDATED`, while the operation will be either `UPDATED` or `AUTO_MERGED`, when an auto-merge was done by the _server_. The storage detects this on the `base_tn` being set.
 
-Note, the `origin` is either kept intact or overridden with the one that the client wants to set. So for origin the _server_ will automatically implement the last-wins. Generally, everything within the XYZ namespace can be handled by the _storage_ automatically, for example tags are always joined, duplicates are removed, only in a conflict case, an error is thrown (same key, different value).
+Note, the `origin` must be same, it is not allowed to change the `origin` as part of an auto-merge!
 
 ### DELETED
 When a feature is deleted by the client, the `action` is set to `DELETED` by the client.
@@ -117,20 +115,32 @@ If the client need to _split_ a feature into multiple ones, it must clone the or
 
 It can perform this across storages, maps, and collections.
 
-As already described in the [CREATED](#forked--created-) section, this will allow the storage to track the modifications, because the `uuid` of all clones will refer to the original feature, which is deleted.
+The storage now has one feature that is `DELETED`, and multiple new features that are `CREATED`, but all have the same `uuid`, it can deduct that this is a _split_, and the feature that is deleted is the one that was split, while the new features are those being created from it.
 
-Because the storage has one feature that is `DELETED` and multiple new features, that refer to the deleted feature via `uuid` and are in `CREATED` action, it can deduct that this is a _split_. It will set the operation for the `DELETED` feature to `SPLIT`, and of all `CREATED` features to `PARTED`, copy the `uuid` into the `origin` for all involved parts, so that the split features, and all parts are referring to the `origin`. Note, that even when the feature is split within the same collection, still `origin` needs to refer to the original state, because the feature states will be modified from here on.
+It will set the operation for the `DELETED` feature to `SPLIT`, and of all `CREATED` features to `PARTED`, copy the `uuid` into the `origin` for all involved features, so that the split features, and all parts, are referring to the `origin`. Note, that even when the feature is split within the same collection, still `origin` needs to refer to the original state, because the feature states will be modified from here on.
+
+Assume, the foreign feature `FOO` should be split, a new deleted version `FOO'` is created from `FOO`, additionally to the new features `A`, `B`, and `C` were created, then the resulting features in the target collection will look like:
+
+- `FOO'`: operation = `SPLIT`, origin = `FOO`, target = `null`
+- `A`: operation = `PARTED`, origin = `FOO`, target - `null`
+- `B`: operation = `PARTED`, origin = `FOO`, target - `null`
+- `C`: operation = `PARTED`, origin = `FOO`, target - `null`
 
 This behavior is essential later when [rebasing](#rebased).
 
 ### MERGED / JOINED
-If the client need to _join_ multiple features together to a single one, there are two basic options.
+If the client need to _join_ multiple features together to a single one, it should delete all features that should be joined, and create a new merged feature. The client need to advertise that this is a join, by settings the `target` on all the features to the `uuid` of the new merged feature.
 
-First, it can delete one to _n_ features, and merge they logically into an existing feature. This is done, by updating the feature into which the others are merged, then deleting the features that were integrated into the existing one. The client is required to set the `target` at all deleted features to the `uuid` of the feature into which they were integrated (simply copy the property value). The storage will now set the operation of the `UPDATED` feature to `MERGED`, and the operation of the `DELETED` features to `JOINED`.
+However, because the new feature is not yet stored, it does not have a `uuid`, the client can create a _HEAD_ _GUID_ for this case, which basically is `urn:here:naksha:guid:{feature-id}`. The storage will detect the situation and resolve it.
 
-The second option is to delete all features that should be joined, and to create a new merged feature. For the client the demand is simply the same, set `target` on the deleted features to the `uuid` of the new feature. However, as the new feature is not yet stored, it does not have a `uuid`, the client can create a _HEAD_ _GUID_ for this case, which basically is `urn:here:naksha:guid:{feature-id}`. The storage will detect the situation, and then set the operation of the `DELETED` features to `JOINED`, and the operation of the `CREATED` feature to `MERGED`. The _storage_ will adjust the `target` to the `uuid` of the _TupleNumber_ of the created merged feature.
+So, when the storage finds a set of features that all have the `target` set to same `uuid`, it deducts that this is a join. It will update operation of the `DELETED` features to `JOINED`, and the operation of the `CREATED` feature to `MERGED`. The _storage_ will adjust the `target` to the real `uuid` of the created merged feature.
 
-If any of the features is a foreign features, the `origin` will be set accordingly.
+Assuming the features `A`, `B`, and `C` should be joined into a new feature `FOO`, the client would need to create the deleted features `A'`, `B'`, and `C'`, and set the target to `urn:here:naksha:guid:FOO`, and it would do the same for `FOO`, eventually resulting in the following features written into the target collection: 
+
+- `FOO`: operation = `MERGED`, origin = null, target = `FOO`
+- `A'`: operation = `JOINED`, origin = `A`, target - `FOO`
+- `B'`: operation = `JOINED`, origin = `B`, target - `FOO`
+- `C'`: operation = `JOINED`, origin = `C`, target - `FOO`
 
 ## REBASED
 To recap, whenever a feature is copied from a foreign storage, map, or collection, or the feature-id is changed in an update, the `origin` refers to the originating feature.
