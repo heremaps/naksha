@@ -1,6 +1,8 @@
 # Binary
 To efficiently store data in-memory, at disk, in remote storage, like s3 buckets, or redis, Naksha defines a binary format for tuples, metadata, and tuple-numbers.
 
+This document expects that you've read the [general lifecycle guide](./LIFECYCLE.md).
+
 ## Endianness
 Generally, all multi-byte values are encoded in network byte-order, so in [Big-Endian byte-order](https://en.wikipedia.org/wiki/Endianness) encoded.
 
@@ -21,6 +23,8 @@ Note that dictionaries, transaction, basically everything in Naksha is a feature
 ## Feature Lifecycle
 The lifecycle of a feature is tracked from its creation to its deletion. Each modification of a feature shall create a new unique immutable state, which we call **Tuple**. A _Tuple_ is always created by a storage, and signed-off by that storage with its own _storage-number_. One exception are temporary tuples, so states that are not immutable, and that are not persisted anywhere, that are only created temporarily in memory, share the same special storage-number `0`. States that are persisted, need to be signed-off by a storage that persists them. This guarantees that there are no two state with the same unique identifier, called **Tuple-Number**. This allows all participants to cache all states of all feature of all sources indefinitely.
 
+More details can be found in the [general lifecycle guide](./LIFECYCLE.md).
+
 ## Binary Header
 When data is binary encoded in-memory, a header is not needed, as it is clear what is encoded, therefore this header is not mandatory. However, when not encoded in-memory, the binary encoding needs headers to know what is encoded. For this purpose, Naksha binary defines a common object/array header as being:
 
@@ -33,7 +37,7 @@ When data is binary encoded in-memory, a header is not needed, as it is clear wh
 - { type-specific-header ... }
 - { payload ... }
 
-The length describes the amount of elements encoded, the size is the total size in byte, that belong to this binary. This includes the header size itself, an empty object/array has a minimal header of 16-byte, the size is therefore 16. A size less than 16 is an invalid header. The type is one of the following values:
+The length describes the amount of elements encoded, the size is the total size in byte, that belong to this binary. This includes the header size itself, an empty object/array has a minimal header of 8-byte, the size is therefore 8. A size less than 8 is an invalid header. The type is one of the following values:
 
 - `0`: Tuple-Number-Array
 - `1`: Metadata-Binary-Object
@@ -61,7 +65,7 @@ So, the header extends to:
 - std-type: u8 (_0_) {u32 read shr 24 & 255}
 - std-size: u24 {u32 read & 16777215}
 - total-size: u32
-- { customer extensions ... }
+- { custom extensions ... }
 
 The first extension is called the _standard-extension_. Its meaning is part of this document, currently the only defined type is `0`, which means that there is no _standard-extension_, therefore _size_ must be `0` as well.
 
@@ -130,26 +134,28 @@ The last variant is generally used within storages, when a single collection is 
 
 When result-sets are encoded (for example persisting handles), they are encoded as tuple-arrays, with an extension header that stores the metadata, like the handle-id, and maybe validation state of this result-set, if not all tuples have been filters, in that case optionally the filter to apply.
 
-## Metadata
+## Metadata-Binary
 The metadata is encoded like following:
 
 - { tuple-number }
 - flags: u32
-- next_version: u64 (optional, flags bit)
-- updated_at: u48
+- txn_next: u64 (optional, flags bit)
+- { previous tuple-number, 96-bit, optional, flags bit }
+- { merge tuple-number, 224-bit, optional, flags bit }
+- { join tuple-number, 224-bit, optional, flags bit }
+- { origin tuple-number, 224-bit, optional, flags bit }
 - created_at: u48 (optional, flags bit)
 - author_ts: u48 (optional, flags bit)
+- updated_at: u48
 - changeCount: u32
 - hash: u32
 - geoGrid: u32
-- { previous tuple-number, optional, flags bit }
 - id: cstring
 - appid: cstring
 - author: cstring
 - type: cstring
-- origin: cstring
 
-Each metadata encodes at its start the tuple-number in 224-bit (28-byte).
+Each metadata encodes at its start the tuple-number in 224-bit (28-byte). The previous tuple-number is only encoded as 96-bit value, so only with _version_, _partition-number_, and _uid_, because the previous tuple is expected to persist in the storage, map, and collection, otherwise the `origin` should be set!
 
 ## Metadata-Binary-Object
 Each tuple has a pre-defined set of metadata. Optionally, metadata can have an object header like:
@@ -247,7 +253,7 @@ dict = {
 ## Compression
 Technically the binary format defines how the data is encoded raw, if the data is stored compressed or not is not part of this specification. Generally it is considered a very good idea to compress all arrays, as this can save a lot of additional space.
 
-## Conclusions
+## SQL
 If we look at how the tuple-numbers and the binary format helps, we first need to look at how a search in the Postgresql database is done.
 
 The following query is how Naksha `lib-psql` will perform a search in the database:
@@ -275,7 +281,7 @@ This query guarantees, that all tuples are ordered by collection, feature-id, ve
 
 We need to limit the result to `2^24-1`, because this is the maximum length we can encode in the binary. This leads to a maximum result size of `20 + (16777215 * 16)`, which is 256 MiB, what as well protects us in producing or reading too big result-sets.
 
-If the HISTORY need to be queried too, then there are two basic cases. A specific version is requested, then only the selects need to be changed: 
+If the HISTORY need to be queried too, then there are two basic cases. A specific version is requested, then only the selects need to be changed:
 ```sql
 WITH query AS (
   -- Select from HEAD.
@@ -301,7 +307,7 @@ SELECT gzip( -- compress the binary
  bytea_agg(int4send(col_num)||tuple_number) -- aggregate all tuple-number
 ) AS rs FROM result;
 ```
-This works, because we search in HEAD for features with a `txn` less than/equal to the searched _version_. If there is such a feature, there can't be any other tuple, that has a `next_version` greater than the searched _version_, because the HEAD feature is the latest one, and it has `next_version` being `0`. Then we search in HISTORY for the feature, that has a `txn` less than/equal to the searched _version_, and at the same time has a newer tuple greater than the searched version (`next_version`), which means, that it can't be in HEAD.
+This works, because we search in HEAD for features with a `txn` less than/equal to the searched _version_. If there is such a feature, there can't be any other tuple, that has a `txn_next` greater than the searched _version_, because the HEAD feature is the latest one, and it has `txn_next` being `0`. Then we search in HISTORY for the feature, that has a `txn` less than/equal to the searched _version_, and at the same time has a newer tuple greater than the searched version (`txn_next`), which means, that it can't be in HEAD.
 
 Therefore, the HEAD and HISTORY queries together guarantee that there can only be one feature that fulfills this condition, either in HEAD or in HISTORY. In a nutshell, ever feature is only found exactly ones in the searched _version_.
 
@@ -310,11 +316,11 @@ However, if the client wants multiple tuples before the given _version_, we need
 ```sql
 -- Select from HEAD.
 WITH query AS (
-(SELECT ${col_number} as col_num, id, tuple_number FROM ${col_name} 
+(SELECT ${col_number} as col_num, id, tuple_number, txn, uid FROM ${col_name} 
  WHERE txn <= $1 AND ...)
 UNION ALL
 -- Select from HISTORY
-(SELECT ${col_number} as col_num, id, tuple_number FROM ${col_name}$hst 
+(SELECT ${col_number} as col_num, id, tuple_number, txn, uid FROM ${col_name}$hst 
   WHERE txn <= $1 AND ...) -- we do not limit by 'AND txn_next > $1' 
 UNION ALL
  ...
@@ -323,7 +329,7 @@ UNION ALL
     col_num,
     id,
     tuple_number,
-    ROW_NUMBER() OVER (PARTITION BY id ORDER BY txn DESC) AS v
+    ROW_NUMBER() OVER (PARTITION BY id ORDER BY txn, uid DESC) AS v
   FROM query
 ), result AS (
   SELECT col_num, tuple_number
@@ -372,21 +378,23 @@ WITH source AS (
     int8send(${storage_number})
     ||int4send(${map_number})
     ||int4send(col_num)
-    ||tuple_number -- 12 byte
+    ||tuple_number -- 12 byte, txn is part of tuple_number
     ||int4send(flags) -- 4 byte, we're aligned to 64-bit again
     ||coalesce(int8send(txn_next),''::bytea)
-    ||substring(int8send(updated_at), 3) -- u48
+    ||coalesce(prev_tn,''::bytea)
+    ||coalesce(merge_tn,''::bytea)
+    ||coalesce(join_tn,''::bytea)
+    ||coalesce(origin_tn,''::bytea)
     ||coalesce(substring(int8send(created_at),3),''::bytea) -- u48
     ||coalesce(substring(int8send(author_ts),3),''::bytea) -- u48
+    ||substring(int8send(updated_at), 3) -- u48
     ||int4send(coalesce(change_count, 1))
     ||int4send(coalesce(hash, 0))
     ||int4send(coalesce(geo_grid,0))
-    ||coalesce(prev_tuple_number,''::bytea)
     ||id::bytea||'\x00'::bytea
     ||coalesce(app_id,'')::bytea||'\x00'::bytea
     ||coalesce(author,'')::bytea||'\x00'::bytea
     ||coalesce(type,'')::bytea||'\x00'::bytea
-    ||coalesce(origin,'')::bytea||'\x00'::bytea
   ) as meta, ref_point, geo, tags, feature, attachment
   FROM source
 ), tuple_objects_without_header AS (
