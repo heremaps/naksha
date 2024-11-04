@@ -314,8 +314,8 @@ public class NakshaHub implements INaksha {
     try {
       eventHandlers = readFeaturesFromResult(rdResult, EventHandler.class);
     } catch (NoCursor e) {
-      logger.error("NoCursor exception encountered", e);
-      throw new RuntimeException("Failed to open cursor", e);
+      logger.error("NoCursor exception encountered while reading Extension based Handlers", e);
+      throw new RuntimeException("Failed to open Cursor while reading Extension based Handlers", e);
     }
 
     Set<String> extensionIds = new HashSet<>();
