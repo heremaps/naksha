@@ -136,7 +136,7 @@ public class ExtensionCache {
             extensionIdWthEnv,
             extension.getInitClassName());
 
-      loaderCache.put(extensionIdWthEnv, new KVPair<Extension, ClassLoader>(extension, loader));
+      loaderCache.put(extensionIdWthEnv, new ValueTuple(extension, loader, instance));
       PluginCache.removeExtensionCache(extensionIdWthEnv);
 
       logger.info(
