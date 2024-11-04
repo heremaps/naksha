@@ -168,3 +168,28 @@ This is a simplified description, but should allow to understand the basic conce
 
 ### Rebase SPLIT and JOIN
 This is out of the scope of this documentation, as it is an even more complex operation, and often requries domain knowledge to be performed correctly. However, technically, due to the `origin`, and `target` properties, plus the capabilities of the Naksha-Hub _server_ to load extensions with custom rebase algorithms, a rebase can be done successfully, and automatically, even when features have been split. If such an automatic rebasing fails, a task for a moderation should be created, so that a human can solve the situation. 
+
+## Long-Term outlook
+The lifecycle was designed so that every mobile phone, every car, every device, can be an own storage, and that users can split each storage logically into maps, and collections.
+
+We intend to split the 64-bit storage-number into parts, for example:
+
+```
+  SEG    BLOCK     NUMBER   
+  [00][00:0000:00][00:0000]
+
+- SEG: Internal segment, 8-bit
+- BLOCK: Allocation block, 32-bit
+- NUMBER: Allocation number, 24-bit
+```
+
+Now, the concept would be, to allocate one block fore HERE internal, merge smaller customers into shared blocks, while bigger customers will receive own blocks, so they can sub-distribute their storage-numbers. 
+
+For example, a car company could acquire a block of storage-numbers from Naksha to allocate an individual storage-number to each car. They could synchronize this with a car identifier, or they create and own storage-number for each consumer, so that all his cars share the same storage-number, but use individual map-numbers. This still allows each consumer to create billions of collections with data.
+
+The concept is to link all productive entities together into one huge virtual cloud, where it is always clear which data record comes from which source, but to decouple the sources, so that a device does not need to synchronize with other devices, before it modifies map data. For example, a car can collect data in a local collection, and then synchronize it back into the cloud, when there is a good and cheap internet connection available, and fetching new map data from the cloud. As all data is versioned, the car can keep track of the last version it had synchronized, then fetch just the difference between its version, and the latest version available in the cloud. When uploading, the same is done inverse, it queries what data the cloud has, calculate the difference to its local data, and only upload the difference. This as well allows rebasing of local modifications to the updated cloud map.
+
+### Storage-Numbers
+All storage-numbers between `0` and `9223372036854775807` are reserved for private usage, which means every vendor (like [HERE Technologies](https://www.here.com/)) can make an own dedicated namespace, and privately distribute storage-numbers to devices, services, or whatever.
+
+The storage-numbers between `-1` and `-9223372036854775808` are reserved for a global public namespace. As every storage always has an `id` and `number`, the idea is to create some form of public DNS for storages, maybe in cooperation with the [OpenStreetMap Foundation](https://osmfoundation.org/). So that everybody can register namespaces the same way that domains can be registered.

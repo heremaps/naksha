@@ -1,6 +1,8 @@
 # Binary
 To efficiently store data in-memory, at disk, in remote storage, like s3 buckets, or redis, Naksha defines a binary format for tuples, metadata, and tuple-numbers.
 
+This document formalizes the binary representation of the in-memory data, so that all caches, and services use the same data format. This allows an efficient binary exchange of data.
+
 This document expects that you've read the [general lifecycle guide](./LIFECYCLE.md).
 
 ## Endianness
@@ -435,18 +437,5 @@ This is efficient, because, even while Postgres has to perform a couple of byte-
 
 As shown here, the query, and tuple loading from the database, is solved efficiently.
 
-## Appendix
-This document formalizes the binary representation of the in-memory data, so that all caches, and services use the same data format. This allows an efficient binary exchange of data.
-
 ### Partitioning
 It is strongly recommended to start partitioning early on, said otherwise, it is not recommended to store more than 10 million features per partition. If it is expected to store up to a billion features in a certain collection, it is recommended to create around 100 partitions. More partitions improve the performance when multiple clients concurrently access the collection. While partitioning does have a positive effect on parallel read and write performance, it negatively effects single threaded performance. Having too many partitions will as well decrease the query (search) performance. Having too few partitions however, will have a bad effect on read, write, and query performance. It is important to select the right number of partitions.
-
-### Conceptual
-The concept was designed so that every mobile phone, every car, every device, can be an own storage, and that users can split each storage logically into many maps. For example, a car company could acquire a storage-number from Naksha for every car-model they have, then manage all cars of this model as individual maps. On the other hand, they can create a new storage-number for every car, and synchronize this with a car identifier, or they share a storage-number for all consumers, so that each consumer has an own map in a virtual consumer storage, still each consumer can create billions of collections with data.
-
-The concept is to link all productive entities together into one virtual huge cloud, where it is always clear which data record comes from which source, but to decouple the sources, so that a device does not need to synchronize with other devices, before it modifies map data. For example, a car can collect data in a local collection, and then synchronize it back, when there is a good and cheap internet connection available into the cloud, fetching new map data from the cloud. As all data is versioned, the car can keep track of the last version it had, then fetch just the difference between its version, and the latest version in the cloud. When uploading, the same is done inverse, it queries what data the cloud has, calculate the difference to its local data, and only upload the difference. This as well allows rebasing of local modifications.
-
-### Storage-Numbers
-All storage-numbers between `0` and `9223372036854775807` are reserved for private usage, which means every vendor (like [HERE Technologies](https://www.here.com/)) can make an own dedicated namespace, and privately distribute storage-numbers to devices, services, or whatever.
-
-The storage-numbers between `-1` and `-9223372036854775808` are reserved for a global public namespace. As every storage always has an `id` and `number`, the idea is to create some form of public DNS for storages, maybe in cooperation with the [OpenStreetMap Foundation](https://osmfoundation.org/). So that everybody can register namespaces the same way that domains can be registered.
