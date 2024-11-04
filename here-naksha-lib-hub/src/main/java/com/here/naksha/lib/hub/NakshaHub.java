@@ -324,7 +324,7 @@ public class NakshaHub implements INaksha {
       if (extensionId != null && extensionId.contains(":")) {
         extensionIds.add(extensionId);
       } else {
-        logger.error("Environment is missing for an extension Id");
+        logger.error("Environment is missing for an extension Id {}", extensionId);
       }
     }
 
