@@ -183,11 +183,15 @@ We intend to split the 64-bit storage-number into parts, for example:
 - NUMBER: Allocation number, 24-bit
 ```
 
-Now, the concept would be, to allocate one block fore HERE internal, merge smaller customers into shared blocks, while bigger customers will receive own blocks, so they can sub-distribute their storage-numbers. 
+Now, the concept would be, to allocate one block for HERE internal, merge smaller customers into shared blocks, while bigger customers will receive own blocks, so they can subdivide their storage-numbers. Some huge customers may even get multiple blocks, as they may have need for more than 16 million storages.
 
-For example, a car company could acquire a block of storage-numbers from Naksha to allocate an individual storage-number to each car. They could synchronize this with a car identifier, or they create and own storage-number for each consumer, so that all his cars share the same storage-number, but use individual map-numbers. This still allows each consumer to create billions of collections with data.
+Technically, the numbers of a block could be divided further into for example 256 sub-blocks, each with 65536 entries, or into 65536 sub-blocks with 256 entries each.
+
+For example, a car company could acquire a block of storage-numbers from Naksha to allocate an individual storage-number to each car. They could synchronize this with a car identifier, or they create an own storage-number for each consumer, so that all his cars share the same storage-number, but use individual map-numbers. This still allows each consumer to create billions of collections with data.
 
 The concept is to link all productive entities together into one huge virtual cloud, where it is always clear which data record comes from which source, but to decouple the sources, so that a device does not need to synchronize with other devices, before it modifies map data. For example, a car can collect data in a local collection, and then synchronize it back into the cloud, when there is a good and cheap internet connection available, and fetching new map data from the cloud. As all data is versioned, the car can keep track of the last version it had synchronized, then fetch just the difference between its version, and the latest version available in the cloud. When uploading, the same is done inverse, it queries what data the cloud has, calculate the difference to its local data, and only upload the difference. This as well allows rebasing of local modifications to the updated cloud map.
+
+Through the way tuples are created, this even allows to first fetch the tuple-numbers of all data needed, then to fetch the data. This is very robust, so even when the internet connection breaks down, while performing the data loading, it can be recovered easily later, as long as the result-set was transferred correctly, and is cached locally. The all tuples can be loaded slowly asynchronously, until everything is ready to update.
 
 ### Storage-Numbers
 All storage-numbers between `0` and `9223372036854775807` are reserved for private usage, which means every vendor (like [HERE Technologies](https://www.here.com/)) can make an own dedicated namespace, and privately distribute storage-numbers to devices, services, or whatever.
