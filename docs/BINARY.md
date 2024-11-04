@@ -140,10 +140,8 @@ The metadata is encoded like following:
 - { tuple-number }
 - flags: u32
 - txn_next: u64 (optional, flags bit)
-- { previous tuple-number, 96-bit, optional, flags bit }
-- { merge tuple-number, 224-bit, optional, flags bit }
-- { join tuple-number, 224-bit, optional, flags bit }
-- { origin tuple-number, 224-bit, optional, flags bit }
+- { prev_tn, 96-bit tuple-number, optional, flags bit }
+- { base_tn, 96-bit tuple-number, optional, flags bit }
 - created_at: u48 (optional, flags bit)
 - author_ts: u48 (optional, flags bit)
 - updated_at: u48
@@ -154,8 +152,12 @@ The metadata is encoded like following:
 - appid: cstring
 - author: cstring
 - type: cstring
+- origin: cstring
+- target: cstring
 
-Each metadata encodes at its start the tuple-number in 224-bit (28-byte). The previous tuple-number is only encoded as 96-bit value, so only with _version_, _partition-number_, and _uid_, because the previous tuple is expected to persist in the storage, map, and collection, otherwise the `origin` should be set!
+Each metadata encodes at its start the tuple-number in 224-bit (28-byte). The previous tuple-number (`prev_tn`) and the base tuple-number (`base_tn`), used in auto-merging, are only encoded as 96-bit values, because they share the same _storage_, _map_, and _collection_, so the are encoded only with _version_, _partition-number_, and _uid_.
+
+The `origin` and `target` are stringified [_GUIDs_](./LIFECYCLE.md#guid). 
 
 ## Metadata-Binary-Object
 Each tuple has a pre-defined set of metadata. Optionally, metadata can have an object header like:
@@ -382,9 +384,7 @@ WITH source AS (
     ||int4send(flags) -- 4 byte, we're aligned to 64-bit again
     ||coalesce(int8send(txn_next),''::bytea)
     ||coalesce(prev_tn,''::bytea)
-    ||coalesce(merge_tn,''::bytea)
-    ||coalesce(join_tn,''::bytea)
-    ||coalesce(origin_tn,''::bytea)
+    ||coalesce(base_tn,''::bytea)
     ||coalesce(substring(int8send(created_at),3),''::bytea) -- u48
     ||coalesce(substring(int8send(author_ts),3),''::bytea) -- u48
     ||substring(int8send(updated_at), 3) -- u48
@@ -395,6 +395,8 @@ WITH source AS (
     ||coalesce(app_id,'')::bytea||'\x00'::bytea
     ||coalesce(author,'')::bytea||'\x00'::bytea
     ||coalesce(type,'')::bytea||'\x00'::bytea
+    ||coalesce(origin,'')::bytea||'\x00'::bytea
+    ||coalesce(target,'')::bytea||'\x00'::bytea
   ) as meta, ref_point, geo, tags, feature, attachment
   FROM source
 ), tuple_objects_without_header AS (
@@ -429,7 +431,7 @@ SELECT gzip(bytea_agg(
     ||all_obj
 )) FROM result
 ```
-This is again highly efficient, because, even while Postgres has to perform a couple of byte-array aggregations, that cost some CPU time and memory, eventually we only return one row with one column, compressed. This reduced not only the amount of byte transferred, it as well avoids that a client has to perform multiple reads, therefore avoids that Postgres need to create a cursor, and letting the client fetch row by row.
+This is efficient, because, even while Postgres has to perform a couple of byte-array aggregations, that cost some CPU time and memory, eventually we only return one row with one column, compressed. This reduces not only the amount of byte transferred, it as well avoids that a client has to perform multiple reads, therefore avoids that Postgres need to create a cursor, and letting the client fetch row by row.
 
 As shown here, the query, and tuple loading from the database, is solved efficiently.
 

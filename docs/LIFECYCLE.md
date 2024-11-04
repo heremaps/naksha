@@ -70,7 +70,7 @@ The `origin`, and `target` are sticky, so when updating the feature, the `origin
 
 This is actually important for [rebasing](#rebased).
 
-### FORKED / CREATED 
+### FORKED / CREATED
 When a feature is created, the `action` is set to `CREATED` by the client.
 
 When a _client_ wants to copy a feature from one collection into another, or to change the _ID_ of a feature in a collection, the _storage_ will detect that this happened. It will decode the _GUID_ stored in the `uuid` of the feature, and recognize, that the _GUID_ refers to a foreign feature. The storage will copy the _GUID_ read from the `uuid` of the originating state into the `origin` property to keep track of this situation. This mechanism is important to [rebase](#rebased).
@@ -84,7 +84,7 @@ When a feature is updated by the client, the `action` is set to `UPDATED` by the
 
 If a client wants to update a feature, it should read the feature, then modify it, and then send the modified feature back, without changing the XYZ namespace, except for the `tags`. When it does this, the change is performed atomically safe, because the `uuid` will hint the server which version was modified by the client, and is expected as current _HEAD_. If the feature was updated meanwhile by another client, the _server_ can try to perform an [auto-merge](#auto_merged--updated), otherwise it will respond with a conflict. This is what the low-level _storage_ will always do, no _storage_ does implement the auto-merging, because it would be unnecessary code replication, complicate the storage implementation, and actually will not allow business use-cast adjustment.
 
-An `UPDATE` will never have `origin` being set.
+An `UPDATE` will never change the `origin`, or `target`, they must store the same value as before, so as the previous state referred by `prev_tn`.
 
 ### AUTO_MERGED / UPDATED
 For all updates, the exact behavior is like following:
@@ -101,14 +101,14 @@ This technically allows later to calculate back, what the client (and or merge c
 
 Eventually the action will always be `UPDATED`, while the operation will be either `UPDATED` or `AUTO_MERGED`, when an auto-merge was done by the _server_. The storage detects this on the `base_tn` being set.
 
-Note, the `origin` must be same, it is not allowed to change the `origin` as part of an auto-merge!
+The same rules apply to an auto-merge, that apply to a normal `UPDATED`, this means neither `origin` nor `target` must change, they are required to be same as the ones referred previously to (via `prev_tn`).
 
 ### DELETED
 When a feature is deleted by the client, the `action` is set to `DELETED` by the client.
 
 A deletion is a tombstone state, changing a feature into this state will not allow any data modification. The only modification automatically done, is the change of the _action_, when copying the state away from the _head_, and that the `txn_next` (_next-version_) will be set to the `txn` (transaction-number aka _version_), which means it forms a loop, referring to itself (so, there is no future state).
 
-It is allowed to perform the action in memory, and to store the deleted features in a different (delta) collection. In this case, the storage will detect that the `uuid` is from a foreign storage, and store a deletion tombstone in the deletion table, and in the history, even while no such map object ever existed in the collection (there is _HEAD_, so the new state need to be inserted). This is needed to support views, in a view, all features that are deleted, should actually be removed from the view. This is only done, when the deletion table exists and is enabled.
+It is allowed to store deleted features in a different (delta) collection. In this case, the storage will detect that the `uuid` is from a foreign storage, and store a deletion tombstone in the deletion table, and in the history. This is done, even when no such map-object ever existed in the collection (there is no _HEAD_, so the new state need to be inserted). This is needed to support views, in a view, all features that are deleted, should actually be removed from the view.
 
 ### PARTED / CREATED - SPLIT / DELETED
 If the client need to _split_ a feature into multiple ones, it must clone the original feature, and modify the clones, without changing the XYZ namespace, except for _tags_. Eventually it should delete the original feature.
@@ -143,17 +143,15 @@ Assuming the features `A`, `B`, and `C` should be joined into a new feature `FOO
 - `C'`: operation = `JOINED`, origin = `C`, target - `FOO`
 
 ## REBASED
-To recap, whenever a feature is copied from a foreign storage, map, or collection, or the feature-id is changed in an update, the `origin` refers to the originating feature.
+To recap, whenever a feature is copied from a foreign storage, map, or collection, or the feature-id is changed in an update, the `origin` refers to the originating feature. When a feature is split, the `origin` refers to the feature that was split, and when features are joined, the origin refers to the features that were joined, while `target` refer to the new feature that replaces the joined ones.
 
-When a client decides to read the _HEAD_ state of a feature, and then to merge a foreign feature logically into it, the client should set `origin` to the foreign feature it merged into this one. This allows to track this, and to rebase the new feature, should the original one being updated.
+Eventually `origin`, and `target` are used to perform rebasing. A rebase is a complex [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge). Assume a feature is modified, then it is possible to search for all features in other storages, maps, and collections that have `origin` set to this feature.
 
-Eventually `origin` is used to perform rebasing. A rebase is a complex [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge). Assume a feature is modified, then it is possible to search for all features in other storages, maps, and collections that have `origin` set to this feature. Actually, we only search for features having the same originating feature, so who have an `origin` starting with the ID of the originating feature, so that starts with `urn:here:naksha:guid:{feature-id}`. When found, a rebase can be started.
-
-Beware, that we will find a lot of _Tuple_, because the origin is sticky, we find all states of a feature until another origin is set, which is where rebasing is either no longer possible, or becomes recursive and therefore out of the scope of this document.
+Normally a rebase is a pull-request, so a client that has a delta collection with changes, requests a rebase. This causes a job to search for all features that have an `origin` set, and then check the origin state, if any rebasing is needed.
 
 When a feature was split, all parts of that split derive the `origin` of the feature that was split, therefore it is quite easy to find all parts.
 
-For a join, only one part may have `origin` set correctly. But the other parts have the `target` set to the target of the join,so all _Tuple_ related to this operation can be found by searching for the `origin`, and the `target`.
+For a join, only one part of the join may have an `origin`. But the other parts are still needed, and have the `target` set to the same target of the join, so all _Tuple_ related to this operation can be found by searching for the `origin`, and the for the missing features using `target`.
 
 ### Rebase UPDATE
 This section describes what a client need to do, to perform a rebase of a feature that was only copied in a new collection (possibly a delta collection), and the continuously updated, but never split or merged.
@@ -162,11 +160,11 @@ First the history of the forked feature need to be searched backwards, until the
 
 Then the client will find the latest state of the originating feature, _ORIGIN-HEAD_. It will read the state that the `origin` of _FORK-BASE_ refers to as _ORIGIN-BASE_, calculating a difference between the _ORIGIN-HEAD_ and the _ORIGIN-BASE_, being _ORIGIN-DIFF_.
 
-Now, we have two differences, the _ORIGIN-DIFF_, describing what was changed in the origin since the feature was forked or rebased the last time, and _FORK-DIFF_, which describes what was changed in the collection that we want to rebase, so since the feature was forked or rebased last. This allows to add both differences into _REBASE-PATCH_ (the same way any other three-way-merge works), or it will cause a conflict, if both collections modified the same properties. Some of these conflicts can be automatically solved by one wins over the other, or by implementing a special custom rebase algorithm, that has domain knowledge, but this is out of scope of this document.
+Now, we have two differences, the _ORIGIN-DIFF_, describing what was changed in the origin since the feature was forked or rebased the last time, and _FORK-DIFF_, which describes what was changed in the collection that we want to rebase, so since the feature was forked or rebased last. This allows to add both differences into a _REBASE-PATCH_ (the same way any other three-way-merge works). This may cause a conflict, if both collections modified the same properties. Some of these conflicts can be automatically solved by one wins over the other, or by implementing a special custom rebase algorithm, that has domain knowledge, but this is out of scope of this document.
 
-Eventually, when successfully created the _REBASE_PATCH_, this patch can be applied to _FORK-BASE_ to produce a _FORK-NEW_ state, that has _FORK-HEAD_ as precedence state (`prevn_tn`), which should be the same as _FORK-HEAD_. When this new state is created, the `origin` need to be updated to _ORIGIN-HEAD_, so to the one to which the rebase is performed. Additionally, the operation must be set to `REBASED`. The client now try to persist the _FORK-NEW_ state. If the forked feature was modified in the meantime, the rebased will fail with a conflict, but as this operation is idempotent, it can simply be repeated using the new _HEAD_ state.
+Eventually, when successfully created the _REBASE_PATCH_, this patch can be applied to _FORK-BASE_ to produce a _FORK-NEW_ state, that has _FORK-HEAD_ as precedence state (`prevn_tn`). When this new state is created, the `origin` need to be updated to _ORIGIN-HEAD_, so to the one to which the rebase is performed. Additionally, the operation must be set to `REBASED`. The client now try to persist the _FORK-NEW_ state. If the forked feature was modified in the meantime, the rebased will fail with a conflict, but as this operation is idempotent, it can simply be repeated using the new _HEAD_ state.
 
 This is a simplified description, but should allow to understand the basic concepts and meaning of the different properties, and states, involved in rebasing.
 
 ### Rebase SPLIT and JOIN
-This is out of the scope of this documentation, as it is an even more complex operation, and often requries domain knowledge to be performed correctly.
+This is out of the scope of this documentation, as it is an even more complex operation, and often requries domain knowledge to be performed correctly. However, technically, due to the `origin`, and `target` properties, plus the capabilities of the Naksha-Hub _server_ to load extensions with custom rebase algorithms, a rebase can be done successfully, and automatically, even when features have been split. If such an automatic rebasing fails, a task for a moderation should be created, so that a human can solve the situation. 
