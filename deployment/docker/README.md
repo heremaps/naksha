@@ -71,55 +71,29 @@ cd ..
 
 # Build miscellaneous image and push
 cd naksha-pg-3-misc
-docker build --platform=linux/arm64 \
-       --build-arg="ARCH=arm64" \
+docker build --platform=linux/arm64,linux/amd64 \
        --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
        --build-arg="VERSION=${PLV8_VER}" \
-       --push \
-       -t "${DR_NAKSHA_POSTGRES}:misc-arm64-${MISC_VER}" .
-docker build --platform=linux/amd64 \
-       --build-arg="ARCH=amd64" \
-       --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
-       --build-arg="VERSION=${PLV8_VER}" \
-       --push \
-       -t "${DR_NAKSHA_POSTGRES}:misc-amd64-${MISC_VER}" .
+       -t "${DR_NAKSHA_POSTGRES}:misc-${MISC_VER}" .
 cd ..
 
 # Build pljava image and push
 cd naksha-pg-4-pljava
-docker build --platform=linux/arm64 \
-       --build-arg="ARCH=arm64" \
+docker build --platform=linux/arm64,linux/amd64 \
        --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
        --build-arg="VERSION=${MISC_VER}" \
-       --push \
-       -t "${DR_NAKSHA_POSTGRES}:pljava-arm64-${PLJAVA_VER}" .
-docker build --platform=linux/amd64 \
-       --build-arg="ARCH=amd64" \
-       --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
-       --build-arg="VERSION=${MISC_VER}" \
-       --push \
-       -t "${DR_NAKSHA_POSTGRES}:pljava-amd64-${PLJAVA_VER}" .
+       -t "${DR_NAKSHA_POSTGRES}:pljava-${PLJAVA_VER}" .
 cd ..
 
 # Build the final postgres with run-scripts and default configurations
 # Note, this can be done multiple times without any need to re-build the previous images
 # Therefore we introduce the BASE var
 cd naksha-pg-release
-docker build --platform=linux/arm64 \
-       --build-arg="ARCH=arm64" \
+docker build --platform=linux/arm64,linux/amd64 \
        --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
        --build-arg="VERSION=${PLJAVA_VER}" \
-       --push \
-       -t "${DR_NAKSHA_POSTGRES}:arm64-${RELEASE_VER}" \
-       -t "${DR_NAKSHA_POSTGRES}:arm64-latest" .
-docker build --platform=linux/amd64 \
-       --build-arg="ARCH=amd64" \
-       --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
-       --build-arg="VERSION=${PLJAVA_VER}" \
-       --push \
-       -t "${DR_NAKSHA_POSTGRES}:amd64-${RELEASE_VER}" \
-       -t "${DR_NAKSHA_POSTGRES}:amd64-latest" .
-cd ..
+       -t "${DR_NAKSHA_POSTGRES}:${RELEASE_VER}" \
+       -t "${DR_NAKSHA_POSTGRES}:latest" .
 ```
 
 **Notes**:
