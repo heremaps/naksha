@@ -73,9 +73,9 @@ jobs:
           CHANGED_FILES_FAILED=$(echo '${{ steps.jacoco.outputs.coverage-changed-files }} < ${{ env.MIN_COVERAGE_CHANGED_FILES }}' | bc)
           [[ $CHANGED_FILES_FAILED -ne 0 ]] && echo 'Changed files coverage ${{ steps.jacoco.outputs.coverage-changed-files }}% is smaller than required ${{ env.MIN_COVERAGE_CHANGED_FILES }}%'
           [[ $CHANGED_FILES_FAILED -ne 0 ]] && exit 1 || exit 0
-      - name: List generated artifacts
-        run: |
-          ls -l $SERVICE_JAR_DIR/*
+#      - name: List generated artifacts
+#        run: |
+#          ls -l $SERVICE_JAR_DIR/*
       ### Upload as pipeline artifact
 #      - name: Prepare artifact content
 #        run: |
