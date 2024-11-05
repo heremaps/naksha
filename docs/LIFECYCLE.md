@@ -175,25 +175,51 @@ The lifecycle was designed so that every mobile phone, every car, every device, 
 We intend to split the 64-bit storage-number into parts, for example:
 
 ```
-  SEG    BLOCK     NUMBER   
-  [00][00:0000:00][00:0000]
+  PA/SEG  BLOCK    NUMBER   
+  [0000]:[0000:00][00:0000]
 
-- SEG: Internal segment, 8-bit
-- BLOCK: Allocation block, 32-bit
+- PUBLIC: 1-bit
+- ANONYM: 1-bit
+- SEG: Segment, 14-bit
+- BLOCK: Allocation block, 24-bit
 - NUMBER: Allocation number, 24-bit
 ```
 
-Now, the concept would be, to allocate one block for HERE internal, merge smaller customers into shared blocks, while bigger customers will receive own blocks, so they can subdivide their storage-numbers. Some huge customers may even get multiple blocks, as they may have need for more than 16 million storages.
+The idea is to split a storage-number logically into _segment_, _block_, and _number_. The suggested stringified human- and machine-readable notation would be:
 
-Technically, the numbers of a block could be divided further into for example 256 sub-blocks, each with 65536 entries, or into 65536 sub-blocks with 256 entries each.
+`urn:here:naksha:sn:{pa}:{segment}:{block}:{number}`
 
-For example, a car company could acquire a block of storage-numbers from Naksha to allocate an individual storage-number to each car. They could synchronize this with a car identifier, or they create an own storage-number for each consumer, so that all his cars share the same storage-number, but use individual map-numbers. This still allows each consumer to create billions of collections with data.
+For example `urn:here:naksha:sn::5:1:19`, but as this is for human-readable notation, the URN prefix (`urn:here:naksha`) is not necessary, and can be moved, truncating the string to `sn::5:1:19`, which means private storage, segment `5`, block `1`, and number `24`, resulting in the final 64-bit value `1407374900330520` (`(5*2^48)+(1*2^24)+19`).
 
-The concept is to link all productive entities together into one huge virtual cloud, where it is always clear which data record comes from which source, but to decouple the sources, so that a device does not need to synchronize with other devices, before it modifies map data. For example, a car can collect data in a local collection, and then synchronize it back into the cloud, when there is a good and cheap internet connection available, and fetching new map data from the cloud. As all data is versioned, the car can keep track of the last version it had synchronized, then fetch just the difference between its version, and the latest version available in the cloud. When uploading, the same is done inverse, it queries what data the cloud has, calculate the difference to its local data, and only upload the difference. This as well allows rebasing of local modifications to the updated cloud map.
+If the `PUBLIC` bit is set, the prefix is changed to `public`, for example `sn:public:5:1:19`, if the segment is part of the privacy extension, it becomes `sn:anonym:5:1:19`. The public flag just changes the storage-number into the public shared namespace, but the anonym flag indicates a [privacy storage-number](#privacy-extension).
 
-Through the way tuples are created, this even allows to first fetch the tuple-numbers of all data needed, then to fetch the data. This is very robust, so even when the internet connection breaks down, while performing the data loading, it can be recovered easily later, as long as the result-set was transferred correctly, and is cached locally. The all tuples can be loaded slowly asynchronously, until everything is ready to update.
+We would allocate segment `0` for HERE internal, and provide each team within HERE with an own block, so each team can create up to 16 million storages, while HERE can have up to 16 million teams.
+
+For example, smaller customers are merged into shared blocks, while bigger customers will receive own blocks, so they can subdivide their storage-numbers. Some important huge customers may get a whole segment, or a part of a segment, when they have need for more than 16 million storages.
+
+### Goal
+For example, a car company could acquire a block or segment of storage-numbers from Naksha to allocate an individual storage-number to each car. They could synchronize this with a car identifier, and assign an own storage-number to each car. A company that manages buildings could use for each building an own dedicated storage-number, then create and own map for each flat, with one collection per room. These are just rough ideas.
+
+The concept is to link all productive features, including their history, together into one huge virtual cloud, where it is always clear which data record comes from which source, but to decouple the sources, so that a device does not need to synchronize with other devices, before it modifies map data. For example, a car can collect data in a local collection, and then synchronize it back into the cloud, when there is a good and cheap internet connection available, and fetching new map data from the cloud. As all data is versioned, the car can keep track of the last version it had synchronized, then fetch just the difference between its version, and the latest version available in the cloud. When uploading, the same is done inverse, it queries what data the cloud has, calculate the difference to its local data, and only upload the difference. This as well allows rebasing of local modifications to the updated cloud map.
+
+The concept allows to always be aware where a _Tuple_ is originally stored, and that each storage can create world-wide unique identifiers, without any distributed locks, except for the initial storage-number allocation.
+
+The way tuples are created, allows to execute a query that only returns the tuple-numbers of the result-set. The data loading is then done asynchronously. This even allows peer-to-peer data transfer, ones a result-set was generated. This is a robust mechanism, so even when the internet connection breaks down, while performing the data loading, it can be recovered easily later, as long as the result-set was transferred correctly, and is cached locally. The tuples can be loaded in the background slowly, while the data in the source continues to get modified, which eventually is fixed with another synchronization, so the data is eventually consistent.
+
+## Privacy extension
+When each device gets an own dedicated fixed storage-number, this is as if it would get a dedicated fixed IP address. For example, when the device is a car, it has a licence plate, and therefore the owner would be identifiable by the storage-number, which is against the law in most countries, except the user consent to this.
+
+For this reason, even while the car has a dedicated storage-number, it is allowed to assign itself a privacy storage-number, and use this when exporting data or connecting to other systems. So, instead of writing the true storage-number into the export, the storage will replace its own storage-number with its privacy storage-number. In all external communication it will expose this privacy storage number. This privacy number can be changed at any point in time, it can even be different for every export and connect, so a storage can have multiple privacy numbers at the same time, and these numbers are not unique, because they are random. To keep the data internally consistent, the storage will internally use its assigned (and fixed) storage-number, and can keep this number in encrypted backups, that are only accessible by the owner. So the storage will translate from privacy number back into internal real storage-number, and vice versa.
+
+Basically this means, storages with privacy extension enabled, externally never expose their real storage-number, and they change their random privacy number regularly. It means as well, that it is not possible to link from other storages into ones with privacy extension enabled, because the _GUIDs_ are ambiguous, except for _HEAD_ only _GUIDs_. Furthermore, a privacy storage number is a contractual request to anonymize all data received. This essentially means, all _origins_ from privacy storages are existing, but useless for rebasing, because the history, and its _Tuple_, can't be fetched from anywhere.
+
+The biggest disadvantage of the privacy extension is, that tuples can't be cached, because there are collisions between privacy storage numbers.
+
+The privacy extension alone does not guarantee real privacy, because it only obfuscates the storage-number. The data itself can still leak information, more filters may be needed. However, legally, the privacy number expresses the will of the storage to stay anonymous, and requests the other participant to anonymize the data being exchanged.
+
+**This need to be improved and is just a first concept draft.**
 
 ### Storage-Numbers
 All storage-numbers between `0` and `9223372036854775807` are reserved for private usage, which means every vendor (like [HERE Technologies](https://www.here.com/)) can make an own dedicated namespace, and privately distribute storage-numbers to devices, services, or whatever.
 
-The storage-numbers between `-1` and `-9223372036854775808` are reserved for a global public namespace. As every storage always has an `id` and `number`, the idea is to create some form of public DNS for storages, maybe in cooperation with the [OpenStreetMap Foundation](https://osmfoundation.org/). So that everybody can register namespaces the same way that domains can be registered.
+The storage-numbers between `-9223372036854775808` and `-1` are reserved for a global public namespace. As every storage always has an `id` and `number`, the idea is to create some form of public DNS for storages, maybe in cooperation with the [OpenStreetMap Foundation](https://osmfoundation.org/). So that everybody can register namespaces the same way that domains can be registered.
