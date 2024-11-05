@@ -100,12 +100,12 @@ public class ExtensionCache {
       final Extension extension = result.getKey();
       final String extensionIdWthEnv = extension.getEnv() + ":" + extension.getId();
       final File jarFile = result.getValue();
-      IExtensionInit instance = null;
+      IExtensionInit initObj = null;
       ClassLoader loader;
       try {
         loader = ClassLoaderHelper.getClassLoader(jarFile, extensionConfig.getWhilelistDelegateClass());
       } catch (Exception e) {
-        logger.error("Failed to load extension jar " + extension.getId(), e);
+        logger.error("Failed to load extension jar " + extensionIdWthEnv, e);
         return;
       }
 
@@ -115,9 +115,13 @@ public class ExtensionCache {
           Object obj = clz.getConstructor().newInstance();
           if (obj instanceof IExtensionInit initInstance) {
             initInstance.init(naksha, extension);
-            instance = initInstance;
+            initObj = initInstance;
+            logger.info(
+                    "Extension {} initialization using initClassName {} done successfully.",
+                    extensionIdWthEnv,
+                    extension.getInitClassName());
           } else {
-            logger.error("Extension does not implement IExtensionInit for extension {}", extension.getId());
+            logger.error("Extension does not implement IExtensionInit for extension {}", extensionIdWthEnv);
             return;
           }
         } catch (Exception e) {
@@ -129,40 +133,39 @@ public class ExtensionCache {
           return;
         }
       }
-      if (!isNullOrEmpty(extension.getInitClassName()))
-        logger.info(
-            "Extension {} initialization using initClassName {} done successfully.",
-            extensionIdWthEnv,
-            extension.getInitClassName());
 
-      loaderCache.put(extensionIdWthEnv, new ValueTuple(extension, loader, instance));
-      PluginCache.removeExtensionCache(extensionIdWthEnv);
+      ValueTuple previousValue = loaderCache.put(extensionIdWthEnv, new ValueTuple(extension, loader, initObj));
+      if (previousValue != null) {
+        IExtensionInit previousInitObj = previousValue.getInstance();
+        closeExtensionInstance(extensionIdWthEnv, previousInitObj);
+      }
 
       logger.info(
-          "Extension id={}, version={} is successfully loaded into the cache, using Jar at {} for env={}.",
+          "Extension id={}, version={} is successfully loaded into the cache, using Jar at {}.",
           extensionIdWthEnv,
           extension.getVersion(),
-          extension.getUrl().substring(extension.getUrl().lastIndexOf("/") + 1),
-          extension.getEnv());
+          extension.getUrl().substring(extension.getUrl().lastIndexOf("/") + 1));
     }
   }
 
   private void removeExtensionFromCache(String extensionId) {
-    ValueTuple valueTuple = loaderCache.get(extensionId);
+    ValueTuple valueTuple = loaderCache.remove(extensionId);
+    PluginCache.removeExtensionCache(extensionId);
+    logger.info("Extension {} removed from cache.", extensionId);
     if (valueTuple != null) {
-      IExtensionInit instance = valueTuple.getInstance();
-      if (instance != null) {
-        try {
-          instance.close();
-          logger.info("Extension {} closed successfully.", extensionId);
-        } catch (Exception e) {
-          logger.error("Failed to close extension {}", extensionId, e);
-        }
-      }
+      IExtensionInit initObj = valueTuple.getInstance();
+      closeExtensionInstance(extensionId, initObj);
+    }
+  }
 
-      loaderCache.remove(extensionId);
-      PluginCache.removeExtensionCache(extensionId);
-      logger.info("Extension {} removed from cache.", extensionId);
+  private void closeExtensionInstance(String extensionId, IExtensionInit initObj) {
+    if (initObj != null) {
+      try {
+        initObj.close();
+        logger.info("Extension {} closed successfully.", extensionId);
+      } catch (Exception e) {
+        logger.error("Failed to close extension {}", extensionId, e);
+      }
     }
   }
 
