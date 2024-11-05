@@ -24,7 +24,7 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster, schemaName: Stri
     companion object {
 
         // If prefer and allowed to pull from HCR then "hcr.data.here.com/naksha/postgres:${architecture()}-latest"
-        internal val POSTGRES_IMAGE_REPO = "docker.io/heremaps/naksha-custom-postgres:latest"
+        internal val POSTGRES_IMAGE_REPO = "docker.io/phmai/naksha-postgres:latest"
 
         @JvmField
         internal val storage = AtomicReference<PsqlTestStorage?>()
