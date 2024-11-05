@@ -54,6 +54,37 @@ When clients create new tuples, these tuples are not yet persisted in any storag
 
 This _GUID_ simply refers to the _HEAD_ state of a feature in any storage. Parsing such a _GUID_ results in the tuple-number being `TupleNumber.ANY_HEAD`.
 
+### Versions and Transactions
+As already described, all features are a timeline of states, called _Tuple_, and each state is assigned a globally unique immutable identifier, called _Tuple-Number_. Each storage is assigned a globally unique storage-number, so a storage does never need to contact any other storage, when it generates new _Tuple_ with new _Tuple-Numbers_.
+
+However, the _Tuple-Number_ stores, next to the _storage-number_, _map-number_, _collection-number_, and _partition-number_ a **version**, and an **uid**.
+
+When a client wants to create a new _Tuples_ (feature states), it needs to assign this _Tuple_ a global unique identifier before writing it into the storage. Therefore, the client need to have an ability to generate globally unique _Tuple-Numbers_ upfront. To enable this, every client can as the storage to allocate a _transaction-number_ (`txn`) to it, which is as well called **version**.
+
+Using this **version**, the client can generate version-local **uids**, which is a 32-bit unsigned integer. This means, every client can create up to 4 billion new _Tuple_ within a single transaction on itself, it only needs one pre-flight request to allocate a transaction-number.
+
+The transaction-number is a 56-bit integers, split into four parts:
+- _Year_: The year in which the transactions started (e.g. 2024).
+- _Month_: The month of the year in which the transaction started (e.g. 9 for September).
+- _Day_: The day of the month in which the transaction started (1 to 31).
+- _Seq_: The local unique  **sequence-number** in this day.
+
+By definition, every day starts with the sequence-number reset to zero. The final 64-bit value is combined as:
+- 8-bit **reserved**, always 0.
+- 15-bit **year**, between 0 and 32768 {_shift-left 41_}.
+- 4-bit **month**, between 1 (January) and 12 (December) {_shift-left 37_}.
+- 5-bit **day**, between 1 and 31 {_shift-left 32_}.
+- 32-bit **seq**uence number.
+
+Note that the **month** and **day** can not be zero, therefore the version `0` is formally invalid, and used to temporary in-memory states.
+
+This concept allows up to 4 billion transactions per day (between 0 and 4,294,967,295, _2^32-1_). It will overflow in browsers in the year 4096, because in that year the transaction number needs 53-bit to be encoded, which is beyond the precision of a double floating point number. Should there be more than 4 billion transaction in a single day, this will overflow into the next day and potentially into an invalid day, should it happen at the last day of a given month. We ignore this situation, it seems currently impossible. Check in the browser:
+
+- `((4095n << 41n)+(12n << 37n)+(31n << 32n)+4294967295n) <= BigInt(Number.MAX_SAFE_INTEGER)`: _true_
+- `(4096n << 41n) <= BigInt(Number.MAX_SAFE_INTEGER)`: _false_
+
+Technically this means, the maximum number of transactions per second per storage is around 49,000.
+
 ## Basic Life-Cycle
 The life-cycle of a features persists out of _actions_ and _operations_.
 
