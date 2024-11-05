@@ -8,7 +8,7 @@ FROM ${DR_NAKSHA_POSTGRES}:misc-${VERSION}
 # https://tada.github.io/pljava/use/policy.html
 # https://www.percona.com/blog/postgresql-pl-java-how-to-part-1/
 # https://www.slideshare.net/petereisentraut/postgresql-and-pljava
-RUN yum install -y java-21-amazon-corretto maven \
+RUN dnf install -y java-21-amazon-corretto maven \
     && cd /tmp/ \
     && git clone https://github.com/tada/pljava.git \
     && cd pljava \

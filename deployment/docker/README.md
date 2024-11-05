@@ -12,7 +12,7 @@ Before you can start building the image, install docker, for example [Docker Des
 export DR_USER='<here-user>'
 export DR_PWD='<encrypted-password>'
 export DR_HOST="hcr.data.here.com" #Do not set if publishing to Docker Hub
-export DR_NAKSHA_POSTGRES="$DR_HOST/naksha/postgres" #For Docker Hub use "heremaps/naksha-custom-postgres"
+export DR_NAKSHA_POSTGRES="$DR_HOST/naksha/postgres" #For Docker Hub use "heremaps/naksha-postgres"
 docker login -u="$DR_USER" -p="$DR_PWD" $DR_HOST
 ```
 
@@ -35,12 +35,12 @@ The Naksha PostgresQL image is build in steps, follow these instructions:
 ```bash
 # Define postgres version, and revision to be build
 # v{pg-major}.{pg-minor}[.{pg-revision}]-r{revision}
-export BASE_VER="v16.2-r3"
-export POSTGIS_VER="v16.2-r3"
-export PLV8_VER="v16.2-r3"
-export MISC_VER="v16.2-r3"
-export PLJAVA_VER="v16.2-r3"
-export RELEASE_VER="v16.2-r3"
+export BASE_VER="v16.2-r4"
+export POSTGIS_VER="v16.2-r4"
+export PLV8_VER="v16.2-r4"
+export MISC_VER="v16.2-r4"
+export PLJAVA_VER="v16.2-r4"
+export RELEASE_VER="v16.2-r4"
 ```
 
 Ones done, start compiling

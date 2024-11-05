@@ -4,7 +4,7 @@ FROM ${DR_NAKSHA_POSTGRES}:base-${VERSION}
 
 #
 # Install Geos (https://libgeos.org/usage/download/)
-RUN yum install -y libxml2 libxml2-devel cmake \
+RUN dnf install -y libxml2 libxml2-devel cmake \
     && cd /tmp/ \
     && wget https://download.osgeo.org/geos/geos-3.12.1.tar.bz2 \
     && tar xjf geos-3.12.1.tar.bz2 \
@@ -20,7 +20,7 @@ RUN yum install -y libxml2 libxml2-devel cmake \
 #
 # Proj4 (https://proj.org/en/9.4/development/index.html)
 # https://github.com/OSGeo/PROJ
-    && yum install -y sqlite sqlite-devel libtiff libtiff-devel \
+    && dnf install -y sqlite sqlite-devel libtiff libtiff-devel \
     && cd /tmp/ \
     && git clone https://github.com/OSGeo/PROJ.git \
     && cd PROJ \
@@ -34,7 +34,7 @@ RUN yum install -y libxml2 libxml2-devel cmake \
 #
 # Install GDal (https://gdal.org/index.html)
 # https://github.com/OSGeo/gdal
-    && yum install -y python3-devel python3-setuptools \
+    && dnf install -y python3-devel python3-setuptools \
     && cd /tmp/ \
     && git clone https://github.com/OSGeo/gdal.git \
     && cd gdal \
@@ -77,7 +77,7 @@ RUN yum install -y libxml2 libxml2-devel cmake \
 # PostGis extension
 # https://postgis.net/docs/postgis_installation.html
 # https://git.osgeo.org/gitea/postgis/postgis
-    && yum install -y protobuf protobuf-devel protobuf-c-devel libxslt libxslt-devel autoconf autoconf-archive perl-Time-HiRes libpq libpq-devel \
+    && dnf install -y protobuf protobuf-devel protobuf-c-devel libxslt libxslt-devel autoconf autoconf-archive perl-Time-HiRes libpq libpq-devel \
     && cd /tmp/ \
     && git clone https://git.osgeo.org/gitea/postgis/postgis.git \
     && cd postgis \
