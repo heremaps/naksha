@@ -57,11 +57,11 @@ This _GUID_ simply refers to the _HEAD_ state of a feature in any storage. Parsi
 ### Versions and Transactions
 As already described, all features are a timeline of states, called _Tuple_, and each state is assigned a globally unique immutable identifier, called _Tuple-Number_. Each storage is assigned a globally unique storage-number, so a storage does never need to contact any other storage, when it generates new _Tuple_ with new _Tuple-Numbers_.
 
-However, the _Tuple-Number_ stores, next to the _storage-number_, _map-number_, _collection-number_, and _partition-number_ a **version**, and an **uid**.
+The _Tuple-Number_ stores next to the _storage-number_, _map-number_, _collection-number_, _partition-number_, **version**, and an **uid**.
 
-When a client wants to create a new _Tuples_ (feature states), it needs to assign this _Tuple_ a global unique identifier before writing it into the storage. Therefore, the client need to have an ability to generate globally unique _Tuple-Numbers_ upfront. To enable this, every client can as the storage to allocate a _transaction-number_ (`txn`) to it, which is as well called **version**.
+When a client wants to create a new _Tuple_ (feature state), it needs to assign this _Tuple_ a global unique identifier (_Tuple-Number_), before writing it into the storage. Therefore, the client need to have an ability to generate globally unique _Tuple-Numbers_ upfront. To enable this, every client can ask the storage to allocate a _transaction-number_ (`txn`) to it, which is as well called **version**.
 
-Using this **version**, the client can generate version-local **uids**, which is a 32-bit unsigned integer. This means, every client can create up to 4 billion new _Tuple_ within a single transaction on itself, it only needs one pre-flight request to allocate a transaction-number.
+Using this **version**, the client can generate version-local **uids**, which are a 32-bit unsigned integer. This means, every client can create up to 4 billion new _Tuple_ within a single transaction on itself, it only needs one pre-flight request to allocate a transaction-number. The client can further split the **uid** into chunks to run multiple worker threads in parallel, before sending the final request to the _storage_.
 
 The transaction-number is a 56-bit integers, split into four parts:
 - _Year_: The year in which the transactions started (e.g. 2024).
