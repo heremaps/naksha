@@ -112,9 +112,8 @@ public class ExtensionCache {
       if (!isNullOrEmpty(extension.getInitClassName())) {
         try {
           Class<?> clz = loader.loadClass(extension.getInitClassName());
-          Object obj = clz.getConstructor(INaksha.class, Extension.class).newInstance(naksha, extension);
+          Object obj = clz.getConstructor().newInstance();
           if (obj instanceof IExtensionInit initInstance) {
-            initInstance.close();
             initInstance.init(naksha, extension);
             instance = initInstance;
           } else {
@@ -152,15 +151,12 @@ public class ExtensionCache {
     ValueTuple valueTuple = loaderCache.get(extensionId);
     if (valueTuple != null) {
       IExtensionInit instance = valueTuple.getInstance();
-      Extension extension = valueTuple.getExtension();
-      final String extensionIdWithEnv = extension.getEnv() + ":" + extension.getId();
-
       if (instance != null) {
         try {
           instance.close();
-          logger.info("Extension {} closed successfully.", extensionIdWithEnv);
+          logger.info("Extension {} closed successfully.", extensionId);
         } catch (Exception e) {
-          logger.error("Failed to close extension {}", extensionIdWithEnv, e);
+          logger.error("Failed to close extension {}", extensionId, e);
         }
       }
 
