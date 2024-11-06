@@ -7,6 +7,7 @@ import naksha.model.Action;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.StoreMode;
 import naksha.model.request.*;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -37,8 +38,8 @@ public class ViewWriteSessionTests extends PsqlTests {
     assertNotNull(storage);
     assertNotNull(session);
     final WriteRequest request = new WriteRequest();
-    request.add(new Write().createCollection(null, new NakshaCollection(COLLECTION_0, 1, null, false, true, null)));
-    request.add(new Write().createCollection(null, new NakshaCollection(COLLECTION_1, 1, null, false, true, null)));
+    request.add(new Write().createCollection(null, new NakshaCollection(COLLECTION_0, 1, null, null, StoreMode.ON, StoreMode.ON, StoreMode.ON)));
+    request.add(new Write().createCollection(null, new NakshaCollection(COLLECTION_1, 1,null, null, StoreMode.ON, StoreMode.ON, StoreMode.ON)));
     SuccessResponse response = (SuccessResponse) session.execute(request);
     assertNotNull(response.getTuples());
     session.commit();

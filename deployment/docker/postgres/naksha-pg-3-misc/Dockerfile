@@ -1,7 +1,6 @@
 ARG DR_NAKSHA_POSTGRES=hcr.data.here.com/naksha/postgres
-ARG ARCH
 ARG VERSION
-FROM ${DR_NAKSHA_POSTGRES}:plv8-${ARCH}-${VERSION}
+FROM ${DR_NAKSHA_POSTGRES}:plv8-${VERSION}
 
 # GZIP extension (https://github.com/pramsey/pgsql-gzip/)
 RUN cd /tmp/ \

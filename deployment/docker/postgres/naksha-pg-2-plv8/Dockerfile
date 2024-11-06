@@ -1,7 +1,6 @@
 ARG DR_NAKSHA_POSTGRES=hcr.data.here.com/naksha/postgres
-ARG ARCH
 ARG VERSION
-FROM ${DR_NAKSHA_POSTGRES}:postgis-${ARCH}-${VERSION}
+FROM ${DR_NAKSHA_POSTGRES}:postgis-${VERSION}
 
 # PLV8 extension (https://github.com/plv8/plv8.git)
 # Note: Very slow, requires one hour!
