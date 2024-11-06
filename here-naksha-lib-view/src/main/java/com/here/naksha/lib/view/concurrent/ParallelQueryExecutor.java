@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import naksha.base.StringList;
+import naksha.model.FetchMode;
 import naksha.model.IReadSession;
 import naksha.model.NakshaContext;
 import naksha.model.request.ReadFeatures;
@@ -85,8 +86,7 @@ public class ParallelQueryExecutor {
           }
         })
         .flatMap(Collection::stream)
-        .collect(groupingBy(viewRow ->
-            viewRow.getTuple().id() != null ? viewRow.getTuple().id() : "no id"));
+        .collect(groupingBy(viewRow -> viewRow.getTuple().id()));
   }
 
   private @NotNull Long getTimeout(@NotNull List<LayerReadRequest> requests) {
@@ -114,9 +114,10 @@ public class ParallelQueryExecutor {
     idsList.add(collectionId);
     clonedRequest.setCollectionIds(idsList);
 
-    SuccessResponse cursor = (SuccessResponse) session.execute(clonedRequest);
+    SuccessResponse response = (SuccessResponse) session.execute(clonedRequest);
 
-    List<ResultTuple> featureList = cursor.getTuples();
+    List<ResultTuple> featureList = response.getTuples();
+    session.fetchTuples(featureList, 0, featureList.size(), true, FetchMode.FETCH_ALL);
     log.info(
         "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",
         NakshaContext.currentContext().getStreamId(),
