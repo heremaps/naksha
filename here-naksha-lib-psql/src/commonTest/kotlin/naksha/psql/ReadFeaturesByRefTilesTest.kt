@@ -8,10 +8,7 @@ import naksha.model.request.ReadFeatures
 import naksha.psql.base.PgTestBase
 import naksha.psql.util.ProxyFeatureGenerator
 import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class ReadFeaturesByRefTilesTest : PgTestBase(NakshaCollection("read_by_ref_tiles")) {
 
@@ -44,6 +41,11 @@ class ReadFeaturesByRefTilesTest : PgTestBase(NakshaCollection("read_by_ref_tile
             eiffelTower,
             zagrebPromenade
         )
+    }
+
+    @AfterTest
+    fun cleanUp(){
+        dropCollection()
     }
 
     @Test
