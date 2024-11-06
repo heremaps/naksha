@@ -1,0 +1,80 @@
+package naksha.psql
+
+import naksha.geo.HereTile
+import naksha.geo.PointCoord
+import naksha.geo.SpPoint
+import naksha.model.objects.NakshaCollection
+import naksha.model.request.ReadFeatures
+import naksha.psql.base.PgTestBase
+import naksha.psql.util.ProxyFeatureGenerator
+import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+class ReadFeaturesByRefTilesTest : PgTestBase(NakshaCollection("read_by_ref_tiles")) {
+
+    private val pragueCityHall = generateRandomFeature().apply {
+        referencePoint = SpPoint(PointCoord(
+            longitude = 14.4178737288,
+            latitude = 50.0872507931
+        ))
+    }
+    private val eiffelTower = generateRandomFeature().apply {
+        referencePoint = SpPoint(PointCoord(
+            longitude = 2.294513484201658,
+            latitude = 48.858546539609414
+        ))
+    }
+    private val zagrebPromenade = generateRandomFeature().apply {
+        referencePoint = SpPoint(PointCoord(
+            15.972726122592436,
+            45.81509550000001
+        ))
+    }
+    private val zagrebTileLv12 = HereTile("122010112103")
+    private val pragueTileLv12 = HereTile("122010322102")
+    private val bolognaTileLv12 = HereTile("120232222021")
+
+    @BeforeTest
+    fun populateFeatures() {
+        insertFeatures(
+            pragueCityHall,
+            eiffelTower,
+            zagrebPromenade
+        )
+    }
+
+    @Test
+    fun shouldReadFeaturesByRefTiles() {
+        // Given:
+        val getFeaturesFromZagrebAndPrague = ReadFeatures().apply {
+            collectionIds += collection!!.id
+            query.refTiles += listOf(zagrebTileLv12.intKey, pragueTileLv12.intKey)
+        }
+
+        // When:
+        val features = executeRead(getFeaturesFromZagrebAndPrague).features
+
+        // Then:
+        assertEquals(2, features.size)
+        val featureIds = features.map { it!!.id }
+        assertTrue(featureIds.containsAll(listOf(pragueCityHall.id, zagrebPromenade.id)))
+    }
+
+    @Test
+    fun shouldNotReturnAnythingOnMissingTiles() {
+        // Given:
+        val getFeaturesFromBologna = ReadFeatures().apply {
+            collectionIds += collection!!.id
+            query.refTiles += bolognaTileLv12.intKey
+        }
+
+        // When:
+        val features = executeRead(getFeaturesFromBologna).features
+
+        // Then:
+        assertTrue(features.isEmpty())
+    }
+}
