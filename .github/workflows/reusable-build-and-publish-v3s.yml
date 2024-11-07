@@ -53,6 +53,7 @@ jobs:
       - name: Build fat jar, Run Unit tests, Verify code coverage
         ## original run clause for project wise
 #        run: gradle shadowJar jacocoTestReport jacocoTestCoverageVerification
+        shell: bash
         run: |
           array = ("here-naksha-lib-model" "here-naksha-lib-base" "here-naksha-lib-core" "here-naksha-lib-psql" "here-naksha-lib-view")
           for item in ${array[@]}; do
