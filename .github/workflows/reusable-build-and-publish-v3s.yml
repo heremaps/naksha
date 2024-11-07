@@ -57,8 +57,8 @@ jobs:
         run: |
           array=( here-naksha-lib-model here-naksha-lib-base here-naksha-lib-core here-naksha-lib-psql here-naksha-lib-view )
           for item in ${array[@]}; do
-            gradle -x jsNodeTest
-#          :$item:build :$item:jacocoTestReport :$item:jacocoTestCoverageVerification
+            gradle -x jsNodeTest :$item:build
+#          :$item:jacocoTestReport :$item:jacocoTestCoverageVerification
           done
           gradle -x jsNodeTest jacocoTestReport jacocoTestCoverageVerification
       - name: Publish Test Report
