@@ -25,6 +25,7 @@ import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
+import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
 import java.util.concurrent.Future;
@@ -55,6 +56,11 @@ public class HttpStorage implements IStorage {
   @Override
   public @NotNull IReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
     return new HttpStorageReadSession(context, useMaster, requestSender, properties.getProtocol());
+  }
+
+  @Override
+  public @NotNull IWriteSession newWriteSession(@Nullable NakshaContext context, boolean useMaster) {
+    return new HttpStorageWriteSession(context, requestSender, properties.getProtocol());
   }
 
   @Override

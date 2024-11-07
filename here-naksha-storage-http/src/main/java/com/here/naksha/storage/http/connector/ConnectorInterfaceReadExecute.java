@@ -61,9 +61,10 @@ public class ConnectorInterfaceReadExecute {
     event.setStreamId(streamId);
 
     String jsonEvent = JsonSerializable.serialize(event);
-    HttpResponse<byte[]> httpResponse = post(sender, jsonEvent);
+    HttpResponse<byte[]> httpResponse = sender.post(jsonEvent);
 
-    return PrepareResult.prepareResult(httpResponse, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
+    return PrepareResult.prepareReadResult(
+        httpResponse, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
   private static Event createIterateEvent(ReadFeaturesProxyWrapper request) {
@@ -108,10 +109,6 @@ public class ConnectorInterfaceReadExecute {
       propertiesQuery.add(POpToQueryConverter.pOpToQuery(propertyOp));
       getFeaturesByBBoxEvent.setPropertiesQuery(propertiesQuery);
     }
-  }
-
-  private static HttpResponse<byte[]> post(RequestSender sender, String body) {
-    return sender.sendRequest("", true, null, "POST", body);
   }
 
   private static Event createFeaturesByTileEvent(ReadFeaturesProxyWrapper readRequest) {

@@ -61,6 +61,10 @@ public class RequestSender {
     return sendRequest(endpoint, true, addHeaders, null, null);
   }
 
+  public HttpResponse<byte[]> post(String body) {
+    return sendRequest("", true, null, "POST", body);
+  }
+
   public HttpResponse<byte[]> sendRequest(
       @NotNull String endpoint,
       boolean keepDefHeaders,

@@ -67,9 +67,9 @@ public class FfwInterfaceReadExecute {
 
     if (response.statusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
       // For Error 404 (not found) on single feature GetById request, we need to return empty result
-      return prepareResult(Collections.emptyList());
+      return prepareReadResult(Collections.emptyList());
     }
-    return prepareResult(response, XyzFeature.class, List::of);
+    return prepareReadResult(response, XyzFeature.class, List::of);
   }
 
   private static Result executeFeaturesById(
@@ -81,7 +81,7 @@ public class FfwInterfaceReadExecute {
         format("/%s/features?%s", baseEndpoint(readRequest), queryParamsString),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
+    return prepareReadResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
   private static Result executeFeatureByBBox(
@@ -92,7 +92,7 @@ public class FfwInterfaceReadExecute {
         format("/%s/bbox?%s%s", baseEndpoint(readRequest), queryParamsString, getPOpQueryOrEmpty(readRequest)),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
+    return prepareReadResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
   private static Result executeFeaturesByTile(
@@ -110,7 +110,7 @@ public class FfwInterfaceReadExecute {
             baseEndpoint(readRequest), tileId, queryParamsString, getPOpQueryOrEmpty(readRequest)),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
+    return prepareReadResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
   private static Result executeIterate(
@@ -121,7 +121,7 @@ public class FfwInterfaceReadExecute {
         format("/%s/iterate?%s", baseEndpoint(readRequest), queryParamsString),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
+    return prepareReadResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
   }
 
   /**

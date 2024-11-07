@@ -23,6 +23,7 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import com.here.naksha.lib.core.models.Typed;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.payload.responses.ErrorResponse;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
@@ -44,32 +45,92 @@ import org.jetbrains.annotations.NotNull;
  */
 public class PrepareResult {
 
-  public static Result prepareResult(List<XyzFeature> featureList) {
-    return createHttpResultFromFeatureList(featureList);
-  }
-
-  public static <T extends Typed> Result prepareResult(
+  public static <T extends Typed> Result prepareReadResult(
       HttpResponse<byte[]> httpResponse,
-      Class<T> httpResponseType,
+      Class<T> httpResponseBodyType,
       Function<T, List<XyzFeature>> typedResponseToFeatureList) {
 
+    Function<String, HttpSuccessResult<XyzFeature, XyzFeatureCodec>> jsonBodyToHttpSuccessResult = jsonBody -> {
+      T typedBody = JsonSerializable.deserialize(jsonBody, httpResponseBodyType);
+      List<XyzFeature> featuresList = typedResponseToFeatureList.apply(typedBody);
+      return prepareReadResult(featuresList);
+    };
+
+    return prepareResult(httpResponse, jsonBodyToHttpSuccessResult);
+  }
+
+  public static HttpSuccessResult<XyzFeature, XyzFeatureCodec> prepareReadResult(
+      final @NotNull List<XyzFeature> features) {
+    // Create ForwardCursor with input features
+    final List<XyzFeatureCodec> codecs = new ArrayList<>();
+    final XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
+    for (final XyzFeature feature : features) {
+      final XyzFeatureCodec codec = codecFactory.newInstance();
+      codec.setOp(EExecutedOp.READ);
+      codec.setFeature(feature);
+      codec.setId(feature.getId());
+      codecs.add(codec);
+    }
+
+    final HeapCacheCursor<XyzFeature, XyzFeatureCodec> cursor = new HeapCacheCursor<>(codecFactory, codecs, null);
+    return new HttpSuccessResult<>(cursor);
+  }
+
+  public static Result prepareWriteResult(HttpResponse<byte[]> httpResponse) {
+    Function<String, HttpSuccessResult<XyzFeature, XyzFeatureCodec>> jsonBodyToHttpSuccessResult = jsonBody -> {
+      XyzFeatureCollection typedBody = JsonSerializable.deserialize(jsonBody, XyzFeatureCollection.class);
+      return prepareWriteResult(typedBody);
+    };
+
+    return prepareResult(httpResponse, jsonBodyToHttpSuccessResult);
+  }
+
+  private static Result prepareResult(
+      HttpResponse<byte[]> httpResponse,
+      Function<String, HttpSuccessResult<XyzFeature, XyzFeatureCodec>> jsonBodyToHttpSuccessResult) {
     int httpStatusCode = httpResponse.statusCode();
     if (!isSuccessStatus(httpStatusCode)) {
       XyzError error = mapHttpStatusCodeToError(httpStatusCode);
       return new ErrorResult(error, "Response http status code: " + httpResponse.statusCode());
     }
 
-    String body = getDecodedBody(httpResponse);
+    String jsonBody = getDecodedBody(httpResponse);
     try {
-      T resultFeatures = JsonSerializable.deserialize(body, httpResponseType);
-      return prepareResult(typedResponseToFeatureList.apply(resultFeatures));
+      return jsonBodyToHttpSuccessResult.apply(jsonBody);
     }
     // Some storages may return success status code but contain ErrorResponse.
-    // UncheckedIOException is thrown then because ErrorResponse cannot be cast to expected httpResponseType.
+    // UncheckedIOException is thrown then because ErrorResponse cannot be cast to expected httpResponseBodyType.
     catch (UncheckedIOException e) {
-      ErrorResponse errorResponse = JsonSerializable.deserialize(body, ErrorResponse.class);
+      ErrorResponse errorResponse = JsonSerializable.deserialize(jsonBody, ErrorResponse.class);
       return new ErrorResult(errorResponse.getError(), "Error response : " + errorResponse.getErrorMessage());
     }
+  }
+
+  private static HttpSuccessResult<XyzFeature, XyzFeatureCodec> prepareWriteResult(
+      XyzFeatureCollection xyzCollection) {
+
+    final XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
+
+    final List<XyzFeatureCodec> codecs = xyzCollection.getFeatures().stream()
+        .map(feature -> {
+          final XyzFeatureCodec codec = codecFactory.newInstance();
+          codec.setFeature(feature);
+          codec.setOp(getOp(feature, xyzCollection));
+          codec.setId(feature.getId());
+          return codec;
+        })
+        .toList();
+
+    final HeapCacheCursor<XyzFeature, XyzFeatureCodec> cursor = new HeapCacheCursor<>(codecFactory, codecs, null);
+    return new HttpSuccessResult<>(cursor);
+  }
+
+  private static EExecutedOp getOp(XyzFeature feature, XyzFeatureCollection xyzCollection) {
+    String id = feature.getId();
+    if (xyzCollection.getInserted() != null && xyzCollection.getInserted().contains(id)) return EExecutedOp.CREATED;
+    if (xyzCollection.getUpdated() != null && xyzCollection.getUpdated().contains(id)) return EExecutedOp.UPDATED;
+    if (xyzCollection.getDeleted() != null && xyzCollection.getDeleted().contains(id)) return EExecutedOp.DELETED;
+    return EExecutedOp.READ;
   }
 
   /**
@@ -96,23 +157,6 @@ public class PrepareResult {
     } catch (IOException e) {
       throw unchecked(e);
     }
-  }
-
-  static HttpSuccessResult<XyzFeature, XyzFeatureCodec> createHttpResultFromFeatureList(
-      final @NotNull List<XyzFeature> features) {
-    // Create ForwardCursor with input features
-    final List<XyzFeatureCodec> codecs = new ArrayList<>();
-    final XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
-    for (final XyzFeature feature : features) {
-      final XyzFeatureCodec codec = codecFactory.newInstance();
-      codec.setOp(EExecutedOp.READ);
-      codec.setFeature(feature);
-      codec.setId(feature.getId());
-      codecs.add(codec);
-    }
-
-    final HeapCacheCursor<XyzFeature, XyzFeatureCodec> cursor = new HeapCacheCursor<>(codecFactory, codecs, null);
-    return new HttpSuccessResult<>(cursor);
   }
 
   private static boolean isSuccessStatus(final int httpStatus) {

@@ -1,12 +1,14 @@
-package com.here.naksha.storage.http.connector.integration;
+package com.here.naksha.storage.http.connector.integration.tests;
 
+import com.here.naksha.storage.http.connector.integration.utils.DataHub;
+import com.here.naksha.storage.http.connector.integration.utils.Naksha;
 import io.restassured.response.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static com.here.naksha.storage.http.connector.integration.Commons.*;
+import static com.here.naksha.storage.http.connector.integration.utils.Commons.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -21,13 +23,13 @@ public class PropSearchTest {
 
     @Test
     void singleOperations() {
-        createFromJsonFileFormatted("propsearch/feature_template.json", "1", """
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "1", """
                 "prop1" : 1"""
         );
-        createFromJsonFileFormatted("propsearch/feature_template.json", "2", """
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "2", """
                 "prop1" : 2"""
         );
-        createFromJsonFileFormatted("propsearch/feature_template.json", "3", """
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "3", """
                 "prop1" : 3"""
         );
 
@@ -44,22 +46,22 @@ public class PropSearchTest {
 
     @Test
     void combinedOperations() {
-        createFromJsonFileFormatted("propsearch/feature_template.json", "A1", """
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "A1", """
                 "prop1" : "A", "prop2" : 1"""
         );
-        createFromJsonFileFormatted("propsearch/feature_template.json", "A2", """
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "A2", """
                 "prop1" : "A", "prop2" : 2"""
         );
-        createFromJsonFileFormatted("propsearch/feature_template.json", "B1", """
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "B1", """
                 "prop1" : "B", "prop2" : 1"""
         );
-        createFromJsonFileFormatted("propsearch/feature_template.json", "B2", """
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "B2", """
                 "prop1" : "B", "prop2" : 2"""
         );
-        createFromJsonFileFormatted("propsearch/feature_template.json", "C1", """
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "C1", """
                 "prop1" : "C", "prop2" : 1"""
         );
-        createFromJsonFileFormatted("propsearch/feature_template.json", "C2", """
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "C2", """
                 "prop1" : "C", "prop2" : 2"""
         );
 
@@ -74,12 +76,12 @@ public class PropSearchTest {
 
     @Test
     void notSupportedOperations(){
-        createFromJsonFileFormatted("propsearch/feature_template.json", "1", """
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "1", """
                 "prop1" : 1"""
         );
 
         String params = BBOX_PATH_AND_PARAMS + "p.prop1=cs=1";
-        Response nakshaResponse = naksha().urlEncodingEnabled(false).get(params);
+        Response nakshaResponse = Naksha.request().urlEncodingEnabled(false).get(params);
         assertEquals(nakshaResponse.jsonPath().getString("type"),"ErrorResponse");
         assertEquals(nakshaResponse.jsonPath().getString("error"),"Exception");
         System.out.println();
@@ -87,8 +89,8 @@ public class PropSearchTest {
 
     void assertPropSearchHasShortIds(String propsearch, List<String> shortIds) {
         String params = BBOX_PATH_AND_PARAMS + propsearch;
-        Response nakshaResponse = naksha().urlEncodingEnabled(false).get(params);
-        Response dataHubResponse = dataHub().urlEncodingEnabled(false).get(params);
+        Response nakshaResponse = Naksha.request().urlEncodingEnabled(false).get(params);
+        Response dataHubResponse = DataHub.request().urlEncodingEnabled(false).get(params);
         assertTrue(responseHasExactShortIds(shortIds, nakshaResponse));
         assertTrue(responseHasExactShortIds(shortIds, dataHubResponse));
     }

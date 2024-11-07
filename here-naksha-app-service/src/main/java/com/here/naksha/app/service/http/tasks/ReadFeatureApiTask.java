@@ -159,7 +159,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     }
     final ReadFeaturesProxyWrapper rdRequest = RequestHelper.readFeaturesByIdsRequest(spaceId, featureIds)
         .withReadRequestType(ReadRequestType.GET_BY_IDS)
-        .withQueryParameters(Map.of(FEATURE_IDS, featureIds));
+        .addQueryParameter(FEATURE_IDS, featureIds);
 
     // Forward request to NH Space Storage reader instance
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
@@ -179,7 +179,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdRequest(spaceId, featureId)
         .withReadRequestType(ReadRequestType.GET_BY_ID)
-        .withQueryParameters(Map.of(FEATURE_ID, featureId));
+        .addQueryParameter(FEATURE_ID, featureId);
 
     // Forward request to NH Space Storage reader instance
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
@@ -443,7 +443,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Forward Read request to NHSpaceStorage instance
     final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdRequest(refSpaceId, refFeatureId)
         .withReadRequestType(ReadRequestType.GET_BY_ID)
-        .withQueryParameters(Map.of(FEATURE_ID, refFeatureId));
+        .addQueryParameter(FEATURE_ID, refFeatureId);
     try (final Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
       if (result instanceof SuccessResult) {
         feature = ResultHelper.readFeatureFromResult(result, XyzFeature.class);
