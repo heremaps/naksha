@@ -50,13 +50,11 @@ jobs:
         with:
           gradle-version: 8.2
       ### Build, Test, Coverage Verification
-      - name: Define modules targeted for testing
-        run: |
-            echo "array=(here-naksha-lib-model here-naksha-lib-base here-naksha-lib-core here-naksha-lib-psql here-naksha-lib-view)" >> $GITHUB_ENV
       - name: Build fat jar, Run Unit tests, Verify code coverage
         ## original run clause for project wise
 #        run: gradle shadowJar jacocoTestReport jacocoTestCoverageVerification
         run: |
+          array = ("here-naksha-lib-model" "here-naksha-lib-base" "here-naksha-lib-core" "here-naksha-lib-psql" "here-naksha-lib-view")
           for item in ${array[@]}; do
             gradle :$item:build :$item:jacocoTestReport :$item:jacocoTestCoverageVerification
           done
