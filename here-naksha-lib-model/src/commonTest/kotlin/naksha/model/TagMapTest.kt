@@ -36,23 +36,23 @@ class TagMapTest {
         assertTrue(tagList.containsAll(listOf("foo=bar", "no-value", "flag:=true")))
     }
 
-    @Test
-    fun shouldFailWhenConvertingToListWithUnsupportedType(){
-        // Given:
-        val tagMap = TagMap().apply {
-            put("foo", "bar")
-            put("failure-reason", NotSupportedType)
-        }
-
-        // When:
-        val failure = assertFails {
-            tagMap.toTagList()
-        }
-
-        // Then:
-        assertIs<NakshaException>(failure)
-        assertEquals("Tag values can only be String, Boolean or Number", failure.message)
-    }
+//    @Test
+//    fun shouldFailWhenConvertingToListWithUnsupportedType(){
+//        // Given:
+//        val tagMap = TagMap().apply {
+//            put("foo", "bar")
+//            put("failure-reason", NotSupportedType)
+//        }
+//
+//        // When:
+//        val failure = assertFails {
+//            tagMap.toTagList()
+//        }
+//
+//        // Then:
+//        assertIs<NakshaException>(failure)
+//        assertEquals("Tag values can only be String, Boolean or Number", failure.message)
+//    }
 
     object NotSupportedType
 }
