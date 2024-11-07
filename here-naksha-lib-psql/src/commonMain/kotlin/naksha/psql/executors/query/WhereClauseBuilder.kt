@@ -2,6 +2,7 @@ package naksha.psql.executors.query
 
 import naksha.geo.HereTile
 import naksha.model.*
+import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
 import naksha.psql.PgColumn
@@ -95,13 +96,17 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
             )
 
             is SpIntersects -> {
-                // TODO: Add transformations!
                 val twkb = PgUtil.encodeGeometry(
                     spatial.geometry,
-                    Flags().geoGzipOff().geoEncoding(GeoEncoding.TWKB)
+                    Flags().geoGzipOff().geoEncoding(TWKB)
                 )
-                val placeholder = placeholderForArg(twkb, PgType.BYTE_ARRAY)
-                where.append("ST_Intersects(naksha_geometry(${PgColumn.geo}, ${PgColumn.flags}), ST_GeomFromTWKB($placeholder))")
+                val twkbPlaceholder = placeholderForArg(twkb, PgType.BYTE_ARRAY)
+                val twkbAsGeometry = "ST_GeomFromTWKB($twkbPlaceholder)"
+                val geometryToCompare = when(spatial.transformation) {
+                    null -> twkbAsGeometry
+                    else -> resolveTransformation(spatial.transformation!!, twkbAsGeometry)
+                }
+                where.append("ST_Intersects(naksha_geometry(${PgColumn.geo}, ${PgColumn.flags}), $geometryToCompare)")
             }
 
             is SpRefInHereTile -> {
@@ -111,6 +116,16 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
             else -> throw NakshaException(
                 NakshaError.ILLEGAL_ARGUMENT,
                 "Invalid spatial query found: $spatial"
+            )
+        }
+    }
+
+    private fun resolveTransformation(transformation: SpTransformation, geometryStmt: String): String {
+        return when(transformation){
+            is SpBuffer -> "ST_Buffer($geometryStmt, ${transformation.distance})"
+            else -> throw NakshaException(
+                NakshaError.UNSUPPORTED_OPERATION,
+                "This transformation is not yet supported: ${transformation::class.simpleName}"
             )
         }
     }
