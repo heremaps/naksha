@@ -439,6 +439,7 @@ open class PgSession(
         }
     }
 
+
     override fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int, to: Int, fetchFromHistory: Boolean, mode: FetchBits) {
         val connection = pgConnection
         val conn = connection ?: storage.adminConnection(storage.adminOptions)
