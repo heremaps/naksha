@@ -20,9 +20,9 @@ package com.here.naksha.storage.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import naksha.model.NakshaVersion;
-import naksha.geo.XyzProperties;
 import java.util.Map;
+import naksha.geo.XyzProperties;
+import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

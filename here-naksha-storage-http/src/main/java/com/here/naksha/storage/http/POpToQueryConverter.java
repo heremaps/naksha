@@ -21,14 +21,14 @@ package com.here.naksha.storage.http;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static naksha.model.POpType.*;
 
-import naksha.model.POp;
-import naksha.model.POpType;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import naksha.model.POp;
+import naksha.model.POpType;
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.NotNull;
 
