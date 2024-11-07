@@ -133,7 +133,7 @@ public class ViewTest {
     when(storage.newWriteSession(sessionOptions)).thenReturn(session);
 
     final WriteRequest request = new WriteRequest();
-    final NakshaFeature feature = new NakshaFeature("id0");
+    final NakshaFeature feature = new NakshaFeature("sampleTuple0");
     request.add(write.deleteFeature(null,VIEW_COLLECTION,feature,false));
     SuccessResponse successResponse1 = new SuccessResponse(sampleXyzWriteResponse(1, storage, ExecutedOp.DELETED));
     when(session.execute(request)).thenReturn(successResponse1);

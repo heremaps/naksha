@@ -1,5 +1,6 @@
 package naksha.psql.executors.query
 
+import naksha.geo.HereTile
 import naksha.model.*
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
@@ -21,6 +22,7 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         whereVersion()
         whereMetadata()
         whereSpatial()
+        whereRefTiles()
         whereTags()
         return if (where.isBlank()) {
             null
@@ -102,11 +104,48 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
                 where.append("ST_Intersects(naksha_geometry(${PgColumn.geo}, ${PgColumn.flags}), ST_GeomFromTWKB($placeholder))")
             }
 
+            is SpRefInHereTile -> {
+                where.append(refPointInTile(spatial.getHereTile()))
+            }
+
             else -> throw NakshaException(
                 NakshaError.ILLEGAL_ARGUMENT,
                 "Invalid spatial query found: $spatial"
             )
         }
+    }
+
+    private fun whereRefTiles() {
+        val hereTiles = request.query.refTiles
+            .filterNotNull()
+            .map { HereTile(it) }
+        if (hereTiles.isNotEmpty()) {
+            if (where.isNotEmpty()) {
+                where.append(" AND (")
+            } else {
+                where.append(" (")
+            }
+            where.append(refPointInAnyOfTiles(hereTiles))
+            where.append(")")
+        }
+    }
+
+    private fun refPointInAnyOfTiles(hereTiles: List<HereTile>): String {
+        return hereTiles.joinToString(separator = " OR ") {
+            hereTile -> refPointInTile(hereTile)
+        }
+    }
+
+    private fun refPointInTile(hereTile: HereTile): String {
+        val lowerBoundPlaceholder = placeholderForArg(
+            hereTile.maxLevelLowerBound().intKey,
+            PgType.INT
+        )
+        val upperBoundPlaceholder = placeholderForArg(
+            hereTile.maxLevelUpperBound().intKey,
+            PgType.INT
+        )
+        return "(${PgColumn.geo_grid} >= $lowerBoundPlaceholder AND ${PgColumn.geo_grid} <= $upperBoundPlaceholder)"
     }
 
     private fun whereMetadata() {
@@ -226,7 +265,10 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
             }
 
             is TagValueMatches -> {
-                val jsonPathPlaceholder = placeholderForArg("\$.${tagQuery.name} ? (@ like_regex \"${tagQuery.regex}\")", PgType.STRING)
+                val jsonPathPlaceholder = placeholderForArg(
+                    "\$.${tagQuery.name} ? (@ like_regex \"${tagQuery.regex}\")",
+                    PgType.STRING
+                )
                 where.append("$tagsAsJsonb @?? $jsonPathPlaceholder::jsonpath")
             }
         }

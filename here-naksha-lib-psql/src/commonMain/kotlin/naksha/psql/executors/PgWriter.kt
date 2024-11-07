@@ -256,7 +256,9 @@ class PgWriter(
 
                         WriteOp.DELETE -> DeleteFeature(session, writeExecutor).execute(
                             collection,
-                            write
+                            write,
+                            tuples,
+                            tupleCache
                         )
 
                         WriteOp.PURGE -> TODO()
