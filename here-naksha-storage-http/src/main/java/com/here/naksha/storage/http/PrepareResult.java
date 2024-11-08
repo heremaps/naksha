@@ -26,23 +26,19 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
-
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmProxyUtil;
 import naksha.base.Platform;
-import naksha.base.Proxy;
 import naksha.model.NakshaError;
 import naksha.model.Tuple;
-import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import naksha.model.request.ResultTuple;
 import naksha.model.request.SuccessResponse;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -50,31 +46,29 @@ import org.jetbrains.annotations.Nullable;
  */
 class PrepareResult {
 
-    static Response prepareResult(
-        HttpResponse<byte[]> httpResponse,
-        Function<ResultTuple, List<Tuple>> typedResponseToTupleList) {
+  static Response prepareResult(
+      HttpResponse<byte[]> httpResponse, Function<ResultTuple, List<Tuple>> typedResponseToTupleList) {
 
-      String error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
-      if (error != null)
-        return new ErrorResponse(
-            new NakshaError(error, "Response http status code: " + httpResponse.statusCode(), null, null));
+    String error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
+    if (error != null)
+      return new ErrorResponse(
+          new NakshaError(error, "Response http status code: " + httpResponse.statusCode(), null, null));
 
-      Object tuples = Platform.fromJSON(prepareBody(httpResponse), FromJsonOptions.getDEFAULT());
-      ResultTuple resultTuples = JvmProxyUtil.box(tuples, ResultTuple.class);
-      return new SuccessResponse(resultTuples);
-      return createHttpResultFromFeatureList(typedResponseToTupleList.apply(resultTuples));
-    }
+    Object tuples = Platform.fromJSON(prepareBody(httpResponse), FromJsonOptions.getDEFAULT());
+    NakshaFeatureList features = JvmProxyUtil.box(tuples, NakshaFeatureList.class);
+    return new SuccessResponse(features);
+  }
 
-    private static String prepareBody(HttpResponse<byte[]> response) {
-      List<String> contentEncodingList = response.headers().allValues("content-encoding");
-      if (contentEncodingList.isEmpty()) return new String(response.body(), StandardCharsets.UTF_8);
-      if (contentEncodingList.size() > 1)
-        throw new IllegalArgumentException("There are more than one Content-Encoding value in response");
-      String contentEncoding = contentEncodingList.get(0);
+  private static String prepareBody(HttpResponse<byte[]> response) {
+    List<String> contentEncodingList = response.headers().allValues("content-encoding");
+    if (contentEncodingList.isEmpty()) return new String(response.body(), StandardCharsets.UTF_8);
+    if (contentEncodingList.size() > 1)
+      throw new IllegalArgumentException("There are more than one Content-Encoding value in response");
+    String contentEncoding = contentEncodingList.get(0);
 
-      if (contentEncoding.equalsIgnoreCase("gzip")) return gzipDecode(response.body());
-      else throw new IllegalArgumentException("Encoding " + contentEncoding + " not recognized");
-    }
+    if (contentEncoding.equalsIgnoreCase("gzip")) return gzipDecode(response.body());
+    else throw new IllegalArgumentException("Encoding " + contentEncoding + " not recognized");
+  }
 
   private static String gzipDecode(byte[] encoded) {
     try (ByteArrayInputStream bis = new ByteArrayInputStream(encoded);
@@ -87,19 +81,20 @@ class PrepareResult {
     }
   }
 
-//    static SuccessResponse createHttpResultFromFeatureList(final @NotNull List<Tuple> features) {
-//      final List<ResultTuple> tuples = new ArrayList<>();
-//      for (final NakshaFeature feature : features) {
-//        tuples.add(new ResultTuple());
-//        codec.setOp(EExecutedOp.READ);
-//        codec.setFeature(feature);
-//        codec.setId(feature.getId());
-//        codecs.add(codec);
-//      }
-//
-//      final HeapCacheCursor<XyzFeature, XyzFeatureCodec> cursor = new HeapCacheCursor<>(codecFactory, codecs, null);
-//      return new SuccessResponse(cursor);
-//    }
+  //    static SuccessResponse createHttpResultFromFeatureList(final @NotNull List<Tuple> features) {
+  //      final List<ResultTuple> tuples = new ArrayList<>();
+  //      for (final NakshaFeature feature : features) {
+  //        tuples.add(new ResultTuple());
+  //        codec.setOp(EExecutedOp.READ);
+  //        codec.setFeature(feature);
+  //        codec.setId(feature.getId());
+  //        codecs.add(codec);
+  //      }
+  //
+  //      final HeapCacheCursor<XyzFeature, XyzFeatureCodec> cursor = new HeapCacheCursor<>(codecFactory, codecs,
+  // null);
+  //      return new SuccessResponse(cursor);
+  //    }
 
   /**
    * @return null if http status is success (200-299)

@@ -37,6 +37,7 @@ import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
+import naksha.model.request.query.IPropertyQuery;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -130,8 +131,8 @@ class HttpStorageReadExecute {
    * @return either POp query string starting with "&" or an empty string if the POp is null
    */
   private static String getPOpQueryOrEmpty(ReadFeaturesProxyWrapper readRequest) {
-    POp pOp = readRequest.getQueryParameter(PROPERTY_SEARCH_OP);
-    return pOp == null ? "" : "&" + POpToQueryConverter.p0pToQuery(pOp);
+    final IPropertyQuery propertyQuery = readRequest.getQuery().getProperties();
+    return propertyQuery == null ? "" : "&" + propertyQuery;
   }
 
   /**
@@ -144,6 +145,6 @@ class HttpStorageReadExecute {
   }
 
   private static String baseEndpoint(ReadFeaturesProxyWrapper request) {
-    return request.getCollections().get(0);
+    return request.getCollectionIds().get(0);
   }
 }

@@ -20,4 +20,8 @@ class PAnd() : ListProxy<IPropertyQuery>(IPropertyQuery::class), IPropertyQuery 
     constructor(vararg queries: IPropertyQuery) : this() {
         addAll(queries)
     }
+
+    override fun toString(): String {
+        return joinToString("&")
+    }
 }

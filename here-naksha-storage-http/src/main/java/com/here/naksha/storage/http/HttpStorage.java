@@ -134,4 +134,18 @@ public class HttpStorage implements IStorage {
   public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
     throw new NakshaException(NakshaError.NOT_IMPLEMENTED, "enterLock", null, null);
   }
+
+  @Override
+  public int getHardCap() {
+    return 0;
+  }
+
+  @Override
+  public void setHardCap(int i) {}
+
+  @Nullable
+  @Override
+  public IMap get(int mapNumber) {
+    return null;
+  }
 }
