@@ -173,6 +173,45 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
         assertEquals(feature.id, features[0]!!.id)
     }
 
+    @Test
+    fun shouldDistinguishDifferentBufferModes(){
+        /**
+         * Note: samples & values based on https://postgis.net/workshops/postgis-intro/geography.html
+         * Actual distance between LAX and NRT:
+         * - 8833954.76996256 meters (Cartesian) - used by 'geography'
+         * - 258.146005837336 degrees (SRS) - used by 'geometry'
+         */
+
+        // Given
+        val laxAirportCoord = PointCoord(longitude = -118.4079, latitude = 33.9434)
+        val nrtAirportCoord = PointCoord(longitude = 139.733, latitude = 35.567)
+        val laxAirport = generateRandomFeature().apply {
+            geometry = SpPoint(laxAirportCoord)
+        }
+
+        // When:
+        insertFeature(laxAirport)
+
+        // And:
+        val featuresWithinThreeHundredMetersFromNrt = executeSpatialQuery(SpIntersects(
+            SpPoint(nrtAirportCoord),
+            SpBuffer(distance = 300.0, geography = true)
+        )).features
+
+        // Then:
+        assertTrue(featuresWithinThreeHundredMetersFromNrt.isEmpty())
+
+        // When:
+        val featuresWithinThreeHundredDegreesFromNrt = executeSpatialQuery(SpIntersects(
+            SpPoint(nrtAirportCoord),
+            SpBuffer(distance = 300.0, geography = false)
+        )).features
+
+        // Then:
+        assertEquals(1, featuresWithinThreeHundredDegreesFromNrt.size)
+        assertEquals(laxAirport.id, featuresWithinThreeHundredDegreesFromNrt[0]!!.id)
+    }
+
     private fun executeSpatialQuery(spatialQuery: ISpatialQuery): SuccessResponse {
         return executeRead(ReadFeatures().apply {
             collectionIds += collection!!.id
