@@ -1,7 +1,9 @@
 package naksha.psql.executors.query
 
 import naksha.geo.HereTile
+import naksha.geo.SpGeometry
 import naksha.model.*
+import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
 import naksha.psql.PgColumn
@@ -95,13 +97,16 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
             )
 
             is SpIntersects -> {
-                // TODO: Add transformations!
-                val twkb = PgUtil.encodeGeometry(
-                    spatial.geometry,
-                    Flags().geoGzipOff().geoEncoding(GeoEncoding.TWKB)
+                val encodedTwkbPlaceholder = placeholderForArg(
+                    encodedGeo(spatial.geometry, TWKB),
+                    PgType.BYTE_ARRAY
                 )
-                val placeholder = placeholderForArg(twkb, PgType.BYTE_ARRAY)
-                where.append("ST_Intersects(naksha_geometry(${PgColumn.geo}, ${PgColumn.flags}), ST_GeomFromTWKB($placeholder))")
+                val geometryFromTwkb = "ST_GeomFromTWKB($encodedTwkbPlaceholder)"
+                val geometryToCompare = when (val transformation = spatial.transformation) {
+                    null -> geometryFromTwkb
+                    else -> resolveTransformation(transformation, geometryFromTwkb)
+                }
+                where.append("ST_Intersects(naksha_geometry(${PgColumn.geo}, ${PgColumn.flags}), $geometryToCompare)")
             }
 
             is SpRefInHereTile -> {
@@ -112,6 +117,71 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
                 NakshaError.ILLEGAL_ARGUMENT,
                 "Invalid spatial query found: $spatial"
             )
+        }
+    }
+
+    private fun encodedGeo(geometry: SpGeometry, geoEncoding: Int): ByteArray? {
+        return PgUtil.encodeGeometry(
+            geometry,
+            Flags().geoGzipOff().geoEncoding(geoEncoding)
+        )
+    }
+
+    private fun resolveTransformation(transformation: SpTransformation, geometryFromTwkb: String): String {
+        return when(transformation){
+            is SpBuffer -> resolveBuffer(transformation, geometryFromTwkb)
+            else -> throw NakshaException(
+                NakshaError.UNSUPPORTED_OPERATION,
+                "This transformation is not yet supported: ${transformation::class.simpleName}"
+            )
+        }
+    }
+
+    private fun resolveBuffer(buffer: SpBuffer, geometryFromTwkb: String): String {
+        val geo = if (buffer.geography) {
+            "$geometryFromTwkb::geography"
+        } else {
+            geometryFromTwkb
+        }
+        val distancePlaceholder = placeholderForArg(buffer.distance, PgType.DOUBLE)
+        val bufferStyleParams = bufferStyleParams(buffer)
+        return if (bufferStyleParams != null) {
+            "ST_Buffer($geo, $distancePlaceholder, $bufferStyleParams)"
+        } else {
+            "ST_Buffer($geo, $distancePlaceholder)"
+        }
+    }
+
+    private fun bufferStyleParams(buffer: SpBuffer): String? {
+        val bufferStyleParams = StringBuilder()
+        if(buffer.quadSegments != null){
+            val quadSegPlaceholder = placeholderForArg(buffer.quadSegments, PgType.INT)
+            bufferStyleParams.append("quad_segs=$quadSegPlaceholder")
+        }
+        if(buffer.joinStyle != null){
+            val joinStylePlaceholder = placeholderForArg(buffer.joinStyle!!.value, PgType.STRING)
+            if(bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            bufferStyleParams.append("join=$joinStylePlaceholder")
+        }
+        if(buffer.joinLimit != null){
+            val joinLimitPlaceholder = placeholderForArg(buffer.joinLimit, PgType.DOUBLE)
+            if(bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            bufferStyleParams.append("mitre_limit=$joinLimitPlaceholder")
+        }
+        if(buffer.endCap != null){
+            val endCapPlaceholder = placeholderForArg(buffer.endCap!!.value, PgType.STRING)
+            if(bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            bufferStyleParams.append("endcap=$endCapPlaceholder")
+        }
+        if(buffer.side != null){
+            val sidePlaceholder = placeholderForArg(buffer.side!!.value, PgType.STRING)
+            if(bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            bufferStyleParams.append("side=$sidePlaceholder")
+        }
+        return if(bufferStyleParams.isNotEmpty()){
+            bufferStyleParams.toString()
+        } else {
+            null
         }
     }
 

@@ -7,10 +7,7 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.model.request.query.ISpatialQuery
-import naksha.model.request.query.SpIntersects
-import naksha.model.request.query.SpOr
-import naksha.model.request.query.SpRefInHereTile
+import naksha.model.request.query.*
 import naksha.psql.assertions.AnyObjectFluidAssertions.Companion.assertThatAnyObject
 import naksha.psql.base.PgTestBase
 import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
@@ -148,6 +145,71 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
         assertEquals(2, features.size)
         val featureIds = features.map { it!!.id }
         assertTrue(featureIds.containsAll(listOf(somePlaceInPrague.id, valencia.id)))
+    }
+
+    @Test
+    fun shouldReadByCorridor(){
+        // Given
+        val feature = generateRandomFeature().apply {
+            geometry = SpLineString().withCoordinates(LineStringCoord(
+                PointCoord(longitude = 45.0, latitude = 45.0),
+                PointCoord(longitude = 45.0, latitude = 46.0),
+            ))
+        }
+
+        // And
+        val point = SpPoint(PointCoord(45.000001, 45.0))
+        val buffer = SpBuffer(distance = 100000.0)
+        val readByCorridor = SpIntersects(point, buffer)
+
+        // When
+        insertFeature(feature)
+
+        // And
+        val features = executeSpatialQuery(readByCorridor).features
+
+        // Then:
+        assertEquals(1, features.size)
+        assertEquals(feature.id, features[0]!!.id)
+    }
+
+    @Test
+    fun shouldDistinguishDifferentBufferModes(){
+        /**
+         * Note: samples & values based on https://postgis.net/workshops/postgis-intro/geography.html
+         * Actual distance between LAX and NRT:
+         * - 8833954.76996256 meters (Cartesian) - used by 'geography'
+         * - 258.146005837336 degrees (SRS) - used by 'geometry'
+         */
+
+        // Given
+        val laxAirportCoord = PointCoord(longitude = -118.4079, latitude = 33.9434)
+        val nrtAirportCoord = PointCoord(longitude = 139.733, latitude = 35.567)
+        val laxAirport = generateRandomFeature().apply {
+            geometry = SpPoint(laxAirportCoord)
+        }
+
+        // When:
+        insertFeature(laxAirport)
+
+        // And:
+        val featuresWithinThreeHundredMetersFromNrt = executeSpatialQuery(SpIntersects(
+            SpPoint(nrtAirportCoord),
+            SpBuffer(distance = 300.0, geography = true)
+        )).features
+
+        // Then:
+        assertTrue(featuresWithinThreeHundredMetersFromNrt.isEmpty())
+
+        // When:
+        val featuresWithinThreeHundredDegreesFromNrt = executeSpatialQuery(SpIntersects(
+            SpPoint(nrtAirportCoord),
+            SpBuffer(distance = 300.0, geography = false)
+        )).features
+
+        // Then:
+        assertEquals(1, featuresWithinThreeHundredDegreesFromNrt.size)
+        assertEquals(laxAirport.id, featuresWithinThreeHundredDegreesFromNrt[0]!!.id)
     }
 
     private fun executeSpatialQuery(spatialQuery: ISpatialQuery): SuccessResponse {
