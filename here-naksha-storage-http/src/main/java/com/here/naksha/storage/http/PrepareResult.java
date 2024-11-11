@@ -27,17 +27,14 @@ import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmProxyUtil;
 import naksha.base.Platform;
 import naksha.model.NakshaError;
-import naksha.model.Tuple;
 import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
-import naksha.model.request.ResultTuple;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,8 +43,7 @@ import org.jetbrains.annotations.Nullable;
  */
 class PrepareResult {
 
-  static Response prepareResult(
-      HttpResponse<byte[]> httpResponse, Function<ResultTuple, List<Tuple>> typedResponseToTupleList) {
+  static Response prepareResult(HttpResponse<byte[]> httpResponse) {
 
     String error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
     if (error != null)

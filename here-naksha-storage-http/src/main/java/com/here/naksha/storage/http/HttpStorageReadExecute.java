@@ -32,8 +32,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
-import naksha.model.XyzFeatureCollection;
-import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
@@ -71,7 +69,7 @@ class HttpStorageReadExecute {
       // For Error 404 (not found) on single feature GetById request, we need to return empty result
       return new SuccessResponse(Collections.emptyList());
     }
-    return prepareResult(response, NakshaFeature.class, List::of);
+    return prepareResult(response);
   }
 
   private static Response executeFeaturesById(
@@ -83,7 +81,7 @@ class HttpStorageReadExecute {
         format("/%s/features?%s", baseEndpoint(readRequest), queryParamsString),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
+    return prepareResult(response);
   }
 
   private static Response executeFeatureByBBox(
@@ -94,7 +92,7 @@ class HttpStorageReadExecute {
         format("/%s/bbox?%s%s", baseEndpoint(readRequest), queryParamsString, getPOpQueryOrEmpty(readRequest)),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
+    return prepareResult(response);
   }
 
   private static Response executeFeaturesByTile(
@@ -113,7 +111,7 @@ class HttpStorageReadExecute {
             baseEndpoint(readRequest), tileId, queryParamsString, getPOpQueryOrEmpty(readRequest)),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
+    return prepareResult(response);
   }
 
   private static Response executeIterate(
@@ -124,7 +122,7 @@ class HttpStorageReadExecute {
         format("/%s/iterate?%s", baseEndpoint(readRequest), queryParamsString),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
+    return prepareResult(response);
   }
 
   /**

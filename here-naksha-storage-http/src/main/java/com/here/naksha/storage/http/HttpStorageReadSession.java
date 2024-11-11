@@ -112,7 +112,7 @@ public final class HttpStorageReadSession implements IReadSession {
   @NotNull
   @Override
   public Response executeParallel(@NotNull Request request) {
-    return IReadSession.super.executeParallel(request);
+    return execute(request);
   }
 
   @NotNull
