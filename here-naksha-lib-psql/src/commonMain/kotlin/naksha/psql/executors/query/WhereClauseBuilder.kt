@@ -97,14 +97,10 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
             )
 
             is SpIntersects -> {
-                val encodedTwkbPlaceholder = placeholderForArg(
-                    encodedGeo(spatial.geometry, TWKB),
-                    PgType.BYTE_ARRAY
-                )
-                val geometryFromTwkb = "ST_GeomFromTWKB($encodedTwkbPlaceholder)"
+                val queryGeometry = nakshaGeometry(spatial.geometry, TWKB)
                 val geometryToCompare = when (val transformation = spatial.transformation) {
-                    null -> geometryFromTwkb
-                    else -> resolveTransformation(transformation, geometryFromTwkb)
+                    null -> queryGeometry
+                    else -> resolveTransformation(transformation, queryGeometry)
                 }
                 where.append("ST_Intersects(naksha_geometry(${PgColumn.geo}, ${PgColumn.flags}), $geometryToCompare)")
             }
@@ -120,16 +116,16 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         }
     }
 
-    private fun encodedGeo(geometry: SpGeometry, geoEncoding: Int): ByteArray? {
-        return PgUtil.encodeGeometry(
-            geometry,
-            Flags().geoGzipOff().geoEncoding(geoEncoding)
-        )
+    private fun nakshaGeometry(geometry: SpGeometry, geoEncoding: Int): String {
+        val flags = Flags().geoGzipOff().geoEncoding(geoEncoding)
+        val geoBytes = PgUtil.encodeGeometry(geometry, flags)
+        val geoBytesPlaceholder = placeholderForArg(geoBytes, PgType.BYTE_ARRAY)
+        return "naksha_geometry($geoBytesPlaceholder, $flags)"
     }
 
-    private fun resolveTransformation(transformation: SpTransformation, geometryFromTwkb: String): String {
+    private fun resolveTransformation(transformation: SpTransformation, basicGeometry: String): String {
         return when(transformation){
-            is SpBuffer -> resolveBuffer(transformation, geometryFromTwkb)
+            is SpBuffer -> resolveBuffer(transformation, basicGeometry)
             else -> throw NakshaException(
                 NakshaError.UNSUPPORTED_OPERATION,
                 "This transformation is not yet supported: ${transformation::class.simpleName}"
@@ -137,11 +133,11 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         }
     }
 
-    private fun resolveBuffer(buffer: SpBuffer, geometryFromTwkb: String): String {
+    private fun resolveBuffer(buffer: SpBuffer, basicGeometry: String): String {
         val geo = if (buffer.geography) {
-            "$geometryFromTwkb::geography"
+            "$basicGeometry::geography"
         } else {
-            geometryFromTwkb
+            basicGeometry
         }
         val distancePlaceholder = placeholderForArg(buffer.distance, PgType.DOUBLE)
         val bufferStyleParams = bufferStyleParams(buffer)
