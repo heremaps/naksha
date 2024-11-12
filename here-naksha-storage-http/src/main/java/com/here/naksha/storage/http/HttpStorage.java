@@ -171,4 +171,5 @@ public class HttpStorage implements IStorage {
   public IMap get(int mapNumber) {
     throw new NotImplementedException("Not supported for HTTP storage");
   }
+
 }
