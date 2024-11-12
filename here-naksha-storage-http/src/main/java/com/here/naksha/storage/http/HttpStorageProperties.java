@@ -33,8 +33,8 @@ import org.jetbrains.annotations.Nullable;
 @AvailableSince(NakshaVersion.v2_0_12)
 public class HttpStorageProperties extends NakshaProperties {
 
-  public static final Long DEF_CONNECTION_TIMEOUT_SEC = 20L;
-  public static final Long DEF_SOCKET_TIMEOUT_SEC = 90L;
+  public static final int DEF_CONNECTION_TIMEOUT_SEC = 20;
+  public static final int DEF_SOCKET_TIMEOUT_SEC = 90;
   public static final Map<String, String> DEFAULT_HEADERS = Map.of(
       "Content-Type", "application/json",
       "Accept-Encoding", "gzip");
@@ -48,10 +48,10 @@ public class HttpStorageProperties extends NakshaProperties {
   private @NotNull String url;
 
   @JsonProperty(CONNECTION_TIMEOUT)
-  private @NotNull Long connectTimeout;
+  private @NotNull Integer connectTimeout;
 
   @JsonProperty(SOCKET_TIMEOUT)
-  private @NotNull Long socketTimeout;
+  private @NotNull Integer socketTimeout;
 
   @JsonProperty(HEADERS)
   private @NotNull Map<String, String> headers;
@@ -59,8 +59,8 @@ public class HttpStorageProperties extends NakshaProperties {
   @JsonCreator
   public HttpStorageProperties(
       @JsonProperty(value = URL, required = true) @NotNull String url,
-      @JsonProperty(CONNECTION_TIMEOUT) @Nullable Long connectTimeout,
-      @JsonProperty(SOCKET_TIMEOUT) @Nullable Long socketTimeout,
+      @JsonProperty(CONNECTION_TIMEOUT) @Nullable Integer connectTimeout,
+      @JsonProperty(SOCKET_TIMEOUT) @Nullable Integer socketTimeout,
       @JsonProperty(HEADERS) @Nullable Map<String, String> headers) {
     this.url = url;
     this.connectTimeout = connectTimeout == null ? DEF_CONNECTION_TIMEOUT_SEC : connectTimeout;
@@ -75,11 +75,11 @@ public class HttpStorageProperties extends NakshaProperties {
     return url;
   }
 
-  public @NotNull Long getConnectTimeout() {
+  public @NotNull Integer getConnectTimeout() {
     return connectTimeout;
   }
 
-  public @NotNull Long getSocketTimeout() {
+  public @NotNull Integer getSocketTimeout() {
     return socketTimeout;
   }
 

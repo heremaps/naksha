@@ -26,6 +26,7 @@ import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.ResultTuple;
+import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -68,40 +69,49 @@ public final class HttpStorageReadSession implements IReadSession {
 
   @Override
   public int getSocketTimeout() {
-    return 0;
+    return requestSender.keyProps.socketTimeoutSec;
   }
 
   @Override
-  public void setSocketTimeout(int i) {}
+  public void setSocketTimeout(int i) {
+    requestSender.keyProps.socketTimeoutSec = i;
+  }
 
   @Override
   public int getStmtTimeout() {
-    return 0;
+    throw new NotImplementedException("Not supported for HTTP storage");
   }
 
   @Override
-  public void setStmtTimeout(int i) {}
+  public void setStmtTimeout(int i) {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
 
   @Override
   public int getLockTimeout() {
-    return 0;
+    throw new NotImplementedException("Not supported for HTTP storage");
   }
 
   @Override
-  public void setLockTimeout(int i) {}
+  public void setLockTimeout(int i) {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
 
   @NotNull
   @Override
   public String getMap() {
-    return "";
+    throw new NotImplementedException("Not supported for HTTP storage");
   }
 
   @Override
-  public void setMap(@NotNull String s) {}
+  public void setMap(@NotNull String s) {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
 
   @Override
   public boolean isClosed() {
     return false;
+    //TODO
   }
 
   @Override
@@ -118,16 +128,18 @@ public final class HttpStorageReadSession implements IReadSession {
   @NotNull
   @Override
   public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
-    return List.of();
+    throw new NotImplementedException("Not supported for HTTP storage");
   }
 
   @Override
   public void fetchTuples(
-      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {}
+      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
 
   @NotNull
   @Override
   public Transaction transaction() {
-    return null;
+    throw new NotImplementedException("Not yet supported for HTTP storage");
   }
 }

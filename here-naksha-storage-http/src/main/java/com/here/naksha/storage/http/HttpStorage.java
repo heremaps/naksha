@@ -22,6 +22,7 @@ import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import naksha.base.Int64;
 import naksha.base.JvmProxyUtil;
 import naksha.model.*;
@@ -37,6 +38,8 @@ public class HttpStorage implements IStorage {
   private static final Logger log = LoggerFactory.getLogger(HttpStorage.class);
 
   private final RequestSender requestSender;
+
+  private final AtomicBoolean initialized = new AtomicBoolean(false);
 
   public HttpStorage(@NotNull Storage storage) {
     HttpStorageProperties properties = HttpStorage.getProperties(storage);
@@ -65,7 +68,9 @@ public class HttpStorage implements IStorage {
   }
 
   @Override
-  public void close() {}
+  public void close() {
+    // TODO
+  }
 
   @NotNull
   @Override
@@ -82,58 +87,61 @@ public class HttpStorage implements IStorage {
   @NotNull
   @Override
   public IWriteSession newWriteSession(@Nullable SessionOptions options) {
-    return null;
+    // TODO
+    throw new NotImplementedException("Not yet supported");
   }
 
   @Nullable
   @Override
   public String getMapId(int mapNumber) {
-    return "";
+    throw new NotImplementedException("Not supported for HTTP storage");
   }
 
   @Override
   public boolean contains(@NotNull String mapId) {
-    return false;
+    throw new NotImplementedException("Not supported for HTTP storage");
   }
 
   @NotNull
   @Override
   public IMap get(@NotNull String mapId) {
-    return null;
+    throw new NotImplementedException("Not supported for HTTP storage");
   }
 
   @NotNull
   @Override
   public IMap getDefaultMap() {
-    return null;
+    throw new NotImplementedException("Not supported for HTTP storage");
   }
 
   @Override
   public void initStorage(@Nullable Map<String, ?> params) {
     log.debug("HttpStorage.initStorage called");
+    initialized.set(true);
+    // TODO processing params when needed
   }
 
   @Override
   public boolean isInitialized() {
-    return false;
+    return initialized.get();
   }
 
   @NotNull
   @Override
   public SessionOptions getAdminOptions() {
-    return null;
+    throw new NotImplementedException("Not supported for HTTP storage");
   }
 
   @NotNull
   @Override
   public String getId() {
-    return "";
+    return requestSender.keyProps.getName();
   }
 
   @NotNull
   @Override
   public NakshaFeature tupleToFeature(@NotNull Tuple tuple) {
-    return null;
+    throw new NotImplementedException("Not supported for HTTP storage");
   }
 
   @NotNull
@@ -150,15 +158,17 @@ public class HttpStorage implements IStorage {
 
   @Override
   public int getHardCap() {
-    return 0;
+    throw new NotImplementedException("Not supported for HTTP storage");
   }
 
   @Override
-  public void setHardCap(int i) {}
+  public void setHardCap(int i) {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
 
   @Nullable
   @Override
   public IMap get(int mapNumber) {
-    return null;
+    throw new NotImplementedException("Not supported for HTTP storage");
   }
 }

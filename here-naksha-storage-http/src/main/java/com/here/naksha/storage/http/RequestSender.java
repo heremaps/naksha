@@ -121,15 +121,15 @@ public class RequestSender {
     private final String name;
     private final String hostUrl;
     private final Map<String, String> defaultHeaders;
-    long connectionTimeoutSec;
-    long socketTimeoutSec;
+    int connectionTimeoutSec;
+    int socketTimeoutSec;
 
     public KeyProperties(
         @NotNull String name,
         @NotNull String hostUrl,
         @NotNull Map<String, String> defaultHeaders,
-        long connectionTimeoutSec,
-        long socketTimeoutSec) {
+        int connectionTimeoutSec,
+        int socketTimeoutSec) {
       this.name = name;
       this.hostUrl = hostUrl;
       this.defaultHeaders = defaultHeaders;
