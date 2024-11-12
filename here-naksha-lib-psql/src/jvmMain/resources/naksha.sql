@@ -249,7 +249,7 @@ BEGIN
   elsif (encoding = 4) then
     RETURN ST_GeomFromEWKB(geo);
   elsif (encoding = 6) then
-    RETURN ST_GeomFromGeoJSON(geo::text);
+    RETURN ST_GeomFromGeoJSON(convert_from(geo, 'UTF8'));
   end if;
   -- Unknown encoding
   return null;

@@ -7,6 +7,8 @@ import naksha.geo.SpLineString
 import naksha.model.*
 import naksha.model.GeoEncoding.GeoEncoding_C.EWKB
 import naksha.model.GeoEncoding.GeoEncoding_C.EWKB_GZIP
+import naksha.model.GeoEncoding.GeoEncoding_C.GEO_JSON
+import naksha.model.GeoEncoding.GeoEncoding_C.GEO_JSON_GZIP
 import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
 import naksha.model.GeoEncoding.GeoEncoding_C.TWKB_GZIP
 import naksha.model.GeoEncoding.GeoEncoding_C.WKB
@@ -65,6 +67,16 @@ class SridTest : PgTestBase() {
                 encodingName = "EWKB_GZIP",
                 flags = flagsFor(EWKB_GZIP),
                 collectionId = "srid_test_ewkb_gzip"
+            ),
+            GEO_JSON to SridTestConfig(
+                encodingName = "GEO_JSON",
+                flags = flagsFor(GEO_JSON),
+                collectionId = "srid_test_geojson"
+            ),
+            GEO_JSON_GZIP to SridTestConfig(
+                encodingName = "GEO_JSON_GZIP",
+                flags = flagsFor(GEO_JSON_GZIP),
+                collectionId = "srid_test_geojson_gzip"
             )
         )
     }
@@ -111,6 +123,16 @@ class SridTest : PgTestBase() {
     @Test
     fun shouldPreserveSridForEwkbGzip() {
         runTestFor(EWKB_GZIP)
+    }
+
+    @Test
+    fun shouldPreserveSridForGeoJson() {
+        runTestFor(GEO_JSON)
+    }
+
+    @Test
+    fun shouldPreserveSridForGeoJsonGzip() {
+        runTestFor(GEO_JSON_GZIP)
     }
 
     private fun runTestFor(encoding: Int) {
