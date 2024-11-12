@@ -139,7 +139,7 @@ public class HttpStorage implements IStorage {
   @NotNull
   @Override
   public Tuple featureToTuple(@NotNull NakshaFeature feature) {
-    return null;
+    throw new NotImplementedException("Not supported for HTTP storage");
   }
 
   @NotNull
