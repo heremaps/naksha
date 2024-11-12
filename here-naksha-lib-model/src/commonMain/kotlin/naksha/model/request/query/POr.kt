@@ -22,6 +22,7 @@ class POr() : ListProxy<IPropertyQuery>(IPropertyQuery::class), IPropertyQuery {
     }
 
     override fun toString(): String {
+        //TODO will not work like expected key=val1,val2, rather currently it is key1=val1,key2=val2
         return joinToString(",")
     }
 }

@@ -42,7 +42,7 @@ public class RequestSender {
   private final HttpClient httpClient;
 
   @NotNull
-  private final RequestSender.KeyProperties keyProps;
+  final RequestSender.KeyProperties keyProps;
 
   public RequestSender(@NotNull RequestSender.KeyProperties keyProps) {
     this.keyProps = keyProps;
@@ -114,12 +114,49 @@ public class RequestSender {
   /**
    * Set of properties that are just enough to construct the sender
    * and distinguish unambiguously between objects
-   * in terms of their effective configuration
+   * in terms of their effective configuration.
+   * Objects of this class are compared based on their contents, not on object reference.
    */
-  public record KeyProperties(
-      @NotNull String name,
-      @NotNull String hostUrl,
-      @NotNull Map<String, String> defaultHeaders,
-      long connectionTimeoutSec,
-      long socketTimeoutSec) {}
+  public static class KeyProperties {
+    private final String name;
+    private final String hostUrl;
+    private final Map<String, String> defaultHeaders;
+    long connectionTimeoutSec;
+    long socketTimeoutSec;
+
+    public KeyProperties(
+        @NotNull String name,
+        @NotNull String hostUrl,
+        @NotNull Map<String, String> defaultHeaders,
+        long connectionTimeoutSec,
+        long socketTimeoutSec) {
+      this.name = name;
+      this.hostUrl = hostUrl;
+      this.defaultHeaders = defaultHeaders;
+      this.connectionTimeoutSec = connectionTimeoutSec;
+      this.socketTimeoutSec = socketTimeoutSec;
+    }
+
+    public String getName() {
+      return name;
+    }
+
+    public String getHostUrl() {
+      return hostUrl;
+    }
+
+    public Map<String, String> getDefaultHeaders() {
+      return defaultHeaders;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof KeyProperties kepProps)) return false;
+      return (name.equals(kepProps.name)
+          && hostUrl.equals(kepProps.hostUrl)
+          && defaultHeaders.equals(kepProps.defaultHeaders)
+          && connectionTimeoutSec == kepProps.connectionTimeoutSec
+          && socketTimeoutSec == kepProps.socketTimeoutSec);
+    }
+  }
 }

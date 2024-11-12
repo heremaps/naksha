@@ -18,9 +18,8 @@
  */
 package com.here.naksha.storage.http.cache;
 
-import static com.here.naksha.storage.http.RequestSender.KeyProperties;
-
 import com.here.naksha.storage.http.RequestSender;
+import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import java.util.concurrent.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -48,7 +47,7 @@ public class RequestSenderCache {
   @NotNull
   public RequestSender getSenderWith(KeyProperties keyProperties) {
     return requestSenders.compute(
-        keyProperties.name(), (__, cachedSender) -> getUpdated(cachedSender, keyProperties));
+        keyProperties.getName(), (__, cachedSender) -> getUpdated(cachedSender, keyProperties));
   }
 
   private @NotNull RequestSender getUpdated(

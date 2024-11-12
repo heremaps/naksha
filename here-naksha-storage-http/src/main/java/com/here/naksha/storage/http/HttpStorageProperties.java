@@ -39,7 +39,7 @@ public class HttpStorageProperties extends NakshaProperties {
       "Content-Type", "application/json",
       "Accept-Encoding", "gzip");
 
-  private static final String URL = "url";
+  static final String URL = "url";
   private static final String CONNECTION_TIMEOUT = "connectTimeout";
   private static final String SOCKET_TIMEOUT = "socketTimeout";
   private static final String HEADERS = "headers";

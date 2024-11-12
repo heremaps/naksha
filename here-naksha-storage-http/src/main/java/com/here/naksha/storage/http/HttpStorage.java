@@ -18,15 +18,15 @@
  */
 package com.here.naksha.storage.http;
 
-import static com.here.naksha.storage.http.RequestSender.KeyProperties;
-
 import com.here.naksha.lib.core.models.naksha.Storage;
+import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
 import java.util.Map;
 import naksha.base.Int64;
 import naksha.base.JvmProxyUtil;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
+import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -40,6 +40,13 @@ public class HttpStorage implements IStorage {
 
   public HttpStorage(@NotNull Storage storage) {
     HttpStorageProperties properties = HttpStorage.getProperties(storage);
+    if (properties == null) {
+      if (!storage.getProperties().hasRaw(HttpStorageProperties.URL)) {
+        throw new IllegalArgumentException("A HTTP storage must have properties containing a 'url'");
+      }
+      properties = new HttpStorageProperties(
+          storage.getProperties().get(HttpStorageProperties.URL).toString(), null, null, null);
+    }
     requestSender = RequestSenderCache.getInstance()
         .getSenderWith(new KeyProperties(
             storage.getId(),
@@ -53,7 +60,7 @@ public class HttpStorage implements IStorage {
     return new HttpStorageReadSession(context, useMaster, requestSender);
   }
 
-  private static @NotNull HttpStorageProperties getProperties(@NotNull Storage storage) {
+  private static @Nullable HttpStorageProperties getProperties(@NotNull Storage storage) {
     return JvmProxyUtil.box(storage.getProperties(), HttpStorageProperties.class);
   }
 
@@ -63,7 +70,13 @@ public class HttpStorage implements IStorage {
   @NotNull
   @Override
   public IReadSession newReadSession(@Nullable SessionOptions options) {
-    return null;
+    boolean useMaster = false;
+    if (options != null) {
+      requestSender.keyProps.connectionTimeoutSec = options.connectTimeout;
+      requestSender.keyProps.socketTimeoutSec = options.socketTimeout;
+      useMaster = options.useMaster;
+    }
+    return new HttpStorageReadSession(NakshaContext.currentContext(), useMaster, requestSender);
   }
 
   @NotNull
@@ -132,7 +145,7 @@ public class HttpStorage implements IStorage {
   @NotNull
   @Override
   public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
-    throw new NakshaException(NakshaError.NOT_IMPLEMENTED, "enterLock", null, null);
+    throw new NotImplementedException("Enter lock not supported");
   }
 
   @Override
