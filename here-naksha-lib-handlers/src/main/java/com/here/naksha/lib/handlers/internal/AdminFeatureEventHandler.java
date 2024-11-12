@@ -18,25 +18,21 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.internal.NakshaFeaturePropertiesValidator.nakshaFeatureValidation;
-
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.models.naksha.NakshaFeature;
-import com.here.naksha.lib.core.models.storage.*;
+import com.here.naksha.lib.handlers.AbstractEventHandler;
 import naksha.model.IReadSession;
 import naksha.model.IWriteSession;
-import com.here.naksha.lib.handlers.AbstractEventHandler;
-import com.here.naksha.lib.psql.PsqlStorage;
-import naksha.model.ReadRequest;
-import naksha.model.Request;
-import naksha.model.ErrorResult;
+import naksha.model.NakshaContext;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.internal.NakshaFeaturePropertiesValidator.nakshaFeatureValidation;
 
 /**
  * Abstract event handler responsible for processing admin resources (like Storage or EventHandler)
@@ -64,25 +60,25 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
   }
 
   @Override
-  public final @NotNull Result process(@NotNull IEvent event) {
+  public final @NotNull Response process(@NotNull IEvent event) {
     final NakshaContext ctx = NakshaContext.currentContext();
-    final Request<?> request = event.getRequest();
+    final Request request = event.getRequest();
     // process request using Naksha Admin Storage instance
     addStorageIdToStreamInfo(PsqlStorage.ADMIN_STORAGE_ID, ctx);
-    if (request instanceof ReadRequest<?> rr) {
+    if (request instanceof ReadRequest rr) {
       try (final IReadSession reader = nakshaHub().getAdminStorage().newReadSession(ctx, false)) {
         return reader.execute(rr);
       }
     } else if (request instanceof WriteXyzFeatures wr) {
       // validate the request before persisting
-      try (Result valResult = validateWriteRequest(wr)) {
-        if (valResult instanceof ErrorResult er) {
+      try (Response valResult = validateWriteRequest(wr)) {
+        if (valResult instanceof ErrorResponse er) {
           return er;
         }
         // persist in storage
         try (final IWriteSession writer = nakshaHub().getAdminStorage().newWriteSession(ctx, true)) {
-          final Result result = writer.execute(wr);
-          if (result instanceof SuccessResult) {
+          final Response result = writer.execute(wr);
+          if (result instanceof SuccessResponse) {
             writer.commit(true);
           } else {
             logger.warn(
@@ -104,18 +100,18 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
    * @param codec containing the feature to be validated before being written
    * @return validation result
    */
-  protected @NotNull Result validateFeature(XyzFeatureCodec codec) {
+  protected @NotNull Response validateFeature(XyzFeatureCodec codec) {
     final FEATURE feature = featureClass.cast(codec.getFeature());
     return nakshaFeatureValidation(feature);
   }
 
-  private @NotNull Result validateWriteRequest(final @NotNull WriteXyzFeatures wr) {
+  private @NotNull Response validateWriteRequest(final @NotNull WriteXyzFeatures wr) {
     for (final XyzFeatureCodec featureCodec : wr.features) {
-      Result featureValidation = validateFeature(featureCodec);
-      if (featureValidation instanceof ErrorResult) {
+      Response featureValidation = validateFeature(featureCodec);
+      if (featureValidation instanceof ErrorResponse) {
         return featureValidation;
       }
     }
-    return new SuccessResult();
+    return new SuccessResponse();
   }
 }

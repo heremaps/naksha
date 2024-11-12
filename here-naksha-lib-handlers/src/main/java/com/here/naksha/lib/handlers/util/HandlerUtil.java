@@ -19,20 +19,23 @@
 package com.here.naksha.lib.handlers.util;
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import naksha.model.*;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereDeltaNs;
-import com.here.naksha.lib.core.models.storage.*;
-import java.util.ArrayList;
-import java.util.List;
-
+import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
+import com.here.naksha.lib.core.models.storage.ContextXyzFeatureResult;
+import com.here.naksha.lib.core.models.storage.EWriteOp;
+import naksha.model.NakshaError;
+import naksha.model.XyzNs;
 import naksha.model.mom.MomChangeState;
 import naksha.model.mom.MomReviewState;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
-import naksha.model.request.ResultTuple;
 import naksha.model.request.ExecutedOp;
+import naksha.model.request.ResultTuple;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class HandlerUtil {
 
@@ -47,7 +50,7 @@ public final class HandlerUtil {
     // Create list of ResultRow with input features
     final List<ResultTuple> resultTuples = new ArrayList<>();
     for (final NakshaFeature feature : features) {
-      resultTuples.add(new ResultTuple(ExecutedOp.UPDATED,null,feature));
+      resultTuples.add(new ResultTuple(ExecutedOp.UPDATED, null, feature));
     }
     // Create ContextResult with cursor, context and violations
     final ContextXyzFeatureResult ctxResult = new ContextXyzFeatureResult(null, resultTuples);
@@ -85,7 +88,7 @@ public final class HandlerUtil {
     final ContextWriteXyzFeatures cwf = new ContextWriteXyzFeatures(collectionId);
 
     // Add features in the request
-    if (inputCodecs.isEmpty()) throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "No features supplied");
+    if (inputCodecs.isEmpty()) throw new XyzErrorException(NakshaError.ILLEGAL_ARGUMENT, "No features supplied");
     for (final Object inputCodec : inputCodecs) {
       final XyzFeatureCodec xyzCodec =
           checkInstanceOf(inputCodec, XyzFeatureCodec.class, "Unsupported feature codec type");
@@ -173,7 +176,8 @@ public final class HandlerUtil {
     return checkInstanceOf(input, returnType, XyzError.NOT_IMPLEMENTED, errDescPrefix);
   }
 
-  public static void setDeltaReviewState(final @NotNull NakshaFeature feature, final @NotNull MomReviewState reviewState) {
+  public static void setDeltaReviewState(
+          final @NotNull NakshaFeature feature, final @NotNull MomReviewState reviewState) {
     final NakshaProperties properties = feature.getProperties();
     final XyzNs xyzNs = properties.getXyz();
     final HereDeltaNs deltaNs = properties.del;

@@ -18,26 +18,29 @@
  */
 package com.here.naksha.lib.handlers;
 
-import static com.here.naksha.lib.core.util.CollectionUtils.isNotNullOrEmpty;
-import static com.here.naksha.lib.core.util.CollectionUtils.isNullOrEmpty;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
-
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
-import com.here.naksha.lib.core.models.storage.*;
+import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
-import java.util.*;
-
-import naksha.model.*;
+import naksha.model.XyzNs;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
+
+import static com.here.naksha.lib.core.util.CollectionUtils.isNotNullOrEmpty;
+import static com.here.naksha.lib.core.util.CollectionUtils.isNullOrEmpty;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
 
 public class TagFilterHandler extends AbstractEventHandler {
 
@@ -55,16 +58,16 @@ public class TagFilterHandler extends AbstractEventHandler {
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
-    final Request<?> request = event.getRequest();
-    if (request instanceof ReadFeatures || request instanceof WriteFeatures) {
+    final Request request = event.getRequest();
+    if (request instanceof ReadFeatures || request instanceof WriteRequest) {
       return PROCESS;
     }
     return SEND_UPSTREAM_WITHOUT_PROCESSING;
   }
 
   @Override
-  public @NotNull Result process(@NotNull IEvent event) {
-    final Request<?> request = event.getRequest();
+  public @NotNull Response process(@NotNull IEvent event) {
+    final Request request = event.getRequest();
     logger.info("Handler received request {}", request.getClass().getSimpleName());
 
     // Forward the request without changing it, if no tag configuration specified
@@ -77,7 +80,7 @@ public class TagFilterHandler extends AbstractEventHandler {
 
     if (request instanceof ReadFeatures readRequest) {
       applyFilterConditionOnRequest(readRequest, properties.getContains());
-    } else if (request instanceof WriteFeatures<?, ?, ?> wf) {
+    } else if (request instanceof WriteRequest wf) {
       applyTagChangesOnRequest(wf, properties.getAdd(), properties.getRemoveWithPrefixes());
     }
 
@@ -128,11 +131,11 @@ public class TagFilterHandler extends AbstractEventHandler {
   }
 
   private static void applyTagChangesOnFeature(
-      final @Nullable XyzFeature feature,
+          final @Nullable NakshaFeature feature,
       final @Nullable List<String> addTags,
       final @Nullable List<String> removeTags) {
     if (feature == null) return;
-    final XyzNamespace xyzNS = feature.getProperties().getXyzNamespace();
+    final XyzNs xyzNS = feature.getProperties().getXyz();
     // NOTE - we need to remove existing tags first, before adding new ones
     if (isNotNullOrEmpty(removeTags)) xyzNS.removeTagsWithPrefixes(removeTags);
     if (isNotNullOrEmpty(addTags)) xyzNS.addTags(addTags, true);

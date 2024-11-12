@@ -18,23 +18,19 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
-import static naksha.model.NakshaContext.currentContext;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readIdsFromResult;
-
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-import naksha.model.ErrorResult;
-import naksha.model.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import naksha.model.IReadSession;
-import java.util.List;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
+
+import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readIdsFromResult;
+import static naksha.model.NakshaContext.currentContext;
 
 public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
 
@@ -43,7 +39,7 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
   }
 
   @Override
-  protected @NotNull Result validateFeature(@NotNull XyzFeatureCodec featureCodec) {
+  protected @NotNull Response validateFeature(@NotNull XyzFeatureCodec featureCodec) {
     if (EWriteOp.DELETE.toString().equals(featureCodec.getOp())) {
       return new SuccessResult();
     }

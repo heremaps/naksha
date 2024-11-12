@@ -18,50 +18,35 @@
  */
 package com.here.naksha.lib.handlers;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.createWriteCollectionsRequest;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_COLLECTION_CREATION;
-import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_STORAGE_INITIALIZATION;
-import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.FIRST_ATTEMPT;
-import static com.here.naksha.lib.psql.EPsqlState.COLLECTION_DOES_NOT_EXIST;
-import static com.here.naksha.lib.psql.EPsqlState.UNDEFINED_TABLE;
-
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.exceptions.StorageNotInitialized;
 import com.here.naksha.lib.core.lambdas.F1;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
-import com.here.naksha.lib.core.models.naksha.EventTarget;
-import com.here.naksha.lib.core.models.naksha.Space;
-import com.here.naksha.lib.core.models.naksha.SpaceProperties;
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
+import com.here.naksha.lib.core.models.naksha.*;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-import naksha.model.ErrorResult;
-import naksha.model.ReadFeatures;
-import naksha.model.Request;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SuccessResult;
-import naksha.model.WriteCollections;
-import naksha.model.WriteFeatures;
-import naksha.model.WriteRequest;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
-import naksha.model.IReadSession;
-import naksha.model.IStorage;
-import naksha.model.IWriteSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
+import naksha.model.*;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.*;
+import static com.here.naksha.lib.psql.EPsqlState.COLLECTION_DOES_NOT_EXIST;
+import static com.here.naksha.lib.psql.EPsqlState.UNDEFINED_TABLE;
 
 public class DefaultStorageHandler extends AbstractEventHandler {
 

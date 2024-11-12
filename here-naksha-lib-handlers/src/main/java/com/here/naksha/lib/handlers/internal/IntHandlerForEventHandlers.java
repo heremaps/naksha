@@ -18,47 +18,35 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
-import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
-import static naksha.model.NakshaContext.currentContext;
-import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdRequest;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
-import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.ADD_VALUES;
-import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.CONTAINS_VALUES;
-import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.REMOVE_W_PREFIXES;
-
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-import naksha.model.ErrorResult;
-import naksha.model.POp;
-import naksha.model.PRef;
-import naksha.model.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.SuccessResult;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import naksha.model.IReadSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.util.storage.ResultHelper;
-import com.here.naksha.lib.handlers.DefaultStorageHandler;
-import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
-import com.here.naksha.lib.handlers.DefaultViewHandler;
-import com.here.naksha.lib.handlers.DefaultViewHandlerProperties;
-import com.here.naksha.lib.handlers.TagFilterHandler;
-import com.here.naksha.lib.handlers.TagFilterHandlerProperties;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import com.here.naksha.lib.handlers.*;
+import naksha.model.*;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+
+import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
+import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
+import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdRequest;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.*;
+import static naksha.model.NakshaContext.currentContext;
 
 public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHandler> {
 

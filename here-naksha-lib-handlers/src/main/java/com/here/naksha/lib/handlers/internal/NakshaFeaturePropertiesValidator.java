@@ -18,10 +18,7 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.naksha.NakshaFeature;
-import com.here.naksha.lib.core.models.storage.*;
-import naksha.model.ErrorResult;
+import naksha.model.request.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -29,7 +26,7 @@ class NakshaFeaturePropertiesValidator {
 
   private NakshaFeaturePropertiesValidator() {}
 
-  static Result nakshaFeatureValidation(NakshaFeature feature) {
+  static Response nakshaFeatureValidation(NakshaFeature feature) {
     Result titleValidation = requiredPropertyValidationError(feature.getTitle(), NakshaFeature.TITLE);
     if (titleValidation instanceof ErrorResult) {
       return titleValidation;

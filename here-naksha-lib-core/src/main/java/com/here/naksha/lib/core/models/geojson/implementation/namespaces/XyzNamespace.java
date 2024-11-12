@@ -23,10 +23,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.util.json.JsonObject;
-import java.text.Normalizer;
-import java.text.Normalizer.Form;
-import java.util.ArrayList;
-import java.util.List;
 import naksha.geo.XyzProperties;
 import naksha.model.EXyzAction;
 import naksha.model.NakshaVersion;
@@ -34,11 +30,18 @@ import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.text.Normalizer;
+import java.text.Normalizer.Form;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * The properties stored as value for the {@link XyzProperties#XYZ_NAMESPACE @ns:com:here:xyz} key in the {@link XyzProperties properties}
  * of features managed by Naksha. Except for the {@code tags} all these values are read-only.
+ * @deprecated please use {@link naksha.model.XyzNs} instead.
  */
 @SuppressWarnings("unused")
+@Deprecated
 public class XyzNamespace extends JsonObject {
 
   /**

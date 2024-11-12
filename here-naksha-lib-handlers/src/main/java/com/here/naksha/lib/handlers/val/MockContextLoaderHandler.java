@@ -18,32 +18,26 @@
  */
 package com.here.naksha.lib.handlers.val;
 
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
-
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-import naksha.model.ErrorResult;
 import com.here.naksha.lib.core.models.storage.FeatureCodec;
-import naksha.model.ReadFeatures;
-import naksha.model.Request;
 import com.here.naksha.lib.core.models.storage.Result;
-import naksha.model.WriteFeatures;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
+import naksha.geo.XyzProperties;
+import naksha.model.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.*;
 
 public class MockContextLoaderHandler extends AbstractEventHandler {
 
