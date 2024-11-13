@@ -23,6 +23,9 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereDel
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.ContextXyzFeatureResult;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
+
+import java.util.ArrayList;
+import java.util.List;
 import naksha.model.NakshaError;
 import naksha.model.XyzNs;
 import naksha.model.mom.MomChangeState;
@@ -33,9 +36,6 @@ import naksha.model.request.ExecutedOp;
 import naksha.model.request.ResultTuple;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public final class HandlerUtil {
 

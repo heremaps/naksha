@@ -18,13 +18,9 @@
  */
 package com.here.naksha.lib.handlers.util;
 
-import naksha.model.POp;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
 
 public class PropertyOperationUtil {
 

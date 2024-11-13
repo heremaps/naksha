@@ -18,6 +18,13 @@
  */
 package com.here.naksha.lib.handlers;
 
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.*;
+import static com.here.naksha.lib.psql.EPsqlState.COLLECTION_DOES_NOT_EXIST;
+import static com.here.naksha.lib.psql.EPsqlState.UNDEFINED_TABLE;
+
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.exceptions.StorageNotInitialized;
@@ -30,23 +37,16 @@ import com.here.naksha.lib.core.models.storage.SuccessResult;
 import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
-import naksha.model.*;
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.*;
-import static com.here.naksha.lib.psql.EPsqlState.COLLECTION_DOES_NOT_EXIST;
-import static com.here.naksha.lib.psql.EPsqlState.UNDEFINED_TABLE;
+import naksha.model.*;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DefaultStorageHandler extends AbstractEventHandler {
 

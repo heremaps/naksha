@@ -31,7 +31,10 @@ final class PluginPropertiesValidator {
   static Response pluginValidation(Plugin plugin) {
     if (plugin.getClassName() == null || plugin.getClassName().isEmpty()) {
       return new ErrorResponse(
-              NakshaError.ILLEGAL_ARGUMENT, "Mandatory parameter '" + Plugin.CLASS_NAME + "' missing!", null, null);
+              NakshaError.ILLEGAL_ARGUMENT,
+              "Mandatory parameter '" + Plugin.CLASS_NAME + "' missing!",
+              null,
+              null);
     }
     return new SuccessResponse();
   }

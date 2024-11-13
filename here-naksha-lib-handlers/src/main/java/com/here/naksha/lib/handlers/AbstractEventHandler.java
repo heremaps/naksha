@@ -65,7 +65,9 @@ public abstract class AbstractEventHandler implements IEventHandler {
     return new ErrorResponse(
             NakshaError.NOT_IMPLEMENTED,
         "Event processing of " + processedRequest.getClass().getSimpleName() + " in "
-                + this.getClass().getSimpleName() + " is not supported", null, null);
+                + this.getClass().getSimpleName() + " is not supported",
+            null,
+            null);
   }
 
   protected void addStorageIdToStreamInfo(final @Nullable String storageId, final @NotNull NakshaContext context) {

@@ -19,20 +19,22 @@
 package com.here.naksha.lib.handlers.internal;
 
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import com.here.naksha.storage.http.HttpStorage;
 import com.here.naksha.storage.http.HttpStorageProperties;
-import naksha.model.*;
+import naksha.base.JvmProxyUtil;
+import naksha.model.IReadSession;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.MalformedURLException;
@@ -61,53 +63,53 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
   }
 
   @Override
-  protected @NotNull Result validateFeature(XyzFeatureCodec codec) {
+  protected @NotNull Response validateFeature(XyzFeatureCodec codec) {
     final EWriteOp operation = EWriteOp.get(codec.getOp());
     if (operation.equals(EWriteOp.DELETE)) {
       // For DELETE, only the feature ID is needed, other JSON properties are irrelevant
       return noActiveHandlerValidation(codec);
     }
     // For non-DELETE write request
-    Result basicValidation = super.validateFeature(codec);
-    if (basicValidation instanceof ErrorResult) {
+    Response basicValidation = super.validateFeature(codec);
+    if (basicValidation instanceof ErrorResponse) {
       return basicValidation;
     }
     final Storage storage = (Storage) codec.getFeature();
-    Result pluginValidation = pluginValidation(storage);
-    if (pluginValidation instanceof ErrorResult) {
+    Response pluginValidation = pluginValidation(storage);
+    if (pluginValidation instanceof ErrorResponse) {
       return pluginValidation;
     }
     return httpStorageValidation(storage);
   }
 
-  private Result httpStorageValidation(Storage storage) {
+  private Response httpStorageValidation(Storage storage) {
     if (HttpStorage.class.getName().equals(storage.getClassName())) {
-      HttpStorageProperties httpStorageProperties = null;
+      HttpStorageProperties httpStorageProperties;
       try {
-        httpStorageProperties = JsonSerializable.convert(storage.getProperties(), HttpStorageProperties.class);
+        httpStorageProperties = JvmProxyUtil.box(storage.getProperties(), HttpStorageProperties.class);
       } catch (Exception e) {
-        return new ErrorResult(
-            XyzError.ILLEGAL_ARGUMENT,
+        return new ErrorResponse(
+                NakshaError.ILLEGAL_ARGUMENT,
             "Unable to convert 'properties' to " + HttpStorageProperties.class.getName(),
-            e);
+                null, e);
       }
       return httpStoragePropertiesValidation(httpStorageProperties);
     }
-    return new SuccessResult();
+    return new SuccessResponse();
   }
 
-  private Result httpStoragePropertiesValidation(HttpStorageProperties httpStorageProperties) {
+  private Response httpStoragePropertiesValidation(HttpStorageProperties httpStorageProperties) {
     boolean isConnectionTimeoutValid = isBetween(
         httpStorageProperties.getConnectTimeout(), MIN_HTTP_CONNECT_TIMEOUT_SEC, MAX_HTTP_CONNECT_TIMEOUT_SEC);
     boolean isSocketTimeoutValid = isBetween(
         httpStorageProperties.getSocketTimeout(), MIN_HTTP_SOCKET_TIMEOUT_SEC, MAX_HTTP_SOCKET_TIMEOUT_SEC);
     boolean isUrlValid = isUrlValid(httpStorageProperties.getUrl());
     if (isConnectionTimeoutValid && isSocketTimeoutValid && isUrlValid) {
-      return new SuccessResult();
+      return new SuccessResponse();
     }
     String errorMsg =
         getErrorMsg(httpStorageProperties, isConnectionTimeoutValid, isSocketTimeoutValid, isUrlValid);
-    return new ErrorResult(XyzError.ILLEGAL_ARGUMENT, errorMsg);
+    return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT, errorMsg, null, null);
   }
 
   @NotNull
@@ -150,24 +152,24 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
     }
   }
 
-  private Result noActiveHandlerValidation(XyzFeatureCodec codec) {
+  private Response noActiveHandlerValidation(Write codec) {
     // Search for active event handlers still using this storage
     String storageId = codec.getId();
     if (storageId == null) {
       if (codec.getFeature() == null) {
-        return new ErrorResult(XyzError.ILLEGAL_ARGUMENT, "No storage ID supplied.");
+        return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT, "No storage ID supplied.", null, null);
       }
       storageId = codec.getFeature().getId();
     }
     // Scan through all handlers with JSON property "properties.storageId" = <storage-id-to-be-deleted>
     final PRef pRef = RequestHelper.pRefFromPropPath(
-        new String[] {XyzFeature.PROPERTIES, DefaultStorageHandlerProperties.STORAGE_ID});
+            new String[]{NakshaFeature.PROPERTIES, DefaultStorageHandlerProperties.STORAGE_ID});
     final POp activeHandlersPOp = POp.eq(pRef, storageId);
     final ReadFeatures readActiveHandlersRequest =
         new ReadFeatures(EVENT_HANDLERS).withPropertyOp(activeHandlersPOp);
     try (final IReadSession readSession =
         nakshaHub().getAdminStorage().newReadSession(NakshaContext.currentContext(), false)) {
-      final Result readResult = readSession.execute(readActiveHandlersRequest);
+      final Response readResult = readSession.execute(readActiveHandlersRequest);
       if (!(readResult instanceof SuccessResult)) {
         return readResult;
       }
@@ -176,14 +178,14 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
         eventHandlers = readFeaturesFromResult(readResult, EventHandler.class);
       } catch (NoCursor | NoSuchElementException emptyException) {
         // No active handler using the storage, proceed with deleting the storage
-        return new SuccessResult();
+        return new SuccessResponse();
       } finally {
         readResult.close();
       }
       final List<String> handlerIds =
-          eventHandlers.stream().map(XyzFeature::getId).toList();
-      return new ErrorResult(
-          XyzError.CONFLICT, "The storage is still in use by these event handlers: " + handlerIds);
+              eventHandlers.stream().map(NakshaFeature::getId).toList();
+      return new ErrorResponse(
+              NakshaError.CONFLICT, "The storage is still in use by these event handlers: " + handlerIds, null, null);
     }
   }
 }

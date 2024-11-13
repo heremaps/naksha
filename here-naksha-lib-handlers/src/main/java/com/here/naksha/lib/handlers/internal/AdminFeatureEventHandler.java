@@ -18,6 +18,10 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.internal.NakshaFeaturePropertiesValidator.nakshaFeatureValidation;
+
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
@@ -29,10 +33,6 @@ import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.internal.NakshaFeaturePropertiesValidator.nakshaFeatureValidation;
 
 /**
  * Abstract event handler responsible for processing admin resources (like Storage or EventHandler)
@@ -52,7 +52,7 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
-    final Request<?> request = event.getRequest();
+    final Request request = event.getRequest();
     if (request instanceof ReadRequest || request instanceof WriteXyzFeatures) {
       return PROCESS;
     }
@@ -95,19 +95,19 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
   }
 
   /**
-   * Direct validation of XyzFeature to be written.
+   * Direct validation of NakshaFeature to be written.
    *
-   * @param codec containing the feature to be validated before being written
+   * @param writeOperation containing the feature to be validated before being written
    * @return validation result
    */
-  protected @NotNull Response validateFeature(XyzFeatureCodec codec) {
-    final FEATURE feature = featureClass.cast(codec.getFeature());
+  protected @NotNull Response validateFeature(Write writeOperation) {
+    final FEATURE feature = featureClass.cast(writeOperation.getFeature());
     return nakshaFeatureValidation(feature);
   }
 
-  private @NotNull Response validateWriteRequest(final @NotNull WriteXyzFeatures wr) {
-    for (final XyzFeatureCodec featureCodec : wr.features) {
-      Response featureValidation = validateFeature(featureCodec);
+  private @NotNull Response validateWriteRequest(final @NotNull WriteRequest wr) {
+    for (final Write writeOperation : wr.getWrites()) {
+      Response featureValidation = validateFeature(writeOperation);
       if (featureValidation instanceof ErrorResponse) {
         return featureValidation;
       }
