@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class PostTest {
+public class PutTest {
     public static final String FEATURE_A_ID = "A";
     public static final String FEATURE_B_ID = "B";
     public static final String FEATURE_C_ID = "C";
@@ -41,14 +41,14 @@ public class PostTest {
     }
 
     @Test
-    void post() {
-        Response responseANew = postFeature(new InputFeature(FEATURE_A_ID, Map.of("p", "1"))); // insert single to empty database
+    void put() {
+        Response responseANew = putFeature(new InputFeature(FEATURE_A_ID, Map.of("p", "1"))); // insert single to empty database
         assertStatusCode200(responseANew);
         OutputFeature outputFeatureANew = new OutputFeature(FEATURE_A_ID, responseANew);
         outputFeatureANew.performNewFeatureAssertions();
 
 
-        Response responseAUpdated = postFeature(new InputFeature(FEATURE_A_ID, Map.of("p", "2"))); // update single
+        Response responseAUpdated = putFeature(new InputFeature(FEATURE_A_ID, Map.of("p", "2"))); // update single
         assertStatusCode200(responseAUpdated);
         OutputFeature outputFeatureAUpdated = new OutputFeature(FEATURE_A_ID, responseAUpdated);
         outputFeatureAUpdated.performUpdatedFeatureAssertions(
@@ -56,12 +56,12 @@ public class PostTest {
                 outputFeatureANew.createdAt
         );
 
-        Response responseBNew = postFeature(new InputFeature(FEATURE_B_ID, Map.of("p", "1"))); // insert single to non empty database
+        Response responseBNew = putFeature(new InputFeature(FEATURE_B_ID, Map.of("p", "1"))); // insert single to non empty database
         assertStatusCode200(responseBNew);
         OutputFeature outputFeatureBNew = new OutputFeature(FEATURE_B_ID, responseBNew);
         outputFeatureBNew.performNewFeatureAssertions();
 
-        Response responseComplex = postFeatures(List.of( // complex request, update single again
+        Response responseComplex = putFeatures(List.of( // complex request, update single again
                 new InputFeature(FEATURE_A_ID, Map.of("p", "3")),
                 new InputFeature(FEATURE_B_ID, Map.of("p", "2")),
                 new InputFeature(FEATURE_C_ID, Map.of("p", "1")),
@@ -84,49 +84,49 @@ public class PostTest {
         outputFeatureDNew.performNewFeatureAssertions();
 
         Response iterateResponse = DataHub.request().get("/iterate");
-        new OutputFeature("A", iterateResponse).performExistingAssertions(outputFeatureAUpdatedAgain);
-        new OutputFeature("B", iterateResponse).performExistingAssertions(outputFeatureBUpdated);
-        new OutputFeature("C", iterateResponse).performExistingAssertions(outputFeatureCNew);
-        new OutputFeature("D", iterateResponse).performExistingAssertions(outputFeatureDNew);
+        new OutputFeature(FEATURE_A_ID, iterateResponse).performExistingAssertions(outputFeatureAUpdatedAgain);
+        new OutputFeature(FEATURE_B_ID, iterateResponse).performExistingAssertions(outputFeatureBUpdated);
+        new OutputFeature(FEATURE_C_ID, iterateResponse).performExistingAssertions(outputFeatureCNew);
+        new OutputFeature(FEATURE_D_ID, iterateResponse).performExistingAssertions(outputFeatureDNew);
     }
 
     @Test
-    void postShouldPatchProperties(){
-        Response responseANew = postFeature(new InputFeature(FEATURE_A_ID, Map.of("p", "1", "q", "1")));
+    void putShouldReplaceProperties(){
+        Response responseANew = putFeature(new InputFeature(FEATURE_A_ID, Map.of("p", "1", "q", "1")));
         assertStatusCode200(responseANew);
 
-        Response responseAUpdated = postFeature(new InputFeature(FEATURE_A_ID, Map.of("p", "2")));
+        Response responseAUpdated = putFeature(new InputFeature(FEATURE_A_ID, Map.of("p", "2")));
         assertStatusCode200(responseAUpdated);
 
         Response iterateResponse = DataHub.request().get("/iterate");
         new OutputFeature(FEATURE_A_ID, iterateResponse).assertOnlyOneFeatureWithId();
 
-        // assert that properties are patched, not replaced as a whole
+        // assert that properties are replaced as a whole, not only patched
         iterateResponse.then().body("features.find{it.id.endsWith(':A')}.properties.p",equalTo("2"));
-        iterateResponse.then().body("features.find{it.id.endsWith(':A')}.properties.q",equalTo("1"));
+        iterateResponse.then().body("features.find{it.id.endsWith(':A')}.properties.q",equalTo(null));
     }
 
     @Test
-    void postEmpty() {
-        Response responseEmpty = postFeatures(List.of());
+    void putEmpty() {
+        Response responseEmpty = putFeatures(List.of());
         responseEmpty.then().assertThat().statusCode(400)
                 .and().body("type", equalTo("ErrorResponse"))
                 .and().body("error", equalTo("IllegalArgument"))
-                .and().body("errorMessage", equalTo("Can't create empty features"));
+                .and().body("errorMessage", equalTo("Can't update empty features"));
 
         DataHub.request().get("iterate").then().assertThat().body("features.isEmpty()", equalTo(true));
     }
 
     @Test
-    void updateWithMatchingUuid() {
-        Response responseNew = postFeature(new InputFeature(FEATURE_A_ID, Map.of("p", "1")));
+    void updateWithMatchingUuid(){
+        Response responseNew = putFeature(new InputFeature(FEATURE_A_ID, Map.of("p", "1")));
         assertStatusCode200(responseNew);
         OutputFeature outputNew = new OutputFeature(FEATURE_A_ID, responseNew);
 
         Map propertiesWithUuid = Map.of("@ns:com:here:xyz",
                 Map.of(UUID_KEY, outputNew.uuid)
         );
-        Response responseUpdated = postFeature(new InputFeature(FEATURE_A_ID, propertiesWithUuid));
+        Response responseUpdated = putFeature(new InputFeature(FEATURE_A_ID, propertiesWithUuid));
         assertStatusCode200(responseUpdated);
         new OutputFeature(FEATURE_A_ID, responseUpdated).performUpdatedFeatureAssertions(
                 outputNew.uuid,
@@ -135,15 +135,15 @@ public class PostTest {
     }
 
     @Test
-    void errorOnUpdateWithNonMatchingUuid() {
-        Response responseNew = postFeature(new InputFeature(FEATURE_A_ID, Map.of("p", "1"))); // insert single to empty database
+    void errorOnUpdateWithNonMatchingUuid(){
+        Response responseNew = putFeature(new InputFeature(FEATURE_A_ID, Map.of("p", "1"))); // insert single to empty database
         assertStatusCode200(responseNew);
         OutputFeature outputNew = new OutputFeature(FEATURE_A_ID, responseNew);
 
         Map propertiesWithUuid = Map.of("@ns:com:here:xyz",
                 Map.of(UUID_KEY, UUID.randomUUID())
         );
-        Response responseUpdated = postFeature(new InputFeature(FEATURE_A_ID, propertiesWithUuid)); // insert single to empty database
+        Response responseUpdated = putFeature(new InputFeature(FEATURE_A_ID, propertiesWithUuid)); // insert single to empty database
         String expectedErrorMessage = "The feature with id urn:here::here:landmark3d.Landmark3dPhotoreal:A cannot be replaced. The provided UUID doesn't match the UUID of the head state: %s"
                 .formatted(outputNew.uuid);
         responseUpdated.then()
@@ -154,22 +154,22 @@ public class PostTest {
     }
 
     @Test
-    void errorOnNewWithUuid() {
+    void errorOnNewWithUuid(){
         Map propertiesWithUuid = Map.of("@ns:com:here:xyz",
                 Map.of(UUID_KEY, UUID.randomUUID())
         );
-        Response responseUuid = postFeature(new InputFeature(FEATURE_A_ID, propertiesWithUuid));
+        Response responseUuid = putFeature(new InputFeature(FEATURE_A_ID, propertiesWithUuid));
         responseUuid.then().assertThat().statusCode(greaterThanOrEqualTo(400))
                 .and().body("type", equalTo("ErrorResponse"));
 
         DataHub.request().get("iterate").then().assertThat().body("features.isEmpty()", equalTo(true));
     }
 
-    Response postFeature(InputFeature feature) {
-        return postFeatures(List.of(feature));
+    Response putFeature(InputFeature feature) {
+        return putFeatures(List.of(feature));
     }
 
-    Response postFeatures(List<InputFeature> features) {
+    Response putFeatures(List<InputFeature> features) {
         String featuresArrayJson = features.stream()
                 .map(InputFeature::toJson)
                 .collect(Collectors.joining(", ", "[", "]"));
@@ -177,7 +177,7 @@ public class PostTest {
         RequestSpecification request = Naksha.request()
                 .with().body(featuresCollectionJson)
                 .with().header("Content-Type", "application/json");
-        return request.post("/features");
+        return request.put("/features");
     }
 
     private record InputFeature(String shortId, Map properties) {

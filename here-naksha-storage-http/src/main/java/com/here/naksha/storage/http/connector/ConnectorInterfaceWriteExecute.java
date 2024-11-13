@@ -81,7 +81,8 @@ public class ConnectorInterfaceWriteExecute {
       setUpdatedAt(feature, creationTime);
     });
     featuresToUpdate.forEach(feature -> {
-      setPuuidFromUuid(feature);
+      assertUuidMatch(context, feature, sender, connectorSpaceName);
+      setPuuidFromUuid(context, feature, sender, connectorSpaceName);
       setRandomUuid(feature);
       fillMissingCreatedAt(context, feature, sender, connectorSpaceName);
       setUpdatedAt(feature, creationTime);
@@ -92,6 +93,19 @@ public class ConnectorInterfaceWriteExecute {
     event.setDeleteFeatures(Map.of()); // Connector requires empty map instead of no-field or null
 
     return event;
+  }
+
+  private static void assertUuidMatch(
+      NakshaContext context, XyzFeature feature, RequestSender sender, String connectorSpaceName) {
+    String uuid = feature.getProperties().getXyzNamespace().getUuid();
+    if (uuid != null) {
+      String uuidFromDb = getUuidFromDb(context, feature, sender, connectorSpaceName);
+      if (!uuid.equals(uuidFromDb)) {
+        throw new ConflictException(
+            "The feature with id %s cannot be replaced. The provided UUID doesn't match the UUID of the head state: %s"
+                .formatted(feature.getId(), uuidFromDb));
+      }
+    }
   }
 
   private static void setCreatedAt(XyzFeature feature, long creationTime) {
@@ -114,9 +128,13 @@ public class ConnectorInterfaceWriteExecute {
     feature.getProperties().getXyzNamespace().setUuid(UUID.randomUUID().toString());
   }
 
-  private static void setPuuidFromUuid(XyzFeature feature) {
+  private static void setPuuidFromUuid(
+      NakshaContext context, XyzFeature feature, RequestSender sender, String connectorSpaceName) {
     XyzNamespace xyzNamespace = feature.getProperties().getXyzNamespace();
     String uuid = xyzNamespace.getUuid();
+    if (uuid == null) {
+      uuid = getUuidFromDb(context, feature, sender, connectorSpaceName);
+    }
     xyzNamespace.setPuuid(uuid);
   }
 
@@ -153,11 +171,33 @@ public class ConnectorInterfaceWriteExecute {
     }
   }
 
+  private static String getUuidFromDb(
+      NakshaContext context, XyzFeature feature, RequestSender sender, String connectorSpaceName) {
+    try {
+      Result result = getFeatureFromDb(context, feature, sender, connectorSpaceName);
+      ForwardCursor<XyzFeature, XyzFeatureCodec> xyzFeatureCursor = result.getXyzFeatureCursor();
+      xyzFeatureCursor.next();
+      return xyzFeatureCursor
+          .getFeature()
+          .getProperties()
+          .getXyzNamespace()
+          .getUuid();
+    } catch (NoCursor e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   private static Result getFeatureFromDb(
       NakshaContext context, XyzFeature feature, RequestSender sender, String connectorSpaceName) {
     ReadFeaturesProxyWrapper getFeaturesRequest = new ReadFeaturesProxyWrapper().withReadRequestType(GET_BY_ID);
     getFeaturesRequest.addQueryParameter(FEATURE_ID, feature.getId());
     getFeaturesRequest.addCollection(connectorSpaceName);
     return ConnectorInterfaceReadExecute.execute(context, getFeaturesRequest, sender);
+  }
+
+  public static class ConflictException extends IllegalStateException {
+    public ConflictException(String message) {
+      super(message);
+    }
   }
 }

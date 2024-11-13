@@ -55,6 +55,8 @@ public class HttpStorageWriteSession implements IWriteSession {
         case dataHubConnector -> ConnectorInterfaceWriteExecute.execute(
             context, (WriteXyzFeatures) writeRequest, requestSender);
       };
+    } catch (ConnectorInterfaceWriteExecute.ConflictException e) {
+      return new ErrorResult(XyzError.CONFLICT, e.getMessage(), e);
     } catch (Exception e) {
       log.warn("We got exception while executing Write request.", e);
       return new ErrorResult(XyzError.EXCEPTION, e.getMessage(), e);
