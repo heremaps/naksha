@@ -51,6 +51,7 @@ inline operator fun Double.compareTo(other: Int64): Int {
 inline fun Double.toInt64RawBits(value: Double): Int64 = Platform.toInt64RawBits(value)
 inline fun Double.toLongRawBits(value: Double): Long = Platform.toInt64RawBits(value).toLong()
 inline fun Long.toInt64(): Int64 = Platform.longToInt64(this)
+inline fun Int.toInt64(): Int64 = Platform.toInt64(this)
 
 inline fun <K : Any, V : Any> AtomicMap(): AtomicMap<K, V> = Platform.newAtomicMap()
 inline fun AtomicInt(initialValue: Int = 0): AtomicInt = Platform.newAtomicInt(initialValue)

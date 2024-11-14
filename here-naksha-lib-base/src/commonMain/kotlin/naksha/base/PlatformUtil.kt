@@ -58,6 +58,13 @@ class PlatformUtil {
         val FLOAT_MIN: Double = Platform.toDoubleRawBits(Int64(0x36a0000000000000L))
 
         /**
+         * A single milliseconds.
+         */
+        @JsStatic
+        @JvmField
+        val MILLISECOND = Int64(1)
+
+        /**
          * A second in milliseconds.
          */
         @JsStatic
@@ -84,6 +91,13 @@ class PlatformUtil {
         @JsStatic
         @JvmField
         val DAY = Int64(24 * 60 * 60 * 1000)
+
+        /**
+         * A multiplier to convert milliseconds to microseconds or a divider, to turn microseconds into millis.
+         */
+        @JsStatic
+        @JvmField
+        val MILLIS_TO_MICROS = Int64(1000)
 
         /**
          * The default size of a view. This is used at various placed.
