@@ -3,6 +3,7 @@
 package naksha.model
 
 import naksha.jbon.IDictManager
+import naksha.jbon.JbDictionary
 import naksha.model.objects.NakshaCollection
 import kotlin.js.JsExport
 
@@ -53,4 +54,10 @@ interface ICollection : IDictManager {
     // TODO: Add:
     //       fun create(collection: NakshaCollection, session: IWriteSession)
     //       fun delete(session: IWriteSession)
+
+    override fun putDictionary(dict: JbDictionary) = map.storage.putDictionary(dict)
+    override fun deleteDictionary(dict: JbDictionary): Boolean = map.storage.deleteDictionary(dict)
+    override fun getDictionary(id: String): JbDictionary? = map.storage.getDictionary(id)
+    override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary?
+        = map.storage.getEncodingDictionary(feature, context?:this)
 }

@@ -54,7 +54,7 @@ open class NakshaContext protected constructor() {
      * @since 2.0.7
      */
     open var appName: String
-        get() = _appName ?: defaultAppName.get() ?: DEFAULT_APP_NAME
+        get() = _appName ?: defaultAppName.get() ?: throw NakshaException(ILLEGAL_STATE, "Missing appName")
         set(value) {
             _appName = value
         }
@@ -66,7 +66,7 @@ open class NakshaContext protected constructor() {
      * @since 2.0.7
      */
     open var appId: String
-        get() = _appId ?: defaultAppId.get() ?: DEFAULT_APP_ID
+        get() = _appId ?: defaultAppId.get() ?: throw NakshaException(ILLEGAL_STATE, "Missing appId")
         set(value) {
             _appId = value
         }
@@ -80,7 +80,7 @@ open class NakshaContext protected constructor() {
     open fun getAppIdOr(alternative: String): String = _appId ?: alternative
 
     /**
-     * Returns the appId or throws a [NakshaError.ILLEGAL_STATE].
+     * Returns the appId or throws a [ILLEGAL_STATE].
      * @return the appId.
      * @since 2.0.7
      */
@@ -157,13 +157,13 @@ open class NakshaContext protected constructor() {
     /**
      * The map to use.
      *
-     * The map-id is read from the JWT `mapId` claim, but can be overridden by the client using the HTTP header `X-Map-Id` or by using specially crafted requests which explicitly specify the map-id. If neither is available, the default is [DEFAULT_MAP_ID].
+     * The map-id is read from the JWT `mapId` claim, but can be overridden by the client using the HTTP header `X-Map-Id` or by using specially crafted requests which explicitly specify the map-id. If neither is available, the default is [defaultMapId].
      *
      * Note: In `lib-psql` the default map is mapped to the default schema configured within the storage driver.
      * @since 3.0.0
      */
     open var mapId: String
-        get() = _mapId ?: defaultMapId.get() ?: DEFAULT_MAP_ID
+        get() = _mapId ?: defaultMapId.get() ?: throw NakshaException(ILLEGAL_STATE, "Missing map-id")
         set(value) {
             _mapId = value
         }
@@ -351,42 +351,31 @@ open class NakshaContext protected constructor() {
     @Suppress("OPT_IN_USAGE")
     companion object NakshaContextCompanion {
         /**
-         * The default map-identifier used by Naksha.
-         */
-        const val DEFAULT_MAP_ID = "unimap"
-
-        /**
-         * The immutable default app-name to be used, if nothing else is available (defined at build time).
-         */
-        const val DEFAULT_APP_NAME = "NakshaClient/${NakshaVersion.LATEST}"
-
-        /**
-         * The immutable default app-id to be used, if nothing else is available (defined at build time).
-         */
-        const val DEFAULT_APP_ID = "anonymous"
-
-        /**
-         * The default map-identifier to use.
+         * The default map-identifier to use, defaults to `unimap`.
+         * @since 3.0.0
          */
         @JvmField
-        val defaultMapId = AtomicRef(DEFAULT_MAP_ID)
+        val defaultMapId = AtomicRef("unimap")
 
         /**
-         * The default application name to use.
+         * The default application name to use, defaults to `NakshaClient/{version}`.
+         * @since 3.0.0
          */
         @JvmField
-        val defaultAppName = AtomicRef(DEFAULT_APP_NAME)
+        val defaultAppName = AtomicRef("NakshaClient/${NakshaVersion.LATEST}")
 
         /**
-         * The default application identifier to use.
+         * The default application identifier to use, defaults to `null`.
+         * @since 3.0.0
          */
         @JvmField
-        val defaultAppId = AtomicRef(DEFAULT_APP_ID)
+        val defaultAppId = AtomicRef<String>(null)
 
         /**
          * The default exclude path to use, when calculating hashes.
          *
          * This is an application wide setting, that when not being _null_, will cause all contexts that have no exclude path, to use this one!
+         * @since 3.0.0
          */
         @JvmField
         val defaultExcludePaths = AtomicRef<List<Array<String>>>(null)
@@ -395,30 +384,35 @@ open class NakshaContext protected constructor() {
          * The default exclude function to use, when calculating hashes.
          *
          * This is an application wide setting, that when not being _null_, will cause all contexts that have no exclude function, to use this one!
+         * @since 3.0.0
          */
         @JvmField
         val defaultExcludeFn = AtomicRef<Fn3<Boolean, NakshaFeature, List<String>, Any?>>(null)
 
         /**
          * The application wide default time in milliseconds to wait for the TCP handshake.
+         * @since 3.0.0
          */
         @JvmField
         val defaultConnectTimeout = AtomicInt(60_000)
 
         /**
          * The application wide default time in milliseconds to wait for the TCP socket when reading or writing from it.
+         * @since 3.0.0
          */
         @JvmField
         val defaultSocketTimeout = AtomicInt(60_000)
 
         /**
          * The application wide default statement-timeout in milliseconds, this means how long to wait for each CREATE, UPDATE or DELETE to be executed.
+         * @since 3.0.0
          */
         @JvmField
         val defaultStmtTimeout = AtomicInt(60_000)
 
         /**
          * The application wide default lock-timeout in milliseconds, when the storage has to use locking.
+         * @since 3.0.0
          */
         @JvmField
         val defaultLockTimeout = AtomicInt(10_000)
@@ -426,6 +420,7 @@ open class NakshaContext protected constructor() {
         /**
          * Returns the map-id to use by default.
          * @return the map-id to use by default.
+         * @since 3.0.0
          */
         @JvmStatic
         @JsStatic
@@ -434,6 +429,7 @@ open class NakshaContext protected constructor() {
         /**
          * Returns the current application name.
          * @return the current application name.
+         * @since 3.0.0
          */
         @JvmStatic
         @JsStatic
@@ -442,6 +438,7 @@ open class NakshaContext protected constructor() {
         /**
          * Returns the current application identifier.
          * @return the current application identifier.
+         * @since 3.0.0
          */
         @JvmStatic
         @JsStatic

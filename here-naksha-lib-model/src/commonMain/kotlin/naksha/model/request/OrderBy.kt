@@ -5,7 +5,7 @@ package naksha.model.request
 import naksha.base.NotNullEnum
 import naksha.base.NullableProperty
 import naksha.base.AnyObject
-import naksha.model.request.query.TupleColumn
+import naksha.model.request.query.MetaColumn
 import naksha.model.request.query.SortOrder
 import naksha.model.request.query.SortOrder.SortOrderCompanion.ANY
 import naksha.model.request.query.SortOrder.SortOrderCompanion.DESCENDING
@@ -35,7 +35,7 @@ open class OrderBy() : AnyObject() {
      * @param next if a second-level order is requested, for example order by `id` and then by `txn`, and finally by `uid`.
      */
     @JsName("of")
-    constructor(column: TupleColumn? = null, order: SortOrder = SortOrder.ANY, next: OrderBy? = null) : this() {
+    constructor(column: MetaColumn? = null, order: SortOrder = SortOrder.ANY, next: OrderBy? = null) : this() {
         this.column = column
         this.order = order
         this.next = next
@@ -54,29 +54,29 @@ open class OrderBy() : AnyObject() {
          */
         @JsStatic
         @JvmStatic
-        fun version(): OrderBy = OrderBy(TupleColumn.version(), DESCENDING, OrderBy(TupleColumn.uid(), DESCENDING))
+        fun version(): OrderBy = OrderBy(MetaColumn.tupleNumber())
 
         /**
          * Supported ordering by `id` and `version`.
          */
         @JsStatic
         @JvmStatic
-        fun id(): OrderBy = OrderBy(TupleColumn.id(), next = version())
+        fun id(): OrderBy = OrderBy(MetaColumn.id(), next = version())
 
         /**
          * Supported ordering by `author`, `updatedAt`, `id`, and `version`.
          */
         @JsStatic
         @JvmStatic
-        fun author(): OrderBy = OrderBy(TupleColumn.author(), next = OrderBy(TupleColumn.updatedAt(), DESCENDING, id()))
+        fun author(): OrderBy = OrderBy(MetaColumn.author(), next = OrderBy(MetaColumn.updatedAt(), DESCENDING, id()))
 
-        private val COLUMN_NULL = NullableProperty<OrderBy, TupleColumn>(TupleColumn::class)
+        private val COLUMN_NULL = NullableProperty<OrderBy, MetaColumn>(MetaColumn::class)
         private val ORDER_ENUM = NotNullEnum<OrderBy, SortOrder>(SortOrder::class) { _, _ -> SortOrder.ANY }
         private val ORDER_BY_NULL = NullableProperty<OrderBy, OrderBy>(OrderBy::class)
     }
 
     /**
-     * The [row column][TupleColumn] by which to order, if _null_, then ordering is requested, but no specific order is needed.
+     * The [row column][MetaColumn] by which to order, if _null_, then ordering is requested, but no specific order is needed.
      */
     var column by COLUMN_NULL
 

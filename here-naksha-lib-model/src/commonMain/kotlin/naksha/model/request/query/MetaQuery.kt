@@ -20,14 +20,14 @@ open class MetaQuery() : AnyObject(), IMetaQuery {
      * @param value the parameter value of the operation.
      */
     @JsName("of")
-    constructor(column: TupleColumn, op: AnyOp, value: Any? = null) : this() {
+    constructor(column: MetaColumn, op: AnyOp, value: Any? = null) : this() {
         this.column = column
         this.op = op
         this.value = value
     }
 
     companion object PropertyQueryCompanion {
-        private val COLUMNS = NotNullProperty<MetaQuery, TupleColumn>(TupleColumn::class)
+        private val COLUMNS = NotNullProperty<MetaQuery, MetaColumn>(MetaColumn::class)
         private val QUERY_OP = NotNullProperty<MetaQuery, AnyOp>(AnyOp::class)
         private val ANY = NullableProperty<MetaQuery, Any>(Any::class)
     }

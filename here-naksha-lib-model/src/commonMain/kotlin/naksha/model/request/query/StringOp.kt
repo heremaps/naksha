@@ -7,7 +7,8 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
- * All string operations.
+ * A subset of the [query operations][AnyOp], limited to string compares.
+ * @since 3.0.0
  */
 @JsExport
 class StringOp : AnyOp() {
@@ -18,6 +19,13 @@ class StringOp : AnyOp() {
         @JvmField
         @JsStatic
         val EQUALS = def(StringOp::class, "equals")
+
+        /**
+         * Tests if the field value is not a string, or does not equal to the given parameter value.
+         */
+        @JvmField
+        @JsStatic
+        val NOT_EQUALS = def(StringOp::class, "not_equals")
 
         /**
          * Tests if the field value is a string, and starts with the given parameter value.

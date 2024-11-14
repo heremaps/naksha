@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import naksha.model.objects.Transaction
 import naksha.model.request.*
 import kotlin.js.JsExport
 
@@ -95,22 +94,22 @@ interface ISession : AutoCloseable {
      * @return the list of the loaded [tuples][Tuple], contains _null_, if the tuple was not found.
      * @since 3.0.0
      */
+    @Deprecated(
+        message = "Use fetchTuples",
+        replaceWith = ReplaceWith("fetchTuples(resultTuples)"),
+        level = DeprecationLevel.WARNING
+    )
     fun getTuples(tupleNumbers: Array<TupleNumber>, fetchFromHistory:Boolean = false, mode: FetchMode = FETCH_ALL): List<Tuple?>
 
     /**
      * Fetches all tuples in the given result-tuples.
      *
-     * @param resultTuples a list of result-tuples to fetch.
+     * @param featureTuples a list of result-tuples to fetch.
      * @param from the index of the first result-tuples to fetch.
      * @param to the index of the first result-tuples to ignore.
      * @param fetchFromHistory if the history should be queried.
      * @param mode the fetch mode.
      * @since 3.0.0
      */
-    fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int = 0, to: Int = resultTuples.size, fetchFromHistory: Boolean = false, mode: FetchMode = FETCH_ALL)
-
-    /**
-     * Current transaction data.
-     */
-    fun transaction(): Transaction
+    fun fetchTuples(featureTuples: List<FeatureTuple?>, from: Int = 0, to: Int = featureTuples.size, fetchFromHistory: Boolean = false, mode: FetchMode = FETCH_ALL)
 }

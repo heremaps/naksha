@@ -41,6 +41,12 @@ open class NakshaFeature() : AnyObject() {
         const val FEATURE_TYPE = "Feature"
 
         /**
+         * The key of geometry (`geometry`).
+         * @since 3.0.0
+         */
+        const val GEOMETRY = "geometry"
+
+        /**
          * Read the feature from a JSON string.
          * @return the [NakshaFeature] deserialized from the given JSON.
          * @since 3.0.0

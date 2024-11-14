@@ -3,6 +3,7 @@
 package naksha.model
 
 import naksha.jbon.IDictManager
+import naksha.jbon.JbDictionary
 import kotlin.js.JsExport
 
 /**
@@ -86,4 +87,10 @@ interface IMap : IDictManager {
      * @since 3.0.0
      */
     fun delete(session: IWriteSession? = null)
+
+    override fun putDictionary(dict: JbDictionary) = storage.putDictionary(dict)
+    override fun deleteDictionary(dict: JbDictionary): Boolean = storage.deleteDictionary(dict)
+    override fun getDictionary(id: String): JbDictionary? = storage.getDictionary(id)
+    override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary?
+        = storage.getEncodingDictionary(feature, context ?: this)
 }

@@ -3,7 +3,6 @@
 package naksha.model.request
 
 import naksha.base.fn.Fn
-import naksha.base.fn.Fn1
 import kotlin.js.JsExport
 
 /**
@@ -11,5 +10,5 @@ import kotlin.js.JsExport
  */
 @JsExport
 interface ResultFilter : Fn {
-    fun filter(resultTuple: ResultTuple): ResultTuple?
+    fun filter(featureTuple: FeatureTuple): FeatureTuple?
 }

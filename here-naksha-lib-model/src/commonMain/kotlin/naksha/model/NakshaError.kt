@@ -40,16 +40,22 @@ open class NakshaError() : AnyObject() {
         const val EXCEPTION = "Exception"
 
         /**
-         * Returned when an already initialized storage is initialized, providing a wrong identifier.
+         * Returned when an already initialized storage is initialized, providing a wrong _storage-id_ and/or _storage-number_.
          * @since 3.0.0
          */
         const val STORAGE_ID_MISMATCH = "StorageIdMismatch"
 
         /**
-         * Returned something requires initialisation before some method can be invoked.
+         * Returned when something requires initialisation before a certain method can be invoked.
          * @since 3.0.0
          */
         const val UNINITIALIZED = "Uninitialized"
+
+        /**
+         * Returned when initialisation failed.
+         * @since 3.0.0
+         */
+        const val INITIALIZATION_FAILED = "InitializationFailed"
 
         /**
          * A provided identifier is not allowed.
@@ -190,13 +196,6 @@ open class NakshaError() : AnyObject() {
          * @since 3.0.0
          */
         const val FEATURE_NOT_FOUND = "FeatureNotFound"
-
-        /**
-         * Thrown if the storage does not support multiple maps (only default map may be used).
-         *
-         * @since 3.0.0
-         */
-        const val MAP_NOT_SUPPORTED = "MapNotSupported"
 
         /**
          * A map does exist, but is expected to not exist.

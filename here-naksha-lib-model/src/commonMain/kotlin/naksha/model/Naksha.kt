@@ -2,14 +2,11 @@
 
 package naksha.model
 
-import naksha.base.Int64
-import naksha.base.Platform
+import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.fromJSON
 import naksha.base.Platform.PlatformCompanion.gzipDeflate
 import naksha.base.Platform.PlatformCompanion.gzipInflate
 import naksha.base.Platform.PlatformCompanion.toJSON
-import naksha.base.PlatformMap
-import naksha.geo.GeoUtil
 import naksha.geo.GeoUtil.GeoUtil_C.fromEWKB
 import naksha.geo.GeoUtil.GeoUtil_C.fromTWKB
 import naksha.geo.GeoUtil.GeoUtil_C.fromWKB
@@ -32,14 +29,18 @@ import naksha.model.GeoEncoding.GeoEncoding_C.WKB
 import naksha.model.GeoEncoding.GeoEncoding_C.WKB_GZIP
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaProperties
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
- * Utility singleton.
+ * Utility singleton of the Naksha `lib-models`.
  * @since 3.0.0
  */
 @JsExport
@@ -52,18 +53,22 @@ class Naksha private constructor() {
         const val VIRT_PREFIX = "naksha~"
 
         /**
+         * The identifier of the virtual (internal) administration map.
+         * @since 3.0.0
+         */
+        const val VIRT_ADMIN_MAP = "naksha~admin"
+
+        /**
+         * The number of the virtual (internal) administration map.
+         * @since 3.0.0
+         */
+        const val VIRT_ADMIN_MAP_NUMBER = 0
+
+        /**
          * The identifier of the virtual collection in which transactions are stored.
          * @since 3.0.0
          */
         const val VIRT_TRANSACTIONS = "naksha~transactions"
-
-        /**
-         * The quoted identifier of the virtual collection in which transactions are stored.
-         * @since 3.0.0
-         */
-        @JvmField
-        @JsStatic
-        val VIRT_TRANSACTIONS_QUOTED = quoteIdent(VIRT_TRANSACTIONS)
 
         /**
          * The collection-number of the virtual collection in which transactions are stored.
@@ -72,24 +77,16 @@ class Naksha private constructor() {
         const val VIRT_TRANSACTIONS_NUMBER = 0
 
         /**
-         * The identifier of the virtual collection in which the collections them-self are stored.
+         * The identifier of the virtual collection in which the maps are stored.
          * @since 3.0.0
          */
-        const val VIRT_COLLECTIONS = "naksha~collections"
+        const val VIRT_MAPS = "naksha~maps"
 
         /**
-         * The quoted identifier of the virtual collections collection to be used in queries.
+         * The collection-number of the virtual collection in which the maps are stored.
          * @since 3.0.0
          */
-        @JvmField
-        @JsStatic
-        val VIRT_COLLECTIONS_QUOTED = quoteIdent(VIRT_COLLECTIONS)
-
-        /**
-         * The collection-number of the virtual collection in which the collections them-self are stored.
-         * @since 3.0.0
-         */
-        const val VIRT_COLLECTIONS_NUMBER = 1
+        const val VIRT_MAPS_NUMBER = 1
 
         /**
          * The identifier of the virtual collection in which the dictionaries are stored.
@@ -104,12 +101,22 @@ class Naksha private constructor() {
         const val VIRT_DICTIONARIES_NUMBER = 2
 
         /**
-         * The quoted identifier of the virtual collection in which the dictionaries are stored.
+         * The identifier of the virtual collection in which the collections them-self are stored.
          * @since 3.0.0
          */
-        @JvmField
-        @JsStatic
-        val VIRT_DICTIONARIES_QUOTED = quoteIdent(VIRT_DICTIONARIES)
+        const val VIRT_COLLECTIONS = "naksha~collections"
+
+        /**
+         * The collection-number of the virtual collection in which the collections them-self are stored.
+         * @since 3.0.0
+         */
+        const val VIRT_COLLECTIONS_NUMBER = 0
+
+        /**
+         * The maximum length of identifiers.
+         * @since 3.0.0
+         */
+        const val MAX_ID_LENGTH = 45
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:
@@ -124,7 +131,7 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun isValidId(id: String?): Boolean {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > 32) return false
+            if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_ID_LENGTH) return false
             var i = 0
             var c = id[i++]
             // First character must be a-z
@@ -150,7 +157,7 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun verifyId(id: String?): String {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > 32) {
+            if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_ID_LENGTH) {
                 throw NakshaException(ILLEGAL_ID, "The given identifier is null, empty or has more than 32 characters", id = id)
             }
             var i = 0
@@ -168,58 +175,6 @@ class Naksha private constructor() {
                 }
             }
             return id
-        }
-
-        /**
-         * Quotes a string literal, this means to replace all single quotes (`'`) with two single quotes (`''`). This encloses the string with quotation characters, when needed.
-         * @param parts the literal parts to merge and quote.
-         * @return The quoted literal.
-         * @since 3.0.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun quoteLiteral(vararg parts: String): String {
-            val sb = StringBuilder()
-            sb.append("E'")
-            for (part in parts) {
-                for (c in part) {
-                    when (c) {
-                        '\'' -> sb.append('\'').append('\'')
-                        '\\' -> sb.append('\\').append('\\')
-                        else -> sb.append(c)
-                    }
-                }
-            }
-            sb.append('\'')
-            return sb.toString()
-        }
-
-        /**
-         * Quotes an identifier, this means to replace all double quotes (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
-         * @param parts the identifier parts to merge and quote.
-         * @return the quoted identifier.
-         * @since 3.0.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun quoteIdent(vararg parts: String): String {
-            if (parts.isEmpty()) throw NakshaException(ILLEGAL_ARGUMENT, "The given parts must not be empty")
-            var quoted = false
-            val sb = StringBuilder()
-            sb.append('"')
-            for (part in parts) {
-                for (c in part) {
-                    when (c) {
-                        in 'a'..'z', in 'A'..'Z', in '0'..'9','_' -> sb.append(c)
-                        '"' -> { quoted = true; sb.append('"').append('"') }
-                        '\\' -> { quoted = true; sb.append('\\').append('\\') }
-                        else -> { quoted = true; sb.append(c) }
-                    }
-                }
-            }
-            if (!quoted) return if (parts.size == 1) return parts[0] else sb.substring(1)
-            sb.append('"')
-            return sb.toString()
         }
 
         /**
@@ -248,7 +203,8 @@ class Naksha private constructor() {
         /**
          * Decode the [Naksha feature][NakshaFeature] from the given [tuple][Tuple].
          *
-         * This method will query the [NakshaCache] to get the [dictionary-manager][IDictManager].
+         * This method will query the [cache] to get the [dictionary-manager][IDictManager].
+         * - Throws [NakshaError.DICT_MANAGER_NOT_FOUND], if a [dictionary-manager][IDictManager] is needed to decode the [Tuple], but not available in [cache].
          * @param tuple the tuple to decode.
          * @return the Naksha feature, _null_ if decoding failed or _null_ was given.
          * @since 3.0.0
@@ -258,7 +214,7 @@ class Naksha private constructor() {
         fun decodeTuple(tuple: Tuple): NakshaFeature {
             val sn = tuple.storageNumber
             val meta = tuple.meta
-            val dictManager = NakshaCache.getDictManager(sn) ?: NakshaCache.getStorage(sn)
+            val dictManager = getStorage(sn) ?: cacheRef.get()
             val feature = decodeFeature(tuple.feature, meta.flags, dictManager) ?: NakshaFeature()
             feature.properties.xyz = XyzNs.fromMetadata(meta)
             val xyz = feature.properties.xyz
@@ -276,22 +232,76 @@ class Naksha private constructor() {
          *
          * The best way to use the [collection][ICollection] into which the tuple should be inserted as [dictionary-manager][IDictManager], the next best thing is use the [map][IMap] into which it should be stored, eventually using the [storage][IStorage] is better than nothing, aka _null_ (no [dictionary-manager][IDictManager]).
          * @param feature the feature to encode.
-         * @param dictManager the [dictionary-manager] to use to encode the feature.
-         * @param flags the encoding flags, should be [DEFAULT_FLAGS].
+         * @param dictionary the [dictionary][IDict] to use to encode the feature; _null_ if encoding should be done storage agnostic.
+         * @param flags the encoding flags or _null_, if [DEFAULT_FLAGS] should be used.
          * @return the encoded [Tuple].
          * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
-        fun encodeTuple(feature: NakshaFeature, dictManager: IDictManager?, flags: Flags = DEFAULT_FLAGS): Tuple {
+        fun encodeTuple(feature: NakshaFeature, dictionary: IDict? = null, flags: Flags? = null): Tuple {
             val xyz = feature.properties.xyz
             val meta = Metadata.fromXyzNs(xyz) ?: Metadata.UNDEFINED
-            val dict = dictManager?.getEncodingDictionary(feature)
+            val flagsOrDefault = flags ?: DEFAULT_FLAGS
+            val featureBytes = encodeFeature(feature, flagsOrDefault, dictionary)
+            val geoBytes = encodeGeometry(feature.geometry, flagsOrDefault)
+            val refPoint = encodeGeometry(feature.referencePoint, TWKB)
+            val tagsBytes = encodeTags(xyz.tags.toTagMap(), flagsOrDefault, dictionary)
+            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, feature.attachment, IS_COMPLETE)
+        }
+
+        /**
+         * Encode the given [NakshaFeature] into a [Tuple] for the given [storage][IStorage].
+         *
+         * @param feature the feature to encode.
+         * @param storage the [storage][IStorage] for which to encode the feature.
+         * @return the encoded [Tuple].
+         * @since 3.0.0
+         */
+        @JsStatic
+        @JvmStatic
+        @JsName("encodeTupleForStorage")
+        fun encodeTuple(feature: NakshaFeature, storage: IStorage): Tuple {
+            val xyz = feature.properties.xyz
+            val meta = Metadata.fromXyzNs(xyz) ?: Metadata.UNDEFINED
+            val dict = storage.getEncodingDictionary(feature)
+            val flags = storage.getEncodingFlags(feature)
             val featureBytes = encodeFeature(feature, flags, dict)
             val geoBytes = encodeGeometry(feature.geometry, flags)
             val refPoint = encodeGeometry(feature.referencePoint, TWKB)
             val tagsBytes = encodeTags(xyz.tags.toTagMap(), flags, dict)
             return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, feature.attachment, IS_COMPLETE)
+        }
+
+        /**
+         * Encodes the given [NakshaFeature] into bytes, skipping over the [geometry][NakshaFeature.geometry] or the [XYZ-namespace][XyzNs].
+         * @param feature the feature to encode.
+         * @param flags the codec flags.
+         * @param dict the dictionary to use for encoding; if any.
+         * @return the encoded feature.
+         * @since 3.0.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun encodeFeature(feature: NakshaFeature?, flags: Flags, dict: IDict?): ByteArray? {
+            if (feature.isNullOrEmpty()) return null
+            val encoding = flags.featureEncoding()
+            var byteArray: ByteArray? = null
+            if (encoding == JSON || encoding == JSON_GZIP) {
+                // We do not want to encode geometry.
+                val f = feature.copy<NakshaFeature>(false)
+                f.removeRaw(NakshaFeature.GEOMETRY)
+                // We do not want to encode properties.@ns:com:here:xyz.
+                val p = feature.properties.copy<NakshaProperties>(false)
+                p.removeRaw(NakshaProperties.XYZ_KEY)
+                val encoded = toJSON(f)
+                byteArray = encoded.encodeToByteArray()
+            } else if (encoding == JBON || encoding == JBON_GZIP) {
+                val encoder = JbEncoder(dict)
+                byteArray = encoder.buildFeatureFromMap(feature)
+            }
+            if (flags.featureGzip() && byteArray != null) byteArray = gzipDeflate(byteArray)
+            return byteArray
         }
 
         /**
@@ -304,7 +314,7 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun decodeFeature(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): NakshaFeature? {
+        fun decodeFeature(bytes: ByteArray?, flags: Flags, dictManager: IDictManager?): NakshaFeature? {
             if (bytes == null || bytes.isEmpty()) return null
             var raw = bytes
             if (flags.featureGzip()) raw = gzipInflate(bytes)
@@ -322,31 +332,6 @@ class Naksha private constructor() {
         }
 
         /**
-         * Encodes the given [NakshaFeature] into bytes.
-         * @param feature the feature to encode.
-         * @param flags the codec flags.
-         * @param dict the dictionary to use for encoding; if any.
-         * @return the encoded feature.
-         * @since 3.0.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun encodeFeature(feature: NakshaFeature?, flags: Flags, dict: JbDictionary? = null): ByteArray? {
-            if (feature == null) return null
-            val encoding = flags.featureEncoding()
-            var byteArray: ByteArray? = null
-            if (encoding == JSON || encoding == JSON_GZIP) {
-                val encoded = toJSON(feature)
-                byteArray = encoded.encodeToByteArray()
-            } else if (encoding == JBON || encoding == JBON_GZIP) {
-                val encoder = JbEncoder(dict)
-                byteArray = encoder.buildFeatureFromMap(feature)
-            }
-            if (flags.featureGzip() && byteArray != null) byteArray = Platform.gzipDeflate(byteArray)
-            return byteArray
-        }
-
-        /**
          * Decode the Naksha tags.
          * @param bytes the bytes to decode.
          * @param flags the codec flags.
@@ -356,7 +341,7 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun decodeTags(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): TagMap? {
+        fun decodeTags(bytes: ByteArray?, flags: Flags, dictManager: IDictManager?): TagMap? {
             if (bytes == null || bytes.isEmpty()) return null
             var raw = bytes
             if (flags.tagsGzip()) raw = gzipInflate(bytes)
@@ -383,8 +368,8 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun encodeTags(tags: TagMap?, flags: Flags, dict: JbDictionary? = null): ByteArray? {
-            if (tags == null) return null
+        fun encodeTags(tags: TagMap?, flags: Flags, dict: IDict?): ByteArray? {
+            if (tags.isNullOrEmpty()) return null
             val encoding = flags.tagsEncoding()
             var byteArray: ByteArray? = null
             if (encoding == TagsEncoding.JSON || encoding == TagsEncoding.JSON_GZIP) {
@@ -443,5 +428,163 @@ class Naksha private constructor() {
             }
             return if (encoding.geoGzip() && bytes != null) gzipDeflate(bytes) else bytes
         }
+
+        /**
+         * A lock that is used to modify static values atomically.
+         * @since 3.0.0
+         */
+        @JvmField
+        internal val lock = Platform.newLock()
+
+        /**
+         * All registered storages by [storage-number][IStorage.number].
+         * @since 3.0.0
+         */
+        @JvmField
+        internal val storagesByNumber = AtomicMap<Int64, IStorage>()
+
+        /**
+         * All registered storages by [storage-id][IStorage.id].
+         * @since 3.0.0
+         */
+        @JvmField
+        internal val storagesById = AtomicMap<String, IStorage>()
+
+        /**
+         * Returns a list of all currently registered storages.
+         * @since 3.0.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun listStorages(): List<IStorage> = storagesByNumber.map { (_, storage) -> storage }
+
+        /**
+         * Register the given storage, this method should be called by [IStorage.initStorage].
+         * @param storage the storage to add.
+         * @return the added storage.
+         * @since 3.0.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun addStorage(storage: IStorage): IStorage {
+            var added = false
+            lock.acquire().use {
+                val existing = storagesById.putIfAbsent(storage.id, storage)
+                if (existing != null) {
+                    if (existing === storage) return storage // This storage was already added.
+                    throw NakshaException(ILLEGAL_STATE, "Another storage with the same id ('${storage.id}') is registered already, existing number: ${existing.number}, provided number: ${storage.number}")
+                }
+                storagesByNumber[storage.number] = storage
+                added = true
+            }
+            if (added) cacheRef.get()?.addedStorage(storage)
+            return storage
+        }
+
+        /**
+         * Unregister the given storage, removes all cached [Tuple] of this storage, should be called by [IStorage.close].
+         * @param storage the storage to remove.
+         * @return the removed storage.
+         * @since 3.0.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun removeStorage(storage: IStorage): IStorage {
+            var removed = false
+            lock.acquire().use {
+                if (storagesById.remove(storage.id, storage)) {
+                    storagesByNumber.remove(storage.number)
+                    removed = true
+                }
+            }
+            if (removed) cacheRef.get()?.removedStorage(storage)
+            return storage
+        }
+
+        /**
+         * Returns the storage with the given identifier.
+         * @param storageId the storage-id.
+         * @return the storage, if added to cache.
+         */
+        @JvmStatic
+        @JsStatic
+        @JsName("getStorageById")
+        fun getStorage(storageId: String): IStorage? = storagesById[storageId]
+
+        /**
+         * Returns the storage with the given number.
+         * @param storageNumber the storage-number.
+         * @return the storage, if added to cache.
+         */
+        @JvmStatic
+        @JsStatic
+        fun getStorage(storageNumber: Int64): IStorage? = storagesByNumber[storageNumber]
+
+        /**
+         * Returns the storage for the given tuple-number.
+         * @param tupleNumber the tuple-number.
+         * @return the storage, if added to cache.
+         */
+        @JvmStatic
+        @JsStatic
+        @JsName("getStorageByTupleNumber")
+        fun getStorage(tupleNumber: TupleNumber): IStorage? = storagesByNumber[tupleNumber.storageNumber]
+
+        /**
+         * Returns the storage with the given number.
+         * - Throws [NakshaError.STORAGE_NOT_FOUND], if no such storage is added to the [cache].
+         * @param storageId the storage-id.
+         * @return the storage.
+         */
+        @JvmStatic
+        @JsStatic
+        @JsName("useStorageById")
+        fun useStorage(storageId: String): IStorage = storagesById[storageId]
+            ?: throw NakshaException(STORAGE_NOT_FOUND, "No storage found for storage-id: $storageId", id=storageId)
+
+        /**
+         * Returns the storage with the given number.
+         * - Throws [NakshaError.STORAGE_NOT_FOUND], if no such storage is added to the [cache].
+         * @param storageNumber the storage-number.
+         * @return the storage.
+         */
+        @JvmStatic
+        @JsStatic
+        fun useStorage(storageNumber: Int64): IStorage = storagesByNumber[storageNumber]
+            ?: throw NakshaException(STORAGE_NOT_FOUND, "No storage found for storage-number: $storageNumber", id=storageNumber.toString())
+
+        /**
+         * The reference to the first [tuple-cache][ITupleCache].
+         *
+         * By default, this will be the [TupleHeapCache], applications can reorganize the cache, for example add a second-level cache (like local filesystem or localhost redis), third-level (remote redis), fourth-level (S3 buckets) or whatever wanted.
+         *
+         * It is strongly recommended to only use caches that extend [AbstractTupleCache], and then simply to call [start][AbstractTupleCache.start], which will initialize the cache, acquire the [lock], and add the cache to the correct position in the cache chain, releasing the [lock]. This base class ensures that all contracts of [ITupleCache] are followed as specified.
+         *
+         * - **Warning**: It is highly recommended to keep the [TupleHeapCache] as the first level cache, even while it is possible to remove or replace it, it is strongly discouraged, because many libraries take advantage of the heap-cache and intrinsically expect it to be there!
+         * - **Warning**: Setting the cache to _null_ can cause plenty of unexpected exceptions, because a lot of code requires some cache via [cache].
+         * @since 3.0.0
+         */
+        @JvmField
+        @JsStatic
+        val cacheRef = AtomicRef<ITupleCache>(TupleHeapCache())
+
+        /**
+         * Returns the [tuple cache][ITupleCache], usage like:
+         * ```kotlin
+         * // rs = ResultTupleList
+         * val result = Naksha.cache.load(rs)
+         * ```
+         * ```java
+         * // rs = ResultTupleList
+         * final ResultTupleList result = Naksha.cache.load(rs, 0, rs.size())
+         * ```
+         * - Throws [ILLEGAL_STATE], if no cache is available ([cacheRef] is _null_). This only happens, when an application explicitly removes all caches.
+         * @return the [cache][ITupleCache] for [Tuple].
+         * @since 3.0.0
+         */
+        @JvmStatic
+        @JsStatic
+        val cache: ITupleCache
+            get() = cacheRef.get() ?: throw NakshaException(ILLEGAL_STATE, "No cache available")
     }
 }

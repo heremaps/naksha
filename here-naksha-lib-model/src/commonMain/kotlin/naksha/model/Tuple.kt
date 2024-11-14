@@ -3,15 +3,13 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.model.NakshaError.NakshaErrorCompanion.DICT_MANAGER_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 /**
- * A tuple represents a specific immutable state of a feature.
+ * A tuple represents a specific immutable state of a feature on the heap. The default constructor creates a metadata-only entry.
  * @since 3.0.0
  */
 @JsExport
@@ -30,20 +28,23 @@ data class Tuple(
 
     /**
      * Geometry encoded with [GeoEncoding] algorithm described by [Metadata.flags].
+     *
      * Might be _null_, when the feature does not have a geometry.
      * @since 3.0.0
      */
     @JvmField val geo: ByteArray? = null,
 
     /**
-     * Geometry-Reference-Point, encoded with the [GeoEncoding] algorithm described by [Metadata.flags].
-     * Might be _null_, when the feature does not have a reference point.
+     * Geometry-Reference-Point, always a single [point][naksha.geo.SpPoint], [TWKB](https://github.com/TWKB/Specification) encoded (no compression, we never get any advantage of compression).
+     *
+     * Might be _null_, when the feature does not have a reference point, in that the [geo-grid HERE tile-id][Metadata.calculateGeoGrid] is calculated from the gravitational center of the [geometry][geo], or, if the feature does not have a geometry either, then it is calculated from the [id][Metadata.id] of the feature.
      * @since 3.0.0
      */
     @JvmField val referencePoint: ByteArray? = null,
 
     /**
      * Tags encoded with [TagsEncoding] algorithm described by [Metadata.flags].
+     *
      * Might be _null_, when the feature does not have any tags.
      * @since 3.0.0
      */
@@ -61,7 +62,7 @@ data class Tuple(
      * If the client wants to create a tuple for internal purpose or to write a new state into a storage, then it should use [IS_COMPLETE].
      * @since 3.0.0
      */
-    @JvmField val state: FetchState,
+    @JvmField val state: FetchState = META_BIT,
 ) : ITuple {
 
     override fun equals(other: Any?): Boolean {
@@ -72,42 +73,63 @@ data class Tuple(
     override fun hashCode(): Int = super.hashCode()
 
     /**
-     * Return the [tuple-number][TupleNumber] of the [Tuple].
+     * The [identifier][Metadata.id] of the feature, basically `meta.id`.
+     * @since 3.0.0
+     */
+    val id: String
+        get() = meta.id
+
+    /**
+     * The [tuple-number][TupleNumber] of the [Tuple].
      * @since 3.0.0
      */
     val tupleNumber: TupleNumber
-        get() = meta.tupleNumber()
+        get() = meta.tupleNumber
 
     /**
-     * Return the number of the storage in which the tuple is stored.
+     * The number of the storage in which the tuple is stored.
      * @since 3.0.0
      */
     val storageNumber: Int64
         get() = meta.storageNumber
 
     /**
-     * Return the number of the map in which the tuple is stored.
+     * The number of the map in which the tuple is stored.
      * @since 3.0.0
      */
     val mapNumber: Int
-        get() = meta.storeNumber.mapNumber()
+        get() = meta.mapNumber
 
     /**
-     * Return the number of the collection in which the tuple is stored.
+     * The number of the collection in which the tuple is stored.
      * @since 3.0.0
      */
     val collectionNumber: Int
-        get() = meta.storeNumber.collectionNumber()
+        get() = meta.collectionNumber
 
     /**
-     * Return the partition-number in the tuple is stored.
+     * The partition-number in the tuple is stored.
      * @since 3.0.0
      */
     val partitionNumber: Int
-        get() = meta.storeNumber.partitionNumber()
+        get() = meta.partitionNumber
 
     /**
-     * Convert the tuple into a [Naksha feature][NakshaFeature], using the [NakshaCache] to query for the [dictionary-manager][naksha.jbon.IDictManager].
+     * The version of the [Tuple].
+     * @since 3.0.0
+     */
+    val version: Version
+        get() = meta.version
+
+    /**
+     * The version local unique identifier of the [Tuple].
+     * @since 3.0.0
+     */
+    val uid: Int
+        get() = meta.uid
+
+    /**
+     * Convert the tuple into a [Naksha feature][NakshaFeature], using the [Naksha.cache] to query for the [dictionary-manager][naksha.jbon.IDictManager].
      *
      * There is no caching involved, every call of this method will perform another convertion.
      * @return this tuple as Naksha feature.
@@ -124,7 +146,7 @@ data class Tuple(
     fun toGuid(): Guid {
         var g = guid
         if (g == null) {
-            g = Guid(meta.id, meta.tupleNumber())
+            g = Guid(meta.id, meta.tupleNumber)
             guid = g
         }
         return g
@@ -177,4 +199,8 @@ data class Tuple(
     fun isComplete(): Boolean = state.fetchAll()
 
     override fun toTuple(): Tuple = this
+
+    // TODO: toByteArray - if isComplete, this method should create a single binary out of the tuple, so that it can be stored in a cache!
+    // TODO: fromByteArray - restore from the binary form
 }
+

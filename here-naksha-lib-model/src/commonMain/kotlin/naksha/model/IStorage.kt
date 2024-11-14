@@ -10,9 +10,11 @@ import kotlin.js.JsName
 /**
  * Any entity implementing the [IStorage] interface represents some data-sink, and comes with an implementation that grants access to the data. The storage normally is a singleton that opens many sessions in parallel.
  *
- * Storages operate on maps. A map is an isolated data sink within the same storage (like an own database schema, an own S3 bucket, an own SQLite database, an own directory or file, aso.). Some implementations only support one map, but if multiple maps are supported, a map is a fully separated storage entity. Each map has its own collections, while the transaction log, dictionaries, and other administrative information are stored in an own virtual map named `naksha~admin`. Some storages allow to access multiple maps from one session, others may limit a session to a single map.
+ * Storages operate on maps. All storages do have an administrative map ([Naksha.VIRT_ADMIN_MAP]), which can be virtual or real, implementation dependent. In this virtual admin-map the storage exposes and manages the custom maps it stores, the transaction-logs of the storage, and the global dictionaries needed for the [JBON](https://github.com/heremaps/naksha/blob/v3/docs/JBON.md).
  *
- * The [IDictManager] implementation of a storage normally accepts for [getEncodingDictionary(feature, context)][IDictManager.getEncodingDictionary] [IMap] or [ICollection] as context. Providing a map-number, map-id, collection-number or collection-id would be ambiguous, because it would not be clear if a map is referred to, or a collection. The implementation may automatically resolve such ambiguity in any way or simply ignore such a context. Therefore, it is recommended to provide the instances, rather than the number or id.
+ * All other maps are custom maps, which are isolated data sinks within the same storage (like an own database schema, an own S3 bucket, an own SQLite database, an own directory or file, aso.). Each custom map is a fully separated storage entity. Some storages allow to access multiple maps from one session, others may limit a session to a single map, and will reject cross map operations with [NakshaError.UNSUPPORTED_OPERATION].
+ *
+ * The [IDictManager] implementation of a storage normally accepts for [getEncodingDictionary(feature, context)][IDictManager.getEncodingDictionary] an [IMap] or [ICollection] as context. Providing a map-number, map-id, collection-number or collection-id would be ambiguous, because it would not be clear if a map is referred to, or a collection. The implementation may automatically resolve such ambiguity in any way or simply ignore such a context. Therefore, it is recommended to provide the instances, rather than the number or id. Generally the storage will mainly use the provided _feature_ to find the best dictionary to use.
  *
  * @since 2.0.7
  */
@@ -38,9 +40,7 @@ interface IStorage : IDictManager, AutoCloseable {
     /**
      * The admin options to use for internal processing.
      *
-     * They are needed for administrative work, reading dictionaries, collection information, create administrative structures. The application can override the defaults to have more control over the `appId` and/or `author` being written, when internal data is processed, and how internal connections authenticate (`appName`).
-     *
-     * If not set, some defaults are read from [NakshaContext] application level defaults, others are internally generated (like `appName`).
+     * They are needed for administrative work, reading dictionaries, collection information, create administrative structures. The application can override the defaults to have more control over the `appId` and/or `author` being written, when internal data is processed, and how internal connections authenticate (`appName`). The default is, when creating an admin-context, to use the values from the current thread-local [NakshaContext].
      * @since 3.0.0
      */
     val adminOptions: SessionOptions
@@ -67,9 +67,11 @@ interface IStorage : IDictManager, AutoCloseable {
      *
      * This operation requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights.
      *
-     * This method will register the storage with the [NakshaCache].
+     * This method will register the storage with the [Naksha].
      *
      * - Throws [NakshaError.FORBIDDEN], if not called as super-user.
+     * - Throws [NakshaError.INITIALIZATION_FAILED], if the initialization failed.
+     * - Throws [NakshaError.STORAGE_ID_MISMATCH], if the existing _storage-id_ and/or _storage-number_ does not match the given one.
      * @param id the identifier of the storage (_added in v3.0.0_).
      * @param number the number of the storage (_added in v3.0.0_).
      * @param params optional special parameters that are storage dependent to influence how a storage is initialized.
@@ -162,7 +164,7 @@ interface IStorage : IDictManager, AutoCloseable {
     @v30_experimental
     fun getMapId(tupleNumber: TupleNumber): String? {
         if (tupleNumber.storageNumber != number) return null
-        return getMapId(tupleNumber.mapNumber())
+        return getMapId(tupleNumber.mapNumber)
     }
 
     /**
@@ -174,9 +176,9 @@ interface IStorage : IDictManager, AutoCloseable {
     @v30_experimental
     fun getCollectionId(tupleNumber: TupleNumber): String? {
         if (tupleNumber.storageNumber != number) return null
-        val map = get(tupleNumber.mapNumber()) ?: return null
+        val map = get(tupleNumber.mapNumber) ?: return null
         if (!map.exists()) return null
-        return map.getCollectionId(tupleNumber.collectionNumber())
+        return map.getCollectionId(tupleNumber.collectionNumber)
     }
 
     // TODO: We should move this into IWriteSession so that we can implement it using an advisory lock!
@@ -219,9 +221,19 @@ interface IStorage : IDictManager, AutoCloseable {
     /**
      * Shutdown the storage instance, blocks until the storage is down (all sessions are closed).
      *
-     * This method will remove the instance from the [NakshaCache].
+     * This method will remove the instance from the [Naksha].
      *
      * @since 2.0.7
      */
     override fun close()
+
+    /**
+     * The best flags to encode the given feature.
+     *
+     * @param feature the feature to encode; _null_ if no specific one is available.
+     * @param context the context in which the encoding happens (for example the [map][IMap] or [collection][ICollection]); _null_ if none is available.
+     * @return best flags to use for encoding.
+     * @since 3.0.0
+     */
+    fun getEncodingFlags(feature: Any?, context: Any? = null): Flags = DEFAULT_FLAGS
 }

@@ -23,4 +23,25 @@ open class NakshaException(@JvmField val error: NakshaError) : RuntimeException(
      */
     @JsName("of")
     constructor(code: String, msg: String, id: String? = null, cause: Throwable? = null) : this(NakshaError(code, msg, id, cause))
+
+    /**
+     * The error code, like for example [NakshaError.UNINITIALIZED].
+     * @since 3.0.0
+     */
+    val code: String
+        get() = error.code
+
+    /**
+     * The human-readable error message, like for example "This property must not be null".
+     * @since 3.0.0
+     */
+    val msg: String
+        get() = error.msg
+
+    /**
+     * An optional identifier that relates to the error.
+     * @since 3.0.0
+     */
+    val id: String?
+        get() = error.id
 }

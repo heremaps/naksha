@@ -1,6 +1,7 @@
 package naksha.model
 
 import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_SHIFT
+import naksha.model.FlagsBits.FlagsBitsCompanion.OP_SHIFT
 import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_CLEAR
 import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_SHIFT
 import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_CLEAR
@@ -19,12 +20,12 @@ class FlagsTest {
         assertEquals(GeoEncoding.TWKB, flags.geoEncoding())
         assertEquals(FeatureEncoding.JBON, flags.featureEncoding())
         assertEquals(TagsEncoding.JBON, flags.tagsEncoding())
-        assertEquals(ActionValues.CREATED, flags.action())
+        assertEquals(Action.CREATED.intValue, flags.action())
     }
 
     @Test
     fun shouldProperlySetGeometryEncoding() {
-        val flags = Flags().geoEncoding(GeoEncoding.EWKB)
+        val flags = Flags().withGeoEncoding(GeoEncoding.EWKB)
 
         assertEquals(GeoEncoding.EWKB, flags.geoEncoding())
         assertEquals(GeoEncoding.EWKB, flags)
@@ -33,7 +34,7 @@ class FlagsTest {
 
     @Test
     fun shouldProperlySetFeatureEncoding() {
-        val flags = Flags(0).featureEncoding(FeatureEncoding.JBON_GZIP)
+        val flags = Flags(0).withFeatureEncoding(FeatureEncoding.JBON_GZIP)
 
         assertEquals(FeatureEncoding.JBON_GZIP, flags.featureEncoding())
         assertEquals(FeatureEncoding.JBON_GZIP, flags)
@@ -42,7 +43,7 @@ class FlagsTest {
 
     @Test
     fun shouldProperlySetTagsEncoding() {
-        val flags = Flags(0).tagsEncoding(TagsEncoding.JBON_GZIP)
+        val flags = Flags(0).withTagsEncoding(TagsEncoding.JBON_GZIP)
 
         assertEquals(TagsEncoding.JBON_GZIP, flags.tagsEncoding())
         assertEquals(TagsEncoding.JBON_GZIP, flags)
@@ -55,22 +56,25 @@ class FlagsTest {
         var flags = 0
 
         // when
-        flags = flags.geoEncoding(15 shl GEO_SHIFT)
-        flags = flags.featureEncoding(15 shl FEATURE_SHIFT)
-        flags = flags.tagsEncoding(15 shl TAGS_SHIFT)
-        flags = flags.action(3 shl ACTION_SHIFT)
+        flags = flags.withGeoEncoding(15 shl GEO_SHIFT)
+        flags = flags.withFeatureEncoding(15 shl FEATURE_SHIFT)
+        flags = flags.withTagsEncoding(15 shl TAGS_SHIFT)
+        flags = flags.withAction(3 shl ACTION_SHIFT)
+        flags = flags.withOperation( 15 shl OP_SHIFT)
 
         // then
-        assertEquals(16383, flags)
+        val expectation = (15 shl GEO_SHIFT) or (15 shl FEATURE_SHIFT) or (15 shl TAGS_SHIFT) or (3 shl ACTION_SHIFT) or ( 15 shl OP_SHIFT)
+        assertEquals(expectation, flags)
         assertEquals(15, flags.geoEncoding() shr GEO_SHIFT)
         assertEquals(15, flags.featureEncoding() shr FEATURE_SHIFT)
         assertEquals(15, flags.tagsEncoding() shr TAGS_SHIFT)
         assertEquals(3, flags.action() shr ACTION_SHIFT)
+        assertEquals(15, flags.operation() shr OP_SHIFT)
     }
 
     @Test
     fun testGeometryGzip() {
-        var flags: Flags = Flags().geoEncoding(GeoEncoding.GEO_JSON)
+        var flags: Flags = Flags().withGeoEncoding(GeoEncoding.GEO_JSON)
         assertFalse(flags.geoGzip())
 
         flags = flags.geoGzipOn()
@@ -84,7 +88,7 @@ class FlagsTest {
 
     @Test
     fun testFeatureGzip() {
-        var flags: Flags = Flags().featureEncoding(FeatureEncoding.JSON)
+        var flags: Flags = Flags().withFeatureEncoding(FeatureEncoding.JSON)
         assertFalse(flags.featureGzip())
 
         flags = flags.featureGzipOn()
@@ -98,7 +102,7 @@ class FlagsTest {
 
     @Test
     fun testTagsGzip() {
-        var flags: Flags = Flags().tagsEncoding(TagsEncoding.JSON)
+        var flags: Flags = Flags().withTagsEncoding(TagsEncoding.JSON)
         assertFalse(flags.tagsGzip())
 
         flags = flags.tagsGzipOn()

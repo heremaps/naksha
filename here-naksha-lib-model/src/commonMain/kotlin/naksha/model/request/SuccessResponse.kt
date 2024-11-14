@@ -25,7 +25,7 @@ open class SuccessResponse @Deprecated("Use secondary", ReplaceWith("SuccessResp
     }
 
     @JsName("ofTuples")
-    constructor(tuples: List<ResultTuple>) : this() {
+    constructor(tuples: List<FeatureTuple>) : this() {
         this.tuples.addAll(tuples)
         this.features.addAll(tuples.map { it.feature })
     }
