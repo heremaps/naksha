@@ -19,18 +19,18 @@
 package com.here.naksha.lib.view;
 
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.ResultTuple;
+import naksha.model.request.FeatureTuple;
 
 public class ViewLayerFeature {
 
-  private final ResultTuple tuple;
+  private final FeatureTuple tuple;
 
   // priority 0 - is highest
   private final int storagePriority;
 
   private final ViewLayer viewLayerRef;
 
-  public ViewLayerFeature(ResultTuple tuple, int storagePriority, ViewLayer viewLayerRef) {
+  public ViewLayerFeature(FeatureTuple tuple, int storagePriority, ViewLayer viewLayerRef) {
     this.tuple = tuple;
     this.storagePriority = storagePriority;
     this.viewLayerRef = viewLayerRef;
@@ -48,7 +48,7 @@ public class ViewLayerFeature {
     return tuple.getFeature();
   }
 
-  public ResultTuple getTuple() {
+  public FeatureTuple getTuple() {
     return tuple;
   }
 }

@@ -5,9 +5,8 @@ import naksha.base.JvmInt64;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ExecutedOp;
-import naksha.model.request.ResultTuple;
+import naksha.model.request.FeatureTuple;
 import naksha.psql.PgUtil;
-import org.apache.logging.log4j.core.config.plugins.convert.TypeConverters.ByteArrayConverter;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -43,9 +42,9 @@ public class MergeByStoragePriorityTest {
     Tuple tu2 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF2, null, null, null, null);
     Tuple tu3 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF3, null, null, null, null);
 
-    ResultTuple t1 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, tu1);
-    ResultTuple t2 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, tu2);
-    ResultTuple t3 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, tu3);
+    FeatureTuple t1 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu1);
+    FeatureTuple t2 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu2);
+    FeatureTuple t3 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu3);
 
     singleRowFeatures.add(new ViewLayerFeature(t1, 1, null));
     singleRowFeatures.add(new ViewLayerFeature(t2, 0, null));
@@ -79,9 +78,9 @@ public class MergeByStoragePriorityTest {
     Tuple tu2 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF2, null, null, null, null);
     Tuple tu3 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF3, null, null, null, null);
 
-    ResultTuple t1 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, tu1);
-    ResultTuple t2 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, tu2);
-    ResultTuple t3 = new ResultTuple(storage, tupleNum, ExecutedOp.READ, tu3);
+    FeatureTuple t1 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu1);
+    FeatureTuple t2 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu2);
+    FeatureTuple t3 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu3);
 
     singleRowFeatures.add(new ViewLayerFeature(t1, 0, null));
     singleRowFeatures.add(new ViewLayerFeature(t2, 0, null));

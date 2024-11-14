@@ -22,7 +22,7 @@ import naksha.base.JvmInt64;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ExecutedOp;
-import naksha.model.request.ResultTuple;
+import naksha.model.request.FeatureTuple;
 import naksha.psql.PgUtil;
 
 import java.util.ArrayList;
@@ -52,21 +52,21 @@ public class Sample {
           null
           );
 
-  public static List<ResultTuple> sampleXyzResponse(int size, IStorage storage) {
-    List<ResultTuple> returnList = new ArrayList<>();
+  public static List<FeatureTuple> sampleXyzResponse(int size, IStorage storage) {
+    List<FeatureTuple> returnList = new ArrayList<>();
     for (int i = 0; i < size; i++) {
       byte[] bytesFeature = PgUtil.encodeFeature(new NakshaFeature(), 0, null);
       Tuple tuple = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesFeature, null, null, null, null);
-      returnList.add(new ResultTuple(storage, tupleNum, ExecutedOp.READ, tuple));
+      returnList.add(new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tuple));
     }
     return returnList;
   }
-  public static List<ResultTuple> sampleXyzWriteResponse(int size, IStorage storage, ExecutedOp op) {
-    List<ResultTuple> returnList = new ArrayList<>();
+  public static List<FeatureTuple> sampleXyzWriteResponse(int size, IStorage storage, ExecutedOp op) {
+    List<FeatureTuple> returnList = new ArrayList<>();
     for (int i = 0; i < size; i++) {
       byte[] bytesFeature = PgUtil.encodeFeature(new NakshaFeature(), 0, null);
       Tuple tuple = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesFeature, null, null, null, null);
-      returnList.add(new ResultTuple(storage, tupleNum, op,tuple));
+      returnList.add(new FeatureTuple(storage, tupleNum, op,tuple));
     }
     return returnList;
   }

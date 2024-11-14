@@ -19,7 +19,7 @@
 package com.here.naksha.lib.view;
 
 import java.util.List;
-import naksha.model.request.ResultTuple;
+import naksha.model.request.FeatureTuple;
 
 public interface MergeOperation {
 
@@ -38,5 +38,5 @@ public interface MergeOperation {
    * @return
    */
   // TODO should we know from which storage result comes from? If yes then we should return SingleStorageRow instead.
-  ResultTuple apply(List<ViewLayerFeature> multipleResults);
+  FeatureTuple apply(List<ViewLayerFeature> multipleResults);
 }

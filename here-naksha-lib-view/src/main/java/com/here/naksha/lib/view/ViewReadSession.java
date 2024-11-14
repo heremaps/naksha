@@ -150,7 +150,7 @@ public class ViewReadSession implements IReadSession {
     Merging: [ <featureId_1, [Layer0_Feature1, Layer1_Feature1, Layer2_Feature1]> ]
     into final result:  [ Feature1 ]
      */
-    List<ResultTuple> mergedRows =
+    List<FeatureTuple> mergedRows =
         multiLayerRows.values().stream().map(mergeOperation::apply).collect(toList());
 
     return new ViewSuccessResult(mergedRows, null);
@@ -261,7 +261,7 @@ public class ViewReadSession implements IReadSession {
 
   @Override
   public void fetchTuples(
-      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {}
+      @NotNull List<? extends FeatureTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {}
 
   @Override
   public @NotNull Transaction transaction() {

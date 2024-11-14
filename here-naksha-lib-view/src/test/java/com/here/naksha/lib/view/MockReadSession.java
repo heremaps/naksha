@@ -26,16 +26,16 @@ import naksha.model.TupleNumber;
 import naksha.model.objects.Transaction;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
-import naksha.model.request.ResultTuple;
+import naksha.model.request.FeatureTuple;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class MockReadSession implements IReadSession {
 
-  List<ResultTuple> results;
+  List<FeatureTuple> results;
 
-  public MockReadSession(List<ResultTuple> results) {
+  public MockReadSession(List<FeatureTuple> results) {
     this.results = results;
   }
 
@@ -120,7 +120,7 @@ public class MockReadSession implements IReadSession {
   }
 
   @Override
-  public void fetchTuples(@NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
+  public void fetchTuples(@NotNull List<? extends FeatureTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
 
   }
 

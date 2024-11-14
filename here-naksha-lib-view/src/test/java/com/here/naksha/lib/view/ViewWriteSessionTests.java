@@ -101,7 +101,7 @@ public class ViewWriteSessionTests extends PsqlTests {
         assertEquals(1d, ((PointCoord) feature.getGeometry().getCoordinates()).getLongitude());
         assertTrue(feature.getProperties().containsKey("testProperty"));
         assertEquals("test", feature.getProperties().get("testProperty").toString());
-        assertSame(Action.UPDATED, response1.getTuples().get(0).tuple.meta.action());
+        assertSame(Action.UPDATED_VALUE, response1.getTuples().get(0).tuple.meta.action());
 
         writeSession.commit();
 
@@ -195,7 +195,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
 
     assertNotNull(response.getTuples().get(0));
-    assertSame(Action.DELETED, Objects.requireNonNull(response.getTuples().get(0).tuple).meta.action());
+    assertSame(Action.DELETED_VALUE, Objects.requireNonNull(response.getTuples().get(0).tuple).meta.action());
         assertEquals(FEATURE_ID, response.getFeatures().get(0).getId());
 
       writeSession.commit();

@@ -65,7 +65,7 @@ public class ViewTest {
     ViewLayer topologiesCS = new ViewLayer(storage, "topologies");
 
     // each layer is going to return 3 same records
-    List<ResultTuple> results = sampleXyzResponse(3, storage);
+    List<FeatureTuple> results = sampleXyzResponse(3, storage);
     when(storage.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS, buildingsDS, topologiesCS);
@@ -84,7 +84,7 @@ public class ViewTest {
     assertInstanceOf(SuccessResponse.class,result);
 
     // then
-    List<ResultTuple> allFeatures = ((SuccessResponse) result).getTuples();
+    List<FeatureTuple> allFeatures = ((SuccessResponse) result).getTuples();
     assertEquals(3, allFeatures.size());
     assertTrue(allFeatures.containsAll(results));
   }
@@ -158,7 +158,7 @@ public class ViewTest {
     ViewLayer topologiesDS = new ViewLayer(topologiesStorage, "topologies");
     ViewLayer buildingsDS = new ViewLayer(buildingsStorage, "buildings");
 
-    List<ResultTuple> results = sampleXyzResponse(3,topologiesStorage);
+    List<FeatureTuple> results = sampleXyzResponse(3,topologiesStorage);
     when(topologiesStorage.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
     when(buildingsStorage.newReadSession(sessionOptions)).thenReturn(readSession);
 
@@ -180,7 +180,7 @@ public class ViewTest {
     ViewLayer topologiesDS_1 = new ViewLayer(topologiesStorage_1, TOPO);
     ViewLayer topologiesDS_2 = new ViewLayer(topologiesStorage_2, TOPO);
 
-    List<ResultTuple> results = sampleXyzResponse(3, topologiesStorage_2);
+    List<FeatureTuple> results = sampleXyzResponse(3, topologiesStorage_2);
     when(topologiesStorage_1.newReadSession(sessionOptions)).thenReturn(readSession);
     when(topologiesStorage_2.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
 
