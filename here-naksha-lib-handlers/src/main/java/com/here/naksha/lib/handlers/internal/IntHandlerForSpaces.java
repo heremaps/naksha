@@ -60,7 +60,9 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
       return new ErrorResponse(
               NakshaError.NOT_FOUND,
           "Following handlers defined for Space %s don't exist: %s"
-                  .formatted(space.getId(), String.join(",", missingHandlerIds)), null, null);
+                  .formatted(space.getId(), String.join(",", missingHandlerIds)),
+              null,
+              null);
     }
   }
 
@@ -68,9 +70,8 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
     List<String> expectedHandlerIds = space.getEventHandlerIds();
     ReadFeatures getEventHandlersRequest = readFeaturesByIdsRequest(EVENT_HANDLERS, expectedHandlerIds);
     try (IReadSession readSession = nakshaHub().getSpaceStorage().newReadSession(currentContext(), false)) {
-      Response result = readSession.execute(getEventHandlersRequest)
-        return missingHandlersIds(result, expectedHandlerIds);
-
+      Response result = readSession.execute(getEventHandlersRequest);
+      return missingHandlersIds(result, expectedHandlerIds);
     }
   }
 

@@ -55,7 +55,8 @@ public class MockValidationHandler extends AbstractEventHandler {
   private static final String MOCK_VIOLATIONS_FILE = "mock_data/dry_run_violations.json";
   private static final TypeReference<List<NakshaFeature>> LIST_FEATURE_TYPE_REF = new TypeReference<>() {
   };
-  private static final List<NakshaFeature> mockViolations = parseJsonFile(MOCK_VIOLATIONS_FILE, LIST_FEATURE_TYPE_REF);
+  private static final List<NakshaFeature> mockViolations =
+          parseJsonFile(MOCK_VIOLATIONS_FILE, LIST_FEATURE_TYPE_REF);
   private static final int totalViolations = mockViolations.size();
 
   public MockValidationHandler(

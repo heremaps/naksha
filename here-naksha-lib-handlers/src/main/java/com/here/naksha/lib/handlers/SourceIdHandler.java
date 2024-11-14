@@ -25,10 +25,9 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
 import naksha.geo.XyzProperties;
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.Request;
-import naksha.model.request.Response;
-import naksha.model.request.WriteRequest;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
+import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,8 +57,7 @@ public class SourceIdHandler extends AbstractEventHandler {
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
     final Request request = event.getRequest();
-    if (request instanceof ReadFeatures
-            || request instanceof WriteRequest) {
+    if (request instanceof ReadFeatures || request instanceof WriteRequest) {
       return PROCESS;
     }
     return SEND_UPSTREAM_WITHOUT_PROCESSING;
@@ -74,15 +72,13 @@ public class SourceIdHandler extends AbstractEventHandler {
       transformPropertyOperation(readRequest);
     } else if (request instanceof WriteRequest wr) {
       // Write request
-      List<XyzFeatureCodec> codecList = null;
-      if (wr instanceof WriteXyzFeatures wf) {
-        codecList = wf.features;
-      } else if (wr instanceof ContextWriteXyzFeatures cwf) {
-        codecList = cwf.features;
+      WriteList codecList = wr.getWrites();
+      if (wr instanceof ContextWriteXyzFeatures cwf) {
+        codecList = cwf.getWrites();
       }
-      if (codecList != null) {
+      if (!codecList.isEmpty()) {
         codecList.stream()
-            .map(XyzFeatureCodec::getFeature)
+                .map(Write::getFeature)
             .filter(Objects::nonNull)
             .forEachOrdered(this::setSourceIdTags);
       }
@@ -107,8 +103,8 @@ public class SourceIdHandler extends AbstractEventHandler {
     }
   }
 
-  private void setSourceIdTags(XyzFeature feature) {
-    XyzProperties properties = feature.getProperties();
+  private void setSourceIdTags(NakshaFeature feature) {
+    NakshaProperties properties = feature.getProperties();
     getSourceIdFromFeature(properties).ifPresent(sourceId -> updateTagsWithSourceIdProperty(properties, sourceId));
   }
 

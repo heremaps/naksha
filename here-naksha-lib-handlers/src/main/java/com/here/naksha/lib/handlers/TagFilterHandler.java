@@ -26,10 +26,7 @@ import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.Request;
-import naksha.model.request.Response;
-import naksha.model.request.WriteRequest;
+import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -113,19 +110,17 @@ public class TagFilterHandler extends AbstractEventHandler {
   }
 
   public static void applyTagChangesOnRequest(
-      final @NotNull WriteFeatures<?, ?, ?> wf,
+          final @NotNull WriteRequest wf,
       final @Nullable List<String> addTags,
       final @Nullable List<String> removeTags) {
     if (isNullOrEmpty(addTags) && isNullOrEmpty(removeTags)) return;
-    List<XyzFeatureCodec> codecList = null;
-    if (wf instanceof WriteXyzFeatures wxf) {
-      codecList = wxf.features;
-    } else if (wf instanceof ContextWriteXyzFeatures cwxf) {
-      codecList = cwxf.features;
+    WriteList writeList = wf.getWrites();
+    if (wf instanceof ContextWriteXyzFeatures cwxf) {
+      writeList = cwxf.getWrites();
     }
-    if (isNotNullOrEmpty(codecList)) {
-      for (final @NotNull XyzFeatureCodec codec : codecList) {
-        applyTagChangesOnFeature(codec.getFeature(), addTags, removeTags);
+    if (isNotNullOrEmpty(writeList)) {
+      for (final @NotNull Write writeOperation : writeList) {
+        applyTagChangesOnFeature(writeOperation.getFeature(), addTags, removeTags);
       }
     }
   }
