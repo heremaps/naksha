@@ -35,7 +35,7 @@ The **version** encodes the year, month, and day when the transaction started (U
 
 The **uid** is the transaction local unique ordering tuple identifier, if multiple new tuples are created within a single transaction. It is forbidden to generate multiple tuples of the same feature within the same transaction. The reason is how the history is organized (_next-version_). Tuples are generated in order, so they can be timely ordered by _uid_. This allows to order all changes by _version_ and _uid_ to get a reliable order, which is important for paging algorithm, to split big transactions into chunks, or when ordering in queued.
 
-This way of creating the tuple-numbers, allows us to only make one call into the database to query a new transaction number from a sequence, after this we can create new world-wide unique tuple-numbers, without any need for the database. Even this initial call is a non-blocking operation, so that two transactions never need any synchronization, we use optimistic locking, if two clients modify the same data, the conflict is later resolved ([see auto-merge](#auto_merged--updated)).
+This way of creating the tuple-numbers, allows us to only make one call into the database to query a new transaction number from a sequence, after this we can create new world-wide unique tuple-numbers, without any need for the database. Even this initial call is a non-blocking operation, so that two transactions never need any synchronization, we use optimistic locking, if two clients modify the same data, the conflict is later resolved ([see auto-merge](#merged)).
 
 ### GUID
 A _GUID_ is a combination of a feature-id with a tuple-number.
@@ -85,7 +85,7 @@ This concept allows up to 4 billion transactions per day (between 0 and 4,294,96
 
 Technically this means, the maximum number of transactions per second per storage is around 49,000.
 
-## Basic Life-Cycle
+## The Life-Cycle
 The life-cycle of a features persists out of _actions_ and _operations_.
 
 The first action is always `CREATED`, then optionally one to _n_ `UPDATED`, and finally it one `DELETED`.
@@ -101,24 +101,30 @@ The `origin`, and `target` are sticky, so when updating the feature, the `origin
 
 This is actually important for [rebasing](#rebased).
 
-### FORKED / CREATED
-When a feature is created, the `action` is set to `CREATED` by the client.
+### CREATED  
+When a feature is created, the `action` is set to `CREATED`.
 
-When a _client_ wants to copy a feature from one collection into another, or to change the _ID_ of a feature in a collection, the _storage_ will detect that this happened. It will decode the _GUID_ stored in the `uuid` of the feature, and recognize, that the _GUID_ refers to a foreign feature. The storage will copy the _GUID_ read from the `uuid` of the originating state into the `origin` property to keep track of this situation. This mechanism is important to [rebase](#rebased).
+This requires that the feature does not have a `uuid`, then the _operation_ is set as well to `CREATED`.
 
-The _operation_ is either `CREATED`, when a new feature was created with no origin, or `FORKED`, when the feature is forked, so originally from a different source, and therefore an `origin` was set. Note that a client is allowed to manually set an `origin`, the storage will detect if this is a valid _GUID_ (syntactically valid), and when it is, it will switch the operation to `FORKED`, this improves indexing, and searching for features, when [rebasing](#rebased).
+### FORKED
+When a _client_ copies a feature from one collection into another, or changes the _ID_ of a feature in a collection, the _storage_ will detect that this happened, because the feature does have a not matching `uuid`. It will decode the _GUID_ stored in the `uuid` of the feature, and recognize, that the _GUID_ refers to a foreign feature. The storage will copy the _GUID_ read from the `uuid` of the originating state into the `origin` property to keep track of this situation. This mechanism is important to [rebase](#rebased).
 
-Technically the _storage_ supports an _UPSERT_ operation, which is just automatically resolved by the storage into create or update, depending on the feature exists already or is really new. The _UPSERT_ is no real individual action, it always will result in on of the other actions and operations.
+While the action is set to `CREATED`, the _operation_ is set to `FORKED`, so originates from a different source, or the _ID_ was changed.
+
+A client may manually set an `origin`, the storage will detect if this is a valid _GUID_ (syntactically valid), and when it is, it will switch the operation to `FORKED` as well, this is necessary to perform [rebasing](#rebased) later. If the `origin` is set to a value that is no valid _GUID_ the behavior is undefined, but the `origin` should still be persisted.
+
+### UPSERT
+Technically the _storage_ supports an _UPSERT_ operation, but eventually it is just automatically resolved by the _storage_ into either create or update, depending on the feature exists already, or is new. The _UPSERT_ is no real action nor an operation, it always will result in one of the other actions and operations.
 
 ### UPDATED
 When a feature is updated by the client, the `action` is set to `UPDATED` by the client.
 
-If a client wants to update a feature, it should read the feature, then modify it, and then send the modified feature back, without changing the XYZ namespace, except for the `tags`. When it does this, the change is performed atomically safe, because the `uuid` will hint the server which version was modified by the client, and is expected as current _HEAD_. If the feature was updated meanwhile by another client, the _server_ can try to perform an [auto-merge](#auto_merged--updated), otherwise it will respond with a conflict. This is what the low-level _storage_ will always do, no _storage_ does implement the auto-merging, because it would be unnecessary code replication, complicate the storage implementation, and actually will not allow business use-cast adjustment.
+If a client wants to update a feature, it should read the feature, then modify it, and then send the modified feature back, without changing the XYZ namespace, except for the `tags`. When it does this, the change is performed atomically safe, because the `uuid` will hint the server which version was modified by the client, and is expected as current _HEAD_. If the feature was updated meanwhile by another client, the _server_ can try to perform an [auto-merge](#merged), otherwise it will respond with a conflict. This is what the low-level _storage_ will always do, no _storage_ does implement the auto-merging, because it would be unnecessary code replication, complicate the storage implementation, and actually will not allow business use-cast adjustment.
 
 An `UPDATE` will never change the `origin`, or `target`, they must store the same value as before, so as the previous state referred by `prev_tn`.
 
-### AUTO_MERGED / UPDATED
-For all updates, the exact behavior is like following:
+### MERGED
+For updates, the exact behavior is like following:
 
 The client reads the latest version (_HEAD_ state) of the feature it wants to modify, we call this state _BASE_, because it is the state on which the changes the client did are _based_ upon. Now, the client modifies it into some _NEW_ state, and tries to save its changes. This only succeeds when _HEAD_ and _BASE_ are still the same. Assuming another client did the same concurrently, a conflict arises. The other client have read the same _BASE_ state, done changes, and then updated the feature. Now, the feature is in a new _HEAD_ state, with _BASE_ being a preceding state. There can be multiple changes between _BASE_ and _HEAD_ now.
 
@@ -130,7 +136,7 @@ Note, the _server_ may allow to influence the merging algorithm, but this requir
 
 This technically allows later to calculate back, what the client (and or merge code) actually modified. For this, the difference between _CURRENT_ and _BASE_ (`base_tn`) is calculated, and then the difference between _HEAD_ (`prev_tn`) and _BASE_ is subtracted, resulting in a patch that can be applied to _BASE_ (`base_tn`) to receive the original _NEW_ state the client had in memory and wanted to persist. This difference will as well document which properties were changed by the client.
 
-Eventually the action will always be `UPDATED`, while the operation will be either `UPDATED` or `AUTO_MERGED`, when an auto-merge was done by the _server_. The storage detects this on the `base_tn` being set.
+Eventually the action will always be `UPDATED`, while the operation will be either `UPDATED` or `MERGED`, dependent on if an auto-merge was done by the _server_. The storage detects this on the `base_tn` being set.
 
 The same rules apply to an auto-merge, that apply to a normal `UPDATED`, this means neither `origin` nor `target` must change, they are required to be same as the ones referred previously to (via `prev_tn`).
 
@@ -141,39 +147,39 @@ A deletion is a tombstone state, changing a feature into this state will not all
 
 It is allowed to store deleted features in a different (delta) collection. In this case, the storage will detect that the `uuid` is from a foreign storage, and store a deletion tombstone in the deletion table, and in the history. This is done, even when no such map-object ever existed in the collection (there is no _HEAD_, so the new state need to be inserted). This is needed to support views, in a view, all features that are deleted, should actually be removed from the view.
 
-### PARTED / CREATED - SPLIT / DELETED
+### SPLIT
 If the client need to _split_ a feature into multiple ones, it must clone the original feature, and modify the clones, without changing the XYZ namespace, except for _tags_. Eventually it should delete the original feature.
 
 It can perform this across storages, maps, and collections.
 
 The storage now has one feature that is `DELETED`, and multiple new features that are `CREATED`, but all have the same `uuid`, it can deduct that this is a _split_, and the feature that is deleted is the one that was split, while the new features are those being created from it.
 
-It will set the operation for the `DELETED` feature to `SPLIT`, and of all `CREATED` features to `PARTED`, copy the `uuid` into the `origin` for all involved features, so that the split features, and all parts, are referring to the `origin`. Note, that even when the feature is split within the same collection, still `origin` needs to refer to the original state, because the feature states will be modified from here on.
+It will set the operation for the `DELETED`, and `CREATED` feature to `SPLIT`, copy the `uuid` into the `origin` for all involved features, so that the split features, and all parts, are referring to the `origin`. Note, that even when the feature is split within the same collection, still `origin` needs to refer to the original state, because the feature states will be modified from here on.
 
 Assume, the foreign feature `FOO` should be split, a new deleted version `FOO'` is created from `FOO`, additionally to the new features `A`, `B`, and `C` were created, then the resulting features in the target collection will look like:
 
-- `FOO'`: operation = `SPLIT`, origin = `FOO`, target = `null`
-- `A`: operation = `PARTED`, origin = `FOO`, target - `null`
-- `B`: operation = `PARTED`, origin = `FOO`, target - `null`
-- `C`: operation = `PARTED`, origin = `FOO`, target - `null`
+- `FOO'`: operation = `SPLIT`, action = `CREATED`, origin = `FOO`, target = `null`
+- `A`: operation = `SPLIT`, action = `DELETED`, origin = `FOO`, target - `null`
+- `B`: operation = `SPLIT`, action = `DELETED`, origin = `FOO`, target - `null`
+- `C`: operation = `SPLIT`, action = `DELETED`, origin = `FOO`, target - `null`
 
 This behavior is essential later when [rebasing](#rebased).
 
-### MERGED / JOINED
+### JOIN
 If the client need to _join_ multiple features together to a single one, it should delete all features that should be joined, and create a new merged feature. The client need to advertise that this is a join, by settings the `target` on all the features to the `uuid` of the new merged feature.
 
 However, because the new feature is not yet stored, it does not have a `uuid`, the client can create a _HEAD_ _GUID_ for this case, which basically is `urn:here:naksha:guid:{feature-id}`. The storage will detect the situation and resolve it.
 
-So, when the storage finds a set of features that all have the `target` set to same `uuid`, it deducts that this is a join. It will update operation of the `DELETED` features to `JOINED`, and the operation of the `CREATED` feature to `MERGED`. The _storage_ will adjust the `target` to the real `uuid` of the created merged feature.
+So, when the storage finds a set of features that all have the `target` set to same `uuid`, it deducts that this is a join. It will update operation of the `DELETED`, and `CREATED` features to `JOINED`. The _storage_ will adjust the `target` to the real `uuid` of the created merged feature.
 
 Assuming the features `A`, `B`, and `C` should be joined into a new feature `FOO`, the client would need to create the deleted features `A'`, `B'`, and `C'`, and set the target to `urn:here:naksha:guid:FOO`, and it would do the same for `FOO`, eventually resulting in the following features written into the target collection: 
 
-- `FOO`: operation = `MERGED`, origin = null, target = `FOO`
-- `A'`: operation = `JOINED`, origin = `A`, target - `FOO`
-- `B'`: operation = `JOINED`, origin = `B`, target - `FOO`
-- `C'`: operation = `JOINED`, origin = `C`, target - `FOO`
+- `FOO`: operation = `JOINED`, action = `CREATED`, origin = null, target = `FOO`
+- `A'`: operation = `JOINED`, action = `DELETED`, origin = `A`, target - `FOO`
+- `B'`: operation = `JOINED`, action = `DELETED`, origin = `B`, target - `FOO`
+- `C'`: operation = `JOINED`, action = `DELETED`, origin = `C`, target - `FOO`
 
-## REBASED
+### REBASED
 To recap, whenever a feature is copied from a foreign storage, map, or collection, or the feature-id is changed in an update, the `origin` refers to the originating feature. When a feature is split, the `origin` refers to the feature that was split, and when features are joined, the origin refers to the features that were joined, while `target` refer to the new feature that replaces the joined ones.
 
 Eventually `origin`, and `target` are used to perform rebasing. A rebase is a complex [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge). Assume a feature is modified, then it is possible to search for all features in other storages, maps, and collections that have `origin` set to this feature.
@@ -200,7 +206,7 @@ This is a simplified description, but should allow to understand the basic conce
 ### Rebase SPLIT and JOIN
 This is out of the scope of this documentation, as it is an even more complex operation, and often requries domain knowledge to be performed correctly. However, technically, due to the `origin`, and `target` properties, plus the capabilities of the Naksha-Hub _server_ to load extensions with custom rebase algorithms, a rebase can be done successfully, and automatically, even when features have been split. If such an automatic rebasing fails, a task for a moderation should be created, so that a human can solve the situation. 
 
-## Long-Term outlook
+## Long-Term Outlook
 The lifecycle was designed so that every mobile phone, every car, every device, can be an own storage, and that users can split each storage logically into maps, and collections.
 
 We intend to split the 64-bit storage-number into parts, for example:
@@ -237,7 +243,7 @@ The concept allows to always be aware where a _Tuple_ is originally stored, and 
 
 The way tuples are created, allows to execute a query that only returns the tuple-numbers of the result-set. The data loading is then done asynchronously. This even allows peer-to-peer data transfer, ones a result-set was generated. This is a robust mechanism, so even when the internet connection breaks down, while performing the data loading, it can be recovered easily later, as long as the result-set was transferred correctly, and is cached locally. The tuples can be loaded in the background slowly, while the data in the source continues to get modified, which eventually is fixed with another synchronization, so the data is eventually consistent.
 
-## Privacy extension
+### Privacy extension
 When each device gets an own dedicated fixed storage-number, this is as if it would get a dedicated fixed IP address. For example, when the device is a car, it has a licence plate, and therefore the owner would be identifiable by the storage-number, which is against the law in most countries, except the user consent to this.
 
 For this reason, even while the car has a dedicated storage-number, it is allowed to assign itself a privacy storage-number, and use this when exporting data or connecting to other systems. So, instead of writing the true storage-number into the export, the storage will replace its own storage-number with its privacy storage-number. In all external communication it will expose this privacy storage number. This privacy number can be changed at any point in time, it can even be different for every export and connect, so a storage can have multiple privacy numbers at the same time, and these numbers are not unique, because they are random. To keep the data internally consistent, the storage will internally use its assigned (and fixed) storage-number, and can keep this number in encrypted backups, that are only accessible by the owner. So the storage will translate from privacy number back into internal real storage-number, and vice versa.

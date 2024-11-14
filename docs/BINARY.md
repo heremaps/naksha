@@ -149,11 +149,10 @@ The metadata is encoded like following:
 - updated_at: u48
 - changeCount: u32
 - hash: u32
-- geoGrid: u32
+- hereTile: u32
 - id: cstring
 - appid: cstring
 - author: cstring
-- type: cstring
 - origin: cstring
 - target: cstring
 
@@ -260,6 +259,7 @@ Technically the binary format defines how the data is encoded raw, if the data i
 ## SQL
 If we look at how the tuple-numbers and the binary format helps, we first need to look at how a search in the Postgresql database is done.
 
+### Standard Search
 The following query is how Naksha `lib-psql` will perform a search in the database:
 
 ```sql
@@ -285,6 +285,7 @@ This query guarantees, that all tuples are ordered by collection, feature-id, ve
 
 We need to limit the result to `2^24-1`, because this is the maximum length we can encode in the binary. This leads to a maximum result size of `20 + (16777215 * 16)`, which is 256 MiB, what as well protects us in producing or reading too big result-sets.
 
+### History Search
 If the HISTORY need to be queried too, then there are two basic cases. A specific version is requested, then only the selects need to be changed:
 ```sql
 WITH query AS (
@@ -315,7 +316,8 @@ This works, because we search in HEAD for features with a `txn` less than/equal 
 
 Therefore, the HEAD and HISTORY queries together guarantee that there can only be one feature that fulfills this condition, either in HEAD or in HISTORY. In a nutshell, ever feature is only found exactly ones in the searched _version_.
 
-However, if the client wants multiple tuples before the given _version_, we need to fetch multiple tuples, order them by version, then select the latest _n_ versions. To be able to do this, we modify the query into:
+### History Search with multiple version
+If the client wants multiple tuples before the given _version_, we need to fetch multiple tuples, order them by version, then select the latest _n_ versions. To be able to do this, we modify the query into:
 
 ```sql
 -- Select from HEAD.
@@ -364,7 +366,8 @@ If the client does not need all results, the limit can be decreased from the _16
 
 This has another big advantage in a multi-service environment. It allows to calculate results, or the content of tiles, and to transfer only the tuple-numbers, without actually transferring the feature payload. This is helpful in queues, when sending results between services, and basically everywhere, where the data may have security implications. When a service receives such a result-set, it can fetch the actual payload from the source, or any cache. This as well allows to perform security checks, if the receiver of the data has the right to access it. As the data is immutable, the whole process is idempotent, and therefore repeatable in a crash case.
 
-Now, finally, lets have a look on how the tuples are eventually fetched from the database, when the client really need them, and can't find them in any cache (we do not allow cross map selection):
+### Tuple Loading
+Finally, lets have a look on how the tuples are eventually fetched from the database, when the client really need them, and can't find them in any cache (we do not allow cross map selection):
 
 ```sql
 WITH source AS (
@@ -392,11 +395,10 @@ WITH source AS (
     ||substring(int8send(updated_at), 3) -- u48
     ||int4send(coalesce(change_count, 1))
     ||int4send(coalesce(hash, 0))
-    ||int4send(coalesce(geo_grid,0))
+    ||int4send(coalesce(here_tile,0))
     ||id::bytea||'\x00'::bytea
     ||coalesce(app_id,'')::bytea||'\x00'::bytea
     ||coalesce(author,'')::bytea||'\x00'::bytea
-    ||coalesce(type,'')::bytea||'\x00'::bytea
     ||coalesce(origin,'')::bytea||'\x00'::bytea
     ||coalesce(target,'')::bytea||'\x00'::bytea
   ) as meta, ref_point, geo, tags, feature, attachment
