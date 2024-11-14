@@ -251,6 +251,9 @@ actual class Platform {
         }
 
         @JsStatic
+        actual fun intToInt64(value: Int): Int64 = js("BigInt(value)").unsafeCast<Int64>()
+
+        @JsStatic
         @Suppress("NON_EXPORTABLE_TYPE")
         actual fun longToInt64(value: Long): Int64 {
             val view = convertView

@@ -307,6 +307,12 @@ actual class Platform {
         actual fun toInt64RawBits(d: Double): Int64 = longToInt64(java.lang.Double.doubleToRawLongBits(d))
 
         @JvmStatic
+        actual fun intToInt64(value: Int): Int64 {
+            if (value >= -1024 && value < 1024) return int64Cache[(value shl 21) ushr 21]
+            return longToInt64(value.toLong())
+        }
+
+        @JvmStatic
         actual fun longToInt64(value: Long): Int64 {
             if (value >= -1024 && value < 1024) return int64Cache[(value.toInt() shl 21) ushr 21]
             if (value == INT64_MAX_VALUE.toLong()) return INT64_MAX_VALUE

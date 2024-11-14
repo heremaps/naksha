@@ -321,6 +321,13 @@ expect class Platform {
         fun toInt64RawBits(d: Double): Int64
 
         /**
+         * Widen a 32-bit integer into a platform specific 64-bit integer.
+         * @param value the 32-bit integer.
+         * @return the platform specific 64-bit representation.
+         */
+        fun intToInt64(value: Int): Int64
+
+        /**
          * Converts an internal 64-bit integer into a platform specific.
          * @param value The internal 64-bit.
          * @return The platform specific 64-bit.
