@@ -22,9 +22,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
 import naksha.geo.XyzProperties;
 import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaCollection;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -63,7 +63,7 @@ public class DefaultStorageHandlerProperties extends XyzProperties {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   @JsonProperty(COLLECTION)
-  private @Nullable XyzCollection xyzCollection;
+  private @Nullable NakshaCollection xyzCollection;
 
   /**
    * Indicates whether collection should be created automatically (happens on first collection's usage).
@@ -90,7 +90,7 @@ public class DefaultStorageHandlerProperties extends XyzProperties {
   @JsonCreator
   public DefaultStorageHandlerProperties(
       final @JsonProperty(STORAGE_ID) @Nullable String storageId,
-      final @JsonProperty(COLLECTION) @Nullable XyzCollection xyzCollection,
+      final @JsonProperty(COLLECTION) @Nullable NakshaCollection xyzCollection,
       final @JsonProperty(AUTO_CREATE_COLLECTION) Boolean autoCreateCollection,
       final @JsonProperty(AUTO_DELETE_COLLECTION) Boolean autoDeleteCollection) {
     this.storageId = storageId;
@@ -101,11 +101,11 @@ public class DefaultStorageHandlerProperties extends XyzProperties {
         autoDeleteCollection == null ? DEFAULT_AUTO_DELETE_COLLECTION : autoDeleteCollection;
   }
 
-  public @Nullable XyzCollection getXyzCollection() {
+  public @Nullable NakshaCollection getXyzCollection() {
     return xyzCollection;
   }
 
-  public void setXyzCollection(final @JsonProperty(COLLECTION) @Nullable XyzCollection xyzCollection) {
+  public void setXyzCollection(final @JsonProperty(COLLECTION) @Nullable NakshaCollection xyzCollection) {
     this.xyzCollection = xyzCollection;
   }
 

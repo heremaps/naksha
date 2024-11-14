@@ -19,23 +19,24 @@
 package com.here.naksha.lib.handlers.util;
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereDeltaNs;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.ContextXyzFeatureResult;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-
-import java.util.ArrayList;
-import java.util.List;
 import naksha.model.NakshaError;
 import naksha.model.XyzNs;
 import naksha.model.mom.MomChangeState;
+import naksha.model.mom.MomDeltaNs;
 import naksha.model.mom.MomReviewState;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.ExecutedOp;
 import naksha.model.request.ResultTuple;
+import naksha.model.request.Write;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class HandlerUtil {
 
@@ -90,10 +91,9 @@ public final class HandlerUtil {
     // Add features in the request
     if (inputCodecs.isEmpty()) throw new XyzErrorException(NakshaError.ILLEGAL_ARGUMENT, "No features supplied");
     for (final Object inputCodec : inputCodecs) {
-      final XyzFeatureCodec xyzCodec =
-          checkInstanceOf(inputCodec, XyzFeatureCodec.class, "Unsupported feature codec type");
-      final XyzFeature feature =
-          HandlerUtil.checkInstanceOf(xyzCodec.getFeature(), XyzFeature.class, "Unsupported feature type");
+      final Write xyzCodec = checkInstanceOf(inputCodec, Write.class, "Unsupported feature codec type");
+      final NakshaFeature feature =
+              HandlerUtil.checkInstanceOf(xyzCodec.getFeature(), NakshaFeature.class, "Unsupported feature type");
       cwf.add(EWriteOp.get(xyzCodec.getOp()), feature);
     }
 
@@ -106,21 +106,21 @@ public final class HandlerUtil {
     return cwf;
   }
 
-  public static @NotNull List<XyzFeature> getXyzFeaturesFromCodecList(final @NotNull List<?> codecs) {
-    final List<XyzFeature> outputFeatures = new ArrayList<>();
+  public static @NotNull List<NakshaFeature> getXyzFeaturesFromCodecList(final @NotNull List<?> codecs) {
+    final List<NakshaFeature> outputFeatures = new ArrayList<>();
     for (final Object obj : codecs) {
-      final XyzFeatureCodec codec = checkInstanceOf(obj, XyzFeatureCodec.class, "Unsupported feature codec");
+      final Write codec = checkInstanceOf(obj, Write.class, "Unsupported feature codec");
       outputFeatures.add(codec.getFeature());
     }
     return outputFeatures;
   }
 
-  public static @Nullable List<XyzFeature> getXyzViolationsFromGenericList(final @Nullable List<?> violations) {
-    List<XyzFeature> outputViolations = null;
+  public static @Nullable List<NakshaFeature> getXyzViolationsFromGenericList(final @Nullable List<?> violations) {
+    List<NakshaFeature> outputViolations = null;
     if (violations != null) {
       for (final Object obj : violations) {
-        final XyzFeature violation = checkInstanceOf(
-            obj, XyzFeature.class, XyzError.EXCEPTION, "Unsupported violation feature type");
+        final NakshaFeature violation = checkInstanceOf(
+                obj, NakshaFeature.class, NakshaError.EXCEPTION, "Unsupported violation feature type");
         if (outputViolations == null) outputViolations = new ArrayList<>();
         // Add violation to output list
         outputViolations.add(violation);
@@ -129,12 +129,12 @@ public final class HandlerUtil {
     return outputViolations;
   }
 
-  public static @Nullable List<XyzFeature> getXyzContextFromGenericList(final @Nullable List<?> contextList) {
-    List<XyzFeature> outputCtx = null;
+  public static @Nullable List<NakshaFeature> getXyzContextFromGenericList(final @Nullable List<?> contextList) {
+    List<NakshaFeature> outputCtx = null;
     if (contextList != null) {
       for (final Object obj : contextList) {
-        final XyzFeature context =
-            checkInstanceOf(obj, XyzFeature.class, XyzError.EXCEPTION, "Unsupported context feature type");
+        final NakshaFeature context = checkInstanceOf(
+                obj, NakshaFeature.class, NakshaError.EXCEPTION, "Unsupported context feature type");
         if (outputCtx == null) outputCtx = new ArrayList<>();
         // Add context to output list
         outputCtx.add(context);
@@ -159,7 +159,7 @@ public final class HandlerUtil {
   public static <T> @NotNull T checkInstanceOf(
       final @Nullable Object input,
       final @NotNull Class<T> returnType,
-      final @NotNull XyzError xyzError,
+      final @NotNull NakshaError xyzError,
       final @NotNull String errDescPrefix) {
     if (input == null) {
       throw new XyzErrorException(xyzError, errDescPrefix + " - object is null.");
@@ -173,16 +173,16 @@ public final class HandlerUtil {
 
   public static <T> @NotNull T checkInstanceOf(
       final @Nullable Object input, final @NotNull Class<T> returnType, final @NotNull String errDescPrefix) {
-    return checkInstanceOf(input, returnType, XyzError.NOT_IMPLEMENTED, errDescPrefix);
+    return checkInstanceOf(input, returnType, NakshaError.NOT_IMPLEMENTED, errDescPrefix);
   }
 
   public static void setDeltaReviewState(
           final @NotNull NakshaFeature feature, final @NotNull MomReviewState reviewState) {
     final NakshaProperties properties = feature.getProperties();
     final XyzNs xyzNs = properties.getXyz();
-    final HereDeltaNs deltaNs = properties.del;
-    deltaNs.setChangeState(MomChangeState.UPDATED);
-    deltaNs.setReviewState(reviewState);
+    final MomDeltaNs deltaNs = properties.getDelta();
+    deltaNs.setChangeState(MomChangeState.UPDATED.getText());
+    deltaNs.setReviewState(reviewState.getText());
     final @NotNull List<@NotNull String> tags = tagsWithoutReviewState(xyzNs.getTags());
     tags.add(REVIEW_STATE_PREFIX + reviewState);
     xyzNs.setTags(tags, false);

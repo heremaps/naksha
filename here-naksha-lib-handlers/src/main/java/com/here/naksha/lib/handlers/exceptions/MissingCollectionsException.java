@@ -18,19 +18,19 @@
  */
 package com.here.naksha.lib.handlers.exceptions;
 
-import static com.here.naksha.lib.core.models.XyzError.NOT_FOUND;
-
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
-import naksha.model.ErrorResult;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.request.ErrorResponse;
 import org.jetbrains.annotations.NotNull;
+
+import static naksha.model.NakshaError.NOT_FOUND;
 
 public final class MissingCollectionsException extends RuntimeException {
 
-  public MissingCollectionsException(@NotNull XyzCollection collection) {
+  public MissingCollectionsException(@NotNull NakshaCollection collection) {
     super("Could not find and auto-create collection: " + collection.getId());
   }
 
-  public ErrorResult toErrorResult() {
-    return new ErrorResult(NOT_FOUND, getMessage(), this);
+  public ErrorResponse toErrorResult() {
+    return new ErrorResponse(NOT_FOUND, getMessage(), null, this);
   }
 }

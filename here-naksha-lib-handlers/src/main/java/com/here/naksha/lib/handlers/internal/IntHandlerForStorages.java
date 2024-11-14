@@ -31,10 +31,7 @@ import naksha.model.IReadSession;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.ErrorResponse;
-import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
-import naksha.model.request.Write;
+import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.MalformedURLException;
@@ -63,7 +60,7 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
   }
 
   @Override
-  protected @NotNull Response validateFeature(XyzFeatureCodec codec) {
+  protected @NotNull Response validateFeature(Write codec) {
     final EWriteOp operation = EWriteOp.get(codec.getOp());
     if (operation.equals(EWriteOp.DELETE)) {
       // For DELETE, only the feature ID is needed, other JSON properties are irrelevant
@@ -91,7 +88,8 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
         return new ErrorResponse(
                 NakshaError.ILLEGAL_ARGUMENT,
             "Unable to convert 'properties' to " + HttpStorageProperties.class.getName(),
-                null, e);
+                null,
+                e);
       }
       return httpStoragePropertiesValidation(httpStorageProperties);
     }
@@ -170,7 +168,7 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
     try (final IReadSession readSession =
         nakshaHub().getAdminStorage().newReadSession(NakshaContext.currentContext(), false)) {
       final Response readResult = readSession.execute(readActiveHandlersRequest);
-      if (!(readResult instanceof SuccessResult)) {
+      if (!(readResult instanceof SuccessResponse)) {
         return readResult;
       }
       final List<EventHandler> eventHandlers;
@@ -185,7 +183,10 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
       final List<String> handlerIds =
               eventHandlers.stream().map(NakshaFeature::getId).toList();
       return new ErrorResponse(
-              NakshaError.CONFLICT, "The storage is still in use by these event handlers: " + handlerIds, null, null);
+              NakshaError.CONFLICT,
+              "The storage is still in use by these event handlers: " + handlerIds,
+              null,
+              null);
     }
   }
 }

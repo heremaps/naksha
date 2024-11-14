@@ -27,15 +27,21 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereMet
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.util.json.JsonObject;
-import java.util.List;
-import java.util.Objects;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/** The standard properties of the standard feature store in the Naksha-Hub. */
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * The standard properties of the standard feature store in the Naksha-Hub.
+ *
+ * @deprecated please use {@link naksha.model.objects.NakshaProperties} instead.
+ */
 @SuppressWarnings({"UnusedReturnValue", "unused"})
+@Deprecated
 public class XyzProperties extends JsonObject {
 
   /**

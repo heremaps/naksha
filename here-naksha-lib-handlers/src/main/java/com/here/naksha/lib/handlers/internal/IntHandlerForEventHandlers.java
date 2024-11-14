@@ -100,7 +100,9 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     if (spaceIds == null || spaceIds.isEmpty()) {
       return new ErrorResponse(
               NakshaError.ILLEGAL_ARGUMENT,
-              "Mandatory properties parameter %s empty/blank!".formatted(DefaultViewHandlerProperties.SPACE_IDS), null, null);
+              "Mandatory properties parameter %s empty/blank!".formatted(DefaultViewHandlerProperties.SPACE_IDS),
+              null,
+              null);
     }
 
     for (String spaceId : spaceIds) {
@@ -108,7 +110,9 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
         return new ErrorResponse(
                 NakshaError.ILLEGAL_ARGUMENT,
             "Mandatory parameter %s contains space which is empty/blank!"
-                    .formatted(DefaultViewHandlerProperties.SPACE_IDS), null, null);
+                    .formatted(DefaultViewHandlerProperties.SPACE_IDS),
+                null,
+                null);
       }
     }
 
@@ -127,7 +131,9 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
       return new ErrorResponse(
               NakshaError.ILLEGAL_ARGUMENT,
           "At least one of [%s, %s, %s] parameters must be set"
-                  .formatted(ADD_VALUES, REMOVE_W_PREFIXES, CONTAINS_VALUES), null, null);
+                  .formatted(ADD_VALUES, REMOVE_W_PREFIXES, CONTAINS_VALUES),
+              null,
+              null);
     }
 
     return errorIfInvalidList(addList, ADD_VALUES)
@@ -148,11 +154,17 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     }
     if (list.isEmpty()) {
       return Optional.of(new ErrorResponse(
-              NakshaError.ILLEGAL_ARGUMENT, "The %s parameter cannot be an empty list".formatted(listName), null, null));
+              NakshaError.ILLEGAL_ARGUMENT,
+              "The %s parameter cannot be an empty list".formatted(listName),
+              null,
+              null));
     }
     if (list.stream().anyMatch(StringUtils::isBlank)) {
       return Optional.of(new ErrorResponse(
-              NakshaError.ILLEGAL_ARGUMENT, "The %s parameter contains blank element".formatted(listName), null, null));
+              NakshaError.ILLEGAL_ARGUMENT,
+              "The %s parameter contains blank element".formatted(listName),
+              null,
+              null));
     }
     return Optional.empty();
   }
@@ -173,14 +185,18 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
           return new ErrorResponse(
                   NakshaError.ILLEGAL_ARGUMENT,
               "Mandatory parameter %s contains space which is not created!"
-                      .formatted(DefaultViewHandlerProperties.SPACE_IDS), null, null);
+                      .formatted(DefaultViewHandlerProperties.SPACE_IDS),
+                  null,
+                  null);
         }
 
       } catch (NoCursor | NoSuchElementException e) {
         return new ErrorResponse(
                 NakshaError.ILLEGAL_ARGUMENT,
             "Mandatory parameter %s contains space which is not created!"
-                    .formatted(DefaultViewHandlerProperties.SPACE_IDS), null, null);
+                    .formatted(DefaultViewHandlerProperties.SPACE_IDS),
+                null,
+                null);
       }
     }
     return new SuccessResponse();
@@ -190,18 +206,23 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     return requestedClass.getName().equals(eventHandler.getClassName());
   }
 
-  private @NotNull Response storageValidation(@NotNull EventHandler eventHandler, @NotNull String storagePropertyName) {
+  private @NotNull Response storageValidation(
+          @NotNull EventHandler eventHandler, @NotNull String storagePropertyName) {
     Object storageIdProp = eventHandler.getProperties().get(storagePropertyName);
     if (storageIdProp == null) {
       return new ErrorResponse(
               NakshaError.ILLEGAL_ARGUMENT,
-              "Mandatory properties parameter %s missing!".formatted(storagePropertyName), null, null);
+              "Mandatory properties parameter %s missing!".formatted(storagePropertyName),
+              null,
+              null);
     }
     String storageId = storageIdProp.toString();
     if (StringUtils.isBlank(storageId)) {
       return new ErrorResponse(
               NakshaError.ILLEGAL_ARGUMENT,
-              "Mandatory parameter %s can't be empty/blank!".formatted(storagePropertyName), null, null);
+              "Mandatory parameter %s can't be empty/blank!".formatted(storagePropertyName),
+              null,
+              null);
     }
     return storageExistenceValidation(storageId);
   }
@@ -216,10 +237,10 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     ReadFeatures findStorageById = readFeaturesByIdRequest(STORAGES, storageId);
     try (IReadSession readSession = nakshaHub().getSpaceStorage().newReadSession(currentContext(), false)) {
       Response result = readSession.execute(findStorageById);
-        List<String> fetchedIds = ResultHelper.readIdsFromResult(result);
-        if (fetchedIds.size() == 1 && fetchedIds.get(0).equals(storageId)) {
-          return new SuccessResponse();
-        }
+      List<String> fetchedIds = ResultHelper.readIdsFromResult(result);
+      if (fetchedIds.size() == 1 && fetchedIds.get(0).equals(storageId)) {
+        return new SuccessResponse();
+      }
       return new ErrorResponse(NakshaError.NOT_FOUND, "Could not find storage with id: " + storageId, null, null);
     }
   }
@@ -252,8 +273,10 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
       } finally {
         readResult.close();
       }
-      final List<String> spaceIds = spaces.stream().map(NakshaFeature::getId).toList();
-      return new ErrorResponse(NakshaError.CONFLICT, "The event handler is still in use by these spaces: " + spaceIds, null, null);
+      final List<String> spaceIds =
+              spaces.stream().map(NakshaFeature::getId).toList();
+      return new ErrorResponse(
+              NakshaError.CONFLICT, "The event handler is still in use by these spaces: " + spaceIds, null, null);
     }
   }
 }

@@ -26,7 +26,11 @@ import naksha.model.mom.MomReviewState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * @deprecated please use {@link naksha.model.mom.MomDeltaNs} instead.
+ */
 @SuppressWarnings({"UnusedReturnValue", "unused"})
+@Deprecated
 public class HereDeltaNs extends JsonObject {
 
   /**

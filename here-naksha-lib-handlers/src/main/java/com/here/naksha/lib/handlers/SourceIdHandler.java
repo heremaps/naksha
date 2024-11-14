@@ -25,7 +25,10 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
 import naksha.geo.XyzProperties;
-import naksha.model.XyzFeature;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,23 +57,22 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
-    final Request<?> request = event.getRequest();
+    final Request request = event.getRequest();
     if (request instanceof ReadFeatures
-        || request instanceof WriteXyzFeatures
-        || request instanceof ContextWriteXyzFeatures) {
+            || request instanceof WriteRequest) {
       return PROCESS;
     }
     return SEND_UPSTREAM_WITHOUT_PROCESSING;
   }
 
   @Override
-  public @NotNull Result process(@NotNull IEvent event) {
-    final Request<?> request = event.getRequest();
+  public @NotNull Response process(@NotNull IEvent event) {
+    final Request request = event.getRequest();
     logger.info("Handler received request {}", request.getClass().getSimpleName());
     if (request instanceof ReadFeatures readRequest) {
       // Read request
       transformPropertyOperation(readRequest);
-    } else if (request instanceof WriteFeatures<?, ?, ?> wr) {
+    } else if (request instanceof WriteRequest wr) {
       // Write request
       List<XyzFeatureCodec> codecList = null;
       if (wr instanceof WriteXyzFeatures wf) {
