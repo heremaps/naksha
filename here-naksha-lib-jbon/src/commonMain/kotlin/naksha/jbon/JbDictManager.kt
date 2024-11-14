@@ -1,31 +1,30 @@
 package naksha.jbon
 
+import naksha.base.Platform
 import kotlin.js.JsExport
 
 /**
- * A simple dictionary manager that only cache dictionaries in memory.
+ * A thread safe in-memory dictionary manager, that only keep dictionaries in memory.
+ * @since 3.0.0
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class JbDictManager : IDictManager {
-    private val globalDictionaries = HashMap<String, JbDictionary>()
+    private val cache = Platform.newAtomicMap<String, JbDictionary>()
 
     override fun putDictionary(dict: JbDictionary) {
-        val id = dict.id()
+        val id = dict.id
         check(id != null)
-        globalDictionaries[id] = dict
+        cache[id] = dict
     }
 
     override fun deleteDictionary(dict: JbDictionary) : Boolean {
-        val id = dict.id()
-        if (id != null && globalDictionaries[id] === dict) {
-            globalDictionaries.remove(id)
-            return true
-        }
+        val id = dict.id
+        if (id != null) return cache.remove(id, dict)
         return false
     }
 
     override fun getDictionary(id: String): JbDictionary? {
-        return globalDictionaries[id]
+        return cache[id]
     }
 }

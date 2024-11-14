@@ -43,7 +43,7 @@ interface IDictManager {
      * @return best dictionary to use for encoding; _null_ if none is available.
      * @since 3.0.0
      */
-    fun getEncodingDictionary(feature: Any? = null, context: Any? = null): JbDictionary? = null
+    fun getEncodingDictionary(feature: Any?, context: Any? = null): JbDictionary? = null
 
     /**
      * The default dictionary to use for encoding.
@@ -55,5 +55,5 @@ interface IDictManager {
         replaceWith = ReplaceWith("getEncodingDictionary()"),
         level = DeprecationLevel.WARNING
     )
-    fun defaultDict(): String? = getEncodingDictionary()?.id()
+    fun defaultDict(): String? = getEncodingDictionary(null)?.id
 }

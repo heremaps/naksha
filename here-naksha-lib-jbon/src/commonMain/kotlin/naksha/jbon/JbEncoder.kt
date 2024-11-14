@@ -13,7 +13,7 @@ import kotlin.math.floor
  */
 @Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate", "OPT_IN_USAGE", "NON_EXPORTABLE_TYPE")
 @JsExport
-open class JbEncoder(var global: JbDictionary? = null) : Binary() {
+open class JbEncoder(var global: IDict? = null) : Binary() {
 
     /**
      * Create a new resizable editor with a new byte-array of the given size backing it.
@@ -22,7 +22,7 @@ open class JbEncoder(var global: JbDictionary? = null) : Binary() {
      */
     @Suppress("LeakingThis")
     @JsName("forSize")
-    constructor(size: Int, global: JbDictionary? = null) : this(global) {
+    constructor(size: Int, global: IDict? = null) : this(global) {
         view = Platform.newDataView(ByteArray(size))
         this.readOnly = false
         this.resize = true
@@ -37,7 +37,7 @@ open class JbEncoder(var global: JbDictionary? = null) : Binary() {
      */
     @Suppress("LeakingThis")
     @JsName("forBinary")
-    constructor(binaryView: BinaryView, pos: Int = binaryView.pos, end: Int = binaryView.end, global: JbDictionary? = null) : this(global) {
+    constructor(binaryView: BinaryView, pos: Int = binaryView.pos, end: Int = binaryView.end, global: IDict? = null) : this(global) {
         this.view = binaryView.view
         this.pos = pos
         this.end = end
@@ -979,7 +979,7 @@ open class JbEncoder(var global: JbDictionary? = null) : Binary() {
 
         // Write the id of the global dictionary.
         val startOfGlobalDictId = end
-        val featureId: String? = global?.id()
+        val featureId: String? = global?.id
         if (featureId != null) {
             encodeString(featureId)
         } else {
