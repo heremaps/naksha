@@ -26,7 +26,7 @@ import naksha.geo.XyzProperties;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.*;
-import naksha.model.request.query.IPropertyQuery;
+import naksha.model.request.query.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -142,8 +142,9 @@ public class SourceIdHandler extends AbstractEventHandler {
         && propertyOperation.children() == null;
   }
 
-  private static boolean operationTypeAllowed(POp propertyOperation) {
-    return propertyOperation.op().equals(POpType.EQ)
-        || propertyOperation.op().equals(POpType.CONTAINS);
+  private static boolean operationTypeAllowed(PQuery propertyOperation) {
+    final AnyOp op = propertyOperation.getOp();
+    return op.equals(StringOp.EQUALS) || op.equals(StringOp.CONTAINS)
+            || op.equals(DoubleOp.EQ);
   }
 }
