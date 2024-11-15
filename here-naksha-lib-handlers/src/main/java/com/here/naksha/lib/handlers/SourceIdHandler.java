@@ -20,14 +20,13 @@ package com.here.naksha.lib.handlers;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
-import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
 import naksha.geo.XyzProperties;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.*;
+import naksha.model.request.query.IPropertyQuery;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,14 +42,12 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 public class SourceIdHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(SourceIdHandler.class);
-  private static final String TAG_PREFIX = "xyz_source_id_";
+  private static final String TAG_PREFIX = "naksha_source_id_"; //TODO decide
   private static final String SOURCE_ID = "sourceId";
   public static final int PREF_PATHS_SIZE = 3;
 
   public SourceIdHandler(
-      final @NotNull EventHandler eventHandler,
-      final @NotNull INaksha hub,
-      final @NotNull EventTarget<?> eventTarget) {
+          final @NotNull INaksha hub) {
     super(hub);
   }
 
@@ -89,11 +86,11 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   private void transformPropertyOperation(ReadFeatures readRequest) {
 
-    if (readRequest.getPropertyOp() == null) {
+    if (readRequest.getQuery().getProperties() == null) {
       return;
     }
 
-    POp propertyOp = readRequest.getPropertyOp();
+    IPropertyQuery propertyOp = readRequest.getQuery().getProperties();
 
     if (propertyOp.children() != null && !propertyOp.children().isEmpty()) {
       PropertyOperationUtil.transformPropertyInPropertyOperationTree(

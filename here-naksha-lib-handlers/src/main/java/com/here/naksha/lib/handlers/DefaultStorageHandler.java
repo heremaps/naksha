@@ -35,7 +35,6 @@ import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
-
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;

@@ -24,18 +24,17 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.DefaultViewHandlerProperties.ViewType;
 import com.here.naksha.lib.view.*;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
 import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import naksha.base.JvmProxyUtil;
 import naksha.model.*;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
@@ -57,7 +56,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties = JsonSerializable.convert(eventHandler.getProperties(), DefaultViewHandlerProperties.class);
+    this.properties = JvmProxyUtil.box(eventHandler.getProperties(), DefaultViewHandlerProperties.class);
   }
 
   @Override
@@ -66,8 +65,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
     if (request instanceof WriteRequest wr
             && wr.getWrites().stream().map(Write::getCollectionId).allMatch(Naksha.VIRT_COLLECTIONS::equals)) {
       return SUCCEED_WITHOUT_PROCESSING;
-    } else if (request instanceof ReadFeatures
-            || request instanceof WriteRequest) {
+    } else if (request instanceof ReadFeatures || request instanceof WriteRequest) {
       return PROCESS;
     }
     return NOT_IMPLEMENTED;
@@ -114,32 +112,31 @@ public class DefaultViewHandler extends AbstractEventHandler {
   private Response processRequest(NakshaContext ctx, IView view, Request request) {
     if (request instanceof ReadFeatures rf) {
       return forwardReadFeatures(ctx, view, rf);
-    } else if (request instanceof WriteFeatures<?, ?, ?> wf) {
-      return forwardWriteFeatures(ctx, view, wf);
-    } else if (request instanceof WriteCollections<?, ?, ?> wc) {
-      return forwardWriteFeatures(ctx, view, wc);
+    } else if (request instanceof WriteRequest wr) {
+      return forwardWriteFeatures(view, wr);
     } else {
       return notImplemented(request);
     }
   }
 
-  private Response forwardWriteFeatures(NakshaContext ctx, IView view, WriteRequest wr) {
-    try (final IWriteSession writeSession = view.newWriteSession(ctx, true)) {
-      return writeSession.execute(wr);
-    }
+  private Response forwardWriteFeatures(IView view, WriteRequest wr) {
+    SessionOptions sessionOptions = new SessionOptions();
+    sessionOptions.useMaster = true;
+    final IWriteSession writeSession = view.newWriteSession(sessionOptions);
+    return writeSession.execute(wr);
   }
 
   private Response forwardReadFeatures(NakshaContext ctx, IView view, ReadFeatures rf) {
 
     try (final ViewReadSession reader = (ViewReadSession) view.newReadSession(ctx, false)) {
-      final MissingIdResolver<XyzFeature, XyzFeatureCodec> resolver;
+      final MissingIdResolver resolver;
       if (properties.getViewType() == ViewType.UNION) {
-        resolver = new IgnoreMissingResolver<>();
+        resolver = new IgnoreMissingResolver();
       } else {
         final Set<ViewLayer> obligatoryLayers = getObligatoryLayers(view.getViewCollection());
-        resolver = new ObligatoryLayersResolver<>(obligatoryLayers);
+        resolver = new ObligatoryLayersResolver(obligatoryLayers);
       }
-      return reader.execute(rf, XyzFeatureCodecFactory.get(), new MergeByStoragePriority<>(), resolver);
+      return reader.execute(rf, new MergeByStoragePriority(), resolver);
     }
   }
 

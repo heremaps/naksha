@@ -24,7 +24,6 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
-
 import java.util.List;
 import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;

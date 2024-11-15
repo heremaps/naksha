@@ -2,12 +2,12 @@ package com.here.naksha.lib.handlers;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
-import com.here.naksha.lib.core.models.storage.*;
+import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
+import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
-import naksha.model.*;
+import naksha.geo.XyzProperties;
+import naksha.model.XyzFeature;
 import org.json.JSONException;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
@@ -22,7 +22,8 @@ import java.util.stream.Stream;
 
 import static com.here.naksha.test.common.FileUtil.loadFileOrFail;
 import static com.here.naksha.test.common.FileUtil.parseJsonFileOrFail;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 class SourceIdHandlerUnitTest {
@@ -134,7 +135,7 @@ class SourceIdHandlerUnitTest {
 
         // Given: Handler initialization
         final EventHandler e = new EventHandler(SourceIdHandler.class, "some_id");
-        final SourceIdHandler sourceIdHandler = new SourceIdHandler(e, naksha, null);
+        final SourceIdHandler sourceIdHandler = new SourceIdHandler(naksha);
 
         // When: handler processing logic is invoked
         try (final Result result = sourceIdHandler.process(event)) {
