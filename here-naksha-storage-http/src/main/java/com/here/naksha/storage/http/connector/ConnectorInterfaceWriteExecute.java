@@ -65,8 +65,8 @@ public class ConnectorInterfaceWriteExecute {
     List<XyzFeature> featuresToInsert = new LinkedList<>();
     List<XyzFeature> featuresToUpdate = new LinkedList<>();
 
-    for (XyzFeatureCodec featureCoded : request.features) {
-      XyzFeature feature = featureCoded.getFeature();
+    for (XyzFeatureCodec featureCodec : request.features) {
+      XyzFeature feature = featureCodec.getFeature();
       if (isNewFeature(context, feature, sender, connectorSpaceName)) {
         featuresToInsert.add(feature);
       } else {
@@ -74,18 +74,18 @@ public class ConnectorInterfaceWriteExecute {
       }
     }
 
-    long creationTime = System.currentTimeMillis();
+    long currentTime = System.currentTimeMillis();
     featuresToInsert.forEach(feature -> {
       setRandomUuid(feature);
-      setCreatedAt(feature, creationTime);
-      setUpdatedAt(feature, creationTime);
+      setCreatedAt(feature, currentTime);
+      setUpdatedAt(feature, currentTime);
     });
     featuresToUpdate.forEach(feature -> {
       assertUuidMatch(context, feature, sender, connectorSpaceName);
       setPuuidFromUuid(context, feature, sender, connectorSpaceName);
       setRandomUuid(feature);
       fillMissingCreatedAt(context, feature, sender, connectorSpaceName);
-      setUpdatedAt(feature, creationTime);
+      setUpdatedAt(feature, currentTime);
     });
 
     event.setInsertFeatures(featuresToInsert);

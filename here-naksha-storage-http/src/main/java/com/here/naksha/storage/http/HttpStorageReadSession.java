@@ -31,7 +31,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class HttpStorageReadSession implements IReadSession {
+public class HttpStorageReadSession implements IReadSession {
 
   private static final Logger log = LoggerFactory.getLogger(HttpStorageReadSession.class);
 
@@ -119,4 +119,8 @@ public final class HttpStorageReadSession implements IReadSession {
 
   @Override
   public void close() {}
+
+  @NotNull RequestSender getRequestSender() {
+    return requestSender;
+  }
 }
