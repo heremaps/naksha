@@ -9,6 +9,7 @@ repositories {
     // provides dev versions!
     //maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/bootstrap")
     maven("https://plugins.gradle.org/m2/")
+    mavenCentral()
 }
 
 plugins {
@@ -654,4 +655,7 @@ fun getRequiredPropertyFromRootProject(propertyKey: String): String {
         Check your 'gradle.properties' file (in both project and ~/.gradle directory)
         """.trimIndent()
     )
+}
+dependencies {
+    implementation(kotlin("stdlib-jdk8"))
 }

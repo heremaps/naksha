@@ -1,5 +1,5 @@
 package naksha.diff
 
-class Patcher {
+class DifferenceMerger {
     // TODO
 }
