@@ -27,27 +27,49 @@ import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.payload.Event;
-import com.here.naksha.lib.core.models.payload.events.feature.*;
+import com.here.naksha.lib.core.models.payload.events.feature.ModifyFeaturesEvent;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.storage.http.PrepareResult;
 import com.here.naksha.storage.http.RequestSender;
 import java.net.http.HttpResponse;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class ConnectorInterfaceWriteExecute {
 
+  private final NakshaContext context;
+  private final WriteXyzFeatures request;
+  private final RequestSender sender;
+  private final String connectorSpaceName;
+  private final Map<String, XyzFeature> featuresCache = new HashMap<>();
+
+  public ConnectorInterfaceWriteExecute(NakshaContext context, WriteXyzFeatures request, RequestSender sender) {
+    this.context = context;
+    this.request = request;
+    this.sender = sender;
+    this.connectorSpaceName = request.getCollectionId();
+  }
+
+  private static void setCreatedAt(XyzFeature feature, long creationTime) {
+    feature.getProperties().getXyzNamespace().setCreatedAt(creationTime);
+  }
+
+  private static void setUpdatedAt(XyzFeature feature, long creationTime) {
+    feature.getProperties().getXyzNamespace().setUpdatedAt(creationTime);
+  }
+
+  private static void setRandomUuid(XyzFeature feature) {
+    feature.getProperties().getXyzNamespace().setUuid(UUID.randomUUID().toString());
+  }
+
   @NotNull
-  public static Result execute(NakshaContext context, WriteXyzFeatures request, RequestSender sender) {
+  public Result execute() {
     String streamId = context.getStreamId();
-    String connectorSpaceName = request.getCollectionId();
     Space connectorSpace = new Space(connectorSpaceName);
 
-    Event event = createCreateFeaturesEvent(context, request, sender, connectorSpaceName);
+    Event event = createCreateFeaturesEvent();
 
     event.setSpace(connectorSpace);
     event.setStreamId(streamId);
@@ -58,8 +80,7 @@ public class ConnectorInterfaceWriteExecute {
     return PrepareResult.prepareWriteResult(httpResponse);
   }
 
-  private static ModifyFeaturesEvent createCreateFeaturesEvent(
-      NakshaContext context, WriteXyzFeatures request, RequestSender sender, String connectorSpaceName) {
+  private ModifyFeaturesEvent createCreateFeaturesEvent() {
     ModifyFeaturesEvent event = new ModifyFeaturesEvent();
 
     List<XyzFeature> featuresToInsert = new LinkedList<>();
@@ -67,7 +88,7 @@ public class ConnectorInterfaceWriteExecute {
 
     for (XyzFeatureCodec featureCodec : request.features) {
       XyzFeature feature = featureCodec.getFeature();
-      if (isNewFeature(context, feature, sender, connectorSpaceName)) {
+      if (isNewFeature(feature)) {
         featuresToInsert.add(feature);
       } else {
         featuresToUpdate.add(feature);
@@ -81,10 +102,10 @@ public class ConnectorInterfaceWriteExecute {
       setUpdatedAt(feature, currentTime);
     });
     featuresToUpdate.forEach(feature -> {
-      assertUuidMatch(context, feature, sender, connectorSpaceName);
-      setPuuidFromUuid(context, feature, sender, connectorSpaceName);
+      assertUuidMatch(feature);
+      setPuuidFromUuid(feature);
       setRandomUuid(feature);
-      fillMissingCreatedAt(context, feature, sender, connectorSpaceName);
+      fillMissingCreatedAt(feature);
       setUpdatedAt(feature, currentTime);
     });
 
@@ -95,11 +116,10 @@ public class ConnectorInterfaceWriteExecute {
     return event;
   }
 
-  private static void assertUuidMatch(
-      NakshaContext context, XyzFeature feature, RequestSender sender, String connectorSpaceName) {
+  private void assertUuidMatch(XyzFeature feature) {
     String uuid = feature.getProperties().getXyzNamespace().getUuid();
     if (uuid != null) {
-      String uuidFromDb = getUuidFromDb(context, feature, sender, connectorSpaceName);
+      String uuidFromDb = getUuidFromDb(feature);
       if (!uuid.equals(uuidFromDb)) {
         throw new ConflictException(
             "The feature with id %s cannot be replaced. The provided UUID doesn't match the UUID of the head state: %s"
@@ -108,91 +128,57 @@ public class ConnectorInterfaceWriteExecute {
     }
   }
 
-  private static void setCreatedAt(XyzFeature feature, long creationTime) {
-    feature.getProperties().getXyzNamespace().setCreatedAt(creationTime);
-  }
-
-  private static void fillMissingCreatedAt(
-      NakshaContext context, XyzFeature feature, RequestSender sender, String connectorSpaceName) {
+  private void fillMissingCreatedAt(XyzFeature feature) {
     XyzNamespace xyzNamespace = feature.getProperties().getXyzNamespace();
     if (xyzNamespace.getCreatedAt() <= 0) {
-      xyzNamespace.setCreatedAt(getCreatedAtFromDb(context, feature, sender, connectorSpaceName));
+      xyzNamespace.setCreatedAt(getCreatedAtFromDb(feature));
     }
   }
 
-  private static void setUpdatedAt(XyzFeature feature, long creationTime) {
-    feature.getProperties().getXyzNamespace().setUpdatedAt(creationTime);
-  }
-
-  private static void setRandomUuid(XyzFeature feature) {
-    feature.getProperties().getXyzNamespace().setUuid(UUID.randomUUID().toString());
-  }
-
-  private static void setPuuidFromUuid(
-      NakshaContext context, XyzFeature feature, RequestSender sender, String connectorSpaceName) {
+  private void setPuuidFromUuid(XyzFeature feature) {
     XyzNamespace xyzNamespace = feature.getProperties().getXyzNamespace();
     String uuid = xyzNamespace.getUuid();
     if (uuid == null) {
-      uuid = getUuidFromDb(context, feature, sender, connectorSpaceName);
+      uuid = getUuidFromDb(feature);
     }
     xyzNamespace.setPuuid(uuid);
   }
 
-  private static boolean isNewFeature(
-      NakshaContext context, XyzFeature feature, RequestSender sender, String connectorSpaceName) {
+  private boolean isNewFeature(XyzFeature feature) {
     String uuid = feature.getProperties().getXyzNamespace().getUuid();
     // We are making an assumption that if uuid exists in feature, it is not a new feature
-    return uuid == null && !existsInDb(context, feature, sender, connectorSpaceName);
+    return uuid == null && !existsInDb(feature);
   }
 
-  private static boolean existsInDb(
-      NakshaContext context, XyzFeature feature, RequestSender sender, String connectorSpaceName) {
-    try {
-      Result result = getFeatureFromDb(context, feature, sender, connectorSpaceName);
-      return result.getXyzFeatureCursor().hasNext();
-    } catch (NoCursor e) {
-      throw new RuntimeException(e);
-    }
+  private boolean existsInDb(XyzFeature feature) {
+    return getFeatureFromDb(feature) != null;
   }
 
-  private static long getCreatedAtFromDb(
-      NakshaContext context, XyzFeature feature, RequestSender sender, String connectorSpaceName) {
-    try {
-      Result result = getFeatureFromDb(context, feature, sender, connectorSpaceName);
-      ForwardCursor<XyzFeature, XyzFeatureCodec> xyzFeatureCursor = result.getXyzFeatureCursor();
-      xyzFeatureCursor.next();
-      return xyzFeatureCursor
-          .getFeature()
-          .getProperties()
-          .getXyzNamespace()
-          .getCreatedAt();
-    } catch (NoCursor e) {
-      throw new RuntimeException(e);
-    }
+  private long getCreatedAtFromDb(XyzFeature feature) {
+    return getFeatureFromDb(feature).getProperties().getXyzNamespace().getCreatedAt();
   }
 
-  private static String getUuidFromDb(
-      NakshaContext context, XyzFeature feature, RequestSender sender, String connectorSpaceName) {
-    try {
-      Result result = getFeatureFromDb(context, feature, sender, connectorSpaceName);
-      ForwardCursor<XyzFeature, XyzFeatureCodec> xyzFeatureCursor = result.getXyzFeatureCursor();
-      xyzFeatureCursor.next();
-      return xyzFeatureCursor
-          .getFeature()
-          .getProperties()
-          .getXyzNamespace()
-          .getUuid();
-    } catch (NoCursor e) {
-      throw new RuntimeException(e);
-    }
+  private String getUuidFromDb(XyzFeature feature) {
+    return getFeatureFromDb(feature).getProperties().getXyzNamespace().getUuid();
   }
 
-  private static Result getFeatureFromDb(
-      NakshaContext context, XyzFeature feature, RequestSender sender, String connectorSpaceName) {
+  private @Nullable XyzFeature getFeatureFromDb(XyzFeature featureFromRequest) {
+    if (featuresCache.containsKey(featureFromRequest.getId())) return featuresCache.get(featureFromRequest.getId());
     ReadFeaturesProxyWrapper getFeaturesRequest = new ReadFeaturesProxyWrapper().withReadRequestType(GET_BY_ID);
-    getFeaturesRequest.addQueryParameter(FEATURE_ID, feature.getId());
+    getFeaturesRequest.addQueryParameter(FEATURE_ID, featureFromRequest.getId());
     getFeaturesRequest.addCollection(connectorSpaceName);
-    return ConnectorInterfaceReadExecute.execute(context, getFeaturesRequest, sender);
+    try (Result result = ConnectorInterfaceReadExecute.execute(context, getFeaturesRequest, sender)) {
+      ForwardCursor<XyzFeature, XyzFeatureCodec> xyzFeatureCursor = result.getXyzFeatureCursor();
+      if (xyzFeatureCursor.next()) {
+        XyzFeature featureFromDb = xyzFeatureCursor.getFeature();
+        featuresCache.put(featureFromDb.getId(), featureFromDb);
+        return featureFromDb;
+      } else {
+        return null;
+      }
+    } catch (NoCursor e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public static class ConflictException extends IllegalStateException {

@@ -120,7 +120,8 @@ public class HttpStorageReadSession implements IReadSession {
   @Override
   public void close() {}
 
-  @NotNull RequestSender getRequestSender() {
+  @NotNull
+  RequestSender getRequestSender() {
     return requestSender;
   }
 }

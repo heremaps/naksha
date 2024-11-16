@@ -43,11 +43,11 @@ public class HttpStorageWriteSession extends HttpStorageReadSession implements I
   public @NotNull Result execute(@NotNull WriteRequest<?, ?, ?> writeRequest) {
     try {
       return switch (httpInterface) {
-        case ffwAdapter -> new ErrorResult(XyzError.NOT_IMPLEMENTED, "Writing not supported by underlying storage");
-        case dataHubConnector -> ConnectorInterfaceWriteExecute.execute(
-                getNakshaContext(),
-                (WriteXyzFeatures) writeRequest,
-                getRequestSender());
+        case ffwAdapter -> new ErrorResult(
+            XyzError.NOT_IMPLEMENTED, "Writing not supported by underlying storage");
+        case dataHubConnector -> new ConnectorInterfaceWriteExecute(
+                getNakshaContext(), (WriteXyzFeatures) writeRequest, getRequestSender())
+            .execute();
       };
     } catch (ConnectorInterfaceWriteExecute.ConflictException e) {
       return new ErrorResult(XyzError.CONFLICT, e.getMessage(), e);
@@ -58,12 +58,15 @@ public class HttpStorageWriteSession extends HttpStorageReadSession implements I
   }
 
   @Override
-  public @NotNull IStorageLock lockFeature(@NotNull String collectionId, @NotNull String featureId, long timeout, @NotNull TimeUnit timeUnit) throws StorageLockException {
+  public @NotNull IStorageLock lockFeature(
+      @NotNull String collectionId, @NotNull String featureId, long timeout, @NotNull TimeUnit timeUnit)
+      throws StorageLockException {
     return null;
   }
 
   @Override
-  public @NotNull IStorageLock lockStorage(@NotNull String lockId, long timeout, @NotNull TimeUnit timeUnit) throws StorageLockException {
+  public @NotNull IStorageLock lockStorage(@NotNull String lockId, long timeout, @NotNull TimeUnit timeUnit)
+      throws StorageLockException {
     return null;
   }
 
@@ -75,5 +78,4 @@ public class HttpStorageWriteSession extends HttpStorageReadSession implements I
 
   @Override
   public void close(boolean autoCloseCursors) {}
-
 }
