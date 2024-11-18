@@ -83,7 +83,6 @@ public class HttpStorage implements IStorage {
   @NotNull
   @Override
   public IWriteSession newWriteSession(@Nullable SessionOptions options) {
-    // TODO
     throw new NotImplementedException("Not yet supported");
   }
 
