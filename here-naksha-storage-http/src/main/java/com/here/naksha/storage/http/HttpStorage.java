@@ -21,9 +21,6 @@ package com.here.naksha.storage.http;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
-
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 import naksha.base.Int64;
 import naksha.base.JvmProxyUtil;
 import naksha.model.*;
@@ -34,11 +31,14 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 public class HttpStorage implements IStorage {
 
   private static final Logger log = LoggerFactory.getLogger(HttpStorage.class);
 
-  private final RequestSender requestSender;
+  private final KeyProperties defaultKeyProperties;
 
   private final AtomicBoolean initialized = new AtomicBoolean(false);
 
@@ -48,20 +48,19 @@ public class HttpStorage implements IStorage {
       if (!storage.getProperties().hasRaw(HttpStorageProperties.URL)) {
         throw new IllegalArgumentException("A HTTP storage must have properties containing a 'url'");
       }
-      properties = new HttpStorageProperties(
-          storage.getProperties().get(HttpStorageProperties.URL).toString(), null, null, null);
+      final Object raw = storage.getProperties().get(HttpStorageProperties.URL);
+      if (raw instanceof String url) {
+        properties = new HttpStorageProperties(url, null, null, null);
+      } else {
+        throw new IllegalArgumentException("A HTTP storage must have properties containing a 'url'");
+      }
     }
-    requestSender = RequestSenderCache.getInstance()
-        .getSenderWith(new KeyProperties(
+    defaultKeyProperties = new KeyProperties(
             storage.getId(),
             properties.getUrl(),
             properties.getHeaders(),
             properties.getConnectTimeout(),
-            properties.getSocketTimeout()));
-  }
-
-  public @NotNull IReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new HttpStorageReadSession(context, useMaster, requestSender);
+            properties.getSocketTimeout());
   }
 
   private static @Nullable HttpStorageProperties getProperties(@NotNull Storage storage) {
@@ -70,25 +69,24 @@ public class HttpStorage implements IStorage {
 
   @Override
   public void close() {
-    // TODO
   }
 
   @NotNull
   @Override
   public IReadSession newReadSession(@Nullable SessionOptions options) {
-    boolean useMaster = false;
-    if (options != null) {
-      requestSender.keyProps.connectionTimeoutSec = options.connectTimeout;
-      requestSender.keyProps.socketTimeoutSec = options.socketTimeout;
-      useMaster = options.useMaster;
-    }
-    return new HttpStorageReadSession(NakshaContext.currentContext(), useMaster, requestSender);
+    final RequestSender requestSender = RequestSenderCache.getInstance()
+            .getSenderWith(new KeyProperties(
+                    defaultKeyProperties.name(),
+                    defaultKeyProperties.hostUrl(),
+                    defaultKeyProperties.defaultHeaders(),
+                    options != null ? options.connectTimeout : defaultKeyProperties.connectionTimeoutSec(),
+                    options != null ? options.socketTimeout : defaultKeyProperties.socketTimeoutSec()));
+    return new HttpStorageReadSession(NakshaContext.currentContext(), requestSender);
   }
 
   @NotNull
   @Override
   public IWriteSession newWriteSession(@Nullable SessionOptions options) {
-    // TODO
     throw new NotImplementedException("Not yet supported");
   }
 
@@ -136,7 +134,7 @@ public class HttpStorage implements IStorage {
   @NotNull
   @Override
   public String getId() {
-    return requestSender.keyProps.getName();
+    return defaultKeyProperties.name();
   }
 
   @NotNull

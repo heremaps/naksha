@@ -19,8 +19,6 @@
 package com.here.naksha.storage.http;
 
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
-
-import java.util.List;
 import naksha.model.*;
 import naksha.model.objects.Transaction;
 import naksha.model.request.ErrorResponse;
@@ -33,6 +31,8 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+
 public final class HttpStorageReadSession implements IReadSession {
 
   private static final Logger log = LoggerFactory.getLogger(HttpStorageReadSession.class);
@@ -40,14 +40,11 @@ public final class HttpStorageReadSession implements IReadSession {
   @NotNull
   private final NakshaContext context;
 
-  private final boolean useMaster;
-
   @NotNull
   private final RequestSender requestSender;
 
-  HttpStorageReadSession(@Nullable NakshaContext context, boolean useMaster, @NotNull RequestSender requestSender) {
+  HttpStorageReadSession(@Nullable NakshaContext context, @NotNull RequestSender requestSender) {
     this.context = context == null ? NakshaContext.currentContext() : context;
-    this.useMaster = useMaster;
     this.requestSender = requestSender;
   }
 
@@ -70,12 +67,12 @@ public final class HttpStorageReadSession implements IReadSession {
 
   @Override
   public int getSocketTimeout() {
-    return requestSender.keyProps.socketTimeoutSec;
+    return requestSender.keyProps.socketTimeoutSec();
   }
 
   @Override
   public void setSocketTimeout(int i) {
-    requestSender.keyProps.socketTimeoutSec = i;
+    throw new IllegalStateException("Can only be set when creating the session");
   }
 
   @Override
