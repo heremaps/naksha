@@ -48,8 +48,12 @@ public class HttpStorage implements IStorage {
       if (!storage.getProperties().hasRaw(HttpStorageProperties.URL)) {
         throw new IllegalArgumentException("A HTTP storage must have properties containing a 'url'");
       }
-      properties = new HttpStorageProperties(
-          storage.getProperties().get(HttpStorageProperties.URL).toString(), null, null, null);
+      final Object raw = storage.getProperties().get(HttpStorageProperties.URL);
+      if (raw instanceof String url) {
+        properties = new HttpStorageProperties(url, null, null, null);
+      } else {
+        throw new IllegalArgumentException("A HTTP storage must have properties containing a 'url'");
+      }
     }
     defaultKeyProperties = new KeyProperties(
             storage.getId(),

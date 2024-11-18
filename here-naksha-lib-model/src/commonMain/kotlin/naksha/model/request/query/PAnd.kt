@@ -22,6 +22,6 @@ class PAnd() : ListProxy<IPropertyQuery>(IPropertyQuery::class), IPropertyQuery 
     }
 
     override fun toString(): String {
-        return joinToString("&")
+        return joinToString(" & ")
     }
 }
