@@ -141,20 +141,29 @@ The metadata is encoded like following:
 
 - { tuple-number }
 - flags: u32
-- txn_next: u64 (optional, flags bit)
-- { prev_tn, 96-bit tuple-number, optional, flags bit }
-- { base_tn, 96-bit tuple-number, optional, flags bit }
-- created_at: u48 (optional, flags bit)
-- author_ts: u48 (optional, flags bit)
-- updated_at: u48
+- txnNext: u64 (optional, flags bit)
+- cv0: f64 (optional, flags bit)
+- cv1: f64 (optional, flags bit)
+- cv2: f64 (optional, flags bit)
+- cv3: f64 (optional, flags bit)
+- { prev_tn: 96-bit tuple-number, optional, flags bit }
+- { base_tn: 96-bit tuple-number, optional, flags bit }
+- createdAt: u48 (optional, flags bit)
+- authorTs: u48 (optional, flags bit)
+- updatedAt: u48
 - changeCount: u32
 - hash: u32
 - hereTile: u32
 - id: cstring
-- appid: cstring
+- appId: cstring
 - author: cstring
 - origin: cstring
 - target: cstring
+- ft: cstring
+- cs0: cstring
+- cs1: cstring
+- cs2: cstring
+- cs3: cstring
 
 Each metadata encodes at its start the tuple-number in 224-bit (28-byte). The previous tuple-number (`prev_tn`) and the base tuple-number (`base_tn`), used in auto-merging, are only encoded as 96-bit values, because they share the same _storage_, _map_, and _collection_, so the are encoded only with _version_, _partition-number_, and _uid_.
 
@@ -264,13 +273,13 @@ The following query is how Naksha `lib-psql` will perform a search in the databa
 
 ```sql
 WITH query AS (
- (SELECT ${col_number} as col_num, id, tuple_number FROM ${col_name} WHERE ...)
+ (SELECT ${col_number} as col_num, id, tn FROM ${col_name} WHERE ...)
  UNION ALL
  ...
 ), result AS (
-  SELECT col_num, tuple_number
+  SELECT col_num, tn
   FROM query
-  ORDER BY col_num, id, tuple_number
+  ORDER BY col_num, id, tn
   LIMIT 16777215
 )
 SELECT gzip( -- compress the binary
@@ -278,7 +287,7 @@ SELECT gzip( -- compress the binary
  int4send(20 + sum(1)::int*16)|| -- size
  int8send(${storage_number})|| -- shared storage-number
  int4send(${map_number})|| -- shared map-number
- bytea_agg(int4send(col_num)||tuple_number) -- aggregate all tuple-number
+ bytea_agg(int4send(col_num)||tn) -- aggregate all tuple-number
 ) AS rs FROM result;
 ```
 This query guarantees, that all tuples are ordered by collection, feature-id, version, uid.
@@ -290,18 +299,18 @@ If the HISTORY need to be queried too, then there are two basic cases. A specifi
 ```sql
 WITH query AS (
   -- Select from HEAD.
-  (SELECT ${col_number} as col_num, id, tuple_number FROM ${col_name} 
+  (SELECT ${col_number} as col_num, id, tn FROM ${col_name} 
    WHERE txn <= $1 AND ...)
   UNION ALL
   -- Select from HISTORY.
-  (SELECT ${col_number} as col_num, id, tuple_number FROM ${col_name_hst} 
+  (SELECT ${col_number} as col_num, id, tn FROM ${col_name_hst} 
     WHERE txn <= $1 AND txn_next > $1 AND ...)
   UNION ALL
   ...
 ), result AS (
-  SELECT col_num, tuple_number
+  SELECT col_num, tn
   FROM query
-  ORDER BY col_num, id, tuple_number
+  ORDER BY col_num, id, tn
   LIMIT 16777215
 )
 SELECT gzip( -- compress the binary
@@ -309,7 +318,7 @@ SELECT gzip( -- compress the binary
  int4send(20 + sum(1)::int*16)|| -- size
  int8send(${storage_number})|| -- shared storage-number
  int4send(${map_number})|| -- shared map-number
- bytea_agg(int4send(col_num)||tuple_number) -- aggregate all tuple-number
+ bytea_agg(int4send(col_num)||tn) -- aggregate all tuple-number
 ) AS rs FROM result;
 ```
 This works, because we search in HEAD for features with a `txn` less than/equal to the searched _version_. If there is such a feature, there can't be any other tuple, that has a `txn_next` greater than the searched _version_, because the HEAD feature is the latest one, and it has `txn_next` being `0`. Then we search in HISTORY for the feature, that has a `txn` less than/equal to the searched _version_, and at the same time has a newer tuple greater than the searched version (`txn_next`), which means, that it can't be in HEAD.
@@ -322,11 +331,11 @@ If the client wants multiple tuples before the given _version_, we need to fetch
 ```sql
 -- Select from HEAD.
 WITH query AS (
-(SELECT ${col_number} as col_num, id, tuple_number, txn, uid FROM ${col_name} 
+(SELECT ${col_number} as col_num, id, tn, txn, uid FROM ${col_name} 
  WHERE txn <= $1 AND ...)
 UNION ALL
 -- Select from HISTORY
-(SELECT ${col_number} as col_num, id, tuple_number, txn, uid FROM ${col_name}$hst 
+(SELECT ${col_number} as col_num, id, tn, txn, uid FROM ${col_name}$hst 
   WHERE txn <= $1 AND ...) -- we do not limit by 'AND txn_next > $1' 
 UNION ALL
  ...
@@ -334,14 +343,14 @@ UNION ALL
   SELECT
     col_num,
     id,
-    tuple_number,
+    tn,
     ROW_NUMBER() OVER (PARTITION BY id ORDER BY txn, uid DESC) AS v
   FROM query
 ), result AS (
-  SELECT col_num, tuple_number
+  SELECT col_num, tn
   FROM query_with_v
   WHERE v <= 2 -- this selects the latest n version!!!
-  ORDER BY col_num, id, tuple_number
+  ORDER BY col_num, id, tn
   LIMIT 16777215
 )
 SELECT gzip( -- compress the binary
@@ -349,7 +358,7 @@ SELECT gzip( -- compress the binary
  int4send(20 + sum(1)::int*16)|| -- size
  int8send(${storage_number})|| -- shared storage-number
  int4send(${map_number})|| -- shared collection-number
- bytea_agg(int4send(col_num)||tuple_number) -- aggregate all tuple-number
+ bytea_agg(int4send(col_num)||tn) -- aggregate all tuple-number
 ) AS rs FROM result;
 ```
 Note, it is strongly recommended to increment the `work_mem` to `1G`, so that we can be sure that all the selections, and the sort, can be done in memory. Postgres will need the memory only for a short moment, because we eventually create one big byte-array. This basically means, while the data is in transfer, Postgres only need to keep this compressed binary in memory. Postgres does not need to keep a cursor hanging around, with multiple round trips to be done by the client to fetch all the rows, as there is only one row and one column returns, it's an all at ones operation!
@@ -376,7 +385,7 @@ WITH source AS (
   -- Then we order by tuple_number, and use offset/limit here!
   -- This must only be done in a single table, but nothing else changes.
   -- Note that using tuple_number will perform an index scan, its ordered already.
-  (SELECT ${col_number} as col_num, * FROM ${col_name} WHERE tuple_number = ANY($1))
+  (SELECT ${col_number} as col_num, * FROM ${col_name} WHERE tn = ANY($1))
   UNION ALL
   ...
 ), meta_with_rest AS (
@@ -385,9 +394,13 @@ WITH source AS (
     int8send(${storage_number})
     ||int4send(${map_number})
     ||int4send(col_num)
-    ||tuple_number -- 12 byte, txn is part of tuple_number
+    ||tn -- 12 byte, txn is part of tuple_number
     ||int4send(flags) -- 4 byte, we're aligned to 64-bit again
     ||coalesce(int8send(txn_next),''::bytea)
+    ||coalesce(int8send(cv0),''::bytea)
+    ||coalesce(int8send(cv1),''::bytea)
+    ||coalesce(int8send(cv2),''::bytea)
+    ||coalesce(int8send(cv3),''::bytea)
     ||coalesce(prev_tn,''::bytea)
     ||coalesce(base_tn,''::bytea)
     ||coalesce(substring(int8send(created_at),3),''::bytea) -- u48
@@ -401,6 +414,11 @@ WITH source AS (
     ||coalesce(author,'')::bytea||'\x00'::bytea
     ||coalesce(origin,'')::bytea||'\x00'::bytea
     ||coalesce(target,'')::bytea||'\x00'::bytea
+    ||coalesce(ft,'')::bytea||'\x00'::bytea
+    ||coalesce(cs0,'')::bytea||'\x00'::bytea
+    ||coalesce(cs1,'')::bytea||'\x00'::bytea
+    ||coalesce(cs2,'')::bytea||'\x00'::bytea
+    ||coalesce(cs3,'')::bytea||'\x00'::bytea
   ) as meta, ref_point, geo, tags, feature, attachment
   FROM source
 ), tuple_objects_without_header AS (
