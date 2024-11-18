@@ -1,5 +1,5 @@
 package naksha.diff
 
-class DifferenceMerger {
-    // TODO
+// TODO
+private class DifferenceMerger private constructor() {
 }
