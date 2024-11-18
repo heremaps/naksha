@@ -96,7 +96,7 @@ internal object WriteFeatureUtils {
             feature = PgUtil.encodeFeature(feature, flags, encodingDict),
             tags = PgUtil.encodeTags(
                 feature.properties.xyz.tags?.toTagMap(),
-                storage.defaultFlags,
+                flags,
                 encodingDict
             ),
             attachment = attachment,
