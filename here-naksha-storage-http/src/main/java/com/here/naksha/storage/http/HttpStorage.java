@@ -21,8 +21,6 @@ package com.here.naksha.storage.http;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 import naksha.base.Int64;
 import naksha.base.JvmProxyUtil;
 import naksha.model.*;
@@ -32,6 +30,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class HttpStorage implements IStorage {
 
@@ -59,29 +60,22 @@ public class HttpStorage implements IStorage {
             properties.getSocketTimeout()));
   }
 
-  public @NotNull IReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new HttpStorageReadSession(context, useMaster, requestSender);
-  }
-
   private static @Nullable HttpStorageProperties getProperties(@NotNull Storage storage) {
     return JvmProxyUtil.box(storage.getProperties(), HttpStorageProperties.class);
   }
 
   @Override
   public void close() {
-    // TODO
   }
 
   @NotNull
   @Override
   public IReadSession newReadSession(@Nullable SessionOptions options) {
-    boolean useMaster = false;
     if (options != null) {
       requestSender.keyProps.connectionTimeoutSec = options.connectTimeout;
       requestSender.keyProps.socketTimeoutSec = options.socketTimeout;
-      useMaster = options.useMaster;
     }
-    return new HttpStorageReadSession(NakshaContext.currentContext(), useMaster, requestSender);
+    return new HttpStorageReadSession(NakshaContext.currentContext(), requestSender);
   }
 
   @NotNull
@@ -171,5 +165,4 @@ public class HttpStorage implements IStorage {
   public IMap get(int mapNumber) {
     throw new NotImplementedException("Not supported for HTTP storage");
   }
-
 }
