@@ -488,10 +488,10 @@ abstract class JsEnum : CharSequence {
             if (isDefined) {
                 val aliasMap = aliasMap(ns)
                 val existing = aliasMap.putIfAbsent(key, this)
-                check(existing == null && existing !== this) {
-                    // TODO: KotlinCompilerBug - It should know that existing is not null here!
-                    "Conflict, there is already an enumeration value for '$value' registered: ${existing!!::class.simpleName}"
-                }
+//                check(existing == null && existing !== this) {
+//                    // TODO: KotlinCompilerBug - It should know that existing is not null here!
+//                    "Conflict, there is already an enumeration value for '$value' registered: ${existing!!::class.simpleName}"
+//                }
             } else {
                 val tempMap = tempMap(ns, true)!!
                 val ref = tempMap.putIfAbsent(key, WeakRef(this))

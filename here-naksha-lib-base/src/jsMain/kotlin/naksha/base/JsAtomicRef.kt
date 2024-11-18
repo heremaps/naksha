@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalJsExport::class)
+
 package naksha.base
 
 @JsExport
