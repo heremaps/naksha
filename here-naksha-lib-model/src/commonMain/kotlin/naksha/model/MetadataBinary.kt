@@ -2,6 +2,7 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.base.PlatformDataView
+import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_float64
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int8
@@ -36,6 +37,10 @@ class MetadataBinary(
     private var _createdAtOffset = -1
     private var _authorTsOffset = -1
     private var _updateAtOffset = -1
+    private var _cv0Offset = -1
+    private var _cv1Offset = -1
+    private var _cv2Offset = -1
+    private var _cv3Offset = -1
     private var _tupleNumber = TupleNumber.HEAD
     private var _version: Version = Version.HEAD
     private var _nextVersion: Version? = Version.HEAD
@@ -50,6 +55,11 @@ class MetadataBinary(
     private var _author: String? = null
     private var _origin: String? = null
     private var _target: String? = null
+    private var _ft: String? = null
+    private var _cs0: String? = null
+    private var _cs1: String? = null
+    private var _cs2: String? = null
+    private var _cs3: String? = null
     private var _end = -1
     private fun clearCache() {
         _tupleNumber = TupleNumber.HEAD
@@ -66,6 +76,11 @@ class MetadataBinary(
         _originGuid = null
         _target = null
         _targetGuid = null
+        _ft = null
+        _cs0 = null
+        _cs1 = null
+        _cs2 = null
+        _cs3 = null
         _end = -1
     }
     private fun updateCache(): Boolean {
@@ -76,6 +91,23 @@ class MetadataBinary(
                 _nextTxnOffset = offset
                 offset += 8
             } else _nextTxnOffset = -1
+
+            if (flags.hasCustomValue(0)) {
+                _cv0Offset = offset
+                offset += 8
+            } else _cv0Offset = -1
+            if (flags.hasCustomValue(1)) {
+                _cv1Offset = offset
+                offset += 8
+            } else _cv1Offset = -1
+            if (flags.hasCustomValue(2)) {
+                _cv2Offset = offset
+                offset += 8
+            } else _cv2Offset = -1
+            if (flags.hasCustomValue(3)) {
+                _cv3Offset = offset
+                offset += 8
+            } else _cv3Offset = -1
 
             if (flags.hasPrevTupleNumber()) {
                 _prevTupleNumberOffset = offset
@@ -96,6 +128,7 @@ class MetadataBinary(
                 _authorTsOffset = offset
                 offset += 6
             } else _authorTsOffset = -1
+
             _updateAtOffset = offset
             val cstring = CStringReader(view, _updateAtOffset + 18)
             _id = cstring.readNext("id")
@@ -103,6 +136,11 @@ class MetadataBinary(
             _author = cstring.readNext("author")
             _origin = cstring.readNext("origin")
             _target = cstring.readNext("target")
+            _ft = cstring.readNext("ft")
+            _cs0 = cstring.readNext("c0")
+            _cs1 = cstring.readNext("c1")
+            _cs2 = cstring.readNext("c2")
+            _cs3 = cstring.readNext("c3")
             _end = cstring.offset
             return true
         }
@@ -261,6 +299,33 @@ class MetadataBinary(
             }
             return guid
         }
+
+    override val ft: String?
+        get() = _ft
+
+    override val cv0: Double?
+        get() = if (_cv0Offset >= 0) dataview_get_float64(view, _cv0Offset) else null
+
+    override val cv1: Double?
+        get() = if (_cv1Offset >= 0) dataview_get_float64(view, _cv1Offset) else null
+
+    override val cv2: Double?
+        get() = if (_cv2Offset >= 0) dataview_get_float64(view, _cv2Offset) else null
+
+    override val cv3: Double?
+        get() = if (_cv3Offset >= 0) dataview_get_float64(view, _cv3Offset) else null
+
+    override val cs0: String?
+        get() = _cs0
+
+    override val cs1: String?
+        get() = _cs1
+
+    override val cs2: String?
+        get() = _cs2
+
+    override val cs3: String?
+        get() = _cs3
 
     override val guid: Guid
         get() {

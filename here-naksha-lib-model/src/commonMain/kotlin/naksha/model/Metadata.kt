@@ -38,6 +38,15 @@ data class Metadata(
     override val author: String? = NakshaContext.author(),
     override val origin: String? = null,
     override val target: String? = null,
+    override val ft: String? = null,
+    override val cv0: Double? = null,
+    override val cv1: Double? = null,
+    override val cv2: Double? = null,
+    override val cv3: Double? = null,
+    override val cs0: String? = null,
+    override val cs1: String? = null,
+    override val cs2: String? = null,
+    override val cs3: String? = null,
 ) : IMetadata {
     override val storageNumber: Int64
         get() = tupleNumber.storageNumber
@@ -155,7 +164,10 @@ data class Metadata(
                 other.appId,
                 other.author,
                 other.origin,
-                other.target
+                other.target,
+                other.ft,
+                other.cv0, other.cv1, other.cv2, other.cv3,
+                other.cs0, other.cs1, other.cs2, other.cs3
             )
         }
 
@@ -189,7 +201,10 @@ data class Metadata(
                 author = xyz.author,
                 id = guid.featureId,
                 origin = xyz.origin,
-                target = xyz.target
+                target = xyz.target,
+                ft = xyz.featureType,
+                cv0 = xyz.cv0, cv1 = xyz.cv1, cv2 = xyz.cv2, cv3 = xyz.cv3,
+                cs0 = xyz.cs0, cs1 = xyz.cs1, cs2 = xyz.cs2, cs3 = xyz.cs3,
             )
         }
 

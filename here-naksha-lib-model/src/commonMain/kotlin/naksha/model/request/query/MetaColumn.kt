@@ -4,7 +4,6 @@ package naksha.model.request.query
 
 import naksha.base.AnyObject
 import naksha.base.NotNullProperty
-import naksha.model.request.query.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -219,6 +218,25 @@ open class MetaColumn() : AnyObject() {
         fun version(): MetaColumn = MetaColumn(VERSION)
 
         /**
+         * The reference to the [uid][naksha.model.Metadata.uid].
+         *
+         * This value is exposed through [naksha.model.XyzNs.uid].
+         *
+         * Supported [query operations][AnyOp] are:
+         * - [DoubleOp]
+         * - [AnyOp.IS_ANY_OF]
+         */
+        const val UID = "uid"
+
+        /**
+         * Returns a new meta-column for [UID].
+         * @return a new meta-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun uid(): MetaColumn = MetaColumn(UID)
+
+        /**
          * The reference to the [tuple-number][naksha.model.Metadata.tupleNumber].
          *
          * This value is part of the [naksha.model.XyzNs.uuid].
@@ -399,6 +417,187 @@ open class MetaColumn() : AnyObject() {
         @JvmStatic
         @JsStatic
         fun appId(): MetaColumn = MetaColumn(APP_ID)
+
+        /**
+         * The reference to the [type][naksha.model.Metadata.ft].
+         *
+         * This value is exposed as [naksha.model.XyzNs.featureType].
+         *
+         * Supported [query operations][AnyOp] are:
+         * - [StringOp]
+         * - [AnyOp.IS_NULL]
+         * - [AnyOp.IS_NOT_NULL]
+         * - [AnyOp.IS_ANY_OF]
+         */
+        const val FEATURE_TYPE = "type"
+
+        /**
+         * Returns a new meta-column for [FEATURE_TYPE].
+         * @return a new meta-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun featureType(): MetaColumn = MetaColumn(FEATURE_TYPE)
+
+        /**
+         * The reference to the [cv][naksha.model.Metadata.cv0] (_custom value_).
+         *
+         * This value is exposed through [naksha.model.XyzNs.cv0].
+         *
+         * Supported [query operations][AnyOp] are:
+         * - [DoubleOp]
+         * - [AnyOp.IS_ANY_OF]
+         */
+        const val CV0 = "cv0"
+
+        /**
+         * Returns a new meta-column for [CV0].
+         * @return a new meta-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun cv0(): MetaColumn = MetaColumn(CV0)
+
+        /**
+         * The reference to the [cv][naksha.model.Metadata.cv1] (_custom value_).
+         *
+         * This value is exposed through [naksha.model.XyzNs.cv1].
+         *
+         * Supported [query operations][AnyOp] are:
+         * - [DoubleOp]
+         * - [AnyOp.IS_ANY_OF]
+         */
+        const val CV1 = "cv1"
+
+        /**
+         * Returns a new meta-column for [CV1].
+         * @return a new meta-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun cv1(): MetaColumn = MetaColumn(CV1)
+
+        /**
+         * The reference to the [cv][naksha.model.Metadata.cv2] (_custom value_).
+         *
+         * This value is exposed through [naksha.model.XyzNs.cv2].
+         *
+         * Supported [query operations][AnyOp] are:
+         * - [DoubleOp]
+         * - [AnyOp.IS_ANY_OF]
+         */
+        const val CV2 = "cv2"
+
+        /**
+         * Returns a new meta-column for [CV2].
+         * @return a new meta-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun cv2(): MetaColumn = MetaColumn(CV2)
+
+        /**
+         * The reference to the [cv][naksha.model.Metadata.cv3] (_custom value_).
+         *
+         * This value is exposed through [naksha.model.XyzNs.cv3].
+         *
+         * Supported [query operations][AnyOp] are:
+         * - [DoubleOp]
+         * - [AnyOp.IS_ANY_OF]
+         */
+        const val CV3 = "cv3"
+
+        /**
+         * Returns a new meta-column for [CV3].
+         * @return a new meta-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun cv3(): MetaColumn = MetaColumn(CV3)
+
+        /**
+         * The reference to the [first custom value][naksha.model.Metadata.cs0].
+         *
+         * This value is exposed as [naksha.model.XyzNs.cs0].
+         *
+         * Supported [query operations][AnyOp] are:
+         * - [StringOp]
+         * - [AnyOp.IS_NULL]
+         * - [AnyOp.IS_NOT_NULL]
+         * - [AnyOp.IS_ANY_OF]
+         */
+        const val CS0 = "cs0"
+
+        /**
+         * Returns a new meta-column for [CS0].
+         * @return a new meta-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun cs0(): MetaColumn = MetaColumn(CS0)
+
+        /**
+         * The reference to the [first custom value][naksha.model.Metadata.cs1].
+         *
+         * This value is exposed as [naksha.model.XyzNs.cs1].
+         *
+         * Supported [query operations][AnyOp] are:
+         * - [StringOp]
+         * - [AnyOp.IS_NULL]
+         * - [AnyOp.IS_NOT_NULL]
+         * - [AnyOp.IS_ANY_OF]
+         */
+        const val CS1 = "cs1"
+
+        /**
+         * Returns a new meta-column for [CS1].
+         * @return a new meta-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun cs1(): MetaColumn = MetaColumn(CS1)
+
+        /**
+         * The reference to the [first custom value][naksha.model.Metadata.cs2].
+         *
+         * This value is exposed as [naksha.model.XyzNs.cs2].
+         *
+         * Supported [query operations][AnyOp] are:
+         * - [StringOp]
+         * - [AnyOp.IS_NULL]
+         * - [AnyOp.IS_NOT_NULL]
+         * - [AnyOp.IS_ANY_OF]
+         */
+        const val CS2 = "cs2"
+
+        /**
+         * Returns a new meta-column for [CS2].
+         * @return a new meta-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun cs2(): MetaColumn = MetaColumn(CS2)
+
+        /**
+         * The reference to the [first custom value][naksha.model.Metadata.cs3].
+         *
+         * This value is exposed as [naksha.model.XyzNs.cs3].
+         *
+         * Supported [query operations][AnyOp] are:
+         * - [StringOp]
+         * - [AnyOp.IS_NULL]
+         * - [AnyOp.IS_NOT_NULL]
+         * - [AnyOp.IS_ANY_OF]
+         */
+        const val CS3 = "cs3"
+
+        /**
+         * Returns a new meta-column for [CS3].
+         * @return a new meta-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun cs3(): MetaColumn = MetaColumn(CS3)
 
         /**
          * The reference to the [feature][naksha.model.Tuple.feature].

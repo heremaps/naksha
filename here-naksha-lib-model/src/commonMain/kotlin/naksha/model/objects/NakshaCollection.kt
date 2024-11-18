@@ -28,9 +28,10 @@ open class NakshaCollection() : NakshaFeature() {
         disableHistory: Boolean = false,
         geoIndex: String? = null
     ) : this() {
+        @Suppress("LeakingThis")
         this.id = id
-        this.storageClass = storageClass
         this.partitions = partitions
+        this.storageClass = storageClass
         this.autoPurge = autoPurge
         this.disableHistory = disableHistory
         this.geoIndex = geoIndex ?: DEFAULT_GEO_INDEX
@@ -89,14 +90,23 @@ open class NakshaCollection() : NakshaFeature() {
      * The disadvantage of these are, that they slow down the processing, but allow to actually do any kind of SQL query.
      * The final ones are NONE, which removes all protecting triggers and allow any kind of manual change, but this can easily break the history and/or transaction logs.
      */
-    var protectionClass: String? by PROTECTION_CLASS
+    var protectionClass by PROTECTION_CLASS
 
     /**
-     * Default value of `null` in `feature.type` column.
+     * If the feature-type in the [metadata][naksha.model.Metadata] should be set automatically (disallows custom values). When enabled, Naksha will read the value from `properties.featureType`, if _null_, then `momType` in the feature root, eventually `type`. It will compare the read value against [defaultType], if they are not equal, the [feature-type][naksha.model.Metadata.ft] will be set to the determined value; otherwise _null_ will be set.
+     *
+     * Therefore, when enabled, this will set the [feature-type][naksha.model.Metadata.ft] only, if it differs from the [defaultType].
      *
      * {Create-Only} - after collection creation, modification of this parameter takes no effect.
      */
-    var defaultType: String by DEFAULT_TYPE
+    var autoFeatureType by BOOLEAN_FALSE
+
+    /**
+     * Default feature-type, only considered if [autoFeatureType] is enabled.
+     *
+     * {Create-Only} - after collection creation, modification of this parameter takes no effect.
+     */
+    var defaultType by DEFAULT_TYPE
 
     /**
      * The encoding flags to be used for new rows.
@@ -124,9 +134,23 @@ open class NakshaCollection() : NakshaFeature() {
     var autoPurge by AUTO_PURGE
 
     /**
-     * The indices list contains the list of indices to add to the collection.
-     * If set to null, default indices are created.
-     * The available indices are exposed through the virtual table naksha~indices.
+     * The index list with all indices to add to the collection; if set to _null_, default indices are created.
+     *
+     * For `lib-psql` the following indices are available:
+     * - `id_txn_uid`: id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE tn.
+     * - `here_tile`: here_tile DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE tn.
+     * - `app_id`: app_id text_pattern_ops DESC, updated_at DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE tn.
+     * - `author`: naksha_author(author, app_id) text_pattern_ops DESC, naksha_author_ts(author_ts, updated_at) DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE tn.
+     * - `tags`: Index above tags, does not allow index-only scans or pre-ordering.
+     * - `ref_point`: Index above geometry, does not allow index-only scans or pre-ordering.
+     * - `gist_geo_(2d|3d|4d)` or `spgist_geo_(2d|3d|4d)`: Index above geometry, does not allow index-only scans or pre-ordering.
+     * - `feature_type`: ft text_pattern_ops DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE $c_tn
+     * - `cv0`, `cv1`, `cv2`, and `cv3`: cv? text_pattern_ops DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE $c_tn
+     * - `cs0`, `cs1`, `cs2`, and `cs3`: cs? text_pattern_ops DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE $c_tn
+     *
+     * To use less or other indices, create an own list of indices out of the above given values, `lib-psql` will all these indices by default, using `2d` variants for the geometry index by default. Beware, that many of the indices exclude _null_ value, and therefore are not costing anything, unless the values are used.
+     *
+     * It is not recommended, to add multiple geometry indices, this can become extreme costly.
      */
     var indices by INDICES
 
@@ -190,6 +214,7 @@ open class NakshaCollection() : NakshaFeature() {
         private val GEO_INDEX = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> DEFAULT_GEO_INDEX }
         private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String::class)
+        private val BOOLEAN_FALSE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val DEFAULT_TYPE = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> "Feature" }
         private val DEFAULT_FLAGS = NullableProperty<NakshaCollection, Flags>(Flags::class)
         private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)

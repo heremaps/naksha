@@ -116,7 +116,7 @@ class Naksha private constructor() {
          * The maximum length of identifiers.
          * @since 3.0.0
          */
-        const val MAX_ID_LENGTH = 45
+        const val MAX_ID_LENGTH = 42
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:

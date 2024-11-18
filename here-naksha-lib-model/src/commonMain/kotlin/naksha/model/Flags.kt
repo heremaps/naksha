@@ -4,6 +4,7 @@ package naksha.model
 
 import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_CLEAR
 import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_MASK
+import naksha.model.FlagsBits.FlagsBitsCompanion.CV_SHIFT
 import naksha.model.FlagsBits.FlagsBitsCompanion.OP_CLEAR
 import naksha.model.FlagsBits.FlagsBitsCompanion.OP_MASK
 import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_CLEAR
@@ -29,20 +30,21 @@ import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_MASK
 /**
  * Collection of bit definitions for the `flags`. The flags store the encoding in the storage, it stores how the binaries are encoded:
  * ```
- *   Reserved    NPBAC   AC    OP    TE     FE    GE
- * [0000-0000-0][000-00][00]-[0000][0000]-[0000][0000]
+ *   RSV    NPBAC    VVVV  AC    OP    TE     FE    GE
+ * [0000-0][000-00][00-00][00]-[0000][0000]-[0000][0000]
  * ```
  * - GE: geometry encoding - bits: 0-3 (4-bit)
  * - FE: feature encoding - bits: 4-7 (4-bit)
  * - TE: tags encoding - bits: 8-11 (4-bit)
  * - OP: operation - bits: 12-15 (4-bit)
  * - AC: action - bits: 16-17 (2-bit)
- * - N: has-next-version - bit 18 _(1-bit, 524288)_
- * - P: has-previous-tuple-number - bit 19 _(1-bit, 1048576)_
- * - B: has-base-tuple-number - bit 20 _(1-bit, 2097152)_
- * - A: has-author-ts - bit 21 _(1-bit, 4194304)_
- * - C: has-created-at - bit 22 _(1-bit, 8388608)_
- * - R1: reserved - bit: 23-31 (9-bit)
+ * - VVVV: has-value-[0-3] - bit 18-21 _(4-bit)_
+ * - N: has-next-version - bit 22 _(1-bit, 4194304)_
+ * - P: has-previous-tuple-number - bit 23 _(1-bit, 8388608)_
+ * - B: has-base-tuple-number - bit 24 _(1-bit, 16777216)_
+ * - A: has-author-ts - bit 25 _(1-bit, 33554432)_
+ * - C: has-created-at - bit 26 _(1-bit, 67108864)_
+ * - RSV: reserved - bit: 27-31 (5-bit)
  * @since 3.0.0
  */
 typealias Flags = Int
@@ -313,4 +315,27 @@ inline fun Flags.withAuthorTs(value: Boolean): Flags = if (value) (this or HAS_A
  * @since 3.0.0
  */
 inline fun Flags.hasAuthorTs(): Boolean = (this and HAS_AUTHOR_TS_CLEAR) == HAS_AUTHOR_TS_BIT
+
+/**
+ * Updates the custom-value bit.
+ * @param i the custom value to test (`0 to 3`).
+ * @param value _true_ if the [MetadataBinary] encodes the custom-value.
+ * @return the new flags.
+ * @since 3.0.0
+ */
+inline fun Flags.withCustomValue(i: Int, value: Boolean = true): Flags {
+    val BIT = 1 shl (CV_SHIFT + (i and 3))
+    return if (value) (this or BIT) else (this and BIT.inv())
+}
+
+/**
+ * Tests if the custom-value is encoded in the [MetadataBinary].
+ * @param i the custom value to test (`0 to 3`).
+ * @return _true_ if the custom-value is encoded in the [MetadataBinary].
+ * @since 3.0.0
+ */
+inline fun Flags.hasCustomValue(i: Int): Boolean {
+    val BIT = 1 shl (CV_SHIFT + (i and 3))
+    return (this and BIT) == BIT
+}
 

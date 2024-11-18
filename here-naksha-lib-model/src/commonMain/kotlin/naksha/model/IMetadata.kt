@@ -198,6 +198,60 @@ interface IMetadata {
      */
     val targetGuid: Guid?
 
+    /**
+     * A custom feature-type that is indexed, if not being _null_ _(partial index)_.
+     * @since 3.0.0
+     */
+    val ft: String?
+
+    /**
+     * A custom value that is indexed, if not being _null_ _(partial index)_.
+     * @since 3.0.0
+     */
+    val cv0: Double?
+
+    /**
+     * A custom value that is indexed, if not being _null_ _(partial index)_.
+     * @since 3.0.0
+     */
+    val cv1: Double?
+
+    /**
+     * A custom value that is indexed, if not being _null_ _(partial index)_.
+     * @since 3.0.0
+     */
+    val cv2: Double?
+
+    /**
+     * A custom value that is indexed, if not being _null_ _(partial index)_.
+     * @since 3.0.0
+     */
+    val cv3: Double?
+
+    /**
+     * A custom string that is indexed, if not being _null_ _(partial index)_.
+     * @since 3.0.0
+     */
+    val cs0: String?
+
+    /**
+     * A custom string that is indexed, if not being _null_ _(partial index)_.
+     * @since 3.0.0
+     */
+    val cs1: String?
+
+    /**
+     * A custom string that is indexed, if not being _null_ _(partial index)_.
+     * @since 3.0.0
+     */
+    val cs2: String?
+
+    /**
+     * A custom string that is indexed, if not being _null_ _(partial index)_.
+     * @since 3.0.0
+     */
+    val cs3: String?
+
     /***
      * The [Guid] of the [Tuple], basically just a combination of [tupleNumber] and [id].
      * @since 3.0.0

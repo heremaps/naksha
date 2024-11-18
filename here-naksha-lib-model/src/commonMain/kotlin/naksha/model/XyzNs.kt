@@ -137,14 +137,69 @@ class XyzNs : AnyObject() {
          */
         const val HERE_TILE = "hereTile"
 
+        /**
+         * The key of the [featureType] property.
+         * @since 3.0.0
+         */
+        const val FEATURE_TYPE = "featureType"
+
+        /**
+         * The key of the [cv0] property.
+         * @since 3.0.0
+         */
+        const val CV0 = "cv0"
+
+        /**
+         * The key of the [cv1] property.
+         * @since 3.0.0
+         */
+        const val CV1 = "cv1"
+
+        /**
+         * The key of the [cv2] property.
+         * @since 3.0.0
+         */
+        const val CV2 = "cv2"
+
+        /**
+         * The key of the [cv3] property.
+         * @since 3.0.0
+         */
+        const val CV3 = "cv3"
+
+        /**
+         * The key of the [cs0] property.
+         * @since 3.0.0
+         */
+        const val CS0 = "c0"
+
+        /**
+         * The key of the [cs1] property.
+         * @since 3.0.0
+         */
+        const val CS1 = "c1"
+
+        /**
+         * The key of the [cs2] property.
+         * @since 3.0.0
+         */
+        const val CS2 = "c2"
+
+        /**
+         * The key of the [cs3] property.
+         * @since 3.0.0
+         */
+        const val CS3 = "c3"
+
         private val _ACTION = NotNullEnum<XyzNs, Action>(Action::class) { _, _ -> Action.CREATED }
         private val _OPERATION = NotNullEnum<XyzNs, Operation>(Operation::class) { _, _ -> Operation.CREATED }
         private val _APP_ID = NotNullProperty<XyzNs, String>(String::class) { _, _ -> NakshaContext.appId() }
-        private val _STRING_NULL = NullableProperty<XyzNs, String>(String::class)
+        private val _STRING_NULL = NullableProperty<XyzNs, String>(String::class, autoRemove = true)
         private val _INT_0 = NotNullProperty<XyzNs, Int>(Int::class) { _, _ -> 0 }
-        private val _INT_NULL = NullableProperty<XyzNs, Int>(Int::class)
+        private val _INT_NULL = NullableProperty<XyzNs, Int>(Int::class, autoRemove = true)
         private val _UPDATED_AT = NotNullProperty<XyzNs, Int64>(Int64::class) { _, _ -> Platform.currentMillis() }
-        private val _INT64_NULL = NullableProperty<XyzNs, Int64>(Int64::class)
+        private val _INT64_NULL = NullableProperty<XyzNs, Int64>(Int64::class, autoRemove = true)
+        private val _DOUBLE_NULL = NullableProperty<XyzNs, Double>(Double::class, autoRemove = true)
         private val _TAGS = NotNullProperty<XyzNs, TagList>(TagList::class) { _, _ -> TagList() }
         private var AS_IS: CharArray = CharArray(128 - 32) { (it + 32).toChar() }
         private var TO_LOWER: CharArray = CharArray(128 - 32) { (it + 32).toChar().lowercaseChar() }
@@ -181,6 +236,15 @@ class XyzNs : AnyObject() {
                 setRaw(HERE_TILE, meta.hereTile)
                 if (meta.origin != null) setRaw(ORIGIN, meta.origin)
                 if (meta.target != null) setRaw(TARGET, meta.target)
+                if (meta.ft != null) setRaw(FEATURE_TYPE, meta.ft)
+                if (meta.cv0 != null) setRaw(CV0, meta.cv0)
+                if (meta.cv1 != null) setRaw(CV1, meta.cv1)
+                if (meta.cv2 != null) setRaw(CV2, meta.cv2)
+                if (meta.cv3 != null) setRaw(CV3, meta.cv3)
+                if (meta.cs0 != null) setRaw(CS0, meta.cs0)
+                if (meta.cs1 != null) setRaw(CS1, meta.cs1)
+                if (meta.cs2 != null) setRaw(CS2, meta.cs2)
+                if (meta.cs3 != null) setRaw(CS3, meta.cs3)
             }.proxy(XyzNs::class)
         }
 
@@ -354,7 +418,7 @@ class XyzNs : AnyObject() {
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      * @since 1.0.0
      */
-    val origin: String? by _STRING_NULL
+    val origin by _STRING_NULL
     private var _origin: String? = null
     private var _originGuid: Guid? = null
 
@@ -383,7 +447,7 @@ class XyzNs : AnyObject() {
      * This field **must** be set by clients, when the join features into a new one, all features involved into the join require the [target] to be set to the [Guid] of the new feature, **including** the new feature itself! As the client may not know the real [Guid] of the new feature, it is okay, when it just inserts the _HEAD_ [Guid], so `urn:here:naksha:guid:{feature-id}`.
      * @since 3.0.0
      */
-    val target: String? by _STRING_NULL
+    val target by _STRING_NULL
     private var _target: String? = null
     private var _targetGuid: Guid? = null
 
@@ -437,7 +501,7 @@ class XyzNs : AnyObject() {
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      * @since 1.0.0
      */
-    val updatedAt: Int64 by _UPDATED_AT
+    val updatedAt by _UPDATED_AT
 
     /**
      * The space in which this feature is located.
@@ -453,7 +517,7 @@ class XyzNs : AnyObject() {
      * @since 1.0.0
      */
     @Deprecated("This field is not supported by Naksha, but part of MOM specification", level = WARNING)
-    val space: String? by _STRING_NULL
+    val space by _STRING_NULL
 
     /**
      * Customer defined tags for this feature.
@@ -468,7 +532,7 @@ class XyzNs : AnyObject() {
      * previous one.
      * @since 1.0.0
      */
-    var tags: TagList by _TAGS
+    var tags by _TAGS
 
     /**
      * The version of the feature.
@@ -492,13 +556,19 @@ class XyzNs : AnyObject() {
         }
 
     /**
+     * The `uid` (unique transaction local identity) of the [Tuple] within the [transaction][naksha.model.objects.Transaction].
+     */
+    val uid: Int?
+        get() = guid?.tupleNumber?.uid
+
+    /**
      * The version of the next [Tuple], if known.
      *
      * - If this value is available, it is **guaranteed** that the current feature state is historic.
      * - If the value is not available (_null_), there is no guarantee if this is still the latest _HEAD_; it is only likely.
      * @since 3.0.0
      */
-    val nextVersion: Int64? by _INT64_NULL
+    val nextVersion by _INT64_NULL
 
     /**
      * The change-count, so how often the feature has been changed since it was created. The value starts with 1.
@@ -508,7 +578,7 @@ class XyzNs : AnyObject() {
      * If the value is `0`, this is a new feature not yet stored anywhere.
      * @since 3.0.0
      */
-    val changeCount: Int by _INT_0
+    val changeCount by _INT_0
 
     /**
      * The action that was done.
@@ -517,7 +587,7 @@ class XyzNs : AnyObject() {
      * @since 1.0.0
      * @see [Action]
      */
-    val action: Action by _ACTION
+    val action by _ACTION
 
     /**
      * The operation that was done.
@@ -526,14 +596,14 @@ class XyzNs : AnyObject() {
      * @since 1.0.0
      * @see [Operation]
      */
-    val operation: Operation by _OPERATION
+    val operation by _OPERATION
 
     /**
      * The identifier of the application that modified the feature the last.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      */
-    val appId: String by _APP_ID
+    val appId by _APP_ID
 
     /**
      * The author of the feature. Not every change of feature is done by intention, the author is only set, when the change of the
@@ -543,7 +613,7 @@ class XyzNs : AnyObject() {
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      * @since 3.0.0
      */
-    val author: String? by _STRING_NULL
+    val author by _STRING_NULL
 
     /**
      * The time when this author of the feature was modified.
@@ -566,7 +636,7 @@ class XyzNs : AnyObject() {
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      * @since 3.0.0
      */
-    val flags: Int? by _INT_NULL
+    val flags by _INT_NULL
 
     /**
      * The hash above the feature, calculated server side.
@@ -574,7 +644,7 @@ class XyzNs : AnyObject() {
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      * @since 3.0.0
      */
-    val hash: Int? by _INT_NULL
+    val hash by _INT_NULL
 
     /**
      * The binary [HERE tile][naksha.geo.HereTile] in which the reference-point of the feature is located at level 15.
@@ -582,7 +652,63 @@ class XyzNs : AnyObject() {
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      * @since 3.0.0
      */
-    val hereTile: Int? by _INT_NULL
+    val hereTile by _INT_NULL
+
+    /**
+     * A custom feature-type.
+     *
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 3.0.0
+     */
+    val featureType by _STRING_NULL
+
+    /**
+     * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0.0
+     */
+    val cv0 by _DOUBLE_NULL
+
+    /**
+     * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0.0
+     */
+    val cv1 by _DOUBLE_NULL
+
+    /**
+     * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0.0
+     */
+    val cv2 by _DOUBLE_NULL
+
+    /**
+     * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0.0
+     */
+    val cv3 by _DOUBLE_NULL
+
+    /**
+     * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0.0
+     */
+    val cs0 by _STRING_NULL
+
+    /**
+     * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0.0
+     */
+    val cs1 by _STRING_NULL
+
+    /**
+     * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0.0
+     */
+    val cs2 by _STRING_NULL
+
+    /**
+     * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0.0
+     */
+    val cs3 by _STRING_NULL
 
     /**
      * Returns 'true' if the tag was removed, 'false' if it was not present.
