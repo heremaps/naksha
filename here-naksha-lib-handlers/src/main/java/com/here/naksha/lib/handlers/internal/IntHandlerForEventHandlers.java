@@ -34,7 +34,6 @@ import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.util.storage.ResultHelper;
 import com.here.naksha.lib.handlers.*;
-
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;

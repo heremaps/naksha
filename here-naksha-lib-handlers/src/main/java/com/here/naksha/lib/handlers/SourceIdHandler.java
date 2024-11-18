@@ -42,12 +42,11 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 public class SourceIdHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(SourceIdHandler.class);
-  private static final String TAG_PREFIX = "naksha_source_id_"; //TODO decide
+  private static final String TAG_PREFIX = "naksha_source_id_"; // TODO decide
   private static final String SOURCE_ID = "sourceId";
   public static final int PREF_PATHS_SIZE = 3;
 
-  public SourceIdHandler(
-          final @NotNull INaksha hub) {
+  public SourceIdHandler(final @NotNull INaksha hub) {
     super(hub);
   }
 
@@ -144,7 +143,6 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   private static boolean operationTypeAllowed(PQuery propertyOperation) {
     final AnyOp op = propertyOperation.getOp();
-    return op.equals(StringOp.EQUALS) || op.equals(StringOp.CONTAINS)
-            || op.equals(DoubleOp.EQ);
+    return op.equals(StringOp.EQUALS) || op.equals(StringOp.CONTAINS) || op.equals(DoubleOp.EQ);
   }
 }

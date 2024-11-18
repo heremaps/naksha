@@ -30,7 +30,6 @@ import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
-
 import java.util.List;
 import naksha.geo.XyzProperties;
 import naksha.geo.XyzReference;

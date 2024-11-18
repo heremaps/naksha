@@ -20,7 +20,6 @@ package com.here.naksha.lib.handlers;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.util.List;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaProperties;

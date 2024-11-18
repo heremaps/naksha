@@ -22,7 +22,6 @@ import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.ContextXyzFeatureResult;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-
 import java.util.ArrayList;
 import java.util.List;
 import naksha.model.NakshaError;

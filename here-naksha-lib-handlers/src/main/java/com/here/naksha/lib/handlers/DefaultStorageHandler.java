@@ -36,10 +36,13 @@ import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
+
+import naksha.base.StringList;
 import naksha.model.*;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.request.*;
@@ -233,7 +236,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       NakshaContext ctx,
       IStorage storageImpl,
       NakshaCollection collection,
-      WriteCollections<?, ?, ?> wc,
+      WriteRequest wc,
       OperationAttempt previousAttempt,
       RuntimeException re) {
     if (previousAttempt == FIRST_ATTEMPT && re instanceof StorageNotInitialized) {
@@ -326,7 +329,9 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   private void applyCollectionId(Request request, @NotNull String customCollectionId) {
     if (request instanceof ReadFeatures rf) {
-      rf.setCollections(List.of(customCollectionId));
+      final StringList ids = new StringList();
+      ids.add(customCollectionId);
+      rf.setFeatureIds(ids);
     } else if (request instanceof WriteFeatures<?, ?, ?> wf) {
       wf.setCollectionId(customCollectionId);
     } else if (request instanceof WriteCollections<?, ?, ?> wc) {
@@ -370,12 +375,14 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     return new NakshaCollection(eventTarget.getId());
   }
 
-  private @NotNull Stream<@NotNull NakshaCollection> collectionsFrom(@NotNull WriteCollections<?, ?, ?> wc) {
-    return wc.features.stream()
-        .filter(XyzCollectionCodec.class::isInstance)
-        .map(XyzCollectionCodec.class::cast)
-        .map(XyzCollectionCodec::getFeature)
-        .filter(Objects::nonNull);
+  private @NotNull List<@NotNull NakshaCollection> collectionsFrom(@NotNull WriteRequest wr) {
+    final ArrayList<NakshaCollection> collections = new ArrayList<>();
+    for (Write write : wr.getWrites()) {
+      if (write.getFeature() instanceof NakshaCollection) {
+        collections.add((NakshaCollection) write.getFeature());
+      }
+    }
+    return collections;
   }
 
   private void createXyzCollection(
