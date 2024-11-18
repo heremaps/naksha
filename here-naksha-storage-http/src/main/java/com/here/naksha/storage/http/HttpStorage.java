@@ -38,7 +38,7 @@ public class HttpStorage implements IStorage {
 
   private static final Logger log = LoggerFactory.getLogger(HttpStorage.class);
 
-  private final RequestSender requestSender;
+  private final KeyProperties defaultKeyProperties;
 
   private final AtomicBoolean initialized = new AtomicBoolean(false);
 
@@ -51,13 +51,12 @@ public class HttpStorage implements IStorage {
       properties = new HttpStorageProperties(
           storage.getProperties().get(HttpStorageProperties.URL).toString(), null, null, null);
     }
-    requestSender = RequestSenderCache.getInstance()
-        .getSenderWith(new KeyProperties(
+    defaultKeyProperties = new KeyProperties(
             storage.getId(),
             properties.getUrl(),
             properties.getHeaders(),
             properties.getConnectTimeout(),
-            properties.getSocketTimeout()));
+            properties.getSocketTimeout());
   }
 
   private static @Nullable HttpStorageProperties getProperties(@NotNull Storage storage) {
@@ -71,10 +70,13 @@ public class HttpStorage implements IStorage {
   @NotNull
   @Override
   public IReadSession newReadSession(@Nullable SessionOptions options) {
-    if (options != null) {
-      requestSender.keyProps.connectionTimeoutSec = options.connectTimeout;
-      requestSender.keyProps.socketTimeoutSec = options.socketTimeout;
-    }
+    final RequestSender requestSender = RequestSenderCache.getInstance()
+            .getSenderWith(new KeyProperties(
+                    defaultKeyProperties.name(),
+                    defaultKeyProperties.hostUrl(),
+                    defaultKeyProperties.defaultHeaders(),
+                    options != null ? options.connectTimeout : defaultKeyProperties.connectionTimeoutSec(),
+                    options != null ? options.socketTimeout : defaultKeyProperties.socketTimeoutSec()));
     return new HttpStorageReadSession(NakshaContext.currentContext(), requestSender);
   }
 
@@ -129,7 +131,7 @@ public class HttpStorage implements IStorage {
   @NotNull
   @Override
   public String getId() {
-    return requestSender.keyProps.getName();
+    return defaultKeyProperties.name();
   }
 
   @NotNull

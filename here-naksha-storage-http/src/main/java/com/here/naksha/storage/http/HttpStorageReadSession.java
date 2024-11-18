@@ -67,12 +67,12 @@ public final class HttpStorageReadSession implements IReadSession {
 
   @Override
   public int getSocketTimeout() {
-    return requestSender.keyProps.socketTimeoutSec;
+    return requestSender.keyProps.socketTimeoutSec();
   }
 
   @Override
   public void setSocketTimeout(int i) {
-    requestSender.keyProps.socketTimeoutSec = i;
+    throw new IllegalStateException("Can only be set when creating the session");
   }
 
   @Override
