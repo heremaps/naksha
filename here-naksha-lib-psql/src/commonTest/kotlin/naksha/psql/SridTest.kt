@@ -24,7 +24,19 @@ import kotlin.test.assertEquals
 
 class SridTest : PgTestBase() {
 
-    data class SridTestConfig(val encodingName: String, val flags: Flags, val collectionId: String)
+
+    /**
+    This might look odd at first glance but there's a reason to have test configs as separate being.
+    Currently in Naksha, when we want to write features with specific encoding we need to specify this as a collection property (via NakshaCollection.defaultFlags). Then, whenever we write features to collection, this field is read and proper encoding is enforced on geometry, tags etc.
+
+    In the tests below, we are validating correct encoding of geometry (more specifically, we check whether naksha_geometry function, when run against persisted feature, returns geometry with SRID set to 4326 which is our default and only supported SRID).
+    To test all encodings we have, we need separate collection for each encoding - we need features to be properly encoded before persisted so we need proper collection.flags to be set (see 1st paragraph above).
+
+    Why not use single collection and modify it with defferent flags for each test?
+    - Because collections and their properties are cached, so if we had shared collection for all test cases, the application wouldn't fetch collection from DB, rather it will use what it has in cache (with previous encoding) and we would end up with encoding not matching our expectation
+    - To avoid the above, the collection cache would have to be cleared, and since it is not public (rightly so), the only way to do that is dropping the collection - this already makes the whole process more complicated and slowe than simply having N collections for N encodings
+     */
+    private data class SridTestConfig(val encodingName: String, val flags: Flags, val collectionId: String)
 
     private companion object {
         // test data
