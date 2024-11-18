@@ -95,6 +95,7 @@ class RequestSenderCacheTest {
             TimeUnit.HOURS
     );
 
+    assertEquals(PROP_ID_1, PROP_ID_1_COPY);
     assertNotSame(PROP_ID_1, PROP_ID_1_COPY);
 
     // Tests
@@ -123,6 +124,7 @@ class RequestSenderCacheTest {
             TimeUnit.HOURS
     );
 
+    assertEquals(PROP_ID_1, PROP_ID_1_MAP_COPIED);
     assertNotSame(PROP_ID_1, PROP_ID_1_MAP_COPIED);
 
     // Tests
