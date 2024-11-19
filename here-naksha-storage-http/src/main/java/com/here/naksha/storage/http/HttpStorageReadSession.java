@@ -19,8 +19,6 @@
 package com.here.naksha.storage.http;
 
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
-
-import java.util.List;
 import naksha.model.*;
 import naksha.model.objects.Transaction;
 import naksha.model.request.ErrorResponse;
@@ -32,6 +30,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 public final class HttpStorageReadSession implements IReadSession {
 
