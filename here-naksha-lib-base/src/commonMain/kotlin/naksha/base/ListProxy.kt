@@ -131,15 +131,15 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
     override fun isEmpty(): Boolean = array_get_length(platformObject()) == 0
 
     override fun iterator(): MutableIterator<E?> {
-        return toMutableList(platformObject()).listIterator()
+        return ListProxyIterator(toMutableList(platformObject()).listIterator(), this)
     }
 
     override fun listIterator(): MutableListIterator<E?> {
-        return toMutableList(platformObject()).listIterator()
+        return ListProxyIterator(toMutableList(platformObject()).listIterator(), this)
     }
 
     override fun listIterator(index: Int): MutableListIterator<E?> {
-        return toMutableList(platformObject()).listIterator(index)
+        return ListProxyIterator(toMutableList(platformObject()).listIterator(index), this)
     }
 
     override fun removeAt(index: Int): E? {
@@ -248,4 +248,22 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
      * @return this cast to List<E>.
      */
     fun asList(): List<E?> = this
+
+    class ListProxyIterator<T: Any>(
+        private val basicIterator: MutableListIterator<T?>,
+        private val owner: ListProxy<T>
+    ): MutableListIterator<T?> by basicIterator {
+
+        private var currentItem: T? = null
+
+        override fun next(): T? {
+            val next = basicIterator.next()
+            currentItem = next
+            return next
+        }
+
+        override fun remove() {
+            owner.remove(currentItem)
+        }
+    }
 }

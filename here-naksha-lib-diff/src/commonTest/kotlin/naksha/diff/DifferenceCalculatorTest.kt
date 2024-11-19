@@ -1,5 +1,6 @@
+package naksha.diff
+
 import naksha.base.Platform
-import naksha.diff.*
 import naksha.diff.DifferenceCalculator.DifferenceCalculator_C.calculateDifference
 import kotlin.test.*
 
