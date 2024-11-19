@@ -7,14 +7,12 @@ class DifferenceFilter private constructor() {
         /**
          * Removes all occurences of [RemoveOp] from composite [Difference] types as [ListDiff] or [MapDiff]
          * Note that supplied [difference] will be affected (it is also returned)
-         * TODO: clean up the contract
          */
-        fun removeAllRemoveOp(difference: Difference?): Difference? {
+        fun removeAllRemoveOp(difference: Difference?) {
             when (difference) {
                 is MapDiff -> removeAllRemoveOpFromMap(difference)
                 is ListDiff -> removeAllRemoveOpFromList(difference)
             }
-            return difference
         }
 
         private fun removeAllRemoveOpFromMap(mapDiff: MapDiff) {

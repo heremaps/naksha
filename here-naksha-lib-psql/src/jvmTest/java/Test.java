@@ -18,8 +18,4 @@
  */
 public class Test {
   static void main() {}
-
-  @org.junit.jupiter.api.Test
-  void x(){}
-
 }
