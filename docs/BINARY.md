@@ -277,7 +277,7 @@ WITH query AS (
  UNION ALL
  ...
 ), result AS (
-  SELECT col_num, tn
+  SELECT DISTINCT col_num, tn
   FROM query
   ORDER BY col_num, id, tn
   LIMIT 16777215
@@ -308,7 +308,7 @@ WITH query AS (
   UNION ALL
   ...
 ), result AS (
-  SELECT col_num, tn
+  SELECT DISTINCT col_num, tn
   FROM query
   ORDER BY col_num, id, tn
   LIMIT 16777215
@@ -339,13 +339,16 @@ UNION ALL
   WHERE txn <= $1 AND ...) -- we do not limit by 'AND txn_next > $1' 
 UNION ALL
  ...
+), without_duplicates AS (
+  SELECT DISTINCT col_num, id, tn, txn, uid
+  FROM query
 ), query_with_v AS (
   SELECT
     col_num,
     id,
     tn,
     ROW_NUMBER() OVER (PARTITION BY id ORDER BY txn, uid DESC) AS v
-  FROM query
+  FROM without_duplicates
 ), result AS (
   SELECT col_num, tn
   FROM query_with_v
