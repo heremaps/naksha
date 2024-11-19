@@ -7,11 +7,11 @@ import kotlin.js.JsExport
  * feature. Beware that the content of an JBON feature can be anything, but most often will be a map. To read this
  * kind of features, simply use the [JbFeatureDecoder] class.
  * @constructor Create a new feature reader.
- * @property dictManager the dictionary manager to use to decode the feature.
+ * @property dictReader the dictionary reader to use to decode the feature.
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-open class JbRecordDecoder(var dictManager: IDictManager? = null) : JbStructDecoder<JbRecordDecoder>() {
+open class JbRecordDecoder(var dictReader: IDictReader? = null) : JbStructDecoder<JbRecordDecoder>() {
     private var id: String? = null
     private var featureType: Int = -1
 
@@ -27,7 +27,7 @@ open class JbRecordDecoder(var dictManager: IDictManager? = null) : JbStructDeco
         // The id of global dictionary (optional).
         if (reader.isString()) {
             val dictId = reader.decodeString()
-            reader.globalDict = dictManager?.getDictionary(dictId)
+            reader.globalDict = dictReader?.getDictionary(dictId)
             check(reader.globalDict != null) { "Unable to load necessary dictionary '$dictId'" }
         } else {
             check(reader.isNull()) { "Expected dictionary ID to be either a string or null, but found ${JbDecoder.unitTypeName(reader.unitType())}" }
