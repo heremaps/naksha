@@ -39,6 +39,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class ConnectorInterfaceWriteExecute {
 
+  public static final String PUT_OP = "PUT";
+  public static final String DELETE_OP = "DELETE";
   private final NakshaContext context;
   private final WriteXyzFeatures request;
   private final RequestSender sender;
@@ -69,7 +71,7 @@ public class ConnectorInterfaceWriteExecute {
     String streamId = context.getStreamId();
     Space connectorSpace = new Space(connectorSpaceName);
 
-    Event event = createCreateFeaturesEvent();
+    Event event = createModifyFeaturesEvent();
 
     event.setSpace(connectorSpace);
     event.setStreamId(streamId);
@@ -80,18 +82,32 @@ public class ConnectorInterfaceWriteExecute {
     return PrepareResult.prepareWriteResult(httpResponse);
   }
 
-  private ModifyFeaturesEvent createCreateFeaturesEvent() {
+  private ModifyFeaturesEvent createModifyFeaturesEvent() {
     ModifyFeaturesEvent event = new ModifyFeaturesEvent();
 
     List<XyzFeature> featuresToInsert = new LinkedList<>();
     List<XyzFeature> featuresToUpdate = new LinkedList<>();
+    Map<String, String> featuresToDelete = new HashMap<>(); // Format enforced by connector API
 
     for (XyzFeatureCodec featureCodec : request.features) {
       XyzFeature feature = featureCodec.getFeature();
-      if (isNewFeature(feature)) {
-        featuresToInsert.add(feature);
-      } else {
-        featuresToUpdate.add(feature);
+      switch (featureCodec.getOp()) {
+        case PUT_OP -> {
+          if (isNewFeature(feature)) {
+            featuresToInsert.add(feature);
+          } else {
+            featuresToUpdate.add(feature);
+          }
+        }
+        case DELETE_OP -> {
+          // Connector docs requires map entry value to be null,
+          // but in reality, doesn't matter what is the value
+          // and map with null is ignored by JsonSerializable.serialize(),
+          // so empty string is used instead.
+          featuresToDelete.put(feature.getId(), "");
+        }
+        default -> throw new UnsupportedOperationException(
+            "Unsupported feature codec OP: " + featureCodec.getOp());
       }
     }
 
@@ -111,7 +127,7 @@ public class ConnectorInterfaceWriteExecute {
 
     event.setInsertFeatures(featuresToInsert);
     event.setUpdateFeatures(featuresToUpdate);
-    event.setDeleteFeatures(Map.of()); // Connector requires empty map instead of no-field or null
+    event.setDeleteFeatures(featuresToDelete);
 
     return event;
   }

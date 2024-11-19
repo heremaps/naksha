@@ -99,11 +99,22 @@ public class PrepareResult {
       return jsonBodyToHttpSuccessResult.apply(jsonBody);
     }
     // Some storages may return success status code but contain ErrorResponse.
-    // UncheckedIOException is thrown then because ErrorResponse cannot be cast to expected httpResponseBodyType.
+    // Then, UncheckedIOException is thrown because ErrorResponse cannot be cast to expected httpResponseBodyType.
     catch (UncheckedIOException e) {
       ErrorResponse errorResponse = JsonSerializable.deserialize(jsonBody, ErrorResponse.class);
-      return new ErrorResult(errorResponse.getError(), "Error response : " + errorResponse.getErrorMessage());
+      if (isEmptyListError(errorResponse)) {
+        return prepareWriteResult(new XyzFeatureCollection());
+      } else {
+        return new ErrorResult(errorResponse.getError(), "Error response : " + errorResponse.getErrorMessage());
+      }
     }
+  }
+
+  /**
+   * @return true is the error is the "head of empty list" error known to be thrown by connector.
+   */
+  private static boolean isEmptyListError(ErrorResponse errorResponse) {
+    return errorResponse.getErrorMessage().equals("head of empty list");
   }
 
   private static HttpSuccessResult<XyzFeature, XyzFeatureCodec> prepareWriteResult(

@@ -51,6 +51,8 @@ public class HttpStorageWriteSession extends HttpStorageReadSession implements I
       };
     } catch (ConnectorInterfaceWriteExecute.ConflictException e) {
       return new ErrorResult(XyzError.CONFLICT, e.getMessage(), e);
+    } catch (UnsupportedOperationException e) {
+      return new ErrorResult(XyzError.NOT_IMPLEMENTED, e.getMessage(), e);
     } catch (Exception e) {
       log.warn("We got exception while executing Write request.", e);
       return new ErrorResult(XyzError.EXCEPTION, e.getMessage(), e);
