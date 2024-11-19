@@ -39,7 +39,7 @@ public class PatcherUtils {
       final MapDiff mapdiff = (MapDiff) difference;
       final Iterator<Entry<Object, Difference>> iterator =
           mapdiff.entrySet().iterator();
-      while (iterator.hasNext()) {
+      while (iterator.hasNext()) {v
         Entry<Object, Difference> next = iterator.next();
         next.setValue(removeAllRemoveOp(next.getValue()));
         if (next.getValue() == null) iterator.remove();
