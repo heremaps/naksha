@@ -16,6 +16,15 @@ import kotlin.jvm.JvmStatic
 open class NakshaCollection() : NakshaFeature() {
 
     /**
+     * Create a new feature with the given ID.
+     * @param id the identifier to set.
+     */
+    @JsName("ofId")
+    constructor(id: String) : this() {
+        this.id = id
+    }
+
+    /**
      * Create a Naksha collection with settings.
      */
     @JsName("of")

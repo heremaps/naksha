@@ -238,6 +238,7 @@ public interface JsonSerializable {
    * @param targetClass the class of the target-type.
    * @param <TARGET>    the target-type.
    * @return the new instance converted.
+   * @deprecated switching to new Naksha V3 models, please use {@link naksha.base.JvmProxyUtil#box(Object, Class)} and related model classes instead
    */
   static <TARGET extends JsonObject, OBJECT extends JsonObject> @NotNull TARGET convert(
       @NotNull OBJECT object, @NotNull Class<TARGET> targetClass) {

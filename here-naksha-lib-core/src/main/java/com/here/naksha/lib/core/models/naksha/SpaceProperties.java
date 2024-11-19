@@ -20,9 +20,9 @@ package com.here.naksha.lib.core.models.naksha;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import naksha.geo.XyzProperties;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,17 +30,17 @@ import org.jetbrains.annotations.Nullable;
  * Default variant of Space properties supported by Naksha - default storage handler
  */
 @AvailableSince(NakshaVersion.v2_0_7)
-public class SpaceProperties extends XyzProperties {
+public class SpaceProperties extends NakshaProperties {
 
   @AvailableSince(NakshaVersion.v2_0_7)
-  public static final String XYZ_COLLECTION = "collection";
+  public static final String NAKSHA_COLLECTION = "collection";
 
   /**
    * The backend storage collection details specified at space level
    */
   @AvailableSince(NakshaVersion.v2_0_7)
-  @JsonProperty(XYZ_COLLECTION)
-  private @Nullable NakshaCollection xyzCollection;
+  @JsonProperty(NAKSHA_COLLECTION)
+  private @Nullable NakshaCollection collection;
 
   /**
    * Create new Space properties with collection details
@@ -49,15 +49,15 @@ public class SpaceProperties extends XyzProperties {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   @JsonCreator
-  public SpaceProperties(final @JsonProperty(XYZ_COLLECTION) @Nullable NakshaCollection xyzCollection) {
-    this.xyzCollection = xyzCollection;
+  public SpaceProperties(final @JsonProperty(NAKSHA_COLLECTION) @Nullable NakshaCollection xyzCollection) {
+    this.collection = xyzCollection;
   }
 
-  public @Nullable NakshaCollection getXyzCollection() {
-    return xyzCollection;
+  public @Nullable NakshaCollection getCollection() {
+    return collection;
   }
 
-  public void setXyzCollection(final @JsonProperty(XYZ_COLLECTION) @Nullable NakshaCollection xyzCollection) {
-    this.xyzCollection = xyzCollection;
+  public void setCollection(final @JsonProperty(NAKSHA_COLLECTION) @Nullable NakshaCollection xyzCollection) {
+    this.collection = xyzCollection;
   }
 }

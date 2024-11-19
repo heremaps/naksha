@@ -26,14 +26,15 @@ import com.here.naksha.lib.core.models.Typed;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.indexing.Constraint;
 import com.here.naksha.lib.core.models.indexing.Index;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import naksha.geo.XyzProperties;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * The space configuration. A space is an event-pipeline accessible via the REST API.
@@ -167,7 +168,7 @@ public final class Space extends EventTarget<Space> implements Typed {
   @JsonIgnore
   public @NotNull String getCollectionId() {
     String collectionIdFromProps = null;
-    Object collectionProps = getProperties().get(SpaceProperties.XYZ_COLLECTION);
+    Object collectionProps = getProperties().get(SpaceProperties.NAKSHA_COLLECTION);
     if (collectionProps != null) {
       collectionIdFromProps = ((Map) collectionProps).get(COLLECTION_ID).toString();
     }

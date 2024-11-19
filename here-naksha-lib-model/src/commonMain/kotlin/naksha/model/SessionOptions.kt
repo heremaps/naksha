@@ -120,7 +120,7 @@ data class SessionOptions(
          */
         @JvmStatic
         @JsStatic
-        fun from(context: NakshaContext?): SessionOptions {
+        fun from(context: NakshaContext?, useMaster: Boolean = false): SessionOptions {
             val c = context ?: NakshaContext.currentContext()
             return SessionOptions(
                 mapId = c.mapId,
@@ -132,7 +132,8 @@ data class SessionOptions(
                 connectTimeout = c.connectTimeout,
                 socketTimeout = c.socketTimeout,
                 stmtTimeout = c.stmtTimeout,
-                lockTimeout = c.lockTimeout
+                lockTimeout = c.lockTimeout,
+                useMaster = useMaster,
             )
         }
     }

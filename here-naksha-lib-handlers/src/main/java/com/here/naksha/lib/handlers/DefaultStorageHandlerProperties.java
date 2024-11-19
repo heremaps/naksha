@@ -25,6 +25,7 @@ import com.here.naksha.lib.core.models.naksha.Storage;
 import naksha.geo.XyzProperties;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -33,7 +34,7 @@ import org.jetbrains.annotations.Nullable;
  * Default variant of EventHandler properties supported by Naksha - default storage handler
  */
 @AvailableSince(NakshaVersion.v2_0_7)
-public class DefaultStorageHandlerProperties extends XyzProperties {
+public class DefaultStorageHandlerProperties extends NakshaProperties {
 
   private static final Boolean DEFAULT_AUTO_CREATE_COLLECTION = true;
   private static final Boolean DEFAULT_AUTO_DELETE_COLLECTION = true;
@@ -101,11 +102,11 @@ public class DefaultStorageHandlerProperties extends XyzProperties {
         autoDeleteCollection == null ? DEFAULT_AUTO_DELETE_COLLECTION : autoDeleteCollection;
   }
 
-  public @Nullable NakshaCollection getXyzCollection() {
+  public @Nullable NakshaCollection getCollection() {
     return xyzCollection;
   }
 
-  public void setXyzCollection(final @JsonProperty(COLLECTION) @Nullable NakshaCollection xyzCollection) {
+  public void setCollection(final @JsonProperty(COLLECTION) @Nullable NakshaCollection xyzCollection) {
     this.xyzCollection = xyzCollection;
   }
 
