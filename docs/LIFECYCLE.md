@@ -57,13 +57,13 @@ This _GUID_ simply refers to the _HEAD_ state of a feature in any storage. Parsi
 ### Versions and Transactions
 As already described, all features are a timeline of states, called _Tuple_, and each state is assigned a globally unique immutable identifier, called _Tuple-Number_. Each storage is assigned a globally unique storage-number, so a storage does never need to contact any other storage, when it generates new _Tuple_ with new _Tuple-Numbers_.
 
-The _Tuple-Number_ stores next to the _storage-number_, _map-number_, _collection-number_, _partition-number_, **version**, and an **uid**.
+The _Tuple-Number_ encodes the _storage-number_, _map-number_, _collection-number_, _partition-number_, _version_, and an _uid_.
 
-When a client wants to create a new _Tuple_ (feature state), it needs to assign this _Tuple_ a global unique identifier (_Tuple-Number_), before writing it into the storage. Therefore, the client need to have an ability to generate globally unique _Tuple-Numbers_ upfront. To enable this, every client can ask the storage to allocate a _transaction-number_ (`txn`) to it, which is as well called **version**.
+When a client wants to create a new _Tuple_ (feature state), it needs to assign this _Tuple_ a global unique identifier (_Tuple-Number_), before writing it into the storage. Therefore, the client need to have an ability to generate globally unique _Tuple-Numbers_ upfront. To enable this, every client can ask the storage to allocate a _transaction-number_ (`txn`) to it, which is as well called _version_.
 
-Using this **version**, the client can generate version-local **uids**, which are a 32-bit unsigned integer. This means, every client can create up to 4 billion new _Tuple_ within a single transaction on itself, it only needs one pre-flight request to allocate a transaction-number. The client can further split the **uid** into chunks to run multiple worker threads in parallel, before sending the final request to the _storage_.
+Using this _transaction-number_ (aka _version_), the client can generate local **uids**, which are a 32-bit unsigned integer. This means, every client can create up to 4 billion new _Tuple_ within a single transaction on itself, it only needs one pre-flight request to allocate a _transaction-number_. The client can further split the **uid** into chunks to run multiple worker threads in parallel, before sending the final request to the _storage_.
 
-The transaction-number is a 56-bit integers, split into four parts:
+The _transaction-number_ (aka _version_) is a 56-bit integers, split into four parts:
 - _Year_: The year in which the transactions started (e.g. 2024).
 - _Month_: The month of the year in which the transaction started (e.g. 9 for September).
 - _Day_: The day of the month in which the transaction started (1 to 31).
@@ -76,7 +76,7 @@ By definition, every day starts with the sequence-number reset to zero. The fina
 - 5-bit **day**, between 1 and 31 {_shift-left 32_}.
 - 32-bit **seq**uence number.
 
-Note that the **month** and **day** can not be zero, therefore the version `0` is formally invalid, and used to temporary in-memory states.
+Note that the **month** and **day** can not be zero, therefore the version `0` is formally invalid, and used for temporary in-memory states.
 
 This concept allows up to 4 billion transactions per day (between 0 and 4,294,967,295, _2^32-1_). It will overflow in browsers in the year 4096, because in that year the transaction number needs 53-bit to be encoded, which is beyond the precision of a double floating point number. Should there be more than 4 billion transaction in a single day, this will overflow into the next day and potentially into an invalid day, should it happen at the last day of a given month. We ignore this situation, it seems currently impossible. Check in the browser:
 
@@ -88,19 +88,19 @@ Technically this means, the maximum number of transactions per second per storag
 ## The Life-Cycle
 The life-cycle of a features persists out of _actions_ and _operations_.
 
-### Actions
-The first action is always `CREATED`, then optionally one to _n_ `UPDATED`, and finally it one `DELETED`.
-
-Additionally, next to these actions, an **_operation_** is stored, which is mainly improving the search. It is advantageous to reduce the cardinality when performing a [rebase](#rebased), so to have one index on the _operation_, rather than making combined queries between _action_ and other indices like _origin_, because _action_ basically will not reduce cardinality a lot, there are so many `CREATED`, `UPDATED`, and `DELETED` actions.
-
-The following explains what _actions_ are assigned to which _operations_. Note, there are far more _operations_ than _actions_, so the assignment is `1 : n`. This document uses the terms _client_, _server_, and _storage_. The _storage_ is the low-level driver that is used by the _server_ (e.g. Naksha-Hub) to interact with a physical storage (the implementation of the `IStorage` interface). The term _client_ refers to a client performing some action by sending instructions to the _server_, no matter if this is a Web-UI, CLI-tool, or another server/service.
-
 ### Foreign Features
 Generally, a feature is called **_foreign feature_**, when its ID changes, or when it is copied from one storage, map, or collection into another one. We always keep track of foreign features using the `origin` property in the XYZ namespace, which will store the _GUID_ of the origin, so from where the feature comes. This can be the same storage, map, and collection, if only the ID changed, but it can be as well be a complete different storage.
 
 The `origin`, and `target` are sticky, so when updating the feature, the `origin`, and `target` stay the same.
 
 This is actually important for [rebasing](#rebased).
+
+### Actions
+The first action is always `CREATED`, then optionally one to _n_ `UPDATED`, and finally it one `DELETED`.
+
+Additionally, next to these actions, an **_operation_** is stored, which is mainly improving the search. It is advantageous to reduce the cardinality when performing a [rebase](#rebased), so to have one index on the _operation_, rather than making combined queries between _action_ and other indices like _origin_, because _action_ basically will not reduce cardinality a lot, there are so many `CREATED`, `UPDATED`, and `DELETED` actions.
+
+The following explains what _actions_ are assigned to which _operations_. Note, there are far more _operations_ than _actions_, so the assignment is `1 : n`. This document uses the terms _client_, _server_, and _storage_. The _storage_ is the low-level driver that is used by the _server_ (e.g. Naksha-Hub) to interact with a physical storage (the implementation of the `IStorage` interface). The term _client_ refers to a client performing some action by sending instructions to the _server_, no matter if this is a Web-UI, CLI-tool, or another server/service.
 
 ### Upsert
 Technically the _storage_ supports an _UPSERT_ operation, but eventually it is just automatically resolved by the _storage_ into either create or update, depending on the feature exists already, or is new. The _UPSERT_ is no real action nor an operation, it always will result in one of the other actions and operations.
