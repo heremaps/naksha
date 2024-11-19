@@ -6,9 +6,9 @@ This document formalizes the binary representation of the in-memory data, so tha
 This document expects that you've read the [general lifecycle guide](./LIFECYCLE.md).
 
 ## Endianness
-Generally, all multi-byte values are encoded in network byte-order, so in [Big-Endian byte-order](https://en.wikipedia.org/wiki/Endianness) encoded.
+Generally, all multi-byte values are encoded in network byte-order, so in [Big-Endian byte-order](https://en.wikipedia.org/wiki/Endianness) encoding.
 
-This is very important, because this allows us to order by tuple-number, which would not be possible in [Little-Endian byte-order](https://en.wikipedia.org/wiki/Endianness)!
+This is very important, because this allows us to order by tuple-number, which would not be possible in [Little-Endian byte-order](https://en.wikipedia.org/wiki/Endianness).
 
 ## Features
 Naksha manages features, they are stored in **storages**.
@@ -25,7 +25,7 @@ Note that dictionaries, transaction, basically everything in Naksha is a feature
 ## Feature Lifecycle
 The lifecycle of a feature is tracked from its creation to its deletion. Each modification of a feature shall create a new unique immutable state, which we call **Tuple**. A _Tuple_ is always created by a storage, and signed-off by that storage with its own _storage-number_. One exception are temporary tuples, so states that are not immutable, and that are not persisted anywhere, that are only created temporarily in memory, share the same special storage-number `0`. States that are persisted, need to be signed-off by a storage that persists them. This guarantees that there are no two state with the same unique identifier, called **Tuple-Number**. This allows all participants to cache all states of all feature of all sources indefinitely.
 
-More details can be found in the [general lifecycle guide](./LIFECYCLE.md).
+More details can be found in the [lifecycle guide](./LIFECYCLE.md).
 
 ## Binary Header
 When data is binary encoded in-memory, a header is not needed, as it is clear what is encoded, therefore this header is not mandatory. However, when not encoded in-memory, the binary encoding needs headers to know what is encoded. For this purpose, Naksha binary defines a common object/array header as being:
@@ -255,7 +255,7 @@ dict = {
   properties: {
     // All custom properties (optional)
   },
-  dictionaries: [
+  content: [
       // Encode all values in order.
       // This means, we can stored strings, objects, arrays, ...
   ]
