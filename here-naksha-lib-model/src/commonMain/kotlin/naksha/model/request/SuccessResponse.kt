@@ -32,9 +32,9 @@ open class SuccessResponse @Deprecated("Use secondary", ReplaceWith("SuccessResp
 
     companion object SuccessResponse_C {
         private val RESULT_SET_NULL = NullableProperty<SuccessResponse, IResultSet>(IResultSet::class)
-        private val TUPLES = NotNullProperty<SuccessResponse, ResultTupleList>(ResultTupleList::class) { self, _ ->
+        private val TUPLES = NotNullProperty<SuccessResponse, FeatureTupleList>(FeatureTupleList::class) { self, _ ->
             val rs = self.resultSet
-            rs?.result ?: ResultTupleList()
+            rs?.result ?: FeatureTupleList()
         }
         private val FEATURES = NotNullProperty<SuccessResponse, NakshaFeatureList>(NakshaFeatureList::class) { self, _ ->
             val features = NakshaFeatureList()

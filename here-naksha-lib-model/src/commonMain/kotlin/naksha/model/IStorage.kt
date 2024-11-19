@@ -3,9 +3,8 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.jbon.IDictManager
+import naksha.jbon.IDictReader
 import kotlin.js.JsExport
-import kotlin.js.JsName
 
 /**
  * Any entity implementing the [IStorage] interface represents some data-sink, and comes with an implementation that grants access to the data. The storage normally is a singleton that opens many sessions in parallel.
@@ -14,20 +13,12 @@ import kotlin.js.JsName
  *
  * All other maps are custom maps, which are isolated data sinks within the same storage (like an own database schema, an own S3 bucket, an own SQLite database, an own directory or file, aso.). Each custom map is a fully separated storage entity. Some storages allow to access multiple maps from one session, others may limit a session to a single map, and will reject cross map operations with [NakshaError.UNSUPPORTED_OPERATION].
  *
- * The [IDictManager] implementation of a storage normally accepts for [getEncodingDictionary(feature, context)][IDictManager.getEncodingDictionary] an [IMap] or [ICollection] as context. Providing a map-number, map-id, collection-number or collection-id would be ambiguous, because it would not be clear if a map is referred to, or a collection. The implementation may automatically resolve such ambiguity in any way or simply ignore such a context. Therefore, it is recommended to provide the instances, rather than the number or id. Generally the storage will mainly use the provided _feature_ to find the best dictionary to use.
+ * The storage will cache the dictionaries to avoid that just for decoding a new session need to be opened, which would require object creation for every single feature decoding, therefore every storage implements the [IDictReader] interface, which internally should be attached to a storage local cache, that is automatically kept up-to-date.
  *
  * @since 2.0.7
  */
 @JsExport
-interface IStorage : IDictManager, AutoCloseable {
-
-    /**
-     * The storage-number, managed by environment, optionally stored in the storage, must always be the same for the same physical storage.
-     *
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * @since 3.0.0
-     */
-    val number: Int64
+interface IStorage : IDictReader, AutoCloseable {
 
     /**
      * The storage-id, optionally stored in the storage, must always be the same for the same physical storage.
@@ -36,6 +27,14 @@ interface IStorage : IDictManager, AutoCloseable {
      * @since 2.0.8
      */
     val id: String
+
+    /**
+     * The storage-number, managed by environment, optionally stored in the storage, must always be the same for the same physical storage.
+     *
+     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
+     * @since 3.0.0
+     */
+    val number: Int64
 
     /**
      * The admin options to use for internal processing.
@@ -74,129 +73,11 @@ interface IStorage : IDictManager, AutoCloseable {
      * - Throws [NakshaError.STORAGE_ID_MISMATCH], if the existing _storage-id_ and/or _storage-number_ does not match the given one.
      * @param id the identifier of the storage (_added in v3.0.0_).
      * @param number the number of the storage (_added in v3.0.0_).
+     * @param setup if the storage is not setup, do a setup; if _false_, the method will throw an [NakshaError.INITIALIZATION_FAILED] exception (_added in v3.0.0_).
      * @param params optional special parameters that are storage dependent to influence how a storage is initialized.
      * @since 2.0.8
      */
-    fun initStorage(id: String, number: Int64, params: Map<String, *>? = null)
-
-    /**
-     * Re-Read all map information from the storage to update the map cache.
-     *
-     * The method will avoid parallel invocation in multiple threads using a lock, internally some very short minimum cache time will be applied, for example one second, to avoid that heavy usage of this method causes too many database requests.
-     *
-     * The method will not update the collection cache of the maps, but if a map was removed, it will remove the map including all collections cached.
-     * @return this
-     * @since 3.0.0
-     */
-    @v30_experimental
-    fun refreshMaps(): IStorage
-
-    /**
-     * Returns the map admin object.
-     *
-     * Does not perform network operations. If the map details are not yet loaded from storage, creates a virtual admin object, that allows the management of the map, like to query if such a map exists already, or to create the map. Creating a map will keep it in the cache, and grant it a unique map-number, provided by the storage.
-     *
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * @param mapId the map-id.
-     * @return the map admin object.
-     * @since 3.0.0
-     */
-    @JsName("getMapById")
-    @v30_experimental
-    operator fun get(mapId: String): IMap
-
-    /**
-     * Returns the map admin object.
-     *
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * @param mapNumber the map-number.
-     * @return the map admin object, _null_, if no such map exists.
-     * @since 3.0.0
-     */
-    @v30_experimental
-    @JsName("getMapByNumber")
-    operator fun get(mapNumber: Int): IMap?
-
-    /**
-     * Tests if this storage contains the given map.
-     *
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * @param mapId the id of the map to test for.
-     * @return _true_ if such a map exists; _false_ otherwise.
-     * @since 3.0.0
-     */
-    @v30_experimental
-    @JsName("containsMapId")
-    operator fun contains(mapId: String): Boolean
-
-    /**
-     * Tests if this storage contains the given map.
-     *
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * @param mapNumber the number of the map to test for.
-     * @return _true_ if such a map exists; _false_ otherwise.
-     * @since 3.0.0
-     */
-    @v30_experimental
-    @JsName("containsMapNumber")
-    operator fun contains(mapNumber: Int): Boolean
-
-    /**
-     * Query the map-identifier for the given map-number.
-     *
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * @param mapNumber the map-number.
-     * @return the map-identifier or _null_, if no such map exists.
-     * @since 3.0.0
-     */
-    @v30_experimental
-    fun getMapId(mapNumber: Int): String?
-
-    /**
-     * Query the map-identifier for the given [tuple-number][TupleNumber].
-     *
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * @param tupleNumber the tuple-number.
-     * @return the map-identifier or _null_, if no such map exists, or the tuple is stored in another storage.
-     * @since 3.0.0
-     */
-    @JsName("getMapIdByTupleNumber")
-    @v30_experimental
-    fun getMapId(tupleNumber: TupleNumber): String? {
-        if (tupleNumber.storageNumber != number) return null
-        return getMapId(tupleNumber.mapNumber)
-    }
-
-    /**
-     * Query the collection-id of the given tuple-number.
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * @return the collection-id or _null_, if no such map and/or collection exists, or the tuple is stored in another storage.
-     * @since 3.0.0
-     */
-    @v30_experimental
-    fun getCollectionId(tupleNumber: TupleNumber): String? {
-        if (tupleNumber.storageNumber != number) return null
-        val map = get(tupleNumber.mapNumber) ?: return null
-        if (!map.exists()) return null
-        return map.getCollectionId(tupleNumber.collectionNumber)
-    }
-
-    // TODO: We should move this into IWriteSession so that we can implement it using an advisory lock!
-    //       We have all kind of security measurements already in PgSession, for example we manage a
-    //       shared background connection, and to keep an advisory lock alive, we need this, because it
-    //       is bound to the session (aka connection).
-    //       Additionally, we can continue to use this connection, that has the lock, for the whole session
-    //       that might be useful for all handlers too.
-    //       Another thing to take into account, when some fatal error happens, we should terminate the connection
-    //       to ensure that the lock is released!
-    @Deprecated(
-        "This is not yet implemented and need further review, we should move it into IWriteSession",
-        level = DeprecationLevel.ERROR
-    )
-    @v30_experimental
-    fun enterLock(id: String, waitMillis: Int64): ILock {
-        throw NakshaException(NakshaError.NOT_IMPLEMENTED, "enterLock")
-    }
+    fun initStorage(id: String, number: Int64, setup: Boolean = true, params: Map<String, *>? = null)
 
     /**
      * Open a new write session.
@@ -226,6 +107,8 @@ interface IStorage : IDictManager, AutoCloseable {
      * @since 2.0.7
      */
     override fun close()
+
+    // fun getDictionary(id: String): JbDictionary? = storage.getDictionary(id)
 
     /**
      * The best flags to encode the given feature.

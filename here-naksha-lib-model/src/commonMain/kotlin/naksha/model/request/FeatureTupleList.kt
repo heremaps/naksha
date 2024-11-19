@@ -14,8 +14,8 @@ import kotlin.jvm.JvmStatic
  * @since 3.0.0
  */
 @JsExport
-class ResultTupleList : ListProxy<FeatureTuple>(FeatureTuple::class) {
-    companion object ResultTupleList_C {
+open class FeatureTupleList : ListProxy<FeatureTuple>(FeatureTuple::class) {
+    companion object FeatureTupleList_C {
         /**
          * Convert the given tuple-number-binary-array into a result-tuple list.
          *
@@ -30,13 +30,35 @@ class ResultTupleList : ListProxy<FeatureTuple>(FeatureTuple::class) {
          */
         @JvmStatic
         @JsStatic
-        fun fromByteArray(array: TupleNumberBinaryArray): ResultTupleList {
-            val rs = ResultTupleList()
+        fun fromByteArray(array: TupleNumberBinaryArray): FeatureTupleList {
+            val rs = FeatureTupleList()
             val length = array.size
             rs.setCapacity(length)
             var i = 0
             while (i < length) {
                 val tupleNumber = array[i] ?: throw NakshaException(ILLEGAL_STATE, "Invalid tuple-number at index $i")
+                val featureTuple = FeatureTuple(tupleNumber)
+                rs.add(featureTuple)
+                i++
+            }
+            return rs
+        }
+
+        /**
+         * Convert the given array of tuple-number into a list of feature-tuple to be loaded using [ISession.fetchTuples].
+         * @param array the array of tuple-number.
+         * @return a list of [FeatureTuple] with the logically same content as the given array.
+         * @since 3.0.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun fromTupleNumberArray(vararg array: TupleNumber): FeatureTupleList {
+            val rs = FeatureTupleList()
+            val length = array.size
+            rs.setCapacity(length)
+            var i = 0
+            while (i < length) {
+                val tupleNumber = array[i]
                 val featureTuple = FeatureTuple(tupleNumber)
                 rs.add(featureTuple)
                 i++

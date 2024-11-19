@@ -7,6 +7,7 @@ import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.StringList
 import naksha.model.Flags
+import naksha.model.NakshaContext
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -14,62 +15,71 @@ import kotlin.jvm.JvmStatic
 
 /**
  * A Naksha collection.
+ * @since 3.0.0
  */
 @JsExport
 open class NakshaCollection() : NakshaFeature() {
 
-    // TODO: Add documentation!
+    /**
+     * Create a new collection object.
+     * @param id the identifier of the collection to create.
+     * @param partitions the amount of partitions; defaults to `1`.
+     * @param storageClass the storage-class to use; defaults to `null`.
+     * @param autoPurge if automatic purge should be enabled, so deleted features are not copied into a shadow/deletion section; defaults to `false`.
+     * @param disableHistory if the history should be disabled; defaults to `false`.
+     * @since 3.0.0
+     */
+    @Suppress("LeakingThis")
     @JsName("of")
     constructor(
         id: String,
         partitions: Int = 1,
         storageClass: String? = null,
         autoPurge: Boolean = false,
-        disableHistory: Boolean = false,
-        geoIndex: String? = null
+        disableHistory: Boolean = false
     ) : this() {
-        @Suppress("LeakingThis")
         this.id = id
+        this.mapId = NakshaContext.mapId()
         this.partitions = partitions
         this.storageClass = storageClass
         this.autoPurge = autoPurge
         this.disableHistory = disableHistory
-        this.geoIndex = geoIndex ?: DEFAULT_GEO_INDEX
     }
 
     override fun defaultFeatureType(): String = FEATURE_TYPE
 
     /**
-     * If partitions is given, then collection is internally partitioned in the storage, and optimised for large quantities of features. The default is no partitions, for around every 10 to 20 million features expected to be stored in a collection, one more partition should be requested, with a minimum of 2 partitions.
+     * The map-id of the map in which the collection is located.
      *
-     * Note that `lib-psql` will allow values between 2 and 256 and 0, to disable partitioning.
+     * If a new collection is created, the value will be set to [NakshaContext.mapId], unless explicitly set otherwise.
+     * @since 3.0.0
+     */
+    var mapId by MAP_ID
+
+    /**
+     * The collection-number, _null_ if the collection does not yet exist.
+     * @since 3.0.0
+     */
+    var number by INT_NULL
+
+    /**
+     * If partitions is given, then collection is internally partitioned in the storage, and optimised for large quantities of features. The default is no partitions, for around every 10 to 20 million features expected to be stored in a collection, one more partition should be requested.
      *
-     * Beware that in AWS ever point-to-point connection is generally limited to 5 Gbps. To reach the full limit of a database, the maximum number of partitions is needed, which allow 40 * 5 Gbps = 200 Gbps throughput. The database instances currently have a maximum of 200 Gbps network bandwidth, plus 100 Gbps of EBS throughput, plus a large in-memory cache, which normally allows to satisfy up to 200 Gbps for a short moment of time. As the CPU load is very high in this use-case, it is strongly recommended to use the following encodings:
+     * Valid values are between 1 and 256, the value _undefined_, _null_ and `0` are interpreted as one partition (`1`), all other values will be rejected.
      *
-     * - [GeoEncoding.TWKB_GZIP]
-     * - [FeatureEncoding.JBON_GZIP]
-     * - [TagsEncoding.JSON] or [TagsEncoding.JSON_GZIP], if GZIP is natively supported.
-     *
-     * Using these values allows to avoid the usage of server side JavaScript code, when indexing the tags, while at the same time keeping the data in the smallest possible size. Using these encodings with e.g. 32-partitions and [parallel request support enabled][NakshaSessionOptions.parallel] should be able to read and write millions of features per second, with a very small risk of crashing while writing. Recovering from a crashed write is possible, if the write is idempotent, but requires a quick read of the transaction log, which partitions were written and which rolled-back, to repeat the writing of those, not being written successfully. Beware, that this requires a lock on the table or to be the only writer, otherwise conflicts can be encountered, which will make recovery not impossible, but much more complicated.
+     * Beware that in AWS ever point-to-point connection is generally limited to 5 Gbps. To reach the full throughput when reading features from a database with a 200 Gbps bandwidth, at least 40 partitions are needed, so 40 * 5 Gbps = 200 Gbps throughput.
      *
      * {Create-Only} - after collection creation, modification of this parameter takes no effect.
+     * @since 3.0.0
      */
     var partitions: Int by PARTITIONS
 
     /**
+     * Tests if this collection has multiple partitions.
+     * @return _true_ if this collection has multiple partitions.
      * @see hasPartitions
      */
     fun hasPartitions(): Boolean = partitions > 1
-
-    /**
-     * The geometry-index to be used for this collection.
-     *
-     * The possible values are implementation specific, for lib-psql there are []gist, sp-gist and brin with gist being the default.
-     * The virtual table naksha~indices should expose the supported values. {Create-Only}
-     *
-     * {Create-Only} - after collection creation, modification of this parameter takes no effect.
-     */
-    var geoIndex: String by GEO_INDEX
 
     /**
      * The storageClass decides where the collection is created.
@@ -89,29 +99,21 @@ open class NakshaCollection() : NakshaFeature() {
      * Next to this, two alternatives are there: SAVE, which installs triggers that automatically apply fixes, so write the history and transaction logs.
      * The disadvantage of these are, that they slow down the processing, but allow to actually do any kind of SQL query.
      * The final ones are NONE, which removes all protecting triggers and allow any kind of manual change, but this can easily break the history and/or transaction logs.
+     * @since 3.0.0
      */
     var protectionClass by PROTECTION_CLASS
 
     /**
-     * If the feature-type in the [metadata][naksha.model.Metadata] should be set automatically (disallows custom values). When enabled, Naksha will read the value from `properties.featureType`, if _null_, then `momType` in the feature root, eventually `type`. It will compare the read value against [defaultType], if they are not equal, the [feature-type][naksha.model.Metadata.ft] will be set to the determined value; otherwise _null_ will be set.
-     *
-     * Therefore, when enabled, this will set the [feature-type][naksha.model.Metadata.ft] only, if it differs from the [defaultType].
-     *
-     * {Create-Only} - after collection creation, modification of this parameter takes no effect.
+     * If the feature-type in the [metadata][naksha.model.Metadata] should be set automatically, therefore indexing the feature type. When explicitly enabled, the storage will read the [feature-type][NakshaFeature.featureType], and copy it into the [metadata feature-type][naksha.model.Metadata.ft].
+     * @since 3.0.0
      */
-    var autoFeatureType by BOOLEAN_FALSE
-
-    /**
-     * Default feature-type, only considered if [autoFeatureType] is enabled.
-     *
-     * {Create-Only} - after collection creation, modification of this parameter takes no effect.
-     */
-    var defaultType by DEFAULT_TYPE
+    var autoFeatureTypeIndex by BOOLEAN_FALSE
 
     /**
      * The encoding flags to be used for new rows.
      *
      * - If _null_, the storage will use whatever is best for the storage.
+     * @since 3.0.0
      */
     var defaultFlags by DEFAULT_FLAGS
 
@@ -119,17 +121,20 @@ open class NakshaCollection() : NakshaFeature() {
      * The identifier of the global dictionary to use, when encoding new rows.
      *
      * - If _null_, the storage will use whatever is best for the storage.
+     * @since 3.0.0
      */
     var encodeDict by STRING_NULL
 
     /**
      * _true_ - disables history of features' modifications.
+     * @since 3.0.0
      */
     var disableHistory by DISABLE_HISTORY
 
     /**
      * If autoPurge is enabled, deleted features are automatically purged and no shadow state is kept available.
      * Note that if [disableHistory] is false, the deleted features will still be around in the history. This mainly effects lib-view.
+     * @since 3.0.0
      */
     var autoPurge by AUTO_PURGE
 
@@ -151,6 +156,7 @@ open class NakshaCollection() : NakshaFeature() {
      * To use less or other indices, create an own list of indices out of the above given values, `lib-psql` will all these indices by default, using `2d` variants for the geometry index by default. Beware, that many of the indices exclude _null_ value, and therefore are not costing anything, unless the values are used.
      *
      * It is not recommended, to add multiple geometry indices, this can become extreme costly.
+     * @since 3.0.0
      */
     var indices by INDICES
 
@@ -158,11 +164,13 @@ open class NakshaCollection() : NakshaFeature() {
      * The maxAge decides about the maximum age of features in the history in days.
      * Note that there is no guarantee that features are deleted exactly after having reached their max-age.
      * However, they are eligible to be deleted at as soon as possible.
+     * @since 3.0.0
      */
     var maxAge by MAX_AGE
 
     /**
      * The quadPartitionSize decides (for the optimal partitioning algorithm) how many features should be placed into each "optimal" tile.
+     * @since 3.0.0
      */
     var quadPartitionSize: Int by QUAD_PARTITION_SIZE
 
@@ -173,6 +181,7 @@ open class NakshaCollection() : NakshaFeature() {
     companion object NakshaCollection_C {
         /**
          * The feature-type of this feature itself.
+         * @since 3.0.0
          */
         const val FEATURE_TYPE = "naksha.Collection"
 
@@ -180,31 +189,37 @@ open class NakshaCollection() : NakshaFeature() {
          * partition count = 0 -> no partitions only head
          * partition count = 2 -> 2 partitions
          * partition count = n -> n partitions
+         * @since 3.0.0
          */
         const val NO_PARTITIONS = 0
 
         /**
          * To create a collection without a geometry index.
+         * @since 3.0.0
          */
         const val GEO_INDEX_NONE = "none"
 
         /**
          * To create a collection with a GIST geometry-index.
+         * @since 3.0.0
          */
         const val GEO_INDEX_GIST = "gist"
 
         /**
          * To create a collection with an SP-GIST geometry-index.
+         * @since 3.0.0
          */
         const val GEO_INDEX_SP_GIST = "sp-gist"
 
         /**
          * Default geo_index - may change over time.
+         * @since 3.0.0
          */
         const val DEFAULT_GEO_INDEX = GEO_INDEX_GIST
 
         /**
          * The value returned as [estimatedFeatureCount] and [estimatedDeletedFeatures], before the estimation is actually done.
+         * @since 3.0.0
          */
         @JvmStatic
         @JsStatic
@@ -215,8 +230,9 @@ open class NakshaCollection() : NakshaFeature() {
         private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val BOOLEAN_FALSE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
-        private val DEFAULT_TYPE = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> "Feature" }
         private val DEFAULT_FLAGS = NullableProperty<NakshaCollection, Flags>(Flags::class)
+        private val INT_NULL = NullableProperty<NakshaCollection, Int>(Int::class)
+        private val MAP_ID = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> NakshaContext.mapId()}
         private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)
         private val DISABLE_HISTORY = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val AUTO_PURGE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }

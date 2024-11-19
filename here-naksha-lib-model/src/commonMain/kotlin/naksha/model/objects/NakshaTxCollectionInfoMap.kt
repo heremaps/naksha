@@ -9,4 +9,4 @@ import kotlin.js.JsExport
  * A map between the collection identifier, and details information about what changed within the collection.
  */
 @JsExport
-class TxCollectionInfoMap : MapProxy<String, TxCollectionInfo>(String::class, TxCollectionInfo::class)
+class NakshaTxCollectionInfoMap : MapProxy<String, NakshaTxCollectionInfo>(String::class, NakshaTxCollectionInfo::class)

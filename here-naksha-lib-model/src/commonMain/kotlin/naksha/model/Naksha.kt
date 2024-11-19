@@ -67,6 +67,7 @@ class Naksha private constructor() {
         /**
          * The identifier of the virtual collection in which transactions are stored.
          * @since 3.0.0
+         * @see [naksha.model.objects.NakshaTransaction]
          */
         const val VIRT_TRANSACTIONS = "naksha~transactions"
 
@@ -78,6 +79,7 @@ class Naksha private constructor() {
 
         /**
          * The identifier of the virtual collection in which the maps are stored.
+         * @see [naksha.model.objects.NakshaMap]
          * @since 3.0.0
          */
         const val VIRT_MAPS = "naksha~maps"
@@ -214,12 +216,12 @@ class Naksha private constructor() {
         fun decodeTuple(tuple: Tuple): NakshaFeature {
             val sn = tuple.storageNumber
             val meta = tuple.meta
-            val dictManager = getStorage(sn) ?: cacheRef.get()
-            val feature = decodeFeature(tuple.feature, meta.flags, dictManager) ?: NakshaFeature()
+            val dictReader = getStorage(sn) ?: cache
+            val feature = decodeFeature(tuple.feature, meta.flags, dictReader) ?: NakshaFeature()
             feature.properties.xyz = XyzNs.fromMetadata(meta)
             val xyz = feature.properties.xyz
             val tags = tuple.tags
-            if (tags != null) xyz.tags = decodeTags(tuple.tags, meta.flags, dictManager)?.toTagList() ?: TagList()
+            if (tags != null) xyz.tags = decodeTags(tuple.tags, meta.flags, dictReader)?.toTagList() ?: TagList()
             val geo = tuple.geo
             if (geo != null) feature.geometry = decodeGeometry(geo, meta.flags)
             val attachment = tuple.attachment
@@ -308,19 +310,19 @@ class Naksha private constructor() {
          * Decode the Naksha feature.
          * @param bytes the bytes to decode.
          * @param flags the codec flags.
-         * @param dictManager the dictionary manager to use for decoding; if any.
+         * @param dictReader the dictionary manager to use for decoding; if any.
          * @return the Naksha feature.
          * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
-        fun decodeFeature(bytes: ByteArray?, flags: Flags, dictManager: IDictManager?): NakshaFeature? {
+        fun decodeFeature(bytes: ByteArray?, flags: Flags, dictReader: IDictReader?): NakshaFeature? {
             if (bytes == null || bytes.isEmpty()) return null
             var raw = bytes
             if (flags.featureGzip()) raw = gzipInflate(bytes)
             val encoding = flags.featureEncoding()
             if (encoding == JBON || encoding == JBON_GZIP) {
-                val decoder = JbFeatureDecoder(dictManager)
+                val decoder = JbFeatureDecoder(dictReader)
                 decoder.mapBytes(raw)
                 return decoder.toAnyObject().proxy(NakshaFeature::class)
             }
@@ -335,19 +337,19 @@ class Naksha private constructor() {
          * Decode the Naksha tags.
          * @param bytes the bytes to decode.
          * @param flags the codec flags.
-         * @param dictManager the dictionary manager to use for decoding; if any.
+         * @param dictReader the dictionary manager to use for decoding; if any.
          * @return the Naksha tags.
          * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
-        fun decodeTags(bytes: ByteArray?, flags: Flags, dictManager: IDictManager?): TagMap? {
+        fun decodeTags(bytes: ByteArray?, flags: Flags, dictReader: IDictReader?): TagMap? {
             if (bytes == null || bytes.isEmpty()) return null
             var raw = bytes
             if (flags.tagsGzip()) raw = gzipInflate(bytes)
             val encoding = flags.tagsEncoding()
             if (encoding == TagsEncoding.JBON || encoding == TagsEncoding.JBON_GZIP) {
-                val decoder = JbFeatureDecoder(dictManager)
+                val decoder = JbFeatureDecoder(dictReader)
                 decoder.mapBytes(raw)
                 return decoder.toAnyObject().proxy(TagMap::class)
             }

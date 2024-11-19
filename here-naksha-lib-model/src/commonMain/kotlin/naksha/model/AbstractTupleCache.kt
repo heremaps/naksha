@@ -135,16 +135,14 @@ abstract class AbstractTupleCache(override val cacheLatencyInMicros: Int64) : IT
         dictCache().putDictionary(dict)
     }
 
-    @OptIn(v30_experimental::class)
     final override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? {
         // This need to always use the storage, we rather should not use any dictionary, than the wrong one!
         if (context is IStorage) return context.getEncodingDictionary(feature)
-        if (context is IMap) return context.getEncodingDictionary(feature)
-        if (context is ICollection) return context.getEncodingDictionary(feature)
         val f = if (feature is NakshaFeature) feature else return null
         val xyz = f.properties.xyz
         val guid = xyz.guid ?: return null
-        return Naksha.getStorage(guid.tupleNumber.storageNumber)?.getEncodingDictionary(feature, context)
+        val storage = Naksha.getStorage(guid.tupleNumber.storageNumber)
+        return storage?.getEncodingDictionary(feature, context)
     }
 
     /**

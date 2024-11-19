@@ -9,4 +9,4 @@ import kotlin.js.JsExport
  * A list of transactions.
  */
 @JsExport
-class TransactionList : ListProxy<Transaction>(Transaction::class)
+class NakshaTransactionList : ListProxy<NakshaTransaction>(NakshaTransaction::class)

@@ -556,7 +556,7 @@ class XyzNs : AnyObject() {
         }
 
     /**
-     * The `uid` (unique transaction local identity) of the [Tuple] within the [transaction][naksha.model.objects.Transaction].
+     * The `uid` (unique transaction local identity) of the [Tuple] within the [transaction][naksha.model.objects.NakshaTransaction].
      */
     val uid: Int?
         get() = guid?.tupleNumber?.uid

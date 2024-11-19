@@ -59,7 +59,7 @@ interface IResultSet {
      *
      * @return a sub-list from [offset] to [end] with all result-tuples, that should be part of the success response.
      */
-    val result: ResultTupleList
+    val result: FeatureTupleList
 
     /**
      * Returns the size of the result, actually this is simply `result().size`.
@@ -73,7 +73,7 @@ interface IResultSet {
      * To generate the features for an [SuccessResponse], simply read all tuples from [offset] till [end] (or use the [result] method), and convert them into features. Beware that only the tuples till [validationEnd] are reliable. All tuples returned starting with the one at [validationEnd] are not yet validated, therefore some filters (like property query, lambdas) have not been applied yet.
      * @return the list of all tuples being part of the result-set.
      */
-    val tuples: ResultTupleList
+    val tuples: FeatureTupleList
 
     /**
      * The position in the result-set that was not yet validated.

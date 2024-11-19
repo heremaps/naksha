@@ -18,13 +18,6 @@ import kotlin.jvm.JvmStatic
 @JsExport
 data class SessionOptions(
     /**
-     * The map-id of the map to operate on, by default taken from [context][NakshaContext.mapId].
-     * @since 3.0.0
-     */
-    @JvmField
-    val mapId: String = NakshaContext.mapId(),
-
-    /**
      * An arbitrary name for debug logs, in `lib-psql` this will be used in the database connection as name and shown in `pg_stat_activity`.
      * @since 3.0.0
      */
@@ -124,7 +117,6 @@ data class SessionOptions(
         fun from(context: NakshaContext?): SessionOptions {
             val c = context ?: NakshaContext.currentContext()
             return SessionOptions(
-                mapId = c.mapId,
                 appName = c.appName,
                 appId = c.appId,
                 author = c.author,

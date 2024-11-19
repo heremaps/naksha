@@ -2,14 +2,24 @@
 
 package naksha.model
 
+import naksha.jbon.IDictReader
+import naksha.jbon.JbDictionary
+import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaMap
 import naksha.model.request.*
 import kotlin.js.JsExport
 
 /**
- * When a session is opened, it is bound to the context in which the session shall operate. The read session will acquire a connection from a connection pools when read is called, and release the connections instantly after the read is done. The write session will acquire a connection, when the first read or write operation is done, and stick with it until `commit`, `rollback` or [close] invoked. The dictionary manager will grab an idle read or read/write connection on demand, and release it to the connection pool as soon as possible.
+ * When a session is opened, it is bound to the context in which the session shall operate. The read session will acquire a connection from a connection pools when read is called, and release the connections instantly after the read is done. The write session will acquire a connection, when the first read or write operation is done, and stick with it until `commit`, `rollback` or [close] invoked.
  */
 @JsExport
-interface ISession : AutoCloseable {
+interface ISession : IDictReader, AutoCloseable {
+    /**
+     * The storage to which the session is bound.
+     * @since 3.0.0
+     */
+    val storage: IStorage
+
     /**
      * The socket timeout in milliseconds.
      * @since 3.0.0
@@ -29,14 +39,6 @@ interface ISession : AutoCloseable {
     var lockTimeout: Int
 
     /**
-     * The map the session currently operates on.
-     *
-     * - If changing the map, may throw [NakshaError.UNSUPPORTED_OPERATION], if changing the map is not supported.
-     * @since 3.0.0
-     */
-    var map: String
-
-    /**
      * Execute the given [Request].
      *
      * The read-only session will only be able to execute [ReadRequest]'s and throw an [NakshaError.UNSUPPORTED_OPERATION], when a [WriteRequest] is provided.
@@ -47,9 +49,11 @@ interface ISession : AutoCloseable {
     fun execute(request: Request): Response
 
     /**
-     * Execute the given [Request] in parallel, if supported, otherwise fallback to a normal [execute]. This differs from [SessionOptions.parallel] in that it no strong guarantee requirements, it is mainly for bulk loading or other siutation in which performance matter more than a 100% guarantee of safety.
+     * Execute the given [Request] in parallel, if supported, otherwise fallback to a normal [execute]. This differs from [SessionOptions.parallel] in that it does not have such strong guarantee requirements, it is mainly for bulk loading or other situations, in which performance matters more than 100% safety.
      *
-     * **Warning**: **There is a minor risk to create a broken state in the storage!** This depends on the exact implementation, but it needs to be an accepted risk, when using `executeParallel`.
+     * **Warning: There is a minor risk to create a broken state in the storage!**
+     *
+     * This depends on the exact implementation, but it needs to be an accepted risk, when using `executeParallel`.
      *
      * For example in `lib-psql`, even after all requests have been executed successfully, committing may fail partially, for example when only one connection aborts or the server crashes in the middle of the operation, while having committed already some connections, with others not yet to be done.
      *
@@ -86,30 +90,89 @@ interface ISession : AutoCloseable {
     fun validateHandle(handle: String, ttl: Int? = null): Boolean
 
     /**
-     * Load specific [tuples][naksha.model.Tuple].
-     *
-     * @param tupleNumbers a list of [tuple-numbers][TupleNumber] of the features to load.
-     * @param fetchFromHistory if the history should be queried.
-     * @param mode the fetch mode.
-     * @return the list of the loaded [tuples][Tuple], contains _null_, if the tuple was not found.
-     * @since 3.0.0
-     */
-    @Deprecated(
-        message = "Use fetchTuples",
-        replaceWith = ReplaceWith("fetchTuples(resultTuples)"),
-        level = DeprecationLevel.WARNING
-    )
-    fun getTuples(tupleNumbers: Array<TupleNumber>, fetchFromHistory:Boolean = false, mode: FetchMode = FETCH_ALL): List<Tuple?>
-
-    /**
      * Fetches all tuples in the given result-tuples.
      *
+     * [Tuple] that can't be fetched will still be _null_ after the method returns.
+     *
+     * **The method is not thread safe!**
+     *
      * @param featureTuples a list of result-tuples to fetch.
-     * @param from the index of the first result-tuples to fetch.
-     * @param to the index of the first result-tuples to ignore.
-     * @param fetchFromHistory if the history should be queried.
-     * @param mode the fetch mode.
+     * @param from the index of the first result-tuples to fetch; default is `0`.
+     * @param to the index of the first result-tuples to ignore; default is `featureTuples.size`.
+     * @param fetchFromHistory if the history should be queried; default is `false`.
+     * @param mode the fetch mode; default is [FETCH_ALL].
      * @since 3.0.0
      */
     fun fetchTuples(featureTuples: List<FeatureTuple?>, from: Int = 0, to: Int = featureTuples.size, fetchFromHistory: Boolean = false, mode: FetchMode = FETCH_ALL)
+
+    /**
+     * Returns the map for the given identifier.
+     *
+     * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return maps that were created in the current session, but beware that these maps may eventually fail to commit.
+     * @param mapId the map-id for which to return the latest HEAD state.
+     * @return the map; _null_ if no such map exists.
+     * @since 3.0.0
+     */
+    fun getMapById(mapId: String): NakshaMap?
+
+    /**
+     * Returns the map for the given number.
+     *
+     * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return maps that were created in the current session, but beware that these maps may eventually fail to commit.
+     * @param mapNumber the map-number for which to return the latest HEAD state.
+     * @return the map; _null_ if no such map exists.
+     * @since 3.0.0
+     */
+    fun getMapByNumber(mapNumber: Int): NakshaMap?
+
+    /**
+     * Update the internal cache.
+     *
+     * Note, calling this method does not give a guarantee that everything is visible, because when the cache is refreshed while another client modifies the storage, there can be only microseconds between the read and write, which means, when the read returns, the information is already outdated.
+     * @since 3.0.0
+     */
+    fun refreshMaps()
+
+    /**
+     * Returns the collection for the given identifier.
+     *
+     * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return maps that were created in the current session, but beware that these collections may eventually fail to commit.
+     * @param map the map to query.
+     * @param collectionId the collection-id for which to return the latest HEAD state.
+     * @return the collection; _null_ if no such collection exists.
+     * @since 3.0.0
+     */
+    fun getCollectionById(map: NakshaMap, collectionId: String): NakshaCollection?
+
+    /**
+     * Returns the collection for the given number.
+     *
+     * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return maps that were created in the current session, but beware that these collections may eventually fail to commit.
+     * @param map the map to query.
+     * @param collectionNumber the collection-number for which to return the latest HEAD state.
+     * @return the collection; _null_ if no such collection exists.
+     * @since 3.0.0
+     */
+    fun getCollectionByNumber(map: NakshaMap, collectionNumber: Int): NakshaCollection?
+
+    /**
+     * Update the internal cache.
+     *
+     * Note, calling this method does not give a guarantee that everything is visible, because when the cache is refreshed while another client modifies the storage, there can be only microseconds between the read and write, which means, when the read returns, the information is already outdated.
+     * @since 3.0.0
+     */
+    fun refreshCollections(map: NakshaMap)
+
+    /**
+     * The best flags to encode the given feature.
+     *
+     * @param feature the feature to encode; _null_ if no specific one is available.
+     * @param context the context in which the encoding happens (for example the [map][IMap] or [collection][ICollection]); _null_ if none is available.
+     * @return best flags to use for encoding.
+     * @since 3.0.0
+     */
+    fun getEncodingFlags(feature: Any?, context: Any? = null): Flags = storage.getEncodingFlags(feature, context)
+
+    override fun getDictionary(id: String): JbDictionary? = storage.getDictionary(id)
+    override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? = storage.getEncodingDictionary(feature, context)
 }

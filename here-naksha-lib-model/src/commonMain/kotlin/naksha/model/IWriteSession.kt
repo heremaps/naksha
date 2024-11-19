@@ -1,15 +1,17 @@
 package naksha.model
 
-import naksha.model.objects.Transaction
+import naksha.jbon.IDictManager
+import naksha.model.objects.NakshaTransaction
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * A write-request.
+ * A write-session.
+ * @since 3.0.0
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
-interface IWriteSession: IReadSession {
+interface IWriteSession: IReadSession, IDictManager {
 
     /**
      * Acquire a storage lock, that is automatically released when the session is [closed][close].
@@ -46,12 +48,12 @@ interface IWriteSession: IReadSession {
      * @return the current transaction, if any is available; _null_ otherwise.
      * @since 3.0.0
      */
-    fun transaction(): Transaction?
+    fun transaction(): NakshaTransaction?
 
     /**
      * Returns the current transaction, if none is yet started, start a new one.
      * @return the transaction.
      * @since 3.0.0
      */
-    fun getOrCreateTransaction(): Transaction
+    fun getOrCreateTransaction(): NakshaTransaction
 }

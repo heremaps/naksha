@@ -2,8 +2,8 @@ package naksha.model.request.notification
 
 import naksha.base.NotNullProperty
 import naksha.model.IStorage
-import naksha.model.objects.SubscriptionState
-import naksha.model.objects.TransactionList
+import naksha.model.objects.NakshaSubscriptionState
+import naksha.model.objects.NakshaTransactionList
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -15,7 +15,7 @@ import kotlin.js.JsName
 @JsExport
 open class SubNotification(): Notification() {
     @JsName("of")
-    constructor(storage: IStorage, subscriptionId: String, state: SubscriptionState): this() {
+    constructor(storage: IStorage, subscriptionId: String, state: NakshaSubscriptionState): this() {
         setRaw("storage", storage)
         setRaw("subscriptionId", subscriptionId)
         setRaw("subscriptionState", state)
@@ -23,8 +23,8 @@ open class SubNotification(): Notification() {
 
     companion object SubNotification_C {
         private val STRING = NotNullProperty<SubNotification, String>(String::class) { _,_ -> "" }
-        private val STATE = NotNullProperty<SubNotification, SubscriptionState>(SubscriptionState::class)
-        private val TX_LIST = NotNullProperty<SubNotification, TransactionList>(TransactionList::class)
+        private val STATE = NotNullProperty<SubNotification, NakshaSubscriptionState>(NakshaSubscriptionState::class)
+        private val TX_LIST = NotNullProperty<SubNotification, NakshaTransactionList>(NakshaTransactionList::class)
     }
 
     /**

@@ -18,7 +18,7 @@ import kotlin.js.JsName
  * @since 3.0.0
  */
 @JsExport
-open class Transaction() : NakshaFeature() {
+open class NakshaTransaction() : NakshaFeature() {
 
     /**
      * Create a new transaction with the given transaction number.
@@ -30,9 +30,9 @@ open class Transaction() : NakshaFeature() {
     }
 
     companion object NakshaTransaction_C {
-        private val INT_0 = NotNullProperty<Transaction, Int>(Int::class, init = { _, _ -> 0 })
-        private val COLLECTIONS = NotNullProperty<Transaction, TxCollectionInfoMap>(TxCollectionInfoMap::class)
-        private val INT64_NULL = NotNullProperty<Transaction, Int64>(Int64::class)
+        private val INT_0 = NotNullProperty<NakshaTransaction, Int>(Int::class, init = { _, _ -> 0 })
+        private val COLLECTIONS = NotNullProperty<NakshaTransaction, NakshaTxCollectionInfoMap>(NakshaTxCollectionInfoMap::class)
+        private val INT64_NULL = NotNullProperty<NakshaTransaction, Int64>(Int64::class)
     }
 
     override fun defaultFeatureType(): String = "naksha.Tx"
@@ -55,7 +55,7 @@ open class Transaction() : NakshaFeature() {
      * @since 3.0.0
      */
     var txn: Int64
-        get() = getOrCreate<Int64, String, Transaction>("txn", Int64::class) { self, _ ->
+        get() = getOrCreate<Int64, String, NakshaTransaction>("txn", Int64::class) { self, _ ->
             self.id = "0"
             Int64(0)
         }
@@ -139,10 +139,10 @@ open class Transaction() : NakshaFeature() {
      * @return the transaction collection information.
      * @since 3.0.0
      */
-    fun useTxCollectionInfo(collectionId: String): TxCollectionInfo {
+    fun useTxCollectionInfo(collectionId: String): NakshaTxCollectionInfo {
         var info = collections[collectionId]
         if (info == null) {
-            info = TxCollectionInfo()
+            info = NakshaTxCollectionInfo()
             collections[collectionId] = info
         }
         return info
@@ -153,7 +153,7 @@ open class Transaction() : NakshaFeature() {
      * @param info the collection info to add.
      * @since 3.0.0
      */
-    fun addTxCollectionInfo(info: TxCollectionInfo) {
+    fun addTxCollectionInfo(info: NakshaTxCollectionInfo) {
         useTxCollectionInfo(info.collectionId).addValues(info)
     }
 }

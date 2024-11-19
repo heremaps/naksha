@@ -5,10 +5,8 @@ import naksha.geo.SpBoundingBox
 import naksha.geo.SpFeature
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
-import naksha.model.Naksha
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaException
-import naksha.model.Tuple
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -30,7 +28,8 @@ open class NakshaFeature() : AnyObject() {
     @JsName("of")
     constructor(id: String?) : this() {
         setRaw("id", id)
-        setRaw("type", FEATURE_TYPE)
+        @Suppress("LeakingThis")
+        setRaw("type", defaultType())
     }
 
     companion object NakshaFeature_C {
@@ -38,7 +37,7 @@ open class NakshaFeature() : AnyObject() {
          * The feature-type of this feature itself.
          * @since 3.0.0
          */
-        const val FEATURE_TYPE = "Feature"
+        const val TYPE = "Feature"
 
         /**
          * The key of geometry (`geometry`).
@@ -59,8 +58,8 @@ open class NakshaFeature() : AnyObject() {
             return raw.proxy(NakshaFeature::class)
         }
 
-        private val ID = NotNullProperty<NakshaFeature, String>(String::class) { _, _ -> PlatformUtil.randomString(12) }
-        private val TYPE = NotNullProperty<NakshaFeature, String>(String::class) { self, _ -> self.defaultFeatureType() }
+        private val ID_RANDOM = NotNullProperty<NakshaFeature, String>(String::class) { _, _ -> PlatformUtil.randomString(12) }
+        private val TYPE_DEFAULT = NotNullProperty<NakshaFeature, String>(String::class) { self, _ -> self.defaultType() }
         private val BBOX_NULL = NullableProperty<NakshaFeature, SpBoundingBox>(SpBoundingBox::class)
         private val GEOMETRY_NULL = NullableProperty<NakshaFeature, SpGeometry>(SpGeometry::class)
         private val REFERENCE_POINT_NULL = NullableProperty<NakshaFeature, SpPoint>(SpPoint::class)
@@ -70,22 +69,40 @@ open class NakshaFeature() : AnyObject() {
     }
 
     /**
-     * The default type to set, when the type is _null_.
+     * The default type.
      * @since 3.0.0
      */
-    protected open fun defaultFeatureType(): String = FEATURE_TYPE
+    protected open fun defaultType(): String = TYPE
+
+    /**
+     * The default feature-type; if any.
+     * @since 3.0.0
+     */
+    protected open fun defaultFeatureType(): String? = null
 
     /**
      * The unique identifier of the feature.
      * @since 3.0.0
      */
-    open var id by ID
+    open var id by ID_RANDOM
 
     /**
-     * The type of the feature.
+     * The type of the feature, must be one of: `FeatureCollection`, `Feature`, `Point`, `LineString`, `MultiPoint`, `Polygon`, `MultiLineString`, `MultiPolygon`, and `GeometryCollection`. Beware, no other values are allowed in the [GeoJSON specification section 7](https://datatracker.ietf.org/doc/html/rfc7946#section-7), therefore we introduce a [customer feature-type][featureType], that is stored in [properties].
      * @since 3.0.0
      */
-    var type by TYPE
+    var type by TYPE_DEFAULT
+
+    /**
+     * The custom feature-type; reads [properties.featureType][NakshaProperties.featureType], then [momType], and eventually [type]. Modifications will change [properties.featureType][NakshaProperties.featureType].
+     *
+     * If [MOM](https://www.here.com/learn/blog/unimap-map-object-model) should be used, please rather access [momType].
+     * @since 3.0.0
+     */
+    var featureType: String
+        get() = properties.featureType ?: momType
+        set(value) {
+            properties.featureType = value
+        }
 
     /**
      * The bounding box; if the feature has any.
@@ -118,8 +135,19 @@ open class NakshaFeature() : AnyObject() {
     open var attachment by ATTACHMENT_NULL
 
     /**
-     * The mom-type; if any.
+     * The mom-type; if _null_ or _undefined_, reads [properties.featureType][NakshaProperties.featureType], then [type]. If modified, writes as well [properties.featureType][NakshaProperties.featureType].
+     * - [UniMap: How the Map-Object-Model enables a frictionless future](https://www.here.com/learn/blog/unimap-map-object-model)
+     * - [What is The Map-Object-Model (MOM) ?](https://www.linkedin.com/pulse/what-map-object-model-mom-kiran-kumar-mj1yf)
      * @since 3.0.0
      */
-    var momType by STRING_NULL
+    var momType: String
+        get() {
+            val raw = getRaw("momType")
+            if (raw is String) return raw
+            return properties.featureType ?: type
+        }
+        set(value) {
+            properties.featureType = value
+            setRaw("momType", value)
+        }
 }

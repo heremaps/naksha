@@ -8,8 +8,8 @@ import naksha.base.PlatformDataView
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.request.ResultTupleList
-import naksha.model.request.ResultTupleList.ResultTupleList_C.fromByteArray
+import naksha.model.request.FeatureTupleList
+import naksha.model.request.FeatureTupleList.FeatureTupleList_C.fromByteArray
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -231,12 +231,12 @@ data class TupleNumberBinaryArray(
     fun md5(): ByteArray = Platform.md5(bytes)
 
     /**
-     * Helper method to convert this binary into a [ResultTupleList].
+     * Helper method to convert this binary into a [FeatureTupleList].
      *
-     * @return the [ResultTupleList].
+     * @return the [FeatureTupleList].
      * @since 3.0.0
      */
-    fun toResultTupleList(): ResultTupleList = fromByteArray(this)
+    fun toResultTupleList(): FeatureTupleList = fromByteArray(this)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

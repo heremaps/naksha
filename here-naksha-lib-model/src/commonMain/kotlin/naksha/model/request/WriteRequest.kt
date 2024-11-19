@@ -37,6 +37,12 @@ open class WriteRequest : Request() {
      */
     var writes by WRITE_LIST
 
+    /**
+     * Adds the given write operation to the end of the [writes] list.
+     *
+     * @param op the write operation to append.
+     * @since 3.0.0
+     */
     fun add(op: Write): WriteRequest {
         writes.add(op)
         return this

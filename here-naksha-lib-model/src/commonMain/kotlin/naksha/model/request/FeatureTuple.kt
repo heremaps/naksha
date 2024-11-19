@@ -56,7 +56,7 @@ open class FeatureTuple(
      * - **Beware**: If the returned feature is modified, this will as well modify the cached version.
      * @since 3.0.0
      */
-    var feature: NakshaFeature?
+    open var feature: NakshaFeature?
         get() {
             var feature = cachedFeature
             val tuple = this.tuple
@@ -94,10 +94,12 @@ open class FeatureTuple(
     /**
      * Convert the tuple into a new feature, no caching; this necessary when the returned feature should be modified.
      *
+     * This method is invoked internally by [feature].
+     *
      * @return a new copy of the tuple converted into a feature.
      * @since 3.0.0
      */
-    fun newFeature(): NakshaFeature? = tuple?.toNakshaFeature()
+    open fun newFeature(): NakshaFeature? = tuple?.toNakshaFeature()
 
     companion object ResultTuple_C {
         /**

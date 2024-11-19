@@ -13,7 +13,7 @@ import kotlin.js.JsName
  * An object storing detailed information what changed in a specific collection within a transaction.
  */
 @JsExport
-class TxCollectionInfo() : AnyObject() {
+class NakshaTxCollectionInfo() : AnyObject() {
 
     /**
      * Create a new collection info.
@@ -25,8 +25,8 @@ class TxCollectionInfo() : AnyObject() {
     }
 
     companion object {
-        private val STRING = NotNullProperty<TxCollectionInfo, String>(String::class) { _, _ -> "" }
-        private val COUNT = NotNullProperty<TxCollectionInfo, Int>(Int::class) { _, _ -> 0 }
+        private val STRING = NotNullProperty<NakshaTxCollectionInfo, String>(String::class) { _, _ -> "" }
+        private val COUNT = NotNullProperty<NakshaTxCollectionInfo, Int>(Int::class) { _, _ -> 0 }
     }
 
     var collectionId by STRING
@@ -39,7 +39,7 @@ class TxCollectionInfo() : AnyObject() {
     var deletedBytes: Int by COUNT
     var purgedBytes: Int by COUNT
 
-    fun addValues(counts: TxCollectionInfo) {
+    fun addValues(counts: NakshaTxCollectionInfo) {
         if (collectionId != counts.collectionId) {
             throw NakshaException(NakshaError.ILLEGAL_ARGUMENT,
                 "The given 'counts' is for another collection: ${counts.collectionId}")

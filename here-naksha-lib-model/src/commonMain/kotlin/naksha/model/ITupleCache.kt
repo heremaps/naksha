@@ -47,7 +47,7 @@ interface ITupleCache : IDictManager {
      * @param end the index of the first [FeatureTuple] **not** to load from cache, defaults to `rs.size`.
      * @return the given [result-set] rs, so that the methods can be used as wrapper.
      * @since 3.0.0
-     * @see [naksha.model.request.ResultTupleList.fromByteArray]
+     * @see [naksha.model.request.FeatureTupleList.fromByteArray]
      */
     fun load(rs: List<FeatureTuple?>, start:Int = 0, end:Int = rs.size): List<FeatureTuple?>
 
