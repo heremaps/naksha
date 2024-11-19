@@ -88,6 +88,7 @@ Technically this means, the maximum number of transactions per second per storag
 ## The Life-Cycle
 The life-cycle of a features persists out of _actions_ and _operations_.
 
+### Actions
 The first action is always `CREATED`, then optionally one to _n_ `UPDATED`, and finally it one `DELETED`.
 
 Additionally, next to these actions, an **_operation_** is stored, which is mainly improving the search. It is advantageous to reduce the cardinality when performing a [rebase](#rebased), so to have one index on the _operation_, rather than making combined queries between _action_ and other indices like _origin_, because _action_ basically will not reduce cardinality a lot, there are so many `CREATED`, `UPDATED`, and `DELETED` actions.
@@ -101,6 +102,11 @@ The `origin`, and `target` are sticky, so when updating the feature, the `origin
 
 This is actually important for [rebasing](#rebased).
 
+### Upsert
+Technically the _storage_ supports an _UPSERT_ operation, but eventually it is just automatically resolved by the _storage_ into either create or update, depending on the feature exists already, or is new. The _UPSERT_ is no real action nor an operation, it always will result in one of the other actions and operations.
+
+## Operations
+
 ### CREATED  
 When a feature is created, the `action` is set to `CREATED`.
 
@@ -112,9 +118,6 @@ When a _client_ copies a feature from one collection into another, or changes th
 While the action is set to `CREATED`, the _operation_ is set to `FORKED`, so originates from a different source, or the _ID_ was changed.
 
 A client may manually set an `origin`, the storage will detect if this is a valid _GUID_ (syntactically valid), and when it is, it will switch the operation to `FORKED` as well, this is necessary to perform [rebasing](#rebased) later. If the `origin` is set to a value that is no valid _GUID_ the behavior is undefined, but the `origin` should still be persisted.
-
-### UPSERT
-Technically the _storage_ supports an _UPSERT_ operation, but eventually it is just automatically resolved by the _storage_ into either create or update, depending on the feature exists already, or is new. The _UPSERT_ is no real action nor an operation, it always will result in one of the other actions and operations.
 
 ### UPDATED
 When a feature is updated by the client, the `action` is set to `UPDATED` by the client.
@@ -165,7 +168,7 @@ Assume, the foreign feature `FOO` should be split, a new deleted version `FOO'` 
 
 This behavior is essential later when [rebasing](#rebased).
 
-### JOIN
+### JOINED
 If the client need to _join_ multiple features together to a single one, it should delete all features that should be joined, and create a new merged feature. The client need to advertise that this is a join, by settings the `target` on all the features to the `uuid` of the new merged feature.
 
 However, because the new feature is not yet stored, it does not have a `uuid`, the client can create a _HEAD_ _GUID_ for this case, which basically is `urn:here:naksha:guid:{feature-id}`. The storage will detect the situation and resolve it.
