@@ -625,9 +625,7 @@ return obj;
          * @return The thread local.
          */
         @JsStatic
-        actual fun <T> newThreadLocal(initializer: (() -> T)?): PlatformThreadLocal<T> {
-            TODO("Not yet implemented newThreadLocal")
-        }
+        actual fun <T> newThreadLocal(initializer: (() -> T)?): PlatformThreadLocal<T> = JsThreadLocal(initializer)
 
         // TODO: Implement high resolution timer, when available (sadly, not in PLV8):
         //       https://developer.mozilla.org/en-US/docs/Web/API/Performance/now

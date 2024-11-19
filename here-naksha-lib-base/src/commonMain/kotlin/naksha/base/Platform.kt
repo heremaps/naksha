@@ -264,7 +264,7 @@ expect class Platform {
          * @param pobject the object at which to query for the proxy ([PlatformMap], [PlatformList] or [PlatformDataView]).
          * @param klass the proxy class.
          * @param doNotOverride if _true_, do not override existing symbols bound to incompatible types, but throw an
-         * [IllegalStateException]
+         * [IllegalStateException].
          * @return the proxy instance.
          * @throws IllegalArgumentException if the given `object` is not [PlatformMap], [PlatformList] or [PlatformDataView].
          * @throws IllegalStateException if [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
