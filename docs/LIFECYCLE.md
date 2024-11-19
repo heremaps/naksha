@@ -95,7 +95,7 @@ The `origin`, and `target` are sticky, so when updating the feature, the `origin
 
 This is actually important for [rebasing](#rebased).
 
-### Actions
+## Actions
 The first action is always `CREATED`, then optionally one to _n_ `UPDATED`, and finally it one `DELETED`.
 
 Additionally, next to these actions, an **_operation_** is stored, which is mainly improving the search. It is advantageous to reduce the cardinality when performing a [rebase](#rebased), so to have one index on the _operation_, rather than making combined queries between _action_ and other indices like _origin_, because _action_ basically will not reduce cardinality a lot, there are so many `CREATED`, `UPDATED`, and `DELETED` actions.
@@ -103,7 +103,7 @@ Additionally, next to these actions, an **_operation_** is stored, which is main
 The following explains what _actions_ are assigned to which _operations_. Note, there are far more _operations_ than _actions_, so the assignment is `1 : n`. This document uses the terms _client_, _server_, and _storage_. The _storage_ is the low-level driver that is used by the _server_ (e.g. Naksha-Hub) to interact with a physical storage (the implementation of the `IStorage` interface). The term _client_ refers to a client performing some action by sending instructions to the _server_, no matter if this is a Web-UI, CLI-tool, or another server/service.
 
 ### Upsert
-Technically the _storage_ supports an _UPSERT_ operation, but eventually it is just automatically resolved by the _storage_ into either create or update, depending on the feature exists already, or is new. The _UPSERT_ is no real action nor an operation, it always will result in one of the other actions and operations.
+Technically the _storage_ supports an _UPSERT_ action and operation, but eventually it is just automatically resolved by the _storage_ into either create or update, depending on the feature exists already, or is new. The _UPSERT_ is no real action nor an operation, it always will result in one of the other actions and operations.
 
 ## Operations
 
