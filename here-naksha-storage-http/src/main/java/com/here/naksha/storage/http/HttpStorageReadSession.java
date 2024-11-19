@@ -18,18 +18,20 @@
  */
 package com.here.naksha.storage.http;
 
-import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.storage.*;
-import java.util.concurrent.TimeUnit;
-import naksha.model.ErrorResult;
-import naksha.model.IReadSession;
-import naksha.model.NakshaContext;
-import naksha.model.ReadRequest;
+import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
+import naksha.model.*;
+import naksha.model.objects.Transaction;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.ResultTuple;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 public final class HttpStorageReadSession implements IReadSession {
 
@@ -38,72 +40,104 @@ public final class HttpStorageReadSession implements IReadSession {
   @NotNull
   private final NakshaContext context;
 
-  private final boolean useMaster;
-
   @NotNull
   private final RequestSender requestSender;
 
-  HttpStorageReadSession(@Nullable NakshaContext context, boolean useMaster, @NotNull RequestSender requestSender) {
+  HttpStorageReadSession(@Nullable NakshaContext context, @NotNull RequestSender requestSender) {
     this.context = context == null ? NakshaContext.currentContext() : context;
-    this.useMaster = useMaster;
     this.requestSender = requestSender;
   }
 
-  @Override
-  public boolean isMasterConnect() {
-    return useMaster;
-  }
-
-  @Override
   public @NotNull NakshaContext getNakshaContext() {
     return context;
   }
 
   @Override
-  public int getFetchSize() {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public void setFetchSize(int size) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public long getStatementTimeout(@NotNull TimeUnit timeUnit) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public void setStatementTimeout(long timeout, @NotNull TimeUnit timeUnit) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public long getLockTimeout(@NotNull TimeUnit timeUnit) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public void setLockTimeout(long timeout, @NotNull TimeUnit timeUnit) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
+  public @NotNull Response execute(@NotNull Request readRequest) {
     try {
       return HttpStorageReadExecute.execute(context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
     } catch (Exception e) {
       log.warn("We got exception while executing Read request.", e);
-      return new ErrorResult(XyzError.EXCEPTION, e.getMessage(), e);
+      return new ErrorResponse(NakshaError.EXCEPTION, e.getMessage(), null, e);
     }
   }
 
   @Override
-  public @NotNull Result process(@NotNull Notification<?> notification) {
-    throw new NotImplementedException();
+  public void close() {}
+
+  @Override
+  public int getSocketTimeout() {
+    return requestSender.keyProps.socketTimeoutSec();
   }
 
   @Override
-  public void close() {}
+  public void setSocketTimeout(int i) {
+    throw new IllegalStateException("Can only be set when creating the session");
+  }
+
+  @Override
+  public int getStmtTimeout() {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @Override
+  public void setStmtTimeout(int i) {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @Override
+  public int getLockTimeout() {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @Override
+  public void setLockTimeout(int i) {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @NotNull
+  @Override
+  public String getMap() {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @Override
+  public void setMap(@NotNull String s) {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @Override
+  public boolean isClosed() {
+    return false;
+    // TODO
+  }
+
+  @Override
+  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
+    return false;
+  }
+
+  @NotNull
+  @Override
+  public Response executeParallel(@NotNull Request request) {
+    return execute(request);
+  }
+
+  @NotNull
+  @Override
+  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @Override
+  public void fetchTuples(
+      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @NotNull
+  @Override
+  public Transaction transaction() {
+    throw new NotImplementedException("Not yet supported for HTTP storage");
+  }
 }

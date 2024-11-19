@@ -18,8 +18,10 @@
  */
 package com.here.naksha.storage.http;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static java.net.http.HttpRequest.newBuilder;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -29,10 +31,9 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static java.net.http.HttpRequest.newBuilder;
 
 public class RequestSender {
 
@@ -42,7 +43,7 @@ public class RequestSender {
   private final HttpClient httpClient;
 
   @NotNull
-  private final RequestSender.KeyProperties keyProps;
+  final RequestSender.KeyProperties keyProps;
 
   public RequestSender(@NotNull RequestSender.KeyProperties keyProps) {
     this.keyProps = keyProps;
@@ -111,15 +112,11 @@ public class RequestSender {
     return this.keyProps.equals(thatKeyProps);
   }
 
-  /**
-   * Set of properties that are just enough to construct the sender
-   * and distinguish unambiguously between objects
-   * in terms of their effective configuration
-   */
   public record KeyProperties(
-      @NotNull String name,
-      @NotNull String hostUrl,
-      @NotNull Map<String, String> defaultHeaders,
-      long connectionTimeoutSec,
-      long socketTimeoutSec) {}
+          @NotNull String name,
+          @NotNull String hostUrl,
+          @NotNull Map<String, String> defaultHeaders,
+          int connectionTimeoutSec,
+          int socketTimeoutSec) {
+  }
 }

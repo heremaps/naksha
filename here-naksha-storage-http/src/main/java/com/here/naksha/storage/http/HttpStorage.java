@@ -18,64 +18,156 @@
  */
 package com.here.naksha.storage.http;
 
-import static com.here.naksha.storage.http.RequestSender.KeyProperties;
-
-import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
+import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-import naksha.model.IReadSession;
-import naksha.model.IStorage;
-import naksha.model.NakshaContext;
+import naksha.base.Int64;
+import naksha.base.JvmProxyUtil;
+import naksha.model.*;
+import naksha.model.objects.NakshaFeature;
+import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 public class HttpStorage implements IStorage {
 
   private static final Logger log = LoggerFactory.getLogger(HttpStorage.class);
 
-  private final RequestSender requestSender;
+  private final KeyProperties defaultKeyProperties;
+
+  private final AtomicBoolean initialized = new AtomicBoolean(false);
 
   public HttpStorage(@NotNull Storage storage) {
     HttpStorageProperties properties = HttpStorage.getProperties(storage);
-    requestSender = RequestSenderCache.getInstance()
-        .getSenderWith(new KeyProperties(
+    if (properties == null) {
+      if (!storage.getProperties().hasRaw(HttpStorageProperties.URL)) {
+        throw new IllegalArgumentException("A HTTP storage must have properties containing a 'url'");
+      }
+      final Object raw = storage.getProperties().get(HttpStorageProperties.URL);
+      if (raw instanceof String url) {
+        properties = new HttpStorageProperties(url, null, null, null);
+      } else {
+        throw new IllegalArgumentException("A HTTP storage must have properties containing a 'url'");
+      }
+    }
+    defaultKeyProperties = new KeyProperties(
             storage.getId(),
             properties.getUrl(),
             properties.getHeaders(),
             properties.getConnectTimeout(),
-            properties.getSocketTimeout()));
+            properties.getSocketTimeout());
+  }
+
+  private static @Nullable HttpStorageProperties getProperties(@NotNull Storage storage) {
+    return JvmProxyUtil.box(storage.getProperties(), HttpStorageProperties.class);
   }
 
   @Override
-  public @NotNull IReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new HttpStorageReadSession(context, useMaster, requestSender);
+  public void close() {
+  }
+
+  @NotNull
+  @Override
+  public IReadSession newReadSession(@Nullable SessionOptions options) {
+    final RequestSender requestSender = RequestSenderCache.getInstance()
+            .getSenderWith(new KeyProperties(
+                    defaultKeyProperties.name(),
+                    defaultKeyProperties.hostUrl(),
+                    defaultKeyProperties.defaultHeaders(),
+                    options != null ? options.connectTimeout : defaultKeyProperties.connectionTimeoutSec(),
+                    options != null ? options.socketTimeout : defaultKeyProperties.socketTimeoutSec()));
+    return new HttpStorageReadSession(NakshaContext.currentContext(), requestSender);
+  }
+
+  @NotNull
+  @Override
+  public IWriteSession newWriteSession(@Nullable SessionOptions options) {
+    throw new NotImplementedException("Not yet supported");
+  }
+
+  @Nullable
+  @Override
+  public String getMapId(int mapNumber) {
+    throw new NotImplementedException("Not supported for HTTP storage");
   }
 
   @Override
-  public void initStorage() {
+  public boolean contains(@NotNull String mapId) {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @NotNull
+  @Override
+  public IMap get(@NotNull String mapId) {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @NotNull
+  @Override
+  public IMap getDefaultMap() {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @Override
+  public void initStorage(@Nullable Map<String, ?> params) {
     log.debug("HttpStorage.initStorage called");
+    initialized.set(true);
+    // TODO processing params when needed
   }
 
   @Override
-  public void startMaintainer() {}
-
-  @Override
-  public void maintainNow() {}
-
-  @Override
-  public void stopMaintainer() {}
-
-  @Override
-  public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
-    return new FutureTask<>(() -> onShutdown != null ? onShutdown.call(this) : null);
+  public boolean isInitialized() {
+    return initialized.get();
   }
 
-  private static @NotNull HttpStorageProperties getProperties(@NotNull Storage storage) {
-    return JsonSerializable.convert(storage.getProperties(), HttpStorageProperties.class);
+  @NotNull
+  @Override
+  public SessionOptions getAdminOptions() {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @NotNull
+  @Override
+  public String getId() {
+    return defaultKeyProperties.name();
+  }
+
+  @NotNull
+  @Override
+  public NakshaFeature tupleToFeature(@NotNull Tuple tuple) {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @NotNull
+  @Override
+  public Tuple featureToTuple(@NotNull NakshaFeature feature) {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @NotNull
+  @Override
+  public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
+    throw new NotImplementedException("Enter lock not supported");
+  }
+
+  @Override
+  public int getHardCap() {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @Override
+  public void setHardCap(int i) {
+    throw new NotImplementedException("Not supported for HTTP storage");
+  }
+
+  @Nullable
+  @Override
+  public IMap get(int mapNumber) {
+    throw new NotImplementedException("Not supported for HTTP storage");
   }
 }

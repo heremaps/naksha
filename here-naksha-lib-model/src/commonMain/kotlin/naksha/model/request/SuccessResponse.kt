@@ -4,6 +4,7 @@ package naksha.model.request
 
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
+import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaFeatureList
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -28,6 +29,11 @@ open class SuccessResponse @Deprecated("Use secondary", ReplaceWith("SuccessResp
     constructor(tuples: List<ResultTuple>) : this() {
         this.tuples.addAll(tuples)
         this.features.addAll(tuples.map { it.feature })
+    }
+
+    @JsName("ofFeatures")
+    constructor(features: NakshaFeatureList) : this() {
+        this.features.addAll(features)
     }
 
     companion object SuccessResponse_C {
