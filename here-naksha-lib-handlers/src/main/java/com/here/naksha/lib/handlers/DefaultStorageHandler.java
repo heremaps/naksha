@@ -18,12 +18,6 @@
  */
 package com.here.naksha.lib.handlers;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.createWriteCollectionsRequest;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.*;
-
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.exceptions.StorageNotInitialized;
@@ -33,11 +27,6 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
 import naksha.base.JvmProxyUtil;
 import naksha.base.StringList;
 import naksha.model.*;
@@ -47,11 +36,18 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.createWriteCollectionsRequest;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.*;
+
 public class DefaultStorageHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(DefaultStorageHandler.class);
-  private static final Set<String> MISSING_COLLECTION_SQL_ERROR_STATES =
-      Set.of(UNDEFINED_TABLE.toString(), COLLECTION_DOES_NOT_EXIST.toString());
 
   protected @NotNull EventHandler eventHandler;
   protected @NotNull EventTarget<?> eventTarget;
@@ -109,7 +105,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     if (request instanceof ReadFeatures rf) {
       return forwardReadFeatures(ctx, storageImpl, collection, rf, currentAttempt);
     } else if (request instanceof WriteRequest wr) {
-      if (wr.getWrites().stream().map(Write::getCollectionId).allMatch(Naksha.VIRT_COLLECTIONS::equals)) {
+      if (isOnlyWriteCollectionRequest(wr)) {
         return forwardWriteCollections(ctx, storageImpl, collection, wr, currentAttempt);
       } else return forwardWriteFeatures(ctx, storageImpl, collection, wr, currentAttempt);
     } else {
@@ -286,13 +282,6 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     }
   }
 
-  private boolean indicatesMissingCollection(RuntimeException re) {
-    if (re.getCause() instanceof SQLException sqe) {
-      return MISSING_COLLECTION_SQL_ERROR_STATES.contains(sqe.getSQLState());
-    }
-    return false;
-  }
-
   @NotNull
   private Response retryDueToUninitializedStorage(
       final @NotNull NakshaContext ctx,
@@ -332,7 +321,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       ids.add(customCollectionId);
       rf.setFeatureIds(ids);
     } else if (request instanceof WriteRequest wr) {
-      if (wr.getWrites().stream().map(Write::getCollectionId).allMatch(Naksha.VIRT_COLLECTIONS::equals)) {
+      if (isOnlyWriteCollectionRequest(wr)) {
         collectionsFrom(wr).forEach(collection -> collection.setId(customCollectionId));
       } else {
         wr.getWrites().forEach(write -> write.setCollectionId(customCollectionId));

@@ -143,6 +143,6 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   private static boolean operationTypeAllowed(PQuery propertyOperation) {
     final AnyOp op = propertyOperation.getOp();
-    return op.equals(StringOp.EQUALS) || op.equals(StringOp.CONTAINS) || op.equals(DoubleOp.EQ);
+    return StringOp.EQUALS.equals(op) || StringOp.CONTAINS.equals(op) || DoubleOp.EQ.equals(op);
   }
 }

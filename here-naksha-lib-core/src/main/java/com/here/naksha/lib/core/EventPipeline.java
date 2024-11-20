@@ -18,14 +18,7 @@
  */
 package com.here.naksha.lib.core;
 
-import static naksha.model.NakshaError.EXCEPTION;
-import static naksha.model.NakshaError.NOT_IMPLEMENTED;
-
 import com.here.naksha.lib.core.models.naksha.EventHandler;
-import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
 import naksha.model.NakshaError;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
@@ -34,6 +27,14 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+
+import static naksha.model.NakshaError.EXCEPTION;
+import static naksha.model.NakshaError.NOT_IMPLEMENTED;
 
 /**
  * Default implementation of an event pipeline that wraps {@link Request requests} into an event.
@@ -300,7 +301,7 @@ public class EventPipeline extends NakshaBound {
 
   @NotNull
   Response notImplemented(@NotNull IEvent event) {
-    return new ErrorResponse(new NakshaError(
-        NOT_IMPLEMENTED, "Event '" + event.getClass().getSimpleName() + "' is not supported", null, null));
+    return new ErrorResponse(
+            NOT_IMPLEMENTED, "Event '" + event.getClass().getSimpleName() + "' is not supported");
   }
 }

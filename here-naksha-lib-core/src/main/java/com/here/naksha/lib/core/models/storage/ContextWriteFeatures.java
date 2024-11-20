@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import java.util.List;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.WriteRequest;
@@ -26,8 +25,10 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+
 /**
- * Abstract class representing WriteFeatures request along with list of features as context and list of violations.
+ * Abstract class representing WriteRequest along with list of features as context and list of violations.
  * Implementing class will define actual data type of context and violations.
  */
 @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)

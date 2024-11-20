@@ -18,21 +18,11 @@
  */
 package com.here.naksha.lib.core;
 
-import static naksha.model.NakshaError.EXCEPTION;
-
 import com.here.naksha.lib.core.models.payload.Payload;
 import com.here.naksha.lib.core.util.NanoTime;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Scanner;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import naksha.base.Platform;
 import naksha.base.ToJsonOptions;
-import naksha.model.NakshaError;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
@@ -40,6 +30,16 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static naksha.model.NakshaError.EXCEPTION;
 
 /**
  * Base implementation for an event pipeline that read the request from an {@link InputStream} and write the result to an
@@ -127,8 +127,8 @@ public class IoEventPipeline extends EventPipeline {
             .addArgument(expected)
             .addArgument(deserialized)
             .log();
-        response = new ErrorResponse(new NakshaError(
-            EXCEPTION, "Invalid event, expected " + expected + ", but found " + deserialized, null, null));
+        response = new ErrorResponse(
+                EXCEPTION, "Invalid event, expected " + expected + ", but found " + deserialized);
         if (output != null) {
           writeDataOut(output, response, null);
         }
@@ -138,7 +138,7 @@ public class IoEventPipeline extends EventPipeline {
           .setMessage("Exception while processing the event")
           .setCause(e)
           .log();
-      response = new ErrorResponse(new NakshaError(EXCEPTION, e.getMessage(), null, null));
+      response = new ErrorResponse(EXCEPTION, e.getMessage());
       if (output != null) {
         writeDataOut(output, response, null);
       }

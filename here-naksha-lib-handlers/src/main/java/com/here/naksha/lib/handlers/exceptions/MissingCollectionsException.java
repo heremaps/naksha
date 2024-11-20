@@ -18,11 +18,11 @@
  */
 package com.here.naksha.lib.handlers.exceptions;
 
-import static naksha.model.NakshaError.NOT_FOUND;
-
 import naksha.model.objects.NakshaCollection;
 import naksha.model.request.ErrorResponse;
 import org.jetbrains.annotations.NotNull;
+
+import static naksha.model.NakshaError.COLLECTION_NOT_FOUND;
 
 public final class MissingCollectionsException extends RuntimeException {
 
@@ -31,6 +31,6 @@ public final class MissingCollectionsException extends RuntimeException {
   }
 
   public ErrorResponse toErrorResult() {
-    return new ErrorResponse(NOT_FOUND, getMessage(), null, this);
+    return new ErrorResponse(COLLECTION_NOT_FOUND, getMessage(), null, this);
   }
 }

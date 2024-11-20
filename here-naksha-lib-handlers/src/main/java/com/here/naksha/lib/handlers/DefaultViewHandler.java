@@ -18,8 +18,6 @@
  */
 package com.here.naksha.lib.handlers;
 
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.*;
-
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
@@ -29,16 +27,19 @@ import com.here.naksha.lib.view.*;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
 import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import naksha.base.JvmProxyUtil;
 import naksha.model.*;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.*;
 
 public class DefaultViewHandler extends AbstractEventHandler {
 
@@ -62,7 +63,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
     final Request request = event.getRequest();
     if (request instanceof WriteRequest wr
-            && wr.getWrites().stream().map(Write::getCollectionId).allMatch(Naksha.VIRT_COLLECTIONS::equals)) {
+            && isOnlyWriteCollectionRequest(wr)) {
       return SUCCEED_WITHOUT_PROCESSING;
     } else if (request instanceof ReadFeatures || request instanceof WriteRequest) {
       return PROCESS;
@@ -112,22 +113,20 @@ public class DefaultViewHandler extends AbstractEventHandler {
     if (request instanceof ReadFeatures rf) {
       return forwardReadFeatures(ctx, view, rf);
     } else if (request instanceof WriteRequest wr) {
-      return forwardWriteFeatures(view, wr);
+      return forwardWriteFeatures(ctx, view, wr);
     } else {
       return notImplemented(request);
     }
   }
 
-  private Response forwardWriteFeatures(IView view, WriteRequest wr) {
-    SessionOptions sessionOptions = new SessionOptions();
-    sessionOptions.useMaster = true;
-    final IWriteSession writeSession = view.newWriteSession(sessionOptions);
+  private Response forwardWriteFeatures(NakshaContext ctx, IView view, WriteRequest wr) {
+    final IWriteSession writeSession = view.newWriteSession(SessionOptions.from(ctx, true));
     return writeSession.execute(wr);
   }
 
   private Response forwardReadFeatures(NakshaContext ctx, IView view, ReadFeatures rf) {
 
-    try (final ViewReadSession reader = (ViewReadSession) view.newReadSession(ctx, false)) {
+    final ViewReadSession reader = (ViewReadSession) view.newReadSession(SessionOptions.from(ctx, false));
       final MissingIdResolver resolver;
       if (properties.getViewType() == ViewType.UNION) {
         resolver = new IgnoreMissingResolver();
@@ -136,7 +135,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
         resolver = new ObligatoryLayersResolver(obligatoryLayers);
       }
       return reader.execute(rf, new MergeByStoragePriority(), resolver);
-    }
+
   }
 
   private ViewLayerCollection prepareViewLayerCollection(IStorage nhStorage, List<String> spaceIds) {

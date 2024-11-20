@@ -28,7 +28,15 @@ open class ErrorResponse() : Response() {
     }
 
     /**
-     * Create an error response from an error.
+     * Constructor to simplify initiation in Java.
+     */
+    @JsName("ofText")
+    constructor(code: String, msg: String) : this() {
+        this.error = NakshaError(code, msg, null, null)
+    }
+
+    /**
+     * Create an error response from a {@link NakshaError}.
      * @param error the error from which to generate the error response.
      */
     @JsName("fromError")
