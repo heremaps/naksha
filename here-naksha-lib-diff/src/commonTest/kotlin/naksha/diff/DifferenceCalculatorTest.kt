@@ -7,6 +7,25 @@ import kotlin.test.*
 class DifferenceCalculatorTest {
 
     @Test
+    fun x(){
+        val objectToPatch = Platform.fromJSON("""
+            {
+                "foo": "bar",
+                "lorem": "ipsum"
+            }
+        """.trimIndent())!!
+
+        val diff = MapDiff()
+        diff["foo"] = UpdateOp(oldValue = "bar", newValue = "new_bar")
+        diff["lorem"] = RemoveOp(oldValue = "ipsum")
+        diff["new_field"] = InsertOp(newValue = 123)
+
+        Patcher.patch(objectToPatch, diff)
+
+        val x = Platform.toJSON(objectToPatch)
+    }
+
+    @Test
     fun shouldTreatMissingSourceAsInsertion() {
         // Given
         val target = "some_value"
@@ -182,10 +201,16 @@ class DifferenceCalculatorTest {
         """.trimIndent())
 
         // And:
-        val ignoreBar = IgnoreKey { key, _, _ -> key == "bar" }
+        val diffContext = object:DiffContext {
+            override fun ignore(key: Any, sourceMap: Map<*, *>, targetOrPatchMap: Map<*, *>): Boolean =
+                key == "bar"
+
+            override fun areTwoNumbersEqual(first: Number, second: Number): Boolean =
+                DiffContext.Default.areTwoNumbersEqual(first, second)
+        }
 
         // When:
-        val diffWithIgnore = calculateDifference(left, right, ignoreBar)
+        val diffWithIgnore = calculateDifference(left, right, diffContext)
 
         // Then: foo remained the same, bar is ignored -> there should be no diff
         assertNull(diffWithIgnore)
@@ -309,5 +334,36 @@ class DifferenceCalculatorTest {
         assertIs<Map<*, *>>(secondRemovedRoleOfSecondEmployee)
         assertEquals("s2", secondRemovedRoleOfSecondEmployee["system"])
         assertEquals("admin", secondRemovedRoleOfSecondEmployee["role"])
+    }
+
+    @Test
+    fun shouldCalculateDiffForSimpleArrays() {
+        // Given:
+        val shorter = arrayOf(0, 1, 2)
+        val longer = arrayOf(0, "one", 2, "three")
+
+        // When: diffing from shorter with longer
+        val shorterToLongerDiff = calculateDifference(shorter, longer)
+
+        // Then
+        assertNotNull(shorterToLongerDiff)
+        assertIs<ListDiff>(shorterToLongerDiff)
+        assertEquals(4, shorterToLongerDiff.size)
+        assertEquals(null, shorterToLongerDiff[0]) // no diff -> null
+        assertEquals(UpdateOp(1, "one"), shorterToLongerDiff[1])
+        assertEquals(null, shorterToLongerDiff[2]) // no diff -> null
+        assertEquals(InsertOp("three"), shorterToLongerDiff[3])
+
+        // When: diffing longer with shorter (reverse-diff of the previous operation)
+        val longerToShorterDiff = calculateDifference(longer, shorter)
+
+        // Then
+        assertNotNull(longerToShorterDiff)
+        assertIs<ListDiff>(longerToShorterDiff)
+        assertEquals(4, longerToShorterDiff.size)
+        assertEquals(null, longerToShorterDiff[0]) // no diff -> null
+        assertEquals(UpdateOp("one", 1), longerToShorterDiff[1])
+        assertEquals(null, longerToShorterDiff[2]) // no diff -> null
+        assertEquals(RemoveOp("three"), longerToShorterDiff[3])
     }
 }

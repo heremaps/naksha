@@ -169,37 +169,51 @@ class MigratedJsonBasedDiffTest {
 
     @Test
     fun testIgnoreAll() {
+        val ignoreAll = object : DiffContext {
+            override fun ignore(key: Any, sourceMap: Map<*, *>, targetOrPatchMap: Map<*, *>): Boolean =
+                true
+
+            override fun areTwoNumbersEqual(first: Number, second: Number): Boolean =
+                DiffContext.Default.areTwoNumbersEqual(first, second)
+        }
+
         val f1 = loadFeature("feature_1.json")
         assertNotNull(f1)
 
         val f2 = loadFeature("feature_2.json")
         assertNotNull(f2)
 
-        val diff = DifferenceCalculator.calculateDifference(f1, f2) { _, _, _ -> true }
+        val diff = DifferenceCalculator.calculateDifference(f1, f2, ignoreAll)
         Assertions.assertNull(diff)
     }
 
     @Test
     fun testXyzNamespace() {
+        val ignoreSomeXyzKeys = object : DiffContext {
+            override fun ignore(key: Any, sourceMap: Map<*, *>, targetOrPatchMap: Map<*, *>): Boolean =
+                key in setOf(
+                    "txn",
+                    "txn_next",
+                    "txn_uuid",
+                    "uuid",
+                    "puuid",
+                    "version",
+                    "rt_ts",
+                    "createdAt",
+                    "updatedAt",
+                )
+
+            override fun areTwoNumbersEqual(first: Number, second: Number): Boolean =
+                DiffContext.Default.areTwoNumbersEqual(first, second)
+        }
+
         val f1 = loadFeature("feature_1.json")
         assertNotNull(f1)
 
         val f2 = loadFeature("feature_2.json")
         assertNotNull(f2)
 
-        val diff = DifferenceCalculator.calculateDifference(f1, f2){ key, _, _ ->
-            key in setOf(
-                "txn",
-                "txn_next",
-                "txn_uuid",
-                "uuid",
-                "puuid",
-                "version",
-                "rt_ts",
-                "createdAt",
-                "updatedAt",
-            )
-        }
+        val diff = DifferenceCalculator.calculateDifference(f1, f2, ignoreSomeXyzKeys)
 
         assertIs<MapDiff>(diff)
         assertEquals(1, diff.size)

@@ -12,7 +12,7 @@ class JsonPatchFactoryTest {
 
     @Test
     fun shouldReturnEmptyListForNullDiff(){
-        assertTrue(JsonPatchFactory.jsonPatch(null).isEmpty())
+        assertEquals("[]", JsonPatchFactory.jsonPatch(null))
     }
 
     @Test
@@ -52,9 +52,6 @@ class JsonPatchFactoryTest {
         // And
         val jsonPatch = JsonPatchFactory.jsonPatch(leftToRightDiff)
 
-        // And:
-        val serializedJsonPatch = Platform.toJSON(jsonPatch)
-
         // Then
         val expected = """
             [
@@ -79,7 +76,7 @@ class JsonPatchFactoryTest {
               }
             ]
         """.trimIndent()
-        assertJsonsAreEqual(expected, serializedJsonPatch)
+        assertJsonsAreEqual(expected, jsonPatch)
     }
 
     @Test
@@ -93,9 +90,6 @@ class JsonPatchFactoryTest {
 
         // And
         val shorterToLongerJsonPatch = JsonPatchFactory.jsonPatch(shorterToLongerDiff)
-
-        // And:
-        val serializedShorterToLonger = Platform.toJSON(shorterToLongerJsonPatch)
 
         // Then
         val expectedShorterToLonger = """
@@ -113,16 +107,13 @@ class JsonPatchFactoryTest {
             ]
 
         """.trimIndent()
-        assertJsonsAreEqual(expectedShorterToLonger, serializedShorterToLonger)
+        assertJsonsAreEqual(expectedShorterToLonger, shorterToLongerJsonPatch)
 
         // When: diffing from shorter with longer
         val longerToShorterDiff = DifferenceCalculator.calculateDifference(longer, shorter)
 
         // And
         val longerToShorterJsonPatch = JsonPatchFactory.jsonPatch(longerToShorterDiff)
-
-        // And:
-        val serializedLongerToShorter = Platform.toJSON(longerToShorterJsonPatch)
 
         // Then
         val expectedLongerToShorter = """
@@ -138,7 +129,7 @@ class JsonPatchFactoryTest {
               }
             ] 
        """.trimIndent()
-        assertJsonsAreEqual(expectedLongerToShorter, serializedLongerToShorter)
+        assertJsonsAreEqual(expectedLongerToShorter, longerToShorterJsonPatch)
     }
 
     @Test
@@ -217,9 +208,6 @@ class JsonPatchFactoryTest {
         // And
         val jsonPatch = JsonPatchFactory.jsonPatch(diff)
 
-        // And
-        val serializedJsonPatch = Platform.toJSON(jsonPatch)
-
         // Then
         val expected = """
            [
@@ -261,7 +249,7 @@ class JsonPatchFactoryTest {
               }
             ]
         """.trimIndent()
-        assertJsonsAreEqual(expected, serializedJsonPatch)
+        assertJsonsAreEqual(expected, jsonPatch)
     }
 
     private fun assertJsonsAreEqual(expected: String, actual: String) {

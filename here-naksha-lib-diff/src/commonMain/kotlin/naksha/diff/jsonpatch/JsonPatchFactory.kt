@@ -1,5 +1,6 @@
 package naksha.diff.jsonpatch
 
+import naksha.base.Platform
 import naksha.diff.*
 
 class JsonPatchFactory private constructor() {
@@ -8,21 +9,23 @@ class JsonPatchFactory private constructor() {
 
         private const val ROOT_PATH = "";
         private const val PATH_DELIMITER = "/";
+        private const val EMPTY_JSON_ARRAY = "[]"
 
         /**
-         * Converts [difference] (which can be a complex [naksha.diff.MapDiff] or [naksha.diff.ListDiff]) to list of [JsonPatchEntry].
-         * The result after serialization complies with JsonPatch standard: [RFC 6092](https://datatracker.ietf.org/doc/html/rfc6902/)
+         * Converts [difference] (which can be a complex [naksha.diff.MapDiff] or [naksha.diff.ListDiff]) to JSON that complies to
+         * JsonPatch standard: [RFC 6092](https://datatracker.ietf.org/doc/html/rfc6902/)
          *
          * In short, [RFC 6092](https://datatracker.ietf.org/doc/html/rfc6902/) specifies that the JsonPatch is just an array of entries.
          * Each entry specifies operation, path and potential value.
          *
-         * TODO: sample
+         * @param difference [Difference] to be converted
+         * @return RFC 6092 - compliant JSON
          */
-        fun jsonPatch(difference: Difference?): List<JsonPatchEntry> {
-            if (difference == null) return emptyList()
+        fun jsonPatch(difference: Difference?): String {
+            if (difference == null) return EMPTY_JSON_ARRAY
             val accumulator = mutableListOf<JsonPatchEntry>()
             accumulateJsonPatchEntries(difference, ROOT_PATH, accumulator)
-            return accumulator
+            return Platform.toJSON(accumulator)
         }
 
 

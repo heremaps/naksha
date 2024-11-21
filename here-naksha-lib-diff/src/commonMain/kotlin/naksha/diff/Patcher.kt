@@ -4,6 +4,37 @@ class Patcher private constructor() {
 
     companion object Patcher_C {
 
+        /**
+         * Applies supplied [Difference] on given object, effectively patching it.
+         * @param toBePatched object to be patched
+         * @param diff [Difference] to be applied as patch on the object
+         * @return [toBePatched] - modified after patching
+         * @since 3.0.0
+         *
+         * See sample below:
+         * ```
+         * val someObject = fromJson(""""
+         * {
+         *     "foo": "bar",
+         *     "lorem": "ipsum"
+         *  }
+         * """")
+         *
+         * val diff = MapDiff()
+         * diff["foo"] = UpdateOp(oldValue = "bar", newValue = "new_bar")
+         * diff["lorem"] = RemoveOp(oldValue = "ipsum")
+         * diff["new_field"] = InsertOp(newValue = 123)
+         *
+         * Patcher.patch(someObject, diff)
+         *
+         * assert(someObject.toJson() == """
+         * {
+         *     "foo": "new_bar",
+         *     "new_field": 123
+         * }
+         * """)
+         * ```
+         */
         fun <T : Any> patch(toBePatched: T, diff: Difference?): T {
             if (diff == null) {
                 return toBePatched
