@@ -6,21 +6,35 @@ DO $sql$ BEGIN
     EXECUTE $outer$
       CREATE OR REPLACE FUNCTION gzip(uncompressed BYTEA, compression_level INTEGER) RETURNS BYTEA AS $inner$
         if (!globalThis["require"]) plv8.find_function('es_modules_init')();
-        return require('pako').deflate(uncompressed, {"level":compression_level});
+        return require('pako').gzip(uncompressed, {"level":compression_level});
       $inner$ LANGUAGE 'plv8' IMMUTABLE;
     $outer$;
 
     EXECUTE $outer$
       CREATE OR REPLACE FUNCTION gzip(uncompressed TEXT, compression_level INTEGER) RETURNS BYTEA AS $inner$
         if (!globalThis["require"]) plv8.find_function('es_modules_init')();
-        return require('pako').deflate(uncompressed, {"level":compression_level});
+        return require('pako').gzip(uncompressed, {"level":compression_level});
+      $inner$ LANGUAGE 'plv8' IMMUTABLE;
+    $outer$;
+
+    EXECUTE $outer$
+      CREATE OR REPLACE FUNCTION gzip(uncompressed BYTEA) RETURNS BYTEA AS $inner$
+        if (!globalThis["require"]) plv8.find_function('es_modules_init')();
+        return require('pako').gzip(uncompressed);
+      $inner$ LANGUAGE 'plv8' IMMUTABLE;
+    $outer$;
+
+    EXECUTE $outer$
+      CREATE OR REPLACE FUNCTION gzip(uncompressed TEXT) RETURNS BYTEA AS $inner$
+        if (!globalThis["require"]) plv8.find_function('es_modules_init')();
+        return require('pako').gzip(uncompressed);
       $inner$ LANGUAGE 'plv8' IMMUTABLE;
     $outer$;
 
     EXECUTE $outer$
       CREATE OR REPLACE FUNCTION gunzip(compressed BYTEA) RETURNS BYTEA AS $inner$
         if (!globalThis["require"]) plv8.find_function('es_modules_init')();
-        return require('pako').inflate(compressed);
+        return require('pako').ungzip(compressed);
       $inner$ LANGUAGE 'plv8' IMMUTABLE;
     $outer$;
   END IF;
