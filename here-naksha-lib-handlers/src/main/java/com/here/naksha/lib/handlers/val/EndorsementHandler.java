@@ -23,21 +23,23 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteFeatures;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
-import naksha.geo.XyzProperties;
-import naksha.geo.XyzReference;
-import naksha.model.Request;
-import naksha.model.XyzFeature;
+import naksha.base.JvmProxyUtil;
+import naksha.model.mom.MomReference;
+import naksha.model.mom.MomReferenceList;
 import naksha.model.mom.MomReviewState;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Objects;
 
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
@@ -47,7 +49,7 @@ public class EndorsementHandler extends AbstractEventHandler {
   private static final Logger logger = LoggerFactory.getLogger(EndorsementHandler.class);
   protected @NotNull EventHandler eventHandler;
   protected @NotNull EventTarget<?> eventTarget;
-  protected @NotNull XyzProperties properties;
+  protected @NotNull NakshaProperties properties;
 
   public EndorsementHandler(
       final @NotNull EventHandler eventHandler,
@@ -56,13 +58,13 @@ public class EndorsementHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties = JsonSerializable.convert(eventHandler.getProperties(), XyzProperties.class);
+    this.properties = Objects.requireNonNull(JvmProxyUtil.box(eventHandler.getProperties(), NakshaProperties.class));
   }
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
-    final Request<?> request = event.getRequest();
-    if (request instanceof ContextWriteFeatures<?, ?, ?, ?, ?>) {
+    final Request request = event.getRequest();
+    if (request instanceof ContextWriteFeatures) {
       return PROCESS;
     }
     return SEND_UPSTREAM_WITHOUT_PROCESSING;
@@ -75,21 +77,21 @@ public class EndorsementHandler extends AbstractEventHandler {
    * @return the result.
    */
   @Override
-  public @NotNull Result process(@NotNull IEvent event) {
-    final Request<?> request = event.getRequest();
+  public @NotNull Response process(@NotNull IEvent event) {
+    final Request request = event.getRequest();
 
     logger.info("Handler received request {}", request.getClass().getSimpleName());
 
-    final ContextWriteFeatures<?, ?, ?, ?, ?> cwf = HandlerUtil.checkInstanceOf(
+    final ContextWriteFeatures cwf = HandlerUtil.checkInstanceOf(
         request, ContextWriteFeatures.class, "Unsupported request type during endorsement");
 
     // Extract violations from request
-    final List<XyzFeature> violations = HandlerUtil.getXyzViolationsFromGenericList(cwf.getViolations());
+    final List<NakshaFeature> violations = HandlerUtil.getXyzViolationsFromGenericList(cwf.getViolations());
 
     // Mark each feature as AUTO_REVIEW_DEFERRED or UNPUBLISHED
     // (depending on whether there is associated violation or not)
-    final List<XyzFeature> updatedFeatures = HandlerUtil.getXyzFeaturesFromWriteList(cwf.features);
-    for (final XyzFeature feature : updatedFeatures) {
+    final List<NakshaFeature> updatedFeatures = HandlerUtil.getXyzFeaturesFromWriteList(cwf.getWrites());
+    for (final NakshaFeature feature : updatedFeatures) {
       updateFeatureDeltaStateIfMatchesViolations(feature, violations);
     }
 
@@ -97,24 +99,24 @@ public class EndorsementHandler extends AbstractEventHandler {
     // list, so they also get updated in storage
 
     // create and forward request for next handler in the pipeline
-    final ContextWriteFeatures<?, ?, ?, ?, ?> upstreamRequest =
+    final ContextWriteFeatures upstreamRequest =
         HandlerUtil.createContextWriteRequestFromFeatureList(
             cwf.getCollectionId(), updatedFeatures, cwf.getContext(), violations);
     return event.sendUpstream(upstreamRequest);
   }
 
   protected void updateFeatureDeltaStateIfMatchesViolations(
-      final @NotNull XyzFeature feature, final @Nullable List<XyzFeature> violations) {
+          final @NotNull NakshaFeature feature, final @Nullable List<NakshaFeature> violations) {
     HandlerUtil.setDeltaReviewState(feature, MomReviewState.UNPUBLISHED);
     if (violations == null) {
       return;
     }
-    for (final XyzFeature violation : violations) {
-      final List<XyzReference> references = violation.getProperties().getReferences();
+    for (final NakshaFeature violation : violations) {
+      final MomReferenceList references = violation.getProperties().getReferences();
       if (references == null) {
         continue;
       }
-      for (final XyzReference reference : references) {
+      for (final MomReference reference : references) {
         if (feature.getId().equals(reference.getId())) {
           HandlerUtil.setDeltaReviewState(feature, MomReviewState.AUTO_REVIEW_DEFERRED);
           return;

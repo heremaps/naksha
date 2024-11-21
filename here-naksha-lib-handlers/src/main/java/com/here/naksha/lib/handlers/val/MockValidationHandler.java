@@ -27,7 +27,7 @@ import com.here.naksha.lib.core.models.storage.ContextWriteFeatures;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
 import naksha.base.JvmProxyUtil;
-import naksha.geo.XyzReference;
+import naksha.model.mom.MomReference;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.Request;
@@ -97,7 +97,7 @@ public class MockValidationHandler extends AbstractEventHandler {
 
     // create and forward request for next handler in the pipeline
     final ContextWriteFeatures upstreamRequest = HandlerUtil.createContextWriteRequestFromWriteList(
-        cwf.getCollectionId(), cwf.features, cwf.getContext(), violations);
+            cwf.getWrites(), cwf.getContext(), violations);
     return event.sendUpstream(upstreamRequest);
   }
 
@@ -108,7 +108,7 @@ public class MockValidationHandler extends AbstractEventHandler {
 
     // Decide randomly whether to generate violations or not
     // Generation violations if odd number of features supplied, otherwise not
-    final boolean generateViolation = (cwf.features.size() % 2) > 0;
+    final boolean generateViolation = (cwf.getWrites().size() % 2) > 0;
 
     if (!generateViolation) {
       return null;
@@ -119,7 +119,7 @@ public class MockValidationHandler extends AbstractEventHandler {
     // Generate random violations and attach feature references
     violations = new ArrayList<>();
     int featureCnt = 0;
-    final List<NakshaFeature> features = HandlerUtil.getXyzFeaturesFromWriteList(cwf.features);
+    final List<NakshaFeature> features = HandlerUtil.getXyzFeaturesFromWriteList(cwf.getWrites());
     for (final NakshaFeature feature : features) {
       featureCnt++;
       // Distribution of "count" of violations, depends on feature "number",
@@ -148,7 +148,7 @@ public class MockValidationHandler extends AbstractEventHandler {
       // randomize violation id
       violation.setId("urn:here::here:Topology:violation_" + RandomStringUtils.randomAlphabetic(12));
       // add reference to feature
-      final XyzReference reference = new XyzReference(feature.getId(), spaceId, featureType);
+      final MomReference reference = new MomReference(feature.getId(), spaceId, featureType);
       violation.getProperties().setReferences(List.of(reference));
       violation.put("violatedObject", reference);
       violation.setGeometry(feature.getGeometry());

@@ -84,22 +84,21 @@ public final class HandlerUtil {
   }
 
   public static @NotNull ContextWriteXyzFeatures createContextWriteRequestFromWriteList(
-      final @NotNull String collectionId,
-      final @NotNull List<?> inputCodecs,
+          final @NotNull List<?> writes,
       final @Nullable List<?> context,
       final @Nullable List<?> violations) {
     // generate new ContextWriteFeatures request
     final ContextWriteXyzFeatures cwf = new ContextWriteXyzFeatures();
 
     // Add features in the request
-    if (inputCodecs.isEmpty())
+    if (writes.isEmpty())
       throw new XyzErrorException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "No features supplied"));
-    for (final Object inputCodec : inputCodecs) {
-      final Write xyzCodec = checkInstanceOf(inputCodec, Write.class, "Unsupported feature codec type");
+    for (final Object inputWrite : writes) {
+      final Write xyzCodec = checkInstanceOf(inputWrite, Write.class, "Unsupported DB write operation type");
       final NakshaFeature feature =
               HandlerUtil.checkInstanceOf(xyzCodec.getFeature(), NakshaFeature.class, "Unsupported feature type");
       final Write write = new Write();
-      write.setCollectionId(collectionId);
+      write.setCollectionId(xyzCodec.getCollectionId());
       write.setFeature(feature);
       write.setOp(xyzCodec.getOp());
       cwf.add(write);
