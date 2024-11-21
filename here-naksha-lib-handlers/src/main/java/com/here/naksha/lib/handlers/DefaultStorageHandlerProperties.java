@@ -22,7 +22,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import naksha.geo.XyzProperties;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaProperties;

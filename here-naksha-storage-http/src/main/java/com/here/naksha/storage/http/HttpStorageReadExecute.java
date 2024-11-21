@@ -18,19 +18,7 @@
  */
 package com.here.naksha.storage.http;
 
-import static com.here.naksha.common.http.apis.ApiParamsConst.*;
-import static com.here.naksha.storage.http.PrepareResult.prepareResult;
-import static java.lang.String.format;
-
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
-
-import java.net.HttpURLConnection;
-import java.net.http.HttpResponse;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.request.ErrorResponse;
@@ -40,6 +28,18 @@ import naksha.model.request.query.IPropertyQuery;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.HttpURLConnection;
+import java.net.http.HttpResponse;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import static com.here.naksha.common.http.apis.ApiParamsConst.*;
+import static com.here.naksha.storage.http.PrepareResult.prepareResult;
+import static java.lang.String.format;
 
 class HttpStorageReadExecute {
 

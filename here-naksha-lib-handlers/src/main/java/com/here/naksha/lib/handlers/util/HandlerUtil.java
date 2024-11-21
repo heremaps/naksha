@@ -21,10 +21,9 @@ package com.here.naksha.lib.handlers.util;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.ContextXyzFeatureResult;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-import java.util.ArrayList;
-import java.util.List;
+import naksha.base.JvmProxyUtil;
 import naksha.model.NakshaError;
+import naksha.model.TagList;
 import naksha.model.XyzNs;
 import naksha.model.mom.MomChangeState;
 import naksha.model.mom.MomDeltaNs;
@@ -36,6 +35,9 @@ import naksha.model.request.ResultTuple;
 import naksha.model.request.Write;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class HandlerUtil {
 
@@ -50,6 +52,7 @@ public final class HandlerUtil {
     // Create list of ResultRow with input features
     final List<ResultTuple> resultTuples = new ArrayList<>();
     for (final NakshaFeature feature : features) {
+      //TODO switch to Tuple, wait for change in v3 enabling Tuple creation without storage
       resultTuples.add(new ResultTuple(ExecutedOp.UPDATED, null, feature));
     }
     // Create ContextResult with cursor, context and violations
@@ -65,12 +68,13 @@ public final class HandlerUtil {
       final @Nullable List<?> context,
       final @Nullable List<?> violations) {
     // generate new ContextWriteFeatures request
-    final ContextWriteXyzFeatures cwf = new ContextWriteXyzFeatures(collectionId);
+    final ContextWriteXyzFeatures cwf = new ContextWriteXyzFeatures();
 
     // Add features in the request
     for (final Object obj : features) {
       final NakshaFeature feature = checkInstanceOf(obj, NakshaFeature.class, "Unsupported feature type");
-      cwf.add(EWriteOp.PUT, feature);
+      final Write write = new Write().updateFeature(null, collectionId, feature, false);
+      cwf.add(write);
     }
     // add context to write request
     cwf.setContext(getXyzContextFromGenericList(context));
@@ -79,21 +83,26 @@ public final class HandlerUtil {
     return cwf;
   }
 
-  public static @NotNull ContextWriteXyzFeatures createContextWriteRequestFromCodecList(
+  public static @NotNull ContextWriteXyzFeatures createContextWriteRequestFromWriteList(
       final @NotNull String collectionId,
       final @NotNull List<?> inputCodecs,
       final @Nullable List<?> context,
       final @Nullable List<?> violations) {
     // generate new ContextWriteFeatures request
-    final ContextWriteXyzFeatures cwf = new ContextWriteXyzFeatures(collectionId);
+    final ContextWriteXyzFeatures cwf = new ContextWriteXyzFeatures();
 
     // Add features in the request
-    if (inputCodecs.isEmpty()) throw new XyzErrorException(NakshaError.ILLEGAL_ARGUMENT, "No features supplied");
+    if (inputCodecs.isEmpty())
+      throw new XyzErrorException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "No features supplied"));
     for (final Object inputCodec : inputCodecs) {
       final Write xyzCodec = checkInstanceOf(inputCodec, Write.class, "Unsupported feature codec type");
       final NakshaFeature feature =
               HandlerUtil.checkInstanceOf(xyzCodec.getFeature(), NakshaFeature.class, "Unsupported feature type");
-      cwf.add(EWriteOp.get(xyzCodec.getOp()), feature);
+      final Write write = new Write();
+      write.setCollectionId(collectionId);
+      write.setFeature(feature);
+      write.setOp(xyzCodec.getOp());
+      cwf.add(write);
     }
 
     // add context to write request
@@ -105,11 +114,11 @@ public final class HandlerUtil {
     return cwf;
   }
 
-  public static @NotNull List<NakshaFeature> getXyzFeaturesFromCodecList(final @NotNull List<?> codecs) {
+  public static @NotNull List<NakshaFeature> getXyzFeaturesFromWriteList(final @NotNull List<?> writes) {
     final List<NakshaFeature> outputFeatures = new ArrayList<>();
-    for (final Object obj : codecs) {
-      final Write codec = checkInstanceOf(obj, Write.class, "Unsupported feature codec");
-      outputFeatures.add(codec.getFeature());
+    for (final Object obj : writes) {
+      final Write write = checkInstanceOf(obj, Write.class, "Unsupported feature codec");
+      outputFeatures.add(write.getFeature());
     }
     return outputFeatures;
   }
@@ -158,16 +167,15 @@ public final class HandlerUtil {
   public static <T> @NotNull T checkInstanceOf(
       final @Nullable Object input,
       final @NotNull Class<T> returnType,
-      final @NotNull NakshaError xyzError,
+      final @NotNull String NakshaErrorCode,
       final @NotNull String errDescPrefix) {
     if (input == null) {
-      throw new XyzErrorException(xyzError, errDescPrefix + " - object is null.");
+      throw new XyzErrorException(new NakshaError(NakshaErrorCode, errDescPrefix + " - object is null."));
     }
     if (returnType.isAssignableFrom(input.getClass())) {
       return returnType.cast(input);
     }
-    throw new XyzErrorException(
-        xyzError, errDescPrefix + " - " + input.getClass().getSimpleName());
+    throw new XyzErrorException(new NakshaError(NakshaErrorCode, errDescPrefix + " - " + input.getClass().getSimpleName()));
   }
 
   public static <T> @NotNull T checkInstanceOf(
@@ -184,6 +192,7 @@ public final class HandlerUtil {
     deltaNs.setReviewState(reviewState.getText());
     final @NotNull List<@NotNull String> tags = tagsWithoutReviewState(xyzNs.getTags());
     tags.add(REVIEW_STATE_PREFIX + reviewState);
-    xyzNs.setTags(tags, false);
+    TagList tagList = JvmProxyUtil.box(tags, TagList.class);
+    xyzNs.setTags(tagList, false);
   }
 }

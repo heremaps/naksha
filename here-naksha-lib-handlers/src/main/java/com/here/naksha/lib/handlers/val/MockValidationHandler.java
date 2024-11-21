@@ -18,10 +18,6 @@
  */
 package com.here.naksha.lib.handlers.val;
 
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
-import static com.here.naksha.lib.handlers.util.MockUtil.*;
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
@@ -30,9 +26,6 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteFeatures;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
-
-import java.util.ArrayList;
-import java.util.List;
 import naksha.base.JvmProxyUtil;
 import naksha.geo.XyzReference;
 import naksha.model.objects.NakshaFeature;
@@ -45,6 +38,13 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
+import static com.here.naksha.lib.handlers.util.MockUtil.*;
+
 public class MockValidationHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(MockValidationHandler.class);
@@ -53,8 +53,8 @@ public class MockValidationHandler extends AbstractEventHandler {
   protected @NotNull NakshaProperties properties;
 
   private static final String MOCK_VIOLATIONS_FILE = "mock_data/dry_run_violations.json";
-    private static final TypeReference<List<NakshaFeature>> LIST_FEATURE_TYPE_REF = new TypeReference<>() {
-    };
+  private static final TypeReference<List<NakshaFeature>> LIST_FEATURE_TYPE_REF = new TypeReference<>() {
+  };
   private static final List<NakshaFeature> mockViolations =
           parseJsonFile(MOCK_VIOLATIONS_FILE, LIST_FEATURE_TYPE_REF);
   private static final int totalViolations = mockViolations.size();
@@ -96,7 +96,7 @@ public class MockValidationHandler extends AbstractEventHandler {
     final @Nullable List<NakshaFeature> violations = validateFeatures(cwf, cwf.getContext());
 
     // create and forward request for next handler in the pipeline
-    final ContextWriteFeatures upstreamRequest = HandlerUtil.createContextWriteRequestFromCodecList(
+    final ContextWriteFeatures upstreamRequest = HandlerUtil.createContextWriteRequestFromWriteList(
         cwf.getCollectionId(), cwf.features, cwf.getContext(), violations);
     return event.sendUpstream(upstreamRequest);
   }
@@ -119,7 +119,7 @@ public class MockValidationHandler extends AbstractEventHandler {
     // Generate random violations and attach feature references
     violations = new ArrayList<>();
     int featureCnt = 0;
-    final List<NakshaFeature> features = HandlerUtil.getXyzFeaturesFromCodecList(cwf.features);
+    final List<NakshaFeature> features = HandlerUtil.getXyzFeaturesFromWriteList(cwf.features);
     for (final NakshaFeature feature : features) {
       featureCnt++;
       // Distribution of "count" of violations, depends on feature "number",
