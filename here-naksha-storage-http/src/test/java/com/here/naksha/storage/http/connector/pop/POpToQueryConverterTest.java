@@ -1,4 +1,4 @@
-package com.here.naksha.storage.http.connector;
+package com.here.naksha.storage.http.connector.pop;
 
 import com.here.naksha.lib.core.models.payload.events.PropertyQueryAnd;
 import com.here.naksha.lib.core.models.storage.POp;
@@ -11,7 +11,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static com.here.naksha.lib.core.models.storage.POp.*;
-import static com.here.naksha.storage.http.connector.POpToQueryConverter.*;
+import static com.here.naksha.storage.http.connector.pop.POpToPropertiesQuery.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -23,7 +23,7 @@ class POpToQueryConverterTest {
             eq(propRef("prop_1"), "1")
     );
 
-    PropertyQueryAnd query = pOpToQuery(pOp);
+    PropertyQueryAnd query = toPoPQueryAnd(pOp);
 
     assertQueryEquals( """
             [
@@ -40,7 +40,7 @@ class POpToQueryConverterTest {
               eq(propRef("prop_2"), 2)
       );
 
-      PropertyQueryAnd query = pOpToQuery(pOp);
+      PropertyQueryAnd query = toPoPQueryAnd(pOp);
 
       assertQueryEquals( """
               [
@@ -57,7 +57,7 @@ class POpToQueryConverterTest {
               eq(propRef("prop_1"), "2")
       );
 
-      PropertyQueryAnd query = pOpToQuery(pOp);
+      PropertyQueryAnd query = toPoPQueryAnd(pOp);
 
       assertQueryEquals("""
                [
@@ -77,7 +77,7 @@ class POpToQueryConverterTest {
               eq(propRef("prop_5"), "5")
       );
 
-      PropertyQueryAnd query = pOpToQuery(pOp);
+      PropertyQueryAnd query = toPoPQueryAnd(pOp);
 
       assertQueryEquals(
               """
@@ -105,7 +105,7 @@ class POpToQueryConverterTest {
               eq(propRef("prop_1"), "1")
       );
 
-      PropertyQueryAnd query = pOpToQuery(pOp);
+      PropertyQueryAnd query = toPoPQueryAnd(pOp);
 
       assertQueryEquals("""
               [
@@ -121,7 +121,7 @@ class POpToQueryConverterTest {
               eq(propRef("prop_1"), "2")
       );
 
-      PropertyQueryAnd query = pOpToQuery(pOp);
+      PropertyQueryAnd query = toPoPQueryAnd(pOp);
 
       assertQueryEquals("""
               [
@@ -139,7 +139,7 @@ class POpToQueryConverterTest {
 
       assertThrows(
               POpToQueryConversionException.class,
-              () -> pOpToQuery(pOp),
+              () -> toPoPQueryAnd(pOp),
               "Operator OR with dwo different keys: property.prop_1 and property.prop_2"
       );
     }
@@ -153,7 +153,7 @@ class POpToQueryConverterTest {
 
       assertThrows(
               POpToQueryConversionException.class,
-              () -> pOpToQuery(pOp),
+              () -> toPoPQueryAnd(pOp),
               "Operators EQUALS and GREATER_THAN combined in one OR"
       );
     }
@@ -169,7 +169,7 @@ class POpToQueryConverterTest {
               eq(propRef("prop_1"), "5")
       );
 
-      PropertyQueryAnd query = pOpToQuery(pOp);
+      PropertyQueryAnd query = toPoPQueryAnd(pOp);
 
       assertQueryEquals("""
               [
@@ -185,7 +185,7 @@ class POpToQueryConverterTest {
               not(exists(propRef("prop_1")))
       );
 
-      PropertyQueryAnd query = pOpToQuery(pOp);
+      PropertyQueryAnd query = toPoPQueryAnd(pOp);
 
       assertQueryEquals("""
               [
@@ -198,7 +198,7 @@ class POpToQueryConverterTest {
     void equals() {
       POp pOp = eq(propRef("prop_1"), "1");
 
-      PropertyQueryAnd query = pOpToQuery(pOp);
+      PropertyQueryAnd query = toPoPQueryAnd(pOp);
 
 
       assertQueryEquals("""
@@ -212,7 +212,7 @@ class POpToQueryConverterTest {
     void notEquals() {
       POp pOp = not(eq(propRef("prop_1"), "1"));
 
-      PropertyQueryAnd query = pOpToQuery(pOp);
+      PropertyQueryAnd query = toPoPQueryAnd(pOp);
 
       assertQueryEquals("""
               [
@@ -226,7 +226,7 @@ class POpToQueryConverterTest {
     void notWithIncompatibleOperation_throw(POp incompatibleOp) {
       POp pOp = not(incompatibleOp);
 
-      assertThrows(POpToQueryConversionException.class, () -> pOpToQuery(pOp));
+      assertThrows(POpToQueryConversionException.class, () -> toPoPQueryAnd(pOp));
     }
 
     public static POp[] getOpsIncompatibleWithNot() {
@@ -245,7 +245,7 @@ class POpToQueryConverterTest {
     void existsSingle() {
       POp pOp = exists(propRef("prop_1"));
 
-      PropertyQueryAnd query = pOpToQuery(pOp);
+      PropertyQueryAnd query = toPoPQueryAnd(pOp);
 
       assertQueryEquals("""
               [
@@ -258,7 +258,7 @@ class POpToQueryConverterTest {
     void notExistsSingle() {
       POp pOp = not(exists(propRef("prop_1")));
 
-      PropertyQueryAnd query = pOpToQuery(pOp);
+      PropertyQueryAnd query = toPoPQueryAnd(pOp);
 
       assertQueryEquals("""
               [
@@ -272,7 +272,7 @@ class POpToQueryConverterTest {
       String json = "{\"num\":1,\"str\":\"str1\",\"arr\":[1,2,3],\"obj\":{}}";
       POp pOp = contains(propRef("prop_1"), json);
 
-      PropertyQueryAnd query = pOpToQuery(pOp);
+      PropertyQueryAnd query = toPoPQueryAnd(pOp);
 
       assertQueryEquals("""
               [
@@ -291,7 +291,7 @@ class POpToQueryConverterTest {
               lte(propRef("prop_5"), 5)
       );
 
-      PropertyQueryAnd query = pOpToQuery(pOp);
+      PropertyQueryAnd query = toPoPQueryAnd(pOp);
 
       assertQueryEquals(
               """
@@ -310,7 +310,7 @@ class POpToQueryConverterTest {
     void notSupportedOps_throw(POp notSupportedOp) {
       POp pOp = not(notSupportedOp);
 
-      assertThrows(POpToQueryConversionException.class, () -> pOpToQuery(pOp));
+      assertThrows(POpToQueryConversionException.class, () -> toPoPQueryAnd(pOp));
     }
 
     public static POp[] getNotSupportedOps() {
@@ -327,7 +327,7 @@ class POpToQueryConverterTest {
       POp pOp = and(
               eq(RequestHelper.pRefFromPropPath(new String[]{"id"}), "1")
       );
-      PropertyQueryAnd query = pOpToQuery(pOp);
+      PropertyQueryAnd query = toPoPQueryAnd(pOp);
 
       assertQueryEquals(
               """

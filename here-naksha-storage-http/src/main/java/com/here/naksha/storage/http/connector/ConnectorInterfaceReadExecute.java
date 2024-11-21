@@ -26,7 +26,6 @@ import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.payload.Event;
-import com.here.naksha.lib.core.models.payload.events.PropertyQueryOr;
 import com.here.naksha.lib.core.models.payload.events.feature.*;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
@@ -35,6 +34,8 @@ import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.storage.http.PrepareResult;
 import com.here.naksha.storage.http.RequestSender;
+import com.here.naksha.storage.http.connector.pop.POpToQueries;
+import com.here.naksha.storage.http.connector.pop.POpToQueries.POpQueries;
 import java.net.http.HttpResponse;
 import java.util.List;
 import org.apache.commons.lang3.NotImplementedException;
@@ -97,17 +98,17 @@ public class ConnectorInterfaceReadExecute {
     getFeaturesByBBoxEvent.setLimit(limit);
     getFeaturesByBBoxEvent.setBbox(bBox);
     getFeaturesByBBoxEvent.setClip(clip);
-    setPropertyOp(request, getFeaturesByBBoxEvent);
+    setPropertyQuery(request, getFeaturesByBBoxEvent);
 
     return getFeaturesByBBoxEvent;
   }
 
-  static void setPropertyOp(ReadFeatures request, QueryEvent getFeaturesByBBoxEvent) {
-    POp propertyOp = request.getPropertyOp();
-    if (propertyOp != null) {
-      PropertyQueryOr propertiesQuery = new PropertyQueryOr();
-      propertiesQuery.add(POpToQueryConverter.pOpToQuery(propertyOp));
-      getFeaturesByBBoxEvent.setPropertiesQuery(propertiesQuery);
+  static void setPropertyQuery(ReadFeatures request, QueryEvent getFeaturesByBBoxEvent) {
+    POp pOp = request.getPropertyOp();
+    if (pOp != null) {
+      POpQueries pOpQueries = POpToQueries.pOpToQuery(pOp);
+      pOpQueries.propertyQuery().ifPresent(getFeaturesByBBoxEvent::setPropertiesQuery);
+      pOpQueries.tagsQuery().ifPresent(getFeaturesByBBoxEvent::setTags);
     }
   }
 
@@ -123,7 +124,7 @@ public class ConnectorInterfaceReadExecute {
       event.setMargin((int) margin);
       event.setLimit(limit);
       event.setClip(clip);
-      setPropertyOp(readRequest, event);
+      setPropertyQuery(readRequest, event);
 
       WebMercatorTile tileAddress = WebMercatorTile.forQuadkey(tileId);
       event.setBbox(tileAddress.getExtendedBBox(event.getMargin()));

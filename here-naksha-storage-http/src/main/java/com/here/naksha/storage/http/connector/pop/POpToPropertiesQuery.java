@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.storage.http.connector;
+package com.here.naksha.storage.http.connector.pop;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.models.payload.events.PropertyQuery.QueryOperation.*;
@@ -25,16 +25,17 @@ import static com.here.naksha.lib.core.models.storage.POpType.*;
 
 import com.here.naksha.lib.core.models.payload.events.PropertyQuery;
 import com.here.naksha.lib.core.models.payload.events.PropertyQueryAnd;
+import com.here.naksha.lib.core.models.payload.events.PropertyQueryOr;
 import com.here.naksha.lib.core.models.storage.OpType;
 import com.here.naksha.lib.core.models.storage.POp;
 import com.here.naksha.lib.core.models.storage.POpType;
 import java.util.*;
 import org.jetbrains.annotations.NotNull;
 
-public class POpToQueryConverter {
+class POpToPropertiesQuery {
 
-  public static final String NULL = null;
-  public static final String PATH_SEGMENT_DELIMITER = ".";
+  private static final String NULL = null;
+  private static final String PATH_SEGMENT_DELIMITER = ".";
 
   private static final Map<OpType, PropertyQuery.QueryOperation> SIMPLE_LEAF_OPERATORS = Map.of(
       POpType.EQ, EQUALS,
@@ -45,9 +46,16 @@ public class POpToQueryConverter {
       POpType.CONTAINS, CONTAINS // Connector cannot handle this operation type, but DataHub works the same
       );
 
-  private POpToQueryConverter() {}
+  private POpToPropertiesQuery() {}
 
-  static PropertyQueryAnd pOpToQuery(POp pOp) {
+  static PropertyQueryOr toPopQueryOr(POp pOp) {
+    PropertyQueryOr queryOr = new PropertyQueryOr();
+    PropertyQueryAnd propertyQueryAnd = toPoPQueryAnd(pOp);
+    queryOr.add(propertyQueryAnd);
+    return queryOr;
+  }
+
+  static PropertyQueryAnd toPoPQueryAnd(POp pOp) {
     if (pOp.op() == AND) {
       return and(pOp);
     } else {
@@ -60,7 +68,7 @@ public class POpToQueryConverter {
   private static PropertyQueryAnd and(POp pOp) {
     assertHasAtLeastOneChildren(pOp);
     List<PropertyQuery> list = pOp.children().stream()
-        .flatMap((child) -> pOpToQuery(child).stream())
+        .flatMap((child) -> toPoPQueryAnd(child).stream())
         .toList();
     PropertyQueryAnd propertyQueries = new PropertyQueryAnd();
     propertyQueries.addAll(list);
@@ -79,7 +87,7 @@ public class POpToQueryConverter {
     assertHasAtLeastOneChildren(pOp);
 
     return pOp.children().stream()
-        .map(POpToQueryConverter::pOpToMultiValueComparison)
+        .map(POpToPropertiesQuery::pOpToMultiValueComparison)
         .reduce((PropertyQuery l, PropertyQuery r) -> {
           if (!Objects.equals(l.getOperation(), r.getOperation()))
             throw unsupportedOperation(

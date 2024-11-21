@@ -23,6 +23,7 @@ public class DataHub {
         return RestAssured
                 .given()
                 .header("Authorization", "Bearer " + token)
-                .baseUri("https://xyz.api.here.com/hub/spaces/" + SPACE);
+                .baseUri("https://xyz.api.here.com/hub/spaces/" + SPACE)
+                .log().ifValidationFails();
     }
 }
