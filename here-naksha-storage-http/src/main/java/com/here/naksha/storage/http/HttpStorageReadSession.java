@@ -19,7 +19,6 @@
 package com.here.naksha.storage.http;
 
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
-
 import java.util.List;
 import naksha.model.*;
 import naksha.model.objects.Transaction;

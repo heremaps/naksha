@@ -23,7 +23,6 @@ import static com.here.naksha.storage.http.PrepareResult.prepareResult;
 import static java.lang.String.format;
 
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
-
 import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
 import java.util.Arrays;

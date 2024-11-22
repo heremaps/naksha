@@ -61,7 +61,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
     final Request request = event.getRequest();
-      if (request instanceof WriteRequest wr && isOnlyWriteCollectionRequest(wr)) {
+    if (request instanceof WriteRequest wr && isOnlyWriteCollectionRequest(wr)) {
       return SUCCEED_WITHOUT_PROCESSING;
     } else if (request instanceof ReadFeatures || request instanceof WriteRequest) {
       return PROCESS;
@@ -125,14 +125,14 @@ public class DefaultViewHandler extends AbstractEventHandler {
   private Response forwardReadFeatures(NakshaContext ctx, IView view, ReadFeatures rf) {
 
     final ViewReadSession reader = (ViewReadSession) view.newReadSession(SessionOptions.from(ctx, false));
-      final MissingIdResolver resolver;
-      if (properties.getViewType() == ViewType.UNION) {
-          resolver = new IgnoreMissingResolver();
-      } else {
-          final Set<ViewLayer> obligatoryLayers = getObligatoryLayers(view.getViewCollection());
-          resolver = new ObligatoryLayersResolver(obligatoryLayers);
-      }
-      return reader.execute(rf, new MergeByStoragePriority(), resolver);
+    final MissingIdResolver resolver;
+    if (properties.getViewType() == ViewType.UNION) {
+      resolver = new IgnoreMissingResolver();
+    } else {
+      final Set<ViewLayer> obligatoryLayers = getObligatoryLayers(view.getViewCollection());
+      resolver = new ObligatoryLayersResolver(obligatoryLayers);
+    }
+    return reader.execute(rf, new MergeByStoragePriority(), resolver);
   }
 
   private ViewLayerCollection prepareViewLayerCollection(IStorage nhStorage, List<String> spaceIds) {

@@ -30,7 +30,6 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteFeatures;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
-
 import java.util.ArrayList;
 import java.util.List;
 import naksha.base.JvmProxyUtil;
@@ -133,7 +132,10 @@ public class MockValidationHandler extends AbstractEventHandler {
       int violationsCount = Math.min(featureCnt, totalViolations);
       final Object momType = feature.get("momType");
       violations.addAll(getNViolationsWithFeatureReference(
-              violationsCount, feature, cwf.getWrites().get(featureCnt - 1).getCollectionId(), (momType == null) ? "" : momType.toString()));
+              violationsCount,
+              feature,
+              cwf.getWrites().get(featureCnt - 1).getCollectionId(),
+              (momType == null) ? "" : momType.toString()));
     }
     return violations;
   }

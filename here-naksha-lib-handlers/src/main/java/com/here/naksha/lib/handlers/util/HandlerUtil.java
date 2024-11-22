@@ -21,7 +21,6 @@ package com.here.naksha.lib.handlers.util;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.ContextXyzFeatureResult;
-
 import java.util.ArrayList;
 import java.util.List;
 import naksha.base.JvmProxyUtil;

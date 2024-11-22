@@ -53,8 +53,8 @@ public class EchoHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-      this.properties =
-              Objects.requireNonNull(JvmProxyUtil.box(eventHandler.getProperties(), NakshaProperties.class));
+    this.properties =
+            Objects.requireNonNull(JvmProxyUtil.box(eventHandler.getProperties(), NakshaProperties.class));
   }
 
   @Override

@@ -22,7 +22,6 @@ import static naksha.model.NakshaError.EXCEPTION;
 import static naksha.model.NakshaError.NOT_IMPLEMENTED;
 
 import com.here.naksha.lib.core.models.naksha.EventHandler;
-
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -301,6 +300,6 @@ public class EventPipeline extends NakshaBound {
 
   @NotNull
   Response notImplemented(@NotNull IEvent event) {
-      return new ErrorResponse(NOT_IMPLEMENTED, "Event '" + event.getClass().getSimpleName() + "' is not supported");
+    return new ErrorResponse(NOT_IMPLEMENTED, "Event '" + event.getClass().getSimpleName() + "' is not supported");
   }
 }
