@@ -19,12 +19,12 @@
 package com.here.naksha.lib.handlers;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.util.List;
 import naksha.geo.XyzProperties;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 /**
  * Default variant of EventHandler properties supported by Naksha - for TagFilterHandler
