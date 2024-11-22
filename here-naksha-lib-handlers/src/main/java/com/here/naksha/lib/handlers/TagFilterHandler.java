@@ -21,9 +21,8 @@ package com.here.naksha.lib.handlers;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
-import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
+import naksha.base.JvmProxyUtil;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
@@ -33,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Objects;
 
 import static com.here.naksha.lib.core.util.CollectionUtils.isNotNullOrEmpty;
 import static com.here.naksha.lib.core.util.CollectionUtils.isNullOrEmpty;
@@ -47,10 +47,9 @@ public class TagFilterHandler extends AbstractEventHandler {
 
   public TagFilterHandler(
       final @NotNull EventHandler eventHandler,
-      final @NotNull INaksha hub,
-      final @NotNull EventTarget<?> eventTarget) {
+      final @NotNull INaksha hub) {
     super(hub);
-    this.properties = JsonSerializable.convert(eventHandler.getProperties(), TagFilterHandlerProperties.class);
+    this.properties = Objects.requireNonNull(JvmProxyUtil.box(eventHandler.getProperties(), TagFilterHandlerProperties.class));
   }
 
   @Override

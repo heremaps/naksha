@@ -19,8 +19,8 @@
 package com.here.naksha.lib.handlers;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import naksha.geo.XyzProperties;
 import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,7 +30,7 @@ import java.util.List;
  * Default variant of EventHandler properties supported by Naksha - for TagFilterHandler
  */
 @AvailableSince(NakshaVersion.v2_0_13)
-public class TagFilterHandlerProperties extends XyzProperties {
+public class TagFilterHandlerProperties extends NakshaProperties {
 
   @AvailableSince(NakshaVersion.v2_0_13)
   public static final String ADD_VALUES = "add";

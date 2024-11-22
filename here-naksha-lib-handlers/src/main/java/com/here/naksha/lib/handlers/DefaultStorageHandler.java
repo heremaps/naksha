@@ -18,12 +18,6 @@
  */
 package com.here.naksha.lib.handlers;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.createWriteCollectionsRequest;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.*;
-
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.exceptions.StorageNotInitialized;
@@ -33,8 +27,6 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
-import java.util.ArrayList;
-import java.util.List;
 import naksha.base.JvmProxyUtil;
 import naksha.base.StringList;
 import naksha.model.*;
@@ -43,6 +35,15 @@ import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.createWriteCollectionsRequest;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.*;
 
 public class DefaultStorageHandler extends AbstractEventHandler {
 
