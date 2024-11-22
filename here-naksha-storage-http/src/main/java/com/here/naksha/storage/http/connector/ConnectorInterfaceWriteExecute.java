@@ -19,6 +19,7 @@
 package com.here.naksha.storage.http.connector;
 
 import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_ID;
+import static com.here.naksha.lib.core.models.storage.EWriteOp.*;
 import static com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper.ReadRequestType.GET_BY_ID;
 
 import com.here.naksha.lib.core.NakshaContext;
@@ -39,8 +40,6 @@ import org.jetbrains.annotations.Nullable;
 
 public class ConnectorInterfaceWriteExecute {
 
-  public static final String PUT_OP = "PUT";
-  public static final String DELETE_OP = "DELETE";
   private final NakshaContext context;
   private final WriteXyzFeatures request;
   private final RequestSender sender;
@@ -91,23 +90,20 @@ public class ConnectorInterfaceWriteExecute {
 
     for (XyzFeatureCodec featureCodec : request.features) {
       XyzFeature feature = featureCodec.getFeature();
-      switch (featureCodec.getOp()) {
-        case PUT_OP -> {
-          if (isNewFeature(feature)) {
-            featuresToInsert.add(feature);
-          } else {
-            featuresToUpdate.add(feature);
-          }
+      if (featureCodec.getOp().equals(PUT.value())) {
+        if (isNewFeature(feature)) {
+          featuresToInsert.add(feature);
+        } else {
+          featuresToUpdate.add(feature);
         }
-        case DELETE_OP -> {
-          // Connector docs requires map entry value to be null,
-          // but in reality, doesn't matter what is the value
-          // and map with null is ignored by JsonSerializable.serialize(),
-          // so empty string is used instead.
-          featuresToDelete.put(feature.getId(), "");
-        }
-        default -> throw new UnsupportedOperationException(
-            "Unsupported feature codec OP: " + featureCodec.getOp());
+      } else if (featureCodec.getOp().equals(DELETE.value())) {
+        // Connector docs requires map entry value to be null,
+        // but in reality, doesn't matter what is the value
+        // and map with null is ignored by JsonSerializable.serialize(),
+        // so empty string is used instead.
+        featuresToDelete.put(feature.getId(), "");
+      } else {
+        throw new UnsupportedOperationException("Unsupported feature codec OP: " + featureCodec.getOp());
       }
     }
 
