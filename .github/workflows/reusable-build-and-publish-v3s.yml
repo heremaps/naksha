@@ -55,7 +55,7 @@ jobs:
 #        run: gradle shadowJar jacocoTestReport jacocoTestCoverageVerification
         shell: bash
         run: |
-          array=( here-naksha-lib-model here-naksha-lib-base here-naksha-lib-core here-naksha-lib-psql here-naksha-lib-view here-naksha-storage-http here-naksha-lib-handlers )
+          array=( here-naksha-lib-model here-naksha-lib-base here-naksha-lib-core here-naksha-lib-psql here-naksha-lib-view here-naksha-storage-http here-naksha-lib-diff here-naksha-lib-handlers )
           for item in ${array[@]}; do
             gradle -x jsNodeTest :$item:build :$item:jacocoTestReport :$item:jacocoTestCoverageVerification
           done
