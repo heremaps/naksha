@@ -21,8 +21,8 @@ package com.here.naksha.storage.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
-import naksha.geo.XyzProperties;
 import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -31,15 +31,15 @@ import org.jetbrains.annotations.Nullable;
  * A Http storage configuration as used by the {@link HttpStorage}.
  */
 @AvailableSince(NakshaVersion.v2_0_12)
-public class HttpStorageProperties extends XyzProperties {
+public class HttpStorageProperties extends NakshaProperties {
 
-  public static final Long DEF_CONNECTION_TIMEOUT_SEC = 20L;
-  public static final Long DEF_SOCKET_TIMEOUT_SEC = 90L;
+  public static final int DEF_CONNECTION_TIMEOUT_SEC = 20;
+  public static final int DEF_SOCKET_TIMEOUT_SEC = 90;
   public static final Map<String, String> DEFAULT_HEADERS = Map.of(
       "Content-Type", "application/json",
       "Accept-Encoding", "gzip");
 
-  private static final String URL = "url";
+  static final String URL = "url";
   private static final String CONNECTION_TIMEOUT = "connectTimeout";
   private static final String SOCKET_TIMEOUT = "socketTimeout";
   private static final String HEADERS = "headers";
@@ -48,10 +48,10 @@ public class HttpStorageProperties extends XyzProperties {
   private @NotNull String url;
 
   @JsonProperty(CONNECTION_TIMEOUT)
-  private @NotNull Long connectTimeout;
+  private @NotNull Integer connectTimeout;
 
   @JsonProperty(SOCKET_TIMEOUT)
-  private @NotNull Long socketTimeout;
+  private @NotNull Integer socketTimeout;
 
   @JsonProperty(HEADERS)
   private @NotNull Map<String, String> headers;
@@ -59,8 +59,8 @@ public class HttpStorageProperties extends XyzProperties {
   @JsonCreator
   public HttpStorageProperties(
       @JsonProperty(value = URL, required = true) @NotNull String url,
-      @JsonProperty(CONNECTION_TIMEOUT) @Nullable Long connectTimeout,
-      @JsonProperty(SOCKET_TIMEOUT) @Nullable Long socketTimeout,
+      @JsonProperty(CONNECTION_TIMEOUT) @Nullable Integer connectTimeout,
+      @JsonProperty(SOCKET_TIMEOUT) @Nullable Integer socketTimeout,
       @JsonProperty(HEADERS) @Nullable Map<String, String> headers) {
     this.url = url;
     this.connectTimeout = connectTimeout == null ? DEF_CONNECTION_TIMEOUT_SEC : connectTimeout;
@@ -75,11 +75,11 @@ public class HttpStorageProperties extends XyzProperties {
     return url;
   }
 
-  public @NotNull Long getConnectTimeout() {
+  public @NotNull Integer getConnectTimeout() {
     return connectTimeout;
   }
 
-  public @NotNull Long getSocketTimeout() {
+  public @NotNull Integer getSocketTimeout() {
     return socketTimeout;
   }
 

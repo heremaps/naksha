@@ -206,62 +206,75 @@ public class ViewReadSession implements IReadSession {
 
   @Override
   public int getSocketTimeout() {
+    //TODO
     return 0;
   }
 
   @Override
-  public void setSocketTimeout(int i) {}
+  public void setSocketTimeout(int i) {
+    //TODO
+  }
 
   @Override
   public int getStmtTimeout() {
-    return 0;
+    return 0;     //TODO
   }
 
   @Override
-  public void setStmtTimeout(int i) {}
+  public void setStmtTimeout(int i) {    //TODO
+  }
 
   @Override
   public int getLockTimeout() {
-    return 0;
+    return 0;    //TODO
+
   }
 
   @Override
-  public void setLockTimeout(int i) {}
+  public void setLockTimeout(int i) {    //TODO
+  }
 
   @Override
   public boolean isClosed() {
-    return false;
+    return false;    //TODO
+
   }
 
   @NotNull
   @Override
   public String getMap() {
-    return "";
+    return "";    //TODO
+
   }
 
   @Override
-  public void setMap(@NotNull String s) {}
+  public void setMap(@NotNull String s) {    //TODO
+  }
 
   @Override
   public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
-    return false;
+    return false;    //TODO
+
   }
 
   @NotNull
   @Override
   public Response executeParallel(@NotNull Request request) {
-    return execute(request);
+    return execute(request);    //TODO
+
   }
 
   @NotNull
   @Override
   public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
-    return List.of();
+    return List.of();    //TODO
+
   }
 
   @Override
   public void fetchTuples(
-      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {}
+      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {    //TODO
+  }
 
   @Override
   public @NotNull Transaction transaction() {
