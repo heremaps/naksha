@@ -1,5 +1,5 @@
 {
-      "id": "urn:here::here:landmark3d.Landmark3dPhotoreal:1",
+  "id": "urn:here::here:landmark3d.Landmark3dPhotoreal:1",
   "type": "Feature",
   "momType": "landmark3d.Landmark3dPhotoreal",
   "properties": {

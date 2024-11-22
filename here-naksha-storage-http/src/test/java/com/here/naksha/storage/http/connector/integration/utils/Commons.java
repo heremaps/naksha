@@ -1,6 +1,7 @@
 package com.here.naksha.storage.http.connector.integration.utils;
 
 import io.restassured.response.Response;
+import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
 import org.hamcrest.Matchers;
 import org.jetbrains.annotations.NotNull;
@@ -12,13 +13,15 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class Commons {
 
-
+    public static final String URN_PREFIX = "urn:here::here:landmark3d.Landmark3dPhotoreal:";
+    public static final String UUID_KEY = "uuid";
     public static final String TEST_RESOURCES_DIR = "com/here/naksha/storage/http/connector/integration/";
 
     public static void rmAllFeatures() {
@@ -42,7 +45,7 @@ public class Commons {
     }
 
     public static boolean responseHasExactShortIds(List<String> expectedShortIds, Response response) {
-        List<String> expectedIds = expectedShortIds.stream().map(e -> "urn:here::here:landmark3d.Landmark3dPhotoreal:" + e).toList();
+        List<String> expectedIds = expectedShortIds.stream().map(e -> URN_PREFIX + e).toList();
         List<String> responseIds = responseToIds(response);
         return expectedIds.equals(responseIds);
     }
@@ -51,9 +54,9 @@ public class Commons {
         createFeatureFromJsonTemplateFile(rs, pathInIntegrationResources);
     }
 
-    public static void createFeatureFromJsonTemplateFile(RequestSpecification rs, String pathInIntegrationResources, String... args) {
+    public static ValidatableResponse createFeatureFromJsonTemplateFile(RequestSpecification rs, String pathInIntegrationResources, String... args) {
         String body = readTestResourcesFile(pathInIntegrationResources).formatted(args);
-        rs.with().body(body)
+        return rs.with().body(body)
                 .when().post("features")
                 .then()
                 .assertThat().statusCode(200)
@@ -64,6 +67,10 @@ public class Commons {
         response.then()
                 .assertThat().statusCode(200)
                 .and().log().ifValidationFails();
+    }
+
+    public static void assertDbEmpty() {
+        DataHub.request().get("iterate").then().assertThat().body("features.isEmpty()", equalTo(true));
     }
 
     public static @NotNull String readTestResourcesFile(String pathInIntegrationResources) {

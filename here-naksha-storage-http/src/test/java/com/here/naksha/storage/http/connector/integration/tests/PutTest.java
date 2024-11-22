@@ -13,9 +13,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static com.here.naksha.storage.http.connector.integration.utils.Commons.assertStatusCode200;
-import static com.here.naksha.storage.http.connector.integration.utils.Commons.readTestResourcesFile;
-import static com.here.naksha.storage.http.connector.integration.utils.Commons.rmAllFeatures;
+import static com.here.naksha.storage.http.connector.integration.utils.Commons.*;
 import static io.restassured.RestAssured.withArgs;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.hamcrest.Matchers.equalTo;
@@ -26,14 +24,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PutTest {
-    public static final String FEATURE_A_ID = "A";
-    public static final String FEATURE_B_ID = "B";
-    public static final String FEATURE_C_ID = "C";
-    public static final String FEATURE_D_ID = "D";
-    public static final String UUID_KEY = "uuid";
-    public static final String PUUID_KEY = "puuid";
-    private static final String CREATED_AT_KEY = "createdAt";
-    private static final String UPDATED_AT_KEY = "updatedAt";
+    private static final String FEATURE_A_ID = "A";
+    private static final String FEATURE_B_ID = "B";
+    private static final String FEATURE_C_ID = "C";
+    private static final String FEATURE_D_ID = "D";
 
     @BeforeEach
     void rmFeatures() {
@@ -52,8 +46,8 @@ public class PutTest {
         assertStatusCode200(responseAUpdated);
         OutputFeature outputFeatureAUpdated = new OutputFeature(FEATURE_A_ID, responseAUpdated);
         outputFeatureAUpdated.performUpdatedFeatureAssertions(
-                outputFeatureANew.uuid,
-                outputFeatureANew.createdAt
+                outputFeatureANew.getUuid(),
+                outputFeatureANew.getCreatedAt()
         );
 
         Response responseBNew = putFeature(new InputFeature(FEATURE_B_ID, Map.of("p", "1"))); // insert single to non empty database
@@ -73,12 +67,12 @@ public class PutTest {
         OutputFeature outputFeatureCNew = new OutputFeature(FEATURE_C_ID, responseComplex);
         OutputFeature outputFeatureDNew = new OutputFeature(FEATURE_D_ID, responseComplex);
         outputFeatureAUpdatedAgain.performUpdatedFeatureAssertions(
-                outputFeatureAUpdated.uuid,
-                outputFeatureAUpdated.createdAt
+                outputFeatureAUpdated.getUuid(),
+                outputFeatureAUpdated.getCreatedAt()
         );
         outputFeatureBUpdated.performUpdatedFeatureAssertions(
-                outputFeatureBNew.uuid,
-                outputFeatureBNew.createdAt
+                outputFeatureBNew.getUuid(),
+                outputFeatureBNew.getCreatedAt()
         );
         outputFeatureCNew.performNewFeatureAssertions();
         outputFeatureDNew.performNewFeatureAssertions();
@@ -114,8 +108,7 @@ public class PutTest {
                 .and().body("error", equalTo("IllegalArgument"))
                 .and().body("errorMessage", equalTo("Can't update empty features"));
 
-        DataHub.request().get("iterate").then().assertThat().body("features.isEmpty()", equalTo(true));
-    }
+assertDbEmpty();    }
 
     @Test
     void updateWithMatchingUuid(){
@@ -124,13 +117,13 @@ public class PutTest {
         OutputFeature outputNew = new OutputFeature(FEATURE_A_ID, responseNew);
 
         Map propertiesWithUuid = Map.of("@ns:com:here:xyz",
-                Map.of(UUID_KEY, outputNew.uuid)
+                Map.of(UUID_KEY, outputNew.getUuid())
         );
         Response responseUpdated = putFeature(new InputFeature(FEATURE_A_ID, propertiesWithUuid));
         assertStatusCode200(responseUpdated);
         new OutputFeature(FEATURE_A_ID, responseUpdated).performUpdatedFeatureAssertions(
-                outputNew.uuid,
-                outputNew.createdAt
+                outputNew.getUuid(),
+                outputNew.getCreatedAt()
         );
     }
 
@@ -145,7 +138,7 @@ public class PutTest {
         );
         Response responseUpdated = putFeature(new InputFeature(FEATURE_A_ID, propertiesWithUuid)); // insert single to empty database
         String expectedErrorMessage = "The feature with id urn:here::here:landmark3d.Landmark3dPhotoreal:A cannot be replaced. The provided UUID doesn't match the UUID of the head state: %s"
-                .formatted(outputNew.uuid);
+                .formatted(outputNew.getUuid());
         responseUpdated.then()
                 .assertThat().statusCode(HTTP_CONFLICT)
                 .and().body("type", equalTo("ErrorResponse"))
@@ -162,14 +155,13 @@ public class PutTest {
         responseUuid.then().assertThat().statusCode(greaterThanOrEqualTo(400))
                 .and().body("type", equalTo("ErrorResponse"));
 
-        DataHub.request().get("iterate").then().assertThat().body("features.isEmpty()", equalTo(true));
-    }
+assertDbEmpty();    }
 
-    Response putFeature(InputFeature feature) {
+    private Response putFeature(InputFeature feature) {
         return putFeatures(List.of(feature));
     }
 
-    Response putFeatures(List<InputFeature> features) {
+    private Response putFeatures(List<InputFeature> features) {
         String featuresArrayJson = features.stream()
                 .map(InputFeature::toJson)
                 .collect(Collectors.joining(", ", "[", "]"));
@@ -187,64 +179,5 @@ public class PutTest {
         }
     }
 
-    private static class OutputFeature {
-        private static final long TEN_SECONDS_IN_MS = 100000;
 
-        private final String shortId;
-        private final Response response;
-        private final String uuid;
-        private final String puuid;
-        private final long createdAt;
-        private final long updatedAt;
-
-        public OutputFeature(String shortId, Response response) {
-            this.shortId = shortId;
-            this.response = response;
-            this.uuid = getXyzNamespaceProperty(UUID_KEY);
-            this.puuid = getXyzNamespaceProperty(PUUID_KEY);
-            this.createdAt = getXyzNamespaceProperty(CREATED_AT_KEY);
-            this.updatedAt = getXyzNamespaceProperty(UPDATED_AT_KEY);
-        }
-
-        private void performNewFeatureAssertions() {
-            assertOnlyOneFeatureWithId();
-            assertNotNull(uuid);
-            assertNull(puuid);
-            assertEquals(createdAt, updatedAt);
-            assertTrue(System.currentTimeMillis() > createdAt);
-            assertTrue(System.currentTimeMillis() < createdAt + TEN_SECONDS_IN_MS);
-        }
-
-        private void performUpdatedFeatureAssertions(String expectedPuuid, long expectedCreatedAt) {
-            assertOnlyOneFeatureWithId();
-            assertNotNull(uuid);
-            assertEquals(expectedPuuid, puuid);
-
-            assertEquals(expectedCreatedAt, createdAt);
-            assertTrue(updatedAt > createdAt);
-            assertTrue(System.currentTimeMillis() > updatedAt);
-            assertTrue(System.currentTimeMillis() < updatedAt + TEN_SECONDS_IN_MS);
-        }
-
-        private void performExistingAssertions(OutputFeature expectedFeature) {
-            assertOnlyOneFeatureWithId();
-            assertEquals(expectedFeature.uuid, uuid);
-            assertEquals(expectedFeature.puuid, puuid);
-            assertEquals(expectedFeature.createdAt, createdAt);
-            assertEquals(expectedFeature.updatedAt, updatedAt);
-        }
-
-        private void assertOnlyOneFeatureWithId() {
-            response.then()
-                    .assertThat()
-                    .body("features.findAll{it.id.endsWith(':%s')}.size()", withArgs(shortId), equalTo(1));
-        }
-
-        private <T> T getXyzNamespaceProperty(String propertyName) {
-            return response.then()
-                    .extract()
-                    .path("features.find{it.id.endsWith(':%s')}.properties.@ns:com:here:xyz.%s", shortId, propertyName);
-
-        }
-    }
 }

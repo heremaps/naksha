@@ -1,5 +1,6 @@
 package com.here.naksha.storage.http.connector.integration.tests;
 
+import com.here.naksha.storage.http.connector.integration.utils.Commons;
 import com.here.naksha.storage.http.connector.integration.utils.DataHub;
 import com.here.naksha.storage.http.connector.integration.utils.Naksha;
 import io.restassured.response.Response;
@@ -7,15 +8,13 @@ import io.restassured.response.ValidatableResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static com.here.naksha.storage.http.connector.integration.utils.Commons.assertStatusCode200;
-import static com.here.naksha.storage.http.connector.integration.utils.Commons.rmAllFeatures;
+import static com.here.naksha.storage.http.connector.integration.utils.Commons.*;
 import static java.net.URLEncoder.encode;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.Matchers.*;
 
 public class DeleteTest {
 
-  public static final String URN_PREFIX = "urn:here::here:landmark3d.Landmark3dPhotoreal:";
   public static final String NO_ID_PROVIDED_ERROR_MSG = "Invalid request input parameter value for QUERY-parameter 'id'. Reason: MISSING_PARAMETER_WHEN_REQUIRED_ERROR";
   public static final String INVALID_URN_ERROR_MSG = "Error response : Incorrect URN format";
 
@@ -110,7 +109,7 @@ public class DeleteTest {
 
   /**
    * Asserts that response contains these and only these features
-   * that has given short ids (ids without {@link DeleteTest#URN_PREFIX})
+   * that has given short ids (ids without {@link Commons#URN_PREFIX})
    */
   private void assertHasExactlyTheseIds(Response response, String... shortIds) {
     ValidatableResponse assertThat = response.then().assertThat();
