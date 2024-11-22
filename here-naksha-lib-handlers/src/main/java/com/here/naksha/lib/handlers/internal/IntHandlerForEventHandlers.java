@@ -18,6 +18,14 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
+import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
+import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
+import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdRequest;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.*;
+import static naksha.model.NakshaContext.currentContext;
+
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
@@ -26,6 +34,10 @@ import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.util.storage.ResultHelper;
 import com.here.naksha.lib.handlers.*;
+
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import naksha.model.IReadSession;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
@@ -34,18 +46,6 @@ import naksha.model.request.*;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-
-import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
-import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
-import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdRequest;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
-import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.*;
-import static naksha.model.NakshaContext.currentContext;
 
 public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHandler> {
 

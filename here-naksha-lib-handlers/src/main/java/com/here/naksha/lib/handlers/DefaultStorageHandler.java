@@ -33,7 +33,6 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
-
 import java.util.ArrayList;
 import java.util.List;
 import naksha.base.JvmProxyUtil;
@@ -123,13 +122,13 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     final IReadSession reader = storageImpl.newReadSession(SessionOptions.from(ctx, false));
     Response response = reader.execute(rf);
     if (response instanceof ErrorResponse er) {
-        return reattemptFeatureRequest(
-                ctx,
-                storageImpl,
-                collection,
-                rf,
-                currentAttempt,
-                new RuntimeException(er.getError().getCause()));
+      return reattemptFeatureRequest(
+              ctx,
+              storageImpl,
+              collection,
+              rf,
+              currentAttempt,
+              new RuntimeException(er.getError().getCause()));
     }
     return response;
   }

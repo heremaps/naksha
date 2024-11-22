@@ -18,6 +18,9 @@
  */
 package com.here.naksha.lib.handlers.val;
 
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
+
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
@@ -25,6 +28,9 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteFeatures;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
+
+import java.util.List;
+import java.util.Objects;
 import naksha.base.JvmProxyUtil;
 import naksha.model.mom.MomReference;
 import naksha.model.mom.MomReferenceList;
@@ -37,12 +43,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
-import java.util.Objects;
-
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
 
 public class EndorsementHandler extends AbstractEventHandler {
 
@@ -58,7 +58,8 @@ public class EndorsementHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties = Objects.requireNonNull(JvmProxyUtil.box(eventHandler.getProperties(), NakshaProperties.class));
+    this.properties =
+            Objects.requireNonNull(JvmProxyUtil.box(eventHandler.getProperties(), NakshaProperties.class));
   }
 
   @Override
@@ -99,8 +100,7 @@ public class EndorsementHandler extends AbstractEventHandler {
     // list, so they also get updated in storage
 
     // create and forward request for next handler in the pipeline
-    final ContextWriteFeatures upstreamRequest =
-        HandlerUtil.createContextWriteRequestFromFeatureList(
+    final ContextWriteFeatures upstreamRequest = HandlerUtil.createContextWriteRequestFromFeatureList(
             cwf.getCollectionId(), updatedFeatures, cwf.getContext(), violations);
     return event.sendUpstream(upstreamRequest);
   }

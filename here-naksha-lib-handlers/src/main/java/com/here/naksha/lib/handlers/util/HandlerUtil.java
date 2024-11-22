@@ -21,6 +21,9 @@ package com.here.naksha.lib.handlers.util;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.ContextXyzFeatureResult;
+
+import java.util.ArrayList;
+import java.util.List;
 import naksha.base.JvmProxyUtil;
 import naksha.model.NakshaError;
 import naksha.model.TagList;
@@ -36,9 +39,6 @@ import naksha.model.request.Write;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public final class HandlerUtil {
 
   public static String REVIEW_STATE_PREFIX = "@:review-state:";
@@ -52,7 +52,7 @@ public final class HandlerUtil {
     // Create list of ResultRow with input features
     final List<ResultTuple> resultTuples = new ArrayList<>();
     for (final NakshaFeature feature : features) {
-      //TODO switch to Tuple, wait for change in v3 enabling Tuple creation without storage
+      // TODO switch to Tuple, wait for change in v3 enabling Tuple creation without storage
       resultTuples.add(new ResultTuple(ExecutedOp.UPDATED, null, feature));
     }
     // Create ContextResult with cursor, context and violations
@@ -84,9 +84,7 @@ public final class HandlerUtil {
   }
 
   public static @NotNull ContextWriteXyzFeatures createContextWriteRequestFromWriteList(
-          final @NotNull List<?> writes,
-      final @Nullable List<?> context,
-      final @Nullable List<?> violations) {
+          final @NotNull List<?> writes, final @Nullable List<?> context, final @Nullable List<?> violations) {
     // generate new ContextWriteFeatures request
     final ContextWriteXyzFeatures cwf = new ContextWriteXyzFeatures();
 
@@ -174,7 +172,8 @@ public final class HandlerUtil {
     if (returnType.isAssignableFrom(input.getClass())) {
       return returnType.cast(input);
     }
-    throw new XyzErrorException(new NakshaError(NakshaErrorCode, errDescPrefix + " - " + input.getClass().getSimpleName()));
+    throw new XyzErrorException(new NakshaError(
+            NakshaErrorCode, errDescPrefix + " - " + input.getClass().getSimpleName()));
   }
 
   public static <T> @NotNull T checkInstanceOf(

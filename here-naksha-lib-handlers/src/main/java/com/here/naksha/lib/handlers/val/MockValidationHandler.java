@@ -18,6 +18,10 @@
  */
 package com.here.naksha.lib.handlers.val;
 
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
+import static com.here.naksha.lib.handlers.util.MockUtil.*;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
@@ -26,8 +30,12 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteFeatures;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
+
+import java.util.ArrayList;
+import java.util.List;
 import naksha.base.JvmProxyUtil;
 import naksha.model.mom.MomReference;
+import naksha.model.mom.MomReferenceList;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.Request;
@@ -37,13 +45,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
-import static com.here.naksha.lib.handlers.util.MockUtil.*;
 
 public class MockValidationHandler extends AbstractEventHandler {
 
@@ -96,8 +97,8 @@ public class MockValidationHandler extends AbstractEventHandler {
     final @Nullable List<NakshaFeature> violations = validateFeatures(cwf, cwf.getContext());
 
     // create and forward request for next handler in the pipeline
-    final ContextWriteFeatures upstreamRequest = HandlerUtil.createContextWriteRequestFromWriteList(
-            cwf.getWrites(), cwf.getContext(), violations);
+    final ContextWriteFeatures upstreamRequest =
+            HandlerUtil.createContextWriteRequestFromWriteList(cwf.getWrites(), cwf.getContext(), violations);
     return event.sendUpstream(upstreamRequest);
   }
 
@@ -132,7 +133,7 @@ public class MockValidationHandler extends AbstractEventHandler {
       int violationsCount = Math.min(featureCnt, totalViolations);
       final Object momType = feature.get("momType");
       violations.addAll(getNViolationsWithFeatureReference(
-          violationsCount, feature, cwf.getCollectionId(), (momType == null) ? "" : momType.toString()));
+              violationsCount, feature, cwf.getWrites().get(featureCnt - 1).getCollectionId(), (momType == null) ? "" : momType.toString()));
     }
     return violations;
   }
@@ -149,7 +150,7 @@ public class MockValidationHandler extends AbstractEventHandler {
       violation.setId("urn:here::here:Topology:violation_" + RandomStringUtils.randomAlphabetic(12));
       // add reference to feature
       final MomReference reference = new MomReference(feature.getId(), spaceId, featureType);
-      violation.getProperties().setReferences(List.of(reference));
+      violation.getProperties().setReferences(JvmProxyUtil.box(List.of(reference), MomReferenceList.class));
       violation.put("violatedObject", reference);
       violation.setGeometry(feature.getGeometry());
       // add violation to the list

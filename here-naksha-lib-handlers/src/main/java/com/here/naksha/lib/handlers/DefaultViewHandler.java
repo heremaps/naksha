@@ -29,7 +29,6 @@ import com.here.naksha.lib.view.*;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
 import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;

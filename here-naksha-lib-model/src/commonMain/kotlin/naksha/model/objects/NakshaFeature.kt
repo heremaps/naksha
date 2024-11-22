@@ -32,6 +32,7 @@ open class NakshaFeature() : AnyObject() {
          * The feature-type of this feature itself.
          */
         const val FEATURE_TYPE = "Feature"
+        const val PROPERTIES_KEY = "properties"
 
         private val ID = NotNullProperty<NakshaFeature, String>(String::class) { _, _ -> PlatformUtil.randomString(12) }
         private val TYPE = NotNullProperty<NakshaFeature, String>(String::class) { self, _ -> self.defaultFeatureType() }

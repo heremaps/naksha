@@ -22,7 +22,6 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
-import naksha.geo.XyzProperties;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.*;
@@ -42,9 +41,9 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 public class SourceIdHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(SourceIdHandler.class);
-  private static final String TAG_PREFIX = "naksha_source_id_"; // TODO decide
+  private static final String TAG_PREFIX = "xyz_source_id_"; // TODO decide
   private static final String SOURCE_ID = "sourceId";
-  public static final int PREF_PATHS_SIZE = 3;
+  public static final int PREF_PATHS_SIZE = 2;
 
   public SourceIdHandler(final @NotNull INaksha hub) {
     super(hub);
@@ -91,12 +90,8 @@ public class SourceIdHandler extends AbstractEventHandler {
 
     IPropertyQuery propertyOp = readRequest.getQuery().getProperties();
 
-    if (propertyOp.children() != null && !propertyOp.children().isEmpty()) {
-      PropertyOperationUtil.transformPropertyInPropertyOperationTree(
-          propertyOp, SourceIdHandler::mapIntoTagOperation);
-    } else {
-      mapIntoTagOperation(propertyOp).ifPresent(readRequest::setPropertyOp);
-    }
+    PropertyOperationUtil.transformPropertyInPropertyOperationTree(
+            propertyOp, SourceIdHandler::mapIntoTagOperation);
   }
 
   private void setSourceIdTags(NakshaFeature feature) {
@@ -104,14 +99,14 @@ public class SourceIdHandler extends AbstractEventHandler {
     getSourceIdFromFeature(properties).ifPresent(sourceId -> updateTagsWithSourceIdProperty(properties, sourceId));
   }
 
-  private void updateTagsWithSourceIdProperty(XyzProperties properties, String sourceId) {
-    properties.getXyzNamespace().removeTagsWithPrefix(TAG_PREFIX);
-    properties.getXyzNamespace().addTag(TAG_PREFIX + sourceId, false);
+  private void updateTagsWithSourceIdProperty(NakshaProperties properties, String sourceId) {
+    properties.getXyz().removeTagsWithPrefix(TAG_PREFIX);
+    properties.getXyz().addTag(TAG_PREFIX + sourceId, false);
   }
 
-  private Optional<String> getSourceIdFromFeature(XyzProperties properties) {
+  private Optional<String> getSourceIdFromFeature(NakshaProperties properties) {
     try {
-      return Optional.ofNullable(properties.get(XyzProperties.HERE_META_NS))
+      return Optional.ofNullable(properties.get(NakshaProperties.META_KEY))
           .map(Map.class::cast)
           .map(metaProperties -> metaProperties.get(SOURCE_ID))
           .map(Object::toString);
@@ -120,25 +115,24 @@ public class SourceIdHandler extends AbstractEventHandler {
     }
   }
 
-  public static Optional<POp> mapIntoTagOperation(POp propertyOperation) {
+  public static Optional<PQuery> mapIntoTagOperation(PQuery propertyOperation) {
 
     if (sourceIdTransformationCapable(propertyOperation) && operationTypeAllowed(propertyOperation)) {
-      return Optional.of(POp.exists(PRef.tag(TAG_PREFIX + propertyOperation.getValue())));
+      final Property property =
+              new Property(Property.XYZ, Property.TAGS, TAG_PREFIX + propertyOperation.getValue());
+      return Optional.of(new PQuery(property, AnyOp.EXISTS, null));
     }
 
     return Optional.empty();
   }
 
-  private static boolean propertyReferenceEqualsSourceId(PRef pRef) {
+  private static boolean propertyReferenceEqualsSourceId(Property pRef) {
     List<@NotNull String> path = pRef.getPath();
-    return path.size() == PREF_PATHS_SIZE
-        && path.containsAll(List.of(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, SOURCE_ID));
+    return path.size() == PREF_PATHS_SIZE && path.containsAll(List.of(NakshaProperties.META_KEY, SOURCE_ID));
   }
 
-  private static boolean sourceIdTransformationCapable(POp propertyOperation) {
-    return propertyReferenceEqualsSourceId(propertyOperation.getPropertyRef())
-        && propertyOperation.getValue() != null
-        && propertyOperation.children() == null;
+  private static boolean sourceIdTransformationCapable(PQuery propertyOperation) {
+    return propertyReferenceEqualsSourceId(propertyOperation.getProperty()) && propertyOperation.getValue() != null;
   }
 
   private static boolean operationTypeAllowed(PQuery propertyOperation) {

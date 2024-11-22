@@ -18,38 +18,37 @@
  */
 package com.here.naksha.lib.handlers.util;
 
-import org.jetbrains.annotations.NotNull;
+import naksha.model.request.query.*;
 
-import java.util.Collections;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 public class PropertyOperationUtil {
 
   private PropertyOperationUtil() {}
 
   public static void transformPropertyInPropertyOperationTree(
-      POp rootPropertyOperation, Function<POp, Optional<POp>> transformingFunction) {
-    replacePropertyInPropertyOperationTree(
-        rootPropertyOperation, Collections.emptyList(), -1, transformingFunction);
+          IPropertyQuery rootPropertyOperation, Function<PQuery, Optional<PQuery>> transformingFunction) {
+    replacePropertyInPropertyOperationTree(rootPropertyOperation, transformingFunction);
   }
 
   private static void replacePropertyInPropertyOperationTree(
-      POp propertyOperation,
-      List<POp> parentCollection,
-      int index,
-      Function<POp, Optional<POp>> transformingFunction) {
+          IPropertyQuery propertyOperation, Function<PQuery, Optional<PQuery>> transformingFunction) {
 
-    if (propertyOperation.getPropertyRef() == null
-        && propertyOperation.children() != null
-        && !propertyOperation.children().isEmpty()) {
-
-      List<@NotNull POp> children = propertyOperation.children();
-
-      for (int i = 0; i < children.size(); i++) {
-        replacePropertyInPropertyOperationTree(children.get(i), children, i, transformingFunction);
-      }
-
-    } else {
-      transformingFunction.apply(propertyOperation).ifPresent(pOp -> parentCollection.set(index, pOp));
-    }
+    if (propertyOperation instanceof PAnd pAnd) {
+      pAnd.forEach(
+              iPropertyQuery -> replacePropertyInPropertyOperationTree(iPropertyQuery, transformingFunction));
+    } else if (propertyOperation instanceof POr pOr) {
+      pOr.forEach(iPropertyQuery -> replacePropertyInPropertyOperationTree(iPropertyQuery, transformingFunction));
+    } else if (propertyOperation instanceof PNot pNot) {
+      replacePropertyInPropertyOperationTree(pNot.getQuery(), transformingFunction);
+    } else if (propertyOperation instanceof PQuery pQuery) {
+      AtomicReference<PQuery> transformed = new AtomicReference<>();
+      transformingFunction.apply(pQuery).ifPresent(transformed::set);
+      pQuery.setProperty(transformed.get().getProperty());
+      pQuery.setOp(transformed.get().getOp());
+      pQuery.setValue(transformed.get().getValue());
+    } // TODO do we throw unsupported of unknown query here?
   }
 }
