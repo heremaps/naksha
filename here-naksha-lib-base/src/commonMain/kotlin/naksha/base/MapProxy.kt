@@ -157,7 +157,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
 
     override val entries: MutableSet<MutableEntry<K, V?>>
         get() {
-            return rawEntries()
+            val basicEntries: MutableSet<MutableEntry<K, V?>> = rawEntries()
                 .map { platformList ->
                     require(array_get_length(platformList) == 2) { "Expected PlatformList with size of 2 (key and value)" }
                     val key = toKey(array_get(platformList, 0))
@@ -165,6 +165,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
                     Entry(key, toValue(key, array_get(platformList, 1)))
                 }
                 .toMutableSet()
+            return MapProxyEntrySet(basicEntries, this)
         }
 
     override val keys: MutableSet<K>
@@ -179,6 +180,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
 
     override val size: Int
         get() = map_size(platformObject())
+
     override val values: MutableCollection<V?>
         get() {
             return rawEntries()
@@ -259,6 +261,34 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
 
         override val value: V
             get() = currentValue
+    }
+
+    class MapProxyEntrySet<K : Any, V : Any>(
+        private val basicEntries: MutableSet<MutableEntry<K, V?>>,
+        private val owner: MapProxy<K, V>
+    ) : MutableSet<MutableEntry<K, V?>> by basicEntries {
+
+        override fun iterator(): MutableIterator<MutableEntry<K, V?>> {
+            return MapProxyEntriesIterator(basicEntries.iterator(), owner)
+        }
+    }
+
+    class MapProxyEntriesIterator<K : Any, V : Any>(
+        private val basicIterator: MutableIterator<MutableEntry<K, V?>>,
+        private val owner: MapProxy<K, V>
+    ) : MutableIterator<MutableEntry<K, V?>> by basicIterator {
+
+        private var currentKey: K? = null
+
+        override fun next(): MutableEntry<K, V?> {
+            val next = basicIterator.next()
+            currentKey = next.key
+            return next
+        }
+
+        override fun remove() {
+            owner.removeRaw(currentKey ?: throw IllegalStateException("Iterator is invalid position"))
+        }
     }
 
     private fun rawEntries(): Sequence<PlatformList> {
