@@ -23,27 +23,29 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.FeatureCodec;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
-import naksha.geo.XyzProperties;
+import naksha.base.JvmProxyUtil;
+import naksha.model.objects.NakshaProperties;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Objects;
 
 public class MockContextLoaderHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(MockContextLoaderHandler.class);
   protected @NotNull EventHandler eventHandler;
   protected @NotNull EventTarget<?> eventTarget;
-  protected @NotNull XyzProperties properties;
+  protected @NotNull NakshaProperties properties;
 
   public MockContextLoaderHandler(
       final @NotNull EventHandler eventHandler,
@@ -52,12 +54,12 @@ public class MockContextLoaderHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties = JsonSerializable.convert(eventHandler.getProperties(), XyzProperties.class);
+    this.properties = Objects.requireNonNull(JvmProxyUtil.box(eventHandler.getProperties(), NakshaProperties.class));
   }
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
-    final Request<?> request = event.getRequest();
+    final Request request = event.getRequest();
     if (request instanceof WriteFeatures<?, ?, ?>) {
       return PROCESS;
     }
@@ -74,17 +76,17 @@ public class MockContextLoaderHandler extends AbstractEventHandler {
    * @return the result.
    */
   @Override
-  public @NotNull Result process(@NotNull IEvent event) {
-    final Request<?> request = event.getRequest();
+  public @NotNull Response process(@NotNull IEvent event) {
+    final Request request = event.getRequest();
 
     logger.info("Handler received request {}", request.getClass().getSimpleName());
 
     try {
-      final WriteFeatures<?, ?, ?> writeRequest = HandlerUtil.checkInstanceOf(
+      final WriteFeatures writeRequest = HandlerUtil.checkInstanceOf(
           request, WriteFeatures.class, "Unsupported request type for validation");
 
       // Generate Validate request
-      final Request<?> forwardRequest = generateContextRequest(writeRequest);
+      final Request forwardRequest = generateContextRequest(writeRequest);
       return event.sendUpstream(forwardRequest);
     } catch (XyzErrorException erx) {
       logger.warn("Error processing validation request. ", erx);

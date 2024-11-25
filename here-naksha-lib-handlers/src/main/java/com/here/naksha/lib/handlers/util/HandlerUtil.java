@@ -21,6 +21,9 @@ package com.here.naksha.lib.handlers.util;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.core.models.storage.ContextXyzFeatureResult;
+
+import java.util.ArrayList;
+import java.util.List;
 import naksha.base.JvmProxyUtil;
 import naksha.model.NakshaError;
 import naksha.model.TagList;
@@ -35,9 +38,6 @@ import naksha.model.request.ResultTuple;
 import naksha.model.request.Write;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public final class HandlerUtil {
 
@@ -62,8 +62,13 @@ public final class HandlerUtil {
     return ctxResult;
   }
 
+  /**
+   * @param collectionIds If the number of collection IDs is smaller than the number of features, the last collection ID
+   *                      will be reused for each feature given at the end. Which means a list of only 1 collection ID
+   *                      is sufficient if every feature should be written in this same 1 collection.
+   */
   public static @NotNull ContextWriteXyzFeatures createContextWriteRequestFromFeatureList(
-      final @NotNull String collectionId,
+          final @NotNull List<String> collectionIds,
       final @NotNull List<?> features,
       final @Nullable List<?> context,
       final @Nullable List<?> violations) {
@@ -71,9 +76,11 @@ public final class HandlerUtil {
     final ContextWriteXyzFeatures cwf = new ContextWriteXyzFeatures();
 
     // Add features in the request
-    for (final Object obj : features) {
-      final NakshaFeature feature = checkInstanceOf(obj, NakshaFeature.class, "Unsupported feature type");
-      final Write write = new Write().updateFeature(null, collectionId, feature, false);
+    for (int i = 0; i < features.size(); i++) {
+      final NakshaFeature feature =
+              checkInstanceOf(features.get(i), NakshaFeature.class, "Unsupported feature type");
+      final Write write = new Write()
+              .updateFeature(null, collectionIds.get(Math.min(i, collectionIds.size())), feature, false);
       cwf.add(write);
     }
     // add context to write request

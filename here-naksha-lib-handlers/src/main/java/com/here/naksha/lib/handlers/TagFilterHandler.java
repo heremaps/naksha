@@ -26,6 +26,9 @@ import naksha.base.JvmProxyUtil;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
+import naksha.model.request.query.ITagQuery;
+import naksha.model.request.query.TagAnd;
+import naksha.model.request.query.TagExists;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -45,11 +48,10 @@ public class TagFilterHandler extends AbstractEventHandler {
 
   private final @NotNull TagFilterHandlerProperties properties;
 
-  public TagFilterHandler(
-      final @NotNull EventHandler eventHandler,
-      final @NotNull INaksha hub) {
+  public TagFilterHandler(final @NotNull EventHandler eventHandler, final @NotNull INaksha hub) {
     super(hub);
-    this.properties = Objects.requireNonNull(JvmProxyUtil.box(eventHandler.getProperties(), TagFilterHandlerProperties.class));
+    this.properties = Objects.requireNonNull(
+            JvmProxyUtil.box(eventHandler.getProperties(), TagFilterHandlerProperties.class));
   }
 
   @Override
@@ -88,24 +90,22 @@ public class TagFilterHandler extends AbstractEventHandler {
     if (isNullOrEmpty(tagValues)) {
       return;
     }
-    final POp origPOp = readRequest.getPropertyOp();
-    final POp tagFilterOp = buildFilterOperationForTags(tagValues);
-    final POp newOp = (origPOp == null) ? tagFilterOp : POp.and(origPOp, tagFilterOp);
-    readRequest.setPropertyOp(newOp);
+    final ITagQuery tagFilterOp = buildFilterOperationForTags(tagValues);
+    readRequest.getQuery().setTags(tagFilterOp);
   }
 
-  private static POp buildFilterOperationForTags(final @NotNull List<String> tagValues) {
+  private static ITagQuery buildFilterOperationForTags(final @NotNull List<String> tagValues) {
     // Do we have only one tag? Then use EXISTS operation
     if (tagValues.size() == 1) {
-      return POp.exists(PRef.tag(tagValues.get(0)));
+      return new TagExists(tagValues.get(0));
     }
     // we have multiple tags, so use AND operation
-    final POp[] ops = new POp[tagValues.size()];
+    final TagExists[] tagExistsList = new TagExists[tagValues.size()];
     int idx = 0;
     for (final @NotNull String value : tagValues) {
-      ops[idx++] = POp.exists(PRef.tag(value));
+      tagExistsList[idx++] = new TagExists(value);
     }
-    return POp.and(ops);
+    return new TagAnd(tagExistsList);
   }
 
   public static void applyTagChangesOnRequest(
