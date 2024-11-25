@@ -18,27 +18,27 @@
  */
 package com.here.naksha.lib.handlers.val;
 
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.*;
-
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
+import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import naksha.base.JvmProxyUtil;
+import naksha.model.NakshaError;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.Request;
-import naksha.model.request.Response;
+import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
+
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.*;
 
 public class MockContextLoaderHandler extends AbstractEventHandler {
 
@@ -54,13 +54,14 @@ public class MockContextLoaderHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties = Objects.requireNonNull(JvmProxyUtil.box(eventHandler.getProperties(), NakshaProperties.class));
+    this.properties =
+            Objects.requireNonNull(JvmProxyUtil.box(eventHandler.getProperties(), NakshaProperties.class));
   }
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
     final Request request = event.getRequest();
-    if (request instanceof WriteFeatures<?, ?, ?>) {
+    if (RequestTypesUtil.isOnlyWriteFeatures(request)) {
       return PROCESS;
     }
     if (request instanceof ReadFeatures) {
@@ -82,33 +83,38 @@ public class MockContextLoaderHandler extends AbstractEventHandler {
     logger.info("Handler received request {}", request.getClass().getSimpleName());
 
     try {
-      final WriteFeatures writeRequest = HandlerUtil.checkInstanceOf(
-          request, WriteFeatures.class, "Unsupported request type for validation");
+      if (!(RequestTypesUtil.isOnlyWriteFeatures(request))) {
+        throw new XyzErrorException(new NakshaError(
+                NakshaError.NOT_IMPLEMENTED,
+                "Unsupported request type for validation - "
+                        + request.getClass().getSimpleName()));
+      }
+      final WriteRequest writeRequest = (WriteRequest) request;
 
       // Generate Validate request
       final Request forwardRequest = generateContextRequest(writeRequest);
       return event.sendUpstream(forwardRequest);
     } catch (XyzErrorException erx) {
       logger.warn("Error processing validation request. ", erx);
-      return new ErrorResult(erx.xyzError, erx.getMessage());
+      return new ErrorResponse(erx.nakshaError);
     }
   }
 
-  protected @NotNull Request<?> generateContextRequest(final @NotNull WriteFeatures<?, ?, ?> wf) {
+  protected @NotNull Request generateContextRequest(final @NotNull WriteRequest wf) {
     // prepare ContextWriteFeatures request
-    final ContextWriteXyzFeatures contextWriteFeatures = new ContextWriteXyzFeatures(wf.getCollectionId());
+    final ContextWriteXyzFeatures contextWriteFeatures = new ContextWriteXyzFeatures();
     // Add features in the request
-    if (wf.features.isEmpty()) {
-      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "No features supplied for validation");
+    if (wf.getWrites().isEmpty()) {
+      throw new XyzErrorException(NakshaError.ILLEGAL_ARGUMENT, "No features supplied for validation");
     }
-    for (final FeatureCodec<?, ?> codec : wf.features) {
-      if (!EWriteOp.PUT.toString().equals(codec.getOp())) {
+    for (final Write write : wf.getWrites()) {
+      if (!WriteOp.UPSERT.equals(write.getOp())) {
         throw new XyzErrorException(
-            XyzError.NOT_IMPLEMENTED, "Unsupported operation type for validation - " + codec.getOp());
+                NakshaError.NOT_IMPLEMENTED, "Unsupported operation type for validation - " + write.getOp());
       }
-      final XyzFeature feature = HandlerUtil.checkInstanceOf(
-          codec.getFeature(), XyzFeature.class, "Unsupported feature type for validation");
-      contextWriteFeatures.add(EWriteOp.get(codec.getOp()), feature);
+      HandlerUtil.checkInstanceOf(
+              write.getFeature(), NakshaFeature.class, "Unsupported feature type for validation");
+      contextWriteFeatures.add(write);
     }
     // TODO : Load and populate context (features) in request
 

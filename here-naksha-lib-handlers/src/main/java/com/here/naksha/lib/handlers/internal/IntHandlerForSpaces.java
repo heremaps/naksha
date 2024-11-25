@@ -18,20 +18,21 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
+import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.models.naksha.Space;
+import com.here.naksha.lib.core.models.storage.EWriteOp;
+import naksha.model.IReadSession;
+import naksha.model.NakshaError;
+import naksha.model.SessionOptions;
+import naksha.model.request.*;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
+
 import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readIdsFromResult;
 import static naksha.model.NakshaContext.currentContext;
-
-import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.Space;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-
-import java.util.List;
-import naksha.model.IReadSession;
-import naksha.model.NakshaError;
-import naksha.model.request.*;
-import org.jetbrains.annotations.NotNull;
 
 public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
 
@@ -69,10 +70,10 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
   private List<String> getMissingHandlersFor(Space space) {
     List<String> expectedHandlerIds = space.getEventHandlerIds();
     ReadFeatures getEventHandlersRequest = readFeaturesByIdsRequest(EVENT_HANDLERS, expectedHandlerIds);
-    try (IReadSession readSession = nakshaHub().getSpaceStorage().newReadSession(currentContext(), false)) {
-      Response result = readSession.execute(getEventHandlersRequest);
-      return missingHandlersIds(result, expectedHandlerIds);
-    }
+    IReadSession readSession =
+            nakshaHub().getSpaceStorage().newReadSession(SessionOptions.from(currentContext(), false));
+    Response result = readSession.execute(getEventHandlersRequest);
+    return missingHandlersIds(result, expectedHandlerIds);
   }
 
   private List<String> missingHandlersIds(Response fetchedHandlers, List<String> expectedHandlersIds) {

@@ -18,10 +18,6 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
-import static com.here.naksha.lib.handlers.internal.PluginPropertiesValidator.pluginValidation;
-
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Storage;
@@ -29,13 +25,6 @@ import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import com.here.naksha.storage.http.HttpStorage;
 import com.here.naksha.storage.http.HttpStorageProperties;
-
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Set;
 import naksha.base.JvmProxyUtil;
 import naksha.model.IReadSession;
 import naksha.model.NakshaContext;
@@ -47,6 +36,17 @@ import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
 import org.jetbrains.annotations.NotNull;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Set;
+
+import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+import static com.here.naksha.lib.handlers.internal.PluginPropertiesValidator.pluginValidation;
 
 public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
 

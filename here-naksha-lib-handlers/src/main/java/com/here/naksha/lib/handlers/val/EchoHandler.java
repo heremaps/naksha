@@ -28,7 +28,6 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteFeatures;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
-
 import java.util.List;
 import java.util.Objects;
 import naksha.base.JvmProxyUtil;

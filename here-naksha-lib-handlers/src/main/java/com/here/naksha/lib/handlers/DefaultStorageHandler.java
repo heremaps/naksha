@@ -33,7 +33,6 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
-
 import java.util.ArrayList;
 import java.util.List;
 import naksha.base.JvmProxyUtil;

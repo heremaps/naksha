@@ -25,9 +25,11 @@ import static com.here.naksha.lib.handlers.internal.NakshaFeaturePropertiesValid
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
+import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import naksha.model.IReadSession;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
+import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
@@ -53,7 +55,7 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
     final Request request = event.getRequest();
-    if (request instanceof ReadRequest || request instanceof WriteXyzFeatures) {
+    if (request instanceof ReadRequest || RequestTypesUtil.isOnlyWriteFeatures(request)) {
       return PROCESS;
     }
     return NOT_IMPLEMENTED;
@@ -66,29 +68,25 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
     // process request using Naksha Admin Storage instance
     addStorageIdToStreamInfo(PsqlStorage.ADMIN_STORAGE_ID, ctx);
     if (request instanceof ReadRequest rr) {
-      try (final IReadSession reader = nakshaHub().getAdminStorage().newReadSession(ctx, false)) {
-        return reader.execute(rr);
-      }
-    } else if (request instanceof WriteXyzFeatures wr) {
+      final IReadSession reader = nakshaHub().getAdminStorage().newReadSession(SessionOptions.from(ctx, false));
+      return reader.execute(rr);
+
+    } else if ((request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteFeatures(request))) {
       // validate the request before persisting
-      try (Response valResult = validateWriteRequest(wr)) {
-        if (valResult instanceof ErrorResponse er) {
-          return er;
-        }
-        // persist in storage
-        try (final IWriteSession writer = nakshaHub().getAdminStorage().newWriteSession(ctx, true)) {
-          final Response result = writer.execute(wr);
-          if (result instanceof SuccessResponse) {
-            writer.commit(true);
-          } else {
-            logger.warn(
-                "Failed writing feature request to admin storage, expected success but got: {}",
-                result);
-            writer.rollback(true);
-          }
-          return result;
-        }
+      Response valResult = validateWriteRequest(wr);
+      if (valResult instanceof ErrorResponse er) {
+        return er;
       }
+      // persist in storage
+      final IWriteSession writer = nakshaHub().getAdminStorage().newWriteSession(SessionOptions.from(ctx, true));
+      final Response result = writer.execute(wr);
+      if (result instanceof SuccessResponse) {
+        writer.commit();
+      } else {
+        logger.warn("Failed writing feature request to admin storage, expected success but got: {}", result);
+        writer.rollback();
+      }
+      return result;
     } else {
       return notImplemented(request);
     }
