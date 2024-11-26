@@ -3,9 +3,7 @@ package naksha.psql
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fx2
-import naksha.jbon.JbDictManager
 import naksha.model.*
-import naksha.model.FetchMode.*
 import naksha.model.NakshaContext.NakshaContextCompanion.DEFAULT_MAP_ID
 import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.model.NakshaVersion.Companion.LATEST
@@ -537,6 +535,11 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
     }
 
     companion object PgStorage_C {
+
+        /**
+         * The storage-id of the Naksha-Hub admin storage.
+         */
+        const val ADMIN_STORAGE_ID: String = "naksha-admin"
 
         /**
          * All columns to be added into a SELECT query, already quoted, if needed.

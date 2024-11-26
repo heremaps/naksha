@@ -33,6 +33,7 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
+import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import java.util.ArrayList;
 import java.util.List;
 import naksha.base.JvmProxyUtil;
@@ -187,15 +188,13 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   private boolean isPurgeCollectionRequest(@NotNull WriteRequest wc) {
     final WriteOp op = wc.getWrites().get(0).getOp();
-    return wc.getWrites().size() == 1
-            && wc.getWrites().get(0).getCollectionId().equals(Naksha.VIRT_COLLECTIONS)
-            && WriteOp.PURGE.equals(op);
+    return wc.getWrites().size() == 1 && RequestTypesUtil.isOnlyWriteCollections(wc) && WriteOp.PURGE.equals(op);
   }
 
   private boolean isUpdateCollectionRequest(@NotNull WriteRequest wc) {
     final WriteOp op = wc.getWrites().get(0).getOp();
     return wc.getWrites().size() == 1
-            && wc.getWrites().get(0).getCollectionId().equals(Naksha.VIRT_COLLECTIONS)
+            && RequestTypesUtil.isOnlyWriteCollections(wc)
             && (WriteOp.UPDATE.equals(op) || WriteOp.UPSERT.equals(op));
   }
 

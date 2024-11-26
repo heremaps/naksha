@@ -31,11 +31,12 @@ class NakshaFeaturePropertiesValidator {
   private NakshaFeaturePropertiesValidator() {}
 
   static Response nakshaFeatureValidation(NakshaFeature feature) {
-    Response titleValidation = requiredPropertyValidationError(feature.getTitle(), NakshaFeature.TITLE);
+    Response titleValidation = requiredPropertyValidationError(feature.getTitle(), NakshaFeature.TITLE_KEY);
     if (titleValidation instanceof ErrorResponse) {
       return titleValidation;
     }
-    Response descValidation = requiredPropertyValidationError(feature.getDescription(), NakshaFeature.DESCRIPTION);
+    Response descValidation =
+            requiredPropertyValidationError(feature.getDescription(), NakshaFeature.DESCRIPTION_KEY);
     if (descValidation instanceof ErrorResponse) {
       return descValidation;
     }

@@ -25,29 +25,29 @@ import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 
 public final class RequestTypesUtil {
-    /**
-     * Check if the given {@link WriteRequest} only includes {@link naksha.model.request.Write} operation on {@link naksha.model.objects.NakshaFeature}.
-     */
-    public static boolean isOnlyWriteFeatures(@NotNull Request request) {
-        if (!(request instanceof WriteRequest)) return false;
-        for (Write write : ((WriteRequest) request).getWrites()) {
-            // A Write operation onto the virtual "naksha~collections" means that it is a write request for
-            // NakshaCollection
-            if (Naksha.VIRT_COLLECTIONS.equals(write.getCollectionId())) return false;
-        }
-        return true;
+  /**
+   * Check if the given {@link WriteRequest} only includes {@link naksha.model.request.Write} operation on {@link naksha.model.objects.NakshaFeature}.
+   */
+  public static boolean isOnlyWriteFeatures(@NotNull Request request) {
+    if (!(request instanceof WriteRequest)) return false;
+    for (Write write : ((WriteRequest) request).getWrites()) {
+      // A Write operation onto the virtual "naksha~collections" means that it is a write request for
+      // NakshaCollection
+      if (Naksha.VIRT_COLLECTIONS.equals(write.getCollectionId())) return false;
     }
+    return true;
+  }
 
-    /**
-     * Check if the given {@link WriteRequest} only includes {@link naksha.model.request.Write} operation on {@link naksha.model.objects.NakshaCollection}.
-     */
-    public static boolean isOnlyWriteCollections(Request request) {
-        if (!(request instanceof WriteRequest)) return false;
-        for (Write write : ((WriteRequest) request).getWrites()) {
-            // A Write operation onto the virtual "naksha~collections" means that it is a write request for
-            // NakshaCollection
-            if (!Naksha.VIRT_COLLECTIONS.equals(write.getCollectionId())) return false;
-        }
-        return true;
+  /**
+   * Check if the given {@link WriteRequest} only includes {@link naksha.model.request.Write} operation on {@link naksha.model.objects.NakshaCollection}.
+   */
+  public static boolean isOnlyWriteCollections(Request request) {
+    if (!(request instanceof WriteRequest)) return false;
+    for (Write write : ((WriteRequest) request).getWrites()) {
+      // A Write operation onto the virtual "naksha~collections" means that it is a write request for
+      // NakshaCollection
+      if (!Naksha.VIRT_COLLECTIONS.equals(write.getCollectionId())) return false;
     }
+    return true;
+  }
 }

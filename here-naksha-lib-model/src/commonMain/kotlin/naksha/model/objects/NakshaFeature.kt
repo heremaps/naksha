@@ -33,6 +33,8 @@ open class NakshaFeature() : AnyObject() {
          */
         const val FEATURE_TYPE = "Feature"
         const val PROPERTIES_KEY = "properties"
+        const val TITLE_KEY = "title"
+        const val DESCRIPTION_KEY = "description"
 
         private val ID = NotNullProperty<NakshaFeature, String>(String::class) { _, _ -> PlatformUtil.randomString(12) }
         private val TYPE = NotNullProperty<NakshaFeature, String>(String::class) { self, _ -> self.defaultFeatureType() }
@@ -40,6 +42,8 @@ open class NakshaFeature() : AnyObject() {
         private val GEOMETRY_NULL = NullableProperty<NakshaFeature, SpGeometry>(SpGeometry::class)
         private val REFERENCE_POINT_NULL = NullableProperty<NakshaFeature, SpPoint>(SpPoint::class)
         private val PROPERTIES = NotNullProperty<NakshaFeature, NakshaProperties>(NakshaProperties::class)
+        private val TITLE_NULL = NullableProperty<NakshaFeature, String>(String::class)
+        private val DESCRIPTION_NULL = NullableProperty<NakshaFeature, String>(String::class)
         private val ATTACHMENT_NULL = NullableProperty<NakshaFeature, ByteArray>(ByteArray::class)
         private val STRING_NULL = NullableProperty<NakshaFeature, String>(String::class)
     }
@@ -88,4 +92,14 @@ open class NakshaFeature() : AnyObject() {
      * The mom-type; if any.
      */
     var momType by STRING_NULL
+
+    /**
+     * Human-readable title.
+     */
+    open var title by TITLE_NULL
+
+    /**
+     * Human-readable description.
+     */
+    open var description by DESCRIPTION_NULL
 }
