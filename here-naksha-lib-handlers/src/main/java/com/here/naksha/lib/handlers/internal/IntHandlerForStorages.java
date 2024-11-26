@@ -29,7 +29,6 @@ import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import com.here.naksha.storage.http.HttpStorage;
 import com.here.naksha.storage.http.HttpStorageProperties;
-
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;

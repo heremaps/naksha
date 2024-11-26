@@ -18,11 +18,11 @@
  */
 package com.here.naksha.lib.handlers.util;
 
-import naksha.model.request.query.*;
-
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+
+import naksha.model.request.query.*;
 
 public class PropertyOperationUtil {
 

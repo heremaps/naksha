@@ -26,7 +26,6 @@ import static naksha.model.NakshaContext.currentContext;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-
 import java.util.List;
 import naksha.model.IReadSession;
 import naksha.model.NakshaError;

@@ -18,6 +18,9 @@
  */
 package com.here.naksha.lib.core.util.storage;
 
+import static java.util.Collections.emptyList;
+
+import java.util.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ExecutedOp;
 import naksha.model.request.Response;
@@ -25,10 +28,6 @@ import naksha.model.request.ResultTuple;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.*;
-
-import static java.util.Collections.emptyList;
 
 public class ResultHelper {
 

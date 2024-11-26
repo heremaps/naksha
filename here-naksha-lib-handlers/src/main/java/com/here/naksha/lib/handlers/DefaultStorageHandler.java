@@ -256,14 +256,16 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull RuntimeException re) {
     if (re instanceof StorageNotInitialized) {
       return retryDueToUninitializedStorage(ctx, storageImpl, collection, request);
-    } else if (indicatesMissingCollection(re)) {
-      try {
-        return retryDueToMissingCollection(ctx, storageImpl, collection, request);
-      } catch (MissingCollectionsException mce) {
-        logger.info("Retrying due to missing collection failed", mce);
-        return mce.toErrorResult();
-      }
-    } else {
+    }
+    //    else if (indicatesMissingCollection(re)) {
+    //      try {
+    //        return retryDueToMissingCollection(ctx, storageImpl, collection, request);
+    //      } catch (MissingCollectionsException mce) {
+    //        logger.info("Retrying due to missing collection failed", mce);
+    //        return mce.toErrorResult();
+    //      }
+    //    }
+    else {
       throw re;
     }
   }
@@ -274,14 +276,15 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull NakshaCollection collection,
       final @NotNull Request request,
       final @NotNull RuntimeException re) {
-    if (indicatesMissingCollection(re)) {
-      try {
-        return retryDueToMissingCollection(ctx, storageImpl, collection, request);
-      } catch (MissingCollectionsException mce) {
-        logger.info("Retrying due to missing collection failed", mce);
-        return mce.toErrorResult();
-      }
-    } else {
+    //    if (indicatesMissingCollection(re)) {
+    //      try {
+    //        return retryDueToMissingCollection(ctx, storageImpl, collection, request);
+    //      } catch (MissingCollectionsException mce) {
+    //        logger.info("Retrying due to missing collection failed", mce);
+    //        return mce.toErrorResult();
+    //      }
+    //    } else
+    {
       throw re;
     }
   }
