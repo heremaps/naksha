@@ -8,6 +8,7 @@ public class Naksha {
     private static final String NAKSHA_SPACE = System.getenv("nakshaSpace");
 
     public static RequestSpecification request() {
-        return RestAssured.given().baseUri("http://localhost:8080/hub/spaces/" + NAKSHA_SPACE);
+        return RestAssured.given().baseUri("http://localhost:8080/hub/spaces/" + NAKSHA_SPACE)
+          .log().all();
     }
 }

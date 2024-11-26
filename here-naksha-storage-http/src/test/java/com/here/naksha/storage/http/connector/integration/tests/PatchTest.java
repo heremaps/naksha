@@ -8,10 +8,12 @@ import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.*;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PatchTest {
 
@@ -37,6 +39,27 @@ public class PatchTest {
       outputFeatureANew.getUuid(),
       outputFeatureANew.getCreatedAt()
     );
+  }
+
+    @Test
+  void addAndDeleteTags() {
+    createFeatureInDb(FULL_A_ID, "{}");
+
+    InputFeature featureA = new InputFeature(SHORT_A_ID, Map.of());
+    Response responseANew = createPatchFeatureRequest(featureA)
+      .with().queryParam("addTags", "tag1", "tag2")
+      .patch("/features/{featureId}", URN_PREFIX + featureA.shortId);
+    assertStatusCode200(responseANew);
+    OutputFeature outputFeatureA = new OutputFeature(responseANew);
+    assertEquals(List.of("tag1", "tag2"), outputFeatureA.getXyzNamespaceProperty("tags"));
+
+    Response responseAChangedTags = createPatchFeatureRequest(featureA)
+      .with().queryParam("addTags", "tag3")
+      .with().queryParam("removeTags", "tag1")
+      .patch("/features/{featureId}", URN_PREFIX + featureA.shortId);
+    assertStatusCode200(responseAChangedTags);
+    OutputFeature outputFeatureAChangedTags = new OutputFeature(responseAChangedTags);
+    assertEquals(List.of("tag2", "tag3"), outputFeatureAChangedTags.getXyzNamespaceProperty("tags"));
   }
 
   @Test
@@ -82,12 +105,15 @@ public class PatchTest {
     assertDbEmpty();
   }
 
-
   private Response patchFeature(InputFeature feature) {
-    RequestSpecification request = Naksha.request()
+    return createPatchFeatureRequest(feature)
+      .patch("/features/{featureId}", URN_PREFIX + feature.shortId);
+  }
+
+  private RequestSpecification createPatchFeatureRequest(InputFeature feature) {
+    return Naksha.request()
       .with().body(feature.toJson())
       .with().header("Content-Type", "application/json");
-    return request.patch("/features/{featureId}", URN_PREFIX + feature.shortId);
   }
 
   private static void createFeatureInDb(String fullId, String propertiesJson) {

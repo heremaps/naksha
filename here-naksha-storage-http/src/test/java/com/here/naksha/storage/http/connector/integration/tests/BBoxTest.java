@@ -21,7 +21,7 @@ public class BBoxTest {
     }
 
     @Test
-    void bbox_notContains() throws URISyntaxException {
+    void bbox_notContains() {
         DataHub.createFeatureFromJsonFile("bbox/feature_1.json");
 
         String bbox = "bbox?west=-1&north=0&east=0&south=-3";
@@ -34,7 +34,7 @@ public class BBoxTest {
     }
 
     @Test
-    void bbox_contains() throws URISyntaxException {
+    void bbox_contains() {
         DataHub.createFeatureFromJsonFile("bbox/feature_1.json");
 
         String bbox = "bbox?west=-3&north=0&east=0&south=-1";

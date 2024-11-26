@@ -17,6 +17,7 @@ import static com.here.naksha.storage.http.connector.integration.utils.Commons.*
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PostTest {
   private static final String FEATURE_A_ID = "A";
@@ -106,6 +107,25 @@ public class PostTest {
   }
 
   @Test
+  void addAndDeleteTags() {
+    InputFeature featureA = new InputFeature(FEATURE_A_ID, Map.of("p", "1", "q", "1"));
+    Response responseANew = createPostFeaturesRequest(featureA)
+      .with().queryParam("addTags", "tag1", "tag2")
+      .post("/features");
+    assertStatusCode200(responseANew);
+    OutputFeature outputFeatureA = new OutputFeature(FEATURE_A_ID, responseANew);
+    assertEquals(List.of("tag1", "tag2"), outputFeatureA.getXyzNamespaceProperty("tags"));
+
+    Response responseAChangedTags = createPostFeaturesRequest(featureA)
+      .with().queryParam("addTags", "tag3")
+      .with().queryParam("removeTags", "tag1")
+      .post("/features");
+    assertStatusCode200(responseAChangedTags);
+    OutputFeature outputFeatureAChangedTags = new OutputFeature(FEATURE_A_ID, responseAChangedTags);
+    assertEquals(List.of("tag2", "tag3"), outputFeatureAChangedTags.getXyzNamespaceProperty("tags"));
+  }
+
+  @Test
   void updateWithMatchingUuid() {
     Response responseNew = postFeature(new InputFeature(FEATURE_A_ID, Map.of("p", "1")));
     assertStatusCode200(responseNew);
@@ -153,10 +173,18 @@ public class PostTest {
 assertDbEmpty();  }
 
   private Response postFeature(InputFeature feature) {
-    return postFeatures(List.of(feature));
+    return createPostFeaturesRequest(feature).post("/features");
   }
 
   private Response postFeatures(List<InputFeature> features) {
+    return createPostFeaturesRequest(features).post("/features");
+  }
+
+  private RequestSpecification createPostFeaturesRequest(InputFeature feature) {
+    return createPostFeaturesRequest(List.of(feature));
+  }
+
+  private RequestSpecification createPostFeaturesRequest(List<InputFeature> features) {
     String featuresArrayJson = features.stream()
       .map(InputFeature::toJson)
       .collect(Collectors.joining(", ", "[", "]"));
@@ -164,7 +192,7 @@ assertDbEmpty();  }
     RequestSpecification request = Naksha.request()
       .with().body(featuresCollectionJson)
       .with().header("Content-Type", "application/json");
-    return request.post("/features");
+    return request;
   }
 
   private record InputFeature(String shortId, Map properties) {

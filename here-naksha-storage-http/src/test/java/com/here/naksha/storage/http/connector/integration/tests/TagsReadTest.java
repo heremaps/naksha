@@ -12,7 +12,7 @@ import java.util.List;
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class TagsTest {
+public class TagsReadTest {
 
   public static final String BBOX_PATH_AND_PARAMS = "bbox?west=-10&north=10&east=10&south=-10&";
 
