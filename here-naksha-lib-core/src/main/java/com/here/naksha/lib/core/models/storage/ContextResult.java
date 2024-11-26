@@ -18,14 +18,20 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import java.util.List;
 import naksha.model.NakshaVersion;
+import naksha.model.request.ResultTuple;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+
 public class ContextResult<FEATURE, CTX_TYPE, V_TYPE> extends SuccessResponse {
+
+  public ContextResult(List<ResultTuple> resultTuples) {
+    super(resultTuples);
+  }
 
   /**
    * The list of features to be returned as context
