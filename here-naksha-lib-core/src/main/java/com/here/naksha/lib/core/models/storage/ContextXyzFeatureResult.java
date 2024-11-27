@@ -18,13 +18,12 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
+import java.util.List;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ResultTuple;
 
-import java.util.List;
-
 public class ContextXyzFeatureResult extends ContextResult<NakshaFeature, NakshaFeature, NakshaFeature> {
-    public ContextXyzFeatureResult(List<ResultTuple> resultTuples) {
-        super(resultTuples);
-    }
+  public ContextXyzFeatureResult(List<ResultTuple> resultTuples) {
+    super(resultTuples);
+  }
 }

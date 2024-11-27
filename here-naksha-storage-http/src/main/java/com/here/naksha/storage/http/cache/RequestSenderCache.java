@@ -20,13 +20,13 @@ package com.here.naksha.storage.http.cache;
 
 import com.here.naksha.storage.http.RequestSender;
 import com.here.naksha.storage.http.RequestSender.KeyProperties;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public class RequestSenderCache {
 

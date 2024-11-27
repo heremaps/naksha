@@ -18,8 +18,6 @@
  */
 package com.here.naksha.lib.handlers.val;
 
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.*;
-
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
@@ -29,7 +27,6 @@ import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
-import java.util.Objects;
 import naksha.base.JvmProxyUtil;
 import naksha.model.NakshaError;
 import naksha.model.objects.NakshaFeature;
@@ -38,6 +35,10 @@ import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Objects;
+
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.*;
 
 public class MockContextLoaderHandler extends AbstractEventHandler {
 

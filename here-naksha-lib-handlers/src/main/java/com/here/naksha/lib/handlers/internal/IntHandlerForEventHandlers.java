@@ -258,7 +258,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     }
     // Scan through all spaces with JSON property "eventHandlerIds" containing the targeted handler ID
     final Property pRef = new Property(EVENT_HANDLER_IDS);
-    final PQuery activeSpacesPOp = new PQuery(pRef, AnyOp.CONTAINS, new String[]{handlerId});
+      final PQuery activeSpacesPOp = new PQuery(pRef, AnyOp.CONTAINS, new String[]{handlerId});
     final ReadFeatures readActiveHandlersRequest = new ReadFeatures(SPACES);
     readActiveHandlersRequest.getQuery().setProperties(activeSpacesPOp);
     final IReadSession readSession = nakshaHub().getAdminStorage().newReadSession(new SessionOptions());
