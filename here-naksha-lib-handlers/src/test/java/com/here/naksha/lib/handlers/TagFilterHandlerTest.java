@@ -1,16 +1,13 @@
 package com.here.naksha.lib.handlers;
 
-import naksha.model.XyzFeature;
-import naksha.model.XyzFeatureCollection;
-import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.test.common.FileUtil;
 import com.here.naksha.test.common.JsonUtil;
-import com.here.naksha.test.common.assertions.POpAssertion;
-import naksha.model.POp;
-import naksha.model.POpType;
-import naksha.model.PRef;
-import naksha.model.ReadFeatures;
+import naksha.model.XyzFeatureCollection;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Write;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
@@ -25,9 +22,6 @@ import org.skyscreamer.jsonassert.JSONCompareMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
-import static naksha.model.PRef.TAGS_PROP_PATH;
-import static org.junit.jupiter.api.Assertions.*;
 
 class TagFilterHandlerTest {
 
@@ -177,20 +171,20 @@ class TagFilterHandlerTest {
         // Given: WriteXyzFeatures request with some tags already part of features
         final String featuresJson = FileUtil.loadFileOrFail(inputFilePath);
         final XyzFeatureCollection inputCollection = JsonUtil.parseJson(featuresJson, XyzFeatureCollection.class);
-        final WriteXyzFeatures wf = RequestHelper.upsertFeaturesRequest("some_space", inputCollection.getFeatures());
+        final WriteRequest wf = RequestHelper.upsertFeaturesRequest("some_space", inputCollection.getFeatures());
         // Given: Expected feature collection JSON
         final String expectedJson = FileUtil.loadFileOrFail(outputFilePath);
 
         // When: a function is called with request and given tag filter configuration
         TagFilterHandler.applyTagChangesOnRequest(wf, addTags, removeTags);
         // Then: Validate that the output features in the request is as expected
-        final String actualJson = covertWriteFeaturesToCollectionJson(wf.features);
+        final String actualJson = covertWriteFeaturesToCollectionJson(wf.getWrites());
         JSONAssert.assertEquals("List of output features don't match", expectedJson, actualJson, JSONCompareMode.STRICT_ORDER);
     }
 
-    private String covertWriteFeaturesToCollectionJson(final @NotNull List<XyzFeatureCodec> codecList) {
-        final List<XyzFeature> features = new ArrayList<>();
-        for (final @NotNull XyzFeatureCodec codec : codecList) {
+    private String covertWriteFeaturesToCollectionJson(final @NotNull List<Write> codecList) {
+        final List<NakshaFeature> features = new ArrayList<>();
+        for (final @NotNull Write codec : codecList) {
             features.add(codec.getFeature());
         }
         final XyzFeatureCollection outputCollection = new XyzFeatureCollection().withFeatures(features);

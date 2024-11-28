@@ -1,23 +1,16 @@
 package com.here.naksha.lib.handlers;
 
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.mockito.Mockito.CALLS_REAL_METHODS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import com.here.naksha.lib.core.IEvent;
 import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
 import naksha.model.StreamInfo;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.*;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.mockito.Mockito.*;
 
 class AbstractEventHandlerTest {
 
@@ -48,7 +41,7 @@ class AbstractEventHandlerTest {
     when(eventHandler.processingStrategyFor(event)).thenReturn(SUCCEED_WITHOUT_PROCESSING);
 
     // When: Processing such event
-    Result result = eventHandler.processEvent(event);
+    Response result = eventHandler.processEvent(event);
 
     // Then: Event handler did not process it
     verify(eventHandler, never()).process(event);
@@ -57,7 +50,7 @@ class AbstractEventHandlerTest {
     verify(event, never()).sendUpstream();
 
     // And: The result of operation was successful
-    assertInstanceOf(SuccessResult.class, result);
+    assertInstanceOf(SuccessResponse.class, result);
   }
 
   @Test
@@ -82,8 +75,8 @@ class AbstractEventHandlerTest {
     StreamInfo streamInfo = spy(new StreamInfo());
 
     // And: context with configured Stream Info
-    NakshaContext nakshaContext = new NakshaContext();
-    nakshaContext.attachStreamInfo(streamInfo);
+    NakshaContext nakshaContext = NakshaContext.currentContext();
+    nakshaContext.setStreamInfo(streamInfo);
 
     // And: StorageId to apply
     String storageId = "some_storage";
