@@ -18,10 +18,15 @@
  */
 package com.here.naksha.lib.view;
 
+import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
+import static java.util.stream.Collectors.*;
+
 import com.here.naksha.lib.view.concurrent.LayerReadRequest;
 import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
+
+import java.util.*;
 import naksha.model.*;
 import naksha.model.objects.Transaction;
 import naksha.model.request.*;
@@ -32,11 +37,6 @@ import naksha.model.request.query.Property;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.*;
-
-import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
-import static java.util.stream.Collectors.*;
 
 /**
  * {@link  ViewReadSession} operates on {@link View}, it queries simultaneously all the storages.

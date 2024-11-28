@@ -281,28 +281,24 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull Request request,
       final @NotNull NakshaException re)
           throws Throwable {
-    if (re instanceof NakshaException) {
+    if (NakshaError.UNINITIALIZED.equals(re.error.getCode())
+            && re.error.getMsg().toLowerCase().contains("storage")) {
       return retryDueToUninitializedStorage(ctx, storageImpl, collection, request);
-    }
-    //    else if (indicatesMissingCollection(re)) {
-    //      try {
-    //        return retryDueToMissingCollection(ctx, storageImpl, collection, request);
-    //      } catch (MissingCollectionsException mce) {
-    //        logger.info("Retrying due to missing collection failed", mce);
-    //        return mce.toErrorResult();
-    //      }
-    //    }
-    else {
+    } else if (indicatesMissingCollection(re)) {
+      try {
+        return retryDueToMissingCollection(ctx, storageImpl, collection, request);
+      } catch (MissingCollectionsException mce) {
+        logger.info("Retrying due to missing collection failed", mce);
+        return mce.toErrorResult();
+      }
+    } else {
       throw (Throwable) re;
     }
   }
 
-  //  private boolean indicatesMissingCollection(RuntimeException re) {
-  //    if (re.getCause() instanceof SQLException sqe) {
-  //      return MISSING_COLLECTION_SQL_ERROR_STATES.contains(sqe.getSQLState());
-  //    }
-  //    return false;
-  //  }
+  private boolean indicatesMissingCollection(NakshaException re) {
+    return NakshaError.COLLECTION_NOT_FOUND.equals(re.error.getCode());
+  }
 
   private @NotNull Response reattemptAfterStorageInitialization(
       final @NotNull NakshaContext ctx,
@@ -311,15 +307,14 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull Request request,
       final @NotNull NakshaException re)
           throws Throwable {
-    //    if (indicatesMissingCollection(re)) {
-    //      try {
-    //        return retryDueToMissingCollection(ctx, storageImpl, collection, request);
-    //      } catch (MissingCollectionsException mce) {
-    //        logger.info("Retrying due to missing collection failed", mce);
-    //        return mce.toErrorResult();
-    //      }
-    //    } else
-    {
+    if (indicatesMissingCollection(re)) {
+      try {
+        return retryDueToMissingCollection(ctx, storageImpl, collection, request);
+      } catch (MissingCollectionsException mce) {
+        logger.info("Retrying due to missing collection failed", mce);
+        return mce.toErrorResult();
+      }
+    } else {
       throw (Throwable) re;
     }
   }

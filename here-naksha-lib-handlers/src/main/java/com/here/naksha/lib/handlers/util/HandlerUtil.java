@@ -20,8 +20,6 @@ package com.here.naksha.lib.handlers.util;
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
-import com.here.naksha.lib.core.models.storage.ContextXyzFeatureResult;
-
 import java.util.ArrayList;
 import java.util.List;
 import naksha.base.JvmProxyUtil;
@@ -33,8 +31,6 @@ import naksha.model.mom.MomDeltaNs;
 import naksha.model.mom.MomReviewState;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
-import naksha.model.request.ExecutedOp;
-import naksha.model.request.ResultTuple;
 import naksha.model.request.Write;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -45,22 +41,22 @@ public final class HandlerUtil {
 
   private HandlerUtil() {}
 
-  public static @NotNull ContextXyzFeatureResult createContextResultFromFeatureList(
-      final @NotNull List<NakshaFeature> features,
-      final @Nullable List<NakshaFeature> context,
-      final @Nullable List<NakshaFeature> violations) {
-    // Create list of ResultRow with input features
-    final List<ResultTuple> resultTuples = new ArrayList<>();
-    for (final NakshaFeature feature : features) {
-      // TODO switch to Tuple, wait for change in v3 enabling Tuple creation without storage
-      resultTuples.add(new ResultTuple(ExecutedOp.UPDATED, null, feature));
-    }
-    // Create ContextResult with cursor, context and violations
-    final ContextXyzFeatureResult ctxResult = new ContextXyzFeatureResult(resultTuples);
-    ctxResult.setContext(context);
-    ctxResult.setViolations(violations);
-    return ctxResult;
-  }
+  //  public static @NotNull ContextXyzFeatureResult createContextResultFromFeatureList(
+  //      final @NotNull List<NakshaFeature> features,
+  //      final @Nullable List<NakshaFeature> context,
+  //      final @Nullable List<NakshaFeature> violations) {
+  //    // Create list of ResultRow with input features
+  //    final List<ResultTuple> resultTuples = new ArrayList<>();
+  //    for (final NakshaFeature feature : features) {
+  //      // TODO switch to Tuple, wait for change in v3 enabling Tuple creation without storage
+  //      resultTuples.add(new ResultTuple(ExecutedOp.UPDATED, null, feature));
+  //    }
+  //    // Create ContextResult with cursor, context and violations
+  //    final ContextXyzFeatureResult ctxResult = new ContextXyzFeatureResult(resultTuples);
+  //    ctxResult.setContext(context);
+  //    ctxResult.setViolations(violations);
+  //    return ctxResult;
+  //  }
 
   /**
    * @param collectionIds If the number of collection IDs is smaller than the number of features, the last collection ID
