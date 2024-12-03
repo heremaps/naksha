@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Named.named;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -12,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import naksha.base.JvmProxyUtil;
 import naksha.model.*;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
@@ -109,14 +111,16 @@ class DefaultStorageHandlerTest {
   @ParameterizedTest
   @MethodSource("collectionPriorityTestCases")
   void shouldCreateMissingCollectionRespectingPriority(CollectionPriorityTestCase testCase) {
-    // Given: Storage writer failing on WriteXyzFeatures due to undefined table but is able to create new collection
-    when(storageWriteSession.execute(any(WriteXyzFeatures.class)))
-        .thenThrow(new RuntimeException(new SQLException("Some message", EPsqlState.UNDEFINED_TABLE.toString())));
-    when(storageWriteSession.execute(any(WriteXyzCollections.class))).thenReturn(new SuccessResult());
+    // Given: Storage writer failing on WriteRequest for features due to undefined table but is able to create new collection
+    when(storageWriteSession.execute(argThat(request -> (request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteFeatures(wr)))))
+            .thenThrow(new RuntimeException(new SQLException("Some message", "42P01"))); //EPsqlState.UNDEFINED_TABLE
+    when(storageWriteSession.execute(argThat(request -> (request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteCollections(wr)))))
+            .thenReturn(new SuccessResponse());
 
     // And: feature to be saved in potentially different collection
-    XyzFeature featureToCreate = new XyzFeature("sample_feature");
-    WriteXyzFeatures writeXyzFeatures = new WriteXyzFeatures("different_collection").create(featureToCreate);
+    NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
+    WriteRequest writeXyzFeatures = new WriteRequest()
+            .add(new Write().createFeature(null, "different_collection", featureToCreate));
 
     // And: Handler with autoCreateCollection enabled to test
     DefaultStorageHandler handler = storageHandler(testCase.handlerProperties, testCase.space);
@@ -129,14 +133,14 @@ class DefaultStorageHandlerTest {
     );
 
     // Then: Write Collection request was passed to storage writer
-    ArgumentCaptor<WriteXyzCollections> storageWriterRequestCaptor = ArgumentCaptor.forClass(WriteXyzCollections.class);
+    ArgumentCaptor<WriteRequest> storageWriterRequestCaptor = ArgumentCaptor.forClass(WriteRequest.class);
     verify(storageWriteSession).execute(storageWriterRequestCaptor.capture());
 
     // And: passed Write Collection request was about creating single collection with correct id
-    WriteXyzCollections requestPassedToStorageWriter = storageWriterRequestCaptor.getValue();
-    assertEquals(1, requestPassedToStorageWriter.features.size());
-    assertEquals(EWriteOp.CREATE.toString(), requestPassedToStorageWriter.features.get(0).getOp());
-    assertEquals(testCase.correctCollection(), requestPassedToStorageWriter.features.get(0).getFeature());
+    WriteRequest requestPassedToStorageWriter = storageWriterRequestCaptor.getValue();
+    assertEquals(1, requestPassedToStorageWriter.getWrites().size());
+    assertEquals(WriteOp.CREATE, requestPassedToStorageWriter.getWrites().get(0).getOp());
+    assertEquals(testCase.correctCollection(), requestPassedToStorageWriter.getWrites().get(0).getFeature());
   }
 
   @ParameterizedTest
@@ -231,8 +235,8 @@ class DefaultStorageHandlerTest {
 
   private static Stream<SQLException> sqlErrorsIndicatingMissingCollection() {
     return Stream.of(
-        new SQLException("Collection does not exist", EPsqlState.COLLECTION_DOES_NOT_EXIST.toString()),
-        new SQLException("Undefined table", EPsqlState.UNDEFINED_TABLE.toString())
+            new SQLException("Collection does not exist", "N0002"), //EPsqlState.COLLECTION_DOES_NOT_EXIST
+            new SQLException("Undefined table", "42P01") //EPsqlState.UNDEFINED_TABLE
     );
   }
 

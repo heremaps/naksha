@@ -107,7 +107,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       return forwardReadFeatures(ctx, storageImpl, collection, rf, currentAttempt);
     } else if (request instanceof WriteRequest wr) {
       try {
-        if (isOnlyWriteCollectionRequest(wr)) {
+        if (RequestTypesUtil.isOnlyWriteCollections(wr)) {
           return forwardWriteCollections(ctx, storageImpl, collection, wr, currentAttempt);
         } else {
           return forwardWriteFeatures(ctx, storageImpl, collection, wr, currentAttempt);
@@ -359,7 +359,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       ids.add(customCollectionId);
       rf.setFeatureIds(ids);
     } else if (request instanceof WriteRequest wr) {
-      if (isOnlyWriteCollectionRequest(wr)) {
+      if (RequestTypesUtil.isOnlyWriteCollections(wr)) {
         collectionsFrom(wr).forEach(collection -> collection.setId(customCollectionId));
       } else {
         wr.getWrites().forEach(write -> write.setCollectionId(customCollectionId));

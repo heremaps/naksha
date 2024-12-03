@@ -18,8 +18,10 @@
  */
 package com.here.naksha.storage.http;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static java.net.http.HttpRequest.newBuilder;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -30,10 +32,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static java.net.http.HttpRequest.newBuilder;
 
 public class RequestSender {
 

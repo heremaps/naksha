@@ -161,7 +161,9 @@ class IntHandlerForSpacesTest {
     IStorage spaceStorage = mock(IStorage.class);
     when(naksha.getSpaceStorage()).thenReturn(spaceStorage);
     IReadSession readSession = mock(IReadSession.class);
-    when(readSession.execute(argThat(anyReadHandlersRequest()))).thenReturn(new TestSuccessResult(eventHandlerIds));
+    when(readSession.execute(argThat(anyReadHandlersRequest()))).thenReturn(new TestSuccessResult(
+//            eventHandlerIds
+    ));
     when(spaceStorage.newReadSession(any(SessionOptions.class))).thenReturn(readSession);
   }
 
@@ -171,16 +173,16 @@ class IntHandlerForSpacesTest {
 
   static class TestSuccessResult extends SuccessResponse {
 
-    TestSuccessResult(List<String> ids) {
-      //TODO need ability to create ResultTuple from NakshaFeature merged into v3
-      List<ResultTuple> featureCodecs = ids.stream()
-              .map(id -> new ResultTuple()
-              .withOp(READ)
-              .withId(id)
-              .withFeature(new XyzFeature(id))
-          )
-          .toList();
-      this.cursor = new HeapCacheCursor<>(codecFactory, featureCodecs, null);
-    }
+//    TestSuccessResult(List<String> ids) {
+//      //TODO need ability to create ResultTuple from NakshaFeature merged into v3
+//      List<ResultTuple> featureCodecs = ids.stream()
+//              .map(id -> new ResultTuple()
+//              .withOp(READ)
+//              .withId(id)
+//              .withFeature(new XyzFeature(id))
+//          )
+//          .toList();
+//      this.cursor = new HeapCacheCursor<>(codecFactory, featureCodecs, null);
+//    }
   }
 }

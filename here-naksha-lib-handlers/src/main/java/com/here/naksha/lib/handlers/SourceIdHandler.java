@@ -21,7 +21,6 @@ package com.here.naksha.lib.handlers;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
-import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.*;
@@ -90,8 +89,9 @@ public class SourceIdHandler extends AbstractEventHandler {
 
     IPropertyQuery propertyOp = readRequest.getQuery().getProperties();
 
-    PropertyOperationUtil.transformPropertyInPropertyOperationTree(
-            propertyOp, SourceIdHandler::mapIntoTagOperation);
+    // TODO fix it CASL-710
+    //    PropertyOperationUtil.transformPropertyInPropertyOperationTree(
+    //            propertyOp, SourceIdHandler::mapIntoTagOperation);
   }
 
   private void setSourceIdTags(NakshaFeature feature) {

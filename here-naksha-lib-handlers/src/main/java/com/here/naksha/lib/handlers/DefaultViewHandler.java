@@ -25,6 +25,7 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.handlers.DefaultViewHandlerProperties.ViewType;
+import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import com.here.naksha.lib.view.*;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
@@ -61,7 +62,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
     final Request request = event.getRequest();
-    if (request instanceof WriteRequest wr && isOnlyWriteCollectionRequest(wr)) {
+    if (request instanceof WriteRequest wr && RequestTypesUtil.isOnlyWriteCollections(wr)) {
       return SUCCEED_WITHOUT_PROCESSING;
     } else if (request instanceof ReadFeatures || request instanceof WriteRequest) {
       return PROCESS;

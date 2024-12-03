@@ -29,7 +29,6 @@ import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
-
 import java.util.Objects;
 import naksha.base.JvmProxyUtil;
 import naksha.model.NakshaError;

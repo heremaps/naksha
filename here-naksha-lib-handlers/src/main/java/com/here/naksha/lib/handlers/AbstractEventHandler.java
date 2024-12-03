@@ -21,7 +21,6 @@ package com.here.naksha.lib.handlers;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.StreamInfo;
@@ -80,12 +79,5 @@ public abstract class AbstractEventHandler implements IEventHandler {
     SEND_UPSTREAM_WITHOUT_PROCESSING,
     SUCCEED_WITHOUT_PROCESSING,
     NOT_IMPLEMENTED
-  }
-
-  /**
-   * Check if request only contains {@link Write} on {@link naksha.model.objects.NakshaCollection}
-   */
-  boolean isOnlyWriteCollectionRequest(WriteRequest wr) {
-    return wr.getWrites().stream().map(Write::getCollectionId).allMatch(Naksha.VIRT_COLLECTIONS::equals);
   }
 }
