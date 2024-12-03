@@ -2,6 +2,7 @@ package naksha.psql.executors.write
 
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.quoteIdent
+import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
 import naksha.psql.PgColumn
@@ -13,12 +14,12 @@ class BulkWriteExecutor(
     val session: PgSession,
 ) : WriteExecutor {
 
-    private var deleteFromDel: MutableMap<PgCollection, MutableSet<String>> = mutableMapOf()
-    private var deleteFromHead: MutableMap<PgCollection, MutableSet<String>> = mutableMapOf()
-    private var insertToHead: MutableMap<PgCollection, PgPlan> = mutableMapOf()
-    private var updateHead: MutableMap<PgCollection, PgPlan> = mutableMapOf()
-    private var copyHeadToHst: MutableMap<PgCollection, PgPlan> = mutableMapOf()
-    private var copyHeadToDel: MutableMap<PgCollection, PgPlan> = mutableMapOf()
+    private val deleteFromDel: MutableMap<PgCollection, MutableSet<String>> = mutableMapOf()
+    private val deleteFromHead: MutableMap<PgCollection, MutableSet<String>> = mutableMapOf()
+    private val insertToHead: MutableMap<PgCollection, PgPlan> = mutableMapOf()
+    private val updateHead: MutableMap<PgCollection, PgPlan> = mutableMapOf()
+    private val copyHeadToHst: MutableMap<PgCollection, PgPlan> = mutableMapOf()
+    private val copyHeadToDel: MutableMap<PgCollection, PgPlan> = mutableMapOf()
 
     override fun removeFeatureFromDel(collection: PgCollection, featureId: String) {
         collection.deleted ?: return
@@ -151,25 +152,24 @@ class BulkWriteExecutor(
     }
 
     override fun finish() {
-        deleteFromDel.forEach {
-            executeDelete(it.key.deleted!!.quotedName, it.value)
+        deleteFromDel.forEach { (collection, idsToDelete) ->
+            executeDelete(collection.deleted!!.quotedName, idsToDelete)
         }
-        copyHeadToDel.forEach {
-            it.value.use { stmt -> stmt.executeBatch() }
+        copyHeadToDel.forEach { (_, copyPlan) ->
+            copyPlan.use { stmt -> stmt.executeBatch() }
         }
-        copyHeadToHst.forEach {
-            it.value.use { stmt -> stmt.executeBatch() }
+        copyHeadToHst.forEach { (_, copyPlan) ->
+            copyPlan.use { stmt -> stmt.executeBatch() }
         }
-        updateHead.forEach {
-            it.value.use { stmt -> stmt.executeBatch() }
+        updateHead.forEach { (_, updatePlan) ->
+            updatePlan.use { stmt -> stmt.executeBatch() }
         }
-        deleteFromHead.forEach {
-            executeDelete(it.key.head.quotedName, it.value)
+        deleteFromHead.forEach { (collection, idsToDelete) ->
+            executeDelete(collection.head.quotedName, idsToDelete)
         }
-        insertToHead.forEach {
-            it.value.use { stmt -> stmt.executeBatch() }
+        insertToHead.forEach { (_, insertPlan) ->
+            insertPlan.use { stmt -> stmt.executeBatch() }
         }
-
     }
 
     private fun createCopyPlan(headTableName: String, dstTableName: String): PgPlan {
