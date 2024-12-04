@@ -7,4 +7,9 @@ package naksha.model
  * @property error the error that happened.
  * @since 3.0.0
  */
-expect class NakshaException
+expect class NakshaException : RuntimeException {
+    val error: NakshaError
+
+    constructor(error: NakshaError)
+    constructor(code: String, msg: String, id: String? = null, cause: Throwable? = null)
+}

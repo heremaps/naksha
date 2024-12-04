@@ -6,7 +6,7 @@ package naksha.model
  * @since 3.0.0
  */
 @JsExport
-actual open class NakshaException ( val error: NakshaError) : RuntimeException(error.msg, error.cause) {
+actual open class NakshaException  actual constructor(actual val error: NakshaError) : RuntimeException(error.msg, error.cause) {
     /**
      * Create an exception with error details individually specified.
      * @param code the error code.
@@ -16,5 +16,5 @@ actual open class NakshaException ( val error: NakshaError) : RuntimeException(e
      * @since 3.0.0
      */
     @JsName("of")
-    constructor(code: String, msg: String, id: String? = null, cause: Throwable? = null) : this(NakshaError(code, msg, id, cause))
+    actual constructor(code: String, msg: String, id: String?, cause: Throwable?) : this(NakshaError(code, msg, id, cause))
 }
