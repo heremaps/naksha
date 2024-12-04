@@ -270,12 +270,12 @@ class PgWriter(
                 }
                 tupleNumbers[write.i] = tupleNumber
             }
+            writeExecutor.finish()
         }
         catch (e: NakshaException) {
             return ErrorResponse(e)
         }
 
-        writeExecutor.finish()
         // If everything was done perfectly, fine.
         val tupleNumberByteArray = TupleNumberByteArray(storage, tupleNumbers.toByteArray())
         return SuccessResponse(
