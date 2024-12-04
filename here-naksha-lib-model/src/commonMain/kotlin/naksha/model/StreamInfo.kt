@@ -28,8 +28,19 @@ open class StreamInfo {
         return arrayOf(spaceId, storageId).contentHashCode()
     }
 
+    private var timeInStorageMs = 0L
+
+    fun increaseTimeInStorage(diffMs: Long) {
+        timeInStorageMs += diffMs
+    }
+
+    fun getTimeInStorageMs(): Long {
+        return timeInStorageMs
+    }
+
     fun toColonSeparatedString(): String {
-        return ("spaceId=" + (if ((spaceId == null || spaceId!!.isEmpty())) "-" else spaceId) + ";storageId="
-                + (if ((storageId == null || storageId!!.isEmpty())) "-" else storageId))
+        return ("spaceId=" + (if (spaceId == null || spaceId!!.isEmpty()) "-" else spaceId) + ";storageId="
+                + (if (storageId == null || storageId!!.isEmpty()) "-" else storageId)
+                + "timeInStorage=" + timeInStorageMs + "ms")
     }
 }
