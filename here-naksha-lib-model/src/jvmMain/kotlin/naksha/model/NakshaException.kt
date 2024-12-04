@@ -1,7 +1,7 @@
 package naksha.model
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
-actual class NakshaException(@JvmField val error: NakshaError) : RuntimeException(error.msg, error.cause) {
+actual open class NakshaException(@JvmField val error: NakshaError) : RuntimeException(error.msg, error.cause) {
     /**
      * Create an exception with error details individually specified.
      * @param code the error code.
