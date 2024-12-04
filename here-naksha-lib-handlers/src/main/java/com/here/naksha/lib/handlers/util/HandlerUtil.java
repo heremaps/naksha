@@ -20,6 +20,8 @@ package com.here.naksha.lib.handlers.util;
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
+import java.util.ArrayList;
+import java.util.List;
 import naksha.base.JvmProxyUtil;
 import naksha.model.NakshaError;
 import naksha.model.TagList;
@@ -32,9 +34,6 @@ import naksha.model.objects.NakshaProperties;
 import naksha.model.request.Write;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public final class HandlerUtil {
 

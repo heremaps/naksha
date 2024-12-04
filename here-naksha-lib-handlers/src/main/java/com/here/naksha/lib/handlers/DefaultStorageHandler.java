@@ -18,6 +18,12 @@
  */
 package com.here.naksha.lib.handlers;
 
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.createWriteCollectionsRequest;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.*;
+
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.lambdas.F1;
@@ -27,6 +33,9 @@ import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import naksha.base.JvmProxyUtil;
 import naksha.base.StringList;
 import naksha.model.*;
@@ -35,16 +44,6 @@ import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.createWriteCollectionsRequest;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.*;
 
 public class DefaultStorageHandler extends AbstractEventHandler {
 
@@ -133,7 +132,12 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     if (response instanceof ErrorResponse er) {
       try {
         return reattemptFeatureRequest(
-            ctx, storageImpl, collection, rf, currentAttempt, new NakshaException(er.getError()));
+            ctx,
+            storageImpl,
+            collection,
+            rf,
+            currentAttempt,
+            new RuntimeException(er.getError().getMsg()));
       } catch (Throwable e) {
         return new ErrorResponse(
             NakshaError.EXCEPTION, "Error even after retrying reading features: ", null, e);
@@ -147,8 +151,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull IStorage storageImpl,
       final @NotNull NakshaCollection collection,
       final @NotNull WriteRequest wf,
-      final OperationAttempt operationAttempt)
-      throws Throwable {
+      final OperationAttempt operationAttempt) {
     logger.info("Processing WriteFeatures against {}", collection.getId());
     return forwardWriteRequest(ctx, storageImpl, wf, re -> {
       try {
@@ -165,8 +168,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull IStorage storageImpl,
       final @NotNull NakshaCollection collection,
       final @NotNull WriteRequest wc,
-      final OperationAttempt operationAttempt)
-      throws Throwable {
+      final OperationAttempt operationAttempt) {
     logger.info("Processing WriteCollections against {}", collection.getId());
     if (isUpdateCollectionRequest(wc)) {
       if (properties.getAutoCreateCollection()) {
@@ -221,18 +223,14 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull NakshaContext ctx,
       @NotNull IStorage storageImpl,
       @NotNull WriteRequest wr,
-      @NotNull F1<Response, NakshaException> reattempt)
-      throws Throwable {
+      @NotNull F1<Response, RuntimeException> reattempt) {
     final IWriteSession writer = storageImpl.newWriteSession(SessionOptions.from(ctx, true));
     final Response result = writer.execute(wr);
     if (result instanceof SuccessResponse) {
       writer.commit();
     } else {
-      reattempt.call(new NakshaException(
-          NakshaError.EXCEPTION,
-          "Failed executing " + wr.getClass() + ", expected success but got: " + result,
-          null,
-          null));
+      reattempt.call(new RuntimeException(
+          "Failed executing " + wr.getClass() + ", expected success but got: " + result));
       logger.warn("Failed executing {}, expected success but got: {}", wr.getClass(), result);
       writer.rollback();
     }
@@ -245,13 +243,12 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull NakshaCollection collection,
       final @NotNull Request request,
       final @NotNull OperationAttempt previousAttempt,
-      final @NotNull NakshaException re)
-      throws Throwable {
+      final @NotNull RuntimeException re) {
     return switch (previousAttempt) {
       case FIRST_ATTEMPT -> reattemptFeatureRequestForTheFirstTime(ctx, storageImpl, collection, request, re);
       case ATTEMPT_AFTER_STORAGE_INITIALIZATION -> reattemptAfterStorageInitialization(
           ctx, storageImpl, collection, request, re);
-      case ATTEMPT_AFTER_COLLECTION_CREATION -> throw (Throwable) re;
+      case ATTEMPT_AFTER_COLLECTION_CREATION -> throw re;
     };
   }
 
@@ -261,18 +258,15 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       NakshaCollection collection,
       WriteRequest wc,
       OperationAttempt previousAttempt,
-      NakshaException re)
-      throws Throwable {
-    if (previousAttempt == FIRST_ATTEMPT
-        && NakshaError.UNINITIALIZED.equals(re.error.getCode())
-        && re.error.getMsg().toLowerCase().contains("storage")) {
+      RuntimeException re) {
+    if (previousAttempt == FIRST_ATTEMPT && re.getMessage().toLowerCase().contains("storage")) {
       return retryDueToUninitializedStorage(ctx, storageImpl, collection, wc);
     }
     logger.warn(
         "No further reattempt strategy available for WriteCollections request (collectionId: {}, previous attempt: {}. Rethrowing original exception",
         collection.getId(),
         previousAttempt);
-    throw (Throwable) re;
+    throw re;
   }
 
   private @NotNull Response reattemptFeatureRequestForTheFirstTime(
@@ -280,10 +274,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull IStorage storageImpl,
       final @NotNull NakshaCollection collection,
       final @NotNull Request request,
-      final @NotNull NakshaException re)
-      throws Throwable {
-    if (NakshaError.UNINITIALIZED.equals(re.error.getCode())
-        && re.error.getMsg().toLowerCase().contains("storage")) {
+      final @NotNull RuntimeException re) {
+    if (re.getMessage().toLowerCase().contains("storage")) {
       return retryDueToUninitializedStorage(ctx, storageImpl, collection, request);
     } else if (indicatesMissingCollection(re)) {
       try {
@@ -293,12 +285,13 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         return mce.toErrorResult();
       }
     } else {
-      throw (Throwable) re;
+            throw re;
     }
   }
 
-  private boolean indicatesMissingCollection(NakshaException re) {
-    return NakshaError.COLLECTION_NOT_FOUND.equals(re.error.getCode());
+  private boolean indicatesMissingCollection(RuntimeException re) {
+    //    return NakshaError.COLLECTION_NOT_FOUND.equals(re.error.getCode());
+    return re.getMessage().toLowerCase().contains("collection");
   }
 
   private @NotNull Response reattemptAfterStorageInitialization(
@@ -306,8 +299,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull IStorage storageImpl,
       final @NotNull NakshaCollection collection,
       final @NotNull Request request,
-      final @NotNull NakshaException re)
-      throws Throwable {
+      final @NotNull RuntimeException re)
+  {
     if (indicatesMissingCollection(re)) {
       try {
         return retryDueToMissingCollection(ctx, storageImpl, collection, request);
@@ -316,7 +309,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         return mce.toErrorResult();
       }
     } else {
-      throw (Throwable) re;
+      throw re;
     }
   }
 
@@ -337,7 +330,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull IStorage storageImpl,
       final @NotNull NakshaCollection collection,
       final @NotNull Request request)
-      throws Throwable {
+  {
     logger.warn("Collection not found for {}", collection.getId());
     if (properties.getAutoCreateCollection()) {
       logger.info(

@@ -18,21 +18,20 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
+import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readIdsFromResult;
+import static naksha.model.NakshaContext.currentContext;
+
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
+import java.util.List;
 import naksha.model.IReadSession;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.List;
-
-import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readIdsFromResult;
-import static naksha.model.NakshaContext.currentContext;
 
 public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
 

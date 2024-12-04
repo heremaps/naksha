@@ -178,7 +178,7 @@ class DefaultStorageHandlerTest {
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
     WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeature(null, "different_collection", featureToCreate));
 
-    // And: Handler with autoCreateCollection enabled to test
+    // And: Handler with autoCreateCollection disabled to test
     DefaultStorageHandler handler = storageHandler();
     handler.properties.setAutoCreateCollection(false);
 
