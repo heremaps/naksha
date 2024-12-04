@@ -20,8 +20,6 @@ package com.here.naksha.lib.handlers.util;
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
-import java.util.ArrayList;
-import java.util.List;
 import naksha.base.JvmProxyUtil;
 import naksha.model.NakshaError;
 import naksha.model.TagList;
@@ -34,6 +32,9 @@ import naksha.model.objects.NakshaProperties;
 import naksha.model.request.Write;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class HandlerUtil {
 
@@ -64,7 +65,7 @@ public final class HandlerUtil {
    *                      is sufficient if every feature should be written in this same 1 collection.
    */
   public static @NotNull ContextWriteXyzFeatures createContextWriteRequestFromFeatureList(
-          final @NotNull List<String> collectionIds,
+      final @NotNull List<String> collectionIds,
       final @NotNull List<?> features,
       final @Nullable List<?> context,
       final @Nullable List<?> violations) {
@@ -74,9 +75,9 @@ public final class HandlerUtil {
     // Add features in the request
     for (int i = 0; i < features.size(); i++) {
       final NakshaFeature feature =
-              checkInstanceOf(features.get(i), NakshaFeature.class, "Unsupported feature type");
+          checkInstanceOf(features.get(i), NakshaFeature.class, "Unsupported feature type");
       final Write write = new Write()
-              .updateFeature(null, collectionIds.get(Math.min(i, collectionIds.size())), feature, false);
+          .updateFeature(null, collectionIds.get(Math.min(i, collectionIds.size())), feature, false);
       cwf.add(write);
     }
     // add context to write request
@@ -87,7 +88,7 @@ public final class HandlerUtil {
   }
 
   public static @NotNull ContextWriteXyzFeatures createContextWriteRequestFromWriteList(
-          final @NotNull List<?> writes, final @Nullable List<?> context, final @Nullable List<?> violations) {
+      final @NotNull List<?> writes, final @Nullable List<?> context, final @Nullable List<?> violations) {
     // generate new ContextWriteFeatures request
     final ContextWriteXyzFeatures cwf = new ContextWriteXyzFeatures();
 
@@ -97,7 +98,7 @@ public final class HandlerUtil {
     for (final Object inputWrite : writes) {
       final Write xyzCodec = checkInstanceOf(inputWrite, Write.class, "Unsupported DB write operation type");
       final NakshaFeature feature =
-              HandlerUtil.checkInstanceOf(xyzCodec.getFeature(), NakshaFeature.class, "Unsupported feature type");
+          HandlerUtil.checkInstanceOf(xyzCodec.getFeature(), NakshaFeature.class, "Unsupported feature type");
       final Write write = new Write();
       write.setCollectionId(xyzCodec.getCollectionId());
       write.setFeature(feature);
@@ -128,7 +129,7 @@ public final class HandlerUtil {
     if (violations != null) {
       for (final Object obj : violations) {
         final NakshaFeature violation = checkInstanceOf(
-                obj, NakshaFeature.class, NakshaError.EXCEPTION, "Unsupported violation feature type");
+            obj, NakshaFeature.class, NakshaError.EXCEPTION, "Unsupported violation feature type");
         if (outputViolations == null) outputViolations = new ArrayList<>();
         // Add violation to output list
         outputViolations.add(violation);
@@ -142,7 +143,7 @@ public final class HandlerUtil {
     if (contextList != null) {
       for (final Object obj : contextList) {
         final NakshaFeature context = checkInstanceOf(
-                obj, NakshaFeature.class, NakshaError.EXCEPTION, "Unsupported context feature type");
+            obj, NakshaFeature.class, NakshaError.EXCEPTION, "Unsupported context feature type");
         if (outputCtx == null) outputCtx = new ArrayList<>();
         // Add context to output list
         outputCtx.add(context);
@@ -176,7 +177,7 @@ public final class HandlerUtil {
       return returnType.cast(input);
     }
     throw new XyzErrorException(new NakshaError(
-            NakshaErrorCode, errDescPrefix + " - " + input.getClass().getSimpleName()));
+        NakshaErrorCode, errDescPrefix + " - " + input.getClass().getSimpleName()));
   }
 
   public static <T> @NotNull T checkInstanceOf(
@@ -185,7 +186,7 @@ public final class HandlerUtil {
   }
 
   public static void setDeltaReviewState(
-          final @NotNull NakshaFeature feature, final @NotNull MomReviewState reviewState) {
+      final @NotNull NakshaFeature feature, final @NotNull MomReviewState reviewState) {
     final NakshaProperties properties = feature.getProperties();
     final XyzNs xyzNs = properties.getXyz();
     final MomDeltaNs deltaNs = properties.getDelta();

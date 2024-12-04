@@ -1,30 +1,14 @@
 package com.here.naksha.lib.handlers;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Named.named;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.handlers.util.RequestTypesUtil;
-import naksha.base.JvmProxyUtil;
-import naksha.model.*;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerTest.CollectionPriorityTestCase.ValidCollectionSource;
-import java.sql.SQLException;
-import java.util.concurrent.Callable;
-import java.util.stream.Stream;
-
+import com.here.naksha.lib.handlers.util.RequestTypesUtil;
+import naksha.base.JvmProxyUtil;
+import naksha.model.*;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
@@ -39,6 +23,16 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.sql.SQLException;
+import java.util.concurrent.Callable;
+import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Named.named;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.*;
 
 class DefaultStorageHandlerTest {
 
@@ -140,7 +134,7 @@ class DefaultStorageHandlerTest {
     WriteRequest requestPassedToStorageWriter = storageWriterRequestCaptor.getValue();
     assertEquals(1, requestPassedToStorageWriter.getWrites().size());
     assertEquals(WriteOp.CREATE, requestPassedToStorageWriter.getWrites().get(0).getOp());
-    assertEquals(testCase.correctCollection(), requestPassedToStorageWriter.getWrites().get(0).getFeature());
+    assertEquals(testCase.correctCollection().getId(), requestPassedToStorageWriter.getWrites().get(0).getCollectionId());
   }
 
   @ParameterizedTest
@@ -171,7 +165,7 @@ class DefaultStorageHandlerTest {
     WriteRequest requestPassedToStorageWriter = storageWriterRequestCaptor.getValue();
     assertEquals(1, requestPassedToStorageWriter.getWrites().size());
     assertEquals(WriteOp.CREATE, requestPassedToStorageWriter.getWrites().get(0).getOp());
-    assertEquals(handler.properties.getCollection(), requestPassedToStorageWriter.getWrites().get(0).getFeature());
+    assertEquals(handler.properties.getCollection().getId(), requestPassedToStorageWriter.getWrites().get(0).getCollectionId());
   }
 
   @ParameterizedTest
@@ -309,8 +303,10 @@ class DefaultStorageHandlerTest {
   private static DefaultStorageHandlerProperties handlerPropertiesWithCollection(String collectionId) {
     DefaultStorageHandlerProperties properties = handlerProperties();
     NakshaCollection collection = collectionId != null ? new NakshaCollection() : null;
-    collection.setId(collectionId);
-    properties.setCollection(collection);
+      if (collection != null) {
+          collection.setId(collectionId);
+      }
+      properties.setCollection(collection);
     return properties;
   }
 

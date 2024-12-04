@@ -54,10 +54,9 @@ public class MockValidationHandler extends AbstractEventHandler {
   protected @NotNull NakshaProperties properties;
 
   private static final String MOCK_VIOLATIONS_FILE = "mock_data/dry_run_violations.json";
-    private static final TypeReference<List<NakshaFeature>> LIST_FEATURE_TYPE_REF = new TypeReference<>() {
-    };
+  private static final TypeReference<List<NakshaFeature>> LIST_FEATURE_TYPE_REF = new TypeReference<>() {};
   private static final List<NakshaFeature> mockViolations =
-          parseJsonFile(MOCK_VIOLATIONS_FILE, LIST_FEATURE_TYPE_REF);
+      parseJsonFile(MOCK_VIOLATIONS_FILE, LIST_FEATURE_TYPE_REF);
   private static final int totalViolations = mockViolations.size();
 
   public MockValidationHandler(
@@ -98,12 +97,12 @@ public class MockValidationHandler extends AbstractEventHandler {
 
     // create and forward request for next handler in the pipeline
     final ContextWriteFeatures upstreamRequest =
-            HandlerUtil.createContextWriteRequestFromWriteList(cwf.getWrites(), cwf.getContext(), violations);
+        HandlerUtil.createContextWriteRequestFromWriteList(cwf.getWrites(), cwf.getContext(), violations);
     return event.sendUpstream(upstreamRequest);
   }
 
   protected @Nullable List<NakshaFeature> validateFeatures(
-          final @NotNull ContextWriteFeatures cwf, final @Nullable List<?> context) {
+      final @NotNull ContextWriteFeatures cwf, final @Nullable List<?> context) {
     // For random features from the input list, create 0-to-N random violations
     final List<NakshaFeature> violations;
 
@@ -133,10 +132,10 @@ public class MockValidationHandler extends AbstractEventHandler {
       int violationsCount = Math.min(featureCnt, totalViolations);
       final Object momType = feature.get("momType");
       violations.addAll(getNViolationsWithFeatureReference(
-              violationsCount,
-              feature,
-              cwf.getWrites().get(featureCnt - 1).getCollectionId(),
-              (momType == null) ? "" : momType.toString()));
+          violationsCount,
+          feature,
+          cwf.getWrites().get(featureCnt - 1).getCollectionId(),
+          (momType == null) ? "" : momType.toString()));
     }
     return violations;
   }

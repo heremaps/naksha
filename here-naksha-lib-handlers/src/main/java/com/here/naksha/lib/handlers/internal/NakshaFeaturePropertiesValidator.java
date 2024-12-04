@@ -36,7 +36,7 @@ class NakshaFeaturePropertiesValidator {
       return titleValidation;
     }
     Response descValidation =
-            requiredPropertyValidationError(feature.getDescription(), NakshaFeature.DESCRIPTION_KEY);
+        requiredPropertyValidationError(feature.getDescription(), NakshaFeature.DESCRIPTION_KEY);
     if (descValidation instanceof ErrorResponse) {
       return descValidation;
     }
@@ -52,6 +52,6 @@ class NakshaFeaturePropertiesValidator {
 
   private static ErrorResponse missingParameterError(String propertyName) {
     return new ErrorResponse(
-            NakshaError.ILLEGAL_ARGUMENT, "Mandatory parameter '" + propertyName + "' missing!", null, null);
+        NakshaError.ILLEGAL_ARGUMENT, "Mandatory parameter '" + propertyName + "' missing!", null, null);
   }
 }

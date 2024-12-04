@@ -259,11 +259,11 @@ public class ViewReadSession implements IReadSession {
 
   @Override
   public void fetchTuples(
-          @NotNull List<? extends ResultTuple> resultTuples,
-          int from,
-          int to,
-          boolean fetchFromHistory,
-          int mode) { // TODO
+      @NotNull List<? extends ResultTuple> resultTuples,
+      int from,
+      int to,
+      boolean fetchFromHistory,
+      int mode) { // TODO
   }
 
   @Override

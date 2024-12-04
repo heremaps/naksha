@@ -24,7 +24,10 @@ import com.here.naksha.lib.core.INaksha;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.StreamInfo;
-import naksha.model.request.*;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -60,11 +63,11 @@ public abstract class AbstractEventHandler implements IEventHandler {
 
   protected @NotNull Response notImplemented(@NotNull Request processedRequest) {
     return new ErrorResponse(
-            NakshaError.NOT_IMPLEMENTED,
+        NakshaError.NOT_IMPLEMENTED,
         "Event processing of " + processedRequest.getClass().getSimpleName() + " in "
-                + this.getClass().getSimpleName() + " is not supported",
-            null,
-            null);
+            + this.getClass().getSimpleName() + " is not supported",
+        null,
+        null);
   }
 
   protected void addStorageIdToStreamInfo(final @Nullable String storageId, final @NotNull NakshaContext context) {

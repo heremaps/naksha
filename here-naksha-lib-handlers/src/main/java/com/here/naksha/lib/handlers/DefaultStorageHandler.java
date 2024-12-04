@@ -18,12 +18,6 @@
  */
 package com.here.naksha.lib.handlers;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.createWriteCollectionsRequest;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.*;
-
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.lambdas.F1;
@@ -33,9 +27,6 @@ import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 import naksha.base.JvmProxyUtil;
 import naksha.base.StringList;
 import naksha.model.*;
@@ -44,6 +35,16 @@ import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static com.here.naksha.lib.core.util.storage.RequestHelper.createWriteCollectionsRequest;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.*;
 
 public class DefaultStorageHandler extends AbstractEventHandler {
 
@@ -61,7 +62,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
     this.properties = Objects.requireNonNull(
-            JvmProxyUtil.box(eventHandler.getProperties(), DefaultStorageHandlerProperties.class));
+        JvmProxyUtil.box(eventHandler.getProperties(), DefaultStorageHandlerProperties.class));
   }
 
   @Override
@@ -132,10 +133,10 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     if (response instanceof ErrorResponse er) {
       try {
         return reattemptFeatureRequest(
-                ctx, storageImpl, collection, rf, currentAttempt, new NakshaException(er.getError()));
+            ctx, storageImpl, collection, rf, currentAttempt, new NakshaException(er.getError()));
       } catch (Throwable e) {
         return new ErrorResponse(
-                NakshaError.EXCEPTION, "Error even after retrying reading features: ", null, e);
+            NakshaError.EXCEPTION, "Error even after retrying reading features: ", null, e);
       }
     }
     return response;
@@ -147,14 +148,14 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull NakshaCollection collection,
       final @NotNull WriteRequest wf,
       final OperationAttempt operationAttempt)
-          throws Throwable {
+      throws Throwable {
     logger.info("Processing WriteFeatures against {}", collection.getId());
     return forwardWriteRequest(ctx, storageImpl, wf, re -> {
       try {
         return reattemptFeatureRequest(ctx, storageImpl, collection, wf, operationAttempt, re);
       } catch (Throwable e) {
         return new ErrorResponse(
-                NakshaError.EXCEPTION, "Error even after retrying writing features: ", null, e);
+            NakshaError.EXCEPTION, "Error even after retrying writing features: ", null, e);
       }
     });
   }
@@ -165,7 +166,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull NakshaCollection collection,
       final @NotNull WriteRequest wc,
       final OperationAttempt operationAttempt)
-          throws Throwable {
+      throws Throwable {
     logger.info("Processing WriteCollections against {}", collection.getId());
     if (isUpdateCollectionRequest(wc)) {
       if (properties.getAutoCreateCollection()) {
@@ -174,7 +175,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
             return reattemptCollectionRequest(ctx, storageImpl, collection, wc, operationAttempt, re);
           } catch (Throwable e) {
             return new ErrorResponse(
-                    NakshaError.EXCEPTION, "Error even after retrying updating collection: ", null, e);
+                NakshaError.EXCEPTION, "Error even after retrying updating collection: ", null, e);
           }
         });
       } else {
@@ -189,7 +190,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
             return reattemptCollectionRequest(ctx, storageImpl, collection, wc, operationAttempt, re);
           } catch (Throwable e) {
             return new ErrorResponse(
-                    NakshaError.EXCEPTION, "Error even after retrying purging collection: ", null, e);
+                NakshaError.EXCEPTION, "Error even after retrying purging collection: ", null, e);
           }
         });
       } else {
@@ -212,8 +213,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   private boolean isUpdateCollectionRequest(@NotNull WriteRequest wc) {
     final WriteOp op = wc.getWrites().get(0).getOp();
     return wc.getWrites().size() == 1
-            && RequestTypesUtil.isOnlyWriteCollections(wc)
-            && (WriteOp.UPDATE.equals(op) || WriteOp.UPSERT.equals(op));
+        && RequestTypesUtil.isOnlyWriteCollections(wc)
+        && (WriteOp.UPDATE.equals(op) || WriteOp.UPSERT.equals(op));
   }
 
   private @NotNull Response forwardWriteRequest(
@@ -221,17 +222,17 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull IStorage storageImpl,
       @NotNull WriteRequest wr,
       @NotNull F1<Response, NakshaException> reattempt)
-          throws Throwable {
+      throws Throwable {
     final IWriteSession writer = storageImpl.newWriteSession(SessionOptions.from(ctx, true));
     final Response result = writer.execute(wr);
     if (result instanceof SuccessResponse) {
       writer.commit();
     } else {
       reattempt.call(new NakshaException(
-              NakshaError.EXCEPTION,
-              "Failed executing " + wr.getClass() + ", expected success but got: " + result,
-              null,
-              null));
+          NakshaError.EXCEPTION,
+          "Failed executing " + wr.getClass() + ", expected success but got: " + result,
+          null,
+          null));
       logger.warn("Failed executing {}, expected success but got: {}", wr.getClass(), result);
       writer.rollback();
     }
@@ -245,7 +246,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull Request request,
       final @NotNull OperationAttempt previousAttempt,
       final @NotNull NakshaException re)
-          throws Throwable {
+      throws Throwable {
     return switch (previousAttempt) {
       case FIRST_ATTEMPT -> reattemptFeatureRequestForTheFirstTime(ctx, storageImpl, collection, request, re);
       case ATTEMPT_AFTER_STORAGE_INITIALIZATION -> reattemptAfterStorageInitialization(
@@ -261,10 +262,10 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       WriteRequest wc,
       OperationAttempt previousAttempt,
       NakshaException re)
-          throws Throwable {
+      throws Throwable {
     if (previousAttempt == FIRST_ATTEMPT
-            && NakshaError.UNINITIALIZED.equals(re.error.getCode())
-            && re.error.getMsg().toLowerCase().contains("storage")) {
+        && NakshaError.UNINITIALIZED.equals(re.error.getCode())
+        && re.error.getMsg().toLowerCase().contains("storage")) {
       return retryDueToUninitializedStorage(ctx, storageImpl, collection, wc);
     }
     logger.warn(
@@ -280,9 +281,9 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull NakshaCollection collection,
       final @NotNull Request request,
       final @NotNull NakshaException re)
-          throws Throwable {
+      throws Throwable {
     if (NakshaError.UNINITIALIZED.equals(re.error.getCode())
-            && re.error.getMsg().toLowerCase().contains("storage")) {
+        && re.error.getMsg().toLowerCase().contains("storage")) {
       return retryDueToUninitializedStorage(ctx, storageImpl, collection, request);
     } else if (indicatesMissingCollection(re)) {
       try {
@@ -306,7 +307,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull NakshaCollection collection,
       final @NotNull Request request,
       final @NotNull NakshaException re)
-          throws Throwable {
+      throws Throwable {
     if (indicatesMissingCollection(re)) {
       try {
         return retryDueToMissingCollection(ctx, storageImpl, collection, request);
@@ -336,7 +337,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull IStorage storageImpl,
       final @NotNull NakshaCollection collection,
       final @NotNull Request request)
-          throws Throwable {
+      throws Throwable {
     logger.warn("Collection not found for {}", collection.getId());
     if (properties.getAutoCreateCollection()) {
       logger.info(
@@ -383,7 +384,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         // use newly provided collection in the Update request itself
         // to make sure that the newer collection id (if it has been changed) is used
         collectionDefinedInSpace =
-                (NakshaCollection) wc.getWrites().get(0).getFeature();
+            (NakshaCollection) wc.getWrites().get(0).getFeature();
       } else {
         // use existing Space collection (as it is not an Update request)
         final SpaceProperties spaceProperties = JvmProxyUtil.box(s.getProperties(), SpaceProperties.class);
@@ -423,9 +424,9 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       writer.commit();
     } else {
       logger.error(
-              "Unexpected result while creating collection {}. Result - {}. Executing rollback",
-              collection.getId(),
-              result);
+          "Unexpected result while creating collection {}. Result - {}. Executing rollback",
+          collection.getId(),
+          result);
       writer.rollback();
       throw unchecked(new Exception("Failed creating collection " + collection.getId()));
     }

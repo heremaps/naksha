@@ -113,10 +113,9 @@ public class RequestSender {
   }
 
   public record KeyProperties(
-          @NotNull String name,
-          @NotNull String hostUrl,
-          @NotNull Map<String, String> defaultHeaders,
-          int connectionTimeoutSec,
-          int socketTimeoutSec) {
-  }
+      @NotNull String name,
+      @NotNull String hostUrl,
+      @NotNull Map<String, String> defaultHeaders,
+      int connectionTimeoutSec,
+      int socketTimeoutSec) {}
 }

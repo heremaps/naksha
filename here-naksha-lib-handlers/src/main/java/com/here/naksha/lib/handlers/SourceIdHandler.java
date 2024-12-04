@@ -72,7 +72,7 @@ public class SourceIdHandler extends AbstractEventHandler {
       }
       if (!codecList.isEmpty()) {
         codecList.stream()
-                .map(Write::getFeature)
+            .map(Write::getFeature)
             .filter(Objects::nonNull)
             .forEachOrdered(this::setSourceIdTags);
       }

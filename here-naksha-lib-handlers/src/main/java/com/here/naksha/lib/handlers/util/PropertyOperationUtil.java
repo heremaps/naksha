@@ -29,16 +29,16 @@ public class PropertyOperationUtil {
   private PropertyOperationUtil() {}
 
   public static void transformPropertyInPropertyOperationTree(
-          IPropertyQuery rootPropertyOperation, Function<PQuery, Optional<PQuery>> transformingFunction) {
+      IPropertyQuery rootPropertyOperation, Function<PQuery, Optional<PQuery>> transformingFunction) {
     replacePropertyInPropertyOperationTree(rootPropertyOperation, transformingFunction);
   }
 
   private static void replacePropertyInPropertyOperationTree(
-          IPropertyQuery propertyOperation, Function<PQuery, Optional<PQuery>> transformingFunction) {
+      IPropertyQuery propertyOperation, Function<PQuery, Optional<PQuery>> transformingFunction) {
 
     if (propertyOperation instanceof PAnd pAnd) {
       pAnd.forEach(
-              iPropertyQuery -> replacePropertyInPropertyOperationTree(iPropertyQuery, transformingFunction));
+          iPropertyQuery -> replacePropertyInPropertyOperationTree(iPropertyQuery, transformingFunction));
     } else if (propertyOperation instanceof POr pOr) {
       pOr.forEach(iPropertyQuery -> replacePropertyInPropertyOperationTree(iPropertyQuery, transformingFunction));
     } else if (propertyOperation instanceof PNot pNot) {

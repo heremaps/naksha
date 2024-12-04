@@ -51,7 +51,7 @@ public class TagFilterHandler extends AbstractEventHandler {
   public TagFilterHandler(final @NotNull EventHandler eventHandler, final @NotNull INaksha hub) {
     super(hub);
     this.properties = Objects.requireNonNull(
-            JvmProxyUtil.box(eventHandler.getProperties(), TagFilterHandlerProperties.class));
+        JvmProxyUtil.box(eventHandler.getProperties(), TagFilterHandlerProperties.class));
   }
 
   @Override
@@ -109,7 +109,7 @@ public class TagFilterHandler extends AbstractEventHandler {
   }
 
   public static void applyTagChangesOnRequest(
-          final @NotNull WriteRequest wf,
+      final @NotNull WriteRequest wf,
       final @Nullable List<String> addTags,
       final @Nullable List<String> removeTags) {
     if (isNullOrEmpty(addTags) && isNullOrEmpty(removeTags)) return;
@@ -125,7 +125,7 @@ public class TagFilterHandler extends AbstractEventHandler {
   }
 
   private static void applyTagChangesOnFeature(
-          final @Nullable NakshaFeature feature,
+      final @Nullable NakshaFeature feature,
       final @Nullable List<String> addTags,
       final @Nullable List<String> removeTags) {
     if (feature == null) return;
