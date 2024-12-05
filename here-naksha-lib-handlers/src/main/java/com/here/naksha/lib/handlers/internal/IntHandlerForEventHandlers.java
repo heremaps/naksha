@@ -174,17 +174,24 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
 
     ReadFeatures readFeaturesRequest = RequestHelper.readFeaturesByIdsRequest(SPACES, spaceIds);
 
-    final IReadSession readSession = nakshaHub().getAdminStorage().newReadSession(new SessionOptions());
+    try (final IReadSession readSession = nakshaHub().getAdminStorage().newReadSession(new SessionOptions())) {
+      final Response readResult = readSession.execute(readFeaturesRequest);
+      try {
+        if (readResult instanceof ErrorResponse errorResponse) {
+          throw new NoSuchElementException(errorResponse.getError().getCause());
+        }
+        List<Space> spaces = readFeaturesFromResult((SuccessResponse) readResult, Space.class);
 
-    final Response readResult = readSession.execute(readFeaturesRequest);
+        if (spaces.size() != spaceIds.size()) {
+          return new ErrorResponse(
+              NakshaError.ILLEGAL_ARGUMENT,
+              "Mandatory parameter %s contains space which is not created!"
+                  .formatted(DefaultViewHandlerProperties.SPACE_IDS),
+              null,
+              null);
+        }
 
-    try {
-      if (readResult instanceof ErrorResponse errorResponse) {
-        throw new NoSuchElementException(errorResponse.getError().getCause());
-      }
-      List<Space> spaces = readFeaturesFromResult((SuccessResponse) readResult, Space.class);
-
-      if (spaces.size() != spaceIds.size()) {
+      } catch (NoSuchElementException e) {
         return new ErrorResponse(
             NakshaError.ILLEGAL_ARGUMENT,
             "Mandatory parameter %s contains space which is not created!"
@@ -192,16 +199,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
             null,
             null);
       }
-
-    } catch (NoSuchElementException e) {
-      return new ErrorResponse(
-          NakshaError.ILLEGAL_ARGUMENT,
-          "Mandatory parameter %s contains space which is not created!"
-              .formatted(DefaultViewHandlerProperties.SPACE_IDS),
-          null,
-          null);
     }
-
     return new SuccessResponse();
   }
 
@@ -238,11 +236,12 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
    */
   private @NotNull Response storageExistenceValidation(@NotNull String storageId) {
     ReadFeatures findStorageById = readFeaturesByIdRequest(STORAGES, storageId);
-    IReadSession readSession = nakshaHub().getSpaceStorage().newReadSession(new SessionOptions());
-    Response result = readSession.execute(findStorageById);
-    List<String> fetchedIds = ResultHelper.readIdsFromResult(result);
-    if (fetchedIds.size() == 1 && fetchedIds.get(0).equals(storageId)) {
-      return new SuccessResponse();
+    try (IReadSession readSession = nakshaHub().getSpaceStorage().newReadSession(new SessionOptions())) {
+      Response result = readSession.execute(findStorageById);
+      List<String> fetchedIds = ResultHelper.readIdsFromResult(result);
+      if (fetchedIds.size() == 1 && fetchedIds.get(0).equals(storageId)) {
+        return new SuccessResponse();
+      }
     }
     return new ErrorResponse(NakshaError.NOT_FOUND, "Could not find storage with id: " + storageId, null, null);
   }
@@ -261,22 +260,21 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     final PQuery activeSpacesPOp = new PQuery(pRef, AnyOp.CONTAINS, new String[] {handlerId});
     final ReadFeatures readActiveHandlersRequest = new ReadFeatures(SPACES);
     readActiveHandlersRequest.getQuery().setProperties(activeSpacesPOp);
-    final IReadSession readSession = nakshaHub().getAdminStorage().newReadSession(new SessionOptions());
-    final Response readResult = readSession.execute(readActiveHandlersRequest);
-    if (!(readResult instanceof SuccessResponse)) {
-      return readResult;
+    try (final IReadSession readSession = nakshaHub().getAdminStorage().newReadSession(new SessionOptions())) {
+      final Response readResult = readSession.execute(readActiveHandlersRequest);
+      if (!(readResult instanceof SuccessResponse)) {
+        return readResult;
+      }
+      final List<Space> spaces;
+      try {
+        spaces = readFeaturesFromResult((SuccessResponse) readResult, Space.class);
+      } catch (NoSuchElementException emptyException) {
+        // No active space using the handler, proceed with deleting the handler
+        return new SuccessResponse();
+      }
+      final List<String> spaceIds = spaces.stream().map(NakshaFeature::getId).toList();
+      return new ErrorResponse(
+              NakshaError.CONFLICT, "The event handler is still in use by these spaces: " + spaceIds, null, null);
     }
-    final List<Space> spaces;
-    try {
-      spaces = readFeaturesFromResult((SuccessResponse) readResult, Space.class);
-    } catch (NoSuchElementException emptyException) {
-      // No active space using the handler, proceed with deleting the handler
-      return new SuccessResponse();
-    } finally {
-      readSession.close();
-    }
-    final List<String> spaceIds = spaces.stream().map(NakshaFeature::getId).toList();
-    return new ErrorResponse(
-        NakshaError.CONFLICT, "The event handler is still in use by these spaces: " + spaceIds, null, null);
   }
 }

@@ -69,9 +69,10 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
     // process request using Naksha Admin Storage instance
     addStorageIdToStreamInfo(PgStorage.ADMIN_STORAGE_ID, ctx);
     if (request instanceof ReadRequest rr) {
-      final IReadSession reader = nakshaHub().getAdminStorage().newReadSession(SessionOptions.from(ctx, false));
-      return reader.execute(rr);
-
+      try (final IReadSession reader =
+          nakshaHub().getAdminStorage().newReadSession(SessionOptions.from(ctx, false))) {
+        return reader.execute(rr);
+      }
     } else if ((request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteFeatures(request))) {
       // validate the request before persisting
       Response valResult = validateWriteRequest(wr);

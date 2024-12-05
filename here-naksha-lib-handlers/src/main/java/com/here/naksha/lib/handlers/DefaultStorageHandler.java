@@ -175,8 +175,9 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   private @NotNull Response singleRead(
       final @NotNull NakshaContext ctx, final @NotNull IStorage storageImpl, final @NotNull ReadFeatures rf) {
-    final IReadSession reader = storageImpl.newReadSession(SessionOptions.from(ctx, false));
-    return reader.execute(rf);
+    try (final IReadSession reader = storageImpl.newReadSession(SessionOptions.from(ctx, false))) {
+      return reader.execute(rf);
+    }
   }
 
   private @NotNull Response forwardWriteFeatures(

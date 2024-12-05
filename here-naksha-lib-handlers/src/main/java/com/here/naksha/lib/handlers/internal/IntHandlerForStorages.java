@@ -167,27 +167,31 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
     final PQuery activeHandlersPOp = new PQuery(property, StringOp.EQUALS, storageId);
     final ReadFeatures readActiveHandlersRequest = new ReadFeatures(EVENT_HANDLERS);
     readActiveHandlersRequest.getQuery().setProperties(activeHandlersPOp);
-    final IReadSession readSession = nakshaHub()
+    try (final IReadSession readSession = nakshaHub()
         .getAdminStorage()
-        .newReadSession(SessionOptions.from(NakshaContext.currentContext(), false));
-    final Response readResult = readSession.execute(readActiveHandlersRequest);
-    if (!(readResult instanceof SuccessResponse)) {
-      return readResult;
-    }
-    final SuccessResponse successResponse = (SuccessResponse) readResult;
-    final List<EventHandler> eventHandlers;
-    try {
-      eventHandlers = readFeaturesFromResult(successResponse, EventHandler.class);
-    } catch (NoSuchElementException emptyException) {
-      // No active handler using the storage, proceed with deleting the storage
-      return new SuccessResponse();
-    } finally {
+        .newReadSession(SessionOptions.from(NakshaContext.currentContext(), false))) {
+      final Response readResult = readSession.execute(readActiveHandlersRequest);
+      if (!(readResult instanceof SuccessResponse)) {
+        return readResult;
+      }
+      final SuccessResponse successResponse = (SuccessResponse) readResult;
+      final List<EventHandler> eventHandlers;
+      try {
+        eventHandlers = readFeaturesFromResult(successResponse, EventHandler.class);
+      } catch (NoSuchElementException emptyException) {
+        // No active handler using the storage, proceed with deleting the storage
+        return new SuccessResponse();
+      } finally {
+        readSession.close();
+      }
+      final List<String> handlerIds =
+          eventHandlers.stream().map(NakshaFeature::getId).toList();
       readSession.close();
+      return new ErrorResponse(
+          NakshaError.CONFLICT,
+          "The storage is still in use by these event handlers: " + handlerIds,
+          null,
+          null);
     }
-    final List<String> handlerIds =
-        eventHandlers.stream().map(NakshaFeature::getId).toList();
-    readSession.close();
-    return new ErrorResponse(
-        NakshaError.CONFLICT, "The storage is still in use by these event handlers: " + handlerIds, null, null);
   }
 }
