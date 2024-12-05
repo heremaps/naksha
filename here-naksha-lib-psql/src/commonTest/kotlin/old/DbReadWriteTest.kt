@@ -50,60 +50,6 @@
 //    private val SINGLE_FEATURE_REPLACEMENT_TAG: String = "@:foo:bar"
 //    private val fg = ProxyFeatureGenerator()
 //
-//
-//    @Test
-//    @Order(61)
-//    @EnabledIf("runTest")
-//    fun testMultiOperationPartialFailCausesOverallFailure() {
-//        // given
-//        val featureToSucceed = NakshaFeatureProxy("123")
-//        val featureToFail = NakshaFeatureProxy(SINGLE_FEATURE_ID)
-//        val request = WriteRequest(
-//            arrayOf(
-//                InsertFeature(collectionId, featureToSucceed),
-//                InsertFeature(collectionId, featureToFail)
-//            )
-//        )
-//
-//        // when
-//        val result = session.execute(request)
-//
-//        // then
-//        assertInstanceOf(ErrorResponse::class.java, result)
-//        val errorResult = result as ErrorResponse
-//        assertEquals("CONFLICT", errorResult.reason.error)
-//        assertTrue(errorResult.reason.message.startsWith("ERROR: duplicate key value violates unique"))
-//
-//        // we don't have detailed information, we can work only in mode: all or nothing.
-//        session.commit()
-//        // verify if other feature has not been stored
-//        val readFeature = ReadFeatures.readFeaturesByIdRequest(collectionId, featureToSucceed.id)
-//        val res = session.execute(readFeature) as SuccessResponse
-//        assertTrue(res.rows.isEmpty())
-//    }
-//
-//    @Test
-//    @Order(62)
-//    @EnabledIf("runTest")
-//    fun testInvalidUuid() {
-//
-//
-//        // given
-//        val deleteOp = DeleteFeature(collectionId, SINGLE_FEATURE_ID, "invalid_UUID")
-//        val deleteReq = WriteRequest(arrayOf(deleteOp))
-//        // when
-//        try {
-//            val result = session.execute(deleteReq)
-//            // then
-//            assertInstanceOf(ErrorResponse::class.java, result)
-//            val errorResult = result as ErrorResponse
-//            assertEquals("NX000", errorResult.reason.error)
-//            assertTrue(errorResult.reason.message.contains("invalid naksha uuid invalid_UUID"))
-//        } finally {
-//            session.commit()
-//        }
-//    }
-//
 //    @Test
 //    @Order(64)
 //    @EnabledIf("runTest")

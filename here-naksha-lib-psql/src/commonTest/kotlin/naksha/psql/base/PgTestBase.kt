@@ -2,6 +2,7 @@ package naksha.psql.base
 
 import naksha.base.AtomicInt
 import naksha.base.AtomicMap
+import naksha.model.IWriteSession
 import naksha.model.SessionOptions
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -54,11 +55,29 @@ abstract class PgTestBase(val collection: NakshaCollection? = null) {
         executeWrite(writeReq, sessionOptions)
     }
 
+    protected fun <T> useWriteSession(
+        sessionOptions: SessionOptions? = null,
+        body: (IWriteSession) -> T
+    ): T {
+        return env.storage.newWriteSession(sessionOptions).use { session ->
+            body(session)
+        }
+    }
+
+    protected fun <T> useReadSession(
+        sessionOptions: SessionOptions? = null,
+        body: (IWriteSession) -> T
+    ): T {
+        return env.storage.newWriteSession(sessionOptions).use { session ->
+            body(session)
+        }
+    }
+
     protected fun executeWrite(
         request: WriteRequest,
         sessionOptions: SessionOptions? = null
     ): SuccessResponse {
-        return env.storage.newWriteSession(sessionOptions).use { session ->
+        return useWriteSession(sessionOptions) { session ->
             val response = session.execute(request)
             assertIs<SuccessResponse>(response)
             session.commit()
@@ -70,7 +89,7 @@ abstract class PgTestBase(val collection: NakshaCollection? = null) {
         request: WriteRequest,
         sessionOptions: SessionOptions? = null
     ): ErrorResponse {
-        return env.storage.newWriteSession(sessionOptions).use { session ->
+        return useWriteSession(sessionOptions) { session ->
             val response = session.execute(request)
             assertIs<ErrorResponse>(response)
             session.commit()
@@ -82,7 +101,7 @@ abstract class PgTestBase(val collection: NakshaCollection? = null) {
         request: ReadRequest,
         sessionOptions: SessionOptions? = null
     ): SuccessResponse {
-        return env.storage.newReadSession(sessionOptions).use { session ->
+        return useReadSession(sessionOptions) { session ->
             val response = session.execute(request)
             assertIs<SuccessResponse>(response)
             session.commit()

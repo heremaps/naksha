@@ -6,7 +6,6 @@ import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ReadRequest
-import naksha.model.request.query.*
 import naksha.psql.*
 import naksha.psql.PgColumn.PgColumnCompanion.id
 import naksha.psql.PgColumn.PgColumnCompanion.tuple_number
@@ -63,6 +62,12 @@ class PgQueryBuilder(val session: PgSession, val request: ReadRequest) {
     }
 
     private fun readFeatures(req: ReadFeatures): PgQuery {
+        if(req.collectionIds.isEmpty()){
+            throw NakshaException(
+                ILLEGAL_ARGUMENT,
+                "No collection has been defined, collectionIds can't be empty"
+            )
+        }
         if (req.versions < 1) {
             throw NakshaException(
                 ILLEGAL_ARGUMENT,
@@ -76,7 +81,7 @@ class PgQueryBuilder(val session: PgSession, val request: ReadRequest) {
             )
         }
         val queryBuilder = StringBuilder()
-        val REQ_LIMIT =
+        val reqLimit =
             if (req.limit != null && req.orderBy == null && req.returnHandle != true) req.limit else null
         queryBuilder.append("SELECT gzip(bytea_agg($tuple_number)) AS rs FROM (SELECT $tuple_number FROM (\n")
         val quotedTablesToQuery = req.getQuotedTablesToQuery()
@@ -84,13 +89,13 @@ class PgQueryBuilder(val session: PgSession, val request: ReadRequest) {
         for (table in quotedTablesToQuery.withIndex()) {
             queryBuilder.append("\t(SELECT $tuple_number, $id FROM ${table.value}")
             if (whereClause != null) queryBuilder.append(whereClause.sql)
-            if (REQ_LIMIT != null) queryBuilder.append(" LIMIT $REQ_LIMIT")
+            if (reqLimit != null) queryBuilder.append(" LIMIT $reqLimit")
             queryBuilder.append(")")
             if (table.index < quotedTablesToQuery.lastIndex) queryBuilder.append(" UNION ALL\n")
         }
         queryBuilder.append("\n) ORDER BY $id, $tuple_number")
-        val HARD_LIMIT = req.limit ?: session.storage.hardCap
-        queryBuilder.append(if (HARD_LIMIT > 0) ") LIMIT $HARD_LIMIT;" else ")")
+        val hardLimit = req.limit ?: session.storage.hardCap
+        queryBuilder.append(if (hardLimit > 0) ") LIMIT $hardLimit;" else ")")
         return PgQuery(
             sql = queryBuilder.toString(),
             argValues = whereClause?.argValues?.toTypedArray() ?: emptyArray(),

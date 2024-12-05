@@ -38,31 +38,38 @@ class PgReader(
         get() = session.version()
 
     fun execute(): Response {
-        val query = PgQueryBuilder(session, request).build()
-        val connection = session.usePgConnection()
-        // TODO: Use prepare, add arguments!
-        val plan = connection.prepare(query.sql, query.argTypes)
-        plan.use {
-            val allBytes: ByteArray?
-            val cursor = plan.execute(query.argValues)
-            cursor.use {
-                allBytes = if (cursor.next()) cursor.column("rs") as ByteArray else null
+        return try {
+            val query = PgQueryBuilder(session, request).build()
+            val connection = session.usePgConnection()
+            val plan = connection.prepare(query.sql, query.argTypes)
+            plan.use {
+                val allBytes: ByteArray?
+                val cursor = plan.execute(query.argValues)
+                cursor.use {
+                    allBytes = if (cursor.next()) cursor.column("rs") as ByteArray else null
+                }
+                if (allBytes == null) throw NakshaException(EXCEPTION, "Failed to execute query for unknown reason")
+                composeSuccess(allBytes)
             }
-            if (allBytes == null) throw NakshaException(EXCEPTION, "Failed to execute query for unknown reason")
-            val tupleNumberBytes = TupleNumberByteArray.fromGzip(storage, allBytes)
-            return SuccessResponse(
-                PgResultSet(
-                    storage,
-                    session,
-                    tupleNumberBytes,
-                    incomplete = false,
-                    validTill = tupleNumberBytes.size,
-                    offset = 0,
-                    limit = tupleNumberBytes.size,
-                    orderBy = null,
-                    filters = request.resultFilters
-                )
-            )
+        } catch (ne: NakshaException){
+            return ErrorResponse(ne)
         }
+    }
+
+    private fun composeSuccess(bytes: ByteArray): SuccessResponse {
+        val tupleNumberBytes = TupleNumberByteArray.fromGzip(storage, bytes)
+        return SuccessResponse(
+            PgResultSet(
+                storage,
+                session,
+                tupleNumberBytes,
+                incomplete = false,
+                validTill = tupleNumberBytes.size,
+                offset = 0,
+                limit = tupleNumberBytes.size,
+                orderBy = null,
+                filters = request.resultFilters
+            )
+        )
     }
 }

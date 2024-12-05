@@ -6,10 +6,7 @@ import naksha.model.NakshaCache
 import naksha.model.NakshaError
 import naksha.model.TagList
 import naksha.model.objects.NakshaCollection
-import naksha.model.request.ErrorResponse
-import naksha.model.request.ReadFeatures
-import naksha.model.request.Write
-import naksha.model.request.WriteRequest
+import naksha.model.request.*
 import naksha.model.request.query.SpIntersects
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import naksha.psql.base.PgTestBase
@@ -156,5 +153,51 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
         // Then
         assertIs<ErrorResponse>(insertDuplicateResponse)
         assertEquals(NakshaError.CONFLICT, insertDuplicateResponse.error.code)
+    }
+
+    @Test
+    fun shouldFailWhollyForPartialFailure(){
+        // Given: single correctly saved feature
+        val initialFeature = generateRandomFeature()
+        insertFeature(initialFeature)
+
+        // And: two features to be inserted, one of which has conflicting id
+        val invalidFeature = generateRandomFeature().apply { id = initialFeature.id }
+        val validFeature = generateRandomFeature()
+
+        // When: trying to insert these features
+        val writeReq = WriteRequest().add(
+            Write().createFeature(
+                map = null,
+                collectionId = collection!!.id,
+                feature = validFeature
+            )
+        ).add(
+            Write().createFeature(
+                map = null,
+                collectionId = collection.id,
+                feature = invalidFeature
+            )
+        )
+        val writeResponse: Response = env.storage.newWriteSession().use { session ->
+            session.execute(writeReq)
+        }
+
+        // Then: inserting new features failed due to conflict
+        assertIs<ErrorResponse>(writeResponse)
+        assertEquals(NakshaError.CONFLICT, writeResponse.error.code)
+
+        // When: reading feature for which there was no id conflict
+        val readReq = ReadFeatures().apply {
+            collectionIds += collection.id
+            featureIds += validFeature.id
+        }
+        val readResponse: Response = env.storage.newReadSession().use { session ->
+            session.execute(readReq)
+        }
+
+        // Then: there is no valid feature
+        assertIs<SuccessResponse>(readResponse)
+        assertTrue(readResponse.features.isEmpty())
     }
 }
