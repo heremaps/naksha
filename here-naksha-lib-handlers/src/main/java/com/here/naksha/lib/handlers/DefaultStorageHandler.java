@@ -22,7 +22,10 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.createWriteCollectionsRequest;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.*;
+import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_COLLECTION_CREATION;
+import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_STORAGE_INITIALIZATION;
+import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.FIRST_ATTEMPT;
+import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import com.here.naksha.lib.core.IEvent;
@@ -33,16 +36,29 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
-import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
 import naksha.base.JvmProxyUtil;
 import naksha.base.StringList;
-import naksha.model.*;
+import naksha.model.IReadSession;
+import naksha.model.IStorage;
+import naksha.model.IWriteSession;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.SessionOptions;
+import naksha.model.StreamInfo;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.request.*;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
+import naksha.model.request.WriteOp;
+import naksha.model.request.WriteRequest;
 import org.apache.commons.lang3.time.StopWatch;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -148,7 +164,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     if (request instanceof ReadFeatures rf) {
       return forwardReadFeatures(ctx, storageImpl, collection, rf, currentAttempt, storageTimer);
     } else if (request instanceof WriteRequest wr) {
-      if (RequestTypesUtil.isOnlyWriteCollections(wr)) {
+      if (isOnlyWriteCollections(wr)) {
         return forwardWriteCollections(ctx, storageImpl, collection, wr, currentAttempt, storageTimer);
       } else {
         return forwardWriteFeatures(ctx, storageImpl, collection, wr, currentAttempt, storageTimer);
@@ -240,15 +256,17 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   }
 
   private boolean isPurgeCollectionRequest(@NotNull WriteRequest wc) {
-    final WriteOp op = wc.getWrites().get(0).getOp();
-    return wc.getWrites().size() == 1 && RequestTypesUtil.isOnlyWriteCollections(wc) && WriteOp.PURGE.equals(op);
+    return isOnlyWriteCollections(wc)
+        && wc.getWrites().size() == 1
+        && WriteOp.PURGE.equals(wc.getWrites().get(0).getOp());
   }
 
   private boolean isUpdateCollectionRequest(@NotNull WriteRequest wc) {
-    final WriteOp op = wc.getWrites().get(0).getOp();
-    return wc.getWrites().size() == 1
-        && RequestTypesUtil.isOnlyWriteCollections(wc)
-        && (WriteOp.UPDATE.equals(op) || WriteOp.UPSERT.equals(op));
+    if (isOnlyWriteCollections(wc) && wc.getWrites().size() == 1) {
+      final WriteOp op = wc.getWrites().get(0).getOp();
+      return WriteOp.UPDATE.equals(op) || WriteOp.UPSERT.equals(op);
+    }
+    return false;
   }
 
   private @NotNull Response forwardWriteRequest(
@@ -312,11 +330,6 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     throw re;
   }
 
-  private boolean indicateStorageNotInitialized(final @NotNull RuntimeException re) {
-    // TODO define a more concrete logic
-    return re.getMessage().toLowerCase().contains("storage");
-  }
-
   private @NotNull Response reattemptFeatureRequestForTheFirstTime(
       final @NotNull NakshaContext ctx,
       final @NotNull IStorage storageImpl,
@@ -331,17 +344,11 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         return retryDueToMissingCollection(ctx, storageImpl, collection, request, storageTimer);
       } catch (MissingCollectionsException mce) {
         logger.info("Retrying due to missing collection failed", mce);
-        return mce.toErrorResult();
+        return mce.toErrorResponse();
       }
     } else {
       throw re;
     }
-  }
-
-  private boolean indicatesMissingCollection(RuntimeException re) {
-    //    return NakshaError.COLLECTION_NOT_FOUND.equals(re.error.getCode());
-    // TODO define the concrete logic
-    return re.getMessage().toLowerCase().contains("collection");
   }
 
   private @NotNull Response reattemptAfterStorageInitialization(
@@ -356,7 +363,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         return retryDueToMissingCollection(ctx, storageImpl, collection, request, storageTimer);
       } catch (MissingCollectionsException mce) {
         logger.info("Retrying due to missing collection failed", mce);
-        return mce.toErrorResult();
+        return mce.toErrorResponse();
       }
     } else {
       throw re;
@@ -400,13 +407,25 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     }
   }
 
+  private boolean indicateStorageNotInitialized(@NotNull RuntimeException re) {
+    return isNakshaExceptionWithCode(re, NakshaError.UNINITIALIZED);
+  }
+
+  private boolean indicatesMissingCollection(@NotNull RuntimeException re) {
+    return isNakshaExceptionWithCode(re, NakshaError.COLLECTION_NOT_FOUND);
+  }
+
+  private boolean isNakshaExceptionWithCode(@NotNull RuntimeException re, @NotNull String code) {
+    return re instanceof NakshaException ne && code.equals(ne.error.getCode());
+  }
+
   private void applyCollectionId(Request request, @NotNull String customCollectionId) {
     if (request instanceof ReadFeatures rf) {
       final StringList ids = new StringList();
       ids.add(customCollectionId);
       rf.setFeatureIds(ids);
     } else if (request instanceof WriteRequest wr) {
-      if (RequestTypesUtil.isOnlyWriteCollections(wr)) {
+      if (isOnlyWriteCollections(wr)) {
         collectionsFrom(wr).forEach(collection -> collection.setId(customCollectionId));
       } else {
         wr.getWrites().forEach(write -> write.setCollectionId(customCollectionId));

@@ -30,7 +30,7 @@ public final class MissingCollectionsException extends RuntimeException {
     super("Could not find and auto-create collection: " + collection.getId());
   }
 
-  public ErrorResponse toErrorResult() {
+  public ErrorResponse toErrorResponse() {
     return new ErrorResponse(COLLECTION_NOT_FOUND, getMessage(), null, this);
   }
 }

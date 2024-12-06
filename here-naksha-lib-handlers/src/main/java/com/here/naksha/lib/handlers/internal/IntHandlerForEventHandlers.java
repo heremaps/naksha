@@ -274,7 +274,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
       }
       final List<String> spaceIds = spaces.stream().map(NakshaFeature::getId).toList();
       return new ErrorResponse(
-              NakshaError.CONFLICT, "The event handler is still in use by these spaces: " + spaceIds, null, null);
+          NakshaError.CONFLICT, "The event handler is still in use by these spaces: " + spaceIds, null, null);
     }
   }
 }
