@@ -81,7 +81,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
 
     if (storageId == null) {
       logger.error("No storageId configured");
-      return new ErrorResponse(NakshaError.NOT_FOUND, "No storageId configured for handler.", null, null);
+      return new ErrorResponse(NakshaError.NOT_FOUND, "No storageId configured for handler.");
     }
     logger.info("Against Storage id={}", storageId);
     addStorageIdToStreamInfo(storageId, ctx);
@@ -93,7 +93,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
 
       if (properties.getSpaceIds() == null || properties.getSpaceIds().isEmpty()) {
         logger.error("No spaces configured, so can't process this request");
-        return new ErrorResponse(NakshaError.NOT_FOUND, "No spaces configured for handler.", null, null);
+        return new ErrorResponse(NakshaError.NOT_FOUND, "No spaces configured for handler.");
       } else {
 
         view.setViewLayerCollection(
@@ -104,7 +104,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
       }
     } else {
       logger.error("Associated storage doesn't implement View, so can't process this request");
-      return new ErrorResponse(NakshaError.EXCEPTION, "Associated storage doesn't implement View", null, null);
+      return new ErrorResponse(NakshaError.EXCEPTION, "Associated storage doesn't implement View");
     }
   }
 

@@ -44,6 +44,9 @@ import com.here.naksha.lib.core.view.ViewSerialize;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 
+/**
+ * @deprecated use {@link naksha.base.Platform} .fromJson() and .toJson() where possible.
+ */
 public class JsonUtil {
 
   private JsonUtil() {}

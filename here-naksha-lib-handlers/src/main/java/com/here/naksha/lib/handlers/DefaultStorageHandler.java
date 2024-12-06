@@ -102,7 +102,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     final String storageId = properties.getStorageId();
     if (storageId == null) {
       logger.error("No storageId configured");
-      return new ErrorResponse(NakshaError.NOT_FOUND, "No storageId configured for handler.", null, null);
+      return new ErrorResponse(NakshaError.NOT_FOUND, "No storageId configured for handler.");
     }
     logger.info("Against Storage id={}", storageId);
     addStorageIdToStreamInfo(storageId, ctx);
