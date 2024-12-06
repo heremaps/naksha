@@ -9,6 +9,6 @@ public class Naksha {
 
     public static RequestSpecification request() {
         return RestAssured.given().baseUri("http://localhost:8080/hub/spaces/" + NAKSHA_SPACE)
-          .log().all();
+          .log().ifValidationFails();
     }
 }

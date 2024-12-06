@@ -25,10 +25,14 @@ public class Commons {
   public static final String TEST_RESOURCES_DIR = "com/here/naksha/storage/http/connector/integration/";
 
   public static void rmAllFeatures() {
-    Response iterateResponse = DataHub.request().get("iterate");
+    Response iterateResponse = getAllFeatuers();
     List<String> featuresIds = responseToIds(iterateResponse);
     DataHub.request().with().queryParam("id", featuresIds).delete("features");
-    DataHub.request().get("iterate").then().body("features", Matchers.hasSize(0));
+    getAllFeatuers().then().body("features", Matchers.hasSize(0));
+  }
+
+  private static Response getAllFeatuers() {
+    return DataHub.request().get("iterate");
   }
 
   public static void assertSameIds(Response dhResponse, Response nResponse) {
@@ -57,6 +61,7 @@ public class Commons {
   public static ValidatableResponse createFeatureFromJsonTemplateFile(RequestSpecification rs, String pathInIntegrationResources, String... args) {
     String body = readTestResourcesFile(pathInIntegrationResources).formatted(args);
     return rs.with().body(body)
+      .contentType("application/json")
       .when().post("features")
       .then()
       .assertThat().statusCode(200)
@@ -64,11 +69,11 @@ public class Commons {
   }
 
   public static void assertStatusCode200(Response response) {
-    response.then().log().all().assertThat().statusCode(200);
+    response.then().log().ifValidationFails().assertThat().statusCode(200);
   }
 
   public static void assertDbEmpty() {
-    DataHub.request().get("iterate").then().assertThat().body("features.isEmpty()", equalTo(true));
+    getAllFeatuers().then().assertThat().body("features.isEmpty()", equalTo(true));
   }
 
   public static @NotNull String readTestResourcesFile(String pathInIntegrationResources) {
