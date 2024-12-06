@@ -1,25 +1,5 @@
 package com.here.naksha.lib.handlers.internal;
 
-import com.here.naksha.lib.core.IEvent;
-import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.Space;
-import naksha.model.IReadSession;
-import naksha.model.IStorage;
-import naksha.model.IWriteSession;
-import naksha.model.SessionOptions;
-import naksha.model.request.*;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Named;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.ArgumentMatcher;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
-import java.util.List;
-import java.util.stream.Stream;
-
 import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
 import static java.util.Collections.emptyList;
@@ -31,6 +11,38 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import com.here.naksha.lib.core.IEvent;
+import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.models.naksha.Space;
+import java.util.List;
+import java.util.stream.Stream;
+import naksha.base.JvmInt64;
+import naksha.model.FetchMode;
+import naksha.model.IReadSession;
+import naksha.model.IStorage;
+import naksha.model.IWriteSession;
+import naksha.model.SessionOptions;
+import naksha.model.Tuple;
+import naksha.model.TupleNumber;
+import naksha.model.Version;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.ExecutedOp;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.ResultTuple;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
+import naksha.model.request.WriteRequest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Named;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentMatcher;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 class IntHandlerForSpacesTest {
 
@@ -111,21 +123,22 @@ class IntHandlerForSpacesTest {
     Space spaceWithoutTitle = space("no_title", null, "some_desc");
     Space spaceWithoutDescription = space("no_desc", "some_title", null);
     return Stream.of(
-            named("PUT Space without title", new WriteRequest().add(new Write().upsertFeature(null, SPACES, spaceWithoutTitle))),
-            named("UPDATE Space without title", new WriteRequest().add(new Write().updateFeature(null, SPACES, spaceWithoutTitle, false))),
-            named("CREATE Space without title", new WriteRequest().add(new Write().createFeature(null, SPACES, spaceWithoutTitle))),
-            named("PUT Space without description", new WriteRequest().add(new Write().upsertFeature(null, SPACES, spaceWithoutDescription))),
-            named("UPDATE Space without description", new WriteRequest().add(new Write().updateFeature(null, SPACES, spaceWithoutDescription, false))),
-            named("CREATE Space without description", new WriteRequest().add(new Write().createFeature(null, SPACES, spaceWithoutDescription)))
+        named("PUT Space without title", new WriteRequest().add(new Write().upsertFeature(null, SPACES, spaceWithoutTitle))),
+        named("UPDATE Space without title", new WriteRequest().add(new Write().updateFeature(null, SPACES, spaceWithoutTitle, false))),
+        named("CREATE Space without title", new WriteRequest().add(new Write().createFeature(null, SPACES, spaceWithoutTitle))),
+        named("PUT Space without description", new WriteRequest().add(new Write().upsertFeature(null, SPACES, spaceWithoutDescription))),
+        named("UPDATE Space without description",
+            new WriteRequest().add(new Write().updateFeature(null, SPACES, spaceWithoutDescription, false))),
+        named("CREATE Space without description", new WriteRequest().add(new Write().createFeature(null, SPACES, spaceWithoutDescription)))
     );
   }
 
   private static Stream<Named<WriteRequest>> persistingSpaceWithoutValidHandlers() {
     Space space = space("space_id", "no_desc", "some_title", List.of("handler_1", "handler_2", "handler_3"));
     return Stream.of(
-            named("PUT Space without valid handlers", new WriteRequest().add(new Write().upsertFeature(null, SPACES, space))),
-            named("UPDATE Space without valid handlers", new WriteRequest().add(new Write().updateFeature(null, SPACES, space, false))),
-            named("CREATE Space without valid handlers", new WriteRequest().add(new Write().createFeature(null, SPACES, space)))
+        named("PUT Space without valid handlers", new WriteRequest().add(new Write().upsertFeature(null, SPACES, space))),
+        named("UPDATE Space without valid handlers", new WriteRequest().add(new Write().updateFeature(null, SPACES, space, false))),
+        named("CREATE Space without valid handlers", new WriteRequest().add(new Write().createFeature(null, SPACES, space)))
     );
   }
 
@@ -161,9 +174,8 @@ class IntHandlerForSpacesTest {
     IStorage spaceStorage = mock(IStorage.class);
     when(naksha.getSpaceStorage()).thenReturn(spaceStorage);
     IReadSession readSession = mock(IReadSession.class);
-    when(readSession.execute(argThat(anyReadHandlersRequest()))).thenReturn(new TestSuccessResult(
-//            eventHandlerIds
-    ));
+    SuccessResponse successResponse = new TestSuccessResponse(spaceStorage, eventHandlerIds);
+    when(readSession.execute(argThat(anyReadHandlersRequest()))).thenReturn(successResponse);
     when(spaceStorage.newReadSession(any(SessionOptions.class))).thenReturn(readSession);
   }
 
@@ -171,18 +183,37 @@ class IntHandlerForSpacesTest {
     return argument -> argument.getCollectionIds().size() == 1 && EVENT_HANDLERS.equals(argument.getCollectionIds().get(0));
   }
 
-  static class TestSuccessResult extends SuccessResponse {
+  static class TestSuccessResponse extends SuccessResponse {
 
-//    TestSuccessResult(List<String> ids) {
-//      //TODO need ability to create ResultTuple from NakshaFeature merged into v3
-//      List<ResultTuple> featureCodecs = ids.stream()
-//              .map(id -> new ResultTuple()
-//              .withOp(READ)
-//              .withId(id)
-//              .withFeature(new XyzFeature(id))
-//          )
-//          .toList();
-//      this.cursor = new HeapCacheCursor<>(codecFactory, featureCodecs, null);
-//    }
+    TestSuccessResponse(IStorage storage, List<String> ids) {
+      super(resultTuples(storage, ids));
+    }
+
+    private static List<ResultTuple> resultTuples(IStorage storage, List<String> ids) {
+      return ids.stream()
+          .map(id -> {
+            TupleNumber tupleNumber = testTupleNumber();
+            return new ResultTuple(storage, tupleNumber, ExecutedOp.READ, testTuple(storage, tupleNumber, id));
+          })
+          .toList();
+    }
+
+    private static TupleNumber testTupleNumber() {
+      return new TupleNumber(new JvmInt64(0L), new Version(0L), 0);
+    }
+
+    private static Tuple testTuple(IStorage storage, TupleNumber tupleNumber, String id) {
+      return new Tuple(storage,
+          tupleNumber,
+          FetchMode.FETCH_ID,
+          null,
+          id,
+          0,
+          null,
+          null,
+          null,
+          null,
+          null);
+    }
   }
 }

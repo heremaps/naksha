@@ -25,6 +25,7 @@ import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ExecutedOp;
 import naksha.model.request.Response;
 import naksha.model.request.ResultTuple;
+import naksha.model.request.ResultTupleList;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -99,14 +100,14 @@ public class ResultHelper {
     if (!(result instanceof SuccessResponse)) {
       return emptyList();
     }
-    final SuccessResponse successResponse = (SuccessResponse) result;
-    if (successResponse.getFeatures().isEmpty()) {
+    final ResultTupleList resultTuples = ((SuccessResponse) result).getTuples();
+    if (resultTuples.isEmpty()) {
       return emptyList();
     }
-    final Iterator<NakshaFeature> iterator = successResponse.getFeatures().iterator();
+    final Iterator<ResultTuple> iterator = resultTuples.iterator();
     final List<String> ids = new ArrayList<>();
     while (iterator.hasNext()) {
-      ids.add(iterator.next().getId());
+      ids.add(iterator.next().id());
     }
     return ids;
   }
