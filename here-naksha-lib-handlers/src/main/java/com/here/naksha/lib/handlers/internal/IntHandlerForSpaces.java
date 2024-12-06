@@ -25,7 +25,6 @@ import static naksha.model.NakshaContext.currentContext;
 
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
 import java.util.List;
 import naksha.model.IReadSession;
 import naksha.model.NakshaError;
@@ -40,15 +39,15 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
   }
 
   @Override
-  protected @NotNull Response validateFeature(@NotNull Write featureCodec) {
-    if (EWriteOp.DELETE.toString().equals(featureCodec.getOp())) {
+  protected @NotNull Response validateWrite(@NotNull Write write) {
+    if (WriteOp.DELETE.equals(write.getOp())) {
       return new SuccessResponse();
     }
-    Response basicValidation = super.validateFeature(featureCodec);
+    Response basicValidation = super.validateWrite(write);
     if (basicValidation instanceof ErrorResponse) {
       return basicValidation;
     }
-    Space space = (Space) featureCodec.getFeature();
+    Space space = (Space) write.getFeature();
     return handlerExistenceValidation(space);
   }
 

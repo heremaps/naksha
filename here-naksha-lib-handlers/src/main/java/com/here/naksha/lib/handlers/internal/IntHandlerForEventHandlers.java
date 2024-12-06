@@ -55,14 +55,14 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
   }
 
   @Override
-  protected @NotNull Response validateFeature(Write codec) {
+  protected @NotNull Response validateWrite(Write codec) {
     final EWriteOp operation = EWriteOp.get(codec.getOp());
     if (operation.equals(EWriteOp.DELETE)) {
       // For DELETE, only the feature ID is needed, other JSON properties are irrelevant
       return noActiveSpaceValidation(codec);
     }
     // For non-DELETE write request
-    Response basicValidationResult = super.validateFeature(codec);
+    Response basicValidationResult = super.validateWrite(codec);
     if (basicValidationResult instanceof ErrorResponse) {
       return basicValidationResult;
     }

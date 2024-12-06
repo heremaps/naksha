@@ -62,14 +62,14 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
   }
 
   @Override
-  protected @NotNull Response validateFeature(Write codec) {
+  protected @NotNull Response validateWrite(Write codec) {
     final EWriteOp operation = EWriteOp.get(codec.getOp());
     if (operation.equals(EWriteOp.DELETE)) {
       // For DELETE, only the feature ID is needed, other JSON properties are irrelevant
       return noActiveHandlerValidation(codec);
     }
     // For non-DELETE write request
-    Response basicValidation = super.validateFeature(codec);
+    Response basicValidation = super.validateWrite(codec);
     if (basicValidation instanceof ErrorResponse) {
       return basicValidation;
     }

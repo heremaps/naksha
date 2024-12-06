@@ -100,14 +100,14 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
    * @param writeOperation containing the feature to be validated before being written
    * @return validation result
    */
-  protected @NotNull Response validateFeature(Write writeOperation) {
+  protected @NotNull Response validateWrite(Write writeOperation) {
     final FEATURE feature = featureClass.cast(writeOperation.getFeature());
     return nakshaFeatureValidation(feature);
   }
 
   private @NotNull Response validateWriteRequest(final @NotNull WriteRequest wr) {
     for (final Write writeOperation : wr.getWrites()) {
-      Response featureValidation = validateFeature(writeOperation);
+      Response featureValidation = validateWrite(writeOperation);
       if (featureValidation instanceof ErrorResponse) {
         return featureValidation;
       }
