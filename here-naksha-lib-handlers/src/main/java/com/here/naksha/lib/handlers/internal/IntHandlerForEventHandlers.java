@@ -109,9 +109,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
         return new ErrorResponse(
             NakshaError.ILLEGAL_ARGUMENT,
             "Mandatory parameter %s contains space which is empty/blank!"
-                .formatted(DefaultViewHandlerProperties.SPACE_IDS),
-            null,
-            null);
+                .formatted(DefaultViewHandlerProperties.SPACE_IDS));
       }
     }
 
@@ -130,9 +128,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
       return new ErrorResponse(
           NakshaError.ILLEGAL_ARGUMENT,
           "At least one of [%s, %s, %s] parameters must be set"
-              .formatted(ADD_VALUES, REMOVE_W_PREFIXES, CONTAINS_VALUES),
-          null,
-          null);
+              .formatted(ADD_VALUES, REMOVE_W_PREFIXES, CONTAINS_VALUES));
     }
 
     return errorIfInvalidList(addList, ADD_VALUES)

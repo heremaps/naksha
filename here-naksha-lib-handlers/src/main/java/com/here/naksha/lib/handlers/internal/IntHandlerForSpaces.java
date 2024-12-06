@@ -59,9 +59,7 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
       return new ErrorResponse(
           NakshaError.NOT_FOUND,
           "Following handlers defined for Space %s don't exist: %s"
-              .formatted(space.getId(), String.join(",", missingHandlerIds)),
-          null,
-          null);
+              .formatted(space.getId(), String.join(",", missingHandlerIds)));
     }
   }
 

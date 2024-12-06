@@ -52,6 +52,6 @@ class NakshaFeaturePropertiesValidator {
 
   private static ErrorResponse missingParameterError(String propertyName) {
     return new ErrorResponse(
-        NakshaError.ILLEGAL_ARGUMENT, "Mandatory parameter '" + propertyName + "' missing!", null, null);
+        NakshaError.ILLEGAL_ARGUMENT, "Mandatory parameter '" + propertyName + "' missing!");
   }
 }

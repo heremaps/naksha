@@ -109,7 +109,7 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
     }
     String errorMsg =
         getErrorMsg(httpStorageProperties, isConnectionTimeoutValid, isSocketTimeoutValid, isUrlValid);
-    return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT, errorMsg, null, null);
+    return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT, errorMsg);
   }
 
   @NotNull
@@ -157,7 +157,7 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
     String storageId = codec.getId();
     if (storageId == null) {
       if (codec.getFeature() == null) {
-        return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT, "No storage ID supplied.", null, null);
+        return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT, "No storage ID supplied.");
       }
       storageId = codec.getFeature().getId();
     }
@@ -189,9 +189,7 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
       readSession.close();
       return new ErrorResponse(
           NakshaError.CONFLICT,
-          "The storage is still in use by these event handlers: " + handlerIds,
-          null,
-          null);
+          "The storage is still in use by these event handlers: " + handlerIds);
     }
   }
 }
