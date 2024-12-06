@@ -181,7 +181,7 @@ class PgWriter(
         try {
             for (write in orderedWrites) {
                 if (write == null) continue
-                val tupleNumber: TupleNumber = if (write.collectionId == VIRT_COLLECTIONS) {
+                val tupleNumber: TupleNumber? = if (write.collectionId == VIRT_COLLECTIONS) {
                     when (write.op) {
                         WriteOp.CREATE -> cachedTupleNumber(
                             write,
