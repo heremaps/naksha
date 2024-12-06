@@ -285,4 +285,20 @@ class CollectionTests : PgTestBase(collection = null) {
         val updatedCollection = updateResponse.features[0]!!.proxy(NakshaCollection::class)
         assertEquals(StoreMode.SUSPEND, updatedCollection.storeDeleted)
     }
+
+    @Test
+    fun dropNotExistingCollection() {
+        // given
+        val collectionName = "not_existing_collection_name"
+
+        // when
+        val response = executeWrite(
+            WriteRequest().add(
+                Write().deleteCollectionById(null, collectionName)
+            )
+        )
+
+        // then
+        assertNull(response.resultSet?.result?.get(0))
+    }
 }
