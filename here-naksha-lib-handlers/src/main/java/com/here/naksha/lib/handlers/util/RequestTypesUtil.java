@@ -25,6 +25,9 @@ import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 
 public final class RequestTypesUtil {
+
+  private RequestTypesUtil() {}
+
   /**
    * Check if the given {@link WriteRequest} only includes {@link naksha.model.request.Write} operation on {@link naksha.model.objects.NakshaFeature}.
    */

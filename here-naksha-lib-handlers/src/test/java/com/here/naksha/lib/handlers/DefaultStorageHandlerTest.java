@@ -1,5 +1,19 @@
 package com.here.naksha.lib.handlers;
 
+import static naksha.model.NakshaError.COLLECTION_NOT_FOUND;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Named.named;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
@@ -7,11 +21,27 @@ import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerTest.CollectionPriorityTestCase.ValidCollectionSource;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.stream.Stream;
 import naksha.base.JvmProxyUtil;
-import naksha.model.*;
+import naksha.model.IReadSession;
+import naksha.model.IStorage;
+import naksha.model.IWriteSession;
+import naksha.model.Naksha;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.*;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
+import naksha.model.request.WriteList;
+import naksha.model.request.WriteOp;
+import naksha.model.request.WriteRequest;
 import org.apache.commons.lang3.RandomUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Named;
@@ -24,17 +54,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.sql.SQLException;
-import java.util.concurrent.Callable;
-import java.util.stream.Stream;
-
-import static naksha.model.NakshaError.COLLECTION_NOT_FOUND;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Named.named;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.*;
 
 class DefaultStorageHandlerTest {
 
@@ -108,15 +127,18 @@ class DefaultStorageHandlerTest {
   @MethodSource("collectionPriorityTestCases")
   void shouldCreateMissingCollectionRespectingPriority(CollectionPriorityTestCase testCase) {
     // Given: Storage writer failing on WriteRequest for features due to undefined table but is able to create new collection
-    when(storageWriteSession.execute(argThat(request -> (request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteFeatures(wr)))))
-            .thenThrow(new RuntimeException(new SQLException("Some message", "42P01"))); //EPsqlState.UNDEFINED_TABLE
-    when(storageWriteSession.execute(argThat(request -> (request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteCollections(wr)))))
-            .thenReturn(new SuccessResponse());
+    NakshaException missingCollectionException = new NakshaException(new NakshaError(COLLECTION_NOT_FOUND, "Missing collection"));
+    when(
+        storageWriteSession.execute(argThat(request -> (request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteFeatures(wr)))))
+        .thenThrow(missingCollectionException);
+    when(storageWriteSession.execute(
+        argThat(request -> (request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteCollections(wr)))))
+        .thenReturn(new SuccessResponse());
 
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
     WriteRequest writeXyzFeatures = new WriteRequest()
-            .add(new Write().createFeature(null, "different_collection", featureToCreate));
+        .add(new Write().createFeature(null, "different_collection", featureToCreate));
 
     // And: Handler with autoCreateCollection enabled to test
     DefaultStorageHandler handler = storageHandler(testCase.handlerProperties, testCase.space);
@@ -128,30 +150,41 @@ class DefaultStorageHandlerTest {
         "The mock for storage writer is already configured to always fail - it's ok to allow this as we only want to check invocations"
     );
 
-    // Then: Write Collection request was passed to storage writer
+    // Then: We got 3 Write Requests (write feature - failed, write collection - success, write feature - retried)
     ArgumentCaptor<WriteRequest> storageWriterRequestCaptor = ArgumentCaptor.forClass(WriteRequest.class);
-    verify(storageWriteSession).execute(storageWriterRequestCaptor.capture());
+    verify(storageWriteSession, times(3)).execute(storageWriterRequestCaptor.capture());
+    List<WriteRequest> capturedWrites = storageWriterRequestCaptor.getAllValues();
 
     // And: passed Write Collection request was about creating single collection with correct id
-    WriteRequest requestPassedToStorageWriter = storageWriterRequestCaptor.getValue();
-    assertEquals(1, requestPassedToStorageWriter.getWrites().size());
-    assertEquals(WriteOp.CREATE, requestPassedToStorageWriter.getWrites().get(0).getOp());
-    assertEquals(testCase.correctCollection().getId(), requestPassedToStorageWriter.getWrites().get(0).getCollectionId());
+    Write writeCollection = findSingleCreateCollectionWrite(capturedWrites);
+    assertEquals(WriteOp.CREATE, writeCollection.getOp());
+    assertEquals(testCase.correctCollection().getId(), writeCollection.getFeatureId());
+    assertEquals(Naksha.VIRT_COLLECTIONS, writeCollection.getCollectionId());
+
+    // And: write features related to the same feature in correct collection
+    List<Write> featureWrites = getSingularWritesToCollection(capturedWrites, testCase.correctCollection().getId());
+    assertEquals(2, featureWrites.size());
+    for (Write writeFeature : featureWrites) {
+      assertEquals(WriteOp.CREATE, writeFeature.getOp());
+      assertEquals(featureToCreate.getId(), writeFeature.getFeatureId());
+      assertEquals(testCase.correctCollection().getId(), writeFeature.getCollectionId());
+    }
   }
 
-  @ParameterizedTest
-  @MethodSource("sqlErrorsIndicatingMissingCollection")
-  void shouldCreateMissingCollectionDueToErrorSqlState(SQLException writerFailureCause) {
+  @Test
+  void shouldCreateMissingCollection() {
     // Given: Storage writer failing on WriteXyzFeatures due to sql exception
-    when(storageWriteSession.execute(any(WriteRequest.class))).thenThrow(new RuntimeException(writerFailureCause));
-
-    // And: feature to be saved in potentially different collection
-    NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
-    WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeature(null, "different_collection", featureToCreate));
+    NakshaException missingCollectionException = new NakshaException(new NakshaError(COLLECTION_NOT_FOUND, "Missing collection"));
+    when(storageWriteSession.execute(any(WriteRequest.class))).thenThrow(missingCollectionException);
 
     // And: Handler with autoCreateCollection enabled to test
     DefaultStorageHandler handler = storageHandler();
     assertTrue(handler.properties.getAutoCreateCollection());
+
+    // And: feature to be saved in potentially different collection
+    NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
+    String collectionId = handler.properties.getCollection().getId();
+    WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeature(null, collectionId, featureToCreate));
 
     // When: Processing write features
     ignoreExceptionsFrom(
@@ -159,15 +192,18 @@ class DefaultStorageHandlerTest {
         "The mock for storage writer is already configured to always fail - it's ok to allow this as we only want to check invocations"
     );
 
-    // Then: Write Collection request was passed to storage writer
+    // Then: We got two Write Requests in total (creating feature & create collection)
     ArgumentCaptor<WriteRequest> storageWriterRequestCaptor = ArgumentCaptor.forClass(WriteRequest.class);
-    verify(storageWriteSession).execute(storageWriterRequestCaptor.capture());
+    verify(storageWriteSession, times(2)).execute(storageWriterRequestCaptor.capture());
+    List<WriteRequest> capturedWriteRequests = storageWriterRequestCaptor.getAllValues();
+    List<Write> capturedFeatureWrites = getSingularWritesToCollection(capturedWriteRequests, collectionId);
+    Write capturedCollectionWrite = findSingleCreateCollectionWrite(capturedWriteRequests);
+    assertEquals(1, capturedFeatureWrites.size(), "Expected single feature write");
+    assertNotNull(capturedCollectionWrite, "Could not capture writing collection");
 
     // And: passed Write Collection request was about creating collection defined in Handler properties
-    WriteRequest requestPassedToStorageWriter = storageWriterRequestCaptor.getValue();
-    assertEquals(1, requestPassedToStorageWriter.getWrites().size());
-    assertEquals(WriteOp.CREATE, requestPassedToStorageWriter.getWrites().get(0).getOp());
-    assertEquals(handler.properties.getCollection().getId(), requestPassedToStorageWriter.getWrites().get(0).getCollectionId());
+    assertEquals(WriteOp.CREATE, capturedCollectionWrite.getOp());
+    assertEquals(handler.properties.getCollection().getId(), capturedCollectionWrite.getFeatureId());
   }
 
   @Test
@@ -194,7 +230,25 @@ class DefaultStorageHandlerTest {
     verify(storageWriteSession, never()).execute(argThat(matchesCreateCollectionRequest()));
   }
 
-  private static ArgumentMatcher<WriteRequest> matchesCreateCollectionRequest(){
+  private static Write findSingleCreateCollectionWrite(List<WriteRequest> writeRequests) {
+    List<Write> collectionWrites = getSingularWritesToCollection(writeRequests, Naksha.VIRT_COLLECTIONS);
+    assertEquals(1, collectionWrites.size(), "Expected single collection write");
+    return collectionWrites.get(0);
+  }
+
+  private static List<Write> getSingularWritesToCollection(List<WriteRequest> writeRequests, String collectionId) {
+    return flattenSingularWriteRequest(writeRequests)
+        .filter(write -> collectionId.equals(write.getCollectionId()))
+        .toList();
+  }
+
+  private static Stream<Write> flattenSingularWriteRequest(List<WriteRequest> writeRequests) {
+    return writeRequests.stream()
+        .filter(wr -> wr.getWrites().size() == 1)
+        .map(wr -> wr.getWrites().get(0));
+  }
+
+  private static ArgumentMatcher<WriteRequest> matchesCreateCollectionRequest() {
     return writeRequest -> {
       WriteList writes = writeRequest.getWrites();
       return writes.size() == 1 && Naksha.VIRT_COLLECTIONS.equals(writes.get(0).getCollectionId());
@@ -236,14 +290,6 @@ class DefaultStorageHandlerTest {
     );
   }
 
-  private static Stream<SQLException> sqlErrorsIndicatingMissingCollection() {
-    return Stream.of(
-
-            new SQLException("Collection does not exist", "N0002"), //EPsqlState.COLLECTION_DOES_NOT_EXIST
-            new SQLException("Undefined table", "42P01") //EPsqlState.UNDEFINED_TABLE
-    );
-  }
-
   record CollectionPriorityTestCase(
       DefaultStorageHandlerProperties handlerProperties,
       Space space,
@@ -280,11 +326,11 @@ class DefaultStorageHandlerTest {
 
   private Request writeRandomFeature() {
     return new WriteRequest()
-            .add(new Write().createFeature(
-                    null,
-                    "random_collection_" + RandomUtils.nextInt(),
-                    new NakshaFeature("random_feature_" + RandomUtils.nextInt())
-            ));
+        .add(new Write().createFeature(
+            null,
+            "random_collection_" + RandomUtils.nextInt(),
+            new NakshaFeature("random_feature_" + RandomUtils.nextInt())
+        ));
   }
 
   private static DefaultStorageHandlerProperties handlerProperties() {
@@ -313,10 +359,10 @@ class DefaultStorageHandlerTest {
   private static DefaultStorageHandlerProperties handlerPropertiesWithCollection(String collectionId) {
     DefaultStorageHandlerProperties properties = handlerProperties();
     NakshaCollection collection = collectionId != null ? new NakshaCollection() : null;
-      if (collection != null) {
-          collection.setId(collectionId);
-      }
-      properties.setCollection(collection);
+    if (collection != null) {
+      collection.setId(collectionId);
+    }
+    properties.setCollection(collection);
     return properties;
   }
 
@@ -325,7 +371,7 @@ class DefaultStorageHandlerTest {
     nakshaCollection.setId("handler_collection");
     return new DefaultStorageHandlerProperties(
         storageId,
-            nakshaCollection,
+        nakshaCollection,
         true,
         true
     );

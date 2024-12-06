@@ -63,7 +63,7 @@ public class DefaultStorageHandlerProperties extends NakshaProperties {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   @JsonProperty(COLLECTION)
-  private @Nullable NakshaCollection xyzCollection;
+  private @Nullable NakshaCollection nakshaCollection;
 
   /**
    * Indicates whether collection should be created automatically (happens on first collection's usage).
@@ -94,7 +94,7 @@ public class DefaultStorageHandlerProperties extends NakshaProperties {
       final @JsonProperty(AUTO_CREATE_COLLECTION) Boolean autoCreateCollection,
       final @JsonProperty(AUTO_DELETE_COLLECTION) Boolean autoDeleteCollection) {
     this.storageId = storageId;
-    this.xyzCollection = xyzCollection;
+    this.nakshaCollection = xyzCollection;
     this.autoCreateCollection =
         autoCreateCollection == null ? DEFAULT_AUTO_CREATE_COLLECTION : autoCreateCollection;
     this.autoDeleteCollection =
@@ -102,11 +102,11 @@ public class DefaultStorageHandlerProperties extends NakshaProperties {
   }
 
   public @Nullable NakshaCollection getCollection() {
-    return xyzCollection;
+    return nakshaCollection;
   }
 
   public void setCollection(final @JsonProperty(COLLECTION) @Nullable NakshaCollection xyzCollection) {
-    this.xyzCollection = xyzCollection;
+    this.nakshaCollection = xyzCollection;
   }
 
   public @Nullable String getStorageId() {
