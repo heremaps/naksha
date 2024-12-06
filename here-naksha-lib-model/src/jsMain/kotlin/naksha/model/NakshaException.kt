@@ -1,0 +1,20 @@
+package naksha.model
+
+/**
+ * A Naksha exception.
+ * @property error the error that happened.
+ * @since 3.0.0
+ */
+@JsExport
+actual open class NakshaException  actual constructor(actual val error: NakshaError) : RuntimeException(error.msg, error.cause) {
+    /**
+     * Create an exception with error details individually specified.
+     * @param code the error code.
+     * @param msg the human-readable error message.
+     * @param id the optional identifier related to the error; if any.
+     * @param cause the cause (exception) of this error; if any.
+     * @since 3.0.0
+     */
+    @JsName("of")
+    actual constructor(code: String, msg: String, id: String?, cause: Throwable?) : this(NakshaError(code, msg, id, cause))
+}
