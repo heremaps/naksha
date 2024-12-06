@@ -188,8 +188,7 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
           eventHandlers.stream().map(NakshaFeature::getId).toList();
       readSession.close();
       return new ErrorResponse(
-          NakshaError.CONFLICT,
-          "The storage is still in use by these event handlers: " + handlerIds);
+          NakshaError.CONFLICT, "The storage is still in use by these event handlers: " + handlerIds);
     }
   }
 }
