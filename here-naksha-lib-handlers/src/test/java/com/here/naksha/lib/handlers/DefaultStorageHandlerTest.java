@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
@@ -28,6 +29,7 @@ import java.sql.SQLException;
 import java.util.concurrent.Callable;
 import java.util.stream.Stream;
 
+import static naksha.model.NakshaError.COLLECTION_NOT_FOUND;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Named.named;
 import static org.mockito.ArgumentMatchers.any;
@@ -168,11 +170,11 @@ class DefaultStorageHandlerTest {
     assertEquals(handler.properties.getCollection().getId(), requestPassedToStorageWriter.getWrites().get(0).getCollectionId());
   }
 
-  @ParameterizedTest
-  @MethodSource("sqlErrorsIndicatingMissingCollection")
-  void shouldNotCreateCollectionWhenAutoCreateIsDisabled(SQLException writerFailureCause) {
-    // Given: Storage writer failing on WriteXyzFeatures due to sql exception
-    when(storageWriteSession.execute(any(WriteRequest.class))).thenThrow(new RuntimeException(writerFailureCause));
+  @Test
+  void shouldNotCreateCollectionWhenAutoCreateIsDisabled() {
+    // Given: Storage writer failing on WriteXyzFeatures due to missing collection exception
+    NakshaException missingCollectionException = new NakshaException(new NakshaError(COLLECTION_NOT_FOUND, "Missing collection"));
+    when(storageWriteSession.execute(any(WriteRequest.class))).thenThrow(missingCollectionException);
 
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
@@ -189,7 +191,14 @@ class DefaultStorageHandlerTest {
     );
 
     // Then: No Write Collection request was passed to storage writer
-    verify(storageWriteSession, never()).execute(any(WriteRequest.class));
+    verify(storageWriteSession, never()).execute(argThat(matchesCreateCollectionRequest()));
+  }
+
+  private static ArgumentMatcher<WriteRequest> matchesCreateCollectionRequest(){
+    return writeRequest -> {
+      WriteList writes = writeRequest.getWrites();
+      return writes.size() == 1 && Naksha.VIRT_COLLECTIONS.equals(writes.get(0).getCollectionId());
+    };
   }
 
   private static Stream<Named<CollectionPriorityTestCase>> collectionPriorityTestCases() {
@@ -229,6 +238,7 @@ class DefaultStorageHandlerTest {
 
   private static Stream<SQLException> sqlErrorsIndicatingMissingCollection() {
     return Stream.of(
+
             new SQLException("Collection does not exist", "N0002"), //EPsqlState.COLLECTION_DOES_NOT_EXIST
             new SQLException("Undefined table", "42P01") //EPsqlState.UNDEFINED_TABLE
     );
