@@ -32,7 +32,7 @@ public class Commons {
   }
 
   private static Response getAllFeatuers() {
-    return DataHub.request().get("iterate");
+    return Naksha.request().get("iterate"); // set temporarily to Naksha as DataHub has iteration bug
   }
 
   public static void assertSameIds(Response dhResponse, Response nResponse) {

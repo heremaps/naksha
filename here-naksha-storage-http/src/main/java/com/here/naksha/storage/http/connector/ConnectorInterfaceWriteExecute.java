@@ -18,9 +18,9 @@
  */
 package com.here.naksha.storage.http.connector;
 
-import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_ID;
+import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_IDS;
 import static com.here.naksha.lib.core.models.storage.EWriteOp.*;
-import static com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper.ReadRequestType.GET_BY_ID;
+import static com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper.ReadRequestType.GET_BY_IDS;
 
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
@@ -44,7 +44,7 @@ public class ConnectorInterfaceWriteExecute {
   private final WriteXyzFeatures request;
   private final RequestSender sender;
   private final String connectorSpaceName;
-  private final Map<String, XyzFeature> featuresCache = new HashMap<>();
+  private final Map<String, XyzFeature> databaseFeaturesCache = new HashMap<>();
 
   public ConnectorInterfaceWriteExecute(NakshaContext context, WriteXyzFeatures request, RequestSender sender) {
     this.context = context;
@@ -88,6 +88,8 @@ public class ConnectorInterfaceWriteExecute {
     List<XyzFeature> featuresToUpdate = new LinkedList<>();
     Map<String, String> featuresToDelete = new HashMap<>(); // Format enforced by connector API
 
+    populateDbCache(request.features);
+
     for (XyzFeatureCodec featureCodec : request.features) {
       XyzFeature feature = featureCodec.getFeature();
       if (featureCodec.getOp().equals(PUT.value())) {
@@ -128,10 +130,23 @@ public class ConnectorInterfaceWriteExecute {
     return event;
   }
 
+  /**
+   * Fills cache with features from database.
+   */
+  private void populateDbCache(List<XyzFeatureCodec> features) {
+    List<String> idsList =
+        features.stream().map(feature -> feature.getFeature().getId()).toList();
+    ForwardCursor<XyzFeature, XyzFeatureCodec> xyzFeatureCursor = getFeaturesFromDb(idsList);
+    while (xyzFeatureCursor.next()) {
+      XyzFeature featureFromDb = xyzFeatureCursor.getFeature();
+      databaseFeaturesCache.put(featureFromDb.getId(), featureFromDb);
+    }
+  }
+
   private void assertUuidMatch(XyzFeature feature) {
     String uuid = feature.getProperties().getXyzNamespace().getUuid();
     if (uuid != null) {
-      String uuidFromDb = getUuidFromDb(feature);
+      String uuidFromDb = getXyzNamespaceFromDbCache(feature).getUuid();
       if (!uuid.equals(uuidFromDb)) {
         throw new ConflictException(
             "The feature with id %s cannot be replaced. The provided UUID doesn't match the UUID of the head state: %s"
@@ -143,7 +158,7 @@ public class ConnectorInterfaceWriteExecute {
   private void fillMissingCreatedAt(XyzFeature feature) {
     XyzNamespace xyzNamespace = feature.getProperties().getXyzNamespace();
     if (xyzNamespace.getCreatedAt() <= 0) {
-      xyzNamespace.setCreatedAt(getCreatedAtFromDb(feature));
+      xyzNamespace.setCreatedAt(getXyzNamespaceFromDbCache(feature).getCreatedAt());
     }
   }
 
@@ -151,7 +166,7 @@ public class ConnectorInterfaceWriteExecute {
     XyzNamespace xyzNamespace = feature.getProperties().getXyzNamespace();
     String uuid = xyzNamespace.getUuid();
     if (uuid == null) {
-      uuid = getUuidFromDb(feature);
+      uuid = getXyzNamespaceFromDbCache(feature).getUuid();
     }
     xyzNamespace.setPuuid(uuid);
   }
@@ -163,31 +178,27 @@ public class ConnectorInterfaceWriteExecute {
   }
 
   private boolean existsInDb(XyzFeature feature) {
-    return getFeatureFromDb(feature) != null;
+    return databaseFeaturesCache.containsKey(feature.getId());
   }
 
-  private long getCreatedAtFromDb(XyzFeature feature) {
-    return getFeatureFromDb(feature).getProperties().getXyzNamespace().getCreatedAt();
+  private XyzNamespace getXyzNamespaceFromDbCache(XyzFeature feature) {
+    return getFeatureFromDbCache(feature).getProperties().getXyzNamespace();
   }
 
-  private String getUuidFromDb(XyzFeature feature) {
-    return getFeatureFromDb(feature).getProperties().getXyzNamespace().getUuid();
+  private @Nullable XyzFeature getFeatureFromDbCache(XyzFeature feature) {
+    if (databaseFeaturesCache.containsKey(feature.getId())) {
+      return databaseFeaturesCache.get(feature.getId());
+    } else {
+      throw new IllegalStateException("Feature with id " + feature.getId() + " not present in cache");
+    }
   }
 
-  private @Nullable XyzFeature getFeatureFromDb(XyzFeature featureFromRequest) {
-    if (featuresCache.containsKey(featureFromRequest.getId())) return featuresCache.get(featureFromRequest.getId());
-    ReadFeaturesProxyWrapper getFeaturesRequest = new ReadFeaturesProxyWrapper().withReadRequestType(GET_BY_ID);
-    getFeaturesRequest.addQueryParameter(FEATURE_ID, featureFromRequest.getId());
+  private ForwardCursor<XyzFeature, XyzFeatureCodec> getFeaturesFromDb(List<String> featureIds) {
+    ReadFeaturesProxyWrapper getFeaturesRequest = new ReadFeaturesProxyWrapper().withReadRequestType(GET_BY_IDS);
+    getFeaturesRequest.addQueryParameter(FEATURE_IDS, featureIds);
     getFeaturesRequest.addCollection(connectorSpaceName);
     try (Result result = ConnectorInterfaceReadExecute.execute(context, getFeaturesRequest, sender)) {
-      ForwardCursor<XyzFeature, XyzFeatureCodec> xyzFeatureCursor = result.getXyzFeatureCursor();
-      if (xyzFeatureCursor.next()) {
-        XyzFeature featureFromDb = xyzFeatureCursor.getFeature();
-        featuresCache.put(featureFromDb.getId(), featureFromDb);
-        return featureFromDb;
-      } else {
-        return null;
-      }
+      return result.getXyzFeatureCursor();
     } catch (NoCursor e) {
       throw new RuntimeException(e);
     }
