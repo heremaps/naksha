@@ -153,7 +153,7 @@ public class IoEventPipeline extends EventPipeline {
   private void writeDataOut(@NotNull OutputStream output, @NotNull Response dataOut, @Nullable String ifNoneMatch) {
     try {
       byte @NotNull [] bytes =
-          Platform.toJSON(dataOut, ToJsonOptions.getDEFAULT()).getBytes(StandardCharsets.UTF_8);
+          Platform.toJSON(dataOut, ToJsonOptions.DEFAULT).getBytes(StandardCharsets.UTF_8);
       log.atInfo()
           .setMessage("Write data out for response with type: {}")
           .addArgument(dataOut.getClass().getSimpleName())

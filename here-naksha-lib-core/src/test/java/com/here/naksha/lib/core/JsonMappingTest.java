@@ -41,7 +41,7 @@ public class JsonMappingTest {
   public void testDeserializeFeature() {
     final String json =
         "{\"type\":\"Feature\", \"id\": \"xyz123\", \"properties\":{\"x\":5}, \"otherProperty\": \"123\"}";
-    JvmMap jvmMap = (JvmMap) Platform.fromJSON(json, FromJsonOptions.getDEFAULT());
+    JvmMap jvmMap = (JvmMap) Platform.fromJSON(json, FromJsonOptions.DEFAULT);
     final NakshaFeature obj = jvmMap.proxy(Platform.klassOf(NakshaFeature.class));
     assertNotNull(obj);
 
@@ -52,11 +52,11 @@ public class JsonMappingTest {
   @Test
   public void testSerializeFeature() throws Exception {
       final String raw = "{\"type\":\"Feature\", \"id\": \"xyz123\", \"properties\":{\"x\":5}}";
-      JvmMap jvmMap = (JvmMap) Platform.fromJSON(raw, FromJsonOptions.getDEFAULT());
+      JvmMap jvmMap = (JvmMap) Platform.fromJSON(raw, FromJsonOptions.DEFAULT);
       final NakshaFeature obj = jvmMap.proxy(Platform.klassOf(NakshaFeature.class));      assertNotNull(obj);
 
       obj.getProperties().put("y", 7);
-      String result = Platform.toJSON(obj, ToJsonOptions.getDEFAULT());
+      String result = Platform.toJSON(obj, ToJsonOptions.DEFAULT);
 
       final String expected = "{\"type\":\"Feature\",\"id\":\"xyz123\",\"properties\":{\"x\":5,\"y\":7}}";
       assertTrue(jsonCompare(expected, result));
@@ -74,7 +74,7 @@ public class JsonMappingTest {
   public void testResponseParsing() {
     final String json =
         "{\"type\":\"ErrorResponse\",\"error\":\"NotImplemented\",\"errorMessage\":\"Hello World!\"}";
-    JvmObject jvmMap = (JvmObject) Platform.fromJSON(json, FromJsonOptions.getDEFAULT());
+    JvmObject jvmMap = (JvmObject) Platform.fromJSON(json, FromJsonOptions.DEFAULT);
     //TODO(lib-core test)
 //    final ErrorResponse obj = jvmMap.proxy(Platform.klassOf(ErrorResponse.class));
 //    assertNotNull(obj);

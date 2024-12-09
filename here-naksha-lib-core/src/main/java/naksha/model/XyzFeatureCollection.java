@@ -20,7 +20,6 @@ package naksha.model;
 
 import static java.util.stream.Collectors.toList;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -29,7 +28,6 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.here.naksha.lib.core.LazyParsableFeatureList;
 import com.here.naksha.lib.core.LazyParsableFeatureList.RawDeserializer;
 import com.here.naksha.lib.core.LazyParsableFeatureList.RawSerializer;
 import java.util.ArrayList;
@@ -47,8 +45,10 @@ import org.jetbrains.annotations.Nullable;
 @SuppressWarnings({"unused", "unchecked"})
 public class XyzFeatureCollection extends Response {
 
-  @JsonIgnore
-  private final @NotNull LazyParsableFeatureList features;
+  @JsonDeserialize(using = RawDeserializer.class)
+  @JsonSerialize(using = RawSerializer.class)
+  @JsonProperty
+  private @NotNull List<? extends NakshaFeature> features;
 
   @JsonProperty
   @JsonInclude(Include.NON_NULL)
@@ -100,7 +100,7 @@ public class XyzFeatureCollection extends Response {
   private Integer version;
 
   public XyzFeatureCollection() {
-    features = new LazyParsableFeatureList();
+    features = new ArrayList<>();
   }
 
   @SuppressWarnings("WeakerAccess")
@@ -163,35 +163,17 @@ public class XyzFeatureCollection extends Response {
   }
 
   public @NotNull List<NakshaFeature> getFeatures() {
-    return (List<NakshaFeature>) features.get();
+    return (List<NakshaFeature>) features;
   }
 
   public void setFeatures(@NotNull List<? extends NakshaFeature> features) {
-    this.features.set(features);
+    this.features = features;
   }
 
   @SuppressWarnings("unused")
   public @NotNull XyzFeatureCollection withFeatures(final @NotNull List<? extends @NotNull NakshaFeature> features) {
     setFeatures(features);
     return this;
-  }
-
-  @JsonSerialize(using = RawSerializer.class)
-  @JsonProperty("features")
-  public @NotNull LazyParsableFeatureList getLazyParsableFeatureList() {
-    return features;
-  }
-
-  @JsonDeserialize(using = RawDeserializer.class)
-  @JsonProperty("features")
-  public void setLazyParsableFeatureList(Object features) {
-    if (features instanceof String) {
-      String string = (String) features;
-      this.features.set(string);
-    } else if (features instanceof List<?>) {
-      List<?> list = (List<?>) features;
-      this.features.set((List<NakshaFeature>) list);
-    }
   }
 
   /**
@@ -464,21 +446,21 @@ public class XyzFeatureCollection extends Response {
   @SuppressWarnings("unused")
   public @NotNull XyzFeatureCollection withInsertedFeatures(
       final @NotNull List<? extends @NotNull NakshaFeature> insertedFeatures) {
-    ((List<NakshaFeature>) this.features.get()).addAll(insertedFeatures); // append features
+    ((List<NakshaFeature>) features).addAll(insertedFeatures); // append features
     withInserted(insertedFeatures.stream().map(NakshaFeature::getId).collect(toList())); // overwrite inserted
     return this;
   }
 
   public @NotNull XyzFeatureCollection withUpdatedFeatures(
       final @NotNull List<? extends @NotNull NakshaFeature> updatedFeatures) {
-    ((List<NakshaFeature>) this.features.get()).addAll(updatedFeatures); // append features
+    ((List<NakshaFeature>) features).addAll(updatedFeatures); // append features
     withUpdated(updatedFeatures.stream().map(NakshaFeature::getId).collect(toList())); // overwrite updated
     return this;
   }
 
   public @NotNull XyzFeatureCollection withDeletedFeatures(
       final @NotNull List<? extends @NotNull NakshaFeature> deletedFeatures) {
-    ((List<NakshaFeature>) this.features.get()).addAll(deletedFeatures); // append features
+    ((List<NakshaFeature>) features).addAll(deletedFeatures); // append features
     withDeleted(deletedFeatures.stream().map(NakshaFeature::getId).collect(toList())); // overwrite deleted
     return this;
   }

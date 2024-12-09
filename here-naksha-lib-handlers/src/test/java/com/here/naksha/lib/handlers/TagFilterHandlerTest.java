@@ -3,6 +3,14 @@ package com.here.naksha.lib.handlers;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.test.common.FileUtil;
 import com.here.naksha.test.common.JsonUtil;
+import java.util.Map;
+import naksha.base.AnyList;
+import naksha.base.AnyObject;
+import naksha.base.FromJsonOptions;
+import naksha.base.JvmProxyUtil;
+import naksha.base.MapProxy;
+import naksha.base.Platform;
+import naksha.base.ToJsonOptions;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
@@ -177,7 +185,16 @@ class TagFilterHandlerTest {
                                final @NotNull String outputFilePath) throws JSONException {
         // Given: WriteXyzFeatures request with some tags already part of features
         final String featuresJson = FileUtil.loadFileOrFail(inputFilePath);
-        final XyzFeatureCollection inputCollection = JsonUtil.parseJson(featuresJson, XyzFeatureCollection.class);
+
+//        final XyzFeatureCollection inputCollection = JsonUtil.parseJson(featuresJson, XyzFeatureCollection.class);
+        final AnyObject rawInputCollection = JvmProxyUtil.box(Platform.fromJSON(featuresJson, FromJsonOptions.DEFAULT), AnyObject.class);
+        final AnyList rawFeatures = (AnyList) rawInputCollection.get("features");
+        final XyzFeatureCollection inputCollection = new XyzFeatureCollection();
+        final List<NakshaFeature> features = new ArrayList<>();
+        for(Object rawF: rawFeatures){
+            features.add(JvmProxyUtil.box(rawF, NakshaFeature.class));
+        }
+        inputCollection.setFeatures(features);
         final WriteRequest wf = RequestHelper.upsertFeaturesRequest("some_space", inputCollection.getFeatures());
         // Given: Expected feature collection JSON
         final String expectedJson = FileUtil.loadFileOrFail(outputFilePath);
@@ -189,13 +206,13 @@ class TagFilterHandlerTest {
         JSONAssert.assertEquals("List of output features don't match", expectedJson, actualJson, JSONCompareMode.STRICT_ORDER);
     }
 
-    private String covertWriteFeaturesToCollectionJson(final @NotNull List<Write> codecList) {
+    private String covertWriteFeaturesToCollectionJson(final @NotNull List<Write> writes) {
         final List<NakshaFeature> features = new ArrayList<>();
-        for (final @NotNull Write codec : codecList) {
-            features.add(codec.getFeature());
+        for (final @NotNull Write write : writes) {
+            features.add(write.getFeature());
         }
         final XyzFeatureCollection outputCollection = new XyzFeatureCollection().withFeatures(features);
-        return JsonUtil.toJson(outputCollection);
+        return Platform.toJSON(outputCollection, ToJsonOptions.DEFAULT);
     }
 
 }
