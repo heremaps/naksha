@@ -50,10 +50,10 @@ open class NotNullMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_
 
     @JsName("getValueByProperty")
     open operator fun getValue(self: MAP, property: KProperty<*>): PROPERTY_TYPE =
-        getValue(self, name)
+        getValue(self, property.name)
 
     @JvmOverloads
-    open fun setValue( self: MAP, propertyName: String? = null, value: PROPERTY_TYPE) =
+    open fun setValue(self: MAP, propertyName: String? = null, value: PROPERTY_TYPE) =
         self.put(
             this.name ?: propertyName ?: throw IllegalArgumentException("Undefined property name"),
             value
@@ -61,5 +61,5 @@ open class NotNullMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_
 
     @JsName("setValueByProperty")
     open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE) =
-        setValue(self, name, value)
+        setValue(self, property.name, value)
 }

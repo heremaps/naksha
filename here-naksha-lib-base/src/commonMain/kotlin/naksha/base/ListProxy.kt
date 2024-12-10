@@ -17,6 +17,7 @@ import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set_length
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_splice
 import naksha.base.fn.Fn2
 import kotlin.js.JsExport
+import kotlin.jvm.JvmStatic
 import kotlin.math.max
 import kotlin.reflect.KClass
 
@@ -28,6 +29,7 @@ import kotlin.reflect.KClass
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
 open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
+
     /**
      * Returns the element class of the proxy.
      */

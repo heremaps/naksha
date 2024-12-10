@@ -7,6 +7,7 @@ import java.util.Map;
 import naksha.base.AnyList;
 import naksha.base.AnyObject;
 import naksha.base.FromJsonOptions;
+import naksha.base.JvmMap;
 import naksha.base.JvmProxyUtil;
 import naksha.base.MapProxy;
 import naksha.base.Platform;
@@ -185,21 +186,15 @@ class TagFilterHandlerTest {
                                final @NotNull String outputFilePath) throws JSONException {
         // Given: WriteXyzFeatures request with some tags already part of features
         final String featuresJson = FileUtil.loadFileOrFail(inputFilePath);
-
-//        final XyzFeatureCollection inputCollection = JsonUtil.parseJson(featuresJson, XyzFeatureCollection.class);
-        final AnyObject rawInputCollection = JvmProxyUtil.box(Platform.fromJSON(featuresJson, FromJsonOptions.DEFAULT), AnyObject.class);
-        final AnyList rawFeatures = (AnyList) rawInputCollection.get("features");
-        final XyzFeatureCollection inputCollection = new XyzFeatureCollection();
-        final List<NakshaFeature> features = new ArrayList<>();
-        for(Object rawF: rawFeatures){
-            features.add(JvmProxyUtil.box(rawF, NakshaFeature.class));
-        }
-        inputCollection.setFeatures(features);
+        final JvmMap rawInputCollection = (JvmMap) Platform.fromJSON(featuresJson, FromJsonOptions.DEFAULT);
+        final XyzFeatureCollection inputCollection = JvmProxyUtil.box(rawInputCollection, XyzFeatureCollection.class);
         final WriteRequest wf = RequestHelper.upsertFeaturesRequest("some_space", inputCollection.getFeatures());
-        // Given: Expected feature collection JSON
+
+        // And: Expected feature collection JSON
         final String expectedJson = FileUtil.loadFileOrFail(outputFilePath);
 
         // When: a function is called with request and given tag filter configuration
+
         TagFilterHandler.applyTagChangesOnRequest(wf, addTags, removeTags);
         // Then: Validate that the output features in the request is as expected
         final String actualJson = covertWriteFeaturesToCollectionJson(wf.getWrites());
