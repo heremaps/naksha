@@ -18,11 +18,12 @@
  */
 package com.here.naksha.handler.activitylog;
 
-import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.storage.*;
+import naksha.model.request.SuccessResponse;
+
 import java.util.List;
 
-public class ActivityLogSuccessResult extends SuccessResult {
+public class ActivityLogSuccessResult extends SuccessResponse {
 
   private ActivityLogSuccessResult(ForwardCursor<XyzFeature, XyzFeatureCodec> cursor) {
     this.cursor = cursor;
