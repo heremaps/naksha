@@ -5,17 +5,18 @@ import com.here.naksha.storage.http.connector.integration.utils.DataHub;
 import com.here.naksha.storage.http.connector.integration.utils.Naksha;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace.*;
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.*;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
+import static java.util.UUID.randomUUID;
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public abstract class WriteCollectionTest {
   static final String FEATURE_A_ID = "A";
@@ -111,11 +112,12 @@ public abstract class WriteCollectionTest {
   @Test
   void errorOnNewWithUuid() {
     Map propertiesWithUuid = Map.of("@ns:com:here:xyz",
-      Map.of(UUID_KEY, UUID.randomUUID())
+      Map.of(UUID_KEY, randomUUID())
     );
     Response responseUuid = writeFeature(new InputFeature(FEATURE_A_ID, propertiesWithUuid));
     responseUuid.then().assertThat().statusCode(greaterThanOrEqualTo(400))
-      .and().body("type", equalTo("ErrorResponse"));
+      .and().body("type", equalTo("ErrorResponse"))
+      .and().body("errorMessage", matchesRegex("The feature with id .* cannot be created. Property UUID should not be provided as input."));
     assertDbEmpty();
   }
 
@@ -138,14 +140,14 @@ public abstract class WriteCollectionTest {
 
   @Test
   void errorOnUpdateWithNonMatchingUuid() {
-    Response responseNew = writeFeature(new InputFeature(FEATURE_A_ID, Map.of("p", "1"))); // insert single to empty database
+    Response responseNew = writeFeature(new InputFeature(FEATURE_A_ID, Map.of("p", "1")));
     assertStatusCode200(responseNew);
     OutputFeature outputNew = new OutputFeature(FEATURE_A_ID, responseNew);
 
     Map propertiesWithUuid = Map.of("@ns:com:here:xyz",
-      Map.of(UUID_KEY, UUID.randomUUID())
+      Map.of(UUID_KEY, randomUUID())
     );
-    Response responseUpdated = writeFeature(new InputFeature(FEATURE_A_ID, propertiesWithUuid)); // insert single to empty database
+    Response responseUpdated = writeFeature(new InputFeature(FEATURE_A_ID, propertiesWithUuid));
     String expectedErrorMessage = "The feature with id urn:here::here:landmark3d.Landmark3dPhotoreal:A cannot be replaced. The provided UUID doesn't match the UUID of the head state: %s"
       .formatted(outputNew.getUuid());
     responseUpdated.then()
@@ -153,6 +155,35 @@ public abstract class WriteCollectionTest {
       .and().body("type", equalTo("ErrorResponse"))
       .and().body("error", equalTo("Conflict"))
       .and().body("errorMessage", equalTo(expectedErrorMessage));
+  }
+
+  @Test
+  void ignoreCreateAtUpdateAtAndPuuidProvidedInRequest() {
+    Map xyzPropertiesToBeIgnored = Map.of(
+      PUUID, randomUUID(),
+      CREATED_AT, System.currentTimeMillis(),
+      UPDATED_AT, System.currentTimeMillis()
+    );
+
+    Map propertiesNew = Map.of(
+      "p", "1",
+      "@ns:com:here:xyz", xyzPropertiesToBeIgnored);
+    Response responseNew = writeFeature(new InputFeature(FEATURE_A_ID, propertiesNew));
+    assertStatusCode200(responseNew);
+    OutputFeature outputNew = new OutputFeature(FEATURE_A_ID, responseNew);
+    assertNotEquals(xyzPropertiesToBeIgnored.get(PUUID), outputNew.getXyzNamespaceProperty(PUUID));
+    assertNotEquals(xyzPropertiesToBeIgnored.get(CREATED_AT), outputNew.getXyzNamespaceProperty(CREATED_AT));
+    assertNotEquals(xyzPropertiesToBeIgnored.get(UPDATED_AT), outputNew.getXyzNamespaceProperty(UPDATED_AT));
+
+    Map propertiesUpdated = Map.of(
+      "p", "2",
+      "@ns:com:here:xyz", xyzPropertiesToBeIgnored);
+    Response responseUpdated = writeFeature(new InputFeature(FEATURE_A_ID, propertiesUpdated));
+    assertStatusCode200(responseUpdated);
+    OutputFeature outputUpdated = new OutputFeature(FEATURE_A_ID, responseUpdated);
+    assertNotEquals(xyzPropertiesToBeIgnored.get(PUUID), outputUpdated.getXyzNamespaceProperty(PUUID));
+    assertNotEquals(xyzPropertiesToBeIgnored.get(CREATED_AT), outputUpdated.getXyzNamespaceProperty(CREATED_AT));
+    assertNotEquals(xyzPropertiesToBeIgnored.get(UPDATED_AT), outputUpdated.getXyzNamespaceProperty(UPDATED_AT));
   }
 
   @Test

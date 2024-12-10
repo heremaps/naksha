@@ -93,7 +93,7 @@ public class ConnectorInterfaceWriteExecute {
     for (XyzFeatureCodec featureCodec : request.features) {
       XyzFeature feature = featureCodec.getFeature();
       if (featureCodec.getOp().equals(PUT.value())) {
-        if (isNewFeature(feature)) {
+        if (!existsInDb(feature)) {
           featuresToInsert.add(feature);
         } else {
           featuresToUpdate.add(feature);
@@ -111,15 +111,16 @@ public class ConnectorInterfaceWriteExecute {
 
     long currentTime = System.currentTimeMillis();
     featuresToInsert.forEach(feature -> {
+      assertNoUuid(feature);
       setRandomUuid(feature);
       setCreatedAt(feature, currentTime);
       setUpdatedAt(feature, currentTime);
     });
     featuresToUpdate.forEach(feature -> {
       assertUuidMatch(feature);
-      setPuuidFromUuid(feature);
+      setPuuidToUuidFromDb(feature);
       setRandomUuid(feature);
-      fillMissingCreatedAt(feature);
+      setCreatedAtToCreateAtFromDb(feature);
       setUpdatedAt(feature, currentTime);
     });
 
@@ -131,15 +132,26 @@ public class ConnectorInterfaceWriteExecute {
   }
 
   /**
-   * Fills cache with features from database.
+   * Fills cache with features from database that will be needed.
+   * Only the features with PUT op are needed, therefore only they are fetched.
    */
   private void populateDbCache(List<XyzFeatureCodec> features) {
-    List<String> idsList =
-        features.stream().map(feature -> feature.getFeature().getId()).toList();
+    List<String> idsList = features.stream()
+        .filter(feature -> feature.getOp().equals(PUT.value()))
+        .map(feature -> feature.getFeature().getId())
+        .toList();
     ForwardCursor<XyzFeature, XyzFeatureCodec> xyzFeatureCursor = getFeaturesFromDb(idsList);
     while (xyzFeatureCursor.next()) {
       XyzFeature featureFromDb = xyzFeatureCursor.getFeature();
       databaseFeaturesCache.put(featureFromDb.getId(), featureFromDb);
+    }
+  }
+
+  private void assertNoUuid(XyzFeature feature) {
+    String id = feature.getId();
+    if (feature.getProperties().getXyzNamespace().getUuid() != null) {
+      throw new IllegalArgumentException("The feature with id " + id + " cannot be created. "
+          + "Property UUID should not be provided as input.");
     }
   }
 
@@ -155,26 +167,16 @@ public class ConnectorInterfaceWriteExecute {
     }
   }
 
-  private void fillMissingCreatedAt(XyzFeature feature) {
-    XyzNamespace xyzNamespace = feature.getProperties().getXyzNamespace();
-    if (xyzNamespace.getCreatedAt() <= 0) {
-      xyzNamespace.setCreatedAt(getXyzNamespaceFromDbCache(feature).getCreatedAt());
-    }
+  private void setCreatedAtToCreateAtFromDb(XyzFeature feature) {
+    XyzNamespace xyzNamespaceFromRequest = feature.getProperties().getXyzNamespace();
+    XyzNamespace xyzNamespaceFromDb = getXyzNamespaceFromDbCache(feature);
+    xyzNamespaceFromRequest.setCreatedAt(xyzNamespaceFromDb.getCreatedAt());
   }
 
-  private void setPuuidFromUuid(XyzFeature feature) {
-    XyzNamespace xyzNamespace = feature.getProperties().getXyzNamespace();
-    String uuid = xyzNamespace.getUuid();
-    if (uuid == null) {
-      uuid = getXyzNamespaceFromDbCache(feature).getUuid();
-    }
-    xyzNamespace.setPuuid(uuid);
-  }
-
-  private boolean isNewFeature(XyzFeature feature) {
-    String uuid = feature.getProperties().getXyzNamespace().getUuid();
-    // We are making an assumption that if uuid exists in feature, it is not a new feature
-    return uuid == null && !existsInDb(feature);
+  private void setPuuidToUuidFromDb(XyzFeature feature) {
+    XyzNamespace xyzNamespaceFromRequest = feature.getProperties().getXyzNamespace();
+    XyzNamespace xyzNamespaceFromDb = getXyzNamespaceFromDbCache(feature);
+    xyzNamespaceFromRequest.setPuuid(xyzNamespaceFromDb.getUuid());
   }
 
   private boolean existsInDb(XyzFeature feature) {

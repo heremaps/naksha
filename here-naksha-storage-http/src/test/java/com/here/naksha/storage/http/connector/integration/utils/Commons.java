@@ -42,9 +42,9 @@ public class Commons {
   }
 
   public static List<String> responseToIds(Response response) {
-    response.
-      then().assertThat().body("$", hasKey("features"))
-      .and().log().ifValidationFails();
+    response.then()
+      .log().ifValidationFails()
+      .and().assertThat().body("$", hasKey("features"));
     return response.body().jsonPath().getList("features").stream().map(e -> ((Map) e).get("id").toString()).toList();
   }
 
