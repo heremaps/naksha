@@ -24,7 +24,9 @@ import naksha.model.NakshaError;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/** An exception, which will cause the connector to respond with an ErrorResponse object. */
+/** An exception, which will cause the connector to respond with an ErrorResponse object.
+ * @deprecated Please use {@link naksha.model.NakshaException} instead
+ */
 public class XyzErrorException extends RuntimeException {
 
   public XyzErrorException(@NotNull Throwable reason) {
