@@ -125,7 +125,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
     }
   }
 
-  private List<NakshaFeature> featuresEnhancedWithActivity(List<XyzFeature> historyFeatures, NakshaContext context) {
+  private List<NakshaFeature> featuresEnhancedWithActivity(List<NakshaFeature> historyFeatures, NakshaContext context) {
     List<FeatureWithPredecessor> featuresWithPredecessors = featuresWithPredecessors(historyFeatures, context);
     return featuresWithPredecessors.stream()
         .map(featureWithPredecessor -> enhanceWithActivityLog(

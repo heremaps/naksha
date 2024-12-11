@@ -59,6 +59,7 @@ import org.jetbrains.annotations.Nullable;
  * using the {@link #additionalProperties() additional properties map}!
  *
  * @since 2.0.0
+ * @deprecated From Naksha V3 onward, please use {@link naksha.base.AnyObject} as the base for any JSON class.
  */
 @AvailableSince(NakshaVersion.v2_0_0)
 @JsonFormat(shape = JsonFormat.Shape.OBJECT)

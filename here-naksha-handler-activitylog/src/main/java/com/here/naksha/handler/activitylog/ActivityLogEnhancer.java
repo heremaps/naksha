@@ -23,10 +23,10 @@ import static com.here.naksha.handler.activitylog.ReversePatchUtil.toJsonNode;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import naksha.model.EXyzAction;
-import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.Original;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -38,8 +38,8 @@ public class ActivityLogEnhancer {
 
   private ActivityLogEnhancer() {}
 
-  static XyzFeature enhanceWithActivityLog(
-      @NotNull XyzFeature newFeature, @Nullable XyzFeature oldFeature, @NotNull String spaceId) {
+  static NakshaFeature enhanceWithActivityLog(
+      @NotNull NakshaFeature newFeature, @Nullable NakshaFeature oldFeature, @NotNull String spaceId) {
     XyzActivityLog activityLog = activityLog(newFeature, oldFeature, spaceId);
     newFeature.getProperties().setXyzActivityLog(activityLog);
     newFeature.setId(uuid(newFeature));
@@ -47,7 +47,7 @@ public class ActivityLogEnhancer {
   }
 
   private static XyzActivityLog activityLog(
-      @NotNull XyzFeature newFeature, @Nullable XyzFeature oldFeature, @NotNull String spaceId) {
+      @NotNull NakshaFeature newFeature, @Nullable NakshaFeature oldFeature, @NotNull String spaceId) {
     final XyzNamespace xyzNamespace = xyzNamespace(newFeature);
     final XyzActivityLog xyzActivityLog = new XyzActivityLog();
     xyzActivityLog.setId(newFeature.getId());
