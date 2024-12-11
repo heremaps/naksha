@@ -194,66 +194,63 @@ public class ViewReadSession implements IReadSession {
     }
     return false;
   }
-
+//TODO CASL-739
   @Override
   public int getSocketTimeout() {
-    // TODO
     return 0;
   }
 
   @Override
   public void setSocketTimeout(int i) {
-    // TODO
   }
 
   @Override
   public int getStmtTimeout() {
-    return 0; // TODO
+    return 0;
   }
 
   @Override
-  public void setStmtTimeout(int i) { // TODO
-  }
+  public void setStmtTimeout(int i) {}
 
   @Override
   public int getLockTimeout() {
-    return 0; // TODO
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  public void setLockTimeout(int i) { // TODO
+  public void setLockTimeout(int i) {
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public boolean isClosed() {
-    return false; // TODO
+    return false;
   }
 
   @NotNull
   @Override
   public String getMap() {
-    return ""; // TODO
+    return "";
   }
 
   @Override
-  public void setMap(@NotNull String s) { // TODO
-  }
+  public void setMap(@NotNull String s) {}
 
   @Override
   public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
-    return false; // TODO
+    return false;
   }
 
   @NotNull
   @Override
   public Response executeParallel(@NotNull Request request) {
-    return execute(request); // TODO
+    return execute(request);
   }
 
   @NotNull
   @Override
   public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
-    return List.of(); // TODO
+    return List.of();
   }
 
   @Override
@@ -262,7 +259,7 @@ public class ViewReadSession implements IReadSession {
       int from,
       int to,
       boolean fetchFromHistory,
-      int mode) { // TODO
+      int mode) {
   }
 
   @Override

@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 public class SourceIdHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(SourceIdHandler.class);
-  private static final String TAG_PREFIX = "xyz_source_id_"; // TODO decide
+  private static final String TAG_PREFIX = "xyz_source_id_"; // TODO decide CASL-710
   private static final String SOURCE_ID = "sourceId";
   public static final int PREF_PATHS_SIZE = 2;
 

@@ -2,14 +2,9 @@ package com.here.naksha.lib.handlers;
 
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.test.common.FileUtil;
-import com.here.naksha.test.common.JsonUtil;
-import java.util.Map;
-import naksha.base.AnyList;
-import naksha.base.AnyObject;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmMap;
 import naksha.base.JvmProxyUtil;
-import naksha.base.MapProxy;
 import naksha.base.Platform;
 import naksha.base.ToJsonOptions;
 import naksha.model.XyzFeatureCollection;
@@ -73,7 +68,6 @@ class TagFilterHandlerTest {
     }
 
     @Test
-        //TODO might be redundant now that property query and tag query are separate
     void testReadWithPOpAndSingleTagFilter() {
         // Given: ReadFeatures request with atleast one property operation
         final PQuery pQuery = new PQuery(new Property("foo"), StringOp.EQUALS, "value");
@@ -91,7 +85,6 @@ class TagFilterHandlerTest {
     }
 
     @Test
-        //TODO might be redundant now that property query and tag query are separate
     void testReadWithPOpAndMultipleTagFilters() {
         // Given: ReadFeatures request with atleast one property operation
         final PQuery pQuery = new PQuery(new Property("foo"), StringOp.EQUALS, "value");
