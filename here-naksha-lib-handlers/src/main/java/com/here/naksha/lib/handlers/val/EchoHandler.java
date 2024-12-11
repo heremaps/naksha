@@ -83,13 +83,13 @@ public class EchoHandler extends AbstractEventHandler {
         request, ContextWriteFeatures.class, "Unsupported request type in echoHandler");
 
     // Extract Xyz features
-    final List<NakshaFeature> features = HandlerUtil.getXyzFeaturesFromWriteList(cwf.getWrites());
+    final List<NakshaFeature> features = HandlerUtil.getFeaturesFromWriteList(cwf.getWrites());
 
     // Extract Xyz context (list of features)
     final List<NakshaFeature> context = HandlerUtil.getXyzContextFromGenericList(cwf.getContext());
 
     // Extract Xyz violations (if to be persisted separately)
-    final List<NakshaFeature> outputViolations = HandlerUtil.getXyzViolationsFromGenericList(cwf.getViolations());
+    final List<NakshaFeature> outputViolations = HandlerUtil.getViolationsFromGenericList(cwf.getViolations());
 
     // prepare result with op as UPDATED, as if features were persisted in DB
     //    return HandlerUtil.createContextResultFromFeatureList(features, context, outputViolations);

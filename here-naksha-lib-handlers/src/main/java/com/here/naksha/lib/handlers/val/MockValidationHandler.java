@@ -118,7 +118,7 @@ public class MockValidationHandler extends AbstractEventHandler {
     // Generate random violations and attach feature references
     violations = new ArrayList<>();
     int featureCnt = 0;
-    final List<NakshaFeature> features = HandlerUtil.getXyzFeaturesFromWriteList(cwf.getWrites());
+    final List<NakshaFeature> features = HandlerUtil.getFeaturesFromWriteList(cwf.getWrites());
     for (final NakshaFeature feature : features) {
       featureCnt++;
       // Distribution of "count" of violations, depends on feature "number",

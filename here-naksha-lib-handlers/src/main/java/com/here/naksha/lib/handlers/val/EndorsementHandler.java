@@ -88,11 +88,11 @@ public class EndorsementHandler extends AbstractEventHandler {
         request, ContextWriteFeatures.class, "Unsupported request type during endorsement");
 
     // Extract violations from request
-    final List<NakshaFeature> violations = HandlerUtil.getXyzViolationsFromGenericList(cwf.getViolations());
+    final List<NakshaFeature> violations = HandlerUtil.getViolationsFromGenericList(cwf.getViolations());
 
     // Mark each feature as AUTO_REVIEW_DEFERRED or UNPUBLISHED
     // (depending on whether there is associated violation or not)
-    final List<NakshaFeature> updatedFeatures = HandlerUtil.getXyzFeaturesFromWriteList(cwf.getWrites());
+    final List<NakshaFeature> updatedFeatures = HandlerUtil.getFeaturesFromWriteList(cwf.getWrites());
     for (final NakshaFeature feature : updatedFeatures) {
       updateFeatureDeltaStateIfMatchesViolations(feature, violations);
     }

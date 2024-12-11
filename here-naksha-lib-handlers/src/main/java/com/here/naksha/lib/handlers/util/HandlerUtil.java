@@ -32,6 +32,7 @@ import naksha.model.mom.MomReviewState;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.Write;
+import naksha.model.request.WriteList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -41,6 +42,7 @@ public final class HandlerUtil {
 
   private HandlerUtil() {}
 
+  // TODO: CASL-736 switch to Tuple, wait for change in v3 enabling Tuple creation without storage,
   //  public static @NotNull ContextXyzFeatureResult createContextResultFromFeatureList(
   //      final @NotNull List<NakshaFeature> features,
   //      final @Nullable List<NakshaFeature> context,
@@ -48,7 +50,7 @@ public final class HandlerUtil {
   //    // Create list of ResultRow with input features
   //    final List<ResultTuple> resultTuples = new ArrayList<>();
   //    for (final NakshaFeature feature : features) {
-  //      // TODO switch to Tuple, wait for change in v3 enabling Tuple creation without storage
+  //      //
   //      resultTuples.add(new ResultTuple(ExecutedOp.UPDATED, null, feature));
   //    }
   //    // Create ContextResult with cursor, context and violations
@@ -82,26 +84,25 @@ public final class HandlerUtil {
     // add context to write request
     cwf.setContext(getXyzContextFromGenericList(context));
     // add violations to write request
-    cwf.setViolations(getXyzViolationsFromGenericList(violations));
+    cwf.setViolations(getViolationsFromGenericList(violations));
     return cwf;
   }
 
   public static @NotNull ContextWriteXyzFeatures createContextWriteRequestFromWriteList(
-      final @NotNull List<?> writes, final @Nullable List<?> context, final @Nullable List<?> violations) {
+      final @NotNull WriteList writes, final @Nullable List<?> context, final @Nullable List<?> violations) {
     // generate new ContextWriteFeatures request
     final ContextWriteXyzFeatures cwf = new ContextWriteXyzFeatures();
 
     // Add features in the request
     if (writes.isEmpty())
       throw new NakshaException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "No features supplied"));
-    for (final Object inputWrite : writes) {
-      final Write xyzCodec = checkInstanceOf(inputWrite, Write.class, "Unsupported DB write operation type");
-      final NakshaFeature feature =
-          HandlerUtil.checkInstanceOf(xyzCodec.getFeature(), NakshaFeature.class, "Unsupported feature type");
+    for (final Write inputWrite : writes) {
+      final NakshaFeature feature = HandlerUtil.checkInstanceOf(
+          inputWrite.getFeature(), NakshaFeature.class, "Unsupported feature type");
       final Write write = new Write();
-      write.setCollectionId(xyzCodec.getCollectionId());
+      write.setCollectionId(inputWrite.getCollectionId());
       write.setFeature(feature);
-      write.setOp(xyzCodec.getOp());
+      write.setOp(inputWrite.getOp());
       cwf.add(write);
     }
 
@@ -109,21 +110,20 @@ public final class HandlerUtil {
     cwf.setContext(getXyzContextFromGenericList(context));
 
     // add violations to write request
-    cwf.setViolations(getXyzViolationsFromGenericList(violations));
+    cwf.setViolations(getViolationsFromGenericList(violations));
 
     return cwf;
   }
 
-  public static @NotNull List<NakshaFeature> getXyzFeaturesFromWriteList(final @NotNull List<?> writes) {
+  public static @NotNull List<NakshaFeature> getFeaturesFromWriteList(final @NotNull WriteList writes) {
     final List<NakshaFeature> outputFeatures = new ArrayList<>();
-    for (final Object obj : writes) {
-      final Write write = checkInstanceOf(obj, Write.class, "Unsupported feature codec");
+    for (final Write write : writes) {
       outputFeatures.add(write.getFeature());
     }
     return outputFeatures;
   }
 
-  public static @Nullable List<NakshaFeature> getXyzViolationsFromGenericList(final @Nullable List<?> violations) {
+  public static @Nullable List<NakshaFeature> getViolationsFromGenericList(final @Nullable List<?> violations) {
     List<NakshaFeature> outputViolations = null;
     if (violations != null) {
       for (final Object obj : violations) {
