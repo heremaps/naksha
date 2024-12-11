@@ -9,7 +9,6 @@ import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import naksha.psql.base.PgTestBase
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -68,7 +67,7 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
                             .hasProperty("author", PgTest.TEST_APP_AUTHOR!!)
-                            .hasProperty("action", Action.UPDATED)
+                            .hasProperty("action", Action.UPDATED_VALUE)
                             .hasProperty("changeCount", 2)
                     }
             }

@@ -48,7 +48,9 @@ data class SessionOptions(
     val parallel: Boolean = true,
 
     /**
-     * Only use the master node to avoid replication lag.
+     * Only use the master node to avoid replication lag, all writes will automatically hit the master.
+     *
+     * **This property should be avoided generally, it only is needed in very special rare cases!**
      * @since 3.0.0
      */
     @JvmField

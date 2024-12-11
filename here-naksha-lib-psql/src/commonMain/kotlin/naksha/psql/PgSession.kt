@@ -14,7 +14,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
-import naksha.model.objects.Transaction
+import naksha.model.objects.NakshaTransaction
 import naksha.psql.executors.PgReader
 import naksha.psql.executors.PgWriter
 import naksha.psql.executors.write.BulkWriteExecutor
@@ -63,7 +63,7 @@ open class PgSession(
             options = options.copy(lockTimeout = value)
         }
 
-    override var map: String
+    override var mapId: String
         get() = storage.schemaToMapId(options.mapId)
         set(value) {
             options = options.copy(mapId = value)
@@ -123,7 +123,7 @@ open class PgSession(
     /**
      * Keeps transaction's counters.
      */
-    private var transaction: Transaction? = null
+    private var transaction: NakshaTransaction? = null
 
     /**
      * The last error number as SQLState.
@@ -217,7 +217,7 @@ open class PgSession(
             reader = JbFeatureDecoder()
             _featureReader = reader
         }
-        reader.dictManager = storage[storage.defaultSchemaName].dictionaries()
+        reader.dictReader = storage[storage.defaultSchemaName].dictionaries()
         return reader
     }
 
@@ -275,11 +275,11 @@ open class PgSession(
      *
      * @return the current transaction.
      */
-    override fun transaction(): Transaction {
+    override fun transaction(): NakshaTransaction {
         var tx = transaction
         if (tx == null) {
             txBeforeStart()
-            tx = Transaction(version().txn)
+            tx = NakshaTransaction(version().txn)
             transaction = tx
             txAfterStart(tx)
         }
@@ -340,19 +340,19 @@ open class PgSession(
      * [transaction].
      * @param tx the transaction that has been started.
      */
-    open protected fun txAfterStart(tx: Transaction) {}
+    open protected fun txAfterStart(tx: NakshaTransaction) {}
 
     /**
      * Invoked before a transaction is committed (called by [commit]).
      * @param tx the transaction that has been finished.
      */
-    open protected fun txOnCommit(tx: Transaction) {}
+    open protected fun txOnCommit(tx: NakshaTransaction) {}
 
     /**
      * Invoked before a transaction is rolled-back (called by [rollback]).
      * @param tx the transaction that has been rolled back.
      */
-    open protected fun txOnRollback(tx: Transaction) {}
+    open protected fun txOnRollback(tx: NakshaTransaction) {}
 
     override fun commit() {
         val conn = pgConnection
@@ -429,7 +429,12 @@ open class PgSession(
         }
     }
 
-    override fun getTuples(tupleNumbers: Array<TupleNumber>, fetchFromHistory: Boolean, mode: FetchBits): List<Tuple?> {
+    @Deprecated(
+        "Use fetchTuples",
+        replaceWith = ReplaceWith("fetchTuples(resultTuples)"),
+        level = DeprecationLevel.WARNING
+    )
+    override fun getTuples(tupleNumbers: Array<TupleNumber>, fetchFromHistory: Boolean, mode: FetchMode): List<Tuple?> {
         val connection = pgConnection
         val conn = connection ?: storage.adminConnection(storage.adminOptions)
         try {
@@ -439,11 +444,11 @@ open class PgSession(
         }
     }
 
-    override fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int, to: Int, fetchFromHistory: Boolean, mode: FetchBits) {
+    override fun fetchTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int, fetchFromHistory: Boolean, mode: FetchMode) {
         val connection = pgConnection
         val conn = connection ?: storage.adminConnection(storage.adminOptions)
         try {
-            return storage.fetchTuples(conn, resultTuples, from, to, fetchFromHistory, mode)
+            return storage.fetchTuples(conn, featureTuples, from, to, fetchFromHistory, mode)
         } finally {
             if (connection == null) conn.close()
         }

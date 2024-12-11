@@ -15,12 +15,12 @@ class WhereClauseBuilderTest {
         // Given
         val req = ReadFeatures().apply {
             query.metadata = MetaOr(
-                MetaQuery(TupleColumn.createdAt(), DoubleOp.GT, 100),
+                MetaQuery(MetaColumn.createdAt(), DoubleOp.GT, 100),
                 MetaAnd(
-                    MetaQuery(TupleColumn.appId(), StringOp.EQUALS, "someApp"),
-                    MetaQuery(TupleColumn.author(), StringOp.STARTS_WITH, "someAuthor")
+                    MetaQuery(MetaColumn.appId(), StringOp.EQUALS, "someApp"),
+                    MetaQuery(MetaColumn.author(), StringOp.STARTS_WITH, "someAuthor")
                 ),
-                MetaNot(MetaQuery(TupleColumn.type(), StringOp.EQUALS, "notTheType"))
+                MetaNot(MetaQuery(MetaColumn.type(), StringOp.EQUALS, "notTheType"))
             )
             query.spatial = SpAnd(
                 SpNot(SpIntersects(SpPolygon(SpBoundingBox(1.0, 2.0, 3.0, 4.0)))),

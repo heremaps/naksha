@@ -1,30 +1,6 @@
 package naksha.psql
 
-import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.fromJSON
-import naksha.base.Platform.PlatformCompanion.gzipDeflate
-import naksha.base.Platform.PlatformCompanion.gzipInflate
-import naksha.base.PlatformMap
-import naksha.geo.ProxyGeoUtil
-import naksha.geo.ProxyGeoUtil.toJtsGeometry
-import naksha.geo.SpGeometry
 import naksha.model.*
-import naksha.model.GeoEncoding.GeoEncoding_C.EWKB
-import naksha.model.GeoEncoding.GeoEncoding_C.EWKB_GZIP
-import naksha.model.GeoEncoding.GeoEncoding_C.GEO_JSON
-import naksha.model.GeoEncoding.GeoEncoding_C.GEO_JSON_GZIP
-import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
-import naksha.model.GeoEncoding.GeoEncoding_C.TWKB_GZIP
-import naksha.model.GeoEncoding.GeoEncoding_C.WKB
-import naksha.model.GeoEncoding.GeoEncoding_C.WKB_GZIP
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import org.locationtech.jts.geom.GeometryFactory
-import org.locationtech.jts.geom.PrecisionModel
-import org.locationtech.jts.io.ByteOrderValues
-import org.locationtech.jts.io.WKBReader
-import org.locationtech.jts.io.WKBWriter
-import org.locationtech.jts.io.twkb.TWKBReader
-import org.locationtech.jts.io.twkb.TWKBWriter
 import java.security.MessageDigest
 
 
@@ -168,62 +144,5 @@ actual class PgPlatform {
          */
         @JvmStatic
         actual fun newTestStorage(): PgStorage = PsqlTestStorage.newTestStorage()
-
-        /**
-         * Decode a GeoJSON geometry from encoded bytes.
-         * @param raw the bytes to decode.
-         * @param flags the codec flags.
-         * @return the GeoJSON geometry.
-         * @since 3.0.0
-         */
-        @JvmStatic
-        actual fun decodeGeometry(raw: ByteArray?, flags: Int): SpGeometry? {
-            if (raw == null || raw.isEmpty()) return null
-            val encoding = flags.geoEncoding()
-            val rawBytes = if (encoding.geoGzip()) gzipInflate(raw) else raw
-            return when(encoding) {
-                TWKB, TWKB_GZIP -> {
-                    val reader = TWKBReader(GeometryFactory(PrecisionModel(), 4326))
-                    val jtsGeometry = reader.read(rawBytes)
-                    ProxyGeoUtil.toProxyGeometry(jtsGeometry)
-                }
-                WKB, WKB_GZIP, EWKB, EWKB_GZIP -> {
-                    val reader = WKBReader(GeometryFactory(PrecisionModel(), 4326))
-                    val jtsGeometry = reader.read(rawBytes)
-                    ProxyGeoUtil.toProxyGeometry(jtsGeometry)
-                }
-                GEO_JSON, GEO_JSON_GZIP -> (fromJSON(rawBytes.decodeToString()) as PlatformMap).proxy(SpGeometry::class)
-                else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown geometry encoding")
-            }
-        }
-
-        /**
-         * Encodes the given GeoJSON geometry into bytes.
-         * @param geometry the geometry to encode.
-         * @param flags the codec flags.
-         * @return the encoded GeoJSON geometry.
-         * @since 3.0.0
-         */
-        actual fun encodeGeometry(geometry: SpGeometry?, flags: Int): ByteArray? {
-            if (geometry == null) return null
-            val encoding = flags.geoEncoding()
-            val bytes = when(encoding) {
-                TWKB, TWKB_GZIP -> {
-                    val writer = TWKBWriter()
-                    writer.setXYPrecision(7)
-                    writer.setEncodeZ(true)
-                    writer.setZPrecision(7)
-                    writer.setEncodeM(false)
-                    writer.write(toJtsGeometry(geometry))
-                }
-                WKB, WKB_GZIP, EWKB, EWKB_GZIP -> {
-                    val writer = WKBWriter(3, ByteOrderValues.BIG_ENDIAN, true)
-                    writer.write(toJtsGeometry(geometry))
-                }
-                GEO_JSON, GEO_JSON_GZIP -> Platform.toJSON(geometry).encodeToByteArray()
-                else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown geometry encoding")
-            }
-            return if (encoding.geoGzip()) gzipDeflate(bytes) else bytes
-        }
     }
 }

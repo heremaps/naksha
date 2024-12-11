@@ -6,8 +6,7 @@ import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fn0
 import naksha.jbon.IDictManager
-import naksha.jbon.JbDictionary
-import naksha.model.IMap
+import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_NUMBER
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
@@ -16,12 +15,8 @@ import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS_NUMBER
 import naksha.model.NakshaContext.NakshaContextCompanion.currentContext
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
-import naksha.model.NakshaError.NakshaErrorCompanion.NOT_IMPLEMENTED
 import naksha.model.NakshaError.NakshaErrorCompanion.UNAUTHORIZED
 import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
-import naksha.model.NakshaException
-import naksha.model.NakshaVersion
-import naksha.model.SessionOptions
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
@@ -30,6 +25,7 @@ import kotlin.js.JsName
 /**
  * Information about the database and connection, that need only to be queried ones per session.
  */
+@OptIn(v30_experimental::class)
 @JsExport
 open class PgMap(
     /**
@@ -124,7 +120,7 @@ open class PgMap(
     /**
      * A concurrent hash map with all cached collection-identifiers by their `number`.
      */
-    internal val collectionIdByNumber: AtomicMap<Int64, String> = Platform.newAtomicMap()
+    internal val collectionIdByNumber: AtomicMap<Int, String> = Platform.newAtomicMap()
 
     /**
      * Returns the dictionaries' collection.
@@ -153,12 +149,24 @@ open class PgMap(
         }
     }
 
-    override fun get(collectionNumber: Int64): PgCollection? {
-        val id = getCollectionId(collectionNumber) ?: return null
+    override fun getCollection(collectionNumber: Int, session: ISession?): PgCollection? {
+        val id = getCollectionId(collectionNumber, session) ?: return null
         return this[id]
     }
 
-    override fun getCollectionId(collectionNumber: Int64): String? {
+    override fun getCollectionId(collectionNumber: Int, session: ISession?): String? {
+        val conn = if (session is PgSession) session.pgConnection else null
+        return pgCollectionId(collectionNumber, conn)
+    }
+
+    @v30_experimental
+    fun pgCollection(collectionNumber: Int, connection: PgConnection? = null): PgCollection? {
+        val id = pgCollectionId(collectionNumber, connection) ?: return null
+        return this[id]
+    }
+
+    @v30_experimental
+    fun pgCollectionId(collectionNumber: Int, connection: PgConnection?): String? {
         return collectionIdByNumber[collectionNumber] ?: when (collectionNumber) {
             VIRT_TRANSACTIONS_NUMBER -> VIRT_TRANSACTIONS
             VIRT_DICTIONARIES_NUMBER -> VIRT_DICTIONARIES
@@ -247,9 +255,29 @@ open class PgMap(
      * Tests if the schema exists.
      * @return _true_ if the schema exists.
      */
-    override fun exists(): Boolean {
-        refresh()
+    override fun exists(session: ISession?): Boolean {
+        if (session is PgSession) refresh(session.pgConnection) else refresh(null)
         return _oid != null
+    }
+
+    override fun create(session: IWriteSession?) {
+        TODO("Not yet implemented")
+    }
+
+    override fun delete(session: IWriteSession?) {
+        TODO("Not yet implemented")
+    }
+
+    override fun dictManager(): IDictManager {
+        TODO("Not yet implemented")
+    }
+
+    override fun tupleToFeature(tuple: Tuple): NakshaFeature {
+        TODO("Not yet implemented")
+    }
+
+    override fun featureToTuple(feature: NakshaFeature): Tuple {
+        TODO("Not yet implemented")
     }
 
     /**
@@ -262,21 +290,6 @@ open class PgMap(
         refresh(connection)
         return _oid != null
     }
-
-    // TODO: Implement support for dictionaries using naksha~dictionaries !
-    override val dictManager: IDictManager = object : IDictManager {
-        override fun putDictionary(dict: JbDictionary) {
-            throw NakshaException(NOT_IMPLEMENTED, "putDictionary is not supported by lib-psql yet")
-        }
-
-        override fun deleteDictionary(dict: JbDictionary): Boolean {
-            throw NakshaException(NOT_IMPLEMENTED, "putDictionary is not supported by lib-psql yet")
-        }
-
-        override fun getDictionary(id: String): JbDictionary? = null
-    }
-
-    override fun encodingDict(collectionId: String, feature: NakshaFeature?): JbDictionary? = null
 
     /**
      * Initialize the schema, creating all necessary database tables, installing modules, ....

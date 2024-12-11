@@ -56,13 +56,13 @@ class Naksha private constructor() {
          * The identifier of the virtual (internal) administration map.
          * @since 3.0.0
          */
-        const val VIRT_ADMIN_MAP = "naksha~admin"
+        const val VIRT_ADMIN = "naksha~admin"
 
         /**
          * The number of the virtual (internal) administration map.
          * @since 3.0.0
          */
-        const val VIRT_ADMIN_MAP_NUMBER = 0
+        const val VIRT_ADMIN_NUMBER = 0
 
         /**
          * The identifier of the virtual collection in which transactions are stored.

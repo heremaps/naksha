@@ -180,7 +180,7 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun createDictionary(dict: NakshaDictionary): Write {
-        this.mapId = Naksha.VIRT_ADMIN_MAP
+        this.mapId = Naksha.VIRT_ADMIN
         this.collectionId = Naksha.VIRT_DICTIONARIES
         this.op = WriteOp.CREATE
         this.id = dict.id
@@ -197,7 +197,7 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun updateDictionary(dict: NakshaDictionary, atomic: Boolean): Write {
-        this.mapId = Naksha.VIRT_ADMIN_MAP
+        this.mapId = Naksha.VIRT_ADMIN
         this.collectionId = Naksha.VIRT_DICTIONARIES
         this.op = WriteOp.UPDATE
         this.id = dict.id
@@ -214,7 +214,7 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun upsertDictionary(dict: NakshaDictionary, atomic: Boolean): Write {
-        this.mapId = Naksha.VIRT_ADMIN_MAP
+        this.mapId = Naksha.VIRT_ADMIN
         this.collectionId = Naksha.VIRT_DICTIONARIES
         this.op = WriteOp.UPSERT
         this.id = dict.id
@@ -231,7 +231,7 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun deleteDictionary(dict: NakshaDictionary, atomic: Boolean): Write {
-        this.mapId = Naksha.VIRT_ADMIN_MAP
+        this.mapId = Naksha.VIRT_ADMIN
         this.collectionId = Naksha.VIRT_DICTIONARIES
         this.op = WriteOp.DELETE
         this.id = dict.id
@@ -248,7 +248,7 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun deleteDictionaryById(dictId: String, version: Int64? = null): Write {
-        this.mapId = Naksha.VIRT_ADMIN_MAP
+        this.mapId = Naksha.VIRT_ADMIN
         this.collectionId = Naksha.VIRT_DICTIONARIES
         this.op = WriteOp.DELETE
         this.id = dictId
@@ -264,7 +264,7 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun createMap(map: NakshaMap): Write {
-        this.mapId = Naksha.VIRT_ADMIN_MAP
+        this.mapId = Naksha.VIRT_ADMIN
         this.collectionId = Naksha.VIRT_MAPS
         this.op = WriteOp.CREATE
         this.id = map.id
@@ -281,7 +281,7 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun updateMap(map: NakshaMap, atomic: Boolean): Write {
-        this.mapId = Naksha.VIRT_ADMIN_MAP
+        this.mapId = Naksha.VIRT_ADMIN
         this.collectionId = Naksha.VIRT_MAPS
         this.op = WriteOp.UPDATE
         this.id = map.id
@@ -298,7 +298,7 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun upsertMap(map: NakshaMap, atomic: Boolean): Write {
-        this.mapId = Naksha.VIRT_ADMIN_MAP
+        this.mapId = Naksha.VIRT_ADMIN
         this.collectionId = Naksha.VIRT_MAPS
         this.op = WriteOp.UPSERT
         this.id = map.id
@@ -315,7 +315,7 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun deleteMap(map: NakshaMap, atomic: Boolean): Write {
-        this.mapId = Naksha.VIRT_ADMIN_MAP
+        this.mapId = Naksha.VIRT_ADMIN
         this.collectionId = Naksha.VIRT_MAPS
         this.op = WriteOp.DELETE
         this.id = map.id
@@ -332,7 +332,7 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun deleteMapById(mapId: String, version: Int64? = null): Write {
-        this.mapId = Naksha.VIRT_ADMIN_MAP
+        this.mapId = Naksha.VIRT_ADMIN
         this.collectionId = Naksha.VIRT_MAPS
         this.op = WriteOp.DELETE
         this.id = mapId

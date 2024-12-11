@@ -2,7 +2,7 @@ package naksha.psql.executors
 
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaException
-import naksha.model.TupleNumberByteArray
+import naksha.model.TupleNumberBinaryArray
 import naksha.model.Version
 import naksha.model.request.*
 import naksha.psql.*
@@ -49,7 +49,7 @@ class PgReader(
                 allBytes = if (cursor.next()) cursor.column("rs") as ByteArray else null
             }
             if (allBytes == null) throw NakshaException(EXCEPTION, "Failed to execute query for unknown reason")
-            val tupleNumberBytes = TupleNumberByteArray.fromGzip(storage, allBytes)
+            val tupleNumberBytes = TupleNumberBinaryArray.fromGzip(storage, allBytes)
             return SuccessResponse(
                 PgResultSet(
                     storage,

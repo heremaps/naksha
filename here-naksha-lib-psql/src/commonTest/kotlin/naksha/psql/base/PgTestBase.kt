@@ -42,7 +42,7 @@ abstract class PgTestBase(val collection: NakshaCollection? = null) {
         features.forEach {
             writeReq.add(
                 Write().createFeature(
-                    map = null,
+                    mapId = null,
                     collectionId = collection!!.id,
                     it
                 )

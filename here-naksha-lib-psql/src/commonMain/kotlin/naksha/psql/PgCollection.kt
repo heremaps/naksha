@@ -16,7 +16,6 @@ import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
 import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES_NUMBER
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
 import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS_NUMBER
-import naksha.model.NakshaCache.PgCache_C.tupleCache
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.objects.NakshaCollection
 import naksha.psql.PgStorageClass.PgStorageClass_C.Consistent
@@ -92,7 +91,14 @@ open class PgCollection internal constructor(
      */
     private var _exists: Boolean = false
 
-    override fun exists(): Boolean = exists(null)
+    @v30_experimental
+    override fun exists(session: ISession?): Boolean {
+        if (session is PgSession) {
+            val conn = session.pgConnection
+            if (conn != null) return exists(conn)
+        }
+        return exists(connection = null)
+    }
 
     /**
      * Tests if this collection does exits.
@@ -236,18 +242,18 @@ open class PgCollection internal constructor(
                 txn.create(conn)
                 txn.createYear(conn, NOW.year)
                 txn.createYear(conn, NOW.year + 1)
-                txn.createIndex(conn, PgIndex.tuple_number_pkey)
+                txn.createIndex(conn, PgIndex.tn_pkey)
                 txn.createIndex(conn, PgIndex.txn_unique)
-                for (index in indices) if (index != PgIndex.tuple_number_pkey && index != PgIndex.txn_unique) txn.createIndex(conn, index)
+                for (index in indices) if (index != PgIndex.tn_pkey && index != PgIndex.txn_unique) txn.createIndex(conn, index)
 
                 // We can have a meta table for transactions, but no history or deleted!
                 val meta: PgMeta?
                 if (storeMeta) {
                     meta = PgMeta(txn)
                     meta.create(conn)
-                    meta.createIndex(conn, PgIndex.tuple_number_pkey)
+                    meta.createIndex(conn, PgIndex.tn_pkey)
                     meta.createIndex(conn, PgIndex.id_unique)
-                    for (index in indices) if (index != PgIndex.tuple_number_pkey && index != PgIndex.id_unique) meta.createIndex(conn, index)
+                    for (index in indices) if (index != PgIndex.tn_pkey && index != PgIndex.id_unique) meta.createIndex(conn, index)
                 } else {
                     meta = null
                 }
@@ -257,24 +263,24 @@ open class PgCollection internal constructor(
             }
             val head = PgHead(this, storageClass, partitions)
             head.create(conn)
-            head.createIndex(conn, PgIndex.tuple_number_pkey)
+            head.createIndex(conn, PgIndex.tn_pkey)
             head.createIndex(conn, PgIndex.id_unique)
-            for (index in indices) if (index != PgIndex.tuple_number_pkey && index != PgIndex.id_unique) head.createIndex(conn, index)
+            for (index in indices) if (index != PgIndex.tn_pkey && index != PgIndex.id_unique) head.createIndex(conn, index)
 
             val deleted = if (storedDeleted) PgDeleted(head) else null
             if (deleted != null) {
                 deleted.create(conn)
-                deleted.createIndex(conn, PgIndex.tuple_number_pkey)
+                deleted.createIndex(conn, PgIndex.tn_pkey)
                 deleted.createIndex(conn, PgIndex.id_unique)
-                for (index in indices) if (index != PgIndex.tuple_number_pkey && index != PgIndex.id_unique) deleted.createIndex(conn, index)
+                for (index in indices) if (index != PgIndex.tn_pkey && index != PgIndex.id_unique) deleted.createIndex(conn, index)
             }
 
             val meta = if (storeMeta) PgMeta(head) else null
             if (meta != null) {
                 meta.create(conn)
-                meta.createIndex(conn, PgIndex.tuple_number_pkey)
+                meta.createIndex(conn, PgIndex.tn_pkey)
                 meta.createIndex(conn, PgIndex.id_unique)
-                for (index in indices) if (index != PgIndex.tuple_number_pkey && index != PgIndex.id_unique) meta.createIndex(conn, index)
+                for (index in indices) if (index != PgIndex.tn_pkey && index != PgIndex.id_unique) meta.createIndex(conn, index)
             }
 
             val history = if (storeHistory) PgHistory(head) else null
@@ -282,10 +288,10 @@ open class PgCollection internal constructor(
                 history.create(conn)
                 history.createYear(conn, NOW.year)
                 history.createYear(conn, NOW.year + 1)
-                history.createIndex(conn, PgIndex.tuple_number_pkey)
+                history.createIndex(conn, PgIndex.tn_pkey)
                 history.createIndex(conn, PgIndex.id_txn_uid_unique)
                 for (index in indices) {
-                    if (index != PgIndex.tuple_number_pkey
+                    if (index != PgIndex.tn_pkey
                         && index != PgIndex.id_txn_uid_unique
                         // We do not need this index, because it would only duplicate the stronger unique one!
                         && index != PgIndex.id_txn_uid) history.createIndex(conn, index)
@@ -563,11 +569,11 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
                 _nakshaCollection.set(NakshaCollection(VIRT_DICTIONARIES, 0))
             }
             else -> {
-                conn.execute("SELECT ${PgStorage.ALL_COLUMNS} FROM $VIRT_COLLECTIONS_QUOTED WHERE id=$1", arrayOf(id)).use { cursor ->
+                conn.execute("SELECT ${PgColumn.fullSelect} FROM $VIRT_COLLECTIONS_QUOTED WHERE id=$1", arrayOf(id)).use { cursor ->
                     if (cursor.next()) {
                         val storage = map.storage
                         val readTuple = PgStorage.readTupleFromCursor(storage, cursor)
-                        val tuple = tupleCache(storage.id).store(readTuple)
+                        val tuple = NakshaCache.store(readTuple)
                         val feature = storage.tupleToFeature(tuple).proxy(NakshaCollection::class)
                         _nakshaCollection.set(feature)
                         val collectionNumber = tuple.tupleNumber.storeNumber.collectionNumber()

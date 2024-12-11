@@ -31,7 +31,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         // And:
         val featuresByAppId = executeMetaQuery(
             MetaQuery(
-                column = TupleColumn.appId(),
+                column = MetaColumn.appId(),
                 op = StringOp.EQUALS,
                 value = sessionOptions.appId
             )
@@ -56,7 +56,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         // And:
         val featuresByAppIdPrefix = executeMetaQuery(
             MetaQuery(
-                column = TupleColumn.appId(),
+                column = MetaColumn.appId(),
                 op = StringOp.STARTS_WITH,
                 value = "prefixed_test_app"
             )
@@ -81,7 +81,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         // And:
         val featuresByAuthor = executeMetaQuery(
             MetaQuery(
-                column = TupleColumn.author(),
+                column = MetaColumn.author(),
                 op = StringOp.EQUALS,
                 value = sessionOptions.author
             )
@@ -106,7 +106,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         // And:
         val featuresByAuthorPrefix = executeMetaQuery(
             MetaQuery(
-                column = TupleColumn.author(),
+                column = MetaColumn.author(),
                 op = StringOp.STARTS_WITH,
                 value = "Jacky"
             )
@@ -128,7 +128,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         // And:
         val featuresById = executeMetaQuery(
             MetaQuery(
-                column = TupleColumn.id(),
+                column = MetaColumn.id(),
                 op = StringOp.EQUALS,
                 value = inputFeature.id
             )
@@ -152,7 +152,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         // And:
         val featuresByIdPrefix = executeMetaQuery(
             MetaQuery(
-                column = TupleColumn.id(),
+                column = MetaColumn.id(),
                 op = StringOp.STARTS_WITH,
                 value = "very"
             )
@@ -176,7 +176,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         // And:
         val featuresByType = executeMetaQuery(
             MetaQuery(
-                column = TupleColumn.type(),
+                column = MetaColumn.type(),
                 op = StringOp.EQUALS,
                 value = inputFeature.type
             )
@@ -200,7 +200,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         // And:
         val featuresByTypePrefix = executeMetaQuery(
             MetaQuery(
-                column = TupleColumn.type(),
+                column = MetaColumn.type(),
                 op = StringOp.STARTS_WITH,
                 value = "quite"
             )
@@ -228,8 +228,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
             collectionIds += collection!!.id
             query.metadata = MetaAnd(
-                MetaQuery(TupleColumn.author(), StringOp.EQUALS, author),
-                MetaQuery(TupleColumn.appId(), StringOp.STARTS_WITH, appId.substring(0, 2))
+                MetaQuery(MetaColumn.author(), StringOp.EQUALS, author),
+                MetaQuery(MetaColumn.appId(), StringOp.STARTS_WITH, appId.substring(0, 2))
             )
         })
 
@@ -248,7 +248,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
 
         // And:
         val featuresByCreatedAt = executeMetaQuery(MetaQuery(
-            TupleColumn.createdAt(),
+            MetaColumn.createdAt(),
             DoubleOp.EQ,
             insertedFeatureMeta.createdAt
         ))
@@ -268,7 +268,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
 
         // And:
         val featuresByUpdatedAt = executeMetaQuery(MetaQuery(
-            TupleColumn.updatedAt(),
+            MetaColumn.updatedAt(),
             DoubleOp.EQ,
             insertedFeatureMeta.updatedAt
         ))
@@ -292,17 +292,17 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         val featuresCreatedInFrame = executeMetaQuery(
             MetaAnd(
                 MetaQuery(
-                    TupleColumn.createdAt(),
+                    MetaColumn.createdAt(),
                     DoubleOp.GT,
                     insertedFeatureMeta.createdAt - 100
                 ),
                 MetaQuery(
-                    TupleColumn.createdAt(),
+                    MetaColumn.createdAt(),
                     DoubleOp.LT,
                     insertedFeatureMeta.createdAt + 100
                 ),
                 MetaQuery(
-                    TupleColumn.type(),
+                    MetaColumn.type(),
                     StringOp.EQUALS,
                     inputFeature.type
                 )
@@ -328,17 +328,17 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         val featuresUpdatedInFrame = executeMetaQuery(
             MetaAnd(
                 MetaQuery(
-                    TupleColumn.updatedAt(),
+                    MetaColumn.updatedAt(),
                     DoubleOp.GTE,
                     insertedFeatureMeta.updatedAt
                 ),
                 MetaQuery(
-                    TupleColumn.updatedAt(),
+                    MetaColumn.updatedAt(),
                     DoubleOp.LTE,
                     insertedFeatureMeta.updatedAt + 100
                 ),
                 MetaQuery(
-                    TupleColumn.type(),
+                    MetaColumn.type(),
                     StringOp.EQUALS,
                     inputFeature.type
                 )
@@ -360,7 +360,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
 
         // And:
         val featuresByAuthorTs = executeMetaQuery(MetaQuery(
-            TupleColumn.authorTs(),
+            MetaColumn.authorTs(),
             DoubleOp.EQ,
             insertedFeatureMeta.authorTs
         ))
@@ -384,8 +384,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
             collectionIds += collection!!.id
             query.metadata = MetaOr(
-                MetaQuery(TupleColumn.author(), StringOp.EQUALS, "this_is_totally_off"),
-                MetaQuery(TupleColumn.appId(), StringOp.STARTS_WITH, appId.substring(0, 2))
+                MetaQuery(MetaColumn.author(), StringOp.EQUALS, "this_is_totally_off"),
+                MetaQuery(MetaColumn.appId(), StringOp.STARTS_WITH, appId.substring(0, 2))
             )
         }).features
 

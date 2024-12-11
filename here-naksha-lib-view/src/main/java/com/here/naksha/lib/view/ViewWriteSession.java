@@ -20,7 +20,7 @@ package com.here.naksha.lib.view;
 
 import naksha.model.IWriteSession;
 import naksha.model.SessionOptions;
-import naksha.model.objects.Transaction;
+import naksha.model.objects.NakshaTransaction;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.Write;
@@ -71,7 +71,7 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   }
 
   @Override
-  public @NotNull Transaction transaction() {
+  public @NotNull NakshaTransaction transaction() {
     return this.session.transaction();
   }
 

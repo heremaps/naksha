@@ -36,7 +36,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import naksha.model.*;
-import naksha.model.objects.Transaction;
+import naksha.model.objects.NakshaTransaction;
 import naksha.model.request.*;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.IPropertyQuery;
@@ -235,12 +235,12 @@ public class ViewReadSession implements IReadSession {
 
   @NotNull
   @Override
-  public String getMap() {
+  public String getMapId() {
     return "";
   }
 
   @Override
-  public void setMap(@NotNull String s) {}
+  public void setMapId(@NotNull String s) {}
 
   @Override
   public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
@@ -264,7 +264,7 @@ public class ViewReadSession implements IReadSession {
       @NotNull List<? extends FeatureTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {}
 
   @Override
-  public @NotNull Transaction transaction() {
+  public @NotNull NakshaTransaction transaction() {
     throw new UnsupportedOperationException(
         "Views have multiple individual transactions and doesn't support common parent transaction.");
   }

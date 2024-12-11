@@ -29,7 +29,7 @@ import naksha.model.mom.MomChangeState;
 import naksha.model.mom.MomReviewState;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
-import naksha.model.request.ResultTuple;
+import naksha.model.request.FeatureTuple;
 import naksha.model.request.ExecutedOp;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -45,12 +45,12 @@ public final class HandlerUtil {
       final @Nullable List<NakshaFeature> context,
       final @Nullable List<NakshaFeature> violations) {
     // Create list of ResultRow with input features
-    final List<ResultTuple> resultTuples = new ArrayList<>();
+    final List<FeatureTuple> featureTuples = new ArrayList<>();
     for (final NakshaFeature feature : features) {
-      resultTuples.add(new ResultTuple(ExecutedOp.UPDATED,null,feature));
+      featureTuples.add(new FeatureTuple(ExecutedOp.UPDATED,null,feature));
     }
     // Create ContextResult with cursor, context and violations
-    final ContextXyzFeatureResult ctxResult = new ContextXyzFeatureResult(null, resultTuples);
+    final ContextXyzFeatureResult ctxResult = new ContextXyzFeatureResult(null, featureTuples);
     ctxResult.setContext(context);
     ctxResult.setViolations(violations);
     return ctxResult;

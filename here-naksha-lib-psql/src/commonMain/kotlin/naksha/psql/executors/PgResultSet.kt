@@ -3,8 +3,6 @@
 package naksha.psql.executors
 
 import naksha.model.*
-import naksha.model.FetchMode.FetchMode_C.FETCH_ALL
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.model.request.*
@@ -33,7 +31,7 @@ class PgResultSet(
      *
      * **Note**: After sorting, the array is replaced with the ordered version. This is quite important to acknowledge when saving the rows-ids to restore result-sets quickly when seeking in them!
      */
-    internal var tupleNumberArray: TupleNumberByteArray,
+    internal var tupleNumberArray: TupleNumberBinaryArray,
 
     /**
      * Signal that the [tupleNumberArray] is incomplete (not the full result set).
@@ -84,7 +82,7 @@ class PgResultSet(
     /**
      * The generated results rows, same size as [tupleNumberArray].
      */
-    internal var all: ResultTupleList
+    internal var all: FeatureTupleList
 
     override var end: Int
         internal set
@@ -95,13 +93,13 @@ class PgResultSet(
     /**
      * The results between [offset] and [end].
      */
-    private var _result: ResultTupleList? = null
+    private var _result: FeatureTupleList? = null
 
-    override val result: ResultTupleList
+    override val result: FeatureTupleList
         get() {
             var result = _result
             if (result == null) {
-                result = all.subList(offset, end).proxy(ResultTupleList::class)
+                result = all.subList(offset, end).proxy(FeatureTupleList::class)
                 _result = result
             }
             return result
@@ -117,7 +115,7 @@ class PgResultSet(
     }
 
     // version
-    private fun order_txn_uid(a: ResultTuple?, b: ResultTuple?): Int {
+    private fun order_txn_uid(a: FeatureTuple?, b: FeatureTuple?): Int {
         if (a === b) return 0
         if (a == null) return 1
         if (b == null) return -1
@@ -131,7 +129,7 @@ class PgResultSet(
         return 0
     }
 
-    private fun order_id_txn_uid(a: ResultTuple?, b: ResultTuple?): Int {
+    private fun order_id_txn_uid(a: FeatureTuple?, b: FeatureTuple?): Int {
         if (a === b) return 0
         if (a == null) return 1
         if (b == null) return -1
@@ -169,7 +167,7 @@ class PgResultSet(
     */
 
     init {
-        all = ResultTupleList.fromTupleNumberArray(storage, tupleNumberArray)
+        all = FeatureTupleList.fromByteArray(tupleNumberArray)
         if (orderBy != null && orderBy != DETERMINISTIC && orderBy != ID) {
             throw NakshaException(UNSUPPORTED_OPERATION, "Currently ordering and filtering is not supported")
             // load all tuples (we need them for custom order)
@@ -187,7 +185,7 @@ class PgResultSet(
         }
     }
 
-    override val tuples: ResultTupleList
+    override val tuples: FeatureTupleList
         get() = all
 
     override val validationEnd: Int
@@ -233,7 +231,7 @@ class PgResultSet(
             if (available >= end) break
         }
 
-        val newList = ResultTupleList()
+        val newList = FeatureTupleList()
         newList.setCapacity(all.size - removed)
         // Copy everything that is not null
         while (i < all.size) {

@@ -59,7 +59,7 @@ class ExistingMetadataProvider(
     }
 
     private fun metaFromRow(row: PgCursorUtil.ReadOnlyRow): Metadata {
-        val tupleNumber: TupleNumber = TupleNumber.fromByteArray(row[PgColumn.tuple_number])
+        val tupleNumber: TupleNumber = TupleNumber.fromFullVariant(row[PgColumn.tn])
         val updatedAt: Int64 = row.column(PgColumn.updated_at) as? Int64 ?: Int64(0)
         return Metadata(
             storeNumber = tupleNumber.storeNumber,
@@ -73,13 +73,13 @@ class ExistingMetadataProvider(
             puid = row.column(PgColumn.puid) as? Int,
             hash = row[PgColumn.hash],
             changeCount = row[PgColumn.change_count],
-            geoGrid = row[PgColumn.geo_grid],
+            hereTile = row[PgColumn.here_tile],
             flags = row[PgColumn.flags],
             id = row[PgColumn.id],
             appId = row[PgColumn.app_id],
             author = row.column(PgColumn.author) as? String,
-            type = row.column(PgColumn.type) as? String,
-            origin = row.column(PgColumn.origin) as? String
+            ft = row.column(PgColumn.ft) as? String,
+            originTupleNumber = row.column(PgColumn.origin) as? String
         )
     }
 

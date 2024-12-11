@@ -31,7 +31,7 @@ interface PgCluster {
      *
      * - Throws [naksha.model.NakshaError.TOO_MANY_CONNECTIONS], if no more connections are available.
      * @param options the session options.
-     * @param readOnly if the connection should be read-only.
+     * @param readOnly if the connection should be read-only; only if being _true_, read-replica are contacted, except [SessionOptions.useMaster] is explicit set.
      * @return the PostgresQL connection.
      */
     fun newConnection(options: SessionOptions, readOnly: Boolean): PgConnection

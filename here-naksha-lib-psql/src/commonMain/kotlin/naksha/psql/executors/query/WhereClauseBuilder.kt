@@ -94,7 +94,7 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
                 // TODO: Add transformations!
                 val twkb = PgUtil.encodeGeometry(
                     spatial.geometry,
-                    Flags().geoGzipOff().geoEncoding(GeoEncoding.TWKB)
+                    Flags().geoGzipOff().withGeoEncoding(GeoEncoding.TWKB)
                 )
                 val placeholder = placeholderForArg(twkb, PgType.BYTE_ARRAY)
                 where.append("ST_Intersects(naksha_geometry(${PgColumn.geo}, ${PgColumn.flags}), ST_GeomFromTWKB($placeholder))")

@@ -6,10 +6,12 @@ import naksha.base.*
 import naksha.geo.SpGeometry
 import naksha.jbon.*
 import naksha.model.*
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON_GZIP
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON_GZIP
+import naksha.model.Naksha.NakshaCompanion.VIRT_ADMIN
+import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
+import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
+import naksha.model.Naksha.NakshaCompanion.VIRT_MAPS
+import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_ident
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_literal
@@ -24,6 +26,46 @@ import kotlin.jvm.JvmStatic
 @JsExport
 class PgUtil private constructor() {
     companion object PgUtilCompanion {
+        /**
+         * The quoted identifier of the virtual administration map to be used in queries.
+         * @since 3.0.0
+         */
+        @JvmField
+        @JsStatic
+        val VIRT_ADMIN_MAP_QUOTED = quoteIdent(VIRT_ADMIN)
+
+        /**
+         * The quoted identifier of the virtual collection in which transactions are stored.
+         * @since 3.0.0
+         */
+        @JvmField
+        @JsStatic
+        val VIRT_TRANSACTIONS_QUOTED = quoteIdent(VIRT_TRANSACTIONS)
+
+        /**
+         * The quoted identifier of the virtual maps collection to be used in queries.
+         * @since 3.0.0
+         */
+        @JvmField
+        @JsStatic
+        val VIRT_MAPS_QUOTED = quoteIdent(VIRT_MAPS)
+
+        /**
+         * The quoted identifier of the virtual collections collection to be used in queries.
+         * @since 3.0.0
+         */
+        @JvmField
+        @JsStatic
+        val VIRT_COLLECTIONS_QUOTED = quoteIdent(VIRT_COLLECTIONS)
+
+        /**
+         * The quoted identifier of the virtual collection in which the dictionaries are stored.
+         * @since 3.0.0
+         */
+        @JvmField
+        @JsStatic
+        val VIRT_DICTIONARIES_QUOTED = quoteIdent(VIRT_DICTIONARIES)
+
         /**
          * Array to query the partition name from the partition number (resolves 0 to "000", 1 to "001", ..., 255 to "256"), usage like:
          *
@@ -75,32 +117,63 @@ class PgUtil private constructor() {
         const val VERSION: String = "version"
 
         /**
-         * Given as parameter for [PgStorage.initStorage], `id` used if the storage is uninitialized, initialize it with the given
-         * storage identifier. If the storage is already initialized, reads the existing identifier and compares it with the given one.
-         * If they do not match, throws an [IllegalStateException]. If not given a random new identifier is generated, when no identifier
-         * yet exists. It is strongly recommended to provide the identifier.
-         */
-        const val ID = "id"
-
-        /**
          * Quotes a string literal, so a custom string. For PostgresQL database this means to replace all single quotes
          * (`'`) with two single quotes (`''`). This encloses the string with quotation characters, when needed.
          * @param parts the literal parts to merge and quote.
          * @return The quoted literal.
+         * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
-        fun quoteLiteral(vararg parts: String): String = quote_literal(*parts) ?: Naksha.quoteLiteral(*parts)
+        fun quoteLiteral(vararg parts: String): String {
+            val quote = quote_literal(*parts)
+            if (quote != null) return quote
+            val sb = StringBuilder()
+            sb.append("E'")
+            for (part in parts) {
+                for (c in part) {
+                    when (c) {
+                        '\'' -> sb.append('\'').append('\'')
+                        '\\' -> sb.append('\\').append('\\')
+                        else -> sb.append(c)
+                    }
+                }
+            }
+            sb.append('\'')
+            return sb.toString()
+        }
 
         /**
          * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all double quotes
          * (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
          * @param parts the identifier parts to merge and quote.
          * @return the quoted identifier.
+         * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
-        fun quoteIdent(vararg parts: String): String = quote_ident(*parts) ?: Naksha.quoteIdent(*parts)
+        @AvailableSince
+        fun quoteIdent(vararg parts: String): String {
+            if (parts.isEmpty()) throw NakshaException(ILLEGAL_ARGUMENT, "The given parts must not be empty")
+            val quote = quote_ident(*parts)
+            if (quote != null) return quote
+            var quoted = false
+            val sb = StringBuilder()
+            sb.append('"')
+            for (part in parts) {
+                for (c in part) {
+                    when (c) {
+                        in 'a'..'z', in 'A'..'Z', in '0'..'9', '_' -> sb.append(c)
+                        '"' -> { quoted = true; sb.append('"').append('"') }
+                        '\\' -> { quoted = true; sb.append('\\').append('\\') }
+                        else -> { quoted = true; sb.append(c) }
+                    }
+                }
+            }
+            if (!quoted) return if (parts.size == 1) return parts[0] else sb.substring(1)
+            sb.append('"')
+            return sb.toString()
+        }
 
         /**
          * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the
@@ -171,22 +244,12 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun decodeFeature(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): NakshaFeature? {
-            if (bytes == null || bytes.isEmpty()) return null
-            var raw = bytes
-            if (flags.featureGzip()) raw = Platform.gzipInflate(bytes)
-            val encoding = flags.featureEncoding()
-            if (encoding == JBON || encoding == JBON_GZIP) {
-                val decoder = JbFeatureDecoder(dictManager)
-                decoder.mapBytes(raw)
-                return decoder.toAnyObject().proxy(NakshaFeature::class)
-            }
-            if (encoding == JSON || encoding == JSON_GZIP) {
-                val decoded = Platform.fromJSON(bytes.decodeToString())
-                if (decoded is PlatformMap) return decoded.proxy(NakshaFeature::class)
-            }
-            return null
-        }
+        @Deprecated(
+            message = "Please use Naksha class instead",
+            replaceWith = ReplaceWith("Naksha.decodeFeature(bytes, flags, dictManager)"),
+            level = DeprecationLevel.WARNING
+        )
+        fun decodeFeature(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): NakshaFeature? = Naksha.decodeFeature(bytes, flags, dictManager)
 
         /**
          * Encodes the given [NakshaFeature] into bytes.
@@ -198,20 +261,12 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun encodeFeature(feature: NakshaFeature?, flags: Flags, dict: JbDictionary? = null): ByteArray? {
-            if (feature == null) return null
-            val encoding = flags.featureEncoding()
-            var byteArray: ByteArray? = null
-            if (encoding == JSON || encoding == JSON_GZIP) {
-                val encoded = Platform.toJSON(feature)
-                byteArray = encoded.encodeToByteArray()
-            } else if (encoding == JBON || encoding == JBON_GZIP) {
-                val encoder = JbEncoder(dict)
-                byteArray = encoder.buildFeatureFromMap(feature)
-            }
-            if (flags.featureGzip() && byteArray != null) byteArray = Platform.gzipDeflate(byteArray)
-            return byteArray
-        }
+        @Deprecated(
+            message = "Please use Naksha class instead",
+            replaceWith = ReplaceWith("Naksha.encodeFeature(feature, flags, dict)"),
+            level = DeprecationLevel.WARNING
+        )
+        fun encodeFeature(feature: NakshaFeature?, flags: Flags, dict: JbDictionary? = null): ByteArray? = Naksha.encodeFeature(feature, flags, dict)
 
         /**
          * Decode the Naksha tags.
@@ -223,22 +278,12 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun decodeTags(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): TagMap? {
-            if (bytes == null || bytes.isEmpty()) return null
-            var raw = bytes
-            if (flags.tagsGzip()) raw = Platform.gzipInflate(bytes)
-            val encoding = flags.tagsEncoding()
-            if (encoding == TagsEncoding.JBON || encoding == TagsEncoding.JBON_GZIP) {
-                val decoder = JbFeatureDecoder(dictManager)
-                decoder.mapBytes(raw)
-                return decoder.toAnyObject().proxy(TagMap::class)
-            }
-            if (encoding == TagsEncoding.JSON || encoding == TagsEncoding.JSON_GZIP) {
-                val decoded = Platform.fromJSON(bytes.decodeToString())
-                if (decoded is PlatformMap) return decoded.proxy(TagMap::class)
-            }
-            return null
-        }
+        @Deprecated(
+            message = "Please use Naksha class instead",
+            replaceWith = ReplaceWith("Naksha.decodeTags(raw, bytes, flags, dictManager)"),
+            level = DeprecationLevel.WARNING
+        )
+        fun decodeTags(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): TagMap? = Naksha.decodeTags(bytes, flags, dictManager)
 
         /**
          * Encodes the given tags into bytes.
@@ -250,22 +295,12 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun encodeTags(tags: TagMap?, flags: Flags, dict: JbDictionary? = null): ByteArray? {
-            if (tags == null) return null
-            val encoding = flags.tagsEncoding()
-            var byteArray: ByteArray? = null
-            if (encoding == TagsEncoding.JSON || encoding == TagsEncoding.JSON_GZIP) {
-                val encoded = Platform.toJSON(tags)
-                byteArray = encoded.encodeToByteArray()
-            } else if (encoding == TagsEncoding.JBON || encoding == TagsEncoding.JBON_GZIP) {
-                val encoder = JbEncoder(dict)
-                encoder.encodeMap(tags)
-                byteArray = encoder.buildFeature(null, FEATURE_VARIANT_TAGS)
-            }
-            if (flags.tagsGzip() && byteArray != null) byteArray = Platform.gzipDeflate(byteArray)
-            return byteArray
-
-        }
+        @Deprecated(
+            message = "Please use Naksha class instead",
+            replaceWith = ReplaceWith("Naksha.encodeTags(tags, flags, dict)"),
+            level = DeprecationLevel.WARNING
+        )
+        fun encodeTags(tags: TagMap?, flags: Flags, dict: JbDictionary? = null): ByteArray? = Naksha.encodeTags(tags, flags, dict)
 
         /**
          * Decode a GeoJSON geometry from encoded bytes.
@@ -276,7 +311,12 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun decodeGeometry(bytes: ByteArray?, flags: Flags): SpGeometry? = PgPlatform.decodeGeometry(bytes, flags)
+        @Deprecated(
+            message = "Please use Naksha class instead",
+            replaceWith = ReplaceWith("Naksha.decodeGeometry(bytes, flags)"),
+            level = DeprecationLevel.WARNING
+        )
+        fun decodeGeometry(bytes: ByteArray?, flags: Flags): SpGeometry? = Naksha.decodeGeometry(bytes, flags)
 
         /**
          * Encodes the given GeoJSON geometry into bytes.
@@ -287,6 +327,11 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun encodeGeometry(geometry: SpGeometry?, flags: Flags): ByteArray? = PgPlatform.encodeGeometry(geometry, flags)
+        @Deprecated(
+            message = "Please use Naksha class instead",
+            replaceWith = ReplaceWith("Naksha.encodeGeometry(geometry, flags)"),
+            level = DeprecationLevel.WARNING
+        )
+        fun encodeGeometry(geometry: SpGeometry?, flags: Flags): ByteArray? = Naksha.encodeGeometry(geometry, flags)
     }
 }

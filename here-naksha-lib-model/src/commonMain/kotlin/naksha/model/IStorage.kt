@@ -9,7 +9,7 @@ import kotlin.js.JsExport
 /**
  * Any entity implementing the [IStorage] interface represents some data-sink, and comes with an implementation that grants access to the data. The storage normally is a singleton that opens many sessions in parallel.
  *
- * Storages operate on maps. All storages do have an administrative map ([Naksha.VIRT_ADMIN_MAP]), which can be virtual or real, implementation dependent. In this virtual admin-map the storage exposes and manages the custom maps it stores, the transaction-logs of the storage, and the global dictionaries needed for the [JBON](https://github.com/heremaps/naksha/blob/v3/docs/JBON.md).
+ * Storages operate on maps. All storages do have an administrative map ([Naksha.VIRT_ADMIN]), which can be virtual or real, implementation dependent. In this virtual admin-map the storage exposes and manages the custom maps it stores, the transaction-logs of the storage, and the global dictionaries needed for the [JBON](https://github.com/heremaps/naksha/blob/v3/docs/JBON.md).
  *
  * All other maps are custom maps, which are isolated data sinks within the same storage (like an own database schema, an own S3 bucket, an own SQLite database, an own directory or file, aso.). Each custom map is a fully separated storage entity. Some storages allow to access multiple maps from one session, others may limit a session to a single map, and will reject cross map operations with [NakshaError.UNSUPPORTED_OPERATION].
  *
@@ -39,15 +39,28 @@ interface IStorage : IDictReader, AutoCloseable {
     /**
      * The admin options to use for internal processing.
      *
-     * They are needed for administrative work, reading dictionaries, collection information, create administrative structures. The application can override the defaults to have more control over the `appId` and/or `author` being written, when internal data is processed, and how internal connections authenticate (`appName`). The default is, when creating an admin-context, to use the values from the current thread-local [NakshaContext].
+     * They are needed for administrative work, reading dictionaries, collection information, create administrative structures. The application can override the defaults to have more control over the `appId` and/or `author` being written, when internal data is processed, and how internal connections authenticate (`appName`).
+     *
+     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
      * @since 3.0.0
      */
-    val adminOptions: SessionOptions
+    var adminOptions: SessionOptions?
+
+    /**
+     * Returns the admin options; if [adminOptions] is _null_, then creating an admin-context from the current thread-local [NakshaContext].
+     *
+     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
+     * @return the admin context.
+     * @since 3.0.0
+     */
+    fun useAdminOptions(): SessionOptions
 
     /**
      * The hard-cap (limit) of the storage. No result-set every should become bigger than this amount of features.
      *
-     * Setting the value is optionally support, storages may throw an [NakshaError.UNSUPPORTED_OPERATION] exception, when trying to modify the hard-cap, or they may only allow certain values and throw an [NakshaError.ILLEGAL_ARGUMENT] exception, if the value too big. A negative value is changed into [Int.MAX_VALUE], which means no hard-cap (if supported by the storage).
+     * Setting the value is optionally support, storages may throw an [NakshaError.UNSUPPORTED_OPERATION] exception, when trying to modify the hard-cap, or they may only allow certain values and throw an [NakshaError.ILLEGAL_ARGUMENT] exception, if the value too big. Zero and negative values are changed into the maximum of whatever the storage supports, [Int.MAX_VALUE] means no hard-cap (if supported by the storage).
+     *
+     * Note that technically, due to binary encoding, there is normally a hard-cap at `16777216`.
      * @since 3.0.0
      */
     var hardCap: Int
@@ -62,9 +75,7 @@ interface IStorage : IDictReader, AutoCloseable {
     /**
      * Initializes the storage.
      *
-     * If necessary, this method will create the storage structures to store transactions, install needed scripts, extensions, and do all other initialization works. If the storage is already initialized, the given storage-identifier, and storage-number, must match the existing ones, otherwise a new storage is initialized, adding the storage-id and storage-number.
-     *
-     * This operation requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights.
+     * If necessary, this method will create the storage structures to store transactions, install needed scripts, extensions, and do all other initialization works. If the storage is already initialized, the given storage-identifier, and storage-number, must match the existing ones, otherwise an [NakshaError.STORAGE_ID_MISMATCH] exception is raised. Setting up a new storage requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights, if this is not the case, an [NakshaError.FORBIDDEN] exception is raised.
      *
      * This method will register the storage with the [Naksha].
      *
@@ -73,11 +84,10 @@ interface IStorage : IDictReader, AutoCloseable {
      * - Throws [NakshaError.STORAGE_ID_MISMATCH], if the existing _storage-id_ and/or _storage-number_ does not match the given one.
      * @param id the identifier of the storage (_added in v3.0.0_).
      * @param number the number of the storage (_added in v3.0.0_).
-     * @param setup if the storage is not setup, do a setup; if _false_, the method will throw an [NakshaError.INITIALIZATION_FAILED] exception (_added in v3.0.0_).
      * @param params optional special parameters that are storage dependent to influence how a storage is initialized.
      * @since 2.0.8
      */
-    fun initStorage(id: String, number: Int64, setup: Boolean = true, params: Map<String, *>? = null)
+    fun initStorage(id: String, number: Int64, params: Map<String, *>? = null)
 
     /**
      * Open a new write session.

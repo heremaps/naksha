@@ -3,15 +3,16 @@ package naksha.psql
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fx2
-import naksha.jbon.JbDictManager
+import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.FetchMode.*
-import naksha.model.NakshaContext.NakshaContextCompanion.DEFAULT_MAP_ID
+import naksha.model.NakshaError.NakshaErrorCompanion.FORBIDDEN
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
+import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.model.NakshaVersion.Companion.LATEST
-import naksha.model.objects.NakshaFeature
-import naksha.model.request.ExecutedOp
-import naksha.model.request.ResultTuple
+import naksha.model.request.FeatureTuple
 import naksha.psql.PgColumn.PgColumnCompanion.app_id
 import naksha.psql.PgColumn.PgColumnCompanion.attachment
 import naksha.psql.PgColumn.PgColumnCompanion.author
@@ -21,76 +22,79 @@ import naksha.psql.PgColumn.PgColumnCompanion.created_at
 import naksha.psql.PgColumn.PgColumnCompanion.feature
 import naksha.psql.PgColumn.PgColumnCompanion.flags
 import naksha.psql.PgColumn.PgColumnCompanion.geo
-import naksha.psql.PgColumn.PgColumnCompanion.geo_grid
+import naksha.psql.PgColumn.PgColumnCompanion.here_tile
 import naksha.psql.PgColumn.PgColumnCompanion.hash
 import naksha.psql.PgColumn.PgColumnCompanion.id
 import naksha.psql.PgColumn.PgColumnCompanion.origin
-import naksha.psql.PgColumn.PgColumnCompanion.ptxn
-import naksha.psql.PgColumn.PgColumnCompanion.puid
 import naksha.psql.PgColumn.PgColumnCompanion.ref_point
-import naksha.psql.PgColumn.PgColumnCompanion.store_number
 import naksha.psql.PgColumn.PgColumnCompanion.tags
-import naksha.psql.PgColumn.PgColumnCompanion.tuple_number
+import naksha.psql.PgColumn.PgColumnCompanion.tn
 import naksha.psql.PgColumn.PgColumnCompanion.txn
 import naksha.psql.PgColumn.PgColumnCompanion.txn_next
-import naksha.psql.PgColumn.PgColumnCompanion.type
+import naksha.psql.PgColumn.PgColumnCompanion.ft
 import naksha.psql.PgColumn.PgColumnCompanion.uid
 import naksha.psql.PgColumn.PgColumnCompanion.updated_at
 import naksha.psql.PgUtil.PgUtilCompanion.CONTEXT
-import naksha.psql.PgUtil.PgUtilCompanion.ID
 import naksha.psql.PgUtil.PgUtilCompanion.OPTIONS
 import naksha.psql.PgUtil.PgUtilCompanion.OVERRIDE
 import naksha.psql.PgUtil.PgUtilCompanion.VERSION
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
-import kotlin.jvm.JvmField
+
+// TODO: Create "naksha~admin" map with map-number 0
+//       Create the "naksha~transactions", "naksha~dictionaries" collections in it
+//       Additionally create a new "naksha~maps" collection, in which we store maps the way we store collections in "naksha~collections"
+//       We keep all maps all the time in memory (using refreshMaps).
+//       Always keep it in the path, install scripts into it
+//       Create the map-number-seq in it
+//       Add `naksha_storage_number` method in it
+//       Install scripts into it
+//       Creating a map is then simply creating a schema with the "naksha~collections", and `col-number-seq`
+//       Register background thread to listen for notifications
+//       Send notifications whenever "naksha~transactions" is written
+//       If maps are created/deleted, we should update the caches
+//       Create a mechanism to call-back to the host, so allow the host to register a transaction-listener
+//       Split the work into steps, initially, lets use md5-hash above map-id (schema-name) as map-number
 
 /**
  * The PostgresQL storage that manages session and connections.
  *
- * This class is a default multi-platform implements of the [IStorage] interface, with PostgresQL specific extensions, properties and methods.
+ * This class is a default multi-platform implements of the [IStorage] interface for the PostgresQL database. To get an instance of it, a platform specific code has to be used, being:
  *
- * In Java multiple instances can be created. Within the PostgresQL database (so running in PLV8 extension), a new storage instance is created as singleton and added into to the global `plv8` object, when the `naksha_start_session` SQL function is executed, which is necessary for all other Naksha SQL functions to work. This singleton will hold only a single [PgSession], trying to acquire a second one, will always error with [NakshaError.ILLEGAL_STATE].
+ * - In Java: Create an instance of `PsqlStorage`, which is the only version that can install needed scripts, when [initStorage] is called. Multiple instances can be created.
+ * - In PLV8 (the PostgresQL database extension): A new storage instance is created as singleton, and added into to the global `plv8` object, when the `naksha_start_session` SQL function is executed, which is necessary for all other Naksha SQL functions to work. This singleton will hold only a single [PgSession], trying to acquire a second one, will always error with [NakshaError.ILLEGAL_STATE]. The [cluster] will be a fake object.
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-open class PgStorage(
+open class PgStorage protected constructor(
     /**
      * The PostgresQL cluster to which this storage is connected.
      *
      * Will be _null_, if being executed within [PLV8 extension](https://plv8.github.io/).
      */
-    open val cluster: PgCluster,
-
-    /**
-     * The name of the default schema, being assigned to the default map.
-     */
-    @JvmField
-    val defaultSchemaName: String
+    open val cluster: PgCluster
 ) : IStorage {
-    private var _adminOptions: SessionOptions? = null
-    override var adminOptions: SessionOptions
-        get() = _adminOptions ?: SessionOptions(
-            mapId = schemaToMapId(defaultSchemaName),
-            appName = "lib-psql/$LATEST",
-            appId = NakshaContext.defaultAppId.get() ?: "lib-psql",
-            author = null,
-            parallel = false,
-            useMaster = true,
-            excludePaths = NakshaContext.defaultExcludePaths.get(),
-            excludeFn = NakshaContext.defaultExcludeFn.get(),
-            connectTimeout = NakshaContext.defaultConnectTimeout.get(),
-            socketTimeout = NakshaContext.defaultSocketTimeout.get(),
-            stmtTimeout = NakshaContext.defaultStmtTimeout.get(),
-            lockTimeout = NakshaContext.defaultLockTimeout.get()
-        )
-        set(value) {
-            _adminOptions = value.copy(mapId = mapIdToSchema(defaultSchemaName))
-        }
 
-    override var hardCap: Int = 1_000_000
+    override var adminOptions: SessionOptions? = null
+
+    override fun useAdminOptions(): SessionOptions = adminOptions ?: SessionOptions(
+        appName = "lib-psql/$LATEST",
+        appId = NakshaContext.appId(),
+        author = NakshaContext.author(),
+        parallel = false,
+        useMaster = true,
+        excludePaths = NakshaContext.defaultExcludePaths.get(),
+        excludeFn = NakshaContext.defaultExcludeFn.get(),
+        connectTimeout = NakshaContext.defaultConnectTimeout.get(),
+        socketTimeout = NakshaContext.defaultSocketTimeout.get(),
+        stmtTimeout = NakshaContext.defaultStmtTimeout.get(),
+        lockTimeout = NakshaContext.defaultLockTimeout.get()
+    )
+
+    override var hardCap: Int = 16777216
         set(value) {
-            field = if (value < 0) Int.MAX_VALUE else value
+            if (value > 16777216) throw NakshaException(ILLEGAL_ARGUMENT, "The maximum hard-cap supported is 16777216, but $value was requested")
+            field = if (value <= 0) 16777216 else value
         }
 
     protected var _pageSize: Int? = null
@@ -152,40 +156,44 @@ open class PgStorage(
     override val id: String
         get() = _id.get() ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
+    private var _number: Int64? = null
+
+    override val number: Int64
+        get() = _number ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+
     override fun isInitialized(): Boolean = _id.get() != null
 
-    private val maps: AtomicMap<String, WeakRef<out PgMap>> = Platform.newAtomicMap()
-    private val mapNumberToId: AtomicMap<Int, String> = Platform.newAtomicMap()
+    protected var admin_oid: Int? = null
 
-    init {
-        mapNumberToId[0] = ""
-    }
+    /**
+     * All cached maps.
+     * @since 3.0.0
+     */
+    protected val maps: AtomicMap<String, PgMap> = Platform.newAtomicMap()
+
+    /**
+     * A map between unique map-numbers and map-identifiers.
+     * @since 3.0.0
+     */
+    protected val mapNumberToId: AtomicMap<Int, String> = Platform.newAtomicMap()
 
     /**
      * A lock for the storage to synchronize access to some properties and to prevent, that multiple threads in parallel initialize the storage.
+     * - [initStorage]
      */
     protected val lock = Platform.newLock()
 
-    /**
-     * Initializes the storage, create the transaction table, install needed scripts and extensions. If the storage is
-     * already initialized; does nothing.
-     *
-     * Well known parameters for this storage:
-     * - [PgUtil.ID]: if the storage is uninitialized, initialize it with the given storage identifier. If the storage is already
-     * initialized, reads the existing identifier and compares it with the given one. If they do not match, throws an
-     * [IllegalStateException]. If not given a random new identifier is generated, when no identifier yet exists. It is strongly
-     * recommended to provide the identifier.
-     * - [PgUtil.CONTEXT]: can be a [NakshaContext] to be used while doing the initialization; only if [superuser][NakshaContext.su] is _true_,
-     * then a not uninitialized storage is installed. This requires as well superuser rights in the PostgresQL database.
-     * - [PgUtil.OPTIONS]: can be a [SessionOptions] object to be used for the initialization connection (specific changed defaults to
-     * timeouts and locks).
-     *
-     * @param params optional special parameters that are storage dependent to influence how a storage is initialized.
-     * @throws NakshaException if the initialization failed.
-     * @since 2.0.30
-     */
-    override fun initStorage(params: Map<String, *>?) {
-        if (this._id.get() != null) return
+    override fun initStorage(id: String, number: Int64, params: Map<String, *>?) {
+        val this_id = this._id.get()
+        if (this_id != null) {
+            if (this_id != id) {
+                throw NakshaException(STORAGE_ID_MISMATCH, "The storage-id is '$this_id', but is expected to be '$id'")
+            }
+            if (this.number != number) {
+                throw NakshaException(STORAGE_ID_MISMATCH, "The storage-number is '$this.number', but is expected to be '$number'")
+            }
+            return
+        }
         lock.acquire().use {
             if (this._id.get() != null) return
             val context: NakshaContext = if (params != null && params.containsKey(CONTEXT)) {
@@ -199,12 +207,6 @@ open class PgStorage(
                 require(v is SessionOptions) { "params.$OPTIONS must be an instance of SessionOptions" }
                 v
             } else SessionOptions.from(context)
-
-            val initId: String? = if (params != null && params.containsKey(ID)) {
-                val _id = params[ID]
-                require(_id is String && _id.length > 0) { "params.$ID must be a string with a minimal length of 1" }
-                _id
-            } else null
 
             var override = false
             if (params != null && params.containsKey(OVERRIDE)) {
@@ -227,19 +229,29 @@ open class PgStorage(
 
             val conn = cluster.newConnection(options, false)
             conn.use {
-                logger.info("Start init of database {}", conn.toUri())
+                logger.info("Start initStorage of database {}", conn.toUri())
                 conn.autoCommit = false
 
                 logger.info("Query basic database information")
                 var cursor = conn.execute(
                     """
-SELECT 
-    current_setting('block_size')::int4 as bs, 
-    (select oid FROM pg_catalog.pg_tablespace WHERE spcname = '$TEMPORARY_TABLESPACE') as temp_oid,
-    (select oid FROM pg_catalog.pg_extension WHERE extname = 'gzip') as gzip_oid,
-    version() as version
+WITH basics AS (SELECT 
+    current_setting('block_size')::int4 AS bs, 
+    (SELECT oid FROM pg_catalog.pg_tablespace WHERE spcname = '$TEMPORARY_TABLESPACE') AS temp_oid,
+    (SELECT oid FROM pg_catalog.pg_extension WHERE extname = 'gzip') AS gzip_oid,
+    (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'naksha~admin') AS admin_oid,
+    version() AS version
+), procs AS (SELECT 
+    (SELECT true FROM pg_catalog.pg_proc, basics WHERE pronamespace = basics.admin_oid AND proname = 'naksha_version') AS has_naksha_version,
+    (SELECT true FROM pg_catalog.pg_proc, basics WHERE pronamespace = basics.admin_oid AND proname = 'naksha_storage_id') AS has_naksha_storage_id,
+    (SELECT true FROM pg_catalog.pg_proc, basics WHERE pronamespace = basics.admin_oid AND proname = 'naksha_storage_number') AS has_naksha_storage_number
+)
+SELECT basics.*, procs.* FROM basics, procs;
 """
                 ).fetch()
+                val has_naksha_version: Boolean?
+                val has_naksha_storage_id: Boolean?
+                val has_naksha_storage_number: Boolean?
                 cursor.use {
                     _pageSize = cursor["bs"]
                     val tupleSize = pageSize - 32
@@ -251,8 +263,7 @@ SELECT
                         tupleSize
                     }
                     // Note: Temporary and Brittle tables are both created in the temp-tablespace!
-                    _brittleTableSpace =
-                        if (cursor.column("temp_oid") is Int) TEMPORARY_TABLESPACE else null
+                    _brittleTableSpace = if (cursor.column("temp_oid") is Int) TEMPORARY_TABLESPACE else null
                     _tempTableSpace = _brittleTableSpace
                     _gzipExtension = cursor.column("gzip_oid") is Int
                     // "PostgreSQL 15.5 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 7.3.1 20180712 (Red Hat 7.3.1-6), 64-bit"
@@ -260,69 +271,112 @@ SELECT
                     val start = v.indexOf(' ')
                     val end = v.indexOf(' ', start + 1)
                     _postgresVersion = NakshaVersion.of(v.substring(start + 1, end))
+
+                    admin_oid = cursor["admin_oid"]
+                    has_naksha_version = cursor["has_naksha_version"]
+                    has_naksha_storage_id = cursor["has_naksha_storage_id"]
+                    has_naksha_storage_number = cursor["has_naksha_storage_number"]
                 }
-                logger.info("Invoke init_internal for default schema '$defaultSchemaName'")
-                val defaultMap = defaultMap
-                val storage_id = defaultMap.init_internal(initId, conn, version, override)
-                _id.set(storage_id)
-
-                logger.info("Commit")
-                conn.commit()
-
-                logger.info("Load OID of sequence counter (located only in default schema)")
-                cursor = conn.execute(
-                    """SELECT oid, relname
-FROM pg_class
-WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defaultMap.oid}"""
-                )
-                cursor.use {
-                    while (cursor.next()) {
-                        val relname: String = cursor["relname"]
-                        if (NAKSHA_TXN_SEQ == relname) _txnSequenceOid = cursor["oid"]
-                        if (NAKSHA_MAP_SEQ == relname) _mapNumberSequenceOid = cursor["oid"]
+                // Note: PostgresQL parses the query before it evaluates it, therefore, we must not access a schema that does not exist.
+                //       This forces us to execute the version read as a second query, ones we are sure that the schema and function exist.
+                var naksha_version: NakshaVersion? = null
+                var naksha_storage_id: String? = null
+                var naksha_storage_number: Int64? = null
+                if (admin_oid != null && has_naksha_version == true && has_naksha_storage_id == true && has_naksha_storage_number == true) {
+                    cursor = conn.execute("SELECT \"naksha~admin\".naksha_version() AS v, \"naksha~admin\".naksha_storage_id() AS id, \"naksha~admin\".naksha_storage_number() AS n").fetch()
+                    val v: Int64 = cursor["v"]
+                    naksha_version = NakshaVersion(v)
+                    naksha_storage_id = cursor["id"]
+                    naksha_storage_number = cursor["n"]
+                }
+                if (override || naksha_version != version) {
+                    if (!context.su) throw NakshaException(FORBIDDEN, "To install new storages admin privileges are required, please set 'su' flag in context")
+                    if (naksha_storage_id != null && naksha_storage_id != id) {
+                        throw NakshaException(STORAGE_ID_MISMATCH, "The storage-id is '$naksha_storage_id', but is expected to be '$id'")
+                    }
+                    if (naksha_storage_number != null && naksha_storage_number != number) {
+                        throw NakshaException(STORAGE_ID_MISMATCH, "The storage-number is '$naksha_storage_number', but is expected to be '$number'")
+                    }
+                    if (naksha_version != null)
+                        logger.info("Upgrade Naksha admin schema from $naksha_version to $version for storage $id / $number")
+                    else
+                        logger.info("Install Naksha admin schema in version $version for storage $id / $number")
+                    admin_oid = upsertAdminMap(id, number, version, naksha_version)
+                    logger.info("Installation done, commit changes")
+                    conn.commit()
+                } else {
+                    if (naksha_storage_id != id) {
+                        throw NakshaException(STORAGE_ID_MISMATCH, "The storage-id is '$naksha_storage_id', but is expected to be '$id'")
+                    }
+                    if (naksha_storage_number != number) {
+                        throw NakshaException(
+                            STORAGE_ID_MISMATCH,
+                            "The storage-number is '$naksha_storage_number', but is expected to be '$number'"
+                        )
                     }
                 }
+                logger.info("Load OID of sequence counters")
+                cursor = conn.execute("""SELECT 
+(SELECT oid FROM pg_class WHERE relname = '$NAKSHA_TXN_SEQ') AS txn_oid,
+(SELECT oid FROM pg_class WHERE relname = '$NAKSHA_MAP_SEQ') AS map_oid
+""").fetch()
+                cursor.use {
+                    _txnSequenceOid = cursor["txn_oid"]
+                    _mapNumberSequenceOid = cursor["map_oid"]
+                }
+                logger.info("Storage $id / $number initialized, txn-seq-oid=$_txnSequenceOid, map-seq-oid=$_mapNumberSequenceOid")
+                beforeInit(id, number)
+                _number = number
+                _id.set(id) // this must be set as last action, because it is tested first in all other places!
+                afterInit()
             }
         }
     }
 
     /**
-     * Translate the map-id into a schema name.
-     * @param mapId the map-id.
-     * @return the schema name.
+     * An internal method invoked by [initStorage], if it detects that the Postgresql database does not yet have the admin-schema (`naksha~admin`), or that it is in an older version, and that we need to create or upgrade it. This means optionally installing or upgrading SQL functions, creating schema, tables, as well as admin-collections.
+     *
+     * This operation is executing with in [lock], so that it can be sure that no other thread is doing the same thing.
+     *
+     * Note that [toVersion] and [fromVersion] can be the same, if the installation should be overridden explicitly!
+     * @param toVersion the target version to which to upgrade, normally [NakshaVersion.latest], but can be overridden from environment.
+     * @param fromVersion the version that is currently installed in `naksha~admin`, _null_ if either the schema or method do not exist.
+     * @return the OID of the admin schema.
+     * @since 3.0.0
      */
-    fun mapIdToSchema(mapId: String): String = if (mapId.isEmpty()) defaultSchemaName else mapId
+    protected open fun upsertAdminMap(id: String, number: Int64, toVersion: NakshaVersion, fromVersion: NakshaVersion?): Int {
+        throw NakshaException(UNSUPPORTED_OPERATION, "Creating new storages is only supported by JVM code")
+    }
 
     /**
-     * Translate the schema name into a map-id.
-     * @param schema the schema name.
-     * @return the map-id.
+     * Helper method invoked by [initStorage] before initialization is done, so just before [id] and [number] will be set.
+     * @param id the storage-id.
+     * @param number the storage-number.
+     * @since 3.0.0
      */
-    fun schemaToMapId(schema: String): String =
-        if (schema == defaultSchemaName) defaultSchemaName else schema
+    protected open fun beforeInit(id: String, number: Int64) {}
 
     /**
-     * Returns the default map.
-     * @return the default map.
+     * Helper method invoked by [initStorage] after initialization has been done successfully, so just after [id], and [number] were set, but before the [lock] is released.
+     * @since 3.0.0
      */
-    override val defaultMap: PgMap
-        get() = this[DEFAULT_MAP_ID]
+    protected open fun afterInit() {}
 
     /**
      * The default flags to use for the storage.
      * @return default flags to use for the storage.
      */
-    val defaultFlags: Flags = Flags()
-        .featureEncoding(FeatureEncoding.JBON_GZIP)
-        .geoEncoding(GeoEncoding.TWKB_GZIP)
-        .tagsEncoding(TagsEncoding.JBON_GZIP)
+    internal val defaultFlags: Flags = Flags()
+        .withFeatureEncoding(FeatureEncoding.JBON_GZIP)
+        .withGeoEncoding(GeoEncoding.TWKB_GZIP)
+        .withTagsEncoding(TagsEncoding.JBON_GZIP)
 
     private var _txnSequenceOid: Int? = null
 
     /**
      * The OID of the transaction sequence.
      */
-    val txnSequenceOid: Int
+    internal val txnSequenceOid: Int
         get() = _txnSequenceOid ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
     private var _mapNumberSequenceOid: Int? = null
@@ -330,83 +384,11 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
     /**
      * The OID of the map-number sequence.
      */
-    val mapNumberSequenceOid: Int
+    internal val mapNumberSequenceOid: Int
         get() = _mapNumberSequenceOid ?: throw NakshaException(
             UNINITIALIZED,
             "Storage uninitialized"
         )
-
-    // TODO: This only works as long as we only support the standard-map, later we need to somehow pre-fetch all maps.
-    //       Maps are entities, that are anyway rare, the hard-cap is 4k, and even that would already be a lot for a storage!
-    override operator fun contains(mapId: String): Boolean = maps.containsKey(mapId)
-
-    /**
-     * Creates a new schema instance, internally called.
-     */
-    protected open fun newMap(storage: PgStorage, mapId: String): PgMap =
-        PgMap(storage, mapId, mapIdToSchema(mapId))
-
-    override operator fun get(mapId: String): PgMap {
-        val maps = this.maps
-        while (true) {
-            var schemaRef = maps[mapId]
-            var schema = schemaRef?.deref()
-            if (schema != null) return schema
-            if (schemaRef != null) {
-                if (!maps.remove(mapId, schemaRef)) continue
-                // Schema removed successfully, no conflict with other thread.
-            }
-            schema = newMap(this, mapId)
-            schemaRef = Platform.newWeakRef(schema)
-            maps.putIfAbsent(mapId, schemaRef) ?: return schema
-            // Conflict, another thread was faster, retry.
-        }
-    }
-
-    override operator fun get(mapNumber: Int): PgMap? {
-        val id = getMapId(mapNumber) ?: return null
-        return this[id]
-    }
-
-    override fun getMapId(mapNumber: Int): String? = mapNumberToId[mapNumber]
-
-    override fun tupleToFeature(tuple: Tuple): NakshaFeature {
-        val feature = if (tuple.fetchBits.feature() && tuple.feature != null) {
-            PgUtil.decodeFeature(tuple.feature, tuple.flags, dictionaryManager) ?: NakshaFeature()
-        } else NakshaFeature()
-        val meta = tuple.meta
-        if (meta != null) feature.properties.xyz = xyzFrom(meta)
-        val tags = tuple.tags
-        if (tags != null) feature.properties.xyz.tags = PgUtil.decodeTags(tuple.tags, tuple.flags, dictionaryManager)?.toTagList()
-        val geo = tuple.geo
-        if (geo != null) feature.geometry = PgUtil.decodeGeometry(geo, tuple.flags)
-        val attachment = tuple.attachment
-        if (attachment != null) feature.attachment = attachment
-        return feature
-    }
-
-    private fun xyzFrom(meta: Metadata): XyzNs {
-        return AnyObject().apply {
-            setRaw("uuid", meta.uid.toString())
-            setRaw("puuid", meta.puid.toString())
-            setRaw("createdAt", meta.createdAt)
-            setRaw("updatedAt", meta.updatedAt)
-            setRaw("txn", meta.version.txn)
-            setRaw("changeCount", meta.changeCount)
-            setRaw("action", meta.action())
-            setRaw("appId", meta.appId)
-            setRaw("author", meta.author)
-            setRaw("authorTs", meta.authorTs)
-            setRaw("hash", meta.hash)
-            setRaw("origin", meta.origin)
-            setRaw("geoGrid", meta.geoGrid)
-        }.proxy(XyzNs::class)
-    }
-
-    override fun featureToTuple(feature: NakshaFeature): Tuple {
-        val nakshaFeature = feature.proxy(NakshaFeature::class)
-        TODO("Implement me")
-    }
 
     override fun newWriteSession(options: SessionOptions?): IWriteSession =
         newSession(options ?: SessionOptions.from(null), false)
@@ -444,8 +426,7 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
         init: Fx2<PgConnection, String>? = null
     ): PgConnection {
         val conn = cluster.newConnection(options, readOnly)
-        // TODO: Do we need more initialization work here?
-        val query = "SET SESSION search_path TO ${quoteIdent(mapIdToSchema(options.mapId))}, public, topology;\n"
+        val query = "SET SESSION search_path TO \"naksha~admin\", hint_plan, public, topology;\n"
         if (init != null) init.call(conn, query) else conn.execute(query).close()
         return conn
     }
@@ -462,10 +443,9 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
      * @return the admin connection, to be closed after usage (uses [adminOptions], and is always bound to master).
      */
     internal open fun adminConnection(
-        options: SessionOptions = adminOptions,
+        options: SessionOptions = useAdminOptions(),
         init: Fx2<PgConnection, String>? = null
-    ): PgConnection =
-        newConnection(options, false, init)
+    ): PgConnection = newConnection(options, false, init)
 
     /**
      * Tests if the given handle is valid, and if it is, tries to extend its live-time to the given amount of milliseconds.
@@ -484,31 +464,10 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
     }
 
     /**
-     * Load specific [tuples][naksha.model.Tuple].
-     *
-     * @param conn the connection to use.
-     * @param tupleNumbers a list of [tuple-numbers][TupleNumber] of the rows to load.
-     * @param fetchFromHistory if the history should be queried.
-     * @param mode the fetch mode.
-     * @return the list of the loaded [tuples][Tuple], _null_, if the tuple was not found.
-     * @since 3.0.0
-     */
-    fun getTuples(
-        conn: PgConnection,
-        tupleNumbers: Array<TupleNumber>,
-        fetchFromHistory: Boolean = false,
-        mode: FetchBits = FetchMode.FETCH_ALL
-    ): List<Tuple?> {
-        val loader = PgTupleLoader(this, fetchFromHistory, conn)
-        for (tupleNumber in tupleNumbers) loader.add(tupleNumber, mode)
-        return loader.execute()
-    }
-
-    /**
      * Fetches all tuples in the given result-tuples.
      *
      * @param conn the connection to use.
-     * @param resultTuples a list of result-tuples to fetch.
+     * @param featureTuples a list of result-tuples to fetch.
      * @param from the index of the first result-tuples to fetch.
      * @param to the index of the first result-tuples to ignore.
      * @param fetchFromHistory if the history should be queried.
@@ -518,17 +477,17 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
      */
     fun fetchTuples(
         conn: PgConnection,
-        resultTuples: List<ResultTuple?>,
+        featureTuples: List<FeatureTuple?>,
         from: Int = 0,
-        to: Int = resultTuples.size,
+        to: Int = featureTuples.size,
         fetchFromHistory: Boolean = false,
-        mode: FetchBits = FetchMode.FETCH_ALL
+        mode: FetchMode = FetchMode.FETCH_ALL
     ) {
         val loader = PgTupleLoader(this, fetchFromHistory, conn)
-        for (rt in resultTuples) loader.add(rt, mode)
+        for (rt in featureTuples) loader.add(rt, mode)
         val all = loader.execute()
         for (i in all.indices) {
-            val rt = resultTuples[i]
+            val rt = featureTuples[i]
             if (rt != null) {
                 rt.op = ExecutedOp.READ
                 rt.tuple = all[i]
@@ -537,6 +496,17 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
     }
 
     companion object PgStorage_C {
+        /**
+         * The admin map identifier.
+         * @since 3.0.0
+         */
+        internal const val ADMIN_MAP_ID = "naksha~admin"
+
+        /**
+         * The map-number of the admin-map.
+         * @since 3.0.0
+         */
+        internal const val ADMIN_MAP_NUMBER = 0
 
         /**
          * All columns to be added into a SELECT query, already quoted, if needed.
@@ -548,7 +518,7 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
          * Helper method to read a [Tuple] from a [PgCursor].
          *
          * It automatically detects which parts have been selected, but requires that at least:
-         * - either [tuple_number][PgColumn.tuple_number] or [txn][PgColumn.txn], [store_number][PgColumn.store_number] and [uid][PgColumn.uid]
+         * - either [tuple_number][PgColumn.tn] or [txn][PgColumn.txn], [store_number][PgColumn.store_number] and [uid][PgColumn.uid]
          * - [flags][PgColumn.flags]
          * - [id][PgColumn.id]
          *
@@ -558,8 +528,8 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
          * @return the read tuple.
          */
         internal fun readTupleFromCursor(storage: PgStorage, cursor: PgCursor): Tuple {
-            val tupleNumberByteArray: ByteArray? = cursor.column(tuple_number) as ByteArray?
-            val tupleNumber = if (tupleNumberByteArray != null) TupleNumber.fromByteArray(tupleNumberByteArray) else {
+            val tupleNumberByteArray: ByteArray? = cursor.column(tn) as ByteArray?
+            val tupleNumber = if (tupleNumberByteArray != null) TupleNumber.fromFullVariant(tupleNumberByteArray) else {
                 val _txn: Int64 = cursor[txn]
                 TupleNumber(
                     cursor[store_number],
@@ -569,13 +539,13 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
             }
 
             // We always need at least tuple-number and id
-            var fetchBits: FetchBits = FetchMode.FETCH_ID
+            var fetchMode: FetchMode = FetchMode.FETCH_ID
             val id: String = cursor[id]
             val flags: Flags = cursor[flags]
 
             val updatedAt: Int64? = cursor.column(updated_at) as Int64?
             val metadata = if (updatedAt != null) {
-                fetchBits = fetchBits.withMeta()
+                fetchMode = fetchMode.withMeta()
                 val createdAt = cursor.column(created_at) as Int64?
                 val authorTs = cursor.column(author_ts) as Int64?
                 val _txn_next = cursor.column(txn_next) as Int64?
@@ -592,24 +562,24 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
                     puid = cursor.column(puid) as Int?,
                     hash = cursor[hash],
                     changeCount = cursor[change_count],
-                    geoGrid = cursor[geo_grid],
+                    hereTile = cursor[here_tile],
                     flags = flags,
                     id = id,
                     appId = cursor[app_id],
                     author = cursor.column(author) as String?,
-                    type = cursor.column(type) as String?,
-                    origin = cursor.column(origin) as String?
+                    ft = cursor.column(ft) as String?,
+                    originTupleNumber = cursor.column(origin) as String?
                 )
             } else null
-            if (feature in cursor) fetchBits = fetchBits.withFeature()
-            if (geo in cursor) fetchBits = fetchBits.withGeometry()
-            if (ref_point in cursor) fetchBits = fetchBits.withReferencePoint()
-            if (tags in cursor) fetchBits = fetchBits.withTags()
-            if (attachment in cursor) fetchBits = fetchBits.withAttachment()
+            if (feature in cursor) fetchMode = fetchMode.withFeature()
+            if (geo in cursor) fetchMode = fetchMode.withGeometry()
+            if (ref_point in cursor) fetchMode = fetchMode.withReferencePoint()
+            if (tags in cursor) fetchMode = fetchMode.withTags()
+            if (attachment in cursor) fetchMode = fetchMode.withAttachment()
             return Tuple(
                 storage = storage,
                 tupleNumber = tupleNumber,
-                fetchBits = fetchBits,
+                state = fetchMode,
                 meta = metadata,
                 id = id,
                 flags = flags,
@@ -622,9 +592,5 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
         }
     }
 
-    override fun close() {
-    }
-
-    @Suppress("LeakingThis")
-    internal val dictionaryManager = PgDictManager(this)
+    override fun close() {}
 }

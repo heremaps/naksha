@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.geo.SpGeometry
 import naksha.model.SessionOptions
 
 /**
@@ -119,23 +118,5 @@ expect class PgPlatform {
          * @throws UnsupportedOperationException if this platform does not support running tests.
          */
         fun newTestStorage(): PgStorage
-
-        /**
-         * Decode a GeoJSON geometry from encoded bytes.
-         * @param raw the bytes to decode.
-         * @param flags the codec flags.
-         * @return the GeoJSON geometry.
-         * @since 3.0.0
-         */
-        fun decodeGeometry(raw: ByteArray?, flags: Int): SpGeometry?
-
-        /**
-         * Encodes the given GeoJSON geometry into bytes.
-         * @param geometry the geometry to encode.
-         * @param flags the codec flags.
-         * @return the encoded GeoJSON geometry.
-         * @since 3.0.0
-         */
-        fun encodeGeometry(geometry: SpGeometry?, flags: Int): ByteArray?
     }
 }

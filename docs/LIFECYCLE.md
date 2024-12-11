@@ -20,7 +20,7 @@ As said, a **Tuple** is an immutable state of a feature. To address these states
 
 - storage-number: u64
 - map-number: u32
-- collection-number: u32 
+- collection-number: u32
 - version: u56
 - partition-number: u8
 - uid: u32
@@ -85,18 +85,18 @@ This concept allows up to 4 billion transactions per day (between 0 and 4,294,96
 
 Technically this means, the maximum number of transactions per second per storage is around 49,000.
 
-## The Life-Cycle
-The life-cycle of a features persists out of _actions_ and _operations_.
-
-### Foreign Features
+## Foreign Features
 Generally, a feature is called **_foreign feature_**, when its ID changes, or when it is copied from one storage, map, or collection into another one. We always keep track of foreign features using the `origin` property in the XYZ namespace, which will store the _GUID_ of the origin, so from where the feature comes. This can be the same storage, map, and collection, if only the ID changed, but it can be as well be a complete different storage.
 
 The `origin`, and `target` are sticky, so when updating the feature, the `origin`, and `target` stay the same.
 
 This is actually important for [rebasing](#rebased).
 
+## The Life-Cycle
+The life-cycle of a features persists out of _actions_ and _operations_.
+
 ## Actions
-The first action is always `CREATED`, then optionally one to _n_ `UPDATED`, and finally it one `DELETED`.
+The first action is always `CREATED`, then optionally zero to _n_ `UPDATED`, and finally it one `DELETED`.
 
 Additionally, next to these actions, an **_operation_** is stored, which is mainly improving the search. It is advantageous to reduce the cardinality when performing a [rebase](#rebased), so to have one index on the _operation_, rather than making combined queries between _action_ and other indices like _origin_, because _action_ basically will not reduce cardinality a lot, there are so many `CREATED`, `UPDATED`, and `DELETED` actions.
 

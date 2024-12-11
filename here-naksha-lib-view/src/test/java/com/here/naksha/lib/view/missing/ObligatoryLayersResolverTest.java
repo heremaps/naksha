@@ -53,6 +53,12 @@ public class ObligatoryLayersResolverTest {
         "test",
         null,
         null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
         null
     );
   }

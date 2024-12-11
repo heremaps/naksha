@@ -1,15 +1,10 @@
 package naksha.psql.executors
 
 import naksha.base.Int64
-import naksha.base.PlatformUtil
-import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.model.objects.NakshaCollection
@@ -78,7 +73,7 @@ class PgWriter(
         collection.defaultFlags ?: session.storage.defaultFlags
 
     /**
-     * Returns the encoding to store for the [feature-type][Metadata.type].
+     * Returns the encoding to store for the [feature-type][Metadata.ft].
      * @param collection the collection in which to store the feature.
      * @param feature the feature.
      * @return the type to store in [Metadata].
@@ -265,7 +260,7 @@ class PgWriter(
 
         writeExecutor.finish()
         // If everything was done perfectly, fine.
-        val tupleNumberByteArray = TupleNumberByteArray(storage, tupleNumbers.toByteArray())
+        val tupleNumberByteArray = TupleNumberBinaryArray(storage, tupleNumbers.toByteArray())
         return SuccessResponse(
             PgResultSet(
                 storage,

@@ -1,6 +1,8 @@
 package naksha.psql
 
+import naksha.base.Int64
 import naksha.model.*
+import naksha.model.NakshaError.NakshaErrorCompanion.FORBIDDEN
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 
@@ -22,8 +24,8 @@ open class PsqlStorage(override val cluster: PsqlCluster, defaultSchemaName: Str
     /**
      * The name of the notification channel used.
      *
-     * - Will throw [NakshaError.UNINITIALIZED] if read before [initStorage].
-     * - Will throw [NakshaError.ILLEGAL_STATE] if change after [initStorage]
+     * - Will throw [UNINITIALIZED] if read before [initStorage].
+     * - Will throw [ILLEGAL_STATE] if change after [initStorage]
      */
     var channel: String
         get() = _channel ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
@@ -35,8 +37,31 @@ open class PsqlStorage(override val cluster: PsqlCluster, defaultSchemaName: Str
 
     override fun newMap(storage: PgStorage, mapId: String): PsqlMap = PsqlMap(storage, mapId, mapIdToSchema(mapId))
 
-    override fun initStorage(params: Map<String, *>?) {
-        super.initStorage(params)
+    /**
+     * Initializes the storage.
+     *
+     * For the [PsqlStorage] implementation, this will test if an [administration-map][Naksha.VIRT_ADMIN] exists (schema `naksha~admin`), and if the _storage-id_ and _storage-number_ match the existing installation. If no such map exists, this method will create one, and install all extensions, create all functions, setup needed sequences, and install the _storage-id_ and _storage-number_, so that the next time the storage is opened, it can be verified. It will as well remember which version of Naksha is installed to be able to upgrade the functions on demand, and the base administration collections will be created, which are: [Naksha.VIRT_TRANSACTIONS], [Naksha.VIRT_MAPS], and [Naksha.VIRT_DICTIONARIES].
+     *
+     * This operation requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights.
+     *
+     * This method will register the storage with the [NakshaCache].
+     *
+     * - Throws [FORBIDDEN], if not called as super-user.
+     * - Throws [NakshaError.STORAGE_ID_MISMATCH], if the given [id] and/or [number] do not match an existing one.
+     * @param id the identifier of the storage (_added in v3.0.0_).
+     * @param number the number of the storage (_added in v3.0.0_).
+     * @param params optional special parameters that are storage dependent to influence how a storage is initialized.
+     * @since 2.0.8
+     */
+    override fun initStorage(id: String, number: Int64, params: Map<String, *>?) {
+        try {
+            super.initStorage(id, number, params)
+        } catch (e: NakshaException) {
+            if (e.code != UNINITIALIZED) throw e
+        }
+        val context = NakshaContext.currentContext()
+        if (!context.su) throw NakshaException(FORBIDDEN, "The context requires supervisor rights ('su') to initialize a new storage")
+        // ...
         if (_channel == null) _channel = "lib-psql-${id}"
         if (!this::listener.isInitialized) listener = PsqlStorageListener(this)
     }

@@ -1,17 +1,15 @@
 package naksha.psql.executors.write
 
 import naksha.model.*
-import naksha.model.Metadata.Metadata_C.geoGrid
-import naksha.model.Metadata.Metadata_C.hash
+import naksha.model.Metadata.Metadata_C.calculateGeoGrid
+import naksha.model.Metadata.Metadata_C.calculateHash
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
 import naksha.psql.PgSession
-import naksha.psql.executors.PgWriter
 import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
 import naksha.psql.executors.write.WriteFeatureUtils.resolveFlags
 import naksha.psql.executors.write.WriteFeatureUtils.tuple
-import kotlin.jvm.JvmField
 
 class UpdateFeature(
     private val session: PgSession,
@@ -79,10 +77,10 @@ class UpdateFeature(
             prevVersion = previousMetadata.version,
             uid = session.uid.getAndAdd(1),
             puid = previousMetadata.puid,
-            hash = hash(feature, session.options.excludePaths, session.options.excludeFn),
+            hash = calculateHash(feature, session.options.excludePaths, session.options.excludeFn),
             changeCount = previousMetadata.changeCount + 1,
-            geoGrid = geoGrid(feature),
-            flags = flags.action(Action.UPDATED),
+            hereTile = calculateGeoGrid(feature),
+            flags = flags.withAction(Action.UPDATED_VALUE),
             appId = session.options.appId,
             author = session.options.author ?: previousMetadata.author,
             id = feature.id

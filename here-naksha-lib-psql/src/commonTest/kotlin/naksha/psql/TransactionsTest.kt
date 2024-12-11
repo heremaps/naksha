@@ -15,10 +15,10 @@ class TransactionsTest : PgTestBase(NakshaCollection("transaction_test")) {
     fun readTransactionInfo() {
         // given - saved feature in one transaction
         val feature = NakshaFeature("f1")
-        val writeOp = Write().createFeature(map = null, collection!!.id, feature)
+        val writeOp = Write().createFeature(mapId = null, collection!!.id, feature)
         val writeRequest = WriteRequest().add(writeOp)
 
-        var savedTuples: ResultTupleList? = null
+        var savedTuples: FeatureTupleList? = null
         storage.newWriteSession().use { session ->
             savedTuples = (session.execute(writeRequest) as SuccessResponse).tuples
             session.commit()

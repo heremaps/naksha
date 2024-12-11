@@ -36,7 +36,7 @@ class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c")) 
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true
-        }).features.sortedBy { it!!.properties.xyz.txn.toLong() }
+        }).features.sortedBy { it!!.properties.xyz.version.toLong() }
 
         // Then
         assertThatFeature(retrievedFeatures[0]!!)
@@ -64,7 +64,7 @@ class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c")) 
                     .hasFeatureType(initialFeature.properties.featureType)
                     .hasXyzThat { retrievedXyz ->
                         retrievedXyz
-                            .hasProperty("action", Action.UPDATED)
+                            .hasProperty("action", Action.UPDATED_VALUE)
                             .hasProperty("changeCount", 2)
                     }
             }

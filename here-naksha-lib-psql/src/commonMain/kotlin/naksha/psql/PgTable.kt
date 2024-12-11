@@ -179,7 +179,7 @@ open class PgTable(
             }
             val pofValue = partitionOfValue
             when (parent.partitionByColumn) {
-                PgColumn.id, PgColumn.tuple_number, PgColumn.store_number -> {
+                PgColumn.id, PgColumn.tn, PgColumn.store_number -> {
                     require(pofValue >= 0 && pofValue < parent.partitionCount) {
                         """The table '$name' is a partition of '${parent.name}', but does not declare a valid 'partitionOfValue' (0 to ${parent.partitionCount}): $pofValue"""
                     }
@@ -235,9 +235,9 @@ open class PgTable(
                 "PARTITION BY RANGE ((get_byte(digest(${PgColumn.id},'md5'),0) % $partitionCount))"
             }
             // The tuple_number contains the partition-number in the top 8-bit (due to big-endian encoding).
-            PgColumn.tuple_number -> {
+            PgColumn.tn -> {
                 require(partitionCount in 2..256) { "Invalid partition-count, expect 2 .. 256, found : $partitionCount" }
-                "PARTITION BY RANGE ((get_byte(${PgColumn.tuple_number}, 7) % $partitionCount))"
+                "PARTITION BY RANGE ((get_byte(${PgColumn.tn}, 7) % $partitionCount))"
             }
             // The store_number contains the partition-number in the lower 8-bit.
             PgColumn.store_number -> {
@@ -272,7 +272,7 @@ open class PgTable(
      * If this table is performance partitioned, so features are stored based upon their ID.
      */
     @JvmField
-    val hasIdPartitions: Boolean = ((partitionByColumn == PgColumn.id) || (partitionByColumn == PgColumn.tuple_number)) && partitionCount >= 2
+    val hasIdPartitions: Boolean = ((partitionByColumn == PgColumn.id) || (partitionByColumn == PgColumn.tn)) && partitionCount >= 2
 
     /**
      * Create the table and its partitions.

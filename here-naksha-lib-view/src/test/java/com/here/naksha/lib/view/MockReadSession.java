@@ -23,7 +23,7 @@ import java.util.List;
 
 import naksha.model.Tuple;
 import naksha.model.TupleNumber;
-import naksha.model.objects.Transaction;
+import naksha.model.objects.NakshaTransaction;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.FeatureTuple;
@@ -99,12 +99,12 @@ public class MockReadSession implements IReadSession {
 
   @NotNull
   @Override
-  public String getMap() {
+  public String getMapId() {
     return map;
   }
 
   @Override
-  public void setMap(@NotNull String s) {
+  public void setMapId(@NotNull String s) {
     map = s;
   }
 
@@ -126,7 +126,7 @@ public class MockReadSession implements IReadSession {
 
   @NotNull
   @Override
-  public Transaction transaction() {
+  public NakshaTransaction transaction() {
     return null;
   }
 }
