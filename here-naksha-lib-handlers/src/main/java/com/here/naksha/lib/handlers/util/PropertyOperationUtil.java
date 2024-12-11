@@ -21,6 +21,8 @@ package com.here.naksha.lib.handlers.util;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
 import naksha.model.request.query.*;
 
 public class PropertyOperationUtil {
@@ -48,6 +50,9 @@ public class PropertyOperationUtil {
       pQuery.setProperty(transformed.get().getProperty());
       pQuery.setOp(transformed.get().getOp());
       pQuery.setValue(transformed.get().getValue());
-    } // TODO do we throw unsupported of unknown query here?
+    } else {
+      throw new NakshaException(
+          new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Unknown property operation: " + propertyOperation));
+    }
   }
 }
