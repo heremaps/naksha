@@ -22,7 +22,6 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
@@ -32,6 +31,7 @@ import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import java.util.Objects;
 import naksha.base.JvmProxyUtil;
 import naksha.model.NakshaError;
+import naksha.model.NakshaException;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.*;
@@ -83,7 +83,7 @@ public class MockContextLoaderHandler extends AbstractEventHandler {
 
     try {
       if (!(RequestTypesUtil.isOnlyWriteFeatures(request))) {
-        throw new XyzErrorException(new NakshaError(
+        throw new NakshaException(new NakshaError(
             NakshaError.NOT_IMPLEMENTED,
             "Unsupported request type for validation - "
                 + request.getClass().getSimpleName()));
@@ -93,9 +93,9 @@ public class MockContextLoaderHandler extends AbstractEventHandler {
       // Generate Validate request
       final Request forwardRequest = generateContextRequest(writeRequest);
       return event.sendUpstream(forwardRequest);
-    } catch (XyzErrorException erx) {
+    } catch (NakshaException erx) {
       logger.warn("Error processing validation request. ", erx);
-      return new ErrorResponse(erx.nakshaError);
+      return new ErrorResponse(erx.error);
     }
   }
 
@@ -104,12 +104,15 @@ public class MockContextLoaderHandler extends AbstractEventHandler {
     final ContextWriteXyzFeatures contextWriteFeatures = new ContextWriteXyzFeatures();
     // Add features in the request
     if (wf.getWrites().isEmpty()) {
-      throw new XyzErrorException(NakshaError.ILLEGAL_ARGUMENT, "No features supplied for validation");
+      throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "No features supplied for validation", null, null);
     }
     for (final Write write : wf.getWrites()) {
       if (!WriteOp.UPSERT.equals(write.getOp())) {
-        throw new XyzErrorException(
-            NakshaError.NOT_IMPLEMENTED, "Unsupported operation type for validation - " + write.getOp());
+        throw new NakshaException(
+            NakshaError.NOT_IMPLEMENTED,
+            "Unsupported operation type for validation - " + write.getOp(),
+            null,
+            null);
       }
       HandlerUtil.checkInstanceOf(
           write.getFeature(), NakshaFeature.class, "Unsupported feature type for validation");

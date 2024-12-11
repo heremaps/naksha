@@ -18,12 +18,12 @@
  */
 package com.here.naksha.lib.handlers.util;
 
-import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import java.util.ArrayList;
 import java.util.List;
 import naksha.base.JvmProxyUtil;
 import naksha.model.NakshaError;
+import naksha.model.NakshaException;
 import naksha.model.TagList;
 import naksha.model.XyzNs;
 import naksha.model.mom.MomChangeState;
@@ -93,7 +93,7 @@ public final class HandlerUtil {
 
     // Add features in the request
     if (writes.isEmpty())
-      throw new XyzErrorException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "No features supplied"));
+      throw new NakshaException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "No features supplied"));
     for (final Object inputWrite : writes) {
       final Write xyzCodec = checkInstanceOf(inputWrite, Write.class, "Unsupported DB write operation type");
       final NakshaFeature feature =
@@ -167,16 +167,16 @@ public final class HandlerUtil {
   public static <T> @NotNull T checkInstanceOf(
       final @Nullable Object input,
       final @NotNull Class<T> returnType,
-      final @NotNull String NakshaErrorCode,
+      final @NotNull String nakshaErrorCode,
       final @NotNull String errDescPrefix) {
     if (input == null) {
-      throw new XyzErrorException(new NakshaError(NakshaErrorCode, errDescPrefix + " - object is null."));
+      throw new NakshaException(new NakshaError(nakshaErrorCode, errDescPrefix + " - object is null."));
     }
     if (returnType.isAssignableFrom(input.getClass())) {
       return returnType.cast(input);
     }
-    throw new XyzErrorException(new NakshaError(
-        NakshaErrorCode, errDescPrefix + " - " + input.getClass().getSimpleName()));
+    throw new NakshaException(new NakshaError(
+        nakshaErrorCode, errDescPrefix + " - " + input.getClass().getSimpleName()));
   }
 
   public static <T> @NotNull T checkInstanceOf(

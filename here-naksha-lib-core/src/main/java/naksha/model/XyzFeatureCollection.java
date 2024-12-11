@@ -86,6 +86,7 @@ public class XyzFeatureCollection extends Response {
     setFeatures(new NakshaFeatureList());
     TYPE.setValue(this, FEATURE_COLLECTION_TYPE);
   }
+
   public SpBoundingBox getBbox() {
     return BBOX.getValue(this);
   }
