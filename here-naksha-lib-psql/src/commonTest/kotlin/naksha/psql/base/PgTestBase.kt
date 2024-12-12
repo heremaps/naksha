@@ -85,7 +85,6 @@ abstract class PgTestBase(val collection: NakshaCollection? = null) {
         return env.storage.newReadSession(sessionOptions).use { session ->
             val response = session.execute(request)
             assertIs<SuccessResponse>(response)
-            session.commit()
             response
         }
     }

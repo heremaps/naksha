@@ -132,6 +132,10 @@ class PsqlConnection internal constructor(
         this._jdbc = null
         if (pgConnection != null) {
             try {
+                if (pgConnection.isClosed) {
+                    instance.connectionPool.remove(id)
+                    return
+                }
                 if (!pgConnection.autoCommit) {
                     pgConnection.rollback()
                 } else {

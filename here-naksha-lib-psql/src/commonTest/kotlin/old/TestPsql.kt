@@ -37,9 +37,9 @@ class TestPsql: PgTestBase() {
 
         val readRequest = ReadCollections()
         readRequest.collectionIds += col.id
-        session = env.storage.newReadSession()
-        session.use {
-            val response = session.execute(readRequest)
+        val readSession = env.storage.newReadSession()
+        readSession.use {
+            val response = readSession.execute(readRequest)
             assertIs<SuccessResponse>(response)
             assertEquals(1, response.resultSize())
             assertEquals(1, response.features.size)

@@ -409,7 +409,7 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
     override fun newWriteSession(options: SessionOptions?): IWriteSession =
         newSession(options ?: SessionOptions.from(null), false)
 
-    override fun newReadSession(options: SessionOptions?): IWriteSession =
+    override fun newReadSession(options: SessionOptions?): IReadSession =
         newSession(options ?: SessionOptions.from(null), true)
 
     /**
