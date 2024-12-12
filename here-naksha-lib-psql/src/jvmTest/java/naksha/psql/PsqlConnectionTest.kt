@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.model.objects.NakshaCollection
 import naksha.psql.base.PgTestBase
 import kotlin.test.Test
 import kotlin.test.assertEquals
