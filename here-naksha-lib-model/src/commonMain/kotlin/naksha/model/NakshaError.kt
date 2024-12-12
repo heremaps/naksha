@@ -7,6 +7,7 @@ import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 
 /**
  * An error class.
@@ -23,20 +24,13 @@ open class NakshaError() : AnyObject() {
      * @param cause the origin exception that caused this error; if any.
      */
     @JsName("of")
+    @JvmOverloads
     constructor(code: String, msg: String, id: String? = null, cause: Throwable? = null) : this() {
         this.code = code
         this.msg = msg
         this.id = id
         this.cause = cause
     }
-
-    /**
-     * Convenient constructor for Java.
-     * @param code the error code.
-     * @param msg a human-readable message.
-     */
-    @JsName("ofText")
-    constructor(code: String, msg: String) : this(code, msg, null, null)
 
     companion object NakshaErrorCompanion {
         /**
