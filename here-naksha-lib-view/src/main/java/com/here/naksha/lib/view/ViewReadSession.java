@@ -194,15 +194,14 @@ public class ViewReadSession implements IReadSession {
     }
     return false;
   }
-//TODO CASL-739
+  // TODO CASL-739
   @Override
   public int getSocketTimeout() {
     return 0;
   }
 
   @Override
-  public void setSocketTimeout(int i) {
-  }
+  public void setSocketTimeout(int i) {}
 
   @Override
   public int getStmtTimeout() {
@@ -255,12 +254,7 @@ public class ViewReadSession implements IReadSession {
 
   @Override
   public void fetchTuples(
-      @NotNull List<? extends ResultTuple> resultTuples,
-      int from,
-      int to,
-      boolean fetchFromHistory,
-      int mode) {
-  }
+      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {}
 
   @Override
   public @NotNull Transaction transaction() {
