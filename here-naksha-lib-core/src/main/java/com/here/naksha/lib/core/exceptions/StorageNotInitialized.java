@@ -24,8 +24,10 @@ import org.jetbrains.annotations.ApiStatus.AvailableSince;
 
 /**
  * An exception thrown when the storage is not initialized.
+ * @deprecated Please use {@code NakshaException(UNINITIALIZED, "Storage uninitialized")} instead.
  */
 @AvailableSince(NakshaVersion.v2_0_8)
+@Deprecated
 public class StorageNotInitialized extends StorageException {
 
   /**

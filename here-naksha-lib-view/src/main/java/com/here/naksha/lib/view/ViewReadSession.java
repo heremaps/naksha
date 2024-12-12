@@ -19,22 +19,13 @@
 package com.here.naksha.lib.view;
 
 import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.*;
 
 import com.here.naksha.lib.view.concurrent.LayerReadRequest;
 import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import naksha.model.*;
 import naksha.model.objects.Transaction;
 import naksha.model.request.*;
@@ -203,78 +194,67 @@ public class ViewReadSession implements IReadSession {
     }
     return false;
   }
-
+  // TODO CASL-739
   @Override
   public int getSocketTimeout() {
-    //TODO
     return 0;
   }
 
   @Override
-  public void setSocketTimeout(int i) {
-    //TODO
-  }
+  public void setSocketTimeout(int i) {}
 
   @Override
   public int getStmtTimeout() {
-    return 0;     //TODO
+    return 0;
   }
 
   @Override
-  public void setStmtTimeout(int i) {    //TODO
-  }
+  public void setStmtTimeout(int i) {}
 
   @Override
   public int getLockTimeout() {
-    return 0;    //TODO
-
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  public void setLockTimeout(int i) {    //TODO
+  public void setLockTimeout(int i) {
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public boolean isClosed() {
-    return false;    //TODO
-
+    return false;
   }
 
   @NotNull
   @Override
   public String getMap() {
-    return "";    //TODO
-
+    return "";
   }
 
   @Override
-  public void setMap(@NotNull String s) {    //TODO
-  }
+  public void setMap(@NotNull String s) {}
 
   @Override
   public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
-    return false;    //TODO
-
+    return false;
   }
 
   @NotNull
   @Override
   public Response executeParallel(@NotNull Request request) {
-    return execute(request);    //TODO
-
+    return execute(request);
   }
 
   @NotNull
   @Override
   public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
-    return List.of();    //TODO
-
+    return List.of();
   }
 
   @Override
   public void fetchTuples(
-      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {    //TODO
-  }
+      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {}
 
   @Override
   public @NotNull Transaction transaction() {

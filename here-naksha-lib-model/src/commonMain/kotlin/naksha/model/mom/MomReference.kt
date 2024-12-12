@@ -5,12 +5,20 @@ package naksha.model.mom
 import naksha.base.NullableProperty
 import naksha.base.AnyObject
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * MOM reference object holding minimum equivalent fields from MOM reference object.
  */
 @JsExport
-class MomReference : AnyObject() {
+class MomReference() : AnyObject() {
+
+    @JsName("of")
+    constructor(id: String?, spaceId: String?, featureType: String?) : this() {
+        this.id = id
+        this.spaceId = spaceId
+        this.featureType = featureType
+    }
 
     companion object MomReference_C {
         private val STRING_NULL = NullableProperty<MomReference, String>(String::class)

@@ -30,6 +30,14 @@ open class NakshaError() : AnyObject() {
         this.cause = cause
     }
 
+    /**
+     * Convenient constructor for Java.
+     * @param code the error code.
+     * @param msg a human-readable message.
+     */
+    @JsName("ofText")
+    constructor(code: String, msg: String) : this(code, msg, null, null)
+
     companion object NakshaErrorCompanion {
         /**
          * A general error (not further specified) happened while processing the request.

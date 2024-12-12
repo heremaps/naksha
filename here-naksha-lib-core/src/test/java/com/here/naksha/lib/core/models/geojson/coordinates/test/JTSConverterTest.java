@@ -39,7 +39,7 @@ public class JTSConverterTest {
         .getResource("/com/here/xyz/test/geometries.json")
         .toURI()));
     String featureText = new String(bytes);
-    JvmMap jvmMap = (JvmMap) Platform.fromJSON(featureText, FromJsonOptions.getDEFAULT());
+    JvmMap jvmMap = (JvmMap) Platform.fromJSON(featureText, FromJsonOptions.DEFAULT);
     NakshaFeature feature = jvmMap.proxy(Platform.klassOf(NakshaFeature.class));
 
     SpGeometry sourceGeometry = feature.getGeometry();

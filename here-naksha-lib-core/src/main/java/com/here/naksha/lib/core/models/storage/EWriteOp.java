@@ -27,8 +27,10 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * The write operations that should be performed.
+ * @deprecated please use {@link naksha.model.request.WriteOp} instead
  */
 @SuppressWarnings("unused")
+@Deprecated
 @AvailableSince(NakshaVersion.v2_0_7)
 public class EWriteOp extends JsonEnum {
 

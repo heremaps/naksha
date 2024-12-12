@@ -24,16 +24,15 @@ import static com.here.naksha.lib.handlers.internal.NakshaFeaturePropertiesValid
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.models.naksha.NakshaFeature;
-import com.here.naksha.lib.core.models.storage.*;
+import com.here.naksha.lib.handlers.AbstractEventHandler;
+import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import naksha.model.IReadSession;
 import naksha.model.IWriteSession;
-import com.here.naksha.lib.handlers.AbstractEventHandler;
-import com.here.naksha.lib.psql.PsqlStorage;
-import naksha.model.ReadRequest;
-import naksha.model.Request;
-import naksha.model.ErrorResult;
+import naksha.model.NakshaContext;
+import naksha.model.SessionOptions;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.*;
+import naksha.psql.PgStorage;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,66 +55,63 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
-    final Request<?> request = event.getRequest();
-    if (request instanceof ReadRequest || request instanceof WriteXyzFeatures) {
+    final Request request = event.getRequest();
+    if (request instanceof ReadRequest || RequestTypesUtil.isOnlyWriteFeatures(request)) {
       return PROCESS;
     }
     return NOT_IMPLEMENTED;
   }
 
   @Override
-  public final @NotNull Result process(@NotNull IEvent event) {
+  public final @NotNull Response process(@NotNull IEvent event) {
     final NakshaContext ctx = NakshaContext.currentContext();
-    final Request<?> request = event.getRequest();
+    final Request request = event.getRequest();
     // process request using Naksha Admin Storage instance
-    addStorageIdToStreamInfo(PsqlStorage.ADMIN_STORAGE_ID, ctx);
-    if (request instanceof ReadRequest<?> rr) {
-      try (final IReadSession reader = nakshaHub().getAdminStorage().newReadSession(ctx, false)) {
+    addStorageIdToStreamInfo(PgStorage.ADMIN_STORAGE_ID, ctx);
+    if (request instanceof ReadRequest rr) {
+      try (final IReadSession reader =
+          nakshaHub().getAdminStorage().newReadSession(SessionOptions.from(ctx, false))) {
         return reader.execute(rr);
       }
-    } else if (request instanceof WriteXyzFeatures wr) {
+    } else if ((request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteFeatures(request))) {
       // validate the request before persisting
-      try (Result valResult = validateWriteRequest(wr)) {
-        if (valResult instanceof ErrorResult er) {
-          return er;
-        }
-        // persist in storage
-        try (final IWriteSession writer = nakshaHub().getAdminStorage().newWriteSession(ctx, true)) {
-          final Result result = writer.execute(wr);
-          if (result instanceof SuccessResult) {
-            writer.commit(true);
-          } else {
-            logger.warn(
-                "Failed writing feature request to admin storage, expected success but got: {}",
-                result);
-            writer.rollback(true);
-          }
-          return result;
-        }
+      Response valResult = validateWriteRequest(wr);
+      if (valResult instanceof ErrorResponse er) {
+        return er;
       }
+      // persist in storage
+      final IWriteSession writer = nakshaHub().getAdminStorage().newWriteSession(SessionOptions.from(ctx, true));
+      final Response result = writer.execute(wr);
+      if (result instanceof SuccessResponse) {
+        writer.commit();
+      } else {
+        logger.warn("Failed writing feature request to admin storage, expected success but got: {}", result);
+        writer.rollback();
+      }
+      return result;
     } else {
       return notImplemented(request);
     }
   }
 
   /**
-   * Direct validation of XyzFeature to be written.
+   * Direct validation of NakshaFeature to be written.
    *
-   * @param codec containing the feature to be validated before being written
+   * @param writeOperation containing the feature to be validated before being written
    * @return validation result
    */
-  protected @NotNull Result validateFeature(XyzFeatureCodec codec) {
-    final FEATURE feature = featureClass.cast(codec.getFeature());
+  protected @NotNull Response validateWrite(Write writeOperation) {
+    final FEATURE feature = featureClass.cast(writeOperation.getFeature());
     return nakshaFeatureValidation(feature);
   }
 
-  private @NotNull Result validateWriteRequest(final @NotNull WriteXyzFeatures wr) {
-    for (final XyzFeatureCodec featureCodec : wr.features) {
-      Result featureValidation = validateFeature(featureCodec);
-      if (featureValidation instanceof ErrorResult) {
+  private @NotNull Response validateWriteRequest(final @NotNull WriteRequest wr) {
+    for (final Write writeOperation : wr.getWrites()) {
+      Response featureValidation = validateWrite(writeOperation);
+      if (featureValidation instanceof ErrorResponse) {
         return featureValidation;
       }
     }
-    return new SuccessResult();
+    return new SuccessResponse();
   }
 }

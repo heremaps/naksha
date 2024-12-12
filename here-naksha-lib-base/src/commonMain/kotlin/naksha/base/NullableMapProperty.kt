@@ -6,6 +6,8 @@ import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
 import naksha.base.Proxy.ProxyCompanion.box
 import naksha.base.Proxy.ProxyCompanion.unbox
 import kotlin.js.JsExport
+import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
@@ -46,8 +48,10 @@ open class NullableMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE
     val name: String? = null,
     val init: ((self: MAP, name: String) -> PROPERTY_TYPE?)? = null
 ) {
-    open operator fun getValue(self: MAP, property: KProperty<*>): PROPERTY_TYPE? {
-        val key = this.name ?: property.name
+    @JvmOverloads
+    open fun getValue(self: MAP, propertyName: String? = null): PROPERTY_TYPE? {
+        val key =
+            this.name ?: propertyName ?: throw IllegalArgumentException("Undefined property name")
         if (autoCreate) return self.getOrCreate(key, klass, init)
         val data = self.platformObject()
         var value: PROPERTY_TYPE? = null
@@ -62,5 +66,19 @@ open class NullableMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE
         return value
     }
 
-    open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE?) = self.put(this.name ?: property.name, value)
+    @JsName("getValueByProperty")
+    open operator fun getValue(self: MAP, property: KProperty<*>): PROPERTY_TYPE? =
+        getValue(self, property.name)
+
+    @JvmOverloads
+    open fun setValue(self: MAP, propertyName: String? = null, value: PROPERTY_TYPE?) =
+        self.put(
+            this.name ?: this.name ?: propertyName
+            ?: throw IllegalArgumentException("Undefined property name"),
+            value
+        )
+
+    @JsName("setValueByProperty")
+    open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE?) =
+        self.put(this.name ?: property.name, value)
 }

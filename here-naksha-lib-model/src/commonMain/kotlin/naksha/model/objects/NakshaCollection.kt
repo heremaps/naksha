@@ -7,6 +7,7 @@ import naksha.model.Flags
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -19,6 +20,7 @@ open class NakshaCollection() : NakshaFeature() {
      * Create a Naksha collection with settings.
      */
     @JsName("of")
+    @JvmOverloads
     constructor(
         id: String,
         partitions: Int = 1,

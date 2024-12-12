@@ -20,15 +20,15 @@ package com.here.naksha.lib.handlers;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import naksha.model.NakshaVersion;
-import naksha.geo.XyzProperties;
 import java.util.List;
+import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @AvailableSince(NakshaVersion.v2_0_12)
-public class DefaultViewHandlerProperties extends XyzProperties {
+public class DefaultViewHandlerProperties extends NakshaProperties {
 
   @AvailableSince(NakshaVersion.v2_0_12)
   public static final String STORAGE_ID = "storageId";

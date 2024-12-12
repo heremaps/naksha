@@ -1,6 +1,8 @@
 package naksha.base
 
 import kotlin.js.JsExport
+import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
@@ -38,7 +40,26 @@ open class NotNullMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_
     val name: String? = null,
     val init: ((self: MAP, name: String) -> PROPERTY_TYPE?)? = null
 ) {
-    open operator fun getValue(self: MAP, property: KProperty<*>): PROPERTY_TYPE = self.getOrCreate(this.name ?: property.name, klass, init)
 
-    open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE) = self.put(this.name ?: property.name, value)
+    @JvmOverloads
+    open fun getValue(self: MAP, propertyName: String? = null): PROPERTY_TYPE = self.getOrCreate(
+        this.name ?: propertyName ?: throw IllegalArgumentException("Undefined property name"),
+        klass,
+        init
+    )
+
+    @JsName("getValueByProperty")
+    open operator fun getValue(self: MAP, property: KProperty<*>): PROPERTY_TYPE =
+        getValue(self, property.name)
+
+    @JvmOverloads
+    open fun setValue(self: MAP, propertyName: String? = null, value: PROPERTY_TYPE) =
+        self.put(
+            this.name ?: propertyName ?: throw IllegalArgumentException("Undefined property name"),
+            value
+        )
+
+    @JsName("setValueByProperty")
+    open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE) =
+        setValue(self, property.name, value)
 }

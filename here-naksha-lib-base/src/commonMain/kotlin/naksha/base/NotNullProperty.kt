@@ -1,6 +1,7 @@
 package naksha.base
 
 import kotlin.js.JsExport
+import kotlin.jvm.JvmOverloads
 import kotlin.reflect.KClass
 
 /**

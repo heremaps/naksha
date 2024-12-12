@@ -20,8 +20,8 @@ package com.here.naksha.lib.handlers.internal;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 
 public class IntHandlerForConfigs extends AbstractEventHandler {
@@ -36,7 +36,7 @@ public class IntHandlerForConfigs extends AbstractEventHandler {
   }
 
   @Override
-  protected @NotNull Result process(@NotNull IEvent event) {
+  protected @NotNull Response process(@NotNull IEvent event) {
     return notImplemented(event);
   }
 }

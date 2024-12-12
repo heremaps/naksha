@@ -32,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import naksha.base.Platform;
 import naksha.base.ToJsonOptions;
-import naksha.model.NakshaError;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
@@ -127,8 +126,8 @@ public class IoEventPipeline extends EventPipeline {
             .addArgument(expected)
             .addArgument(deserialized)
             .log();
-        response = new ErrorResponse(new NakshaError(
-            EXCEPTION, "Invalid event, expected " + expected + ", but found " + deserialized, null, null));
+        response = new ErrorResponse(
+            EXCEPTION, "Invalid event, expected " + expected + ", but found " + deserialized);
         if (output != null) {
           writeDataOut(output, response, null);
         }
@@ -138,7 +137,7 @@ public class IoEventPipeline extends EventPipeline {
           .setMessage("Exception while processing the event")
           .setCause(e)
           .log();
-      response = new ErrorResponse(new NakshaError(EXCEPTION, e.getMessage(), null, null));
+      response = new ErrorResponse(EXCEPTION, e.getMessage());
       if (output != null) {
         writeDataOut(output, response, null);
       }
@@ -154,7 +153,7 @@ public class IoEventPipeline extends EventPipeline {
   private void writeDataOut(@NotNull OutputStream output, @NotNull Response dataOut, @Nullable String ifNoneMatch) {
     try {
       byte @NotNull [] bytes =
-          Platform.toJSON(dataOut, ToJsonOptions.getDEFAULT()).getBytes(StandardCharsets.UTF_8);
+          Platform.toJSON(dataOut, ToJsonOptions.DEFAULT).getBytes(StandardCharsets.UTF_8);
       log.atInfo()
           .setMessage("Write data out for response with type: {}")
           .addArgument(dataOut.getClass().getSimpleName())

@@ -18,10 +18,11 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.naksha.NakshaFeature;
-import com.here.naksha.lib.core.models.storage.*;
-import naksha.model.ErrorResult;
+import naksha.model.NakshaError;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -29,26 +30,27 @@ class NakshaFeaturePropertiesValidator {
 
   private NakshaFeaturePropertiesValidator() {}
 
-  static Result nakshaFeatureValidation(NakshaFeature feature) {
-    Result titleValidation = requiredPropertyValidationError(feature.getTitle(), NakshaFeature.TITLE);
-    if (titleValidation instanceof ErrorResult) {
+  static Response nakshaFeatureValidation(NakshaFeature feature) {
+    Response titleValidation = requiredPropertyValidationError(feature.getTitle(), NakshaFeature.TITLE_KEY);
+    if (titleValidation instanceof ErrorResponse) {
       return titleValidation;
     }
-    Result descValidation = requiredPropertyValidationError(feature.getDescription(), NakshaFeature.DESCRIPTION);
-    if (descValidation instanceof ErrorResult) {
+    Response descValidation =
+        requiredPropertyValidationError(feature.getDescription(), NakshaFeature.DESCRIPTION_KEY);
+    if (descValidation instanceof ErrorResponse) {
       return descValidation;
     }
-    return new SuccessResult();
+    return new SuccessResponse();
   }
 
-  private static @NotNull Result requiredPropertyValidationError(String value, String propertyName) {
+  private static @NotNull Response requiredPropertyValidationError(String value, String propertyName) {
     if (StringUtils.isBlank(value)) {
       return missingParameterError(propertyName);
     }
-    return new SuccessResult();
+    return new SuccessResponse();
   }
 
-  private static ErrorResult missingParameterError(String propertyName) {
-    return new ErrorResult(XyzError.ILLEGAL_ARGUMENT, "Mandatory parameter '" + propertyName + "' missing!");
+  private static ErrorResponse missingParameterError(String propertyName) {
+    return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT, "Mandatory parameter '" + propertyName + "' missing!");
   }
 }

@@ -23,7 +23,9 @@ import static java.util.Collections.emptyList;
 import java.util.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ExecutedOp;
+import naksha.model.request.Response;
 import naksha.model.request.ResultTuple;
+import naksha.model.request.ResultTupleList;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -94,14 +96,18 @@ public class ResultHelper {
     return type.cast(rows.get(0));
   }
 
-  public static List<String> readIdsFromResult(final @NotNull SuccessResponse result) {
-    if (result.getFeatures().isEmpty()) {
+  public static List<String> readIdsFromResult(final @NotNull Response result) {
+    if (!(result instanceof SuccessResponse)) {
       return emptyList();
     }
-    final Iterator<NakshaFeature> iterator = result.getFeatures().iterator();
+    final ResultTupleList resultTuples = ((SuccessResponse) result).getTuples();
+    if (resultTuples.isEmpty()) {
+      return emptyList();
+    }
+    final Iterator<ResultTuple> iterator = resultTuples.iterator();
     final List<String> ids = new ArrayList<>();
     while (iterator.hasNext()) {
-      ids.add(iterator.next().getId());
+      ids.add(iterator.next().id());
     }
     return ids;
   }

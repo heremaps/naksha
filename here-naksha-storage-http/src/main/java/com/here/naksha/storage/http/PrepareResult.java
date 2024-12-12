@@ -50,7 +50,7 @@ class PrepareResult {
       return new ErrorResponse(
           new NakshaError(error, "Response http status code: " + httpResponse.statusCode(), null, null));
 
-    Object tuples = Platform.fromJSON(prepareBody(httpResponse), FromJsonOptions.getDEFAULT());
+    Object tuples = Platform.fromJSON(prepareBody(httpResponse), FromJsonOptions.DEFAULT);
     NakshaFeatureList features = JvmProxyUtil.box(tuples, NakshaFeatureList.class);
     return new SuccessResponse(features);
   }

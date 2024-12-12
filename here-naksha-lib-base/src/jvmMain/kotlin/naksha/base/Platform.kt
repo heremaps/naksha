@@ -175,7 +175,7 @@ actual class Platform {
         @JvmField
         internal val initialized = AtomicBoolean(false)
 
-        private val nonArgsConstuctorsCache: AtomicMap<KClass<out Proxy>, KFunction<out Proxy>>
+        private val nonArgsConstuctorsCache: AtomicMap<KClass<out Any>, KFunction<Any>>
 
         init {
             val unsafeConstructor = Unsafe::class.java.getDeclaredConstructor()
@@ -344,7 +344,8 @@ actual class Platform {
         actual fun hashCodeOf(o: Any?): Int = throw UnsupportedOperationException()
 
         @JvmStatic
-        actual fun <T : Any> newInstanceOf(klass: KClass<out T>): T = klass.primaryConstructor?.call() ?: throw IllegalArgumentException()
+        actual fun <T : Any> newInstanceOf(klass: KClass<out T>): T =
+            resolveConstructorFor(klass).call()
 
         @JvmStatic
         @Suppress("UNCHECKED_CAST")
@@ -393,6 +394,7 @@ actual class Platform {
         internal val toJsonOptions = ThreadLocal<ToJsonOptions>()
 
         @JvmStatic
+        @JvmOverloads
         actual fun toJSON(obj: Any?, options: ToJsonOptions): String {
             toJsonOptions.set(options)
             return objectMapper.get().writeValueAsString(obj)
@@ -522,7 +524,7 @@ actual class Platform {
             return proxy
         }
 
-        private fun <T: Proxy> resolveConstructorFor(klass: KClass<T>): KFunction<T>{
+        private fun <T: Any> resolveConstructorFor(klass: KClass<T>): KFunction<T>{
             var constructor = nonArgsConstuctorsCache[klass]
             if(constructor == null){
                 constructor = nonArgConstructorFor(klass)
@@ -534,7 +536,7 @@ actual class Platform {
         /**
          * Returns non-arg constructor for [klass] or throws [IllegalArgumentException] if none is found.
          */
-        private fun <T : Proxy> nonArgConstructorFor(klass: KClass<T>): KFunction<T> {
+        private fun <T : Any> nonArgConstructorFor(klass: KClass<T>): KFunction<T> {
             return klass.constructors.firstOrNull { constructor: KFunction<T> ->
                 constructor.parameters.isEmpty()
             } ?: throw IllegalArgumentException("Unable to find non-arg constructor for class: ${klass.qualifiedName}")

@@ -21,6 +21,8 @@ package com.here.naksha.storage.http;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import naksha.base.Int64;
 import naksha.base.JvmProxyUtil;
 import naksha.model.*;
@@ -30,9 +32,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class HttpStorage implements IStorage {
 
@@ -56,11 +55,11 @@ public class HttpStorage implements IStorage {
       }
     }
     defaultKeyProperties = new KeyProperties(
-            storage.getId(),
-            properties.getUrl(),
-            properties.getHeaders(),
-            properties.getConnectTimeout(),
-            properties.getSocketTimeout());
+        storage.getId(),
+        properties.getUrl(),
+        properties.getHeaders(),
+        properties.getConnectTimeout(),
+        properties.getSocketTimeout());
   }
 
   private static @Nullable HttpStorageProperties getProperties(@NotNull Storage storage) {
@@ -68,19 +67,18 @@ public class HttpStorage implements IStorage {
   }
 
   @Override
-  public void close() {
-  }
+  public void close() {}
 
   @NotNull
   @Override
   public IReadSession newReadSession(@Nullable SessionOptions options) {
     final RequestSender requestSender = RequestSenderCache.getInstance()
-            .getSenderWith(new KeyProperties(
-                    defaultKeyProperties.name(),
-                    defaultKeyProperties.hostUrl(),
-                    defaultKeyProperties.defaultHeaders(),
-                    options != null ? options.connectTimeout : defaultKeyProperties.connectionTimeoutSec(),
-                    options != null ? options.socketTimeout : defaultKeyProperties.socketTimeoutSec()));
+        .getSenderWith(new KeyProperties(
+            defaultKeyProperties.name(),
+            defaultKeyProperties.hostUrl(),
+            defaultKeyProperties.defaultHeaders(),
+            options != null ? options.connectTimeout : defaultKeyProperties.connectionTimeoutSec(),
+            options != null ? options.socketTimeout : defaultKeyProperties.socketTimeoutSec()));
     return new HttpStorageReadSession(NakshaContext.currentContext(), requestSender);
   }
 

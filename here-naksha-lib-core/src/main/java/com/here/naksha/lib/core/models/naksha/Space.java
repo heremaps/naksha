@@ -167,7 +167,7 @@ public final class Space extends EventTarget<Space> implements Typed {
   @JsonIgnore
   public @NotNull String getCollectionId() {
     String collectionIdFromProps = null;
-    Object collectionProps = getProperties().get(SpaceProperties.XYZ_COLLECTION);
+    Object collectionProps = getProperties().get(SpaceProperties.NAKSHA_COLLECTION);
     if (collectionProps != null) {
       collectionIdFromProps = ((Map) collectionProps).get(COLLECTION_ID).toString();
     }

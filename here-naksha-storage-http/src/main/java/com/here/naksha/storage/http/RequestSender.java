@@ -18,10 +18,8 @@
  */
 package com.here.naksha.storage.http;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static java.net.http.HttpRequest.newBuilder;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -31,9 +29,10 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static java.net.http.HttpRequest.newBuilder;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RequestSender {
 
@@ -113,10 +112,9 @@ public class RequestSender {
   }
 
   public record KeyProperties(
-          @NotNull String name,
-          @NotNull String hostUrl,
-          @NotNull Map<String, String> defaultHeaders,
-          int connectionTimeoutSec,
-          int socketTimeoutSec) {
-  }
+      @NotNull String name,
+      @NotNull String hostUrl,
+      @NotNull Map<String, String> defaultHeaders,
+      int connectionTimeoutSec,
+      int socketTimeoutSec) {}
 }

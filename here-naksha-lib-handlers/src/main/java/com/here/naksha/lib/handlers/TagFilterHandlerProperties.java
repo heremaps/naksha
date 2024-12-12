@@ -19,12 +19,9 @@
 package com.here.naksha.lib.handlers;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import naksha.model.NakshaVersion;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzProperties;
-import naksha.model.ReadFeatures;
-import naksha.model.WriteFeatures;
 import java.util.List;
+import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
  * Default variant of EventHandler properties supported by Naksha - for TagFilterHandler
  */
 @AvailableSince(NakshaVersion.v2_0_13)
-public class TagFilterHandlerProperties extends XyzProperties {
+public class TagFilterHandlerProperties extends NakshaProperties {
 
   @AvailableSince(NakshaVersion.v2_0_13)
   public static final String ADD_VALUES = "add";
@@ -44,20 +41,20 @@ public class TagFilterHandlerProperties extends XyzProperties {
   public static final String CONTAINS_VALUES = "contains";
 
   /**
-   * To specify list of tags to be added to the {@link XyzFeature} during create/update {@link WriteFeatures} operations.
+   * To specify list of tags to be added to the {@link naksha.model.objects.NakshaFeature} during create/update {@link naksha.model.request.WriteRequest} operations.
    */
   @AvailableSince(NakshaVersion.v2_0_13)
   @JsonProperty(ADD_VALUES)
   private @Nullable List<String> add;
   /**
-   * To specify prefix-matching tags to be removed from the {@link XyzFeature} during create/update {@link WriteFeatures} operations.
+   * To specify prefix-matching tags to be removed from the {@link naksha.model.objects.NakshaFeature} during create/update {@link naksha.model.request.WriteRequest} operations.
    * This is applied before {@link #add} operation.
    */
   @AvailableSince(NakshaVersion.v2_0_13)
   @JsonProperty(REMOVE_W_PREFIXES)
   private @Nullable List<String> removeWithPrefixes;
   /**
-   * To specify list of tags to be added as AND filter condition whenever {@link ReadFeatures} is processed via this handler.
+   * To specify list of tags to be added as AND filter condition whenever {@link naksha.model.request.ReadFeatures} is processed via this handler.
    */
   @AvailableSince(NakshaVersion.v2_0_13)
   @JsonProperty(CONTAINS_VALUES)

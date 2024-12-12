@@ -3,7 +3,9 @@ package naksha.base
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
+
 
 /**
  * Options for the JSON parsing.
@@ -18,7 +20,7 @@ data class FromJsonOptions(val parseDataUrl: Boolean = false) {
         /**
          * The default JSON parsing options being used, when none are given explicitly.
          */
-        @JvmStatic
+        @JvmField
         @JsStatic
         val DEFAULT = FromJsonOptions()
     }

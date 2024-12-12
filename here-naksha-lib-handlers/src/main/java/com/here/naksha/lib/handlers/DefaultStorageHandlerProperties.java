@@ -20,11 +20,11 @@ package com.here.naksha.lib.handlers;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import naksha.model.NakshaVersion;
-import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
+import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
  * Default variant of EventHandler properties supported by Naksha - default storage handler
  */
 @AvailableSince(NakshaVersion.v2_0_7)
-public class DefaultStorageHandlerProperties extends XyzProperties {
+public class DefaultStorageHandlerProperties extends NakshaProperties {
 
   private static final Boolean DEFAULT_AUTO_CREATE_COLLECTION = true;
   private static final Boolean DEFAULT_AUTO_DELETE_COLLECTION = true;
@@ -63,7 +63,7 @@ public class DefaultStorageHandlerProperties extends XyzProperties {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   @JsonProperty(COLLECTION)
-  private @Nullable XyzCollection xyzCollection;
+  private @Nullable NakshaCollection nakshaCollection;
 
   /**
    * Indicates whether collection should be created automatically (happens on first collection's usage).
@@ -90,23 +90,23 @@ public class DefaultStorageHandlerProperties extends XyzProperties {
   @JsonCreator
   public DefaultStorageHandlerProperties(
       final @JsonProperty(STORAGE_ID) @Nullable String storageId,
-      final @JsonProperty(COLLECTION) @Nullable XyzCollection xyzCollection,
+      final @JsonProperty(COLLECTION) @Nullable NakshaCollection xyzCollection,
       final @JsonProperty(AUTO_CREATE_COLLECTION) Boolean autoCreateCollection,
       final @JsonProperty(AUTO_DELETE_COLLECTION) Boolean autoDeleteCollection) {
     this.storageId = storageId;
-    this.xyzCollection = xyzCollection;
+    this.nakshaCollection = xyzCollection;
     this.autoCreateCollection =
         autoCreateCollection == null ? DEFAULT_AUTO_CREATE_COLLECTION : autoCreateCollection;
     this.autoDeleteCollection =
         autoDeleteCollection == null ? DEFAULT_AUTO_DELETE_COLLECTION : autoDeleteCollection;
   }
 
-  public @Nullable XyzCollection getXyzCollection() {
-    return xyzCollection;
+  public @Nullable NakshaCollection getCollection() {
+    return nakshaCollection;
   }
 
-  public void setXyzCollection(final @JsonProperty(COLLECTION) @Nullable XyzCollection xyzCollection) {
-    this.xyzCollection = xyzCollection;
+  public void setCollection(final @JsonProperty(COLLECTION) @Nullable NakshaCollection xyzCollection) {
+    this.nakshaCollection = xyzCollection;
   }
 
   public @Nullable String getStorageId() {

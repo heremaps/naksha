@@ -125,10 +125,8 @@ public class RequestHelper {
   public static @NotNull <FEATURE extends NakshaFeature> WriteRequest updateFeaturesRequest(
       final @NotNull String collectionName, final @NotNull List<FEATURE> features) {
     final WriteRequest request = new WriteRequest();
-    final Write write = new Write();
     for (FEATURE feature : features) {
-      write.updateFeature(null, collectionName, feature, true);
-      request.add(write);
+      request.add(new Write().updateFeature(null, collectionName, feature, true));
     }
     return request;
   }
@@ -144,10 +142,8 @@ public class RequestHelper {
   public static @NotNull <FEATURE extends NakshaFeature> WriteRequest upsertFeaturesRequest(
       final @NotNull String collectionName, final @NotNull List<FEATURE> features) {
     final WriteRequest request = new WriteRequest();
-    final Write write = new Write();
     for (FEATURE feature : features) {
-      write.upsertFeature(null, collectionName, feature);
-      request.add(write);
+      request.add(new Write().upsertFeature(null, collectionName, feature));
     }
     return request;
   }
@@ -162,10 +158,8 @@ public class RequestHelper {
   public static @NotNull WriteRequest deleteFeaturesByIdsRequest(
       final @NotNull String collectionName, final @NotNull List<String> ids) {
     final WriteRequest request = new WriteRequest();
-    final Write write = new Write();
     for (String id : ids) {
-      write.deleteFeatureById(null, collectionName, id, null);
-      request.add(write);
+      request.add(new Write().deleteFeatureById(null, collectionName, id, null));
     }
     return request;
   }
@@ -256,10 +250,9 @@ public class RequestHelper {
       final @NotNull IfExists ifExistsAction,
       final @NotNull IfConflict ifConflictAction) {
     final WriteRequest request = new WriteRequest();
-    final Write write = new Write();
     for (final NakshaFeature feature : featureList) {
       assert feature != null;
-      request.add(write.createFeature(null, collectionName, feature));
+      request.add(new Write().createFeature(null, collectionName, feature));
     }
     return request;
   }
@@ -270,12 +263,11 @@ public class RequestHelper {
 
   public static @NotNull WriteRequest createWriteCollectionsRequest(
       final @NotNull List<@NotNull NakshaCollection> collections) {
-    final WriteRequest writeXyzCollections = new WriteRequest();
-    final Write write = new Write();
+    final WriteRequest writeRequest = new WriteRequest();
     for (final NakshaCollection collection : collections) {
-      writeXyzCollections.add(write.createCollection(null, collection));
+      writeRequest.add(new Write().createCollection(null, collection));
     }
-    return writeXyzCollections;
+    return writeRequest;
   }
 
   /**

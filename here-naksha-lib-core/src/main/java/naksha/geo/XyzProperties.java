@@ -34,8 +34,13 @@ import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/** The standard properties of the standard feature store in the Naksha-Hub. */
+/**
+ * The standard properties of the standard feature store in the Naksha-Hub.
+ *
+ * @deprecated please use {@link naksha.model.objects.NakshaProperties} instead.
+ */
 @SuppressWarnings({"UnusedReturnValue", "unused"})
+@Deprecated
 public class XyzProperties extends JsonObject {
 
   /**

@@ -19,7 +19,6 @@
 package com.here.naksha.lib.core.models.storage;
 
 import java.util.List;
-import naksha.model.NakshaContext;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.WriteRequest;
@@ -28,7 +27,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Abstract class representing WriteFeatures request alongwith list of features as context and list of violations.
+ * Abstract class representing WriteRequest along with list of features as context and list of violations.
  * Implementing class will define actual data type of context and violations.
  */
 @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
@@ -38,7 +37,7 @@ public abstract class ContextWriteFeatures extends WriteRequest {
    * The list of features passed as context, as part of Write request
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  private @Nullable List<@NotNull NakshaContext> context;
+  private @Nullable List<@NotNull NakshaFeature> context;
 
   /**
    * The list of violations passed as part of Write request
@@ -47,12 +46,12 @@ public abstract class ContextWriteFeatures extends WriteRequest {
   private @Nullable List<@NotNull NakshaFeature> violations;
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public @Nullable List<NakshaContext> getContext() {
+  public @Nullable List<NakshaFeature> getContext() {
     return context;
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public void setContext(@Nullable List<NakshaContext> context) {
+  public void setContext(@Nullable List<NakshaFeature> context) {
     this.context = context;
   }
 

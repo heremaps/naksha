@@ -22,12 +22,12 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.ErrorResult;
-import naksha.model.Request;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
+import naksha.model.NakshaError;
 import naksha.model.StreamInfo;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,25 +45,25 @@ public abstract class AbstractEventHandler implements IEventHandler {
 
   protected abstract EventProcessingStrategy processingStrategyFor(IEvent event);
 
-  protected abstract @NotNull Result process(@NotNull IEvent event);
+  protected abstract @NotNull Response process(@NotNull IEvent event);
 
   @Override
-  public final @NotNull Result processEvent(@NotNull IEvent event) {
+  public final @NotNull Response processEvent(@NotNull IEvent event) {
     return switch (processingStrategyFor(event)) {
       case PROCESS -> process(event);
       case SEND_UPSTREAM_WITHOUT_PROCESSING -> event.sendUpstream();
-      case SUCCEED_WITHOUT_PROCESSING -> new SuccessResult();
+      case SUCCEED_WITHOUT_PROCESSING -> new SuccessResponse();
       case NOT_IMPLEMENTED -> notImplemented(event);
     };
   }
 
-  protected @NotNull Result notImplemented(@NotNull IEvent event) {
+  protected @NotNull Response notImplemented(@NotNull IEvent event) {
     return notImplemented(event.getRequest());
   }
 
-  protected @NotNull Result notImplemented(@NotNull Request processedRequest) {
-    return new ErrorResult(
-        XyzError.NOT_IMPLEMENTED,
+  protected @NotNull Response notImplemented(@NotNull Request processedRequest) {
+    return new ErrorResponse(
+        NakshaError.NOT_IMPLEMENTED,
         "Event processing of " + processedRequest.getClass().getSimpleName() + " in "
             + this.getClass().getSimpleName() + " is not supported");
   }

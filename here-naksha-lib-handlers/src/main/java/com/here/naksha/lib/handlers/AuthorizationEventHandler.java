@@ -24,8 +24,8 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
-import com.here.naksha.lib.core.models.storage.Result;
 import java.util.List;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -51,7 +51,7 @@ public class AuthorizationEventHandler extends AbstractEventHandler {
   }
 
   @Override
-  protected @NotNull Result process(@NotNull IEvent event) {
+  protected @NotNull Response process(@NotNull IEvent event) {
     // TODO : Apply authorization logic here (for now requests will be sent upstream - see EventProcessingStrategy)
     return notImplemented(event);
   }
