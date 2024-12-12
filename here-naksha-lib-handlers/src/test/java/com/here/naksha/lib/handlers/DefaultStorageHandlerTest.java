@@ -30,7 +30,6 @@ import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
 import naksha.model.NakshaError;
-import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
@@ -127,10 +126,10 @@ class DefaultStorageHandlerTest {
   @MethodSource("collectionPriorityTestCases")
   void shouldCreateMissingCollectionRespectingPriority(CollectionPriorityTestCase testCase) {
     // Given: Storage writer failing on WriteRequest for features due to undefined table but is able to create new collection
-    NakshaException missingCollectionException = new NakshaException(new NakshaError(COLLECTION_NOT_FOUND, "Missing collection"));
+    NakshaError missingCollectionError = new NakshaError(COLLECTION_NOT_FOUND, "Missing collection");
     when(
         storageWriteSession.execute(argThat(request -> (request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteFeatures(wr)))))
-        .thenThrow(missingCollectionException);
+        .thenReturn(new ErrorResponse(missingCollectionError));
     when(storageWriteSession.execute(
         argThat(request -> (request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteCollections(wr)))))
         .thenReturn(new SuccessResponse());
@@ -174,8 +173,8 @@ class DefaultStorageHandlerTest {
   @Test
   void shouldCreateMissingCollection() {
     // Given: Storage writer failing on WriteXyzFeatures due to sql exception
-    NakshaException missingCollectionException = new NakshaException(new NakshaError(COLLECTION_NOT_FOUND, "Missing collection"));
-    when(storageWriteSession.execute(any(WriteRequest.class))).thenThrow(missingCollectionException);
+    NakshaError missingCollectionError = new NakshaError(COLLECTION_NOT_FOUND, "Missing collection");
+    when(storageWriteSession.execute(any(WriteRequest.class))).thenReturn(new ErrorResponse(missingCollectionError));
 
     // And: Handler with autoCreateCollection enabled to test
     DefaultStorageHandler handler = storageHandler();
@@ -209,8 +208,8 @@ class DefaultStorageHandlerTest {
   @Test
   void shouldNotCreateCollectionWhenAutoCreateIsDisabled() {
     // Given: Storage writer failing on WriteXyzFeatures due to missing collection exception
-    NakshaException missingCollectionException = new NakshaException(new NakshaError(COLLECTION_NOT_FOUND, "Missing collection"));
-    when(storageWriteSession.execute(any(WriteRequest.class))).thenThrow(missingCollectionException);
+    NakshaError missingCollectionError = new NakshaError(COLLECTION_NOT_FOUND, "Missing collection");
+    when(storageWriteSession.execute(any(WriteRequest.class))).thenReturn(new ErrorResponse(missingCollectionError));
 
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
