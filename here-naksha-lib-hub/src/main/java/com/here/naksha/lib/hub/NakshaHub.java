@@ -314,8 +314,8 @@ public class NakshaHub implements INaksha {
     try {
       eventHandlers = readFeaturesFromResult(rdResult, EventHandler.class);
     } catch (NoCursor e) {
-      logger.error("NoCursor exception encountered while reading Extension based Handlers", e);
-      throw new RuntimeException("Failed to open Cursor while reading Extension based Handlers", e);
+      logger.error("NoCursor exception encountered", e);
+      throw new RuntimeException("Failed to open cursor", e);
     }
 
     Set<String> extensionIds = new HashSet<>();
@@ -324,7 +324,7 @@ public class NakshaHub implements INaksha {
       if (extensionId != null && extensionId.contains(":")) {
         extensionIds.add(extensionId);
       } else {
-        logger.error("Environment is missing for an extension Id {}", extensionId);
+        logger.error("Environment is missing for an extension Id");
       }
     }
 
