@@ -58,7 +58,18 @@ class NakshaExceptionMapperTest {
                 java.net.SocketTimeoutException(),
                 java.util.concurrent.TimeoutException(),
                 java.sql.SQLTimeoutException(),
-                org.postgresql.util.PSQLException(null, null, java.net.SocketTimeoutException()) // cause matters!
+                org.postgresql.util.PSQLException(
+                    null,
+                    null,
+                    java.net.SocketTimeoutException()
+                ), // cause matters!
+                java.sql.BatchUpdateException(
+                    org.postgresql.util.PSQLException(
+                        null,
+                        null,
+                        java.net.SocketTimeoutException()
+                    )
+                ) // example of batch update failure in psql, mind the double nesting
             )
 
         @JvmStatic
@@ -74,7 +85,7 @@ class NakshaExceptionMapperTest {
                 NakshaExceptionMapper.ERR_NO_DATA to NakshaError.NOT_FOUND,
                 "Unknown sql state" to NakshaError.EXCEPTION
             ).map { (sqlState, expectedCode) ->
-               arguments(sqlException(sqlState), expectedCode)
+                arguments(sqlException(sqlState), expectedCode)
             }
 
         private fun sqlException(sqlState: String): SQLException =
