@@ -286,7 +286,7 @@ open class PgSession(
         return tx
     }
 
-    override fun execute(request: Request): Response {
+    override fun execute(request: Request): Response { // SuccessResponse
         when (request) {
             is WriteRequest -> {
                 transaction()
@@ -304,7 +304,7 @@ open class PgSession(
                 return response
             }
 
-            else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown request")
+            else -> return ErrorResponse(NakshaException(ILLEGAL_ARGUMENT, "Unknown request"))
         }
     }
 

@@ -6,8 +6,6 @@ import org.postgresql.util.PSQLException
 import java.sql.BatchUpdateException
 import java.sql.SQLException
 
-private typealias MessageResolver = ((Throwable) -> String)
-
 object NakshaExceptionMapper {
     const val ERR_UNINITIALIZED = "N0000"
     const val ERR_COLLECTION_EXISTS = "N0001"
@@ -28,14 +26,10 @@ object NakshaExceptionMapper {
      * @param throwable original [Throwable] to map
      * @param msgResolver optional [Throwable] consumer to produce message prefix ([String]) from
      */
-    fun nakshaExceptionFrom(
-        throwable: Throwable,
-        msgResolver: MessageResolver? = null
-    ): NakshaException {
+    fun nakshaExceptionFrom(throwable: Throwable): NakshaException {
         return nakshaExceptionFrom(
             throwable = throwable,
-            topLevelCause = null,
-            msgResolver = msgResolver
+            topLevelCause = null
         )
     }
 
@@ -45,15 +39,14 @@ object NakshaExceptionMapper {
      */
     private fun nakshaExceptionFrom(
         throwable: Throwable,
-        topLevelCause: Throwable? = null,
-        msgResolver: MessageResolver? = null
+        topLevelCause: Throwable? = null
     ): NakshaException {
         return when (throwable) {
-            is BatchUpdateException -> nakshaExceptionFromBatch(throwable, msgResolver)
-            is PSQLException -> nakshaExceptionFromPsql(throwable, topLevelCause, msgResolver)
-            is SQLException -> nakshaExceptionFromSql(throwable, topLevelCause, msgResolver)
-            is java.net.SocketTimeoutException -> timeout(throwable, topLevelCause, msgResolver)
-            is java.util.concurrent.TimeoutException -> timeout(throwable, topLevelCause, msgResolver)
+            is BatchUpdateException -> nakshaExceptionFromBatch(throwable)
+            is PSQLException -> nakshaExceptionFromPsql(throwable, topLevelCause)
+            is SQLException -> nakshaExceptionFromSql(throwable, topLevelCause)
+            is java.net.SocketTimeoutException -> timeout(throwable, topLevelCause)
+            is java.util.concurrent.TimeoutException -> timeout(throwable, topLevelCause)
 
             else -> NakshaException(
                 NakshaError(
@@ -69,18 +62,12 @@ object NakshaExceptionMapper {
      * [BatchUpdateException] usually wraps other exception - in that case, we extract the cause and handle it directly.
      * If the cause is missing, we treat it as any other [SQLException] - it might contain [SQLException.SQLState] which could be used for determining proper [NakshaError.code]
      */
-    private fun nakshaExceptionFromBatch(
-        bue: BatchUpdateException,
-        messageResolver: MessageResolver? = null
-    ): NakshaException {
+    private fun nakshaExceptionFromBatch(bue: BatchUpdateException): NakshaException {
         val cause = bue.cause
-        val msgPrefix = if (messageResolver != null) messageResolver(bue) + "\n" else ""
-        val msg =
-            msgPrefix + "Exception occurred during batch update (updateCounts: ${bue.updateCounts}, largeUpdateCounts: ${bue.largeUpdateCounts})"
         return if (cause != null) {
-            nakshaExceptionFrom(throwable = cause, topLevelCause = bue) { msg }
+            nakshaExceptionFrom(throwable = cause, topLevelCause = bue)
         } else {
-            nakshaExceptionFromSql(sqlException = bue, topLevelCause = null) { msg }
+            nakshaExceptionFromSql(sqlException = bue, topLevelCause = null)
         }
     }
 
@@ -90,15 +77,13 @@ object NakshaExceptionMapper {
      */
     private fun nakshaExceptionFromPsql(
         exception: PSQLException,
-        topLevelCause: Throwable? = null,
-        msgResolver: MessageResolver? = null
+        topLevelCause: Throwable? = null
     ): NakshaException {
         return when (exception.cause) {
-            is java.net.SocketTimeoutException -> timeout(exception, topLevelCause, msgResolver)
+            is java.net.SocketTimeoutException -> timeout(exception, topLevelCause)
             else -> nakshaExceptionFromSql(
                 sqlException = exception,
-                topLevelCause = topLevelCause,
-                msgResolver = msgResolver
+                topLevelCause = topLevelCause
             )
         }
     }
@@ -110,11 +95,10 @@ object NakshaExceptionMapper {
      */
     private fun nakshaExceptionFromSql(
         sqlException: SQLException,
-        topLevelCause: Throwable? = null,
-        msgResolver: MessageResolver? = null
+        topLevelCause: Throwable? = null
     ): NakshaException {
         if (sqlException is java.sql.SQLTimeoutException) {
-            return timeout(sqlException, topLevelCause, msgResolver)
+            return timeout(sqlException, topLevelCause)
         }
         val errorCode = when (sqlException.sqlState) {
             ERR_UNINITIALIZED -> NakshaError.EXCEPTION
@@ -127,13 +111,11 @@ object NakshaExceptionMapper {
             ERR_NO_DATA -> NakshaError.NOT_FOUND
             else -> NakshaError.EXCEPTION
         }
-        val msg = msgResolver?.let { resolver -> resolver(sqlException) }
-            ?: sqlException.message
-            ?: "SQL Exception occurred (sqlState: '${sqlException.sqlState}')"
         return NakshaException(
             NakshaError(
                 code = errorCode,
-                msg = msg,
+                msg = sqlException.message
+                    ?: "SQL Exception occurred (sqlState: '${sqlException.sqlState}')",
                 cause = topLevelCause ?: sqlException
             )
         )
@@ -148,14 +130,12 @@ object NakshaExceptionMapper {
      */
     private fun timeout(
         timeoutException: Exception,
-        topLevelCause: Throwable? = null,
-        msgResolver: MessageResolver? = null
+        topLevelCause: Throwable? = null
     ): NakshaException {
-        val msgPrefix = if (msgResolver != null) msgResolver(timeoutException) + "\n" else ""
         return NakshaException(
             NakshaError(
                 code = NakshaError.TIMEOUT,
-                msg = msgPrefix + "Timeout exception occurred",
+                msg = "Timeout exception occurred",
                 cause = topLevelCause ?: timeoutException
             )
         )
