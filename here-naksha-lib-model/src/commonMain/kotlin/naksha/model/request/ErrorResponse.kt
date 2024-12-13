@@ -7,6 +7,7 @@ import naksha.model.NakshaError
 import naksha.model.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 
 /**
  * An error response, means at least one operation failed.
@@ -22,17 +23,10 @@ open class ErrorResponse() : Response() {
      * @param id the identifier of the object that relates to the error; if any.
      * @param cause the origin exception that caused this error; if any.
      */
+    @JvmOverloads
     @JsName("of")
     constructor(code: String, msg: String, id: String? = null, cause: Throwable? = null) : this() {
         this.error = NakshaError(code, msg, id, cause)
-    }
-
-    /**
-     * Constructor to simplify initiation in Java.
-     */
-    @JsName("ofText")
-    constructor(code: String, msg: String) : this() {
-        this.error = NakshaError(code, msg, null, null)
     }
 
     /**

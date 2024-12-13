@@ -11,5 +11,6 @@ expect class NakshaException : RuntimeException {
     val error: NakshaError
 
     constructor(error: NakshaError)
+
     constructor(code: String, msg: String, id: String? = null, cause: Throwable? = null)
 }
