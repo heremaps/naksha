@@ -43,18 +43,17 @@ public final class HandlerUtil {
 
   private HandlerUtil() {}
 
-    public static @NotNull ContextXyzFeatureResult createContextResultFromFeatureList(
-        final @NotNull List<NakshaFeature> features,
-        final @Nullable List<NakshaFeature> context,
-        final @Nullable List<NakshaFeature> violations
-    ) {
-      // Create ContextResult with cursor, context and violations
-      final ContextXyzFeatureResult ctxResult = new ContextXyzFeatureResult();
-      ctxResult.setFeatures(features);
-      ctxResult.setContext(context);
-      ctxResult.setViolations(violations);
-      return ctxResult;
-    }
+  public static @NotNull ContextXyzFeatureResult createContextResultFromFeatureList(
+      final @NotNull List<NakshaFeature> features,
+      final @Nullable List<NakshaFeature> context,
+      final @Nullable List<NakshaFeature> violations) {
+    // Create ContextResult with cursor, context and violations
+    final ContextXyzFeatureResult ctxResult = new ContextXyzFeatureResult();
+    ctxResult.setFeatures(features);
+    ctxResult.setContext(context);
+    ctxResult.setViolations(violations);
+    return ctxResult;
+  }
 
   /**
    * @param collectionIds If the number of collection IDs is smaller than the number of features, the last collection ID
