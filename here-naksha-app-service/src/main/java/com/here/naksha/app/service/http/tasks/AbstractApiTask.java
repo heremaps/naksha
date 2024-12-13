@@ -41,7 +41,6 @@ import naksha.geo.XyzGeometry;
 import naksha.model.ReadFeatures;
 import naksha.model.WriteFeatures;
 import naksha.model.XyzResponse;
-import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.util.PropertyPathUtil;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.json.JsonSerializable;

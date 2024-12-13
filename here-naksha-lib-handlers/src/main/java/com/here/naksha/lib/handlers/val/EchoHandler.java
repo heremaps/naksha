@@ -31,10 +31,8 @@ import com.here.naksha.lib.handlers.util.HandlerUtil;
 import java.util.List;
 import java.util.Objects;
 import naksha.base.JvmProxyUtil;
-import naksha.model.NakshaError;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
-import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
@@ -92,7 +90,6 @@ public class EchoHandler extends AbstractEventHandler {
     final List<NakshaFeature> outputViolations = HandlerUtil.getViolationsFromGenericList(cwf.getViolations());
 
     // prepare result with op as UPDATED, as if features were persisted in DB
-    //    return HandlerUtil.createContextResultFromFeatureList(features, context, outputViolations);
-    return new ErrorResponse(NakshaError.NOT_IMPLEMENTED, "Not fixed yet");
+    return HandlerUtil.createContextResultFromFeatureList(features, context, outputViolations);
   }
 }
