@@ -60,7 +60,7 @@ public class ContextXyzFeatureResult extends SuccessResponse {
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public @Nullable List<NakshaFeature> getViolations() {
-    return JvmProxyUtil.box(get(CONTEXT_KEY), NakshaFeatureList.class);
+    return JvmProxyUtil.box(get(VIOLATIONS_KEY), NakshaFeatureList.class);
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
