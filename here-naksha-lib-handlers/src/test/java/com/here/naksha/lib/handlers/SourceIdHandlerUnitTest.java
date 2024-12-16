@@ -1,157 +1,193 @@
 package com.here.naksha.lib.handlers;
 
+import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
+import naksha.model.objects.NakshaProperties;
+import naksha.model.request.RequestQuery;
+import naksha.model.request.query.*;
+import org.junit.jupiter.api.Test;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+
 class SourceIdHandlerUnitTest {
 
-    //TODO fix these tests when source id handler is fixed CASL-710
-//    @Test
-//    void tc2002_testMapEqToContainsTag() {
-//        //given
-//        final Property property = new Property(NakshaProperties.META_KEY, "sourceId");
-//        PQuery given = new PQuery(property, StringOp.EQUALS,"task_1");
-//        //when
-//
-//        Optional<ITagQuery> result = SourceIdHandler.mapIntoTagOperation(given);
-//        //then
-//
-//        assertTrue(result.isPresent());
-//        assertEquals("xyz_source_id_task_1", result.get().getName());
-//    }
-//
-//    @Test
-//    void tc2003_testMapNotEqToNotContainsTag() {
-//        //given
-//        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "sourceId");
-//        POp given = POp.not(POp.eq(pRef, "task_1"));
-//        //when
-//
-//        PropertyOperationUtil.transformPropertyInPropertyOperationTree(given, SourceIdHandler::mapIntoTagOperation);
-//        //then
-//
-//        assertFalse(given.children().isEmpty());
-//
-//        POp nestedPop = given.children().get(0);
-//        assertEquals(nestedPop.getPropertyRef().getTagName(), "xyz_source_id_task_1");
-//        assertEquals(nestedPop.op(), POpType.EXISTS);
-//    }
-//
-//    @Test
-//    void tc2004_testMapContainsToContainsTag() {
-//        //given
-//        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "sourceId");
-//        POp given = POp.contains(pRef, "task_1");
-//        //when
-//
-//        Optional<POp> result = SourceIdHandler.mapIntoTagOperation(given);
-//        //then
-//
-//        assertTrue(result.isPresent());
-//        assertEquals(result.get().getPropertyRef().getTagName(), "xyz_source_id_task_1");
-//        assertEquals(result.get().op(), POpType.EXISTS);
-//    }
-//
-//    @Test
-//    void tc2005_testMapOnlyCorrectPref() {
-//        //given
-//        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "WrongPRef");
-//        POp given = POp.eq(pRef, "task_1");
-//        //when
-//
-//        Optional<POp> result = SourceIdHandler.mapIntoTagOperation(given);
-//        //then
-//
-//        assertTrue(result.isEmpty());
-//    }
-//
-//    @Test
-//    void tc2006_testMapsCorrectlyCombinedOperation () {
-//        //given
-//        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "sourceId");
-//        POp given = POp.and(POp.not(POp.eq(pRef, "task_1")), POp.contains(PRef.tag("funnyTag"), "4"));
-//        //when
-//
-//        PropertyOperationUtil.transformPropertyInPropertyOperationTree(given, SourceIdHandler::mapIntoTagOperation);
-//        //then
-//
-//        assertEquals(given.op(), OpType.AND);
-//        assertFalse(given.children().isEmpty());
-//        assertEquals(given.children().size(), 2);
-//        assertEquals(given.children().get(0).op(), OpType.NOT);
-//
-//        POp nestedPop = given.children().get(0).children().get(0);
-//        assertEquals(nestedPop.getPropertyRef().getTagName(), "xyz_source_id_task_1");
-//        assertEquals(nestedPop.op(), POpType.EXISTS);
-//
-//        assertEquals(given.children().get(1).op(), POpType.CONTAINS);
-//    }
-//    @Test
-//    void tc2007_testMapEqToContainsTagWithoutNormalization() {
-//        //given
-//        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "sourceId");
-//        POp given = POp.eq(pRef, "tAskK_1");
-//
-//        //when
-//        Optional<POp> result = SourceIdHandler.mapIntoTagOperation(given);
-//
-//        //then
-//        assertTrue(result.isPresent());
-//        assertEquals(result.get().getPropertyRef().getTagName(), "xyz_source_id_tAskK_1");
-//        assertEquals(result.get().op(), POpType.EXISTS);
-//    }
-//
-//    @ParameterizedTest
-//    @MethodSource("writeRequestTestParams")
-//    void testWriteRequestTagPopulation(final WriteFeatures<XyzFeature,?,?> wf, final String expectedFeatureJson) throws JSONException {
-//        // Given: Mocking in place
-//        final INaksha naksha = mock(INaksha.class);
-//        final IEvent event = mock(IEvent.class);
-//        when(event.getRequest()).thenReturn((Request)wf);
-//        when(event.sendUpstream(any())).thenReturn(new SuccessResult());
-//
-//        // Given: Handler initialization
-//        final EventHandler e = new EventHandler(SourceIdHandler.class, "some_id");
-//        final SourceIdHandler sourceIdHandler = new SourceIdHandler(naksha);
-//
-//        // When: handler processing logic is invoked
-//        try (final Result result = sourceIdHandler.process(event)) {
-//            assertTrue(result instanceof SuccessResult, "SuccessResult was expected");
-//        }
-//        // Then: validate that the feature in the original request is modified as per expectation
-//        assertNotNull(wf.features.get(0));
-//        assertNotNull(wf.features.get(0).getFeature());
-//        JSONAssert.assertEquals("Output Feature not as expected", expectedFeatureJson, wf.features.get(0).getFeature().serialize(), JSONCompareMode.STRICT);
-//    }
-//
-//    private static Stream<Arguments> writeRequestTestParams() {
-//        // Common parameters across tests
-//        final String commonFilePath = "SourceIdFilter/testWriteFeatureTagPopulation/input_feature.json";
-//        final String expectedFeatureJson = loadFileOrFail("SourceIdFilter/testWriteFeatureTagPopulation/output_feature.json");
-//
-//        return Stream.of(
-//                Arguments.arguments(
-//                        Named.named(
-//                                "WriteXyzFeatures tag population",
-//                                createWriteXyzFeaturesFromFile(commonFilePath)
-//                        ),
-//                        expectedFeatureJson
-//                ),
-//                Arguments.arguments(
-//                        Named.named(
-//                                "ContextWriteXyzFeatures tag population",
-//                                createContextWriteXyzFeaturesFromFile(commonFilePath)
-//                        ),
-//                        expectedFeatureJson
-//                )
-//        );
-//    }
-//
-//    private static WriteFeatures<?,?,?> createWriteXyzFeaturesFromFile(final String filePath) {
-//        final XyzFeature feature = parseJsonFileOrFail(filePath, XyzFeature.class);
-//        return new WriteXyzFeatures("some_collection").add(EWriteOp.CREATE, feature);
-//    }
-//
-//    private static WriteFeatures<?,?,?> createContextWriteXyzFeaturesFromFile(final String filePath) {
-//        final XyzFeature feature = parseJsonFileOrFail(filePath, XyzFeature.class);
-//        return new ContextWriteXyzFeatures("some_collection").add(EWriteOp.CREATE, feature);
-//    }
+    @Test
+    void tc2002_testMapEqToContainsTag() {
+        //given
+        final Property property = new Property(NakshaProperties.META_KEY, "sourceId");
+        final PQuery given = new PQuery(property, StringOp.EQUALS,"task_1");
+        //when
+
+        Optional<ITagQuery> tagQuery = SourceIdHandler.mapIntoTagOperation(given);
+        //then
+
+        assertTrue(tagQuery.isPresent());
+        assertInstanceOf(TagExists.class,tagQuery.get());
+        final TagExists exists = (TagExists) tagQuery.get();
+        assertEquals("xyz_source_id_task_1", exists.getName());
+    }
+
+    @Test
+    void tc2003_testMapNotEqToNotContainsTag() {
+        //given
+        final Property property = new Property(NakshaProperties.META_KEY, "sourceId");
+        final IPropertyQuery given = new PNot(new PQuery(property, StringOp.EQUALS,"task_1"));
+        //when
+
+        Optional<ITagQuery> tagQuery = SourceIdHandler.mapIntoTagOperation(given);
+        //then
+
+        assertTrue(tagQuery.isPresent());
+        assertInstanceOf(TagNot.class,tagQuery.get());
+        final TagNot tagNot = (TagNot) tagQuery.get();
+        assertInstanceOf(TagExists.class,tagNot.getQuery());
+        final TagExists exists = (TagExists) tagNot.getQuery();
+        assertEquals("xyz_source_id_task_1", exists.getName());
+    }
+
+    @Test
+    void tc2004_testMapContainsToContainsTag() {
+        //given
+        final Property property = new Property(NakshaProperties.META_KEY, "sourceId");
+        final PQuery given = new PQuery(property, StringOp.CONTAINS,"task_1");
+        //when
+
+        final Optional<ITagQuery> tagQuery = SourceIdHandler.mapIntoTagOperation(given);
+        //then
+
+        assertTrue(tagQuery.isPresent());
+        assertInstanceOf(TagExists.class,tagQuery.get());
+        final TagExists exists = (TagExists) tagQuery.get();
+        assertEquals("xyz_source_id_task_1", exists.getName());
+    }
+
+    @Test
+    void tc2005_testMapOnlyCorrectPref() {
+        //given
+        final Property property = new Property(NakshaProperties.META_KEY, "WrongProperty");
+        final PQuery given = new PQuery(property, StringOp.EQUALS,"task_1");
+        //when
+
+        final Optional<ITagQuery> tagQuery = SourceIdHandler.mapIntoTagOperation(given);
+        //then
+
+        assertFalse(tagQuery.isPresent());
+    }
+
+    @Test
+    void tc2006_testMapsCorrectlyCombinedOperation () {
+        //given
+        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "sourceId");
+        POp given = POp.and(POp.not(POp.eq(pRef, "task_1")), POp.contains(PRef.tag("funnyTag"), "4"));
+        //when
+
+        PropertyOperationUtil.transformPropertyInPropertyOperationTree(given, SourceIdHandler::mapIntoTagOperation);
+       //then
+
+        assertEquals(given.op(), OpType.AND);
+        assertFalse(given.children().isEmpty());
+        assertEquals(given.children().size(), 2);
+        assertEquals(given.children().get(0).op(), OpType.NOT);
+
+        POp nestedPop = given.children().get(0).children().get(0);
+        assertEquals(nestedPop.getPropertyRef().getTagName(), "xyz_source_id_task_1");
+        assertEquals(nestedPop.op(), POpType.EXISTS);
+
+        assertEquals(given.children().get(1).op(), POpType.CONTAINS);
+
+        //given
+        final Property property = new Property(NakshaProperties.META_KEY, "sourceId");
+        final Property property2 = new Property(NakshaProperties.META_KEY, "funnyTag");
+        final PAnd given = new PAnd();
+        given.add(new PNot(new PQuery(property, StringOp.EQUALS,"task_1")));
+        given.add(new PQuery(property2, StringOp.CONTAINS,"4"));
+
+        final RequestQuery query = new RequestQuery();
+        query.setProperties(given);
+        //when
+
+        PropertyOperationUtil.transformPropertyInPropertyOperationTree(given,query, (propertyOperation, query1) -> SourceIdHandler.mapIntoTagOperation(propertyOperation));
+        //then
+
+        assertInstanceOf(TagAnd.class,query.getTags());
+        final TagAnd tagAnd = (TagAnd) query.getTags();
+        assertEquals(2, tagAnd.size());
+        assertInstanceOf(TagNot.class,tagAnd.get(0));
+        final TagNot nestedTagNot = (TagNot) tagAnd.get(0);
+        assertInstanceOf(TagExists.class,nestedTagNot.getQuery());
+        final TagExists nestedTagExist = (TagExists) nestedTagNot.getQuery();
+        assertEquals("xyz_source_id_task_1", nestedTagExist.getName());
+    }
+    @Test
+    void tc2007_testMapEqToContainsTagWithoutNormalization() {
+        //given
+        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "sourceId");
+        POp given = POp.eq(pRef, "tAskK_1");
+
+        //when
+        Optional<POp> result = SourceIdHandler.mapIntoTagOperation(given);
+
+        //then
+        assertTrue(result.isPresent());
+        assertEquals(result.get().getPropertyRef().getTagName(), "xyz_source_id_tAskK_1");
+        assertEquals(result.get().op(), POpType.EXISTS);
+    }
+
+    @ParameterizedTest
+    @MethodSource("writeRequestTestParams")
+    void testWriteRequestTagPopulation(final WriteFeatures<XyzFeature,?,?> wf, final String expectedFeatureJson) throws JSONException {
+        // Given: Mocking in place
+        final INaksha naksha = mock(INaksha.class);
+        final IEvent event = mock(IEvent.class);
+        when(event.getRequest()).thenReturn((Request)wf);
+        when(event.sendUpstream(any())).thenReturn(new SuccessResult());
+
+        // Given: Handler initialization
+        final EventHandler e = new EventHandler(SourceIdHandler.class, "some_id");
+        final SourceIdHandler sourceIdHandler = new SourceIdHandler(naksha);
+
+        // When: handler processing logic is invoked
+        try (final Result result = sourceIdHandler.process(event)) {
+            assertTrue(result instanceof SuccessResult, "SuccessResult was expected");
+        }
+        // Then: validate that the feature in the original request is modified as per expectation
+        assertNotNull(wf.features.get(0));
+        assertNotNull(wf.features.get(0).getFeature());
+        JSONAssert.assertEquals("Output Feature not as expected", expectedFeatureJson, wf.features.get(0).getFeature().serialize(), JSONCompareMode.STRICT);
+    }
+
+    private static Stream<Arguments> writeRequestTestParams() {
+        // Common parameters across tests
+        final String commonFilePath = "SourceIdFilter/testWriteFeatureTagPopulation/input_feature.json";
+        final String expectedFeatureJson = loadFileOrFail("SourceIdFilter/testWriteFeatureTagPopulation/output_feature.json");
+
+        return Stream.of(
+                Arguments.arguments(
+                        Named.named(
+                                "WriteXyzFeatures tag population",
+                                createWriteXyzFeaturesFromFile(commonFilePath)
+                        ),
+                        expectedFeatureJson
+                ),
+                Arguments.arguments(
+                        Named.named(
+                                "ContextWriteXyzFeatures tag population",
+                                createContextWriteXyzFeaturesFromFile(commonFilePath)
+                        ),
+                        expectedFeatureJson
+                )
+        );
+    }
+
+    private static WriteFeatures<?,?,?> createWriteXyzFeaturesFromFile(final String filePath) {
+        final XyzFeature feature = parseJsonFileOrFail(filePath, XyzFeature.class);
+        return new WriteXyzFeatures("some_collection").add(EWriteOp.CREATE, feature);
+    }
+
+    private static WriteFeatures<?,?,?> createContextWriteXyzFeaturesFromFile(final String filePath) {
+        final XyzFeature feature = parseJsonFileOrFail(filePath, XyzFeature.class);
+        return new ContextWriteXyzFeatures("some_collection").add(EWriteOp.CREATE, feature);
+    }
 
 }

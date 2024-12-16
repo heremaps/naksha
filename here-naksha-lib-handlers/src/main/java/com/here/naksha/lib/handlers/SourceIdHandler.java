@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 public class SourceIdHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(SourceIdHandler.class);
-  private static final String TAG_PREFIX = "xyz_source_id_"; // TODO decide CASL-710
+  private static final String TAG_PREFIX = "xyz_source_id_";
   private static final String SOURCE_ID = "sourceId";
   public static final int PREF_PATHS_SIZE = 2;
 
@@ -88,9 +88,10 @@ public class SourceIdHandler extends AbstractEventHandler {
 
     IPropertyQuery propertyOp = readRequest.getQuery().getProperties();
 
-    // TODO fix it CASL-710
-    //    PropertyOperationUtil.transformPropertyInPropertyOperationTree(
-    //            propertyOp, SourceIdHandler::mapIntoTagOperation);
+    final Optional<ITagQuery> tagQuery = mapIntoTagOperation(propertyOp);
+    if (tagQuery.isPresent()) {
+      readRequest.getQuery().setTags(tagQuery.get());
+    }
   }
 
   private void setSourceIdTags(NakshaFeature feature) {
@@ -114,14 +115,52 @@ public class SourceIdHandler extends AbstractEventHandler {
     }
   }
 
-  public static Optional<ITagQuery> mapIntoTagOperation(PQuery propertyOperation) {
-
-    if (sourceIdTransformationCapable(propertyOperation) && operationTypeAllowed(propertyOperation)) {
-      final TagExists tagQuery = new TagExists(TAG_PREFIX + propertyOperation.getValue());
-      return Optional.of(tagQuery);
+  public static Optional<ITagQuery> mapIntoTagOperation(IPropertyQuery propertyOperation) {
+    if (propertyOperation instanceof PAnd pAnd) {
+      final TagAnd tagAnd = new TagAnd();
+      for (IPropertyQuery component : pAnd) {
+        final Optional<ITagQuery> tagComponent = mapIntoTagOperation(component);
+        if (tagComponent.isPresent()) {
+          tagAnd.add(tagComponent.get());
+        }
+        else {
+          return Optional.empty();
+        }
+      }
+      return Optional.of(tagAnd);
     }
-
-    return Optional.empty();
+    else if (propertyOperation instanceof POr pOr) {
+      final TagOr tagOr = new TagOr();
+      for (IPropertyQuery component : pOr) {
+        final Optional<ITagQuery> tagComponent = mapIntoTagOperation(component);
+        if (tagComponent.isPresent()) {
+          tagOr.add(tagComponent.get());
+        }
+        else {
+          return Optional.empty();
+        }
+      }
+      return Optional.of(tagOr);
+    }
+    else if (propertyOperation instanceof PNot pNot) {
+      final Optional<ITagQuery> tagComponent = mapIntoTagOperation(pNot.getQuery());
+      if (tagComponent.isPresent()) {
+        return Optional.of(new TagNot(tagComponent.get()));
+      }
+      else {
+        return Optional.empty();
+      }
+    }
+    else if (propertyOperation instanceof PQuery pQuery) {
+      if (sourceIdTransformationCapable(pQuery) && operationTypeAllowed(pQuery)) {
+        final TagExists tagQuery = new TagExists(TAG_PREFIX + pQuery.getValue());
+        return Optional.of(tagQuery);
+      }
+      return Optional.empty();
+    }
+    else {
+      throw new IllegalArgumentException("Unknown property operation type: " + propertyOperation.getClass().getSimpleName());
+    }
   }
 
   private static boolean propertyReferenceEqualsSourceId(Property pRef) {
