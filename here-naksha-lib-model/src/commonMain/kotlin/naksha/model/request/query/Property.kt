@@ -14,6 +14,12 @@ import kotlin.jvm.JvmStatic
 
 /**
  * The reference to a property within a feature.
+ *
+ * **Warning:** You should not search for the `id`, `geometry`, or anything from [`properties->@ns:com:here:xyz`][naksha.model.XyzNs] using this query, because there are specialized, and optimized, dedicated queries available. So avoid things like `PQuery(Property("id"), StringOp.EQUALS, "foo"`.
+ * @see naksha.model.request.ReadFeatures.featureIds
+ * @see ISpatialQuery
+ * @see IMetaQuery
+ * @see ITagQuery
  */
 @JsExport
 open class Property() : MetaColumn(FEATURE) {

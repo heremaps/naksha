@@ -84,10 +84,12 @@ interface IStorage : IDictReader, AutoCloseable {
      * - Throws [NakshaError.STORAGE_ID_MISMATCH], if the existing _storage-id_ and/or _storage-number_ does not match the given one.
      * @param id the identifier of the storage (_added in v3.0.0_).
      * @param number the number of the storage (_added in v3.0.0_).
+     * @param create if _true_, then the method will create missing structures in the storage; if _false_, the method does not modify the storage, but rather throw an [NakshaError.INITIALIZATION_FAILED].
+     * @param upgrade if _true_, then the method will upgrade the storage admin-structures (e.g. stored procedures), when necessary; if _false_, the method does not modify the storage, but rather throw an [NakshaError.INITIALIZATION_FAILED].
      * @param params optional special parameters that are storage dependent to influence how a storage is initialized.
      * @since 2.0.8
      */
-    fun initStorage(id: String, number: Int64, params: Map<String, *>? = null)
+    fun initStorage(id: String, number: Int64, create: Boolean = true, upgrade: Boolean = false, params: Map<String, *>? = null)
 
     /**
      * Open a new write session.

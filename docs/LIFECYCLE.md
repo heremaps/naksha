@@ -161,10 +161,10 @@ It will set the operation for the `DELETED`, and `CREATED` feature to `SPLIT`, c
 
 Assume, the foreign feature `FOO` should be split, a new deleted version `FOO'` is created from `FOO`, additionally to the new features `A`, `B`, and `C` were created, then the resulting features in the target collection will look like:
 
-- `FOO'`: operation = `SPLIT`, action = `CREATED`, origin = `FOO`, target = `null`
-- `A`: operation = `SPLIT`, action = `DELETED`, origin = `FOO`, target - `null`
-- `B`: operation = `SPLIT`, action = `DELETED`, origin = `FOO`, target - `null`
-- `C`: operation = `SPLIT`, action = `DELETED`, origin = `FOO`, target - `null`
+- `FOO'`: operation = `SPLIT`, action = `DELETED`, origin = `FOO`, target = `null`
+- `A`: operation = `SPLIT`, action = `CREATED`, origin = `FOO`, target - `null`
+- `B`: operation = `SPLIT`, action = `CREATED`, origin = `FOO`, target - `null`
+- `C`: operation = `SPLIT`, action = `CREATED`, origin = `FOO`, target - `null`
 
 This behavior is essential later when [rebasing](#rebased).
 

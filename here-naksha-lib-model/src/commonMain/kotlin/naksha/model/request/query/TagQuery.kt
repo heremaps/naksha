@@ -9,6 +9,12 @@ import kotlin.js.JsExport
 /**
  * A general form of a tag query without any operation.
  * @since 3.0.0
+ * @see TagExists
+ * @see TagValueIsBool
+ * @see TagValueIsDouble
+ * @see TagValueIsNull
+ * @see TagValueIsString
+ * @see TagValueMatches
  */
 @JsExport
 open class TagQuery internal constructor(): AnyObject(), ITagQuery {

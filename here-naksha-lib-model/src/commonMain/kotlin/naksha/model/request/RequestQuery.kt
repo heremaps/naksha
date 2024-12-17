@@ -34,24 +34,28 @@ open class RequestQuery : AnyObject() {
     /**
      * Search for features matching the given spatial query.
      * @since 3.0.0
+     * @see ISpatialQuery
      */
     var spatial by SPATIAL_QUERY_NULL
 
     /**
      * Search for features matching the given tag query.
      * @since 3.0.0
+     * @see ITagQuery
      */
     var tags by TAG_QUERY_NULL
 
     /**
      * Search for features matching the given property query.
      * @since 3.0.0
+     * @see IPropertyQuery
      */
     var properties by PROPERTIES_QUERY_NULL
 
     /**
      * Search for features matching the given metadata query.
      * @since 3.0.0
+     * @see IMetaQuery
      */
     var metadata by METADATA_QUERY_NULL
 

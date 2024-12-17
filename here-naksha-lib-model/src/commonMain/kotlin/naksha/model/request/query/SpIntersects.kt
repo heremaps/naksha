@@ -55,4 +55,8 @@ open class SpIntersects() : AnyObject(), ISpatialQuery {
      * The optional transformation to apply to the given geometry, before using it.
      */
     var transformation by TRANSFORMATION_NULL
+
+    // TODO: Refactor SpTransformation children into Tr{Name}, otherwise they are not distinct for spatial queries!
+    //       This applies to SpBuffer -> TrBuffer
+    //       Refactor transformation enumeration parameters into ETrSide, ETrEndCap, and ETrJoinStyle
 }
