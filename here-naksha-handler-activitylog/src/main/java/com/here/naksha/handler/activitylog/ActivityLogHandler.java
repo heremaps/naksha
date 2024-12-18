@@ -19,7 +19,6 @@
 package com.here.naksha.handler.activitylog;
 
 import static com.here.naksha.handler.activitylog.ActivityLogEnhancer.enhanceWithActivityLog;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
@@ -28,6 +27,7 @@ import static java.util.stream.Collectors.toMap;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.util.storage.ResultHelper;
 import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;
@@ -120,7 +120,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
   private List<XyzFeature> fetchHistoryFeatures(ReadFeatures readFeatures, NakshaContext context) {
     try (IReadSession readSession = nakshaHub().getSpaceStorage().newReadSession(context, true)) {
       try (Result result = readSession.execute(readFeatures)) {
-        return readFeaturesFromResult(result, XyzFeature.class);
+        return ResultHelper.extractResponseItems(result, XyzFeature.class);
       }
     } catch (NoCursor | NoSuchElementException e) {
       return Collections.emptyList();

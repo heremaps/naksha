@@ -35,6 +35,8 @@ import org.locationtech.jts.geom.Geometry;
 @AvailableSince(NakshaVersion.v2_0_7)
 public class RequestHelper {
 
+  private RequestHelper() {}
+
   /**
    * Helper method to create ReadFeatures request for reading feature by given Id from given storage collection name.
    *
@@ -66,27 +68,6 @@ public class RequestHelper {
   }
 
   /**
-   * Helper method to create WriteFeatures request with given feature. If silentIfExists is true, function internally sets IfExists.RETAIN
-   * and IfConflict.RETAIN (to silently ignoring create operation, if feature already exists). If set to false, both flags will be set to
-   * FAIL, which will ensure that feature doesn't get overwritten in storage, if already exists.
-   *
-   * @param collectionName name of the storage collection
-   * @param feature        feature object to be created
-   * @param silentIfExists flag to turn on/off silent create operation
-   * @param <FEATURE>      any object extending XyzFeature
-   * @return WriteFeatures request that can be used against IStorage methods
-   */
-  @AvailableSince(NakshaVersion.v2_0_7)
-  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest createFeatureRequest(
-      final @NotNull String collectionName, final @NotNull FEATURE feature, final boolean silentIfExists) {
-    if (silentIfExists) {
-      return createFeaturesRequest(collectionName, List.of(feature), IfExists.RETAIN, IfConflict.RETAIN);
-    } else {
-      return createFeaturesRequest(collectionName, List.of(feature), IfExists.FAIL, IfConflict.FAIL);
-    }
-  }
-
-  /**
    * Helper method to create WriteFeatures request with given feature. Function internally sets flags IfExists.FAIL and IfConflict.FAIL,
    * which will ensure that feature doesn't get overwritten in storage, if already exists.
    *
@@ -98,8 +79,9 @@ public class RequestHelper {
   @AvailableSince(NakshaVersion.v2_0_7)
   public static <FEATURE extends NakshaFeature> @NotNull WriteRequest createFeatureRequest(
       final @NotNull String collectionName, final @NotNull FEATURE feature) {
-    return createFeaturesRequest(collectionName, List.of(feature), IfExists.FAIL, IfConflict.FAIL);
+    return createFeaturesRequest(collectionName, List.of(feature));
   }
+
   /**
    * Helper method to create WriteFeatures request for updating given feature.
    *
@@ -178,77 +160,15 @@ public class RequestHelper {
   }
 
   /**
-   * Helper method to create WriteFeatures request with given list of features. If silentIfExists is true, function internally sets
-   * IfExists.RETAIN and IfConflict.RETAIN (to silently ignoring create operation, if feature already exists). If set to false, both flags
-   * will be set to FAIL, which will ensure that feature doesn't get overwritten in storage, if already exists.
-   *
-   * @param collectionName name of the storage collection
-   * @param featureList    list of features to be created
-   * @param silentIfExists flag to turn on/off silent create operation
-   * @param <FEATURE>      any object extending XyzFeature
-   * @return WriteFeatures request that can be used against IStorage methods
-   */
-  @AvailableSince(NakshaVersion.v2_0_7)
-  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest createFeatureRequest(
-      final @NotNull String collectionName,
-      final @NotNull List<FEATURE> featureList,
-      final boolean silentIfExists) {
-    if (silentIfExists) {
-      return createFeaturesRequest(collectionName, featureList, IfExists.RETAIN, IfConflict.RETAIN);
-    } else {
-      return createFeaturesRequest(collectionName, featureList, IfExists.FAIL, IfConflict.FAIL);
-    }
-  }
-
-  /**
-   * Helper method to create WriteFeatures request with given list of features. Function internally sets flags IfExists.FAIL and
-   * IfConflict.FAIL, which will ensure that feature doesn't get overwritten in storage, if already exists.
-   *
-   * @param collectionName name of the storage collection
-   * @param featureList    list of feature objects to be created
-   * @param <FEATURE>      any object extending XyzFeature
-   * @return WriteFeatures request that can be used against IStorage methods
-   */
-  @AvailableSince(NakshaVersion.v2_0_7)
-  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest createFeaturesRequest(
-      final @NotNull String collectionName, final @NotNull List<FEATURE> featureList) {
-    return createFeaturesRequest(collectionName, featureList, IfExists.FAIL, IfConflict.FAIL);
-  }
-
-  /**
-   * Helper method to create WriteFeatures request with given feature.
-   *
-   * @param collectionName   name of the storage collection
-   * @param feature          feature object to be created
-   * @param ifExistsAction   flag to indicate what to do if feature already found existing in database
-   * @param ifConflictAction flag to indicate what to do if feature version in database conflicts with given feature version
-   * @param <FEATURE>        any object extending XyzFeature
-   * @return WriteFeatures request that can be used against IStorage methods
-   */
-  @AvailableSince(NakshaVersion.v2_0_7)
-  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest createFeatureRequest(
-      final @NotNull String collectionName,
-      final @NotNull FEATURE feature,
-      final @NotNull IfExists ifExistsAction,
-      final @NotNull IfConflict ifConflictAction) {
-    return createFeaturesRequest(collectionName, List.of(feature), ifExistsAction, ifConflictAction);
-  }
-
-  /**
    * Helper method to create WriteFeatures request with given list of features.
    *
    * @param collectionName   name of the storage collection
    * @param featureList      list of feature objects to be created
-   * @param ifExistsAction   flag to indicate what to do if feature already found existing in database
-   * @param ifConflictAction flag to indicate what to do if feature version in database conflicts with given feature version
    * @return WriteFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   public static @NotNull WriteRequest createFeaturesRequest(
-      final @NotNull String collectionName,
-      final @NotNull List<? extends NakshaFeature> featureList,
-      final @NotNull IfExists ifExistsAction,
-      final @NotNull IfConflict ifConflictAction) {
+      final @NotNull String collectionName, final @NotNull List<? extends NakshaFeature> featureList) {
     final WriteRequest request = new WriteRequest();
     for (final NakshaFeature feature : featureList) {
       assert feature != null;

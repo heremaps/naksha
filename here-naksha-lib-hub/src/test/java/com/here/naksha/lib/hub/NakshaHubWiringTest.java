@@ -21,6 +21,7 @@ package com.here.naksha.lib.hub;
 import static com.here.naksha.lib.common.TestFileLoader.parseJsonFileOrFail;
 import static com.here.naksha.lib.common.TestNakshaContext.newTestNakshaContext;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.createFeatureRequest;
+import static com.here.naksha.lib.hub.mock.MockResult.mockResultWithFeature;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
@@ -37,46 +38,39 @@ import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.models.PluginCache;
-import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import com.here.naksha.lib.core.models.storage.IfConflict;
-import com.here.naksha.lib.core.models.storage.IfExists;
-import naksha.model.ReadFeatures;
-import naksha.model.ReadRequest;
-import com.here.naksha.lib.core.models.storage.Result;
-import naksha.model.WriteFeatures;
-import naksha.model.WriteRequest;
-import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
-import com.here.naksha.lib.core.models.storage.XyzCodecFactory;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
-import naksha.model.IReadSession;
-import naksha.model.IStorage;
-import naksha.model.IWriteSession;
-import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.view.ViewDeserialize;
 import com.here.naksha.lib.handlers.AuthorizationEventHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import com.here.naksha.lib.handlers.internal.IntHandlerForStorages;
-import com.here.naksha.lib.hub.mock.MockResult;
 import com.here.naksha.lib.hub.storages.NHAdminStorage;
 import com.here.naksha.lib.hub.storages.NHAdminStorageReader;
 import com.here.naksha.lib.hub.storages.NHAdminStorageWriter;
 import com.here.naksha.lib.hub.storages.NHSpaceStorage;
-import com.here.naksha.lib.psql.PsqlStorage.Params;
 import java.util.List;
 import java.util.Map;
-import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.*;
+import java.util.Objects;
+import naksha.model.IReadSession;
+import naksha.model.IStorage;
+import naksha.model.IWriteSession;
+import naksha.model.SessionOptions;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.ReadRequest;
+import naksha.model.request.Response;
+import naksha.model.request.WriteRequest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class NakshaHubWiringTest {
+class NakshaHubWiringTest {
 
   @Mock
   static NakshaHub hub;
@@ -95,22 +89,14 @@ public class NakshaHubWiringTest {
   static NHSpaceStorage spaceStorage = null;
 
   @BeforeEach
-  void beforeEachTest() throws Exception {
+  void beforeEachTest() {
     MockitoAnnotations.openMocks(this);
     spyPipelineFactory = spy(new NakshaEventPipelineFactory(hub));
     spaceStorage = new NHSpaceStorage(hub, spyPipelineFactory);
     when(hub.getSpaceStorage()).thenReturn(spaceStorage);
     when(hub.getAdminStorage()).thenReturn(adminStorage);
-    when(adminStorage.newReadSession(any(), anyBoolean())).thenReturn(adminStorageReader);
-    when(adminStorage.newWriteSession(any(), anyBoolean())).thenReturn(adminStorageWriter);
-  }
-
-  private <T> T parseJson(final @NotNull String jsonStr, final @NotNull Class<T> type) throws Exception {
-    T obj = null;
-    try (final Json json = Json.get()) {
-      obj = json.reader(ViewDeserialize.Storage.class).forType(type).readValue(jsonStr);
-    }
-    return obj;
+    when(adminStorage.newReadSession(any())).thenReturn(adminStorageReader);
+    when(adminStorage.newWriteSession(any())).thenReturn(adminStorageWriter);
   }
 
   @Test
@@ -118,19 +104,18 @@ public class NakshaHubWiringTest {
   void testCreateStorageRequestWiring() {
     // Given: Create Storage request
     final Storage storage = parseJsonFileOrFail("create_storage.json", Storage.class);
-    final WriteXyzFeatures request =
-        createFeatureRequest(NakshaAdminCollection.STORAGES, storage, IfExists.REPLACE, IfConflict.REPLACE);
+    final WriteRequest request = createFeatureRequest(NakshaAdminCollection.STORAGES, storage);
 
     // And: spies and captors in place
     final EventPipeline spyPipeline = spy(spyPipelineFactory.eventPipeline());
     when(spyPipelineFactory.eventPipeline()).thenReturn(spyPipeline);
-    final ArgumentCaptor<WriteRequest<?, ?, ?>> reqCaptor = ArgumentCaptor.forClass(WriteRequest.class);
+    final ArgumentCaptor<WriteRequest> reqCaptor = ArgumentCaptor.forClass(WriteRequest.class);
     final ArgumentCaptor<IEventHandler> handlerCaptor = ArgumentCaptor.forClass(IEventHandler.class);
 
     // When: Request is submitted to Hub Space Storage
-    try (final IWriteSession admin = hub.getSpaceStorage().newWriteSession(newTestNakshaContext(), true)) {
+    try (final IWriteSession admin = hub.getSpaceStorage().newWriteSession(SessionOptions.from(newTestNakshaContext(), true))) {
       admin.execute(request);
-      admin.commit(true);
+      admin.commit();
     }
 
     // Then:
@@ -145,7 +130,7 @@ public class NakshaHubWiringTest {
     assertTrue(handlers.get(2) instanceof EndPipelineHandler, "Expected instance of EndPipelineHandler");
     // Verify: admin storage writer finally gets the write request
     verify(adminStorageWriter, times(1)).execute(reqCaptor.capture());
-    assertTrue(reqCaptor.getValue() instanceof WriteFeatures<?, ?, ?>);
+    assertTrue(reqCaptor.getValue() instanceof WriteRequest);
   }
 
   @Test
@@ -157,11 +142,11 @@ public class NakshaHubWiringTest {
     // And: spies and captors in place
     final EventPipeline spyPipeline = spy(spyPipelineFactory.eventPipeline());
     when(spyPipelineFactory.eventPipeline()).thenReturn(spyPipeline);
-    final ArgumentCaptor<ReadRequest<?>> reqCaptor = ArgumentCaptor.forClass(ReadRequest.class);
+    final ArgumentCaptor<ReadRequest> reqCaptor = ArgumentCaptor.forClass(ReadRequest.class);
     final ArgumentCaptor<IEventHandler> handlerCaptor = ArgumentCaptor.forClass(IEventHandler.class);
 
     // When: Request is submitted to Hub Space Storage
-    try (final IReadSession reader = hub.getSpaceStorage().newReadSession(newTestNakshaContext(), true)) {
+    try (final IReadSession reader = hub.getSpaceStorage().newReadSession(SessionOptions.from(newTestNakshaContext(), true))) {
       reader.execute(request);
     }
 
@@ -190,33 +175,33 @@ public class NakshaHubWiringTest {
     final Space space = parseJsonFileOrFail("createFeature/create_space.json", Space.class);
     final IStorage storageImpl = PluginCache.getStorageConstructor(storage.getClassName(), Storage.class)
         .call(storage);
-    storageImpl.initStorage(new Params().pg_hint_plan(false).pg_stat_statements(false));
+    storageImpl.initStorage(null); // TODO: CASL-764
 
     // And: mock in place to return given Storage, EventHandler and Space objects, when requested from Admin Storage
     final IStorage spyStorageImpl = spy(storageImpl);
     when(adminStorageReader.execute(argThat(readRequest -> {
-          if (readRequest instanceof ReadFeatures rr) {
-            return rr.getCollections().get(0).equals(NakshaAdminCollection.SPACES);
-          }
-          return false;
-        })))
-        .thenReturn(new MockResult<>(Space.class, List.of(featureCodec(space))));
+      if (readRequest instanceof ReadFeatures rr) {
+        return Objects.equals(rr.getCollectionIds().get(0), NakshaAdminCollection.SPACES);
+      }
+      return false;
+    })))
+        .thenReturn(mockResultWithFeature(space));
     when(adminStorageReader.execute(argThat(readRequest -> {
-          if (readRequest instanceof ReadFeatures rr) {
-            return rr.getCollections().get(0).equals(NakshaAdminCollection.EVENT_HANDLERS);
-          }
-          return false;
-        })))
-        .thenReturn(new MockResult<>(EventHandler.class, List.of(featureCodec(eventHandler))));
+      if (readRequest instanceof ReadFeatures rr) {
+        return Objects.equals(rr.getCollectionIds().get(0), NakshaAdminCollection.EVENT_HANDLERS);
+      }
+      return false;
+    })))
+        .thenReturn(mockResultWithFeature(eventHandler));
     when(hub.getStorageById(argThat(argument -> argument.equals(storage.getId()))))
         .thenReturn(spyStorageImpl);
     // And: setup spy on Custom Storage Writer to intercept execute() method calls
-    final IWriteSession spyWriter = spy(spyStorageImpl.newWriteSession(newTestNakshaContext(), true));
-    doReturn(spyWriter).when(spyStorageImpl).newWriteSession(any(), anyBoolean());
+    final IWriteSession spyWriter = spy(spyStorageImpl.newWriteSession(SessionOptions.from(newTestNakshaContext(), true)));
+    doReturn(spyWriter).when(spyStorageImpl).newWriteSession(any());
 
     // And: Create Feature request
-    final XyzFeature feature = parseJsonFileOrFail("createFeature/create_feature.json", XyzFeature.class);
-    final WriteXyzFeatures request = createFeatureRequest(space.getId(), feature, IfExists.FAIL, IfConflict.FAIL);
+    final NakshaFeature feature = parseJsonFileOrFail("createFeature/create_feature.json", NakshaFeature.class);
+    final WriteRequest request = createFeatureRequest(space.getId(), feature);
 
     // And: spies and captors in place to return
     final EventPipeline spyPipeline = spy(spyPipelineFactory.eventPipeline());
@@ -225,9 +210,9 @@ public class NakshaHubWiringTest {
     final ArgumentCaptor<IEventHandler> handlerCaptor = ArgumentCaptor.forClass(IEventHandler.class);
 
     // When: Request is submitted to Hub Space Storage
-    try (final IWriteSession writer = hub.getSpaceStorage().newWriteSession(newTestNakshaContext(), true)) {
-      final Result result = writer.execute(request);
-      writer.commit(true);
+    try (final IWriteSession writer = hub.getSpaceStorage().newWriteSession(SessionOptions.from(newTestNakshaContext(), true))) {
+      final Response response = writer.execute(request);
+      writer.commit();
     }
 
     // Then:
@@ -243,42 +228,35 @@ public class NakshaHubWiringTest {
     // Verify: admin storage writer finally gets:
     //    3 write requests (create feature, create missing collection, reattempt create feature)
     //    + 1 for setting up spy
-    verify(spyStorageImpl, times(4)).newWriteSession(any(), anyBoolean());
+    verify(spyStorageImpl, times(4)).newWriteSession(any());
     verify(spyWriter, times(3)).execute(reqCaptor.capture());
-    assertTrue(reqCaptor.getValue() instanceof WriteFeatures);
+    assertTrue(reqCaptor.getValue() instanceof WriteRequest);
     final List<WriteRequest> requests = reqCaptor.getAllValues();
     final String collectionId = ((Map) space.getProperties().get("collection"))
         .get("id")
         .toString(); // TODO: this is ambiguous (see Space::getCollectionId), discuss
     // Verify: WriteFeature into collection got called
-    assertTrue(requests.get(0) instanceof WriteXyzFeatures, "Expected WriteXyzFeatures type of request.");
+    assertTrue(requests.get(0) instanceof WriteRequest, "Expected WriteRequest type of request.");
     assertEquals(
         collectionId,
-        ((WriteXyzFeatures) requests.get(0)).getCollectionId(),
+        ((WriteRequest) requests.get(0)).getWrites().get(0).getCollectionId(),
         "CollectionId mismatch for Write Feature request");
     // Verify: WriteCollection got called (to create missing table)
-    assertTrue(requests.get(1) instanceof WriteXyzCollections, "Expected WriteXyzCollections type of request.");
+    assertTrue(requests.get(1) instanceof WriteRequest, "Expected WriteRequest type of request.");
     assertEquals(
         collectionId,
-        ((WriteXyzCollections) requests.get(1))
-            .features
+        requests.get(1)
+            .getWrites()
             .get(0)
-            .getFeature()
-            .getId(),
+            .getFeatureId(),
         "CollectionId mismatch for Write Collection request");
     // Verify: WriteFeature into collectionId got called again
     assertTrue(
-        requests.get(2) instanceof WriteXyzFeatures,
+        requests.get(2) instanceof WriteRequest,
         "Expected WriteXyzFeatures type of request during reattempt.");
     assertEquals(
         collectionId,
-        ((WriteXyzFeatures) requests.get(2)).getCollectionId(),
+        requests.get(2).getWrites().get(0).getCollectionId(),
         "CollectionId mismatch for reattempted Write Feature request");
-  }
-
-  private XyzFeatureCodec featureCodec(XyzFeature feature) {
-    return XyzCodecFactory.getFactory(XyzFeatureCodecFactory.class)
-        .newInstance()
-        .withFeature(feature);
   }
 }

@@ -38,31 +38,31 @@ public class ResultHelper {
    * Helper method to fetch features from given Result and return list of features with type T. Returned list is not limited - to set the
    * upper bound, use sibling method with limit argument.
    *
-   * @param result      the Result which is to be read
+   * @param response      the Result which is to be read
    * @param featureType the type of feature to be extracted from result
    * @param <R>         type of feature
    * @return list of features extracted from ReadResult
    */
-  public static <R extends NakshaFeature> List<R> readFeaturesFromResult(SuccessResponse result, Class<R> featureType)
+  public static <R extends NakshaFeature> List<R> extractResponseItems(SuccessResponse response, Class<R> featureType)
       throws NoSuchElementException {
-    return readFeaturesFromResult(result, featureType, 0, Long.MAX_VALUE);
+    return extractResponseItems(response, featureType, 0, Long.MAX_VALUE);
   }
 
   /**
    * Helper method to fetch features from given Result and return list of features with type T. Returned list is limited with respect to
    * supplied `limit` parameter.
    *
-   * @param result      the Result which is to be read
+   * @param response      the Result which is to be read
    * @param featureType the type of feature to be extracted from result
    * @param offset      the offset position (0-based index) in a list from where features to be extracted
    * @param limit       the max number of features to be extracted
    * @param <R>         type of feature
    * @return list of features extracted from ReadResult
    */
-  public static <R extends NakshaFeature> List<R> readFeaturesFromResult(
-      SuccessResponse result, Class<R> featureType, long offset, long limit) {
+  public static <R extends NakshaFeature> List<R> extractResponseItems(
+      SuccessResponse response, Class<R> featureType, long offset, long limit) {
     final List<R> features = new ArrayList<>();
-    final Iterator<NakshaFeature> iterator = result.getFeatures().iterator();
+    final Iterator<NakshaFeature> iterator = response.getFeatures().iterator();
     int pos = 0;
     int cnt = 0;
     while (iterator.hasNext() && cnt < limit) {
@@ -87,7 +87,7 @@ public class ResultHelper {
    * @param type   the type of feature
    * @return the feature of type T if found, else null
    */
-  public static <T> @Nullable T readFeatureFromResult(
+  public static <T> @Nullable T readFeatureFromResponse(
       final @NotNull SuccessResponse result, final @NotNull Class<T> type) {
     final List<NakshaFeature> rows = result.getFeatures();
     if (rows.isEmpty()) {

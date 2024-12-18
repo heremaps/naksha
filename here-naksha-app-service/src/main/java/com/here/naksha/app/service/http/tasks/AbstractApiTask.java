@@ -21,8 +21,8 @@ package com.here.naksha.app.service.http.tasks;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.DEF_ADMIN_FEATURE_LIMIT;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResult;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResponse;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.extractResponseItems;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesGroupedByOp;
 import static java.util.Collections.emptyList;
 
@@ -139,7 +139,7 @@ public abstract class AbstractApiTask<T extends Response>
       return validatedErrorResponse;
     } else {
       try {
-        final R feature = readFeatureFromResult(result, type);
+        final R feature = readFeatureFromResponse(result, type);
         R processedFeature = feature;
         if (feature != null && preResponseProcessing != null) {
           processedFeature = preResponseProcessing.call(feature);
@@ -191,7 +191,7 @@ public abstract class AbstractApiTask<T extends Response>
       return validatedErrorResponse;
     } else {
       try {
-        final List<R> features = readFeaturesFromResult(rdResult, type, offset, maxLimit);
+        final List<R> features = extractResponseItems(rdResult, type, offset, maxLimit);
         List<R> processedFeatures = features;
         if (preResponseProcessing != null) {
           processedFeatures = new ArrayList<>();
@@ -264,13 +264,13 @@ public abstract class AbstractApiTask<T extends Response>
   }
 
   protected Result executeReadRequestFromSpaceStorage(ReadFeatures readRequest) {
-    try (final IReadSession reader = naksha().getSpaceStorage().newReadSession(context(), false)) {
+    try (final IReadSession reader = naksha().getSpaceStorage().newReadSession(SessionOptions.from(context(), false))) {
       return reader.execute(readRequest);
     }
   }
 
   protected Result executeWriteRequestFromSpaceStorage(WriteFeatures writeRequest) {
-    try (final IWriteSession writer = naksha().getSpaceStorage().newWriteSession(context(), true)) {
+    try (final IWriteSession writer = naksha().getSpaceStorage().newWriteSession(SessionOptions.from(context(), true))) {
       return writer.execute(writeRequest);
     }
   }

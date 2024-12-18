@@ -12,6 +12,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
@@ -455,6 +456,7 @@ open class NakshaContext protected constructor() {
         // TODO: Kotlin-Compiler-Bug: We need open, otherwise Java can't create another static method with the same name in extending class!
         @Suppress("NON_FINAL_MEMBER_IN_OBJECT")
         @JvmStatic
+        @JvmOverloads
         @JsStatic
         open fun newInstance(appId: String, author: String? = null, streamId: String? = null, su: Boolean = false): NakshaContext {
             val context = constructorRef.call()

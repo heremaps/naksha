@@ -22,7 +22,6 @@ import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
 import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
 import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdRequest;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
 import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.*;
 
 import com.here.naksha.lib.core.INaksha;
@@ -168,7 +167,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
         if (readResult instanceof ErrorResponse errorResponse) {
           throw new NoSuchElementException(errorResponse.getError().getCause());
         }
-        List<Space> spaces = readFeaturesFromResult((SuccessResponse) readResult, Space.class);
+        List<Space> spaces = ResultHelper.extractResponseItems((SuccessResponse) readResult, Space.class);
 
         if (spaces.size() != spaceIds.size()) {
           return new ErrorResponse(
@@ -247,7 +246,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
       }
       final List<Space> spaces;
       try {
-        spaces = readFeaturesFromResult((SuccessResponse) readResult, Space.class);
+        spaces = ResultHelper.extractResponseItems((SuccessResponse) readResult, Space.class);
       } catch (NoSuchElementException emptyException) {
         // No active space using the handler, proceed with deleting the handler
         return new SuccessResponse();

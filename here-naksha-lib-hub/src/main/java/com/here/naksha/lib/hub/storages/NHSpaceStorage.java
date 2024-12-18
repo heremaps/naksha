@@ -23,12 +23,6 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaAdminCollection;
-import naksha.model.NakshaContext;
-import naksha.model.NakshaVersion;
-import com.here.naksha.lib.core.lambdas.Fe1;
-import naksha.model.IReadSession;
-import naksha.model.IStorage;
-import naksha.model.IWriteSession;
 import com.here.naksha.lib.handlers.AuthorizationEventHandler;
 import com.here.naksha.lib.handlers.internal.IntHandlerForConfigs;
 import com.here.naksha.lib.handlers.internal.IntHandlerForEventHandlers;
@@ -40,7 +34,18 @@ import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Future;
+import naksha.base.Int64;
+import naksha.model.ILock;
+import naksha.model.IMap;
+import naksha.model.IReadSession;
+import naksha.model.IStorage;
+import naksha.model.IWriteSession;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.NakshaVersion;
+import naksha.model.SessionOptions;
+import naksha.model.Tuple;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -49,7 +54,9 @@ public class NHSpaceStorage implements IStorage {
 
   protected final @NotNull INaksha nakshaHub;
 
-  /** List of Admin virtual spaces with relevant event handlers required to support event processing */
+  /**
+   * List of Admin virtual spaces with relevant event handlers required to support event processing
+   */
   protected final @NotNull Map<String, List<IEventHandler>> virtualSpaces;
 
   protected final @NotNull EventPipelineFactory pipelineFactory;
@@ -89,64 +96,98 @@ public class NHSpaceStorage implements IStorage {
    */
   @Override
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void initStorage() {
-    nakshaHub.getAdminStorage().initStorage();
-  }
-
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public void initStorage(@Nullable Map<String, ?> params) {
     nakshaHub.getAdminStorage().initStorage(params);
   }
 
-  /**
-   * Starts the maintainer thread that will take about history garbage collection, sequencing and other background jobs.
-   */
+  @NotNull
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void startMaintainer() {
-    nakshaHub.getAdminStorage().startMaintainer();
+  public String getId() {
+    return nakshaHub.getAdminStorage().getId();
   }
 
-  /**
-   * Blocking call to perform maintenance tasks right now. One-time maintenance.
-   */
+  @NotNull
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void maintainNow() {
-    nakshaHub.getAdminStorage().maintainNow();
-  }
-
-  /**
-   * Stops the maintainer thread.
-   */
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void stopMaintainer() {
-    nakshaHub.getAdminStorage().stopMaintainer();
+  public SessionOptions getAdminOptions() {
+    return nakshaHub.getAdminStorage().getAdminOptions();
   }
 
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull IWriteSession newWriteSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new NHSpaceStorageWriter(this.nakshaHub, virtualSpaces, pipelineFactory, context, useMaster);
+  public int getHardCap() {
+    return nakshaHub.getAdminStorage().getHardCap();
   }
 
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull IReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new NHSpaceStorageReader(this.nakshaHub, virtualSpaces, pipelineFactory, context, useMaster);
+  public void setHardCap(int i) {
+    nakshaHub.getAdminStorage().setHardCap(i);
   }
 
-  /**
-   * Shutdown the storage instance asynchronously. This method returns asynchronously whatever the given {@code onShutdown} handler returns.
-   * If no shutdown handler given, then {@code null} is returned.
-   *
-   * @param onShutdown The (optional) method to call when the shutdown is done.
-   * @return The future when the shutdown will be done.
-   */
   @Override
-  public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
-    return nakshaHub.getAdminStorage().shutdown(onShutdown);
+  public boolean isInitialized() {
+    return nakshaHub.getAdminStorage().isInitialized();
+  }
+
+  @NotNull
+  @Override
+  public IMap getDefaultMap() {
+    return nakshaHub.getAdminStorage().getDefaultMap();
+  }
+
+  @NotNull
+  @Override
+  public IMap get(@NotNull String mapId) {
+    return nakshaHub.getAdminStorage().get(mapId);
+  }
+
+  @Nullable
+  @Override
+  public IMap get(int mapNumber) {
+    return nakshaHub.getAdminStorage().get(mapNumber);
+  }
+
+  @Override
+  public boolean contains(@NotNull String mapId) {
+    return nakshaHub.getAdminStorage().contains(mapId);
+  }
+
+  @Nullable
+  @Override
+  public String getMapId(int mapNumber) {
+    return nakshaHub.getAdminStorage().getMapId(mapNumber);
+  }
+
+  @NotNull
+  @Override
+  public NakshaFeature tupleToFeature(@NotNull Tuple tuple) {
+    return nakshaHub.getAdminStorage().tupleToFeature(tuple);
+  }
+
+  @NotNull
+  @Override
+  public Tuple featureToTuple(@NotNull NakshaFeature feature) {
+    return nakshaHub.getAdminStorage().featureToTuple(feature);
+  }
+
+  @NotNull
+  @Override
+  public IWriteSession newWriteSession(@Nullable SessionOptions options) {
+    return new NHSpaceStorageWriter(nakshaHub, virtualSpaces, pipelineFactory, options);
+  }
+
+  @NotNull
+  @Override
+  public IReadSession newReadSession(@Nullable SessionOptions options) {
+    return new NHSpaceStorageReader(nakshaHub, virtualSpaces, pipelineFactory, options);
+  }
+
+  @Override
+  public void close() {
+    nakshaHub.getAdminStorage().close();
+  }
+
+  @NotNull
+  @Override
+  public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
+    throw new NakshaException(new NakshaError(NakshaError.NOT_IMPLEMENTED, "enterLock"));
   }
 }

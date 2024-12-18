@@ -18,31 +18,36 @@
  */
 package com.here.naksha.lib.hub.storages;
 
+import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
+import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteFeatures;
+
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaAdminCollection;
-import naksha.model.NakshaContext;
-import naksha.model.NakshaVersion;
-import com.here.naksha.lib.core.exceptions.StorageLockException;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import naksha.model.WriteCollections;
-import naksha.model.WriteFeatures;
-import naksha.model.WriteRequest;
-import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
-import naksha.model.IStorageLock;
-import naksha.model.IWriteSession;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
+import naksha.model.IWriteSession;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.NakshaVersion;
+import naksha.model.SessionOptions;
+import naksha.model.Tuple;
+import naksha.model.TupleNumber;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.Transaction;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.ResultTuple;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
+import naksha.model.request.WriteOp;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -51,6 +56,9 @@ import org.slf4j.LoggerFactory;
 
 public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWriteSession {
 
+  private static final NakshaException NOT_SUPPORTED_ERROR = new NakshaException(
+      new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Operation not supported by NHSpaceStorageWriter"));
+
   private static final Logger logger = LoggerFactory.getLogger(NHSpaceStorageWriter.class);
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
@@ -58,209 +66,225 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
       final @NotNull INaksha hub,
       final @NotNull Map<String, List<IEventHandler>> virtualSpaces,
       final @NotNull EventPipelineFactory pipelineFactory,
-      final @Nullable NakshaContext context,
-      boolean useMaster) {
-    super(hub, virtualSpaces, pipelineFactory, context, useMaster);
+      final @Nullable SessionOptions sessionOptions) {
+    super(hub, virtualSpaces, pipelineFactory, sessionOptions);
   }
 
-  /**
-   * Execute the given write-request.
-   *
-   * @param writeRequest the write-request to execute.
-   * @return the result.
-   */
+  @NotNull
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull Result execute(@NotNull WriteRequest writeRequest) {
-    if (writeRequest instanceof WriteCollections wc) {
-      return executeWriteCollections(wc);
-    } else if (writeRequest instanceof WriteFeatures wf) {
-      return executeWriteFeatures(wf);
+  public Response execute(@NotNull Request request) {
+    if (request instanceof WriteRequest writeRequest) {
+      if (isOnlyWriteCollections(writeRequest)) {
+        executeSingleCollectionWrite(writeRequest);
+      } else if (isOnlyWriteFeatures(writeRequest)) {
+        executeWriteFeatures(writeRequest);
+      } else {
+        return new ErrorResponse(
+            NakshaError.UNSUPPORTED_OPERATION,
+            "Only single collection writes and pure write features writes are supported");
+      }
     }
-    throw new UnsupportedOperationException(
-        "WriteRequest with unsupported type " + writeRequest.getClass().getName());
+    return new ErrorResponse(
+        NakshaError.UNSUPPORTED_OPERATION,
+        "Supported type: " + WriteRequest.class.getName() + ", got "
+            + request.getClass().getName() + " instead");
   }
 
-  private @NotNull Result executeWriteCollections(final @NotNull WriteCollections wc) {
-    String spaceId = singleCollectionIdFrom(wc);
-    return executeWriteCollections(wc, spaceId);
+  private @NotNull Response executeSingleCollectionWrite(final @NotNull WriteRequest writeRequest) {
+    String spaceId = singleCollectionIdFrom(writeRequest);
+    return executeSingleCollectionWrite(writeRequest, spaceId);
   }
 
-  private @NotNull Result executeWriteCollections(final @NotNull WriteCollections wc, final @NotNull String spaceId) {
+  private @NotNull Response executeSingleCollectionWrite(
+      final @NotNull WriteRequest writeRequest, final @NotNull String spaceId) {
     if (virtualSpaces.containsKey(spaceId)) {
-      logger.info("WriteCollections Request for {}, against Admin storage.", spaceId);
-      return executeWriteToAdminSpaces(wc, spaceId);
+      logger.info("Single collection write request for {}, against Admin storage.", spaceId);
+      return executeWriteToAdminSpaces(writeRequest, spaceId);
     } else {
-      logger.info("WriteCollections Request for {}, against Custom storage.", spaceId);
-      return executeWriteToCustomSpaces(wc, spaceId);
+      logger.info("Single collection write request {}, against Custom storage.", spaceId);
+      return executeWriteToCustomSpaces(writeRequest, spaceId);
     }
   }
 
-  private @NotNull Result executeWriteFeatures(final @NotNull WriteFeatures wf) {
-    final String spaceId = wf.getCollectionId();
-    logger.info("WriteFeatures Request against spaceId={}", spaceId);
+  private @NotNull Response executeWriteFeatures(final @NotNull WriteRequest writeRequest) {
+    final String spaceId = singleCollectionIdFrom(writeRequest);
+    logger.info("WriteRequest with writes against spaceId={}", spaceId);
     addSpaceIdToStreamInfo(spaceId);
-    if (isDeleteSpaceRequest(wf, spaceId)) {
-      return executeDeleteSpace(wf);
-    } else if (isUpdateSpaceRequest(wf, spaceId)) {
-      return executeUpdateSpace(wf);
+    if (isDeleteSpaceRequest(writeRequest, spaceId)) {
+      return executeDeleteSpace(writeRequest);
+    } else if (isUpdateSpaceRequest(writeRequest, spaceId)) {
+      return executeUpdateSpace(writeRequest);
     } else if (virtualSpaces.containsKey(spaceId)) {
       // Request is to write to Naksha Admin space
-      return executeWriteToAdminSpaces(wf, spaceId);
+      return executeWriteToAdminSpaces(writeRequest, spaceId);
     } else {
       // Request is to write to Custom space
-      return executeWriteToCustomSpaces(wf, spaceId);
+      return executeWriteToCustomSpaces(writeRequest, spaceId);
     }
   }
 
-  private @NotNull Result executeWriteToAdminSpaces(
-      final @NotNull WriteRequest<?, ?, ?> wr, @NotNull String spaceId) {
+  private @NotNull Response executeWriteToAdminSpaces(@NotNull WriteRequest writeRequest, @NotNull String spaceId) {
     // Run pipeline against virtual space
     final EventPipeline pipeline = pipelineFactory.eventPipeline();
-    final Result result = setupEventPipelineForAdminVirtualSpace(spaceId, pipeline);
-    if (!(result instanceof SuccessResult)) {
+    final Response result = setupEventPipelineForAdminVirtualSpace(spaceId, pipeline);
+    if (!(result instanceof SuccessResponse)) {
       return result;
     }
-    return pipeline.sendEvent(wr);
+    return pipeline.sendEvent(writeRequest);
   }
 
-  private @NotNull Result executeWriteToCustomSpaces(
-      final @NotNull WriteRequest<?, ?, ?> wr, @NotNull String spaceId) {
+  private @NotNull Response executeWriteToCustomSpaces(
+      final @NotNull WriteRequest writeRequest, @NotNull String spaceId) {
     final EventPipeline eventPipeline = pipelineFactory.eventPipeline();
-    final Result result = setupEventPipelineForSpaceId(spaceId, eventPipeline);
-    if (!(result instanceof SuccessResult)) {
+    final Response result = setupEventPipelineForSpaceId(spaceId, eventPipeline);
+    if (!(result instanceof SuccessResponse)) {
       return result;
     }
-    return eventPipeline.sendEvent(wr);
+    return eventPipeline.sendEvent(writeRequest);
   }
 
-  private boolean isDeleteSpaceRequest(@NotNull WriteFeatures<?, ?, ?> wf, @NotNull String spaceId) {
-    return NakshaAdminCollection.SPACES.equals(spaceId)
-        && wf.features.size() == 1
-        && EWriteOp.DELETE.toString().equals(wf.features.get(0).getOp());
+  private boolean isDeleteSpaceRequest(@NotNull WriteRequest writeRequest, @NotNull String spaceId) {
+    if (NakshaAdminCollection.SPACES.equals(spaceId)) {
+      List<Write> writes = writeRequest.getWrites();
+      if (writes.size() == 1) {
+        Write write = writes.get(0);
+        return WriteOp.DELETE.equals(write.getOp());
+      }
+    }
+    return false;
   }
 
-  private @NotNull Result executeDeleteSpace(@NotNull WriteFeatures<?, ?, ?> deleteSpaceEntryReq) {
-    String spaceId = deleteSpaceEntryReq.features.get(0).getId();
-    WriteXyzCollections deleteCollectionReq = new WriteXyzCollections().purge(new XyzCollection(spaceId));
-    Result deleteSpaceRes = executeWriteCollections(deleteCollectionReq, spaceId);
-    if (deleteSpaceRes instanceof SuccessResult) {
-      return executeWriteToAdminSpaces(deleteSpaceEntryReq, deleteSpaceEntryReq.getCollectionId());
+  private @NotNull Response executeDeleteSpace(@NotNull WriteRequest deleteSpaceEntryReq) {
+    Write originalWrite = deleteSpaceEntryReq.getWrites().get(0);
+    String spaceId = originalWrite.getFeatureId();
+    WriteRequest deleteCollectionReq = new WriteRequest().add(new Write().deleteCollectionById(null, spaceId));
+    Response deleteCollectionRes = executeSingleCollectionWrite(deleteCollectionReq, spaceId);
+    if (deleteCollectionRes instanceof SuccessResponse) {
+      return executeWriteToAdminSpaces(deleteSpaceEntryReq, originalWrite.getCollectionId());
     } else {
-      return deleteSpaceRes;
+      return deleteCollectionRes;
     }
   }
 
-  private boolean isUpdateSpaceRequest(@NotNull WriteFeatures<?, ?, ?> wf, @NotNull String spaceId) {
+  private boolean isUpdateSpaceRequest(@NotNull WriteRequest writeRequest, @NotNull String spaceId) {
+    List<Write> writes = writeRequest.getWrites();
     return NakshaAdminCollection.SPACES.equals(spaceId)
-        && wf.features.size() == 1
-        && EWriteOp.UPDATE.toString().equals(wf.features.get(0).getOp());
+        && writes.size() == 1
+        && WriteOp.UPDATE.equals(writes.get(0).getOp());
   }
 
-  private @NotNull Result executeUpdateSpace(@NotNull WriteFeatures<?, ?, ?> updateSpaceEntryReq) {
-    final Space space = ((Space) updateSpaceEntryReq.features.get(0).getFeature());
-    final SpaceProperties spaceProperties = JsonSerializable.convert(space.getProperties(), SpaceProperties.class);
-    final XyzCollection collection = spaceProperties.getXyzCollection();
-    Result updateSpaceRes = null;
+  private @NotNull Response executeUpdateSpace(@NotNull WriteRequest updateSpaceEntryReq) {
+    final Space space = ((Space) updateSpaceEntryReq.getWrites().get(0).getFeature());
+    final SpaceProperties spaceProperties = (SpaceProperties) space.getProperties();
+    final NakshaCollection collection = spaceProperties.getCollection();
+    Response updateSpaceRes = null;
     if (collection != null) {
       // submit Update Collection request to Custom Space based pipeline
-      WriteXyzCollections updateCollectionReq = new WriteXyzCollections().put(collection);
-      updateSpaceRes = executeWriteCollections(updateCollectionReq, space.getId());
+      WriteRequest updateCollectionReq = new WriteRequest().add(new Write().updateCollection(null, collection));
+      updateSpaceRes = executeSingleCollectionWrite(updateCollectionReq, space.getId());
     }
-    if (collection == null || updateSpaceRes instanceof SuccessResult) {
+    if (collection == null || updateSpaceRes instanceof SuccessResponse) {
       // submit Update Space request to Admin Space based pipeline
-      return executeWriteToAdminSpaces(updateSpaceEntryReq, updateSpaceEntryReq.getCollectionId());
+      return executeWriteToAdminSpaces(updateSpaceEntryReq, NakshaAdminCollection.SPACES);
     } else {
       return updateSpaceRes;
     }
   }
 
-  private String singleCollectionIdFrom(WriteCollections<?, ?, ?> wc) {
-    if (wc.features.size() != 1) {
-      throw new IllegalArgumentException("Currently supporting WriteCollections for single collection only, got "
-          + wc.features.size() + " instead");
+  private String singleCollectionIdFrom(WriteRequest writeRequest) {
+    List<Write> writes = writeRequest.getWrites();
+    if (writes.size() != 1) {
+      throw new IllegalArgumentException(
+          "Currently supporting WriteRequest for single collection only, got " + writes.size() + " instead");
     }
     return Objects.requireNonNull(
-            wc.features.get(0).getFeature(),
-            "Got empty (null) feature inside codec when processing WriteCollections")
-        .getId();
-  }
-
-  /**
-   * Acquire a lock to a specific feature in the HEAD state.
-   *
-   * @param collectionId the collection in which the feature is stored.
-   * @param featureId    the identifier of the feature to lock.
-   * @param timeout      the maximum time to wait for the lock.
-   * @param timeUnit     the time-unit in which the wait-time was provided.
-   * @return the lock.
-   * @throws StorageLockException if the locking failed.
-   */
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull IStorageLock lockFeature(
-      @NotNull String collectionId, @NotNull String featureId, long timeout, @NotNull TimeUnit timeUnit)
-      throws StorageLockException {
-    throw new UnsupportedOperationException("Locking not supported by this storage instance!");
-  }
-
-  /**
-   * Acquire an advisory lock.
-   *
-   * @param lockId   the unique identifier of the lock to acquire.
-   * @param timeout  the maximum time to wait for the lock.
-   * @param timeUnit the time-unit in which the wait-time was provided.
-   * @return the lock.
-   * @throws StorageLockException if the locking failed.
-   */
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull IStorageLock lockStorage(@NotNull String lockId, long timeout, @NotNull TimeUnit timeUnit)
-      throws StorageLockException {
-    throw new UnsupportedOperationException("Locking not supported by this storage instance!");
+            writes.get(0), "Got empty (null) feature inside codec when processing WriteCollections")
+        .getFeatureId();
   }
 
   @Override
-  public @NotNull Result executeBulkWriteFeatures(@NotNull WriteRequest<?, ?, ?> writeRequest) {
-    throw new UnsupportedOperationException("bulk write is not supported");
+  public void commit() {
+    // empty on purpose - commits will happen on the pipeline
   }
 
-  /**
-   * Commit all changes.
-   * <p>
-   * Beware setting {@code autoCloseCursors} to {@code true} is often very suboptimal. To keep cursors alive, most of the time the
-   * implementation requires to read all results synchronously from all open cursors in an in-memory cache and to close the underlying
-   * network resources. This can lead to {@link OutOfMemoryError}'s or other issues. It is strictly recommended to first read from all open
-   * cursors before closing, committing or rolling-back a session.
-   *
-   * @param autoCloseCursors If {@code true}, all open cursors are closed; otherwise all pending cursors are kept alive.
-   */
   @Override
-  public void commit(boolean autoCloseCursors) {}
+  public void rollback() {
+    // empty on purpose - rollbacks will happen on the pipeline
+  }
 
-  /**
-   * Abort the transaction, revert all pending changes.
-   * <p>
-   * Beware setting {@code autoCloseCursors} to {@code true} is often very suboptimal. To keep cursors alive, most of the time the
-   * implementation requires to read all results synchronously from all open cursors in an in-memory cache and to close the underlying
-   * network resources. This can lead to {@link OutOfMemoryError}'s or other issues. It is strictly recommended to first read from all open
-   * cursors before closing, committing or rolling-back a session.
-   *
-   * @param autoCloseCursors If {@code true}, all open cursors are closed; otherwise all pending cursors are kept alive.
-   */
   @Override
-  public void rollback(boolean autoCloseCursors) {}
+  public int getSocketTimeout() {
+    throw NOT_SUPPORTED_ERROR;
+  }
 
-  /**
-   * Closes the session and, when necessary invokes {@link #rollback(boolean)}.
-   * <p>
-   * Beware setting {@code autoCloseCursors} to {@code true} is often very suboptimal. To keep cursors alive, most of the time the
-   * implementation requires to read all results synchronously from all open cursors in an in-memory cache and to close the underlying
-   * network resources. This can lead to {@link OutOfMemoryError}'s or other issues. It is strictly recommended to first read from all open
-   * cursors before closing, committing or rolling-back a session.
-   *
-   * @param autoCloseCursors If {@code true}, all open cursors are closed; otherwise all pending cursors are kept alive.
-   */
   @Override
-  public void close(boolean autoCloseCursors) {}
+  public void setSocketTimeout(int i) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public int getStmtTimeout() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public void setStmtTimeout(int i) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public int getLockTimeout() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public void setLockTimeout(int i) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @NotNull
+  @Override
+  public String getMap() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public void setMap(@NotNull String s) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public boolean isClosed() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @NotNull
+  @Override
+  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public void fetchTuples(
+      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @NotNull
+  @Override
+  public Transaction transaction() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @NotNull
+  @Override
+  public Response executeParallel(@NotNull Request request) {
+    throw new NakshaException(
+        new NakshaError(NakshaError.NOT_IMPLEMENTED, "parallel execution not supported for NHSpace"));
+  }
 }

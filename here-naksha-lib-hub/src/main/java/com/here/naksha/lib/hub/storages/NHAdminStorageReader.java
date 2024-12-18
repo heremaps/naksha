@@ -18,152 +18,117 @@
  */
 package com.here.naksha.lib.hub.storages;
 
-import naksha.model.NakshaContext;
-import naksha.model.NakshaVersion;
-import com.here.naksha.lib.core.models.storage.Notification;
-import naksha.model.ReadRequest;
-import com.here.naksha.lib.core.models.storage.Result;
+import java.util.List;
 import naksha.model.IReadSession;
-import java.util.concurrent.TimeUnit;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.NakshaVersion;
+import naksha.model.Tuple;
+import naksha.model.TupleNumber;
+import naksha.model.objects.Transaction;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.ResultTuple;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class NHAdminStorageReader implements IReadSession {
 
-  private final int DEFAULT_FETCH_SIZE = 1_000;
-
-  /** Current session, all read storage operations should be executed against */
+  /**
+   * Current session, all read storage operations should be executed against
+   */
   final @NotNull IReadSession session;
-
-  private int fetchSize;
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   protected NHAdminStorageReader(final @NotNull IReadSession reader) {
     this.session = reader;
-    fetchSize = DEFAULT_FETCH_SIZE;
   }
 
-  /**
-   * Tests whether this session is connected to the master-node.
-   *
-   * @return {@code true}, if this session is connected to the master-node; {@code false} otherwise.
-   */
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public boolean isMasterConnect() {
-    return session.isMasterConnect();
+  public int getSocketTimeout() {
+    return session.getSocketTimeout();
   }
 
-  /**
-   * Returns the Naksha context bound to this read-connection.
-   *
-   * @return the Naksha context bound to this read-connection.
-   */
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull NakshaContext getNakshaContext() {
-    return session.getNakshaContext();
+  public void setSocketTimeout(int i) {
+    session.setSocketTimeout(i);
   }
 
-  /**
-   * Returns the amount of features to fetch at ones.
-   *
-   * @return the amount of features to fetch at ones.
-   */
   @Override
-  public int getFetchSize() {
-    return fetchSize;
+  public int getStmtTimeout() {
+    return session.getStmtTimeout();
   }
 
-  /**
-   * Changes the amount of features to fetch at ones.
-   *
-   * @param size The amount of features to fetch at ones.
-   */
   @Override
-  public void setFetchSize(int size) {
-    this.fetchSize = size;
+  public void setStmtTimeout(int i) {
+    session.setStmtTimeout(i);
   }
 
-  /**
-   * Returns the statement timeout.
-   *
-   * @param timeUnit The time-unit in which to return the timeout.
-   * @return The timeout.
-   */
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public long getStatementTimeout(@NotNull TimeUnit timeUnit) {
-    return session.getStatementTimeout(timeUnit);
+  public int getLockTimeout() {
+    return session.getLockTimeout();
   }
 
-  /**
-   * Sets the statement timeout.
-   *
-   * @param timeout  The timeout to set.
-   * @param timeUnit The unit of the timeout.
-   */
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void setStatementTimeout(long timeout, @NotNull TimeUnit timeUnit) {
-    session.setStatementTimeout(timeout, timeUnit);
+  public void setLockTimeout(int i) {
+    session.setLockTimeout(i);
   }
 
-  /**
-   * Returns the lock timeout.
-   *
-   * @param timeUnit The time-unit in which to return the timeout.
-   * @return The timeout.
-   */
+  @NotNull
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public long getLockTimeout(@NotNull TimeUnit timeUnit) {
-    return session.getLockTimeout(timeUnit);
+  public String getMap() {
+    return session.getMap();
   }
 
-  /**
-   * Sets the lock timeout.
-   *
-   * @param timeout  The timeout to set.
-   * @param timeUnit The unit of the timeout.
-   */
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void setLockTimeout(long timeout, @NotNull TimeUnit timeUnit) {
-    session.setLockTimeout(timeout, timeUnit);
+  public void setMap(@NotNull String s) {
+    session.setMap(s);
   }
 
-  /**
-   * Execute the given read-request.
-   *
-   * @param readRequest input request
-   * @return the result.
-   */
+  @NotNull
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
-    return session.execute(readRequest);
+  public Response execute(@NotNull Request request) {
+    return session.execute(request);
   }
 
-  /**
-   * Process the given notification.
-   *
-   * @param notification input notification
-   * @return the result.
-   */
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull Result process(@NotNull Notification<?> notification) {
-    return session.process(notification);
+  public boolean isClosed() {
+    return session.isClosed();
   }
 
-  /**
-   * Closes the session, returns the underlying connection back to the connection pool. Any method of the session will from now on throw an
-   * {@link IllegalStateException}.
-   */
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
+  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
+    return session.validateHandle(handle, ttl);
+  }
+
+  @NotNull
+  @Override
+  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
+    return session.getTuples(tupleNumbers, fetchFromHistory, mode);
+  }
+
+  @Override
+  public void fetchTuples(
+      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
+    session.fetchTuples(resultTuples, from, to, fetchFromHistory, mode);
+  }
+
+  @NotNull
+  @Override
+  public Transaction transaction() {
+    return session.transaction();
+  }
+
+  @Override
   public void close() {
     session.close();
+  }
+
+  @NotNull
+  @Override
+  public Response executeParallel(@NotNull Request request) {
+    throw new NakshaException(
+        new NakshaError(NakshaError.NOT_IMPLEMENTED, "parallel execution not supported for NHAdmin"));
   }
 }

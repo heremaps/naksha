@@ -18,118 +18,62 @@
  */
 package com.here.naksha.lib.hub.mock;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-
-import naksha.model.*;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.XyzFeature;
-import com.here.naksha.lib.core.models.storage.*;
-import naksha.model.IReadSession;
-import com.here.naksha.lib.psql.EPsqlState;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
-
-import naksha.model.ErrorResult;
-import org.apache.commons.lang3.NotImplementedException;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
+import naksha.geo.ProxyGeoUtil;
+import naksha.geo.SpGeometry;
+import naksha.model.IReadSession;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.TagMap;
+import naksha.model.Tuple;
+import naksha.model.TupleNumber;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
+import naksha.model.objects.Transaction;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Request;
+import naksha.model.request.RequestQuery;
+import naksha.model.request.Response;
+import naksha.model.request.ResultTuple;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.query.ISpatialQuery;
+import naksha.model.request.query.ITagQuery;
+import naksha.model.request.query.SpAnd;
+import naksha.model.request.query.SpIntersects;
+import naksha.model.request.query.SpNot;
+import naksha.model.request.query.SpOr;
+import naksha.model.request.query.SpRefInHereTile;
+import naksha.model.request.query.TagAnd;
+import naksha.model.request.query.TagExists;
+import naksha.model.request.query.TagNot;
+import naksha.model.request.query.TagOr;
+import naksha.model.request.query.TagValueIsBool;
+import naksha.model.request.query.TagValueIsDouble;
+import naksha.model.request.query.TagValueIsNull;
+import naksha.model.request.query.TagValueIsString;
+import naksha.model.request.query.TagValueMatches;
 import org.jetbrains.annotations.NotNull;
-import org.postgresql.util.PSQLState;
+import org.jetbrains.annotations.Nullable;
 
 public class NHAdminReaderMock implements IReadSession {
 
-  protected static @NotNull Map<String, TreeMap<String, Object>> mockCollection;
+  protected static @NotNull Map<String, TreeMap<String, NakshaFeature>> mockCollection;
 
   public NHAdminReaderMock() {
     throw new UnsupportedOperationException(
         "NHAdminReaderMock storage should not be used"); // comment to use mock in local env
   }
 
-  public NHAdminReaderMock(final @NotNull Map<String, TreeMap<String, Object>> mockCollection) {
+  public NHAdminReaderMock(final @NotNull Map<String, TreeMap<String, NakshaFeature>> mockCollection) {
     this.mockCollection = mockCollection;
   }
-
-  /**
-   * Tests whether this session is connected to the master-node.
-   *
-   * @return {@code true}, if this session is connected to the master-node; {@code false} otherwise.
-   */
-  @Override
-  public boolean isMasterConnect() {
-    return false;
-  }
-
-  /**
-   * Returns the Naksha context bound to this read-connection.
-   *
-   * @return the Naksha context bound to this read-connection.
-   */
-  @Override
-  public @NotNull NakshaContext getNakshaContext() {
-    return null;
-  }
-
-  /**
-   * Returns the amount of features to fetch at ones.
-   *
-   * @return the amount of features to fetch at ones.
-   */
-  @Override
-  public int getFetchSize() {
-    throw new NotImplementedException();
-  }
-
-  /**
-   * Changes the amount of features to fetch at ones.
-   *
-   * @param size The amount of features to fetch at ones.
-   */
-  @Override
-  public void setFetchSize(int size) {
-    throw new NotImplementedException();
-  }
-
-  /**
-   * Returns the statement timeout.
-   *
-   * @param timeUnit The time-unit in which to return the timeout.
-   * @return The timeout.
-   */
-  @Override
-  public long getStatementTimeout(@NotNull TimeUnit timeUnit) {
-    return 0;
-  }
-
-  /**
-   * Sets the statement timeout.
-   *
-   * @param timeout  The timeout to set.
-   * @param timeUnit The unit of the timeout.
-   */
-  @Override
-  public void setStatementTimeout(long timeout, @NotNull TimeUnit timeUnit) {}
-
-  /**
-   * Returns the lock timeout.
-   *
-   * @param timeUnit The time-unit in which to return the timeout.
-   * @return The timeout.
-   */
-  @Override
-  public long getLockTimeout(@NotNull TimeUnit timeUnit) {
-    return 0;
-  }
-
-  /**
-   * Sets the lock timeout.
-   *
-   * @param timeout  The timeout to set.
-   * @param timeUnit The unit of the timeout.
-   */
-  @Override
-  public void setLockTimeout(long timeout, @NotNull TimeUnit timeUnit) {}
 
   /**
    * Execute the given read-request.
@@ -138,250 +82,138 @@ public class NHAdminReaderMock implements IReadSession {
    * @return the result.
    */
   @Override
-  public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
-    if (readRequest instanceof ReadFeatures rf) {
+  public @NotNull Response execute(@NotNull Request request) {
+    if (request instanceof ReadFeatures rf) {
       return executeReadFeatures(rf);
     }
-    return new ErrorResult(
-        XyzError.NOT_IMPLEMENTED,
-        "ReadRequest type " + readRequest.getClass().getName() + " not supported");
+    return new ErrorResponse(
+        new NakshaError(NakshaError.ILLEGAL_STATE, "ReadRequest type " + request.getClass().getName() + " not supported"));
   }
 
-  protected @NotNull Result executeReadFeatures(@NotNull ReadFeatures rf) {
-    final POp pOp = rf.getPropertyOp();
-    final List<Object> features = new ArrayList<>();
-    if (pOp == null) {
-      // return all features from given collection names
-      for (final String collectionName : rf.getCollections()) {
-        if (mockCollection.get(collectionName) == null) {
-          throw unchecked(new SQLException(
-              "Collection " + collectionName + " not found!",
-              EPsqlState.COLLECTION_DOES_NOT_EXIST.toString()));
-        }
-        features.addAll(mockCollection.get(collectionName).values());
+  protected @NotNull Response executeReadFeatures(@NotNull ReadFeatures rf) {
+    List<NakshaFeature> features = getFeatures(rf.getCollectionIds(), rf.getFeatureIds(), rf.getQuery());
+    SuccessResponse response = new SuccessResponse();
+    response.setFeatures(NakshaFeatureList.fromList(features));
+    return response;
+  }
+
+  private List<NakshaFeature> getFeatures(List<String> collectionIds, List<String> featureIds, RequestQuery query) {
+    if (query.getProperties() != null || query.getMetadata() != null || !query.getRefTiles().isEmpty()) {
+      throw new NakshaException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Mock supports only tags and spatial query"));
+    }
+    final List<NakshaFeature> allFeaturesFromCollections = getAllFeaturesFromCollections(collectionIds);
+    if (featureIds == null || featureIds.isEmpty()) {
+      return allFeaturesFromCollections;
+    }
+    Stream<NakshaFeature> featureStream = allFeaturesFromCollections.stream()
+        .filter(nf -> featureIds.contains(nf.getId()));
+
+    ITagQuery tagQuery = query.getTags();
+    if (tagQuery != null) {
+      Predicate<NakshaFeature> tagBasedPredicate = tagBasedPredicate(tagQuery);
+      featureStream = featureStream.filter(tagBasedPredicate);
+    }
+
+    ISpatialQuery spatialQuery = query.getSpatial();
+    if (spatialQuery != null) {
+      Predicate<NakshaFeature> spatialPredicate = spatialPredicate(spatialQuery);
+      featureStream = featureStream.filter(spatialPredicate);
+    }
+
+    return featureStream.toList();
+  }
+
+  private List<NakshaFeature> getAllFeaturesFromCollections(List<String> collectionIds) {
+    List<NakshaFeature> features = new ArrayList<>();
+    for (final String collectionId : collectionIds) {
+      if (mockCollection.get(collectionId) == null) {
+        throw new NakshaException(new NakshaError(
+            NakshaError.COLLECTION_NOT_FOUND,
+            "Collection " + collectionId + " not found!"
+        ));
       }
-    } else if (pOp.op() == POpType.EQ && pOp.getPropertyRef() == PRef.id()) {
-      // return features by Id from the given collections names
-      getFeatureById(rf.getCollections(), (String) pOp.getValue(), features);
-    } else if (pOp.op() == OpType.OR) {
-      final List<POp> pOpList = pOp.children();
-      for (final POp orOp : pOpList) {
-        if (orOp.op() == POpType.EQ && orOp.getPropertyRef() == PRef.id()) {
-          getFeatureById(rf.getCollections(), (String) orOp.getValue(), features);
-        } else if (orOp.op() == POpType.EXISTS
-            && orOp.getPropertyRef().getPath().size() == 3
-            && orOp.getPropertyRef().getPath().get(2).equals("tags")) {
-          getFeaturesByTagOrOperation(rf.getCollections(), pOp, features);
-          break;
-        } else if (orOp.op() == OpType.AND) {
-          if (orOp.children().get(0).op() == POpType.EXISTS
-              && orOp.children().get(0).getPropertyRef().getPath().size() == 3
-              && orOp.children()
-                  .get(0)
-                  .getPropertyRef()
-                  .getPath()
-                  .get(2)
-                  .equals("tags")) {
-            getFeaturesByTagAndOperation(rf.getCollections(), orOp, features);
-          } else {
-            // TODO : Operation Not supported
-          }
-        } else {
-          // TODO : Operation Not supported
-        }
+      features.addAll(mockCollection.get(collectionId).values());
+    }
+    return features;
+  }
+
+  private Predicate<NakshaFeature> tagBasedPredicate(ITagQuery tagQuery) {
+    if (tagQuery instanceof TagNot notQuery) {
+      return Predicate.not(tagBasedPredicate(notQuery.getQuery()));
+    } else if (tagQuery instanceof TagOr orQuery) {
+      if (orQuery.isEmpty()) {
+        throw new NakshaException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Empty OR tagQuery"));
       }
-    } else if (pOp.op() == POpType.EXISTS) {
-      if (pOp.getPropertyRef().getPath().size() == 3
-          && pOp.getPropertyRef().getPath().get(2).equals("tags")) {
-        getFeatureByTag(rf.getCollections(), pOp.getPropertyRef().getTagName(), features);
-      } else {
-        // TODO : Operation Not supported
+      Predicate<NakshaFeature> combinedOr = nakshaFeature -> false;
+      for (ITagQuery nestedCondition : orQuery) {
+        combinedOr = combinedOr.or(tagBasedPredicate(nestedCondition));
       }
-    } else if (pOp.op() == OpType.AND) {
-      final List<POp> pOpList = pOp.children();
-      for (final POp andOp : pOpList) {
-        if (andOp.op() == POpType.EXISTS
-            && andOp.getPropertyRef().getPath().size() == 3
-            && andOp.getPropertyRef().getPath().get(2).equals("tags")) {
-          getFeaturesByTagAndOperation(rf.getCollections(), pOp, features);
-          break;
-        } else {
-          // TODO : Operation Not supported
-        }
+      return combinedOr;
+    } else if (tagQuery instanceof TagAnd tagAnd) {
+      if (tagAnd.isEmpty()) {
+        throw new NakshaException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Empty AND tagQuery"));
       }
+      Predicate<NakshaFeature> combinedAnd = nakshaFeature -> true;
+      for (ITagQuery nestedCondition : tagAnd) {
+        combinedAnd = combinedAnd.or(tagBasedPredicate(nestedCondition));
+      }
+      return combinedAnd;
+    } else if (tagQuery instanceof TagExists tagExists) {
+      return nakshaFeature -> tagMapOf(nakshaFeature).containsKey(tagExists.getName());
+    } else if (tagQuery instanceof TagValueIsNull tagValueIsNull) {
+      return nakshaFeature -> tagMapOf(nakshaFeature).get(tagValueIsNull.getName()) == null;
+    } else if (tagQuery instanceof TagValueIsBool tagValueIsBool) {
+      return nakshaFeature -> tagMapOf(nakshaFeature).get(tagValueIsBool.getName()) == Boolean.valueOf(tagValueIsBool.getValue());
+    } else if (tagQuery instanceof TagValueIsDouble tagValueIsDouble) {
+      return nakshaFeature -> Objects.equals(tagMapOf(nakshaFeature).get(tagValueIsDouble.getName()), tagValueIsDouble.getValue());
+    } else if (tagQuery instanceof TagValueIsString tagValueIsString) {
+      return nakshaFeature -> Objects.equals(tagMapOf(nakshaFeature).get(tagValueIsString.getName()), tagValueIsString.getValue());
+    } else if (tagQuery instanceof TagValueMatches tagValueMatches) {
+      return nakshaFeature -> ((String) tagMapOf(nakshaFeature).get(tagValueMatches.getName())).matches(tagValueMatches.getRegex());
     } else {
-      // TODO : Operation Not supported
-    }
-
-    // Apply Spatial operation if was requested
-    final SOp sOp = rf.getSpatialOp();
-    List<Object> spatialFilteredFeatures = null;
-    if (sOp != null) {
-      if (sOp.op() == SOpType.INTERSECTS) {
-        spatialFilteredFeatures = features.stream()
-            .filter(feature -> ((XyzFeature) feature)
-                .getGeometry()
-                .getJTSGeometry()
-                .intersects(sOp.getGeometry()))
-            .toList();
-        features.clear();
-        features.addAll(spatialFilteredFeatures);
-      } else {
-        // TODO : Operation not supported
-      }
-    }
-
-    XyzFeatureCodecFactory codecFactory = XyzCodecFactory.getFactory(XyzFeatureCodecFactory.class);
-    List<XyzFeatureCodec> featuresAsXyzCodecs = features.stream()
-        .map(feature -> codecFactory.newInstance().withFeature((XyzFeature) feature))
-        .toList();
-    return new MockResult<>(XyzFeature.class, featuresAsXyzCodecs);
-  }
-
-  private void getFeatureById(
-      final List<String> collectionNames, final String featureId, final List<Object> features) {
-    // fetch features for given input OR criteria
-    for (final String collectionName : collectionNames) {
-      if (mockCollection.get(collectionName) == null) {
-        throw unchecked(new SQLException(
-            "Collection " + collectionName + " not found!", PSQLState.UNDEFINED_TABLE.getState()));
-      }
-      if (featureId != null) {
-        // fetch for given id
-        final Object feature = mockCollection.get(collectionName).get(featureId);
-        if (feature != null) features.add(feature);
-      }
+      throw new NakshaException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Unknown tag query type: " + tagQuery.getClass().getName()));
     }
   }
 
-  private void getFeatureByTag(final List<String> collectionNames, final String tag, final List<Object> features) {
-    // fetch features for given input OR criteria
-    for (final String collectionName : collectionNames) {
-      if (mockCollection.get(collectionName) == null) {
-        throw unchecked(new SQLException(
-            "Collection " + collectionName + " not found!", PSQLState.UNDEFINED_TABLE.getState()));
+  private TagMap tagMapOf(NakshaFeature nakshaFeature) {
+    return nakshaFeature.getProperties().getXyz().getTags().toTagMap();
+  }
+
+  private Predicate<NakshaFeature> spatialPredicate(ISpatialQuery spatialQuery) {
+    if (spatialQuery instanceof SpNot spNot) {
+      return Predicate.not(spatialPredicate(spNot.getQuery()));
+    } else if (spatialQuery instanceof SpAnd spAnd) {
+      if (spAnd.isEmpty()) {
+        throw new NakshaException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Empty OR tag query"));
       }
-      if (tag != null) {
-        // fetch for given tag
-        for (Object obj : mockCollection.get(collectionName).values()) {
-          XyzFeature feature = (XyzFeature) obj;
-          if (feature.getProperties().getXyzNamespace().getTags() != null
-              && feature.getProperties()
-                  .getXyzNamespace()
-                  .getTags()
-                  .contains(tag)) {
-            if (!features.contains(feature)) {
-              features.add(feature);
-            }
-          }
+      Predicate<NakshaFeature> combinedAnd = nakshaFeature -> true;
+      for (ISpatialQuery nestedCondition : spAnd) {
+        combinedAnd = combinedAnd.and(spatialPredicate(nestedCondition));
+      }
+      return combinedAnd;
+    } else if (spatialQuery instanceof SpOr spOr) {
+      if (spOr.isEmpty()) {
+        throw new NakshaException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Empty AND spatial query"));
+      }
+      Predicate<NakshaFeature> combinedOr = nakshaFeature -> false;
+      for (ISpatialQuery nestedCondition : spOr) {
+        combinedOr = combinedOr.or(spatialPredicate(nestedCondition));
+      }
+      return combinedOr;
+    } else if (spatialQuery instanceof SpIntersects spIntersects) {
+      return nakshaFeature -> {
+        SpGeometry featureGeometry = nakshaFeature.getGeometry();
+        if (featureGeometry != null) {
+          return ProxyGeoUtil.toJtsGeometry(featureGeometry)
+              .intersects(ProxyGeoUtil.toJtsGeometry(spIntersects.getGeometry()));
         }
-      }
+        return false;
+      };
+    } else if (spatialQuery instanceof SpRefInHereTile spRefInHereTile) {
+      throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "SpRefInHereTile is not supported by mock yet"));
     }
-  }
-
-  private void getFeaturesByTagOrOperation(
-      final List<String> collectionNames, final POp orOp, final List<Object> features) {
-    // fetch features for given input OR criteria
-    for (final String collectionName : collectionNames) {
-      if (mockCollection.get(collectionName) == null) {
-        throw unchecked(new SQLException(
-            "Collection " + collectionName + " not found!", PSQLState.UNDEFINED_TABLE.getState()));
-      }
-      // for each available feature apply AND / OR condition on tag recursively
-      for (Object obj : mockCollection.get(collectionName).values()) {
-        XyzFeature feature = matchFeatureAgainstTagOrOperations((XyzFeature) obj, orOp);
-        if (feature != null) {
-          if (!features.contains(feature)) {
-            features.add(feature);
-          }
-        }
-      }
-    }
-  }
-
-  private void getFeaturesByTagAndOperation(
-      final List<String> collectionNames, final POp andOp, final List<Object> features) {
-    // fetch features for given input OR criteria
-    for (final String collectionName : collectionNames) {
-      if (mockCollection.get(collectionName) == null) {
-        throw unchecked(new SQLException(
-            "Collection " + collectionName + " not found!", PSQLState.UNDEFINED_TABLE.getState()));
-      }
-      // for each available feature apply AND / OR condition on tag recursively
-      for (Object obj : mockCollection.get(collectionName).values()) {
-        XyzFeature feature = matchFeatureAgainstTagAndOperations((XyzFeature) obj, andOp);
-        if (feature != null) {
-          if (!features.contains(feature)) {
-            features.add(feature);
-          }
-        }
-      }
-    }
-  }
-
-  private XyzFeature matchFeatureAgainstTagAndOperations(final XyzFeature feature, final POp andOp) {
-    // fetch features for given input AND criteria
-    // so return feature as null, as soon as even one AND condition mismatch
-    for (final POp tagOp : andOp.children()) {
-      if (tagOp.op() == POpType.EXISTS
-          && tagOp.getPropertyRef().getPath().size() == 3
-          && tagOp.getPropertyRef().getPath().get(2).equals("tags")) {
-        if (feature.getProperties().getXyzNamespace().getTags() == null
-            || !feature.getProperties()
-                .getXyzNamespace()
-                .getTags()
-                .contains(tagOp.getPropertyRef().getTagName())) {
-          return null;
-        }
-      } else if (tagOp.op() == POpType.AND) {
-        XyzFeature matchingFeature = matchFeatureAgainstTagAndOperations(feature, tagOp);
-        if (matchingFeature == null) return null;
-      } else if (tagOp.op() == POpType.OR) {
-        XyzFeature matchingFeature = matchFeatureAgainstTagOrOperations(feature, tagOp);
-        if (matchingFeature == null) return null;
-      } else {
-        return null;
-      }
-    }
-    return feature;
-  }
-
-  private XyzFeature matchFeatureAgainstTagOrOperations(final XyzFeature feature, final POp orOp) {
-    // fetch features for given input OR criteria
-    // so return feature as null, as soon as even one OR condition match
-    for (final POp tagOp : orOp.children()) {
-      if (tagOp.op() == POpType.EXISTS
-          && tagOp.getPropertyRef().getPath().size() == 3
-          && tagOp.getPropertyRef().getPath().get(2).equals("tags")) {
-        if (feature.getProperties().getXyzNamespace().getTags() != null
-            && feature.getProperties()
-                .getXyzNamespace()
-                .getTags()
-                .contains(tagOp.getPropertyRef().getTagName())) {
-          return feature;
-        }
-      } else if (tagOp.op() == POpType.AND) {
-        XyzFeature matchingFeature = matchFeatureAgainstTagAndOperations(feature, tagOp);
-        if (matchingFeature != null) return matchingFeature;
-      } else if (tagOp.op() == POpType.OR) {
-        XyzFeature matchingFeature = matchFeatureAgainstTagOrOperations(feature, tagOp);
-        if (matchingFeature != null) return matchingFeature;
-      } else {
-        return null;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Process the given notification.
-   *
-   * @param notification
-   * @return the result.
-   */
-  @Override
-  public @NotNull Result process(@NotNull Notification<?> notification) {
-    return null;
+    throw new NakshaException(
+        new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported spatial query: " + spatialQuery.getClass().getName()));
   }
 
   /**
@@ -389,5 +221,80 @@ public class NHAdminReaderMock implements IReadSession {
    * {@link IllegalStateException}.
    */
   @Override
-  public void close() {}
+  public void close() {
+  }
+
+  @Override
+  public int getSocketTimeout() {
+    return 0;
+  }
+
+  @Override
+  public void setSocketTimeout(int i) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public int getStmtTimeout() {
+    return 0;
+  }
+
+  @Override
+  public void setStmtTimeout(int i) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public int getLockTimeout() {
+    return 0;
+  }
+
+  @Override
+  public void setLockTimeout(int i) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @NotNull
+  @Override
+  public String getMap() {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public void setMap(@NotNull String s) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public boolean isClosed() {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @NotNull
+  @Override
+  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public void fetchTuples(@NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @NotNull
+  @Override
+  public Transaction transaction() {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @NotNull
+  @Override
+  public Response executeParallel(@NotNull Request request) {
+    return IReadSession.super.executeParallel(request);
+  }
 }

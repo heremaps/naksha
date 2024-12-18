@@ -19,13 +19,13 @@
 package com.here.naksha.lib.handlers.internal;
 
 import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
 import static com.here.naksha.lib.handlers.internal.PluginPropertiesValidator.pluginValidation;
 
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
+import com.here.naksha.lib.core.util.storage.ResultHelper;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import com.here.naksha.storage.http.HttpStorage;
 import com.here.naksha.storage.http.HttpStorageProperties;
@@ -177,7 +177,7 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
       final SuccessResponse successResponse = (SuccessResponse) readResult;
       final List<EventHandler> eventHandlers;
       try {
-        eventHandlers = readFeaturesFromResult(successResponse, EventHandler.class);
+        eventHandlers = ResultHelper.extractResponseItems(successResponse, EventHandler.class);
       } catch (NoSuchElementException emptyException) {
         // No active handler using the storage, proceed with deleting the storage
         return new SuccessResponse();

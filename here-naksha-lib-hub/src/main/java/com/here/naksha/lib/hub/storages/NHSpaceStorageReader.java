@@ -20,28 +20,15 @@ package com.here.naksha.lib.hub.storages;
 
 import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdRequest;
 import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResult;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResponse;
 
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaAdminCollection;
-import naksha.model.NakshaContext;
-import naksha.model.NakshaVersion;
-import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
-import naksha.model.ErrorResult;
-import com.here.naksha.lib.core.models.storage.Notification;
-import naksha.model.ReadCollections;
-import naksha.model.ReadFeatures;
-import naksha.model.ReadRequest;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import naksha.model.IReadSession;
-import naksha.model.StreamInfo;
+import com.here.naksha.lib.core.util.storage.ResultHelper;
 import com.here.naksha.lib.handlers.AuthorizationEventHandler;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.ArrayList;
@@ -49,7 +36,23 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.concurrent.TimeUnit;
+import naksha.model.IReadSession;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.NakshaVersion;
+import naksha.model.SessionOptions;
+import naksha.model.StreamInfo;
+import naksha.model.Tuple;
+import naksha.model.TupleNumber;
+import naksha.model.objects.Transaction;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.ReadCollections;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.ResultTuple;
+import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -58,21 +61,16 @@ import org.slf4j.LoggerFactory;
 
 public class NHSpaceStorageReader implements IReadSession {
 
-  private static final int DEFAULT_FETCH_SIZE = 1_000;
+  private static final NakshaException NOT_SUPPORTED_ERROR = new NakshaException(
+      new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Operation not supported by NHSpaceStorageReader"));
+
   private static final Logger logger = LoggerFactory.getLogger(NHSpaceStorageReader.class);
 
   /**
    * Singleton instance of NakshaHub storage implementation
    */
   protected final @NotNull INaksha nakshaHub;
-  /**
-   * Runtime NakshaContext which is to be associated with read operations
-   */
-  protected final @NotNull NakshaContext context;
-  /**
-   * Flag to indicate whether it has to connect to master storage instance or not
-   */
-  protected final boolean useMaster;
+
   /**
    * List of Admin virtual spaces with relevant event handlers required to support event processing
    */
@@ -80,228 +78,147 @@ public class NHSpaceStorageReader implements IReadSession {
 
   protected final @NotNull EventPipelineFactory pipelineFactory;
 
-  private @NotNull int fetchSize;
+  /**
+   * Runtime session information
+   */
+  protected final @Nullable SessionOptions sessionOptions;
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public NHSpaceStorageReader(
       final @NotNull INaksha hub,
       final @NotNull Map<String, List<IEventHandler>> virtualSpaces,
       final @NotNull EventPipelineFactory pipelineFactory,
-      final @Nullable NakshaContext context,
-      boolean useMaster) {
+      final @Nullable SessionOptions sessionOptions) {
     this.nakshaHub = hub;
     this.virtualSpaces = virtualSpaces;
     this.pipelineFactory = pipelineFactory;
-    this.context = (context != null) ? context : NakshaContext.currentContext();
-    this.useMaster = useMaster;
-    fetchSize = DEFAULT_FETCH_SIZE;
+    this.sessionOptions =
+        sessionOptions != null ? sessionOptions : SessionOptions.from(NakshaContext.currentContext(), false);
   }
-
-  /**
-   * Tests whether this session is connected to the master-node.
-   *
-   * @return {@code true}, if this session is connected to the master-node; {@code false} otherwise.
-   */
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public boolean isMasterConnect() {
-    return useMaster;
-  }
-
-  /**
-   * Returns the Naksha context bound to this read-connection.
-   *
-   * @return the Naksha context bound to this read-connection.
-   */
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull NakshaContext getNakshaContext() {
-    return this.context;
-  }
-
-  /**
-   * Returns the amount of features to fetch at ones.
-   *
-   * @return the amount of features to fetch at ones.
-   */
-  @Override
-  public int getFetchSize() {
-    return fetchSize;
-  }
-
-  /**
-   * Changes the amount of features to fetch at ones.
-   *
-   * @param size The amount of features to fetch at ones.
-   */
-  @Override
-  public void setFetchSize(int size) {
-    this.fetchSize = size;
-  }
-
-  /**
-   * Returns the statement timeout.
-   *
-   * @param timeUnit The time-unit in which to return the timeout.
-   * @return The timeout.
-   */
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public long getStatementTimeout(@NotNull TimeUnit timeUnit) {
-    return 0;
-  }
-
-  /**
-   * Sets the statement timeout.
-   *
-   * @param timeout  The timeout to set.
-   * @param timeUnit The unit of the timeout.
-   */
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void setStatementTimeout(long timeout, @NotNull TimeUnit timeUnit) {}
-
-  /**
-   * Returns the lock timeout.
-   *
-   * @param timeUnit The time-unit in which to return the timeout.
-   * @return The timeout.
-   */
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public long getLockTimeout(@NotNull TimeUnit timeUnit) {
-    return 0;
-  }
-
-  /**
-   * Sets the lock timeout.
-   *
-   * @param timeout  The timeout to set.
-   * @param timeUnit The unit of the timeout.
-   */
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void setLockTimeout(long timeout, @NotNull TimeUnit timeUnit) {}
 
   /**
    * Execute the given read-request.
    *
-   * @param readRequest input read request
+   * @param request input read request
    * @return the result.
    */
   @Override
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull Result execute(final @NotNull ReadRequest<?> readRequest) {
-    if (readRequest instanceof ReadCollections rc) {
-      return executeReadCollections(rc);
-    } else if (readRequest instanceof ReadFeatures rf) {
-      return executeReadFeatures(rf);
+  public @NotNull Response execute(final @NotNull Request request) {
+    if (request instanceof ReadFeatures readFeatures) {
+      return executeReadFeatures(readFeatures);
+    } else if (request instanceof ReadCollections readCollections) {
+      return executeReadFeatures(readCollections.toReadFeatures());
     }
     throw new UnsupportedOperationException(
-        "ReadRequest with unsupported type " + readRequest.getClass().getName());
+        "Request with unsupported type " + request.getClass().getName());
   }
 
-  private @NotNull Result executeReadCollections(final @NotNull ReadCollections rc) {
-    logger.info("ReadCollections Request for {}, against Admin storage.", rc.getIds());
-    try (final IReadSession admin = nakshaHub.getAdminStorage().newReadSession(context, useMaster)) {
-      return admin.execute(rc);
-    }
-  }
-
-  private @NotNull Result executeReadFeatures(final @NotNull ReadFeatures rf) {
-    if (rf.getCollections().size() > 1) {
+  private @NotNull Response executeReadFeatures(final @NotNull ReadFeatures rf) {
+    List<String> collectionIds = rf.getCollectionIds();
+    if (collectionIds.size() > 1) {
       throw new UnsupportedOperationException("Reading from multiple spaces not supported!");
     }
-    final String spaceId = rf.getCollections().get(0);
+    final String spaceId = collectionIds.get(0);
     logger.info("ReadFeatures Request against spaceId={}", spaceId);
     addSpaceIdToStreamInfo(spaceId);
     if (virtualSpaces.containsKey(spaceId)) {
       // Request is to read from Naksha Admin space
-      return executeReadFeaturesFromAdminSpaces(rf);
+      return executeReadFeaturesFromAdminSpaces(rf, spaceId);
     } else {
       // Request is to read from Custom space
       return executeReadFeaturesFromCustomSpaces(rf);
     }
   }
 
-  private @NotNull Result executeReadFeaturesFromAdminSpaces(final @NotNull ReadFeatures rf) {
+  private @NotNull Response executeReadFeaturesFromAdminSpaces(
+      final @NotNull ReadFeatures rf, final @NotNull String spaceId) {
     // Run pipeline against virtual space
-    final String spaceId = rf.getCollections().get(0);
     final EventPipeline pipeline = pipelineFactory.eventPipeline();
-    final Result result = setupEventPipelineForAdminVirtualSpace(spaceId, pipeline);
-    if (!(result instanceof SuccessResult)) {
+    final Response result = setupEventPipelineForAdminVirtualSpace(spaceId, pipeline);
+    if (!(result instanceof SuccessResponse)) {
       return result;
     }
     return pipeline.sendEvent(rf);
   }
 
-  protected @NotNull Result setupEventPipelineForAdminVirtualSpace(
+  protected @NotNull Response setupEventPipelineForAdminVirtualSpace(
       final @NotNull String spaceId, final @NotNull EventPipeline pipeline) {
     // add internal Admin resource specific event handlers
     final StringBuilder handlerTypes = new StringBuilder();
     for (final IEventHandler handler : virtualSpaces.get(spaceId)) {
       pipeline.addEventHandler(handler);
-      if (handlerTypes.length() == 0) {
+      if (handlerTypes.isEmpty()) {
         handlerTypes.append(handler.getClass().getSimpleName());
       } else {
         handlerTypes.append(",").append(handler.getClass().getSimpleName());
       }
     }
     logger.info("Handler types identified [{}]", handlerTypes);
-    return new SuccessResult();
+    return new SuccessResponse();
   }
 
-  private @NotNull Result executeReadFeaturesFromCustomSpaces(final @NotNull ReadFeatures rf) {
-    if (rf.getCollections().size() > 1) {
-      return new ErrorResult(
-          XyzError.NOT_IMPLEMENTED, "ReadFeatures from multiple collections not supported at present!");
+  private @NotNull Response executeReadFeaturesFromCustomSpaces(final @NotNull ReadFeatures rf) {
+    List<String> collectionIds = rf.getCollectionIds();
+    if (collectionIds.size() > 1) {
+      return new ErrorResponse(new NakshaError(
+          NakshaError.UNSUPPORTED_OPERATION,
+          "ReadFeatures from multiple collections not supported at present!"));
     }
-    final String spaceId = rf.getCollections().get(0);
+    final String spaceId = collectionIds.get(0);
     final EventPipeline eventPipeline = pipelineFactory.eventPipeline();
-    final Result result = setupEventPipelineForSpaceId(spaceId, eventPipeline);
-    if (!(result instanceof SuccessResult)) {
-      return result;
+    final Response response = setupEventPipelineForSpaceId(spaceId, eventPipeline);
+    if (!(response instanceof SuccessResponse)) {
+      return response;
     }
     return eventPipeline.sendEvent(rf);
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  protected @NotNull Result setupEventPipelineForSpaceId(
+  protected @NotNull Response setupEventPipelineForSpaceId(
       final @NotNull String spaceId, final @NotNull EventPipeline pipeline) {
     Space space = null;
     List<EventHandler> eventHandlers = null;
 
-    try (final IReadSession reader = nakshaHub.getAdminStorage().newReadSession(context, false)) {
+    try (final IReadSession reader = nakshaHub.getAdminStorage().newReadSession(sessionOptions)) {
       // Get Space details using Admin Storage
-      Result result = reader.execute(readFeaturesByIdRequest(NakshaAdminCollection.SPACES, spaceId));
-      if (result instanceof ErrorResult er) {
+      Response response = reader.execute(readFeaturesByIdRequest(NakshaAdminCollection.SPACES, spaceId));
+      if (response instanceof ErrorResponse er) {
         return er;
+      } else if (response instanceof SuccessResponse successResponse) {
+        space = readFeatureFromResponse(successResponse, Space.class);
       } else {
-        space = readFeatureFromResult(result, Space.class);
+        return new ErrorResponse(
+            NakshaError.ILLEGAL_STATE,
+            "Unexpected response type: " + response.getClass().getName());
       }
       if (space == null) {
-        return new ErrorResult(XyzError.NOT_FOUND, "Space not found : " + spaceId);
+        return new ErrorResponse(NakshaError.NOT_FOUND, "Space not found : " + spaceId);
       }
       if (space.getEventHandlerIds() == null || space.getEventHandlerIds().isEmpty()) {
-        return new ErrorResult(XyzError.NOT_FOUND, "No associated handler");
+        return new ErrorResponse(NakshaError.NOT_FOUND, "No associated handler");
       }
 
       logger.info("Handler IDs identified {}", space.getEventHandlerIds());
       // Get EventHandler Details using Admin Storage
-      result = reader.execute(
+      response = reader.execute(
           readFeaturesByIdsRequest(NakshaAdminCollection.EVENT_HANDLERS, space.getEventHandlerIds()));
-      if (result instanceof ErrorResult er) {
+      if (response instanceof ErrorResponse er) {
         return er;
-      } else {
+      } else if (response instanceof SuccessResponse successResponse) {
         try {
-          eventHandlers = readFeaturesFromResult(result, EventHandler.class);
+          eventHandlers = ResultHelper.extractResponseItems(successResponse, EventHandler.class);
           if (eventHandlers.size() != space.getEventHandlerIds().size()) {
-            return new ErrorResult(
-                XyzError.EXCEPTION, "Not all EventHandlers found for space : " + spaceId);
+            return new ErrorResponse(
+                NakshaError.EXCEPTION, "Not all EventHandlers found for space : " + spaceId);
           }
-        } catch (NoCursor | NoSuchElementException e) {
-          return new ErrorResult(XyzError.EXCEPTION, "No handlers associated with space : " + spaceId);
+        } catch (NoSuchElementException e) {
+          return new ErrorResponse(NakshaError.EXCEPTION, "No handlers associated with space : " + spaceId);
         }
+      } else {
+        return new ErrorResponse(
+            NakshaError.ILLEGAL_STATE,
+            "Unexpected response type: " + response.getClass().getName());
       }
     }
 
@@ -320,7 +237,7 @@ public class NHSpaceStorageReader implements IReadSession {
       handlerImpls.add(eventHandler.newInstance(nakshaHub, space));
     }
     if (handlerImpls.isEmpty()) {
-      return new ErrorResult(XyzError.EXCEPTION, "No active EventHandlers found for space : " + spaceId);
+      return new ErrorResponse(NakshaError.NOT_FOUND, "No active EventHandlers found for space : " + spaceId);
     }
 
     // Create pipeline and add all applicable event handlers
@@ -329,26 +246,14 @@ public class NHSpaceStorageReader implements IReadSession {
     final StringBuilder handlerTypes = new StringBuilder();
     for (final IEventHandler handler : handlerImpls) {
       pipeline.addEventHandler(handler);
-      if (handlerTypes.length() == 0) {
+      if (handlerTypes.isEmpty()) {
         handlerTypes.append(handler.getClass().getSimpleName());
       } else {
         handlerTypes.append(",").append(handler.getClass().getSimpleName());
       }
     }
     logger.info("Handler types identified [{}]", handlerTypes);
-    return new SuccessResult();
-  }
-
-  /**
-   * Process the given notification.
-   *
-   * @param notification notification event
-   * @return the result.
-   */
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull Result process(@NotNull Notification<?> notification) {
-    throw new UnsupportedOperationException("Notification processing not supported!");
+    return new SuccessResponse();
   }
 
   /**
@@ -360,9 +265,85 @@ public class NHSpaceStorageReader implements IReadSession {
   public void close() {}
 
   protected void addSpaceIdToStreamInfo(final @Nullable String spaceId) {
-    final StreamInfo streamInfo = context.getStreamInfo();
+    final StreamInfo streamInfo = sessionOptions.streamInfo;
     if (streamInfo != null) {
       streamInfo.setSpaceIdIfMissing(spaceId);
     }
+  }
+
+  @Override
+  public int getSocketTimeout() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public void setSocketTimeout(int i) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public int getStmtTimeout() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public void setStmtTimeout(int i) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public int getLockTimeout() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public void setLockTimeout(int i) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @NotNull
+  @Override
+  public String getMap() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public void setMap(@NotNull String s) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public boolean isClosed() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @NotNull
+  @Override
+  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public void fetchTuples(
+      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @NotNull
+  @Override
+  public Transaction transaction() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @NotNull
+  @Override
+  public Response executeParallel(@NotNull Request request) {
+    throw new NakshaException(
+        new NakshaError(NakshaError.NOT_IMPLEMENTED, "parallel execution not supported for NHSpace"));
   }
 }

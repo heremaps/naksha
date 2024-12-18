@@ -96,7 +96,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
   private @NotNull XyzResponse executeCreateHandler() throws Exception {
     // Read request JSON
     final EventHandler newHandler = handlerFromRequestBody();
-    final WriteXyzFeatures writeRequest = RequestHelper.createFeatureRequest(EVENT_HANDLERS, newHandler, false);
+    final WriteXyzFeatures writeRequest = RequestHelper.createFeatureRequest(EVENT_HANDLERS, newHandler);
     // persist new handler in Admin DB (if doesn't exist already)
     try (Result writeResult = executeWriteRequestFromSpaceStorage(writeRequest)) {
       return transformWriteResultToXyzFeatureResponse(writeResult, EventHandler.class);
