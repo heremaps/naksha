@@ -22,7 +22,7 @@ open class NakshaProperties : AnyObject() {
         const val FEATURE_TYPE = "featureType"
         const val XYZ_KEY = "@ns:com:here:xyz"
         const val DELTA_KEY = "@ns:com:here:delta"
-        const val META_KEY = "@ns:com:here:meta"
+        const val META_KEY = "@ns:com:here:mom:meta"
 
         private val XYZ = NotNullProperty<NakshaProperties, XyzNs>(XyzNs::class, name = XYZ_KEY)
         private val DELTA_PROXY_NULL = NullableProperty<NakshaProperties, MomDeltaNs>(MomDeltaNs::class, name = DELTA_KEY)
