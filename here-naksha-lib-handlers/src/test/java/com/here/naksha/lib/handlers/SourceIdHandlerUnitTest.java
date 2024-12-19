@@ -78,46 +78,29 @@ class SourceIdHandlerUnitTest {
     @Test
     void tc2006_testMapsCorrectlyCombinedOperation () {
         //given
-        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "sourceId");
-        POp given = POp.and(POp.not(POp.eq(pRef, "task_1")), POp.contains(PRef.tag("funnyTag"), "4"));
-        //when
-
-        PropertyOperationUtil.transformPropertyInPropertyOperationTree(given, SourceIdHandler::mapIntoTagOperation);
-       //then
-
-        assertEquals(given.op(), OpType.AND);
-        assertFalse(given.children().isEmpty());
-        assertEquals(given.children().size(), 2);
-        assertEquals(given.children().get(0).op(), OpType.NOT);
-
-        POp nestedPop = given.children().get(0).children().get(0);
-        assertEquals(nestedPop.getPropertyRef().getTagName(), "xyz_source_id_task_1");
-        assertEquals(nestedPop.op(), POpType.EXISTS);
-
-        assertEquals(given.children().get(1).op(), POpType.CONTAINS);
-
-        //given
         final Property property = new Property(NakshaProperties.META_KEY, "sourceId");
         final Property property2 = new Property(NakshaProperties.META_KEY, "funnyTag");
         final PAnd given = new PAnd();
         given.add(new PNot(new PQuery(property, StringOp.EQUALS,"task_1")));
         given.add(new PQuery(property2, StringOp.CONTAINS,"4"));
 
-        final RequestQuery query = new RequestQuery();
-        query.setProperties(given);
         //when
 
-        PropertyOperationUtil.transformPropertyInPropertyOperationTree(given,query, (propertyOperation, query1) -> SourceIdHandler.mapIntoTagOperation(propertyOperation));
+        final Optional<ITagQuery> tagQuery = SourceIdHandler.mapIntoTagOperation(given);
         //then
 
-        assertInstanceOf(TagAnd.class,query.getTags());
-        final TagAnd tagAnd = (TagAnd) query.getTags();
-        assertEquals(2, tagAnd.size());
+        assertTrue(tagQuery.isPresent());
+        assertInstanceOf(TagAnd.class,tagQuery.get());
+        final TagAnd tagAnd = (TagAnd) tagQuery.get();
+        assertEquals(1, tagAnd.size());
         assertInstanceOf(TagNot.class,tagAnd.get(0));
         final TagNot nestedTagNot = (TagNot) tagAnd.get(0);
         assertInstanceOf(TagExists.class,nestedTagNot.getQuery());
         final TagExists nestedTagExist = (TagExists) nestedTagNot.getQuery();
         assertEquals("xyz_source_id_task_1", nestedTagExist.getName());
+        assertEquals(1, given.size());
+        assertInstanceOf(PQuery.class, given.get(0));
+        assertEquals(StringOp.CONTAINS,((PQuery) given.get(0)).getOp());
     }
     @Test
     void tc2007_testMapEqToContainsTagWithoutNormalization() {
