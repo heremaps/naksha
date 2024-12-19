@@ -61,7 +61,7 @@ public class SourceIdHandler extends AbstractEventHandler {
     logger.info("Handler received request {}", request.getClass().getSimpleName());
     if (request instanceof ReadFeatures readRequest) {
       // Read request
-      transformPropertyOperation(readRequest);
+      mapIntoTagOperation(readRequest);
     } else if (request instanceof WriteRequest wr) {
       // Write request
       WriteList codecList = wr.getWrites();
@@ -79,7 +79,13 @@ public class SourceIdHandler extends AbstractEventHandler {
     return event.sendUpstream(request);
   }
 
-  private void transformPropertyOperation(ReadFeatures readRequest) {
+  /**
+   * For the AND case, any property query sub-clause that can be converted into tag query will be converted and returned, leaving the remaining inconvertible clauses intact.
+   * <br>
+   * For the OR case, it is required that every sub-clause must be convertible, else the whole clause will not be converted.
+   * This is because OR relation between types of queries (property, tag, spatial,...) is not supported, only AND is supported and applied at the very end of the request.
+   */
+  public static void mapIntoTagOperation(ReadFeatures readRequest) {
 
     if (readRequest.getQuery().getProperties() == null) {
       return;
@@ -87,7 +93,7 @@ public class SourceIdHandler extends AbstractEventHandler {
 
     IPropertyQuery propertyOp = readRequest.getQuery().getProperties();
 
-    final Optional<ITagQuery> tagQuery = mapIntoTagOperation(propertyOp);
+    final Optional<ITagQuery> tagQuery = transformPropertyOperation(propertyOp);
     if (tagQuery.isPresent()) {
       readRequest.getQuery().setTags(tagQuery.get());
       if (isFullyConvertedToITagQuery(propertyOp)) {
@@ -127,13 +133,7 @@ public class SourceIdHandler extends AbstractEventHandler {
             || ((propertyQuery instanceof PAnd pAnd) && (pAnd.isEmpty()));
   }
 
-  /**
-   * For the AND case, any property query sub-clause that can be converted into tag query will be converted and returned, leaving the remaining inconvertible clauses intact.
-   * <br>
-   * For the OR case, it is required that every sub-clause must be convertible, else the whole clause will not be converted.
-   * This is because OR relation between types of queries (property, tag, spatial,...) is not supported, only AND is supported and applied at the very end of the request.
-   */
-  public static Optional<ITagQuery> mapIntoTagOperation(IPropertyQuery propertyOperation) {
+  private static Optional<ITagQuery> transformPropertyOperation(IPropertyQuery propertyOperation) {
     if (propertyOperation instanceof PAnd pAnd) {
       final TagAnd tagAnd = new TagAnd();
       // List of successfully transformed property queries to be removed at the end, so as not to disrupt the loop
@@ -141,7 +141,7 @@ public class SourceIdHandler extends AbstractEventHandler {
       final int size = pAnd.size();
       for (int i = 0; i < size; i++) {
         final IPropertyQuery propertyComponent = pAnd.get(i);
-        final Optional<ITagQuery> tagComponent = mapIntoTagOperation(propertyComponent);
+        final Optional<ITagQuery> tagComponent = transformPropertyOperation(propertyComponent);
         if (tagComponent.isPresent()) {
           tagAnd.add(tagComponent.get());
           if (isFullyConvertedToITagQuery(propertyComponent)) {
@@ -166,7 +166,7 @@ public class SourceIdHandler extends AbstractEventHandler {
     else if (propertyOperation instanceof POr pOr) {
       final TagOr tagOr = new TagOr();
         for (IPropertyQuery iPropertyQuery : pOr) {
-            final Optional<ITagQuery> tagComponent = mapIntoTagOperation(iPropertyQuery);
+            final Optional<ITagQuery> tagComponent = transformPropertyOperation(iPropertyQuery);
             if (tagComponent.isEmpty()) {
               // At least one sub-clause in an OR clause cannot be converted, hence abort and leave the whole OR as is
                 return Optional.empty();
@@ -176,7 +176,7 @@ public class SourceIdHandler extends AbstractEventHandler {
       return Optional.of(tagOr);
     }
     else if (propertyOperation instanceof PNot pNot) {
-      final Optional<ITagQuery> tagComponent = mapIntoTagOperation(pNot.getQuery());
+      final Optional<ITagQuery> tagComponent = transformPropertyOperation(pNot.getQuery());
         return tagComponent.map(TagNot::new);
     }
     else if (propertyOperation instanceof PQuery pQuery) {

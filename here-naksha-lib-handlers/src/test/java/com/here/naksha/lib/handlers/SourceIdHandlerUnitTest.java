@@ -1,12 +1,15 @@
 package com.here.naksha.lib.handlers;
 
-import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
 import naksha.model.objects.NakshaProperties;
-import naksha.model.request.RequestQuery;
+import naksha.model.request.ReadFeatures;
 import naksha.model.request.query.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -17,14 +20,17 @@ class SourceIdHandlerUnitTest {
         //given
         final Property property = new Property(NakshaProperties.META_KEY, "sourceId");
         final PQuery given = new PQuery(property, StringOp.EQUALS,"task_1");
+        final ReadFeatures readFeatures = new ReadFeatures();
+        readFeatures.getQuery().setProperties(given);
         //when
 
-        Optional<ITagQuery> tagQuery = SourceIdHandler.mapIntoTagOperation(given);
+        SourceIdHandler.mapIntoTagOperation(readFeatures);
         //then
 
-        assertTrue(tagQuery.isPresent());
-        assertInstanceOf(TagExists.class,tagQuery.get());
-        final TagExists exists = (TagExists) tagQuery.get();
+        final ITagQuery tagQuery = readFeatures.getQuery().getTags();
+
+        assertInstanceOf(TagExists.class,tagQuery);
+        final TagExists exists = (TagExists) tagQuery;
         assertEquals("xyz_source_id_task_1", exists.getName());
     }
 
@@ -33,14 +39,17 @@ class SourceIdHandlerUnitTest {
         //given
         final Property property = new Property(NakshaProperties.META_KEY, "sourceId");
         final IPropertyQuery given = new PNot(new PQuery(property, StringOp.EQUALS,"task_1"));
+        final ReadFeatures readFeatures = new ReadFeatures();
+        readFeatures.getQuery().setProperties(given);
         //when
 
-        Optional<ITagQuery> tagQuery = SourceIdHandler.mapIntoTagOperation(given);
+        SourceIdHandler.mapIntoTagOperation(readFeatures);
         //then
 
-        assertTrue(tagQuery.isPresent());
-        assertInstanceOf(TagNot.class,tagQuery.get());
-        final TagNot tagNot = (TagNot) tagQuery.get();
+        final ITagQuery tagQuery = readFeatures.getQuery().getTags();
+
+        assertInstanceOf(TagNot.class,tagQuery);
+        final TagNot tagNot = (TagNot) tagQuery;
         assertInstanceOf(TagExists.class,tagNot.getQuery());
         final TagExists exists = (TagExists) tagNot.getQuery();
         assertEquals("xyz_source_id_task_1", exists.getName());
@@ -51,14 +60,17 @@ class SourceIdHandlerUnitTest {
         //given
         final Property property = new Property(NakshaProperties.META_KEY, "sourceId");
         final PQuery given = new PQuery(property, StringOp.CONTAINS,"task_1");
+        final ReadFeatures readFeatures = new ReadFeatures();
+        readFeatures.getQuery().setProperties(given);
         //when
 
-        final Optional<ITagQuery> tagQuery = SourceIdHandler.mapIntoTagOperation(given);
+        SourceIdHandler.mapIntoTagOperation(readFeatures);
         //then
 
-        assertTrue(tagQuery.isPresent());
-        assertInstanceOf(TagExists.class,tagQuery.get());
-        final TagExists exists = (TagExists) tagQuery.get();
+        final ITagQuery tagQuery = readFeatures.getQuery().getTags();
+
+        assertInstanceOf(TagExists.class,tagQuery);
+        final TagExists exists = (TagExists) tagQuery;
         assertEquals("xyz_source_id_task_1", exists.getName());
     }
 
@@ -67,12 +79,16 @@ class SourceIdHandlerUnitTest {
         //given
         final Property property = new Property(NakshaProperties.META_KEY, "WrongProperty");
         final PQuery given = new PQuery(property, StringOp.EQUALS,"task_1");
+        final ReadFeatures readFeatures = new ReadFeatures();
+        readFeatures.getQuery().setProperties(given);
         //when
 
-        final Optional<ITagQuery> tagQuery = SourceIdHandler.mapIntoTagOperation(given);
+        SourceIdHandler.mapIntoTagOperation(readFeatures);
         //then
 
-        assertFalse(tagQuery.isPresent());
+        final ITagQuery tagQuery = readFeatures.getQuery().getTags();
+
+        assertNull(tagQuery);
     }
 
     @Test
@@ -83,15 +99,17 @@ class SourceIdHandlerUnitTest {
         final PAnd given = new PAnd();
         given.add(new PNot(new PQuery(property, StringOp.EQUALS,"task_1")));
         given.add(new PQuery(property2, StringOp.CONTAINS,"4"));
-
+        final ReadFeatures readFeatures = new ReadFeatures();
+        readFeatures.getQuery().setProperties(given);
         //when
 
-        final Optional<ITagQuery> tagQuery = SourceIdHandler.mapIntoTagOperation(given);
+        SourceIdHandler.mapIntoTagOperation(readFeatures);
         //then
 
-        assertTrue(tagQuery.isPresent());
-        assertInstanceOf(TagAnd.class,tagQuery.get());
-        final TagAnd tagAnd = (TagAnd) tagQuery.get();
+        final ITagQuery tagQuery = readFeatures.getQuery().getTags();
+
+        assertInstanceOf(TagAnd.class,tagQuery);
+        final TagAnd tagAnd = (TagAnd) tagQuery;
         assertEquals(1, tagAnd.size());
         assertInstanceOf(TagNot.class,tagAnd.get(0));
         final TagNot nestedTagNot = (TagNot) tagAnd.get(0);
@@ -105,16 +123,20 @@ class SourceIdHandlerUnitTest {
     @Test
     void tc2007_testMapEqToContainsTagWithoutNormalization() {
         //given
-        NonIndexedPRef pRef = new NonIndexedPRef(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, "sourceId");
-        POp given = POp.eq(pRef, "tAskK_1");
-
+        final Property property = new Property(NakshaProperties.META_KEY, "sourceId");
+        final PQuery given = new PQuery(property, StringOp.CONTAINS,"tAskK_1");
+        final ReadFeatures readFeatures = new ReadFeatures();
+        readFeatures.getQuery().setProperties(given);
         //when
-        Optional<POp> result = SourceIdHandler.mapIntoTagOperation(given);
 
+        SourceIdHandler.mapIntoTagOperation(readFeatures);
         //then
-        assertTrue(result.isPresent());
-        assertEquals(result.get().getPropertyRef().getTagName(), "xyz_source_id_tAskK_1");
-        assertEquals(result.get().op(), POpType.EXISTS);
+
+        final ITagQuery tagQuery = readFeatures.getQuery().getTags();
+
+        assertInstanceOf(TagExists.class,tagQuery);
+        final TagExists exists = (TagExists) tagQuery;
+        assertEquals("xyz_source_id_tAskK_1", exists.getName());
     }
 
     @ParameterizedTest
