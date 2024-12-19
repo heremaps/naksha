@@ -38,9 +38,7 @@ package com.here.naksha.test.common;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
-import naksha.base.FromJsonOptions;
-import naksha.base.Platform;
-import naksha.base.ToJsonOptions;
+import naksha.base.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 
@@ -48,12 +46,12 @@ public class JsonUtil {
 
   private JsonUtil() {}
 
-  public static <T> T parseJson(final @NotNull String jsonStr, final @NotNull Class<T> type) {
+  public static <T extends AnyObject> T parseJson(final @NotNull String jsonStr, final @NotNull Class<T> type) {
     T obj = null;
     try {
-      obj = type.cast(Platform.fromJSON(jsonStr, FromJsonOptions.DEFAULT));
+      obj = JvmProxyUtil.box(Platform.fromJSON(jsonStr, FromJsonOptions.DEFAULT), type);
     } catch (Exception ex) {
-      Assertions.fail("Unable tor parse jsonStr " + jsonStr, ex);
+      Assertions.fail("Unable to parse jsonStr " + jsonStr, ex);
       return null;
     }
     return obj;
