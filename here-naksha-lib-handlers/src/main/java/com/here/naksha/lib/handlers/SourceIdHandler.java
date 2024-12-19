@@ -24,9 +24,7 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
-
 import java.util.*;
-
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.*;
@@ -128,9 +126,10 @@ public class SourceIdHandler extends AbstractEventHandler {
   }
 
   private static boolean isFullyConvertedToITagQuery(IPropertyQuery propertyQuery) {
-    return (propertyQuery instanceof PQuery) || (propertyQuery instanceof PNot)
-            || (propertyQuery instanceof POr)
-            || ((propertyQuery instanceof PAnd pAnd) && (pAnd.isEmpty()));
+    return (propertyQuery instanceof PQuery)
+        || (propertyQuery instanceof PNot)
+        || (propertyQuery instanceof POr)
+        || ((propertyQuery instanceof PAnd pAnd) && (pAnd.isEmpty()));
   }
 
   private static Optional<ITagQuery> transformPropertyOperation(IPropertyQuery propertyOperation) {
@@ -156,38 +155,35 @@ public class SourceIdHandler extends AbstractEventHandler {
       pAnd.removeAll(toRemove);
       if (tagAnd.isEmpty()) {
         return Optional.empty();
-      }
-      else if (tagAnd.size() == 1) {
+      } else if (tagAnd.size() == 1) {
         // Unwrap this one single query in an AND clause
-          return Optional.of(tagAnd.get(0));
+        return Optional.of(tagAnd.get(0));
       }
       return Optional.of(tagAnd);
-    }
-    else if (propertyOperation instanceof POr pOr) {
+    } else if (propertyOperation instanceof POr pOr) {
       final TagOr tagOr = new TagOr();
-        for (IPropertyQuery iPropertyQuery : pOr) {
-            final Optional<ITagQuery> tagComponent = transformPropertyOperation(iPropertyQuery);
-            if (tagComponent.isEmpty()) {
-              // At least one sub-clause in an OR clause cannot be converted, hence abort and leave the whole OR as is
-                return Optional.empty();
-            }
-            tagOr.add(tagComponent.get());
+      for (IPropertyQuery iPropertyQuery : pOr) {
+        final Optional<ITagQuery> tagComponent = transformPropertyOperation(iPropertyQuery);
+        if (tagComponent.isEmpty()) {
+          // At least one sub-clause in an OR clause cannot be converted, hence abort and leave the whole OR
+          // as is
+          return Optional.empty();
         }
+        tagOr.add(tagComponent.get());
+      }
       return Optional.of(tagOr);
-    }
-    else if (propertyOperation instanceof PNot pNot) {
+    } else if (propertyOperation instanceof PNot pNot) {
       final Optional<ITagQuery> tagComponent = transformPropertyOperation(pNot.getQuery());
-        return tagComponent.map(TagNot::new);
-    }
-    else if (propertyOperation instanceof PQuery pQuery) {
+      return tagComponent.map(TagNot::new);
+    } else if (propertyOperation instanceof PQuery pQuery) {
       if (sourceIdTransformationCapable(pQuery) && operationTypeAllowed(pQuery)) {
         final TagExists tagQuery = new TagExists(TAG_PREFIX + pQuery.getValue());
         return Optional.of(tagQuery);
       }
       return Optional.empty();
-    }
-    else {
-      throw new IllegalArgumentException("Unknown property operation type: " + propertyOperation.getClass().getSimpleName());
+    } else {
+      throw new IllegalArgumentException("Unknown property operation type: "
+          + propertyOperation.getClass().getSimpleName());
     }
   }
 

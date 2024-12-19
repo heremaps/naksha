@@ -1,17 +1,32 @@
 package com.here.naksha.lib.handlers;
 
+import com.here.naksha.lib.core.IEvent;
+import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
+import naksha.base.Platform;
+import naksha.base.ToJsonOptions;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
-import naksha.model.request.ReadFeatures;
+import naksha.model.request.*;
 import naksha.model.request.query.*;
+import org.json.JSONException;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 
-import java.util.Optional;
 import java.util.stream.Stream;
 
+import static com.here.naksha.test.common.FileUtil.loadFileOrFail;
+import static com.here.naksha.test.common.FileUtil.parseJsonFileOrFail;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class SourceIdHandlerUnitTest {
 
@@ -108,11 +123,8 @@ class SourceIdHandlerUnitTest {
 
         final ITagQuery tagQuery = readFeatures.getQuery().getTags();
 
-        assertInstanceOf(TagAnd.class,tagQuery);
-        final TagAnd tagAnd = (TagAnd) tagQuery;
-        assertEquals(1, tagAnd.size());
-        assertInstanceOf(TagNot.class,tagAnd.get(0));
-        final TagNot nestedTagNot = (TagNot) tagAnd.get(0);
+        assertInstanceOf(TagNot.class,tagQuery);
+        final TagNot nestedTagNot = (TagNot) tagQuery;
         assertInstanceOf(TagExists.class,nestedTagNot.getQuery());
         final TagExists nestedTagExist = (TagExists) nestedTagNot.getQuery();
         assertEquals("xyz_source_id_task_1", nestedTagExist.getName());
@@ -141,25 +153,26 @@ class SourceIdHandlerUnitTest {
 
     @ParameterizedTest
     @MethodSource("writeRequestTestParams")
-    void testWriteRequestTagPopulation(final WriteFeatures<XyzFeature,?,?> wf, final String expectedFeatureJson) throws JSONException {
+    void testWriteRequestTagPopulation(final WriteRequest wf, final String expectedFeatureJson) throws JSONException {
         // Given: Mocking in place
         final INaksha naksha = mock(INaksha.class);
         final IEvent event = mock(IEvent.class);
         when(event.getRequest()).thenReturn((Request)wf);
-        when(event.sendUpstream(any())).thenReturn(new SuccessResult());
+        when(event.sendUpstream(any())).thenReturn(new SuccessResponse());
 
         // Given: Handler initialization
         final EventHandler e = new EventHandler(SourceIdHandler.class, "some_id");
         final SourceIdHandler sourceIdHandler = new SourceIdHandler(naksha);
 
         // When: handler processing logic is invoked
-        try (final Result result = sourceIdHandler.process(event)) {
-            assertTrue(result instanceof SuccessResult, "SuccessResult was expected");
-        }
+        final Response result = sourceIdHandler.process(event);
+        assertTrue(result instanceof SuccessResponse, "SuccessResult was expected");
+
         // Then: validate that the feature in the original request is modified as per expectation
-        assertNotNull(wf.features.get(0));
-        assertNotNull(wf.features.get(0).getFeature());
-        JSONAssert.assertEquals("Output Feature not as expected", expectedFeatureJson, wf.features.get(0).getFeature().serialize(), JSONCompareMode.STRICT);
+        assertNotNull(wf.getWrites().get(0));
+        assertNotNull(wf.getWrites().get(0).getFeature());
+        final String featureString = Platform.toJSON(wf.getWrites().get(0).getFeature(), ToJsonOptions.DEFAULT);
+        JSONAssert.assertEquals("Output Feature not as expected", expectedFeatureJson, featureString, JSONCompareMode.STRICT);
     }
 
     private static Stream<Arguments> writeRequestTestParams() {
@@ -185,14 +198,17 @@ class SourceIdHandlerUnitTest {
         );
     }
 
-    private static WriteFeatures<?,?,?> createWriteXyzFeaturesFromFile(final String filePath) {
-        final XyzFeature feature = parseJsonFileOrFail(filePath, XyzFeature.class);
-        return new WriteXyzFeatures("some_collection").add(EWriteOp.CREATE, feature);
+    private static WriteRequest createWriteXyzFeaturesFromFile(final String filePath) {
+        final NakshaFeature feature = parseJsonFileOrFail(filePath, NakshaFeature.class);
+        final WriteRequest writeRequest = new WriteRequest();
+        writeRequest.add(new Write().createFeature(null, "some_collection", feature));
+        return writeRequest;
     }
 
-    private static WriteFeatures<?,?,?> createContextWriteXyzFeaturesFromFile(final String filePath) {
-        final XyzFeature feature = parseJsonFileOrFail(filePath, XyzFeature.class);
-        return new ContextWriteXyzFeatures("some_collection").add(EWriteOp.CREATE, feature);
+    private static ContextWriteXyzFeatures createContextWriteXyzFeaturesFromFile(final String filePath) {
+        final NakshaFeature feature = parseJsonFileOrFail(filePath, NakshaFeature.class);
+        final ContextWriteXyzFeatures writeXyzFeatures = new ContextWriteXyzFeatures();
+        writeXyzFeatures.add(new Write().createFeature(null, "some_collection", feature));
+        return writeXyzFeatures;
     }
-
 }

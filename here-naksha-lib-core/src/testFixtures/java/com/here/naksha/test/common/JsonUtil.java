@@ -38,23 +38,20 @@ package com.here.naksha.test.common;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
-import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.view.ViewDeserialize;
-import com.here.naksha.lib.core.view.ViewSerialize;
+import naksha.base.FromJsonOptions;
+import naksha.base.Platform;
+import naksha.base.ToJsonOptions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 
-/**
- * @deprecated use {@link naksha.base.Platform} .fromJson() and .toJson() where possible.
- */
 public class JsonUtil {
 
   private JsonUtil() {}
 
   public static <T> T parseJson(final @NotNull String jsonStr, final @NotNull Class<T> type) {
     T obj = null;
-    try (final Json json = Json.get()) {
-      obj = json.reader(ViewDeserialize.Storage.class).forType(type).readValue(jsonStr);
+    try {
+      obj = type.cast(Platform.fromJSON(jsonStr, FromJsonOptions.DEFAULT));
     } catch (Exception ex) {
       Assertions.fail("Unable tor parse jsonStr " + jsonStr, ex);
       return null;
@@ -64,8 +61,8 @@ public class JsonUtil {
 
   public static String toJson(final @NotNull Object obj) {
     String jsonStr = null;
-    try (final Json json = Json.get()) {
-      jsonStr = json.writer(ViewSerialize.Storage.class).writeValueAsString(obj);
+    try {
+      jsonStr = Platform.toJSON(obj, ToJsonOptions.DEFAULT);
     } catch (Exception ex) {
       throw unchecked(ex);
     }
