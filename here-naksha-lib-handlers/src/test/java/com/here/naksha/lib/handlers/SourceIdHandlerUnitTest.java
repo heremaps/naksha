@@ -157,7 +157,7 @@ class SourceIdHandlerUnitTest {
         // Given: Mocking in place
         final INaksha naksha = mock(INaksha.class);
         final IEvent event = mock(IEvent.class);
-        when(event.getRequest()).thenReturn((Request)wf);
+        when(event.getRequest()).thenReturn(wf);
         when(event.sendUpstream(any())).thenReturn(new SuccessResponse());
 
         // Given: Handler initialization
