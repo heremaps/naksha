@@ -92,8 +92,15 @@ public class SourceIdHandler extends AbstractEventHandler {
     IPropertyQuery propertyOp = readRequest.getQuery().getProperties();
 
     final Optional<ITagQuery> tagQuery = transformPropertyOperation(propertyOp);
-    if (tagQuery.isPresent()) {
-      readRequest.getQuery().setTags(tagQuery.get());
+    tagQuery.ifPresent(presentTagQuery -> {
+      // Set tag query to request, combining with the already existing tag query if given
+      final ITagQuery existingTagQuery = readRequest.getQuery().getTags();
+      if (existingTagQuery != null) {
+        readRequest.getQuery().setTags(new TagAnd(presentTagQuery, existingTagQuery));
+      } else {
+        readRequest.getQuery().setTags(presentTagQuery);
+      }
+      // Clean up property query if it has already been transformed into tag query
       if (isFullyConvertedToITagQuery(propertyOp)) {
         readRequest.getQuery().setProperties(null);
       }
@@ -101,7 +108,7 @@ public class SourceIdHandler extends AbstractEventHandler {
       else if ((propertyOp instanceof PAnd canBeSimplified) && (canBeSimplified.size() == 1)) {
         readRequest.getQuery().setProperties(canBeSimplified.get(0));
       }
-    }
+    });
   }
 
   private void setSourceIdTags(NakshaFeature feature) {
