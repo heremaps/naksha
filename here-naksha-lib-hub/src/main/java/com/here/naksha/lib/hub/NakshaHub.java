@@ -312,9 +312,12 @@ public class NakshaHub implements INaksha {
     final List<EventHandler> eventHandlers;
     try {
       eventHandlers = readFeaturesFromResult(rdResult, EventHandler.class);
-    } catch (NoCursor e) {
-      logger.error("NoCursor exception encountered", e);
-      throw new RuntimeException("Failed to open cursor", e);
+    } catch (NoCursor | NoSuchElementException e) {
+      logger.info("No relevant handlers found for Extension loading", e);
+      return new ExtensionConfig(
+          System.currentTimeMillis() + nakshaHubConfig.extensionConfigParams.getIntervalMs(),
+          Collections.emptyList(),
+          null);
     }
 
     Set<String> extensionIds = new HashSet<>();
