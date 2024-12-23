@@ -286,6 +286,9 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
   public static final String JWT_PVT_KEY_PATH = "jwtPvtKeyPath";
   /**
    * The relative path to Private key file to support JWT signing (e.g. {@code "auth/jwt.key"}).
+   * The path should be relative to the directory where config file is supplied.
+   * For example - if config file is {@code "/home/config/cloud-config.json"} then the key path {@code "auth/jwt.key"}
+   * will be considered relative to {@code "/home/config"} folder, resulting into absolute path as {@code "/home/config/auth/jwt.key}"
    */
   @JsonProperty(JWT_PVT_KEY_PATH)
   public final @NotNull String jwtPvtKeyPath;
@@ -293,6 +296,9 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
   public static final String JWT_PUB_KEY_PATHS = "jwtPubKeyPaths";
   /**
    * The comma separated relative paths to Public key files to support JWT signature verification (e.g. {@code "auth/jwt.pub,auth/jwt_2.pub"}).
+   * The path should be relative to the directory where config file is supplied.
+   * For example - if config file is {@code "/home/config/cloud-config.json"} then the key path {@code "auth/jwt.pub"}
+   * will be considered relative to {@code "/home/config"} folder, resulting into absolute path as {@code "/home/config/auth/jwt.pub}"
    */
   @JsonProperty(JWT_PUB_KEY_PATHS)
   public final @NotNull String jwtPubKeyPaths;
