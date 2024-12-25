@@ -153,6 +153,21 @@ vi $NAKSHA_CONFIG_PATH/default-config.json
 java -jar naksha.jar default-config
 ```
 
+The config also accepts custom RSA256 Private key and multiple Public key files (in PEM format) to support JWT signing/verification operations.
+
+* If custom Private key not provided, default will be loaded from Jar bundled resource [here-naksha-app-service/src/main/resources/auth/jwt.key](here-naksha-app-service/src/main/resources/auth/jwt.key).
+* If custom Public key not provided, default will be loaded from Jar bundled resource [here-naksha-app-service/src/main/resources/auth/jwt.pub](here-naksha-app-service/src/main/resources/auth/jwt.pub).
+
+Sample commands to generate the custom key files:
+
+```bash
+# Generate private key
+openssl genrsa -out ./custom_rsa256.key 2048
+
+# Generate public key (using above private key)
+openssl rsa -in ./custom_rsa256.key -pubout -outform PEM -out ./custom_rsa256.pub
+```
+
 # Usage
 
 Start using the service by creating a _space_:
