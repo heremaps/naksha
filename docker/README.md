@@ -57,12 +57,12 @@ To get Naksha container running, one must do the following:
    ```shell
    docker run \
    --name=naksha-app \
-   --env NAKSHA_CONFIG_ID="<your Naksha config id>" \
-   --env NAKSHA_ADMIN_DB_URL="<your DB uri that Naksha should use>" \
-   --env NAKSHA_EXTENSION_S3_BUCKET="<your s3 bucket name or access point>" \
-   --env NAKSHA_JWT_PVT_KEY="<your naksha JWT private key with '\n' for new lines>" \
-   --env NAKSHA_JWT_PUB_KEY="<your naksha JWT public key with '\n' for new lines>" \
-   --env NAKSHA_JWT_PUB_KEY_2="<some other application's JWT public key with '\n' for new lines>" \
+   --env NAKSHA_CONFIG_ID=<your Naksha config id> \
+   --env NAKSHA_ADMIN_DB_URL=<your DB uri that Naksha should use> \
+   --env NAKSHA_EXTENSION_S3_BUCKET=<your s3 bucket name or access point> \
+   --env NAKSHA_JWT_PVT_KEY=<your naksha JWT private key with '\n' for new lines> \
+   --env NAKSHA_JWT_PUB_KEY=<your naksha JWT public key with '\n' for new lines> \
+   --env NAKSHA_JWT_PUB_KEY_2=<some other application's JWT public key with '\n' for new lines> \
    --env JAVA_OPTS="-Xms1024m -Xmx2048m" \
    -p 8080:8080 \
    local-naksha-app
