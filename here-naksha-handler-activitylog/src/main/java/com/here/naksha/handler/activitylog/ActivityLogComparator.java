@@ -18,10 +18,9 @@
  */
 package com.here.naksha.handler.activitylog;
 
+import java.util.Comparator;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
-
-import java.util.Comparator;
 
 public class ActivityLogComparator implements Comparator<NakshaFeature> {
 

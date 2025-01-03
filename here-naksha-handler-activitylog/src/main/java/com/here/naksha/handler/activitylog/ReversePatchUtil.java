@@ -22,7 +22,7 @@ import static java.lang.System.arraycopy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import naksha.geo.XyzProperties;
+import java.util.Map;
 import naksha.diff.Difference;
 import naksha.diff.InsertOp;
 import naksha.diff.ListDiff;
@@ -31,8 +31,7 @@ import naksha.diff.Patcher;
 import naksha.diff.PrimitiveDiff;
 import naksha.diff.RemoveOp;
 import naksha.diff.UpdateOp;
-import java.util.Map;
-
+import naksha.geo.XyzProperties;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.RequestQuery;
 import naksha.model.request.query.Property;

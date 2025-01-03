@@ -19,9 +19,8 @@
 package com.here.naksha.handler.activitylog;
 
 import com.here.naksha.lib.core.models.storage.*;
-import naksha.model.request.SuccessResponse;
-
 import java.util.List;
+import naksha.model.request.SuccessResponse;
 
 public class ActivityLogSuccessResult extends SuccessResponse {
 

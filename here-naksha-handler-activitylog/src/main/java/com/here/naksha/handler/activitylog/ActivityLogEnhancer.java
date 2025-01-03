@@ -22,10 +22,11 @@ import static com.here.naksha.handler.activitylog.ReversePatchUtil.reversePatch;
 import static com.here.naksha.handler.activitylog.ReversePatchUtil.toJsonNode;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import naksha.model.EXyzAction;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.Original;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
+import naksha.model.Action;
+import naksha.model.EXyzAction;
+import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -48,11 +49,11 @@ public class ActivityLogEnhancer {
 
   private static XyzActivityLog activityLog(
       @NotNull NakshaFeature newFeature, @Nullable NakshaFeature oldFeature, @NotNull String spaceId) {
-    final XyzNamespace xyzNamespace = xyzNamespace(newFeature);
+    final XyzNs xyzNamespace = xyzNamespace(newFeature);
     final XyzActivityLog xyzActivityLog = new XyzActivityLog();
     xyzActivityLog.setId(newFeature.getId());
     xyzActivityLog.setOriginal(original(xyzNamespace, spaceId));
-    EXyzAction action = xyzNamespace.getAction();
+    Action action = xyzNamespace.getAction();
     if (action != null) {
       xyzActivityLog.setAction(action);
     }
@@ -60,7 +61,7 @@ public class ActivityLogEnhancer {
     return xyzActivityLog;
   }
 
-  private static Original original(@Nullable XyzNamespace xyzNamespace, @Nullable String spaceId) {
+  private static Original original(@Nullable XyzNs xyzNamespace, @Nullable String spaceId) {
     Original original = new Original();
     if (xyzNamespace != null) {
       original.setPuuid(xyzNamespace.getPuuid());
@@ -74,7 +75,7 @@ public class ActivityLogEnhancer {
   }
 
   private static @Nullable JsonNode calculateDiff(
-      @Nullable EXyzAction action, @NotNull XyzFeature newFeature, @Nullable XyzFeature oldFeature) {
+      @Nullable EXyzAction action, @NotNull NakshaFeature newFeature, @Nullable NakshaFeature oldFeature) {
     if (action == null || EXyzAction.CREATE.equals(action) || EXyzAction.DELETE.equals(action)) {
       return null;
     } else if (EXyzAction.UPDATE.equals(action)) {
@@ -91,11 +92,11 @@ public class ActivityLogEnhancer {
     }
   }
 
-  private static String uuid(XyzFeature feature) {
+  private static String uuid(NakshaFeature feature) {
     return xyzNamespace(feature).getUuid();
   }
 
-  private static XyzNamespace xyzNamespace(XyzFeature feature) {
-    return feature.getProperties().getXyzNamespace();
+  private static XyzNs xyzNamespace(NakshaFeature feature) {
+    return feature.getProperties().getXyz();
   }
 }

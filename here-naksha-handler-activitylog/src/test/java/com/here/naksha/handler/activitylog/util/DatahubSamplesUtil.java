@@ -2,13 +2,14 @@ package com.here.naksha.handler.activitylog.util;
 
 import com.here.naksha.handler.activitylog.ActivityLogComparator;
 import naksha.model.EXyzAction;
-import naksha.model.XyzFeature;
 import naksha.model.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.Original;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.test.common.FileUtil;
+import naksha.model.objects.NakshaFeature;
+
 import java.util.List;
 
 public class DatahubSamplesUtil {
@@ -30,8 +31,8 @@ public class DatahubSamplesUtil {
     return FileUtil.loadFileOrFail(SAMPLES_DIR, SAMPLES_FILE);
   }
 
-  private static List<XyzFeature> historyFeatures(String sampleFeaturesJson) {
-    List<XyzFeature> features = activityFeatures(sampleFeaturesJson);
+  private static List<NakshaFeature> historyFeatures(String sampleFeaturesJson) {
+    List<NakshaFeature> features = activityFeatures(sampleFeaturesJson);
     features.forEach(feature -> {
       String originFeatureId = feature.getProperties().getXyzActivityLog().getId();
       feature.setId(originFeatureId);
@@ -40,8 +41,8 @@ public class DatahubSamplesUtil {
     return features;
   }
 
-  private static List<XyzFeature> activityFeatures(String sampleFeaturesJson) {
-    List<XyzFeature> features = featuresFromCollectionJson(sampleFeaturesJson);
+  private static List<NakshaFeature> activityFeatures(String sampleFeaturesJson) {
+    List<NakshaFeature> features = featuresFromCollectionJson(sampleFeaturesJson);
     features.forEach(feature -> {
       String originId = feature.getId();
       XyzActivityLog datahubActivityLog = feature.getProperties().getXyzActivityLog();
@@ -68,12 +69,12 @@ public class DatahubSamplesUtil {
     return features;
   }
 
-  private static List<XyzFeature> featuresFromCollectionJson(String featuresCollectionJson) {
+  private static List<NakshaFeature> featuresFromCollectionJson(String featuresCollectionJson) {
     XyzFeatureCollection collection = JsonSerializable.deserialize(featuresCollectionJson, XyzFeatureCollection.class);
     return collection.getFeatures();
   }
 
-  public record DatahubSample(List<XyzFeature> historyFeatures, List<XyzFeature> activityFeatures) {
+  public record DatahubSample(List<NakshaFeature> historyFeatures, List<NakshaFeature> activityFeatures) {
 
   }
 }

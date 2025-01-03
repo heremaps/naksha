@@ -28,11 +28,8 @@ import static java.util.stream.Collectors.toMap;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
-import naksha.model.IReadSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import java.util.Collections;
@@ -43,7 +40,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Stream;
-
+import naksha.model.IReadSession;
+import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
@@ -116,7 +114,8 @@ public class ActivityLogHandler extends AbstractEventHandler {
   }
 
   private List<NakshaFeature> fetchHistoryFeatures(ReadFeatures readFeatures, NakshaContext context) {
-    try (IReadSession readSession = nakshaHub().getSpaceStorage().newReadSession(SessionOptions.from(context, true))) {
+    try (IReadSession readSession =
+        nakshaHub().getSpaceStorage().newReadSession(SessionOptions.from(context, true))) {
       try (Response result = readSession.execute(readFeatures)) {
         return readFeaturesFromResult(result, XyzFeature.class);
       }
@@ -125,7 +124,8 @@ public class ActivityLogHandler extends AbstractEventHandler {
     }
   }
 
-  private List<NakshaFeature> featuresEnhancedWithActivity(List<NakshaFeature> historyFeatures, NakshaContext context) {
+  private List<NakshaFeature> featuresEnhancedWithActivity(
+      List<NakshaFeature> historyFeatures, NakshaContext context) {
     List<FeatureWithPredecessor> featuresWithPredecessors = featuresWithPredecessors(historyFeatures, context);
     return featuresWithPredecessors.stream()
         .map(featureWithPredecessor -> enhanceWithActivityLog(
@@ -143,7 +143,8 @@ public class ActivityLogHandler extends AbstractEventHandler {
         .toList();
   }
 
-  private List<NakshaFeature> collectAllNecessaryFeatures(List<NakshaFeature> historyFeatures, NakshaContext context) {
+  private List<NakshaFeature> collectAllNecessaryFeatures(
+      List<NakshaFeature> historyFeatures, NakshaContext context) {
     List<NakshaFeature> missingPredecessors = fetchMissingPredecessors(missingPuuids(historyFeatures), context);
     return combine(historyFeatures, missingPredecessors);
   }

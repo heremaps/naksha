@@ -25,7 +25,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.util.json.JsonObject;
 import org.jetbrains.annotations.Nullable;
 
-/** The standard properties of the standard feature store in the Naksha-Hub. */
+/** The standard properties of the standard feature store in the Naksha-Hub.
+ * @deprecated moved to {@link naksha.model.objects.Original}
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Original extends JsonObject {
 
