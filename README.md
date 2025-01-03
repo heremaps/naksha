@@ -103,9 +103,9 @@ java -jar <jar-file> <config-id> <database-url>
 
 # Example 1 : Start service with test config against default Database URL (useful for local env)
 java -jar build/libs/naksha-2.0.6-all.jar test-config
-# Example 2 : Start service with given custom config and custom database URL (useful for cloud env)
+# Example 2 : Start service with given custom config (using NAKSHA_CONFIG_PATH) and custom database URL (useful for cloud env)
 java -jar build/libs/naksha-2.0.6-all.jar cloud-config 'jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd&schema=naksha&app=naksha_local&id=naksha_admin_db'
-# Example 3 : Start service with given custom config and default (local) database URL
+# Example 3 : Start service with given custom config (using NAKSHA_CONFIG_PATH) and default (local) database URL
 java -jar build/libs/naksha-2.0.6-all.jar custom-config
 
 ```

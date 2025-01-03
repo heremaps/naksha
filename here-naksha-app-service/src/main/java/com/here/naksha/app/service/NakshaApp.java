@@ -102,13 +102,13 @@ public final class NakshaApp extends Thread {
     err.println("Examples:");
     err.println(" ");
     err.println("    Example 1 : Start service with given config and default (local) database URL");
-    err.println("        java -jar naksha.jar default-config");
+    err.println("        java -jar naksha.jar test-config");
     err.println(" ");
     err.println("    Example 2 : Start service with given config and custom database URL");
-    err.println("        java -jar naksha.jar default-config '" + DEFAULT_URL + "'");
+    err.println("        java -jar naksha.jar test-config '" + DEFAULT_URL + "'");
     err.println(" ");
-    err.println("    Example 3 : Start service with mock config (with in-memory hub)");
-    err.println("        java -jar naksha.jar mock-config");
+    err.println("    Example 3 : Start service with custom config (using custom NAKSHA_CONFIG_PATH)");
+    err.println("        java -jar naksha.jar custom-config");
     err.println(" ");
     err.flush();
   }
