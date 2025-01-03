@@ -57,6 +57,7 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
   public static final String v2_0_20 = "2.0.20";
   public static final String v2_1_0 = "2.1.0";
   public static final String v2_1_1 = "2.1.1";
+  public static final String v2_2_0 = "2.2.0";
   public static final String v2_2_1 = "2.2.1";
 
   /**
