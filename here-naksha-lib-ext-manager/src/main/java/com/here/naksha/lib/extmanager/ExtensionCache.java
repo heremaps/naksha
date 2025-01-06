@@ -49,6 +49,7 @@ public class ExtensionCache {
   private static final ConcurrentHashMap<String, ValueTuple> loaderCache = new ConcurrentHashMap<>();
   private static final Map<String, FileClient> jarClientMap = new HashMap<>();
   private final @NotNull INaksha naksha;
+  private static final String WHITE_LIST_CLASSES = "whitelistClasses";
 
   static {
     jarClientMap.put(JarClientType.S3.getType(), new AmazonS3Helper());
@@ -103,7 +104,11 @@ public class ExtensionCache {
       IExtensionInit initObj = null;
       ClassLoader loader;
       try {
-        loader = ClassLoaderHelper.getClassLoader(jarFile, extensionConfig.getWhilelistDelegateClass());
+        @SuppressWarnings("unchecked")
+        List<String> whitelistClasses = (List<String>) extension
+            .getProperties()
+            .getOrDefault(WHITE_LIST_CLASSES, extensionConfig.getWhilelistDelegateClass());
+        loader = ClassLoaderHelper.getClassLoader(jarFile, whitelistClasses);
       } catch (Exception e) {
         logger.error("Failed to load extension jar " + extensionIdWthEnv, e);
         return;
