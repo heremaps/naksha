@@ -23,20 +23,12 @@ import static com.here.naksha.lib.core.util.storage.RequestHelper.createFeatureR
 
 import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.IfConflict;
-import com.here.naksha.lib.core.models.storage.IfExists;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
-import com.here.naksha.lib.core.models.storage.XyzCodecFactory;
-import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
-import com.here.naksha.lib.core.models.storage.XyzCollectionCodecFactory;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import naksha.model.ErrorResult;
+import naksha.base.Int64;
+import naksha.model.ILock;
 import naksha.model.IMap;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
@@ -49,12 +41,10 @@ import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.postgresql.ssl.WrappedFactory;
 
 public class NHAdminMock implements IStorage {
 
@@ -65,7 +55,7 @@ public class NHAdminMock implements IStorage {
     // this constructor is only to support IStorage instantiation
     if (this.mockCollection == null) {
       this.mockCollection = new ConcurrentHashMap<>();
-      this.initStorage();
+      this.initStorage(null);
     }
   }
 
@@ -80,22 +70,18 @@ public class NHAdminMock implements IStorage {
     this.setupConfig();*/
   }
 
-  @Override
-  public void initStorage() {
-  }
-
   private void setupConfig() {
     // Add custom config in naksha:configs
     final NakshaContext ctx = NakshaContext.newInstance("naksha_mock");
     ctx.attachToCurrentThread();
 
     try (final IWriteSession admin = newWriteSession(SessionOptions.from(ctx, true))) {
-      final Response response = admin.execute(createFeatureRequest(
-          NakshaAdminCollection.CONFIGS, nakshaHubConfig, IfExists.REPLACE, IfConflict.REPLACE));
-      if(response instanceof ErrorResponse errorResponse){
+      final Response response = admin.execute(createFeatureRequest(NakshaAdminCollection.CONFIGS, nakshaHubConfig));
+      if (response instanceof ErrorResponse errorResponse) {
         admin.rollback();
         throw unchecked(
-            new Exception("Unable to add custom config in Mock storage (code: " + errorResponse.getError().getCode() + " )", errorResponse.getError().getCause()));
+            new Exception("Unable to add custom config in Mock storage (code: " + errorResponse.getError().getCode() + " )",
+                errorResponse.getError().getCause()));
       }
       admin.commit();
     }
@@ -141,7 +127,7 @@ public class NHAdminMock implements IStorage {
         writeAdminCollections.add(write);
       }
       final Response response = admin.execute(writeAdminCollections);
-      if(response instanceof ErrorResponse errorResponse){
+      if (response instanceof ErrorResponse errorResponse) {
         admin.rollback();
         NakshaError error = errorResponse.getError();
         throw unchecked(new Exception("Unable to create Admin collections in Mock storage (code: " + error.getCode() + " )"));
@@ -205,6 +191,12 @@ public class NHAdminMock implements IStorage {
 
   @Override
   public void close() {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @NotNull
+  @Override
+  public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
     throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
   }
 }

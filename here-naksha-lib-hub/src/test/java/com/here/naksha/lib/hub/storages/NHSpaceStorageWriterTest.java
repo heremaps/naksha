@@ -1,10 +1,11 @@
 package com.here.naksha.lib.hub.storages;
 
 
-import static com.here.naksha.lib.common.assertions.WriteXyzCollectionsAssertions.assertThatWriteXyzCollections;
-import static com.here.naksha.lib.common.assertions.WriteXyzFeaturesAssertions.assertThatWriteXyzFeatures;
+import static com.here.naksha.lib.common.assertions.WriteRequestAssertions.assertThatWriteRequest;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -17,22 +18,26 @@ import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaAdminCollection;
-import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-import naksha.model.ErrorResult;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import naksha.model.WriteRequest;
-import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.List;
 import java.util.Map;
-import org.jetbrains.annotations.Nullable;
+import java.util.Set;
+import java.util.stream.Collectors;
+import naksha.model.Naksha;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.SessionOptions;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
+import naksha.model.request.WriteOp;
+import naksha.model.request.WriteRequest;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -60,8 +65,10 @@ class NHSpaceStorageWriterTest {
             CUSTOM_SPACE, List.of(mock(IEventHandler.class))
         ),
         eventPipelineFactory,
-        nakshaContext,
-        false
+        SessionOptions.from(
+            nakshaContext,
+            false
+        )
     );
   }
 
@@ -71,101 +78,134 @@ class NHSpaceStorageWriterTest {
     EventPipeline eventPipeline = alwaysSucceedingPipeline();
 
     // And: delete space request
-    WriteXyzFeatures deleteSpaceRequest = new WriteXyzFeatures(NakshaAdminCollection.SPACES).delete(CUSTOM_SPACE, null);
+    WriteRequest deleteSpaceRequest = new WriteRequest().add(
+        new Write().deleteFeatureById(null, NakshaAdminCollection.SPACES, CUSTOM_SPACE));
 
     // When: executing delete space request
-    Result result = writer.execute(deleteSpaceRequest);
+    Response result = writer.execute(deleteSpaceRequest);
 
-    // Then: Event Pipeline received Purge Collection request
-    assertThatWriteXyzCollections(requestPassedToPipeline(eventPipeline, WriteXyzCollections.class))
-        .hasSingleCodecThat(collectionCodec -> collectionCodec
-            .hasWriteOp(EWriteOp.PURGE)
-            .hasCollectionWithId(CUSTOM_SPACE)
+    // Then: Event Pipeline received two Write Requests
+    List<WriteRequest> requestsPassedToPipeline = requestsPassedToPipeline(eventPipeline);
+    Assertions.assertEquals(2, requestsPassedToPipeline.size());
+
+    // And: the first request was about purging undelrying collection
+    assertThatWriteRequest(requestsPassedToPipeline.get(0))
+        .hasSingleWriteThat(write -> write
+            .hasOp(WriteOp.PURGE)
+            .hasCollectionId(Naksha.VIRT_COLLECTIONS)
+            .hasId(CUSTOM_SPACE)
         );
 
-    // And: Event Pipeline received Delete Space Entry request
-    assertThatWriteXyzFeatures(requestPassedToPipeline(eventPipeline, WriteXyzFeatures.class))
-        .hasSingleCodecThat(featureCodec -> featureCodec
-            .hasWriteOp(EWriteOp.DELETE)
+    // And: the seoncd request was about deleting space entry
+    assertThatWriteRequest(requestsPassedToPipeline.get(1))
+        .hasSingleWriteThat(write -> write
+            .hasOp(WriteOp.DELETE)
+            .hasCollectionId(NakshaAdminCollection.SPACES)
             .hasId(CUSTOM_SPACE)
         );
 
     // And: Result of the whole operation is positive
-    assertInstanceOf(SuccessResult.class, result);
+    assertInstanceOf(SuccessResponse.class, result);
   }
 
   @Test
   void shouldNotTriggerSpaceEntryDeletionWhenPurgingFailed() {
     // Given: Configured event pipeline spy that fails on WriteCollections
-    EventPipeline eventPipeline = eventPipelineFailingOn(WriteXyzCollections.class);
+    EventPipeline eventPipeline = eventPipelineFailingOn(writeCollectionRequest());
 
     // And: delete space request
-    WriteXyzFeatures deleteSpaceRequest = new WriteXyzFeatures(NakshaAdminCollection.SPACES).delete(CUSTOM_SPACE, null);
+    WriteRequest deleteSpaceRequest = new WriteRequest().add(
+        new Write().deleteFeatureById(null, NakshaAdminCollection.SPACES, CUSTOM_SPACE));
 
     // When: executing delete space request
-    Result result = writer.execute(deleteSpaceRequest);
+    Response response = writer.execute(deleteSpaceRequest);
 
-    // Then: Event Pipeline received Purge Collection request
-    assertThatWriteXyzCollections(requestPassedToPipeline(eventPipeline, WriteXyzCollections.class))
-        .hasSingleCodecThat(collectionCodec -> collectionCodec
-            .hasWriteOp(EWriteOp.PURGE)
-            .hasCollectionWithId(CUSTOM_SPACE)
+    // Then: Event Pipeline received single Write Request
+    List<WriteRequest> requestsPassedToPipeline = requestsPassedToPipeline(eventPipeline);
+    Assertions.assertEquals(1, requestsPassedToPipeline.size());
+
+    // And: that request was about purging collection
+    assertThatWriteRequest(requestsPassedToPipeline.get(0))
+        .hasSingleWriteThat(write -> write
+            .hasOp(WriteOp.PURGE)
+            .hasCollectionId(Naksha.VIRT_COLLECTIONS)
+            .hasId(CUSTOM_SPACE)
         );
 
-    // And: Space entry in admin collection does not get deleted (purging failed) - Event Pipeline does not receive Delete Space Entry request
-    verify(eventPipeline, never()).sendEvent(any(WriteXyzFeatures.class));
-
-    // And: Result of the whole operation is negative
-    assertInstanceOf(ErrorResult.class, result);
+    // And: Result of the whole operation is negative, as purging failes
+    assertInstanceOf(ErrorResponse.class, response);
   }
 
   @Test
   void shouldFailWhenSpaceEntryDeletionFailed() {
-    // Given: Configured event pipeline spy that fails on WriteFeatures
-    EventPipeline eventPipeline = eventPipelineFailingOn(WriteXyzFeatures.class);
+    // Given: Configured event pipeline spy that fails on writes to SPACES (ie when deleting a space)
+    ArgumentMatcher<WriteRequest> anyWriteFeatureToAdminSpaces = writeFeaturesRequest(NakshaAdminCollection.SPACES);
+    EventPipeline eventPipeline = eventPipelineFailingOn(anyWriteFeatureToAdminSpaces);
 
     // And: delete space request
-    WriteXyzFeatures deleteSpaceRequest = new WriteXyzFeatures(NakshaAdminCollection.SPACES).delete(CUSTOM_SPACE, null);
+    WriteRequest deleteSpaceRequest = new WriteRequest().add(
+        new Write().deleteFeatureById(null, NakshaAdminCollection.SPACES, CUSTOM_SPACE));
 
     // When: executing delete space request
-    Result result = writer.execute(deleteSpaceRequest);
+    Response response = writer.execute(deleteSpaceRequest);
 
-    // Then: Event Pipeline received Purge Collection request
-    assertThatWriteXyzCollections(requestPassedToPipeline(eventPipeline, WriteXyzCollections.class))
-        .hasSingleCodecThat(collectionCodec -> collectionCodec
-            .hasWriteOp(EWriteOp.PURGE)
-            .hasCollectionWithId(CUSTOM_SPACE)
+    // Then: Event Pipeline received two Write Request
+    List<WriteRequest> requestsPassedToPipeline = requestsPassedToPipeline(eventPipeline);
+    Assertions.assertEquals(2, requestsPassedToPipeline.size());
+
+    // And: the first request was about purging undelrying collection
+    assertThatWriteRequest(requestsPassedToPipeline.get(0))
+        .hasSingleWriteThat(write -> write
+            .hasOp(WriteOp.PURGE)
+            .hasCollectionId(Naksha.VIRT_COLLECTIONS)
+            .hasId(CUSTOM_SPACE)
         );
 
-    // And: Event Pipeline received Delete Space Entry request
-    assertThatWriteXyzFeatures(requestPassedToPipeline(eventPipeline, WriteXyzFeatures.class))
-        .hasSingleCodecThat(featureCodec -> featureCodec
-            .hasWriteOp(EWriteOp.DELETE)
+    // And: the second request was about deleting space entry
+    assertThatWriteRequest(requestsPassedToPipeline.get(1))
+        .hasSingleWriteThat(write -> write
+            .hasOp(WriteOp.DELETE)
+            .hasCollectionId(NakshaAdminCollection.SPACES)
             .hasId(CUSTOM_SPACE)
         );
 
     // And: Result of the whole operation is negative (space entry deletion failed)
-    assertInstanceOf(ErrorResult.class, result);
+    assertInstanceOf(ErrorResponse.class, response);
   }
 
-  private <T extends WriteRequest<?, ?, ?>> T requestPassedToPipeline(EventPipeline eventPipeline, Class<T> reqType) {
-    ArgumentCaptor<T> requestPassedToPipeline = ArgumentCaptor.forClass(reqType);
-    verify(eventPipeline).sendEvent(requestPassedToPipeline.capture());
-    return requestPassedToPipeline.getValue();
+  private List<WriteRequest> requestsPassedToPipeline(EventPipeline eventPipeline) {
+    ArgumentCaptor<WriteRequest> requestPassedToPipeline = ArgumentCaptor.forClass(WriteRequest.class);
+    verify(eventPipeline, atLeast(1)).sendEvent(requestPassedToPipeline.capture());
+    return requestPassedToPipeline.getAllValues();
   }
 
   private EventPipeline alwaysSucceedingPipeline() {
     return eventPipelineFailingOn(null);
   }
 
-  private <T extends WriteRequest<?, ?, ?>> EventPipeline eventPipelineFailingOn(@Nullable Class<T> reqType) {
+  private EventPipeline eventPipelineFailingOn(ArgumentMatcher<WriteRequest> failingWrite) {
     EventPipeline eventPipeline = spy(new EventPipeline(naksha));
-    when(eventPipeline.sendEvent(any())).thenReturn(new SuccessResult());
-    if (reqType != null) {
-      when(eventPipeline.sendEvent(any(reqType))).thenReturn(new ErrorResult(XyzError.ILLEGAL_ARGUMENT, "Configured to fail"));
+    when(eventPipeline.sendEvent(any())).thenReturn(new SuccessResponse());
+    if (failingWrite != null) {
+      when(eventPipeline.sendEvent(argThat(failingWrite))).thenReturn(
+          new ErrorResponse(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Configured to fail")));
     }
     clearInvocations(eventPipeline);
     when(eventPipelineFactory.eventPipeline()).thenReturn(eventPipeline);
     return eventPipeline;
+  }
+
+  private ArgumentMatcher<WriteRequest> writeCollectionRequest() {
+    return writeRequest -> {
+      List<Write> writes = writeRequest.getWrites();
+      return writes.size() == 1 && writes.get(0).getCollectionId().equals(Naksha.VIRT_COLLECTIONS);
+    };
+  }
+
+  private ArgumentMatcher<WriteRequest> writeFeaturesRequest(String collectionId) {
+    return writeRequest -> {
+      Set<String> collectionIds = writeRequest.getWrites().stream().map(Write::getCollectionId).collect(Collectors.toSet());
+      return collectionIds.size() == 1 && collectionIds.contains(collectionId);
+    };
   }
 }

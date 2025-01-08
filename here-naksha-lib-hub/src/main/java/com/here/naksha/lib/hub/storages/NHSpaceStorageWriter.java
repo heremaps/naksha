@@ -75,9 +75,9 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   public Response execute(@NotNull Request request) {
     if (request instanceof WriteRequest writeRequest) {
       if (isOnlyWriteCollections(writeRequest)) {
-        executeSingleCollectionWrite(writeRequest);
+        return executeSingleCollectionWrite(writeRequest);
       } else if (isOnlyWriteFeatures(writeRequest)) {
-        executeWriteFeatures(writeRequest);
+        return executeWriteFeatures(writeRequest);
       } else {
         return new ErrorResponse(
             NakshaError.UNSUPPORTED_OPERATION,
@@ -157,12 +157,12 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   private @NotNull Response executeDeleteSpace(@NotNull WriteRequest deleteSpaceEntryReq) {
     Write originalWrite = deleteSpaceEntryReq.getWrites().get(0);
     String spaceId = originalWrite.getFeatureId();
-    WriteRequest deleteCollectionReq = new WriteRequest().add(new Write().deleteCollectionById(null, spaceId));
-    Response deleteCollectionRes = executeSingleCollectionWrite(deleteCollectionReq, spaceId);
-    if (deleteCollectionRes instanceof SuccessResponse) {
+    WriteRequest purgeCollectionReq = new WriteRequest().add(new Write().purgeCollectionById(null, spaceId));
+    Response purgeCollectionRes = executeSingleCollectionWrite(purgeCollectionReq, spaceId);
+    if (purgeCollectionRes instanceof SuccessResponse) {
       return executeWriteToAdminSpaces(deleteSpaceEntryReq, originalWrite.getCollectionId());
     } else {
-      return deleteCollectionRes;
+      return purgeCollectionRes;
     }
   }
 
@@ -197,9 +197,8 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
       throw new IllegalArgumentException(
           "Currently supporting WriteRequest for single collection only, got " + writes.size() + " instead");
     }
-    return Objects.requireNonNull(
-            writes.get(0), "Got empty (null) feature inside codec when processing WriteCollections")
-        .getFeatureId();
+    return Objects.requireNonNull(writes.get(0), "Got empty (null) Write instruction within WriteRequest")
+        .getCollectionId();
   }
 
   @Override

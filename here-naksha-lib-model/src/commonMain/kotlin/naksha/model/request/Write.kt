@@ -320,4 +320,22 @@ open class Write : AnyObject() {
         return this
     }
 
+
+    /**
+     * Purge a collection.
+     * @param map the map.
+     * @param collectionId the identifier of the collection to delete.
+     * @param version if the operation should be performed atomic, the version that is expected.
+     * @since 3.0.0
+     */
+    @JvmOverloads
+    fun purgeCollectionById(map: String?, collectionId: String, version: Int64? = null): Write {
+        this.mapId = map ?: NakshaContext.mapId()
+        this.collectionId = VIRT_COLLECTIONS
+        this.op = WriteOp.PURGE
+        this.id = collectionId
+        this.version = version
+        this.feature = null
+        return this
+    }
 }

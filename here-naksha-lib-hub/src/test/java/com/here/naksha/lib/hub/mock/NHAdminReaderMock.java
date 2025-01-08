@@ -295,6 +295,6 @@ public class NHAdminReaderMock implements IReadSession {
   @NotNull
   @Override
   public Response executeParallel(@NotNull Request request) {
-    return IReadSession.super.executeParallel(request);
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 }
