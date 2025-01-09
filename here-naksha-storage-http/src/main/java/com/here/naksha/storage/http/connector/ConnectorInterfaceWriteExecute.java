@@ -26,7 +26,6 @@ import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
-import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.payload.Event;
 import com.here.naksha.lib.core.models.payload.events.feature.ModifyFeaturesEvent;
 import com.here.naksha.lib.core.models.storage.*;
@@ -43,14 +42,14 @@ public class ConnectorInterfaceWriteExecute {
   private final NakshaContext context;
   private final WriteXyzFeatures request;
   private final RequestSender sender;
-  private final String connectorSpaceName;
+  private final String endpoint;
   private final Map<String, XyzFeature> databaseFeaturesCache = new HashMap<>();
 
   public ConnectorInterfaceWriteExecute(NakshaContext context, WriteXyzFeatures request, RequestSender sender) {
     this.context = context;
     this.request = request;
     this.sender = sender;
-    this.connectorSpaceName = request.getCollectionId();
+    this.endpoint = "/" + request.getCollectionId();
   }
 
   private static void setCreatedAt(XyzFeature feature, long creationTime) {
@@ -68,15 +67,12 @@ public class ConnectorInterfaceWriteExecute {
   @NotNull
   public Result execute() {
     String streamId = context.getStreamId();
-    Space connectorSpace = new Space(connectorSpaceName);
-
     Event event = createModifyFeaturesEvent();
 
-    event.setSpace(connectorSpace);
     event.setStreamId(streamId);
 
     String jsonEvent = JsonSerializable.serialize(event);
-    HttpResponse<byte[]> httpResponse = sender.post(jsonEvent);
+    HttpResponse<byte[]> httpResponse = sender.post(endpoint, jsonEvent);
 
     return PrepareResult.prepareWriteResult(httpResponse);
   }
@@ -198,7 +194,7 @@ public class ConnectorInterfaceWriteExecute {
   private ForwardCursor<XyzFeature, XyzFeatureCodec> getFeaturesFromDb(List<String> featureIds) {
     ReadFeaturesProxyWrapper getFeaturesRequest = new ReadFeaturesProxyWrapper().withReadRequestType(GET_BY_IDS);
     getFeaturesRequest.addQueryParameter(FEATURE_IDS, featureIds);
-    getFeaturesRequest.addCollection(connectorSpaceName);
+    getFeaturesRequest.addCollection(endpoint);
     try (Result result = ConnectorInterfaceReadExecute.execute(context, getFeaturesRequest, sender)) {
       return result.getXyzFeatureCursor();
     } catch (NoCursor e) {

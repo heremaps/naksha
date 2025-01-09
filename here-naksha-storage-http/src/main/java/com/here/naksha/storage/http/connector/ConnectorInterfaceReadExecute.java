@@ -24,7 +24,6 @@ import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import com.here.naksha.lib.core.models.geojson.coordinates.BBox;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
-import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.payload.Event;
 import com.here.naksha.lib.core.models.payload.events.feature.*;
 import com.here.naksha.lib.core.models.storage.POp;
@@ -46,8 +45,7 @@ public class ConnectorInterfaceReadExecute {
   @NotNull
   public static Result execute(NakshaContext context, ReadFeaturesProxyWrapper request, RequestSender sender) {
     String streamId = context.getStreamId();
-    String dataHubSpaceName = request.getCollections().get(0);
-    Space dataHubSpace = new Space(dataHubSpaceName);
+    String endpoint = "/" + request.getCollections().get(0);
 
     Event event =
         switch (request.getReadRequestType()) {
@@ -58,11 +56,10 @@ public class ConnectorInterfaceReadExecute {
           case ITERATE -> createIterateEvent(request);
         };
 
-    event.setSpace(dataHubSpace);
     event.setStreamId(streamId);
 
     String jsonEvent = JsonSerializable.serialize(event);
-    HttpResponse<byte[]> httpResponse = sender.post(jsonEvent);
+    HttpResponse<byte[]> httpResponse = sender.post(endpoint, jsonEvent);
 
     return PrepareResult.prepareReadResult(
         httpResponse, XyzFeatureCollection.class, XyzFeatureCollection::getFeatures);
