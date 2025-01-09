@@ -21,11 +21,6 @@ package com.here.naksha.lib.core.models.naksha;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.models.PluginCache.getEventHandlerConstructor;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.lambdas.Fe3;
@@ -41,7 +36,6 @@ import org.slf4j.LoggerFactory;
  * A configured event handler.
  */
 @AvailableSince(NakshaVersion.v2_0_3)
-@JsonTypeName(value = "EventHandler")
 public class EventHandler extends Plugin<IEventHandler> {
   private static final @NotNull Logger logger = LoggerFactory.getLogger(EventHandler.class);
 
@@ -52,28 +46,16 @@ public class EventHandler extends Plugin<IEventHandler> {
   public static final String ACTIVE = "active";
 
   /**
-   * Create a new connector.
-   *
-   * @param id    the identifier of the event handler.
-   * @param cla$$ the class, that implements this event handler.
+   * The unique identifier of the extension that hosts the handler, referred by the {@link #getClassName() className}.
    */
-  @AvailableSince(NakshaVersion.v2_0_3)
-  public EventHandler(
-      @JsonProperty(CLASS_NAME) @NotNull Class<? extends IEventHandler> cla$$,
-      @JsonProperty(ID) @NotNull String id) {
-    super(cla$$.getName(), id);
+  @AvailableSince(NakshaVersion.v2_0_7)
+  public @Nullable String getExtensionId() {
+    return (String) getRaw(EXTENSION_ID);
   }
 
-  /**
-   * Create a new connector.
-   *
-   * @param id        the identifier of the event handler.
-   * @param className the full qualified name of the class, that implements this handler.
-   */
-  @AvailableSince(NakshaVersion.v2_0_3)
-  @JsonCreator
-  public EventHandler(@JsonProperty(CLASS_NAME) @NotNull String className, @NotNull String id) {
-    super(className, id);
+  @AvailableSince(NakshaVersion.v2_0_7)
+  public void setExtensionId(@Nullable String extensionId) {
+    setRaw(EXTENSION_ID, extensionId);
   }
 
   /**
@@ -81,26 +63,14 @@ public class EventHandler extends Plugin<IEventHandler> {
    * using this connector will bypass this connector. If the connector configures the storage, all requests to spaces using the connector as
    * storage will fail.
    */
-  @AvailableSince(NakshaVersion.v2_0_3)
-  @JsonProperty(ACTIVE)
-  private boolean active = true;
-
-  /**
-   * The unique identifier of the extension that hosts the handler, referred by the {@link #getClassName() className}.
-   */
   @AvailableSince(NakshaVersion.v2_0_7)
-  @JsonProperty(EXTENSION_ID)
-  @JsonInclude(Include.NON_DEFAULT)
-  private @Nullable String extensionId;
-
-  @AvailableSince(NakshaVersion.v2_0_7)
-  public @Nullable String getExtensionId() {
-    return extensionId;
+  public boolean isActive() {
+    return (Boolean) getRaw(ACTIVE);
   }
 
   @AvailableSince(NakshaVersion.v2_0_7)
-  public void setExtensionId(@Nullable String extensionId) {
-    this.extensionId = extensionId;
+  public void setActive(boolean active) {
+    setRaw(ACTIVE, active);
   }
 
   /**
@@ -109,6 +79,7 @@ public class EventHandler extends Plugin<IEventHandler> {
   @Deprecated
   @AvailableSince(NakshaVersion.v2_0_7)
   @Override
+  // TODO (CASL-780): strongly consider removing this
   public @NotNull IEventHandler newInstance(@NotNull INaksha naksha) {
     return newInstance(naksha, null);
   }
@@ -120,16 +91,18 @@ public class EventHandler extends Plugin<IEventHandler> {
    */
   @Deprecated
   @AvailableSince(NakshaVersion.v2_0_7)
+  // TODO (CASL-780): strongly consider removing this
   public @NotNull IEventHandler newInstance(@NotNull INaksha naksha, @Nullable EventTarget<?> eventTarget) {
     Class<?> eventTargetClass = eventTarget == null ? Space.class : eventTarget.getClass();
     final Fe3<IEventHandler, INaksha, EventHandler, EventTarget<?>> constructor;
+    final String extensionId = getExtensionId();
     try {
-      if (this.extensionId == null || this.extensionId.isEmpty() || "null".equalsIgnoreCase(this.extensionId)) {
+      if (extensionId == null || extensionId.isEmpty() || "null".equalsIgnoreCase(extensionId)) {
         //noinspection unchecked
         constructor = (Fe3<IEventHandler, INaksha, EventHandler, EventTarget<?>>)
             getEventHandlerConstructor(getClassName(), EventHandler.class, eventTargetClass);
       } else {
-        ClassLoader extClassLoader = naksha.getClassLoader(this.extensionId);
+        ClassLoader extClassLoader = naksha.getClassLoader(extensionId);
         //noinspection unchecked
         constructor = (Fe3<IEventHandler, INaksha, EventHandler, EventTarget<?>>) getEventHandlerConstructor(
             getClassName(), EventHandler.class, eventTargetClass, extensionId, extClassLoader);
@@ -137,26 +110,13 @@ public class EventHandler extends Plugin<IEventHandler> {
       return constructor.call(naksha, this, eventTarget);
     } catch (Exception e) {
       logger.error(
-          "Exception loading constructor for EventHandler id {}, extensionId {}.",
-          getId(),
-          this.extensionId,
-          e);
+          "Exception loading constructor for EventHandler id {}, extensionId {}.", getId(), extensionId, e);
       throw unchecked(e);
     }
   }
 
-  @AvailableSince(NakshaVersion.v2_0_7)
-  public boolean isActive() {
-    return active;
-  }
-
-  @AvailableSince(NakshaVersion.v2_0_7)
-  public void setActive(boolean active) {
-    this.active = active;
-  }
-
   @Override
   public @NotNull String toString() {
-    return "EventHandler{" + "id='" + getId() + '\'' + "className='" + className + '\'' + '}';
+    return "EventHandler{" + "id='" + getId() + '\'' + "className='" + getClassName() + '\'' + '}';
   }
 }

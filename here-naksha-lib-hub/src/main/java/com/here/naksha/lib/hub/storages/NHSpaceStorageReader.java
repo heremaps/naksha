@@ -18,18 +18,17 @@
  */
 package com.here.naksha.lib.hub.storages;
 
-import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdRequest;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResponse;
+import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
+import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
+import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
-import com.here.naksha.lib.core.util.storage.ResultHelper;
 import com.here.naksha.lib.handlers.AuthorizationEventHandler;
+import com.here.naksha.lib.handlers.NakshaAdminCollection;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -53,6 +52,7 @@ import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.ResultTuple;
 import naksha.model.request.SuccessResponse;
+import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

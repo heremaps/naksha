@@ -16,21 +16,17 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.util.storage;
+package naksha.model.util;
 
-import com.here.naksha.lib.core.models.storage.*;
 import java.util.List;
-import naksha.geo.MultiPointCoord;
-import naksha.geo.PointCoord;
-import naksha.geo.ProxyGeoUtil;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.*;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
-import org.locationtech.jts.geom.Geometry;
 
 @AvailableSince(NakshaVersion.v2_0_7)
 public class RequestHelper {
@@ -134,7 +130,7 @@ public class RequestHelper {
    * Helper method to create WriteFeatures request for deleting multiple features.
    *
    * @param collectionName name of the storage collection
-   * @param ids       feature object array to be deleted
+   * @param ids            feature object array to be deleted
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull WriteRequest deleteFeaturesByIdsRequest(
@@ -150,7 +146,7 @@ public class RequestHelper {
    * Helper method to create WriteFeatures request for deleting given feature.
    *
    * @param collectionName name of the storage collection
-   * @param id        feature object to be deleted
+   * @param id             feature object to be deleted
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull WriteRequest deleteFeatureByIdRequest(
@@ -162,8 +158,8 @@ public class RequestHelper {
   /**
    * Helper method to create WriteFeatures request with given list of features.
    *
-   * @param collectionName   name of the storage collection
-   * @param featureList      list of feature objects to be created
+   * @param collectionName name of the storage collection
+   * @param featureList    list of feature objects to be created
    * @return WriteFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v2_0_7)
@@ -190,23 +186,22 @@ public class RequestHelper {
     return writeRequest;
   }
 
-  /**
-   * Helper function that returns Geometry representing BoundingBox for the co-ordinates
-   * supplied as arguments.
-   *
-   * @param west west co-ordinate
-   * @param south south co-ordinate
-   * @param east east co-ordinate
-   * @param north north co-ordinate
-   * @return Geometry representing BBox envelope
-   */
-  public static @NotNull Geometry createBBoxEnvelope(
-      final double west, final double south, final double east, final double north) {
-    MultiPointCoord multiPoint = new MultiPointCoord();
-    multiPoint.add(new PointCoord(west, south));
-    multiPoint.add(new PointCoord(east, north));
-    return ProxyGeoUtil.toJtsMultiPoint(multiPoint);
-  }
+  //  /**
+  //   * Helper function that returns Geometry representing BoundingBox for the co-ordinates supplied as arguments.
+  //   *
+  //   * @param west  west co-ordinate
+  //   * @param south south co-ordinate
+  //   * @param east  east co-ordinate
+  //   * @param north north co-ordinate
+  //   * @return Geometry representing BBox envelope
+  //   */
+  //  public static @NotNull Geometry createBBoxEnvelope(
+  //      final double west, final double south, final double east, final double north) {
+  //    MultiPointCoord multiPoint = new MultiPointCoord();
+  //    multiPoint.add(new PointCoord(west, south));
+  //    multiPoint.add(new PointCoord(east, north));
+  //    return ProxyGeoUtil.toJtsMultiPoint(multiPoint);
+  //  }
 
   //  /**
   //   * Helper function that returns instance of PRef or NonIndexedPRef depending on

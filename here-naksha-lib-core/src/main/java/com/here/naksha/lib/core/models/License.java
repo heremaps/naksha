@@ -19,16 +19,16 @@
 package com.here.naksha.lib.core.models;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.Arrays;
 import java.util.List;
+import naksha.model.objects.NakshaFeature;
 
-public class License {
+public class License extends NakshaFeature {
 
   // Source: https://github.com/shinnn/spdx-license-ids/blob/master/index.json
   // Information about the licenses can be found here: https://spdx.org/licenses/ OR
   // https://choosealicense.com/licenses/<keyword>
-  private static List<String> allowedKeywords = Arrays.asList(
+  private static final List<String> ALLOWED_KEYWORDS = Arrays.asList(
       "AFL-3.0",
       "Apache-2.0",
       "Artistic-2.0",
@@ -61,15 +61,14 @@ public class License {
       "Zlib",
       "ODbL-1.0");
 
-  @JsonValue
-  private String keyword;
+  private static final String KEYWORD = "keyword";
 
   public String getKeyword() {
-    return keyword;
+    return (String) getRaw(KEYWORD);
   }
 
   public void setKeyword(final String keyword) {
-    this.keyword = keyword;
+    setRaw(KEYWORD, keyword);
   }
 
   public License withKeyword(final String keyword) {
@@ -80,13 +79,13 @@ public class License {
   @JsonCreator
   public static License forKeyword(String keyword) {
     License l = new License();
-    if (!allowedKeywords.contains(keyword)) {
+    if (!ALLOWED_KEYWORDS.contains(keyword)) {
       throw new IllegalArgumentException("\""
           + keyword
           + "\" is not a valid license keyword. Allowed keywords are: "
-          + String.join(", ", allowedKeywords));
+          + String.join(", ", ALLOWED_KEYWORDS));
     }
-    l.keyword = keyword;
+    l.setKeyword(keyword);
     return l;
   }
 }

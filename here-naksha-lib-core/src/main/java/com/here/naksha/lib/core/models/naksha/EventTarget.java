@@ -18,60 +18,31 @@
  */
 package com.here.naksha.lib.core.models.naksha;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.ArrayList;
 import java.util.List;
-import naksha.model.NakshaVersion;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.StringList;
 import naksha.model.objects.NakshaFeature;
-import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public abstract class EventTarget<SELF extends EventTarget<SELF>> extends NakshaFeature {
-
   public static final String EVENT_HANDLER_IDS = "eventHandlerIds";
   public static final String ID = "id";
 
-  /**
-   * Create a new empty event target.
-   *
-   * @param id The ID; if {@code null}, then a random one is generated.
-   */
-  public EventTarget(@Nullable String id) {
-    super(id);
-    this.eventHandlerIds = new ArrayList<>();
-  }
-
-  /**
-   * Create a new initialized event target.
-   *
-   * @param id The ID; if {@code null}, then a random one is generated.
-   */
-  public EventTarget(@Nullable String id, @Nullable List<@NotNull String> eventHandlerIds) {
-    super(id);
-    this.eventHandlerIds = eventHandlerIds == null ? new ArrayList<>() : eventHandlerIds;
-  }
-
-  @SuppressWarnings("unchecked")
   protected final @NotNull SELF self() {
     return (SELF) this;
   }
 
   public @NotNull List<@NotNull String> getEventHandlerIds() {
-    return eventHandlerIds;
+    return JvmBoxingUtil.box(get(EVENT_HANDLER_IDS), StringList.class);
   }
 
   public @NotNull SELF addHandler(@NotNull String handlerId) {
-    eventHandlerIds.add(handlerId);
+    getEventHandlerIds().add(handlerId);
     return self();
   }
 
   public @NotNull SELF addHandler(@NotNull EventHandler handler) {
-    eventHandlerIds.add(handler.getId());
+    getEventHandlerIds().add(handler.getId());
     return self();
   }
-
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  @JsonProperty(EVENT_HANDLER_IDS)
-  private final @NotNull List<@NotNull String> eventHandlerIds;
 }

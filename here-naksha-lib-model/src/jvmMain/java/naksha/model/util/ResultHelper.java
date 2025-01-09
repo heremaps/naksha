@@ -16,11 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.util.storage;
+package naksha.model.util;
 
 import static java.util.Collections.emptyList;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ExecutedOp;
 import naksha.model.request.Response;
@@ -38,7 +43,7 @@ public class ResultHelper {
    * Helper method to fetch features from given Result and return list of features with type T. Returned list is not limited - to set the
    * upper bound, use sibling method with limit argument.
    *
-   * @param response      the Result which is to be read
+   * @param response    the Result which is to be read
    * @param featureType the type of feature to be extracted from result
    * @param <R>         type of feature
    * @return list of features extracted from ReadResult
@@ -52,7 +57,7 @@ public class ResultHelper {
    * Helper method to fetch features from given Result and return list of features with type T. Returned list is limited with respect to
    * supplied `limit` parameter.
    *
-   * @param response      the Result which is to be read
+   * @param response    the Result which is to be read
    * @param featureType the type of feature to be extracted from result
    * @param offset      the offset position (0-based index) in a list from where features to be extracted
    * @param limit       the max number of features to be extracted

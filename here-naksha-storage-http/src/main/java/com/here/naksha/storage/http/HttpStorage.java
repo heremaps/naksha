@@ -24,7 +24,7 @@ import com.here.naksha.storage.http.cache.RequestSenderCache;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import naksha.base.Int64;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import org.apache.commons.lang3.NotImplementedException;
@@ -63,7 +63,7 @@ public class HttpStorage implements IStorage {
   }
 
   private static @Nullable HttpStorageProperties getProperties(@NotNull Storage storage) {
-    return JvmProxyUtil.box(storage.getProperties(), HttpStorageProperties.class);
+    return JvmBoxingUtil.box(storage.getProperties(), HttpStorageProperties.class);
   }
 
   @Override

@@ -24,7 +24,7 @@ import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Stream;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
@@ -305,14 +305,14 @@ class DefaultStorageHandlerTest {
     NakshaCollection correctCollection() {
       return switch (validCollectionSource) {
         case HANDLER_PROPERTIES -> handlerProperties.getCollection();
-        case SPACE_PROPERTIES -> JvmProxyUtil.box(space.getProperties(), SpaceProperties.class).getCollection();
+        case SPACE_PROPERTIES -> JvmBoxingUtil.box(space.getProperties(), SpaceProperties.class).getCollection();
         case SPACE_ID -> new NakshaCollection(space.getId());
       };
     }
   }
 
   private Space space(SpaceProperties spaceProperties) {
-    Space space = new Space("test_space");
+    Space space = testSpace();
     space.setProperties(spaceProperties);
     return space;
   }
@@ -341,18 +341,21 @@ class DefaultStorageHandlerTest {
   }
 
   private static Space space(String spaceId, SpaceProperties spaceProperties) {
-    Space space = new Space(spaceId);
+    Space space = new Space();
+    space.setId(spaceId);
     space.setProperties(spaceProperties);
     return space;
   }
 
   private static SpaceProperties spacePropertiesWithCollection(String collectionId) {
     if (collectionId == null) {
-      return new SpaceProperties(null);
+      return new SpaceProperties();
     }
     final NakshaCollection nakshaCollection = new NakshaCollection();
     nakshaCollection.setId(collectionId);
-    return new SpaceProperties(nakshaCollection);
+    SpaceProperties spaceProperties = new SpaceProperties();
+    spaceProperties.setCollection(nakshaCollection);
+    return spaceProperties;
   }
 
   private static DefaultStorageHandlerProperties handlerPropertiesWithCollection(String collectionId) {
@@ -368,20 +371,26 @@ class DefaultStorageHandlerTest {
   private static DefaultStorageHandlerProperties handlerProperties(String storageId) {
     final NakshaCollection nakshaCollection = new NakshaCollection();
     nakshaCollection.setId("handler_collection");
-    return new DefaultStorageHandlerProperties(
-        storageId,
-        nakshaCollection,
-        true,
-        true
-    );
+    DefaultStorageHandlerProperties properties = new DefaultStorageHandlerProperties();
+    properties.setStorageId(storageId);
+    properties.setCollection(nakshaCollection);
+    properties.setAutoDeleteCollection(true);
+    properties.setAutoCreateCollection(true);
+    return properties;
   }
 
   private DefaultStorageHandler storageHandler() {
-    return storageHandler(new Space("some_test_space"));
+    return storageHandler(testSpace());
   }
 
   private DefaultStorageHandler storageHandler(DefaultStorageHandlerProperties properties) {
-    return storageHandler(properties, new Space("some_test_space"));
+    return storageHandler(properties, testSpace());
+  }
+
+  private Space testSpace(){
+    Space space = new Space();
+    space.setId("some_test_space");
+    return space;
   }
 
   private DefaultStorageHandler storageHandler(Space space) {
@@ -389,7 +398,9 @@ class DefaultStorageHandlerTest {
   }
 
   private DefaultStorageHandler storageHandler(DefaultStorageHandlerProperties properties, Space space) {
-    EventHandler config = new EventHandler(DefaultStorageHandler.class, "test_handler");
+    EventHandler config = new EventHandler();
+    config.setClassName(DefaultStorageHandler.class.getName());
+    config.setId("test_handler");
     config.setProperties(properties);
     return new DefaultStorageHandler(config, naksha, space);
   }

@@ -19,9 +19,9 @@
 package com.here.naksha.lib.hub.mock;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.createFeatureRequest;
+import static naksha.model.util.RequestHelper.createFeatureRequest;
 
-import com.here.naksha.lib.core.NakshaAdminCollection;
+import com.here.naksha.lib.handlers.NakshaAdminCollection;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import java.util.Map;
@@ -48,7 +48,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class NHAdminMock implements IStorage {
 
-  protected static @NotNull Map<String, TreeMap<String, Object>> mockCollection;
+  protected static @NotNull Map<String, TreeMap<String, NakshaFeature>> mockCollection;
   protected static @NotNull NakshaHubConfig nakshaHubConfig;
 
   public NHAdminMock(final @NotNull Storage storage) {
@@ -130,7 +130,7 @@ public class NHAdminMock implements IStorage {
       if (response instanceof ErrorResponse errorResponse) {
         admin.rollback();
         NakshaError error = errorResponse.getError();
-        throw unchecked(new Exception("Unable to create Admin collections in Mock storage (code: " + error.getCode() + " )"));
+        throw unchecked(new Exception("Unable to create Admin collections in Mock storage (code: " + error.getCode() + " )", error.getCause()));
       }
       admin.commit();
     }
@@ -180,13 +180,13 @@ public class NHAdminMock implements IStorage {
   @NotNull
   @Override
   public IWriteSession newWriteSession(@Nullable SessionOptions options) {
-    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+    return new NHAdminWriterMock(mockCollection);
   }
 
   @NotNull
   @Override
   public IReadSession newReadSession(@Nullable SessionOptions options) {
-    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+    return new NHAdminReaderMock(mockCollection);
   }
 
   @Override

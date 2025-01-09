@@ -18,23 +18,21 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
-import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
 import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdRequest;
+import static com.here.naksha.lib.handlers.NakshaAdminCollection.SPACES;
+import static com.here.naksha.lib.handlers.NakshaAdminCollection.STORAGES;
 import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.*;
+import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.util.storage.RequestHelper;
-import com.here.naksha.lib.core.util.storage.ResultHelper;
 import com.here.naksha.lib.handlers.*;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.IReadSession;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
@@ -43,6 +41,8 @@ import naksha.model.request.*;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
+import naksha.model.util.RequestHelper;
+import naksha.model.util.ResultHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -94,7 +94,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     }
 
     DefaultViewHandlerProperties viewHandlerProperties =
-        JvmProxyUtil.box(eventHandler.getProperties(), DefaultViewHandlerProperties.class);
+        JvmBoxingUtil.box(eventHandler.getProperties(), DefaultViewHandlerProperties.class);
 
     List<String> spaceIds = viewHandlerProperties.getSpaceIds();
     if (spaceIds == null || spaceIds.isEmpty()) {
@@ -118,7 +118,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
   private @NotNull Response tagFilterHandlerPropertiesValidation(EventHandler eventHandler) {
 
     TagFilterHandlerProperties properties =
-        JvmProxyUtil.box(eventHandler.getProperties(), TagFilterHandlerProperties.class);
+        JvmBoxingUtil.box(eventHandler.getProperties(), TagFilterHandlerProperties.class);
 
     List<String> addList = properties.getAdd();
     List<String> removeWithPrefixesList = properties.getRemoveWithPrefixes();

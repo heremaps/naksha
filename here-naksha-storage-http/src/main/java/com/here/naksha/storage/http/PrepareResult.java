@@ -29,7 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
 import naksha.base.FromJsonOptions;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
 import naksha.model.NakshaError;
 import naksha.model.objects.NakshaFeatureList;
@@ -51,7 +51,7 @@ class PrepareResult {
           new NakshaError(error, "Response http status code: " + httpResponse.statusCode(), null, null));
 
     Object tuples = Platform.fromJSON(prepareBody(httpResponse), FromJsonOptions.DEFAULT);
-    NakshaFeatureList features = JvmProxyUtil.box(tuples, NakshaFeatureList.class);
+    NakshaFeatureList features = JvmBoxingUtil.box(tuples, NakshaFeatureList.class);
     return new SuccessResponse(features);
   }
 

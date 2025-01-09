@@ -1,13 +1,6 @@
 package com.here.naksha.storage.http;
 
 import com.here.naksha.lib.core.util.storage.RequestHelper;
-import naksha.model.request.query.PQuery;
-import naksha.model.request.query.Property;
-import naksha.model.request.query.StringOp;
-import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.URLEncoder;
 import static java.nio.charset.StandardCharsets.UTF_8;

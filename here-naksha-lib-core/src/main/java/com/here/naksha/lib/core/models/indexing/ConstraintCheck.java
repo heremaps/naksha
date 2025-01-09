@@ -19,10 +19,8 @@
 package com.here.naksha.lib.core.models.indexing;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import naksha.base.JvmBoxingUtil;
 
 /** A condition to check. */
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -31,47 +29,65 @@ public class ConstraintCheck extends Constraint {
 
   /** The condition to apply. */
   public enum Test {
-    /** If the property is not null; ignores {@link #value}. */
+    /** If the property is not null; ignores {@link #getValue()}. */
     NOT_NULL,
 
-    /** If the value of the property is unique; ignores {@link #value}. */
+    /** If the value of the property is unique; ignores {@link #getValue()}. */
     UNIQUE,
 
-    /** If the value of the property is greater than the {@link #value}. */
+    /** If the value of the property is greater than the {@link #getValue()}. */
     GT,
 
-    /** If the value of the property is greater than or equal to the {@link #value}. */
+    /** If the value of the property is greater than or equal to the {@link #getValue()}. */
     GTE,
 
-    /** If the value of the property is equal to the {@link #value}. */
+    /** If the value of the property is equal to the {@link #getValue()}. */
     EQ,
 
-    /** If the value of the property is less than the {@link #value}. */
+    /** If the value of the property is less than the {@link #getValue()}. */
     LT,
 
-    /** If the value of the property is less than or equal to the {@link #value}. */
+    /** If the value of the property is less than or equal to the {@link #getValue()}. */
     LTE,
 
-    /** If the length of the property is more than or equal to the defined {@link #value}. */
+    /** If the length of the property is more than or equal to the defined {@link #getValue()}. */
     MIN_LEN,
 
-    /** If the length of the property is less than or equal to the defined {@link #value}. */
+    /** If the length of the property is less than or equal to the defined {@link #getValue()}. */
     MAX_LEN,
 
-    /** If the value matches the given regular expression, given in the {@link #value}. */
+    /** If the value matches the given regular expression, given in the {@link #getValue()}. */
     MATCHES
   }
 
+  private static final String TEST = "test";
+  private static final String PATH = "path";
+  private static final String VALUE = "value";
+
   /** The check to perform. */
-  @JsonProperty
-  public Test test;
+  public Test getTest() {
+    return JvmBoxingUtil.box(get(TEST), Test.class);
+  }
+
+  public void setTest(Test test) {
+    setRaw(TEST, test);
+  }
 
   /** The JSON path to the property to check. */
-  @JsonProperty
-  public String path;
+  public String getPath() {
+    return (String) getRaw(PATH);
+  }
+
+  public void setPath(String path) {
+    setRaw(PATH, path);
+  }
 
   /** The optional value for the check. */
-  @JsonProperty
-  @JsonInclude(Include.NON_NULL)
-  public Object value;
+  public Object getValue() {
+    return getRaw(VALUE);
+  }
+
+  public void setValue(Object value) {
+    setRaw(VALUE, value);
+  }
 }

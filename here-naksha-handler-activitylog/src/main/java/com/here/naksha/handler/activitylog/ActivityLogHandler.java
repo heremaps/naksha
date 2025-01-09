@@ -27,7 +27,7 @@ import static java.util.stream.Collectors.toMap;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.util.storage.ResultHelper;
+import naksha.model.util.ResultHelper;
 import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.XyzError;

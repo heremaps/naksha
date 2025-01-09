@@ -32,6 +32,7 @@ import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteOp;
 import naksha.model.request.WriteRequest;
@@ -54,10 +55,12 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
           executeWriteFeature(write);
         }
       }
+      return new SuccessResponse();
+    } else {
+      return new ErrorResponse(
+          new NakshaError(NakshaError.UNSUPPORTED_OPERATION,
+              "WriteRequest type " + request.getClass().getName() + " not supported"));
     }
-    return new ErrorResponse(
-        new NakshaError(NakshaError.UNSUPPORTED_OPERATION,
-            "WriteRequest type " + request.getClass().getName() + " not supported"));
   }
 
   private void executeWriteCollection(Write write) {
@@ -68,7 +71,7 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
     } else if (op.equals(WriteOp.DELETE)) {
       mockCollection.remove(collectionId);
     } else {
-      throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Mock can only CREATE and DELTE collection"));
+      throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Mock can only CREATE and DELETE collection"));
     }
   }
 

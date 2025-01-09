@@ -22,8 +22,8 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.handlers.AuthorizationEventHandler;
+import com.here.naksha.lib.handlers.NakshaAdminCollection;
 import com.here.naksha.lib.handlers.internal.IntHandlerForConfigs;
 import com.here.naksha.lib.handlers.internal.IntHandlerForEventHandlers;
 import com.here.naksha.lib.handlers.internal.IntHandlerForExtensions;

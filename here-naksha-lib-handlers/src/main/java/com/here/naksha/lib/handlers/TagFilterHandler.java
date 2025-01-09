@@ -29,7 +29,7 @@ import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import java.util.List;
 import java.util.Objects;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
@@ -50,7 +50,7 @@ public class TagFilterHandler extends AbstractEventHandler {
   public TagFilterHandler(final @NotNull EventHandler eventHandler, final @NotNull INaksha hub) {
     super(hub);
     this.properties = Objects.requireNonNull(
-        JvmProxyUtil.box(eventHandler.getProperties(), TagFilterHandlerProperties.class));
+        JvmBoxingUtil.box(eventHandler.getProperties(), TagFilterHandlerProperties.class));
   }
 
   @Override
