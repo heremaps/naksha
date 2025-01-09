@@ -2,16 +2,13 @@
 
 package naksha.model.objects
 
+import naksha.base.AnyObject
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.base.AnyObject
-import naksha.base.Platform
 import naksha.model.XyzNs
 import naksha.model.mom.MomDeltaNs
 import naksha.model.mom.MomReferenceList
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmField
 
 /**
  * The properties of a standard Naksha feature.
@@ -23,6 +20,11 @@ open class NakshaProperties : AnyObject() {
         const val XYZ_KEY = "@ns:com:here:xyz"
         const val DELTA_KEY = "@ns:com:here:delta"
         const val META_KEY = "@ns:com:here:meta"
+        /**
+         * Properties used by the deprecated Activity-Log service, just here to allow downward
+         * compatibility.
+         */
+        const val XYZ_ACTIVITY_LOG_NS = "@ns:com:here:xyz:log"
 
         private val XYZ = NotNullProperty<NakshaProperties, XyzNs>(XyzNs::class, name = XYZ_KEY)
         private val DELTA_PROXY_NULL = NullableProperty<NakshaProperties, MomDeltaNs>(MomDeltaNs::class, name = DELTA_KEY)

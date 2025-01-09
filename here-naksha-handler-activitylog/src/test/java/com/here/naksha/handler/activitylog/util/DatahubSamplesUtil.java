@@ -1,16 +1,18 @@
 package com.here.naksha.handler.activitylog.util;
 
 import com.here.naksha.handler.activitylog.ActivityLogComparator;
-import naksha.model.EXyzAction;
-import naksha.model.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.Original;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
+import naksha.base.JvmProxyUtil;
+import naksha.model.XyzFeatureCollection;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.test.common.FileUtil;
+import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 
 import java.util.List;
+
+import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
 
 public class DatahubSamplesUtil {
 
@@ -34,9 +36,9 @@ public class DatahubSamplesUtil {
   private static List<NakshaFeature> historyFeatures(String sampleFeaturesJson) {
     List<NakshaFeature> features = activityFeatures(sampleFeaturesJson);
     features.forEach(feature -> {
-      String originFeatureId = feature.getProperties().getXyzActivityLog().getId();
+      String originFeatureId = feature.getProperties().getActivityLog().getId();
       feature.setId(originFeatureId);
-      feature.getProperties().setXyzActivityLog(null);
+      feature.getProperties().remove(XYZ_ACTIVITY_LOG_NS);
     });
     return features;
   }
@@ -45,14 +47,14 @@ public class DatahubSamplesUtil {
     List<NakshaFeature> features = featuresFromCollectionJson(sampleFeaturesJson);
     features.forEach(feature -> {
       String originId = feature.getId();
-      XyzActivityLog datahubActivityLog = feature.getProperties().getXyzActivityLog();
-      XyzNamespace datahubXyzNamespace = feature.getProperties().getXyzNamespace();
+      XyzActivityLog datahubActivityLog = JvmProxyUtil.box(feature.getProperties().get(XYZ_ACTIVITY_LOG_NS), XyzActivityLog.class);
+      XyzNs datahubXyzNamespace = feature.getProperties().getXyz();
       Original datahubOriginal = datahubActivityLog.getOriginal();
       String originAction = datahubActivityLog.getAction();
       String originPuuid = datahubOriginal.getPuuid();
       long updatedAt = datahubOriginal.getUpdatedAt();
       long createdAt = datahubOriginal.getCreatedAt();
-      feature.getProperties().getXyzNamespace().setUuid(originId);
+      feature.getProperties().getXyz().setUuid(originId);
       if (originAction.equals("SAVE")) {
         originAction = "CREATE";
         datahubActivityLog.setAction("CREATE");

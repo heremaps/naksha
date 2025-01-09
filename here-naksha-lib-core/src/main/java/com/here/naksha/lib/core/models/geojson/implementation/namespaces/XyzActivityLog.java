@@ -23,13 +23,13 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.here.naksha.lib.core.util.json.JsonObject;
-import naksha.model.EXyzAction;
+import naksha.base.AnyObject;
+import naksha.model.Action;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("unused")
-public class XyzActivityLog extends JsonObject {
+public class XyzActivityLog extends AnyObject {
   public static final ObjectMapper mapper = new ObjectMapper();
   public static final String ID = "id";
   public static final String ORIGINAL = "original";
@@ -57,7 +57,7 @@ public class XyzActivityLog extends JsonObject {
 
   /**
    * The operation that lead to the current state of the namespace. Should be a value from {@link
-   * EXyzAction}.
+   * Action}.
    */
   @JsonProperty(ACTION)
   private String action;
@@ -78,7 +78,7 @@ public class XyzActivityLog extends JsonObject {
     this.diff = diff;
   }
 
-  public void setAction(@NotNull EXyzAction action) {
+  public void setAction(@NotNull Action action) {
     this.action = action.toString();
   }
 
@@ -87,18 +87,18 @@ public class XyzActivityLog extends JsonObject {
     return this;
   }
 
-  public @NotNull XyzActivityLog withAction(@NotNull EXyzAction action) {
+  public @NotNull XyzActivityLog withAction(@NotNull Action action) {
     setAction(action);
     return this;
   }
 
   public boolean isDeleted() {
-    return EXyzAction.DELETE.equals(getAction());
+    return Action.DELETED.toString().equals(getAction());
   }
 
   public void setDeleted(boolean deleted) {
     if (deleted) {
-      setAction(EXyzAction.DELETE);
+      setAction(Action.DELETED);
     }
   }
 
