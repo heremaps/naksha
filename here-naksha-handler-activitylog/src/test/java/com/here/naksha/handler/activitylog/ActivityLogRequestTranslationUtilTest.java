@@ -1,6 +1,6 @@
 package com.here.naksha.handler.activitylog;
 
-import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PREF_ACTIVITY_LOG_ID;
+import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PROPERTY_ACTIVITY_LOG_ID;
 import static naksha.model.PRef.id;
 import static naksha.model.PRef.uuid;
 
@@ -62,7 +62,7 @@ class ActivityLogRequestTranslationUtilTest {
   void shouldTranslateActivityLogIdToId() {
     // Given:
     String expectedId = "some_id";
-    POp singleActivityLogIdQuery = POp.eq(PREF_ACTIVITY_LOG_ID, expectedId);
+    POp singleActivityLogIdQuery = POp.eq(PROPERTY_ACTIVITY_LOG_ID, expectedId);
     ReadFeatures readFeatures = new ReadFeatures().withPropertyOp(singleActivityLogIdQuery);
 
     // When:
@@ -81,8 +81,8 @@ class ActivityLogRequestTranslationUtilTest {
     String firstId = "id_1";
     String secondId = "id_2";
     POp activityLogIdsQuery = POp.or(
-        POp.eq(PREF_ACTIVITY_LOG_ID, firstId),
-        POp.eq(PREF_ACTIVITY_LOG_ID, secondId)
+        POp.eq(PROPERTY_ACTIVITY_LOG_ID, firstId),
+        POp.eq(PROPERTY_ACTIVITY_LOG_ID, secondId)
     );
     ReadFeatures readFeatures = new ReadFeatures().withPropertyOp(activityLogIdsQuery);
 
@@ -111,7 +111,7 @@ class ActivityLogRequestTranslationUtilTest {
     String activityLogId = "activity_log_id";
     POp mixedQuery = POp.or(
         POp.eq(id(), id),
-        POp.eq(PREF_ACTIVITY_LOG_ID, activityLogId)
+        POp.eq(PROPERTY_ACTIVITY_LOG_ID, activityLogId)
     );
     ReadFeatures readFeatures = new ReadFeatures().withPropertyOp(mixedQuery);
 

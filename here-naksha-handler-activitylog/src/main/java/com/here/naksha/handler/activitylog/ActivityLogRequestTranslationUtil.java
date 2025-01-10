@@ -19,20 +19,23 @@
 package com.here.naksha.handler.activitylog;
 
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog.ID;
-import static naksha.geo.XyzProperties.XYZ_ACTIVITY_LOG_NS;
-import static naksha.model.request.query.Property.PROPERTIES;
+import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
 
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
 import java.util.Optional;
 import naksha.model.request.ReadFeatures;
+import naksha.model.request.query.IPropertyQuery;
+import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
+import naksha.model.request.query.StringOp;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 class ActivityLogRequestTranslationUtil {
 
-  private static final String[] ACTIVITY_LOG_ID_PATH = new String[] {PROPERTIES, XYZ_ACTIVITY_LOG_NS, ID};
-  static final Property PREF_ACTIVITY_LOG_ID = new Property(ACTIVITY_LOG_ID_PATH);
+  private static final String UUID = "uuid";
+  private static final String[] ACTIVITY_LOG_ID_PATH = new String[] {XYZ_ACTIVITY_LOG_NS, ID};
+  private static final String[] UUID_PATH = new String[] {XYZ_ACTIVITY_LOG_NS, UUID};
+  static final Property PROPERTY_ACTIVITY_LOG_ID = new Property(ACTIVITY_LOG_ID_PATH);
 
   private ActivityLogRequestTranslationUtil() {}
 
@@ -43,58 +46,54 @@ class ActivityLogRequestTranslationUtil {
    * <br>
    * Translation applies to given source-target pairs:
    * <ul>
-   * <li>'id' ({{@link PRef#id()}} => 'properties.@ns:com:here:xyz.uuid' ({{@link PRef#uuid()}})</li>
-   * <li>'properties.@ns:com:here:xyz:log.id' ({{@link #PREF_ACTIVITY_LOG_ID}}) => 'id' ({{@link PRef#id()}})</li>
+   * <li>'id' => 'properties.@ns:com:here:xyz.uuid' </li>
+   * <li>'properties.@ns:com:here:xyz:log.id' => 'id' </li>
    * </ul>
    * Translation is required because the ReadRequest that reach {{@link ActivityLogHandler}} are being delegated to HistoryHandler
    *
    * @param readFeatures ReadFeatures bearing potential POp to be translated (request will be mutated after this operation!)
    */
   static void translatePropertyOperation(ReadFeatures readFeatures) {
-    POp pOp = readFeatures.getPropertyOp();
-    if (pOp != null) {
-      if (hasChildren(pOp)) {
-        PropertyOperationUtil.transformPropertyInPropertyOperationTree(
-            pOp, ActivityLogRequestTranslationUtil::translateIfApplicable);
-      } else {
-        translateIfApplicable(pOp).ifPresent(readFeatures::setPropertyOp);
-      }
+    IPropertyQuery propertyQuery = readFeatures.getQuery().getProperties();
+    if (propertyQuery != null) {
+      PropertyOperationUtil.transformPropertyInPropertyOperationTree(
+          propertyQuery, ActivityLogRequestTranslationUtil::translateIfApplicable);
     }
   }
 
-  private static Optional<POp> translateIfApplicable(POp pOp) {
-    if (isSingleIdEqualityQuery(pOp)) {
-      String featureUuid = (String) pOp.getValue();
+  private static Optional<PQuery> translateIfApplicable(PQuery pQuery) {
+    if (isSingleIdEqualityQuery(pQuery)) {
+      String featureUuid = (String) pQuery.getValue();
       return Optional.of(uuidMustMatch(featureUuid));
-    } else if (isSingleActivityLogIdEqualityQuery(pOp)) {
-      String activityLogId = (String) pOp.getValue();
+    } else if (isSingleActivityLogIdEqualityQuery(pQuery)) {
+      String activityLogId = (String) pQuery.getValue();
       return Optional.of(idMustMatch(activityLogId));
     }
     return Optional.empty();
   }
 
-  private static boolean hasChildren(POp pOp) {
-    List<POp> maybeChildren = pOp.children();
-    return maybeChildren != null && !maybeChildren.isEmpty();
+  private static boolean isSingleIdEqualityQuery(@NotNull PQuery pQuery) {
+    return StringOp.EQUALS.equals(pQuery.getOp())
+        && Property.ID.equals(pQuery.getProperty().toString());
   }
 
-  private static boolean isSingleIdEqualityQuery(@NotNull POp pOp) {
-    return pOp.op().equals(POpType.EQ) && sameRefs(PRef.id(), pOp.getPropertyRef());
+  private static boolean isSingleActivityLogIdEqualityQuery(PQuery pQuery) {
+    return StringOp.EQUALS.equals(pQuery.getOp()) && PROPERTY_ACTIVITY_LOG_ID.equals(pQuery.getProperty());
   }
 
-  private static boolean isSingleActivityLogIdEqualityQuery(POp pOp) {
-    return pOp.op().equals(POpType.EQ) && sameRefs(PREF_ACTIVITY_LOG_ID, pOp.getPropertyRef());
+  private static PQuery uuidMustMatch(String desiredUuid) {
+    final PQuery pQuery = new PQuery();
+    pQuery.setOp(StringOp.EQUALS);
+    pQuery.setValue(desiredUuid);
+    pQuery.setProperty(new Property(UUID_PATH));
+    return pQuery;
   }
 
-  private static boolean sameRefs(@NotNull PRef expected, @Nullable PRef actual) {
-    return actual != null && expected.getPath().equals(actual.getPath());
-  }
-
-  private static POp uuidMustMatch(String desiredUuid) {
-    return POp.eq(PRef.uuid(), desiredUuid);
-  }
-
-  private static POp idMustMatch(String desiredId) {
-    return POp.eq(PRef.id(), desiredId);
+  private static PQuery idMustMatch(String desiredId) {
+    final PQuery pQuery = new PQuery();
+    pQuery.setOp(StringOp.EQUALS);
+    pQuery.setValue(desiredId);
+    pQuery.setProperty(new Property(ID));
+    return pQuery;
   }
 }

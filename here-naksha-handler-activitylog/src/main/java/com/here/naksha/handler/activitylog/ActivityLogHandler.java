@@ -40,15 +40,10 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Stream;
-import naksha.model.IReadSession;
-import naksha.model.NakshaContext;
-import naksha.model.SessionOptions;
-import naksha.model.XyzNs;
+import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.ErrorResponse;
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.Request;
-import naksha.model.request.Response;
+import naksha.model.objects.NakshaFeatureList;
+import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -74,7 +69,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
     if (request instanceof ReadFeatures) {
       return PROCESS;
     }
-    if (request instanceof WriteCollections<?, ?, ?>) {
+    if (request instanceof WriteCollections) {
       return SUCCEED_WITHOUT_PROCESSING;
     }
     return NOT_IMPLEMENTED;
@@ -89,7 +84,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
     final NakshaContext ctx = NakshaContext.currentContext();
     final ReadFeatures request = transformRequest(event.getRequest());
     List<NakshaFeature> activityLogFeatures = activityLogFeatures(request, ctx);
-    return ActivityLogSuccessResult.forFeatures(activityLogFeatures);
+    return new SuccessResponse(NakshaFeatureList.fromList(activityLogFeatures));
   }
 
   private @NotNull ReadFeatures transformRequest(Request request) {
@@ -103,7 +98,8 @@ public class ActivityLogHandler extends AbstractEventHandler {
   private @Nullable ErrorResponse propertiesValidationError() {
     if (nullOrEmpty(properties.getSpaceId())) {
       return new ErrorResponse(
-          XyzError.ILLEGAL_ARGUMENT, "Missing required property: " + ActivityLogHandlerProperties.SPACE_ID);
+          NakshaError.ILLEGAL_ARGUMENT,
+          "Missing required property: " + ActivityLogHandlerProperties.SPACE_ID);
     }
     return null;
   }

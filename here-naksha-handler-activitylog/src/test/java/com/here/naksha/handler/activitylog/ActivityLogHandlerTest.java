@@ -1,6 +1,6 @@
 package com.here.naksha.handler.activitylog;
 
-import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PREF_ACTIVITY_LOG_ID;
+import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PROPERTY_ACTIVITY_LOG_ID;
 import static com.here.naksha.handler.activitylog.assertions.ActivityLogSuccessResultAssertions.assertThatResult;
 import static com.here.naksha.test.common.assertions.POpAssertion.assertThatOperation;
 import static java.util.Collections.emptyMap;
@@ -149,7 +149,7 @@ class ActivityLogHandlerTest {
         .withPropertyOp(
             POp.or(
                 POp.eq(PRef.id(), featureUuid),
-                POp.eq(PREF_ACTIVITY_LOG_ID, featureId)
+                POp.eq(PROPERTY_ACTIVITY_LOG_ID, featureId)
             )
         );
 
