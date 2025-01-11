@@ -40,6 +40,9 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Stream;
+
+import com.here.naksha.lib.handlers.util.RequestTypesUtil;
+import naksha.base.StringList;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
@@ -69,7 +72,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
     if (request instanceof ReadFeatures) {
       return PROCESS;
     }
-    if (request instanceof WriteCollections) {
+    if (request instanceof WriteRequest && RequestTypesUtil.isOnlyWriteCollections(request)) {
       return SUCCEED_WITHOUT_PROCESSING;
     }
     return NOT_IMPLEMENTED;
@@ -89,9 +92,10 @@ public class ActivityLogHandler extends AbstractEventHandler {
 
   private @NotNull ReadFeatures transformRequest(Request request) {
     final ReadFeatures readFeatures = (ReadFeatures) request;
-    readFeatures.withReturnAllVersions(true);
+    readFeatures.setQueryHistory(true);
+    readFeatures.setVersions(Integer.MAX_VALUE);
     ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
-    readFeatures.setCollections(List.of(properties.getSpaceId()));
+    readFeatures.setCollectionIds(StringList.fromList(List.of(properties.getSpaceId())));
     return readFeatures;
   }
 
@@ -113,7 +117,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
     try (IReadSession readSession =
         nakshaHub().getSpaceStorage().newReadSession(SessionOptions.from(context, true))) {
       try (Response result = readSession.execute(readFeatures)) {
-        return readFeaturesFromResult(result, XyzFeature.class);
+        return readFeaturesFromResult(result, NakshaFeature.class);
       }
     } catch (NoCursor | NoSuchElementException e) {
       return Collections.emptyList();
