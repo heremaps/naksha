@@ -32,16 +32,19 @@ import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
-
 import java.util.*;
 import java.util.stream.Stream;
-
 import naksha.base.JvmProxyUtil;
 import naksha.base.StringList;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
+import naksha.model.objects.NakshaProperties;
 import naksha.model.request.*;
+import naksha.model.request.query.POr;
+import naksha.model.request.query.PQuery;
+import naksha.model.request.query.Property;
+import naksha.model.request.query.StringOp;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -58,7 +61,8 @@ public class ActivityLogHandler extends AbstractEventHandler {
   public ActivityLogHandler(
       @NotNull EventHandler handlerConfig, @NotNull INaksha hub, @NotNull EventTarget<?> eventTarget) {
     super(hub);
-    this.properties = Objects.requireNonNull(JvmProxyUtil.box(handlerConfig.getProperties(), ActivityLogHandlerProperties.class));
+    this.properties = Objects.requireNonNull(
+        JvmProxyUtil.box(handlerConfig.getProperties(), ActivityLogHandlerProperties.class));
   }
 
   @Override
@@ -112,7 +116,10 @@ public class ActivityLogHandler extends AbstractEventHandler {
     try (IReadSession readSession =
         nakshaHub().getSpaceStorage().newReadSession(SessionOptions.from(context, true))) {
       Response result = readSession.execute(readFeatures);
-        return readFeaturesFromResult(result, NakshaFeature.class);
+      if (!(result instanceof SuccessResponse)) {
+        return Collections.emptyList();
+      }
+      return readFeaturesFromResult((SuccessResponse) result, NakshaFeature.class);
     } catch (NoSuchElementException e) {
       return Collections.emptyList();
     }
@@ -173,12 +180,15 @@ public class ActivityLogHandler extends AbstractEventHandler {
   }
 
   private ReadFeatures missingPredecessorsRequest(Set<String> missingUuids) {
-    POp[] matchUuids = missingUuids.stream()
-        .map(missingUuid -> POp.eq(PRef.uuid(), missingUuid))
-        .toArray(POp[]::new);
-    return new ReadFeatures(properties.getSpaceId())
-        .withReturnAllVersions(true)
-        .withPropertyOp(POp.or(matchUuids));
+    PQuery[] matchUuids = missingUuids.stream()
+        .map(missingUuid ->
+            new PQuery(new Property(NakshaProperties.XYZ_KEY, "uuid"), StringOp.EQUALS, missingUuid))
+        .toArray(PQuery[]::new);
+    final ReadFeatures readFeatures = new ReadFeatures(properties.getSpaceId());
+    readFeatures.setQueryHistory(true);
+    readFeatures.setVersions(Integer.MAX_VALUE);
+    readFeatures.getQuery().setProperties(new POr(matchUuids));
+    return readFeatures;
   }
 
   @NotNull

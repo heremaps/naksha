@@ -1,13 +1,12 @@
 package com.here.naksha.handler.activitylog;
 
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PROPERTY_ACTIVITY_LOG_ID;
-import static naksha.model.PRef.id;
-import static naksha.model.PRef.uuid;
 
-import naksha.model.POp;
-import naksha.model.POpType;
-import naksha.model.ReadFeatures;
-import com.here.naksha.test.common.assertions.POpAssertion;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.query.PQuery;
+import naksha.model.request.query.Property;
+import naksha.model.request.query.StringOp;
 import org.junit.jupiter.api.Test;
 
 class ActivityLogRequestTranslationUtilTest {
@@ -16,8 +15,9 @@ class ActivityLogRequestTranslationUtilTest {
   void shouldTranslateIdToUuid() {
     // Given:
     String expectedId = "some_id";
-    POp singleIdQuery = POp.eq(id(), expectedId);
-    ReadFeatures readFeatures = new ReadFeatures().withPropertyOp(singleIdQuery);
+    PQuery singleIdQuery = new PQuery(new Property(NakshaFeature.ID_KEY), StringOp.EQUALS, expectedId);
+    ReadFeatures readFeatures = new ReadFeatures();
+    readFeatures.getQuery().setProperties(singleIdQuery);
 
     // When:
     ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
