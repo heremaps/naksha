@@ -4,9 +4,6 @@ import static com.here.naksha.handler.activitylog.assertions.ActivityLogFeatureA
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import com.here.naksha.handler.activitylog.ActivityLogSuccessResult;
-import naksha.model.XyzFeature;
-import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.util.storage.ResultHelper;
 import java.util.List;
 import java.util.function.Consumer;

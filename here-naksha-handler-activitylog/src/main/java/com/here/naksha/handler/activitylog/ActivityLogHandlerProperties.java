@@ -20,7 +20,6 @@ package com.here.naksha.handler.activitylog;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import naksha.geo.XyzProperties;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;

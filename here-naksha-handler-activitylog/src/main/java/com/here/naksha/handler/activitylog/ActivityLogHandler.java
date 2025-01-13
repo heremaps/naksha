@@ -30,18 +30,13 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Set;
+import com.here.naksha.lib.handlers.util.RequestTypesUtil;
+
+import java.util.*;
 import java.util.stream.Stream;
 
-import com.here.naksha.lib.handlers.util.RequestTypesUtil;
+import naksha.base.JvmProxyUtil;
 import naksha.base.StringList;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
@@ -63,7 +58,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
   public ActivityLogHandler(
       @NotNull EventHandler handlerConfig, @NotNull INaksha hub, @NotNull EventTarget<?> eventTarget) {
     super(hub);
-    this.properties = JsonSerializable.convert(handlerConfig.getProperties(), ActivityLogHandlerProperties.class);
+    this.properties = Objects.requireNonNull(JvmProxyUtil.box(handlerConfig.getProperties(), ActivityLogHandlerProperties.class));
   }
 
   @Override
@@ -116,10 +111,9 @@ public class ActivityLogHandler extends AbstractEventHandler {
   private List<NakshaFeature> fetchHistoryFeatures(ReadFeatures readFeatures, NakshaContext context) {
     try (IReadSession readSession =
         nakshaHub().getSpaceStorage().newReadSession(SessionOptions.from(context, true))) {
-      try (Response result = readSession.execute(readFeatures)) {
+      Response result = readSession.execute(readFeatures);
         return readFeaturesFromResult(result, NakshaFeature.class);
-      }
-    } catch (NoCursor | NoSuchElementException e) {
+    } catch (NoSuchElementException e) {
       return Collections.emptyList();
     }
   }

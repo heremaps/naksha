@@ -5,8 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import naksha.model.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
+import naksha.model.objects.NakshaFeature;
 import org.json.JSONException;
 import org.junit.jupiter.api.Assertions;
 import org.skyscreamer.jsonassert.JSONAssert;
@@ -14,13 +15,13 @@ import org.skyscreamer.jsonassert.JSONCompareMode;
 
 public class ActivityLogFeatureAssertions {
 
-  private final XyzFeature subject;
+  private final NakshaFeature subject;
 
-  private ActivityLogFeatureAssertions(XyzFeature subject) {
+  private ActivityLogFeatureAssertions(NakshaFeature subject) {
     this.subject = subject;
   }
 
-  public static ActivityLogFeatureAssertions assertThatActivityLogFeature(XyzFeature xyzFeature) {
+  public static ActivityLogFeatureAssertions assertThatActivityLogFeature(NakshaFeature xyzFeature) {
     assertNotNull(xyzFeature);
     return new ActivityLogFeatureAssertions(xyzFeature);
   }
@@ -31,24 +32,27 @@ public class ActivityLogFeatureAssertions {
   }
 
   public ActivityLogFeatureAssertions hasActivityLogId(String id) {
-    assertNotNull(subject.getProperties().getXyzActivityLog());
-    Assertions.assertEquals(id, subject.getProperties().getXyzActivityLog().getId());
+    final XyzActivityLog activityLog = XyzActivityLog.getXyzActivityLog(subject.getProperties());
+    assertNotNull(activityLog);
+    Assertions.assertEquals(id, activityLog.getId());
     return this;
   }
 
   public ActivityLogFeatureAssertions hasAction(String action) {
-    assertNotNull(subject.getProperties().getXyzActivityLog());
-    Assertions.assertEquals(action, subject.getProperties().getXyzActivityLog().getAction());
+    final XyzActivityLog activityLog = XyzActivityLog.getXyzActivityLog(subject.getProperties());
+    assertNotNull(activityLog);
+    Assertions.assertEquals(action, activityLog.getAction());
     return this;
   }
 
   public ActivityLogFeatureAssertions hasReversePatch(JsonNode reversePatch) {
-    assertNotNull(subject.getProperties().getXyzActivityLog());
-    Assertions.assertEquals(reversePatch, subject.getProperties().getXyzActivityLog().getDiff());
+    final XyzActivityLog activityLog = XyzActivityLog.getXyzActivityLog(subject.getProperties());
+    assertNotNull(activityLog);
+    Assertions.assertEquals(reversePatch, activityLog.getDiff());
     return this;
   }
 
-  public ActivityLogFeatureAssertions isIdenticalToDatahubSampleFeature(XyzFeature datahubFeature, String message) throws JSONException {
+  public ActivityLogFeatureAssertions isIdenticalToDatahubSampleFeature(NakshaFeature datahubFeature, String message) throws JSONException {
     alignDiff(subject);
     String subjectJson = JsonSerializable.serialize(subject);
     String datahubFeatureJson = JsonSerializable.serialize(datahubFeature);
@@ -56,8 +60,8 @@ public class ActivityLogFeatureAssertions {
     return this;
   }
 
-  private static void alignDiff(XyzFeature xyzFeature) {
-    JsonNode diff = xyzFeature.getProperties().getXyzActivityLog().getDiff();
+  private static void alignDiff(NakshaFeature xyzFeature) {
+    JsonNode diff = XyzActivityLog.getXyzActivityLog(xyzFeature.getProperties()).getDiff();
     if(diff != null){
       ((ObjectNode) diff).put("copy", 0);
       ((ObjectNode) diff).put("move", 0);

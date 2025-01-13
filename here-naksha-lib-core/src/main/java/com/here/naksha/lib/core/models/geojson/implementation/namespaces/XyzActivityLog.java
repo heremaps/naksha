@@ -18,13 +18,17 @@
  */
 package com.here.naksha.lib.core.models.geojson.implementation.namespaces;
 
+import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import naksha.base.AnyObject;
+import naksha.base.JvmProxyUtil;
 import naksha.model.Action;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -121,5 +125,9 @@ public class XyzActivityLog extends AnyObject {
 
   public void setOriginal(@NotNull Original original) {
     this.original = original;
+  }
+
+  public static @Nullable XyzActivityLog getXyzActivityLog(@NotNull NakshaProperties properties) {
+    return JvmProxyUtil.box(properties.get(XYZ_ACTIVITY_LOG_NS), XyzActivityLog.class);
   }
 }

@@ -36,7 +36,7 @@ public class DatahubSamplesUtil {
   private static List<NakshaFeature> historyFeatures(String sampleFeaturesJson) {
     List<NakshaFeature> features = activityFeatures(sampleFeaturesJson);
     features.forEach(feature -> {
-      String originFeatureId = feature.getProperties().getActivityLog().getId();
+      String originFeatureId = XyzActivityLog.getXyzActivityLog(feature.getProperties()).getId();
       feature.setId(originFeatureId);
       feature.getProperties().remove(XYZ_ACTIVITY_LOG_NS);
     });
