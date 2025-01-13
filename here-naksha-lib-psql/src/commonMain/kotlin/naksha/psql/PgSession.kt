@@ -69,6 +69,8 @@ open class PgSession(
             options = options.copy(mapId = value)
         }
 
+    override fun executeParallel(request: Request): Response = execute(request)
+
     /**
      * The PostgresQL database connection currently being used; if any.
      */

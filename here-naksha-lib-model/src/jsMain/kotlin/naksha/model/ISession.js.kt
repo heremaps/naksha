@@ -1,32 +1,30 @@
-@file:Suppress("OPT_IN_USAGE")
-
 package naksha.model
 
 import naksha.model.objects.Transaction
 import naksha.model.request.*
-import kotlin.js.JsExport
 
 /**
  * When a session is opened, it is bound to the context in which the session shall operate. The read session will acquire a connection from a connection pools when read is called, and release the connections instantly after the read is done. The write session will acquire a connection, when the first read or write operation is done, and stick with it until `commit`, `rollback` or [close] invoked. The dictionary manager will grab an idle read or read/write connection on demand, and release it to the connection pool as soon as possible.
  */
-expect interface ISession : AutoCloseable {
+@JsExport
+actual interface ISession : AutoCloseable {
     /**
      * The socket timeout in milliseconds.
      * @since 3.0.0
      */
-    var socketTimeout: Int
+    actual var socketTimeout: Int
 
     /**
      * The statement timeout in milliseconds.
      * @since 3.0.0
      */
-    var stmtTimeout: Int
+    actual var stmtTimeout: Int
 
     /**
      * The lock timeout in milliseconds.
      * @since 3.0.0
      */
-    var lockTimeout: Int
+    actual var lockTimeout: Int
 
     /**
      * The map the session currently operates on.
@@ -34,7 +32,7 @@ expect interface ISession : AutoCloseable {
      * - If changing the map, may throw [NakshaError.UNSUPPORTED_OPERATION], if changing the map is not supported.
      * @since 3.0.0
      */
-    var map: String
+    actual var map: String
 
     /**
      * Execute the given [Request].
@@ -44,7 +42,7 @@ expect interface ISession : AutoCloseable {
      * @return the response.
      * @since 2.0.7
      */
-    fun execute(request: Request): Response
+    actual fun execute(request: Request): Response
 
     /**
      * Execute the given [Request] in parallel, if supported, otherwise fallback to a normal [execute]. This differs from [SessionOptions.parallel] in that it no strong guarantee requirements, it is mainly for bulk loading or other siutation in which performance matter more than a 100% guarantee of safety.
@@ -56,21 +54,21 @@ expect interface ISession : AutoCloseable {
      * Parallel executions on partitioned tables can be up to 256 times faster than sequential ones, depending on how many partitions there are, and on the available network bandwidth. This is, because all partitions are queried in parallel. The biggest PostgresQL database server available currently (at the time of writing, mid 2024) can be installed on an EC2 [r6idn.metal](https://aws.amazon.com/ec2/instance-types/r6i/) instance, providing 200 Gbps of networking, which would allow theoretically to satisfy 40 parallel connections or 20, when being in the same [placement group](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-strategies.html#placement-groups-cluster), see [AWS ec2-instance-network-bandwidth](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-network-bandwidth.html). So, with two `r6idn.metal` machines, one being the database, and the other being the client, in the same `placement group`, theoretically 20 concurrent connections will reach the limit of 200 Gbps. However, because the CPU load has a factor too, and the kernel configuration for TCP as well, it is recommended to use 64 partitions, so that each partition receives 3.125 Gbps of traffic only. The reason is, that this uses all CPU perfectly fine and works as well, when the clients are distributed on 64 EMR nodes. For all of this to be working eventually, especially when reading later, it is recommended to think always about the CPU limit, because reading requires nearly always to query all partitions in parallel to be efficient, this requires a lot of CPU resources on the server. Therefore, the best often is to find a middle ground between extreme write throughput, and query performance. In the above example, 8 to 16 partitions (and therefore 8 to 16 concurrent connections) would still be able to each between 40/80 and 80/160 Gbps of throughput, but make reading much more efficient. As the EBS volume is anyway limited to 100 Gbps, and for updates or deleted multiple writes are needed (move to history), and WAL logs are as well sharing this bandwidth, it is anyway unlikely to satisfy even 100 Gbps of the bandwidth for writing. This is not true for the temporary tablespace located on the ephemeral storage, where 200 Gbps can be fully satisfied. **In a nutshell, planning is essential!**
      * @since 3.0.0
      */
-    fun executeParallel(request: Request): Response
+    actual fun executeParallel(request: Request): Response
 
     /**
      * Tests if the session is closed.
      * @return _true_ if the session is closed.
      * @since 3.0.0
      */
-    fun isClosed(): Boolean
+    actual fun isClosed(): Boolean
 
     /**
      * Closing a session will roll back the underlying connection, and then return it to their connection pool. After closing a session
      * any further methods invocation will raise an [IllegalStateException].
      * @since 2.0.7
      */
-    override fun close()
+    actual override fun close()
 
     /**
      * Tests if the given handle is valid, and if it is, tries to extend its live-time to the given amount of milliseconds.
@@ -83,7 +81,7 @@ expect interface ISession : AutoCloseable {
      * @return _true_ if the handle is valid, _false_ otherwise.
      * @since 3.0.0
      */
-    fun validateHandle(handle: String, ttl: Int? = null): Boolean
+    actual fun validateHandle(handle: String, ttl: Int?): Boolean
 
     /**
      * Load specific [tuples][naksha.model.Tuple].
@@ -94,7 +92,7 @@ expect interface ISession : AutoCloseable {
      * @return the list of the loaded [tuples][Tuple], contains _null_, if the tuple was not found.
      * @since 3.0.0
      */
-    fun getTuples(tupleNumbers: Array<TupleNumber>, fetchFromHistory:Boolean = false, mode: FetchBits = FetchMode.FETCH_ALL): List<Tuple?>
+    actual fun getTuples(tupleNumbers: Array<TupleNumber>, fetchFromHistory:Boolean, mode: FetchBits): List<Tuple?>
 
     /**
      * Fetches all tuples in the given result-tuples.
@@ -106,10 +104,10 @@ expect interface ISession : AutoCloseable {
      * @param mode the fetch mode.
      * @since 3.0.0
      */
-    fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int = 0, to: Int = resultTuples.size, fetchFromHistory: Boolean = false, mode: FetchBits = FetchMode.FETCH_ALL)
+    actual fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int, to: Int, fetchFromHistory: Boolean, mode: FetchBits)
 
     /**
      * Current transaction data.
      */
-    fun transaction(): Transaction
+    actual fun transaction(): Transaction
 }

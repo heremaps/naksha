@@ -628,6 +628,10 @@ WHERE relname IN ('$NAKSHA_TXN_SEQ', '$NAKSHA_MAP_SEQ') AND relnamespace=${defau
     override fun close() {
     }
 
+    override fun enterLock(id: String, waitMillis: Int64): ILock {
+        throw NakshaException(NakshaError.NOT_IMPLEMENTED, "enterLock")
+    }
+
     @Suppress("LeakingThis")
     internal val dictionaryManager = PgDictManager(this)
 }
