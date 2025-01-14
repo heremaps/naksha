@@ -137,7 +137,7 @@ val defaultOverallMinCoverage: Double = 0.8 // Don't decrease me!
     used by the users of the library.
 */
 
-// Apply general settings to all sub-projects
+// Apply general settings to all subprojects
 subprojects {
     // All subprojects should be in the naksha group (for artifactory) and have the same version!
     group = rootProject.group
@@ -206,10 +206,10 @@ subprojects {
                 events("standardOut", "started", "passed", "skipped", "failed")
             }
             afterTest(KotlinClosure2(
-                    { descriptor: TestDescriptor, result: TestResult ->
-                        val totalTime = result.endTime - result.startTime
-                        println("Total time of $descriptor.name was $totalTime")
-                    }
+                { descriptor: TestDescriptor, result: TestResult ->
+                    val totalTime = result.endTime - result.startTime
+                    println("Total time of $descriptor.name was $totalTime")
+                }
             ))
         }
 
@@ -556,14 +556,14 @@ subprojects {
                 }
             }
 
-                artifacts {
-                    file("build/libs/${project.name}-${project.version}.jar")
-                    file("build/libs/${project.name}-${project.version}-javadoc.jar")
-                    file("build/libs/${project.name}-${project.version}-sources.jar")
-                }
+            artifacts {
+                file("build/libs/${project.name}-${project.version}.jar")
+                file("build/libs/${project.name}-${project.version}-javadoc.jar")
+                file("build/libs/${project.name}-${project.version}-sources.jar")
             }
         }
     }
+}
 
 // For publishing root project (including shaded jar)
 publishing {
@@ -609,24 +609,17 @@ rootProject.dependencies {
     //This is needed, otherwise the blank root project will include nothing in the fat jar
     implementation(project(":here-naksha-app-service"))
 }
-// to include license files in Jar
-sourceSets {
-    main {
-        resources {
-            setSrcDirs(listOf(".")).setIncludes(listOf("LICENSE","HERE_NOTICE"))
-        }
-    }
-}
 
-rootProject.tasks.shadowJar {
-    //Have all tests run before building the fat jar
-    dependsOn(allprojects.flatMap { it.tasks.withType(Test::class) })
-    archiveClassifier.set("all")
-    mergeServiceFiles()
-    isZip64 = true
-    manifest {
-        attributes["Implementation-Title"] = "Naksha Service"
-        attributes["Main-Class"] = "com.here.naksha.app.service.NakshaApp"
+// to include license files in Jar
+subprojects {
+    tasks.withType<Jar> {
+        from(rootProject.file("HERE_NOTICE"))
+        into("")
+    }
+
+    tasks.withType<Jar> {
+        from(rootProject.file("LICENSE"))
+        into("")
     }
 }
 
@@ -642,7 +635,7 @@ fun Project.setOverallCoverage(minOverallCoverage: Double) {
 fun Project.getOverallCoverage(): Double {
     return if (ext.has(minOverallCoverageKey)) {
         ext.get(minOverallCoverageKey) as? Double
-                ?: throw IllegalStateException("Property '$minOverallCoverageKey' is expected to be Double")
+            ?: throw IllegalStateException("Property '$minOverallCoverageKey' is expected to be Double")
     } else {
         defaultOverallMinCoverage
     }
