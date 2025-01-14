@@ -2,7 +2,6 @@
 
 package naksha.base
 
-import kotlin.jvm.JvmOverloads
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 
