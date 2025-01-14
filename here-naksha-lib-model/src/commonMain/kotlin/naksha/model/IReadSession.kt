@@ -7,5 +7,4 @@ import kotlin.js.JsExport
 /**
  * A read-only session.
  */
-@JsExport
-interface IReadSession: ISession
+expect interface IReadSession: ISession
