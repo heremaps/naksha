@@ -20,6 +20,7 @@ package com.here.naksha.handler.activitylog;
 
 import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog.ID;
 import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
+import static naksha.model.objects.NakshaProperties.XYZ_KEY;
 
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
 import java.util.Optional;
@@ -34,8 +35,9 @@ class ActivityLogRequestTranslationUtil {
 
   private static final String UUID = "uuid";
   private static final String[] ACTIVITY_LOG_ID_PATH = new String[] {XYZ_ACTIVITY_LOG_NS, ID};
-  private static final String[] UUID_PATH = new String[] {XYZ_ACTIVITY_LOG_NS, UUID};
+  private static final String[] UUID_PATH = new String[] {XYZ_KEY, UUID};
   static final Property PROPERTY_ACTIVITY_LOG_ID = new Property(ACTIVITY_LOG_ID_PATH);
+  static final Property PROPERTY_UUID = new Property(UUID_PATH);
 
   private ActivityLogRequestTranslationUtil() {}
 
@@ -85,7 +87,7 @@ class ActivityLogRequestTranslationUtil {
     final PQuery pQuery = new PQuery();
     pQuery.setOp(StringOp.EQUALS);
     pQuery.setValue(desiredUuid);
-    pQuery.setProperty(new Property(UUID_PATH));
+    pQuery.setProperty(PROPERTY_UUID);
     return pQuery;
   }
 

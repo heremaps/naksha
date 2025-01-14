@@ -2,7 +2,6 @@ package com.here.naksha.handler.activitylog;
 
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PROPERTY_ACTIVITY_LOG_ID;
 import static com.here.naksha.handler.activitylog.assertions.ActivityLogSuccessResultAssertions.assertThatResult;
-import static com.here.naksha.test.common.assertions.POpAssertion.assertThatOperation;
 import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -25,38 +24,20 @@ import com.here.naksha.handler.activitylog.util.DatahubSamplesUtil;
 import com.here.naksha.handler.activitylog.util.DatahubSamplesUtil.DatahubSample;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.XyzError;
 import naksha.model.EXyzAction;
-import naksha.model.XyzFeature;
 import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
-import com.here.naksha.lib.core.models.storage.EExecutedOp;
-import naksha.model.ErrorResult;
-import com.here.naksha.lib.core.models.storage.ListBasedForwardCursor;
-import naksha.model.OpType;
-import naksha.model.POp;
-import naksha.model.POpType;
-import naksha.model.PRef;
-import naksha.model.ReadCollections;
-import naksha.model.ReadFeatures;
-import naksha.model.ReadRequest;
-import naksha.model.Request;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
-import com.here.naksha.test.common.assertions.POpAssertion;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Request;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -105,7 +86,7 @@ class ActivityLogHandlerTest {
 
   @ParameterizedTest
   @MethodSource("unhandledRequests")
-  void shouldFailOnUnhandledRequests(Request<?> unhandledRequest) {
+  void shouldFailOnUnhandledRequests(Request unhandledRequest) {
     // Given: event bearing some unhandler request
     IEvent event = eventWith(unhandledRequest);
 
@@ -187,7 +168,7 @@ class ActivityLogHandlerTest {
   void shouldComposeActivityFeatures() throws Exception {
     // Given: old version of feature
     String featureId = "featureId";
-    XyzFeature oldFeature = xyzFeature(
+    NakshaFeature oldFeature = xyzFeature(
         featureId,
         "initial_uuid",
         null,
