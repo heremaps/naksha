@@ -203,6 +203,8 @@ public class RequestHelper {
   //    return ProxyGeoUtil.toJtsMultiPoint(multiPoint);
   //  }
 
+  // TODO: cleanup as part of CASL-784
+  //
   //  /**
   //   * Helper function that returns instance of PRef or NonIndexedPRef depending on
   //   * whether the propPath provided matches with standard (indexed) property search or not.

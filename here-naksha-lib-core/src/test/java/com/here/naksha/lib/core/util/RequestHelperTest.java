@@ -1,10 +1,13 @@
-package com.here.naksha.lib.core.util;
-
-import com.here.naksha.lib.core.util.storage.RequestHelper;
-
-public class RequestHelperTest {
-
-    //TODO(lib-core test) see if this test is still relevant now that PRef is no longer available (replaced with Property?)
+// TODO: clean up as part of CASL-784
+// see if this test is still relevant now that PRef is no longer available (replaced with Property?)
+//
+//package com.here.naksha.lib.core.util;
+//
+//import com.here.naksha.lib.core.util.storage.RequestHelper;
+//
+//public class RequestHelperTest {
+//
+//
 //    @Test
 //    public void testPRefFromStandardPath() {
 //        final PRef pref = RequestHelper.pRefFromPropPath(new String[]{"properties","@ns:com:here:xyz","tags"});
@@ -18,4 +21,4 @@ public class RequestHelperTest {
 //        assertNotNull(pref);
 //        assertTrue(pref instanceof NON_INDEXED_PREF, "Must be instanceof NonIndexedPRef");
 //    }
-}
+//}
