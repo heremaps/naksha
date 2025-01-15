@@ -1,14 +1,15 @@
-package com.here.naksha.storage.http;
-
-import com.here.naksha.lib.core.util.storage.RequestHelper;
-
-import java.net.URLEncoder;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-class POpToQueryConverterTest {
-//TODO if still relevant somewhere, modify to fit new query model, else delete
+// TODO CASL-784 if still relevant somewhere, modify to fit new query model, else delete
+//package com.here.naksha.storage.http;
+//
+//import com.here.naksha.lib.core.util.storage.RequestHelper;
+//
+//import java.net.URLEncoder;
+//import static java.nio.charset.StandardCharsets.UTF_8;
+//import static org.junit.jupiter.api.Assertions.assertEquals;
+//import static org.junit.jupiter.api.Assertions.assertThrows;
+//
+//class POpToQueryConverterTest {
+//
 //  @Test
 //  void andSingle() {
 //    POp pOp = and(
@@ -244,8 +245,8 @@ class POpToQueryConverterTest {
 //
 //    assertEquals(query, "f.id=1");
 //  }
-
-  public static String urlEncoded(String text) {
-    return URLEncoder.encode(text, UTF_8);
-  }
-}
+//
+//  public static String urlEncoded(String text) {
+//    return URLEncoder.encode(text, UTF_8);
+//  }
+//}
