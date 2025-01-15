@@ -7,6 +7,11 @@ import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
     kotlin("plugin.js-plain-objects")
+    id("naksha.publish")
+    id("naksha.java")
+
+    // uncomment spotless to add license comments
+    // id("naksha.spotless-kotlin")
 }
 
 kotlin {
@@ -40,7 +45,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(kotlin("stdlib-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation(Lib.kotlinx_datetime)
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-geo"))
                 api(project(":here-naksha-lib-jbon"))
@@ -54,7 +59,7 @@ kotlin {
                 implementation(kotlin("test-annotations-common"))
                 implementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
                 implementation("org.mockito:mockito-core:5.13.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation(Lib.kotlinx_datetime)
             }
         }
         jvmMain {
@@ -70,7 +75,7 @@ kotlin {
         }
         jvmTest {
             dependencies {
-                implementation("org.mockito:mockito-core:5.8.0")
+                implementation(Lib.mockito)
             }
         }
         jsMain {

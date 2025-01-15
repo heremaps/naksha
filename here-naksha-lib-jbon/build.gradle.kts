@@ -6,6 +6,11 @@ import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
     kotlin("plugin.js-plain-objects")
+    id("naksha.publish")
+    id("naksha.java")
+
+    // uncomment spotless to add license comments
+    // id("naksha.spotless-kotlin")
 }
 
 kotlin {
@@ -39,7 +44,7 @@ kotlin {
         commonMain {
             dependencies {
                 api(kotlin("stdlib-common"))
-                api("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                api(Lib.kotlinx_datetime)
                 api(project(":here-naksha-lib-base"))
             }
         }
@@ -48,7 +53,7 @@ kotlin {
                 implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation(Lib.kotlinx_datetime)
                 implementation(project(":here-naksha-lib-base"))
             }
         }
@@ -56,8 +61,8 @@ kotlin {
             jvmToolchain(11)
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
-                api("org.lz4:lz4-java:1.8.0")
-                implementation("org.slf4j:slf4j-simple:2.0.13")
+                api(Lib.lz4_java)
+                implementation(Lib.slf4j_console)
             }
             resources.setSrcDirs(resources.srcDirs + "${layout.buildDirectory}/dist/js/productionExecutable/")
         }
@@ -85,3 +90,4 @@ tasks {
         maxHeapSize = "8g"
     }
 }
+setOverallCoverage(0.0) // only increasing allowed!

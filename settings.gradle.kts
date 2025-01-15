@@ -1,6 +1,7 @@
 pluginManagement {
     repositories {
         maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/bootstrap")
+        maven("https://plugins.gradle.org/m2/")
         gradlePluginPortal()
     }
 }
