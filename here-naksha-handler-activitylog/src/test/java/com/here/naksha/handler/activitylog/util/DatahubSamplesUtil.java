@@ -54,18 +54,18 @@ public class DatahubSamplesUtil {
       String originPuuid = datahubOriginal.getPuuid();
       long updatedAt = datahubOriginal.getUpdatedAt();
       long createdAt = datahubOriginal.getCreatedAt();
-      feature.getProperties().getXyz().setUuid(originId);
+      feature.getProperties().getXyz().put("uuid",originId);
       if (originAction.equals("SAVE")) {
-        originAction = "CREATE";
-        datahubActivityLog.setAction("CREATE");
+        originAction = "CREATED";
+        datahubActivityLog.setAction("CREATED");
       }
       if (datahubOriginal.getSpace() == null) {
         datahubOriginal.setSpace(SAMPLE_SPACE_ID);
       }
-      datahubXyzNamespace.setAction(EXyzAction.get(EXyzAction.class, originAction));
-      datahubXyzNamespace.setPuuid(originPuuid);
-      datahubXyzNamespace.setUpdatedAt(updatedAt);
-      datahubXyzNamespace.setCreatedAt(createdAt);
+      datahubXyzNamespace.put("action", originAction);
+      datahubXyzNamespace.put("puuid",originPuuid);
+      datahubXyzNamespace.put("updatedAt",updatedAt);
+      datahubXyzNamespace.put("createdAt",createdAt);
     });
     features.sort(new ActivityLogComparator());
     return features;

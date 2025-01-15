@@ -1,6 +1,5 @@
 package com.here.naksha.handler.activitylog;
 
-import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.test.common.FileUtil;
 import java.io.File;
@@ -8,6 +7,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.stream.Stream;
+
+import naksha.model.objects.NakshaFeature;
 import org.json.JSONException;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -27,10 +28,10 @@ class ActivityLogEnhancerTest {
 
   @ParameterizedTest
   @MethodSource("samples")
-  void shouldEnhanceFeatureWithPredecessor(String sampleDir, XyzFeature oldFeature, XyzFeature newFeature, String expectedFeatureJson)
+  void shouldEnhanceFeatureWithPredecessor(String sampleDir, NakshaFeature oldFeature, NakshaFeature newFeature, String expectedFeatureJson)
       throws JSONException {
     // When
-    XyzFeature enhancedFeature = ActivityLogEnhancer.enhanceWithActivityLog(newFeature, oldFeature, SPACE_ID);
+    NakshaFeature enhancedFeature = ActivityLogEnhancer.enhanceWithActivityLog(newFeature, oldFeature, SPACE_ID);
 
     // And
     String enhancedFeatureJson = JsonSerializable.serialize(enhancedFeature);
@@ -57,10 +58,10 @@ class ActivityLogEnhancerTest {
         });
   }
 
-  private static XyzFeature featureFromFile(String sampleDir, String fileName) {
+  private static NakshaFeature featureFromFile(String sampleDir, String fileName) {
     return JsonSerializable.deserialize(
         FileUtil.loadFileOrFail(sampleDir, fileName),
-        XyzFeature.class
+            NakshaFeature.class
     );
   }
 

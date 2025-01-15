@@ -33,7 +33,9 @@ import org.jetbrains.annotations.NotNull;
 
 class ActivityLogRequestTranslationUtil {
 
-  private static final String UUID = "uuid";
+  static final String UUID = "uuid";
+  static final String PUUID = "puuid";
+  static final String ACTION = "action";
   private static final String[] ACTIVITY_LOG_ID_PATH = new String[] {XYZ_ACTIVITY_LOG_NS, ID};
   private static final String[] UUID_PATH = new String[] {XYZ_KEY, UUID};
   static final Property PROPERTY_ACTIVITY_LOG_ID = new Property(ACTIVITY_LOG_ID_PATH);

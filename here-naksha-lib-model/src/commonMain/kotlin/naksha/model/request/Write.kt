@@ -10,6 +10,7 @@ import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaCollection
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -166,6 +167,7 @@ open class Write : AnyObject() {
      * @param atomic if _true_, the [version] is read from the [XZY namespace][naksha.model.XyzNs] of the feature, so that the operation fails, if the currently existing feature is not exactly in this state. It is assumed, that when a client sends a new feature, it will not change the metadata, so the [XZY namespace][naksha.model.XyzNs], of the feature, except maybe for the tags.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun updateFeature(map: String?, collectionId: String, feature: NakshaFeature, atomic: Boolean = false): Write {
         this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = collectionId
@@ -201,6 +203,7 @@ open class Write : AnyObject() {
      * @param atomic if the operation should be performed atomic.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun deleteFeature(map: String?, collectionId: String, feature: NakshaFeature, atomic: Boolean = false): Write {
         this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = collectionId
@@ -219,6 +222,7 @@ open class Write : AnyObject() {
      * @param version if the operation should be performed atomic, the version that is expected.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun deleteFeatureById(map: String?, collectionId: String, id: String, version: Int64? = null): Write {
         this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = collectionId
@@ -252,6 +256,7 @@ open class Write : AnyObject() {
      * @param atomic if _true_, the [version] is read from the [XZY namespace][naksha.model.XyzNs] of the feature, so that the operation fails, if the currently existing feature is not exactly in this state. It is assumed, that when a client sends a new feature, it will not change the metadata, so the [XZY namespace][naksha.model.XyzNs], of the feature, except maybe for the tags.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun updateCollection(map: String?, collection: NakshaCollection, atomic: Boolean = false): Write {
         this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = VIRT_COLLECTIONS
@@ -285,6 +290,7 @@ open class Write : AnyObject() {
      * @param atomic if the operation should be performed atomic.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun deleteCollection(map: String?, collection: NakshaCollection, atomic: Boolean = false): Write {
         this.mapId = map ?: NakshaContext.mapId()
         this.op = WriteOp.DELETE
@@ -301,6 +307,7 @@ open class Write : AnyObject() {
      * @param version if the operation should be performed atomic, the version that is expected.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun deleteCollectionById(map: String?, collectionId: String, version: Int64? = null): Write {
         this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = VIRT_COLLECTIONS

@@ -6,8 +6,6 @@ import naksha.base.*
 import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
 import kotlin.DeprecationLevel.WARNING
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmStatic
 
 /**
  * The XYZ namespace stored in [properties.@ns:com:here:xyz][NakshaProperties.XYZ] of the [NakshaFeature].
