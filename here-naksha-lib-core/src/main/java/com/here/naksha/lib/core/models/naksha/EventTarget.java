@@ -19,7 +19,6 @@
 package com.here.naksha.lib.core.models.naksha;
 
 import java.util.List;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.StringList;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
@@ -33,7 +32,7 @@ public abstract class EventTarget<SELF extends EventTarget<SELF>> extends Naksha
   }
 
   public @NotNull List<@NotNull String> getEventHandlerIds() {
-    return JvmBoxingUtil.box(get(EVENT_HANDLER_IDS), StringList.class);
+    return getOrSet(EVENT_HANDLER_IDS, new StringList());
   }
 
   public @NotNull SELF addHandler(@NotNull String handlerId) {

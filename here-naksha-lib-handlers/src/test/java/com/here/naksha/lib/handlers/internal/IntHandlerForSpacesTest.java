@@ -147,7 +147,8 @@ class IntHandlerForSpacesTest {
   }
 
   private static Space space(String id, String title, String desc, List<String> handlersIds) {
-    Space space = new Space(id);
+    Space space = new Space();
+    space.setId(id);
     space.setTitle(title);
     space.setDescription(desc);
     for (String handlerId : handlersIds) {

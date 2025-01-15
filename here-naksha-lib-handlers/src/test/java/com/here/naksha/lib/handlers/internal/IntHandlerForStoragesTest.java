@@ -113,7 +113,9 @@ class IntHandlerForStoragesTest {
   }
 
   private Storage httpStorage(NakshaProperties xyzProperties) {
-    Storage httpStorage = new Storage(HttpStorage.class, "test-http-storage");
+    Storage httpStorage = new Storage();
+    httpStorage.setClassName(HttpStorage.class.getName());
+    httpStorage.setId("test-http-storage");
     httpStorage.setTitle("some title");
     httpStorage.setDescription("some desc");
     httpStorage.setProperties(xyzProperties);
