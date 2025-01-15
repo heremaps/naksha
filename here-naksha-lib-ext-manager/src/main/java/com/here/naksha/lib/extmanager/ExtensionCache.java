@@ -108,6 +108,7 @@ public class ExtensionCache {
         List<String> whitelistClasses = (List<String>) extension
             .getProperties()
             .getOrDefault(WHITE_LIST_CLASSES, extensionConfig.getWhilelistDelegateClass());
+        logger.info("Whitelist classes in use for extension {} are {}", extensionIdWthEnv, whitelistClasses);
         loader = ClassLoaderHelper.getClassLoader(jarFile, whitelistClasses);
       } catch (Exception e) {
         logger.error("Failed to load extension jar " + extensionIdWthEnv, e);
@@ -126,7 +127,7 @@ public class ExtensionCache {
                     extensionIdWthEnv,
                     extension.getInitClassName());
           } else {
-            logger.error("Extension does not implement IExtensionInit for extension {}", extensionIdWthEnv);
+            logger.error("InitClassName {} does not implement IExtensionInit for Extension {}", extension.getInitClassName(), extensionIdWthEnv);
             return;
           }
         } catch (Exception e) {
