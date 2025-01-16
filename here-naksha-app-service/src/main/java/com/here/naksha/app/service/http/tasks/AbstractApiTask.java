@@ -88,7 +88,7 @@ public abstract class AbstractApiTask<T extends Response>
   protected @NotNull Response errorResponse(@NotNull Throwable throwable) {
     logger.warn("The task failed with an exception. ", throwable);
     return verticle.sendErrorResponse(
-        routingContext, NakshaError.EXCEPTION, "Task failed processing! " + throwable.getMessage());
+        routingContext, new NakshaError(NakshaError.EXCEPTION, "Task failed processing! " + throwable.getMessage(), throwable));
   }
 
   public @NotNull Response executeUnsupported() {
