@@ -19,7 +19,6 @@
 package com.here.naksha.lib.handlers;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.createWriteCollectionsRequest;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_COLLECTION_CREATION;
@@ -27,6 +26,7 @@ import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttemp
 import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.FIRST_ATTEMPT;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
@@ -39,13 +39,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.base.StringList;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
+import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.StreamInfo;
 import naksha.model.objects.NakshaCollection;
@@ -78,7 +79,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
     this.properties = Objects.requireNonNull(
-        JvmProxyUtil.box(eventHandler.getProperties(), DefaultStorageHandlerProperties.class));
+        JvmBoxingUtil.box(eventHandler.getProperties(), DefaultStorageHandlerProperties.class));
   }
 
   @Override
@@ -286,15 +287,22 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   private @NotNull Response singleWrite(
       @NotNull NakshaContext ctx, @NotNull IStorage storageImpl, @NotNull WriteRequest wr) {
-    final IWriteSession writer = storageImpl.newWriteSession(SessionOptions.from(ctx, true));
-    final Response result = writer.execute(wr);
-    if (result instanceof SuccessResponse) {
-      writer.commit();
-    } else {
-      logger.warn("Failed executing {}, expected success but got: {}", wr.getClass(), result);
-      writer.rollback();
+    try (final IWriteSession writer = storageImpl.newWriteSession(SessionOptions.from(ctx, true))) {
+      final Response result = writer.execute(wr);
+      if (result instanceof SuccessResponse) {
+        writer.commit();
+      } else {
+        logger.warn("Failed executing {}, expected success but got: {}", wr.getClass(), result);
+        writer.rollback();
+      }
+      return result;
+    } catch (NakshaException ne) {
+      logger.warn("Failed executing {}", wr.getClass(), ne);
+      return new ErrorResponse(ne.error);
+    } catch (Exception e) {
+      logger.warn("Failed executing {}", wr.getClass(), e);
+      return new ErrorResponse(NakshaError.EXCEPTION, "Execution unexpectedly failed", e.getMessage(), e);
     }
-    return result;
   }
 
   private @NotNull Response reattemptFeatureRequest(
@@ -441,7 +449,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
             (NakshaCollection) wc.getWrites().get(0).getFeature();
       } else {
         // use existing Space collection (as it is not an Update request)
-        final SpaceProperties spaceProperties = JvmProxyUtil.box(s.getProperties(), SpaceProperties.class);
+        final SpaceProperties spaceProperties = JvmBoxingUtil.box(s.getProperties(), SpaceProperties.class);
         collectionDefinedInSpace = spaceProperties.getCollection();
       }
       if (collectionDefinedInSpace != null) {

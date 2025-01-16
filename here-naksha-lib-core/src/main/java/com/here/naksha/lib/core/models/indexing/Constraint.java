@@ -18,16 +18,25 @@
  */
 package com.here.naksha.lib.core.models.indexing;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import naksha.base.AnyObject;
+import naksha.base.JvmListProxy;
+import naksha.base.JvmMapProxy;
+import naksha.model.objects.NakshaFeature;
 
 /** Base class of all possible constraints that can be combined. */
-@JsonTypeInfo(use = Id.NAME, property = "type")
-@JsonSubTypes({
-  @JsonSubTypes.Type(value = ConstraintCheck.class),
-  @JsonSubTypes.Type(value = ConstraintAll.class),
-  @JsonSubTypes.Type(value = ConstraintOne.class),
-  @JsonSubTypes.Type(value = ConstraintNot.class)
-})
-public class Constraint {}
+public class Constraint extends AnyObject {
+
+  public static class ConstraintList extends JvmListProxy<Constraint> {
+
+    public ConstraintList() {
+      super(Constraint.class);
+    }
+  }
+
+  public static class ConstraintMap extends JvmMapProxy<String, Constraint> {
+
+    public ConstraintMap() {
+      super(String.class, Constraint.class);
+    }
+  }
+}

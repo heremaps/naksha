@@ -18,8 +18,7 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
+import static com.here.naksha.lib.handlers.NakshaAdminCollection.EVENT_HANDLERS;
 import static com.here.naksha.lib.handlers.internal.PluginPropertiesValidator.pluginValidation;
 
 import com.here.naksha.lib.core.INaksha;
@@ -35,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.IReadSession;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
@@ -45,6 +44,7 @@ import naksha.model.request.*;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
+import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
 
 public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
@@ -85,7 +85,7 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
     if (HttpStorage.class.getName().equals(storage.getClassName())) {
       HttpStorageProperties httpStorageProperties;
       try {
-        httpStorageProperties = JvmProxyUtil.box(storage.getProperties(), HttpStorageProperties.class);
+        httpStorageProperties = JvmBoxingUtil.box(storage.getProperties(), HttpStorageProperties.class);
       } catch (Exception e) {
         return new ErrorResponse(
             NakshaError.ILLEGAL_ARGUMENT,
@@ -177,7 +177,7 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
       final SuccessResponse successResponse = (SuccessResponse) readResult;
       final List<EventHandler> eventHandlers;
       try {
-        eventHandlers = readFeaturesFromResult(successResponse, EventHandler.class);
+        eventHandlers = ResultHelper.extractResponseItems(successResponse, EventHandler.class);
       } catch (NoSuchElementException emptyException) {
         // No active handler using the storage, proceed with deleting the storage
         return new SuccessResponse();

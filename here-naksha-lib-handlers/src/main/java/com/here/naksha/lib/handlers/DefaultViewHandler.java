@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.*;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
@@ -56,7 +56,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties = JvmProxyUtil.box(eventHandler.getProperties(), DefaultViewHandlerProperties.class);
+    this.properties = JvmBoxingUtil.box(eventHandler.getProperties(), DefaultViewHandlerProperties.class);
   }
 
   @Override

@@ -18,45 +18,21 @@
  */
 package com.here.naksha.lib.core.models.naksha;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaFeature;
-import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public abstract class Plugin<API> extends NakshaFeature {
 
-  @AvailableSince(NakshaVersion.v2_0_7)
-  public static final String ID = "id";
-
   public static final String CLASS_NAME = "className";
 
-  /**
-   * Create a new empty feature.
-   *
-   * @param className the name of the class to instantiate.
-   * @param id The ID; if {@code null}, then a random one is generated.
-   */
-  protected Plugin(@JsonProperty(CLASS_NAME) @NotNull String className, @JsonProperty(ID) @Nullable String id) {
-    super(id);
-    this.className = className;
-  }
-
   public @NotNull String getClassName() {
-    return className;
+    return (String) getRaw(CLASS_NAME);
   }
 
   public void setClassName(@NotNull String className) {
-    this.className = className;
+    setRaw(CLASS_NAME, className);
   }
-
-  @JsonProperty(CLASS_NAME)
-  @JsonInclude(Include.ALWAYS)
-  protected @NotNull String className;
 
   /**
    * Create a new instance of the plugin.

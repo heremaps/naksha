@@ -22,7 +22,7 @@ import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.handlers.val.ContextXyzFeatureResult;
 import java.util.ArrayList;
 import java.util.List;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.TagList;
@@ -188,7 +188,7 @@ public final class HandlerUtil {
     deltaNs.setReviewState(reviewState.getText());
     final @NotNull List<@NotNull String> tags = tagsWithoutReviewState(xyzNs.getTags());
     tags.add(REVIEW_STATE_PREFIX + reviewState);
-    TagList tagList = JvmProxyUtil.box(tags, TagList.class);
+    TagList tagList = JvmBoxingUtil.box(tags, TagList.class);
     xyzNs.setTags(tagList, false);
   }
 }

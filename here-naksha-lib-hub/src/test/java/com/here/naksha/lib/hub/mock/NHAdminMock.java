@@ -19,43 +19,43 @@
 package com.here.naksha.lib.hub.mock;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.createFeatureRequest;
+import static naksha.model.util.RequestHelper.createFeatureRequest;
 
-import com.here.naksha.lib.core.NakshaAdminCollection;
-import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.lambdas.Fe1;
+import com.here.naksha.lib.handlers.NakshaAdminCollection;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-import naksha.model.ErrorResult;
-import com.here.naksha.lib.core.models.storage.IfConflict;
-import com.here.naksha.lib.core.models.storage.IfExists;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
-import com.here.naksha.lib.core.models.storage.XyzCodecFactory;
-import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
-import com.here.naksha.lib.core.models.storage.XyzCollectionCodecFactory;
-import naksha.model.IReadSession;
-import naksha.model.IStorage;
-import naksha.model.IWriteSession;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
+import naksha.base.Int64;
+import naksha.model.ILock;
+import naksha.model.IMap;
+import naksha.model.IReadSession;
+import naksha.model.IStorage;
+import naksha.model.IWriteSession;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.SessionOptions;
+import naksha.model.Tuple;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Response;
+import naksha.model.request.Write;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class NHAdminMock implements IStorage {
 
-  protected static @NotNull Map<String, TreeMap<String, Object>> mockCollection;
+  protected static @NotNull Map<String, TreeMap<String, NakshaFeature>> mockCollection;
   protected static @NotNull NakshaHubConfig nakshaHubConfig;
 
   public NHAdminMock(final @NotNull Storage storage) {
     // this constructor is only to support IStorage instantiation
     if (this.mockCollection == null) {
       this.mockCollection = new ConcurrentHashMap<>();
-      this.initStorage();
+      this.initStorage(null);
     }
   }
 
@@ -70,109 +70,133 @@ public class NHAdminMock implements IStorage {
     this.setupConfig();*/
   }
 
+  private void setupConfig() {
+    // Add custom config in naksha:configs
+    final NakshaContext ctx = NakshaContext.newInstance("naksha_mock");
+    ctx.attachToCurrentThread();
+
+    try (final IWriteSession admin = newWriteSession(SessionOptions.from(ctx, true))) {
+      final Response response = admin.execute(createFeatureRequest(NakshaAdminCollection.CONFIGS, nakshaHubConfig));
+      if (response instanceof ErrorResponse errorResponse) {
+        admin.rollback();
+        throw unchecked(
+            new Exception("Unable to add custom config in Mock storage (code: " + errorResponse.getError().getCode() + " )",
+                errorResponse.getError().getCause()));
+      }
+      admin.commit();
+    }
+  }
+
+  @NotNull
   @Override
-  public void initStorage() {
-    final NakshaContext ctx = new NakshaContext().withAppId("naksha_mock");
+  public String getId() {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @NotNull
+  @Override
+  public SessionOptions getAdminOptions() {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @Override
+  public int getHardCap() {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @Override
+  public void setHardCap(int i) {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @Override
+  public boolean isInitialized() {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @Override
+  public void initStorage(@Nullable Map<String, ?> params) {
+    final NakshaContext ctx = NakshaContext.newInstance("naksha_mock");
     ctx.attachToCurrentThread();
 
     // Create all admin collections
-    try (final IWriteSession admin = newWriteSession(ctx, true)) {
-      WriteXyzCollections writeXyzCollections = new WriteXyzCollections();
+    try (final IWriteSession admin = newWriteSession(SessionOptions.from(ctx, true))) {
+      WriteRequest writeAdminCollections = new WriteRequest();
       for (final String name : NakshaAdminCollection.ALL) {
-        final XyzCollection collection = new XyzCollection(name);
-        writeXyzCollections.add(EWriteOp.CREATE, collection);
+        Write write = new Write().createCollection(null, new NakshaCollection(name));
+        writeAdminCollections.add(write);
       }
-      final Result wrResult = admin.execute(writeXyzCollections);
-      if (wrResult == null) {
-        admin.rollback(true);
-        throw unchecked(new Exception("Unable to create Admin collections in Mock storage. Null result!"));
-      } else if (wrResult instanceof ErrorResult er) {
-        admin.rollback(true);
-        throw unchecked(new Exception(
-            "Unable to create Admin collections in Mock storage. " + er.toString(), er.exception));
+      final Response response = admin.execute(writeAdminCollections);
+      if (response instanceof ErrorResponse errorResponse) {
+        admin.rollback();
+        NakshaError error = errorResponse.getError();
+        throw unchecked(new Exception("Unable to create Admin collections in Mock storage (code: " + error.getCode() + " )", error.getCause()));
       }
-      admin.commit(true);
+      admin.commit();
     }
   }
 
-  private void setupConfig() {
-    // Add custom config in naksha:configs
-    final NakshaContext ctx = new NakshaContext().withAppId("naksha_mock");
-    ctx.attachToCurrentThread();
-
-    try (final IWriteSession admin = newWriteSession(ctx, true)) {
-      final Result wrResult = admin.execute(createFeatureRequest(
-          NakshaAdminCollection.CONFIGS, nakshaHubConfig, IfExists.REPLACE, IfConflict.REPLACE));
-      if (wrResult == null) {
-        admin.rollback(true);
-        throw unchecked(new Exception("Unable to add custom config in Mock storage. Null result!"));
-      } else if (wrResult instanceof ErrorResult er) {
-        admin.rollback(true);
-        throw unchecked(
-            new Exception("Unable to add custom config in Mock storage. " + er.toString(), er.exception));
-      }
-      admin.commit(true);
-    }
+  @NotNull
+  @Override
+  public IMap getDefaultMap() {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
   }
 
-  private XyzCollectionCodec collectionCodec(XyzCollection collection, EWriteOp op) {
-    return XyzCodecFactory.getFactory(XyzCollectionCodecFactory.class)
-        .newInstance()
-        .withFeature(collection)
-        .withOp(op);
+  @NotNull
+  @Override
+  public IMap get(@NotNull String mapId) {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
   }
 
-  /**
-   * Starts the maintainer thread that will take about history garbage collection, sequencing and other background jobs.
-   */
+  @Nullable
   @Override
-  public void startMaintainer() {}
+  public IMap get(int mapNumber) {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
 
-  /**
-   * Blocking call to perform maintenance tasks right now. One-time maintenance.
-   */
   @Override
-  public void maintainNow() {}
+  public boolean contains(@NotNull String mapId) {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
 
-  /**
-   * Stops the maintainer thread.
-   */
+  @Nullable
   @Override
-  public void stopMaintainer() {}
+  public String getMapId(int mapNumber) {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
 
-  /**
-   * Open a new write-session, optionally to a master-node (when being in a multi-writer cluster).
-   *
-   * @param context   the {@link NakshaContext} to which to link the session.
-   * @param useMaster {@code true} if the master-node should be connected to; false if any writer is okay.
-   * @return the write-session.
-   */
+  @NotNull
   @Override
-  public @NotNull IWriteSession newWriteSession(@Nullable NakshaContext context, boolean useMaster) {
+  public NakshaFeature tupleToFeature(@NotNull Tuple tuple) {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @NotNull
+  @Override
+  public Tuple featureToTuple(@NotNull NakshaFeature feature) {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @NotNull
+  @Override
+  public IWriteSession newWriteSession(@Nullable SessionOptions options) {
     return new NHAdminWriterMock(mockCollection);
   }
 
-  /**
-   * Open a new read-session, optionally to a master-node to prevent replication lags.
-   *
-   * @param context   the {@link NakshaContext} to which to link the session.
-   * @param useMaster {@code true} if the master-node should be connected to, to avoid replication lag; false if any reader is okay.
-   * @return the read-session.
-   */
+  @NotNull
   @Override
-  public @NotNull IReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
+  public IReadSession newReadSession(@Nullable SessionOptions options) {
     return new NHAdminReaderMock(mockCollection);
   }
 
-  /**
-   * Shutdown the storage instance asynchronously. This method returns asynchronously whatever the given {@code onShutdown} handler returns.
-   * If no shutdown handler given, then {@code null} is returned.
-   *
-   * @param onShutdown The (optional) method to call when the shutdown is done.
-   * @return The future when the shutdown will be done.
-   */
   @Override
-  public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
-    return null;
+  public void close() {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @NotNull
+  @Override
+  public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
   }
 }

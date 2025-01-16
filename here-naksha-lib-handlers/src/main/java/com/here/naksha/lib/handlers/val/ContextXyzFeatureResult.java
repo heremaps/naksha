@@ -19,7 +19,7 @@
 package com.here.naksha.lib.handlers.val;
 
 import java.util.List;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
@@ -42,7 +42,7 @@ public class ContextXyzFeatureResult extends SuccessResponse {
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public @Nullable List<NakshaFeature> getContext() {
-    return JvmProxyUtil.box(get(CONTEXT_KEY), NakshaFeatureList.class);
+    return JvmBoxingUtil.box(get(CONTEXT_KEY), NakshaFeatureList.class);
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
@@ -60,7 +60,7 @@ public class ContextXyzFeatureResult extends SuccessResponse {
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public @Nullable List<NakshaFeature> getViolations() {
-    return JvmProxyUtil.box(get(VIOLATIONS_KEY), NakshaFeatureList.class);
+    return JvmBoxingUtil.box(get(VIOLATIONS_KEY), NakshaFeatureList.class);
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)

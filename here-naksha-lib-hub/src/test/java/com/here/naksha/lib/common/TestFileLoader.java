@@ -18,11 +18,12 @@
  */
 package com.here.naksha.lib.common;
 
-import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.view.ViewDeserialize;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import naksha.base.FromJsonOptions;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 
@@ -30,7 +31,8 @@ public class TestFileLoader {
 
   private static final String TEST_DATA_FOLDER = "src/test/resources/unit_test_data/";
 
-  private TestFileLoader() {}
+  private TestFileLoader() {
+  }
 
   public static String loadFileOrFail(String fileName) {
     try {
@@ -43,8 +45,8 @@ public class TestFileLoader {
 
   public static <T> T parseJson(final @NotNull String jsonStr, final @NotNull Class<T> type) {
     T obj = null;
-    try (final Json json = Json.get()) {
-      obj = json.reader(ViewDeserialize.Storage.class).forType(type).readValue(jsonStr);
+    try {
+      obj = JvmBoxingUtil.box(Platform.fromJSON(jsonStr, FromJsonOptions.DEFAULT), type);
     } catch (Exception ex) {
       Assertions.fail("Unable tor parse jsonStr " + jsonStr, ex);
       return null;

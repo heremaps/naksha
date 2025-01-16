@@ -161,7 +161,9 @@ class SourceIdHandlerUnitTest {
         when(event.sendUpstream(any())).thenReturn(new SuccessResponse());
 
         // Given: Handler initialization
-        final EventHandler e = new EventHandler(SourceIdHandler.class, "some_id");
+        final EventHandler e = new EventHandler();
+        e.setClassName(SourceIdHandler.class.getName());
+        e.setId("some_id");
         final SourceIdHandler sourceIdHandler = new SourceIdHandler(naksha);
 
         // When: handler processing logic is invoked

@@ -18,8 +18,8 @@
  */
 package com.here.naksha.lib.view;
 
-import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
 import static java.util.stream.Collectors.*;
+import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 
 import com.here.naksha.lib.view.concurrent.LayerReadRequest;
 import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
@@ -183,7 +183,7 @@ public class ViewReadSession implements IReadSession {
       final ReadFeatures readFeatures = (ReadFeatures) request;
       final IPropertyQuery propertyQuery = readFeatures.getQuery().getProperties();
       if (!readFeatures.getFeatureIds().isEmpty()
-          && readFeatures.getQuery().isEmpty()) {
+          && readFeatures.getQuery().hasNoConditions()) {
         return true;
       }
       if (propertyQuery instanceof PQuery) {

@@ -1,4 +1,5 @@
-///*
+// TODO: cleanup as part of CASL-784
+//*
 // * Copyright (C) 2017-2024 HERE Europe B.V.
 // *
 // * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +22,7 @@
 //import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.*;
 //import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.COMMA;
 //import static com.here.naksha.lib.core.models.payload.events.QueryOperation.*;
-//import static com.here.naksha.lib.core.util.storage.RequestHelper.pRefFromPropPath;
+//import static naksha.model.util.RequestHelper.pRefFromPropPath;
 //import static naksha.model.request.query.Property.PROPERTIES;
 //
 //import com.here.naksha.lib.core.exceptions.XyzErrorException;

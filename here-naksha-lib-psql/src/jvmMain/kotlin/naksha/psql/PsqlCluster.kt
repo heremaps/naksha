@@ -12,7 +12,7 @@ import kotlin.math.min
  * @property master the master instance.
  * @property replicas a mutable list of read-replicas, can be changed at runtime.
  */
-class PsqlCluster(override val master: PgInstance, override var replicas: MutableList<PgInstance> = mutableListOf()) : PgCluster {
+class PsqlCluster @JvmOverloads constructor(override val master: PgInstance, override var replicas: MutableList<PgInstance> = mutableListOf()) : PgCluster {
     override val connectionLimit: Int
         get() {
             var limit = master.connectionLimit

@@ -2,16 +2,13 @@
 
 package naksha.model.objects
 
+import naksha.base.AnyObject
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.base.AnyObject
-import naksha.base.Platform
 import naksha.model.XyzNs
 import naksha.model.mom.MomDeltaNs
 import naksha.model.mom.MomReferenceList
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmField
 
 /**
  * The properties of a standard Naksha feature.

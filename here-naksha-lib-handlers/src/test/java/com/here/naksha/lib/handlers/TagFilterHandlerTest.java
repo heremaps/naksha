@@ -1,10 +1,10 @@
 package com.here.naksha.lib.handlers;
 
-import com.here.naksha.lib.core.util.storage.RequestHelper;
+import naksha.model.util.RequestHelper;
 import com.here.naksha.test.common.FileUtil;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmMap;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
 import naksha.base.ToJsonOptions;
 import naksha.model.XyzFeatureCollection;
@@ -180,7 +180,7 @@ class TagFilterHandlerTest {
         // Given: WriteXyzFeatures request with some tags already part of features
         final String featuresJson = FileUtil.loadFileOrFail(inputFilePath);
         final JvmMap rawInputCollection = (JvmMap) Platform.fromJSON(featuresJson, FromJsonOptions.DEFAULT);
-        final XyzFeatureCollection inputCollection = JvmProxyUtil.box(rawInputCollection, XyzFeatureCollection.class);
+        final XyzFeatureCollection inputCollection = JvmBoxingUtil.box(rawInputCollection, XyzFeatureCollection.class);
         final WriteRequest wf = RequestHelper.upsertFeaturesRequest("some_space", inputCollection.getFeatures());
 
         // And: Expected feature collection JSON

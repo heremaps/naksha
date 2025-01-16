@@ -32,7 +32,7 @@ import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
 import java.util.ArrayList;
 import java.util.List;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.mom.MomReference;
 import naksha.model.mom.MomReferenceList;
 import naksha.model.objects.NakshaFeature;
@@ -65,7 +65,7 @@ public class MockValidationHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties = JvmProxyUtil.box(eventHandler.getProperties(), NakshaProperties.class);
+    this.properties = JvmBoxingUtil.box(eventHandler.getProperties(), NakshaProperties.class);
   }
 
   @Override
@@ -151,7 +151,7 @@ public class MockValidationHandler extends AbstractEventHandler {
       violation.setId("urn:here::here:Topology:violation_" + RandomStringUtils.randomAlphabetic(12));
       // add reference to feature
       final MomReference reference = new MomReference(feature.getId(), spaceId, featureType);
-      violation.getProperties().setReferences(JvmProxyUtil.box(List.of(reference), MomReferenceList.class));
+      violation.getProperties().setReferences(JvmBoxingUtil.box(List.of(reference), MomReferenceList.class));
       violation.put("violatedObject", reference);
       violation.setGeometry(feature.getGeometry());
       // add violation to the list
