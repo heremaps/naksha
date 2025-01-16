@@ -424,13 +424,15 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
    * Send an error response for the given XyzError.
    *
    * @param routingContext The routing context for which to send the response.
-   * @param xyzError       The XyzError indicating the cause of error
+   * @param nakshaError       The XyzError indicating the cause of error
    * @return xyzResponse object representing error
    */
   public @NotNull Response sendErrorResponse(
       final @NotNull RoutingContext routingContext,
-      final @NotNull NakshaError xyzError) {
-    final ErrorResponse response = new ErrorResponse(xyzError, message, AccessLogUtil.getStreamId(routingContext));
+      final @NotNull NakshaError nakshaError,
+      final @NotNull String message
+  ) {
+    final ErrorResponse response = new ErrorResponse(nakshaError, message, AccessLogUtil.getStreamId(routingContext));
     sendRawResponse(
         routingContext,
         mapErrorToHttpStatus(response.getError()),
