@@ -25,8 +25,8 @@ open class ErrorResponse() : Response() {
      */
     @JvmOverloads
     @JsName("of")
-    constructor(code: String, msg: String, id: String? = null, cause: Throwable? = null) : this() {
-        this.error = NakshaError(code, msg, id, cause)
+    constructor(code: String, msg: String, cause: Throwable? = null, id: String? = null) : this() {
+        this.error = NakshaError(code, msg, cause, id)
     }
 
     /**
