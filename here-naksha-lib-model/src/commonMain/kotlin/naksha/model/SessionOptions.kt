@@ -102,7 +102,13 @@ data class SessionOptions(
      * @since 3.0.0
      */
     @JvmField
-    val lockTimeout: Int = NakshaContext.currentContext().lockTimeout
+    val lockTimeout: Int = NakshaContext.currentContext().lockTimeout,
+
+    /**
+     * Stream information.
+     */
+    @JvmField
+    val streamInfo: StreamInfo? = null
 ) {
 
     /**
@@ -134,6 +140,7 @@ data class SessionOptions(
                 stmtTimeout = c.stmtTimeout,
                 lockTimeout = c.lockTimeout,
                 useMaster = useMaster,
+                streamInfo = c.streamInfo
             )
         }
     }

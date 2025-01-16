@@ -27,7 +27,7 @@ public class TestNakshaContext {
   private TestNakshaContext() {}
 
   public static @NotNull NakshaContext newTestNakshaContext() {
-    final NakshaContext nakshaContext = new NakshaContext().withAppId(NakshaHubConfig.defaultAppName());
+    final NakshaContext nakshaContext = NakshaContext.newInstance(NakshaHubConfig.defaultAppName());
     nakshaContext.attachToCurrentThread();
     return nakshaContext;
   }

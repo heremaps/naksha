@@ -24,13 +24,12 @@ import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Stream;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
 import naksha.model.NakshaError;
-import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
@@ -127,10 +126,10 @@ class DefaultStorageHandlerTest {
   @MethodSource("collectionPriorityTestCases")
   void shouldCreateMissingCollectionRespectingPriority(CollectionPriorityTestCase testCase) {
     // Given: Storage writer failing on WriteRequest for features due to undefined table but is able to create new collection
-    NakshaException missingCollectionException = new NakshaException(new NakshaError(COLLECTION_NOT_FOUND, "Missing collection"));
+    NakshaError missingCollectionError = new NakshaError(COLLECTION_NOT_FOUND, "Missing collection");
     when(
         storageWriteSession.execute(argThat(request -> (request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteFeatures(wr)))))
-        .thenThrow(missingCollectionException);
+        .thenReturn(new ErrorResponse(missingCollectionError));
     when(storageWriteSession.execute(
         argThat(request -> (request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteCollections(wr)))))
         .thenReturn(new SuccessResponse());
@@ -174,8 +173,8 @@ class DefaultStorageHandlerTest {
   @Test
   void shouldCreateMissingCollection() {
     // Given: Storage writer failing on WriteXyzFeatures due to sql exception
-    NakshaException missingCollectionException = new NakshaException(new NakshaError(COLLECTION_NOT_FOUND, "Missing collection"));
-    when(storageWriteSession.execute(any(WriteRequest.class))).thenThrow(missingCollectionException);
+    NakshaError missingCollectionError = new NakshaError(COLLECTION_NOT_FOUND, "Missing collection");
+    when(storageWriteSession.execute(any(WriteRequest.class))).thenReturn(new ErrorResponse(missingCollectionError));
 
     // And: Handler with autoCreateCollection enabled to test
     DefaultStorageHandler handler = storageHandler();
@@ -209,8 +208,8 @@ class DefaultStorageHandlerTest {
   @Test
   void shouldNotCreateCollectionWhenAutoCreateIsDisabled() {
     // Given: Storage writer failing on WriteXyzFeatures due to missing collection exception
-    NakshaException missingCollectionException = new NakshaException(new NakshaError(COLLECTION_NOT_FOUND, "Missing collection"));
-    when(storageWriteSession.execute(any(WriteRequest.class))).thenThrow(missingCollectionException);
+    NakshaError missingCollectionError = new NakshaError(COLLECTION_NOT_FOUND, "Missing collection");
+    when(storageWriteSession.execute(any(WriteRequest.class))).thenReturn(new ErrorResponse(missingCollectionError));
 
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
@@ -306,14 +305,14 @@ class DefaultStorageHandlerTest {
     NakshaCollection correctCollection() {
       return switch (validCollectionSource) {
         case HANDLER_PROPERTIES -> handlerProperties.getCollection();
-        case SPACE_PROPERTIES -> JvmProxyUtil.box(space.getProperties(), SpaceProperties.class).getCollection();
+        case SPACE_PROPERTIES -> JvmBoxingUtil.box(space.getProperties(), SpaceProperties.class).getCollection();
         case SPACE_ID -> new NakshaCollection(space.getId());
       };
     }
   }
 
   private Space space(SpaceProperties spaceProperties) {
-    Space space = new Space("test_space");
+    Space space = testSpace();
     space.setProperties(spaceProperties);
     return space;
   }
@@ -342,18 +341,21 @@ class DefaultStorageHandlerTest {
   }
 
   private static Space space(String spaceId, SpaceProperties spaceProperties) {
-    Space space = new Space(spaceId);
+    Space space = new Space();
+    space.setId(spaceId);
     space.setProperties(spaceProperties);
     return space;
   }
 
   private static SpaceProperties spacePropertiesWithCollection(String collectionId) {
     if (collectionId == null) {
-      return new SpaceProperties(null);
+      return new SpaceProperties();
     }
     final NakshaCollection nakshaCollection = new NakshaCollection();
     nakshaCollection.setId(collectionId);
-    return new SpaceProperties(nakshaCollection);
+    SpaceProperties spaceProperties = new SpaceProperties();
+    spaceProperties.setCollection(nakshaCollection);
+    return spaceProperties;
   }
 
   private static DefaultStorageHandlerProperties handlerPropertiesWithCollection(String collectionId) {
@@ -369,20 +371,26 @@ class DefaultStorageHandlerTest {
   private static DefaultStorageHandlerProperties handlerProperties(String storageId) {
     final NakshaCollection nakshaCollection = new NakshaCollection();
     nakshaCollection.setId("handler_collection");
-    return new DefaultStorageHandlerProperties(
-        storageId,
-        nakshaCollection,
-        true,
-        true
-    );
+    DefaultStorageHandlerProperties properties = new DefaultStorageHandlerProperties();
+    properties.setStorageId(storageId);
+    properties.setCollection(nakshaCollection);
+    properties.setAutoDeleteCollection(true);
+    properties.setAutoCreateCollection(true);
+    return properties;
   }
 
   private DefaultStorageHandler storageHandler() {
-    return storageHandler(new Space("some_test_space"));
+    return storageHandler(testSpace());
   }
 
   private DefaultStorageHandler storageHandler(DefaultStorageHandlerProperties properties) {
-    return storageHandler(properties, new Space("some_test_space"));
+    return storageHandler(properties, testSpace());
+  }
+
+  private Space testSpace(){
+    Space space = new Space();
+    space.setId("some_test_space");
+    return space;
   }
 
   private DefaultStorageHandler storageHandler(Space space) {
@@ -390,7 +398,9 @@ class DefaultStorageHandlerTest {
   }
 
   private DefaultStorageHandler storageHandler(DefaultStorageHandlerProperties properties, Space space) {
-    EventHandler config = new EventHandler(DefaultStorageHandler.class, "test_handler");
+    EventHandler config = new EventHandler();
+    config.setClassName(DefaultStorageHandler.class.getName());
+    config.setId("test_handler");
     config.setProperties(properties);
     return new DefaultStorageHandler(config, naksha, space);
   }

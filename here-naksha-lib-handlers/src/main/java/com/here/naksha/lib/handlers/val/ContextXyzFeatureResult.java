@@ -16,51 +16,60 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.models.storage;
+package com.here.naksha.lib.handlers.val;
 
 import java.util.List;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaVersion;
-import naksha.model.request.ResultTuple;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ContextResult<FEATURE, CTX_TYPE, V_TYPE> extends SuccessResponse {
+public class ContextXyzFeatureResult extends SuccessResponse {
 
-  public ContextResult(List<ResultTuple> resultTuples) {
-    super(resultTuples);
+  private static final String CONTEXT_KEY = "context";
+  private static final String VIOLATIONS_KEY = "violations";
+
+  public void setFeatures(@NotNull List<NakshaFeature> nakshaFeatures) {
+    super.setFeatures(NakshaFeatureList.fromList(nakshaFeatures));
   }
 
   /**
    * The list of features to be returned as context
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  private @Nullable List<@NotNull CTX_TYPE> context;
+  public @Nullable List<NakshaFeature> getContext() {
+    return JvmBoxingUtil.box(get(CONTEXT_KEY), NakshaFeatureList.class);
+  }
+
+  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
+  public void setContext(@Nullable List<NakshaFeature> contextFeatures) {
+    setContext(NakshaFeatureList.fromList(contextFeatures));
+  }
+
+  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
+  public void setContext(@Nullable NakshaFeatureList contextFeatures) {
+    put(CONTEXT_KEY, contextFeatures);
+  }
 
   /**
    * The list of violations to be returned as context
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  private @Nullable List<@NotNull V_TYPE> violations;
-
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public @Nullable List<CTX_TYPE> getContext() {
-    return context;
+  public @Nullable List<NakshaFeature> getViolations() {
+    return JvmBoxingUtil.box(get(VIOLATIONS_KEY), NakshaFeatureList.class);
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public void setContext(@Nullable List<CTX_TYPE> context) {
-    this.context = context;
+  public void setViolations(@Nullable List<NakshaFeature> violations) {
+    setViolations(NakshaFeatureList.fromList(violations));
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public @Nullable List<V_TYPE> getViolations() {
-    return violations;
-  }
-
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public void setViolations(@Nullable List<V_TYPE> violations) {
-    this.violations = violations;
+  public void setViolations(@Nullable NakshaFeatureList violations) {
+    put(VIOLATIONS_KEY, violations);
   }
 }

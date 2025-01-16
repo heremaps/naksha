@@ -30,7 +30,7 @@ public class ActivityLogSuccessResultAssertions {
   @SafeVarargs
   public final ActivityLogSuccessResultAssertions hasActivityFeatures(Consumer<ActivityLogFeatureAssertions>... featuresAssertions)
       throws Exception {
-    List<NakshaFeature> features = ResultHelper.readFeaturesFromResult(subject, NakshaFeature.class);
+    List<NakshaFeature> features = ResultHelper.extractResponseItems(subject, NakshaFeature.class);
     Assertions.assertEquals(featuresAssertions.length, features.size());
     for (int i = 0; i < featuresAssertions.length; i++) {
       featuresAssertions[i].accept(assertThatActivityLogFeature(features.get(i)));
@@ -40,7 +40,7 @@ public class ActivityLogSuccessResultAssertions {
 
   public final ActivityLogSuccessResultAssertions hasActivityFeaturesIdenticalTo(List<NakshaFeature> otherFeatures)
       throws Exception {
-    List<NakshaFeature> features = ResultHelper.readFeaturesFromResult(subject, NakshaFeature.class);
+    List<NakshaFeature> features = ResultHelper.extractResponseItems(subject, NakshaFeature.class);
     Assertions.assertEquals(otherFeatures.size(), features.size());
     for (int i = 0; i < features.size(); i++) {
       assertThatActivityLogFeature(features.get(i))

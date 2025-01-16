@@ -18,10 +18,10 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readIdsFromResult;
+import static com.here.naksha.lib.handlers.NakshaAdminCollection.EVENT_HANDLERS;
 import static naksha.model.NakshaContext.currentContext;
+import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
+import static naksha.model.util.ResultHelper.readIdsFromResult;
 
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;

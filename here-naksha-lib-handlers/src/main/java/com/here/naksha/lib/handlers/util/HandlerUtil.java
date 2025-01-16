@@ -19,9 +19,10 @@
 package com.here.naksha.lib.handlers.util;
 
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
+import com.here.naksha.lib.handlers.val.ContextXyzFeatureResult;
 import java.util.ArrayList;
 import java.util.List;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.TagList;
@@ -42,23 +43,17 @@ public final class HandlerUtil {
 
   private HandlerUtil() {}
 
-  // TODO: CASL-736 switch to Tuple, wait for change in v3 enabling Tuple creation without storage,
-  //  public static @NotNull ContextXyzFeatureResult createContextResultFromFeatureList(
-  //      final @NotNull List<NakshaFeature> features,
-  //      final @Nullable List<NakshaFeature> context,
-  //      final @Nullable List<NakshaFeature> violations) {
-  //    // Create list of ResultRow with input features
-  //    final List<ResultTuple> resultTuples = new ArrayList<>();
-  //    for (final NakshaFeature feature : features) {
-  //      //
-  //      resultTuples.add(new ResultTuple(ExecutedOp.UPDATED, null, feature));
-  //    }
-  //    // Create ContextResult with cursor, context and violations
-  //    final ContextXyzFeatureResult ctxResult = new ContextXyzFeatureResult(resultTuples);
-  //    ctxResult.setContext(context);
-  //    ctxResult.setViolations(violations);
-  //    return ctxResult;
-  //  }
+  public static @NotNull ContextXyzFeatureResult createContextResultFromFeatureList(
+      final @NotNull List<NakshaFeature> features,
+      final @Nullable List<NakshaFeature> context,
+      final @Nullable List<NakshaFeature> violations) {
+    // Create ContextResult with cursor, context and violations
+    final ContextXyzFeatureResult ctxResult = new ContextXyzFeatureResult();
+    ctxResult.setFeatures(features);
+    ctxResult.setContext(context);
+    ctxResult.setViolations(violations);
+    return ctxResult;
+  }
 
   /**
    * @param collectionIds If the number of collection IDs is smaller than the number of features, the last collection ID
@@ -193,7 +188,7 @@ public final class HandlerUtil {
     deltaNs.setReviewState(reviewState.getText());
     final @NotNull List<@NotNull String> tags = tagsWithoutReviewState(xyzNs.getTags());
     tags.add(REVIEW_STATE_PREFIX + reviewState);
-    TagList tagList = JvmProxyUtil.box(tags, TagList.class);
+    TagList tagList = JvmBoxingUtil.box(tags, TagList.class);
     xyzNs.setTags(tagList, false);
   }
 }

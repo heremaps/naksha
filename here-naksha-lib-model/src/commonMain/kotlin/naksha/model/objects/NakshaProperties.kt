@@ -18,8 +18,8 @@ open class NakshaProperties : AnyObject() {
     companion object {
         const val FEATURE_TYPE = "featureType"
         const val XYZ_KEY = "@ns:com:here:xyz"
-        const val DELTA_KEY = "@ns:com:here:delta"
-        const val META_KEY = "@ns:com:here:meta"
+        const val DELTA_KEY = "@ns:com:here:mom:delta"
+        const val META_KEY = "@ns:com:here:mom:meta"
         /**
          * Properties used by the deprecated Activity-Log service, just here to allow downward
          * compatibility.

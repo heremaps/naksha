@@ -91,4 +91,15 @@ open class RequestQuery : AnyObject() {
         refTiles.remove(tile.intKey)
         return this
     }
+
+    /**
+     * Checks whether this query is effectively empty (it has no actual conditions)
+     */
+    fun hasNoConditions(): Boolean {
+        return refTiles.isEmpty()
+                && spatial == null
+                && tags == null
+                && properties == null
+                && metadata == null;
+    }
 }

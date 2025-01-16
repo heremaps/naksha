@@ -2,7 +2,7 @@ package com.here.naksha.lib.handlers.internal;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaAdminCollection;
+import com.here.naksha.lib.handlers.NakshaAdminCollection;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.storage.http.HttpStorage;
 import com.here.naksha.storage.http.HttpStorageProperties;
@@ -22,7 +22,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.util.stream.Stream;
 
-import static com.here.naksha.lib.core.util.storage.RequestHelper.createFeatureRequest;
+import static naksha.model.util.RequestHelper.createFeatureRequest;
 import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -113,7 +113,9 @@ class IntHandlerForStoragesTest {
   }
 
   private Storage httpStorage(NakshaProperties xyzProperties) {
-    Storage httpStorage = new Storage(HttpStorage.class, "test-http-storage");
+    Storage httpStorage = new Storage();
+    httpStorage.setClassName(HttpStorage.class.getName());
+    httpStorage.setId("test-http-storage");
     httpStorage.setTitle("some title");
     httpStorage.setDescription("some desc");
     httpStorage.setProperties(xyzProperties);

@@ -20,27 +20,31 @@ package com.here.naksha.lib.hub.mock;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.models.PluginCache.getStorageConstructor;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdRequest;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResult;
+import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
+import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaAdminCollection;
-import naksha.model.NakshaContext;
+import com.here.naksha.lib.handlers.NakshaAdminCollection;
 import com.here.naksha.lib.core.lambdas.Fe1;
-import com.here.naksha.lib.core.models.PluginCache;
 import com.here.naksha.lib.core.models.ExtensionConfig;
-import naksha.model.XyzFeature;
+import com.here.naksha.lib.core.models.PluginCache;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import naksha.model.ErrorResult;
-import com.here.naksha.lib.core.models.storage.Result;
-import naksha.model.IReadSession;
-import naksha.model.IStorage;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import java.util.Map;
 import java.util.TreeMap;
+import naksha.model.IReadSession;
+import naksha.model.IStorage;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.SessionOptions;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+//TODO: CASL-657 remove?
 public class NakshaHubMock implements INaksha {
 
   /**
@@ -115,21 +119,27 @@ public class NakshaHubMock implements INaksha {
    */
   @Override
   public @NotNull IStorage getStorageById(@NotNull String storageId) {
-    try (final IReadSession reader = getAdminStorage().newReadSession(NakshaContext.currentContext(), false)) {
-      final Result result = reader.execute(readFeaturesByIdRequest(NakshaAdminCollection.STORAGES, storageId));
-      if (result instanceof ErrorResult er) {
-        throw unchecked(new Exception(
-            "Exception fetching storage details for id " + storageId + ". " + er.message, er.exception));
+    SessionOptions sessionOptions = SessionOptions.from(NakshaContext.currentContext(), false);
+    try (final IReadSession reader = getAdminStorage().newReadSession(sessionOptions)) {
+      final Response response = reader.execute(readFeaturesByIdRequest(NakshaAdminCollection.STORAGES, storageId));
+      if (response instanceof SuccessResponse successResponse) {
+        final Storage storage = readFeatureFromResponse(successResponse, Storage.class);
+        if (storage == null) {
+          throw unchecked(new Exception("No storage found with id " + storageId));
+        }
+        // stare flow:
+        // return storage.newInstance(this); <-- stare
+        //    return PluginCache.newInstance(className, IStorage.class, this, naksha); <-- className ze storage
+        return PluginCache.getStorageConstructor(storage.getClassName(), Storage.class)
+            .call(storage);
+      } else {
+        if (response instanceof ErrorResponse er) {
+          NakshaError error = er.getError();
+          throw unchecked(new Exception(
+              "Exception fetching storage details for id " + storageId + " (error code: " + error.getCode() + ")", error.getCause()));
+        }
+        throw unchecked(new Exception("Unknown response: " + response));
       }
-      final Storage storage = readFeatureFromResult(result, Storage.class);
-      if (storage == null) {
-        throw unchecked(new Exception("No storage found with id " + storageId));
-      }
-      // stare flow:
-      // return storage.newInstance(this); <-- stare
-      //    return PluginCache.newInstance(className, IStorage.class, this, naksha); <-- className ze storage
-      return PluginCache.getStorageConstructor(storage.getClassName(), Storage.class)
-          .call(storage);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -151,7 +161,7 @@ public class NakshaHubMock implements INaksha {
    * @return the config
    */
   @Override
-  public <T extends XyzFeature> @NotNull T getConfig() {
+  public <T extends NakshaFeature> @NotNull T getConfig() {
     return (T) this.nakshaHubConfig;
   }
 

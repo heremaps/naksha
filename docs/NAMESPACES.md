@@ -32,7 +32,7 @@ In the tags Naksha stores:
 
 **Note**: The **grid** is automatically set by the Naksha storage engine at part of the normal triggers. The **grid** is based upon the mass center of the geometry (`ST_GeoHash(ST_Centroid(geo),14)`). If the feature does not have a geometry, the `id` is used to create a geo-hash replacement. It can be used for work distribution.
 
-## MOM-Metadata [`@ns:com:here:meta`]
+## MOM-Metadata [`@ns:com:here:mom:meta`]
 
 The MOM metadata was traditionally stored in the base-collection of the Data-Hub and extended the data originating from the RMOB. The Data-Hub was the predecessor of XYZ-Hub, which is the predecessor of the Interactive-Map-Service. Naksha will continue to support this namespace, but only through the `lib-naksha-moderation`. The updates to this namespace are now-a-days done by the `Wikvaya` service (aka Map-Creator Middleware), which eventually will be replaced by the `lib-naksha-moderation`.
 
@@ -50,7 +50,7 @@ The MOM metadata was traditionally stored in the base-collection of the Data-Hub
 
 The **sourceId** is used differently in different contexts. For example, in Map-Creator, for normal edits, the app and date are stored here, like `COM_1000001_20220713`. For the UTM (User-Task-Management) the task-id is stored in it, for example  `MapTask:LqBzOJyAo2pTa12l`. In other contexts it is used to logically group parts of a distributed transaction to later query all collections that have features belonging to the same logical transaction.
 
-## Moderation-Metadata [`@ns:com:here:delta`]
+## Moderation-Metadata [`@ns:com:here:mom:delta`]
 
 The moderation metadata was historically managed by the Map-Creator Middleware and were part of the moderation process. This namespace only exists for features being in the moderation process, it does not exist in the base collections (so not in the consistent store). The updates to this namespace are now-a-days done by the `Wikvaya` service (aka Map-Creator Middleware), which eventually will be replaced by the `lib-naksha-moderation`.
 

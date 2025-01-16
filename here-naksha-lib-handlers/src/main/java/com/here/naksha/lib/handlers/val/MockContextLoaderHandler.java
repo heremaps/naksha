@@ -29,7 +29,7 @@ import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import java.util.Objects;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.objects.NakshaFeature;
@@ -54,7 +54,7 @@ public class MockContextLoaderHandler extends AbstractEventHandler {
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
     this.properties =
-        Objects.requireNonNull(JvmProxyUtil.box(eventHandler.getProperties(), NakshaProperties.class));
+        Objects.requireNonNull(JvmBoxingUtil.box(eventHandler.getProperties(), NakshaProperties.class));
   }
 
   @Override

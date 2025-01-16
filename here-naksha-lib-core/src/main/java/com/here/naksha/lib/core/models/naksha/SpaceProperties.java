@@ -18,8 +18,7 @@
  */
 package com.here.naksha.lib.core.models.naksha;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaProperties;
@@ -38,26 +37,11 @@ public class SpaceProperties extends NakshaProperties {
   /**
    * The backend storage collection details specified at space level
    */
-  @AvailableSince(NakshaVersion.v2_0_7)
-  @JsonProperty(NAKSHA_COLLECTION)
-  private @Nullable NakshaCollection collection;
-
-  /**
-   * Create new Space properties with collection details
-   *
-   * @param xyzCollection details of backend xyz collection
-   */
-  @AvailableSince(NakshaVersion.v2_0_7)
-  @JsonCreator
-  public SpaceProperties(final @JsonProperty(NAKSHA_COLLECTION) @Nullable NakshaCollection xyzCollection) {
-    this.collection = xyzCollection;
-  }
-
   public @Nullable NakshaCollection getCollection() {
-    return collection;
+    return JvmBoxingUtil.box(get(NAKSHA_COLLECTION), NakshaCollection.class);
   }
 
-  public void setCollection(final @JsonProperty(NAKSHA_COLLECTION) @Nullable NakshaCollection xyzCollection) {
-    this.collection = xyzCollection;
+  public void setCollection(final @Nullable NakshaCollection collection) {
+    setRaw(NAKSHA_COLLECTION, collection);
   }
 }

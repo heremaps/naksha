@@ -6,6 +6,7 @@ import naksha.base.Int64
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 
 /**
  * Any entity implementing the [IStorage] interface represents some data-sink, and comes with an implementation that grants access to the data. The storage normally is a singleton that opens many sessions in parallel.
@@ -15,8 +16,7 @@ import kotlin.js.JsName
  * The storage may or may not support dictionaries, but in any case it needs to return a dictionary manager (even, if this is only an immutable one with no content).
  * @since 2.0.7
  */
-@JsExport
-interface IStorage : AutoCloseable {
+expect interface IStorage : AutoCloseable {
 
     /**
      * The storage-id.
@@ -135,9 +135,7 @@ interface IStorage : AutoCloseable {
         "This is not yet implemented and need further review, we should move it into IWriteSession",
         level = DeprecationLevel.ERROR
     )
-    fun enterLock(id: String, waitMillis: Int64): ILock {
-        throw NakshaException(NakshaError.NOT_IMPLEMENTED, "enterLock")
-    }
+    fun enterLock(id: String, waitMillis: Int64): ILock
 
     /**
      * Open a new write session.

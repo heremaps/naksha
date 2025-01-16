@@ -2,7 +2,6 @@ package naksha.psql
 
 import java.sql.Connection
 import java.sql.PreparedStatement
-import java.sql.SQLException
 
 /**
  * The Java implementation of a plan.
@@ -22,8 +21,8 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
             if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
             stmt.execute()
             return PsqlCursor(stmt, false)
-        } catch (sqlException: SQLException) {
-            throw PsqlErrorMapper.nakshaExceptionFromSql(sqlException)
+        } catch (exception: Exception) {
+            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
         }
     }
 
@@ -38,8 +37,8 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
             check(!closed)
             if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
             stmt.addBatch()
-        } catch (sqlException: SQLException) {
-            throw PsqlErrorMapper.nakshaExceptionFromSql(sqlException)
+        } catch (exception: Exception) {
+            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
         }
     }
 
@@ -50,8 +49,8 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
     override fun executeBatch(): IntArray {
         return try {
             stmt.executeBatch()
-        } catch (sqlException: SQLException) {
-            throw PsqlErrorMapper.nakshaExceptionFromSql(sqlException)
+        } catch (exception: Exception) {
+            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
         }
     }
 
@@ -60,8 +59,8 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
             val closed = this.closed
             this.closed = true
             if (!closed) stmt.close()
-        } catch (sqlException: SQLException) {
-            throw PsqlErrorMapper.nakshaExceptionFromSql(sqlException)
+        } catch (exception: Exception) {
+            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
         }
     }
 }

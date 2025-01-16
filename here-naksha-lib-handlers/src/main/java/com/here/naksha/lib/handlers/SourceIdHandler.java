@@ -24,10 +24,7 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.*;
@@ -39,7 +36,7 @@ import org.slf4j.LoggerFactory;
 public class SourceIdHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(SourceIdHandler.class);
-  private static final String TAG_PREFIX = "xyz_source_id_"; // TODO decide CASL-710
+  private static final String TAG_PREFIX = "xyz_source_id_";
   private static final String SOURCE_ID = "sourceId";
   public static final int PREF_PATHS_SIZE = 2;
 
@@ -62,7 +59,7 @@ public class SourceIdHandler extends AbstractEventHandler {
     logger.info("Handler received request {}", request.getClass().getSimpleName());
     if (request instanceof ReadFeatures readRequest) {
       // Read request
-      transformPropertyOperation(readRequest);
+      mapIntoTagOperation(readRequest);
     } else if (request instanceof WriteRequest wr) {
       // Write request
       WriteList codecList = wr.getWrites();
@@ -80,7 +77,13 @@ public class SourceIdHandler extends AbstractEventHandler {
     return event.sendUpstream(request);
   }
 
-  private void transformPropertyOperation(ReadFeatures readRequest) {
+  /**
+   * For the AND case, any property query sub-clause that can be converted into tag query will be converted and returned, leaving the remaining inconvertible clauses intact.
+   * <br>
+   * For the OR case, it is required that every sub-clause must be convertible, else the whole clause will not be converted.
+   * This is because OR relation between types of queries (property, tag, spatial,...) is not supported, only AND is supported and applied at the very end of the request.
+   */
+  public static void mapIntoTagOperation(ReadFeatures readRequest) {
 
     if (readRequest.getQuery().getProperties() == null) {
       return;
@@ -88,9 +91,24 @@ public class SourceIdHandler extends AbstractEventHandler {
 
     IPropertyQuery propertyOp = readRequest.getQuery().getProperties();
 
-    // TODO fix it CASL-710
-    //    PropertyOperationUtil.transformPropertyInPropertyOperationTree(
-    //            propertyOp, SourceIdHandler::mapIntoTagOperation);
+    final Optional<ITagQuery> tagQuery = transformPropertyOperation(propertyOp);
+    tagQuery.ifPresent(presentTagQuery -> {
+      // Set tag query to request, combining with the already existing tag query if given
+      final ITagQuery existingTagQuery = readRequest.getQuery().getTags();
+      if (existingTagQuery != null) {
+        readRequest.getQuery().setTags(new TagAnd(presentTagQuery, existingTagQuery));
+      } else {
+        readRequest.getQuery().setTags(presentTagQuery);
+      }
+      // Clean up property query if it has already been transformed into tag query
+      if (isFullyConvertedToITagQuery(propertyOp)) {
+        readRequest.getQuery().setProperties(null);
+      }
+      // Unwrap the query if it is an AND clause with only 1 remaining sub-clause
+      else if ((propertyOp instanceof PAnd canBeSimplified) && (canBeSimplified.size() == 1)) {
+        readRequest.getQuery().setProperties(canBeSimplified.get(0));
+      }
+    });
   }
 
   private void setSourceIdTags(NakshaFeature feature) {
@@ -114,14 +132,66 @@ public class SourceIdHandler extends AbstractEventHandler {
     }
   }
 
-  public static Optional<ITagQuery> mapIntoTagOperation(PQuery propertyOperation) {
+  private static boolean isFullyConvertedToITagQuery(IPropertyQuery propertyQuery) {
+    return (propertyQuery instanceof PQuery)
+        || (propertyQuery instanceof PNot)
+        || (propertyQuery instanceof POr)
+        || ((propertyQuery instanceof PAnd pAnd) && (pAnd.isEmpty()));
+  }
 
-    if (sourceIdTransformationCapable(propertyOperation) && operationTypeAllowed(propertyOperation)) {
-      final TagExists tagQuery = new TagExists(TAG_PREFIX + propertyOperation.getValue());
-      return Optional.of(tagQuery);
+  private static Optional<ITagQuery> transformPropertyOperation(IPropertyQuery propertyOperation) {
+    if (propertyOperation instanceof PAnd pAnd) {
+      final TagAnd tagAnd = new TagAnd();
+      // List of successfully transformed property queries to be removed at the end, so as not to disrupt the loop
+      final List<IPropertyQuery> toRemove = new ArrayList<>();
+      final int size = pAnd.size();
+      for (int i = 0; i < size; i++) {
+        final IPropertyQuery propertyComponent = pAnd.get(i);
+        final Optional<ITagQuery> tagComponent = transformPropertyOperation(propertyComponent);
+        if (tagComponent.isPresent()) {
+          tagAnd.add(tagComponent.get());
+          if (isFullyConvertedToITagQuery(propertyComponent)) {
+            toRemove.add(propertyComponent);
+          }
+          // Unwrap the query if it is an AND clause with only 1 remaining sub-clause
+          else if ((propertyComponent instanceof PAnd canBeSimplified) && (canBeSimplified.size() == 1)) {
+            pAnd.set(i, canBeSimplified.get(0));
+          }
+        }
+      }
+      pAnd.removeAll(toRemove);
+      if (tagAnd.isEmpty()) {
+        return Optional.empty();
+      } else if (tagAnd.size() == 1) {
+        // Unwrap this one single query in an AND clause
+        return Optional.of(tagAnd.get(0));
+      }
+      return Optional.of(tagAnd);
+    } else if (propertyOperation instanceof POr pOr) {
+      final TagOr tagOr = new TagOr();
+      for (IPropertyQuery iPropertyQuery : pOr) {
+        final Optional<ITagQuery> tagComponent = transformPropertyOperation(iPropertyQuery);
+        if (tagComponent.isEmpty()) {
+          // At least one sub-clause in an OR clause cannot be converted, hence abort and leave the whole OR
+          // as is
+          return Optional.empty();
+        }
+        tagOr.add(tagComponent.get());
+      }
+      return Optional.of(tagOr);
+    } else if (propertyOperation instanceof PNot pNot) {
+      final Optional<ITagQuery> tagComponent = transformPropertyOperation(pNot.getQuery());
+      return tagComponent.map(TagNot::new);
+    } else if (propertyOperation instanceof PQuery pQuery) {
+      if (sourceIdTransformationCapable(pQuery) && operationTypeAllowed(pQuery)) {
+        final TagExists tagQuery = new TagExists(TAG_PREFIX + pQuery.getValue());
+        return Optional.of(tagQuery);
+      }
+      return Optional.empty();
+    } else {
+      throw new IllegalArgumentException("Unknown property operation type: "
+          + propertyOperation.getClass().getSimpleName());
     }
-
-    return Optional.empty();
   }
 
   private static boolean propertyReferenceEqualsSourceId(Property pRef) {

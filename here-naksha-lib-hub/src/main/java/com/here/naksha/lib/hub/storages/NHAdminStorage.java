@@ -18,25 +18,31 @@
  */
 package com.here.naksha.lib.hub.storages;
 
-import naksha.model.NakshaContext;
-import naksha.model.NakshaVersion;
-import com.here.naksha.lib.core.lambdas.Fe1;
+import java.util.Map;
+import naksha.base.Int64;
+import naksha.model.ILock;
+import naksha.model.IMap;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
-import com.here.naksha.lib.psql.PsqlStorage;
-import java.util.Map;
-import java.util.concurrent.Future;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.NakshaVersion;
+import naksha.model.SessionOptions;
+import naksha.model.Tuple;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class NHAdminStorage implements IStorage {
 
+  public static final String ID_PREFIX = "NH_ADMIN_STORAGE_";
+
   /**
    * Singleton instance of physical admin storage implementation
    */
-  protected final @NotNull IStorage psqlStorage;
+  private final @NotNull IStorage psqlStorage;
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public NHAdminStorage(final @NotNull IStorage psqlStorage) {
@@ -45,75 +51,99 @@ public class NHAdminStorage implements IStorage {
 
   @Override
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull IWriteSession newWriteSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new NHAdminStorageWriter(this.psqlStorage.newWriteSession(context, useMaster));
-  }
-
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull IReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new NHAdminStorageReader(this.psqlStorage.newReadSession(context, useMaster));
-  }
-
-  /**
-   * Shutdown the storage instance asynchronously. This method returns asynchronously whatever the given {@code onShutdown} handler returns.
-   * If no shutdown handler given, then {@code null} is returned.
-   *
-   * @param onShutdown The (optional) method to call when the shutdown is done.
-   * @return The future when the shutdown will be done.
-   */
-  @Override
-  public @NotNull <T> Future<T> shutdown(@Nullable Fe1<T, IStorage> onShutdown) {
-    return psqlStorage.shutdown(onShutdown);
-  }
-
-  /**
-   * Initializes the storage, create the transaction table, install needed scripts and extensions.
-   */
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void initStorage() {
-    this.psqlStorage.initStorage();
-  }
-
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public void initStorage(@Nullable Map<String, ?> params) {
     this.psqlStorage.initStorage(params);
   }
 
-  /**
-   * Starts the maintainer thread that will take about history garbage collection, sequencing and other background jobs.
-   */
+  @NotNull
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void startMaintainer() {
-    this.psqlStorage.startMaintainer();
+  public IWriteSession newWriteSession(@Nullable SessionOptions options) {
+    return new NHAdminStorageWriter(psqlStorage.newWriteSession(options));
   }
 
-  /**
-   * Blocking call to perform maintenance tasks right now. One-time maintenance.
-   */
+  @NotNull
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void maintainNow() {
-    this.psqlStorage.maintainNow();
+  public IReadSession newReadSession(@Nullable SessionOptions options) {
+    return new NHAdminStorageReader(psqlStorage.newReadSession(options));
   }
 
-  /**
-   * Stops the maintainer thread.
-   */
   @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void stopMaintainer() {
-    this.psqlStorage.stopMaintainer();
+  public void close() {
+    psqlStorage.close();
   }
 
-  public void dropSchema() {
-    if (psqlStorage instanceof PsqlStorage) {
-      ((PsqlStorage) psqlStorage).dropSchema();
-    } else {
-      throw new UnsupportedOperationException("Unable to drop schema");
-    }
+  @NotNull
+  @Override
+  public String getId() {
+    return ID_PREFIX + psqlStorage.getId();
+  }
+
+  @NotNull
+  @Override
+  public SessionOptions getAdminOptions() {
+    return psqlStorage.getAdminOptions();
+  }
+
+  @Override
+  public int getHardCap() {
+    return psqlStorage.getHardCap();
+  }
+
+  @Override
+  public void setHardCap(int i) {
+    psqlStorage.setHardCap(i);
+  }
+
+  @Override
+  public boolean isInitialized() {
+    return psqlStorage.isInitialized();
+  }
+
+  @NotNull
+  @Override
+  public IMap getDefaultMap() {
+    return psqlStorage.getDefaultMap();
+  }
+
+  @NotNull
+  @Override
+  public IMap get(@NotNull String mapId) {
+    return psqlStorage.get(mapId);
+  }
+
+  @Nullable
+  @Override
+  public IMap get(int mapNumber) {
+    return psqlStorage.get(mapNumber);
+  }
+
+  @Override
+  public boolean contains(@NotNull String mapId) {
+    return psqlStorage.contains(mapId);
+  }
+
+  @Nullable
+  @Override
+  public String getMapId(int mapNumber) {
+    return psqlStorage.getMapId(mapNumber);
+  }
+
+  @NotNull
+  @Override
+  public NakshaFeature tupleToFeature(@NotNull Tuple tuple) {
+    return psqlStorage.tupleToFeature(tuple);
+  }
+
+  @NotNull
+  @Override
+  public Tuple featureToTuple(@NotNull NakshaFeature feature) {
+    return psqlStorage.featureToTuple(feature);
+  }
+
+  @NotNull
+  @Override
+  @Deprecated
+  public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
+    throw new NakshaException(new NakshaError(NakshaError.NOT_IMPLEMENTED, "enterLock not supported"));
   }
 }

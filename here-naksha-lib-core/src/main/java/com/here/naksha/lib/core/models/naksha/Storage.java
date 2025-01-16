@@ -21,9 +21,6 @@ package com.here.naksha.lib.core.models.naksha;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.models.PluginCache.getStorageConstructor;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.PluginCache;
@@ -36,43 +33,21 @@ import org.jetbrains.annotations.NotNull;
  * The configuration of a storage. Storages are internally used to access and modify features and collection.
  */
 @AvailableSince(NakshaVersion.v2_0_0)
-@JsonTypeName(value = "Storage")
 public class Storage extends Plugin<IStorage> {
 
   @Deprecated
   @AvailableSince(NakshaVersion.v2_0_0)
   public static final String NUMBER = "number";
 
-  /**
-   * Create a new storage.
-   *
-   * @param cla$$ the class that implement the {@link IStorage} API.
-   * @param id    the unique identifier of the storage (selected by the user).
-   */
-  @AvailableSince(NakshaVersion.v2_0_7)
-  public Storage(@NotNull Class<? extends IStorage> cla$$, @NotNull String id) {
-    super(cla$$.getName(), id);
-  }
-
-  /**
-   * Create a new empty storage.
-   *
-   * @param className the full qualified name of the class to load for this storage. The class need to implement the {@link IStorage} API.
-   * @param id        the unique identifier of the storage (selected by the user).
-   */
-  @AvailableSince(NakshaVersion.v2_0_7)
-  @JsonCreator
-  public Storage(@JsonProperty(CLASS_NAME) @NotNull String className, @JsonProperty(ID) @NotNull String id) {
-    super(className, id);
-  }
-
-  /**
-   * The unique storage number, being a 40-bit unsigned integer.
-   */
   @Deprecated
-  @AvailableSince(NakshaVersion.v2_0_0)
-  @JsonProperty(NUMBER)
-  private long number;
+  public long getNumber() {
+    return (Long) getRaw(NUMBER);
+  }
+
+  @Deprecated
+  public void setNumber(long number) {
+    setRaw(NUMBER, number);
+  }
 
   /**
    * Do not use anymore, please call {@link PluginCache#getStorageConstructor(String, Class)} and create the instance yourself.
@@ -87,15 +62,5 @@ public class Storage extends Plugin<IStorage> {
     } catch (Exception e) {
       throw unchecked(e);
     }
-  }
-
-  @Deprecated
-  public long getNumber() {
-    return number;
-  }
-
-  @Deprecated
-  public void setNumber(long number) {
-    this.number = number;
   }
 }

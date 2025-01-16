@@ -1,0 +1,19 @@
+package naksha.model
+
+/**
+ * A write-request.
+ */
+actual interface IWriteSession : IReadSession {
+    /**
+     * Commit all pending changes in the current transaction. Returns the underlying connection back into the connection pool.
+     * @since 2.0.7
+     */
+    actual fun commit()
+
+    /**
+     * Rollback (revert) all pending changes in the current transaction. Returns the underlying connection back into the connection pool.
+     * @since 2.0.7
+     */
+    actual fun rollback()
+
+}

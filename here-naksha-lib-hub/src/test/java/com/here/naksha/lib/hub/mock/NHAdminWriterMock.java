@@ -18,185 +18,130 @@
  */
 package com.here.naksha.lib.hub.mock;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.models.storage.EWriteOp.CREATE;
-import static com.here.naksha.lib.core.models.storage.EWriteOp.DELETE;
-import static com.here.naksha.lib.core.models.storage.EWriteOp.PURGE;
-import static com.here.naksha.lib.core.models.storage.EWriteOp.PUT;
-import static com.here.naksha.lib.core.models.storage.EWriteOp.UPDATE;
-
-import com.here.naksha.lib.core.exceptions.StorageLockException;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.XyzFeature;
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
-import com.here.naksha.lib.core.models.storage.EExecutedOp;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-import naksha.model.ErrorResult;
-import com.here.naksha.lib.core.models.storage.Result;
-import naksha.model.WriteRequest;
-import com.here.naksha.lib.core.models.storage.WriteXyzCollections;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
-import com.here.naksha.lib.core.models.storage.XyzCodecFactory;
-import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodecFactory;
-import naksha.model.IStorageLock;
-import naksha.model.IWriteSession;
-import com.here.naksha.lib.psql.EPsqlState;
 import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
+import java.util.Objects;
+import java.util.TreeMap;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import naksha.model.IWriteSession;
+import naksha.model.Naksha;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
+import naksha.model.request.WriteOp;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.postgresql.util.PSQLState;
 
 public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSession {
 
-  public NHAdminWriterMock(final @NotNull Map<String, TreeMap<String, Object>> mockCollection) {
+  public NHAdminWriterMock(final @NotNull Map<String, TreeMap<String, NakshaFeature>> mockCollection) {
     super(mockCollection);
   }
 
-  /**
-   * Execute the given write-request.
-   *
-   * @param writeRequest the write-request to execute.
-   * @return the result.
-   */
   @Override
-  public @NotNull Result execute(@NotNull WriteRequest<?, ?, ?> writeRequest) {
-    if (writeRequest instanceof WriteXyzCollections wc) {
-      return executeWriteCollection(wc);
-    } else if (writeRequest instanceof WriteXyzFeatures wf) {
-      return executeWriteFeatures(wf);
-    }
-    return new ErrorResult(
-        XyzError.NOT_IMPLEMENTED,
-        "WriteRequest type " + writeRequest.getClass().getName() + " not supported");
-  }
-
-  @Override
-  public @NotNull Result executeBulkWriteFeatures(@NotNull WriteRequest<?, ?, ?> writeRequest) {
-    throw new UnsupportedOperationException("bulk write is not supported");
-  }
-
-  protected @NotNull Result executeWriteCollection(@NotNull WriteXyzCollections wc) {
-    final @NotNull List<XyzCollectionCodec> results = new ArrayList<>();
-    for (final XyzCollectionCodec collectionCodec : wc.features) {
-      // persist collection (if not already)
-      EExecutedOp execOp = EExecutedOp.RETAINED;
-      if (mockCollection.putIfAbsent(collectionCodec.getFeature().getId(), new TreeMap<>()) == null) {
-        execOp = EExecutedOp.CREATED;
-      }
-      collectionCodec.setOp(execOp);
-      // add to output list
-      results.add(collectionCodec);
-    }
-    return new MockResult(XyzCollection.class, results);
-  }
-
-  protected @NotNull Result executeWriteFeatures(@NotNull WriteXyzFeatures wf) {
-    final @NotNull List<XyzFeatureCodec> results = new ArrayList<>();
-    // Raise exception if collection doesn't exist already
-    if (mockCollection.get(wf.getCollectionId()) == null) {
-      throw unchecked(new SQLException(
-          "Collection " + wf.getCollectionId() + " doesn't exist.",
-          EPsqlState.COLLECTION_DOES_NOT_EXIST.toString()));
-    }
-    // Perform write operation for each feature
-    for (final XyzFeatureCodec featureCodec : wf.features) {
-      // generate new feature Id, if not already provided
-      final EWriteOp op = EWriteOp.get(featureCodec.getOp());
-      try {
-        if ((op == DELETE) && (featureCodec.getFeature() == null)) {
-          if (featureCodec.getId() == null) {
-            throw new SQLException("Feature to delete has null id!");
-          }
-          results.add(deleteFeature(wf.getCollectionId(), featureCodec.getId(), featureCodec.getUuid()));
-          continue;
-        }
-        final XyzFeature feature = Objects.requireNonNull(featureCodec.getFeature(), "Codec's feature is null");
-        if (op == CREATE && (feature.getId() == null || feature.getId().isEmpty())) {
-          feature.setId(UUID.randomUUID().toString());
-        }
-        // persist feature in a space
-
-        XyzFeatureCodec result;
-        if (op.equals(CREATE)) {
-          result = insertFeature(wf.getCollectionId(), feature);
-        } else if (op.equals(UPDATE)) {
-          result = updateFeature(wf.getCollectionId(), feature);
-        } else if (op.equals(PUT)) {
-          result = upsertFeature(wf.getCollectionId(), feature);
-        } else if (op.equals(DELETE)) {
-          result = deleteFeature(wf.getCollectionId(), feature);
-        } else if (op.equals(PURGE)) {
-          return new ErrorResult(XyzError.NOT_IMPLEMENTED, "PurgeFeature not mocked yet");
+  public @NotNull Response execute(@NotNull Request request) {
+    if (request instanceof WriteRequest wr) {
+      for (Write write : wr.getWrites()) {
+        if (Naksha.VIRT_COLLECTIONS.equals(write.getCollectionId())) {
+          executeWriteCollection(write);
         } else {
-          return new ErrorResult(XyzError.NOT_IMPLEMENTED, op + " not mocked yet");
+          executeWriteFeature(write);
         }
-        // add to output list
-        results.add(result);
-      } catch (SQLException ex) {
-        return mapExceptionToErrorResult(ex);
       }
+      return new SuccessResponse();
+    } else {
+      return new ErrorResponse(
+          new NakshaError(NakshaError.UNSUPPORTED_OPERATION,
+              "WriteRequest type " + request.getClass().getName() + " not supported"));
     }
-    return new MockResult<>(XyzFeature.class, results);
   }
 
-  protected @NotNull ErrorResult mapExceptionToErrorResult(final @NotNull SQLException sqe) {
-    XyzError error = XyzError.EXCEPTION;
-    final String state = sqe.getSQLState();
-    if (PSQLState.UNIQUE_VIOLATION.getState().equals(state)) {
-      error = XyzError.CONFLICT;
-    } else if (PSQLState.NO_DATA.getState().equals(state)) {
-      error = XyzError.NOT_FOUND;
+  private void executeWriteCollection(Write write) {
+    String collectionId = write.getFeatureId();
+    WriteOp op = write.getOp();
+    if (op.equals(WriteOp.CREATE)) {
+      mockCollection.putIfAbsent(collectionId, new TreeMap<>());
+    } else if (op.equals(WriteOp.DELETE)) {
+      mockCollection.remove(collectionId);
+    } else {
+      throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Mock can only CREATE and DELETE collection"));
     }
-    return new ErrorResult(error, sqe.getMessage(), sqe);
   }
 
-  protected <T> @NotNull XyzFeatureCodec insertFeature(
-      final @NotNull String collectionId, final @NotNull XyzFeature feature) throws SQLException {
-    if (mockCollection.get(collectionId).putIfAbsent(feature.getId(), setUuidFor(feature)) == null) {
-      return featureCodec(feature, EExecutedOp.CREATED);
+  private void executeWriteFeature(Write write) {
+    String collectionId = write.getCollectionId();
+    if (!mockCollection.containsKey(collectionId)) {
+      throw new NakshaException(new NakshaError(
+          NakshaError.COLLECTION_NOT_FOUND,
+          "Collection " + write.getCollectionId() + " doesn't exist."
+      ));
     }
-    throw new SQLException("Feature already exists " + feature.getId(), PSQLState.UNIQUE_VIOLATION.getState());
+
+    WriteOp op = write.getOp();
+    NakshaFeature feature = write.getFeature();
+    if (op.equals(WriteOp.CREATE)) {
+      insertFeature(collectionId, feature);
+    } else if (op.equals(WriteOp.UPDATE)) {
+      updateFeature(collectionId, feature);
+    } else if (op.equals(WriteOp.UPSERT)) {
+      upsertFeature(collectionId, feature);
+    } else if (op.equals(WriteOp.DELETE)) {
+      deleteFeature(collectionId, feature.getId());
+    } else if (op.equals(WriteOp.PURGE)) {
+      throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "PurgeFeature not mocked yet"));
+    } else {
+      throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, op.getValue() + " not mocked yet"));
+    }
   }
 
-  protected @NotNull XyzFeatureCodec updateFeature(
-      final @NotNull String collectionId, final @NotNull XyzFeature feature) throws SQLException {
-    final AtomicReference<XyzFeatureCodec> result = new AtomicReference<>();
-    final AtomicReference<SQLException> exception = new AtomicReference<>();
+  private void insertFeature(
+      final @NotNull String collectionId,
+      final @NotNull NakshaFeature feature
+  ) {
+    if (mockCollection.get(collectionId).putIfAbsent(feature.getId(), setUuidFor(feature)) != null) {
+      throw new NakshaException(new NakshaError(NakshaError.CONFLICT, "Feature already exists: " + feature.getId()));
+    }
+  }
+
+  private void updateFeature(
+      final @NotNull String collectionId,
+      final @NotNull NakshaFeature feature
+  ) {
+    final AtomicReference<NakshaException> exception = new AtomicReference<>();
 
     mockCollection.get(collectionId).compute(feature.getId(), (fId, oldF) -> {
       // no existing feature to update
       if (oldF == null) {
-        exception.set(new SQLException("No feature found for id " + fId, PSQLState.NO_DATA.getState()));
+        exception.set(new NakshaException(new NakshaError(NakshaError.NOT_FOUND, "No feature found for id " + fId)));
         return oldF;
       }
       // update if UUID matches (or overwrite if new uuid is missing)
-      final XyzFeature ef = (XyzFeature) oldF;
-      if ((Objects.equals(uuidOf(ef), uuidOf(feature)) && uuidOf(feature) != null) || uuidOf(feature) == null) {
-        result.set(featureCodec(feature, EExecutedOp.UPDATED));
+      if ((Objects.equals(uuidOf(oldF), uuidOf(feature)) && uuidOf(feature) != null) || uuidOf(feature) == null) {
         return setUuidFor(feature);
       } else {
         // throw error if UUID mismatches
-        exception.set(new SQLException(
-            "Uuid " + uuidOf(ef) + " mismatch for id " + fId,
-            EPsqlState.COLLECTION_DOES_NOT_EXIST.toString()));
+        exception.set(new NakshaException(new NakshaError(NakshaError.ILLEGAL_STATE, "Uuid " + uuidOf(oldF) + " mismatch for id " + fId)));
         return oldF;
       }
     });
     if (exception.get() != null) {
       throw exception.get();
     }
-    return result.get();
   }
 
-  protected @NotNull XyzFeatureCodec upsertFeature(
-      final @NotNull String collectionId, final @NotNull XyzFeature feature) throws SQLException {
-    final AtomicReference<XyzFeatureCodec> result = new AtomicReference<>();
-    final AtomicReference<SQLException> exception = new AtomicReference<>();
+  private void upsertFeature(
+      final @NotNull String collectionId,
+      final @NotNull NakshaFeature feature
+  ) {
+    final AtomicReference<NakshaFeature> result = new AtomicReference<>();
+    final AtomicReference<NakshaException> exception = new AtomicReference<>();
 
     mockCollection.get(collectionId).compute(feature.getId(), (fId, oldF) -> {
       // insert if missing
@@ -204,156 +149,80 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
         if (uuidOf(feature) == null) {
           setUuidFor(feature);
         }
-        result.set(featureCodec(feature, EExecutedOp.CREATED));
+        result.set(feature);
         return feature;
       }
       // update if UUID matches (or overwrite if new uuid is missing)
-      final XyzFeature ef = (XyzFeature) oldF;
-      if ((Objects.equals(uuidOf(ef), uuidOf(feature)) && uuidOf(feature) != null) || uuidOf(feature) == null) {
-        result.set(featureCodec(feature, EExecutedOp.UPDATED));
+      if ((Objects.equals(uuidOf(oldF), uuidOf(feature)) && uuidOf(feature) != null) || uuidOf(feature) == null) {
+        result.set(feature);
         return setUuidFor(feature);
       } else {
         // throw error if UUID mismatches
-        exception.set(new SQLException(
-            "Uuid " + uuidOf(ef) + " mismatch for id " + feature.getId(),
-            PSQLState.UNIQUE_VIOLATION.getState()));
+        exception.set(
+            new NakshaException(new NakshaError(NakshaError.CONFLICT, "Uuid " + uuidOf(oldF) + " mismatch for id " + feature.getId())));
         return oldF;
       }
     });
     if (exception.get() != null) {
       throw exception.get();
     }
-    return result.get();
   }
 
-  protected @NotNull XyzFeatureCodec deleteFeature(
-      final @NotNull String collectionId, final @NotNull String id, final @Nullable String uuid)
-      throws SQLException {
-    final AtomicReference<XyzFeatureCodec> result = new AtomicReference<>();
-    final AtomicReference<SQLException> exception = new AtomicReference<>();
+  private void deleteFeature(
+      final @NotNull String collectionId,
+      final @NotNull String id,
+      final @Nullable String uuid
+  ) {
+    final AtomicReference<NakshaException> exception = new AtomicReference<>();
 
     mockCollection.get(collectionId).compute(id, (fId, oldF) -> {
       // nothing to delete if it is already absent
       if (oldF == null) {
-        result.set(featureCodec(id, EExecutedOp.RETAINED));
+//        result.set(featureCodec(id, EExecutedOp.RETAINED)); TODO?
         return oldF;
       }
       // delete if UUID matches
-      final XyzFeature ef = (XyzFeature) oldF;
-      if ((Objects.equals(uuidOf(ef), uuid)) || (uuid == null)) {
-        result.set(featureCodec(ef, EExecutedOp.DELETED));
+      if ((Objects.equals(uuidOf(oldF), uuid)) || (uuid == null)) {
+//        result.set(oldF); TODO
         return null;
       } else {
         // throw error if UUID mismatches
-        exception.set(new SQLException(
-            "Uuid " + uuidOf(ef) + " mismatch for id " + id, PSQLState.UNIQUE_VIOLATION.getState()));
+        exception.set(new NakshaException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT,
+            "Uuid " + uuidOf(oldF) + " mismatch for id " + id)));
         return oldF;
       }
     });
     if (exception.get() != null) {
       throw exception.get();
     }
-    return result.get();
   }
 
-  protected @NotNull XyzFeatureCodec deleteFeature(
-      final @NotNull String collectionId, final @NotNull XyzFeature feature) throws SQLException {
-    final String id = feature.getId();
-    final String uuid = uuidOf(feature);
-    return deleteFeature(collectionId, id, uuid);
+  private void deleteFeature(
+      final @NotNull String collectionId,
+      final @Nullable String featureId
+  ) {
+    if (featureId == null) {
+      throw new NakshaException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Can't delete feature without id"));
+    }
+    mockCollection.get(collectionId).remove(collectionId);
   }
 
-  private @Nullable String uuidOf(final @NotNull XyzFeature feature) {
-    return feature.getProperties().getXyzNamespace().getUuid();
+  private @Nullable String uuidOf(final @NotNull NakshaFeature feature) {
+    return feature.getProperties().getXyz().getUuid();
   }
 
-  private XyzFeature setUuidFor(final @NotNull XyzFeature feature) {
-    feature.getProperties().getXyzNamespace().setUuid(UUID.randomUUID().toString());
+  private NakshaFeature setUuidFor(final @NotNull NakshaFeature feature) {
+    feature.getProperties().getXyz().setRaw("uuid", UUID.randomUUID());
     return feature;
   }
 
-  private XyzFeatureCodec featureCodec(XyzFeature feature, EExecutedOp op) {
-    return XyzCodecFactory.getFactory(XyzFeatureCodecFactory.class)
-        .newInstance()
-        .withFeature(feature)
-        .withOp(op);
+  @Override
+  public void commit() {
+    // do nothing
   }
 
-  private XyzFeatureCodec featureCodec(String id, EExecutedOp op) {
-    return XyzCodecFactory.getFactory(XyzFeatureCodecFactory.class)
-        .newInstance()
-        .withId(id)
-        .withOp(op);
+  @Override
+  public void rollback() {
+    // do nothing
   }
-
-  /**
-   * Acquire a lock to a specific feature in the HEAD state.
-   *
-   * @param collectionId the collection in which the feature is stored.
-   * @param featureId    the identifier of the feature to lock.
-   * @param timeout      the maximum time to wait for the lock.
-   * @param timeUnit     the time-unit in which the wait-time was provided.
-   * @return the lock.
-   * @throws StorageLockException if the locking failed.
-   */
-  @Override
-  public @NotNull IStorageLock lockFeature(
-      @NotNull String collectionId, @NotNull String featureId, long timeout, @NotNull TimeUnit timeUnit)
-      throws StorageLockException {
-    return null;
-  }
-
-  /**
-   * Acquire an advisory lock.
-   *
-   * @param lockId   the unique identifier of the lock to acquire.
-   * @param timeout  the maximum time to wait for the lock.
-   * @param timeUnit the time-unit in which the wait-time was provided.
-   * @return the lock.
-   * @throws StorageLockException if the locking failed.
-   */
-  @Override
-  public @NotNull IStorageLock lockStorage(@NotNull String lockId, long timeout, @NotNull TimeUnit timeUnit)
-      throws StorageLockException {
-    return null;
-  }
-
-  /**
-   * Commit all changes.
-   * <p>
-   * Beware setting {@code autoCloseCursors} to {@code true} is often very suboptimal. To keep cursors alive, most of the time the
-   * implementation requires to read all results synchronously from all open cursors in an in-memory cache and to close the underlying
-   * network resources. This can lead to {@link OutOfMemoryError}'s or other issues. It is strictly recommended to first read from all open
-   * cursors before closing, committing or rolling-back a session.
-   *
-   * @param autoCloseCursors If {@code true}, all open cursors are closed; otherwise all pending cursors are kept alive.
-   */
-  @Override
-  public void commit(boolean autoCloseCursors) {}
-
-  /**
-   * Abort the transaction, revert all pending changes.
-   * <p>
-   * Beware setting {@code autoCloseCursors} to {@code true} is often very suboptimal. To keep cursors alive, most of the time the
-   * implementation requires to read all results synchronously from all open cursors in an in-memory cache and to close the underlying
-   * network resources. This can lead to {@link OutOfMemoryError}'s or other issues. It is strictly recommended to first read from all open
-   * cursors before closing, committing or rolling-back a session.
-   *
-   * @param autoCloseCursors If {@code true}, all open cursors are closed; otherwise all pending cursors are kept alive.
-   */
-  @Override
-  public void rollback(boolean autoCloseCursors) {}
-
-  /**
-   * Closes the session and, when necessary invokes {@link #rollback(boolean)}.
-   * <p>
-   * Beware setting {@code autoCloseCursors} to {@code true} is often very suboptimal. To keep cursors alive, most of the time the
-   * implementation requires to read all results synchronously from all open cursors in an in-memory cache and to close the underlying
-   * network resources. This can lead to {@link OutOfMemoryError}'s or other issues. It is strictly recommended to first read from all open
-   * cursors before closing, committing or rolling-back a session.
-   *
-   * @param autoCloseCursors If {@code true}, all open cursors are closed; otherwise all pending cursors are kept alive.
-   */
-  @Override
-  public void close(boolean autoCloseCursors) {}
 }

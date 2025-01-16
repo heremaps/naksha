@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Int64
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
@@ -43,4 +44,7 @@ open class PsqlStorage(override val cluster: PsqlCluster, defaultSchemaName: Str
     override fun newSession(options: SessionOptions, readOnly: Boolean): PsqlSession = PsqlSession(this, options, readOnly)
     override val defaultMap: PsqlMap = super.defaultMap as PsqlMap
     override operator fun get(mapId: String): PsqlMap = super.get(mapId) as PsqlMap
+    override fun enterLock(id: String, waitMillis: Int64): ILock {
+        throw NakshaException(NakshaError.NOT_IMPLEMENTED, "enterLock")
+    }
 }
