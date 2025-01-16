@@ -3,7 +3,7 @@ package com.here.naksha.handler.activitylog.util;
 import com.here.naksha.handler.activitylog.ActivityLogComparator;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.Original;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.XyzFeatureCollection;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.test.common.FileUtil;
@@ -47,7 +47,7 @@ public class DatahubSamplesUtil {
     List<NakshaFeature> features = featuresFromCollectionJson(sampleFeaturesJson);
     features.forEach(feature -> {
       String originId = feature.getId();
-      XyzActivityLog datahubActivityLog = JvmProxyUtil.box(feature.getProperties().get(XYZ_ACTIVITY_LOG_NS), XyzActivityLog.class);
+      XyzActivityLog datahubActivityLog = JvmBoxingUtil.box(feature.getProperties().get(XYZ_ACTIVITY_LOG_NS), XyzActivityLog.class);
       XyzNs datahubXyzNamespace = feature.getProperties().getXyz();
       Original datahubOriginal = datahubActivityLog.getOriginal();
       String originAction = datahubActivityLog.getAction();

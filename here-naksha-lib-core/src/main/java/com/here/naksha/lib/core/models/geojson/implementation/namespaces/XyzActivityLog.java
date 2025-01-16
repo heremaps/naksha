@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import naksha.base.AnyObject;
-import naksha.base.JvmProxyUtil;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.Action;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.NotNull;
@@ -128,6 +128,6 @@ public class XyzActivityLog extends AnyObject {
   }
 
   public static @Nullable XyzActivityLog getXyzActivityLog(@NotNull NakshaProperties properties) {
-    return JvmProxyUtil.box(properties.get(XYZ_ACTIVITY_LOG_NS), XyzActivityLog.class);
+    return JvmBoxingUtil.box(properties.get(XYZ_ACTIVITY_LOG_NS), XyzActivityLog.class);
   }
 }

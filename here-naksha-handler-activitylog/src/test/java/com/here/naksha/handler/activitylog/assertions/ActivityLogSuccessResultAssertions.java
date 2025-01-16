@@ -4,13 +4,13 @@ import static com.here.naksha.handler.activitylog.assertions.ActivityLogFeatureA
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import com.here.naksha.lib.core.util.storage.ResultHelper;
 import java.util.List;
 import java.util.function.Consumer;
 
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
+import naksha.model.util.ResultHelper;
 import org.junit.jupiter.api.Assertions;
 
 public class ActivityLogSuccessResultAssertions {
