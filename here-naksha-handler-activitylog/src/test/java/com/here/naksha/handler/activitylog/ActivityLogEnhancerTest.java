@@ -8,6 +8,9 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
+import naksha.base.FromJsonOptions;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
 import naksha.model.objects.NakshaFeature;
 import org.json.JSONException;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -59,8 +62,9 @@ class ActivityLogEnhancerTest {
   }
 
   private static NakshaFeature featureFromFile(String sampleDir, String fileName) {
-    return JsonSerializable.deserialize(
-        FileUtil.loadFileOrFail(sampleDir, fileName),
+    String fileContent = FileUtil.loadFileOrFail(sampleDir, fileName);
+    return JvmBoxingUtil.box(
+            Platform.fromJSON(fileContent, FromJsonOptions.DEFAULT),
             NakshaFeature.class
     );
   }
