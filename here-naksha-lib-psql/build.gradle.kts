@@ -6,6 +6,11 @@ import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
     kotlin("plugin.js-plain-objects")
+    id("naksha.java")
+    id("naksha.publish")
+
+    // uncomment spotless to add license comments
+    // id("naksha.spotless-kotlin")
 }
 
 kotlin {
@@ -44,7 +49,7 @@ kotlin {
                 api(project(":here-naksha-lib-model"))
                 api(project(":here-naksha-lib-geo"))
 
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation(Lib.kotlinx_datetime)
             }
         }
         commonTest {
@@ -52,7 +57,7 @@ kotlin {
                 implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation(Lib.kotlinx_datetime)
             }
         }
         jvmMain {
@@ -65,15 +70,15 @@ kotlin {
                 api(project(":here-naksha-lib-model"))
                 api(project(":here-naksha-lib-geo"))
 
-                implementation("org.apache.commons:commons-lang3:3.12.0")
-                implementation("org.postgresql:postgresql:42.5.4")
-                implementation("org.testcontainers:postgresql:1.19.4")
-                implementation("commons-dbutils:commons-dbutils:1.7")
-                implementation("org.locationtech.jts:jts-core:1.19.0")
-                implementation("org.locationtech.jts.io:jts-io-common:1.19.0")
+                implementation(Lib.commons_lang3)
+                implementation(Lib.postgres)
+                implementation(Lib.test_containers_postgres)
+                implementation(Lib.commons_dbutils)
+                implementation(Lib.jts_core)
+                implementation(Lib.jts_io_common)
 
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
-                implementation("org.postgresql:postgresql:42.5.4")
+                implementation(Lib.kotlinx_datetime)
+                implementation(Lib.postgres)
             }
             // TODO: We should replace ${project.buildDir} with ${layout.buildDirectory}, but this is not the same:
             // println("------------ ${project.buildDir}/dist/js/productionExecutable/")
@@ -83,17 +88,17 @@ kotlin {
         jvmTest {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
-                runtimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
-                implementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
-                implementation("org.junit.jupiter:junit-jupiter-params:5.5.2")
-                implementation("org.slf4j:slf4j-api:2.0.13")
-                implementation("org.slf4j:slf4j-simple:2.0.13")
-                implementation("org.testcontainers:postgresql:1.19.4")
-                implementation("org.postgresql:postgresql:42.5.4")
-                implementation("org.mockito:mockito-core:5.8.0")
-                implementation("org.mockito.kotlin:mockito-kotlin:5.3.1")
-                implementation("org.locationtech.spatial4j:spatial4j:0.8")
+                implementation(Lib.kotlintest_runner_junit5)
+                runtimeOnly(Lib.junit_jupiter_engine)
+                implementation(Lib.junit_jupiter_api)
+                implementation(Lib.junit_params)
+                implementation(Lib.slf4j_api)
+                implementation(Lib.slf4j_console)
+                implementation(Lib.test_containers_postgres)
+                implementation(Lib.postgres)
+                implementation(Lib.mockito)
+                implementation(Lib.mockito_kotlin)
+                implementation(Lib.spatial4j)
             }
         }
         jsMain {
@@ -104,7 +109,7 @@ kotlin {
                 api(project(":here-naksha-lib-model"))
                 api(project(":here-naksha-lib-geo"))
 
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation(Lib.kotlinx_datetime)
                 //implementation(npm("postgres", "3.4.4"))
             }
         }
@@ -138,3 +143,4 @@ tasks {
         maxHeapSize = "8g"
     }
 }
+setOverallCoverage(0.0) // only increasing allowed!
