@@ -11,7 +11,6 @@ import java.util.stream.Stream;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
-import naksha.base.ToJsonOptions;
 import naksha.model.objects.NakshaFeature;
 import org.json.JSONException;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -38,7 +37,7 @@ class ActivityLogEnhancerTest {
     NakshaFeature enhancedFeature = ActivityLogEnhancer.enhanceWithActivityLog(newFeature, oldFeature, SPACE_ID);
 
     // And
-    String enhancedFeatureJson = Platform.toJSON(enhancedFeature, ToJsonOptions.DEFAULT);
+    String enhancedFeatureJson = JsonSerializable.serialize(enhancedFeature);
 
     // Then
     JSONAssert.assertEquals(

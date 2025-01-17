@@ -49,7 +49,7 @@ interface IMetadata {
     /**
      * The previous version.
      *
-     * This is the transaction number of the transaction that contains the previous state of the feature; if _null_, the state should be [CREATED][Action.CREATE], if not _null_ [UPDATED][Action.CREATE] or [DELETED][Action.DELETE].
+     * This is the transaction number of the transaction that contains the previous state of the feature; if _null_, the state should be [CREATED][Action.CREATED], if not _null_ [UPDATED][Action.CREATED] or [DELETED][Action.DELETED].
      */
     val prevVersion: Version?
 

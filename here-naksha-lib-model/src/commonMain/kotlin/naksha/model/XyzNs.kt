@@ -16,7 +16,7 @@ class XyzNs : AnyObject() {
     companion object XyzNsCompanion {
         const val TAGS_KEY = "tags"
 
-        private val ACTION = NotNullEnum<XyzNs, Action>(Action::class) { _, _ -> Action.CREATE }
+        private val ACTION = NotNullEnum<XyzNs, Action>(Action::class) { _, _ -> Action.CREATED }
         private val STRING = NotNullProperty<XyzNs, String>(String::class) { _, name ->
             throw IllegalStateException("The field $name must have a value")
         }

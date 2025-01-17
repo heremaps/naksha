@@ -49,7 +49,7 @@ class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c")) 
                     .hasFeatureType(initialFeature.properties.featureType)
                     .hasXyzThat { retrievedXyz ->
                         retrievedXyz
-                            .hasProperty("action", Action.CREATE)
+                            .hasProperty("action", Action.CREATED)
                             .hasProperty("changeCount", 1)
                     }
             }
@@ -64,7 +64,7 @@ class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c")) 
                     .hasFeatureType(initialFeature.properties.featureType)
                     .hasXyzThat { retrievedXyz ->
                         retrievedXyz
-                            .hasProperty("action", Action.UPDATE)
+                            .hasProperty("action", Action.UPDATED)
                             .hasProperty("changeCount", 2)
                     }
             }

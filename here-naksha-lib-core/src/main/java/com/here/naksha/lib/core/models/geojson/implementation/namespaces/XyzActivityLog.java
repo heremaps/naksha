@@ -97,12 +97,12 @@ public class XyzActivityLog extends AnyObject {
   }
 
   public boolean isDeleted() {
-    return Action.DELETE.toString().equals(getAction());
+    return Action.DELETED.toString().equals(getAction());
   }
 
   public void setDeleted(boolean deleted) {
     if (deleted) {
-      setAction(Action.DELETE);
+      setAction(Action.DELETED);
     }
   }
 

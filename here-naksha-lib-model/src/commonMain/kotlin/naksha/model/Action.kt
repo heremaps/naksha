@@ -23,21 +23,21 @@ class Action : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val CREATE = defIgnoreCase(Action::class, "CREATE") { self -> self.action = ActionValues.CREATED }
+        val CREATED = defIgnoreCase(Action::class, "CREATED") { self -> self.action = ActionValues.CREATED }
 
         /**
          * The feature was updated.
          */
         @JsStatic
         @JvmField
-        val UPDATE = defIgnoreCase(Action::class, "UPDATE") { self -> self.action = ActionValues.UPDATED }
+        val UPDATED = defIgnoreCase(Action::class, "UPDATED") { self -> self.action = ActionValues.UPDATED }
 
         /**
          * The feature was deleted.
          */
         @JsStatic
         @JvmField
-        val DELETE = defIgnoreCase(Action::class, "DELETE") { self -> self.action = ActionValues.DELETED }
+        val DELETED = defIgnoreCase(Action::class, "DELETED") { self -> self.action = ActionValues.DELETED }
 
         /**
          * The action is unknown (invalid state).
