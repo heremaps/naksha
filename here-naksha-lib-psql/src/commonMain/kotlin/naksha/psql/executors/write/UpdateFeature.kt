@@ -75,7 +75,7 @@ class UpdateFeature(
             hash = hash(feature, session.options.excludePaths, session.options.excludeFn),
             changeCount = previousMetadata.changeCount + 1,
             geoGrid = geoGrid(feature),
-            flags = flags.action(Action.UPDATED),
+            flags = flags.action(Action.UPDATE),
             appId = session.options.appId,
             author = session.options.author ?: previousMetadata.author,
             id = feature.id

@@ -62,7 +62,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
                             .hasProperty("author", PgTest.TEST_APP_AUTHOR!!)
-                            .hasProperty("action", Action.CREATED)
+                            .hasProperty("action", Action.CREATE)
                     }
                     .hasTags(TagList("wicked"))
             }
@@ -105,7 +105,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
                             retrievedXyz
                                 .hasProperty("appId", PgTest.TEST_APP_ID)
                                 .hasProperty("author", PgTest.TEST_APP_AUTHOR!!)
-                                .hasProperty("action", Action.CREATED)
+                                .hasProperty("action", Action.CREATE)
                         }
                 }
         }

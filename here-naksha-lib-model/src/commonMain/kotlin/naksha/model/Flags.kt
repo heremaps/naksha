@@ -153,9 +153,9 @@ inline fun Flags.action(): Int = this and ACTION_MASK
  * @return the action-enumeration value from the encoding.
  */
 inline fun Flags.actionEnum(): Action = when (this.action()) {
-    ActionValues.CREATED -> Action.CREATED
-    ActionValues.UPDATED -> Action.UPDATED
-    ActionValues.DELETED -> Action.DELETED
+    ActionValues.CREATED -> Action.CREATE
+    ActionValues.UPDATED -> Action.UPDATE
+    ActionValues.DELETED -> Action.DELETE
     else -> Action.UNKNOWN
 }
 

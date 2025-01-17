@@ -67,7 +67,7 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
                             .hasProperty("author", PgTest.TEST_APP_AUTHOR!!)
-                            .hasProperty("action", Action.UPDATED)
+                            .hasProperty("action", Action.UPDATE)
                             .hasProperty("changeCount", 2)
                     }
             }
@@ -103,8 +103,8 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
             queryHistory = true
         }).tuples
 
-        val retrievedUpdatedTupleResult = retrievedTuples.first { it?.tuple?.meta?.action() == Action.UPDATED }!!
-        val retrievedHstCreatedTupleResult = retrievedTuples.first { it?.tuple?.meta?.action() == Action.CREATED }!!
+        val retrievedUpdatedTupleResult = retrievedTuples.first { it?.tuple?.meta?.action() == Action.UPDATE }!!
+        val retrievedHstCreatedTupleResult = retrievedTuples.first { it?.tuple?.meta?.action() == Action.CREATE }!!
 
         // Then
         assertNotEquals(retrievedUpdatedTupleResult.tupleNumber.version, retrievedHstCreatedTupleResult.tupleNumber.version)

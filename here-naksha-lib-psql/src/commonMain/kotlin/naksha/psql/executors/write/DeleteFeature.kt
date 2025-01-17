@@ -9,7 +9,6 @@ import naksha.model.request.SuccessResponse
 import naksha.psql.PgCollection
 import naksha.psql.PgSession
 import naksha.psql.executors.PgReader
-import naksha.psql.executors.PgWriter
 import naksha.psql.executors.TupleCachingUtils.cachedTupleNumber
 import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
@@ -24,7 +23,7 @@ class DeleteFeature(
         val featureId = write.featureId ?: throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "No feature ID provided")
 
         val tupleNumber = newFeatureTupleNumber(collection, featureId, session)
-        val flags = resolveFlags(collection, session).action(Action.DELETED)
+        val flags = resolveFlags(collection, session).action(Action.DELETE)
 
         val readFeatures = ReadFeatures(collection.id)
         readFeatures.featureIds.add(featureId)

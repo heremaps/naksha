@@ -57,9 +57,9 @@ data class Metadata(
      * @return the enumeration value of action, extracted from [flags].
      */
     fun action() : Action = when (flags.action()) {
-        ActionValues.CREATED -> Action.CREATED
-        ActionValues.UPDATED -> Action.UPDATED
-        ActionValues.DELETED -> Action.DELETED
+        ActionValues.CREATED -> Action.CREATE
+        ActionValues.UPDATED -> Action.UPDATE
+        ActionValues.DELETED -> Action.DELETE
         else -> Action.UNKNOWN
     }
 
