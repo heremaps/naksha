@@ -1,0 +1,55 @@
+import org.gradle.kotlin.dsl.apply
+
+plugins {
+    id("java")
+    id("com.diffplug.spotless")
+}
+
+apply(plugin = "com.diffplug.spotless")
+
+// https://github.com/diffplug/spotless/tree/main/plugin-gradle
+spotless {
+    java {
+        // excluding tests where Builder pattern gets broken by palantir
+        targetExclude("src/test/**")
+        encoding("UTF-8")
+        // TODO - Hardcoding it to 2023 for now to avoid all the files conflicting with open PRs
+        // val YEAR = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy"))
+        val YEAR = 2024
+        licenseHeader("""
+/*
+ * Copyright (C) 2017-$YEAR HERE Europe B.V.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * License-Filename: LICENSE
+ */
+""")
+        // Allow "spotless:off" / "spotless:on" comments to toggle spotless auto-format.
+        toggleOffOn()
+        removeUnusedImports()
+        importOrder()
+        formatAnnotations()
+        // https://github.com/diffplug/spotless/issues/1774
+        palantirJavaFormat("2.39.0")
+        indentWithTabs(4)
+        indentWithSpaces(2)
+    }
+}
+
+tasks {
+    compileJava {
+        finalizedBy(spotlessApply)
+    }
+}

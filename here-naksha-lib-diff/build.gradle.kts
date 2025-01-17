@@ -6,6 +6,11 @@ import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
     kotlin("plugin.js-plain-objects")
+    id("naksha.publish")
+    id("naksha.java")
+
+    // uncomment spotless to add license comments
+    // id("naksha.spotless-kotlin")
 }
 
 kotlin {
@@ -39,7 +44,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(kotlin("stdlib-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation(Lib.kotlinx_datetime)
                 implementation(project(":here-naksha-lib-base"))
             }
         }
@@ -48,19 +53,19 @@ kotlin {
                 implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation(Lib.kotlinx_datetime)
             }
         }
         jvmTest {
             jvmToolchain(11)
             dependencies {
                 implementation(kotlin("test"))
-                implementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
-                runtimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
-                implementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
-                implementation("org.junit.jupiter:junit-jupiter-params:5.5.2")
-                api("org.slf4j:slf4j-api:2.0.13")
-                implementation("org.slf4j:slf4j-simple:2.0.13")
+                implementation(Lib.kotlintest_runner_junit5)
+                runtimeOnly(Lib.junit_jupiter_engine)
+                implementation(Lib.junit_jupiter_api)
+                implementation(Lib.junit_params)
+                api(Lib.slf4j_api)
+                implementation(Lib.slf4j_console)
                 implementation("org.skyscreamer:jsonassert:1.5.1")
             }
         }
