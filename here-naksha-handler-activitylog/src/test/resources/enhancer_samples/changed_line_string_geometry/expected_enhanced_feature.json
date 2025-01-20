@@ -114,7 +114,7 @@
       "version": 35
     },
     "@ns:com:here:xyz:log": {
-      "action": "UPDATE",
+      "action": "UPDATED",
       "diff": {
         "add": 3,
         "remove": 0,

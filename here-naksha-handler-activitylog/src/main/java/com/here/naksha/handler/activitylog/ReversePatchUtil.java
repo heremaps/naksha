@@ -23,14 +23,8 @@ import static java.lang.System.arraycopy;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
-import naksha.diff.Difference;
-import naksha.diff.InsertOp;
-import naksha.diff.ListDiff;
-import naksha.diff.MapDiff;
-import naksha.diff.Patcher;
-import naksha.diff.PrimitiveDiff;
-import naksha.diff.RemoveOp;
-import naksha.diff.UpdateOp;
+
+import naksha.diff.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.RequestQuery;
@@ -58,7 +52,7 @@ class ReversePatchUtil {
   }
 
   static @Nullable ReversePatch reversePatch(NakshaFeature older, NakshaFeature younger) {
-    Difference difference = Patcher.getDifference(older, younger);
+    Difference difference = DifferenceCalculator.DifferenceCalculator_C.calculateDifference(older, younger);
     if (difference == null) {
       return null;
     } else {

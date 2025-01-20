@@ -5,7 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.here.naksha.handler.activitylog.NakshaActivityLog;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
+import naksha.base.Platform;
+import naksha.base.ToJsonOptions;
 import naksha.model.objects.NakshaFeature;
 import org.json.JSONException;
 import org.junit.jupiter.api.Assertions;
@@ -53,8 +54,8 @@ public class ActivityLogFeatureAssertions {
 
   public ActivityLogFeatureAssertions isIdenticalToDatahubSampleFeature(NakshaFeature datahubFeature, String message) throws JSONException {
     alignDiff(subject);
-    String subjectJson = JsonSerializable.serialize(subject);
-    String datahubFeatureJson = JsonSerializable.serialize(datahubFeature);
+    String subjectJson = Platform.toJSON(subject, ToJsonOptions.DEFAULT);
+    String datahubFeatureJson = Platform.toJSON(datahubFeature, ToJsonOptions.DEFAULT);
     JSONAssert.assertEquals(message, datahubFeatureJson, subjectJson, JSONCompareMode.LENIENT);
     return this;
   }
