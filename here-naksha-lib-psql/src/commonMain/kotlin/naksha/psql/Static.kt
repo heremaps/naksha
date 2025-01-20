@@ -61,8 +61,8 @@ internal const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 2048
 
 internal const val TRANSACTIONS_COL = Naksha.VIRT_TRANSACTIONS
 
-internal const val NKC_TABLE = Naksha.VIRT_TRANSACTIONS
-internal const val NKC_TABLE_ESC = "\"${Naksha.VIRT_TRANSACTIONS}\""
+internal const val NKC_TABLE = Naksha.VIRT_COLLECTIONS
+internal const val NKC_TABLE_ESC = "\"${Naksha.VIRT_COLLECTIONS}\""
 internal const val NKC_PARTITION_COUNT = "partitionCount"
 internal const val NKC_ID = "id"
 internal const val NKC_GEO_INDEX = "geoIndex"
