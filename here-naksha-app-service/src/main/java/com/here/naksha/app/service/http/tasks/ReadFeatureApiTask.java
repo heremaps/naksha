@@ -46,9 +46,10 @@ import static naksha.model.BufferTransformation.bufferInMeters;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
+import com.here.naksha.app.service.http.ops.TagQueryUtil;
 import com.here.naksha.app.service.http.ops.PropertySearchUtil;
 import com.here.naksha.app.service.http.ops.PropertySelectionUtil;
-import com.here.naksha.app.service.http.ops.SpatialUtil;
+import com.here.naksha.app.service.http.ops.SpatialQueryUtil;
 import com.here.naksha.app.service.http.ops.TagsUtil;
 import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.INaksha;
@@ -77,6 +78,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import naksha.model.request.query.ITagQuery;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.geom.Geometry;
@@ -216,7 +218,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Prepare read request based on parameters supplied
     final Geometry bbox = RequestHelper.createBBoxEnvelope(west, south, east, north);
-    final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
+    final ITagQuery tagQuery = TagQueryUtil.tagQueryFromParams(queryParams);
     final POp propSearchOp = PropertySearchUtil.buildOperationForPropertySearchParams(queryParams);
 
     final Map<String, Object> queryParamsMap = new HashMap<>();
@@ -232,6 +234,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final ReadFeatures rdRequest = new ReadFeaturesProxyWrapper()
         .withReadRequestType(ReadRequestType.GET_BY_BBOX)
         .withQueryParameters(queryParamsMap)
+        .withT
         .withLimit(limit)
         .addCollection(spaceId)
         .withSpatialOp(SOp.intersects(bbox));
@@ -266,7 +269,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
 
     // Prepare read request based on parameters supplied
-    final Geometry geo = SpatialUtil.buildGeometryForTile(tileType, tileId, (int) margin);
+    final Geometry geo = SpatialQueryUtil.buildGeometryForTile(tileType, tileId, (int) margin);
     final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
     final POp propSearchOp = PropertySearchUtil.buildOperationForPropertySearchParams(queryParams);
 

@@ -39,15 +39,16 @@ open class NakshaFeature() : AnyObject() {
         const val PROPERTIES_KEY = "properties"
         const val TITLE_KEY = "title"
         const val DESCRIPTION_KEY = "description"
+        const val GEOMETRY_KEY = "geometry"
 
         private val ID = NotNullProperty<NakshaFeature, String>(String::class) { _, _ -> PlatformUtil.randomString(12) }
         private val TYPE = NotNullProperty<NakshaFeature, String>(String::class) { self, _ -> self.defaultFeatureType() }
         private val BBOX_NULL = NullableProperty<NakshaFeature, SpBoundingBox>(SpBoundingBox::class)
-        private val GEOMETRY_NULL = NullableProperty<NakshaFeature, SpGeometry>(SpGeometry::class)
+        private val GEOMETRY_NULL = NullableProperty<NakshaFeature, SpGeometry>(SpGeometry::class, name = GEOMETRY_KEY)
         private val REFERENCE_POINT_NULL = NullableProperty<NakshaFeature, SpPoint>(SpPoint::class)
-        private val PROPERTIES = NotNullProperty<NakshaFeature, NakshaProperties>(NakshaProperties::class)
-        private val TITLE_NULL = NullableProperty<NakshaFeature, String>(String::class)
-        private val DESCRIPTION_NULL = NullableProperty<NakshaFeature, String>(String::class)
+        private val PROPERTIES = NotNullProperty<NakshaFeature, NakshaProperties>(NakshaProperties::class, PROPERTIES_KEY)
+        private val TITLE_NULL = NullableProperty<NakshaFeature, String>(String::class, name = TITLE_KEY)
+        private val DESCRIPTION_NULL = NullableProperty<NakshaFeature, String>(String::class, name = DESCRIPTION_KEY)
         private val ATTACHMENT_NULL = NullableProperty<NakshaFeature, ByteArray>(ByteArray::class)
         private val STRING_NULL = NullableProperty<NakshaFeature, String>(String::class)
     }

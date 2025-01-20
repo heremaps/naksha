@@ -18,19 +18,20 @@
  */
 package com.here.naksha.app.service.http.ops;
 
-import naksha.model.XyzFeature;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import naksha.model.objects.NakshaFeature;
 
 public class MaskingUtil {
 
   static final String MASK = "xxxxxx";
 
-  private MaskingUtil() {}
+  private MaskingUtil() {
+  }
 
-  public static void maskProperties(XyzFeature feature, Set<String> propertiesToMask) {
+  public static void maskProperties(NakshaFeature feature, Set<String> propertiesToMask) {
     maskProperties(feature.getProperties(), propertiesToMask);
   }
 
