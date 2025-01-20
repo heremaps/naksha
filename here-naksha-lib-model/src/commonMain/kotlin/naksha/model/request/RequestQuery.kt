@@ -29,7 +29,7 @@ open class RequestQuery : AnyObject() {
 
     companion object RequestQuery_C {
         @JvmField
-        val TAGS_PROP_PATH = arrayOf(NakshaProperties.XYZ_KEY, XyzNs.TAGS_KEY)
+        val TAGS_PROP_PATH = arrayOf(NakshaFeature.PROPERTIES_KEY, NakshaProperties.XYZ_KEY, XyzNs.TAGS_KEY)
 
         private val INT_LIST = NotNullProperty<RequestQuery, IntList>(IntList::class)
         private val SPATIAL_QUERY_NULL = NullableProperty<RequestQuery, ISpatialQuery>(ISpatialQuery::class)

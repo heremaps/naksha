@@ -24,6 +24,8 @@ import static naksha.model.objects.NakshaProperties.XYZ_KEY;
 
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
 import java.util.Optional;
+
+import naksha.base.StringList;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.PQuery;
@@ -77,8 +79,9 @@ class ActivityLogRequestTranslationUtil {
   }
 
   private static boolean isSingleIdEqualityQuery(@NotNull PQuery pQuery) {
-    return StringOp.EQUALS.equals(pQuery.getOp())
-        && Property.ID.equals(pQuery.getProperty().toString());
+    final StringList path = pQuery.getProperty().getPath();
+    return StringOp.EQUALS.equals(pQuery.getOp()) && path.size() == 1
+        && Property.ID.equals(path.get(0));
   }
 
   private static boolean isSingleActivityLogIdEqualityQuery(PQuery pQuery) {
