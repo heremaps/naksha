@@ -1,6 +1,7 @@
 plugins {
     id("naksha.java")
     id("naksha.publish")
+    kotlin("jvm")
 }
 description = "Naksha Activity Log Handler"
 dependencies {
@@ -16,3 +17,6 @@ dependencies {
     testImplementation(testFixtures(project(":here-naksha-lib-core")))
 }
 setOverallCoverage(0.4) // only increasing allowed!
+kotlin {
+    jvmToolchain(17)
+}

@@ -1,11 +1,10 @@
 package com.here.naksha.handler.activitylog.assertions;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;
+import com.here.naksha.handler.activitylog.NakshaActivityLog;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import naksha.model.objects.NakshaFeature;
 import org.json.JSONException;
@@ -32,21 +31,21 @@ public class ActivityLogFeatureAssertions {
   }
 
   public ActivityLogFeatureAssertions hasActivityLogId(String id) {
-    final XyzActivityLog activityLog = XyzActivityLog.getXyzActivityLog(subject.getProperties());
+    final NakshaActivityLog activityLog = NakshaActivityLog.getActivityLog(subject.getProperties());
     assertNotNull(activityLog);
     Assertions.assertEquals(id, activityLog.getId());
     return this;
   }
 
   public ActivityLogFeatureAssertions hasAction(String action) {
-    final XyzActivityLog activityLog = XyzActivityLog.getXyzActivityLog(subject.getProperties());
+    final NakshaActivityLog activityLog = NakshaActivityLog.getActivityLog(subject.getProperties());
     assertNotNull(activityLog);
     Assertions.assertEquals(action, activityLog.getAction());
     return this;
   }
 
   public ActivityLogFeatureAssertions hasReversePatch(JsonNode reversePatch) {
-    final XyzActivityLog activityLog = XyzActivityLog.getXyzActivityLog(subject.getProperties());
+    final NakshaActivityLog activityLog = NakshaActivityLog.getActivityLog(subject.getProperties());
     assertNotNull(activityLog);
     Assertions.assertEquals(reversePatch, activityLog.getDiff());
     return this;
@@ -61,7 +60,7 @@ public class ActivityLogFeatureAssertions {
   }
 
   private static void alignDiff(NakshaFeature xyzFeature) {
-    JsonNode diff = XyzActivityLog.getXyzActivityLog(xyzFeature.getProperties()).getDiff();
+    JsonNode diff = NakshaActivityLog.getActivityLog(xyzFeature.getProperties()).getDiff();
     if(diff != null){
       ((ObjectNode) diff).put("copy", 0);
       ((ObjectNode) diff).put("move", 0);

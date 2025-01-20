@@ -26,6 +26,7 @@ import naksha.base.AnyObject;
 import org.jetbrains.annotations.Nullable;
 
 /** The standard properties of the standard feature store in the Naksha-Hub.
+ * @deprecated use the class included in naksha-here-handler-activitylog instead
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Original extends AnyObject {

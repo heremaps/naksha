@@ -18,7 +18,7 @@
  */
 package com.here.naksha.handler.activitylog;
 
-import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog.ID;
+import static com.here.naksha.handler.activitylog.NakshaActivityLog.ID;
 import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
 import static naksha.model.objects.NakshaProperties.XYZ_KEY;
 

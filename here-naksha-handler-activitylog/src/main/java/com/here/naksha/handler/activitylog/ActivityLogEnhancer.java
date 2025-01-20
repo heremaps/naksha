@@ -22,8 +22,6 @@ import static com.here.naksha.handler.activitylog.ReversePatchUtil.reversePatch;
 import static com.here.naksha.handler.activitylog.ReversePatchUtil.toJsonNode;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.Original;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;
 import naksha.model.Action;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
@@ -41,20 +39,20 @@ public class ActivityLogEnhancer {
 
   static NakshaFeature enhanceWithActivityLog(
       @NotNull NakshaFeature newFeature, @Nullable NakshaFeature oldFeature, @NotNull String spaceId) {
-    XyzActivityLog activityLog = activityLog(newFeature, oldFeature, spaceId);
+    NakshaActivityLog activityLog = activityLog(newFeature, oldFeature, spaceId);
     newFeature.getProperties().put(NakshaProperties.XYZ_ACTIVITY_LOG_NS, activityLog);
     newFeature.setId(uuid(newFeature));
     return newFeature;
   }
 
-  private static XyzActivityLog activityLog(
+  private static NakshaActivityLog activityLog(
       @NotNull NakshaFeature newFeature, @Nullable NakshaFeature oldFeature, @NotNull String spaceId) {
     final XyzNs xyzNamespace = xyzNamespace(newFeature);
-    final XyzActivityLog activityLog = new XyzActivityLog();
+    final NakshaActivityLog activityLog = new NakshaActivityLog();
     activityLog.setId(newFeature.getId());
     activityLog.setOriginal(original(xyzNamespace, spaceId));
     Action action = xyzNamespace.getAction();
-    activityLog.setAction(action);
+    activityLog.setAction(action.toString());
     activityLog.setDiff(calculateDiff(action, newFeature, oldFeature));
     return activityLog;
   }
