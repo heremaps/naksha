@@ -1,9 +1,8 @@
 package com.here.naksha.handler.activitylog.util;
 
 import com.here.naksha.handler.activitylog.ActivityLogComparator;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.Original;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;
-import naksha.base.JvmBoxingUtil;
+import com.here.naksha.handler.activitylog.NakshaActivityLog;
+import com.here.naksha.handler.activitylog.Original;
 import naksha.model.XyzFeatureCollection;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.test.common.FileUtil;
@@ -36,7 +35,7 @@ public class DatahubSamplesUtil {
   private static List<NakshaFeature> historyFeatures(String sampleFeaturesJson) {
     List<NakshaFeature> features = activityFeatures(sampleFeaturesJson);
     features.forEach(feature -> {
-      String originFeatureId = XyzActivityLog.getXyzActivityLog(feature.getProperties()).getId();
+      String originFeatureId = NakshaActivityLog.getActivityLog(feature.getProperties()).getId();
       feature.setId(originFeatureId);
       feature.getProperties().remove(XYZ_ACTIVITY_LOG_NS);
     });
@@ -47,7 +46,7 @@ public class DatahubSamplesUtil {
     List<NakshaFeature> features = featuresFromCollectionJson(sampleFeaturesJson);
     features.forEach(feature -> {
       String originId = feature.getId();
-      XyzActivityLog datahubActivityLog = JvmBoxingUtil.box(feature.getProperties().get(XYZ_ACTIVITY_LOG_NS), XyzActivityLog.class);
+      NakshaActivityLog datahubActivityLog = NakshaActivityLog.getActivityLog(feature.getProperties());
       XyzNs datahubXyzNamespace = feature.getProperties().getXyz();
       Original datahubOriginal = datahubActivityLog.getOriginal();
       String originAction = datahubActivityLog.getAction();

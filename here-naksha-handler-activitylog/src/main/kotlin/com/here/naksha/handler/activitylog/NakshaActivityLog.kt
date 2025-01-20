@@ -15,10 +15,11 @@ class NakshaActivityLog : AnyObject() {
         private val ORIGINAL = NotNullProperty<NakshaActivityLog, Original>(Original::class)
         private val DIFF_NULL = NullableProperty<NakshaActivityLog, JsonNode>(JsonNode::class)
 
+        @JvmStatic
         fun getActivityLog(properties: NakshaProperties): NakshaActivityLog? = box(
             properties[NakshaProperties.XYZ_ACTIVITY_LOG_NS],
             NakshaActivityLog::class.java
-        );
+        )
     }
 
     /** The space ID the feature belongs to. */
