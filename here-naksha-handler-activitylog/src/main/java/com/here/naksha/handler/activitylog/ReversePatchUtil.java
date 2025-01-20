@@ -31,8 +31,8 @@ import naksha.diff.Patcher;
 import naksha.diff.PrimitiveDiff;
 import naksha.diff.RemoveOp;
 import naksha.diff.UpdateOp;
-import naksha.geo.XyzProperties;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import naksha.model.request.RequestQuery;
 import naksha.model.request.query.Property;
 import org.jetbrains.annotations.Nullable;
@@ -48,7 +48,7 @@ class ReversePatchUtil {
   private static final String ID_PATH = patchPath(ROOT_PATH, NakshaFeature.ID_KEY);
 
   private static final String XYZ_NAMESPACE_PATH =
-      patchPath(ROOT_PATH, Property.PROPERTIES, XyzProperties.XYZ_NAMESPACE);
+      patchPath(ROOT_PATH, Property.PROPERTIES, NakshaProperties.XYZ_KEY);
   private static final String XYZ_NAMESPACE_TAGS_PATH = patchPath(prependRoot(RequestQuery.TAGS_PROP_PATH));
 
   private ReversePatchUtil() {}
