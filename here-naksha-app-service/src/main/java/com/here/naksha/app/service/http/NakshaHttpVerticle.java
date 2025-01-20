@@ -169,21 +169,6 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
         final RouterBuilder rb = ar.result();
         rb.setOptions(new RouterBuilderOptions().setRequireSecurityHandlers(false));
 
-        // TODO: We need to change this, so that all these handlers are merged into one handler that is added to
-        // the route builder.
-        //       The route builder has a method rb.rootHandler(handler) for this purpose!
-        // Add default handlers to be executed before all other routes.
-        //        final Route earlyRoute = router.route();
-        //        earlyRoute
-        //            .order(-1)
-        //            .handler(this::onNewRequest)
-        //            .handler(this::maxRequestSizeHandler)
-        //            .handler(this.corsHandler)
-        //            .handler(BodyHandler.create()
-        //                .setBodyLimit(Integer.MAX_VALUE - 65535)
-        //                .setHandleFileUploads(false)
-        //                .setPreallocateBodyBuffer(true));
-
         final AuthenticationHandler jwtHandler = new NakshaJwtAuthHandler(app().authProvider, hubConfig, null);
         rb.securityHandler("Bearer", jwtHandler);
 

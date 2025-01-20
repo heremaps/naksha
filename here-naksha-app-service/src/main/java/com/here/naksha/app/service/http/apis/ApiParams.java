@@ -21,24 +21,25 @@ package com.here.naksha.app.service.http.apis;
 import static com.here.naksha.common.http.apis.ApiParamsConst.*;
 
 import com.here.naksha.app.service.models.IterateHandle;
-import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.payload.events.QueryParameter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.util.ValueList;
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public final class ApiParams {
+  private ApiParams(){}
 
   public static @NotNull String extractMandatoryPathParam(
       final @NotNull RoutingContext routingContext, final @NotNull String param) {
     final String value = routingContext.pathParam(param);
     if (value == null || value.isEmpty()) {
-      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing " + param + " parameter");
+      throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Missing " + param + " parameter");
     }
     return value;
   }
@@ -46,12 +47,12 @@ public final class ApiParams {
   public static @Nullable QueryParameter extractQueryParamForKey(
       final @Nullable QueryParameterList queryParams, final @NotNull String key, final boolean isMandatory) {
     if (queryParams == null) {
-      if (isMandatory) throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Query parameters missing");
+      if (isMandatory) throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Query parameters missing");
       else return null;
     }
     final QueryParameter queryParam = queryParams.get(key);
     if (queryParam == null || queryParam.values().isEmpty()) {
-      if (isMandatory) throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Parameter " + key + " missing");
+      if (isMandatory) throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Parameter " + key + " missing");
       else return null;
     }
     return queryParam;
@@ -77,8 +78,8 @@ public final class ApiParams {
     } else if (values.isString(0)) {
       return Boolean.parseBoolean(values.getString(0));
     }
-    throw new XyzErrorException(
-        XyzError.ILLEGAL_ARGUMENT, "Invalid value " + values.get(0) + " for parameter " + key);
+    throw new NakshaException(
+        NakshaError.ILLEGAL_ARGUMENT, "Invalid value " + values.get(0) + " for parameter " + key);
   }
 
   public static double extractQueryParamAsDouble(
@@ -102,8 +103,8 @@ public final class ApiParams {
       final Long longVal = values.getLong(0);
       return (longVal == null) ? defVal : longVal.doubleValue();
     }
-    throw new XyzErrorException(
-        XyzError.ILLEGAL_ARGUMENT, "Invalid value " + values.getString(0) + " for parameter " + key);
+    throw new NakshaException(
+        NakshaError.ILLEGAL_ARGUMENT, "Invalid value " + values.getString(0) + " for parameter " + key);
   }
 
   public static long extractQueryParamAsLong(
@@ -122,8 +123,8 @@ public final class ApiParams {
     }
     final ValueList values = queryParam.values();
     if (!values.isLong(0)) {
-      throw new XyzErrorException(
-          XyzError.ILLEGAL_ARGUMENT, "Invalid value " + values.getString(0) + " for parameter " + key);
+      throw new NakshaException(
+          NakshaError.ILLEGAL_ARGUMENT, "Invalid value " + values.getString(0) + " for parameter " + key);
     }
     return values.getLong(0, defVal);
   }
@@ -131,16 +132,16 @@ public final class ApiParams {
   public static void validateParamRange(
       final @NotNull String param, final long value, final long min, final long max) {
     if (value < min || value > max) {
-      throw new XyzErrorException(
-          XyzError.ILLEGAL_ARGUMENT, "Invalid value " + value + " for parameter " + param);
+      throw new NakshaException(
+          NakshaError.ILLEGAL_ARGUMENT, "Invalid value " + value + " for parameter " + param);
     }
   }
 
   public static void validateParamRange(
       final @NotNull String param, final double value, final double min, final double max) {
     if (value < min || value > max) {
-      throw new XyzErrorException(
-          XyzError.ILLEGAL_ARGUMENT, "Invalid value " + value + " for parameter " + param);
+      throw new NakshaException(
+          NakshaError.ILLEGAL_ARGUMENT, "Invalid value " + value + " for parameter " + param);
     }
   }
 
@@ -148,8 +149,8 @@ public final class ApiParams {
       final @NotNull RoutingContext routingContext, final @NotNull String idFromRequest) {
     final String featureId = ApiParams.extractMandatoryPathParam(routingContext, FEATURE_ID);
     if (!featureId.equals(idFromRequest)) {
-      throw new XyzErrorException(
-          XyzError.ILLEGAL_ARGUMENT,
+      throw new NakshaException(
+          NakshaError.ILLEGAL_ARGUMENT,
           "URI path parameter featureId is not the same as id in feature request body.");
     }
   }
@@ -178,8 +179,8 @@ public final class ApiParams {
       try {
         handle = IterateHandle.base64DecodedDeserializedJson(handleStr);
       } catch (Exception ex) {
-        throw new XyzErrorException(
-            XyzError.ILLEGAL_ARGUMENT,
+        throw new NakshaException(
+            NakshaError.ILLEGAL_ARGUMENT,
             "Unable to use value " + handleStr + " for parameter " + apiParamName + ". " + ex.getMessage());
       }
     }
@@ -192,10 +193,10 @@ public final class ApiParams {
     // Validate that both lat and lon provided or none of them
     if (lat == NULL_COORDINATE && lon != NULL_COORDINATE) {
       // only lon provided, lan is not
-      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing latitude co-ordinate");
+      throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Missing latitude co-ordinate");
     } else if (lat != NULL_COORDINATE && lon == NULL_COORDINATE) {
       // only lan provided, lon is not
-      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing longitude co-ordinate");
+      throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Missing longitude co-ordinate");
     }
   }
 }

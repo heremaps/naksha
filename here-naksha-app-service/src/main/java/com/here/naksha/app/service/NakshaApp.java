@@ -27,11 +27,9 @@ import com.here.naksha.app.service.http.auth.NakshaAuthProvider;
 import com.here.naksha.app.service.metrics.OTelMetrics;
 import com.here.naksha.app.service.util.UrlUtil;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.NakshaVersion;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.hub.NakshaHubFactory;
 import com.here.naksha.lib.hub.util.ConfigUtil;
-import com.here.naksha.lib.psql.PsqlStorage;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
@@ -42,11 +40,17 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import naksha.model.NakshaVersion;
+import naksha.psql.PgStorage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -65,9 +69,9 @@ public final class NakshaApp extends Thread {
   private static final String DEFAULT_SCHEMA = "naksha";
 
   private static final String DEFAULT_URL = "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd"
-      + "&schema=" + DEFAULT_SCHEMA
-      + "&app=" + NakshaHubConfig.defaultAppName()
-      + "&id=" + PsqlStorage.ADMIN_STORAGE_ID;
+                                            + "&schema=" + DEFAULT_SCHEMA
+                                            + "&app=" + NakshaHubConfig.defaultAppName()
+                                            + "&id=" + PgStorage.ADMIN_STORAGE_ID;
   private final AtomicReference<Boolean> stopInstance = new AtomicReference<>(false);
 
   /**
@@ -135,7 +139,7 @@ public final class NakshaApp extends Thread {
         url = args[1];
         if (!url.startsWith("jdbc:postgresql://")) {
           throw new IllegalArgumentException("Missing or invalid argument <url>, must be a value like '"
-              + DEFAULT_URL + "', got '" + url + "' instead");
+                                             + DEFAULT_URL + "', got '" + url + "' instead");
         }
         log.info("Starting with config `{}` and custom database URL...", cfgId);
       }
