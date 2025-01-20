@@ -10,5 +10,5 @@ actual open class NakshaException actual constructor(@JvmField actual val error:
      * @param cause the cause (exception) of this error; if any.
      * @since 3.0.0
      */
-    actual constructor(code: String, msg: String, id: String?, cause: Throwable?) : this(NakshaError(code, msg, id, cause))
+    actual constructor(code: String, msg: String, id: String?, cause: Throwable?) : this(NakshaError(code, msg, cause, id))
 }

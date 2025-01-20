@@ -40,7 +40,11 @@ import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.*;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
@@ -86,12 +90,11 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
       HttpStorageProperties httpStorageProperties;
       try {
         httpStorageProperties = JvmBoxingUtil.box(storage.getProperties(), HttpStorageProperties.class);
-      } catch (Exception e) {
+      } catch (Exception exception) {
         return new ErrorResponse(
             NakshaError.ILLEGAL_ARGUMENT,
             "Unable to convert 'properties' to " + HttpStorageProperties.class.getName(),
-            null,
-            e);
+            exception);
       }
       return httpStoragePropertiesValidation(httpStorageProperties);
     }

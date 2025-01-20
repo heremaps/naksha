@@ -46,10 +46,9 @@ import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * An extended version of the standard {@link IEventHandler} interface that simplifies the
- * implementation of processors. This comes with a default implementation of the {@link
- * #processEvent(IEvent)} method and distributes to dedicated handlers, and it has has a
- * basic exception handling.
+ * An extended version of the standard {@link IEventHandler} interface that simplifies the implementation of processors. This comes with a
+ * default implementation of the {@link #processEvent(IEvent)} method and distributes to dedicated handlers, and it has has a basic
+ * exception handling.
  */
 @Deprecated
 public interface IExtendedEventHandler {
@@ -131,8 +130,8 @@ public interface IExtendedEventHandler {
       return new ErrorResponse(new NakshaError(
           NOT_IMPLEMENTED,
           "Unknown event type '" + event.getClass().getSimpleName() + "'",
-          event.getStreamId(),
-          null));
+          null,
+          event.getStreamId()));
     } catch (Exception e) {
       currentLogger()
           .atError("Uncaught exception in event processor")
@@ -141,8 +140,8 @@ public interface IExtendedEventHandler {
       return new ErrorResponse(new NakshaError(
           EXCEPTION,
           "Unexpected exception in storage connector: " + e.getMessage(),
-          event.getStreamId(),
-          null));
+          null,
+          event.getStreamId()));
     }
   }
 
@@ -158,79 +157,106 @@ public interface IExtendedEventHandler {
    * Processes a HealthCheckEvent event.
    *
    * <p>This type of events are sent in regular intervals to the storage connector and should be
-   * used to perform maintenance work. One important task is for example to ensure that all
-   * partitions of tables with history exist.
+   * used to perform maintenance work. One important task is for example to ensure that all partitions of tables with history exist.
    */
   @NotNull
   @Deprecated
   Response processHealthCheckEvent(@NotNull HealthCheckEvent event);
 
-  /** Processes a GetStatistics event. */
+  /**
+   * Processes a GetStatistics event.
+   */
   @NotNull
   @Deprecated
   Response processGetStatistics(@NotNull GetStatisticsEvent event) throws Exception;
 
-  /** Processes a GetStatistics event. */
+  /**
+   * Processes a GetStatistics event.
+   */
   @NotNull
   @Deprecated
   Response processGetHistoryStatisticsEvent(@NotNull GetHistoryStatisticsEvent event) throws Exception;
 
-  /** Processes a GetFeaturesById event. */
+  /**
+   * Processes a GetFeaturesById event.
+   */
   @NotNull
   @Deprecated
   Response processGetFeaturesByIdEvent(@NotNull GetFeaturesByIdEvent event) throws Exception;
 
-  /** Processes a GetFeaturesByGeometryEvent event. */
+  /**
+   * Processes a GetFeaturesByGeometryEvent event.
+   */
   @NotNull
   @Deprecated
   Response processGetFeaturesByGeometryEvent(@NotNull GetFeaturesByGeometryEvent event) throws Exception;
 
-  /** Processes a GetFeaturesByBBox event. */
+  /**
+   * Processes a GetFeaturesByBBox event.
+   */
   @NotNull
   @Deprecated
   Response processGetFeaturesByBBoxEvent(@Nonnull GetFeaturesByBBoxEvent event) throws Exception;
 
-  /** Processes a GetFeaturesByTile event. */
+  /**
+   * Processes a GetFeaturesByTile event.
+   */
   @NotNull
   @Deprecated
   Response processGetFeaturesByTileEvent(@NotNull GetFeaturesByTileEvent event) throws Exception;
 
-  /** Processes a IterateFeatures event. */
+  /**
+   * Processes a IterateFeatures event.
+   */
   @NotNull
   @Deprecated
   Response processIterateFeaturesEvent(@NotNull IterateFeaturesEvent event) throws Exception;
 
-  /** Processes a SearchForFeatures event. */
+  /**
+   * Processes a SearchForFeatures event.
+   */
   @NotNull
   @Deprecated
   Response processSearchForFeaturesEvent(@NotNull SearchForFeaturesEvent event) throws Exception;
 
-  /** Processes a DeleteFeaturesEvent event. */
+  /**
+   * Processes a DeleteFeaturesEvent event.
+   */
   @NotNull
   @Deprecated
   Response processDeleteFeaturesByTagEvent(@NotNull DeleteFeaturesByTagEvent event) throws Exception;
 
-  /** Processes a LoadFeaturesEvent event. */
+  /**
+   * Processes a LoadFeaturesEvent event.
+   */
   @NotNull
   @Deprecated
   Response processLoadFeaturesEvent(@NotNull LoadFeaturesEvent event) throws Exception;
 
-  /** Processes a ModifyFeaturesEvent event. */
+  /**
+   * Processes a ModifyFeaturesEvent event.
+   */
   @NotNull
   @Deprecated
   Response processModifyFeaturesEvent(@NotNull ModifyFeaturesEvent event) throws Exception;
 
-  /** Processes a DeleteSpaceEvent event. */
+  /**
+   * Processes a DeleteSpaceEvent event.
+   */
   @NotNull
   @Deprecated
   Response processModifySpaceEvent(@NotNull ModifySpaceEvent event) throws Exception;
 
-  /** Processes a ModifySubscriptionEvent event. */
+  /**
+   * Processes a ModifySubscriptionEvent event.
+   */
   @NotNull
   @Deprecated
   Response processModifySubscriptionEvent(@NotNull ModifySubscriptionEvent event) throws Exception;
 
-  /** Processes a IterateFeatures event. */
+  /**
+   * Processes a IterateFeatures event.
+   */
   @NotNull
   @Deprecated
   Response processIterateHistoryEvent(@NotNull IterateHistoryEvent event) throws Exception;

@@ -55,9 +55,9 @@ public final class HttpStorageReadSession implements IReadSession {
   public @NotNull Response execute(@NotNull Request readRequest) {
     try {
       return HttpStorageReadExecute.execute(context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
-    } catch (Exception e) {
-      log.warn("We got exception while executing Read request.", e);
-      return new ErrorResponse(NakshaError.EXCEPTION, e.getMessage(), null, e);
+    } catch (Exception exception) {
+      log.warn("We got exception while executing Read request.", exception);
+      return new ErrorResponse(NakshaError.EXCEPTION, exception.getMessage(), exception);
     }
   }
 

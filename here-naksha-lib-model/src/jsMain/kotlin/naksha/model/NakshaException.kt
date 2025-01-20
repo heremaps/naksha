@@ -16,5 +16,5 @@ actual open class NakshaException  actual constructor(actual val error: NakshaEr
      * @since 3.0.0
      */
     @JsName("of")
-    actual constructor(code: String, msg: String, id: String?, cause: Throwable?) : this(NakshaError(code, msg, id, cause))
+    actual constructor(code: String, msg: String, id: String?, cause: Throwable?) : this(NakshaError(code, msg, cause, id))
 }
