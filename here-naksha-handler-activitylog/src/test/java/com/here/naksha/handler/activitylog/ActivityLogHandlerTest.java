@@ -24,9 +24,9 @@ import com.here.naksha.handler.activitylog.util.DatahubSamplesUtil.DatahubSample
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.test.common.assertions.AssertionIPropertyQuery;
+import naksha.base.JvmInt64;
 import naksha.model.*;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
-import com.here.naksha.lib.core.models.naksha.EventTarget;
 
 import java.util.List;
 import java.util.Map;
@@ -70,6 +70,7 @@ class ActivityLogHandlerTest {
     MockitoAnnotations.openMocks(this);
     when(naksha.getSpaceStorage()).thenReturn(spaceStorage);
     handler = handlerForSpaceId(SPACE_ID);
+
   }
 
   @ParameterizedTest
@@ -170,7 +171,7 @@ class ActivityLogHandlerTest {
   void shouldComposeActivityFeatures() throws Exception {
     // Given: old version of feature
     String featureId = "featureId";
-    NakshaFeature oldFeature = xyzFeature(
+    NakshaFeature oldFeature = nakshaFeature(
         featureId,
         "initial_uuid",
         null,
@@ -182,7 +183,7 @@ class ActivityLogHandlerTest {
     );
 
     // And: new version of feature
-    NakshaFeature newFeature = xyzFeature(
+    NakshaFeature newFeature = nakshaFeature(
         featureId,
         "new_uuid",
         "initial_uuid",
@@ -245,14 +246,14 @@ class ActivityLogHandlerTest {
 
     // And: Space storage that will return two history features for client's request
     IReadSession readSession = spaceStorageSessionReturningHistoryFeatures(firstRequest,
-        xyzFeature("id_1", "uuid_1", "puuid_1", Action.UPDATED),
-        xyzFeature("id_2", "uuid_2", "puuid_2", Action.DELETED)
+        nakshaFeature("id_1", "uuid_1", "puuid_1", Action.UPDATED),
+        nakshaFeature("id_2", "uuid_2", "puuid_2", Action.DELETED)
     );
 
     // And: Space storage that will return two predecessors for any other request
     when(readSession.execute(not(eq(firstRequest)))).thenReturn(new SuccessResponse(NakshaFeatureList.fromList(List.of(
-        xyzFeature("id_1", "puuid_1", null, Action.CREATED),
-        xyzFeature("id_2", "puuid_2", null, Action.CREATED)
+        nakshaFeature("id_1", "puuid_1", null, Action.CREATED),
+        nakshaFeature("id_2", "puuid_2", null, Action.CREATED)
     ))));
 
     // When: Handler processes event with original client's request
@@ -304,7 +305,7 @@ class ActivityLogHandlerTest {
     ReadFeatures request = new ReadFeatures();
 
     // And: space storage that returns some feature with 'CREATE' action for given request
-    spaceStorageSessionReturningHistoryFeatures(request, xyzFeature(
+    spaceStorageSessionReturningHistoryFeatures(request, nakshaFeature(
         "featureId",
         "uuid",
         null,
@@ -331,13 +332,13 @@ class ActivityLogHandlerTest {
 
     // And: space storage that returns features with 'DELETE' and `CREATE` actions for given request
     spaceStorageSessionReturningHistoryFeatures(request,
-        xyzFeature(
+        nakshaFeature(
             "featureId",
             "delete_uuid",
             "create_uuid",
             Action.DELETED
         ),
-        xyzFeature(
+        nakshaFeature(
             "featureId",
             "create_uuid",
             null,
@@ -366,7 +367,7 @@ class ActivityLogHandlerTest {
 
   private ActivityLogHandler handlerForSpaceId(String spaceId) {
     when(eventHandler.getProperties()).thenReturn(new ActivityLogHandlerProperties(spaceId));
-    return new ActivityLogHandler(eventHandler, naksha, mock(EventTarget.class));
+    return new ActivityLogHandler(eventHandler, naksha);
   }
 
   private static JsonNode jsonNode(String rawJson) {
@@ -405,16 +406,18 @@ class ActivityLogHandlerTest {
     return newFeature.getProperties().getXyz().getUuid();
   }
 
-  private static NakshaFeature xyzFeature(String id, String uuid, String puuid, Action action) {
-    return xyzFeature(id, uuid, puuid, action, emptyMap());
+  private static NakshaFeature nakshaFeature(String id, String uuid, String puuid, Action action) {
+    return nakshaFeature(id, uuid, puuid, action, emptyMap());
   }
 
-  private static NakshaFeature xyzFeature(String id, String uuid, String puuid, Action action, Map properties) {
+  private static NakshaFeature nakshaFeature(String id, String uuid, String puuid, Action action, Map properties) {
     NakshaFeature feature = new NakshaFeature(id);
     XyzNs xyzNamespace = new XyzNs();
     xyzNamespace.put(UUID,uuid);
     xyzNamespace.put(PUUID,puuid);
     xyzNamespace.put(ACTION,action);
+    xyzNamespace.put(CREATED_AT, new JvmInt64(System.currentTimeMillis()));
+    xyzNamespace.put(UPDATED_AT,new JvmInt64(System.currentTimeMillis()+100));
     NakshaProperties xyzProperties = new NakshaProperties();
     xyzProperties.putAll(properties);
     xyzProperties.setXyz(xyzNamespace);

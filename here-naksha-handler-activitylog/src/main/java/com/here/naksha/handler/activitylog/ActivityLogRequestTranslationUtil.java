@@ -38,6 +38,9 @@ class ActivityLogRequestTranslationUtil {
   static final String UUID = "uuid";
   static final String PUUID = "puuid";
   static final String ACTION = "action";
+  static final String CREATED_AT = "createdAt";
+  static final String UPDATED_AT = "updatedAt";
+
   private static final String[] ACTIVITY_LOG_ID_PATH = new String[] {XYZ_ACTIVITY_LOG_NS, ID};
   private static final String[] UUID_PATH = new String[] {XYZ_KEY, UUID};
   static final Property PROPERTY_ACTIVITY_LOG_ID = new Property(ACTIVITY_LOG_ID_PATH);
