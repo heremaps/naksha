@@ -278,6 +278,7 @@ class PgWriter(
 
         // If everything was done perfectly, fine.
         val tupleNumberByteArray = TupleNumberByteArray(storage, tupleNumbers.toByteArray())
+        session.transaction().featuresModified += tupleNumbers.size
         return SuccessResponse(
             PgResultSet(
                 storage,

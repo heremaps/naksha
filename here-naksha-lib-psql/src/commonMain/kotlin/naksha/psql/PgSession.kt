@@ -310,26 +310,12 @@ open class PgSession(
         }
     }
 
-    private var isTransactionStored = false
-    private fun saveTransactionIntoDb(create: Boolean = false) {
-        // FIXME instead of create/update we can use upsert when ready
-        if (isTransactionStored && create) {
-            return
-        } else if (isTransactionStored) {
-            val updateTxReq = WriteRequest()
-            val updateTx = Write()
-            updateTxReq.add(updateTx)
-            updateTx.updateFeature(null, VIRT_TRANSACTIONS, transaction())
-            // FIXME uncomment when counts and update ready
-//            PgWriter(this, updateTxReq).execute()
-        } else {
-            val writeTxReq = WriteRequest()
-            val writeTx = Write()
-            writeTxReq.add(writeTx)
-            writeTx.createFeature(null, VIRT_TRANSACTIONS, transaction())
-            PgWriter(this, writeTxReq, InstantWriteExecutor(this)).execute()
-            isTransactionStored = true
-        }
+    private fun saveTransactionIntoDb() {
+        val writeTxReq = WriteRequest()
+        val writeTx = Write()
+        writeTxReq.add(writeTx)
+        writeTx.upsertFeature(null, VIRT_TRANSACTIONS, transaction())
+        PgWriter(this, writeTxReq, InstantWriteExecutor(this)).execute()
     }
 
     /**
@@ -363,7 +349,7 @@ open class PgSession(
             val tx = transaction
             if (tx != null) {
                 try {
-                    saveTransactionIntoDb(true)
+                    saveTransactionIntoDb()
                 } catch (e: Throwable) {
                     throw NakshaException(EXCEPTION, "Failed to save transaction", cause = e)
                 }
