@@ -105,7 +105,7 @@ class PgQueryBuilderTest : PgTestBase() {
         )
     }
 
-    // TODO FIXME uncomment me once property read is ready.
+    // TODO FIXME uncomment me once property read is ready (CASL-473).
     //    @Test
     fun testReadWithAnd() {
         // given
