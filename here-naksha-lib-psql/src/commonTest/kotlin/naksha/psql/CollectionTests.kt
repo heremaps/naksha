@@ -8,6 +8,7 @@ import naksha.model.NakshaError
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
+import naksha.model.request.ErrorResponse
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -112,7 +113,7 @@ class CollectionTests : PgTestBase(collection = null) {
             indices.add(cursor["indexname"])
         }
         assertTrue(PgIndex.DEFAULT_INDICES.size <= indices.size)
-        assertTrue(PgIndex.DEFAULT_INDICES.all { index -> indices.any { addedIndex -> addedIndex.contains(index)}})
+        assertTrue(PgIndex.DEFAULT_INDICES.all { index -> indices.any { addedIndex -> addedIndex.contains(index) } })
         cursor.close()
     }
 
@@ -147,22 +148,22 @@ class CollectionTests : PgTestBase(collection = null) {
         readFeature.featureIds.add(feature.id)
         executeWrite(
             WriteRequest().add(
-                Write().createFeature(null, collectionName,feature)
+                Write().createFeature(null, collectionName, feature)
             )
         )
         val insertedFeatureResponse = executeRead(readFeature)
-        assertEquals(1,insertedFeatureResponse.features.size)
+        assertEquals(1, insertedFeatureResponse.features.size)
         feature.properties["foo"] = "bar"
         executeWrite(
             WriteRequest().add(
-                Write().updateFeature(null, collectionName,feature)
+                Write().updateFeature(null, collectionName, feature)
             )
         )
         val updatedFeatureResponse = executeRead(readFeature)
         assertEquals("bar", updatedFeatureResponse.features[0]?.properties!!["foo"])
         executeWrite(
             WriteRequest().add(
-                Write().deleteFeatureById(null, collectionName,feature.id)
+                Write().deleteFeatureById(null, collectionName, feature.id)
             )
         )
         val deletedFeatureResponse = executeRead(readFeature)
@@ -175,7 +176,7 @@ class CollectionTests : PgTestBase(collection = null) {
         val collection = NakshaCollection(
             id = collectionName,
             storeDeleted = StoreMode.OFF
-            )
+        )
         executeWrite(
             WriteRequest().add(
                 Write().createCollection(null, collection)
@@ -200,22 +201,22 @@ class CollectionTests : PgTestBase(collection = null) {
         readFeature.featureIds.add(feature.id)
         executeWrite(
             WriteRequest().add(
-                Write().createFeature(null, collectionName,feature)
+                Write().createFeature(null, collectionName, feature)
             )
         )
         val insertedFeatureResponse = executeRead(readFeature)
-        assertEquals(1,insertedFeatureResponse.features.size)
+        assertEquals(1, insertedFeatureResponse.features.size)
         feature.properties["foo"] = "bar"
         executeWrite(
             WriteRequest().add(
-                Write().updateFeature(null, collectionName,feature)
+                Write().updateFeature(null, collectionName, feature)
             )
         )
         val updatedFeatureResponse = executeRead(readFeature)
         assertEquals("bar", updatedFeatureResponse.features[0]?.properties!!["foo"])
         executeWrite(
             WriteRequest().add(
-                Write().deleteFeatureById(null, collectionName,feature.id)
+                Write().deleteFeatureById(null, collectionName, feature.id)
             )
         )
         val deletedFeatureResponse = executeRead(readFeature)
@@ -300,5 +301,29 @@ class CollectionTests : PgTestBase(collection = null) {
 
         // then
         assertNull(response.resultSet?.result?.get(0))
+    }
+
+    @Test
+    fun testCreateExistingCollection() {
+        // Given: collection in db
+        val collectionId = "test_create_existing_collection"
+        executeWrite(
+            WriteRequest().add(
+                Write().createCollection(null, NakshaCollection(collectionId))
+            )
+        )
+
+        // When: create same collection once again
+        val response = env.storage.newWriteSession().use { session ->
+            session.execute(
+                WriteRequest().add(
+                    Write().createCollection(null, NakshaCollection(collectionId))
+                )
+            )
+        }
+
+        // Then
+        assertIs<ErrorResponse>(response)
+        assertEquals(NakshaError.CONFLICT, response.error.code)
     }
 }
