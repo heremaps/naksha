@@ -208,7 +208,7 @@ class ActivityLogHandlerTest {
                 .hasId(uuid(newFeature))
                 .hasActivityLogId(featureId)
                 .hasAction(Action.UPDATED.toString())
-                .hasReversePatch(jsonNode("""
+                .hasReversePatch("""
                     {
                       "add": 1,
                       "remove": 1,
@@ -230,7 +230,7 @@ class ActivityLogHandlerTest {
                         }
                       ]
                     }
-                    """)),
+                    """),
             secondFeature -> secondFeature
                 .hasId(uuid(oldFeature))
                 .hasActivityLogId(featureId)

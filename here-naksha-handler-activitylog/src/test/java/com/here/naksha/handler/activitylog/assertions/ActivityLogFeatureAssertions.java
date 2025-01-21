@@ -1,6 +1,7 @@
 package com.here.naksha.handler.activitylog.assertions;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -45,11 +46,20 @@ public class ActivityLogFeatureAssertions {
     return this;
   }
 
-  public ActivityLogFeatureAssertions hasReversePatch(JsonNode reversePatch) {
+  public ActivityLogFeatureAssertions hasReversePatch(String reversePatch) {
     final NakshaActivityLog activityLog = NakshaActivityLog.getActivityLog(subject.getProperties());
     assertNotNull(activityLog);
-    Assertions.assertEquals(reversePatch, activityLog.getDiff());
-    return this;
+    JsonNode diff = activityLog.getDiff();
+    if (reversePatch == null) {
+      assertNull(diff);
+      return this;
+    }
+    try {
+          JSONAssert.assertEquals(reversePatch, diff.toString(), JSONCompareMode.LENIENT);
+      } catch (JSONException e) {
+          throw new RuntimeException(e);
+      }
+      return this;
   }
 
   public ActivityLogFeatureAssertions isIdenticalToDatahubSampleFeature(NakshaFeature datahubFeature, String message) throws JSONException {
