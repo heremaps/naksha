@@ -126,7 +126,7 @@ public abstract class AbstractApiTask<T extends Response>
   }
 
   protected XyzResponse handleNoElements(NoElementsStrategy noElementsStrategy) {
-    return verticle.sendErrorResponse(routingContext, noElementsStrategy.xyzError, noElementsStrategy.message);
+    return verticle.sendErrorResponse(routingContext, noElementsStrategy.nakshaError, noElementsStrategy.message);
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformResultToXyzFeatureResponse(
