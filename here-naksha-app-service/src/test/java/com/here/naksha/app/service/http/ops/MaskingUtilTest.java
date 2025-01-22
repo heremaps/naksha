@@ -23,6 +23,9 @@ class MaskingUtilTest {
             "Authorization", "secret stuff, do not look",
             "Content-Type", "application/json"
         ),
+        "customValProperties", mutableMapOf(
+                    "mod.extension-database.password", "pwd"
+            ),
         "very", mutableMapOf(
             "nested", mutableMapOf(
                 "map", mutableMapOf(
@@ -37,7 +40,7 @@ class MaskingUtilTest {
     ));
 
     // And:
-    Set<String> sensitiveProperties = Set.of("sensitiveObject", "Authorization");
+    Set<String> sensitiveProperties = Set.of("sensitiveObject", "Authorization", "password");
 
     // When:
     MaskingUtil.maskProperties(feature, sensitiveProperties);
@@ -48,6 +51,9 @@ class MaskingUtilTest {
         "headers", Map.of(
             "Authorization", MaskingUtil.MASK,
             "Content-Type", "application/json"
+        ),
+        "customValProperties", Map.of(
+                 "mod.extension-database.password", MaskingUtil.MASK
         ),
         "very", Map.of(
             "nested", Map.of(

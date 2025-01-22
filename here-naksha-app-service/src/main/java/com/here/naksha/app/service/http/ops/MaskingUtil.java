@@ -36,14 +36,16 @@ public class MaskingUtil {
 
   private static void maskProperties(Map<String, Object> propertiesAsMap, Set<String> propertiesToMask) {
     for (Entry<String, Object> entry : propertiesAsMap.entrySet()) {
-      if (propertiesToMask.contains(entry.getKey())) {
+      if (propertiesToMask.stream().anyMatch(entry.getKey()::contains)) {
         entry.setValue(MASK);
       } else if (entry.getValue() instanceof Map) {
         maskProperties((Map<String, Object>) entry.getValue(), propertiesToMask);
       } else if (entry.getValue() instanceof ArrayList array) {
         // recursive call to the nested array json
         for (Object arrayEntry : array) {
-          maskProperties((Map<String, Object>) arrayEntry, propertiesToMask);
+          if (arrayEntry instanceof Map) {
+            maskProperties((Map<String, Object>) arrayEntry, propertiesToMask);
+          }
         }
       }
     }

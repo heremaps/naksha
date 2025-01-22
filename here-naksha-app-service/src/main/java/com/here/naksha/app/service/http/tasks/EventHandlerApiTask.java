@@ -18,6 +18,7 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
+import static com.here.naksha.app.service.http.ops.MaskingUtil.maskProperties;
 import static com.here.naksha.common.http.apis.ApiParamsConst.HANDLER_ID;
 import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
 
@@ -38,7 +39,9 @@ import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
+import com.here.naksha.lib.psql.PsqlInstanceConfig;
 import io.vertx.ext.web.RoutingContext;
+import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +49,9 @@ import org.slf4j.LoggerFactory;
 public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResponse> {
 
   private static final Logger logger = LoggerFactory.getLogger(EventHandlerApiTask.class);
+
+  private static final Set<String> SENSITIVE_PROPERTIES =
+      Set.of(PsqlInstanceConfig.PASSWORD, "Authorization", "authorization");
 
   private final @NotNull EventHandlerApiReqType reqType;
 
@@ -99,7 +105,8 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
     final WriteXyzFeatures writeRequest = RequestHelper.createFeatureRequest(EVENT_HANDLERS, newHandler, false);
     // persist new handler in Admin DB (if doesn't exist already)
     try (Result writeResult = executeWriteRequestFromSpaceStorage(writeRequest)) {
-      return transformWriteResultToXyzFeatureResponse(writeResult, EventHandler.class);
+      return transformWriteResultToXyzFeatureResponse(
+          writeResult, EventHandler.class, this::handlerWithMaskedSensitiveProperties);
     }
   }
 
@@ -109,7 +116,8 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Submit request to NH Space Storage
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
       // transform ReadResult to Http FeatureCollection response
-      return transformReadResultToXyzCollectionResponse(rdResult, EventHandler.class);
+      return transformReadResultToXyzCollectionResponse(
+          rdResult, EventHandler.class, this::handlerWithMaskedSensitiveProperties);
     }
   }
 
@@ -119,7 +127,8 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
     final ReadFeatures request = new ReadFeatures(EVENT_HANDLERS).withPropertyOp(POp.eq(PRef.id(), handlerId));
     // Submit request to NH Space Storage
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzFeatureResponse(rdResult, EventHandler.class);
+      return transformReadResultToXyzFeatureResponse(
+          rdResult, EventHandler.class, this::handlerWithMaskedSensitiveProperties);
     }
   }
 
@@ -133,7 +142,8 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
       final WriteXyzFeatures updateHandlerReq =
           RequestHelper.updateFeatureRequest(EVENT_HANDLERS, handlerToUpdate);
       try (Result updateHandlerResult = executeWriteRequestFromSpaceStorage(updateHandlerReq)) {
-        return transformWriteResultToXyzFeatureResponse(updateHandlerResult, EventHandler.class);
+        return transformWriteResultToXyzFeatureResponse(
+            updateHandlerResult, EventHandler.class, this::handlerWithMaskedSensitiveProperties);
       }
     }
   }
@@ -142,8 +152,14 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
     final String handlerId = ApiParams.extractMandatoryPathParam(routingContext, HANDLER_ID);
     final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureByIdRequest(EVENT_HANDLERS, handlerId);
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
-      return transformDeleteResultToXyzFeatureResponse(wrResult, EventHandler.class);
+      return transformDeleteResultToXyzFeatureResponse(
+          wrResult, EventHandler.class, this::handlerWithMaskedSensitiveProperties);
     }
+  }
+
+  private EventHandler handlerWithMaskedSensitiveProperties(EventHandler handler) {
+    maskProperties(handler, SENSITIVE_PROPERTIES);
+    return handler;
   }
 
   private @NotNull EventHandler handlerFromRequestBody() throws JsonProcessingException {
