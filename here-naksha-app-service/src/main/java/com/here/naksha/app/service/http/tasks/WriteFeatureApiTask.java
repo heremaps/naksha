@@ -47,6 +47,7 @@ import io.vertx.ext.web.RoutingContext;
 import java.util.*;
 
 import naksha.model.ErrorResult;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -180,7 +181,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
       // transform WriteResult to Http FeatureCollection response
-      return transformWriteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+      return transformResponseToXyzFeatureResponse(wrResult, XyzFeature.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
     }
   }
 
@@ -215,7 +216,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
       // transform WriteResult to Http FeatureCollection response
-      return transformDeleteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+      return transformResponseToXyzFeatureResponse(wrResult, XyzFeature.class, NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS);
     }
   }
 
@@ -367,9 +368,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         }
       } else {
         if (responseType.equals(HttpResponseType.FEATURE)) {
-          return transformWriteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+          return transformResponseToXyzFeatureResponse(wrResult, NakshaFeature.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
         }
-        return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class, false);
+        return transformResponseToXyzFeatureResponse(wrResult, NakshaFeature.class, false);
       }
     }
   }

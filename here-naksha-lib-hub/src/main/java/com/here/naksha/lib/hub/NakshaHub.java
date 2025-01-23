@@ -43,7 +43,7 @@ import com.here.naksha.lib.core.view.ViewDeserialize;
 import com.here.naksha.lib.extmanager.ExtensionManager;
 import com.here.naksha.lib.extmanager.IExtensionManager;
 import com.here.naksha.lib.extmanager.helpers.AmazonS3Helper;
-import com.here.naksha.lib.handlers.NakshaAdminCollection;
+import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.hub.storages.NHAdminStorage;
 import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import java.util.ArrayList;

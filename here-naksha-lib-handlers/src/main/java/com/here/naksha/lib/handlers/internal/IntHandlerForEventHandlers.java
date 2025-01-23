@@ -19,8 +19,8 @@
 package com.here.naksha.lib.handlers.internal;
 
 import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
-import static com.here.naksha.lib.handlers.NakshaAdminCollection.SPACES;
-import static com.here.naksha.lib.handlers.NakshaAdminCollection.STORAGES;
+import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
+import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
 import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.*;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 

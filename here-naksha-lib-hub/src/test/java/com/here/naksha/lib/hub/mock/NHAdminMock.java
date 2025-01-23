@@ -21,7 +21,7 @@ package com.here.naksha.lib.hub.mock;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
 
-import com.here.naksha.lib.handlers.NakshaAdminCollection;
+import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import java.util.Map;

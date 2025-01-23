@@ -188,7 +188,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       final F1<XyzFeature, XyzFeature> preResponseProcessing =
           standardReadFeaturesPreResponseProcessing(propPaths, false, null);
       // transform Result to Http XyzFeature response
-      return transformReadResultToXyzFeatureResponse(result, XyzFeature.class, preResponseProcessing);
+      return transformResponseToXyzFeatureResponse(result, XyzFeature.class, preResponseProcessing);
     }
   }
 
@@ -247,7 +247,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // if any of the options is enabled
     final F1<XyzFeature, XyzFeature> preResponseProcessing =
         standardReadFeaturesPreResponseProcessing(propPaths, clip, bbox);
-    return transformReadResultToXyzCollectionResponse(
+    return transformResponseToXyzCollectionResponse(
         result, XyzFeature.class, 0, limit, null, preResponseProcessing);
   }
 
@@ -297,7 +297,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // if any of the options is enabled
     final F1<XyzFeature, XyzFeature> preResponseProcessing =
         standardReadFeaturesPreResponseProcessing(propPaths, clip, geo);
-    return transformReadResultToXyzCollectionResponse(
+    return transformResponseToXyzCollectionResponse(
         result, XyzFeature.class, 0, limit, null, preResponseProcessing);
   }
 
@@ -331,7 +331,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final F1<XyzFeature, XyzFeature> preResponseProcessing =
         standardReadFeaturesPreResponseProcessing(propPaths, false, null);
     // transform Result to Http FeatureCollection response, restricted by given feature limit
-    return transformReadResultToXyzCollectionResponse(
+    return transformResponseToXyzCollectionResponse(
         result, XyzFeature.class, 0, limit, null, preResponseProcessing);
   }
 
@@ -374,7 +374,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
         standardReadFeaturesPreResponseProcessing(propPaths, false, null);
     // transform Result to Http FeatureCollection response,
     // restricted by given feature limit and by adding "handle" attribute to support subsequent iteration
-    return transformReadResultToXyzCollectionResponse(
+    return transformResponseToXyzCollectionResponse(
         result, XyzFeature.class, offset, clientLimit, handle, preResponseProcessing);
   }
 
@@ -418,7 +418,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final F1<XyzFeature, XyzFeature> preResponseProcessing =
         standardReadFeaturesPreResponseProcessing(propPaths, false, radiusOp.getGeometry());
     // transform Result to Http FeatureCollection response, restricted by given feature limit
-    return transformReadResultToXyzCollectionResponse(
+    return transformResponseToXyzCollectionResponse(
         result, XyzFeature.class, 0, limit, null, preResponseProcessing);
   }
 
@@ -497,7 +497,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final F1<XyzFeature, XyzFeature> preResponseProcessing =
         standardReadFeaturesPreResponseProcessing(propPaths, false, radiusOp.getGeometry());
     // transform Result to Http FeatureCollection response, restricted by given feature limit
-    return transformReadResultToXyzCollectionResponse(
+    return transformResponseToXyzCollectionResponse(
         result, XyzFeature.class, 0, limit, null, preResponseProcessing);
   }
 }

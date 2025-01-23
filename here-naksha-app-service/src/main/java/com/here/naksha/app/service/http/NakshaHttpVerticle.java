@@ -18,7 +18,7 @@
  */
 package com.here.naksha.app.service.http;
 
-import static com.here.naksha.app.service.http.NakshaHttpErrorResponse.httpErrorResponse;
+import static com.here.naksha.app.service.http.HttpXyzErrorResponse.httpErrorResponse;
 import static com.here.naksha.app.service.http.NakshaHttpHeaders.STREAM_ID;
 import static com.here.naksha.app.service.http.NakshaHttpHeaders.STREAM_INFO;
 import static com.here.naksha.app.service.http.auth.actions.JwtUtil.extractJwtPayloadFromContext;
@@ -58,6 +58,7 @@ import com.here.naksha.app.service.util.logging.AccessLogUtil;
 import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
+import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.storage.ModifyFeaturesResp;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.MIMEType;
@@ -436,7 +437,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
    * @param message        Error message
    * @return xyzResponse object representing error
    */
-  public @NotNull Response sendErrorResponse(
+  public @NotNull HttpXyzErrorResponse sendErrorResponse(
       final @NotNull RoutingContext routingContext,
       final @NotNull String errorCode,
       final @NotNull String message
@@ -451,11 +452,11 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
    * @param nakshaError    The XyzError indicating the cause of error
    * @return xyzResponse object representing error
    */
-  public @NotNull Response sendErrorResponse(
+  public @NotNull HttpXyzErrorResponse sendErrorResponse(
       final @NotNull RoutingContext routingContext,
       final @NotNull NakshaError nakshaError
   ) {
-    final NakshaHttpErrorResponse errorResponse = httpErrorResponse(nakshaError, getStreamId(routingContext));
+    final HttpXyzErrorResponse errorResponse = httpErrorResponse(nakshaError, getStreamId(routingContext));
     sendRawResponse(
         routingContext,
         mapErrorCodeToHttpStatus(nakshaError.getCode()),
@@ -473,7 +474,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
   public void sendErrorResponse(@NotNull RoutingContext routingContext, @NotNull Throwable throwable) {
     final String streamId = getStreamId(routingContext);
     try {
-      final NakshaHttpErrorResponse response;
+      final HttpXyzErrorResponse response;
       final HttpResponseStatus httpStatus;
       if (throwable instanceof HttpException e) {
         log.atInfo()
@@ -524,11 +525,11 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
             .log();
       }
       assert streamId.equals(response.getStreamId());
-      assert response.getError() != null;
+      assert response.getErrorCode() != null;
       if (throwable instanceof HttpException e) {
         httpStatus = HttpResponseStatus.valueOf(e.getStatusCode());
       } else {
-        httpStatus = mapErrorCodeToHttpStatus(response.getError().getCode());
+        httpStatus = mapErrorCodeToHttpStatus(response.getErrorCode());
       }
       sendRawResponse(routingContext, httpStatus, APPLICATION_JSON, Buffer.buffer(Platform.toJSON(response, ToJsonOptions.DEFAULT)));
     } catch (Throwable t) {
@@ -617,51 +618,47 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
    *
    * @param routingContext The routing context for which to send the response.
    * @param responseType   The response type to return.
-   * @param response       The response to send.
+   * @param xyzResponse       The response to send.
    * @return XyzResponse object representing actual response content
    */
-  public Response sendXyzResponse(
+  public XyzResponse sendXyzResponse(
       @NotNull RoutingContext routingContext,
       @Nullable HttpResponseType responseType,
-      @NotNull Response response) {
+      @NotNull XyzResponse xyzResponse) {
     try {
-//      final String etag = response.getEtag();
-//      if (etag != null) {
-//        routingContext.response().putHeader(ETAG, etag);
-//      }
-      if (response instanceof ErrorResponse er) {
+      if (xyzResponse instanceof HttpXyzErrorResponse er) {
         sendRawResponse(
             routingContext,
             mapErrorCodeToHttpStatus(er.getError().getCode()),
             APPLICATION_JSON,
             Buffer.buffer(Platform.toJSON(er, ToJsonOptions.DEFAULT)));
-        return response;
+        return xyzResponse;
       }
-      if (response instanceof BinaryResponse br) {
+      if (xyzResponse instanceof BinaryResponse br) {
         sendRawResponse(routingContext, OK, br.getMimeType(), Buffer.buffer(br.getBytes()));
-        return response;
+        return xyzResponse;
       }
-      if (response instanceof NotModifiedResponse) {
+      if (xyzResponse instanceof NotModifiedResponse) {
         sendEmptyResponse(routingContext, NOT_MODIFIED);
-        return response;
+        return xyzResponse;
       }
-      if (response instanceof XyzFeatureCollection fc && responseType == HttpResponseType.FEATURE) {
+      if (xyzResponse instanceof XyzFeatureCollection fc && responseType == HttpResponseType.FEATURE) {
         // If we should only send back a single feature.
         final List<? extends NakshaFeature> features = fc.getFeatures();
         if (features.size() == 0) {
           sendEmptyResponse(routingContext, OK);
-          return response;
+          return xyzResponse;
         } else {
           final String content = Platform.toJSON(features.get(0), ToJsonOptions.DEFAULT);
           sendRawResponse(routingContext, OK, responseType, Buffer.buffer(content));
-          return response;
+          return xyzResponse;
         }
       }
       if (responseType == HttpResponseType.EMPTY) {
         sendEmptyResponse(routingContext, OK);
-        return response;
+        return xyzResponse;
       }
-      sendRawResponse(routingContext, OK, responseType, Buffer.buffer(Platform.toJSON(response, ToJsonOptions.DEFAULT)));
+      sendRawResponse(routingContext, OK, responseType, Buffer.buffer(Platform.toJSON(xyzResponse, ToJsonOptions.DEFAULT)));
     } catch (Throwable t) {
       log.atError()
           .setMessage("Unexpected error while sending XYZ response")
@@ -669,7 +666,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
           .log();
       sendFatalErrorResponse(routingContext, "Unexpected failure while serializing response");
     }
-    return response;
+    return xyzResponse;
   }
 
   /**

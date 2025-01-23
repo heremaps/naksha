@@ -32,7 +32,7 @@ public enum NoElementsStrategy {
     this.nakshaError = nakshaError;
   }
 
-  public NakshaException asException(){
+  public NakshaException asException() {
     return new NakshaException(nakshaError);
   }
 }

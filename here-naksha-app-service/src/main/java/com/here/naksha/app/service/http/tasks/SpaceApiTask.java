@@ -19,6 +19,7 @@
 package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.apis.ApiParams.extractMandatoryPathParam;
+import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.SPACE_ID;
 import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
 
@@ -108,7 +109,7 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
     final WriteXyzFeatures wr = new WriteXyzFeatures(SPACES).delete(spaceId, null);
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wr)) {
-      return transformDeleteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+      return transformResponseToXyzFeatureResponse(wrResult, XyzFeature.class, NOT_FOUND_ON_NO_ELEMENTS);
     }
   }
 
@@ -116,7 +117,7 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
     final Space newSpace = spaceFromRequestBody();
     final WriteXyzFeatures wrRequest = RequestHelper.createFeatureRequest(SPACES, newSpace, false);
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
-      return transformWriteResultToXyzFeatureResponse(wrResult, Space.class);
+      return transformResponseToXyzFeatureResponse(wrResult, Space.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
     }
   }
 
@@ -129,7 +130,7 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
     } else {
       final WriteXyzFeatures updateSpaceReq = RequestHelper.updateFeatureRequest(SPACES, spaceFromBody);
       try (Result updateSpaceResult = executeWriteRequestFromSpaceStorage(updateSpaceReq)) {
-        return transformWriteResultToXyzFeatureResponse(updateSpaceResult, Space.class);
+        return transformResponseToXyzFeatureResponse(updateSpaceResult, Space.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
       }
     }
   }
@@ -137,7 +138,7 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
   private @NotNull XyzResponse executeGetSpaces() {
     final ReadFeatures request = new ReadFeatures(SPACES);
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzCollectionResponse(rdResult, Space.class);
+      return transformResponseToXyzCollectionResponse(rdResult, Space.class);
     }
   }
 
@@ -145,7 +146,7 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
     final ReadFeatures request = new ReadFeatures(SPACES).withPropertyOp(POp.eq(PRef.id(), spaceId));
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzFeatureResponse(rdResult, Space.class);
+      return transformResponseToXyzFeatureResponse(rdResult, Space.class, NOT_FOUND_ON_NO_ELEMENTS);
     }
   }
 

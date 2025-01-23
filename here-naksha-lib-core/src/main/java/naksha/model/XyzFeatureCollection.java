@@ -20,6 +20,7 @@ package naksha.model;
 
 import static java.util.stream.Collectors.toList;
 
+import com.here.naksha.lib.core.models.payload.XyzResponse;
 import java.util.List;
 import naksha.base.AnyObject;
 import naksha.base.JvmListProxy;
@@ -30,11 +31,10 @@ import naksha.base.StringList;
 import naksha.geo.SpBoundingBox;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
-import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class XyzFeatureCollection extends Response {
+public class XyzFeatureCollection extends XyzResponse {
 
   private static final String FEATURE_COLLECTION_TYPE = "FeatureCollection";
 
@@ -431,15 +431,6 @@ public class XyzFeatureCollection extends Response {
   public @NotNull XyzFeatureCollection withViolations(final @Nullable List<NakshaFeature> violations) {
     setViolations(violations);
     return this;
-  }
-
-  @Override
-  public int resultSize() {
-    Long count = COUNT.getValue(this);
-    if (count == null) {
-      count = 0L;
-    }
-    return Math.toIntExact(count);
   }
 
   private void appendToNullableStringList(

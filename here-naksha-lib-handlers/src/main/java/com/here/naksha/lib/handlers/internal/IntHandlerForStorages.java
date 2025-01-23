@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import static com.here.naksha.lib.handlers.NakshaAdminCollection.EVENT_HANDLERS;
+import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
 import static com.here.naksha.lib.handlers.internal.PluginPropertiesValidator.pluginValidation;
 
 import com.here.naksha.lib.core.INaksha;

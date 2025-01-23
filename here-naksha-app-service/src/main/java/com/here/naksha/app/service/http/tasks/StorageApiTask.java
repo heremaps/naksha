@@ -19,6 +19,8 @@
 package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.ops.MaskingUtil.maskProperties;
+import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
+import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.STORAGE_ID;
 import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
 
@@ -109,7 +111,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
   private @NotNull XyzResponse executeGetStorages() {
     final ReadFeatures request = new ReadFeatures(STORAGES);
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzCollectionResponse(
+      return transformResponseToXyzCollectionResponse(
           rdResult, Storage.class, this::storageWithMaskedSensitiveProperties);
     }
   }
@@ -142,24 +144,24 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
     final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
     final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureByIdRequest(STORAGES, storageId);
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
-      return transformDeleteResultToXyzFeatureResponse(
-          wrResult, Storage.class, this::storageWithMaskedSensitiveProperties);
+      return transformResponseToXyzFeatureResponse(
+          wrResult, Storage.class, NOT_FOUND_ON_NO_ELEMENTS, this::storageWithMaskedSensitiveProperties);
     }
   }
 
   @NotNull
   private XyzResponse transformedResponseTo(ReadFeatures request) {
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzFeatureResponse(
-          rdResult, Storage.class, this::storageWithMaskedSensitiveProperties);
+      return transformResponseToXyzFeatureResponse(
+          rdResult, Storage.class, NOT_FOUND_ON_NO_ELEMENTS, this::storageWithMaskedSensitiveProperties);
     }
   }
 
   @NotNull
   private XyzResponse transformedResponseTo(WriteXyzFeatures updateStorageReq) {
     try (Result updateStorageResult = executeWriteRequestFromSpaceStorage(updateStorageReq)) {
-      return transformWriteResultToXyzFeatureResponse(
-          updateStorageResult, Storage.class, this::storageWithMaskedSensitiveProperties);
+      return transformResponseToXyzFeatureResponse(
+          updateStorageResult, Storage.class, FAIL_ON_NO_ELEMENTS, this::storageWithMaskedSensitiveProperties);
     }
   }
 

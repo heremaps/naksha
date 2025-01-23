@@ -10,6 +10,8 @@ import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
 
 /**
  * The Naksha Feature extending the default [SpFeature].

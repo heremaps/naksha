@@ -18,13 +18,11 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
-import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.DEF_ADMIN_FEATURE_LIMIT;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResponse;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.extractResponseItems;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesGroupedByOp;
 import static java.util.Collections.emptyList;
+import static naksha.model.util.ResultHelper.extractResponseItems;
+import static naksha.model.util.ResultHelper.readFeatureFromResponse;
+import static naksha.model.util.ResultHelper.readFeaturesGroupedByOp;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.HttpResponseType;
@@ -32,26 +30,33 @@ import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.*;
-import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.lambdas.F1;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzGeometry;
-import naksha.model.ReadFeatures;
-import naksha.model.WriteFeatures;
-import naksha.model.XyzResponse;
+import com.here.naksha.lib.core.models.ContextXyzFeatureResponse;
+import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.util.PropertyPathUtil;
 import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
-import java.util.*;
-
-import naksha.model.ErrorResult;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import naksha.base.JvmBoxingUtil;
+import naksha.geo.ProxyGeoUtil;
+import naksha.geo.SpGeometry;
+import naksha.model.IReadSession;
+import naksha.model.IWriteSession;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.SessionOptions;
+import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.response.NakshaError;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.ExecutedOp;
+import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.geom.Geometry;
@@ -62,8 +67,8 @@ import org.slf4j.LoggerFactory;
 /**
  * An abstract class that can be used for all Http API specific custom Task implementations.
  */
-public abstract class AbstractApiTask<T extends Response>
-    extends AbstractTask<Response, AbstractApiTask<Response>> {
+public abstract class AbstractApiTask<T extends XyzResponse>
+    extends AbstractTask<XyzResponse, AbstractApiTask<XyzResponse>> {
 
   private static final Logger logger = LoggerFactory.getLogger(AbstractApiTask.class);
   protected final @NotNull RoutingContext routingContext;
@@ -85,191 +90,177 @@ public abstract class AbstractApiTask<T extends Response>
     this.routingContext = routingContext;
   }
 
-  protected @NotNull Response errorResponse(@NotNull Throwable throwable) {
+  protected @NotNull XyzResponse errorResponse(@NotNull Throwable throwable) {
     logger.warn("The task failed with an exception. ", throwable);
     return verticle.sendErrorResponse(
         routingContext, new NakshaError(NakshaError.EXCEPTION, "Task failed processing! " + throwable.getMessage(), throwable));
   }
 
-  public @NotNull Response executeUnsupported() {
+  public @NotNull XyzResponse executeUnsupported() {
     return verticle.sendErrorResponse(routingContext, NakshaError.NOT_IMPLEMENTED, "Unsupported operation!");
   }
 
-  protected <R extends NakshaFeature> @NotNull Response transformReadResultToXyzFeatureResponse(
-      final @NotNull Result rdResult, final @NotNull Class<R> type) {
-    return transformResultToXyzFeatureResponse(rdResult, type, NOT_FOUND_ON_NO_ELEMENTS, null);
-  }
-
-  protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzFeatureResponse(
-      final @NotNull Result rdResult, final @NotNull Class<R> type, @Nullable F1<R, R> preResponseProcessing) {
-    return transformResultToXyzFeatureResponse(rdResult, type, NOT_FOUND_ON_NO_ELEMENTS, preResponseProcessing);
-  }
-
-  protected <R extends XyzFeature> @NotNull XyzResponse transformWriteResultToXyzFeatureResponse(
-      final @Nullable Result wrResult, final @NotNull Class<R> type) {
-    return transformResultToXyzFeatureResponse(wrResult, type, FAIL_ON_NO_ELEMENTS, null);
-  }
-
-  protected <R extends XyzFeature> @NotNull XyzResponse transformWriteResultToXyzFeatureResponse(
-      final @Nullable Result wrResult, final @NotNull Class<R> type, @Nullable F1<R, R> preResponseProcessing) {
-    return transformResultToXyzFeatureResponse(wrResult, type, FAIL_ON_NO_ELEMENTS, preResponseProcessing);
-  }
-
-  protected <R extends XyzFeature> @NotNull XyzResponse transformDeleteResultToXyzFeatureResponse(
-      final @Nullable Result wrResult, final @NotNull Class<R> type) {
-    return transformResultToXyzFeatureResponse(wrResult, type, NOT_FOUND_ON_NO_ELEMENTS, null);
-  }
-
-  protected <R extends XyzFeature> @NotNull XyzResponse transformDeleteResultToXyzFeatureResponse(
-      final @Nullable Result wrResult, final @NotNull Class<R> type, @Nullable F1<R, R> postProcessing) {
-    return transformResultToXyzFeatureResponse(wrResult, type, NOT_FOUND_ON_NO_ELEMENTS, postProcessing);
+  protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzFeatureResponse(
+      final @Nullable Response response,
+      final @NotNull Class<F> type,
+      final @NotNull NoElementsStrategy noElementsStrategy
+  ) {
+    return transformResponseToXyzFeatureResponse(response, type, noElementsStrategy);
   }
 
   protected XyzResponse handleNoElements(NoElementsStrategy noElementsStrategy) {
-    return verticle.sendErrorResponse(routingContext, noElementsStrategy.nakshaError, noElementsStrategy.message);
+    return verticle.sendErrorResponse(routingContext, noElementsStrategy.nakshaError);
   }
 
-  protected <R extends XyzFeature> @NotNull XyzResponse transformResultToXyzFeatureResponse(
-      final @Nullable Result result,
-      final @NotNull Class<R> type,
+  protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzFeatureResponse(
+      final @Nullable Response response,
+      final @NotNull Class<F> type,
       final @NotNull NoElementsStrategy noElementsStrategy,
-      final @Nullable F1<R, R> preResponseProcessing) {
-    final XyzResponse validatedErrorResponse = validateErrorResult(result);
+      final @Nullable F1<F, F> preResponseProcessing
+  ) {
+    final XyzResponse validatedErrorResponse = validateErrorResult(response);
     if (validatedErrorResponse != null) {
       return validatedErrorResponse;
-    } else {
-      try {
-        final R feature = readFeatureFromResponse(result, type);
-        R processedFeature = feature;
-        if (feature != null && preResponseProcessing != null) {
-          processedFeature = preResponseProcessing.call(feature);
-        }
-        if (processedFeature == null) {
-          return verticle.sendErrorResponse(
-              routingContext,
-              XyzError.NOT_FOUND,
-              "No feature found for id "
-                  + result.getXyzFeatureCursor().getId());
-        }
-        final List<R> featureList = new ArrayList<>();
-        featureList.add(processedFeature);
-        final XyzFeatureCollection featureResponse = new XyzFeatureCollection().withFeatures(featureList);
-        return verticle.sendXyzResponse(routingContext, HttpResponseType.FEATURE, featureResponse);
-      } catch (NoCursor | NoSuchElementException emptyException) {
-        return handleNoElements(noElementsStrategy);
+    } else if (response instanceof SuccessResponse successResponse) {
+      F feature = readFeatureFromResponse(successResponse, type);
+      if (feature != null && preResponseProcessing != null) {
+        feature = preResponseProcessing.call(feature);
       }
+      if (feature == null) {
+        handleNoElements(noElementsStrategy);
+      }
+      final XyzFeatureCollection featureResponse = new XyzFeatureCollection().withFeatures(List.of(feature));
+      return verticle.sendXyzResponse(routingContext, HttpResponseType.FEATURE, featureResponse);
+    } else {
+      return verticle.sendErrorResponse(
+          routingContext,
+          NakshaError.EXCEPTION,
+          "Unable to process unexpected response: " + response
+      );
     }
   }
 
-  protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzCollectionResponse(
-      final @Nullable Result rdResult,
-      final @NotNull Class<R> type,
-      final @Nullable F1<R, R> preResponseProcessing) {
-    return transformReadResultToXyzCollectionResponse(
-        rdResult, type, 0, DEF_ADMIN_FEATURE_LIMIT, null, preResponseProcessing);
+  protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzCollectionResponse(
+      final @Nullable Response response,
+      final @NotNull Class<F> type,
+      final @Nullable F1<F, F> preResponseProcessing) {
+    return transformResponseToXyzCollectionResponse(
+        response, type, 0, DEF_ADMIN_FEATURE_LIMIT, null, preResponseProcessing);
   }
 
-  protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzCollectionResponse(
-      final @Nullable Result rdResult, final @NotNull Class<R> type) {
-    return transformReadResultToXyzCollectionResponse(rdResult, type, DEF_ADMIN_FEATURE_LIMIT);
+  protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzCollectionResponse(
+      final @Nullable Response response, final @NotNull Class<F> type) {
+    return transformResponseToXyzCollectionResponse(response, type, DEF_ADMIN_FEATURE_LIMIT);
   }
 
-  protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzCollectionResponse(
-      final @Nullable Result rdResult, final @NotNull Class<R> type, final long maxLimit) {
-    return transformReadResultToXyzCollectionResponse(rdResult, type, 0, maxLimit, null, null);
+  protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzCollectionResponse(
+      final @Nullable Response response, final @NotNull Class<F> type, final long maxLimit) {
+    return transformResponseToXyzCollectionResponse(response, type, 0, maxLimit, null, null);
   }
 
-  protected <R extends XyzFeature> @NotNull XyzResponse transformReadResultToXyzCollectionResponse(
-      final @Nullable Result rdResult,
-      final @NotNull Class<R> type,
+  protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzCollectionResponse(
+      final @Nullable Response response,
+      final @NotNull Class<F> type,
       final long offset,
       final long maxLimit,
       final @Nullable IterateHandle handle,
-      final @Nullable F1<R, R> preResponseProcessing) {
-    final XyzResponse validatedErrorResponse = validateErrorResultEmptyCollection(rdResult);
+      final @Nullable F1<F, F> preResponseProcessing) {
+    final XyzResponse validatedErrorResponse = validateErrorResultEmptyCollection(response);
     if (validatedErrorResponse != null) {
       return validatedErrorResponse;
-    } else {
-      try {
-        final List<R> features = extractResponseItems(rdResult, type, offset, maxLimit);
-        List<R> processedFeatures = features;
-        if (preResponseProcessing != null) {
-          processedFeatures = new ArrayList<>();
-          for (R feature : features) {
-            final R processedFeature = preResponseProcessing.call(feature);
-            if (processedFeature != null) {
-              processedFeatures.add(processedFeature);
-            }
+    } else if (response instanceof SuccessResponse successResponse) {
+      final List<F> features = extractResponseItems(successResponse, type, offset, maxLimit);
+      List<F> processedFeatures = features;
+      if (preResponseProcessing != null) {
+        processedFeatures = new ArrayList<>();
+        for (F feature : features) {
+          final F processedFeature = preResponseProcessing.call(feature);
+          if (processedFeature != null) {
+            processedFeatures.add(processedFeature);
           }
         }
-        // Populate handle (if provided), with the values ready for next iteration
-        final String handleStr = getIterateHandleAsString(processedFeatures.size(), offset, maxLimit, handle);
-        return verticle.sendXyzResponse(
-            routingContext,
-            HttpResponseType.FEATURE_COLLECTION,
-            new XyzFeatureCollection()
-                .withFeatures(processedFeatures)
-                .withNextPageToken(handleStr));
-      } catch (NoCursor | NoSuchElementException emptyException) {
-        logger.info("No data found in ResultCursor, returning empty collection");
+      }
+      if (processedFeatures.isEmpty()) {
+        logger.info("No features found, returning empty collection");
         return verticle.sendXyzResponse(
             routingContext, HttpResponseType.FEATURE_COLLECTION, emptyFeatureCollection());
       }
+      // Populate handle (if provided), with the values ready for next iteration
+      final String handleStr = getIterateHandleAsString(processedFeatures.size(), offset, maxLimit, handle);
+      return verticle.sendXyzResponse(
+          routingContext,
+          HttpResponseType.FEATURE_COLLECTION,
+          new XyzFeatureCollection()
+              .withFeatures(processedFeatures)
+              .withNextPageToken(handleStr));
+    } else {
+      return verticle.sendErrorResponse(
+          routingContext,
+          NakshaError.EXCEPTION,
+          "Unable to process unexpected response: " + response
+      );
     }
   }
 
   private static String getIterateHandleAsString(
       long featuresFound, long crtOffset, long maxLimit, final @Nullable IterateHandle handle) {
     // nothing to populate if handle is not provided OR if we don't have more features to iterate
-    if (handle == null || featuresFound < maxLimit) return null;
+    if (handle == null || featuresFound < maxLimit) {
+      return null;
+    }
     handle.setOffset(crtOffset + featuresFound); // set offset for next iteration
     handle.setLimit(maxLimit);
     return handle.base64EncodedSerializedJson();
   }
 
-  protected <R extends XyzFeature> @NotNull XyzResponse transformWriteResultToXyzCollectionResponse(
-      final @Nullable Result wrResult, final @NotNull Class<R> type, final boolean isDeleteOperation) {
-    final XyzResponse validatedErrorResponse = validateErrorResult(wrResult);
+  protected <F extends NakshaFeature> @NotNull XyzResponse transformWriteResultToXyzCollectionResponse(
+      final @Nullable Response response, final @NotNull Class<F> type, final boolean isDeleteOperation) {
+    final XyzResponse validatedErrorResponse = validateErrorResult(response);
     if (validatedErrorResponse != null) {
       return validatedErrorResponse;
-    } else {
-      try {
-        final Map<EExecutedOp, List<R>> featureMap = readFeaturesGroupedByOp(wrResult, type);
-        final List<R> insertedFeatures = featureMap.get(EExecutedOp.CREATED);
-        final List<R> updatedFeatures = featureMap.get(EExecutedOp.UPDATED);
-        final List<R> deletedFeatures = featureMap.get(EExecutedOp.DELETED);
-        // extract violations if available
-        List<XyzFeature> violations = null;
-        if (wrResult instanceof ContextXyzFeatureResult cr) {
-          violations = cr.getViolations();
-        }
-        return verticle.sendXyzResponse(
-            routingContext,
-            HttpResponseType.FEATURE_COLLECTION,
-            new XyzFeatureCollection()
-                .withInsertedFeatures(insertedFeatures)
-                .withUpdatedFeatures(updatedFeatures)
-                .withDeletedFeatures(deletedFeatures)
-                .withViolations(violations));
-      } catch (NoCursor | NoSuchElementException emptyException) {
+    } else if (response instanceof SuccessResponse successResponse) {
+      final Map<ExecutedOp, List<F>> featureMap = readFeaturesGroupedByOp(successResponse, type);
+      final List<F> insertedFeatures = featureMap.get(ExecutedOp.CREATED);
+      final List<F> updatedFeatures = featureMap.get(ExecutedOp.UPDATED);
+      final List<F> deletedFeatures = featureMap.get(ExecutedOp.DELETED);
+      // extract violations if available
+      List<NakshaFeature> violations = null;
+      if (successResponse instanceof ContextXyzFeatureResponse cr) {
+        violations = cr.getViolations();
+      }
+      if (featureMap.isEmpty() && (violations == null || violations.isEmpty())) {
         if (isDeleteOperation) {
           logger.info("No data found in ResultCursor, returning empty collection");
           return verticle.sendXyzResponse(
               routingContext, HttpResponseType.FEATURE_COLLECTION, emptyFeatureCollection());
         }
         return verticle.sendErrorResponse(
-            routingContext, XyzError.EXCEPTION, "Unexpected empty result from ResultCursor");
+            routingContext, NakshaError.EXCEPTION, "Unexpected empty response");
       }
+      return verticle.sendXyzResponse(
+          routingContext,
+          HttpResponseType.FEATURE_COLLECTION,
+          new XyzFeatureCollection()
+              .withInsertedFeatures(insertedFeatures)
+              .withUpdatedFeatures(updatedFeatures)
+              .withDeletedFeatures(deletedFeatures)
+              .withViolations(violations));
+    } else {
+      return verticle.sendErrorResponse(
+          routingContext,
+          NakshaError.EXCEPTION,
+          "Unable to process unexpected response: " + response
+      );
     }
   }
 
-  protected Result executeReadRequestFromSpaceStorage(ReadFeatures readRequest) {
+  protected Response executeReadRequestFromSpaceStorage(ReadFeatures readFeatures) {
     try (final IReadSession reader = naksha().getSpaceStorage().newReadSession(SessionOptions.from(context(), false))) {
-      return reader.execute(readRequest);
+      return reader.execute(readFeatures);
     }
   }
 
-  protected Result executeWriteRequestFromSpaceStorage(WriteFeatures writeRequest) {
+  protected Response executeWriteRequestFromSpaceStorage(WriteRequest writeRequest) {
     try (final IWriteSession writer = naksha().getSpaceStorage().newWriteSession(SessionOptions.from(context(), true))) {
       return writer.execute(writeRequest);
     }
@@ -279,29 +270,29 @@ public abstract class AbstractApiTask<T extends Response>
     return new XyzFeatureCollection().withFeatures(emptyList());
   }
 
-  protected @Nullable XyzResponse validateErrorResultEmptyCollection(final @Nullable Result result) {
-    if (result == null) {
+  protected @Nullable XyzResponse validateErrorResultEmptyCollection(final @Nullable Response response) {
+    if (response == null) {
       // return empty collection
       logger.warn("Unexpected null result, returning empty collection.");
       return verticle.sendXyzResponse(
           routingContext, HttpResponseType.FEATURE_COLLECTION, new XyzFeatureCollection());
-    } else if (result instanceof ErrorResult er) {
+    } else if (response instanceof ErrorResponse er) {
       // In case of error, convert result to ErrorResponse
-      logger.error("Received error result {}", er);
-      return verticle.sendErrorResponse(routingContext, er.reason, er.message);
+      logger.error("Received error response {}", er);
+      return verticle.sendErrorResponse(routingContext, er.getError());
     }
     return null;
   }
 
-  protected @Nullable XyzResponse validateErrorResult(final @Nullable Result result) {
-    if (result == null) {
+  protected @Nullable XyzResponse validateErrorResult(final @Nullable Response response) {
+    if (response == null) {
       // return empty collection
       logger.error("Unexpected null result!");
-      return verticle.sendErrorResponse(routingContext, XyzError.EXCEPTION, "Unexpected null result!");
-    } else if (result instanceof ErrorResult er) {
+      return verticle.sendErrorResponse(routingContext, NakshaError.EXCEPTION, "Unexpected null result!");
+    } else if (response instanceof ErrorResponse er) {
       // In case of error, convert result to ErrorResponse
       logger.error("Received error result {}", er);
-      return verticle.sendErrorResponse(routingContext, er.reason, er.message);
+      return verticle.sendErrorResponse(routingContext, er.getError());
     }
     return null;
   }
@@ -313,37 +304,45 @@ public abstract class AbstractApiTask<T extends Response>
     }
   }
 
-  protected <F extends XyzFeature> @Nullable F1<F, F> standardReadFeaturesPreResponseProcessing(
+  protected <F extends NakshaFeature> @Nullable F1<F, F> standardReadFeaturesPreResponseProcessing(
       final @Nullable Set<String> propPaths, final boolean clip, final Geometry clipGeo) {
-    if (propPaths == null && !clip) return null;
+    if (propPaths == null && !clip) {
+      return null;
+    }
     return f -> {
       F newF = f;
       // Apply prop selection if enabled
-      if (propPaths != null) newF = applyPropertySelection(newF, propPaths);
+      if (propPaths != null) {
+        newF = applyPropertySelection(newF, propPaths);
+      }
       // Apply geometry clipping if enabled
-      if (clip) applyGeometryClipping(newF, clipGeo);
+      if (clip) {
+        applyGeometryClipping(newF, clipGeo);
+      }
       return newF;
     };
   }
 
   @SuppressWarnings("unchecked")
-  private <F extends XyzFeature> @NotNull F applyPropertySelection(
+  private <F extends NakshaFeature> @NotNull F applyPropertySelection(
       final @NotNull F f, final @NotNull Set<String> propPaths) {
     final Map<String, Object> tgtMap = PropertyPathUtil.extractPropertyMapFromFeature(f, propPaths);
-    return (F) JsonSerializable.fromMap(tgtMap, f.getClass());
+    NakshaFeature newF = new NakshaFeature();
+    newF.putAll(tgtMap);
+    return (F) JvmBoxingUtil.box(newF, f.getClass());
   }
 
-  private <F extends XyzFeature> void applyGeometryClipping(final @NotNull F f, final Geometry clipGeo) {
+  private <F extends NakshaFeature> void applyGeometryClipping(final @NotNull F f, final Geometry clipGeo) {
     // clip Feature geometry (if present) to a given clipGeo geometry
-    final XyzGeometry xyzGeo = f.getGeometry();
-    if (xyzGeo != null) {
+    final SpGeometry geo = f.getGeometry();
+    if (geo != null) {
       // NOTE - in JTS when we say:
       //    GeometryFixer.fix(geom).intersection(bbox)
       // it is the best available way of clipping geometry, equivalent to PostGIS approach of:
       //    ST_Intersection(ST_MakeValid(geo, 'method=structure'), bbox)
-      final Geometry clippedGeo =
-          GeometryFixer.fix(xyzGeo.getJTSGeometry()).intersection(clipGeo);
-      f.setGeometry(XyzGeometry.convertJTSGeometry(clippedGeo));
+      Geometry jtsGeo = ProxyGeoUtil.toJtsGeometry(geo);
+      Geometry clippedGeo = GeometryFixer.fix(jtsGeo).intersection(clipGeo);
+      f.setGeometry(ProxyGeoUtil.toProxyGeometry(clippedGeo));
     }
   }
 }

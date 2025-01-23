@@ -18,6 +18,7 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
+import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.HANDLER_ID;
 import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
 
@@ -25,20 +26,23 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
-import naksha.model.XyzResponse;
-import naksha.model.POp;
-import naksha.model.PRef;
-import naksha.model.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
+import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.RequestQuery;
+import naksha.model.request.Response;
+import naksha.model.request.WriteRequest;
+import naksha.model.request.query.PQuery;
+import naksha.model.request.query.Property;
+import naksha.model.request.query.StringOp;
+import naksha.model.util.RequestHelper;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +72,8 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
   }
 
   @Override
-  protected void init() {}
+  protected void init() {
+  }
 
   @Override
   protected @NotNull XyzResponse execute() {
@@ -82,13 +87,13 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
         default -> executeUnsupported();
       };
     } catch (Exception ex) {
-      if (ex instanceof XyzErrorException xyz) {
+      if (ex instanceof NakshaException nakshaException) {
         logger.warn("Known exception while processing request. ", ex);
-        return verticle.sendErrorResponse(routingContext, xyz.xyzError, xyz.getMessage());
+        return verticle.sendErrorResponse(routingContext, nakshaException.error);
       } else {
         logger.error("Unexpected error while processing request. ", ex);
         return verticle.sendErrorResponse(
-            routingContext, XyzError.EXCEPTION, "Internal error : " + ex.getMessage());
+            routingContext, NakshaError.EXCEPTION, "Internal error : " + ex.getMessage());
       }
     }
   }
@@ -96,31 +101,31 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
   private @NotNull XyzResponse executeCreateHandler() throws Exception {
     // Read request JSON
     final EventHandler newHandler = handlerFromRequestBody();
-    final WriteXyzFeatures writeRequest = RequestHelper.createFeatureRequest(EVENT_HANDLERS, newHandler);
+    final WriteRequest writeRequest = RequestHelper.createFeatureRequest(EVENT_HANDLERS, newHandler);
     // persist new handler in Admin DB (if doesn't exist already)
-    try (Result writeResult = executeWriteRequestFromSpaceStorage(writeRequest)) {
-      return transformWriteResultToXyzFeatureResponse(writeResult, EventHandler.class);
-    }
+    Response response = executeWriteRequestFromSpaceStorage(writeRequest);
+    return transformResponseToXyzFeatureResponse(response, EventHandler.class, FAIL_ON_NO_ELEMENTS);
   }
 
   private @NotNull XyzResponse executeGetHandlers() {
     // Create ReadFeatures Request to read all handlers from Admin DB
     final ReadFeatures request = new ReadFeatures(EVENT_HANDLERS);
     // Submit request to NH Space Storage
-    try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      // transform ReadResult to Http FeatureCollection response
-      return transformReadResultToXyzCollectionResponse(rdResult, EventHandler.class);
-    }
+    Response response = executeReadRequestFromSpaceStorage(request);
+    // transform Response to Http FeatureCollection response
+    return transformResponseToXyzCollectionResponse(response, EventHandler.class);
   }
 
   private @NotNull XyzResponse executeGetHandlerById() {
     // Create ReadFeatures Request to read the handler with the specific ID from Admin DB
     final String handlerId = routingContext.pathParam(HANDLER_ID);
-    final ReadFeatures request = new ReadFeatures(EVENT_HANDLERS).withPropertyOp(POp.eq(PRef.id(), handlerId));
+    final ReadFeatures request = new ReadFeatures(EVENT_HANDLERS);
+    RequestQuery query = new RequestQuery();
+    query.setProperties(new PQuery(new Property(NakshaFeature.ID_KEY), StringOp.EQUALS, handlerId));
+    request.setQuery(query);
     // Submit request to NH Space Storage
-    try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzFeatureResponse(rdResult, EventHandler.class);
-    }
+    Response response = executeReadRequestFromSpaceStorage(request);
+    return transformResponseToXyzFeatureResponse(response, EventHandler.class, NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS);
   }
 
   private @NotNull XyzResponse executeUpdateHandler() throws JsonProcessingException {
@@ -128,22 +133,20 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
     EventHandler handlerToUpdate = handlerFromRequestBody();
     if (!handlerIdFromPath.equals(handlerToUpdate.getId())) {
       return verticle.sendErrorResponse(
-          routingContext, XyzError.ILLEGAL_ARGUMENT, mismatchMsg(handlerIdFromPath, handlerToUpdate));
+          routingContext, NakshaError.ILLEGAL_ARGUMENT, mismatchMsg(handlerIdFromPath, handlerToUpdate));
     } else {
-      final WriteXyzFeatures updateHandlerReq =
+      final WriteRequest updateHandlerReq =
           RequestHelper.updateFeatureRequest(EVENT_HANDLERS, handlerToUpdate);
-      try (Result updateHandlerResult = executeWriteRequestFromSpaceStorage(updateHandlerReq)) {
-        return transformWriteResultToXyzFeatureResponse(updateHandlerResult, EventHandler.class);
-      }
+      Response updateHandlerResponse = executeWriteRequestFromSpaceStorage(updateHandlerReq);
+      return transformResponseToXyzFeatureResponse(updateHandlerResponse, EventHandler.class, FAIL_ON_NO_ELEMENTS);
     }
   }
 
   private @NotNull XyzResponse executeDeleteHandler() {
     final String handlerId = ApiParams.extractMandatoryPathParam(routingContext, HANDLER_ID);
-    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureByIdRequest(EVENT_HANDLERS, handlerId);
-    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
-      return transformDeleteResultToXyzFeatureResponse(wrResult, EventHandler.class);
-    }
+    final WriteRequest wrRequest = RequestHelper.deleteFeatureByIdRequest(EVENT_HANDLERS, handlerId);
+    Response response = executeWriteRequestFromSpaceStorage(wrRequest);
+    return transformResponseToXyzFeatureResponse(response, EventHandler.class, NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS);
   }
 
   private @NotNull EventHandler handlerFromRequestBody() throws JsonProcessingException {
