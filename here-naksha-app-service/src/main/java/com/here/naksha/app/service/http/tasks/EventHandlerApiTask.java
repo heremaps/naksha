@@ -107,7 +107,8 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Submit request to NH Space Storage
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
       // transform ReadResult to Http FeatureCollection response
-      return transformReadResultToXyzCollectionResponse(rdResult, EventHandler.class);
+      return transformReadResultToXyzCollectionResponse(
+          rdResult, EventHandler.class, this::handlerWithMaskedSensitiveProperties);
     }
   }
 
