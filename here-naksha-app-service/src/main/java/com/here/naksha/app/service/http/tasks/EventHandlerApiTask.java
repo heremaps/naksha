@@ -98,7 +98,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Read request JSON
     final EventHandler newHandler = handlerFromRequestBody();
     final WriteXyzFeatures writeRequest = RequestHelper.createFeatureRequest(EVENT_HANDLERS, newHandler, false);
-    return transformedResponseTo(writeRequest);
+    return transformResponseFor(writeRequest);
   }
 
   private @NotNull XyzResponse executeGetHandlers() {
@@ -116,7 +116,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Create ReadFeatures Request to read the handler with the specific ID from Admin DB
     final String handlerId = routingContext.pathParam(HANDLER_ID);
     final ReadFeatures request = new ReadFeatures(EVENT_HANDLERS).withPropertyOp(POp.eq(PRef.id(), handlerId));
-    return transformedResponseTo(request);
+    return transformResponseFor(request);
   }
 
   private @NotNull XyzResponse executeUpdateHandler() throws JsonProcessingException {
@@ -128,7 +128,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
     } else {
       final WriteXyzFeatures updateHandlerReq =
           RequestHelper.updateFeatureRequest(EVENT_HANDLERS, handlerToUpdate);
-      return transformedResponseTo(updateHandlerReq);
+      return transformResponseFor(updateHandlerReq);
     }
   }
 
@@ -142,7 +142,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
   }
 
   @NotNull
-  private XyzResponse transformedResponseTo(ReadFeatures rdRequest) {
+  private XyzResponse transformResponseFor(ReadFeatures rdRequest) {
     try (Result rdResult = executeReadRequestFromSpaceStorage(rdRequest)) {
       return transformReadResultToXyzFeatureResponse(
           rdResult, EventHandler.class, this::handlerWithMaskedSensitiveProperties);
@@ -150,7 +150,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
   }
 
   @NotNull
-  private XyzResponse transformedResponseTo(WriteXyzFeatures updateHandlerReq) {
+  private XyzResponse transformResponseFor(WriteXyzFeatures updateHandlerReq) {
     // persist new handler in Admin DB (if doesn't exist already)
     try (Result updateHandlerResult = executeWriteRequestFromSpaceStorage(updateHandlerReq)) {
       return transformWriteResultToXyzFeatureResponse(

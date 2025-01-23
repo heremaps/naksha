@@ -112,13 +112,13 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
   private @NotNull XyzResponse executeGetStorageById() {
     final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
     final ReadFeatures request = new ReadFeatures(STORAGES).withPropertyOp(POp.eq(PRef.id(), storageId));
-    return transformedResponseTo(request);
+    return transformResponseFor(request);
   }
 
   private @NotNull XyzResponse executeCreateStorage() throws JsonProcessingException {
     final Storage newStorage = storageFromRequestBody();
     final WriteXyzFeatures wrRequest = RequestHelper.createFeatureRequest(STORAGES, newStorage, false);
-    return transformedResponseTo(wrRequest);
+    return transformResponseFor(wrRequest);
   }
 
   private @NotNull XyzResponse executeUpdateStorage() throws JsonProcessingException {
@@ -129,7 +129,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
           routingContext, XyzError.ILLEGAL_ARGUMENT, mismatchMsg(storageIdFromPath, storageFromBody));
     } else {
       final WriteXyzFeatures updateStorageReq = RequestHelper.updateFeatureRequest(STORAGES, storageFromBody);
-      return transformedResponseTo(updateStorageReq);
+      return transformResponseFor(updateStorageReq);
     }
   }
 
@@ -143,7 +143,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
   }
 
   @NotNull
-  private XyzResponse transformedResponseTo(ReadFeatures request) {
+  private XyzResponse transformResponseFor(ReadFeatures request) {
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
       return transformReadResultToXyzFeatureResponse(
           rdResult, Storage.class, this::storageWithMaskedSensitiveProperties);
@@ -151,7 +151,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
   }
 
   @NotNull
-  private XyzResponse transformedResponseTo(WriteXyzFeatures updateStorageReq) {
+  private XyzResponse transformResponseFor(WriteXyzFeatures updateStorageReq) {
     try (Result updateStorageResult = executeWriteRequestFromSpaceStorage(updateStorageReq)) {
       return transformWriteResultToXyzFeatureResponse(
           updateStorageResult, Storage.class, this::storageWithMaskedSensitiveProperties);
