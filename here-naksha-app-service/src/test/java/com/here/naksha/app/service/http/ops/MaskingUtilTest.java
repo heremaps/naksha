@@ -15,7 +15,7 @@ class MaskingUtilTest {
   void shouldMaskProperties(){
     // Given
     XyzFeature feature = featureWithProps(mutableMapOf(
-        "sensitiveObject", mutableMapOf(
+        "Authorization", mutableMapOf(
             "some_entry_1", 123,
             "some_entry_2", "lorem ipsum"
         ),
@@ -30,7 +30,7 @@ class MaskingUtilTest {
             "nested", mutableMapOf(
                 "map", mutableMapOf(
                     "to", mutableMapOf(
-                        "sensitiveObject", mutableMapOf(
+                        "authorization", mutableMapOf(
                             "foo", "bar"
                         )
                     )
@@ -39,15 +39,12 @@ class MaskingUtilTest {
         )
     ));
 
-    // And:
-    Set<String> sensitiveProperties = Set.of("sensitiveObject", "Authorization", "password");
-
     // When:
-    MaskingUtil.maskProperties(feature, sensitiveProperties);
+    MaskingUtil.maskProperties(feature);
 
     // Then:
     assertEquals(Map.of(
-        "sensitiveObject", MaskingUtil.MASK,
+        "Authorization", MaskingUtil.MASK,
         "headers", Map.of(
             "Authorization", MaskingUtil.MASK,
             "Content-Type", "application/json"
@@ -59,7 +56,7 @@ class MaskingUtilTest {
             "nested", Map.of(
                 "map", Map.of(
                     "to", Map.of(
-                        "sensitiveObject", MaskingUtil.MASK
+                        "authorization", MaskingUtil.MASK
                     )
                 )
             )

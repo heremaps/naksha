@@ -25,26 +25,27 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 public class MaskingUtil {
-
+  public static final Set<String> SENSITIVE_PROPERTIES = Set.of("password", "authorization");
   static final String MASK = "xxxxxx";
 
   private MaskingUtil() {}
 
-  public static void maskProperties(XyzFeature feature, Set<String> propertiesToMask) {
-    maskProperties(feature.getProperties(), propertiesToMask);
+  public static void maskProperties(XyzFeature feature) {
+    maskProperties(feature.getProperties());
   }
 
-  private static void maskProperties(Map<String, Object> propertiesAsMap, Set<String> propertiesToMask) {
+  private static void maskProperties(Map<String, Object> propertiesAsMap) {
     for (Entry<String, Object> entry : propertiesAsMap.entrySet()) {
-      if (propertiesToMask.stream().anyMatch(entry.getKey()::contains)) {
+      if (SENSITIVE_PROPERTIES.stream()
+          .anyMatch(property -> entry.getKey().toLowerCase().contains(property.toLowerCase()))) {
         entry.setValue(MASK);
       } else if (entry.getValue() instanceof Map) {
-        maskProperties((Map<String, Object>) entry.getValue(), propertiesToMask);
+        maskProperties((Map<String, Object>) entry.getValue());
       } else if (entry.getValue() instanceof ArrayList array) {
         // recursive call to the nested array json
         for (Object arrayEntry : array) {
           if (arrayEntry instanceof Map) {
-            maskProperties((Map<String, Object>) arrayEntry, propertiesToMask);
+            maskProperties((Map<String, Object>) arrayEntry);
           }
         }
       }
