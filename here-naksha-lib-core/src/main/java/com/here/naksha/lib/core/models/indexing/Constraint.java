@@ -21,7 +21,6 @@ package com.here.naksha.lib.core.models.indexing;
 import naksha.base.AnyObject;
 import naksha.base.JvmListProxy;
 import naksha.base.JvmMapProxy;
-import naksha.model.objects.NakshaFeature;
 
 /** Base class of all possible constraints that can be combined. */
 public class Constraint extends AnyObject {

@@ -22,8 +22,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import java.util.Arrays;
 import java.util.List;
 import naksha.base.AnyObject;
-import naksha.base.JvmObject;
-import naksha.model.objects.NakshaFeature;
 
 public class License extends AnyObject {
 

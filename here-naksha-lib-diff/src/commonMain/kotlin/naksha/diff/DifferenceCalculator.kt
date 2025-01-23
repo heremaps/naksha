@@ -1,5 +1,7 @@
 package naksha.diff
 
+import kotlin.jvm.JvmOverloads
+
 class DifferenceCalculator private constructor() {
     companion object DifferenceCalculator_C {
 
@@ -17,6 +19,7 @@ class DifferenceCalculator private constructor() {
          * @return the difference between the two states or null, if both states are equal.
          * @since 3.0.0
          */
+        @JvmOverloads
         fun calculateDifference(
             source: Any?,
             target: Any?,

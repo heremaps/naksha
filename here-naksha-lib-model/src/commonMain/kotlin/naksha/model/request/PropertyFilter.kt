@@ -7,10 +7,6 @@ import naksha.model.request.query.*
 
 class PropertyFilter(val req: ReadFeatures) : ResultFilter {
 
-    companion object {
-        const val PROPERTIES = "properties"
-    }
-
     /**
      * Check if the feature matches the query
      * @param resultTuple the tuple containing the feature
@@ -33,7 +29,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
             is POr -> return pQuery.any { resolvePropsQuery(it, decoder) }
             is PNot -> return !resolvePropsQuery(pQuery.query, decoder)
             is PQuery -> {
-                val propFromFeature = decoder.get(PROPERTIES,*pQuery.property.path.filterNotNull().toTypedArray())
+                val propFromFeature = decoder.get(Property.PROPERTIES,*pQuery.property.path.filterNotNull().toTypedArray())
                 val op = pQuery.op
                 return resolveEachOp(op,propFromFeature,pQuery.value)
             }

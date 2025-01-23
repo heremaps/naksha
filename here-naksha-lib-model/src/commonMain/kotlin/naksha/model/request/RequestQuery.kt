@@ -4,8 +4,12 @@ package naksha.model.request
 
 import naksha.base.*
 import naksha.geo.HereTile
+import naksha.model.XyzNs
+import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaProperties
 import naksha.model.request.query.*
 import kotlin.js.JsExport
+import kotlin.jvm.JvmField
 
 /**
  * A set of conditions to be executed against the storage, logically AND combined.
@@ -24,6 +28,9 @@ import kotlin.js.JsExport
 open class RequestQuery : AnyObject() {
 
     companion object RequestQuery_C {
+        @JvmField
+        val TAGS_PROP_PATH = arrayOf(NakshaFeature.PROPERTIES_KEY, NakshaProperties.XYZ_KEY, XyzNs.TAGS_KEY)
+
         private val INT_LIST = NotNullProperty<RequestQuery, IntList>(IntList::class)
         private val SPATIAL_QUERY_NULL = NullableProperty<RequestQuery, ISpatialQuery>(ISpatialQuery::class)
         private val TAG_QUERY_NULL = NullableProperty<RequestQuery, ITagQuery>(ITagQuery::class)

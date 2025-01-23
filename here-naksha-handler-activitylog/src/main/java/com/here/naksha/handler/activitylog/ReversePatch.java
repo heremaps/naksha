@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import naksha.diff.RemoveOp;
 import naksha.diff.UpdateOp;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -90,13 +91,13 @@ public record ReversePatch(
 
     Builder reverseRemove(RemoveOp removeOp, String path) {
       insert++;
-      ops.add(PatchOp.insert(path, removeOp.oldValue()));
+      ops.add(PatchOp.insert(path, removeOp.getOldValue()));
       return this;
     }
 
     Builder reverseUpdate(UpdateOp updateOp, String path) {
       update++;
-      ops.add(PatchOp.update(path, updateOp.oldValue()));
+      ops.add(PatchOp.update(path, updateOp.getOldValue()));
       return this;
     }
   }

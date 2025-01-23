@@ -6,16 +6,17 @@ import static com.here.naksha.handler.activitylog.ReversePatch.PatchOp.REPLACE;
 import static com.here.naksha.handler.activitylog.assertions.ReversePatchAssertions.assertThat;
 
 import com.here.naksha.handler.activitylog.ReversePatch.PatchOp;
-import naksha.geo.LineStringCoordinates;
-import naksha.geo.PointCoordinates;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzLineString;
-import naksha.geo.XyzProperties;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+
+import naksha.geo.LineStringCoord;
+import naksha.geo.PointCoord;
+import naksha.geo.SpLineString;
+import naksha.model.XyzNs;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import net.bytebuddy.utility.RandomString;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,7 @@ class ReversePatchUtilTest {
   @Test
   void shouldConvertDifferenceToReversePatch() {
     // Given: feature representing John some time ago
-    XyzFeature before = xyzFeature(Map.of(
+    NakshaFeature before = xyzFeature(Map.of(
         "op", "John",
         "age", 23,
         "address", Map.of(
@@ -54,7 +55,7 @@ class ReversePatchUtilTest {
     ));
 
     // And: feature representing John year later (he moved a couple of blocks away, finished studies, found a job and changed his contact details)
-    XyzFeature after = xyzFeature(Map.of(
+    NakshaFeature after = xyzFeature(Map.of(
         "op", "John",
         "age", 24,
         "address", Map.of(
@@ -98,10 +99,10 @@ class ReversePatchUtilTest {
   @Test
   void shouldIgnoreChangedId() {
     // Given: feature A
-    XyzFeature featureA = new XyzFeature("id_a");
+    NakshaFeature featureA = new NakshaFeature("id_a");
 
     // And: feature B
-    XyzFeature featureB = new XyzFeature("id_b");
+    NakshaFeature featureB = new NakshaFeature("id_b");
 
     // When: applying reverse patch calculation on these two
     ReversePatch reversePatch = ReversePatchUtil.reversePatch(featureA, featureB);
@@ -113,14 +114,14 @@ class ReversePatchUtilTest {
   @Test
   void shouldIgnoreXyzNamespaceButNotTags() {
     // Given: feature with tags
-    XyzNamespace oldXyzNamespace = generateRandomXyzNamespace()
+    XyzNs oldXyzNamespace = generateRandomXyzNamespace()
         .addTags(List.of("one", "two", "three"), true);
-    XyzFeature oldFeature = featureWithXyzNamespace(oldXyzNamespace);
+    NakshaFeature oldFeature = featureWithXyzNamespace(oldXyzNamespace);
 
     // And: feature with different XyzNamespace (including different tags)
-    XyzNamespace newXyzNamespace = generateRandomXyzNamespace()
+    XyzNs newXyzNamespace = generateRandomXyzNamespace()
         .addTags(List.of("two", "three", "four", "five"), true);
-    XyzFeature newFeature = featureWithXyzNamespace(newXyzNamespace);
+    NakshaFeature newFeature = featureWithXyzNamespace(newXyzNamespace);
 
     // When: applying reverse patch calculation on these two
     ReversePatch reversePatch = ReversePatchUtil.reversePatch(oldFeature, newFeature);
@@ -141,21 +142,21 @@ class ReversePatchUtilTest {
   @Test
   void shouldCorrectlyParseLineGeometryChange(){
     // Given
-    XyzFeature oldFeature = new XyzFeature();
-    LineStringCoordinates oldCoordinates = new LineStringCoordinates();
-    oldCoordinates.add(new PointCoordinates(4.0d, 5.0));
-    oldCoordinates.add(new PointCoordinates(4.0d, 6.0));
-    oldCoordinates.add(new PointCoordinates(4.0d, 7.0));
-    oldCoordinates.add(new PointCoordinates(4.0d, 8.0));
-    oldFeature.setGeometry(new XyzLineString().withCoordinates(oldCoordinates));
+    NakshaFeature oldFeature = new NakshaFeature();
+    LineStringCoord oldCoordinates = new LineStringCoord();
+    oldCoordinates.add(new PointCoord(4.0d, 5.0));
+    oldCoordinates.add(new PointCoord(4.0d, 6.0));
+    oldCoordinates.add(new PointCoord(4.0d, 7.0));
+    oldCoordinates.add(new PointCoord(4.0d, 8.0));
+    oldFeature.setGeometry(new SpLineString().withCoordinates(oldCoordinates));
 
     // And:
-    XyzFeature newFeature = new XyzFeature();
-    LineStringCoordinates newCoordinates = new LineStringCoordinates();
-    newCoordinates.add(new PointCoordinates(4.0d, 5.0));
-    newCoordinates.add(new PointCoordinates(4.0d, 8.0));
-    newCoordinates.add(new PointCoordinates(4.0d, 7.0));
-    newFeature.setGeometry(new XyzLineString().withCoordinates(newCoordinates));
+    NakshaFeature newFeature = new NakshaFeature();
+    LineStringCoord newCoordinates = new LineStringCoord();
+    newCoordinates.add(new PointCoord(4.0d, 5.0));
+    newCoordinates.add(new PointCoord(4.0d, 8.0));
+    newCoordinates.add(new PointCoord(4.0d, 7.0));
+    newFeature.setGeometry(new SpLineString().withCoordinates(newCoordinates));
 
     // When: applying reverse patch calculation on these two
     ReversePatch reversePatch = ReversePatchUtil.reversePatch(oldFeature, newFeature);
@@ -167,31 +168,31 @@ class ReversePatchUtilTest {
         .hasUpdateOpsCount(1) // we did update second coordinate
         .hasReverseOps(
             new PatchOp(REPLACE, "/geometry/coordinates/1/1", 6.0),
-            new PatchOp(ADD, "/geometry/coordinates/3", new PointCoordinates(4.0d, 8.0d))
+            new PatchOp(ADD, "/geometry/coordinates/3", new PointCoord(4.0d, 8.0d))
         );
   }
 
-  private XyzFeature featureWithXyzNamespace(XyzNamespace xyzNamespace) {
-    XyzFeature feature = new XyzFeature();
-    XyzProperties properties = new XyzProperties();
-    properties.setXyzNamespace(xyzNamespace);
+  private NakshaFeature featureWithXyzNamespace(XyzNs xyzNamespace) {
+    NakshaFeature feature = new NakshaFeature();
+    NakshaProperties properties = new NakshaProperties();
+    properties.setXyz(xyzNamespace);
     feature.setProperties(properties);
     return feature;
   }
 
-  private XyzNamespace generateRandomXyzNamespace() {
-    return new XyzNamespace()
-        .withAppId(RandomString.make(10))
-        .withAuthor(RandomString.make(10))
-        .withTxn(random.nextLong())
-        .withExtend(random.nextLong())
-        .withUuid(UUID.randomUUID().toString())
-        .withPuuid(UUID.randomUUID().toString());
+  private XyzNs generateRandomXyzNamespace() {
+    final XyzNs xyzNamespace = new XyzNs();
+    xyzNamespace.put("appId",RandomString.make(10));
+    xyzNamespace.put("author",RandomString.make(10));
+    xyzNamespace.put("txn",random.nextLong());
+    xyzNamespace.put("uuid",UUID.randomUUID().toString());
+    xyzNamespace.put("puuid",UUID.randomUUID().toString());
+        return xyzNamespace;
   }
 
-  private XyzFeature xyzFeature(Map<String, Object> props) {
-    XyzFeature feature = new XyzFeature();
-    XyzProperties properties = new XyzProperties();
+  private NakshaFeature xyzFeature(Map<String, Object> props) {
+    NakshaFeature feature = new NakshaFeature();
+    NakshaProperties properties = new NakshaProperties();
     properties.putAll(props);
     feature.setProperties(properties);
     return feature;

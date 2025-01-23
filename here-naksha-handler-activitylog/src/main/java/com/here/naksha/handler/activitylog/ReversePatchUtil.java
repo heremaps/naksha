@@ -22,18 +22,13 @@ import static java.lang.System.arraycopy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzProperties;
-import naksha.model.PRef;
-import naksha.diff.Difference;
-import naksha.diff.InsertOp;
-import naksha.diff.ListDiff;
-import naksha.diff.MapDiff;
-import naksha.diff.Patcher;
-import naksha.diff.PrimitiveDiff;
-import naksha.diff.RemoveOp;
-import naksha.diff.UpdateOp;
 import java.util.Map;
+
+import naksha.diff.*;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
+import naksha.model.request.RequestQuery;
+import naksha.model.request.query.Property;
 import org.jetbrains.annotations.Nullable;
 
 class ReversePatchUtil {
@@ -44,11 +39,11 @@ class ReversePatchUtil {
 
   private static final String PATCH_PATH_DELIMITER = "/";
 
-  private static final String ID_PATH = patchPath(ROOT_PATH, XyzFeature.ID);
+  private static final String ID_PATH = patchPath(ROOT_PATH, NakshaFeature.ID_KEY);
 
   private static final String XYZ_NAMESPACE_PATH =
-      patchPath(ROOT_PATH, XyzFeature.PROPERTIES, XyzProperties.XYZ_NAMESPACE);
-  private static final String XYZ_NAMESPACE_TAGS_PATH = patchPath(prependRoot(PRef.TAGS_PROP_PATH));
+      patchPath(ROOT_PATH, Property.PROPERTIES, NakshaProperties.XYZ_KEY);
+  private static final String XYZ_NAMESPACE_TAGS_PATH = patchPath(prependRoot(RequestQuery.TAGS_PROP_PATH));
 
   private ReversePatchUtil() {}
 
@@ -56,8 +51,8 @@ class ReversePatchUtil {
     return MAPPER.valueToTree(activityLogReversePatch);
   }
 
-  static @Nullable ReversePatch reversePatch(XyzFeature older, XyzFeature younger) {
-    Difference difference = Patcher.getDifference(older, younger);
+  static @Nullable ReversePatch reversePatch(NakshaFeature older, NakshaFeature younger) {
+    Difference difference = DifferenceCalculator.DifferenceCalculator_C.calculateDifference(older, younger);
     if (difference == null) {
       return null;
     } else {

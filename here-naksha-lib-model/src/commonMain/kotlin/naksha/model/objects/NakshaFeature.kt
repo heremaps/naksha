@@ -32,6 +32,10 @@ open class NakshaFeature() : AnyObject() {
          * The feature-type of this feature itself.
          */
         const val FEATURE_TYPE = "Feature"
+        /**
+         * The JSON keys
+         */
+        const val ID_KEY = "id"
         const val PROPERTIES_KEY = "properties"
         const val TITLE_KEY = "title"
         const val DESCRIPTION_KEY = "description"

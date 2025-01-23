@@ -24,35 +24,26 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
+import static naksha.model.util.ResultHelper.extractResponseItems;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.util.ResultHelper;
-import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
-import com.here.naksha.lib.core.models.naksha.EventTarget;
-import naksha.model.ErrorResult;
-import naksha.model.POp;
-import naksha.model.PRef;
-import naksha.model.ReadFeatures;
-import naksha.model.Request;
-import com.here.naksha.lib.core.models.storage.Result;
-import naksha.model.WriteCollections;
-import naksha.model.IReadSession;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Set;
+import com.here.naksha.lib.handlers.util.RequestTypesUtil;
+import java.util.*;
 import java.util.stream.Stream;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.StringList;
+import naksha.model.*;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
+import naksha.model.objects.NakshaProperties;
+import naksha.model.request.*;
+import naksha.model.request.query.POr;
+import naksha.model.request.query.PQuery;
+import naksha.model.request.query.Property;
+import naksha.model.request.query.StringOp;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -60,74 +51,81 @@ import org.slf4j.LoggerFactory;
 
 public class ActivityLogHandler extends AbstractEventHandler {
 
-  private static final Comparator<XyzFeature> FEATURE_COMPARATOR = new ActivityLogComparator();
+  private static final Comparator<NakshaFeature> FEATURE_COMPARATOR = new ActivityLogComparator();
 
   private final @NotNull Logger logger = LoggerFactory.getLogger(ActivityLogHandler.class);
   private final @NotNull ActivityLogHandlerProperties properties;
 
   // TODO: remove unused 'eventTarget' property as part of MCPODS-7103
   public ActivityLogHandler(
-      @NotNull EventHandler handlerConfig, @NotNull INaksha hub, @NotNull EventTarget<?> eventTarget) {
+      @NotNull EventHandler handlerConfig, @NotNull INaksha hub) {
     super(hub);
-    this.properties = JsonSerializable.convert(handlerConfig.getProperties(), ActivityLogHandlerProperties.class);
+    this.properties = Objects.requireNonNull(
+        JvmBoxingUtil.box(handlerConfig.getProperties(), ActivityLogHandlerProperties.class));
   }
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
-    final Request<?> request = event.getRequest();
+    final Request request = event.getRequest();
     if (request instanceof ReadFeatures) {
       return PROCESS;
     }
-    if (request instanceof WriteCollections<?, ?, ?>) {
+    if (request instanceof WriteRequest && RequestTypesUtil.isOnlyWriteCollections(request)) {
       return SUCCEED_WITHOUT_PROCESSING;
     }
     return NOT_IMPLEMENTED;
   }
 
   @Override
-  protected @NotNull Result process(@NotNull IEvent event) {
-    final ErrorResult validationError = propertiesValidationError();
+  protected @NotNull Response process(@NotNull IEvent event) {
+    final ErrorResponse validationError = propertiesValidationError();
     if (validationError != null) {
       return validationError;
     }
     final NakshaContext ctx = NakshaContext.currentContext();
     final ReadFeatures request = transformRequest(event.getRequest());
-    List<XyzFeature> activityLogFeatures = activityLogFeatures(request, ctx);
-    return ActivityLogSuccessResult.forFeatures(activityLogFeatures);
+    List<NakshaFeature> activityLogFeatures = activityLogFeatures(request, ctx);
+    return new SuccessResponse(NakshaFeatureList.fromList(activityLogFeatures));
   }
 
-  private @NotNull ReadFeatures transformRequest(Request<?> request) {
+  private @NotNull ReadFeatures transformRequest(Request request) {
     final ReadFeatures readFeatures = (ReadFeatures) request;
-    readFeatures.withReturnAllVersions(true);
+    readFeatures.setQueryHistory(true);
+    readFeatures.setVersions(Integer.MAX_VALUE);
     ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
-    readFeatures.setCollections(List.of(properties.getSpaceId()));
+    readFeatures.setCollectionIds(StringList.fromList(List.of(properties.getSpaceId())));
     return readFeatures;
   }
 
-  private @Nullable ErrorResult propertiesValidationError() {
+  private @Nullable ErrorResponse propertiesValidationError() {
     if (nullOrEmpty(properties.getSpaceId())) {
-      return new ErrorResult(
-          XyzError.ILLEGAL_ARGUMENT, "Missing required property: " + ActivityLogHandlerProperties.SPACE_ID);
+      return new ErrorResponse(
+          NakshaError.ILLEGAL_ARGUMENT,
+          "Missing required property: " + ActivityLogHandlerProperties.SPACE_ID);
     }
     return null;
   }
 
-  private List<XyzFeature> activityLogFeatures(ReadFeatures readFeatures, NakshaContext context) {
-    List<XyzFeature> historyFeatures = fetchHistoryFeatures(readFeatures, context);
+  private List<NakshaFeature> activityLogFeatures(ReadFeatures readFeatures, NakshaContext context) {
+    List<NakshaFeature> historyFeatures = fetchHistoryFeatures(readFeatures, context);
     return featuresEnhancedWithActivity(historyFeatures, context);
   }
 
-  private List<XyzFeature> fetchHistoryFeatures(ReadFeatures readFeatures, NakshaContext context) {
-    try (IReadSession readSession = nakshaHub().getSpaceStorage().newReadSession(context, true)) {
-      try (Result result = readSession.execute(readFeatures)) {
-        return ResultHelper.extractResponseItems(result, XyzFeature.class);
+  private List<NakshaFeature> fetchHistoryFeatures(ReadFeatures readFeatures, NakshaContext context) {
+    try (IReadSession readSession =
+        nakshaHub().getSpaceStorage().newReadSession(SessionOptions.from(context, true))) {
+      Response result = readSession.execute(readFeatures);
+      if (!(result instanceof SuccessResponse)) {
+        return Collections.emptyList();
       }
-    } catch (NoCursor | NoSuchElementException e) {
+      return extractResponseItems((SuccessResponse) result, NakshaFeature.class);
+    } catch (NoSuchElementException e) {
       return Collections.emptyList();
     }
   }
 
-  private List<XyzFeature> featuresEnhancedWithActivity(List<XyzFeature> historyFeatures, NakshaContext context) {
+  private List<NakshaFeature> featuresEnhancedWithActivity(
+      List<NakshaFeature> historyFeatures, NakshaContext context) {
     List<FeatureWithPredecessor> featuresWithPredecessors = featuresWithPredecessors(historyFeatures, context);
     return featuresWithPredecessors.stream()
         .map(featureWithPredecessor -> enhanceWithActivityLog(
@@ -137,20 +135,21 @@ public class ActivityLogHandler extends AbstractEventHandler {
   }
 
   private List<FeatureWithPredecessor> featuresWithPredecessors(
-      List<XyzFeature> historyFeatures, NakshaContext context) {
-    List<XyzFeature> allNecessaryFeatures = collectAllNecessaryFeatures(historyFeatures, context);
-    Map<String, XyzFeature> allFeaturesByUuid = featuresByUuid(allNecessaryFeatures);
+      List<NakshaFeature> historyFeatures, NakshaContext context) {
+    List<NakshaFeature> allNecessaryFeatures = collectAllNecessaryFeatures(historyFeatures, context);
+    Map<String, NakshaFeature> allFeaturesByUuid = featuresByUuid(allNecessaryFeatures);
     return historyFeatures.stream()
         .map(feature -> new FeatureWithPredecessor(feature, allFeaturesByUuid.get(puuid(feature))))
         .toList();
   }
 
-  private List<XyzFeature> collectAllNecessaryFeatures(List<XyzFeature> historyFeatures, NakshaContext context) {
-    List<XyzFeature> missingPredecessors = fetchMissingPredecessors(missingPuuids(historyFeatures), context);
+  private List<NakshaFeature> collectAllNecessaryFeatures(
+      List<NakshaFeature> historyFeatures, NakshaContext context) {
+    List<NakshaFeature> missingPredecessors = fetchMissingPredecessors(missingPuuids(historyFeatures), context);
     return combine(historyFeatures, missingPredecessors);
   }
 
-  private List<XyzFeature> combine(List<XyzFeature> historyFeatures, List<XyzFeature> missingPredecessors) {
+  private List<NakshaFeature> combine(List<NakshaFeature> historyFeatures, List<NakshaFeature> missingPredecessors) {
     if (missingPredecessors.isEmpty()) {
       return historyFeatures;
     }
@@ -158,7 +157,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
         .toList();
   }
 
-  private Set<String> missingPuuids(List<XyzFeature> historyFeatures) {
+  private Set<String> missingPuuids(List<NakshaFeature> historyFeatures) {
     Set<String> requiredPredecessorsUuids = new HashSet<>();
     Set<String> fetchedUuids = new HashSet<>();
     historyFeatures.forEach(historyFeature -> {
@@ -172,7 +171,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
     return requiredPredecessorsUuids;
   }
 
-  private List<XyzFeature> fetchMissingPredecessors(Set<String> missingUuids, NakshaContext context) {
+  private List<NakshaFeature> fetchMissingPredecessors(Set<String> missingUuids, NakshaContext context) {
     if (missingUuids.isEmpty()) {
       return Collections.emptyList();
     }
@@ -180,16 +179,19 @@ public class ActivityLogHandler extends AbstractEventHandler {
   }
 
   private ReadFeatures missingPredecessorsRequest(Set<String> missingUuids) {
-    POp[] matchUuids = missingUuids.stream()
-        .map(missingUuid -> POp.eq(PRef.uuid(), missingUuid))
-        .toArray(POp[]::new);
-    return new ReadFeatures(properties.getSpaceId())
-        .withReturnAllVersions(true)
-        .withPropertyOp(POp.or(matchUuids));
+    PQuery[] matchUuids = missingUuids.stream()
+        .map(missingUuid ->
+            new PQuery(new Property(NakshaProperties.XYZ_KEY, "uuid"), StringOp.EQUALS, missingUuid))
+        .toArray(PQuery[]::new);
+    final ReadFeatures readFeatures = new ReadFeatures(properties.getSpaceId());
+    readFeatures.setQueryHistory(true);
+    readFeatures.setVersions(Integer.MAX_VALUE);
+    readFeatures.getQuery().setProperties(new POr(matchUuids));
+    return readFeatures;
   }
 
   @NotNull
-  private static Map<String, XyzFeature> featuresByUuid(List<XyzFeature> historyFeatures) {
+  private static Map<String, NakshaFeature> featuresByUuid(List<NakshaFeature> historyFeatures) {
     return historyFeatures.stream().collect(toMap(ActivityLogHandler::uuid, identity()));
   }
 
@@ -197,17 +199,17 @@ public class ActivityLogHandler extends AbstractEventHandler {
     return value == null || value.isBlank();
   }
 
-  private static String uuid(XyzFeature feature) {
+  private static String uuid(NakshaFeature feature) {
     return xyzNamespace(feature).getUuid();
   }
 
-  private static String puuid(XyzFeature feature) {
+  private static String puuid(NakshaFeature feature) {
     return xyzNamespace(feature).getPuuid();
   }
 
-  private static XyzNamespace xyzNamespace(XyzFeature feature) {
-    return feature.getProperties().getXyzNamespace();
+  private static XyzNs xyzNamespace(NakshaFeature feature) {
+    return feature.getProperties().getXyz();
   }
 
-  private record FeatureWithPredecessor(@NotNull XyzFeature feature, @Nullable XyzFeature oldFeature) {}
+  private record FeatureWithPredecessor(@NotNull NakshaFeature feature, @Nullable NakshaFeature oldFeature) {}
 }

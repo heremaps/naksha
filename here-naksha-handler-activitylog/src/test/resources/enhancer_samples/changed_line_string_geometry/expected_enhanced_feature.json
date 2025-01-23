@@ -93,7 +93,7 @@
       "sourceId": "TMOB"
     },
     "@ns:com:here:xyz": {
-      "action": "UPDATE",
+      "action": "UPDATED",
       "app_id": "ChangeSetPublisher",
       "author": "DEMO_APP_ID",
       "authorTime": 1706017408414,
@@ -114,7 +114,7 @@
       "version": 35
     },
     "@ns:com:here:xyz:log": {
-      "action": "UPDATE",
+      "action": "UPDATED",
       "diff": {
         "add": 3,
         "remove": 0,

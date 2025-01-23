@@ -22,12 +22,14 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.here.naksha.lib.core.util.json.JsonObject;
+import naksha.base.AnyObject;
 import org.jetbrains.annotations.Nullable;
 
-/** The standard properties of the standard feature store in the Naksha-Hub. */
+/** The standard properties of the standard feature store in the Naksha-Hub.
+ * @deprecated use the class included in naksha-here-handler-activitylog instead
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Original extends JsonObject {
+public class Original extends AnyObject {
 
   public static final String CREATED_AT = "createdAt";
   public static final String PUUID = "puuid";
