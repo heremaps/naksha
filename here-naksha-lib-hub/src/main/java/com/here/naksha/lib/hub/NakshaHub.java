@@ -49,6 +49,10 @@ import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+
+import naksha.base.FromJsonOptions;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
@@ -404,7 +408,7 @@ public class NakshaHub implements INaksha {
       }
       Extension extension;
       try {
-        extension = new ObjectMapper().readValue(exJson, Extension.class);
+        extension = JvmBoxingUtil.box(Platform.fromJSON(exJson, FromJsonOptions.DEFAULT), Extension.class);
         extList.add(extension);
       } catch (Exception e) {
         logger.error("Failed to convert extension meta data to Extension object. {} ", exJson, e);
