@@ -3,6 +3,7 @@ description = "Naksha Core Library"
 plugins {
     id("naksha.java")
     id("naksha.publish")
+    kotlin("jvm")
 }
 
 java {
@@ -26,3 +27,6 @@ dependencies {
     testImplementation(Lib.json_assert)
 }
 setOverallCoverage(0.0) // only increasing allowed!
+kotlin {
+    jvmToolchain(11)
+}
