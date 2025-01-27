@@ -1,9 +1,12 @@
 package com.here.naksha.lib.extmanager;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.lib.core.models.ExtensionConfig;
 import com.here.naksha.lib.core.models.features.Extension;
+import naksha.base.FromJsonOptions;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.JvmListProxy;
+import naksha.base.Platform;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -20,11 +23,16 @@ public class BaseSetup {
     List<Extension> list;
     try {
       String data = Files.readAllLines(file).stream().collect(Collectors.joining());
-      list = new ObjectMapper().readValue(data, new TypeReference<>() {
-      });
+      list = JvmBoxingUtil.box(Platform.fromJSON(data, FromJsonOptions.DEFAULT), ExtensionList.class);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
     return new ExtensionConfig(System.currentTimeMillis() + 6000, list,whitelistUrls,"test");
+  }
+
+  public static class ExtensionList extends JvmListProxy<Extension> {
+    public ExtensionList() {
+      super(Extension.class);
+    }
   }
 }
