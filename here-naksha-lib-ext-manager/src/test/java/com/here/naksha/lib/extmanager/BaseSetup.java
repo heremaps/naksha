@@ -1,6 +1,7 @@
 package com.here.naksha.lib.extmanager;
 
 import com.here.naksha.lib.core.models.ExtensionConfig;
+import com.here.naksha.lib.core.models.ExtensionList;
 import com.here.naksha.lib.core.models.features.Extension;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmBoxingUtil;
@@ -28,11 +29,5 @@ public class BaseSetup {
       throw new RuntimeException(e);
     }
     return new ExtensionConfig(System.currentTimeMillis() + 6000, list,whitelistUrls,"test");
-  }
-
-  public static class ExtensionList extends JvmListProxy<Extension> {
-    public ExtensionList() {
-      super(Extension.class);
-    }
   }
 }

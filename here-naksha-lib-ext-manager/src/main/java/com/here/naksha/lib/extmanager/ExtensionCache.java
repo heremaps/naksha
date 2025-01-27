@@ -103,7 +103,7 @@ public class ExtensionCache {
       final File jarFile = result.getValue();
       ClassLoader loader;
       try {
-        loader = ClassLoaderHelper.getClassLoader(jarFile, extensionConfig.getWhilelistDelegateClass());
+        loader = ClassLoaderHelper.getClassLoader(jarFile, extensionConfig.getWhitelistDelegateClasses());
       } catch (Exception e) {
         logger.error("Failed to load extension jar " + extension.getId(), e);
         return;
