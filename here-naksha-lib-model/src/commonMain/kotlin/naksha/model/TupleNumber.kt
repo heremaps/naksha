@@ -10,7 +10,7 @@ import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 /**
- * The in-memory representation of the unique [Tuple] identifier, being a 224-bit value, persisting out of the storage-number, map-number, collection-number, [version][Version], partition-number, and the local unique identifier.
+ * The in-memory representation of the unique [Tuple] identifier, being a 224-bit value, persisting out of the storage-number, map-number, collection-number, [transaction-number][Version], partition-number, and the local unique identifier.
  *
  * The tuple-number is stringified into:
  * ```

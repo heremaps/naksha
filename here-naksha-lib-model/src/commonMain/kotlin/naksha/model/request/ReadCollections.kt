@@ -43,7 +43,7 @@ open class ReadCollections() : ReadRequest() {
      * @return this request as [ReadFeatures] request.
      */
     fun toReadFeatures(): ReadFeatures {
-        val req = ReadFeatures(Naksha.VIRT_COLLECTIONS)
+        val req = ReadFeatures(Naksha.COLLECTIONS_COL)
         req.queryDeleted = false
         req.queryHistory = false
         req.featureIds.addAll(collectionIds)

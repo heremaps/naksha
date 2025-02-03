@@ -24,6 +24,15 @@ class PsqlInstance : PgInstance {
         private val instancePool = ConcurrentHashMap<String, PsqlInstance>()
         private val connCounter = AtomicLong(1)
 
+        /**
+         * Return the _Postgres Server Instance_ for the given connection data.
+         * @param host the host of the PostgresQL server.
+         * @param port the post of the PostgresQL server.
+         * @param database the database to connect to.
+         * @param user the user to authenticate against the server.
+         * @param password the password to authenticate against the server.
+         * @param readOnly if the server is a read-replicate _(read-only instance)_.
+         */
         @JvmStatic
         fun get(host: String, port: Int = 5432, database: String, user: String, password: String, readOnly: Boolean = false): PsqlInstance {
             val i = PsqlInstance(host, port, database, user, password, readOnly)
@@ -31,6 +40,10 @@ class PsqlInstance : PgInstance {
             return existing ?: i
         }
 
+        /**
+         * Return the _Postgres Server Instance_ for the given connection data.
+         * @param url the [JDBC connection string](https://jdbc.postgresql.org/documentation/use/) of the PostgresQL server, for example `jdbc:postgresql://localhost:5432/testdb?user=fred&password=secret&ssl=true`.
+         */
         @JvmStatic
         fun get(url: String): PsqlInstance {
             var existing = instancePool[url]

@@ -10,7 +10,7 @@ import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
- * Optional options when acquiring a new session.
+ * Options when acquiring a new session.
  *
  * @constructor Creates a new session, if a default should be created, simply use [from], example `SessionOptions.from(null)`, which will create session options using the defaults setup in the current [NakshaContext] (this is the right thing to do, in most of the cases, and matches the default values in the Kotlin constructor).
  * @since 3.0.0
@@ -41,7 +41,7 @@ data class SessionOptions(
     /**
      * Allow optimiser to execute requests in parallel, as long as it can provide similar guarantees that a single, not parallel session, would grant.
      *
-     * Often this is not possible for writing, but for reading, where failures can be bypassed by simply repeating the operation or falling back to a single connection. Note that parallel writing may use much more connection in parallel, this can be a problem in some situations, in these the feature can be disabled. Beware that this option is ignored when a parallel execution is forced via [ISession.executeParallel].
+     * Often this is not possible for writing, but for reading, where failures can be bypassed by simply repeating the operation or falling back to a single connection. Note that parallelization may use many connections for a single query, this can be a problem in some situations, where the storage only supports a limited number of total connections, and many clients want to read parallel. In these cases the feature can be disabled. Beware that this option is ignored when a parallel execution is forced via [ISession.executeParallel].
      * @since 3.0.0
      */
     @JvmField

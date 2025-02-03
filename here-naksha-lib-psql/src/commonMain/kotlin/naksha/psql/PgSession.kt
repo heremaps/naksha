@@ -8,7 +8,7 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.jbon.JbMapDecoder
 import naksha.jbon.JbFeatureDecoder
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
+import naksha.model.Naksha.NakshaCompanion.ADMIN_TRANSACTIONS_COL
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
@@ -275,7 +275,7 @@ open class PgSession(
      *
      * @return the current transaction.
      */
-    override fun transaction(): NakshaTransaction {
+    override fun useTransaction(): NakshaTransaction {
         var tx = transaction
         if (tx == null) {
             txBeforeStart()
@@ -289,7 +289,7 @@ open class PgSession(
     override fun execute(request: Request): Response {
         when (request) {
             is WriteRequest -> {
-                transaction()
+                useTransaction()
                 val response = PgWriter(this, request, BulkWriteExecutor(this)).execute()
                 return response
             }
@@ -317,27 +317,27 @@ open class PgSession(
             val updateTxReq = WriteRequest()
             val updateTx = Write()
             updateTxReq.add(updateTx)
-            updateTx.updateFeature(null, VIRT_TRANSACTIONS, transaction())
+            updateTx.updateFeature(null, ADMIN_TRANSACTIONS_COL, useTransaction())
             // FIXME uncomment when counts and update ready
 //            PgWriter(this, updateTxReq).execute()
         } else {
             val writeTxReq = WriteRequest()
             val writeTx = Write()
             writeTxReq.add(writeTx)
-            writeTx.createFeature(null, VIRT_TRANSACTIONS, transaction())
+            writeTx.createFeature(null, ADMIN_TRANSACTIONS_COL, useTransaction())
             PgWriter(this, writeTxReq, InstantWriteExecutor(this)).execute()
             isTransactionStored = true
         }
     }
 
     /**
-     * Invoked before a new transaction starts. This is before even the transaction number has been acquired, called by [transaction].
+     * Invoked before a new transaction starts. This is before even the transaction number has been acquired, called by [useTransaction].
      */
     open protected fun txBeforeStart() {}
 
     /**
      * Invoked after a new transaction has been started, so a connection and a transaction number are available, called by
-     * [transaction].
+     * [useTransaction].
      * @param tx the transaction that has been started.
      */
     open protected fun txAfterStart(tx: NakshaTransaction) {}

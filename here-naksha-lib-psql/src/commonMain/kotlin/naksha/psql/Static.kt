@@ -50,7 +50,7 @@ internal const val PG_YEAR = "${PG_S}y"
 /**
  * The prefix used for all internal tables.
  */
-internal const val PG_INTERNAL_PREFIX = Naksha.VIRT_PREFIX
+internal const val PG_INTERNAL_PREFIX = Naksha.ADMIN_PREFIX
 
 internal const val NAKSHA_TXN_SEQ = "naksha_txn_seq"
 internal const val NAKSHA_MAP_SEQ = "naksha_map_seq"
@@ -59,10 +59,10 @@ internal const val NAKSHA_COL_SEQ = "naksha_col_seq"
 internal const val MAX_POSTGRES_TOAST_TUPLE_TARGET = 32736
 internal const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 2048
 
-internal const val TRANSACTIONS_COL = Naksha.VIRT_TRANSACTIONS
+internal const val TRANSACTIONS_COL = Naksha.ADMIN_TRANSACTIONS_COL
 
-internal const val NKC_TABLE = Naksha.VIRT_TRANSACTIONS
-internal const val NKC_TABLE_ESC = "\"${Naksha.VIRT_TRANSACTIONS}\""
+internal const val NKC_TABLE = Naksha.ADMIN_TRANSACTIONS_COL
+internal const val NKC_TABLE_ESC = "\"${Naksha.ADMIN_TRANSACTIONS_COL}\""
 internal const val NKC_PARTITION_COUNT = "partitionCount"
 internal const val NKC_ID = "id"
 internal const val NKC_GEO_INDEX = "geoIndex"
@@ -160,8 +160,6 @@ internal const val RET_GEOMETRY = "geo"
 internal const val RET_ERR_NO = "err_no"
 internal const val RET_ERR_MSG = "err_msg"
 
-
-var TEMPORARY_TABLESPACE = "temp"
 
 /**
  * Search for the occurrence of the given byte-value.

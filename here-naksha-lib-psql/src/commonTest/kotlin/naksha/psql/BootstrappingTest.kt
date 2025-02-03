@@ -15,11 +15,11 @@ class BootstrappingTest: PgTestBase() {
         val schema = env.storage.defaultMap
         assertTrue(schema.exists(), "The default schema should exists!")
 
-        val naksha_collections = schema[Naksha.VIRT_COLLECTIONS]
-        assertTrue(naksha_collections.exists(), "${Naksha.VIRT_COLLECTIONS} should exist!")
-        val naksha_dictionaries = schema[Naksha.VIRT_DICTIONARIES]
-        assertTrue(naksha_dictionaries.exists(), "${Naksha.VIRT_DICTIONARIES} should exist!")
-        val naksha_transactions = schema[Naksha.VIRT_TRANSACTIONS]
-        assertTrue(naksha_transactions.exists(), "${Naksha.VIRT_TRANSACTIONS} should exist!")
+        val naksha_collections = schema[Naksha.COLLECTIONS_COL]
+        assertTrue(naksha_collections.exists(), "${Naksha.COLLECTIONS_COL} should exist!")
+        val naksha_dictionaries = schema[Naksha.ADMIN_DICT_COL]
+        assertTrue(naksha_dictionaries.exists(), "${Naksha.ADMIN_DICT_COL} should exist!")
+        val naksha_transactions = schema[Naksha.ADMIN_TRANSACTIONS_COL]
+        assertTrue(naksha_transactions.exists(), "${Naksha.ADMIN_TRANSACTIONS_COL} should exist!")
     }
 }

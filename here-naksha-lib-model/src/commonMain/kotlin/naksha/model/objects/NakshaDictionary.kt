@@ -54,7 +54,7 @@ open class NakshaDictionary() : NakshaFeature() {
             val content = dict.content
             var i = 0
             while (i < jbDict.length) {
-                content.add(jbDict.get(i))
+                content.add(jbDict.get(i++))
             }
             return dict
         }

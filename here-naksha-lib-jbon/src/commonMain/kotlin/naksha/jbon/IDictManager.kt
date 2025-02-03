@@ -14,15 +14,15 @@ interface IDictManager : IDictReader {
 
     /**
      * Store the given dictionary into the manager.
-     * @param dict The global dictionary to store.
-     * @throws IllegalStateException If a dictionary with the same identifier exists already.
+     * @param dict the global dictionary to store.
+     * @throws IllegalStateException if a dictionary with the same identifier exists already.
      * @since 3.0.0
      */
     fun putDictionary(dict: JbDictionary)
 
     /**
      * Deleted the given dictionary from the manager.
-     * @param dict The dictionary to delete.
+     * @param dict the dictionary to delete.
      * @return _true_ if the dictionary was deleted; _false_ if this dictionary is not stored in the manager.
      * @since 3.0.0
      */

@@ -9,13 +9,13 @@ import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_NUMBER
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_NUMBER
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
-import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
-import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES_NUMBER
-import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
-import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS_NUMBER
+import naksha.model.Naksha.NakshaCompanion.ADMIN_DICT_COL
+import naksha.model.Naksha.NakshaCompanion.ADMIN_DICT_COL_NUMBER
+import naksha.model.Naksha.NakshaCompanion.ADMIN_TRANSACTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.ADMIN_TRANSACTIONS_COL_NUMBER
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.objects.NakshaCollection
 import naksha.psql.PgStorageClass.PgStorageClass_C.Consistent
@@ -237,7 +237,7 @@ open class PgCollection internal constructor(
         val conn = connection ?: s.adminConnection(map.adminOptions())
         try {
             val NOW = Epoch()
-            if (this.id == VIRT_TRANSACTIONS) {
+            if (this.id == ADMIN_TRANSACTIONS_COL) {
                 val txn = PgTransactions(this)
                 txn.create(conn)
                 txn.createYear(conn, NOW.year)
@@ -433,7 +433,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
                         val metaIndices: MutableList<PgIndex> = mutableListOf()
                         while (cursor.next()) {
                             val rel = PgRelation(cursor)
-                            if (id == VIRT_TRANSACTIONS) {
+                            if (id == ADMIN_TRANSACTIONS_COL) {
                                 // We know that the transaction table does only have a HEAD.
                                 // We further know, that head is split yearly!
                                 if (rel.isAnyHeadRelation()) {
@@ -556,17 +556,17 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
             // TODO: Improve the details of the virtual collections
             //       They are invisible when reading all collections, by intention!
             //       However, when explicitly asked for, they can be accessed, but they can't be modified.
-            VIRT_TRANSACTIONS -> {
-                _number = VIRT_TRANSACTIONS_NUMBER
-                _nakshaCollection.set(NakshaCollection(VIRT_TRANSACTIONS, 0))
+            ADMIN_TRANSACTIONS_COL -> {
+                _number = ADMIN_TRANSACTIONS_COL_NUMBER
+                _nakshaCollection.set(NakshaCollection(ADMIN_TRANSACTIONS_COL, 0))
             }
-            VIRT_COLLECTIONS -> {
-                _number = VIRT_COLLECTIONS_NUMBER
-                _nakshaCollection.set(NakshaCollection(VIRT_COLLECTIONS, 0))
+            COLLECTIONS_COL -> {
+                _number = COLLECTIONS_COL_NUMBER
+                _nakshaCollection.set(NakshaCollection(COLLECTIONS_COL, 0))
             }
-            VIRT_DICTIONARIES -> {
-                _number = VIRT_DICTIONARIES_NUMBER
-                _nakshaCollection.set(NakshaCollection(VIRT_DICTIONARIES, 0))
+            ADMIN_DICT_COL -> {
+                _number = ADMIN_DICT_COL_NUMBER
+                _nakshaCollection.set(NakshaCollection(ADMIN_DICT_COL, 0))
             }
             else -> {
                 conn.execute("SELECT ${PgColumn.fullSelect} FROM $VIRT_COLLECTIONS_QUOTED WHERE id=$1", arrayOf(id)).use { cursor ->

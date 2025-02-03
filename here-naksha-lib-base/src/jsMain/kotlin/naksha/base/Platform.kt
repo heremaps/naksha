@@ -347,12 +347,24 @@ actual class Platform {
         @JsStatic
         actual fun isProxyKlass(klass: KClass<*>): Boolean = isAssignable(klass, Proxy::class)
 
-        @Suppress("NON_EXPORTABLE_TYPE")
+        @Suppress("NON_EXPORTABLE_TYPE", "UNCHECKED_CAST")
         @JsStatic
-        actual fun <T : Any> klassFor(constructor: KFunction<T>): KClass<out T>
-            = (js("Object.create(constructor.prototype)") as T)::class
+        actual fun <T : Any> klassFor(constructor: KFunction<T>): KClass<T>
+            = ((js("Object.create(constructor.prototype)") as T)::class) as KClass<T>
 
-        @Suppress("UNCHECKED_CAST", "NON_EXPORTABLE_TYPE")
+        @Suppress("NON_EXPORTABLE_TYPE", "UNCHECKED_CAST")
+        @JsStatic
+        actual fun <T : Any> klassForName(name: String): KClass<T> {
+            @Suppress("CanBeVal") //
+            var instance: T? = null
+            js("""var i=0; var p=name.split("."); var k=globalThis;
+while (k && i<p.length) k=k[p[i++]];
+if (typeof k==='function') instance=Object.create(k.prototype);""")
+            if (instance == null) throw IllegalArgumentException("Class not found '$name'")
+            return instance::class as KClass<T>
+        }
+
+        @Suppress("NON_EXPORTABLE_TYPE", "UNCHECKED_CAST")
         @JsStatic
         actual fun <T : Any> klassOf(o: T): KClass<T> = o::class as KClass<T>
 

@@ -7,12 +7,12 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fn0
 import naksha.jbon.IDictManager
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_NUMBER
-import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
-import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES_NUMBER
-import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
-import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS_NUMBER
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_NUMBER
+import naksha.model.Naksha.NakshaCompanion.ADMIN_DICT_COL
+import naksha.model.Naksha.NakshaCompanion.ADMIN_DICT_COL_NUMBER
+import naksha.model.Naksha.NakshaCompanion.ADMIN_TRANSACTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.ADMIN_TRANSACTIONS_COL_NUMBER
 import naksha.model.NakshaContext.NakshaContextCompanion.currentContext
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.UNAUTHORIZED
@@ -126,25 +126,25 @@ open class PgMap(
      * Returns the dictionaries' collection.
      * @return the dictionaries' collection.
      */
-    open fun dictionaries(): PgNakshaDictionaries = getCollection(VIRT_DICTIONARIES) { PgNakshaDictionaries(this) }
+    open fun dictionaries(): PgNakshaDictionaries = getCollection(ADMIN_DICT_COL) { PgNakshaDictionaries(this) }
 
     /**
      * Returns the transactions' collection.
      * @return the transactions' collection.
      */
-    open fun transactions(): PgNakshaTransactions = getCollection(VIRT_TRANSACTIONS) { PgNakshaTransactions(this) }
+    open fun transactions(): PgNakshaTransactions = getCollection(ADMIN_TRANSACTIONS_COL) { PgNakshaTransactions(this) }
 
     /**
      * Returns the collections' collection.
      * @return the collections' collection.
      */
-    open fun collections(): PgNakshaCollections = getCollection(VIRT_COLLECTIONS) { PgNakshaCollections(this) }
+    open fun collections(): PgNakshaCollections = getCollection(COLLECTIONS_COL) { PgNakshaCollections(this) }
 
     override operator fun get(collectionId: String): PgCollection = getCollection(collectionId) {
         when (collectionId) {
-            VIRT_DICTIONARIES -> PgNakshaDictionaries(this)
-            VIRT_COLLECTIONS -> PgNakshaCollections(this)
-            VIRT_TRANSACTIONS -> PgNakshaTransactions(this)
+            ADMIN_DICT_COL -> PgNakshaDictionaries(this)
+            COLLECTIONS_COL -> PgNakshaCollections(this)
+            ADMIN_TRANSACTIONS_COL -> PgNakshaTransactions(this)
             else -> PgCollection(this, collectionId)
         }
     }
@@ -168,9 +168,9 @@ open class PgMap(
     @v30_experimental
     fun pgCollectionId(collectionNumber: Int, connection: PgConnection?): String? {
         return collectionIdByNumber[collectionNumber] ?: when (collectionNumber) {
-            VIRT_TRANSACTIONS_NUMBER -> VIRT_TRANSACTIONS
-            VIRT_DICTIONARIES_NUMBER -> VIRT_DICTIONARIES
-            VIRT_COLLECTIONS_NUMBER -> VIRT_COLLECTIONS
+            ADMIN_TRANSACTIONS_COL_NUMBER -> ADMIN_TRANSACTIONS_COL
+            ADMIN_DICT_COL_NUMBER -> ADMIN_DICT_COL
+            COLLECTIONS_COL_NUMBER -> COLLECTIONS_COL
             else -> null
         }
     }

@@ -170,13 +170,13 @@ open class NakshaContext protected constructor() {
         }
 
     /**
-     * Change the current map.
-     * @param map the map to select.
+     * Change the current map-id.
+     * @param mapId the map-id to select.
      * @return this.
      * @since 3.0.0
      */
-    open fun withMap(map: String): NakshaContext {
-        this.mapId = map
+    open fun withMapId(mapId: String): NakshaContext {
+        this.mapId = mapId
         return this
     }
 

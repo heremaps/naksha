@@ -44,16 +44,16 @@ interface IWriteSession: IReadSession, IDictManager {
     fun rollback()
 
     /**
+     * Returns the current transaction, if none is yet started, start a new one. Starting a transaction, requires to allocate a sticky connection, and therefore disables parallel reading.
+     * @return the transaction.
+     * @since 3.0.0
+     */
+    fun useTransaction(): NakshaTransaction
+
+    /**
      * Returns the current transaction, if any is available.
      * @return the current transaction, if any is available; _null_ otherwise.
      * @since 3.0.0
      */
-    fun transaction(): NakshaTransaction?
-
-    /**
-     * Returns the current transaction, if none is yet started, start a new one.
-     * @return the transaction.
-     * @since 3.0.0
-     */
-    fun getOrCreateTransaction(): NakshaTransaction
+    fun getTransaction(): NakshaTransaction?
 }

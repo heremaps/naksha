@@ -158,14 +158,26 @@ expect class Platform {
         fun isProxyKlass(klass: KClass<*>): Boolean
 
         /**
-         * Returns the [KClass] created **by** the given constructor. This is mainly for JavaScript, it will simply query a cached and if not
-         * found, it will create an instance, query the [KClass] using [klassOf] and add it into the cache. Therefore, the cost of
-         * creating an instance to get the [KClass] is only paid ones in the lifetime of an application.
+         * Returns the [KClass] created **by** the given constructor.
+         *
+         * This is mainly for JavaScript, it will simply query a cached and if not found, it will create an instance, query the [KClass] using [klassOf] and add it into the cache. Therefore, the cost of creating an instance to get the [KClass] is only paid ones in the lifetime of an application.
          * @param constructor The constructor.
          * @return The [KClass] that is created **by** this constructor.
          * @throws IllegalArgumentException If the given constructor does not create any valid Kotlin object.
          */
-        fun <T : Any> klassFor(constructor: KFunction<T>): KClass<out T>
+        fun <T : Any> klassFor(constructor: KFunction<T>): KClass<T>
+
+        /**
+         * A reflective method to turn a full qualified classname into a klass instance.
+         *
+         * - In the JVM this method will use `Class.forName` to find the class, initialize it, and then return the Kotlin class of it.
+         * - In JavaScript this method will use `globalThis` to find the constructor, so `com.here.example.Foo` will resolve into `globalThis.com.here.example.Foo`, this is expected to be a constructor function, then using [klassFor] to resolve it into the Kotlin class.
+         * @param name the full qualified name of the Klass.
+         * @return the Klass.
+         * @since 3.0.0
+         * @throws IllegalArgumentException if no such Klass is found.
+         */
+        fun <T : Any> klassForName(name: String): KClass<T>
 
         /**
          * Returns the [KClass] **of** the given object.

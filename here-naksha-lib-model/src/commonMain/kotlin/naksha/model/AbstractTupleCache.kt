@@ -141,7 +141,7 @@ abstract class AbstractTupleCache(override val cacheLatencyInMicros: Int64) : IT
         val f = if (feature is NakshaFeature) feature else return null
         val xyz = f.properties.xyz
         val guid = xyz.guid ?: return null
-        val storage = Naksha.getStorage(guid.tupleNumber.storageNumber)
+        val storage = Naksha.getStorageByNumber(guid.tupleNumber.storageNumber)
         return storage?.getEncodingDictionary(feature, context)
     }
 

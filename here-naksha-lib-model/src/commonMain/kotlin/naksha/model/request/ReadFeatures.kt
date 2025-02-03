@@ -83,7 +83,9 @@ open class ReadFeatures() : ReadRequest() {
     var minVersion by INT64_NULL
 
     /**
-     * Limit the read to all features with a maximal version, _null_ if no limit. This effectively is a request for a specific version, if no [minVersion] is set.
+     * Limit the read to all features with a maximal version, _null_ if no limit _(latest)_.
+     *
+     * This effectively is a request for a specific version, if no [minVersion] is set, and [versions] is default or explicitly 1.
      * @since 3.0.0
      */
     var version by INT64_NULL

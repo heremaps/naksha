@@ -6,11 +6,11 @@ import naksha.base.*
 import naksha.geo.SpGeometry
 import naksha.jbon.*
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.VIRT_ADMIN
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
-import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
-import naksha.model.Naksha.NakshaCompanion.VIRT_MAPS
-import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
+import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.ADMIN_DICT_COL
+import naksha.model.Naksha.NakshaCompanion.ADMIN_MAPS_COL
+import naksha.model.Naksha.NakshaCompanion.ADMIN_TRANSACTIONS_COL
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_ident
@@ -27,20 +27,20 @@ import kotlin.jvm.JvmStatic
 class PgUtil private constructor() {
     companion object PgUtilCompanion {
         /**
-         * The quoted identifier of the virtual administration map to be used in queries.
+         * The quoted identifier of the administration map to be used in queries.
          * @since 3.0.0
          */
         @JvmField
         @JsStatic
-        val VIRT_ADMIN_MAP_QUOTED = quoteIdent(VIRT_ADMIN)
+        val ADMIN_MAP_QUOTED = quoteIdent(ADMIN_MAP)
 
         /**
-         * The quoted identifier of the virtual collection in which transactions are stored.
+         * The quoted identifier of the collection in which transactions are stored.
          * @since 3.0.0
          */
         @JvmField
         @JsStatic
-        val VIRT_TRANSACTIONS_QUOTED = quoteIdent(VIRT_TRANSACTIONS)
+        val ADMIN_TRANSACTIONS_COL_QUOTED = quoteIdent(ADMIN_TRANSACTIONS_COL)
 
         /**
          * The quoted identifier of the virtual maps collection to be used in queries.
@@ -48,15 +48,7 @@ class PgUtil private constructor() {
          */
         @JvmField
         @JsStatic
-        val VIRT_MAPS_QUOTED = quoteIdent(VIRT_MAPS)
-
-        /**
-         * The quoted identifier of the virtual collections collection to be used in queries.
-         * @since 3.0.0
-         */
-        @JvmField
-        @JsStatic
-        val VIRT_COLLECTIONS_QUOTED = quoteIdent(VIRT_COLLECTIONS)
+        val ADMIN_MAPS_COL_QUOTED = quoteIdent(ADMIN_MAPS_COL)
 
         /**
          * The quoted identifier of the virtual collection in which the dictionaries are stored.
@@ -64,18 +56,23 @@ class PgUtil private constructor() {
          */
         @JvmField
         @JsStatic
-        val VIRT_DICTIONARIES_QUOTED = quoteIdent(VIRT_DICTIONARIES)
+        val ADMIN_DICT_COL_QUOTED = quoteIdent(ADMIN_DICT_COL)
 
         /**
-         * Array to query the partition name from the partition number (resolves 0 to "000", 1 to "001", ..., 255 to "256"), usage like:
-         *
-         * `partitionName[partitionNumber(conn, "id", 16)]`
-         *
-         * @see partitionPosix
+         * The quoted identifier of the virtual collections collection to be used in queries.
+         * @since 3.0.0
+         */
+        @JvmField
+        @JsStatic
+        val COLLECTIONS_COL_QUOTED = quoteIdent(COLLECTIONS_COL)
+
+        /**
+         * Array to query the partition name from the partition number (resolves 0 to "000", 1 to "001", ..., 255 to "256").
+         * @see partitionSuffix
          */
         @JsStatic
         @JvmField
-        val POSIX = Array(256) { if (it < 10) "00$it" else if (it < 100) "0$it" else "$it" }
+        val SUFFIX = Array(256) { if (it < 10) "00$it" else if (it < 100) "0$it" else "$it" }
 
         /**
          * Array to create a pseudo GeoHash, which is BASE-32 encoded.
@@ -91,30 +88,6 @@ class PgUtil private constructor() {
          */
         @JvmField
         internal val TXN_LOCK_ID = lockId("naksha_txn_seq")
-
-        /**
-         * Given as parameter for [PgStorage.initStorage], `override` can be set to _true_ to force the storage to reinstall, even when
-         * the existing installed version of Naksha code is up-to-date.
-         */
-        const val OVERRIDE = "override"
-
-        /**
-         * Given as parameter for [PgStorage.initStorage], `options` can be a [PgOptions] object to be used for the initialization
-         * connection (specific changed defaults to timeouts and locks).
-         */
-        const val OPTIONS = "options"
-
-        /**
-         * Given as parameter for [PgStorage.initStorage], `context` can be a [naksha.model.NakshaContext] to be used while doing the
-         * initialization; only if [superuser][naksha.model.NakshaContext.su] is _true_, then a not uninitialized storage is installed.
-         * This requires as well superuser rights in the PostgresQL database.
-         */
-        const val CONTEXT = "context"
-
-        /**
-         * Special parameter, only recognized by the JVM storage implementation (`PsqlStorage`) to install the needed database SQL code in this version. The value is expected to be an instance of [naksha.model.NakshaVersion], a string in the same format or the binary form (64-bit integer).
-         */
-        const val VERSION: String = "version"
 
         /**
          * Quotes a string literal, so a custom string. For PostgresQL database this means to replace all single quotes
@@ -152,7 +125,6 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        @AvailableSince
         fun quoteIdent(vararg parts: String): String {
             if (parts.isEmpty()) throw NakshaException(ILLEGAL_ARGUMENT, "The given parts must not be empty")
             val quote = quote_ident(*parts)
@@ -188,13 +160,13 @@ class PgUtil private constructor() {
         fun partitionNumber(featureId: String): Int = PgPlatform.partitionNumber(featureId)
 
         /**
-         * Returns the posix of the partition based upon the given partition number, so maps 0 to "000", 1 to "001", ..., and 255 to "255".
+         * Returns the suffix of the partition based upon the given partition number, so maps 0 to "000", 1 to "001", ..., and 255 to "255".
          * @param number the partition number.
-         * @return the partition posix.
+         * @return the partition suffix.
          */
         @JsStatic
         @JvmStatic
-        fun partitionPosix(number: Int): String = POSIX[number and 255]
+        fun partitionSuffix(number: Int): String = SUFFIX[number and 255]
 
         /**
          * Calculate a pseudo geo-reference-id from the given feature id.

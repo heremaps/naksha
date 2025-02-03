@@ -50,25 +50,25 @@ class BinaryUtil private constructor() {
         const val TYPE_TUPLE_ARRAY = 4
 
         /**
-         * The subtype to signal that all tuple-numbers are full encoded (224-bit, 28-byte, encoding).
+         * The subtype _(of the Tuple-Number-Array)_ to signal that all tuple-numbers are full encoded (224-bit, 28-byte, encoding).
          * @since 3.0.0
          */
         const val SUBTYPE_TNA_28_BYTE = 0
 
         /**
-         * The subtype to signal that the storage-number is shared, and stored in the header (160-bit, 20-byte encoding).
+         * The subtype _(of the Tuple-Number-Array)_ to signal that the storage-number is shared and stored in the header _(20-byte/160-bit tuple-number encoding)_.
          * @since 3.0.0
          */
         const val SUBTYPE_TNA_20_BYTE = 1
 
         /**
-         * The subtype to signal that the storage-, and map-number are shared, and stored in the header (128-bit, 16-byte encoding).
+         * The subtype _(of the Tuple-Number-Array)_ to signal that the storage-, and map-number are shared, and stored in the header _(16-byte/128-bit tuple-number encoding)_.
          * @since 3.0.0
          */
         const val SUBTYPE_TNA_16_BYTE = 2
 
         /**
-         * The subtype to signal that the storage-, map-, and collection-number are shared, and stored in the header (96-bit, 12-byte encoding).
+         * The subtype _(of the Tuple-Number-Array)_ to signal that the storage-, map-, and collection-number are shared, and stored in the header _(12-byte/96-bit tuple-number encoding)_.
          * @since 3.0.0
          */
         const val SUBTYPE_TNA_12_BYTE = 3
@@ -147,11 +147,11 @@ class BinaryUtil private constructor() {
         fun getLength(view: PlatformDataView, offset: Int = 0): Int = dataview_get_int32(view, offset) and 16777215
 
         /**
-         * Reads the size from the header.
+         * Reads the byte-size from the header.
          *
          * @param view the view into the binary.
          * @param offset the byte-offset in the view where the binary starts.
-         * @return the size of the binary, including the header.
+         * @return the byte-size of the binary, including the header.
          * @since 3.0.0
          */
         @JvmStatic
@@ -163,7 +163,7 @@ class BinaryUtil private constructor() {
          *
          * @param view the view into the binary.
          * @param offset the byte-offset in the view where the binary starts.
-         * @return the content-offset.
+         * @return the byte-offset of the content.
          * @since 3.0.0
          */
         @JvmStatic
@@ -172,7 +172,7 @@ class BinaryUtil private constructor() {
             = if (hasExtension(view, offset)) 8 + (dataview_get_int32(view, offset + 8) and 16777215) else 8
 
         /**
-         * Helper to read a 48-bit unsigned integer (6-byte) used to store timestamps.
+         * Helper to read a 48-bit unsigned integer (6-byte) used to store timestamps as 64-bit integer.
          * @param view the view into the binary.
          * @param offset the byte-offset in the view to read.
          * @return the 48-bit unsigned integer as 64-bit integer.

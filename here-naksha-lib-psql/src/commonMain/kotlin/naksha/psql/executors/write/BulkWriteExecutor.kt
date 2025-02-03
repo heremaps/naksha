@@ -55,7 +55,7 @@ class BulkWriteExecutor(
             )
             insertToHead[collection] = plan
         }
-        insertToHead[collection]!!.addBatch(allColumnValues(tuple = tuple, feature = feature, txn = session.transaction().txn))
+        insertToHead[collection]!!.addBatch(allColumnValues(tuple = tuple, feature = feature, txn = session.useTransaction().txn))
     }
 
 
@@ -86,7 +86,7 @@ class BulkWriteExecutor(
         }
         plan.addBatch(
             args = arrayOf(
-                session.transaction().txn,
+                session.useTransaction().txn,
                 tupleNumber?.version?.txn,
                 tupleNumber?.uid,
                 flags,
@@ -105,7 +105,7 @@ class BulkWriteExecutor(
         }
         plan.addBatch(
             args = arrayOf(
-                session.transaction().txn,
+                session.useTransaction().txn,
                 tupleNumber?.version?.txn,
                 tupleNumber?.uid,
                 flags,

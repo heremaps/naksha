@@ -31,8 +31,11 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
+import naksha.model.NakshaVersion.Companion.LATEST
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaProperties
+import naksha.model.request.ReadFeatures
+import naksha.model.request.SuccessResponse
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -42,83 +45,84 @@ import kotlin.jvm.JvmStatic
 /**
  * Utility singleton of the Naksha `lib-models`.
  * @since 3.0.0
+ * @see IStorage
  */
 @JsExport
 class Naksha private constructor() {
     companion object NakshaCompanion {
         /**
-         * The prefix for virtual (internal) collections.
+         * The prefix for administrative collections.
          * @since 3.0.0
          */
-        const val VIRT_PREFIX = "naksha~"
+        const val ADMIN_PREFIX = "naksha~"
 
         /**
-         * The identifier of the virtual (internal) administration map.
+         * The identifier of the administration map.
          * @since 3.0.0
          */
-        const val VIRT_ADMIN = "naksha~admin"
+        const val ADMIN_MAP = "naksha~admin"
 
         /**
-         * The number of the virtual (internal) administration map.
+         * The number of the administration map.
          * @since 3.0.0
          */
-        const val VIRT_ADMIN_NUMBER = 0
+        const val ADMIN_MAP_NUMBER = 0
 
         /**
-         * The identifier of the virtual collection in which transactions are stored.
+         * The identifier of the collection in which transactions are stored, located in the [admin-map][ADMIN_MAP].
          * @since 3.0.0
          * @see [naksha.model.objects.NakshaTransaction]
          */
-        const val VIRT_TRANSACTIONS = "naksha~transactions"
+        const val ADMIN_TRANSACTIONS_COL = "naksha~transactions"
 
         /**
-         * The collection-number of the virtual collection in which transactions are stored.
+         * The collection-number of the collection in which transactions are stored, located in the [admin-map][ADMIN_MAP].
          * @since 3.0.0
          */
-        const val VIRT_TRANSACTIONS_NUMBER = 0
+        const val ADMIN_TRANSACTIONS_COL_NUMBER = 0
 
         /**
-         * The identifier of the virtual collection in which the maps are stored.
+         * The identifier of the collection in which maps are stored, located only within the [admin-map][ADMIN_MAP].
          * @see [naksha.model.objects.NakshaMap]
          * @since 3.0.0
          */
-        const val VIRT_MAPS = "naksha~maps"
+        const val ADMIN_MAPS_COL = "naksha~maps"
 
         /**
-         * The collection-number of the virtual collection in which the maps are stored.
+         * The collection-number of the collection in which maps are stored, located in the [admin-map][ADMIN_MAP].
          * @since 3.0.0
          */
-        const val VIRT_MAPS_NUMBER = 1
+        const val ADMIN_MAPS_COL_NUMBER = 1
 
         /**
-         * The identifier of the virtual collection in which the dictionaries are stored.
+         * The identifier of the collection in which dictionaries are stored, located in the [admin-map][ADMIN_MAP].
          * @since 3.0.0
          */
-        const val VIRT_DICTIONARIES = "naksha~dictionaries"
+        const val ADMIN_DICT_COL = "naksha~dictionaries"
 
         /**
-         * The collection-number of the virtual collection in which the dictionaries are stored.
+         * The collection-number of the collection in which dictionaries are stored, located in the [admin-map][ADMIN_MAP].
          * @since 3.0.0
          */
-        const val VIRT_DICTIONARIES_NUMBER = 2
+        const val ADMIN_DICT_COL_NUMBER = 2
 
         /**
-         * The identifier of the virtual collection in which the collections them-self are stored.
+         * The identifier of the virtual collection in which the collections of a map are managed, located within each map.
          * @since 3.0.0
          */
-        const val VIRT_COLLECTIONS = "naksha~collections"
+        const val COLLECTIONS_COL = "naksha~collections"
 
         /**
-         * The collection-number of the virtual collection in which the collections them-self are stored.
+         * The collection-number of the virtual collection in which the collections of a map are managed, located within each map.
          * @since 3.0.0
          */
-        const val VIRT_COLLECTIONS_NUMBER = 0
+        const val COLLECTIONS_COL_NUMBER = 0
 
         /**
          * The maximum length of identifiers.
          * @since 3.0.0
          */
-        const val MAX_ID_LENGTH = 42
+        const val MAX_ID_LENGTH = 42 // The answer to everything ;-)
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:
@@ -193,6 +197,20 @@ class Naksha private constructor() {
         fun partitionNumber(featureId: String?): Int = if (featureId == null) 0 else Platform.md5(featureId)[0].toInt() and 255
 
         /**
+         * Helper method to calculate a valid storage-number from a given storage-id.
+         *
+         * @param storageId the storage-id.
+         * @return the storage-number.
+         */
+        @JsStatic
+        @JvmStatic
+        fun storageNumberByHash(storageId: String): Int64 {
+            val hash = Platform.md5(storageId)
+            val view = Binary(Platform.newDataView(hash))
+            return view.getInt64(8) and Int64(0x00ff_ffff_ffff_ffff)
+        }
+
+        /**
          * Tests if the given collection is an internal one.
          * @param collectionId the collection-id to test.
          * @return _true_ if this is an internal collection; _false_ otherwise.
@@ -200,7 +218,7 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun isInternal(collectionId: String?): Boolean = collectionId != null && collectionId.startsWith(VIRT_PREFIX)
+        fun isInternal(collectionId: String?): Boolean = collectionId != null && collectionId.startsWith(ADMIN_PREFIX)
 
         /**
          * Decode the [Naksha feature][NakshaFeature] from the given [tuple][Tuple].
@@ -208,15 +226,16 @@ class Naksha private constructor() {
          * This method will query the [cache] to get the [dictionary-manager][IDictManager].
          * - Throws [NakshaError.DICT_MANAGER_NOT_FOUND], if a [dictionary-manager][IDictManager] is needed to decode the [Tuple], but not available in [cache].
          * @param tuple the tuple to decode.
+         * @param dictionaryReader the dictionary reader to use, if _null_, then the storage or cache are used.
          * @return the Naksha feature, _null_ if decoding failed or _null_ was given.
          * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
-        fun decodeTuple(tuple: Tuple): NakshaFeature {
+        fun decodeTuple(tuple: Tuple, dictionaryReader: IDictReader? = null): NakshaFeature {
             val sn = tuple.storageNumber
             val meta = tuple.meta
-            val dictReader = getStorage(sn) ?: cache
+            val dictReader = dictionaryReader ?: getStorageByNumber(sn) ?: cache
             val feature = decodeFeature(tuple.feature, meta.flags, dictReader) ?: NakshaFeature()
             feature.properties.xyz = XyzNs.fromMetadata(meta)
             val xyz = feature.properties.xyz
@@ -276,7 +295,7 @@ class Naksha private constructor() {
         }
 
         /**
-         * Encodes the given [NakshaFeature] into bytes, skipping over the [geometry][NakshaFeature.geometry] or the [XYZ-namespace][XyzNs].
+         * Encodes the given [NakshaFeature] into bytes, skipping over the [geometry][NakshaFeature.geometry], and the [XYZ-namespace][XyzNs].
          * @param feature the feature to encode.
          * @param flags the codec flags.
          * @param dict the dictionary to use for encoding; if any.
@@ -443,14 +462,14 @@ class Naksha private constructor() {
          * @since 3.0.0
          */
         @JvmField
-        internal val storagesByNumber = AtomicMap<Int64, IStorage>()
+        internal val storagesByNumber = AtomicMap<Int64, AbstractStorage<*>>()
 
         /**
          * All registered storages by [storage-id][IStorage.id].
          * @since 3.0.0
          */
         @JvmField
-        internal val storagesById = AtomicMap<String, IStorage>()
+        internal val storagesById = AtomicMap<String, AbstractStorage<*>>()
 
         /**
          * Returns a list of all currently registered storages.
@@ -460,48 +479,18 @@ class Naksha private constructor() {
         @JsStatic
         fun listStorages(): List<IStorage> = storagesByNumber.map { (_, storage) -> storage }
 
-        /**
-         * Register the given storage, this method should be called by [IStorage.initStorage].
-         * @param storage the storage to add.
-         * @return the added storage.
-         * @since 3.0.0
+         /**
+         * Returns the storage with the given configuration.
+         * @param config the configuration.
+         * @return the storage, if available.
          */
         @JvmStatic
         @JsStatic
-        fun addStorage(storage: IStorage): IStorage {
-            var added = false
-            lock.acquire().use {
-                val existing = storagesById.putIfAbsent(storage.id, storage)
-                if (existing != null) {
-                    if (existing === storage) return storage // This storage was already added.
-                    throw NakshaException(ILLEGAL_STATE, "Another storage with the same id ('${storage.id}') is registered already, existing number: ${existing.number}, provided number: ${storage.number}")
-                }
-                storagesByNumber[storage.number] = storage
-                added = true
-            }
-            if (added) cacheRef.get()?.addedStorage(storage)
-            return storage
-        }
-
-        /**
-         * Unregister the given storage, removes all cached [Tuple] of this storage, should be called by [IStorage.close].
-         * @param storage the storage to remove.
-         * @return the removed storage.
-         * @since 3.0.0
-         */
-        @JvmStatic
-        @JsStatic
-        fun removeStorage(storage: IStorage): IStorage {
-            var removed = false
-            lock.acquire().use {
-                if (storagesById.remove(storage.id, storage)) {
-                    storagesByNumber.remove(storage.number)
-                    removed = true
-                }
-            }
-            if (removed) cacheRef.get()?.removedStorage(storage)
-            return storage
-        }
+        fun getStorage(config: StorageConfig): IStorage? {
+            val s = storagesByNumber[config.number] ?: return null
+            val s2 = storagesById[config.id] ?: return null
+            return if (s!==s2 || s.config != config) null else s
+         }
 
         /**
          * Returns the storage with the given identifier.
@@ -510,8 +499,7 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        @JsName("getStorageById")
-        fun getStorage(storageId: String): IStorage? = storagesById[storageId]
+        fun getStorageById(storageId: String): IStorage? = storagesById[storageId]
 
         /**
          * Returns the storage with the given number.
@@ -520,7 +508,7 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun getStorage(storageNumber: Int64): IStorage? = storagesByNumber[storageNumber]
+        fun getStorageByNumber(storageNumber: Int64): IStorage? = storagesByNumber[storageNumber]
 
         /**
          * Returns the storage for the given tuple-number.
@@ -529,19 +517,86 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        @JsName("getStorageByTupleNumber")
-        fun getStorage(tupleNumber: TupleNumber): IStorage? = storagesByNumber[tupleNumber.storageNumber]
+        fun getStorageByTupleNumber(tupleNumber: TupleNumber): IStorage? = storagesByNumber[tupleNumber.storageNumber]
 
         /**
-         * Returns the storage with the given number.
+         * Set up the storage with the given configuration, enforces an [initStorage][AbstractStorage.initStorage] invocation that is forced to `create` or `upgrade` the storage.
+         *
+         * - If no such storage exists, create it, calling [initStorage][AbstractStorage.initStorage] with `create` and `upgrade` set to `true`.
+         * - If the same storage, but with another configuration, exists, shutdown the existing one, and gracefully replace it with a new instance, which is initialized via [initStorage][AbstractStorage.initStorage] with `create` and `upgrade` set to `true`.
+         * - If the same storage exists already, invoke [initStorage][AbstractStorage.initStorage] again with `create` and `upgrade` set to `true`.
+         * - Throws [NakshaError.ILLEGAL_STATE] if the given **storage-number** and **storage-id** are currently allocated to two different storages.
+         * - Throws [NakshaError.FORBIDDEN], if not called as super-user.
+         * - Throws [NakshaError.INITIALIZATION_FAILED], if the initialization failed.
+         * - Throws [NakshaError.STORAGE_ID_MISMATCH], if the existing _storage-id_ and/or _storage-number_ of the data does not match the given one.
+         * @param config the storage configuration.
+         * @return the storage.
+         */
+        @JvmStatic
+        @JsStatic
+        fun setupStorage(config: StorageConfig): IStorage = _useStorage(config, true)
+
+        /**
+         * Returns the storage with the given configuration.
+         *
+         * - If the same storage with the same configuration exists, just returns the existing one.
+         * - If no such storage exists, create it, and invoke [initStorage][AbstractStorage.initStorage].
+         * - If the same storage, but with another configuration, exists, shutdown the existing storage, and replace it gracefully with a  new instance using the updated configuration, invoking [initStorage][AbstractStorage.initStorage].
+         * - Throws [NakshaError.ILLEGAL_STATE] if the given **storage-number** and **storage-id** are currently allocated to two different storages.
+         * - Throws [NakshaError.FORBIDDEN], if not called as super-user, but super-user rights are necessary (only needed to create or upgrade storages).
+         * - Throws [NakshaError.INITIALIZATION_FAILED], if the initialization failed.
+         * - Throws [NakshaError.STORAGE_ID_MISMATCH], if the existing _storage-id_ and/or _storage-number_ of the data does not match the given one.
+         * @param config the storage configuration.
+         * @return the storage.
+         */
+        @JvmStatic
+        @JsStatic
+        fun useStorage(config: StorageConfig): IStorage = _useStorage(config, false)
+
+        private fun _useStorage(config: StorageConfig, forceCreateOrUpgrade:Boolean): IStorage {
+            val createOrUpdate = if (forceCreateOrUpgrade) true else null
+            val s = storagesByNumber[config.number]
+            val s2 = storagesById[config.id]
+            if (s !== s2) {
+                throw NakshaException(
+                    ILLEGAL_ARGUMENT,
+                    "The storage-id (${config.id}) and -number (${config.number}) belong to different storages")
+            }
+            if (s != null && s.config == config) {
+                // Only invoke initStorage, when we are forced to do it!
+                if (createOrUpdate != null) s.invokeInitStorage(config, create = createOrUpdate, upgrade = createOrUpdate)
+                return s
+            }
+            lock.acquire().use {
+                var storage = storagesByNumber[config.number]
+                val storage2 = storagesById[config.id]
+                if (storage !== storage2) {
+                    throw NakshaException(
+                        ILLEGAL_ARGUMENT,
+                        "The storage-id (${config.id}) and -number (${config.number}) belong to different storages")
+                }
+                if (storage != null) {
+                    if (storage.config == config) return storage
+                    storage.invokeShutdownStorage(false)
+                }
+                val klass = Platform.klassForName<AbstractStorage<*>>(config.className)
+                storage = Platform.newInstanceOf(klass)
+                storage.invokeInitStorage(config, create = createOrUpdate, upgrade = createOrUpdate)
+                storagesById[config.id] = storage
+                storagesByNumber[config.number] = storage
+                return storage
+            }
+        }
+
+        /**
+         * Returns the storage with the given identifier.
          * - Throws [NakshaError.STORAGE_NOT_FOUND], if no such storage is added to the [cache].
          * @param storageId the storage-id.
          * @return the storage.
          */
         @JvmStatic
         @JsStatic
-        @JsName("useStorageById")
-        fun useStorage(storageId: String): IStorage = storagesById[storageId]
+        fun useStorageById(storageId: String): IStorage = storagesById[storageId]
             ?: throw NakshaException(STORAGE_NOT_FOUND, "No storage found for storage-id: $storageId", id=storageId)
 
         /**
@@ -552,8 +607,39 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun useStorage(storageNumber: Int64): IStorage = storagesByNumber[storageNumber]
+        fun useStorageByNumber(storageNumber: Int64): IStorage = storagesByNumber[storageNumber]
             ?: throw NakshaException(STORAGE_NOT_FOUND, "No storage found for storage-number: $storageNumber", id=storageNumber.toString())
+
+        /**
+         * Remove the given storage, invoke [AbstractStorage.shutdownStorage] so that all cached [Tuple] of this storage are removed, eventually returning the removed and shutdown storage.
+         *
+         * There is no guarantee that this method does block until the shutdown is finished, it is perfectly fine if the shutdown is done gracefully in the background.
+         *
+         * - Throws [NakshaError.ILLEGAL_STATE] if the given **storage-number** and **storage-id** are currently allocated to two different storages.
+         * @param config the storage configuration to remove.
+         * @return the removed storage, if any.
+         * @since 3.0.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun removeStorage(config: StorageConfig): IStorage? {
+            val s = storagesByNumber[config.number]
+            if (s == null || s.config != config) return null
+            lock.acquire().use {
+                val storage = storagesByNumber[config.number]
+                if (storage == null || storage.config != config) return null
+                val storage2 = storagesById[config.id]
+                if (storage !== storage2) {
+                    throw NakshaException(
+                        ILLEGAL_ARGUMENT,
+                        "The storage-id (${config.id}) and -number (${config.number}) belong to different storages")
+                }
+                storagesById.remove(config.id)
+                storagesByNumber.remove(config.number)
+                storage.invokeShutdownStorage(true)
+                return storage
+            }
+        }
 
         /**
          * The reference to the first [tuple-cache][ITupleCache].
@@ -588,5 +674,47 @@ class Naksha private constructor() {
         @JsStatic
         val cache: ITupleCache
             get() = cacheRef.get() ?: throw NakshaException(ILLEGAL_STATE, "No cache available")
+
+        private val _adminOptions: AtomicRef<SessionOptions> = AtomicRef(null)
+
+        /**
+         * The admin-options to use by all storages for internal processing, like setting up the admin-map.
+         *
+         * This should be overridden by the application when bootstrapping.
+         *
+         * The admin-options are needed for administrative work, reading dictionaries, collection information, create administrative structures. The application should set the defaults to have more control over the `appId` and/or `author` being used, when internal data is processed, and how internal connections authenticate (`appName`).
+         *
+         * If not explicitly set, the first time the options are needed, they are creating from the current [NakshaContext].
+         *
+         * @since 3.0.0
+         */
+        @JvmStatic
+        @JsStatic
+        var adminOptions: SessionOptions
+            get() {
+                var options = _adminOptions.get()
+                while (options == null) {
+                    options = SessionOptions(
+                        appName = "lib-psql/$LATEST",
+                        appId = NakshaContext.appId(),
+                        author = NakshaContext.author(),
+                        parallel = false,
+                        useMaster = true,
+                        excludePaths = NakshaContext.defaultExcludePaths.get(),
+                        excludeFn = NakshaContext.defaultExcludeFn.get(),
+                        connectTimeout = NakshaContext.defaultConnectTimeout.get(),
+                        socketTimeout = NakshaContext.defaultSocketTimeout.get(),
+                        stmtTimeout = NakshaContext.defaultStmtTimeout.get(),
+                        lockTimeout = NakshaContext.defaultLockTimeout.get()
+                    )
+                    if (!_adminOptions.compareAndSet(null, options)) {
+                        options = null
+                    }
+                }
+                return options
+            }
+            set(value) {
+                _adminOptions.set(value)
+            }
     }
 }

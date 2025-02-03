@@ -28,7 +28,7 @@ class InstantWriteExecutor(
         tuple: Tuple,
         feature: NakshaFeature
     ) {
-        val transaction = session.transaction()
+        val transaction = session.useTransaction()
         val conn = session.usePgConnection()
         val quotedCollectionId = quoteIdent(collection.id)
         conn.execute(
@@ -138,7 +138,7 @@ class InstantWriteExecutor(
                 WHERE ${PgColumn.id.ident} = $5
             """.trimIndent(),
             args = arrayOf(
-                session.transaction().txn,
+                session.useTransaction().txn,
                 tupleNumber?.version?.txn,
                 tupleNumber?.uid,
                 flags,

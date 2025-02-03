@@ -11,6 +11,6 @@ import kotlin.js.JsExport
  */
 @JsExport
 class PgDeletedPartition(val deleted: PgDeleted, index: Int) : PgTable(
-    deleted.collection, "${deleted.name}${PG_PART}${PgUtil.partitionPosix(index)}", deleted.storageClass, true,
+    deleted.collection, "${deleted.name}${PG_PART}${PgUtil.partitionSuffix(index)}", deleted.storageClass, true,
     partitionOfTable = deleted, partitionOfValue = index
 )

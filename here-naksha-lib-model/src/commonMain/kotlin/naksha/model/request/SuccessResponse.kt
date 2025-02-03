@@ -79,7 +79,7 @@ open class SuccessResponse @Deprecated("Use secondary", ReplaceWith("SuccessResp
     open var features by FEATURES
 
     /**
-     * The handle to fetch more results, if any is available.
+     * The handle to fetch more results, if any are available.
      */
     open var handle by HANDLE_NULL
 }

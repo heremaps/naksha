@@ -26,7 +26,6 @@ import naksha.psql.PgStorage;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
-import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,7 +92,7 @@ abstract class PsqlTests {
     }
     if (storage != null) {
       try {
-        storage.close();
+        storage.shutdownStorage();
       } catch (Exception e) {
         log.atError().setMessage("Failed to close storage").setCause(e).log();
       } finally {

@@ -3,27 +3,51 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.base.Platform
+import naksha.base.PlatformLock
 import naksha.jbon.IDictReader
 import kotlin.js.JsExport
 
 /**
  * Any entity implementing the [IStorage] interface represents some data-sink, and comes with an implementation that grants access to the data. The storage normally is a singleton that opens many sessions in parallel.
  *
- * Storages operate on maps. All storages do have an administrative map ([Naksha.VIRT_ADMIN]), which can be virtual or real, implementation dependent. In this virtual admin-map the storage exposes and manages the custom maps it stores, the transaction-logs of the storage, and the global dictionaries needed for the [JBON](https://github.com/heremaps/naksha/blob/v3/docs/JBON.md).
+ * Storages operate on maps. All storages do have an [administrative map][Naksha.ADMIN_MAP], which can be virtual or real, implementation dependent. In this admin-map the storage exposes and manages the custom maps it stores, the transaction-logs of the storage, and the global dictionaries needed for the [JBON](https://github.com/heremaps/naksha/blob/v3/docs/JBON.md), plus optional implementation specific information.
  *
- * All other maps are custom maps, which are isolated data sinks within the same storage (like an own database schema, an own S3 bucket, an own SQLite database, an own directory or file, aso.). Each custom map is a fully separated storage entity. Some storages allow to access multiple maps from one session, others may limit a session to a single map, and will reject cross map operations with [NakshaError.UNSUPPORTED_OPERATION].
+ * All other maps are custom maps, which are isolated data sinks within the same storage (like an own database schema, an own S3 bucket, an own SQLite database, an own directory or file, aso.). Each custom map is a fully separated storage entity. Within each custom map one [virtual admin collection][Naksha.COLLECTIONS_COL] is exposed, which can be used to manage the collections in the map. Some storages allow to access multiple maps from one session, others may limit a session to a single map, and will reject cross map operations with [NakshaError.UNSUPPORTED_OPERATION].
  *
- * The storage will cache the dictionaries to avoid that just for decoding a new session need to be opened, which would require object creation for every single feature decoding, therefore every storage implements the [IDictReader] interface, which internally should be attached to a storage local cache, that is automatically kept up-to-date.
+ * The storage will cache the dictionaries to avoid that just for [Tuple] decoding a new session need to be opened, which would require object creation for every single feature being decoded, therefore every storage implements the [IDictReader] interface, which internally should be attached to a storage local cache, that is automatically kept up-to-date. The same cache can be accessed from every [session][ISession], because every [session][ISession] implements as well the [dictionary-reader interface][IDictReader].
  *
  * @since 2.0.7
  */
 @JsExport
-interface IStorage : IDictReader, AutoCloseable {
+interface IStorage : IDictReader {
+
+    /**
+     * A lock to be used to synchronize access to this storage.
+     *
+     * Usage like:
+     * ```kotlin
+     * storage.lock.acquire().use {
+     *   // use storage
+     * }
+     * ```
+     * @since 3.0.0
+     */
+    val lock: PlatformLock
+
+    /**
+     * The configuration object with which this storage was initialized.
+     *
+     * **Warning**: Modification of the returned configuration object will not have any impact on the storage, but it can provide wrong information to other callers of the function, so this should be avoided, apart from that the configuration object is not thread safe!
+     * - Throws [NakshaError.UNINITIALIZED], if not initialized.
+     * @since 3.0.0
+     */
+    val config: StorageConfig
 
     /**
      * The storage-id, optionally stored in the storage, must always be the same for the same physical storage.
      *
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
+     * - Throws [NakshaError.UNINITIALIZED], if the storage failed to initialize.
      * @since 2.0.8
      */
     val id: String
@@ -31,70 +55,25 @@ interface IStorage : IDictReader, AutoCloseable {
     /**
      * The storage-number, managed by environment, optionally stored in the storage, must always be the same for the same physical storage.
      *
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
+     * - Throws [NakshaError.UNINITIALIZED], if the storage failed to initialize.
      * @since 3.0.0
      */
     val number: Int64
 
     /**
-     * The admin options to use for internal processing.
-     *
-     * They are needed for administrative work, reading dictionaries, collection information, create administrative structures. The application can override the defaults to have more control over the `appId` and/or `author` being written, when internal data is processed, and how internal connections authenticate (`appName`).
-     *
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * @since 3.0.0
-     */
-    var adminOptions: SessionOptions?
-
-    /**
-     * Returns the admin options; if [adminOptions] is _null_, then creating an admin-context from the current thread-local [NakshaContext].
-     *
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
-     * @return the admin context.
-     * @since 3.0.0
-     */
-    fun useAdminOptions(): SessionOptions
-
-    /**
-     * The hard-cap (limit) of the storage. No result-set every should become bigger than this amount of features.
+     * The hard-cap _(max result size)_ of the storage. No result-set every can become bigger than this amount of features.
      *
      * Setting the value is optionally support, storages may throw an [NakshaError.UNSUPPORTED_OPERATION] exception, when trying to modify the hard-cap, or they may only allow certain values and throw an [NakshaError.ILLEGAL_ARGUMENT] exception, if the value too big. Zero and negative values are changed into the maximum of whatever the storage supports, [Int.MAX_VALUE] means no hard-cap (if supported by the storage).
      *
      * Note that technically, due to binary encoding, there is normally a hard-cap at `16777216`.
      * @since 3.0.0
      */
-    var hardCap: Int
-
-    /**
-     * Tests if this storage is initialized, so [initStorage] has been called.
-     * @return _true_ if this storage is initialized; _false_ otherwise.
-     * @since 3.0.0
-     */
-    fun isInitialized(): Boolean
-
-    /**
-     * Initializes the storage.
-     *
-     * If necessary, this method will create the storage structures to store transactions, install needed scripts, extensions, and do all other initialization works. If the storage is already initialized, the given storage-identifier, and storage-number, must match the existing ones, otherwise an [NakshaError.STORAGE_ID_MISMATCH] exception is raised. Setting up a new storage requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights, if this is not the case, an [NakshaError.FORBIDDEN] exception is raised.
-     *
-     * This method will register the storage with the [Naksha].
-     *
-     * - Throws [NakshaError.FORBIDDEN], if not called as super-user.
-     * - Throws [NakshaError.INITIALIZATION_FAILED], if the initialization failed.
-     * - Throws [NakshaError.STORAGE_ID_MISMATCH], if the existing _storage-id_ and/or _storage-number_ does not match the given one.
-     * @param id the identifier of the storage (_added in v3.0.0_).
-     * @param number the number of the storage (_added in v3.0.0_).
-     * @param create if _true_, then the method will create missing structures in the storage; if _false_, the method does not modify the storage, but rather throw an [NakshaError.INITIALIZATION_FAILED].
-     * @param upgrade if _true_, then the method will upgrade the storage admin-structures (e.g. stored procedures), when necessary; if _false_, the method does not modify the storage, but rather throw an [NakshaError.INITIALIZATION_FAILED].
-     * @param params optional special parameters that are storage dependent to influence how a storage is initialized.
-     * @since 2.0.8
-     */
-    fun initStorage(id: String, number: Int64, create: Boolean = true, upgrade: Boolean = false, params: Map<String, *>? = null)
+    val hardCap: Int
 
     /**
      * Open a new write session.
      *
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
+     * - Throws [NakshaError.UNINITIALIZED], if the storage failed to initialize.
      * @param options additional options, _null_ automatically creates them from the current [NakshaContext].
      * @return the write session.
      * @since 2.0.7
@@ -104,7 +83,7 @@ interface IStorage : IDictReader, AutoCloseable {
     /**
      * Open a new read-only session. The [SessionOptions] can be used to guarantee, that the session relates to the master-node, if replication lags are not acceptable.
      *
-     * - Throws [NakshaError.UNINITIALIZED], if [initStorage] has not been called before.
+     * - Throws [NakshaError.UNINITIALIZED], if the storage failed to initialize.
      * @param options additional options, _null_ automatically creates them from the current [NakshaContext].
      * @return the read-only session.
      * @since 2.0.7
@@ -112,21 +91,11 @@ interface IStorage : IDictReader, AutoCloseable {
     fun newReadSession(options: SessionOptions? = null): IReadSession
 
     /**
-     * Shutdown the storage instance, blocks until the storage is down (all sessions are closed).
-     *
-     * This method will remove the instance from the [Naksha].
-     *
-     * @since 2.0.7
-     */
-    override fun close()
-
-    // fun getDictionary(id: String): JbDictionary? = storage.getDictionary(id)
-
-    /**
      * The best flags to encode the given feature.
      *
+     * - Throws [NakshaError.UNINITIALIZED], if the storage failed to initialize.
      * @param feature the feature to encode; _null_ if no specific one is available.
-     * @param context the context in which the encoding happens (for example the [map][IMap] or [collection][ICollection]); _null_ if none is available.
+     * @param context the context in which the encoding happens (for example the [map][naksha.model.objects.NakshaMap] or [collection][naksha.model.objects.NakshaCollection]); _null_ if none is available.
      * @return best flags to use for encoding.
      * @since 3.0.0
      */

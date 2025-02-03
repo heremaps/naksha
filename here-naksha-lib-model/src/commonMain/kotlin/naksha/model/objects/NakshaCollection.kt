@@ -19,48 +19,57 @@ import kotlin.jvm.JvmStatic
  */
 @JsExport
 open class NakshaCollection() : NakshaFeature() {
-
     /**
-     * Create a new collection object.
-     * @param id the identifier of the collection to create.
-     * @param partitions the amount of partitions; defaults to `1`.
-     * @param storageClass the storage-class to use; defaults to `null`.
-     * @param autoPurge if automatic purge should be enabled, so deleted features are not copied into a shadow/deletion section; defaults to `false`.
-     * @param disableHistory if the history should be disabled; defaults to `false`.
+     * Create a new collection object with a specific identifier and all other properties being their default.
+     * @param id the identifier of the collection.
      * @since 3.0.0
      */
     @Suppress("LeakingThis")
     @JsName("of")
-    constructor(
-        id: String,
-        partitions: Int = 1,
-        storageClass: String? = null,
-        autoPurge: Boolean = false,
-        disableHistory: Boolean = false
-    ) : this() {
+    constructor(id: String) : this() {
         this.id = id
-        this.mapId = NakshaContext.mapId()
-        this.partitions = partitions
-        this.storageClass = storageClass
-        this.autoPurge = autoPurge
-        this.disableHistory = disableHistory
     }
 
     override fun defaultFeatureType(): String = FEATURE_TYPE
 
     /**
-     * The map-id of the map in which the collection is located.
-     *
-     * If a new collection is created, the value will be set to [NakshaContext.mapId], unless explicitly set otherwise.
+     * The map-id of the map in which the collection is located, defaults to [NakshaContext.mapId].
      * @since 3.0.0
      */
     var mapId by MAP_ID
+
+    /**
+     * @see [mapId]
+     */
+    fun withMapId(value: String): NakshaCollection {
+        this.mapId = value
+        return this
+    }
+
+    /**
+     * Sets the [mapId] to the one of the given map.
+     * @param map the map in which the collection is/should be located.
+     * @return this
+     * @since 3.0.0
+     */
+    fun inMap(map: NakshaMap): NakshaCollection {
+        this.mapId = map.id
+        return this
+    }
 
     /**
      * The collection-number, _null_ if the collection does not yet exist.
      * @since 3.0.0
      */
     var number by INT_NULL
+
+    /**
+     * @see [number]
+     */
+    fun withNumber(value: Int?): NakshaCollection {
+        this.number = value
+        return this
+    }
 
     /**
      * If partitions is given, then collection is internally partitioned in the storage, and optimised for large quantities of features. The default is no partitions, for around every 10 to 20 million features expected to be stored in a collection, one more partition should be requested.
@@ -73,6 +82,14 @@ open class NakshaCollection() : NakshaFeature() {
      * @since 3.0.0
      */
     var partitions: Int by PARTITIONS
+
+    /**
+     * @see [partitions]
+     */
+    fun withPartitions(value: Int): NakshaCollection {
+        this.partitions = value
+        return this
+    }
 
     /**
      * Tests if this collection has multiple partitions.
@@ -94,6 +111,14 @@ open class NakshaCollection() : NakshaFeature() {
     var storageClass: String? by STORAGE_CLASS
 
     /**
+     * @see [storageClass]
+     */
+    fun withStorageClass(value: String?): NakshaCollection {
+        this.storageClass = value
+        return this
+    }
+
+    /**
      * The protectionClass defines how collections should be protected.
      * The default is FULL, which means that triggers are installed that prevent any manual change, so changed are only allow through the lib-psql.
      * Next to this, two alternatives are there: SAVE, which installs triggers that automatically apply fixes, so write the history and transaction logs.
@@ -104,10 +129,26 @@ open class NakshaCollection() : NakshaFeature() {
     var protectionClass by PROTECTION_CLASS
 
     /**
+     * @see [protectionClass]
+     */
+    fun withProtectionClass(value: String): NakshaCollection {
+        this.protectionClass = value
+        return this
+    }
+
+    /**
      * If the feature-type in the [metadata][naksha.model.Metadata] should be set automatically, therefore indexing the feature type. When explicitly enabled, the storage will read the [feature-type][NakshaFeature.featureType], and copy it into the [metadata feature-type][naksha.model.Metadata.ft].
      * @since 3.0.0
      */
     var autoFeatureTypeIndex by BOOLEAN_FALSE
+
+    /**
+     * @see [autoFeatureTypeIndex]
+     */
+    fun withAutoFeatureTypeIndex(value: Boolean): NakshaCollection {
+        this.autoFeatureTypeIndex = value
+        return this
+    }
 
     /**
      * The encoding flags to be used for new rows.
@@ -118,6 +159,14 @@ open class NakshaCollection() : NakshaFeature() {
     var defaultFlags by DEFAULT_FLAGS
 
     /**
+     * @see [defaultFlags]
+     */
+    fun withDefaultFlags(value: Flags): NakshaCollection {
+        this.defaultFlags = value
+        return this
+    }
+
+    /**
      * The identifier of the global dictionary to use, when encoding new rows.
      *
      * - If _null_, the storage will use whatever is best for the storage.
@@ -126,10 +175,26 @@ open class NakshaCollection() : NakshaFeature() {
     var encodeDict by STRING_NULL
 
     /**
+     * @see [encodeDict]
+     */
+    fun withEncode(value: String?): NakshaCollection {
+        this.encodeDict = value
+        return this
+    }
+
+    /**
      * _true_ - disables history of features' modifications.
      * @since 3.0.0
      */
     var disableHistory by DISABLE_HISTORY
+
+    /**
+     * @see [disableHistory]
+     */
+    fun withDisableHistory(value: Boolean): NakshaCollection {
+        this.disableHistory = value
+        return this
+    }
 
     /**
      * If autoPurge is enabled, deleted features are automatically purged and no shadow state is kept available.
@@ -137,6 +202,14 @@ open class NakshaCollection() : NakshaFeature() {
      * @since 3.0.0
      */
     var autoPurge by AUTO_PURGE
+
+    /**
+     * @see [autoPurge]
+     */
+    fun withAutoPurge(value: Boolean): NakshaCollection {
+        this.autoPurge = value
+        return this
+    }
 
     /**
      * The index list with all indices to add to the collection; if set to _null_, default indices are created.
@@ -161,6 +234,14 @@ open class NakshaCollection() : NakshaFeature() {
     var indices by INDICES
 
     /**
+     * @see [indices]
+     */
+    fun withIndices(value: StringList): NakshaCollection {
+        this.indices = value
+        return this
+    }
+
+    /**
      * The maxAge decides about the maximum age of features in the history in days.
      * Note that there is no guarantee that features are deleted exactly after having reached their max-age.
      * However, they are eligible to be deleted at as soon as possible.
@@ -169,14 +250,38 @@ open class NakshaCollection() : NakshaFeature() {
     var maxAge by MAX_AGE
 
     /**
-     * The quadPartitionSize decides (for the optimal partitioning algorithm) how many features should be placed into each "optimal" tile.
+     * @see [maxAge]
+     */
+    fun withMaxAge(value: Int64): NakshaCollection {
+        this.maxAge = value
+        return this
+    }
+
+    /**
+     * The quadPartitionSize decides _(for the optimal partitioning algorithm)_ how many features should be placed into each "optimal" tile.
      * @since 3.0.0
      */
     var quadPartitionSize: Int by QUAD_PARTITION_SIZE
 
-    var estimatedFeatureCount: Int64 by ESTIMATED_FEATURE_COUNT
+    /**
+     * @see [quadPartitionSize]
+     */
+    fun withQuadPartitionSize(value: Int): NakshaCollection {
+        this.quadPartitionSize = value
+        return this
+    }
 
-    var estimatedDeletedFeatures: Int64 by ESTIMATED_DELETED_FEATURES
+    /**
+     * The estimated amount of features stored within a collection, read-only property only set by the storage.
+     * @since 3.0.0
+     */
+    val estimatedFeatureCount: Int64 by _ESTIMATED_FEATURE_COUNT
+
+    /**
+     * The estimated amount of deleted features within a collection, read-only property only set by the storage.
+     * @since 3.0.0
+     */
+    val estimatedDeletedFeatures: Int64 by _ESTIMATED_DELETED_FEATURES
 
     companion object NakshaCollection_C {
         /**
@@ -218,12 +323,24 @@ open class NakshaCollection() : NakshaFeature() {
         const val DEFAULT_GEO_INDEX = GEO_INDEX_GIST
 
         /**
-         * The value returned as [estimatedFeatureCount] and [estimatedDeletedFeatures], before the estimation is actually done.
+         * The value returned as [estimatedFeatureCount] and [estimatedDeletedFeatures], before the estimation was actually done, so when the number is totally unknown _(-1)_.
          * @since 3.0.0
          */
         @JvmStatic
         @JsStatic
-        val BEFORE_ESTIMATION = Int64(-1)
+        val UNKNOWN = Int64(-1)
+
+        /**
+         * The name of the [estimatedFeatureCount] property.
+         * @since 3.0.0
+         */
+        const val ESTIMATED_FEATURE_COUNT = "estimatedFeatureCount"
+
+        /**
+         * The name of the [estimatedDeletedFeatures] property.
+         * @since 3.0.0
+         */
+        const val ESTIMATED_DELETED_FEATURES = "estimatedDeletedFeatures"
 
         private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 0 }
         private val GEO_INDEX = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> DEFAULT_GEO_INDEX }
@@ -232,14 +349,14 @@ open class NakshaCollection() : NakshaFeature() {
         private val BOOLEAN_FALSE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val DEFAULT_FLAGS = NullableProperty<NakshaCollection, Flags>(Flags::class)
         private val INT_NULL = NullableProperty<NakshaCollection, Int>(Int::class)
-        private val MAP_ID = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> NakshaContext.mapId()}
+        private val MAP_ID = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> NakshaContext.mapId() }
         private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)
         private val DISABLE_HISTORY = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val AUTO_PURGE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val INDICES = NotNullProperty<NakshaCollection, StringList>(StringList::class)
         private val MAX_AGE = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> Int64(-1) }
         private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 10_485_760 }
-        private val ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> BEFORE_ESTIMATION }
-        private val ESTIMATED_DELETED_FEATURES =  NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> BEFORE_ESTIMATION }
+        private val _ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }
+        private val _ESTIMATED_DELETED_FEATURES =  NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }
     }
 }

@@ -215,27 +215,40 @@ The lifecycle was designed so that every mobile phone, every car, every device, 
 We intend to split the 64-bit storage-number into parts, for example:
 
 ```
-  PA/SEG  BLOCK    NUMBER   
-  [0000]:[0000:00][00:0000]
+  PAS CHUNK  BLOCK    NUMBER   
+  [00][00]:[0000:00][00:0000]
 
 - PUBLIC: 1-bit
 - ANONYM: 1-bit
-- SEG: Segment, 14-bit
+- SEGMENT: Segment, 6-bit
+- CHUNK: Allocation chunk, 8-bit
 - BLOCK: Allocation block, 24-bit
 - NUMBER: Allocation number, 24-bit
 ```
 
-The idea is to split a storage-number logically into _segment_, _block_, and _number_. The suggested stringified human- and machine-readable notation would be:
+The idea is to split a storage-number logically into:
 
-`urn:here:naksha:sn:{pa}:{segment}:{block}:{number}`
+- public addresses
+- anonymous addresses
+- private addresses within HERE _(not public, not anonymous)_
+- hash-address based upon MD5-hash of storage-id _(segment is 0)_
+- reserved-addresses _(segment > 0)_, which persist out of _segment_, _chunk_, _block_, and _number_
 
-For example `urn:here:naksha:sn::5:1:19`, but as this is for human-readable notation, the URN prefix (`urn:here:naksha`) is not necessary, and can be moved, truncating the string to `sn::5:1:19`, which means private storage, segment `5`, block `1`, and number `24`, resulting in the final 64-bit value `1407374900330520` (`(5*2^48)+(1*2^24)+19`).
+The suggested stringified human- and machine-readable notation would be:
 
-If the `PUBLIC` bit is set, the prefix is changed to `public`, for example `sn:public:5:1:19`, if the segment is part of the privacy extension, it becomes `sn:anonym:5:1:19`. The public flag just changes the storage-number into the public shared namespace, but the anonym flag indicates a [privacy storage-number](#privacy-extension).
+`urn:here:naksha:sn:{pa}:{seg}:{chunk}:{block}:{number}`
 
-We would allocate segment `0` for HERE internal, and provide each team within HERE with an own block, so each team can create up to 16 million storages, while HERE can have up to 16 million teams.
+For example `urn:here:naksha:sn::1:5:1:19`, but as this is for human-readable notation, the URN prefix (`urn:here:naksha`) is not necessary, and can be moved, truncating the string to `sn::1:5:1:19`, which means private storage, segment `1`, chunk `5`, block `1`, and number `19`, resulting in the final 64-bit value `5910974527701010` (`(1*2^52)+(5*2^48)+(1*2^24)+19`).
 
-For example, smaller customers are merged into shared blocks, while bigger customers will receive own blocks, so they can subdivide their storage-numbers. Some important huge customers may get a whole segment, or a part of a segment, when they have need for more than 16 million storages.
+If all the 8 high bits are zero, the storage-number is the lower 52-bit (big endian) of the MD5-hash above the UTF-8 encoded bytes of the storage-id.
+
+If the `PUBLIC` bit is set, the prefix is changed to `public`, for example `sn:public:1:5:1:19`, if the segment is part of the privacy extension, it becomes `sn:anonym:1:5:1:19`. The public flag just changes the storage-number into the public shared namespace, but the anonymous flag indicates a [privacy storage-number](#privacy-extension).
+
+We allocate segment `0` for storage-numbers which are derived from the storage-id using MD5-hash, all other segments are reserved, distributed and managed by a central authority.
+
+Within the private HERE address-space, we reserve segment `1` for HERE internal storage-numbers, all other segments are reserved for customer specific addresses.
+
+For example, smaller customers are merged into shared blocks, while bigger customers will receive own blocks or chunks, so they can subdivide their storage-numbers. Some important huge customers may get a whole segment.
 
 ### Goal
 For example, a car company could acquire a block or segment of storage-numbers from Naksha to allocate an individual storage-number to each car. They could synchronize this with a car identifier, and assign an own storage-number to each car. A company that manages buildings could use for each building an own dedicated storage-number, then create and own map for each flat, with one collection per room. These are just rough ideas.

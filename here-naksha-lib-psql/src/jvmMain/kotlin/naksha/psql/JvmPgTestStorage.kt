@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicReference
  * A special storage that optionally starts an own docker container.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-class PsqlTestStorage private constructor(cluster: PsqlCluster, schemaName: String) : PsqlStorage(cluster, schemaName) {
+class JvmPgTestStorage private constructor(cluster: PsqlCluster, schemaName: String) : JvmPgStorage(cluster, schemaName) {
 
     internal data class DockerContainerInfo(
         val container: GenericContainer<*>,
@@ -24,7 +24,7 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster, schemaName: Stri
     companion object {
 
         @JvmField
-        internal val storage = AtomicReference<PsqlTestStorage?>()
+        internal val storage = AtomicReference<JvmPgTestStorage?>()
 
         @JvmField
         internal val DEFAULT_OPTIONS = SessionOptions(
@@ -56,14 +56,14 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster, schemaName: Stri
         }
 
         @JvmStatic
-        internal fun newTestStorage(options: SessionOptions = DEFAULT_OPTIONS, params: Map<String, *>? = null): PsqlTestStorage {
+        internal fun newTestStorage(options: SessionOptions = DEFAULT_OPTIONS, params: Map<String, *>? = null): JvmPgTestStorage {
             storage.set(null)
             return getTestOrInitStorage(options, params)
         }
 
         @JvmStatic
-        internal fun getTestOrInitStorage(options: SessionOptions = DEFAULT_OPTIONS, params: Map<String, *>? = null): PsqlTestStorage {
-            var testStorage: PsqlTestStorage? = storage.get()
+        internal fun getTestOrInitStorage(options: SessionOptions = DEFAULT_OPTIONS, params: Map<String, *>? = null): JvmPgTestStorage {
+            var testStorage: JvmPgTestStorage? = storage.get()
             while (testStorage == null) {
                 optionsRef.set(options)
                 var schemaName = PgTest.TEST_SCHEMA
@@ -122,7 +122,7 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster, schemaName: Stri
                         Runtime.getRuntime().addShutdownHook(containerInfo.shutdownThread)
                     }
                 }
-                testStorage = PsqlTestStorage(PsqlCluster(psqlInstance), schemaName)
+                testStorage = JvmPgTestStorage(PsqlCluster(psqlInstance), schemaName)
                 // The initialization is only successful, when there is still no existing storage.
                 if (!storage.compareAndSet(null, testStorage)) {
                     testStorage = null
@@ -147,10 +147,10 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster, schemaName: Stri
 
     }
 
-    override fun close() {
+    override fun shutdownStorage() {
         storage.compareAndSet(this, null)
         try {
-            super.close()
+            super.shutdownStorage()
         } catch (e: Exception) {
             logger.info("Error while trying to close the test storage: {}", e)
         }

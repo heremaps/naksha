@@ -14,7 +14,7 @@ import kotlin.js.JsExport
 open class Response : AnyObject() {
 
     /**
-     * The amount of results being part of the response.
+     * The amount of [Tuple][naksha.model.Tuple] results being part of the response.
      */
     open fun resultSize(): Int = 0
 }

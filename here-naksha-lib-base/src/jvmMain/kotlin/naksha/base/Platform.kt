@@ -14,6 +14,8 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.kotlinModule
 import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
+import java.lang.invoke.MethodHandles
+import java.lang.reflect.Method
 import java.security.MessageDigest
 import java.text.Normalizer
 import java.util.concurrent.ConcurrentHashMap
@@ -24,6 +26,7 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.isSuperclassOf
 import kotlin.reflect.full.primaryConstructor
+
 
 /**
  * The JVM implementation of the static Naksha multi-platform singleton.
@@ -175,7 +178,10 @@ actual class Platform {
         @JvmField
         internal val initialized = AtomicBoolean(false)
 
-        private val nonArgsConstuctorsCache: AtomicMap<KClass<out Proxy>, KFunction<out Proxy>>
+        private val nonArgsConstuctorsCache: AtomicMap<KClass<Proxy>, KFunction<Proxy>>
+        private val ensureClassInitialized: Method? // unsafe.ensureClassInitialized
+        private val lookupInstance: Any? // MethodHandles.lookup()
+        private val ensureInitialized: Method? // MethodHandles.lookup().ensureInitialized(klass);
 
         init {
             val unsafeConstructor = Unsafe::class.java.getDeclaredConstructor()
@@ -184,6 +190,25 @@ actual class Platform {
             val someByteArray = ByteArray(8)
             baseOffset = unsafe.arrayBaseOffset(someByteArray.javaClass)
             nonArgsConstuctorsCache = AtomicMap()
+
+            var _ensureClassInitialized: Method?
+            var _ensureInitialized: Method?
+            var _lookupInstance: Any?
+            try {
+                // Note: Before Java 15, `MethodHandles.lookup().ensureInitialized(klass)` does not exist, we need to use Unsafe!
+                _ensureClassInitialized = unsafe.javaClass.getMethod("ensureClassInitialized", Class::class.java)
+                _ensureInitialized = null
+                _lookupInstance = null
+            } catch (ignore: NoSuchMethodException) {
+                // In Java 23+ this method does not exist!
+                _ensureClassInitialized = null
+                val lookupMethod = MethodHandles::class.java.getMethod("lookup")
+                _lookupInstance = lookupMethod.invoke(null)
+                _ensureInitialized = _lookupInstance.javaClass.getMethod("ensureInitialized", Class::class.java)
+            }
+            ensureClassInitialized = _ensureClassInitialized
+            ensureInitialized = _ensureInitialized
+            lookupInstance = _lookupInstance
         }
 
         @JvmStatic
@@ -206,8 +231,18 @@ actual class Platform {
         actual fun isProxyKlass(klass: KClass<*>): Boolean = Proxy::class.isSuperclassOf(klass)
 
         @JvmStatic
-        actual fun <T : Any> klassFor(constructor: KFunction<T>): KClass<out T> {
+        actual fun <T : Any> klassFor(constructor: KFunction<T>): KClass<T> {
             TODO("Implement me!")
+        }
+
+        @JvmStatic
+        actual fun <T : Any> klassForName(name: String): KClass<T> {
+            try {
+                @Suppress("UNCHECKED_CAST")
+                return (Class.forName(name, true, this::class.java.classLoader).kotlin) as KClass<T>
+            } catch (e: Exception) {
+                throw IllegalArgumentException("Class '$name' not found", e)
+            }
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -358,7 +393,19 @@ actual class Platform {
 
         @JvmStatic
         actual fun initializeKlass(klass: KClass<*>) {
-            unsafe.ensureClassInitialized(klass.java)
+            // This code is required, because in Java 23 they removed unsafe.ensureClassInitialized, but
+            // the replacement method does not exist before Java 15, this is such a nonsense!
+            val ensureInitialized = this.ensureInitialized
+            val lookupInstance = this.lookupInstance
+            if (ensureInitialized != null && lookupInstance != null) {
+                ensureInitialized.invoke(lookupInstance, klass)
+                // == MethodHandles.lookup().ensureInitialized(klass.java);
+            } else {
+                val ensureClassInitialized = this.ensureClassInitialized
+                require(ensureClassInitialized != null) { "Failed to use unsafe.ensureClassInitialized" }
+                ensureClassInitialized.invoke(unsafe, klass.java)
+                // == unsafe.ensureClassInitialized(klass.java)
+            }
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -528,11 +575,13 @@ actual class Platform {
             return proxy
         }
 
+        @Suppress("UNCHECKED_CAST")
         private fun <T: Proxy> resolveConstructorFor(klass: KClass<T>): KFunction<T>{
-            var constructor = nonArgsConstuctorsCache[klass]
-            if(constructor == null){
+            val key = klass as KClass<Proxy>
+            var constructor = nonArgsConstuctorsCache[key]
+            if (constructor == null) {
                 constructor = nonArgConstructorFor(klass)
-                nonArgsConstuctorsCache[klass] = constructor
+                nonArgsConstuctorsCache[key] = constructor
             }
             return constructor as KFunction<T>
         }

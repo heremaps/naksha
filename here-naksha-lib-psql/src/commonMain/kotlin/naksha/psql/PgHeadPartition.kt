@@ -11,6 +11,6 @@ import kotlin.js.JsExport
  */
 @JsExport
 class PgHeadPartition internal constructor(val head: PgHead, index: Int) : PgTable(
-    head.collection, "${head.name}${PG_PART}${PgUtil.partitionPosix(index)}", head.storageClass, true,
+    head.collection, "${head.name}${PG_PART}${PgUtil.partitionSuffix(index)}", head.storageClass, true,
     partitionOfTable = head, partitionOfValue = index
 )

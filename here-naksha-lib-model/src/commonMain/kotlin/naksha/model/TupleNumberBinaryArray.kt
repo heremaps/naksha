@@ -16,7 +16,7 @@ import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
- * A helper that allows reading a binary encoded [TupleNumber] array.
+ * A helper that allows reading a binary encoded array of [TupleNumber]'s.
  *
  * @since 3.0.0
  */

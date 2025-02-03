@@ -86,7 +86,7 @@ class CreateCollection(
         tuple: Tuple,
         feature: NakshaFeature
     ): Tuple {
-        val transaction = session.transaction()
+        val transaction = session.useTransaction()
         val conn = session.usePgConnection()
         conn.execute(
             sql = """ INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})

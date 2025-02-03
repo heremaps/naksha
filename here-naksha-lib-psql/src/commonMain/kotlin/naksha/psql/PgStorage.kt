@@ -3,7 +3,6 @@ package naksha.psql
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fx2
-import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.FetchMode.*
 import naksha.model.NakshaError.NakshaErrorCompanion.FORBIDDEN
@@ -34,11 +33,6 @@ import naksha.psql.PgColumn.PgColumnCompanion.txn_next
 import naksha.psql.PgColumn.PgColumnCompanion.ft
 import naksha.psql.PgColumn.PgColumnCompanion.uid
 import naksha.psql.PgColumn.PgColumnCompanion.updated_at
-import naksha.psql.PgUtil.PgUtilCompanion.CONTEXT
-import naksha.psql.PgUtil.PgUtilCompanion.OPTIONS
-import naksha.psql.PgUtil.PgUtilCompanion.OVERRIDE
-import naksha.psql.PgUtil.PgUtilCompanion.VERSION
-import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 
 // TODO: Create "naksha~admin" map with map-number 0
@@ -57,50 +51,63 @@ import kotlin.js.JsExport
 //       Split the work into steps, initially, lets use md5-hash above map-id (schema-name) as map-number
 
 /**
- * The PostgresQL storage that manages session and connections.
+ * A storage implementation based upon PostgresQL database.
  *
- * This class is a default multi-platform implements of the [IStorage] interface for the PostgresQL database. To get an instance of it, a platform specific code has to be used, being:
+ * This class is a default multi-platform implementation of the [IStorage] interface for the PostgresQL database. To get an instance of it, a platform specific code has to be used.
  *
- * - In Java: Create an instance of `PsqlStorage`, which is the only version that can install needed scripts, when [initStorage] is called. Multiple instances can be created.
- * - In PLV8 (the PostgresQL database extension): A new storage instance is created as singleton, and added into to the global `plv8` object, when the `naksha_start_session` SQL function is executed, which is necessary for all other Naksha SQL functions to work. This singleton will hold only a single [PgSession], trying to acquire a second one, will always error with [NakshaError.ILLEGAL_STATE]. The [cluster] will be a fake object.
+ * ### JVM / Java,Scala,Kotlin,...
+ * On the JVM platform, create an instance using a configuration, and operate with it like for example:
+ * ```kotlin
+ * val config = PgConfig()
+ *   .withId("demo")
+ *   .withMaster(PgInstanceConfig()
+ *   .withHost("host")
+ *   .withDb("testdb")
+ *   .withUser("fred")
+ *   .withPassword("secret"))
+ * val storage = Naksha.useStorage(config)
+ * storage.newReadSession().use { session ->
+ *   ...
+ * }
+ * ```
+ * If needed, you can cast the returned [IStorage] up to [PgStorage] or even `JvmPgStorage`.
+ *
+ * ### JavaScript / PLV8
+ * When using Naksha storage within PostgresQL, an initialized storage is needed. Ones a storage was initialized from external, every PostgresQL session can prepare usage via:
+ * ```SQL
+ * SELECT naksha_init_session('id', 12345678, 'appName', 'appId', 'author');
+ * ```
+ * This creates a [PgStorage] singleton in the global context (`globalThis.naksha.storage`), a session singleton (`globalThis.naksha.session`), and the `NakshaContext` (`globalThis.naksha.context`). The _session_ is the one that is currently being used, and normally an [IWriteSession], even when execute on a read-replica, as the internal PLV8 code does not know that this instance is a read-replica. This is necessary for all other Naksha SQL functions to work. The storage only support a single [PgSession], which is already exposed via `naksha.session`, trying to acquire another session will always fail with [NakshaError.ILLEGAL_STATE]. Actually, within PLV8 each `plv8` session is always bound to a single connection/session. Usage example:
+ * ```
+ * SELECT naksha_init_session('id', 12345678, 'appName', 'appId', 'author');
+ * DO $$
+ *   // Print storage-id to server output.
+ *   plv8.elog(NOTICE, "Hello storage " + naksha.storage.id);
+ *   // All code that requires a ISession, should use:
+ *   plv8.elog(NOTICE, naksha.session.getMapById("foo").number);
+ * $$ LANGUAGE plv8;
+ * ```
+ * After the session was closed, a new call to `naksha_init_session` should be done.
+ *
+ * If needed, you can cast the returned [IStorage] up to [PgStorage], or even to `JsPgStorage`.
+ *
+ * ### JavaScript / Browser
+ * TBD, technically every connection should be represented using a single WebSocket.
+ *
+ * ### JavaScript / Node
+ * TBD, technically every connection can be represented by a real PostgresQL connection, the same way Java does it.
+ * @since 3.0.0
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-open class PgStorage protected constructor(
-    /**
-     * The PostgresQL cluster to which this storage is connected.
-     *
-     * Will be _null_, if being executed within [PLV8 extension](https://plv8.github.io/).
-     */
-    open val cluster: PgCluster
-) : IStorage {
-
-    override var adminOptions: SessionOptions? = null
-
-    override fun useAdminOptions(): SessionOptions = adminOptions ?: SessionOptions(
-        appName = "lib-psql/$LATEST",
-        appId = NakshaContext.appId(),
-        author = NakshaContext.author(),
-        parallel = false,
-        useMaster = true,
-        excludePaths = NakshaContext.defaultExcludePaths.get(),
-        excludeFn = NakshaContext.defaultExcludeFn.get(),
-        connectTimeout = NakshaContext.defaultConnectTimeout.get(),
-        socketTimeout = NakshaContext.defaultSocketTimeout.get(),
-        stmtTimeout = NakshaContext.defaultStmtTimeout.get(),
-        lockTimeout = NakshaContext.defaultLockTimeout.get()
-    )
-
-    override var hardCap: Int = 16777216
-        set(value) {
-            if (value > 16777216) throw NakshaException(ILLEGAL_ARGUMENT, "The maximum hard-cap supported is 16777216, but $value was requested")
-            field = if (value <= 0) 16777216 else value
-        }
+abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
 
     protected var _pageSize: Int? = null
 
     /**
      * The page-size of the database (`current_setting('block_size')`).
+     * - Throws [NakshaError.UNINITIALIZED], if the storage is not yet initialized.
+     * @since 3.0.0
      */
     val pageSize: Int
         get() = _pageSize ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
@@ -109,36 +116,60 @@ open class PgStorage protected constructor(
 
     /**
      * The maximum size of a tuple (row).
+     * - Throws [NakshaError.UNINITIALIZED], if the storage is not yet initialized.
+     * @since 3.0.0
      */
     val maxTupleSize: Int
         get() = _maxTupleSize ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
     private var _brittleTableSpace: String? = null
+    private var _brittleTableSpaceOid: Int? = null
 
     /**
      * The tablespace to use for storage-class "brittle"; if any.
+     * - Throws [NakshaError.UNINITIALIZED], if the storage is not yet initialized.
+     * @since 3.0.0
      */
     val brittleTableSpace: String?
         get() {
-            if (!isInitialized()) throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+            if (!initialized) throw NakshaException(UNINITIALIZED, "Storage uninitialized")
             return _brittleTableSpace
         }
 
     private var _tempTableSpace: String? = null
+    private var _tempTableSpaceOid: Int? = null
 
     /**
      * The tablespace to use for temporary tables and their indices; if any.
+     * - Throws [NakshaError.UNINITIALIZED], if the storage is not yet initialized.
+     * @since 3.0.0
      */
     val tempTableSpace: String?
         get() {
-            if (!isInitialized()) throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+            if (!initialized) throw NakshaException(UNINITIALIZED, "Storage uninitialized")
             return _tempTableSpace
+        }
+
+    private var _ephemeralTableSpace: String? = null
+    private var _ephemeralTableSpaceOid: Int? = null
+
+    /**
+     * The tablespace to use for ephemeral tables and their indices; if any.
+     * - Throws [NakshaError.UNINITIALIZED], if the storage is not yet initialized.
+     * @since 3.0.0
+     */
+    val ephemeralTableSpace: String?
+        get() {
+            if (!initialized) throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+            return _ephemeralTableSpace
         }
 
     private var _gzipExtension: Boolean? = null
 
     /**
      * If the [pgsql-gzip][https://github.com/pramsey/pgsql-gzip] extension is installed, therefore PostgresQL supported `gzip`/`gunzip` as standalone SQL function by the database. Note, that if this is not the case, we're installing code that is implemented in JavaScript.
+     * - Throws [NakshaError.UNINITIALIZED], if the storage is not yet initialized.
+     * @since 3.0.0
      */
     val gzipExtension: Boolean
         get() = _gzipExtension ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
@@ -147,21 +178,11 @@ open class PgStorage protected constructor(
 
     /**
      * The PostgresQL database version.
+     * - Throws [NakshaError.UNINITIALIZED], if the storage is not yet initialized.
+     * @since 3.0.0
      */
     val postgresVersion: NakshaVersion
         get() = _postgresVersion ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
-
-    private var _id: AtomicRef<String> = AtomicRef(null)
-
-    override val id: String
-        get() = _id.get() ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
-
-    private var _number: Int64? = null
-
-    override val number: Int64
-        get() = _number ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
-
-    override fun isInitialized(): Boolean = _id.get() != null
 
     protected var admin_oid: Int? = null
 
@@ -178,54 +199,61 @@ open class PgStorage protected constructor(
     protected val mapNumberToId: AtomicMap<Int, String> = Platform.newAtomicMap()
 
     /**
-     * A lock for the storage to synchronize access to some properties and to prevent, that multiple threads in parallel initialize the storage.
-     * - [initStorage]
+     * Test if this storage has the given _id_ and _number_.
+     * - Throws [STORAGE_ID_MISMATCH], if an invalid _id_ or _number_ was given.
+     * @param id the expected _id_.
+     * @param number the expected _number_.
+     * @return _true_ if the current _id_ and _number_ are the given-expected ones; _false_ if the storage is not initialized.
      */
-    protected val lock = Platform.newLock()
-
-    override fun initStorage(id: String, number: Int64, params: Map<String, *>?) {
-        val this_id = this._id.get()
-        if (this_id != null) {
-            if (this_id != id) {
-                throw NakshaException(STORAGE_ID_MISMATCH, "The storage-id is '$this_id', but is expected to be '$id'")
-            }
-            if (this.number != number) {
-                throw NakshaException(STORAGE_ID_MISMATCH, "The storage-number is '$this.number', but is expected to be '$number'")
-            }
-            return
+    private fun isIdAndNumber(id: String, number: Int64): Boolean {
+        if (this.id != id) {
+            throw NakshaException(STORAGE_ID_MISMATCH, "The storage-id is '${this.id}', but was expected to be '$id'")
         }
+        if (this.number != number) {
+            throw NakshaException(STORAGE_ID_MISMATCH, "The storage-number is '${this.number}', but was expected to be '$number'")
+        }
+        return true
+    }
+
+    /**
+     * If there is a special tablespace for temporary tables.
+     */
+    protected var temp_tablespace: String? = null
+
+    /**
+     * If there is a special tablespace for brittle tables.
+     */
+    protected var brittle_tablespace: String? = null
+
+    /**
+     * If there is a special tablespace for ephemeral tables.
+     */
+    protected var ephemeral_tablespace: String? = null
+
+    /**
+     * Internally invoked by [initStorage], if the storage is outdated or not available at all.
+     * @param config the configuration to be used for setup or upgrade.
+     * @since 3.0.0
+     */
+    protected open fun createOrUpgradeStorage(config: PgConfig) {
+        throw NakshaException(UNSUPPORTED_OPERATION, "This implementation is not capable of setting-up or upgrading the storage")
+    }
+
+    override fun initStorage(config: PgConfig, create: Boolean?, upgrade: Boolean?) {
+        if (isIdAndNumber(id, number)) return
         lock.acquire().use {
-            if (this._id.get() != null) return
-            val context: NakshaContext = if (params != null && params.containsKey(CONTEXT)) {
-                val v = params[CONTEXT]
-                require(v is NakshaContext) { "params.$CONTEXT must be an instance of NakshaContext" }
-                v
-            } else NakshaContext.currentContext()
+            if (isIdAndNumber(id, number)) return
 
-            val options: SessionOptions = if (params != null && params.containsKey(OPTIONS)) {
-                val v = params[OPTIONS]
-                require(v is SessionOptions) { "params.$OPTIONS must be an instance of SessionOptions" }
-                v
-            } else SessionOptions.from(context)
+            // Ensure that the cluster is available.
+            // Within PLV8 implementation this will create a fake PgCluster instance, only supporting a single connection.
+            setupCluster(config)
 
-            var override = false
-            if (params != null && params.containsKey(OVERRIDE)) {
-                val v = params[OVERRIDE]
-                require(v is Boolean) { "params.$OVERRIDE must be a boolean, if given" }
-                override = v
-            }
-
-            var version = NakshaVersion.latest
-            if (params != null && params.contains(VERSION)) {
-                val v = params[VERSION]
-                version = when (v) {
-                    is String -> NakshaVersion.of(v)
-                    is Number -> NakshaVersion(v.toLong())
-                    is Int64 -> NakshaVersion(v)
-                    is NakshaVersion -> v
-                    else -> throw IllegalArgumentException("params.${VERSION} must be a valid Naksha version string or binary encoding")
-                }
-            }
+            val override = config.override
+            val temp_spcname: String = config.temp_tablespace ?: "temp"
+            val brittle_spcname: String = config.brittle_tablespace ?: "brittle"
+            val ephemeral_spcname: String = config.ephemeral_tablespace ?: "ephemeral"
+            val config_version = config.version
+            val version = if (config_version != null) NakshaVersion.of(config_version) else NakshaVersion.latest
 
             val conn = cluster.newConnection(options, false)
             conn.use {
@@ -237,9 +265,11 @@ open class PgStorage protected constructor(
                     """
 WITH basics AS (SELECT 
     current_setting('block_size')::int4 AS bs, 
-    (SELECT oid FROM pg_catalog.pg_tablespace WHERE spcname = '$TEMPORARY_TABLESPACE') AS temp_oid,
-    (SELECT oid FROM pg_catalog.pg_extension WHERE extname = 'gzip') AS gzip_oid,
+    (SELECT oid FROM pg_catalog.pg_tablespace WHERE spcname = '$temp_spcname') AS temp_oid,
+    (SELECT oid FROM pg_catalog.pg_tablespace WHERE spcname = '$brittle_spcname') AS brittle_oid,
+    (SELECT oid FROM pg_catalog.pg_tablespace WHERE spcname = '$ephemeral_spcname') AS ephemeral_oid,
     (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'naksha~admin') AS admin_oid,
+    (SELECT oid FROM pg_catalog.pg_extension WHERE extname = 'gzip') AS gzip_oid,
     version() AS version
 ), procs AS (SELECT 
     (SELECT true FROM pg_catalog.pg_proc, basics WHERE pronamespace = basics.admin_oid AND proname = 'naksha_version') AS has_naksha_version,
@@ -263,14 +293,27 @@ SELECT basics.*, procs.* FROM basics, procs;
                         tupleSize
                     }
                     // Note: Temporary and Brittle tables are both created in the temp-tablespace!
-                    _brittleTableSpace = if (cursor.column("temp_oid") is Int) TEMPORARY_TABLESPACE else null
-                    _tempTableSpace = _brittleTableSpace
+                    var raw = cursor.column("temp_oid")
+                    if (raw is Int) {
+                        _tempTableSpaceOid = raw
+                        _tempTableSpace = temp_spcname
+                    }
+                    raw = cursor.column("brittle_oid")
+                    if (raw is Int) {
+                        _brittleTableSpaceOid = raw
+                        _brittleTableSpace = brittle_spcname
+                    }
+                    raw = cursor.column("ephemeral_oid")
+                    if (raw is Int) {
+                        _ephemeralTableSpaceOid = raw
+                        _ephemeralTableSpace = ephemeral_spcname
+                    }
                     _gzipExtension = cursor.column("gzip_oid") is Int
                     // "PostgreSQL 15.5 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 7.3.1 20180712 (Red Hat 7.3.1-6), 64-bit"
                     val v: String = cursor["version"]
-                    val start = v.indexOf(' ')
-                    val end = v.indexOf(' ', start + 1)
-                    _postgresVersion = NakshaVersion.of(v.substring(start + 1, end))
+                    val start = v.indexOf(' ') + 1
+                    val end = v.indexOf(' ', start)
+                    _postgresVersion = NakshaVersion.of(v.substring(start, end))
 
                     admin_oid = cursor["admin_oid"]
                     has_naksha_version = cursor["has_naksha_version"]
@@ -404,32 +447,31 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @param readOnly if the session should be read-only.
      * @return the session.
      */
-    open fun newSession(options: SessionOptions, readOnly: Boolean): PgSession =
-        PgSession(this, options, readOnly)
+    internal open fun newSession(options: SessionOptions, readOnly: Boolean): PgSession = PgSession(this, options, readOnly)
 
     /**
      * Opens a new PostgresQL database connection.
      *
-     * A connection received through this method will not really close when [PgConnection.close] is invoked, but the wrapper returns the underlying JDBC connection to the connection pool of the instance. If really necessary, [PgConnection.terminate] can be used for this case (for example to ensure advisory locks are released).
+     * A connection received through this method will not really close when [PgConnection.close] is invoked, but the wrapper returns the underlying JDBC connection to the connection pool of the instance it received it from. If really necessary, [PgConnection.terminate] can be used for this case (for example to ensure advisory locks are released).
      *
      * If this is the [PLV8 engine](https://plv8.github.io/), then there is only one connection available, so calling this before closing
-     * the previous returned connection will always cause an [NakshaError.TOO_MANY_CONNECTIONS].
+     * a previously acquired connection will always cause an [NakshaError.TOO_MANY_CONNECTIONS].
+     *
+     * The returned connection normally, unless a special [init] function was provided, initializes the search-path so that all naksha function are available, and the admin schema is at the top of the search-path (recommended setup).
      *
      * - Throws [naksha.model.NakshaError.TOO_MANY_CONNECTIONS], if no more connections are available.
      * @param options the options for the connection.
      * @param readOnly if the connection should be read-only.
-     * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the connection. It may just do the work or perform arbitrary additional work or supress initialization.
+     * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the connection. It may just use this string, perform arbitrary additional work, or suppress initialization completely.
+     * @since 3.0.0
      */
-    open fun newConnection(
-        options: SessionOptions,
-        readOnly: Boolean,
-        init: Fx2<PgConnection, String>? = null
-    ): PgConnection {
-        val conn = cluster.newConnection(options, readOnly)
-        val query = "SET SESSION search_path TO \"naksha~admin\", hint_plan, public, topology;\n"
-        if (init != null) init.call(conn, query) else conn.execute(query).close()
-        return conn
-    }
+    abstract fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>? = null): PgConnection
+//    {
+//        val conn = cluster.newConnection(options, readOnly)
+//        val query = "SET SESSION search_path TO \"naksha~admin\", hint_plan, public, topology;\n"
+//        if (init != null) init.call(conn, query) else conn.execute(query).close()
+//        return conn
+//    }
 
     /**
      * Opens an admin connection.
@@ -439,13 +481,12 @@ SELECT basics.*, procs.* FROM basics, procs;
      * **WARNING**: This method is only for internal purpose, to avoid breaking the code on `PLV8`.
      *
      * @param options the options for the connection.
-     * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the connection. It may just do the work or perform arbitrary additional work or supress initialization.
-     * @return the admin connection, to be closed after usage (uses [adminOptions], and is always bound to master).
+     * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the connection. It may just use this string, perform arbitrary additional work, or suppress initialization completely.
+     * @return the admin connection that does not count against connection-limit, to be closed after usage.
+     * @since 3.0.0
      */
-    internal open fun adminConnection(
-        options: SessionOptions = useAdminOptions(),
-        init: Fx2<PgConnection, String>? = null
-    ): PgConnection = newConnection(options, false, init)
+    internal open fun adminConnection(options: SessionOptions = Naksha.adminOptions, init: Fx2<PgConnection, String>? = null): PgConnection
+        = newConnection(options, false, init)
 
     /**
      * Tests if the given handle is valid, and if it is, tries to extend its live-time to the given amount of milliseconds.
@@ -592,5 +633,79 @@ SELECT basics.*, procs.* FROM basics, procs;
         }
     }
 
-    override fun close() {}
+    override fun shutdownStorage() {}
 }
+
+// PgAdminMap(storage: PgStorage)
+//
+//  getTxn(session: IReadSession): Int64
+//  newTxn(session: IWriteSession): Int64
+//  getMapNumber(session: IReadSession): Int
+//  newMapNumber(session: IWriteSession): Int
+//  refreshMapCache(session: IReadSession): Boolean
+//  createMap(session: IWriteSession, map: NakshaMap): PgMap
+//  getMapById(session: IWriteSession, id: String): PgMap?
+//  getMapByNumber(session: IWriteSession, number: Int): PgMap?
+//  listMaps(session: IWriteSession): PgMapList
+
+// PgMap(storage: PgStorage, feature: NakshaMap)
+// PgMap(storage: PgStorage, tuple: Tuple)
+//   - requires a NakshaMap object, which is used as configuration
+//     note: we do no longer read data from the database, because this is too slow
+//           when a PgMap is created, it should be an instance action, not requiring any DB access, it only parses the config!
+//   - we add all helpers needed to manage a map to it, like reading and updating the collection-sequence
+//   - every map has one internal PgCollection (`naksha~collections`), which stores the collections them-self!
+//   - creating a map requires to create a collection-sequence, and then the initial `naksha~collections` collection
+//   - for the root admin map, the pg-storage will then create
+//     - `naksha~maps`
+//     - `naksha~transactions`
+//     - `naksha~dictionaries`
+//     - `naksha~handles`
+//   - we do not allow to create any other collections within the root map nor do we allow modification of collections
+//   - therefore all maps need to support an `readOnly` setting
+//
+// - state: FeatureTuple
+// - drop(session: IWriteSession) - drop this map physically in the database
+// - getCollectionNumber(session: IReadSession): Int
+// - newCollectionNumber(session: IWriteSession): Int
+// - createCollection(session: IWriteSession, feature: NakshaCollection): PgCollection
+// - getCollectionById(session: IWriteSession, id: String): PgCollection?
+// - getCollectionByNumber(session: IWriteSession, number: Int): PgCollection?
+
+// PgCollection(map: PgMap, feature: NakshaCollection)
+// PgCollection(map: PgMap, tuple: Tuple)
+//   - requires a NakshaCollection, which is used as configuration
+//     note: we do no longer read data from the database, because this is too slow
+//           when a PgCollection is created, it should be an instance action, not requiring any DB access, it only parses the config!
+//   - low level helper that allows reading and writing data
+//   - the NakshaCollections of the internal collections are immutable
+//
+// - state: FeatureTuple
+// - exists(session: IReadSession) - tests if this collection exists physically
+// - drop(session: IWriteSession) - drop this collection physically in the database
+// - queryHead(session: IReadSession, queries: ?): ResultSet - see BINARY.md
+// - queryHistory(session: IReadSession, minVersion: Version?, version: Version, queries: ?): ResultSet - see BINARY.md
+// - queryMultiVersion(session: IReadSession, minVersion: Version?, version: Version, versions: Int, queries: ?): ResultSet - see BINARY.md
+// - getTuples(session: IReadSession, ids) - see BINARY.md
+// - write(session: IWriteSession, req: List<Write>): Response
+//   this needs to be optimal performing, so we need always to use bulk-writer!
+
+// PgSession(storage: PgStorage)
+// - commit()
+//   - before committing we need to write the transaction
+//   - we need to do it as last action, short before we commit, because this allows us to create the admin map, and then to insert the transaction-log into the transaction-log table we just created within the same session
+//   - as transactions are always persisted in the admin-map, we know it exists!
+
+// PgStorage(config: PgConfig)
+// - on init
+//   - read the admin data, and create a root PgMap (`adminMap: PgMap`)
+//   - optionally create/upgrade storage
+//     - create admin schema
+//     - install scripts, plv8, ...
+//     - create map-sequence (managed by PgStorage)
+//     - core collections using PgCollection
+//
+//  createAdminMap(): PgAdminMap
+//  upgradeAdminMap(): PgAdminMap
+//  adminMap: PgAdminMap
+

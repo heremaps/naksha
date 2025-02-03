@@ -31,7 +31,7 @@ class TransactionsTest : PgTestBase(NakshaCollection("transaction_test")) {
         val savedFeatureVersion = savedTuples!![0]?.tuple?.meta?.version
 
         // when - read all transactions
-        val readRequest = ReadFeatures(Naksha.VIRT_TRANSACTIONS)
+        val readRequest = ReadFeatures(Naksha.ADMIN_TRANSACTIONS_COL)
         readRequest.featureIds.add(savedFeatureVersion?.txn.toString())
         val readResponse = storage.newReadSession().execute(readRequest) as SuccessResponse
         readSession.fetchTuples(readResponse.tuples)

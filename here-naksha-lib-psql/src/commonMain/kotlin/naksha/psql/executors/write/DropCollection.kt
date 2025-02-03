@@ -1,21 +1,19 @@
 package naksha.psql.executors.write
 
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.PlatformLogger
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
-import naksha.model.objects.NakshaCollection
 import naksha.psql.*
 import naksha.psql.executors.WriteExt
 
 class DropCollection(private val session: PgSession) {
 
     fun execute(map: PgMap, write: WriteExt): TupleNumber {
-        if(write.collectionId != VIRT_COLLECTIONS){
+        if(write.collectionId != COLLECTIONS_COL){
             throw NakshaException(
                 NakshaError.ILLEGAL_ARGUMENT,
-                "Expected $VIRT_COLLECTIONS collectionId when dropping collections"
+                "Expected $COLLECTIONS_COL collectionId when dropping collections"
             )
         }
         val collectionId = write.featureId ?: throw NakshaException(

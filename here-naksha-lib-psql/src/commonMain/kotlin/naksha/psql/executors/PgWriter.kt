@@ -2,7 +2,7 @@ package naksha.psql.executors
 
 import naksha.base.Int64
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
@@ -179,7 +179,7 @@ class PgWriter(
         // First, process collections, no performance need here for now.
         for (write in orderedWrites) {
             if (write == null) continue
-            val tupleNumber: TupleNumber = if (write.collectionId == VIRT_COLLECTIONS) {
+            val tupleNumber: TupleNumber = if (write.collectionId == COLLECTIONS_COL) {
                 when (write.op) {
                     WriteOp.CREATE -> cachedTupleNumber(
                         write,

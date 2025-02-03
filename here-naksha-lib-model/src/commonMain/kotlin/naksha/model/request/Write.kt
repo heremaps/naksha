@@ -5,7 +5,7 @@ package naksha.model.request
 import naksha.base.*
 import naksha.model.Naksha
 import naksha.model.NakshaContext
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaCollection
@@ -39,7 +39,7 @@ open class Write : AnyObject() {
          * ```
          * It is very important that all code that modifies features, use the same ordering.
          *
-         * **If writes are not order like this, this will lead to row-level locking in wrong order, causing deadlocks in the database!**
+         * **If writes are not ordered like this, this will lead to row-level locking in wrong order, causing deadlocks in the database!**
          * @since 3.0.0
          */
         @JvmStatic
@@ -54,8 +54,8 @@ open class Write : AnyObject() {
             val b_mapId = b.mapId
             val map_diff = a_mapId.compareTo(b_mapId)
             return if (map_diff == 0) {
-                val a_colId = if (a.collectionId == VIRT_COLLECTIONS) a.featureId ?: "" else a.collectionId
-                val b_colId = if (b.collectionId == VIRT_COLLECTIONS) b.featureId ?: "" else b.collectionId
+                val a_colId = if (a.collectionId == COLLECTIONS_COL) a.featureId ?: "" else a.collectionId
+                val b_colId = if (b.collectionId == COLLECTIONS_COL) b.featureId ?: "" else b.collectionId
                 if (a_colId !== b_colId) {
                     if (a_colId == null) return 1
                     if (b_colId == null) return -1
@@ -92,28 +92,54 @@ open class Write : AnyObject() {
     var op by OP
 
     /**
-     * The map in which the collection is stored, if being an empty string, the [map of the current-context][NakshaContext.mapId] is used.
+     * @see [op]
+     */
+    fun withOp(value: WriteOp): Write {
+        op = value
+        return this
+    }
+
+    /**
+     * The identifier of the map to access, defaults to the [map of the current-context][NakshaContext.mapId].
+     *
+     * - If a [map][NakshaMap] should be modified, then use [Naksha.ADMIN_MAP].
+     * - If a [dictionary][NakshaDictionary] should be modified, then use [Naksha.ADMIN_MAP].
      * @since 3.0.0
      */
     var mapId by MAP_ID
 
     /**
-     * The identifier of the collection into which to write.
+     * @see [mapId]
+     */
+    fun withMapId(value: String): Write {
+        mapId = value
+        return this
+    }
+
+    /**
+     * The identifier of the collection to modify.
      *
+     * - If a [map][NakshaMap] should be modified, then [Naksha.ADMIN_MAPS_COL] should be used, within [Naksha.ADMIN_MAP].
+     * - If a [dictionary][NakshaDictionary] should be modified, the [Naksha.ADMIN_DICT_COL] should be used, within [Naksha.ADMIN_MAP].
+     * - If a [collection][NakshaCollection] should be modified, then [Naksha.COLLECTIONS_COL] should be used, must not be used together with [Naksha.ADMIN_MAP], because the admin-map does not allow collection modification, it is internally managed.
+     * - If a [feature][NakshaFeature] should be created, then the [NakshaCollection] in which the feature should be stored is required.
      * @since 3.0.0
      */
     var collectionId by STRING_NULL
 
     /**
-     * The identifier of the target to modify.
-     * @since 3.0.0
+     * @see [collectionId]
      */
-    var id by STRING_NULL
+    fun withCollectionId(value: String?): Write {
+        collectionId = value
+        return this
+    }
 
     /**
-     * The version that should be updated.
+     * The expected version that should be updated.
      *
-     * If not _null_, the operation is atomic, and expects that the existing HEAD row is in the given version.
+     * - If _null_, then the operation is not atomic.
+     * - If not _null_, the operation is atomic, and expects that the existing HEAD [Tuple][naksha.model.Tuple] is in the given [version][naksha.model.Version].
      * @since 3.0.0
      */
     var version by INT64_NULL
@@ -126,11 +152,48 @@ open class Write : AnyObject() {
     fun isAtomic(): Boolean = version != null
 
     /**
-     * The new feature to persist; if any.
+     * The identifier of the feature to modify.
+     * @since 3.0.0
+     */
+    var id: String?
+        get() {
+            val feature = this.feature
+            if (feature != null) return feature.id
+            val raw = getRaw("id")
+            return if (raw is String) raw else null
+        }
+        set(value) {
+            val feature = this.feature
+            if (feature == null || feature.id != value) {
+                setRaw("id", value)
+                removeRaw("feature")
+            } else {
+                removeRaw("id")
+            }
+        }
+
+    /**
+     * @see [id]
+     */
+    fun withId(value: String?): Write {
+        id = value
+        return this
+    }
+    
+    /**
+     * The new feature state to persist; if any _(not valid for deletes)_.
      * @since 3.0.0
      */
     var feature by FEATURE_NULL
 
+    /**
+     * @see [feature]
+     */
+    fun withFeature(value: NakshaFeature?): Write {
+        feature = value
+        return this
+    }
+    
     /**
      * Returns `feature.id` or `id` in that order.
      * @since 3.0.0
@@ -149,6 +212,14 @@ open class Write : AnyObject() {
     var attachment by BYTE_ARRAY_NULL
 
     /**
+     * @see [attachment]
+     */
+    fun withAttachment(value: ByteArray?): Write {
+        attachment = value
+        return this
+    }
+
+    /**
      * If enabled, a missing map is automatically created, when creating or modifying collections; defaults to `false`.
      *
      * To make the default map more transparent, this option can be enabled by clients like:
@@ -164,12 +235,10 @@ open class Write : AnyObject() {
     var autoCreateMap by BOOLEAN_FALSE
 
     /**
-     * Change the [autoCreateMap] property in fluent syntax.
-     * @param autoCreateMap the value to set the property into.
-     * @return this.
+     * @see [autoCreateMap]
      */
-    fun withAutoCreateMap(autoCreateMap: Boolean): Write {
-        this.autoCreateMap = autoCreateMap
+    fun withAutoCreateMap(value: Boolean): Write {
+        autoCreateMap = value
         return this
     }
 
@@ -180,8 +249,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun createDictionary(dict: NakshaDictionary): Write {
-        this.mapId = Naksha.VIRT_ADMIN
-        this.collectionId = Naksha.VIRT_DICTIONARIES
+        this.mapId = Naksha.ADMIN_MAP
+        this.collectionId = Naksha.ADMIN_DICT_COL
         this.op = WriteOp.CREATE
         this.id = dict.id
         this.version = null
@@ -197,8 +266,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun updateDictionary(dict: NakshaDictionary, atomic: Boolean): Write {
-        this.mapId = Naksha.VIRT_ADMIN
-        this.collectionId = Naksha.VIRT_DICTIONARIES
+        this.mapId = Naksha.ADMIN_MAP
+        this.collectionId = Naksha.ADMIN_DICT_COL
         this.op = WriteOp.UPDATE
         this.id = dict.id
         this.version = if (atomic) dict.properties.xyz.version?.txn else null
@@ -214,8 +283,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun upsertDictionary(dict: NakshaDictionary, atomic: Boolean): Write {
-        this.mapId = Naksha.VIRT_ADMIN
-        this.collectionId = Naksha.VIRT_DICTIONARIES
+        this.mapId = Naksha.ADMIN_MAP
+        this.collectionId = Naksha.ADMIN_DICT_COL
         this.op = WriteOp.UPSERT
         this.id = dict.id
         this.version = if (atomic) dict.properties.xyz.version?.txn else null
@@ -231,8 +300,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun deleteDictionary(dict: NakshaDictionary, atomic: Boolean): Write {
-        this.mapId = Naksha.VIRT_ADMIN
-        this.collectionId = Naksha.VIRT_DICTIONARIES
+        this.mapId = Naksha.ADMIN_MAP
+        this.collectionId = Naksha.ADMIN_DICT_COL
         this.op = WriteOp.DELETE
         this.id = dict.id
         this.version = if (atomic) dict.properties.xyz.version?.txn else null
@@ -248,8 +317,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun deleteDictionaryById(dictId: String, version: Int64? = null): Write {
-        this.mapId = Naksha.VIRT_ADMIN
-        this.collectionId = Naksha.VIRT_DICTIONARIES
+        this.mapId = Naksha.ADMIN_MAP
+        this.collectionId = Naksha.ADMIN_DICT_COL
         this.op = WriteOp.DELETE
         this.id = dictId
         this.version = version
@@ -264,8 +333,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun createMap(map: NakshaMap): Write {
-        this.mapId = Naksha.VIRT_ADMIN
-        this.collectionId = Naksha.VIRT_MAPS
+        this.mapId = Naksha.ADMIN_MAP
+        this.collectionId = Naksha.ADMIN_MAPS_COL
         this.op = WriteOp.CREATE
         this.id = map.id
         this.version = null
@@ -281,8 +350,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun updateMap(map: NakshaMap, atomic: Boolean): Write {
-        this.mapId = Naksha.VIRT_ADMIN
-        this.collectionId = Naksha.VIRT_MAPS
+        this.mapId = Naksha.ADMIN_MAP
+        this.collectionId = Naksha.ADMIN_MAPS_COL
         this.op = WriteOp.UPDATE
         this.id = map.id
         this.version = if (atomic) map.properties.xyz.version?.txn else null
@@ -298,8 +367,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun upsertMap(map: NakshaMap, atomic: Boolean): Write {
-        this.mapId = Naksha.VIRT_ADMIN
-        this.collectionId = Naksha.VIRT_MAPS
+        this.mapId = Naksha.ADMIN_MAP
+        this.collectionId = Naksha.ADMIN_MAPS_COL
         this.op = WriteOp.UPSERT
         this.id = map.id
         this.version = if (atomic) map.properties.xyz.version?.txn else null
@@ -315,8 +384,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun deleteMap(map: NakshaMap, atomic: Boolean): Write {
-        this.mapId = Naksha.VIRT_ADMIN
-        this.collectionId = Naksha.VIRT_MAPS
+        this.mapId = Naksha.ADMIN_MAP
+        this.collectionId = Naksha.ADMIN_MAPS_COL
         this.op = WriteOp.DELETE
         this.id = map.id
         this.version = if (atomic) map.properties.xyz.version?.txn else null
@@ -332,8 +401,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     fun deleteMapById(mapId: String, version: Int64? = null): Write {
-        this.mapId = Naksha.VIRT_ADMIN
-        this.collectionId = Naksha.VIRT_MAPS
+        this.mapId = Naksha.ADMIN_MAP
+        this.collectionId = Naksha.ADMIN_MAPS_COL
         this.op = WriteOp.DELETE
         this.id = mapId
         this.version = version
@@ -348,7 +417,7 @@ open class Write : AnyObject() {
      */
     fun createCollection(collection: NakshaCollection): Write {
         this.mapId = collection.mapId
-        this.collectionId = VIRT_COLLECTIONS
+        this.collectionId = COLLECTIONS_COL
         this.op = WriteOp.CREATE
         this.id = collection.id
         this.version = null
@@ -364,7 +433,7 @@ open class Write : AnyObject() {
      */
     fun updateCollection(collection: NakshaCollection, atomic: Boolean): Write {
         this.mapId = collection.mapId
-        this.collectionId = VIRT_COLLECTIONS
+        this.collectionId = COLLECTIONS_COL
         this.op = WriteOp.UPDATE
         this.id = collection.id
         this.version = if (atomic) collection.properties.xyz.version?.txn else null
@@ -380,7 +449,7 @@ open class Write : AnyObject() {
      */
     fun upsertCollection(collection: NakshaCollection, atomic: Boolean): Write {
         this.mapId = collection.mapId
-        this.collectionId = VIRT_COLLECTIONS
+        this.collectionId = COLLECTIONS_COL
         this.op = WriteOp.UPSERT
         this.id = collection.id
         this.version = if (atomic) collection.properties.xyz.version?.txn else null
@@ -396,7 +465,7 @@ open class Write : AnyObject() {
      */
     fun deleteCollection(collection: NakshaCollection, atomic: Boolean): Write {
         this.mapId = collection.mapId
-        this.collectionId = VIRT_COLLECTIONS
+        this.collectionId = COLLECTIONS_COL
         this.op = WriteOp.DELETE
         this.id = collection.id
         this.version = if (atomic) collection.properties.xyz.version?.txn else null
@@ -413,7 +482,7 @@ open class Write : AnyObject() {
      */
     fun deleteCollectionById(mapId: String, collectionId: String, version: Int64? = null): Write {
         this.mapId = mapId
-        this.collectionId = VIRT_COLLECTIONS
+        this.collectionId = COLLECTIONS_COL
         this.op = WriteOp.DELETE
         this.id = collectionId
         this.version = version

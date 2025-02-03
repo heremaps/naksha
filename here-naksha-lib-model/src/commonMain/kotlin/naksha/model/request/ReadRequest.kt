@@ -10,6 +10,7 @@ import kotlin.js.JsExport
 
 /**
  * All read-requests should extend this base class.
+ *
  * @since 3.0.0
  */
 @JsExport
@@ -25,11 +26,11 @@ open class ReadRequest : Request() {
     override fun defaultRowOptions(): ReturnColumns = ReturnColumns.all()
 
     /**
-     * A soft-cap, so the amount of rows the client needs.
+     * A soft-cap, so the amount of [Tuple][naksha.model.Tuple] the client needs.
      *
-     * If _null_, the storage will automatically decide for some hard-cap value. If all results are needed, setting it to [Int.MAX_VALUE] should be considered. If the soft-cap (_limit_) is bigger than what the storage supports as hard-cap, the hard-cap is used by the storage. For example `lib-psql` has a default hard-cap of 1,000,000, and therefore will never fetch more than one million rows, even when requested.
+     * If _null_, the storage will automatically return the complete result-set up to the soft-cap, except the soft-cap exceeds the [hard-cap][naksha.model.IStorage.hardCap]. If the soft-cap (_limit_) is bigger than what the storage supports as [hard-cap][naksha.model.IStorage.hardCap], the [hard-cap][naksha.model.IStorage.hardCap] is used by the storage.
      *
-     * To query more than the hard-cap of a storage, a streaming processing is needed. The interface for this is not yet designed, but may come with later model specifications.
+     * To query more than the [hard-cap][naksha.model.IStorage.hardCap] of a storage, a streaming processing is needed. The interface for this is not yet designed, but may come with later model specifications.
      * @since 3.0.0
      */
     var limit by INT_NULL

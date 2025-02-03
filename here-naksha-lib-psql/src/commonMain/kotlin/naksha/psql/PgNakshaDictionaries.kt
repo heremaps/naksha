@@ -12,7 +12,7 @@ import kotlin.js.JsExport
  */
 @JsExport
 class PgNakshaDictionaries internal constructor(schema: PgMap) :
-    PgCollection(schema, Naksha.VIRT_DICTIONARIES), PgInternalCollection, IDictManager
+    PgCollection(schema, Naksha.ADMIN_DICT_COL), PgInternalCollection, IDictManager
 {
 
     override fun putDictionary(dict: JbDictionary) {

@@ -35,7 +35,7 @@ class PartitioningTest : PgTestBase() {
         assertEquals(numberOfPartitions, createdPartitions.size)
         for ((idx, createdPartition) in createdPartitions.withIndex()) {
             // "feature_partitioned$p000", "feature_partitioned$p001",...
-            val expectedPartitionTableName = "\"feature_partitioned\$p${PgUtil.partitionPosix(idx)}\""
+            val expectedPartitionTableName = "\"feature_partitioned\$p${PgUtil.partitionSuffix(idx)}\""
             assertEquals(expectedPartitionTableName, createdPartition)
         }
 
@@ -52,7 +52,7 @@ class PartitioningTest : PgTestBase() {
             assertEquals(numberOfPartitions, createdHstSubPartitions.size)
             for ((idx, createdPartition) in createdHstSubPartitions.withIndex()) {
                 // "feature_partitioned$hst$y2025$p001", ...
-                val expectedPartitionTableName = "\"$rawHstName\$p${PgUtil.partitionPosix(idx)}\""
+                val expectedPartitionTableName = "\"$rawHstName\$p${PgUtil.partitionSuffix(idx)}\""
                 assertEquals(expectedPartitionTableName, createdPartition)
             }
         }

@@ -28,9 +28,9 @@ import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_GZIP_BIT
 import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_MASK
 
 /**
- * Collection of bit definitions for the `flags`. The flags store the encoding in the storage, it stores how the binaries are encoded:
+ * Collection of bits making the `flags`. The flags store the encoding in the storage, so how the binaries are encoded:
  * ```
- *   RSV    NPBAC    VVVV  AC    OP    TE     FE    GE
+ *   RSV    CAB-PN  V3210  AC    OP    TE     FE    GE
  * [0000-0][000-00][00-00][00]-[0000][0000]-[0000][0000]
  * ```
  * - GE: geometry encoding - bits: 0-3 (4-bit)
@@ -38,7 +38,10 @@ import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_MASK
  * - TE: tags encoding - bits: 8-11 (4-bit)
  * - OP: operation - bits: 12-15 (4-bit)
  * - AC: action - bits: 16-17 (2-bit)
- * - VVVV: has-value-[0-3] - bit 18-21 _(4-bit)_
+ * - V3210: has-custom-value-0 - bit 18 _(1-bit, 262144)_
+ * - V3210: has-custom-value-1 - bit 19 _(1-bit, 524288)_
+ * - V3210: has-custom-value-2 - bit 20 _(1-bit, 1048576)_
+ * - V3210: has-custom-value-3 - bit 21 _(1-bit, 2097152)_
  * - N: has-next-version - bit 22 _(1-bit, 4194304)_
  * - P: has-previous-tuple-number - bit 23 _(1-bit, 8388608)_
  * - B: has-base-tuple-number - bit 24 _(1-bit, 16777216)_

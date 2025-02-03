@@ -31,7 +31,7 @@ class DropCollectionTest : PgTestBase(collection = null) {
 
         // And: Virtual Collections contain the created collection
         val selectCollectionFromVirt = ReadFeatures().apply {
-            collectionIds += Naksha.VIRT_COLLECTIONS
+            collectionIds += Naksha.COLLECTIONS_COL
             featureIds += collection.id
         }
         val virtBeforeDelete = executeRead(selectCollectionFromVirt)

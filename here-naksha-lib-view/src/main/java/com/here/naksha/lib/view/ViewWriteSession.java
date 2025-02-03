@@ -71,8 +71,8 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   }
 
   @Override
-  public @NotNull NakshaTransaction transaction() {
-    return this.session.transaction();
+  public @NotNull NakshaTransaction useTransaction() {
+    return this.session.useTransaction();
   }
 
   public void commit() {

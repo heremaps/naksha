@@ -11,13 +11,14 @@ import kotlin.js.JsExport
  * Example:
  * ```kotlin
  * val req = WriteRequest()
- * req.add(Write().createFeature(null, collection.id, feature))
+ * val col = NakshaCollection("foo")
+ * req.add(Write().createFeature(col, feature))
  * ...
  * ```
  * ```java
- * final WriteRequest req = new WriteRequest();
- * req.add(new Write()
- *         .createFeature(null, collection.getId(), feature));
+ * final val req = new WriteRequest();
+ * final val col = new NakshaCollection("foo");
+ * req.add(new Write().createFeature(col, feature));
  * ...
  * ```
  */
