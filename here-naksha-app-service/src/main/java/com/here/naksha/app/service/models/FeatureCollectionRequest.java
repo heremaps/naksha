@@ -19,9 +19,7 @@
 package com.here.naksha.app.service.models;
 
 import com.fasterxml.jackson.annotation.*;
-import com.here.naksha.lib.core.LazyParsableFeatureList;
 import java.util.ArrayList;
-import naksha.model.XyzFeature;
 import java.util.List;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;

@@ -24,10 +24,10 @@ import java.util.List;
 import java.util.function.Consumer;
 import naksha.model.request.query.*;
 
-public class AssertionIPropertyQuery {
+public class PropertyQueryAssertions {
   private final IPropertyQuery subject;
 
-  public AssertionIPropertyQuery(IPropertyQuery subject) {
+  public PropertyQueryAssertions(IPropertyQuery subject) {
     this.subject = subject;
   }
 
@@ -35,58 +35,68 @@ public class AssertionIPropertyQuery {
     return this.subject;
   }
 
-  public static AssertionIPropertyQuery assertThatOperation(IPropertyQuery subject) {
+  public static PropertyQueryAssertions assertThatPropertyQuery(IPropertyQuery subject) {
     assertNotNull(subject);
-    return new AssertionIPropertyQuery(subject);
+    return new PropertyQueryAssertions(subject);
   }
 
-  public AssertionIPropertyQuery hasType(AnyOp expectedOpType) {
+  public PropertyQueryAssertions hasOp(AnyOp expectedOpType) {
     assertInstanceOf(PQuery.class, subject);
     assertEquals(expectedOpType, ((PQuery) subject).getOp());
     return this;
   }
 
-  public AssertionIPropertyQuery isPOr() {
+  public PropertyQueryAssertions isPOr() {
     assertInstanceOf(POr.class, subject);
     return this;
   }
 
-  public AssertionIPropertyQuery hasProperty(Property expected) {
+  public PropertyQueryAssertions isPNot() {
+    assertInstanceOf(PNot.class, subject);
+    return this;
+  }
+
+  public PropertyQueryAssertions isPQuery(){
+    assertInstanceOf(PQuery.class, subject);
+    return this;
+  }
+
+  public PropertyQueryAssertions hasProperty(Property expected) {
     return hasProperty(expected.getPath());
   }
 
-  public AssertionIPropertyQuery hasProperty(List<String> expected) {
+  public PropertyQueryAssertions hasProperty(List<String> expected) {
     assertNotNull(expected);
     assertInstanceOf(PQuery.class, subject);
     assertEquals(expected, ((PQuery) subject).getProperty().getPath());
     return this;
   }
 
-  public AssertionIPropertyQuery hasPRefWithPath(String[] path) {
+  public PropertyQueryAssertions hasPropertyWithPath(String... path) {
     assertInstanceOf(PQuery.class, subject);
     assertArrayEquals(path, ((PQuery) subject).getProperty().getPath().toArray());
     return this;
   }
 
-  public AssertionIPropertyQuery hasValue(Number value) {
+  public PropertyQueryAssertions hasValue(Number value) {
     assertInstanceOf(PQuery.class, subject);
     assertEquals(value, ((PQuery) subject).getValue());
     return this;
   }
 
-  public AssertionIPropertyQuery hasValue(String value) {
+  public PropertyQueryAssertions hasValue(String value) {
     assertInstanceOf(PQuery.class, subject);
     assertEquals(value, ((PQuery) subject).getValue());
     return this;
   }
 
   @SafeVarargs
-  public final AssertionIPropertyQuery hasChildrenThat(Consumer<AssertionIPropertyQuery>... childrenAssertions) {
+  public final PropertyQueryAssertions hasChildrenThat(Consumer<PropertyQueryAssertions>... childrenAssertions) {
     assertInstanceOf(List.class, subject, "Expected multiple operations");
     List<IPropertyQuery> subjects = (List) subject;
     assertEquals(subjects.size(), childrenAssertions.length, "Expecting single assertion per property query");
     for (int i = 0; i < subjects.size(); i++) {
-      AssertionIPropertyQuery childAssertion = new AssertionIPropertyQuery(subjects.get(i));
+      PropertyQueryAssertions childAssertion = new PropertyQueryAssertions(subjects.get(i));
       childrenAssertions[i].accept(childAssertion);
     }
     return this;

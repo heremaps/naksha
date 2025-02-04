@@ -7,6 +7,7 @@ import naksha.base.NullableEnum
 import naksha.base.NullableProperty
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 
 /**
  * Computes a POLYGON or MULTIPOLYGON that represents all points whose distance from a geometry/geography is less than or equal to a given distance. A negative distance shrinks the geometry rather than expanding it. A negative distance may shrink a polygon completely, in which case POLYGON EMPTY is returned. For points and lines negative distances always return empty results.
@@ -27,6 +28,7 @@ open class SpBuffer() : SpTransformation() {
      * @param childTransformation an optional child transformation to be executed before this transformation is applied.
      */
     @JsName("of")
+    @JvmOverloads
     constructor(
         distance: Double,
         geography: Boolean = true,

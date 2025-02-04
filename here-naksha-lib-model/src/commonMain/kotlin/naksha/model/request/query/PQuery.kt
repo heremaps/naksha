@@ -7,6 +7,7 @@ import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 
 /**
  * A property query within the Naksha feature.
@@ -20,6 +21,7 @@ open class PQuery() : AnyObject(), IPropertyQuery {
      * @param value the parameter value of the operation.
      */
     @JsName("of")
+    @JvmOverloads
     constructor(property: Property, op: AnyOp, value: Any? = null) : this() {
         this.property = property
         this.op = op

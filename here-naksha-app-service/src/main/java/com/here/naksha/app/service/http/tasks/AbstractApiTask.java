@@ -20,6 +20,8 @@ package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.common.http.apis.ApiParamsConst.DEF_ADMIN_FEATURE_LIMIT;
 import static java.util.Collections.emptyList;
+import static java.util.Objects.requireNonNull;
+import static naksha.base.JvmBoxingUtil.box;
 import static naksha.model.util.ResultHelper.extractResponseItems;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 import static naksha.model.util.ResultHelper.readFeaturesGroupedByOp;
@@ -40,9 +42,14 @@ import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import naksha.base.AnyObject;
+import naksha.base.FromJsonOptions;
 import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
 import naksha.geo.ProxyGeoUtil;
+import naksha.geo.SpBoundingBox;
 import naksha.geo.SpGeometry;
 import naksha.model.IReadSession;
 import naksha.model.IWriteSession;
@@ -68,7 +75,7 @@ import org.slf4j.LoggerFactory;
  * An abstract class that can be used for all Http API specific custom Task implementations.
  */
 public abstract class AbstractApiTask<T extends XyzResponse>
-    extends AbstractTask<XyzResponse, AbstractApiTask<XyzResponse>> {
+    extends AbstractTask<XyzResponse, AbstractApiTask<T>> {
 
   private static final Logger logger = LoggerFactory.getLogger(AbstractApiTask.class);
   protected final @NotNull RoutingContext routingContext;
@@ -297,15 +304,13 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     return null;
   }
 
-  protected <F> @NotNull F parseRequestBodyAs(final Class<F> type) throws JsonProcessingException {
-    try (final Json json = Json.get()) {
-      final String bodyJson = routingContext.body().asString();
-      return json.reader(ViewDeserialize.User.class).forType(type).readValue(bodyJson);
-    }
+  protected <P extends AnyObject> @NotNull P parseRequestBodyAs(final Class<P> type) {
+    final String bodyJson = routingContext.body().asString();
+    return requireNonNull(box(Platform.fromJSON(bodyJson, FromJsonOptions.DEFAULT), type));
   }
 
   protected <F extends NakshaFeature> @Nullable F1<F, F> standardReadFeaturesPreResponseProcessing(
-      final @Nullable Set<String> propPaths, final boolean clip, final Geometry clipGeo) {
+      final @Nullable Set<String> propPaths, final boolean clip, final SpGeometry clipGeo) {
     if (propPaths == null && !clip) {
       return null;
     }
@@ -329,10 +334,10 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     final Map<String, Object> tgtMap = PropertyPathUtil.extractPropertyMapFromFeature(f, propPaths);
     NakshaFeature newF = new NakshaFeature();
     newF.putAll(tgtMap);
-    return (F) JvmBoxingUtil.box(newF, f.getClass());
+    return (F) box(newF, f.getClass());
   }
 
-  private <F extends NakshaFeature> void applyGeometryClipping(final @NotNull F f, final Geometry clipGeo) {
+  private <F extends NakshaFeature> void applyGeometryClipping(final @NotNull F f, final SpGeometry clipGeo) {
     // clip Feature geometry (if present) to a given clipGeo geometry
     final SpGeometry geo = f.getGeometry();
     if (geo != null) {
@@ -341,7 +346,8 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       // it is the best available way of clipping geometry, equivalent to PostGIS approach of:
       //    ST_Intersection(ST_MakeValid(geo, 'method=structure'), bbox)
       Geometry jtsGeo = ProxyGeoUtil.toJtsGeometry(geo);
-      Geometry clippedGeo = GeometryFixer.fix(jtsGeo).intersection(clipGeo);
+      Geometry jtsClip = ProxyGeoUtil.toJtsGeometry(clipGeo);
+      Geometry clippedGeo = GeometryFixer.fix(jtsGeo).intersection(jtsClip);
       f.setGeometry(ProxyGeoUtil.toProxyGeometry(clippedGeo));
     }
   }

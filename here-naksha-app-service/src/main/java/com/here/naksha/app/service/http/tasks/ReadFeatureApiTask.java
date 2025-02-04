@@ -42,43 +42,51 @@ import static com.here.naksha.common.http.apis.ApiParamsConst.SPACE_ID;
 import static com.here.naksha.common.http.apis.ApiParamsConst.TILE_ID;
 import static com.here.naksha.common.http.apis.ApiParamsConst.TILE_TYPE;
 import static com.here.naksha.common.http.apis.ApiParamsConst.WEST;
+import static com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper.proxyWrapperOf;
 import static naksha.model.BufferTransformation.bufferInMeters;
+import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
+import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
-import com.here.naksha.app.service.http.ops.TagQueryUtil;
-import com.here.naksha.app.service.http.ops.PropertySearchUtil;
+import com.here.naksha.app.service.http.ops.PropertyQueryUtil;
 import com.here.naksha.app.service.http.ops.PropertySelectionUtil;
 import com.here.naksha.app.service.http.ops.SpatialQueryUtil;
-import com.here.naksha.app.service.http.ops.TagsUtil;
+import com.here.naksha.app.service.http.ops.TagQueryUtil;
 import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.lambdas.F1;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzGeometry;
-import naksha.geo.XyzPoint;
-import naksha.model.XyzResponse;
+import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
-import naksha.model.ErrorResult;
-import naksha.model.OpType;
-import naksha.model.POp;
-import naksha.model.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper.ReadRequestType;
-import com.here.naksha.lib.core.models.storage.Result;
-import naksha.model.SOp;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.util.storage.RequestHelper;
-import com.here.naksha.lib.core.util.storage.ResultHelper;
 import io.vertx.ext.web.RoutingContext;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import naksha.base.StringList;
+import naksha.geo.PointCoord;
+import naksha.geo.SpBoundingBox;
+import naksha.geo.SpGeometry;
+import naksha.geo.SpPoint;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.RequestQuery;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.query.IPropertyQuery;
+import naksha.model.request.query.ISpatialQuery;
 import naksha.model.request.query.ITagQuery;
+import naksha.model.request.query.SpBuffer;
+import naksha.model.request.query.SpIntersects;
+import naksha.model.util.RequestHelper;
+import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.geom.Geometry;
@@ -115,7 +123,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
    * Initializes this task.
    */
   @Override
-  protected void init() {}
+  protected void init() {
+  }
 
   /**
    * Execute this task.
@@ -136,15 +145,13 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
         case GET_BY_RADIUS_POST -> executeFeaturesByRadiusPost();
         default -> executeUnsupported();
       };
-    } catch (Exception ex) {
-      if (ex instanceof XyzErrorException xyz) {
-        logger.warn("Known exception while processing request. ", ex);
-        return verticle.sendErrorResponse(routingContext, xyz.xyzError, xyz.getMessage());
-      } else {
-        logger.error("Unexpected error while processing request. ", ex);
-        return verticle.sendErrorResponse(
-            routingContext, XyzError.EXCEPTION, "Internal error : " + ex.getMessage());
-      }
+    } catch (NakshaException nakshaException) {
+      logger.warn("Known exception while processing request. ", nakshaException);
+      return verticle.sendErrorResponse(routingContext, nakshaException.getError());
+    } catch (Exception unknownException) {
+      logger.error("Unexpected error while processing request. ", unknownException);
+      return verticle.sendErrorResponse(
+          routingContext, NakshaError.EXCEPTION, "Internal error : " + unknownException.getMessage());
     }
   }
 
@@ -157,19 +164,18 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Validate parameters
     if (featureIds == null || featureIds.isEmpty()) {
-      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing id parameter");
+      return verticle.sendErrorResponse(routingContext, NakshaError.ILLEGAL_ARGUMENT, "Missing id parameter");
     }
-    final ReadFeaturesProxyWrapper rdRequest = RequestHelper.readFeaturesByIdsRequest(spaceId, featureIds)
+    final ReadFeaturesProxyWrapper rdRequest = proxyWrapperOf(readFeaturesByIdsRequest(spaceId, featureIds))
         .withReadRequestType(ReadRequestType.GET_BY_IDS)
         .withQueryParameters(Map.of(FEATURE_IDS, featureIds));
 
     // Forward request to NH Space Storage reader instance
-    try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
-      final F1<XyzFeature, XyzFeature> preResponseProcessing =
-          standardReadFeaturesPreResponseProcessing(propPaths, false, null);
-      // transform Result to Http FeatureCollection response
-      return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, preResponseProcessing);
-    }
+    Response response = executeReadRequestFromSpaceStorage(rdRequest);
+    final F1<NakshaFeature, NakshaFeature> preResponseProcessing = standardReadFeaturesPreResponseProcessing(propPaths, false, null);
+
+    // transform Result to Http FeatureCollection response
+    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, preResponseProcessing);
   }
 
   private @NotNull XyzResponse executeFeatureById() {
@@ -179,17 +185,15 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final QueryParameterList queryParameters = queryParamsFromRequest(routingContext);
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParameters);
 
-    final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdRequest(spaceId, featureId)
+    final ReadFeatures rdRequest = proxyWrapperOf(readFeaturesByIdRequest(spaceId, featureId))
         .withReadRequestType(ReadRequestType.GET_BY_ID)
         .withQueryParameters(Map.of(FEATURE_ID, featureId));
 
     // Forward request to NH Space Storage reader instance
-    try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
-      final F1<XyzFeature, XyzFeature> preResponseProcessing =
-          standardReadFeaturesPreResponseProcessing(propPaths, false, null);
-      // transform Result to Http XyzFeature response
-      return transformResponseToXyzFeatureResponse(result, XyzFeature.class, preResponseProcessing);
-    }
+    Response response = executeReadRequestFromSpaceStorage(rdRequest);
+    final F1<NakshaFeature, NakshaFeature> preResponseProcessing = standardReadFeaturesPreResponseProcessing(propPaths, false, null);
+    // transform Result to Http XyzFeature response
+    return transformResponseToXyzFeatureResponse(response, NakshaFeature.class, preResponseProcessing);
   }
 
   private @NotNull XyzResponse executeFeaturesByBBox() {
@@ -200,13 +204,13 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
     if (queryParams == null || queryParams.size() <= 0) {
       return verticle.sendErrorResponse(
-          routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing mandatory parameters");
+          routingContext, NakshaError.ILLEGAL_ARGUMENT, "Missing mandatory parameters");
     }
     final double west = ApiParams.extractQueryParamAsDouble(queryParams, WEST, true);
     final double north = ApiParams.extractQueryParamAsDouble(queryParams, NORTH, true);
     final double east = ApiParams.extractQueryParamAsDouble(queryParams, EAST, true);
     final double south = ApiParams.extractQueryParamAsDouble(queryParams, SOUTH, true);
-    long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+    int limit = (int) ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
     final boolean clip = ApiParams.extractQueryParamAsBoolean(queryParams, CLIP_GEO, false);
     // validate values
@@ -217,9 +221,9 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     ApiParams.validateParamRange(SOUTH, south, -90, 90);
 
     // Prepare read request based on parameters supplied
-    final Geometry bbox = RequestHelper.createBBoxEnvelope(west, south, east, north);
+    final SpBoundingBox bbox = new SpBoundingBox(west, south, east, north);
     final ITagQuery tagQuery = TagQueryUtil.tagQueryFromParams(queryParams);
-    final POp propSearchOp = PropertySearchUtil.buildOperationForPropertySearchParams(queryParams);
+    final IPropertyQuery propertyQuery = PropertyQueryUtil.propertyQueryFromParams(queryParams);
 
     final Map<String, Object> queryParamsMap = new HashMap<>();
     queryParamsMap.put(WEST, west);
@@ -227,28 +231,28 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     queryParamsMap.put(EAST, east);
     queryParamsMap.put(SOUTH, south);
     queryParamsMap.put(LIMIT, limit);
-    if (propSearchOp != null) {
-      queryParamsMap.put(PROPERTY_SEARCH_OP, propSearchOp);
+    if (propertyQuery != null) {
+      queryParamsMap.put(PROPERTY_SEARCH_OP, propertyQuery);
     }
 
-    final ReadFeatures rdRequest = new ReadFeaturesProxyWrapper()
+    final ReadFeatures readFeatures = new ReadFeaturesProxyWrapper()
         .withReadRequestType(ReadRequestType.GET_BY_BBOX)
         .withQueryParameters(queryParamsMap)
-        .withT
         .withLimit(limit)
         .addCollection(spaceId)
-        .withSpatialOp(SOp.intersects(bbox));
-    RequestHelper.combineOperationsForRequestAs(rdRequest, OpType.AND, tagsOp, propSearchOp);
+        .withSpatialQuery(new SpIntersects(bbox))
+        .withTagsQuery(tagQuery)
+        .withPropertyQuery(propertyQuery);
 
     // Forward request to NH Space Storage reader instance
-    final Result result = executeReadRequestFromSpaceStorage(rdRequest);
+    final Response response = executeReadRequestFromSpaceStorage(readFeatures);
+
     // transform Result to Http FeatureCollection response, restricted by given feature limit
     // we will also apply response preprocessing (like property selection and geometry clipping)
     // if any of the options is enabled
-    final F1<XyzFeature, XyzFeature> preResponseProcessing =
-        standardReadFeaturesPreResponseProcessing(propPaths, clip, bbox);
-    return transformResponseToXyzCollectionResponse(
-        result, XyzFeature.class, 0, limit, null, preResponseProcessing);
+    final F1<NakshaFeature, NakshaFeature> preResponseProcessing =
+        standardReadFeaturesPreResponseProcessing(propPaths, clip, bbox.toPolygon());
+    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, 0, limit, null, preResponseProcessing);
   }
 
   private @NotNull XyzResponse executeFeaturesByTile() {
@@ -309,7 +313,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
     if (queryParams == null || queryParams.size() <= 0) {
       return verticle.sendErrorResponse(
-          routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing mandatory query parameters");
+          routingContext, NakshaError.ILLEGAL_ARGUMENT, "Missing mandatory query parameters");
     }
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
@@ -322,7 +326,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withLimit(limit);
     if (tagsOp == null && propSearchOp == null) {
       return verticle.sendErrorResponse(
-          routingContext, XyzError.ILLEGAL_ARGUMENT, "Atleast Tags or Prop search parameters required.");
+          routingContext, NakshaError.ILLEGAL_ARGUMENT, "Atleast Tags or Prop search parameters required.");
     }
     RequestHelper.combineOperationsForRequestAs(rdRequest, OpType.AND, tagsOp, propSearchOp);
 
@@ -378,6 +382,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
         result, XyzFeature.class, offset, clientLimit, handle, preResponseProcessing);
   }
 
+  // TODO: refactor: this and other radius method are basically the sma,e only refGeo origin differs
   private @NotNull XyzResponse executeFeaturesByRadius() {
     // Parse and validate Path parameters
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
@@ -386,7 +391,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
     if (queryParams == null || queryParams.size() <= 0) {
       return verticle.sendErrorResponse(
-          routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing mandatory parameters");
+          routingContext, NakshaError.ILLEGAL_ARGUMENT, "Missing mandatory parameters");
     }
     final double lat = ApiParams.extractQueryParamAsDouble(queryParams, LAT, false, NULL_COORDINATE);
     final double lon = ApiParams.extractQueryParamAsDouble(queryParams, LON, false, NULL_COORDINATE);
@@ -395,78 +400,78 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final long radius = ApiParams.extractQueryParamAsLong(queryParams, RADIUS, false, 0);
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
-    final boolean clip = ApiParams.extractQueryParamAsBoolean(queryParams, CLIP_GEO, false);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
     ApiParams.validateLatLon(lat, lon);
     ApiParams.validateParamRange(RADIUS, radius, 0, Long.MAX_VALUE);
 
     // Obtain reference geometry based on given coordinates or feature reference
-    final XyzGeometry refGeometry = obtainReferenceGeometry(lat, lon, refSpaceId, refFeatureId);
+    final SpGeometry refGeometry = obtainReferenceGeometry(lat, lon, refSpaceId, refFeatureId);
 
     // Prepare read request based on parameters supplied
-    final SOp radiusOp =
-        (radius > 0) ? SOp.intersects(refGeometry, bufferInMeters(radius)) : SOp.intersects(refGeometry);
-    final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
-    final POp propSearchOp = PropertySearchUtil.buildOperationForPropertySearchParams(queryParams);
-    final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(radiusOp);
-    RequestHelper.combineOperationsForRequestAs(rdRequest, OpType.AND, tagsOp, propSearchOp);
+    final ISpatialQuery radiusQuery =
+        (radius > 0) ? new SpIntersects(refGeometry, new SpBuffer(radius, true)) : new SpIntersects(refGeometry);
+    final ITagQuery tagQuery = TagQueryUtil.tagQueryFromParams(queryParams);
+    final IPropertyQuery propertyQuery = PropertyQueryUtil.propertyQueryFromParams(queryParams);
+    final RequestQuery query = new RequestQuery();
+    query.setSpatial(radiusQuery);
+    query.setTags(tagQuery);
+    query.setProperties(propertyQuery);
+    final ReadFeatures rdRequest = new ReadFeatures();
+    rdRequest.setCollectionIds(StringList.forStrings(spaceId));
+    rdRequest.setQuery(query);
 
     // Forward request to NH Space Storage reader instance
-    final Result result = executeReadRequestFromSpaceStorage(rdRequest);
+    final Response response = executeReadRequestFromSpaceStorage(rdRequest);
     // TODO pass the correct transformed geometry into this method call, also use the boolean clip
-    final F1<XyzFeature, XyzFeature> preResponseProcessing =
-        standardReadFeaturesPreResponseProcessing(propPaths, false, radiusOp.getGeometry());
+    final F1<NakshaFeature, NakshaFeature> preResponseProcessing = standardReadFeaturesPreResponseProcessing(propPaths, false, refGeometry);
     // transform Result to Http FeatureCollection response, restricted by given feature limit
-    return transformResponseToXyzCollectionResponse(
-        result, XyzFeature.class, 0, limit, null, preResponseProcessing);
+    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, 0, limit, null, preResponseProcessing);
   }
 
-  private @NotNull XyzGeometry obtainReferenceGeometry(
+  private @NotNull SpGeometry obtainReferenceGeometry(
       final double lat,
       final double lon,
       final @Nullable String refSpaceId,
       final @Nullable String refFeatureId) {
     // if both lan and lon provided, then prepare Point geometry
     if (lat != NULL_COORDINATE && lon != NULL_COORDINATE) {
-      return new XyzPoint(lon, lat);
+      return new SpPoint(new PointCoord(lon, lat));
     }
 
     // Validate that both refSpaceId and refFeatureId provided and not just one
     if (refSpaceId == null || refSpaceId.isEmpty()) {
-      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing %s param".formatted(REF_SPACE_ID));
+      throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Missing %s param".formatted(REF_SPACE_ID));
     } else if (refFeatureId == null || refFeatureId.isEmpty()) {
-      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Missing %s param".formatted(REF_FEATURE_ID));
+      throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Missing %s param".formatted(REF_FEATURE_ID));
     }
 
     // Find geometry by querying referenced feature
-    XyzFeature feature = null;
+    NakshaFeature feature = null;
     // Forward Read request to NHSpaceStorage instance
-    final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdRequest(refSpaceId, refFeatureId)
+    final ReadFeatures rdRequest = proxyWrapperOf(readFeaturesByIdRequest(refSpaceId, refFeatureId))
         .withReadRequestType(ReadRequestType.GET_BY_ID)
         .withQueryParameters(Map.of(FEATURE_ID, refFeatureId));
-    try (final Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
-      if (result instanceof SuccessResult) {
-        feature = ResultHelper.readFeatureFromResponse(result, XyzFeature.class);
-      } else if (result instanceof ErrorResult er) {
-        throw new XyzErrorException(er.reason, er.message);
-      } else {
-        throw new XyzErrorException(
-            XyzError.EXCEPTION, "Unexpected result while retrieving referenced feature");
-      }
+    final Response response = executeReadRequestFromSpaceStorage(rdRequest);
+    if (response instanceof SuccessResponse successResponse) {
+      feature = ResultHelper.readFeatureFromResponse(successResponse, NakshaFeature.class);
+    } else if (response instanceof ErrorResponse errorResponse) {
+      throw new NakshaException(errorResponse.getError());
+    } else {
+      throw new NakshaException(NakshaError.EXCEPTION, "Unexpected result while retrieving referenced feature");
     }
     if (feature == null) {
-      throw new XyzErrorException(
-          XyzError.NOT_FOUND,
+      throw new NakshaException(
+          NakshaError.NOT_FOUND,
           "No feature found for given spaceId %s and featureId %s".formatted(refSpaceId, refFeatureId));
     } else if (feature.getGeometry() == null) {
-      throw new XyzErrorException(XyzError.NOT_FOUND, "Missing geometry for referenced feature");
+      throw new NakshaException(NakshaError.NOT_FOUND, "Missing geometry for referenced feature");
     }
 
     return feature.getGeometry();
   }
 
-  private @NotNull XyzResponse executeFeaturesByRadiusPost() throws Exception {
+  private @NotNull XyzResponse executeFeaturesByRadiusPost() {
     // Parse and validate Path parameters
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
 
@@ -481,23 +486,26 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     ApiParams.validateParamRange(RADIUS, radius, 0, Long.MAX_VALUE);
 
     // Obtain reference geometry based on given coordinates or feature reference
-    final XyzGeometry refGeometry = parseRequestBodyAs(XyzGeometry.class);
+    final SpGeometry refGeometry = parseRequestBodyAs(SpGeometry.class);
 
     // Prepare read request based on parameters supplied
-    final SOp radiusOp =
-        (radius > 0) ? SOp.intersects(refGeometry, bufferInMeters(radius)) : SOp.intersects(refGeometry);
-    final POp tagsOp = TagsUtil.buildOperationForTagsQueryParam(queryParams);
-    final POp propSearchOp = PropertySearchUtil.buildOperationForPropertySearchParams(queryParams);
-    final ReadFeatures rdRequest = new ReadFeatures().addCollection(spaceId).withSpatialOp(radiusOp);
-    RequestHelper.combineOperationsForRequestAs(rdRequest, OpType.AND, tagsOp, propSearchOp);
+    final ISpatialQuery radiusQuery =
+        (radius > 0) ? new SpIntersects(refGeometry, new SpBuffer(radius, true)) : new SpIntersects(refGeometry);
+    final ITagQuery tagQuery = TagQueryUtil.tagQueryFromParams(queryParams);
+    final IPropertyQuery propertyQuery = PropertyQueryUtil.propertyQueryFromParams(queryParams);
+    final RequestQuery query = new RequestQuery();
+    query.setSpatial(radiusQuery);
+    query.setTags(tagQuery);
+    query.setProperties(propertyQuery);
+    final ReadFeatures rdRequest = new ReadFeatures();
+    rdRequest.setCollectionIds(StringList.forStrings(spaceId));
+    rdRequest.setQuery(query);
 
     // Forward request to NH Space Storage reader instance
-    final Result result = executeReadRequestFromSpaceStorage(rdRequest);
+    final Response response = executeReadRequestFromSpaceStorage(rdRequest);
     // TODO pass the correct transformed geometry into this method call, also use the boolean clip
-    final F1<XyzFeature, XyzFeature> preResponseProcessing =
-        standardReadFeaturesPreResponseProcessing(propPaths, false, radiusOp.getGeometry());
+    final F1<NakshaFeature, NakshaFeature> preResponseProcessing = standardReadFeaturesPreResponseProcessing(propPaths, false, refGeometry);
     // transform Result to Http FeatureCollection response, restricted by given feature limit
-    return transformResponseToXyzCollectionResponse(
-        result, XyzFeature.class, 0, limit, null, preResponseProcessing);
+    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, 0, limit, null, preResponseProcessing);
   }
 }

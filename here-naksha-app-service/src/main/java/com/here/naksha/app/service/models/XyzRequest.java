@@ -20,7 +20,6 @@ package com.here.naksha.app.service.models;
 
 import com.fasterxml.jackson.annotation.*;
 import com.here.naksha.lib.core.models.Typed;
-import com.here.naksha.lib.core.models.payload.responses.*;
 
 /**
  * All classes that represent a valid response of any remote procedure to the XYZ Hub need to extend this class.

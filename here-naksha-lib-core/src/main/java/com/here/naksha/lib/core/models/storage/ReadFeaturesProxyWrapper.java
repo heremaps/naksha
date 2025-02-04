@@ -20,9 +20,19 @@ package com.here.naksha.lib.core.models.storage;
 
 import java.util.HashMap;
 import java.util.Map;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.request.ReadFeatures;
+import naksha.model.request.query.IPropertyQuery;
+import naksha.model.request.query.ISpatialQuery;
 import naksha.model.request.query.ITagQuery;
+import org.jetbrains.annotations.NotNull;
 
+/**
+ *
+ *
+ * Fields of this class do not follow map-based Proxy pattern usually enforced by {@link naksha.base.Proxy}
+ * This class leaves only in memory, it is not serialized, so there's no need to make it harder for us.
+ */
 public class ReadFeaturesProxyWrapper extends ReadFeatures {
 
   private ReadRequestType readRequestType;
@@ -66,5 +76,34 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
 
   public ReadFeaturesProxyWrapper shallowClone() {
     return this.copy(false);
+  }
+
+  public ReadFeaturesProxyWrapper withLimit(int limit){
+    setLimit(limit);
+    return this;
+  }
+
+  public ReadFeaturesProxyWrapper addCollection(String collectionId){
+    getCollectionIds().add(collectionId);
+    return this;
+  }
+
+  public ReadFeaturesProxyWrapper withSpatialQuery(ISpatialQuery spatialQuery){
+    getQuery().setSpatial(spatialQuery);
+    return this;
+  }
+
+  public ReadFeaturesProxyWrapper withTagsQuery(ITagQuery tagQuery){
+    getQuery().setTags(tagQuery);
+    return this;
+  }
+
+  public ReadFeaturesProxyWrapper withPropertyQuery(IPropertyQuery propertyQuery){
+    getQuery().setProperties(propertyQuery);
+    return this;
+  }
+
+  public static ReadFeaturesProxyWrapper proxyWrapperOf(@NotNull ReadFeatures readFeatures){
+    return JvmBoxingUtil.box(readFeatures, ReadFeaturesProxyWrapper.class);
   }
 }
