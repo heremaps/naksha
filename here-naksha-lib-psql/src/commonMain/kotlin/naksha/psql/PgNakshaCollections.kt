@@ -3,10 +3,15 @@
 package naksha.psql
 
 import naksha.model.Naksha
+import naksha.model.objects.NakshaCollection
 import kotlin.js.JsExport
 
 /**
- * The internal collections table.
+ * The internal collection in each map that keeps track of the collections being in the map.
  */
 @JsExport
-class PgNakshaCollections internal constructor(schema: PgMap) : PgCollection(schema, Naksha.COLLECTIONS_COL), PgInternalCollection
+class PgNakshaCollections internal constructor(map: PgMap) : PgCollection(map, NakshaCollection()
+    .withMapId(map.id)
+    .withId(Naksha.COLLECTIONS_COL)
+    .withNumber(Naksha.COLLECTIONS_COL_NUMBER)
+), PgInternalCollection

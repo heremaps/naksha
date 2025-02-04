@@ -8,7 +8,7 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.jbon.JbMapDecoder
 import naksha.jbon.JbFeatureDecoder
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.ADMIN_TRANSACTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
@@ -26,24 +26,51 @@ import kotlin.jvm.JvmField
  * A session linked to a PostgresQL database.
  *
  * This object is created when [IStorage.newReadSession] or [IStorage.newWriteSession] are called, create the session is cheap without database access.
- *
- * @constructor Create a new session.
- * @param storage the storage to which this session is bound.
- * @param readOnly if this is a read-only session.
- * @param options the options to use, when opening new database connections.
+ * @since 3.0.0
  */
 @JsExport
 open class PgSession(
+    /**
+     * The storage to which the session is bound.
+     * @since 3.0.0
+     */
     @JvmField val storage: PgStorage,
+
+    /**
+     * The session options to use, if any specific.
+     * @since 3.0.0
+     */
     options: SessionOptions?,
+
+    /**
+     * If this session is read-only.
+     * @since 3.0.0
+     */
     @JvmField val readOnly: Boolean
 ) : IWriteSession, IReadSession, ISession {
+
+    /**
+     * Assert that this session mutable and not closed.
+     * - Throws [NakshaError.ILLEGAL_STATE] if this session is [readOnly] or [closed][isClosed].
+     */
+    fun assertMutable() {
+        if (readOnly) throw NakshaException(ILLEGAL_STATE, "Failed to acquire mutable connection from read-only session")
+        assertOpen()
+    }
+
+    /**
+     * Assert that this session mutable.
+     * - Throws [NakshaError.ILLEGAL_STATE] if this session is [closed][isClosed].
+     */
+    fun assertOpen() {
+        if (_closed) throw NakshaException(ILLEGAL_STATE, "Connection closed")
+    }
 
     /**
      * The options when opening new connections. The options are mostly immutable, except for the timeout values, for which there are dedicated setter.
      */
     var options: SessionOptions = options ?: SessionOptions()
-        internal set
+        private set
 
     override var socketTimeout: Int
         get() = options.socketTimeout
@@ -63,12 +90,6 @@ open class PgSession(
             options = options.copy(lockTimeout = value)
         }
 
-    override var mapId: String
-        get() = storage.schemaToMapId(options.mapId)
-        set(value) {
-            options = options.copy(mapId = value)
-        }
-
     /**
      * The PostgresQL database connection currently being used; if any.
      */
@@ -76,11 +97,30 @@ open class PgSession(
         private set
 
     /**
-     * Returns the PostgresQL connection used internally. If none is yet acquired, acquires on from the pools and returns it.
-     * @return the PostgresQL connection.
+     * Tests if reading in parallel is applicable for this session.
+     * @return _true_ if multiple read-connections can be used in parallel for this session; _false_ otherwise.
      */
-    fun usePgConnection(): PgConnection {
-        check(!_closed) { "Connection closed" }
+    fun readParallel(): Boolean = pgConnection == null && options.parallel
+
+    /**
+     * Opens a new parallel read connection for the session.
+     * - Throws [NakshaError.ILLEGAL_STATE] if the session is [closed][isClosed] or may [not be read in parallel right now][readParallel].
+     * @return a new read-only connection for this session, which must be closed when done reading.
+     */
+    fun newReadConnection(): PgConnection {
+        assertOpen()
+        if (!readParallel()) throw NakshaException(ILLEGAL_STATE, "Session can't be read in parallel right now")
+        return storage.newConnection(options, readOnly, this::initConnection)
+    }
+
+    /**
+     * Returns a single shared PostgresQL session connection.
+     *
+     * If none is yet acquired, acquires on from the pools and returns it. This connection is shared and must not be closed, it will automatically be closed when either [rollback] or [commit] are invoked.
+     * @return the shared PostgresQL connection.
+     */
+    fun connection(): PgConnection {
+        assertOpen()
         var conn = pgConnection
         if (conn == null) {
             conn = storage.newConnection(options, readOnly, this::initConnection)
@@ -90,11 +130,11 @@ open class PgSession(
     }
 
     /**
-     * Internally invoked by [usePgConnection] to initialize the connection.
+     * Internally invoked by [connection] to initialize the connection.
      * @param conn the connection to initialize.
      * @param query the query to executed, can be modified, when overriding this method.
      */
-    open fun initConnection(conn: PgConnection, query: String) {
+    protected open fun initConnection(conn: PgConnection, query: String) {
         // This is the same as the default implementation, when init is null, see PgStorage::newConnection
         conn.execute(query).close()
     }
@@ -121,12 +161,13 @@ open class PgSession(
     private var _version: Version? = null
 
     /**
-     * Keeps transaction's counters.
+     * The transaction of the session, if any.
      */
-    private var transaction: NakshaTransaction? = null
+    var transaction: NakshaTransaction? = null
+        private set
 
     /**
-     * The last error number as SQLState.
+     * The last [PostgreSQL Error Code](https://www.postgresql.org/docs/current/errcodes-appendix.html) or _null_, if no error has happened.
      */
     var errNo: String? = null
 
@@ -155,7 +196,7 @@ open class PgSession(
     fun version(): Version {
         if (_version == null) {
             // Start a new transaction.
-            val conn = usePgConnection()
+            val conn = connection()
             val QUERY = "SELECT nextval($1) as txn, (extract(epoch from transaction_timestamp())*1000)::int8 as time"
             val cursor = conn.execute(QUERY, arrayOf(storage.txnSequenceOid)).fetch()
             cursor.use {
@@ -273,9 +314,12 @@ open class PgSession(
     /**
      * Return the current transaction, if no transaction started yet, starts a new one.
      *
+     * - Throws [NakshaError.ILLEGAL_STATE] if this is session is [readOnly] or [closed][isClosed].
      * @return the current transaction.
      */
     override fun useTransaction(): NakshaTransaction {
+        assertMutable()
+        assertOpen()
         var tx = transaction
         if (tx == null) {
             txBeforeStart()
@@ -317,14 +361,14 @@ open class PgSession(
             val updateTxReq = WriteRequest()
             val updateTx = Write()
             updateTxReq.add(updateTx)
-            updateTx.updateFeature(null, ADMIN_TRANSACTIONS_COL, useTransaction())
+            updateTx.updateFeature(null, TRANSACTIONS_COL, useTransaction())
             // FIXME uncomment when counts and update ready
 //            PgWriter(this, updateTxReq).execute()
         } else {
             val writeTxReq = WriteRequest()
             val writeTx = Write()
             writeTxReq.add(writeTx)
-            writeTx.createFeature(null, ADMIN_TRANSACTIONS_COL, useTransaction())
+            writeTx.createFeature(null, TRANSACTIONS_COL, useTransaction())
             PgWriter(this, writeTxReq, InstantWriteExecutor(this)).execute()
             isTransactionStored = true
         }
@@ -416,16 +460,6 @@ open class PgSession(
             _closed = true
             pgConnection?.close()
             pgConnection = null
-        }
-    }
-
-    override fun validateHandle(handle: String, ttl: Int?): Boolean {
-        val connection = pgConnection
-        val conn = connection ?: storage.adminConnection(storage.adminOptions)
-        try {
-            return storage.validateHandle(conn, handle, ttl)
-        } finally {
-            if (connection == null) conn.close()
         }
     }
 

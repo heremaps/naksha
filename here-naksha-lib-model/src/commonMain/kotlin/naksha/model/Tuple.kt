@@ -3,7 +3,6 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -57,12 +56,10 @@ data class Tuple(
     @JvmField val attachment: ByteArray? = null,
 
     /**
-     * The bits about which parts of the tuple have been fetched.
-     *
-     * If the client wants to create a tuple for internal purpose or to write a new state into a storage, then it should use [IS_COMPLETE].
+     * If the [Tuple] is complete, otherwise this is a partial tuple, which can't be cached.
      * @since 3.0.0
      */
-    @JvmField val state: FetchState = META_BIT,
+    @JvmField val complete: Boolean = false,
 ) : ITuple {
 
     override fun equals(other: Any?): Boolean {
@@ -140,7 +137,8 @@ data class Tuple(
     private var guid: Guid? = null
 
     /**
-     * Return the [Guid] for this tuple, requires that [fetchMeta] is not _null_, otherwise throws a [NakshaError.ILLEGAL_STATE].
+     * Return the [Guid] for this tuple, requires [complete], otherwise throws a [NakshaError.ILLEGAL_STATE].
+     * - Throws [NakshaError.ILLEGAL_STATE], if the [Tuple] is not [complete].
      * @return the [Guid] of this tuple.
      */
     fun toGuid(): Guid {
@@ -153,50 +151,10 @@ data class Tuple(
     }
 
     /**
-     * Merge the given [Tuple] with this one.
-     *
-     * As tuples are immutable, the order should not be significant, actually, the [state] is checked to understand which properties are valid.
-     *
-     * This is basically done, when more details become available about a tuple in the cache.
-     *
-     * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given other tuple is not referring to the same tuple.
-     * @param other the tuple to merge this with (must be the same tuple).
-     * @return either this, [other], or a new tuple that merge the two.
+     * Tests if this [Tuple] is loaded completely.
+     * @return _true_ if this [Tuple] is loaded completely; _false_ otherwise.
      */
-    fun merge(other: Tuple?): Tuple {
-        if (other == null) return this
-        if (meta != other.meta) throw NakshaException(ILLEGAL_ARGUMENT, "Can't merge two different tuples")
-        val meta = this.meta
-        val nextVersion = meta.nextVersion ?: other.meta.nextVersion
-        if (state.fetchAll() && meta.nextVersion == nextVersion) {
-            return this
-        }
-        if (other.state.fetchAll() && other.meta.nextVersion == nextVersion) {
-            return other
-        }
-        val newMeta = if (meta.nextVersion == nextVersion) {
-            meta
-        } else if (other.meta.nextVersion == nextVersion) {
-            other.meta
-        } else {
-            meta.copy(nextVersion = meta.nextVersion)
-        }
-        return Tuple(
-            newMeta,
-            feature ?: other.feature,
-            geo ?: other.geo,
-            referencePoint ?: other.referencePoint,
-            tags ?: other.tags,
-            attachment ?: other.attachment,
-            state or other.state,
-        )
-    }
-
-    /**
-     * Tests if the tuple is fetched completely.
-     * @return _true_, when the tuple is fully fetched; _false_ if parts are missing.
-     */
-    fun isComplete(): Boolean = state.fetchAll()
+    fun isComplete(): Boolean = complete
 
     override fun toTuple(): Tuple = this
 

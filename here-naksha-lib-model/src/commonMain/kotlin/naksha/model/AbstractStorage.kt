@@ -28,12 +28,16 @@ abstract class AbstractStorage<CONFIG : StorageConfig> : IStorage {
      */
     abstract val configKlass: KClass<CONFIG>
 
-    private var _config: AtomicRef<CONFIG> = AtomicRef(null)
+    /**
+     * The atomic reference to the configuration for internal use within [initStorage].
+     * @since 3.0.0
+     */
+    protected var configRef: AtomicRef<CONFIG> = AtomicRef(null)
     private var _id: String? = null
     private var _number: Int64? = null
 
     override val config: CONFIG
-        get() = _config.get() ?: throw NakshaException(UNINITIALIZED, "initStorage not called")
+        get() = configRef.get() ?: throw NakshaException(UNINITIALIZED, "initStorage not called")
 
     override val id: String
         get() = _id ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
@@ -54,7 +58,7 @@ abstract class AbstractStorage<CONFIG : StorageConfig> : IStorage {
      *
      * - Throws [NakshaError.FORBIDDEN], if not called as super-user, but super-user rights are necessary.
      * - Throws [NakshaError.INITIALIZATION_FAILED], if the initialization failed.
-     * - Throws [NakshaError.STORAGE_ID_MISMATCH], if the existing _storage-id_ and/or _storage-number_ of the data does not match the given one.
+     * - Throws [NakshaError.STORAGE_ID_MISMATCH], if the existing _storage-id_ and/or _storage-number_ of the data does not match the given ones in the configuration.
      * - Throws [NakshaError.ILLEGAL_ARGUMENT], if any configuration entry is invalid, for example [StorageConfig.hardCap] too large.
      * @param config the configuration as required.
      * @param create if not _null_, overrides [StorageConfig.create].
@@ -64,18 +68,25 @@ abstract class AbstractStorage<CONFIG : StorageConfig> : IStorage {
     protected abstract fun initStorage(config: CONFIG, create: Boolean?, upgrade: Boolean?)
 
     // Called by caching sub-system, which is the only one actually invoking initStorage!
-    internal open fun invokeInitStorage(config: StorageConfig, create: Boolean?, upgrade: Boolean?) {
+    internal fun invokeInitStorage(config: StorageConfig, create: Boolean?, upgrade: Boolean?) {
         lock.acquire().use {
-            if (_config.get() == null || create==true || upgrade==true) {
+            if (configRef.get() == null || create==true || upgrade==true) {
                 val _config = config.proxy(configKlass)
                 this.hardCap = config.hardCap
                 initStorage(_config, create, upgrade)
                 this._id = config.id
                 this._number = config.number
-                this._config.set(_config)
+                this.configRef.set(_config)
+                afterInit()
             }
         }
     }
+
+    /**
+     * Helper method invoked by [initStorage] after the initialization has been done successfully, so just after [id], and [number] were set, but before the [lock] is released.
+     * @since 3.0.0
+     */
+    protected abstract fun afterInit()
 
     /**
      * Shutdown the storage instance, blocks until the storage is down (all sessions are closed).
@@ -88,7 +99,7 @@ abstract class AbstractStorage<CONFIG : StorageConfig> : IStorage {
     protected abstract fun shutdownStorage(dropCache: Boolean)
 
     // Needed by caching sub-system only!
-    internal open fun invokeShutdownStorage(dropCache: Boolean) {
+    internal fun invokeShutdownStorage(dropCache: Boolean) {
         shutdownStorage(dropCache)
     }
 
@@ -99,7 +110,7 @@ abstract class AbstractStorage<CONFIG : StorageConfig> : IStorage {
      * @return _true_ if the storage is initialized; _false_ otherwise.
      */
     val initialized: Boolean
-        get() = _config.get() != null
+        get() = configRef.get() != null
 
     /**
      * Helper method to be called by the storage, ones a [shutdownStorage] is done, to finally remove the cache.

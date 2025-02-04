@@ -34,8 +34,6 @@ import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
 import naksha.model.NakshaVersion.Companion.LATEST
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaProperties
-import naksha.model.request.ReadFeatures
-import naksha.model.request.SuccessResponse
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -73,38 +71,38 @@ class Naksha private constructor() {
          * @since 3.0.0
          * @see [naksha.model.objects.NakshaTransaction]
          */
-        const val ADMIN_TRANSACTIONS_COL = "naksha~transactions"
+        const val TRANSACTIONS_COL = "naksha~transactions"
 
         /**
          * The collection-number of the collection in which transactions are stored, located in the [admin-map][ADMIN_MAP].
          * @since 3.0.0
          */
-        const val ADMIN_TRANSACTIONS_COL_NUMBER = 0
+        const val TRANSACTIONS_COL_NUMBER = 1
 
         /**
          * The identifier of the collection in which maps are stored, located only within the [admin-map][ADMIN_MAP].
          * @see [naksha.model.objects.NakshaMap]
          * @since 3.0.0
          */
-        const val ADMIN_MAPS_COL = "naksha~maps"
+        const val MAPS_COL = "naksha~maps"
 
         /**
          * The collection-number of the collection in which maps are stored, located in the [admin-map][ADMIN_MAP].
          * @since 3.0.0
          */
-        const val ADMIN_MAPS_COL_NUMBER = 1
+        const val MAPS_COL_NUMBER = 2
 
         /**
          * The identifier of the collection in which dictionaries are stored, located in the [admin-map][ADMIN_MAP].
          * @since 3.0.0
          */
-        const val ADMIN_DICT_COL = "naksha~dictionaries"
+        const val DICTIONARIES_COL = "naksha~dictionaries"
 
         /**
          * The collection-number of the collection in which dictionaries are stored, located in the [admin-map][ADMIN_MAP].
          * @since 3.0.0
          */
-        const val ADMIN_DICT_COL_NUMBER = 2
+        const val DICTIONARIES_COL_NUMBER = 3
 
         /**
          * The identifier of the virtual collection in which the collections of a map are managed, located within each map.
@@ -268,7 +266,7 @@ class Naksha private constructor() {
             val geoBytes = encodeGeometry(feature.geometry, flagsOrDefault)
             val refPoint = encodeGeometry(feature.referencePoint, TWKB)
             val tagsBytes = encodeTags(xyz.tags.toTagMap(), flagsOrDefault, dictionary)
-            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, feature.attachment, IS_COMPLETE)
+            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, feature.attachment, true)
         }
 
         /**
@@ -291,7 +289,7 @@ class Naksha private constructor() {
             val geoBytes = encodeGeometry(feature.geometry, flags)
             val refPoint = encodeGeometry(feature.referencePoint, TWKB)
             val tagsBytes = encodeTags(xyz.tags.toTagMap(), flags, dict)
-            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, feature.attachment, IS_COMPLETE)
+            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, feature.attachment, true)
         }
 
         /**
@@ -541,7 +539,7 @@ class Naksha private constructor() {
          *
          * - If the same storage with the same configuration exists, just returns the existing one.
          * - If no such storage exists, create it, and invoke [initStorage][AbstractStorage.initStorage].
-         * - If the same storage, but with another configuration, exists, shutdown the existing storage, and replace it gracefully with a  new instance using the updated configuration, invoking [initStorage][AbstractStorage.initStorage].
+         * - If the same storage, but with another configuration, exists, shutdown the existing storage, and replace it gracefully with a new instance using the updated configuration, invoking [initStorage][AbstractStorage.initStorage].
          * - Throws [NakshaError.ILLEGAL_STATE] if the given **storage-number** and **storage-id** are currently allocated to two different storages.
          * - Throws [NakshaError.FORBIDDEN], if not called as super-user, but super-user rights are necessary (only needed to create or upgrade storages).
          * - Throws [NakshaError.INITIALIZATION_FAILED], if the initialization failed.
@@ -553,7 +551,7 @@ class Naksha private constructor() {
         @JsStatic
         fun useStorage(config: StorageConfig): IStorage = _useStorage(config, false)
 
-        private fun _useStorage(config: StorageConfig, forceCreateOrUpgrade:Boolean): IStorage {
+        private fun _useStorage(config: StorageConfig, forceCreateOrUpgrade: Boolean): IStorage {
             val createOrUpdate = if (forceCreateOrUpgrade) true else null
             val s = storagesByNumber[config.number]
             val s2 = storagesById[config.id]

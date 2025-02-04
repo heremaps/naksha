@@ -179,7 +179,7 @@ open class PgTable(
             }
             val pofValue = partitionOfValue
             when (parent.partitionByColumn) {
-                PgColumn.id, PgColumn.tn, PgColumn.store_number -> {
+                PgColumn.id, PgColumn.tn -> {
                     require(pofValue >= 0 && pofValue < parent.partitionCount) {
                         """The table '$name' is a partition of '${parent.name}', but does not declare a valid 'partitionOfValue' (0 to ${parent.partitionCount}): $pofValue"""
                     }
@@ -198,14 +198,19 @@ open class PgTable(
         }
         val storage = collection.map.storage
         when (storageClass) {
+            PgStorageClass.Ephemeral -> {
+                CREATE_TABLE = "CREATE TABLE IF NOT EXISTS "
+                TABLESPACE = if (storage.adminMap.ephemeralTableSpace != null) " TABLESPACE ${storage.adminMap.ephemeralTableSpace}" else ""
+            }
+
             PgStorageClass.Brittle -> {
                 CREATE_TABLE = "CREATE UNLOGGED TABLE IF NOT EXISTS "
-                TABLESPACE = if (storage.brittleTableSpace != null) " TABLESPACE ${storage.brittleTableSpace}" else ""
+                TABLESPACE = if (storage.adminMap.brittleTableSpace != null) " TABLESPACE ${storage.adminMap.brittleTableSpace}" else ""
             }
 
             PgStorageClass.Temporary -> {
                 CREATE_TABLE = "CREATE UNLOGGED TABLE IF NOT EXISTS "
-                TABLESPACE = if (storage.tempTableSpace != null) " TABLESPACE ${storage.tempTableSpace}" else ""
+                TABLESPACE = if (storage.adminMap.tempTableSpace != null) " TABLESPACE ${storage.adminMap.tempTableSpace}" else ""
             }
 
             else -> {
@@ -223,7 +228,7 @@ open class PgTable(
         // execute a query activity in parallel, similar to max_parallel_workers_per_gather, but only for a specific table;
         // ALTER TABLE tabname SET (parallel_workers = N);
         val WITH = if (partitionByColumn == null)
-            "WITH (fillfactor=${if (isVolatile) 65 else 100},toast_tuple_target=${storage.maxTupleSize})"
+            "WITH (fillfactor=${if (isVolatile) 65 else 100},toast_tuple_target=1024)"
         else
             ""
         val PARTITION_BY = when (partitionByColumn) {
@@ -239,20 +244,15 @@ open class PgTable(
                 require(partitionCount in 2..256) { "Invalid partition-count, expect 2 .. 256, found : $partitionCount" }
                 "PARTITION BY RANGE ((get_byte(${PgColumn.tn}, 7) % $partitionCount))"
             }
-            // The store_number contains the partition-number in the lower 8-bit.
-            PgColumn.store_number -> {
-                require(partitionCount in 2..256) { "Invalid partition-count, expect 2 .. 256, found : $partitionCount" }
-                "PARTITION BY RANGE (((${PgColumn.store_number} & 255) % $partitionCount))"
-            }
             // This is used in transaction table and history table, partition by year.
             PgColumn.txn, PgColumn.txn_next -> "PARTITION BY RANGE ((${partitionByColumn.name} >> 41))"
             else -> throw IllegalArgumentException("Unsupported partitionByColumn: '$partitionByColumn'")
         }
         if (partitionOfTable != null) {
             val PARTITION_OF = """ PARTITION OF ${partitionOfTable.quotedName} FOR VALUES FROM (${partitionOfValue}) TO (${partitionOfValue + 1}) """
-            CREATE_SQL = """$CREATE_TABLE ${collection.map.nameQuoted}.$quotedName ${PARTITION_OF}${PARTITION_BY}${WITH}${TABLESPACE}"""
+            CREATE_SQL = """$CREATE_TABLE ${collection.map.quotedId}.$quotedName ${PARTITION_OF}${PARTITION_BY}${WITH}${TABLESPACE}"""
         } else {
-            CREATE_SQL = "$CREATE_TABLE ${collection.map.nameQuoted}.$quotedName ${TABLE_BODY}${PARTITION_BY}${WITH}${TABLESPACE}"
+            CREATE_SQL = "$CREATE_TABLE ${collection.map.quotedId}.$quotedName ${TABLE_BODY}${PARTITION_BY}${WITH}${TABLESPACE}"
         }
     }
 

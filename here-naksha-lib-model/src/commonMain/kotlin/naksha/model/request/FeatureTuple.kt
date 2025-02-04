@@ -1,4 +1,4 @@
-@file:Suppress("OPT_IN_USAGE")
+@file:Suppress("OPT_IN_USAGE", "unused")
 
 package naksha.model.request
 
@@ -92,9 +92,7 @@ open class FeatureTuple(
         }
 
     /**
-     * Convert the tuple into a new feature, no caching; this necessary when the returned feature should be modified.
-     *
-     * This method is invoked internally by [feature].
+     * Convert the tuple into a new feature, bypassing the cache and not updating the cache.
      *
      * @return a new copy of the tuple converted into a feature.
      * @since 3.0.0

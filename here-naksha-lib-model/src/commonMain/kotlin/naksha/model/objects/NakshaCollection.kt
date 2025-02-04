@@ -6,6 +6,9 @@ import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.StringList
+import naksha.geo.SpBoundingBox
+import naksha.geo.SpGeometry
+import naksha.geo.SpPoint
 import naksha.model.Flags
 import naksha.model.NakshaContext
 import kotlin.js.JsExport
@@ -31,9 +34,20 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     override fun defaultFeatureType(): String = FEATURE_TYPE
+    override fun withId(value: String): NakshaCollection = super.withId(value) as NakshaCollection
+    override fun withType(value: String): NakshaCollection = super.withType(value) as NakshaCollection
+    override fun withFeatureType(value: String): NakshaCollection = super.withFeatureType(value) as NakshaCollection
+    override fun withBbox(value: SpBoundingBox?): NakshaCollection = super.withBbox(value) as NakshaCollection
+    override fun withGeometry(value: SpGeometry?): NakshaCollection = super.withGeometry(value) as NakshaCollection
+    override fun withReferencePoint(value: SpPoint?): NakshaCollection = super.withReferencePoint(value) as NakshaCollection
+    override fun withProperties(value: NakshaProperties): NakshaCollection = super.withProperties(value) as NakshaCollection
+    override fun withAttachment(value: ByteArray?): NakshaCollection = super.withAttachment(value) as NakshaCollection
+    override fun withMomType(value: String): NakshaCollection = super.withMomType(value) as NakshaCollection
 
     /**
      * The map-id of the map in which the collection is located, defaults to [NakshaContext.mapId].
+     *
+     * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
      * @since 3.0.0
      */
     var mapId by MAP_ID
@@ -41,7 +55,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [mapId]
      */
-    fun withMapId(value: String): NakshaCollection {
+    open fun withMapId(value: String): NakshaCollection {
         this.mapId = value
         return this
     }
@@ -52,13 +66,15 @@ open class NakshaCollection() : NakshaFeature() {
      * @return this
      * @since 3.0.0
      */
-    fun inMap(map: NakshaMap): NakshaCollection {
+    open fun inMap(map: NakshaMap): NakshaCollection {
         this.mapId = map.id
         return this
     }
 
     /**
      * The collection-number, _null_ if the collection does not yet exist.
+     *
+     * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
      * @since 3.0.0
      */
     var number by INT_NULL
@@ -66,7 +82,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [number]
      */
-    fun withNumber(value: Int?): NakshaCollection {
+    open fun withNumber(value: Int?): NakshaCollection {
         this.number = value
         return this
     }
@@ -78,7 +94,7 @@ open class NakshaCollection() : NakshaFeature() {
      *
      * Beware that in AWS ever point-to-point connection is generally limited to 5 Gbps. To reach the full throughput when reading features from a database with a 200 Gbps bandwidth, at least 40 partitions are needed, so 40 * 5 Gbps = 200 Gbps throughput.
      *
-     * {Create-Only} - after collection creation, modification of this parameter takes no effect.
+     * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
      * @since 3.0.0
      */
     var partitions: Int by PARTITIONS
@@ -86,7 +102,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [partitions]
      */
-    fun withPartitions(value: Int): NakshaCollection {
+    open fun withPartitions(value: Int): NakshaCollection {
         this.partitions = value
         return this
     }
@@ -100,30 +116,34 @@ open class NakshaCollection() : NakshaFeature() {
 
     /**
      * The storageClass decides where the collection is created.
-     * The possible values are implementation specific, for lib-psql there is consistent (the default), which is a normal collection.
-     * Other options are: brittle and temporary.
-     * The brittle storage class force all the tables of the collection to be created on ephemeral storage and to be unlogged, distributed across multiple local SSDs.
-     * This drastically improves the read and write performance, but no backups are done, no read-replicas are available, and any server crash can corrupt the data.
-     * The temporary option is the same as brittle, but it will be auto-deleted when the session is closed.
-     * <br>
-     * {Create-Only} - after collection creation, modification of this parameter takes no effect.
+     *
+     * The possible values are implementation specific, but the general ones are:
+     * - `consistent`: The default storage type, which should be perfectly safe.
+     * - `ephemeral`: Force all the tables of the collection to be created on ephemeral storage, optionally distributed across multiple local disks. This drastically improves the read and write performance, but no backups are done, no read-replicas are available. The data normally survives a server crash, unless the physical instance on which the data is stored is lost.
+     * - `brittle`: Force all the tables of the collection to be created on ephemeral storage, and to be unlogged, optionally distributed across multiple local SSDs. Any server crash can corrupt the data. This is the fastest way to store data, but the least reliable.
+     * - `temporary`: The collection is created in temporary space _(when possible, on ephemeral storage)_, it is unlogged, and automatically deleted when the session is closed. The weakest form to store data.
+     *
+     * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
      */
     var storageClass: String? by STORAGE_CLASS
 
     /**
      * @see [storageClass]
      */
-    fun withStorageClass(value: String?): NakshaCollection {
+    open fun withStorageClass(value: String?): NakshaCollection {
         this.storageClass = value
         return this
     }
 
     /**
      * The protectionClass defines how collections should be protected.
-     * The default is FULL, which means that triggers are installed that prevent any manual change, so changed are only allow through the lib-psql.
-     * Next to this, two alternatives are there: SAVE, which installs triggers that automatically apply fixes, so write the history and transaction logs.
-     * The disadvantage of these are, that they slow down the processing, but allow to actually do any kind of SQL query.
-     * The final ones are NONE, which removes all protecting triggers and allow any kind of manual change, but this can easily break the history and/or transaction logs.
+     *
+     * Values supported by `lib-psql` are:
+     * - `FULL`: Install triggers to prevent any manual change in collections, so that changed are only allowed using `lib-psql`, reading the data is possible.
+     * - `SAVE`: Installs triggers that automatically apply fixes, so write the history and transaction logs. The disadvantage is that the triggers will slow down the processing, but they allow to actually execute any kind of SQL query without breaking the internal structures.
+     * - `NONE`: Removes all protecting triggers and allow any kind of manual change, but this can easily break the history and/or transaction logs, as well allows the creation of invalid table entries that can break `lib-psql`.
+     *
+     * If _null_, the storage will use whatever is best for the storage.
      * @since 3.0.0
      */
     var protectionClass by PROTECTION_CLASS
@@ -131,7 +151,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [protectionClass]
      */
-    fun withProtectionClass(value: String): NakshaCollection {
+    open fun withProtectionClass(value: String): NakshaCollection {
         this.protectionClass = value
         return this
     }
@@ -145,7 +165,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [autoFeatureTypeIndex]
      */
-    fun withAutoFeatureTypeIndex(value: Boolean): NakshaCollection {
+    open fun withAutoFeatureTypeIndex(value: Boolean): NakshaCollection {
         this.autoFeatureTypeIndex = value
         return this
     }
@@ -161,7 +181,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [defaultFlags]
      */
-    fun withDefaultFlags(value: Flags): NakshaCollection {
+    open fun withDefaultFlags(value: Flags): NakshaCollection {
         this.defaultFlags = value
         return this
     }
@@ -177,13 +197,15 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [encodeDict]
      */
-    fun withEncode(value: String?): NakshaCollection {
+    open fun withEncode(value: String?): NakshaCollection {
         this.encodeDict = value
         return this
     }
 
     /**
      * _true_ - disables history of features' modifications.
+     *
+     * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
      * @since 3.0.0
      */
     var disableHistory by DISABLE_HISTORY
@@ -191,14 +213,49 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [disableHistory]
      */
-    fun withDisableHistory(value: Boolean): NakshaCollection {
+    open fun withDisableHistory(value: Boolean): NakshaCollection {
         this.disableHistory = value
         return this
     }
 
     /**
-     * If autoPurge is enabled, deleted features are automatically purged and no shadow state is kept available.
-     * Note that if [disableHistory] is false, the deleted features will still be around in the history. This mainly effects lib-view.
+     * _true_ - disables the shadow of features'. The shadow normally keeps a tombstone for deleted features, so that `lib-view` is able to detect that a feature was explicitly deleted in a higher layer, and therefore removes the feature from the view. Disabling the shadow will impact `lib-view`, but make the deletion of features slightly faster.
+     *
+     * **Note**: If shadow should only be disabled temporarily, rather use [autoPurge].
+     *
+     * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
+     * @since 3.0.0
+     */
+    var disableShadow by DISABLE_SHADOW
+
+    /**
+     * @see [disableHistory]
+     */
+    open fun withDisableShadow(value: Boolean): NakshaCollection {
+        this.disableShadow = value
+        return this
+    }
+
+    /**
+     * _true_ - disables the metadata table of the collection. This does not allow the system to store statistics and other metadata. It is not recommended to disable the metadata table.
+     *
+     * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
+     * @since 3.0.0
+     */
+    var disableMeta by DISABLE_META
+
+    /**
+     * @see [disableHistory]
+     */
+    open fun withDisableMeta(value: Boolean): NakshaCollection {
+        this.disableMeta = value
+        return this
+    }
+
+    /**
+     * If autoPurge is enabled, deleted features are purged and no shadow state is kept available. To permanently disable the shadow, use [disableShadow].
+     *
+     * Note that if [disableHistory] is _false_, the deleted features will still be around in the history. This mainly effects `lib-view`.
      * @since 3.0.0
      */
     var autoPurge by AUTO_PURGE
@@ -206,7 +263,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [autoPurge]
      */
-    fun withAutoPurge(value: Boolean): NakshaCollection {
+    open fun withAutoPurge(value: Boolean): NakshaCollection {
         this.autoPurge = value
         return this
     }
@@ -223,10 +280,10 @@ open class NakshaCollection() : NakshaFeature() {
      * - `ref_point`: Index above geometry, does not allow index-only scans or pre-ordering.
      * - `gist_geo_(2d|3d|4d)` or `spgist_geo_(2d|3d|4d)`: Index above geometry, does not allow index-only scans or pre-ordering.
      * - `feature_type`: ft text_pattern_ops DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE $c_tn
-     * - `cv0`, `cv1`, `cv2`, and `cv3`: cv? text_pattern_ops DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE $c_tn
-     * - `cs0`, `cs1`, `cs2`, and `cs3`: cs? text_pattern_ops DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE $c_tn
+     * - `cv0`, `cv1`, `cv2`, and `cv3`: cvX text_pattern_ops DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE $c_tn
+     * - `cs0`, `cs1`, `cs2`, and `cs3`: csX text_pattern_ops DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE $c_tn
      *
-     * To use less or other indices, create an own list of indices out of the above given values, `lib-psql` will all these indices by default, using `2d` variants for the geometry index by default. Beware, that many of the indices exclude _null_ value, and therefore are not costing anything, unless the values are used.
+     * To use less or other indices, create an own list of indices out of the above given values, `lib-psql` will add all these indices by default, using `2d` variants for the geometry index by default. Beware, that many of the indices exclude _null_ values, and therefore do not costing anything, unless the values are used.
      *
      * It is not recommended, to add multiple geometry indices, this can become extreme costly.
      * @since 3.0.0
@@ -236,15 +293,15 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [indices]
      */
-    fun withIndices(value: StringList): NakshaCollection {
+    open fun withIndices(value: StringList): NakshaCollection {
         this.indices = value
         return this
     }
 
     /**
      * The maxAge decides about the maximum age of features in the history in days.
-     * Note that there is no guarantee that features are deleted exactly after having reached their max-age.
-     * However, they are eligible to be deleted at as soon as possible.
+     *
+     * Note that there is no guarantee that features are deleted exactly after having reached their max-age. However, they are eligible to be deleted at as soon as possible.
      * @since 3.0.0
      */
     var maxAge by MAX_AGE
@@ -252,13 +309,13 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [maxAge]
      */
-    fun withMaxAge(value: Int64): NakshaCollection {
+    open fun withMaxAge(value: Int64): NakshaCollection {
         this.maxAge = value
         return this
     }
 
     /**
-     * The quadPartitionSize decides _(for the optimal partitioning algorithm)_ how many features should be placed into each "optimal" tile.
+     * The quad-partition-size decides _(for the optimal partitioning algorithm)_ how many features should be placed into each "optimal" tile.
      * @since 3.0.0
      */
     var quadPartitionSize: Int by QUAD_PARTITION_SIZE
@@ -266,7 +323,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [quadPartitionSize]
      */
-    fun withQuadPartitionSize(value: Int): NakshaCollection {
+    open fun withQuadPartitionSize(value: Int): NakshaCollection {
         this.quadPartitionSize = value
         return this
     }
@@ -352,6 +409,8 @@ open class NakshaCollection() : NakshaFeature() {
         private val MAP_ID = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> NakshaContext.mapId() }
         private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)
         private val DISABLE_HISTORY = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
+        private val DISABLE_SHADOW = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
+        private val DISABLE_META = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val AUTO_PURGE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val INDICES = NotNullProperty<NakshaCollection, StringList>(StringList::class)
         private val MAX_AGE = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> Int64(-1) }

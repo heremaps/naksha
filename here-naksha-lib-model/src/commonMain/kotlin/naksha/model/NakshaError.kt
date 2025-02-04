@@ -1,4 +1,4 @@
-@file:Suppress("OPT_IN_USAGE", "NON_EXPORTABLE_TYPE")
+@file:Suppress("OPT_IN_USAGE")
 
 package naksha.model
 

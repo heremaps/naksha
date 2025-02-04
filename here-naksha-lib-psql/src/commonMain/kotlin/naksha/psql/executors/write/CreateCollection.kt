@@ -39,7 +39,7 @@ class CreateCollection(
         // Create the tables
         val collection = map[colId]
         collection.create(
-            connection = session.usePgConnection(),
+            connection = session.connection(),
             partitions = feature.partitions,
             storageClass = PgStorageClass.of(feature.storageClass)
         )
@@ -87,7 +87,7 @@ class CreateCollection(
         feature: NakshaFeature
     ): Tuple {
         val transaction = session.useTransaction()
-        val conn = session.usePgConnection()
+        val conn = session.connection()
         conn.execute(
             sql = """ INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})
                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
@@ -111,7 +111,7 @@ class CreateCollection(
      * @param map the map in which to create a new map.
      * @return the new collection-number of the new collection.
      */
-    fun newCollectionNumber(map: PgMap): Int64 = map.newCollectionNumber(session.usePgConnection())
+    fun newCollectionNumber(map: PgMap): Int64 = map.newCollectionNumber(session.connection())
 
     /**
      * Returns a new `uid` for a new tuple.

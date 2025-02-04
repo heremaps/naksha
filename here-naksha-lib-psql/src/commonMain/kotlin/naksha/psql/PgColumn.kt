@@ -148,7 +148,7 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * The [version][naksha.model.Version] (aka transaction) of this [tuple][naksha.model.Tuple] (state).
+         * The [version][naksha.model.Version] (aka transaction-number) of this [tuple][naksha.model.Tuple] (state).
          */
         @JvmField
         @JsStatic
@@ -208,6 +208,8 @@ class PgColumn : JsEnum() {
             self._type = PgType.DOUBLE
         }
 
+        //= 9 * 8 = 71 byte
+
         /**
          * The [version][naksha.model.Version] (aka transaction) of this [tuple][naksha.model.Tuple] (state).
          */
@@ -262,6 +264,8 @@ class PgColumn : JsEnum() {
             self._type = PgType.INT
             self._extra = "NOT NULL"
         }
+
+        //= 71 + 5 * 4 = 91 byte
 
         /**
          * The [tuple-number][naksha.model.TupleNumber] of this row in 96-bit encoding.
@@ -446,6 +450,13 @@ class PgColumn : JsEnum() {
             self._extra = "STORAGE PLAIN COLLATE \"C\""
         }
 
+        // Assuming:
+        // - id is not more than 60 byte
+        // - app_id and author are not more than 30 byte
+        // - origin and target are not more 60 byte
+        // - some byte reserved for cs0, cs1, cs2, cs3 (60 byte total)
+        //= 91 + 60 + 60 + 120 + 60 = 391 byte
+
         /**
          * The [tags][naksha.model.TagMap] of the [tuple][naksha.model.Tuple], stored as map.
          */
@@ -478,6 +489,8 @@ class PgColumn : JsEnum() {
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE EXTERNAL"
         }
+
+        // When we want to keep tags and geometry as well untoasted, we should use 1024 toast_tuple_target!
 
         /**
          * The serialized [feature][naksha.model.objects.NakshaFeature].

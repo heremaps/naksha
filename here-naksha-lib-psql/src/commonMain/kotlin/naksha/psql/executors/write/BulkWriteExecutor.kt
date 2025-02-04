@@ -47,7 +47,7 @@ class BulkWriteExecutor(
         var plan = insertToHead[collection]
         if (plan == null) {
             val quotedCollectionId = quoteIdent(collection.id)
-            plan = session.usePgConnection().prepare(
+            plan = session.connection().prepare(
                 """INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})
                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
                       """.trimIndent(),
@@ -128,7 +128,7 @@ class BulkWriteExecutor(
             }.joinToString(separator = ",")
             val quotedHeadTable = collection.head.quotedName
 
-            val conn = session.usePgConnection()
+            val conn = session.connection()
             plan = conn.prepare(
                 sql = """ UPDATE $quotedHeadTable
                    SET $columnEqualsVariable
@@ -183,7 +183,7 @@ class BulkWriteExecutor(
         val columnNames = columns.joinToString(separator = ",")
         val copyColumnNames = columnsToCopy.joinToString(separator = ",")
 
-        return session.usePgConnection().prepare(
+        return session.connection().prepare(
             sql = """
                 INSERT INTO $dstTableName($columnNames)
                 SELECT $1,
@@ -199,6 +199,6 @@ class BulkWriteExecutor(
 
     private fun executeDelete(quotedTable: String, idsToDelete: Set<String>) {
         val SQL = "DELETE FROM $quotedTable WHERE ${PgColumn.id.ident} = ANY($1)"
-        session.usePgConnection().execute(SQL, arrayOf(idsToDelete.toTypedArray())).close()
+        session.connection().execute(SQL, arrayOf(idsToDelete.toTypedArray())).close()
     }
 }

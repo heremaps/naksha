@@ -7,13 +7,13 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 
 /**
- * The Java implementation of the [IStorage] interface.
+ * The Java implementation of the [PgStorage].
  *
  * @constructor Creates a new PSQL storage.
  * @property cluster the PostgresQL cluster used by this storage.
  * @param defaultSchemaName the default schema name.
  */
-class JvmPgStorage(override val cluster: PsqlCluster) : PgStorage(cluster), IStorage {
+class JvmPgStorage : PgStorage(), IStorage {
 
     private var _channel: String? = null
 
@@ -25,18 +25,15 @@ class JvmPgStorage(override val cluster: PsqlCluster) : PgStorage(cluster), ISto
      */
     var channel: String
         get() = _channel ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
-        set(value) {
-            if (!isInitialized()) throw NakshaException(ILLEGAL_STATE, "Storage already initialized")
+        private set(value) {
             _channel = value
         }
     private lateinit var listener: PsqlStorageListener
 
-    override fun newMap(storage: PgStorage, mapId: String): PsqlMap = PsqlMap(storage, mapId, mapIdToSchema(mapId))
-
     /**
      * Initializes the storage.
      *
-     * For the [JvmPgStorage] implementation, this will test if an [administration-map][Naksha.ADMIN_MAP] exists (schema `naksha~admin`), and if the _storage-id_ and _storage-number_ match the existing installation. If no such map exists, this method will create one, and install all extensions, create all functions, setup needed sequences, and install the _storage-id_ and _storage-number_, so that the next time the storage is opened, it can be verified. It will as well remember which version of Naksha is installed to be able to upgrade the functions on demand, and the base administration collections will be created, which are: [Naksha.ADMIN_TRANSACTIONS_COL], [Naksha.ADMIN_MAPS_COL], and [Naksha.ADMIN_DICT_COL].
+     * For the [JvmPgStorage] implementation, this will test if an [administration-map][Naksha.ADMIN_MAP] exists (schema `naksha~admin`), and if the _storage-id_ and _storage-number_ match the existing installation. If no such map exists, this method will create one, and install all extensions, create all functions, setup needed sequences, and install the _storage-id_ and _storage-number_, so that the next time the storage is opened, it can be verified. It will as well remember which version of Naksha is installed to be able to upgrade the functions on demand, and the base administration collections will be created, which are: [Naksha.TRANSACTIONS_COL], [Naksha.MAPS_COL], and [Naksha.DICTIONARIES_COL].
      *
      * This operation requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights.
      *

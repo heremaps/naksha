@@ -1,3 +1,4 @@
+-- noinspection SqlNoDataSourceInspectionForFile
 -- noinspection SqlResolveForFile @ routine/"ST_GeomFromTWKB"
 -- noinspection SqlResolveForFile @ routine/"ST_GeomFromEWKB"
 -- noinspection SqlResolveForFile @ routine/"ST_GeomFromWKB"

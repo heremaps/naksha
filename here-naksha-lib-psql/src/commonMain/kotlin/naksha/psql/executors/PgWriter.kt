@@ -48,7 +48,7 @@ class PgWriter(
     /**
      * The connection to use.
      */
-    val conn: PgConnection = session.usePgConnection()
+    val conn: PgConnection = session.connection()
 
     /**
      * The writes to act upon.

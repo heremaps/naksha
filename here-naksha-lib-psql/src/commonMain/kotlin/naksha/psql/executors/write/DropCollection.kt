@@ -22,7 +22,7 @@ class DropCollection(private val session: PgSession) {
         )
         val pgCollection = map[collectionId]
         val tupleNumber = collectionTupleNumber(pgCollection)
-        val conn = session.usePgConnection()
+        val conn = session.connection()
         try {
             /**
              * TODO:

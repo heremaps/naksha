@@ -2,31 +2,26 @@
 
 package naksha.psql
 
-import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
-import naksha.model.NakshaException
 import naksha.model.Naksha
+import naksha.model.objects.NakshaCollection
 import kotlin.js.JsExport
 
 /**
- * The internal transactions table.
- *
+ * The internal collection in the admin-map, that keeps track of the transactions of the storage.
  */
 @JsExport
-class PgNakshaTransactions internal constructor(schema: PgMap) : PgCollection(schema, Naksha.ADMIN_TRANSACTIONS_COL), PgInternalCollection {
+class PgNakshaTransactions internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection()
+    .withMapId(Naksha.ADMIN_MAP)
+    .withId(Naksha.TRANSACTIONS_COL)
+    .withNumber(Naksha.TRANSACTIONS_COL_NUMBER)
+    .withDisableShadow(true)
+    .withDisableHistory(true)
+    .withDisableMeta(true)
+), PgInternalCollection {
 
     /**
-     * The transactions table.
+     * The transactions table, which actually is just [head].
      */
-    var transactions: PgTransactions? = null
-        get() {
-            check(exists()) { throw NakshaException(COLLECTION_NOT_FOUND, "Collection '$id' does not exist", id = id) }
-            return field
-        }
-        private set
-
-    override fun refresh(connection: PgConnection?, noCache: Boolean): PgCollection {
-        super.refresh(connection, noCache)
-        // TODO: txnPartitions
-        return this
-    }
+    val transactions: PgTransactions
+        get() = head as PgTransactions
 }

@@ -15,9 +15,9 @@ import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
- * The on heap representation of the metadata of a [Tuple].
+ * The immutable on-heap representation of the metadata of a [Tuple].
  *
- * This is mainly used by applications therefore the default value of [tupleNumber] is [TupleNumber.HEAD].
+ * This is mainly used by applications, therefore the default value of [tupleNumber] is [TupleNumber.HEAD].
  * @since 3.0.0
  */
 @JsExport

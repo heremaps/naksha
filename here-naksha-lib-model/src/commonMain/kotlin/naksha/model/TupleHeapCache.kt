@@ -18,7 +18,7 @@ import kotlin.js.JsExport
  */
 @JsExport
 class TupleHeapCache : AbstractTupleCache(LATENCY_MEMORY) {
-    // TODO: !!! We should not store data simply using weak-references. !!!
+    // TODO: !!! We should not store data only using weak-references. !!!
     //       This is many bad side effects, one very bad is that when an eviction happens, everything is evicted at ones!
     //       We should define a minimum cache size in bytes, and keep GZIP compressed full tuples, in binary encoding, in it.
     //       We should define a maximum cache size in bytes, and we use soft-references for this one (binary encoding).
@@ -35,45 +35,38 @@ class TupleHeapCache : AbstractTupleCache(LATENCY_MEMORY) {
     override fun doLoad(rs: List<FeatureTuple?>, start: Int, end: Int) {
         var i = start
         while (i < end) {
-            val rt = rs[i++] ?: continue
-            val tupleNumber = rt.tupleNumber
-            var tuple = rt.tuple
-            if (tuple == null || !tuple.isComplete()) {
+            val featureTuple = rs[i++] ?: continue
+            val tupleNumber = featureTuple.tupleNumber
+            val tuple = featureTuple.tuple
+            if (tuple == null) {
                 val cached = tuplesByStorage[tupleNumber.storageNumber]?.get(tupleNumber)?.deref()
                 if (cached != null) {
-                    tuple = cached.merge(tuple)
-                    if (tuple !== cached) performStore(tuple)
-                    rt.tuple = tuple
-                    rt.source = this
+                    featureTuple.tuple = tuple
+                    featureTuple.source = this
                 }
             }
         }
     }
 
-    override tailrec fun doStore(tuple: Tuple, dictionary: IDict?): Tuple {
+    override fun doStore(tuple: Tuple, dictionary: IDict?): Tuple {
+        // Do not cache incomplete or undefined tuples, they are created in the client and not yet stored.
+        if (!tuple.isComplete()) return tuple
         val tuple_number = tuple.meta.tupleNumber
-        // Do not cache undefined tuples, they are created in the client and not yet stored.
         if (TupleNumber.HEAD == tuple_number) return tuple
+
         var cacheLine = tuplesByStorage[tuple_number.storageNumber]
-        if (cacheLine != null) {
-            val existingRef = cacheLine[tuple_number]
-            if (existingRef != null) {
-                val existing = existingRef.deref()
-                if (existing != null && existing.meta.tupleNumber == tuple_number) {
-                    val merged = existing.merge(tuple)
-                    if (existing !== merged) {
-                        cacheLine[tuple_number] = WeakRef(merged)
-                        return merged
-                    }
-                    return existing
-                }
-            }
-            cacheLine[tuple_number] = WeakRef(tuple)
-            return tuple
+        if (cacheLine == null) {
+            cacheLine = AtomicMap()
+            val existing = tuplesByStorage.putIfAbsent(tuple_number.storageNumber, cacheLine)
+            if (existing != null) cacheLine = existing
         }
-        cacheLine = AtomicMap()
-        tuplesByStorage.putIfAbsent(tuple_number.storageNumber, cacheLine)
-        return doStore(tuple, dictionary)
+        val existingRef = cacheLine[tuple_number]
+        if (existingRef != null) {
+            val existing = existingRef.deref()
+            if (existing != null) return tuple
+        }
+        cacheLine[tuple_number] = WeakRef(tuple)
+        return tuple
     }
 
     override fun doesContain(tupleNumber: TupleNumber): Boolean
@@ -106,5 +99,4 @@ class TupleHeapCache : AbstractTupleCache(LATENCY_MEMORY) {
             }
         }
     }
-
 }

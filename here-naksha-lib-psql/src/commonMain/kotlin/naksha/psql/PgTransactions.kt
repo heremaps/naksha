@@ -2,8 +2,6 @@
 
 package naksha.psql
 
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaException
 import naksha.model.Version
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -14,10 +12,7 @@ import kotlin.jvm.JvmField
  * @param c the collection for which to create the HEAD table.
  */
 @JsExport
-class PgTransactions(c: PgCollection) : PgHead(c, "${c.id}${PG_HEAD}", PgStorageClass.Consistent, false, partitionBy = PgColumn.txn) {
-    init {
-        check(c is PgNakshaTransactions) { throw NakshaException(ILLEGAL_ARGUMENT, "Expected NakshaTransactions") }
-    }
+class PgTransactions(c: PgNakshaTransactions) : PgHead(c, "${c.id}${PG_HEAD}", PgStorageClass.Consistent, false, partitionBy = PgColumn.txn) {
 
     /**
      * All partitions, with key being the year (`txn >> 41`).

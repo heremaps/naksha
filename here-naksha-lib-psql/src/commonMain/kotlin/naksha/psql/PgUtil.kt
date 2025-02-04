@@ -8,9 +8,9 @@ import naksha.jbon.*
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
-import naksha.model.Naksha.NakshaCompanion.ADMIN_DICT_COL
-import naksha.model.Naksha.NakshaCompanion.ADMIN_MAPS_COL
-import naksha.model.Naksha.NakshaCompanion.ADMIN_TRANSACTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL
+import naksha.model.Naksha.NakshaCompanion.MAPS_COL
+import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_ident
@@ -40,7 +40,7 @@ class PgUtil private constructor() {
          */
         @JvmField
         @JsStatic
-        val ADMIN_TRANSACTIONS_COL_QUOTED = quoteIdent(ADMIN_TRANSACTIONS_COL)
+        val ADMIN_TRANSACTIONS_COL_QUOTED = quoteIdent(TRANSACTIONS_COL)
 
         /**
          * The quoted identifier of the virtual maps collection to be used in queries.
@@ -48,7 +48,7 @@ class PgUtil private constructor() {
          */
         @JvmField
         @JsStatic
-        val ADMIN_MAPS_COL_QUOTED = quoteIdent(ADMIN_MAPS_COL)
+        val ADMIN_MAPS_COL_QUOTED = quoteIdent(MAPS_COL)
 
         /**
          * The quoted identifier of the virtual collection in which the dictionaries are stored.
@@ -56,7 +56,7 @@ class PgUtil private constructor() {
          */
         @JvmField
         @JsStatic
-        val ADMIN_DICT_COL_QUOTED = quoteIdent(ADMIN_DICT_COL)
+        val ADMIN_DICT_COL_QUOTED = quoteIdent(DICTIONARIES_COL)
 
         /**
          * The quoted identifier of the virtual collections collection to be used in queries.

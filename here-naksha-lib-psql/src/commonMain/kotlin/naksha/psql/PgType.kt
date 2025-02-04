@@ -16,11 +16,15 @@ class PgType : JsEnum() {
         // https://www.postgresql.org/docs/current/datatype.html
         @JvmField
         @JsStatic
-        val NULL = defIgnoreCase(PgType::class, "null")
+        val NULL = defIgnoreCase(PgType::class, "null") {
+            it.byteSize = 0
+        }
 
         @JvmField
         @JsStatic
-        val BOOLEAN = defIgnoreCase(PgType::class, "boolean").alias<PgType>("bool")
+        val BOOLEAN = defIgnoreCase(PgType::class, "boolean") {
+            it.byteSize = 1
+        }.alias<PgType>("bool")
 
         @JvmField
         @JsStatic
@@ -28,7 +32,9 @@ class PgType : JsEnum() {
 
         @JvmField
         @JsStatic
-        val SHORT = defIgnoreCase(PgType::class, "smallint").alias<PgType>("int2")
+        val SHORT = defIgnoreCase(PgType::class, "smallint") {
+            it.byteSize = 2
+        }.alias<PgType>("int2")
 
         @JvmField
         @JsStatic
@@ -36,7 +42,9 @@ class PgType : JsEnum() {
 
         @JvmField
         @JsStatic
-        val INT = defIgnoreCase(PgType::class, "integer").alias<PgType>("int4").alias<PgType>("int")
+        val INT = defIgnoreCase(PgType::class, "integer") {
+            it.byteSize = 4
+        }.alias<PgType>("int4").alias<PgType>("int")
 
         @JvmField
         @JsStatic
@@ -45,7 +53,9 @@ class PgType : JsEnum() {
 
         @JvmField
         @JsStatic
-        val INT64 = defIgnoreCase(PgType::class, "bigint").alias<PgType>("int8")
+        val INT64 = defIgnoreCase(PgType::class, "bigint") {
+            it.byteSize = 8
+        }.alias<PgType>("int8")
 
         @JvmField
         @JsStatic
@@ -53,7 +63,9 @@ class PgType : JsEnum() {
 
         @JvmField
         @JsStatic
-        val FLOAT = defIgnoreCase(PgType::class, "real").alias<PgType>("float4")
+        val FLOAT = defIgnoreCase(PgType::class, "real") {
+            it.byteSize = 4
+        }.alias<PgType>("float4")
 
         @JvmField
         @JsStatic
@@ -61,7 +73,9 @@ class PgType : JsEnum() {
 
         @JvmField
         @JsStatic
-        val DOUBLE = defIgnoreCase(PgType::class, "double precision").alias<PgType>("float8")
+        val DOUBLE = defIgnoreCase(PgType::class, "double precision") {
+            it.byteSize = 8
+        }.alias<PgType>("float8")
 
         @JvmField
         @JsStatic
@@ -84,4 +98,10 @@ class PgType : JsEnum() {
     override fun namespace(): KClass<out JsEnum> = PgType::class
 
     override fun initClass() {}
+
+    /**
+     * The size of the type, when being stored and not _null_, or `-1`, if the type has a dynamic
+     */
+    var byteSize: Int = -1
+        private set
 }

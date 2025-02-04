@@ -92,24 +92,9 @@ interface ISession : IDictReader, AutoCloseable {
     override fun close()
 
     /**
-     * Tests if the given handle is valid, and if it is, tries to extend its live-time to the given amount of milliseconds.
-     *
-     * Some handles may expire after some time. For example, when custom filters were applied, the generated result-set must be stored somewhere to guarantee that it is always the same (we can't store the filter code!), but we do not store this forever, so the handle does have an expiry. Some handles may not have an expiry, for example when the storage can reproduce them at any moment, using just the information from the handle.
-     *
-     * There is no guarantee that the life-time of the handle can be extended, especially when invoking this method on a read-only session.
-     * @param handle the handle to test.
-     * @param ttl if not _null_, the time-to-live of the handle should be extended by the given amount of milliseconds, if possible.
-     * @return _true_ if the handle is valid, _false_ otherwise.
-     * @since 3.0.0
-     */
-    fun validateHandle(handle: String, ttl: Int? = null): Boolean
-
-    /**
      * Fetches all tuples in the given result-tuples.
      *
      * [Tuple] that can't be fetched will still be _null_ after the method returns.
-     *
-     * **The method is not thread safe!**
      *
      * @param featureTuples a list of result-tuples to fetch.
      * @param from the index of the first result-tuples to fetch; default is `0`.

@@ -52,7 +52,7 @@ class ExistingMetadataProvider(
                      FROM $quotedHeadName
                      WHERE ${PgColumn.id.ident} = ANY($1)
             """.trimMargin()
-        val fetchedMetadata = session.usePgConnection()
+        val fetchedMetadata = session.connection()
             .execute(sql, arrayOf(featureIds.toTypedArray()))
             .collectAndClose { metaFromRow(it) }
         return fetchedMetadata

@@ -24,7 +24,7 @@ class PgReader(
     /**
      * The connection to use.
      */
-    val conn: PgConnection = session.usePgConnection()
+    val conn: PgConnection = session.connection()
 
     /**
      * The storage.
@@ -39,7 +39,7 @@ class PgReader(
 
     fun execute(): Response {
         val query = PgQueryBuilder(session, request).build()
-        val connection = session.usePgConnection()
+        val connection = session.connection()
         // TODO: Use prepare, add arguments!
         val plan = connection.prepare(query.sql, query.argTypes)
         plan.use {

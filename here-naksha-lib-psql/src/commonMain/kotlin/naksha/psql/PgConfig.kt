@@ -27,7 +27,7 @@ class PgConfig() : StorageConfig() {
      * Create a default PostgresQL configuration.
      * @since 3.0.0
      */
-    @JsName("create")
+    @JsName("of")
     constructor(id: String): this() {
         this.id = id
         this.className = defaultClassName()

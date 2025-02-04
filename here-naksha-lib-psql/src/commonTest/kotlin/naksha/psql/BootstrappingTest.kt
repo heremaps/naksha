@@ -17,9 +17,9 @@ class BootstrappingTest: PgTestBase() {
 
         val naksha_collections = schema[Naksha.COLLECTIONS_COL]
         assertTrue(naksha_collections.exists(), "${Naksha.COLLECTIONS_COL} should exist!")
-        val naksha_dictionaries = schema[Naksha.ADMIN_DICT_COL]
-        assertTrue(naksha_dictionaries.exists(), "${Naksha.ADMIN_DICT_COL} should exist!")
-        val naksha_transactions = schema[Naksha.ADMIN_TRANSACTIONS_COL]
-        assertTrue(naksha_transactions.exists(), "${Naksha.ADMIN_TRANSACTIONS_COL} should exist!")
+        val naksha_dictionaries = schema[Naksha.DICTIONARIES_COL]
+        assertTrue(naksha_dictionaries.exists(), "${Naksha.DICTIONARIES_COL} should exist!")
+        val naksha_transactions = schema[Naksha.TRANSACTIONS_COL]
+        assertTrue(naksha_transactions.exists(), "${Naksha.TRANSACTIONS_COL} should exist!")
     }
 }

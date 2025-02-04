@@ -8,7 +8,7 @@ import naksha.model.request.FeatureTuple
 import kotlin.js.JsExport
 
 /**
- * The interface to a [Tuple] cache.
+ * The interface to a [Tuple] cache. Caches do only store complete tuple.
  *
  * Every cache needs to keep track of needed global dictionaries.
  * @since 3.0.0
@@ -53,24 +53,19 @@ interface ITupleCache : IDictManager {
 
     /**
      * Store the given [Tuple].
-     *
-     * This method automatically merges any [Tuple] being already in the cache with the given [Tuple]. This is necessary, because the [Tuple] being in the cache may be more complete than the new one given.
-     *
-     * It is recommended for custom cache implementations to not store [tuples][Tuple] that are incomplete, so that return _false_ for [Tuple.isComplete] calls. Furthermore, the cache should keep new tuples in-memory for a while, before flushing them asynchronously to the storage, so that the amount of storage requests can be minimized. It may even be good to organize [Tuple] using the [HERE tile-id][Metadata.calculateGeoGrid], and optionally sort them by their [version][Tuple.version] within the tile.
-     *
      * @param tuple the [Tuple] to store in the cache.
-     * @return either the existing [Tuple], the given one, or a merge [Tuple].
+     * @return the given [Tuple].
      * @since 3.0.0
      */
     fun store(tuple: Tuple): Tuple
 
     /**
-     * Tests if the cache may contain a [Tuple] with the given id; this is a probabilistic gues.
+     * Tests if the cache may contain the [Tuple] with the given [tuple-number][TupleNumber].
      *
-     * The method should guess, as good as possible, if the tuple with the given [TupleNumber] is in the cache. It is recommended to implement this method using some form of a [bloom filters](https://en.wikipedia.org/wiki/Bloom_filter) to make that guess.
+     * This is a probabilistic guess. The method should guess, as good as possible, if the tuple with the given [TupleNumber] is in the cache. It is recommended to implement this method using some form of a [bloom filters](https://en.wikipedia.org/wiki/Bloom_filter) to make that guess.
      *
      * @param tupleNumber the [TupleNumber] to check for.
-     * @return _true_ if the [Tuple] is very likely contained in cache; _false_ if it is likely not in the cache.
+     * @return _true_ if the [Tuple] is very likely in the cache; _false_ if it is not in the cache.
      * @since 3.0.0
      */
     operator fun contains(tupleNumber: TupleNumber): Boolean

@@ -15,7 +15,7 @@ class InstantWriteExecutor(
         collection.deleted?.let { delTable ->
             val quotedDelTable = quoteIdent(delTable.name)
             val quotedIdColumn = quoteIdent(PgColumn.id.name)
-            session.usePgConnection()
+            session.connection()
                 .execute(
                     sql = "DELETE FROM $quotedDelTable WHERE $quotedIdColumn=$1",
                     args = arrayOf(featureId)
@@ -29,7 +29,7 @@ class InstantWriteExecutor(
         feature: NakshaFeature
     ) {
         val transaction = session.useTransaction()
-        val conn = session.usePgConnection()
+        val conn = session.connection()
         val quotedCollectionId = quoteIdent(collection.id)
         conn.execute(
             sql = """ INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})
@@ -54,7 +54,7 @@ class InstantWriteExecutor(
         newVersion: Version,
         previousMetadata: Metadata
     ) {
-        val conn = session.usePgConnection()
+        val conn = session.connection()
         conn.execute(
             sql = updateStatement(collection.head.name),
             args = allColumnValues(
@@ -82,7 +82,7 @@ class InstantWriteExecutor(
     override fun removeFeatureFromHead(collection: PgCollection, featureId: String) {
         collection.head.let { headTable ->
             val quotedHeadTable = PgUtilCompanion.quoteIdent(headTable.name)
-            session.usePgConnection()
+            session.connection()
                 .execute(
                     sql = "DELETE FROM $quotedHeadTable WHERE ${PgColumn.id.ident}=$1",
                     args = arrayOf(featureId)
@@ -122,7 +122,7 @@ class InstantWriteExecutor(
             .filterNot { it == PgColumn.uid }
             .filterNot { it == PgColumn.flags }
             .joinToString(separator = ",")
-        session.usePgConnection().execute(
+        session.connection().execute(
             sql = """
                 INSERT INTO $dstTableName(
                 ${PgColumn.txn_next.name},

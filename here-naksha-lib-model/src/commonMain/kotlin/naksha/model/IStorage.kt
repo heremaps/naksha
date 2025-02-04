@@ -3,7 +3,6 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.base.Platform
 import naksha.base.PlatformLock
 import naksha.jbon.IDictReader
 import kotlin.js.JsExport

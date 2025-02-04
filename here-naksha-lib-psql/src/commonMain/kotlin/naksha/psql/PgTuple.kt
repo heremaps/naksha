@@ -90,8 +90,8 @@ internal data class PgTuple(
             referencePoint = this.referencePoint,
             tags = this.tags,
             attachment = this.attachment,
-            state = fetchMode
-        ).merge(NakshaCache[meta.tupleNumber()])
+            complete = true
+        )//.merge(NakshaCache[meta.tupleNumber()])
         this.tuple = tuple
         return tuple
     }

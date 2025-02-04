@@ -146,7 +146,7 @@ abstract class AbstractTupleCache(override val cacheLatencyInMicros: Int64) : IT
     }
 
     /**
-     * If the cache wants to accept [incomplete tuple][Tuple.isComplete], normally this only makes sense in the [TupleHeapCache].
+     * If the cache wants to accept [incomplete tuple][Tuple.complete], normally this only makes sense in the [TupleHeapCache].
      * @since 3.0.0
      */
     protected open val allowIncompleteTuple: Boolean
@@ -195,7 +195,7 @@ abstract class AbstractTupleCache(override val cacheLatencyInMicros: Int64) : IT
     /**
      * Invoked to ask this cache to store this tuple.
      *
-     * This method is only called for tuples that are [complete][Tuple.isComplete], except [allowIncompleteTuple] is `true`. The method can perform the store asynchronously, it even should do this, if the latency is bigger than a few nanoseconds (so all, but the [TupleHeapCache] should asynchronize persistence). It is recommended to group tuples, when storing them, for example put all tuples from the same [storage][IStorage] in the same [tile][Metadata.hereTile], and order them by their [version][Tuple.version].
+     * This method is only called for tuples that are [complete][Tuple.complete], except [allowIncompleteTuple] is `true`. The method can perform the store asynchronously, it even should do this, if the latency is bigger than a few nanoseconds (so all, but the [TupleHeapCache] should asynchronize persistence). It is recommended to group tuples, when storing them, for example put all tuples from the same [storage][IStorage] in the same [tile][Metadata.hereTile], and order them by their [version][Tuple.version].
      * @param tuple the [Tuple] to store in this cache.
      * @param dictionary the [dictionary][IDict] that is needed to decode this tuple; must be stored and linked to the [tuple][Tuple].
      * @return the stored [Tuple], normally the given parameter, but can be a merged tuple, when the cache has more data.
