@@ -18,7 +18,9 @@
  */
 package com.here.naksha.lib.core.util;
 
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -31,6 +33,10 @@ public class Unsafe {
    */
   public static final @NotNull sun.misc.Unsafe unsafe;
 
+  private static final Method ensureClassInitialized; // unsafe.ensureClassInitialized
+  private static final Object lookupInstance; // MethodHandles.lookup()
+  private static final Method ensureInitialized; // MethodHandles.lookup().ensureInitialized(klass);
+
   static {
     // http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/share/classes/sun/misc/Unsafe.java
     try {
@@ -39,8 +45,42 @@ public class Unsafe {
       // unmap = getMethod(FileChannelImpl.class, "unmap0", long.class, long.class);
       f.setAccessible(true);
       unsafe = (sun.misc.Unsafe) f.get(null);
+
+      Method _ensureClassInitialized = null;
+      Method _ensureInitialized = null;
+      Object _lookupInstance = null;
+      try {
+        // Note: Before Java 15, `MethodHandles.lookup().ensureInitialized(klass)` does not exist, we need to
+        // use Unsafe!
+        Method ensureClassInitialized1 = sun.misc.Unsafe.class.getMethod("ensureClassInitialized", Class.class);
+        _ensureInitialized = null;
+        _lookupInstance = null;
+      } catch (NoSuchMethodException ignore) {
+        // In Java 23+ this method does not exist!
+        _ensureClassInitialized = null;
+        final Method lookup = MethodHandles.class.getMethod("lookup");
+        _lookupInstance = lookup.invoke(null);
+        _ensureInitialized = _lookupInstance.getClass().getMethod("ensureInitialized", Class.class);
+      }
+      ensureClassInitialized = _ensureClassInitialized;
+      ensureInitialized = _ensureInitialized;
+      lookupInstance = _lookupInstance;
     } catch (Exception e) {
       throw new InternalError(e);
+    }
+  }
+
+  public static void ensureClassInitialized(Class<?> clazz) {
+    try {
+      if (ensureInitialized != null && lookupInstance != null) {
+        ensureInitialized.invoke(lookupInstance, clazz);
+        // == MethodHandles.lookup().ensureInitialized(klass.java);
+      } else {
+        ensureClassInitialized.invoke(unsafe, clazz);
+        // == unsafe.ensureClassInitialized(klass.java)
+      }
+    } catch (Exception e) {
+      throw new Error(e);
     }
   }
 

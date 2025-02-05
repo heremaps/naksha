@@ -297,7 +297,7 @@ public abstract class JsonEnum implements CharSequence {
     // TODO: Replace with MethodHandles.Lookup.ensureInitialized(Class), but as long as we need to stay compatible
     // to Java 8, well.
     //noinspection removal
-    Unsafe.unsafe.ensureClassInitialized(enumClass);
+    Unsafe.ensureClassInitialized(enumClass);
   }
 
   /**
