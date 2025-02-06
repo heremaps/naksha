@@ -1,11 +1,14 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.model
 
-import naksha.jbon.IDictManager
 import naksha.model.objects.NakshaTransaction
+import kotlin.js.JsExport
 
 /**
  * A write-request.
  */
+@JsExport
 interface IWriteSession: IReadSession {
 
     /**

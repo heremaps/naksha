@@ -4,17 +4,24 @@ package naksha.model
 
 import kotlin.js.JsExport
 import kotlin.js.JsName
-import kotlin.jvm.JvmField
 
 /**
  * A Naksha exception.
  * @property error the error that happened.
  * @since 3.0.0
  */
-expect class NakshaException : RuntimeException {
+@JsExport
+class NakshaException(
+    /**
+     * The [NakshaError] that causes this exception.
+     * @since 3.0.0
+     */
     val error: NakshaError
+) : RuntimeException(error.msg, error.cause) {
 
-    constructor(error: NakshaError)
-
-    constructor(code: String, msg: String, id: String? = null, cause: Throwable? = null)
+    /**
+     * Secondary constructor to directly
+     */
+    @JsName("of")
+    constructor(code: String, msg: String, id: String? = null, cause: Throwable? = null) : this(NakshaError(code, msg, id, cause))
 }

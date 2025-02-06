@@ -16,7 +16,7 @@ import naksha.model.request.*
  * A write session will acquire a connection when the first write operation is executed, and stick with it until `commit`, `rollback` or [close] invoked. All reads after write will always utilize this single connection to ensure consistency. Before the first write operation, the optimizer is free to utilize multiple connections to read in parallel, but after the first write execution, a single connection must be used for all reading and writing, to guarantee consistency. Therefore, it is recommended to first perform all reads, then to perform the writes. The parallel reading can be disabled, if needed, using the [SessionOptions.parallel] switch.
  */
 
-expect interface ISession : IDictReader, AutoCloseable {
+interface ISession : IDictReader, AutoCloseable {
     /**
      * The storage to which the session is bound.
      * @since 3.0.0
