@@ -94,11 +94,11 @@ public class ResultHelper {
    */
   public static <T> @Nullable T readFeatureFromResponse(
       final @NotNull SuccessResponse result, final @NotNull Class<T> type) {
-    final List<NakshaFeature> rows = result.getFeatures();
-    if (rows.isEmpty()) {
+    final List<NakshaFeature> features = result.getFeatures();
+    if (features.isEmpty()) {
       return null;
     }
-    return type.cast(rows.get(0));
+    return type.cast(features.get(0));
   }
 
   public static List<String> readIdsFromResult(final @NotNull Response result) {
