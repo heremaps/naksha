@@ -18,9 +18,15 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.apis.ApiParams.*;
-import static com.here.naksha.common.http.apis.ApiParamsConst.*;
-import static naksha.diff.PatcherUtils.removeAllRemoveOp;
+import static com.here.naksha.app.service.http.apis.ApiParams.extractParamAsStringList;
+import static com.here.naksha.app.service.http.apis.ApiParams.queryParamsFromRequest;
+import static com.here.naksha.app.service.http.apis.ApiParams.validateFeatureId;
+import static com.here.naksha.common.http.apis.ApiParamsConst.ADD_TAGS;
+import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_ID;
+import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_IDS;
+import static com.here.naksha.common.http.apis.ApiParamsConst.REMOVE_TAGS;
+import static com.here.naksha.common.http.apis.ApiParamsConst.SPACE_ID;
+import static com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper.proxyWrapperOf;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.HttpResponseType;
@@ -28,26 +34,34 @@ import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.util.storage.ResultHelper;
-import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.exceptions.NoCursor;
-import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.SessionOptions;
-import naksha.model.XyzFeature;
-import naksha.model.ReadFeatures;
-import naksha.model.XyzResponse;
+import com.here.naksha.lib.core.lambdas.P;
+import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
-import com.here.naksha.lib.core.models.storage.*;
-import naksha.model.IWriteSession;
-import naksha.diff.Difference;
-import naksha.diff.Patcher;
-import com.here.naksha.lib.core.util.storage.RequestHelper;
+import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import io.vertx.ext.web.RoutingContext;
-import java.util.*;
-
-import naksha.model.ErrorResult;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import naksha.diff.Difference;
+import naksha.diff.DifferenceCalculator;
+import naksha.diff.DifferenceFilter;
+import naksha.diff.Patcher;
+import naksha.model.IWriteSession;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.WriteRequest;
+import naksha.model.util.RequestHelper;
+import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -81,7 +95,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
    * Initializes this task.
    */
   @Override
-  protected void init() {}
+  protected void init() {
+  }
 
   /**
    * Execute this task.
@@ -102,24 +117,22 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         case PATCH_BY_ID -> executePatchFeatureById();
         default -> executeUnsupported();
       };
+    } catch (NakshaException ex) {
+      logger.warn("Known exception while processing request. ", ex);
+      return verticle.sendErrorResponse(routingContext, ex.error);
     } catch (Exception ex) {
-      if (ex instanceof XyzErrorException xyz) {
-        logger.warn("Known exception while processing request. ", ex);
-        return verticle.sendErrorResponse(routingContext, xyz.xyzError, xyz.getMessage());
-      } else {
-        logger.error("Unexpected error while processing request. ", ex);
-        return verticle.sendErrorResponse(
-            routingContext, XyzError.EXCEPTION, "Internal error : " + ex.getMessage());
-      }
+      logger.error("Unexpected error while processing request. ", ex);
+      return verticle.sendErrorResponse(
+          routingContext, NakshaError.EXCEPTION, "Internal error : " + ex.getMessage());
     }
   }
 
   private @NotNull XyzResponse executeCreateOrPatchFeatures() throws Exception {
     // Deserialize input request
     final FeatureCollectionRequest collectionRequest = parseRequestBodyAs(FeatureCollectionRequest.class);
-    final List<XyzFeature> features = (List<XyzFeature>) collectionRequest.getFeatures();
+    final NakshaFeatureList features = collectionRequest.getFeatures();
     if (features.isEmpty()) {
-      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Can't create empty features");
+      return verticle.sendErrorResponse(routingContext, NakshaError.ILLEGAL_ARGUMENT, "Can't create empty features");
     }
 
     // Parse API parameters
@@ -134,9 +147,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
   private @NotNull XyzResponse executeUpsertFeatures() throws Exception {
     // Deserialize input request
     final FeatureCollectionRequest collectionRequest = parseRequestBodyAs(FeatureCollectionRequest.class);
-    final List<XyzFeature> features = (List<XyzFeature>) collectionRequest.getFeatures();
+    final NakshaFeatureList features = collectionRequest.getFeatures();
     if (features.isEmpty()) {
-      return verticle.sendErrorResponse(routingContext, XyzError.ILLEGAL_ARGUMENT, "Can't update empty features");
+      return verticle.sendErrorResponse(routingContext, NakshaError.ILLEGAL_ARGUMENT, "Can't update empty features");
     }
 
     // Parse API parameters
@@ -146,22 +159,21 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
 
     // as applicable, modify features based on parameters supplied
-    for (final XyzFeature feature : features) {
+    for (final NakshaFeature feature : features) {
       addTagsToFeature(feature, addTags);
       removeTagsFromFeature(feature, removeTags);
     }
-    final WriteXyzFeatures wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, features);
+    final WriteRequest wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, features);
 
     // Forward request to NH Space Storage writer instance
-    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
-      // transform WriteResult to Http FeatureCollection response
-      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class, false);
-    }
+    Response response = executeWriteRequestFromSpaceStorage(wrRequest);
+    // transform WriteResult to Http FeatureCollection response
+    return transformWriteResultToXyzCollectionResponse(response, NakshaFeature.class, false);
   }
 
   private @NotNull XyzResponse executeUpdateFeature() throws Exception {
     // Deserialize input request
-    final XyzFeature feature = parseRequestBodyAs(XyzFeature.class);
+    final NakshaFeature feature = parseRequestBodyAs(NakshaFeature.class);
 
     // Parse API parameters
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
@@ -176,13 +188,13 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     addTagsToFeature(feature, addTags);
     removeTagsFromFeature(feature, removeTags);
 
-    final WriteXyzFeatures wrRequest = RequestHelper.updateFeatureRequest(spaceId, feature);
+    final WriteRequest wrRequest = RequestHelper.updateFeatureRequest(spaceId, feature);
 
     // Forward request to NH Space Storage writer instance
-    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
-      // transform WriteResult to Http FeatureCollection response
-      return transformResponseToXyzFeatureResponse(wrResult, XyzFeature.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
-    }
+    Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest);
+    // transform WriteResult to Http FeatureCollection response
+    return transformResponseToXyzFeatureResponse(wrResult, NakshaFeature.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
+
   }
 
   private @NotNull XyzResponse executeDeleteFeatures() {
@@ -191,19 +203,18 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final List<String> features = extractParamAsStringList(queryParameters, FEATURE_IDS);
     if (features == null || features.isEmpty()) {
       return verticle.sendErrorResponse(
-          routingContext, XyzError.ILLEGAL_ARGUMENT, "Missing feature id parameter");
+          routingContext, NakshaError.ILLEGAL_ARGUMENT, "Missing feature id parameter");
     }
 
     // Parse API parameters
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
 
-    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeaturesByIdsRequest(spaceId, features);
+    final WriteRequest wrRequest = RequestHelper.deleteFeaturesByIdsRequest(spaceId, features);
 
     // Forward request to NH Space Storage writer instance
-    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
-      // transform WriteResult to Http FeatureCollection response
-      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class, true);
-    }
+    Response response = executeWriteRequestFromSpaceStorage(wrRequest);
+    // transform WriteResult to Http FeatureCollection response
+    return transformWriteResultToXyzCollectionResponse(response, NakshaFeature.class, true);
   }
 
   private @NotNull XyzResponse executeDeleteFeature() {
@@ -211,20 +222,19 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
     final String featureId = ApiParams.extractMandatoryPathParam(routingContext, FEATURE_ID);
 
-    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureByIdRequest(spaceId, featureId);
+    final WriteRequest wrRequest = RequestHelper.deleteFeatureByIdRequest(spaceId, featureId);
 
     // Forward request to NH Space Storage writer instance
-    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
-      // transform WriteResult to Http FeatureCollection response
-      return transformResponseToXyzFeatureResponse(wrResult, XyzFeature.class, NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS);
-    }
+    Response response = executeWriteRequestFromSpaceStorage(wrRequest);
+    // transform WriteResult to Http FeatureCollection response
+    return transformResponseToXyzFeatureResponse(response, NakshaFeature.class, NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS);
   }
 
   private static final int MAX_RETRY_ATTEMPT = 5;
 
   private @NotNull XyzResponse executePatchFeatureById() throws JsonProcessingException {
 
-    final XyzFeature featureFromRequest = parseRequestBodyAs(XyzFeature.class);
+    final NakshaFeature featureFromRequest = parseRequestBodyAs(NakshaFeature.class);
 
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
     final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
@@ -234,81 +244,83 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Validate parameters
     validateFeatureId(routingContext, featureFromRequest.getId());
 
-    final List<XyzFeature> featuresFromRequest = new ArrayList<>();
+    final List<NakshaFeature> featuresFromRequest = new ArrayList<>();
     featuresFromRequest.add(featureFromRequest);
     return attemptFeaturesPatching(spaceId, featuresFromRequest, HttpResponseType.FEATURE, addTags, removeTags, 0);
   }
 
   private XyzResponse attemptFeaturesPatching(
       @NotNull String spaceId,
-      @NotNull List<XyzFeature> featuresFromRequest,
+      @NotNull List<NakshaFeature> featuresFromRequest,
       @NotNull HttpResponseType responseType,
       @Nullable List<String> addTags,
       @Nullable List<String> removeTags,
       int retry) {
     // Patched feature list is to ensure the order of input features is retained
-    final List<XyzFeature> patchedFeatures;
-    List<XyzFeature> featuresToPatchFromStorage = new ArrayList<>();
+    final List<NakshaFeature> patchedFeatures;
     final List<String> featureIds = new ArrayList<>();
-    for (XyzFeature feature : featuresFromRequest) {
-      if (feature.getId() != null) {
-        featureIds.add(feature.getId());
-      }
+    for (NakshaFeature feature : featuresFromRequest) {
+      featureIds.add(feature.getId());
     }
     // Extract the version of features in storage
-    final ReadFeatures rdRequest = RequestHelper.readFeaturesByIdsRequest(spaceId, featureIds)
+    final ReadFeatures rdRequest = proxyWrapperOf(RequestHelper.readFeaturesByIdsRequest(spaceId, featureIds))
         .withReadRequestType(ReadFeaturesProxyWrapper.ReadRequestType.GET_BY_IDS)
         .withQueryParameters(Map.of(FEATURE_IDS, featureIds));
-    try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
-      if (result == null) {
-        return returnError(
-            XyzError.EXCEPTION,
-            "Unexpected null result while reading features from storage",
-            "Unexpected null result while reading features from storage: {}",
-            featureIds);
-      } else if (result instanceof ErrorResult er) {
-        // In case of error, convert result to ErrorResponse
-        return returnError(
-            er.reason, er.message, "Received error result while reading features in storage: {}", er);
-      }
-      try {
-        featuresToPatchFromStorage = ResultHelper.extractResponseItems(result, XyzFeature.class);
-      } catch (NoCursor | NoSuchElementException emptyException) {
-        if (responseType.equals(HttpResponseType.FEATURE)) {
-          // If this is patching only 1 feature (PATCH by ID), return not found
-          return returnError(
-              XyzError.NOT_FOUND,
-              "Feature does not exist.",
-              "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature does not exist.");
-        } else if (!responseType.equals(HttpResponseType.FEATURE_COLLECTION)) {
-          // This function was then misused somewhere. FIND AND FIX IT!!
-          return returnError(
-              XyzError.EXCEPTION,
-              "Internal server error.",
-              "Unsupported HttpResponseType was called: {}",
-              responseType);
-        }
-        // Else none of the features exists in storage, will create them later
-      }
-      // Attempt patching, keeping the order of the features from the request
-      patchedFeatures =
-          performInMemoryPatching(featuresFromRequest, featuresToPatchFromStorage, addTags, removeTags);
+
+    Response response = executeReadRequestFromSpaceStorage(rdRequest);
+    List<NakshaFeature> featuresToPatchFromStorage = new ArrayList<>();
+    if(response instanceof SuccessResponse successResponse){
+      featuresToPatchFromStorage = ResultHelper.extractResponseItems(successResponse, NakshaFeature.class);
+    } else if(response instanceof ErrorResponse errorResponse){
+      return returnError(
+          errorResponse.getError(),
+          "Error encountered while reading features from storage: {}",
+          featureIds);
+    } else {
+      return returnError(
+          NakshaError.EXCEPTION,
+          "Unexpected response while reading features from storage: " + response,
+          "Unexpected null result while reading features from storage: {}",
+          featureIds);
     }
-    final WriteXyzFeatures wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, patchedFeatures);
+    if(featuresToPatchFromStorage.isEmpty()){
+      if(responseType == HttpResponseType.FEATURE){
+        return returnError(
+            NakshaError.NOT_FOUND,
+            "Feature does not exist.",
+            "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature does not exist.");
+      } else if (!responseType.equals(HttpResponseType.FEATURE_COLLECTION)) {
+        // This function was then misused somewhere. FIND AND FIX IT!!
+        return returnError(
+            NakshaError.EXCEPTION,
+            "Internal server error.",
+            "Unsupported HttpResponseType was called: {}",
+            responseType);
+    }
+      // Else none of the features exists in storage, will create them later
+    }
+    // Attempt patching, keeping the order of the features from the request
+    patchedFeatures =
+        performInMemoryPatching(featuresFromRequest, featuresToPatchFromStorage, addTags, removeTags);
+
+    final WriteRequest wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, patchedFeatures);
     // Forward request to NH Space Storage writer instance
     try (final IWriteSession writer = naksha().getSpaceStorage().newWriteSession(SessionOptions.from(context(), true))) {
-      final Result wrResult = writer.execute(wrRequest);
-      if (wrResult == null) {
+      final Response wrResponse = writer.execute(wrRequest);
+      if (wrResponse == null) {
         // unexpected null response
         writer.rollback();
         writer.close();
         return returnError(
-            XyzError.EXCEPTION,
+            NakshaError.EXCEPTION,
             "Unexpected null result.",
             "Received null result after writing patched features, rolled back.");
-      } else if (wrResult instanceof ErrorResult er) {
+      } else if (wrResponse instanceof ErrorResponse er) {
         writer.rollback();
         writer.close();
+
+        // TODO (Jakub): start over here: mismatching UUID logic
+
         try (ForwardCursor<XyzFeature, XyzFeatureCodec> resultCursor = er.getXyzFeatureCursor()) {
           if (!resultCursor.hasNext()) {
             throw new NoSuchElementException("Error Result Cursor is empty");
@@ -352,7 +364,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
             return returnError(
                 XyzError.EXCEPTION,
                 "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: "
-                    + er.message,
+                + er.message,
                 "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: {}",
                 er.message);
           }
@@ -368,9 +380,9 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         }
       } else {
         if (responseType.equals(HttpResponseType.FEATURE)) {
-          return transformResponseToXyzFeatureResponse(wrResult, NakshaFeature.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
+          return transformResponseToXyzFeatureResponse(wrResponse, NakshaFeature.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
         }
-        return transformResponseToXyzFeatureResponse(wrResult, NakshaFeature.class, false);
+        return transformResponseToXyzFeatureResponse(wrResponse, NakshaFeature.class, false);
       }
     }
   }
@@ -378,23 +390,23 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
   /**
    * Return a list of patched XyzFeature, including the ones not yet existing, ready for upsert
    */
-  private List<XyzFeature> performInMemoryPatching(
-      @NotNull List<XyzFeature> featuresFromRequest,
-      List<XyzFeature> featuresToPatchFromStorage,
+  private List<NakshaFeature> performInMemoryPatching(
+      @NotNull List<NakshaFeature> featuresFromRequest,
+      List<NakshaFeature> featuresToPatchFromStorage,
       @Nullable List<String> addTags,
       @Nullable List<String> removeTags) {
-    final List<XyzFeature> patchedFeatureList = new ArrayList<>();
-    for (final XyzFeature inputFeature : featuresFromRequest) {
+    final List<NakshaFeature> patchedFeatureList = new ArrayList<>();
+    for (final NakshaFeature inputFeature : featuresFromRequest) {
       // we take input feature as default
-      XyzFeature featureToPatch = inputFeature;
+      NakshaFeature featureToPatch = inputFeature;
       // check if input feature matches with any of the existing features in storage
       if (inputFeature.getId() != null) {
-        for (XyzFeature storageFeature : featuresToPatchFromStorage) {
+        for (NakshaFeature storageFeature : featuresToPatchFromStorage) {
           if (inputFeature.getId().equals(storageFeature.getId())) {
             // we found matching feature in storage, so we take patched version of the feature
-            final Difference difference = Patcher.getDifference(storageFeature, inputFeature);
-            final Difference diffNoRemoveOp = removeAllRemoveOp(difference);
-            featureToPatch = Patcher.patch(storageFeature, diffNoRemoveOp);
+            final Difference difference = DifferenceCalculator.calculateDifference(storageFeature, inputFeature);
+            DifferenceFilter.removeAllRemoveOp(difference);
+            featureToPatch = Patcher.patch(storageFeature, difference);
             break;
           }
         }
@@ -407,21 +419,24 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     return patchedFeatureList;
   }
 
-  private XyzResponse returnError(
-      XyzError xyzError, String httpResponseMsg, String internalLogMsg, Object... logArgs) {
-    logger.error(internalLogMsg, logArgs);
-    return verticle.sendErrorResponse(routingContext, xyzError, httpResponseMsg);
+  private XyzResponse returnError(String errorCode, String errorMsg, String internalLogMsg, Object... logArgs) {
+    return returnError(new NakshaError(errorCode, errorMsg), internalLogMsg, logArgs);
   }
 
-  private void addTagsToFeature(XyzFeature feature, List<String> addTags) {
+  private XyzResponse returnError(NakshaError nakshaError, String internalLogMsg, Object... logArgs) {
+    logger.error(internalLogMsg, logArgs);
+    return verticle.sendErrorResponse(routingContext, nakshaError);
+  }
+
+  private void addTagsToFeature(NakshaFeature feature, List<String> addTags) {
     if (addTags != null) {
-      feature.getProperties().getXyzNamespace().addTags(addTags, true);
+      feature.getProperties().getXyz().addTags(addTags, true);
     }
   }
 
-  private void removeTagsFromFeature(XyzFeature feature, List<String> removeTags) {
+  private void removeTagsFromFeature(NakshaFeature feature, List<String> removeTags) {
     if (removeTags != null) {
-      feature.getProperties().getXyzNamespace().removeTags(removeTags, true);
+      feature.getProperties().getXyz().removeTags(removeTags, true);
     }
   }
 }

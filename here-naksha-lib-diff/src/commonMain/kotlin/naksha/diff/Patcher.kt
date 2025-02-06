@@ -1,5 +1,7 @@
 package naksha.diff
 
+import kotlin.jvm.JvmStatic
+
 class Patcher private constructor() {
 
     companion object Patcher_C {
@@ -35,6 +37,7 @@ class Patcher private constructor() {
          * """)
          * ```
          */
+        @JvmStatic
         fun <T : Any> patch(toBePatched: T, diff: Difference?): T {
             if (diff == null) {
                 return toBePatched

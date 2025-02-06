@@ -18,35 +18,30 @@
  */
 package com.here.naksha.app.service.models;
 
-import com.fasterxml.jackson.annotation.*;
-import java.util.ArrayList;
 import java.util.List;
+import naksha.base.AnyObject;
+import naksha.base.JvmAnyObjectUtil;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import org.jetbrains.annotations.NotNull;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonTypeName(value = "FeatureCollection")
-@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class FeatureCollectionRequest extends XyzRequest {
 
-  @JsonProperty
-  @NotNull
-  private List<? extends NakshaFeature> features;
+  private static final String FEATURES_KEY = "features";
+  private static final String NEXT_PAGE_TOKEN_KEY = "nextPageToken";
 
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  private String nextPageToken;
-
-  public FeatureCollectionRequest() {
-    features = new ArrayList<>();
+  @Override
+  public void onCreation() {
+    setFeatures(new NakshaFeatureList());
+    super.onCreation();
   }
 
-  public @NotNull List<? extends NakshaFeature> getFeatures() {
-    return features;
+  public @NotNull NakshaFeatureList getFeatures() {
+    return JvmAnyObjectUtil.getProperty(this, FEATURES_KEY, NakshaFeatureList.class);
   }
 
   public void setFeatures(@NotNull List<? extends NakshaFeature> features) {
-    this.features = features;
+    setRaw(FEATURES_KEY, NakshaFeatureList.fromList(features));
   }
 
   public @NotNull FeatureCollectionRequest withFeatures(final @NotNull List<? extends @NotNull NakshaFeature> features) {
@@ -60,7 +55,7 @@ public class FeatureCollectionRequest extends XyzRequest {
    * @return the nextPageToken.
    */
   public String getNextPageToken() {
-    return this.nextPageToken;
+    return JvmAnyObjectUtil.getProperty(this, NEXT_PAGE_TOKEN_KEY, String.class);
   }
 
   /**
@@ -69,7 +64,7 @@ public class FeatureCollectionRequest extends XyzRequest {
    * @param nextPageToken the nextPageToken, if null the nextPageToken property is removed.
    */
   public void setNextPageToken(String nextPageToken) {
-    this.nextPageToken = nextPageToken;
+    setRaw(NEXT_PAGE_TOKEN_KEY, nextPageToken);
   }
 
   public @NotNull FeatureCollectionRequest withNextPageToken(final String nextPageToken) {

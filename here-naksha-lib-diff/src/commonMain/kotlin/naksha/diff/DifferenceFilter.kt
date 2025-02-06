@@ -1,5 +1,7 @@
 package naksha.diff
 
+import kotlin.jvm.JvmStatic
+
 class DifferenceFilter private constructor() {
 
     companion object DifferenceFilter_C {
@@ -11,6 +13,7 @@ class DifferenceFilter private constructor() {
          * @param difference [Difference] to be filtered
          * @since 3.0.0
          */
+        @JvmStatic
         fun removeAllRemoveOp(difference: Difference?) {
             when (difference) {
                 is MapDiff -> removeAllRemoveOpFromMap(difference)
