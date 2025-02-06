@@ -7,6 +7,7 @@ import naksha.jbon.JbDictionary
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
 import naksha.model.request.*
+import kotlin.js.JsExport
 
 /**
  * When a session is opened, it is bound to the context in which the session shall operate.
@@ -15,6 +16,7 @@ import naksha.model.request.*
  *
  * A write session will acquire a connection when the first write operation is executed, and stick with it until `commit`, `rollback` or [close] invoked. All reads after write will always utilize this single connection to ensure consistency. Before the first write operation, the optimizer is free to utilize multiple connections to read in parallel, but after the first write execution, a single connection must be used for all reading and writing, to guarantee consistency. Therefore, it is recommended to first perform all reads, then to perform the writes. The parallel reading can be disabled, if needed, using the [SessionOptions.parallel] switch.
  */
+@JsExport
 interface ISession : IDictReader, AutoCloseable {
     /**
      * The storage to which the session is bound.
@@ -175,8 +177,8 @@ interface ISession : IDictReader, AutoCloseable {
      * @return best flags to use for encoding.
      * @since 3.0.0
      */
-    fun getEncodingFlags(feature: Any?, context: Any? = null): Flags
+    fun getEncodingFlags(feature: Any?, context: Any? = null): Flags = storage.getEncodingFlags(feature, context)
 
-    override fun getDictionary(id: String): JbDictionary?
-    override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary?
+    override fun getDictionary(id: String): JbDictionary? = storage.getDictionary(id)
+    override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? = storage.getEncodingDictionary(feature, context)
 }

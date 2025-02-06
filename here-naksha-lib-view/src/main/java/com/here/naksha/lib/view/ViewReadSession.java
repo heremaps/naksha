@@ -26,7 +26,10 @@ import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
 import java.util.*;
+import naksha.jbon.JbDictionary;
 import naksha.model.*;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaMap;
 import naksha.model.objects.NakshaTransaction;
 import naksha.model.request.*;
 import naksha.model.request.query.AnyOp;
@@ -228,28 +231,8 @@ public class ViewReadSession implements IReadSession {
 
   @NotNull
   @Override
-  public String getMapId() {
-    return "";
-  }
-
-  @Override
-  public void setMapId(@NotNull String s) {}
-
-  @Override
-  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
-    return false;
-  }
-
-  @NotNull
-  @Override
   public Response executeParallel(@NotNull Request request) {
     return execute(request);
-  }
-
-  @NotNull
-  @Override
-  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
-    return List.of();
   }
 
   @Override
@@ -257,8 +240,52 @@ public class ViewReadSession implements IReadSession {
       @NotNull List<? extends FeatureTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {}
 
   @Override
-  public @NotNull NakshaTransaction transaction() {
-    throw new UnsupportedOperationException(
-        "Views have multiple individual transactions and doesn't support common parent transaction.");
+  public @NotNull IStorage getStorage() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public @Nullable NakshaMap getMapById(@NotNull String mapId) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public @Nullable NakshaMap getMapByNumber(int mapNumber) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void refreshMaps() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void refreshCollections(@NotNull NakshaMap map) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public @Nullable JbDictionary getDictionary(@NotNull String id) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
+    throw new UnsupportedOperationException();
   }
 }

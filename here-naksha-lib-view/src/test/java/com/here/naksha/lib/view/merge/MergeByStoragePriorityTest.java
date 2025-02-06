@@ -4,9 +4,7 @@ import com.here.naksha.lib.view.ViewLayerFeature;
 import naksha.base.JvmInt64;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.ExecutedOp;
 import naksha.model.request.FeatureTuple;
-import naksha.psql.PgUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -31,20 +29,20 @@ public class MergeByStoragePriorityTest {
     NakshaFeature f2 = new NakshaFeature();
     NakshaFeature f3 = new NakshaFeature();
 
-    byte[] bytesF1 = PgUtil.encodeFeature(f1, 0, null);
-    byte[] bytesF2 = PgUtil.encodeFeature(f2, 0, null);
-    byte[] bytesF3 = PgUtil.encodeFeature(f3, 0, null);
+    byte[] bytesF1 = Naksha.encodeFeature(f1, 0, null);
+    byte[] bytesF2 = Naksha.encodeFeature(f2, 0, null);
+    byte[] bytesF3 = Naksha.encodeFeature(f3, 0, null);
 
-    final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), Version.fromDouble(3.0),0);
+    final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), 0, 0, 0, Version.fromDouble(3.0), 1);
     Metadata metadata = mock(Metadata.class);
 
-    Tuple tu1 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, f1.getId(), metadata.getFlags(), bytesF1, null, null, null, null);
-    Tuple tu2 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, f2.getId(), metadata.getFlags(), bytesF2, null, null, null, null);
-    Tuple tu3 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, f3.getId(), metadata.getFlags(), bytesF3, null, null, null, null);
+    Tuple tu1 = new Tuple(metadata, bytesF1, null, null, null, null, false);
+    Tuple tu2 = new Tuple(metadata, bytesF2, null, null, null, null, false);
+    Tuple tu3 = new Tuple(metadata, bytesF3, null, null, null, null, false);
 
-    FeatureTuple t1 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu1);
-    FeatureTuple t2 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu2);
-    FeatureTuple t3 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu3);
+    FeatureTuple t1 = new FeatureTuple(tupleNum, tu1);
+    FeatureTuple t2 = new FeatureTuple(tupleNum, tu2);
+    FeatureTuple t3 = new FeatureTuple(tupleNum, tu3);
 
     singleRowFeatures.add(new ViewLayerFeature(t1, 1, null));
     singleRowFeatures.add(new ViewLayerFeature(t2, 0, null));
@@ -67,20 +65,20 @@ public class MergeByStoragePriorityTest {
     NakshaFeature f2 = new NakshaFeature();
     NakshaFeature f3 = new NakshaFeature();
 
-    byte[] bytesF1 = PgUtil.encodeFeature(f1, 0, null);
-    byte[] bytesF2 = PgUtil.encodeFeature(f2, 0, null);
-    byte[] bytesF3 = PgUtil.encodeFeature(f3, 0, null);
+    byte[] bytesF1 = Naksha.encodeFeature(f1, 0, null);
+    byte[] bytesF2 = Naksha.encodeFeature(f2, 0, null);
+    byte[] bytesF3 = Naksha.encodeFeature(f3, 0, null);
 
-    final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), Version.fromDouble(3.0),0);
+    final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), 0, 0, 0, Version.fromDouble(3.0), 1);
     Metadata metadata = mock(Metadata.class);
 
-    Tuple tu1 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, f1.getId(), metadata.getFlags(), bytesF1, null, null, null, null);
-    Tuple tu2 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, f2.getId(), metadata.getFlags(), bytesF2, null, null, null, null);
-    Tuple tu3 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, f3.getId(), metadata.getFlags(), bytesF3, null, null, null, null);
+    Tuple tu1 = new Tuple(metadata, bytesF1, null, null, null, null, false);
+    Tuple tu2 = new Tuple(metadata, bytesF2, null, null, null, null, false);
+    Tuple tu3 = new Tuple(metadata, bytesF3, null, null, null, null, false);
 
-    FeatureTuple t1 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu1);
-    FeatureTuple t2 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu2);
-    FeatureTuple t3 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu3);
+    FeatureTuple t1 = new FeatureTuple(tupleNum, tu1);
+    FeatureTuple t2 = new FeatureTuple(tupleNum, tu2);
+    FeatureTuple t3 = new FeatureTuple(tupleNum, tu3);
 
     singleRowFeatures.add(new ViewLayerFeature(t1, 0, null));
     singleRowFeatures.add(new ViewLayerFeature(t2, 0, null));

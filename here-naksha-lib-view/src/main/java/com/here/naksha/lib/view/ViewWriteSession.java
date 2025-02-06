@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.view;
 
+import naksha.model.ILock;
 import naksha.model.IWriteSession;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaTransaction;
@@ -91,5 +92,20 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   private IWriteSession getSession() {
     if (this.session == null) init();
     return this.session;
+  }
+
+  @Override
+  public @NotNull ILock acquireSessionLock(@NotNull String lockId) {
+    return getSession().acquireSessionLock(lockId);
+  }
+
+  @Override
+  public @NotNull ILock acquireTransactionLock(@NotNull String lockId) {
+    return getSession().acquireTransactionLock(lockId);
+  }
+
+  @Override
+  public @Nullable NakshaTransaction getTransaction() {
+    return getSession().getTransaction();
   }
 }

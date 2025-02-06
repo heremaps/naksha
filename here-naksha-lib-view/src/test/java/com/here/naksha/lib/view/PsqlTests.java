@@ -18,11 +18,11 @@
  */
 package com.here.naksha.lib.view;
 
+import naksha.model.IStorage;
 import naksha.model.IWriteSession;
+import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
-import naksha.psql.PgPlatform;
-import naksha.psql.PgStorage;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
@@ -58,7 +58,7 @@ abstract class PsqlTests {
 
   static final String TEST_APP_ID = "test_app";
   static final String TEST_AUTHOR = "test_author";
-  static PgStorage storage;
+  static IStorage storage;
   static @Nullable NakshaContext nakshaContext;
   static @Nullable IWriteSession session;
 
@@ -67,8 +67,7 @@ abstract class PsqlTests {
     NakshaContext.currentContext().setAuthor("PsqlStorageTest");
     NakshaContext.currentContext().setAppId("naksha-lib-view-unit-tests");
     nakshaContext = NakshaContext.currentContext().withAppId(TEST_APP_ID).withAuthor(TEST_AUTHOR);
-    storage = PgPlatform.newTestStorage();
-    storage.initStorage(null);
+    storage = Naksha.useStorage(Naksha.getLOCAL_DOCKER_CONFIG());
     session = storage.newWriteSession(new SessionOptions());
     assertNotNull(storage);
     assertNotNull(session);
@@ -92,7 +91,7 @@ abstract class PsqlTests {
     }
     if (storage != null) {
       try {
-        storage.shutdownStorage();
+        Naksha.removeStorage(Naksha.getLOCAL_DOCKER_CONFIG());
       } catch (Exception e) {
         log.atError().setMessage("Failed to close storage").setCause(e).log();
       } finally {

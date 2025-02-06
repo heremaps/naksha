@@ -59,6 +59,9 @@ public class ObligatoryLayersResolverTest {
         null,
         null,
         null,
+        null,
+        null,
+        null,
         null
     );
   }
@@ -66,7 +69,7 @@ public class ObligatoryLayersResolverTest {
   private @NotNull FeatureTuple mockFeatureTuple(@NotNull NakshaFeature feature) {
     final Metadata metadata = mockMetadata(feature.getId());
     final byte[] bytesFeature = Naksha.encodeFeature(feature, metadata.getFlags(), null);
-    final Tuple tuple = new Tuple(metadata, bytesFeature, null, null, null, null, withFeature(0));
+    final Tuple tuple = new Tuple(metadata, bytesFeature, null, null, null, null, false);
     final FeatureTuple featureTuple = new FeatureTuple(metadata.getTupleNumber(), tuple);
     return featureTuple;
   }

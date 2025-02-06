@@ -18,11 +18,15 @@
  */
 package com.here.naksha.lib.view;
 
+import naksha.jbon.JbDictionary;
 import naksha.model.IReadSession;
 import java.util.List;
 
+import naksha.model.IStorage;
 import naksha.model.Tuple;
 import naksha.model.TupleNumber;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaMap;
 import naksha.model.objects.NakshaTransaction;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
@@ -97,36 +101,58 @@ public class MockReadSession implements IReadSession {
 
   private String map = "";
 
-  @NotNull
-  @Override
-  public String getMapId() {
-    return map;
-  }
-
-  @Override
-  public void setMapId(@NotNull String s) {
-    map = s;
-  }
-
-  @Override
-  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
-    return false;
-  }
-
-  @NotNull
-  @Override
-  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
-    return List.of();
-  }
-
   @Override
   public void fetchTuples(@NotNull List<? extends FeatureTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
 
   }
 
-  @NotNull
   @Override
-  public NakshaTransaction transaction() {
+  public @NotNull IStorage getStorage() {
+    return null;
+  }
+
+  @Override
+  public @Nullable NakshaMap getMapById(@NotNull String mapId) {
+    return null;
+  }
+
+  @Override
+  public @Nullable NakshaMap getMapByNumber(int mapNumber) {
+    return null;
+  }
+
+  @Override
+  public void refreshMaps() {
+
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
+    return null;
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
+    return null;
+  }
+
+  @Override
+  public void refreshCollections(@NotNull NakshaMap map) {
+
+  }
+
+  @Override
+  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
+    return 0;
+  }
+
+  @Override
+  public @Nullable JbDictionary getDictionary(@NotNull String id) {
+    return null;
+  }
+
+  @Override
+  public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
     return null;
   }
 }
