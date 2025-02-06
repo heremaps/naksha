@@ -100,5 +100,5 @@ interface IStorage : IDictReader {
      * @return best flags to use for encoding.
      * @since 3.0.0
      */
-    fun getEncodingFlags(feature: Any?, context: Any? = null): Flags = DEFAULT_FLAGS
+    fun getEncodingFlags(feature: Any?, context: Any? = null): Flags
 }

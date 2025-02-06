@@ -53,7 +53,10 @@ open class PsqlStorage : PgStorage(), IStorage {
     override fun adminConnection(): PgConnection {
         TODO("Not yet implemented")
     }
-    override fun getDictionary(id: String): JbDictionary? {
-        TODO("Not yet implemented")
-    }
+
+    override fun getEncodingFlags(feature: Any?, context: Any?): Flags = adminMap.getEncodingFlags(feature, context)
+
+    override fun getDictionary(id: String): JbDictionary? = adminMap.getDictionary(id)
+
+    override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? = adminMap.getEncodingDictionary(feature, context)
 }

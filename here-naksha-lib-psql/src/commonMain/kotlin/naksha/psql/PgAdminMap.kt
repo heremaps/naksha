@@ -8,6 +8,8 @@ import kotlinx.datetime.toLocalDateTime
 import naksha.base.Epoch
 import naksha.base.Int64
 import naksha.base.Platform.PlatformCompanion.logger
+import naksha.jbon.IDictReader
+import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.FORBIDDEN
@@ -53,7 +55,7 @@ abstract class PgAdminMap internal constructor(
     .withStorageId(storage.id)
     .withId(Naksha.ADMIN_MAP)
     .withNumber(Naksha.ADMIN_MAP_NUMBER),
-    0) {
+    0), IDictReader {
 
     /**
      * The page-size of the database (`current_setting('block_size')`).
@@ -762,4 +764,10 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @since 3.0.0
      */
     abstract fun listPgCollections(conn: PgConnection, map: PgMap): PgCollectionList
+
+    abstract fun getEncodingFlags(feature: Any?, context: Any?): Flags
+
+    abstract override fun getDictionary(id: String): JbDictionary?
+
+    abstract override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary?
 }

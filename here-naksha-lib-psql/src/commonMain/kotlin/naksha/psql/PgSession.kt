@@ -3,6 +3,7 @@
 package naksha.psql
 
 import naksha.base.*
+import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
@@ -417,4 +418,12 @@ open class PgSession(
     override fun refreshCollections(map: NakshaMap) {
         // TODO: Implement me, for now we ignore the call.
     }
+
+    override fun executeParallel(request: Request): Response = execute(request)
+
+    override fun getEncodingFlags(feature: Any?, context: Any?): Flags = pgStorage.adminMap.getEncodingFlags(feature, context)
+
+    override fun getDictionary(id: String): JbDictionary? = pgStorage.adminMap.getDictionary(id)
+
+    override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? = pgStorage.adminMap.getEncodingDictionary(feature, context)
 }

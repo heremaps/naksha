@@ -123,6 +123,14 @@ class Naksha private constructor() {
         const val MAX_ID_LENGTH = 42 // The answer to everything ;-)
 
         /**
+         * Default configuration, when being use for storage, the storage will start a local docker container with PostgresQL, and use this for testing purpose.
+         * @since 3.0.0
+         */
+        @JvmStatic
+        @JsStatic
+        val LOCAL_DOCKER_CONFIG: StorageConfig = (fromJSON("""{}""") as PlatformMap).proxy(StorageConfig::class)
+
+        /**
          * Tests if the given **id** is a valid identifier, so matches:
          *
          * `[a-z][a-z0-9_:-]{31}`
