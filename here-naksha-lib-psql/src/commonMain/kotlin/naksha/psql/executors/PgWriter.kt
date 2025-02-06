@@ -113,8 +113,8 @@ class PgWriter(
      * @param collectionNumber the collection-number of the collection.
      * @return a new tuple-number.
      */
-    fun newCollectionTupleNumber(map: PgMap, collectionNumber: Int64): TupleNumber =
-        TupleNumber(StoreNumber(map.number, collectionNumber, 0), version, newUid())
+    fun newCollectionTupleNumber(map: PgMap, collectionNumber: Int): TupleNumber =
+        TupleNumber(session.storage.number, map.number, collectionNumber, 0, version, newUid())
 
     /**
      * Creates a new tuple-number for an existing collection.
@@ -122,7 +122,7 @@ class PgWriter(
      * @return a new tuple-number.
      */
     fun newCollectionTupleNumber(collection: PgCollection): TupleNumber =
-        TupleNumber(StoreNumber(collection.map.number, collection.number, 0), version, newUid())
+        TupleNumber(session.storage.number, collection.map.number, collection.number, 0, version, newUid())
 
     /**
      * Creates a new tuple-number for a feature.
@@ -132,11 +132,12 @@ class PgWriter(
      */
     fun newFeatureTupleNumber(collection: PgCollection, featureId: String): TupleNumber =
         TupleNumber(
-            StoreNumber(
-                collection.map.number,
-                collection.number,
-                partitionNumber(featureId)
-            ), version, newUid()
+            session.storage.number,
+            collection.map.number,
+            collection.number,
+            partitionNumber(featureId),
+            version,
+            newUid()
         )
 
     /**
@@ -169,7 +170,6 @@ class PgWriter(
     }
 
     // We should keep references generated tuples to be able to cached them for the result-set!
-    private val tupleCache = NakshaCache.tupleCache(storage.id)
     private val tuples = TupleList()
     private val tupleNumbers = TupleNumberList()
 
@@ -257,8 +257,7 @@ class PgWriter(
                         WriteOp.DELETE -> DeleteFeature(session, writeExecutor).execute(
                             collection,
                             write,
-                            tuples,
-                            tupleCache
+                            tuples
                         )
 
                         WriteOp.PURGE -> TODO()
@@ -278,7 +277,7 @@ class PgWriter(
 
         // If everything was done perfectly, fine.
         val tupleNumberByteArray = TupleNumberBinaryArray(tupleNumbers.toByteArray())
-        session.getTransaction().featuresModified += tupleNumbers.size
+        session.useTransaction().featuresModified += tupleNumbers.size
         return SuccessResponse(
             PgResultSet(
                 storage,
@@ -296,7 +295,7 @@ class PgWriter(
 
     private fun cachedTupleNumber(write: WriteExt, tuple: Tuple): TupleNumber {
         tuples[write.i] = tuple
-        tupleCache.store(tuple)
+        Naksha.cache.store(tuple)
         return tuple.tupleNumber
     }
 

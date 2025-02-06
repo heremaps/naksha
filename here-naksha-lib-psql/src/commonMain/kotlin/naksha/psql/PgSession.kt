@@ -281,6 +281,10 @@ open class PgSession(
 
     override fun fetchTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int, fetchFromHistory: Boolean, mode: FetchMode) {
         TODO("Not yet implemented")
+        // TODO: Rohit - Only if you want:
+        // Naksha.cache <- to be used first, whats missing, query from DB, then put into cache
+        // Naksha.cache.load()
+        // Naksha.cache.storeTuple()
 //        WITH source AS (
 //            -- Select all tuples needed from all collections.
 //            -- We can read all tuples using paging
