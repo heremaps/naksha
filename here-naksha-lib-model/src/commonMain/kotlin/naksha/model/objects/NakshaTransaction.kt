@@ -5,6 +5,9 @@ package naksha.model.objects
 import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.base.Platform
+import naksha.geo.SpBoundingBox
+import naksha.geo.SpGeometry
+import naksha.geo.SpPoint
 import naksha.model.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -41,7 +44,14 @@ open class NakshaTransaction() : NakshaFeature() {
 
     override fun defaultFeatureType(): String = "naksha.Tx"
     override fun withId(value: String): NakshaTransaction = super.withId(value) as NakshaTransaction
-    // TODO: Rohit - add overrides for the other super methods!
+    override fun withType(value: String): NakshaTransaction = super.withType(value) as NakshaTransaction
+    override fun withFeatureType(value: String): NakshaTransaction = super.withFeatureType(value) as NakshaTransaction
+    override fun withBbox(value: SpBoundingBox?): NakshaTransaction = super.withBbox(value) as NakshaTransaction
+    override fun withGeometry(value: SpGeometry?): NakshaTransaction = super.withGeometry(value) as NakshaTransaction
+    override fun withReferencePoint(value: SpPoint?): NakshaTransaction = super.withReferencePoint(value) as NakshaTransaction
+    override fun withProperties(value: NakshaProperties): NakshaTransaction = super.withProperties(value) as NakshaTransaction
+    override fun withAttachment(value: ByteArray?): NakshaTransaction = super.withAttachment(value) as NakshaTransaction
+    override fun withMomType(value: String): NakshaTransaction = super.withMomType(value) as NakshaTransaction
 
     override var id: String
         get() {
