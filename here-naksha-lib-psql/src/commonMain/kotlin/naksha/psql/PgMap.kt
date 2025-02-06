@@ -70,4 +70,34 @@ open class PgMap internal constructor(
      */
     @JvmField
     val quotedId = quoteIdent(id)
+
+    /**
+     * Returns the current collection-number, so the last used one.
+     * @param conn the connection to use to access the database.
+     * @return the current _(last used)_ collection-number.
+     * @since 3.0.0
+     */
+    fun getCollectionNumber(conn: PgConnection): Int {
+        val QUERY = "SELECT currval($1) as colnum"
+        val cursor = conn.execute(QUERY, arrayOf(colNumberSequenceOid)).fetch()
+        cursor.use {
+            val number: Int = cursor["colnum"]
+            return number
+        }
+    }
+
+    /**
+     * Allocate a new collection-number.
+     * @param conn the connection to use to access the database.
+     * @return the allocated collection-number.
+     * @since 3.0.0
+     */
+    fun newCollectionNumber(conn: PgConnection): Int {
+        val QUERY = "SELECT nextval($1) as colnum"
+        val cursor = conn.execute(QUERY, arrayOf(colNumberSequenceOid)).fetch()
+        cursor.use {
+            val number: Int = cursor["colnum"]
+            return number
+        }
+    }
 }

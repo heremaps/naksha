@@ -47,7 +47,7 @@ class InsertFeature(
         feature: NakshaFeature,
         flags: Flags,
     ): Metadata {
-        val versionTime = session.versionTime()
+        val versionTime = session.useTransaction().time
         return Metadata(
             storeNumber = tupleNumber.storeNumber,
             version = tupleNumber.version,

@@ -211,7 +211,7 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
             hereTile.maxLevelUpperBound().intKey,
             PgType.INT
         )
-        return "(${PgColumn.geo_grid} >= $lowerBoundPlaceholder AND ${PgColumn.geo_grid} <= $upperBoundPlaceholder)"
+        return "(${PgColumn.here_tile} >= $lowerBoundPlaceholder AND ${PgColumn.here_tile} <= $upperBoundPlaceholder)"
     }
 
     private fun whereMetadata() {

@@ -422,8 +422,8 @@ SELECT basics.*, procs.* FROM basics, procs;
         val QUERY = "SELECT currval($1) as mapnum"
         val cursor = conn.execute(QUERY, arrayOf(mapNumberSequenceOid)).fetch()
         cursor.use {
-            val mapNumber: Int = cursor["mapnum"]
-            return mapNumber
+            val number: Int = cursor["mapnum"]
+            return number
         }
     }
 
@@ -437,8 +437,8 @@ SELECT basics.*, procs.* FROM basics, procs;
         val QUERY = "SELECT nextval($1) as mapnum"
         val cursor = conn.execute(QUERY, arrayOf(mapNumberSequenceOid)).fetch()
         cursor.use {
-            val mapNumber: Int = cursor["mapnum"]
-            return mapNumber
+            val number: Int = cursor["mapnum"]
+            return number
         }
     }
 

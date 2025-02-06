@@ -65,7 +65,7 @@ class PgWriter(
      * The version of which this writer is part.
      */
     val version: Version
-        get() = session.version()
+        get() = session.useTransaction().version
 
     /**
      * Returns the [flags][Flags] to use, when encoding new rows.
@@ -93,7 +93,7 @@ class PgWriter(
     /**
      * Returns the update-time to be set.
      */
-    fun updateTime(): Int64 = session.versionTime()
+    fun updateTime(): Int64 = session.useTransaction().time
 
     /**
      * Returns a new `uid` for a new tuple.
@@ -105,7 +105,7 @@ class PgWriter(
      * @param map the map in which to create a new map.
      * @return the new collection-number of the new collection.
      */
-    fun newCollectionNumber(map: PgMap): Int64 = map.newCollectionNumber(conn)
+    fun newCollectionNumber(map: PgMap): Int = map.newCollectionNumber(conn)
 
     /**
      * Creates a new tuple-number for a new collection (to be created).

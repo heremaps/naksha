@@ -35,7 +35,7 @@ class PgReader(
      * The version of which this reader is part.
      */
     val version: Version
-        get() = session.version()
+        get() = session.useTransaction().version
 
     fun execute(): Response {
         val query = PgQueryBuilder(session, request).build()
