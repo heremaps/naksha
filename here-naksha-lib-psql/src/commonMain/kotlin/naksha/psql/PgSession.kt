@@ -280,11 +280,23 @@ open class PgSession(
     }
 
     override fun fetchTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int, fetchFromHistory: Boolean, mode: FetchMode) {
-        TODO("Not yet implemented")
+        //TODO("Not yet implemented")
         // TODO: Rohit - Only if you want:
-        // Naksha.cache <- to be used first, whats missing, query from DB, then put into cache
-        // Naksha.cache.load()
-        // Naksha.cache.storeTuple()
+        val cachedTuples = Naksha.cache.load(featureTuples, from, to)
+        val missingTuples = featureTuples.subList(from, to).filter { it !in cachedTuples }
+        if (missingTuples.isNotEmpty()) {
+            fetchFromDatabase(missingTuples, fetchFromHistory, mode)?.forEachIndexed { index, dbResult ->
+                if (dbResult != null) {
+                    dbResult.tuple?.let { it1 -> Naksha.cache.store(it1) }
+                    //Update the original featureTup at the appropriate position. How as list is immutable
+                    //featureTuples[from+index] = dbResult
+                }
+            }
+        }
+    }
+
+    private fun fetchFromDatabase( missingTuples: List<FeatureTuple?>, fetchFromHistory: Boolean, mode: FetchMode): List<FeatureTuple?>? {
+
 //        WITH source AS (
 //            -- Select all tuples needed from all collections.
 //            -- We can read all tuples using paging
@@ -358,6 +370,7 @@ open class PgSession(
 //                ||int4send(8 + octet_length(all_obj)) -- size
 //                ||all_obj
 //        )) FROM result
+        return null
     }
 
     override fun getMapById(mapId: String): NakshaMap? {
