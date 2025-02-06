@@ -2,7 +2,7 @@ var module = {exports: {}};
 var exports = module.exports;
 
 function js() {
-  let js = module.exports["here-naksha-lib-geo"].com.here.naksha.js;
+  let js = module.exports["here-naksha-lib-auth"].com.here.naksha.js;
   js.JsEngine.Companion.initJsEngine();
   js.TestFactory = {
     id: function() { return "TestFactory" },

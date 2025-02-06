@@ -38,9 +38,9 @@ public class MergeByStoragePriorityTest {
     final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), Version.fromDouble(3.0),0);
     Metadata metadata = mock(Metadata.class);
 
-    Tuple tu1 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF1, null, null, null, null);
-    Tuple tu2 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF2, null, null, null, null);
-    Tuple tu3 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF3, null, null, null, null);
+    Tuple tu1 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, f1.getId(), metadata.getFlags(), bytesF1, null, null, null, null);
+    Tuple tu2 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, f2.getId(), metadata.getFlags(), bytesF2, null, null, null, null);
+    Tuple tu3 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, f3.getId(), metadata.getFlags(), bytesF3, null, null, null, null);
 
     FeatureTuple t1 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu1);
     FeatureTuple t2 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu2);
@@ -74,9 +74,9 @@ public class MergeByStoragePriorityTest {
     final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), Version.fromDouble(3.0),0);
     Metadata metadata = mock(Metadata.class);
 
-    Tuple tu1 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF1, null, null, null, null);
-    Tuple tu2 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF2, null, null, null, null);
-    Tuple tu3 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId(), metadata.getFlags(), bytesF3, null, null, null, null);
+    Tuple tu1 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, f1.getId(), metadata.getFlags(), bytesF1, null, null, null, null);
+    Tuple tu2 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, f2.getId(), metadata.getFlags(), bytesF2, null, null, null, null);
+    Tuple tu3 = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, f3.getId(), metadata.getFlags(), bytesF3, null, null, null, null);
 
     FeatureTuple t1 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu1);
     FeatureTuple t2 = new FeatureTuple(storage, tupleNum, ExecutedOp.READ, tu2);

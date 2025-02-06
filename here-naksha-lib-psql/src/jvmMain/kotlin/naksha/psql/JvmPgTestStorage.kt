@@ -23,6 +23,10 @@ class JvmPgTestStorage private constructor(cluster: PsqlCluster, schemaName: Str
 
     companion object {
 
+        // If prefer and allowed to pull from HCR then "hcr.data.here.com/naksha/postgres:${architecture()}-latest"
+        //TODO use image under company docker hub account "docker.io/heremaps/naksha-postgres:latest"
+        internal val POSTGRES_IMAGE_REPO = "docker.io/phmai/naksha-postgres:latest"
+
         @JvmField
         internal val storage = AtomicReference<JvmPgTestStorage?>()
 
@@ -102,7 +106,7 @@ class JvmPgTestStorage private constructor(cluster: PsqlCluster, schemaName: Str
                     } else {
                         // Otherwise, start a docker container.
                         val password = "password"
-                        val container = GenericContainer("hcr.data.here.com/naksha/postgres:${architecture()}-latest")
+                        val container = GenericContainer(POSTGRES_IMAGE_REPO)
                         container.portBindings = listOf("44585:5432") // host : container
                         container.addEnv("PGPASSWORD", password)
                         container.setWaitStrategy(

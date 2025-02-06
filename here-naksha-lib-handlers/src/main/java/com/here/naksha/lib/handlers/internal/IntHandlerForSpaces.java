@@ -18,22 +18,18 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
+import static com.here.naksha.lib.handlers.NakshaAdminCollection.EVENT_HANDLERS;
 import static naksha.model.NakshaContext.currentContext;
-import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readIdsFromResult;
+import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
+import static naksha.model.util.ResultHelper.readIdsFromResult;
 
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.Space;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-import naksha.model.ErrorResult;
-import naksha.model.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
-import naksha.model.IReadSession;
 import java.util.List;
+import naksha.model.IReadSession;
+import naksha.model.NakshaError;
+import naksha.model.SessionOptions;
+import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 
 public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
@@ -43,25 +39,25 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
   }
 
   @Override
-  protected @NotNull Result validateFeature(@NotNull XyzFeatureCodec featureCodec) {
-    if (EWriteOp.DELETE.toString().equals(featureCodec.getOp())) {
-      return new SuccessResult();
+  protected @NotNull Response validateWrite(@NotNull Write write) {
+    if (WriteOp.DELETE.equals(write.getOp())) {
+      return new SuccessResponse();
     }
-    Result basicValidation = super.validateFeature(featureCodec);
-    if (basicValidation instanceof ErrorResult) {
+    Response basicValidation = super.validateWrite(write);
+    if (basicValidation instanceof ErrorResponse) {
       return basicValidation;
     }
-    Space space = (Space) featureCodec.getFeature();
+    Space space = (Space) write.getFeature();
     return handlerExistenceValidation(space);
   }
 
-  private @NotNull Result handlerExistenceValidation(Space space) {
+  private @NotNull Response handlerExistenceValidation(Space space) {
     List<String> missingHandlerIds = getMissingHandlersFor(space);
     if (missingHandlerIds.isEmpty()) {
-      return new SuccessResult();
+      return new SuccessResponse();
     } else {
-      return new ErrorResult(
-          XyzError.NOT_FOUND,
+      return new ErrorResponse(
+          NakshaError.NOT_FOUND,
           "Following handlers defined for Space %s don't exist: %s"
               .formatted(space.getId(), String.join(",", missingHandlerIds)));
     }
@@ -70,14 +66,14 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
   private List<String> getMissingHandlersFor(Space space) {
     List<String> expectedHandlerIds = space.getEventHandlerIds();
     ReadFeatures getEventHandlersRequest = readFeaturesByIdsRequest(EVENT_HANDLERS, expectedHandlerIds);
-    try (IReadSession readSession = nakshaHub().getSpaceStorage().newReadSession(currentContext(), false)) {
-      try (Result result = readSession.execute(getEventHandlersRequest)) {
-        return missingHandlersIds(result, expectedHandlerIds);
-      }
+    try (IReadSession readSession =
+        nakshaHub().getSpaceStorage().newReadSession(SessionOptions.from(currentContext(), false))) {
+      Response result = readSession.execute(getEventHandlersRequest);
+      return missingHandlersIds(result, expectedHandlerIds);
     }
   }
 
-  private List<String> missingHandlersIds(Result fetchedHandlers, List<String> expectedHandlersIds) {
+  private List<String> missingHandlersIds(Response fetchedHandlers, List<String> expectedHandlersIds) {
     List<String> availableHandlerIds = readIdsFromResult(fetchedHandlers);
     return expectedHandlersIds.stream()
         .filter(expectedId -> !availableHandlerIds.contains(expectedId))

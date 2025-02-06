@@ -25,28 +25,23 @@ class UpdateFeature(
             NakshaError.ILLEGAL_ARGUMENT,
             "UPDATE without feature"
         )
-        require(feature.id == write.featureId) {
-            "Feature id in payload (${feature.id}) and write request (${write.featureId}) are different"
-        }
+        if (feature.id != write.featureId) throw NakshaException(NakshaError.ILLEGAL_ARGUMENT,"Feature id in payload (${feature.id}) and write request (${write.featureId}) are different")
         val previousMetadata = existingMetadataProvider.get(collection.head.name, write.id!!)
-        require(previousMetadata != null) {
-            "Trying update feature that not exists in head: ${write.id}"
+            ?: throw NakshaException(NakshaError.FEATURE_NOT_FOUND, "Trying update feature that not exists in head: ${write.id}")
+        if (feature.id != previousMetadata.id) {
+            throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Feature id (${feature.id}) differs from previous metadata (${previousMetadata.id})")
         }
-        require(feature.id == previousMetadata.id) {
-            "Feature id (${feature.id}) differs from previous metadata (${previousMetadata.id})"
-        }
-        require(previousMetadata.nextVersion == null) {
-            "Previous metadata shouldn't have 'nextVersion' but it does (${previousMetadata.nextVersion})"
+        if (previousMetadata.nextVersion != null) {
+            throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Previous metadata shouldn't have 'nextVersion' but it does (${previousMetadata.nextVersion})")
         }
 
         val tupleNumber = newFeatureTupleNumber(collection, feature.id, session)
         val flags = resolveFlags(collection, session)
-        val newVersion = session.version()
         val tuple = tuple(
             session.storage,
             tupleNumber,
             feature,
-            metadataForNewVersion(previousMetadata, previousMetadata.version, feature, flags),
+            metadataForNewVersion(previousMetadata, tupleNumber, feature, flags),
             write.attachment,
             flags
         )
@@ -58,14 +53,14 @@ class UpdateFeature(
                 featureId = feature.id
             )
         }
-        writeExecutor.updateFeatureInHead(collection, tuple, feature, newVersion, previousMetadata)
+        writeExecutor.updateFeatureInHead(collection, tuple, feature, tupleNumber.version, previousMetadata)
         return tuple
     }
 
 
     private fun metadataForNewVersion(
         previousMetadata: Metadata,
-        newVersion: Version,
+        newTupleNumber: TupleNumber,
         feature: NakshaFeature,
         flags: Flags
     ): Metadata {
@@ -73,9 +68,9 @@ class UpdateFeature(
         return previousMetadata.copy(
             updatedAt = versionTime,
             authorTs = if (session.options.author == null) previousMetadata.authorTs else versionTime,
-            version = newVersion,
+            version = newTupleNumber.version,
             prevVersion = previousMetadata.version,
-            uid = session.uid.getAndAdd(1),
+            uid = newTupleNumber.uid,
             puid = previousMetadata.puid,
             hash = calculateHash(feature, session.options.excludePaths, session.options.excludeFn),
             changeCount = previousMetadata.changeCount + 1,
@@ -86,6 +81,4 @@ class UpdateFeature(
             id = feature.id
         )
     }
-
-
 }

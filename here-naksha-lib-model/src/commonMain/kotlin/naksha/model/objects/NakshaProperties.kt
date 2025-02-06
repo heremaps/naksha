@@ -2,10 +2,9 @@
 
 package naksha.model.objects
 
+import naksha.base.AnyObject
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.base.AnyObject
-import naksha.model.TagList
 import naksha.model.XyzNs
 import naksha.model.mom.MomDeltaNs
 import naksha.model.mom.MomMetaNs
@@ -54,6 +53,12 @@ open class NakshaProperties() : AnyObject() {
          * @since 3.0.0
          */
         const val META_KEY = "@ns:com:here:meta"
+
+        /**
+         * Properties used by the deprecated Activity-Log service, just here to allow downward
+         * compatibility.
+         */
+        const val XYZ_ACTIVITY_LOG_NS = "@ns:com:here:xyz:log"
 
         /**
          * The key of the tags, they do override the tags in the XYZ namespace when set.

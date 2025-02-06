@@ -95,10 +95,10 @@ object ProxyFeatureGenerator {
     }
 
     private fun Double.roundToDecimal(decimals: Int): Double {
-        var dotAt = 1
+        var dotAt = 1.0
         repeat(decimals) { dotAt *= 10 }
         val roundedValue = (this * dotAt).roundToInt()
-        return (roundedValue / dotAt) + (roundedValue % dotAt).toDouble() / dotAt
+        return roundedValue / dotAt
     }
 
     private val adverbs: Array<String> = arrayOf(

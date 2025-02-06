@@ -1,6 +1,7 @@
 pluginManagement {
     repositories {
         maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/bootstrap")
+        maven("https://plugins.gradle.org/m2/")
         gradlePluginPortal()
     }
 }
@@ -27,3 +28,4 @@ include(":here-naksha-common-http")
 include(":here-naksha-storage-http")
 include(":here-naksha-app-service")
 include(":here-naksha-lib-ext-manager")
+include("here-naksha-lib-diff")

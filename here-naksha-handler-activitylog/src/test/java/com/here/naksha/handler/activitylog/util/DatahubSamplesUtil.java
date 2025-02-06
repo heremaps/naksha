@@ -1,15 +1,17 @@
 package com.here.naksha.handler.activitylog.util;
 
 import com.here.naksha.handler.activitylog.ActivityLogComparator;
-import naksha.model.EXyzAction;
-import naksha.model.XyzFeature;
+import com.here.naksha.handler.activitylog.NakshaActivityLog;
+import com.here.naksha.handler.activitylog.Original;
 import naksha.model.XyzFeatureCollection;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.Original;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzActivityLog;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.test.common.FileUtil;
+import naksha.model.XyzNs;
+import naksha.model.objects.NakshaFeature;
+
 import java.util.List;
+
+import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
 
 public class DatahubSamplesUtil {
 
@@ -30,50 +32,50 @@ public class DatahubSamplesUtil {
     return FileUtil.loadFileOrFail(SAMPLES_DIR, SAMPLES_FILE);
   }
 
-  private static List<XyzFeature> historyFeatures(String sampleFeaturesJson) {
-    List<XyzFeature> features = activityFeatures(sampleFeaturesJson);
+  private static List<NakshaFeature> historyFeatures(String sampleFeaturesJson) {
+    List<NakshaFeature> features = activityFeatures(sampleFeaturesJson);
     features.forEach(feature -> {
-      String originFeatureId = feature.getProperties().getXyzActivityLog().getId();
+      String originFeatureId = NakshaActivityLog.getActivityLog(feature.getProperties()).getId();
       feature.setId(originFeatureId);
-      feature.getProperties().setXyzActivityLog(null);
+      feature.getProperties().remove(XYZ_ACTIVITY_LOG_NS);
     });
     return features;
   }
 
-  private static List<XyzFeature> activityFeatures(String sampleFeaturesJson) {
-    List<XyzFeature> features = featuresFromCollectionJson(sampleFeaturesJson);
+  private static List<NakshaFeature> activityFeatures(String sampleFeaturesJson) {
+    List<NakshaFeature> features = featuresFromCollectionJson(sampleFeaturesJson);
     features.forEach(feature -> {
       String originId = feature.getId();
-      XyzActivityLog datahubActivityLog = feature.getProperties().getXyzActivityLog();
-      XyzNamespace datahubXyzNamespace = feature.getProperties().getXyzNamespace();
+      NakshaActivityLog datahubActivityLog = NakshaActivityLog.getActivityLog(feature.getProperties());
+      XyzNs datahubXyzNamespace = feature.getProperties().getXyz();
       Original datahubOriginal = datahubActivityLog.getOriginal();
       String originAction = datahubActivityLog.getAction();
       String originPuuid = datahubOriginal.getPuuid();
       long updatedAt = datahubOriginal.getUpdatedAt();
       long createdAt = datahubOriginal.getCreatedAt();
-      feature.getProperties().getXyzNamespace().setUuid(originId);
+      feature.getProperties().getXyz().put("uuid",originId);
       if (originAction.equals("SAVE")) {
-        originAction = "CREATE";
-        datahubActivityLog.setAction("CREATE");
+        originAction = "CREATED";
+        datahubActivityLog.setAction("CREATED");
       }
       if (datahubOriginal.getSpace() == null) {
         datahubOriginal.setSpace(SAMPLE_SPACE_ID);
       }
-      datahubXyzNamespace.setAction(EXyzAction.get(EXyzAction.class, originAction));
-      datahubXyzNamespace.setPuuid(originPuuid);
-      datahubXyzNamespace.setUpdatedAt(updatedAt);
-      datahubXyzNamespace.setCreatedAt(createdAt);
+      datahubXyzNamespace.put("action", originAction);
+      datahubXyzNamespace.put("puuid",originPuuid);
+      datahubXyzNamespace.put("updatedAt",updatedAt);
+      datahubXyzNamespace.put("createdAt",createdAt);
     });
     features.sort(new ActivityLogComparator());
     return features;
   }
 
-  private static List<XyzFeature> featuresFromCollectionJson(String featuresCollectionJson) {
+  private static List<NakshaFeature> featuresFromCollectionJson(String featuresCollectionJson) {
     XyzFeatureCollection collection = JsonSerializable.deserialize(featuresCollectionJson, XyzFeatureCollection.class);
     return collection.getFeatures();
   }
 
-  public record DatahubSample(List<XyzFeature> historyFeatures, List<XyzFeature> activityFeatures) {
+  public record DatahubSample(List<NakshaFeature> historyFeatures, List<NakshaFeature> activityFeatures) {
 
   }
 }

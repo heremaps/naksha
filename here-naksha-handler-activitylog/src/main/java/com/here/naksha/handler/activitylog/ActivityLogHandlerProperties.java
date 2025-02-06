@@ -21,12 +21,12 @@ package com.here.naksha.handler.activitylog;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import naksha.model.NakshaVersion;
-import naksha.geo.XyzProperties;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 
 @AvailableSince(NakshaVersion.v2_0_14)
-public class ActivityLogHandlerProperties extends XyzProperties {
+public class ActivityLogHandlerProperties extends NakshaProperties {
 
   @AvailableSince(NakshaVersion.v2_0_14)
   public static final String SPACE_ID = "spaceId";

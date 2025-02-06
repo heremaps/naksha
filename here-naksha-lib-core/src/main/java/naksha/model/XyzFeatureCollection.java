@@ -20,140 +20,79 @@ package naksha.model;
 
 import static java.util.stream.Collectors.toList;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.here.naksha.lib.core.LazyParsableFeatureList;
-import com.here.naksha.lib.core.LazyParsableFeatureList.RawDeserializer;
-import com.here.naksha.lib.core.LazyParsableFeatureList.RawSerializer;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import naksha.base.AnyObject;
+import naksha.base.JvmListProxy;
+import naksha.base.JvmPropertyUtil;
+import naksha.base.NotNullProperty;
+import naksha.base.NullableProperty;
+import naksha.base.StringList;
 import naksha.geo.SpBoundingBox;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonTypeName(value = "FeatureCollection")
-@JsonInclude(Include.NON_EMPTY)
-@SuppressWarnings({"unused", "unchecked"})
 public class XyzFeatureCollection extends Response {
 
-  @JsonIgnore
-  private final @NotNull LazyParsableFeatureList features;
+  private static final String FEATURE_COLLECTION_TYPE = "FeatureCollection";
 
-  @JsonProperty
-  @JsonInclude(Include.NON_NULL)
-  private SpBoundingBox bbox;
+  private static final NotNullProperty<XyzFeatureCollection, String> TYPE =
+      JvmPropertyUtil.notNullProperty(String.class, "type", (xfc, name) -> FEATURE_COLLECTION_TYPE);
 
-  @JsonProperty
-  @JsonInclude(Include.NON_NULL)
-  private Boolean partial;
+  private static final NotNullProperty<XyzFeatureCollection, NakshaFeatureList> FEATURES =
+      JvmPropertyUtil.notNullProperty(
+          NakshaFeatureList.class, "features", (xfc, name) -> new NakshaFeatureList());
 
-  @JsonProperty
-  @JsonInclude(Include.NON_NULL)
-  @Deprecated
-  private String handle;
+  private static final NullableProperty<XyzFeatureCollection, SpBoundingBox> BBOX =
+      JvmPropertyUtil.nullableProperty(SpBoundingBox.class, "bbox");
 
-  @JsonProperty
-  @JsonInclude(Include.NON_NULL)
-  private String nextPageToken;
+  private static final NullableProperty<XyzFeatureCollection, Boolean> PARTIAL =
+      JvmPropertyUtil.nullableProperty(Boolean.class, "partial");
 
-  @JsonProperty
-  @JsonInclude(Include.NON_NULL)
-  private Long count;
+  private static final NullableProperty<XyzFeatureCollection, String> HANDLE =
+      JvmPropertyUtil.nullableProperty(String.class, "handle");
 
-  @JsonProperty
-  @JsonInclude(Include.NON_EMPTY)
-  private List<String> inserted;
+  private static final NullableProperty<XyzFeatureCollection, String> NEXT_PAGE_TOKEN =
+      JvmPropertyUtil.nullableProperty(String.class, "nextPageToken");
 
-  @JsonProperty
-  @JsonInclude(Include.NON_EMPTY)
-  private List<String> updated;
+  private static final NullableProperty<XyzFeatureCollection, Long> COUNT =
+      JvmPropertyUtil.nullableProperty(Long.class, "count");
 
-  @JsonProperty
-  @JsonInclude(Include.NON_EMPTY)
-  private List<String> deleted;
+  private static final NullableProperty<XyzFeatureCollection, StringList> INSERTED =
+      JvmPropertyUtil.nullableProperty(StringList.class, "inserted");
 
-  @JsonProperty
-  @JsonInclude(Include.NON_EMPTY)
-  private List<NakshaFeature> oldFeatures;
+  private static final NullableProperty<XyzFeatureCollection, StringList> UPDATED =
+      JvmPropertyUtil.nullableProperty(StringList.class, "updated");
 
-  @JsonProperty
-  @JsonInclude(Include.NON_EMPTY)
-  private List<NakshaFeature> violations;
+  private static final NullableProperty<XyzFeatureCollection, StringList> DELETED =
+      JvmPropertyUtil.nullableProperty(StringList.class, "deleted");
 
-  @JsonProperty
-  @JsonInclude(Include.NON_EMPTY)
-  private List<ModificationFailure> failed;
+  private static final NullableProperty<XyzFeatureCollection, NakshaFeatureList> OLD_FEATURES =
+      JvmPropertyUtil.nullableProperty(NakshaFeatureList.class, "oldFeatures");
 
-  @JsonProperty
-  @JsonInclude(Include.NON_NULL)
-  private Integer version;
+  private static final NullableProperty<XyzFeatureCollection, NakshaFeatureList> VIOLATIONS =
+      JvmPropertyUtil.nullableProperty(NakshaFeatureList.class, "violations");
 
-  public XyzFeatureCollection() {
-    features = new LazyParsableFeatureList();
-  }
+  private static final NullableProperty<XyzFeatureCollection, ModificationFailureList> FAILED =
+      JvmPropertyUtil.nullableProperty(ModificationFailureList.class, "failed");
 
-  @SuppressWarnings("WeakerAccess")
-  public void calculateAndSetBBox(boolean recalculateChildrenBoxes) throws JsonProcessingException {
-    if (getFeatures().size() == 0) {
-      return;
-    }
+  private static final NullableProperty<XyzFeatureCollection, Integer> VERSION =
+      JvmPropertyUtil.nullableProperty(Integer.class, "version");
 
-    double minLon = Double.POSITIVE_INFINITY;
-    double minLat = Double.POSITIVE_INFINITY;
-    double maxLon = Double.NEGATIVE_INFINITY;
-    double maxLat = Double.NEGATIVE_INFINITY;
-
-    for (final NakshaFeature feature : getFeatures()) {
-      if (recalculateChildrenBoxes || feature.getBbox() == null) {
-        feature.setBbox(new SpBoundingBox(
-            Objects.requireNonNull(feature.getGeometry()).getCoordinates()));
-      }
-
-      SpBoundingBox bbox = feature.getBbox();
-
-      if (bbox != null) {
-        if (bbox.getMinLongitude() < minLon) {
-          minLon = bbox.getMinLongitude();
-        }
-        if (bbox.getMinLatitude() < minLat) {
-          minLat = bbox.getMinLatitude();
-        }
-        if (bbox.getMaxLongitude() > maxLon) {
-          maxLon = bbox.getMaxLongitude();
-        }
-        if (bbox.getMaxLatitude() > maxLat) {
-          maxLat = bbox.getMaxLatitude();
-        }
-      }
-    }
-
-    if (minLon != Double.POSITIVE_INFINITY
-        && minLat != Double.POSITIVE_INFINITY
-        && maxLon != Double.NEGATIVE_INFINITY
-        && maxLat != Double.NEGATIVE_INFINITY) {
-      setBbox(new SpBoundingBox(minLon, minLat, maxLon, maxLat));
-    } else {
-      setBbox(null);
-    }
+  @Override
+  public void onCreation() {
+    setFeatures(new NakshaFeatureList());
+    TYPE.setValue(this, FEATURE_COLLECTION_TYPE);
   }
 
   public SpBoundingBox getBbox() {
-    return bbox;
+    return BBOX.getValue(this);
   }
 
   public void setBbox(SpBoundingBox bbox) {
-    this.bbox = bbox;
+    BBOX.setValue(this, bbox);
   }
 
   @SuppressWarnings("unused")
@@ -163,35 +102,27 @@ public class XyzFeatureCollection extends Response {
   }
 
   public @NotNull List<NakshaFeature> getFeatures() {
-    return (List<NakshaFeature>) features.get();
+    return FEATURES.getValue(this);
   }
 
   public void setFeatures(@NotNull List<? extends NakshaFeature> features) {
-    this.features.set(features);
+    NakshaFeatureList nakshaFeatureList = new NakshaFeatureList();
+    nakshaFeatureList.addAll(features);
+    FEATURES.setValue(this, nakshaFeatureList);
   }
 
-  @SuppressWarnings("unused")
-  public @NotNull XyzFeatureCollection withFeatures(final @NotNull List<? extends @NotNull NakshaFeature> features) {
+  public void setFeatures(@NotNull NakshaFeatureList features) {
+    FEATURES.setValue(this, features);
+  }
+
+  public @NotNull XyzFeatureCollection withFeatures(NakshaFeatureList features) {
     setFeatures(features);
     return this;
   }
 
-  @JsonSerialize(using = RawSerializer.class)
-  @JsonProperty("features")
-  public @NotNull LazyParsableFeatureList getLazyParsableFeatureList() {
-    return features;
-  }
-
-  @JsonDeserialize(using = RawDeserializer.class)
-  @JsonProperty("features")
-  public void setLazyParsableFeatureList(Object features) {
-    if (features instanceof String) {
-      String string = (String) features;
-      this.features.set(string);
-    } else if (features instanceof List<?>) {
-      List<?> list = (List<?>) features;
-      this.features.set((List<NakshaFeature>) list);
-    }
+  public @NotNull XyzFeatureCollection withFeatures(final @NotNull List<? extends @NotNull NakshaFeature> features) {
+    setFeatures(features);
+    return this;
   }
 
   /**
@@ -201,7 +132,7 @@ public class XyzFeatureCollection extends Response {
    * @deprecated use {@link #getNextPageToken()} instead.
    */
   public @Nullable String getHandle() {
-    return this.handle;
+    return HANDLE.getValue(this);
   }
 
   /**
@@ -212,7 +143,7 @@ public class XyzFeatureCollection extends Response {
    */
   @SuppressWarnings("WeakerAccess")
   public void setHandle(String handle) {
-    this.handle = handle;
+    HANDLE.setValue(this, handle);
   }
 
   /**
@@ -230,7 +161,7 @@ public class XyzFeatureCollection extends Response {
    * @return the nextPageToken.
    */
   public String getNextPageToken() {
-    return this.nextPageToken;
+    return NEXT_PAGE_TOKEN.getValue(this);
   }
 
   /**
@@ -240,7 +171,7 @@ public class XyzFeatureCollection extends Response {
    */
   @SuppressWarnings("WeakerAccess")
   public void setNextPageToken(String nextPageToken) {
-    this.nextPageToken = nextPageToken;
+    NEXT_PAGE_TOKEN.setValue(this, nextPageToken);
   }
 
   @SuppressWarnings("unused")
@@ -255,7 +186,7 @@ public class XyzFeatureCollection extends Response {
    * @return the handle.
    */
   public Boolean isPartial() {
-    return this.partial;
+    return PARTIAL.getValue(this);
   }
 
   /**
@@ -265,7 +196,7 @@ public class XyzFeatureCollection extends Response {
    */
   @SuppressWarnings("WeakerAccess")
   public void setPartial(Boolean partial) {
-    this.partial = partial;
+    PARTIAL.setValue(this, partial);
   }
 
   @SuppressWarnings("unused")
@@ -275,25 +206,23 @@ public class XyzFeatureCollection extends Response {
   }
 
   /**
-   * Returns the proprietary count property that is used by Space count requests to return the
-   * number of features found.
+   * Returns the proprietary count property that is used by Space count requests to return the number of features found.
    *
    * @return the amount of features that are matching the query.
    */
   public Long getCount() {
-    return this.count;
+    return COUNT.getValue(this);
   }
 
   /**
-   * Sets the amount of features that where matching a query, without returning the features (so
-   * features will be null or an empty array).
+   * Sets the amount of features that where matching a query, without returning the features (so features will be null or an empty array).
    *
-   * @param count the amount of features that where matching a query, if null, then the property is
-   *     removed.
+   * @param count the amount of features that where matching a query, if null, then the property is removed.
    */
   @SuppressWarnings("WeakerAccess")
   public void setCount(Long count) {
-    this.count = count;
+    put("count", count);
+    COUNT.setValue(this, count);
   }
 
   @SuppressWarnings("unused")
@@ -306,7 +235,7 @@ public class XyzFeatureCollection extends Response {
    * @return list of features IDs of those features that where successfully inserted.
    */
   public List<String> getInserted() {
-    return this.inserted;
+    return INSERTED.getValue(this);
   }
 
   /**
@@ -316,7 +245,11 @@ public class XyzFeatureCollection extends Response {
    */
   @SuppressWarnings("WeakerAccess")
   public void setInserted(List<String> inserted) {
-    this.inserted = inserted;
+    setInserted(StringList.fromList(inserted));
+  }
+
+  public void setInserted(StringList inserted) {
+    INSERTED.setValue(this, inserted);
   }
 
   /**
@@ -325,10 +258,7 @@ public class XyzFeatureCollection extends Response {
    * @param insertId the ID to be inserted into the list
    */
   public void appendInsertId(@NotNull String insertId) {
-    if (this.inserted == null) {
-      this.inserted = new ArrayList<>();
-    }
-    this.inserted.add(insertId);
+    appendToNullableStringList(INSERTED, insertId);
   }
 
   @SuppressWarnings("unused")
@@ -341,7 +271,11 @@ public class XyzFeatureCollection extends Response {
    * @return list of features IDs of those features that where successfully updated.
    */
   public List<String> getUpdated() {
-    return this.updated;
+    return UPDATED.getValue(this);
+  }
+
+  public void setUpdated(List<String> updated) {
+    UPDATED.setValue(this, StringList.fromList(updated));
   }
 
   /**
@@ -349,9 +283,8 @@ public class XyzFeatureCollection extends Response {
    *
    * @param updated the IDs of the features that where updated.
    */
-  @SuppressWarnings("WeakerAccess")
-  public void setUpdated(List<String> updated) {
-    this.updated = updated;
+  public void setUpdated(StringList updated) {
+    UPDATED.setValue(this, updated);
   }
 
   /**
@@ -360,10 +293,7 @@ public class XyzFeatureCollection extends Response {
    * @param updateId the ID to be inserted into the list
    */
   public void appendUpdateId(@NotNull String updateId) {
-    if (this.updated == null) {
-      this.updated = new ArrayList<>();
-    }
-    this.updated.add(updateId);
+    appendToNullableStringList(UPDATED, updateId);
   }
 
   @SuppressWarnings("unused")
@@ -375,8 +305,12 @@ public class XyzFeatureCollection extends Response {
   /**
    * @return list of features IDs of those features that where successfully deleted.
    */
-  public List<String> getDeleted() {
-    return this.deleted;
+  public StringList getDeleted() {
+    return DELETED.getValue(this);
+  }
+
+  public void setDeleted(List<String> deleted) {
+    setDeleted(StringList.fromList(deleted));
   }
 
   /**
@@ -384,9 +318,8 @@ public class XyzFeatureCollection extends Response {
    *
    * @param deleted the IDs of the features that where deleted.
    */
-  @SuppressWarnings("WeakerAccess")
-  public void setDeleted(List<String> deleted) {
-    this.deleted = deleted;
+  public void setDeleted(StringList deleted) {
+    DELETED.setValue(this, deleted);
   }
 
   /**
@@ -395,10 +328,7 @@ public class XyzFeatureCollection extends Response {
    * @param deleteId the ID to be inserted into the list
    */
   public void appendDeleteId(@NotNull String deleteId) {
-    if (this.deleted == null) {
-      this.deleted = new ArrayList<>();
-    }
-    this.deleted.add(deleteId);
+    appendToNullableStringList(DELETED, deleteId);
   }
 
   @SuppressWarnings("unused")
@@ -410,13 +340,13 @@ public class XyzFeatureCollection extends Response {
   /**
    * @return A list of modification failures
    */
-  public List<ModificationFailure> getFailed() {
-    return this.failed;
+  public ModificationFailureList getFailed() {
+    return FAILED.getValue(this);
   }
 
   @SuppressWarnings("WeakerAccess")
   public void setFailed(List<ModificationFailure> failed) {
-    this.failed = failed;
+    FAILED.setValue(this, new ModificationFailureList(failed));
   }
 
   @SuppressWarnings("unused")
@@ -426,18 +356,17 @@ public class XyzFeatureCollection extends Response {
   }
 
   /**
-   * For FeatureCollection write-responses: If the history of a space is activated and this
-   * FeatureCollection is a response to a modification of the space - contains the (new)
-   * space-version which has just been written.
+   * For FeatureCollection write-responses: If the history of a space is activated and this FeatureCollection is a response to a
+   * modification of the space - contains the (new) space-version which has just been written.
    *
    * @return The new space-version after some modification
    */
   public Integer getVersion() {
-    return version;
+    return VERSION.getValue(this);
   }
 
   public void setVersion(int version) {
-    this.version = version;
+    VERSION.setValue(this, version);
   }
 
   public XyzFeatureCollection withVersion(int version) {
@@ -447,12 +376,16 @@ public class XyzFeatureCollection extends Response {
 
   @SuppressWarnings("unused")
   public List<NakshaFeature> getOldFeatures() {
-    return oldFeatures;
+    return OLD_FEATURES.getValue(this);
   }
 
   @SuppressWarnings("WeakerAccess")
   public void setOldFeatures(List<NakshaFeature> oldFeatures) {
-    this.oldFeatures = oldFeatures;
+    setOldFeatures(NakshaFeatureList.fromList(oldFeatures));
+  }
+
+  public void setOldFeatures(NakshaFeatureList oldFeatures) {
+    OLD_FEATURES.setValue(this, oldFeatures);
   }
 
   @SuppressWarnings("unused")
@@ -464,31 +397,35 @@ public class XyzFeatureCollection extends Response {
   @SuppressWarnings("unused")
   public @NotNull XyzFeatureCollection withInsertedFeatures(
       final @NotNull List<? extends @NotNull NakshaFeature> insertedFeatures) {
-    ((List<NakshaFeature>) this.features.get()).addAll(insertedFeatures); // append features
-    withInserted(insertedFeatures.stream().map(NakshaFeature::getId).collect(toList())); // overwrite inserted
+    getFeatures().addAll(insertedFeatures); // append features
+    setInserted(insertedFeatures.stream().map(NakshaFeature::getId).collect(toList())); // overwrite inserted
     return this;
   }
 
   public @NotNull XyzFeatureCollection withUpdatedFeatures(
       final @NotNull List<? extends @NotNull NakshaFeature> updatedFeatures) {
-    ((List<NakshaFeature>) this.features.get()).addAll(updatedFeatures); // append features
-    withUpdated(updatedFeatures.stream().map(NakshaFeature::getId).collect(toList())); // overwrite updated
+    getFeatures().addAll(updatedFeatures); // append features
+    setUpdated(updatedFeatures.stream().map(NakshaFeature::getId).collect(toList())); // overwrite updated
     return this;
   }
 
   public @NotNull XyzFeatureCollection withDeletedFeatures(
       final @NotNull List<? extends @NotNull NakshaFeature> deletedFeatures) {
-    ((List<NakshaFeature>) this.features.get()).addAll(deletedFeatures); // append features
-    withDeleted(deletedFeatures.stream().map(NakshaFeature::getId).collect(toList())); // overwrite deleted
+    getFeatures().addAll(deletedFeatures); // append features
+    setDeleted(deletedFeatures.stream().map(NakshaFeature::getId).collect(toList())); // overwrite deleted
     return this;
   }
 
   public @Nullable List<NakshaFeature> getViolations() {
-    return violations;
+    return VIOLATIONS.getValue(this);
   }
 
   public void setViolations(final @Nullable List<NakshaFeature> violations) {
-    this.violations = violations;
+    setViolations(NakshaFeatureList.fromList(violations));
+  }
+
+  public void setViolations(final @Nullable NakshaFeatureList violations) {
+    VIOLATIONS.setValue(this, violations);
   }
 
   public @NotNull XyzFeatureCollection withViolations(final @Nullable List<NakshaFeature> violations) {
@@ -498,10 +435,36 @@ public class XyzFeatureCollection extends Response {
 
   @Override
   public int resultSize() {
+    Long count = COUNT.getValue(this);
+    if (count == null) {
+      count = 0L;
+    }
     return Math.toIntExact(count);
   }
 
-  public static class ModificationFailure {
+  private void appendToNullableStringList(
+      NullableProperty<XyzFeatureCollection, StringList> stringsProperty, String element) {
+    StringList stringList = stringsProperty.getValue(this);
+    if (stringList == null) {
+      stringList = new StringList();
+      stringsProperty.setValue(this, stringList);
+    }
+    stringList.add(element);
+  }
+
+  public static class ModificationFailureList extends JvmListProxy<ModificationFailure> {
+
+    public ModificationFailureList() {
+      super(ModificationFailure.class);
+    }
+
+    public ModificationFailureList(List<ModificationFailure> failures) {
+      this();
+      addAll(failures);
+    }
+  }
+
+  public static class ModificationFailure extends AnyObject {
 
     private String id;
     private Long position;

@@ -184,6 +184,14 @@ abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
      */
     abstract fun adminConnection(): PgConnection
     //    = newConnection(options, false, init)
+
+    companion object PgStorage_C {
+
+        /**
+         * The storage-id of the Naksha-Hub admin storage.
+         */
+        const val ADMIN_STORAGE_ID: String = "naksha-admin"
+    }
 }
 
 // PgSession(storage: PgStorage)

@@ -18,17 +18,23 @@
  */
 package com.here.naksha.lib.core.models.indexing;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.List;
-import org.jetbrains.annotations.NotNull;
+import naksha.base.JvmBoxingUtil;
 
-@JsonTypeName(value = "All")
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class ConstraintAll {
+public class ConstraintAll extends Constraint {
 
-  /** The constraints that all need to hold true (AND). */
-  @JsonProperty
-  public List<@NotNull Constraint> of;
+  private static final String OF = "of";
+
+  /**
+   * The constraints that all need to hold true (AND).
+   */
+  public List<Constraint> getOf() {
+    return JvmBoxingUtil.box(get(OF), ConstraintList.class);
+  }
+
+  public void setOf(List<Constraint> of) {
+    ConstraintList proxyBasedConstrains = new ConstraintList();
+    proxyBasedConstrains.addAll(of);
+    setRaw(OF, proxyBasedConstrains);
+  }
 }

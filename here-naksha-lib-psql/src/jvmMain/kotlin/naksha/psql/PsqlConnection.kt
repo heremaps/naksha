@@ -4,6 +4,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
 import naksha.model.SessionOptions
 import java.lang.ref.WeakReference
+import java.sql.SQLException
 
 /**
  * A thin wrapper around a JDBC PostgresQL connection, which implements the [PgConnection] interface.
@@ -50,19 +51,23 @@ class PsqlConnection internal constructor(
      */
     override fun execute(sql: String, args: Array<Any?>?): PgCursor {
         val conn = jdbc
-        val stmt = if (args.isNullOrEmpty()) {
-            // no args execute
-            val stmt = conn.createStatement()
-            stmt.execute(sql)
-            stmt
-        } else {
-            val query = PsqlQuery(sql)
-            val stmt = query.prepare(conn)
-            if (args.isNotEmpty()) query.bindArguments(stmt, args)
-            stmt.execute()
-            stmt
+        try {
+            val stmt = if (args.isNullOrEmpty()) {
+                // no args execute
+                val stmt = conn.createStatement()
+                stmt.execute(sql)
+                stmt
+            } else {
+                val query = PsqlQuery(sql)
+                val stmt = query.prepare(conn)
+                if (args.isNotEmpty()) query.bindArguments(stmt, args)
+                stmt.execute()
+                stmt
+            }
+            return PsqlCursor(stmt, true)
+        } catch (exception: Exception) {
+            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
         }
-        return PsqlCursor(stmt, true)
     }
 
     /**
@@ -71,26 +76,45 @@ class PsqlConnection internal constructor(
      * @param typeNames The name of the types of the arguments, to be at $n position, where $1 is the first array element.
      * @return The prepared plan.
      */
-    override fun prepare(sql: String, typeNames: Array<String>?): PgPlan = PsqlPlan(PsqlQuery(sql), jdbc)
+    override fun prepare(sql: String, typeNames: Array<String>?): PgPlan =
+        PsqlPlan(PsqlQuery(sql), jdbc)
 
     override var autoCommit: Boolean
-        get() = jdbc.autoCommit
+        get() {
+            return try {
+                jdbc.autoCommit
+            } catch (exception: Exception) {
+                throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+            }
+        }
         set(value) {
-            jdbc.autoCommit = value
+            try {
+                jdbc.autoCommit = value
+            } catch (exception: Exception) {
+                throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+            }
         }
 
     /**
      * Commit all changes done in the current transaction.
      */
     override fun commit() {
-        jdbc.commit()
+        try {
+            jdbc.commit()
+        } catch (exception: Exception) {
+            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+        }
     }
 
     /**
      * Rollback (revert) all changes done in the current transaction.
      */
     override fun rollback() {
-        jdbc.rollback()
+        try {
+            jdbc.rollback()
+        } catch (exception: Exception) {
+            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+        }
     }
 
     /**
@@ -107,12 +131,20 @@ class PsqlConnection internal constructor(
         val pgConnection = _jdbc
         this._jdbc = null
         if (pgConnection != null) {
-            if (!pgConnection.autoCommit) {
-                pgConnection.rollback()
-            } else {
-                pgConnection.autoCommit = false
+            try {
+                if (pgConnection.isClosed) {
+                    instance.connectionPool.remove(id)
+                    return
+                }
+                if (!pgConnection.autoCommit) {
+                    pgConnection.rollback()
+                } else {
+                    pgConnection.autoCommit = false
+                }
+                instance.connectionPool[id]?.connection?.compareAndSet(weakRef, null)
+            } catch (exception: Exception) {
+                throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
             }
-            instance.connectionPool[id]?.connection?.compareAndSet(weakRef, null)
         }
     }
 
@@ -122,9 +154,13 @@ class PsqlConnection internal constructor(
         val pgConnection = _jdbc
         this._jdbc = null
         if (pgConnection != null) {
-            // Remove the connection from the pool and close it
-            instance.connectionPool.remove(id)
-            pgConnection.close()
+            try {
+                // Remove the connection from the pool and close it
+                instance.connectionPool.remove(id)
+                pgConnection.close()
+            } catch (exception: Exception) {
+                throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+            }
         }
     }
 

@@ -2,10 +2,7 @@
 
 package naksha.model.objects
 
-import naksha.base.Int64
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
-import naksha.base.StringList
+import naksha.base.*
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
@@ -14,6 +11,7 @@ import naksha.model.NakshaContext
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -22,15 +20,26 @@ import kotlin.jvm.JvmStatic
  */
 @JsExport
 open class NakshaCollection() : NakshaFeature() {
+
     /**
-     * Create a new collection object with a specific identifier and all other properties being their default.
-     * @param id the identifier of the collection.
-     * @since 3.0.0
+     * Create a Naksha collection with settings.
      */
-    @Suppress("LeakingThis")
     @JsName("of")
-    constructor(id: String) : this() {
+    @JvmOverloads
+    constructor(
+        id: String,
+        partitions: Int = 1,
+        storageClass: String? = null,
+        storeDeleted: StoreMode = StoreMode.ON,
+        storeHistory: StoreMode = StoreMode.ON,
+        storeMeta: StoreMode = StoreMode.ON,
+    ) : this() {
         this.id = id
+        this.storageClass = storageClass
+        this.partitions = partitions
+        this.storeDeleted = storeDeleted
+        this.storeHistory = storeHistory
+        this.storeMeta = storeMeta
     }
 
     override fun defaultFeatureType(): String = FEATURE_TYPE
@@ -203,63 +212,45 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * _true_ - disables history of features' modifications.
-     *
-     * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
-     * @since 3.0.0
+     * If [StoreMode.OFF] there will be no history table in the database for features in this collection,
+     * which boosts performance in certain operations.
      */
-    var disableHistory by DISABLE_HISTORY
+    var storeHistory by STORE_HISTORY
 
-    /**
-     * @see [disableHistory]
-     */
-    open fun withDisableHistory(value: Boolean): NakshaCollection {
-        this.disableHistory = value
+    open fun withStoreHistory(value: StoreMode): NakshaCollection {
+        this.storeHistory = value
         return this
     }
 
     /**
-     * _true_ - disables the shadow of features'. The shadow normally keeps a tombstone for deleted features, so that `lib-view` is able to detect that a feature was explicitly deleted in a higher layer, and therefore removes the feature from the view. Disabling the shadow will impact `lib-view`, but make the deletion of features slightly faster.
-     *
-     * **Note**: If shadow should only be disabled temporarily, rather use [autoPurge].
-     *
-     * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
-     * @since 3.0.0
+     * If [StoreMode.OFF] there will be no table in the database for deleted features from this collection,
+     * which boosts performance in certain operations.
      */
-    var disableShadow by DISABLE_SHADOW
+    var storeDeleted by STORE_DELETED
 
-    /**
-     * @see [disableHistory]
-     */
-    open fun withDisableShadow(value: Boolean): NakshaCollection {
-        this.disableShadow = value
+    open fun withStoreDeleted(value: StoreMode): NakshaCollection {
+        this.storeDeleted = value
         return this
     }
 
     /**
-     * _true_ - disables the metadata table of the collection. This does not allow the system to store statistics and other metadata. It is not recommended to disable the metadata table.
-     *
-     * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
-     * @since 3.0.0
+     * If [StoreMode.OFF] there will be no meta table in the database for statistics of features in this collection,
+     * which boosts performance in certain operations.
      */
-    var disableMeta by DISABLE_META
+    var storeMeta by STORE_META
 
-    /**
-     * @see [disableHistory]
-     */
-    open fun withDisableMeta(value: Boolean): NakshaCollection {
-        this.disableMeta = value
+    open fun withStoreMeta(value: StoreMode): NakshaCollection {
+        this.storeMeta = value
         return this
     }
 
     /**
      * If autoPurge is enabled, deleted features are purged and no shadow state is kept available. To permanently disable the shadow, use [disableShadow].
      *
-     * Note that if [disableHistory] is _false_, the deleted features will still be around in the history. This mainly effects `lib-view`.
+     * Note that if [storeHistory] is ON, the deleted features will still be around in the history. This mainly effects `lib-view`.
      * @since 3.0.0
      */
     var autoPurge by AUTO_PURGE
-
     /**
      * @see [autoPurge]
      */
@@ -408,14 +399,22 @@ open class NakshaCollection() : NakshaFeature() {
         private val INT_NULL = NullableProperty<NakshaCollection, Int>(Int::class)
         private val MAP_ID = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> NakshaContext.mapId() }
         private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)
-        private val DISABLE_HISTORY = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
-        private val DISABLE_SHADOW = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
-        private val DISABLE_META = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
-        private val AUTO_PURGE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val INDICES = NotNullProperty<NakshaCollection, StringList>(StringList::class)
         private val MAX_AGE = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> Int64(-1) }
         private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 10_485_760 }
         private val _ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }
         private val _ESTIMATED_DELETED_FEATURES =  NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }
+        private val AUTO_PURGE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
+        private val STORE_HISTORY = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { self, _ ->
+            // For downward compatibility with Naksha version 2
+            val old = self.getRaw("disableHistory")
+            if (old == true) StoreMode.SUSPEND else StoreMode.ON
+        }
+        private val STORE_DELETED = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { self, _ ->
+            // For downward compatibility with Naksha version 2
+            val old = self.getRaw("autoPurge")
+            if (old == true) StoreMode.SUSPEND else StoreMode.ON
+        }
+        private val STORE_META = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { _, _ -> StoreMode.ON }
     }
 }

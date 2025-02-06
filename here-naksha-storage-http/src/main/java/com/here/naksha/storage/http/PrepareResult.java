@@ -20,45 +20,39 @@ package com.here.naksha.storage.http;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
-import com.here.naksha.lib.core.models.Typed;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.XyzFeature;
-import com.here.naksha.lib.core.models.storage.*;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
-
-import naksha.model.ErrorResult;
-import org.jetbrains.annotations.NotNull;
+import naksha.base.FromJsonOptions;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
+import naksha.model.NakshaError;
+import naksha.model.objects.NakshaFeatureList;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Builds a {@link Result} from {@link HttpResponse}
+ * Builds a {@link Response} from {@link HttpResponse}
  */
 class PrepareResult {
 
-  static Result prepareResult(List<XyzFeature> featureList) {
-    return createHttpResultFromFeatureList(featureList);
-  }
+  static Response prepareResult(HttpResponse<byte[]> httpResponse) {
 
-  static <T extends Typed> Result prepareResult(
-      HttpResponse<byte[]> httpResponse,
-      Class<T> httpResponseType,
-      Function<T, List<XyzFeature>> typedResponseToFeatureList) {
+    String error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
+    if (error != null)
+      return new ErrorResponse(
+          new NakshaError(error, "Response http status code: " + httpResponse.statusCode(), null, null));
 
-    XyzError error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
-    if (error != null) return new ErrorResult(error, "Response http status code: " + httpResponse.statusCode());
-
-    T resultFeatures = JsonSerializable.deserialize(prepareBody(httpResponse), httpResponseType);
-    return prepareResult(typedResponseToFeatureList.apply(resultFeatures));
+    Object tuples = Platform.fromJSON(prepareBody(httpResponse), FromJsonOptions.DEFAULT);
+    NakshaFeatureList features = JvmBoxingUtil.box(tuples, NakshaFeatureList.class);
+    return new SuccessResponse(features);
   }
 
   private static String prepareBody(HttpResponse<byte[]> response) {
@@ -83,40 +77,23 @@ class PrepareResult {
     }
   }
 
-  static HttpSuccessResult<XyzFeature, XyzFeatureCodec> createHttpResultFromFeatureList(
-      final @NotNull List<XyzFeature> features) {
-    // Create ForwardCursor with input features
-    final List<XyzFeatureCodec> codecs = new ArrayList<>();
-    final XyzFeatureCodecFactory codecFactory = XyzFeatureCodecFactory.get();
-    for (final XyzFeature feature : features) {
-      final XyzFeatureCodec codec = codecFactory.newInstance();
-      codec.setOp(EExecutedOp.READ);
-      codec.setFeature(feature);
-      codec.setId(feature.getId());
-      codecs.add(codec);
-    }
-
-    final HeapCacheCursor<XyzFeature, XyzFeatureCodec> cursor = new HeapCacheCursor<>(codecFactory, codecs, null);
-    return new HttpSuccessResult<>(cursor);
-  }
-
   /**
    * @return null if http status is success (200-299)
    */
-  private static @Nullable XyzError mapHttpStatusToErrorOrNull(final int httpStatus) {
+  private static @Nullable String mapHttpStatusToErrorOrNull(final int httpStatus) {
     if (httpStatus >= 200 && httpStatus <= 299) return null;
     return switch (httpStatus) {
-      case HttpURLConnection.HTTP_INTERNAL_ERROR -> XyzError.EXCEPTION;
-      case HttpURLConnection.HTTP_NOT_IMPLEMENTED -> XyzError.NOT_IMPLEMENTED;
-      case HttpURLConnection.HTTP_BAD_REQUEST -> XyzError.ILLEGAL_ARGUMENT;
-      case HttpURLConnection.HTTP_ENTITY_TOO_LARGE -> XyzError.PAYLOAD_TOO_LARGE;
-      case HttpURLConnection.HTTP_BAD_GATEWAY -> XyzError.BAD_GATEWAY;
-      case HttpURLConnection.HTTP_CONFLICT -> XyzError.CONFLICT;
-      case HttpURLConnection.HTTP_UNAUTHORIZED -> XyzError.UNAUTHORIZED;
-      case HttpURLConnection.HTTP_FORBIDDEN -> XyzError.FORBIDDEN;
-      case 429 -> XyzError.TOO_MANY_REQUESTS;
-      case HttpURLConnection.HTTP_GATEWAY_TIMEOUT -> XyzError.TIMEOUT;
-      case HttpURLConnection.HTTP_NOT_FOUND -> XyzError.NOT_FOUND;
+      case HttpURLConnection.HTTP_INTERNAL_ERROR -> NakshaError.EXCEPTION;
+      case HttpURLConnection.HTTP_NOT_IMPLEMENTED -> NakshaError.NOT_IMPLEMENTED;
+      case HttpURLConnection.HTTP_BAD_REQUEST -> NakshaError.ILLEGAL_ARGUMENT;
+      case HttpURLConnection.HTTP_ENTITY_TOO_LARGE -> NakshaError.PAYLOAD_TOO_LARGE;
+      case HttpURLConnection.HTTP_BAD_GATEWAY -> NakshaError.BAD_GATEWAY;
+      case HttpURLConnection.HTTP_CONFLICT -> NakshaError.CONFLICT;
+      case HttpURLConnection.HTTP_UNAUTHORIZED -> NakshaError.UNAUTHORIZED;
+      case HttpURLConnection.HTTP_FORBIDDEN -> NakshaError.FORBIDDEN;
+      case 429 -> NakshaError.TOO_MANY_REQUESTS;
+      case HttpURLConnection.HTTP_GATEWAY_TIMEOUT -> NakshaError.TIMEOUT;
+      case HttpURLConnection.HTTP_NOT_FOUND -> NakshaError.NOT_FOUND;
       default -> throw new IllegalArgumentException("Not known http error status returned: " + httpStatus);
     };
   }

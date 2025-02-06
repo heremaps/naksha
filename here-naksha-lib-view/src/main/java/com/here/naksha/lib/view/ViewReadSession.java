@@ -18,23 +18,14 @@
  */
 package com.here.naksha.lib.view;
 
-import static com.here.naksha.lib.core.util.storage.RequestHelper.readFeaturesByIdsRequest;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.*;
+import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 
 import com.here.naksha.lib.view.concurrent.LayerReadRequest;
 import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import naksha.model.*;
 import naksha.model.objects.NakshaTransaction;
 import naksha.model.request.*;
@@ -192,7 +183,7 @@ public class ViewReadSession implements IReadSession {
       final ReadFeatures readFeatures = (ReadFeatures) request;
       final IPropertyQuery propertyQuery = readFeatures.getQuery().getProperties();
       if (!readFeatures.getFeatureIds().isEmpty()
-          && readFeatures.getQuery().isEmpty()) {
+          && readFeatures.getQuery().hasNoConditions()) {
         return true;
       }
       if (propertyQuery instanceof PQuery) {
@@ -203,7 +194,7 @@ public class ViewReadSession implements IReadSession {
     }
     return false;
   }
-
+  // TODO CASL-739
   @Override
   public int getSocketTimeout() {
     return 0;
@@ -222,11 +213,13 @@ public class ViewReadSession implements IReadSession {
 
   @Override
   public int getLockTimeout() {
-    return 0;
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  public void setLockTimeout(int i) {}
+  public void setLockTimeout(int i) {
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   public boolean isClosed() {

@@ -6,6 +6,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.StoreMode
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -109,9 +110,9 @@ open class PgCollection internal constructor(
         storageClass = PgStorageClass.of(nakshaCollection.storageClass)
         @Suppress("LeakingThis")
         head = if (this is PgNakshaTransactions) PgTransactions(this) else PgHead(this, storageClass, nakshaCollection.partitions)
-        deleted = if (nakshaCollection.disableShadow) null else PgDeleted(head)
-        history = if (nakshaCollection.disableHistory) null else PgHistory(head)
-        meta = if (nakshaCollection.disableMeta) null else PgMeta(head)
+        deleted = if (nakshaCollection.storeDeleted == StoreMode.OFF) null else PgDeleted(head)
+        history = if (nakshaCollection.storeHistory == StoreMode.OFF) null else PgHistory(head)
+        meta = if (nakshaCollection.storeMeta == StoreMode.OFF) null else PgMeta(head)
     }
 
     // TODO: We need this rather integrated in createPgCollection in admin-map!

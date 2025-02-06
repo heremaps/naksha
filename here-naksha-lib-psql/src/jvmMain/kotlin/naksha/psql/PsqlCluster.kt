@@ -11,7 +11,7 @@ import kotlin.math.min
  * A PostgresQL cluster that persists out of one master instance and optional read-replicas.
  * @property master the master instance.
  */
-class PsqlCluster(override val master: PgInstance) : PgCluster {
+class PsqlCluster @JvmOverloads constructor(override val master: PgInstance) : PgCluster {
     /**
      * The replicas a mutable list of read-replicas, can be changed at runtime.
      * @see [addReader]

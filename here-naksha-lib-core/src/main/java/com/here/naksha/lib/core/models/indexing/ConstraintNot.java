@@ -18,15 +18,23 @@
  */
 package com.here.naksha.lib.core.models.indexing;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import java.util.List;
+import naksha.base.JvmBoxingUtil;
 
-@JsonTypeName(value = "Not")
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class ConstraintNot {
+public class ConstraintNot extends Constraint {
 
-  /** The constraints that should be negated. */
-  @JsonProperty
-  public Constraint of;
+  private static final String OF = "of";
+
+  /**
+   * The constraints that should be negated.
+   */
+  public List<Constraint> getOf() {
+    return JvmBoxingUtil.box(get(OF), ConstraintList.class);
+  }
+
+  public void setOf(List<Constraint> of) {
+    ConstraintList proxyBasedConstrains = new ConstraintList();
+    proxyBasedConstrains.addAll(of);
+    setRaw(OF, proxyBasedConstrains);
+  }
 }

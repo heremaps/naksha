@@ -13,6 +13,8 @@ import naksha.model.objects.NakshaDictionary
 import naksha.model.objects.NakshaMap
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmMultifileClass
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -179,7 +181,7 @@ open class Write : AnyObject() {
         id = value
         return this
     }
-    
+
     /**
      * The new feature state to persist; if any _(not valid for deletes)_.
      * @since 3.0.0
@@ -193,7 +195,7 @@ open class Write : AnyObject() {
         feature = value
         return this
     }
-    
+
     /**
      * Returns `feature.id` or `id` in that order.
      * @since 3.0.0
@@ -265,6 +267,7 @@ open class Write : AnyObject() {
      * @return this.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun updateDictionary(dict: NakshaDictionary, atomic: Boolean): Write {
         this.mapId = Naksha.ADMIN_MAP
         this.collectionId = Naksha.DICTIONARIES_COL
@@ -316,6 +319,7 @@ open class Write : AnyObject() {
      * @return this.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun deleteDictionaryById(dictId: String, version: Int64? = null): Write {
         this.mapId = Naksha.ADMIN_MAP
         this.collectionId = Naksha.DICTIONARIES_COL
@@ -383,6 +387,7 @@ open class Write : AnyObject() {
      * @return this.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun deleteMap(map: NakshaMap, atomic: Boolean): Write {
         this.mapId = Naksha.ADMIN_MAP
         this.collectionId = Naksha.MAPS_COL
@@ -431,6 +436,7 @@ open class Write : AnyObject() {
      * @param atomic if _true_, the [version] is read from the [XZY namespace][naksha.model.XyzNs] of the feature, so that the operation fails, if the currently existing feature is not exactly in this state. It is assumed, that when a client sends a new feature, it will not change the metadata, so the [XZY namespace][naksha.model.XyzNs], of the feature, except maybe for the tags.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun updateCollection(collection: NakshaCollection, atomic: Boolean): Write {
         this.mapId = collection.mapId
         this.collectionId = COLLECTIONS_COL
@@ -463,6 +469,7 @@ open class Write : AnyObject() {
      * @param atomic if the operation should be performed atomic.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun deleteCollection(collection: NakshaCollection, atomic: Boolean): Write {
         this.mapId = collection.mapId
         this.collectionId = COLLECTIONS_COL
@@ -480,6 +487,7 @@ open class Write : AnyObject() {
      * @param version if the operation should be performed atomic, the version that is expected.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun deleteCollectionById(mapId: String, collectionId: String, version: Int64? = null): Write {
         this.mapId = mapId
         this.collectionId = COLLECTIONS_COL
@@ -576,4 +584,22 @@ open class Write : AnyObject() {
         return this
     }
 
+
+    /**
+     * Purge a collection.
+     * @param map the map.
+     * @param collectionId the identifier of the collection to delete.
+     * @param version if the operation should be performed atomic, the version that is expected.
+     * @since 3.0.0
+     */
+    @JvmOverloads
+    fun purgeCollectionById(map: String?, collectionId: String, version: Int64? = null): Write {
+        this.mapId = map ?: NakshaContext.mapId()
+        this.collectionId = COLLECTIONS_COL
+        this.op = WriteOp.PURGE
+        this.id = collectionId
+        this.version = version
+        this.feature = null
+        return this
+    }
 }

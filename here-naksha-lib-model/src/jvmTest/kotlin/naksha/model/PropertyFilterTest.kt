@@ -49,8 +49,7 @@ class PropertyFilterTest {
                     author = null,
                     flags = flags,
                 ),
-                feature = featureBytes,
-                state = FETCH_ALL,
+                feature = featureBytes
             )
             featureTuple = FeatureTuple(tupleNumber, tuple)
         }

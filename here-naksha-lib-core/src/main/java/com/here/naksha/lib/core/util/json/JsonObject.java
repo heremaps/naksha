@@ -37,7 +37,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import naksha.diff.Patcher;
 import naksha.model.NakshaVersion;
 import naksha.model.StringHelper;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
@@ -49,7 +48,7 @@ import org.jetbrains.annotations.Nullable;
  * properties. In other words, this is a hash-map that can be extended with native POJO members. In
  * that case all Java fields annotated with {@link JsonProperty}, being {@code public} or {@code
  * protected} and <b>not</b> annotated with {@link JsonIgnore} are made available as hash-map
- * key-value pairs. This is necessary for the {@link Patcher} to work. Note that the map will
+ * key-value pairs. This is necessary for the old {@code Patcher} to work. Note that the map will
  * reflect the properties by their annotated name, if annotated differently from the name in the
  * source code.
  *
@@ -59,6 +58,7 @@ import org.jetbrains.annotations.Nullable;
  * using the {@link #additionalProperties() additional properties map}!
  *
  * @since 2.0.0
+ * @deprecated From Naksha V3 onward, please use {@link naksha.base.AnyObject} as the base for any JSON class.
  */
 @AvailableSince(NakshaVersion.v2_0_0)
 @JsonFormat(shape = JsonFormat.Shape.OBJECT)

@@ -20,7 +20,6 @@ package com.here.naksha.lib.core;
 
 import static naksha.model.NakshaError.NOT_IMPLEMENTED;
 
-import naksha.model.NakshaError;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
@@ -43,7 +42,6 @@ public class EndPipelineHandler implements IEventHandler {
         .setMessage("End of pipeline reached and no handle created a response")
         .setCause(new IllegalStateException())
         .log();
-    return new ErrorResponse(new NakshaError(
-        NOT_IMPLEMENTED, "Event '" + event.getClass().getSimpleName() + "' is not supported", null, null));
+    return new ErrorResponse(NOT_IMPLEMENTED, "Event '" + event.getClass().getSimpleName() + "' is not supported");
   }
 }

@@ -6,6 +6,8 @@ import naksha.base.Int64
 import naksha.base.PlatformLock
 import naksha.jbon.IDictReader
 import kotlin.js.JsExport
+import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 
 /**
  * Any entity implementing the [IStorage] interface represents some data-sink, and comes with an implementation that grants access to the data. The storage normally is a singleton that opens many sessions in parallel.

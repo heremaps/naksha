@@ -18,14 +18,14 @@
  */
 package com.here.naksha.handler.activitylog;
 
-import naksha.model.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import java.util.Comparator;
+import naksha.model.XyzNs;
+import naksha.model.objects.NakshaFeature;
 
-public class ActivityLogComparator implements Comparator<XyzFeature> {
+public class ActivityLogComparator implements Comparator<NakshaFeature> {
 
   @Override
-  public int compare(XyzFeature featureA, XyzFeature featureB) {
+  public int compare(NakshaFeature featureA, NakshaFeature featureB) {
     int updatedAtComparison = Long.compare(updatedAt(featureA), updatedAt(featureB));
     if (updatedAtComparison == 0) {
       return uuid(featureA).compareTo(uuid(featureB)) * -1;
@@ -33,15 +33,15 @@ public class ActivityLogComparator implements Comparator<XyzFeature> {
     return updatedAtComparison * -1;
   }
 
-  private static String uuid(XyzFeature feature) {
+  private static String uuid(NakshaFeature feature) {
     return xyzNamespace(feature).getUuid();
   }
 
-  private static long updatedAt(XyzFeature feature) {
-    return xyzNamespace(feature).getUpdatedAt();
+  private static long updatedAt(NakshaFeature feature) {
+    return xyzNamespace(feature).getUpdatedAt().toLong();
   }
 
-  private static XyzNamespace xyzNamespace(XyzFeature feature) {
-    return feature.getProperties().getXyzNamespace();
+  private static XyzNs xyzNamespace(NakshaFeature feature) {
+    return feature.getProperties().getXyz();
   }
 }

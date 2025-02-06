@@ -178,7 +178,7 @@ actual class Platform {
         @JvmField
         internal val initialized = AtomicBoolean(false)
 
-        private val nonArgsConstuctorsCache: AtomicMap<KClass<Proxy>, KFunction<Proxy>>
+        private val nonArgsConstuctorsCache: AtomicMap<KClass<out Any>, KFunction<Any>>
         private val ensureClassInitialized: Method? // unsafe.ensureClassInitialized
         private val lookupInstance: Any? // MethodHandles.lookup()
         private val ensureInitialized: Method? // MethodHandles.lookup().ensureInitialized(klass);
@@ -575,13 +575,11 @@ actual class Platform {
             return proxy
         }
 
-        @Suppress("UNCHECKED_CAST")
-        private fun <T: Proxy> resolveConstructorFor(klass: KClass<T>): KFunction<T>{
-            val key = klass as KClass<Proxy>
-            var constructor = nonArgsConstuctorsCache[key]
-            if (constructor == null) {
+        private fun <T: Any> resolveConstructorFor(klass: KClass<T>): KFunction<T>{
+            var constructor = nonArgsConstuctorsCache[klass]
+            if(constructor == null){
                 constructor = nonArgConstructorFor(klass)
-                nonArgsConstuctorsCache[key] = constructor
+                nonArgsConstuctorsCache[klass] = constructor
             }
             return constructor as KFunction<T>
         }
@@ -589,7 +587,7 @@ actual class Platform {
         /**
          * Returns non-arg constructor for [klass] or throws [IllegalArgumentException] if none is found.
          */
-        private fun <T : Proxy> nonArgConstructorFor(klass: KClass<T>): KFunction<T> {
+        private fun <T : Any> nonArgConstructorFor(klass: KClass<T>): KFunction<T> {
             return klass.constructors.firstOrNull { constructor: KFunction<T> ->
                 constructor.parameters.isEmpty()
             } ?: throw IllegalArgumentException("Unable to find non-arg constructor for class: ${klass.qualifiedName}")

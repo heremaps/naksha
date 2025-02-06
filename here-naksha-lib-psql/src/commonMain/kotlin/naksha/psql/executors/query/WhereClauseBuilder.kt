@@ -1,6 +1,9 @@
 package naksha.psql.executors.query
 
+import naksha.geo.HereTile
+import naksha.geo.SpGeometry
 import naksha.model.*
+import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
 import naksha.psql.PgColumn
@@ -21,6 +24,8 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         whereVersion()
         whereMetadata()
         whereSpatial()
+        whereRefTiles()
+        whereTags()
         return if (where.isBlank()) {
             null
         } else {
@@ -50,8 +55,8 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
                     where.append(" AND ")
                 }
                 val idPlaceholder = placeholderForArg(guid.featureId, PgType.STRING)
-                val txnPlaceholder = placeholderForArg(guid.version.txn, PgType.INT64)
-                val uidPlaceholder = placeholderForArg(guid.uid, PgType.INT)
+                val txnPlaceholder = placeholderForArg(guid.tupleNumber.version.txn, PgType.INT64)
+                val uidPlaceholder = placeholderForArg(guid.tupleNumber.uid, PgType.INT)
                 where.append("(${PgColumn.id} = $idPlaceholder AND ${PgColumn.txn} = $txnPlaceholder AND ${PgColumn.uid} = $uidPlaceholder)")
             }
         }
@@ -62,7 +67,8 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
     }
 
     private fun whereSpatial() {
-        request.query.spatial?.let { spatialQuery ->
+        val spatialQuery = request.query.spatial
+        if (spatialQuery != null) {
             if (where.isNotEmpty()) {
                 where.append(" AND (")
             } else {
@@ -73,7 +79,7 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         }
     }
 
-    private tailrec fun whereNestedSpatial(spatial: ISpatialQuery) {
+    private fun whereNestedSpatial(spatial: ISpatialQuery) {
         when (spatial) {
             is SpNot -> not(
                 subClause = spatial.query,
@@ -91,13 +97,16 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
             )
 
             is SpIntersects -> {
-                // TODO: Add transformations!
-                val twkb = PgUtil.encodeGeometry(
-                    spatial.geometry,
-                    Flags().geoGzipOff().withGeoEncoding(GeoEncoding.TWKB)
-                )
-                val placeholder = placeholderForArg(twkb, PgType.BYTE_ARRAY)
-                where.append("ST_Intersects(naksha_geometry(${PgColumn.geo}, ${PgColumn.flags}), ST_GeomFromTWKB($placeholder))")
+                val queryGeometry = nakshaGeometry(spatial.geometry, TWKB)
+                val geometryToCompare = when (val transformation = spatial.transformation) {
+                    null -> queryGeometry
+                    else -> resolveTransformation(transformation, queryGeometry)
+                }
+                where.append("ST_Intersects(naksha_geometry(${PgColumn.geo}, ${PgColumn.flags}), $geometryToCompare)")
+            }
+
+            is SpRefInHereTile -> {
+                where.append(refPointInTile(spatial.getHereTile()))
             }
 
             else -> throw NakshaException(
@@ -107,8 +116,107 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         }
     }
 
+    private fun nakshaGeometry(geometry: SpGeometry, geoEncoding: Int): String {
+        val flags = Flags().geoGzipOff().withGeoEncoding(geoEncoding)
+        val geoBytes = PgUtil.encodeGeometry(geometry, flags)
+        val geoBytesPlaceholder = placeholderForArg(geoBytes, PgType.BYTE_ARRAY)
+        return "naksha_geometry($geoBytesPlaceholder, $flags)"
+    }
+
+    private fun resolveTransformation(transformation: SpTransformation, basicGeometry: String): String {
+        return when(transformation){
+            is SpBuffer -> resolveBuffer(transformation, basicGeometry)
+            else -> throw NakshaException(
+                NakshaError.UNSUPPORTED_OPERATION,
+                "This transformation is not yet supported: ${transformation::class.simpleName}"
+            )
+        }
+    }
+
+    private fun resolveBuffer(buffer: SpBuffer, basicGeometry: String): String {
+        val geo = if (buffer.geography) {
+            "$basicGeometry::geography"
+        } else {
+            basicGeometry
+        }
+        val distancePlaceholder = placeholderForArg(buffer.distance, PgType.DOUBLE)
+        val bufferStyleParams = bufferStyleParams(buffer)
+        return if (bufferStyleParams != null) {
+            "ST_Buffer($geo, $distancePlaceholder, $bufferStyleParams)"
+        } else {
+            "ST_Buffer($geo, $distancePlaceholder)"
+        }
+    }
+
+    private fun bufferStyleParams(buffer: SpBuffer): String? {
+        val bufferStyleParams = StringBuilder()
+        if(buffer.quadSegments != null){
+            val quadSegPlaceholder = placeholderForArg(buffer.quadSegments, PgType.INT)
+            bufferStyleParams.append("quad_segs=$quadSegPlaceholder")
+        }
+        if(buffer.joinStyle != null){
+            val joinStylePlaceholder = placeholderForArg(buffer.joinStyle!!.value, PgType.STRING)
+            if(bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            bufferStyleParams.append("join=$joinStylePlaceholder")
+        }
+        if(buffer.joinLimit != null){
+            val joinLimitPlaceholder = placeholderForArg(buffer.joinLimit, PgType.DOUBLE)
+            if(bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            bufferStyleParams.append("mitre_limit=$joinLimitPlaceholder")
+        }
+        if(buffer.endCap != null){
+            val endCapPlaceholder = placeholderForArg(buffer.endCap!!.value, PgType.STRING)
+            if(bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            bufferStyleParams.append("endcap=$endCapPlaceholder")
+        }
+        if(buffer.side != null){
+            val sidePlaceholder = placeholderForArg(buffer.side!!.value, PgType.STRING)
+            if(bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            bufferStyleParams.append("side=$sidePlaceholder")
+        }
+        return if(bufferStyleParams.isNotEmpty()){
+            bufferStyleParams.toString()
+        } else {
+            null
+        }
+    }
+
+    private fun whereRefTiles() {
+        val hereTiles = request.query.refTiles
+            .filterNotNull()
+            .map { HereTile(it) }
+        if (hereTiles.isNotEmpty()) {
+            if (where.isNotEmpty()) {
+                where.append(" AND (")
+            } else {
+                where.append(" (")
+            }
+            where.append(refPointInAnyOfTiles(hereTiles))
+            where.append(")")
+        }
+    }
+
+    private fun refPointInAnyOfTiles(hereTiles: List<HereTile>): String {
+        return hereTiles.joinToString(separator = " OR ") {
+            hereTile -> refPointInTile(hereTile)
+        }
+    }
+
+    private fun refPointInTile(hereTile: HereTile): String {
+        val lowerBoundPlaceholder = placeholderForArg(
+            hereTile.maxLevelLowerBound().intKey,
+            PgType.INT
+        )
+        val upperBoundPlaceholder = placeholderForArg(
+            hereTile.maxLevelUpperBound().intKey,
+            PgType.INT
+        )
+        return "(${PgColumn.geo_grid} >= $lowerBoundPlaceholder AND ${PgColumn.geo_grid} <= $upperBoundPlaceholder)"
+    }
+
     private fun whereMetadata() {
-        request.query.metadata?.let { metaQuery ->
+        val metaQuery = request.query.metadata
+        if (metaQuery != null) {
             if (where.isNotEmpty()) {
                 where.append(" AND (")
             } else {
@@ -119,7 +227,7 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
         }
     }
 
-    private tailrec fun whereNestedMetadata(metaQuery: IMetaQuery) {
+    private fun whereNestedMetadata(metaQuery: IMetaQuery) {
         when (metaQuery) {
             is MetaNot -> not(
                 subClause = metaQuery.query,
@@ -143,8 +251,8 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
                 )
                 val placeholder = placeholderForArg(metaQuery.value, pgColumn.type)
                 val resolvedQuery = when (val op = metaQuery.op) {
-                    is StringOp -> resolveStringOp(op, pgColumn, placeholder)
-                    is DoubleOp -> resolveDoubleOp(op, pgColumn, placeholder)
+                    is StringOp -> resolveStringOp(op, pgColumn.name, placeholder)
+                    is DoubleOp -> resolveDoubleOp(op, pgColumn.name, placeholder)
                     else -> throw NakshaException(
                         NakshaError.ILLEGAL_ARGUMENT,
                         "Unknown op type: ${op::class.simpleName}"
@@ -157,6 +265,87 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
                 NakshaError.ILLEGAL_ARGUMENT,
                 "Unknown metadata query type: ${metaQuery::class.simpleName}"
             )
+        }
+    }
+
+    private fun whereTags() {
+        val tagQuery = request.query.tags
+        if (tagQuery != null) {
+            if (where.isNotEmpty()) {
+                where.append(" AND (")
+            } else {
+                where.append(" (")
+            }
+            whereNestedTags(tagQuery)
+            where.append(")")
+        }
+    }
+
+    private fun whereNestedTags(tagQuery: ITagQuery) {
+        when (tagQuery) {
+            is TagNot -> not(tagQuery.query, this::whereNestedTags)
+            is TagOr -> or(tagQuery.filterNotNull(), this::whereNestedTags)
+            is TagAnd -> and(tagQuery.filterNotNull(), this::whereNestedTags)
+            is TagQuery -> resolveSingleTagQuery(tagQuery)
+        }
+    }
+
+    private fun resolveSingleTagQuery(tagQuery: TagQuery) {
+        when (tagQuery) {
+            is TagExists -> {
+                val tagNamePlaceholder = placeholderForArg(tagQuery.name, PgType.STRING)
+                where.append("$tagsAsJsonb ?? $tagNamePlaceholder")
+            }
+
+            is TagValueIsNull -> {
+                val tagValuePlaceholder = placeholderForArg(selectTagValue(tagQuery), PgType.STRING)
+                where.append("$tagValuePlaceholder IS NULL")
+            }
+
+            is TagValueIsBool -> {
+                if (tagQuery.value) {
+                    where.append(selectTagValue(tagQuery, PgType.BOOLEAN))
+                } else {
+                    where.append("not(${selectTagValue(tagQuery, PgType.BOOLEAN)})")
+                }
+            }
+
+            is TagValueIsDouble -> {
+                val queryValuePlaceholder = placeholderForArg(tagQuery.value, PgType.DOUBLE)
+                val doubleOp = resolveDoubleOp(
+                    tagQuery.op,
+                    selectTagValue(tagQuery, PgType.DOUBLE),
+                    queryValuePlaceholder
+                )
+                where.append(doubleOp)
+            }
+
+            is TagValueIsString -> {
+                val queryValuePlaceholder = placeholderForArg(tagQuery.value, PgType.STRING)
+                val stringEquals = resolveStringOp(
+                    StringOp.EQUALS,
+                    selectTagValue(tagQuery, PgType.STRING),
+                    queryValuePlaceholder
+                )
+                where.append(stringEquals)
+            }
+
+            is TagValueMatches -> {
+                val jsonPathPlaceholder = placeholderForArg(
+                    "\$.${tagQuery.name} ? (@ like_regex \"${tagQuery.regex}\")",
+                    PgType.STRING
+                )
+                where.append("$tagsAsJsonb @?? $jsonPathPlaceholder::jsonpath")
+            }
+        }
+    }
+
+    private fun selectTagValue(tagQuery: TagQuery, castTo: PgType? = null): String {
+        val tagKeyPlaceholder = placeholderForArg(tagQuery.name, PgType.STRING)
+        return when (castTo) {
+            null -> "$tagsAsJsonb->$tagKeyPlaceholder"
+            PgType.STRING -> "$tagsAsJsonb->>$tagKeyPlaceholder"
+            else -> "($tagsAsJsonb->$tagKeyPlaceholder)::${castTo.value}"
         }
     }
 
@@ -195,12 +384,12 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
 
     private fun resolveStringOp(
         stringOp: StringOp,
-        column: PgColumn,
-        valuePlaceholder: String
+        leftOperand: String,
+        rightOperand: String
     ): String {
         return when (stringOp) {
-            StringOp.EQUALS -> "${column.name} = $valuePlaceholder"
-            StringOp.STARTS_WITH -> "starts_with(${column.name}, $valuePlaceholder)"
+            StringOp.EQUALS -> "$leftOperand = $rightOperand"
+            StringOp.STARTS_WITH -> "starts_with($leftOperand, $rightOperand)"
             else -> throw NakshaException(
                 NakshaError.ILLEGAL_ARGUMENT,
                 "Unknown StringOp: $stringOp"
@@ -210,19 +399,23 @@ class WhereClauseBuilder(private val request: ReadFeatures) {
 
     private fun resolveDoubleOp(
         doubleOp: DoubleOp,
-        column: PgColumn,
-        valuePlaceholder: String
+        leftOperand: String,
+        rightOperand: String
     ): String {
         return when (doubleOp) {
-            DoubleOp.EQ -> "${column.name} = $valuePlaceholder"
-            DoubleOp.GT -> "${column.name} > $valuePlaceholder"
-            DoubleOp.GTE -> "${column.name} >= $valuePlaceholder"
-            DoubleOp.LT -> "${column.name} < $valuePlaceholder"
-            DoubleOp.LTE -> "${column.name} <= $valuePlaceholder"
+            DoubleOp.EQ -> "$leftOperand = $rightOperand"
+            DoubleOp.GT -> "$leftOperand > $rightOperand"
+            DoubleOp.GTE -> "$leftOperand >= $rightOperand"
+            DoubleOp.LT -> "$leftOperand < $rightOperand"
+            DoubleOp.LTE -> "$leftOperand <= $rightOperand"
             else -> throw NakshaException(
                 NakshaError.ILLEGAL_ARGUMENT,
                 "Unknown DoubleOp: $doubleOp"
             )
         }
+    }
+
+    companion object {
+        private val tagsAsJsonb = "naksha_tags(${PgColumn.tags}, ${PgColumn.flags})"
     }
 }

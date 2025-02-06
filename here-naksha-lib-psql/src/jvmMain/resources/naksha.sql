@@ -68,6 +68,7 @@ IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN
   RETURN a || b;
 END $$;
+
 CREATE AGGREGATE bytea_agg(bytea) (
     SFUNC = bytea_concat,
     STYPE = bytea,
@@ -344,3 +345,23 @@ BEGIN
   RETURN ST_SetSRID(ST_Force2D(ST_GeomFromTWKB(ref_point)), 4326);
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION naksha_action(flags int4) RETURNS int2
+LANGUAGE 'plpgsql'
+IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+BEGIN
+  -- 0=CREATED; 1=UPDATED; 2=DELETED; 3=UNKNOWN
+  return (flags >> 12) & 3;
+END $$;
+
+CREATE OR REPLACE FUNCTION naksha_geo_grid_trim_level(geo_grid int4, new_level int4) RETURNS int4
+LANGUAGE 'plpgsql'
+IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+BEGIN
+  if (new_level > 15) then
+    RAISE EXCEPTION 'New level must be <=15';
+  end if;
+return (geo_grid >> (2 * (15 - new_level)));
+END $$;

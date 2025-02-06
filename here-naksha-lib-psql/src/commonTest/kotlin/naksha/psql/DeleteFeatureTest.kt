@@ -1,5 +1,8 @@
 package naksha.psql
 
+import naksha.model.*
+import naksha.model.Action.ActionEnumCompanion.CREATED
+import naksha.model.Action.ActionEnumCompanion.DELETED
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
@@ -38,5 +41,23 @@ class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c")) 
         })
         val responseFeatures = response.features
         assertEquals(0, responseFeatures.size)
+
+        // verify if history contains 2 versions
+        val historyResponse = executeRead(ReadFeatures().apply {
+            collectionIds += collection.id
+            featureIds += initialFeature.id
+            queryHistory = true
+        })
+        assertEquals(2, historyResponse.features.size)
+        assertEquals(CREATED, historyResponse.tuples[0]?.tuple?.flags?.actionEnum())
+        assertEquals(DELETED, historyResponse.tuples[1]?.tuple?.flags?.actionEnum())
+
+        // verify if delete table contains element
+        val deleteTableResponse = executeRead(ReadFeatures().apply {
+            collectionIds += collection.id
+            featureIds += initialFeature.id
+            queryDeleted = true
+        })
+        assertEquals(1, deleteTableResponse.features.size)
     }
 }

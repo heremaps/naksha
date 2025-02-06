@@ -300,7 +300,6 @@ public class EventPipeline extends NakshaBound {
 
   @NotNull
   Response notImplemented(@NotNull IEvent event) {
-    return new ErrorResponse(new NakshaError(
-        NOT_IMPLEMENTED, "Event '" + event.getClass().getSimpleName() + "' is not supported", null, null));
+    return new ErrorResponse(NOT_IMPLEMENTED, "Event '" + event.getClass().getSimpleName() + "' is not supported");
   }
 }

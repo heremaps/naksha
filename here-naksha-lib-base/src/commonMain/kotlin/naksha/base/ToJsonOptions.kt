@@ -2,6 +2,7 @@ package naksha.base
 
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
@@ -15,7 +16,7 @@ data class ToJsonOptions(val int64Encoding: Int64Encoding = Int64Encoding.AS_INT
         /**
          * The default JSON serialization options being used, when none are given explicitly.
          */
-        @JvmStatic
+        @JvmField
         @JsStatic
         val DEFAULT = ToJsonOptions()
     }

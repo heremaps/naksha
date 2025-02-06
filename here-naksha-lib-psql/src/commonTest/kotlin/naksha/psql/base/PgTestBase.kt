@@ -34,6 +34,9 @@ abstract class PgTestBase(val collection: NakshaCollection? = null) {
     protected fun insertFeature(feature: NakshaFeature, sessionOptions: SessionOptions? = null) =
         insertFeatures(listOf(feature), sessionOptions)
 
+    protected fun insertFeatures(vararg features: NakshaFeature) =
+        insertFeatures(listOf(*features))
+
     protected fun insertFeatures(
         features: List<NakshaFeature>,
         sessionOptions: SessionOptions? = null
@@ -63,6 +66,18 @@ abstract class PgTestBase(val collection: NakshaCollection? = null) {
         }
     }
 
+    protected fun executeWriteErrorResponse(
+        request: WriteRequest,
+        sessionOptions: SessionOptions? = null
+    ): ErrorResponse {
+        return env.storage.newWriteSession(sessionOptions).use { session ->
+            val response = session.execute(request)
+            assertIs<ErrorResponse>(response)
+            session.commit()
+            response
+        }
+    }
+
     protected fun executeRead(
         request: ReadRequest,
         sessionOptions: SessionOptions? = null
@@ -70,7 +85,6 @@ abstract class PgTestBase(val collection: NakshaCollection? = null) {
         return env.storage.newReadSession(sessionOptions).use { session ->
             val response = session.execute(request)
             assertIs<SuccessResponse>(response)
-            session.commit()
             response
         }
     }

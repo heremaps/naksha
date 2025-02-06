@@ -182,6 +182,56 @@ class Naksha private constructor() {
         }
 
         /**
+         * Quotes a string literal, this means to replace all single quotes (`'`) with two single quotes (`''`). This encloses the string with quotation characters, when needed.
+         * @param parts the literal parts to merge and quote.
+         * @return The quoted literal.
+         */
+        @JsStatic
+        @JvmStatic
+        fun quoteLiteral(vararg parts: String): String {
+            val sb = StringBuilder()
+            sb.append("E'")
+            for (part in parts) {
+                for (c in part) {
+                    when (c) {
+                        '\'' -> sb.append('\'').append('\'')
+                        '\\' -> sb.append('\\').append('\\')
+                        else -> sb.append(c)
+                    }
+                }
+            }
+            sb.append('\'')
+            return sb.toString()
+        }
+
+        /**
+         * Quotes an identifier, this means to replace all double quotes (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
+         * @param parts the identifier parts to merge and quote.
+         * @return the quoted identifier.
+         */
+        @JsStatic
+        @JvmStatic
+        fun quoteIdent(vararg parts: String): String {
+            if (parts.isEmpty()) throw NakshaException(ILLEGAL_ARGUMENT, "The given parts must not be empty")
+            var quoted = false
+            val sb = StringBuilder()
+            sb.append('"')
+            for (part in parts) {
+                for (c in part) {
+                    when (c) {
+                        in 'a'..'z', in 'A'..'Z', in '0'..'9', '_' -> sb.append(c)
+                        '"' -> { quoted = true; sb.append('"').append('"') }
+                        '\\' -> { quoted = true; sb.append('\\').append('\\') }
+                        else -> { quoted = true; sb.append(c) }
+                    }
+                }
+            }
+            if (!quoted) return if (parts.size == 1) return parts[0] else sb.substring(1)
+            sb.append('"')
+            return sb.toString()
+        }
+
+        /**
          * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the
          * given feature-id. When there are less than 256 partitions, the value must be divided by the number of partitions, and the rest
          * addresses the partition, for example for 4 partitions do `partitionNumber(id) % 4`, what will be a value between 0 and 3.

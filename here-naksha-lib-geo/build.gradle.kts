@@ -6,6 +6,11 @@ import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
     kotlin("plugin.js-plain-objects")
+    id("naksha.publish")
+    id("naksha.java")
+
+    // uncomment spotless to add license comments
+    // id("naksha.spotless-kotlin")
 }
 
 kotlin {
@@ -39,7 +44,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(kotlin("stdlib-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation(Lib.kotlinx_datetime)
                 implementation(project(":here-naksha-lib-base"))
             }
         }
@@ -48,7 +53,7 @@ kotlin {
                 implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation(Lib.kotlinx_datetime)
             }
         }
         jvmMain {
@@ -56,20 +61,19 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(project(":here-naksha-lib-base"))
-                implementation("org.locationtech.jts:jts-core:1.19.0")
-                implementation("org.locationtech.jts.io:jts-io-common:1.19.0")
+                implementation(Lib.jts_core)
+                implementation(Lib.jts_io_common)
             }
             resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }
         jvmTest {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("org.locationtech.jts:jts-core:1.19.0")
-                implementation("org.locationtech.jts.io:jts-io-common:1.19.0")
-                implementation("io.kotlintest:kotlintest-runner-junit5:3.3.2")
-                runtimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
-                implementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
-                implementation("org.junit.jupiter:junit-jupiter-params:5.5.2")
+                implementation(Lib.jts_io_common)
+                implementation(Lib.kotlintest_runner_junit5)
+                runtimeOnly(Lib.junit_jupiter_engine)
+                implementation(Lib.junit_jupiter_api)
+                implementation(Lib.junit_params)
             }
         }
         jsMain {
@@ -102,3 +106,4 @@ tasks {
         maxHeapSize = "8g"
     }
 }
+setOverallCoverage(0.0) // only increasing allowed!

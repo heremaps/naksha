@@ -160,9 +160,15 @@ abstract class Proxy : PlatformObject {
         if (data == null) {
             data = createData()
             bind(data, symbol())
+            onCreation()
         }
         return data
     }
+
+    /**
+     * Function invoked after binding - can be used ie for initial data population.
+     */
+    open fun onCreation(){ /* implement in subclass if needed */ }
 
     /**
      * Returns the symbol through which this proxy is bound to the [platformObject] object.

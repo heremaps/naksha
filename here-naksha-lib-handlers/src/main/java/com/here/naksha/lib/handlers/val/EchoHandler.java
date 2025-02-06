@@ -23,17 +23,18 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
-import com.here.naksha.lib.core.models.storage.*;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
+import com.here.naksha.lib.core.models.storage.ContextWriteFeatures;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
 import java.util.List;
-
-import naksha.model.Request;
+import java.util.Objects;
+import naksha.base.JvmBoxingUtil;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +44,7 @@ public class EchoHandler extends AbstractEventHandler {
   private static final Logger logger = LoggerFactory.getLogger(EchoHandler.class);
   protected @NotNull EventHandler eventHandler;
   protected @NotNull EventTarget<?> eventTarget;
-  protected @NotNull XyzProperties properties;
+  protected @NotNull NakshaProperties properties;
 
   public EchoHandler(
       final @NotNull EventHandler eventHandler,
@@ -52,13 +53,14 @@ public class EchoHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties = JsonSerializable.convert(eventHandler.getProperties(), XyzProperties.class);
+    this.properties =
+        Objects.requireNonNull(JvmBoxingUtil.box(eventHandler.getProperties(), NakshaProperties.class));
   }
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
-    final Request<?> request = event.getRequest();
-    if (request instanceof ContextWriteFeatures<?, ?, ?, ?, ?>) {
+    final Request request = event.getRequest();
+    if (request instanceof ContextWriteFeatures) {
       return PROCESS;
     }
     return SUCCEED_WITHOUT_PROCESSING;
@@ -71,21 +73,21 @@ public class EchoHandler extends AbstractEventHandler {
    * @return the result.
    */
   @Override
-  public @NotNull Result process(@NotNull IEvent event) {
-    final Request<?> request = event.getRequest();
+  public @NotNull Response process(@NotNull IEvent event) {
+    final Request request = event.getRequest();
 
     logger.info("Handler received request {}", request.getClass().getSimpleName());
-    final ContextWriteFeatures<?, ?, ?, ?, ?> cwf = HandlerUtil.checkInstanceOf(
+    final ContextWriteFeatures cwf = HandlerUtil.checkInstanceOf(
         request, ContextWriteFeatures.class, "Unsupported request type in echoHandler");
 
     // Extract Xyz features
-    final List<XyzFeature> features = HandlerUtil.getXyzFeaturesFromCodecList(cwf.features);
+    final List<NakshaFeature> features = HandlerUtil.getFeaturesFromWriteList(cwf.getWrites());
 
     // Extract Xyz context (list of features)
-    final List<XyzFeature> context = HandlerUtil.getXyzContextFromGenericList(cwf.getContext());
+    final List<NakshaFeature> context = HandlerUtil.getXyzContextFromGenericList(cwf.getContext());
 
     // Extract Xyz violations (if to be persisted separately)
-    final List<XyzFeature> outputViolations = HandlerUtil.getXyzViolationsFromGenericList(cwf.getViolations());
+    final List<NakshaFeature> outputViolations = HandlerUtil.getViolationsFromGenericList(cwf.getViolations());
 
     // prepare result with op as UPDATED, as if features were persisted in DB
     return HandlerUtil.createContextResultFromFeatureList(features, context, outputViolations);

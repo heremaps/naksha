@@ -18,31 +18,26 @@
  */
 package com.here.naksha.lib.core.models;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import naksha.base.JvmListProxy;
+import naksha.model.objects.NakshaFeature;
 
-/** The copyright information object. */
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class Copyright {
+/**
+ * The copyright information object.
+ */
+public class Copyright extends NakshaFeature {
 
-  /** The copyright label to be displayed by the client. */
-  @JsonProperty
-  @JsonInclude(Include.NON_NULL)
-  private String label;
+  private static final String LABEL = "label";
+  private static final String ALT = "alt";
 
-  /** The description text for the label to be displayed by the client. */
-  @JsonProperty
-  @JsonInclude(Include.NON_NULL)
-  private String alt;
-
+  /**
+   * The copyright label to be displayed by the client.
+   */
   public String getLabel() {
-    return label;
+    return (String) getRaw(LABEL);
   }
 
   public void setLabel(final String label) {
-    this.label = label;
+    setRaw(LABEL, label);
   }
 
   public Copyright withLabel(final String label) {
@@ -50,16 +45,25 @@ public class Copyright {
     return this;
   }
 
+  /**
+   * The description text for the label to be displayed by the client.
+   */
   public String getAlt() {
-    return alt;
+    return (String) getRaw(ALT);
   }
 
   public void setAlt(final String alt) {
-    this.alt = alt;
+    setRaw(ALT, alt);
   }
 
   public Copyright withAlt(final String alt) {
     setAlt(alt);
     return this;
+  }
+
+  public static class List extends JvmListProxy<Copyright> {
+    public List() {
+      super(Copyright.class);
+    }
   }
 }

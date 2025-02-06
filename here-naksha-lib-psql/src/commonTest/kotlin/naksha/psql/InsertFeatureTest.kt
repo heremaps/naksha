@@ -3,8 +3,10 @@ package naksha.psql
 import naksha.geo.SpBoundingBox
 import naksha.model.Action
 import naksha.model.NakshaCache
+import naksha.model.NakshaError
 import naksha.model.TagList
 import naksha.model.objects.NakshaCollection
+import naksha.model.request.ErrorResponse
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -13,10 +15,7 @@ import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatF
 import naksha.psql.base.PgTestBase
 import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
 import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeatures
-import kotlin.test.AfterTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import kotlin.test.*
 
 class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) {
 
@@ -126,9 +125,36 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
         // Read only one feature by bounding box.
         val featuresByBBox = executeRead(ReadFeatures().apply {
             collectionIds += collection!!.id
-            query.spatial = SpIntersects(SpBoundingBox(expectFeature.geometry).addMargin(0.0000001).toPolygon())
+            query.spatial =
+                SpIntersects(SpBoundingBox(expectFeature.geometry).addMargin(0.0000001).toPolygon())
         })
         assertEquals(1, featuresByBBox.features.size)
         assertEquals(expectFeature.id, featuresByBBox.features[0]!!.id)
+    }
+
+    @Test
+    fun shouldNotAllowDuplicatedId() {
+        // Given
+        val originalFeature = generateRandomFeature()
+        val featureWithDuplicatedId = generateRandomFeature().apply { id = originalFeature.id }
+
+        // When
+        insertFeature(originalFeature)
+
+        // And
+        val writeReq = WriteRequest().add(
+            Write().createFeature(
+                map = null,
+                collectionId = collection!!.id,
+                feature = featureWithDuplicatedId
+            )
+        )
+        val insertDuplicateResponse = env.storage.newWriteSession().use { session ->
+            session.execute(writeReq)
+        }
+
+        // Then
+        assertIs<ErrorResponse>(insertDuplicateResponse)
+        assertEquals(NakshaError.CONFLICT, insertDuplicateResponse.error.code)
     }
 }

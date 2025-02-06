@@ -22,7 +22,6 @@ import com.here.naksha.lib.core.*;
 import com.here.naksha.lib.core.exceptions.TooManyTasks;
 import com.here.naksha.lib.core.exceptions.UncheckedException;
 import naksha.model.*;
-import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.view.concurrent.LayerReadRequest;
 import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
@@ -30,6 +29,7 @@ import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
 import naksha.model.request.query.*;
+import naksha.model.util.RequestHelper;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.invocation.InvocationOnMock;
@@ -133,7 +133,7 @@ public class ViewTest {
     when(storage.newWriteSession(sessionOptions)).thenReturn(session);
 
     final WriteRequest request = new WriteRequest();
-    final NakshaFeature feature = new NakshaFeature("id0");
+    final NakshaFeature feature = new NakshaFeature("sampleTuple0");
     request.add(write.deleteFeature(null,VIEW_COLLECTION,feature,false));
     SuccessResponse successResponse1 = new SuccessResponse(sampleXyzWriteResponse(1, storage, ExecutedOp.DELETED));
     when(session.execute(request)).thenReturn(successResponse1);

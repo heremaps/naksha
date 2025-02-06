@@ -20,26 +20,25 @@ package com.here.naksha.lib.handlers.val;
 
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
-import static com.here.naksha.lib.handlers.util.MockUtil.parseJson;
-import static com.here.naksha.lib.handlers.util.MockUtil.parseJsonFile;
-import static com.here.naksha.lib.handlers.util.MockUtil.toJson;
+import static com.here.naksha.lib.handlers.util.MockUtil.*;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzProperties;
-import naksha.geo.XyzReference;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteFeatures;
-import naksha.model.Request;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
 import java.util.ArrayList;
 import java.util.List;
+import naksha.base.JvmBoxingUtil;
+import naksha.model.mom.MomReference;
+import naksha.model.mom.MomReferenceList;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -51,11 +50,12 @@ public class MockValidationHandler extends AbstractEventHandler {
   private static final Logger logger = LoggerFactory.getLogger(MockValidationHandler.class);
   protected @NotNull EventHandler eventHandler;
   protected @NotNull EventTarget<?> eventTarget;
-  protected @NotNull XyzProperties properties;
+  protected @NotNull NakshaProperties properties;
 
   private static final String MOCK_VIOLATIONS_FILE = "mock_data/dry_run_violations.json";
-  private static final TypeReference<List<XyzFeature>> LIST_FEATURE_TYPE_REF = new TypeReference<>() {};
-  private static final List<XyzFeature> mockViolations = parseJsonFile(MOCK_VIOLATIONS_FILE, LIST_FEATURE_TYPE_REF);
+  private static final TypeReference<List<NakshaFeature>> LIST_FEATURE_TYPE_REF = new TypeReference<>() {};
+  private static final List<NakshaFeature> mockViolations =
+      parseJsonFile(MOCK_VIOLATIONS_FILE, LIST_FEATURE_TYPE_REF);
   private static final int totalViolations = mockViolations.size();
 
   public MockValidationHandler(
@@ -65,13 +65,13 @@ public class MockValidationHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties = JsonSerializable.convert(eventHandler.getProperties(), XyzProperties.class);
+    this.properties = JvmBoxingUtil.box(eventHandler.getProperties(), NakshaProperties.class);
   }
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
-    final Request<?> request = event.getRequest();
-    if (request instanceof ContextWriteFeatures<?, ?, ?, ?, ?>) {
+    final Request request = event.getRequest();
+    if (request instanceof ContextWriteFeatures) {
       return PROCESS;
     }
     return SEND_UPSTREAM_WITHOUT_PROCESSING;
@@ -84,30 +84,30 @@ public class MockValidationHandler extends AbstractEventHandler {
    * @return the result.
    */
   @Override
-  public @NotNull Result process(@NotNull IEvent event) {
-    final Request<?> request = event.getRequest();
+  public @NotNull Response process(@NotNull IEvent event) {
+    final Request request = event.getRequest();
 
     logger.info("Handler received request {}", request.getClass().getSimpleName());
 
-    final ContextWriteFeatures<?, ?, ?, ?, ?> cwf = HandlerUtil.checkInstanceOf(
+    final ContextWriteFeatures cwf = HandlerUtil.checkInstanceOf(
         request, ContextWriteFeatures.class, "Unsupported request type for validation");
 
-    final @Nullable List<XyzFeature> violations = validateFeatures(cwf, cwf.getContext());
+    final @Nullable List<NakshaFeature> violations = validateFeatures(cwf, cwf.getContext());
 
     // create and forward request for next handler in the pipeline
-    final ContextWriteFeatures<?, ?, ?, ?, ?> upstreamRequest = HandlerUtil.createContextWriteRequestFromCodecList(
-        cwf.getCollectionId(), cwf.features, cwf.getContext(), violations);
+    final ContextWriteFeatures upstreamRequest =
+        HandlerUtil.createContextWriteRequestFromWriteList(cwf.getWrites(), cwf.getContext(), violations);
     return event.sendUpstream(upstreamRequest);
   }
 
-  protected @Nullable List<XyzFeature> validateFeatures(
-      final @NotNull ContextWriteFeatures<?, ?, ?, ?, ?> cwf, final @Nullable List<?> context) {
+  protected @Nullable List<NakshaFeature> validateFeatures(
+      final @NotNull ContextWriteFeatures cwf, final @Nullable List<?> context) {
     // For random features from the input list, create 0-to-N random violations
-    final List<XyzFeature> violations;
+    final List<NakshaFeature> violations;
 
     // Decide randomly whether to generate violations or not
     // Generation violations if odd number of features supplied, otherwise not
-    final boolean generateViolation = (cwf.features.size() % 2) > 0;
+    final boolean generateViolation = (cwf.getWrites().size() % 2) > 0;
 
     if (!generateViolation) {
       return null;
@@ -118,8 +118,8 @@ public class MockValidationHandler extends AbstractEventHandler {
     // Generate random violations and attach feature references
     violations = new ArrayList<>();
     int featureCnt = 0;
-    final List<XyzFeature> features = HandlerUtil.getXyzFeaturesFromCodecList(cwf.features);
-    for (final XyzFeature feature : features) {
+    final List<NakshaFeature> features = HandlerUtil.getFeaturesFromWriteList(cwf.getWrites());
+    for (final NakshaFeature feature : features) {
       featureCnt++;
       // Distribution of "count" of violations, depends on feature "number",
       // using min condition (i.e. min (feature, violation count))
@@ -131,24 +131,27 @@ public class MockValidationHandler extends AbstractEventHandler {
       int violationsCount = Math.min(featureCnt, totalViolations);
       final Object momType = feature.get("momType");
       violations.addAll(getNViolationsWithFeatureReference(
-          violationsCount, feature, cwf.getCollectionId(), (momType == null) ? "" : momType.toString()));
+          violationsCount,
+          feature,
+          cwf.getWrites().get(featureCnt - 1).getCollectionId(),
+          (momType == null) ? "" : momType.toString()));
     }
     return violations;
   }
 
-  private @NotNull List<XyzFeature> getNViolationsWithFeatureReference(
+  private @NotNull List<NakshaFeature> getNViolationsWithFeatureReference(
       final int count,
-      final @NotNull XyzFeature feature,
+      final @NotNull NakshaFeature feature,
       final @NotNull String spaceId,
       final @Nullable String featureType) {
-    final List<XyzFeature> violations = new ArrayList<>();
+    final List<NakshaFeature> violations = new ArrayList<>();
     for (int i = 0; i < count && i < totalViolations; i++) {
-      final XyzFeature violation = parseJson(toJson(mockViolations.get(i)), XyzFeature.class);
+      final NakshaFeature violation = parseJson(toJson(mockViolations.get(i)), NakshaFeature.class);
       // randomize violation id
       violation.setId("urn:here::here:Topology:violation_" + RandomStringUtils.randomAlphabetic(12));
       // add reference to feature
-      final XyzReference reference = new XyzReference(feature.getId(), spaceId, featureType);
-      violation.getProperties().setReferences(List.of(reference));
+      final MomReference reference = new MomReference(feature.getId(), spaceId, featureType);
+      violation.getProperties().setReferences(JvmBoxingUtil.box(List.of(reference), MomReferenceList.class));
       violation.put("violatedObject", reference);
       violation.setGeometry(feature.getGeometry());
       // add violation to the list

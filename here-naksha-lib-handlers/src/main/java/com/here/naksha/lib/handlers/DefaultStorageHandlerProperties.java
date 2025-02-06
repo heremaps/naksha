@@ -18,13 +18,12 @@
  */
 package com.here.naksha.lib.handlers;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import naksha.model.NakshaVersion;
-import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import com.here.naksha.lib.core.models.naksha.XyzCollection;
+import naksha.base.JvmBoxingUtil;
+import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -33,7 +32,7 @@ import org.jetbrains.annotations.Nullable;
  * Default variant of EventHandler properties supported by Naksha - default storage handler
  */
 @AvailableSince(NakshaVersion.v2_0_7)
-public class DefaultStorageHandlerProperties extends XyzProperties {
+public class DefaultStorageHandlerProperties extends NakshaProperties {
 
   private static final Boolean DEFAULT_AUTO_CREATE_COLLECTION = true;
   private static final Boolean DEFAULT_AUTO_DELETE_COLLECTION = true;
@@ -53,83 +52,44 @@ public class DefaultStorageHandlerProperties extends XyzProperties {
   /**
    * To associate EventHandler with specific {@link Storage} that it should operate against.
    */
-  @AvailableSince(NakshaVersion.v2_0_7)
-  @JsonProperty(STORAGE_ID)
-  private @Nullable String storageId;
-
-  /**
-   * Details of the backend xyz collection to use.
-   * If undefined, the collection defined at the {@link SpaceProperties} level will be used.
-   */
-  @AvailableSince(NakshaVersion.v2_0_7)
-  @JsonProperty(COLLECTION)
-  private @Nullable XyzCollection xyzCollection;
-
-  /**
-   * Indicates whether collection should be created automatically (happens on first collection's usage).
-   * By default: 'true'
-   */
-  @AvailableSince(NakshaVersion.v2_0_7)
-  @JsonProperty(AUTO_CREATE_COLLECTION)
-  private @NotNull Boolean autoCreateCollection;
-
-  /**
-   * Indicates whether collection should be deleted automatically (happens when handler is deleted).
-   * By default: 'true'
-   */
-  @AvailableSince(NakshaVersion.v2_0_7)
-  @JsonProperty(AUTO_DELETE_COLLECTION)
-  private @NotNull Boolean autoDeleteCollection;
-
-  /**
-   * Create new EventHandler properties with storageId and collection details
-   *
-   * @param xyzCollection details of backend xyz collection
-   */
-  @AvailableSince(NakshaVersion.v2_0_7)
-  @JsonCreator
-  public DefaultStorageHandlerProperties(
-      final @JsonProperty(STORAGE_ID) @Nullable String storageId,
-      final @JsonProperty(COLLECTION) @Nullable XyzCollection xyzCollection,
-      final @JsonProperty(AUTO_CREATE_COLLECTION) Boolean autoCreateCollection,
-      final @JsonProperty(AUTO_DELETE_COLLECTION) Boolean autoDeleteCollection) {
-    this.storageId = storageId;
-    this.xyzCollection = xyzCollection;
-    this.autoCreateCollection =
-        autoCreateCollection == null ? DEFAULT_AUTO_CREATE_COLLECTION : autoCreateCollection;
-    this.autoDeleteCollection =
-        autoDeleteCollection == null ? DEFAULT_AUTO_DELETE_COLLECTION : autoDeleteCollection;
-  }
-
-  public @Nullable XyzCollection getXyzCollection() {
-    return xyzCollection;
-  }
-
-  public void setXyzCollection(final @JsonProperty(COLLECTION) @Nullable XyzCollection xyzCollection) {
-    this.xyzCollection = xyzCollection;
-  }
-
   public @Nullable String getStorageId() {
-    return storageId;
+    return (String) getRaw(STORAGE_ID);
   }
 
   public void setStorageId(final @Nullable String storageId) {
-    this.storageId = storageId;
+    setRaw(STORAGE_ID, storageId);
   }
 
+  /**
+   * Details of the backend xyz collection to use. If undefined, the collection defined at the {@link SpaceProperties} level will be used.
+   */
+  public @Nullable NakshaCollection getCollection() {
+    return JvmBoxingUtil.box(get(COLLECTION), NakshaCollection.class);
+  }
+
+  public void setCollection(final @Nullable NakshaCollection collection) {
+    setRaw(COLLECTION, collection);
+  }
+
+  /**
+   * Indicates whether collection should be created automatically (happens on first collection's usage). By default: 'true'
+   */
   public @NotNull Boolean getAutoCreateCollection() {
-    return autoCreateCollection;
+    return getOrSet(AUTO_CREATE_COLLECTION, DEFAULT_AUTO_CREATE_COLLECTION);
   }
 
   public void setAutoCreateCollection(Boolean autoCreateCollection) {
-    this.autoCreateCollection = autoCreateCollection;
+    setRaw(AUTO_CREATE_COLLECTION, autoCreateCollection);
   }
 
+  /**
+   * Indicates whether collection should be deleted automatically (happens when handler is deleted). By default: 'true'
+   */
   public @NotNull Boolean getAutoDeleteCollection() {
-    return autoDeleteCollection;
+    return getOrSet(AUTO_DELETE_COLLECTION, DEFAULT_AUTO_DELETE_COLLECTION);
   }
 
   public void setAutoDeleteCollection(Boolean autoDeleteCollection) {
-    this.autoDeleteCollection = autoDeleteCollection;
+    setRaw(AUTO_DELETE_COLLECTION, autoDeleteCollection);
   }
 }

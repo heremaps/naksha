@@ -18,15 +18,25 @@
  */
 package com.here.naksha.lib.hub.mock;
 
-import naksha.model.XyzFeature;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import java.util.List;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
+import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 
-public class MockResult<T extends XyzFeature> extends SuccessResult {
+public class MockResult<T extends NakshaFeature> extends SuccessResponse {
 
-  public MockResult(@NotNull Class<T> featureType, @NotNull List<XyzFeatureCodec> results) {
-    this.cursor = new MockResultCursor<T>(featureType, results);
+  public void setFeatures(@NotNull List<T> features) {
+    setFeatures(NakshaFeatureList.fromList(features));
+  }
+
+  public static <T extends NakshaFeature> MockResult<T> mockResultWithFeature(@NotNull T feature){
+    return mockResultWithFeatures(List.of(feature));
+  }
+
+  public static <T extends NakshaFeature> MockResult<T> mockResultWithFeatures(@NotNull List<T> features){
+    MockResult<T> result = new MockResult<T>();
+    result.setFeatures(features);
+    return result;
   }
 }

@@ -16,10 +16,14 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
      * @return either the number of affected rows or the rows.
      */
     override fun execute(args: Array<Any?>?): PgCursor {
-        check(!closed)
-        if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
-        stmt.execute()
-        return PsqlCursor(stmt, false)
+        try {
+            check(!closed)
+            if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
+            stmt.execute()
+            return PsqlCursor(stmt, false)
+        } catch (exception: Exception) {
+            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+        }
     }
 
     /**
@@ -29,9 +33,13 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
      * @param args the arguments to be set at $n position, where $1 is the first array element.
      */
     override fun addBatch(args: Array<Any?>?) {
-        check(!closed)
-        if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
-        stmt.addBatch()
+        try {
+            check(!closed)
+            if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
+            stmt.addBatch()
+        } catch (exception: Exception) {
+            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+        }
     }
 
     /**
@@ -39,12 +47,20 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
      * @return an array with the amount of effected rows by each queued execution.
      */
     override fun executeBatch(): IntArray {
-        return stmt.executeBatch()
+        return try {
+            stmt.executeBatch()
+        } catch (exception: Exception) {
+            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+        }
     }
 
     override fun close() {
-        val closed = this.closed
-        this.closed = true
-        if (!closed) stmt.close()
+        try {
+            val closed = this.closed
+            this.closed = true
+            if (!closed) stmt.close()
+        } catch (exception: Exception) {
+            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+        }
     }
 }

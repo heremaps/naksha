@@ -14,7 +14,6 @@ import kotlin.jvm.JvmStatic
 
 /**
  * The Naksha Feature extending the default [SpFeature].
- * @since 3.0.0
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
@@ -38,7 +37,6 @@ open class NakshaFeature() : AnyObject() {
          * @since 3.0.0
          */
         const val TYPE = "Feature"
-
         /**
          * The key of geometry (`geometry`).
          * @since 3.0.0
@@ -46,10 +44,12 @@ open class NakshaFeature() : AnyObject() {
         const val GEOMETRY = "geometry"
 
         /**
-         * Read the feature from a JSON string.
-         * @return the [NakshaFeature] deserialized from the given JSON.
-         * @since 3.0.0
+         * The JSON keys
          */
+        const val ID_KEY = "id"
+        const val PROPERTIES_KEY = "properties"
+        const val TITLE_KEY = "title"
+        const val DESCRIPTION_KEY = "description"
         @JvmStatic
         @JsStatic
         fun fromJson(json: String): NakshaFeature {
@@ -64,6 +64,8 @@ open class NakshaFeature() : AnyObject() {
         private val GEOMETRY_NULL = NullableProperty<NakshaFeature, SpGeometry>(SpGeometry::class)
         private val REFERENCE_POINT_NULL = NullableProperty<NakshaFeature, SpPoint>(SpPoint::class)
         private val PROPERTIES = NotNullProperty<NakshaFeature, NakshaProperties>(NakshaProperties::class)
+        private val TITLE_NULL = NullableProperty<NakshaFeature, String>(String::class)
+        private val DESCRIPTION_NULL = NullableProperty<NakshaFeature, String>(String::class)
         private val ATTACHMENT_NULL = NullableProperty<NakshaFeature, ByteArray>(ByteArray::class)
         private val STRING_NULL = NullableProperty<NakshaFeature, String>(String::class)
     }
@@ -222,4 +224,14 @@ open class NakshaFeature() : AnyObject() {
         momType = value
         return this
     }
+
+    /**
+     * Human-readable title.
+     */
+    open var title by TITLE_NULL
+
+    /**
+     * Human-readable description.
+     */
+    open var description by DESCRIPTION_NULL
 }

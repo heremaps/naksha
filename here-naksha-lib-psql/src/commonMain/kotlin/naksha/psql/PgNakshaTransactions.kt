@@ -4,6 +4,7 @@ package naksha.psql
 
 import naksha.model.Naksha
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.StoreMode
 import kotlin.js.JsExport
 
 /**
@@ -14,9 +15,9 @@ class PgNakshaTransactions internal constructor(adminMap: PgAdminMap) : PgCollec
     .withMapId(Naksha.ADMIN_MAP)
     .withId(Naksha.TRANSACTIONS_COL)
     .withNumber(Naksha.TRANSACTIONS_COL_NUMBER)
-    .withDisableShadow(true)
-    .withDisableHistory(true)
-    .withDisableMeta(true)
+    .withStoreDeleted(StoreMode.OFF)
+    .withStoreHistory(StoreMode.OFF)
+    .withStoreMeta(StoreMode.OFF)
 ), PgInternalCollection {
 
     /**

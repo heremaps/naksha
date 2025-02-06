@@ -8,7 +8,6 @@ import naksha.model.request.*
 import naksha.psql.base.PgTestBase
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
 import kotlin.test.assertTrue
 
 class PartitioningTest : PgTestBase() {
@@ -107,7 +106,8 @@ class PartitioningTest : PgTestBase() {
         // when
         storage.newWriteSession().use { session ->
             // expect
-            assertFails("Invalid amount of partitions requested, must be 1 to 256, was: 0") { session.execute(writeRequest) }
+            val response = session.execute(writeRequest) as ErrorResponse
+            assertEquals("Invalid amount of partitions requested, must be 1 to 256, was: 0", response.error.msg)
         }
     }
 
@@ -125,7 +125,8 @@ class PartitioningTest : PgTestBase() {
         // when
         storage.newWriteSession().use { session ->
             // expect
-            assertFails("Invalid amount of partitions requested, must be 1 to 256, was: 0") { session.execute(writeRequest) }
+            val response = session.execute(writeRequest) as ErrorResponse
+            assertEquals("Invalid amount of partitions requested, must be 1 to 256, was: 257", response.error.msg)
         }
     }
 

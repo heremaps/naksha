@@ -37,8 +37,10 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The properties stored as value for the {@link XyzProperties#XYZ_NAMESPACE @ns:com:here:xyz} key in the {@link XyzProperties properties}
  * of features managed by Naksha. Except for the {@code tags} all these values are read-only.
+ * @deprecated please use {@link naksha.model.XyzNs} instead.
  */
 @SuppressWarnings("unused")
+@Deprecated
 public class XyzNamespace extends JsonObject {
 
   /**

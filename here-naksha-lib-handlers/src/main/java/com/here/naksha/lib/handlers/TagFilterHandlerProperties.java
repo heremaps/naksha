@@ -18,13 +18,11 @@
  */
 package com.here.naksha.lib.handlers;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import naksha.model.NakshaVersion;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzProperties;
-import naksha.model.ReadFeatures;
-import naksha.model.WriteFeatures;
 import java.util.List;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.StringList;
+import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
  * Default variant of EventHandler properties supported by Naksha - for TagFilterHandler
  */
 @AvailableSince(NakshaVersion.v2_0_13)
-public class TagFilterHandlerProperties extends XyzProperties {
+public class TagFilterHandlerProperties extends NakshaProperties {
 
   @AvailableSince(NakshaVersion.v2_0_13)
   public static final String ADD_VALUES = "add";
@@ -44,46 +42,38 @@ public class TagFilterHandlerProperties extends XyzProperties {
   public static final String CONTAINS_VALUES = "contains";
 
   /**
-   * To specify list of tags to be added to the {@link XyzFeature} during create/update {@link WriteFeatures} operations.
+   * To specify list of tags to be added to the {@link naksha.model.objects.NakshaFeature} during create/update
+   * {@link naksha.model.request.WriteRequest} operations.
    */
-  @AvailableSince(NakshaVersion.v2_0_13)
-  @JsonProperty(ADD_VALUES)
-  private @Nullable List<String> add;
-  /**
-   * To specify prefix-matching tags to be removed from the {@link XyzFeature} during create/update {@link WriteFeatures} operations.
-   * This is applied before {@link #add} operation.
-   */
-  @AvailableSince(NakshaVersion.v2_0_13)
-  @JsonProperty(REMOVE_W_PREFIXES)
-  private @Nullable List<String> removeWithPrefixes;
-  /**
-   * To specify list of tags to be added as AND filter condition whenever {@link ReadFeatures} is processed via this handler.
-   */
-  @AvailableSince(NakshaVersion.v2_0_13)
-  @JsonProperty(CONTAINS_VALUES)
-  private @Nullable List<String> contains;
-
   public @Nullable List<String> getAdd() {
-    return add;
+    return JvmBoxingUtil.box(get(ADD_VALUES), StringList.class);
   }
 
   public void setAdd(@Nullable final List<String> add) {
-    this.add = add;
+    setRaw(ADD_VALUES, StringList.fromList(add));
   }
 
+  /**
+   * To specify prefix-matching tags to be removed from the {@link naksha.model.objects.NakshaFeature} during create/update
+   * {@link naksha.model.request.WriteRequest} operations. This is applied before {@link #getAdd()} operation.
+   */
   public @Nullable List<String> getRemoveWithPrefixes() {
-    return removeWithPrefixes;
+    return JvmBoxingUtil.box(get(REMOVE_W_PREFIXES), StringList.class);
   }
 
   public void setRemoveWithPrefixes(final @Nullable List<String> removeWithPrefixes) {
-    this.removeWithPrefixes = removeWithPrefixes;
+    setRaw(REMOVE_W_PREFIXES, StringList.fromList(removeWithPrefixes));
   }
 
+  /**
+   * To specify list of tags to be added as AND filter condition whenever {@link naksha.model.request.ReadFeatures} is processed via this
+   * handler.
+   */
   public @Nullable List<String> getContains() {
-    return contains;
+    return JvmBoxingUtil.box(get(CONTAINS_VALUES), StringList.class);
   }
 
   public void setContains(@Nullable List<String> contains) {
-    this.contains = contains;
+    setRaw(CONTAINS_VALUES, StringList.fromList(contains));
   }
 }

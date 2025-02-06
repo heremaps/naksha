@@ -4,11 +4,12 @@ import naksha.base.Int64
 import naksha.base.PlatformUtil
 import naksha.jbon.JbDictionary
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.StoreMode
 import naksha.psql.*
 import naksha.psql.executors.WriteExt
+import naksha.psql.executors.write.WriteCollectionUtils.tupleOfCollection
 import naksha.psql.executors.write.WriteFeatureUtils.allColumnValues
 
 class CreateCollection(
@@ -24,7 +25,7 @@ class CreateCollection(
         val colId = write.featureId ?: PlatformUtil.randomString()
         val collectionNumber = newCollectionNumber(map)
         val tupleNumber = newCollectionTupleNumber(map, collectionNumber)
-        val tuple = tuple(
+        val tuple = tupleOfCollection(
             tupleNumber = tupleNumber,
             feature = feature,
             attachment = write.attachment,
@@ -34,51 +35,20 @@ class CreateCollection(
         )
 
         // insert row into naksha~collections before creating tables
-        executeInsert(VIRT_COLLECTIONS_QUOTED, tuple, feature)
+        executeInsert(tuple, feature)
 
         // Create the tables
         val collection = map[colId]
         collection.create(
             connection = session.connection(),
             partitions = feature.partitions,
-            storageClass = PgStorageClass.of(feature.storageClass)
+            storageClass = PgStorageClass.of(feature.storageClass),
+            indices = PgIndex.DEFAULT_INDICES,
+            storeHistory = feature.storeHistory != StoreMode.OFF,
+            storedDeleted = feature.storeDeleted != StoreMode.OFF,
+            storeMeta = feature.storeMeta != StoreMode.OFF
         )
         return tuple
-    }
-
-    private fun tuple(
-        tupleNumber: TupleNumber,
-        feature: NakshaFeature,
-        attachment: ByteArray?,
-        featureId: String,
-        flags: Flags,
-        encodingDict: JbDictionary? = null
-    ): Tuple {
-        return Tuple(
-            storage = session.storage,
-            tupleNumber = tupleNumber,
-            state = FetchMode.FETCH_ALL,
-            geo = PgUtil.encodeGeometry(feature.geometry, flags),
-            referencePoint = PgUtil.encodeGeometry(feature.referencePoint, flags),
-            feature = PgUtil.encodeFeature(feature, flags, encodingDict),
-            tags = PgUtil.encodeTags(
-                feature.properties.xyz.tags?.toTagMap(),
-                session.storage.defaultFlags,
-                encodingDict
-            ),
-            attachment = attachment,
-            meta = Metadata(
-                storeNumber = tupleNumber.storeNumber,
-                version = tupleNumber.version,
-                uid = tupleNumber.uid,
-                updatedAt = session.versionTime(),
-                author = session.options.author,
-                appId = session.options.appId,
-                flags = flags,
-                id = featureId,
-                ft = NakshaCollection.FEATURE_TYPE
-            )
-        )
     }
 
     private fun executeInsert(
@@ -111,7 +81,7 @@ class CreateCollection(
      * @param map the map in which to create a new map.
      * @return the new collection-number of the new collection.
      */
-    fun newCollectionNumber(map: PgMap): Int64 = map.newCollectionNumber(session.connection())
+    fun newCollectionNumber(map: PgMap): Int64 = map.newCollectionNumber(session.usePgConnection())
 
     /**
      * Returns a new `uid` for a new tuple.

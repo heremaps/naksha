@@ -49,7 +49,7 @@ class PgReader(
                 allBytes = if (cursor.next()) cursor.column("rs") as ByteArray else null
             }
             if (allBytes == null) throw NakshaException(EXCEPTION, "Failed to execute query for unknown reason")
-            val tupleNumberBytes = TupleNumberBinaryArray.fromGzip(storage, allBytes)
+            val tupleNumberBytes = TupleNumberBinaryArray.fromGzip(allBytes)
             return SuccessResponse(
                 PgResultSet(
                     storage,

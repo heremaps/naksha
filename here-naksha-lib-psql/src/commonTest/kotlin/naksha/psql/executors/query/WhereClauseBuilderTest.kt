@@ -2,6 +2,7 @@ package naksha.psql.executors.query
 
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpPolygon
+import naksha.model.objects.NakshaCollection
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
 import kotlin.test.Test
@@ -30,6 +31,7 @@ class WhereClauseBuilderTest {
                 )
             )
         }
+
         // When
         val query = WhereClauseBuilder(req).build()
 
@@ -45,10 +47,10 @@ class WhereClauseBuilderTest {
             )
         AND ( 
                 (
-                 NOT (ST_Intersects(naksha_geometry(geo, flags), ST_GeomFromTWKB($5))) 
+                 NOT (ST_Intersects(naksha_geometry(geo, flags), naksha_geometry($5, 0))) 
                  AND (
-                        ST_Intersects(naksha_geometry(geo, flags), ST_GeomFromTWKB($6)) 
-                        OR ST_Intersects(naksha_geometry(geo, flags), ST_GeomFromTWKB($7))
+                        ST_Intersects(naksha_geometry(geo, flags), naksha_geometry($6, 0)) 
+                        OR ST_Intersects(naksha_geometry(geo, flags), naksha_geometry($7, 0))
                      ) 
                 ) 
             )  

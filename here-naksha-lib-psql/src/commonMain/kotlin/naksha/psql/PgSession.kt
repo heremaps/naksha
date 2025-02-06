@@ -90,6 +90,8 @@ open class PgSession(
             options = options.copy(lockTimeout = value)
         }
 
+    override fun executeParallel(request: Request): Response = execute(request)
+
     /**
      * The PostgresQL database connection currently being used; if any.
      */
@@ -348,30 +350,16 @@ open class PgSession(
                 return response
             }
 
-            else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown request")
+            else -> return ErrorResponse(NakshaException(ILLEGAL_ARGUMENT, "Unknown request"))
         }
     }
 
-    private var isTransactionStored = false
-    private fun saveTransactionIntoDb(create: Boolean = false) {
-        // FIXME instead of create/update we can use upsert when ready
-        if (isTransactionStored && create) {
-            return
-        } else if (isTransactionStored) {
-            val updateTxReq = WriteRequest()
-            val updateTx = Write()
-            updateTxReq.add(updateTx)
-            updateTx.updateFeature(null, TRANSACTIONS_COL, useTransaction())
-            // FIXME uncomment when counts and update ready
-//            PgWriter(this, updateTxReq).execute()
-        } else {
-            val writeTxReq = WriteRequest()
-            val writeTx = Write()
-            writeTxReq.add(writeTx)
-            writeTx.createFeature(null, TRANSACTIONS_COL, useTransaction())
-            PgWriter(this, writeTxReq, InstantWriteExecutor(this)).execute()
-            isTransactionStored = true
-        }
+    private fun saveTransactionIntoDb() {
+        val writeTxReq = WriteRequest()
+        val writeTx = Write()
+        writeTxReq.add(writeTx)
+        writeTx.upsertFeature(null, VIRT_TRANSACTIONS, transaction())
+        PgWriter(this, writeTxReq, InstantWriteExecutor(this)).execute()
     }
 
     /**
@@ -405,7 +393,7 @@ open class PgSession(
             val tx = transaction
             if (tx != null) {
                 try {
-                    saveTransactionIntoDb(true)
+                    saveTransactionIntoDb()
                 } catch (e: Throwable) {
                     throw NakshaException(EXCEPTION, "Failed to save transaction", cause = e)
                 }
@@ -487,4 +475,15 @@ open class PgSession(
             if (connection == null) conn.close()
         }
     }
+
+    @v30_experimental
+    override fun acquireSessionLock(lockId: String): ILock {
+        TODO("Not yet implemented")
+    }
+
+    @v30_experimental
+    override fun acquireTransactionLock(lockId: String): ILock {
+        TODO("Not yet implemented")
+    }
+
 }

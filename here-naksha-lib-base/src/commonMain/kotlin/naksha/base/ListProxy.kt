@@ -17,6 +17,7 @@ import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set_length
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_splice
 import naksha.base.fn.Fn2
 import kotlin.js.JsExport
+import kotlin.jvm.JvmStatic
 import kotlin.math.max
 import kotlin.reflect.KClass
 
@@ -28,6 +29,7 @@ import kotlin.reflect.KClass
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
 open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
+
     /**
      * Returns the element class of the proxy.
      */
@@ -131,15 +133,15 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
     override fun isEmpty(): Boolean = array_get_length(platformObject()) == 0
 
     override fun iterator(): MutableIterator<E?> {
-        return toMutableList(platformObject()).listIterator()
+        return ListProxyIterator(toMutableList(platformObject()).listIterator(), this)
     }
 
     override fun listIterator(): MutableListIterator<E?> {
-        return toMutableList(platformObject()).listIterator()
+        return ListProxyIterator(toMutableList(platformObject()).listIterator(), this)
     }
 
     override fun listIterator(index: Int): MutableListIterator<E?> {
-        return toMutableList(platformObject()).listIterator(index)
+        return ListProxyIterator(toMutableList(platformObject()).listIterator(index), this)
     }
 
     override fun removeAt(index: Int): E? {
@@ -248,4 +250,22 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
      * @return this cast to List<E>.
      */
     fun asList(): List<E?> = this
+
+    class ListProxyIterator<T: Any>(
+        private val basicIterator: MutableListIterator<T?>,
+        private val owner: ListProxy<T>
+    ): MutableListIterator<T?> by basicIterator {
+
+        private var currentItem: T? = null
+
+        override fun next(): T? {
+            val next = basicIterator.next()
+            currentItem = next
+            return next
+        }
+
+        override fun remove() {
+            owner.remove(currentItem)
+        }
+    }
 }

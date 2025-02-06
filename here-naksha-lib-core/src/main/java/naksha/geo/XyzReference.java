@@ -18,8 +18,9 @@
  */
 package naksha.geo;
 
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.util.json.JsonObject;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import naksha.model.NakshaVersion;
@@ -29,7 +30,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Xyz reference object holding minimum equivalent fields from MOM reference object
+ * @deprecated please use {@link naksha.model.mom.MomReference} instead.
  */
+@Deprecated
 @AvailableSince(NakshaVersion.v2_0_11)
 public class XyzReference extends JsonObject {
 

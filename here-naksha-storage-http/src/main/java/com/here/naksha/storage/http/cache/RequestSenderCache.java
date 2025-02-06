@@ -18,10 +18,12 @@
  */
 package com.here.naksha.storage.http.cache;
 
-import static com.here.naksha.storage.http.RequestSender.KeyProperties;
-
 import com.here.naksha.storage.http.RequestSender;
-import java.util.concurrent.*;
+import com.here.naksha.storage.http.RequestSender.KeyProperties;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

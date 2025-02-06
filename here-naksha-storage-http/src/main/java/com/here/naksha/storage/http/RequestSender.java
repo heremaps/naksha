@@ -42,7 +42,7 @@ public class RequestSender {
   private final HttpClient httpClient;
 
   @NotNull
-  private final RequestSender.KeyProperties keyProps;
+  final RequestSender.KeyProperties keyProps;
 
   public RequestSender(@NotNull RequestSender.KeyProperties keyProps) {
     this.keyProps = keyProps;
@@ -111,15 +111,10 @@ public class RequestSender {
     return this.keyProps.equals(thatKeyProps);
   }
 
-  /**
-   * Set of properties that are just enough to construct the sender
-   * and distinguish unambiguously between objects
-   * in terms of their effective configuration
-   */
   public record KeyProperties(
       @NotNull String name,
       @NotNull String hostUrl,
       @NotNull Map<String, String> defaultHeaders,
-      long connectionTimeoutSec,
-      long socketTimeoutSec) {}
+      int connectionTimeoutSec,
+      int socketTimeoutSec) {}
 }

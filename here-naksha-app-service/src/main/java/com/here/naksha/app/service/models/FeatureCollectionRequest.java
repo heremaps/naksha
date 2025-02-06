@@ -20,8 +20,10 @@ package com.here.naksha.app.service.models;
 
 import com.fasterxml.jackson.annotation.*;
 import com.here.naksha.lib.core.LazyParsableFeatureList;
+import java.util.ArrayList;
 import naksha.model.XyzFeature;
 import java.util.List;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -29,41 +31,29 @@ import org.jetbrains.annotations.NotNull;
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class FeatureCollectionRequest extends XyzRequest {
 
-  private final @NotNull LazyParsableFeatureList features;
+  @JsonProperty
+  @NotNull
+  private List<? extends NakshaFeature> features;
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private String nextPageToken;
 
   public FeatureCollectionRequest() {
-    features = new LazyParsableFeatureList();
+    features = new ArrayList<>();
   }
 
-  public @NotNull List<? extends XyzFeature> getFeatures() {
-    return features.get();
-  }
-
-  public void setFeatures(@NotNull List<? extends XyzFeature> features) {
-    this.features.set(features);
-  }
-
-  public @NotNull FeatureCollectionRequest withFeatures(final @NotNull List<? extends @NotNull XyzFeature> features) {
-    setFeatures(features);
-    return this;
-  }
-
-  @JsonIgnore
-  public @NotNull LazyParsableFeatureList getLazyParsableFeatureList() {
+  public @NotNull List<? extends NakshaFeature> getFeatures() {
     return features;
   }
 
-  @SuppressWarnings({"unchecked"})
-  public void setLazyParsableFeatureList(Object features) {
-    if (features instanceof String string) {
-      this.features.set(string);
-    } else if (features instanceof List<?> list) {
-      this.features.set((List<XyzFeature>) list);
-    }
+  public void setFeatures(@NotNull List<? extends NakshaFeature> features) {
+    this.features = features;
+  }
+
+  public @NotNull FeatureCollectionRequest withFeatures(final @NotNull List<? extends @NotNull NakshaFeature> features) {
+    setFeatures(features);
+    return this;
   }
 
   /**

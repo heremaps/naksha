@@ -6,6 +6,11 @@ import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
     kotlin("plugin.js-plain-objects")
+    id("naksha.publish")
+    id("naksha.java")
+
+    // uncomment spotless to add license comments
+    // id("naksha.spotless-kotlin")
 }
 
 kotlin {
@@ -23,7 +28,7 @@ kotlin {
                 implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
+                implementation(Lib.kotlinx_datetime)
             }
         }
         jvmMain {
@@ -31,12 +36,11 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(kotlin("reflect"))
-                api("org.lz4:lz4-java:1.8.0")
-                implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2")
+                api(Lib.lz4_java)
+                implementation(Lib.jackson_kotlin)
                 // https://mvnrepository.com/artifact/org.slf4j
-                api("org.slf4j:slf4j-api:2.0.13")
-                implementation("org.slf4j:slf4j-simple:2.0.13")
-                api("org.lz4:lz4-java:1.8.0")
+                api(Lib.slf4j_api)
+                implementation(Lib.slf4j_console)
             }
             resources.setSrcDirs(resources.srcDirs + "${layout.buildDirectory}/dist/js/productionExecutable/")
         }
@@ -133,3 +137,4 @@ tasks {
         maxHeapSize = "8g"
     }
 }
+setOverallCoverage(0.0) // only increasing allowed!

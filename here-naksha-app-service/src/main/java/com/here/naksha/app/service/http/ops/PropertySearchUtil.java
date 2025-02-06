@@ -1,4 +1,5 @@
-///*
+// TODO: cleanup as part of CASL-784
+//*
 // * Copyright (C) 2017-2024 HERE Europe B.V.
 // *
 // * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +22,7 @@
 //import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.*;
 //import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.COMMA;
 //import static com.here.naksha.lib.core.models.payload.events.QueryOperation.*;
-//import static com.here.naksha.lib.core.util.storage.RequestHelper.pRefFromPropPath;
+//import static naksha.model.util.RequestHelper.pRefFromPropPath;
 //import static naksha.model.request.query.Property.PROPERTIES;
 //
 //import com.here.naksha.lib.core.exceptions.XyzErrorException;
@@ -62,6 +63,11 @@
 //   * Multiple parameter values concatenated with "," (COMMA) delimiter, will result into OR list.
 //   * <br>
 //   * So, "p.prop_1=value_1,value_11" will form OR condition as (p.prop_1=value_1 OR p.prop_1=value_11).
+//   * <br>
+//   * NOTE that OR condition is supported only for the same one key and multiple values only, not for multiple key value pairs.
+//   * The reason is to prevent complication when transformation between property search and other types of search like tag search is employed (for example through Source ID Handler).
+//   * So, "?p.property_name_1=value_1 OR p.@ns:com:here:mom:meta.sourceId=abc" through Source ID Handler would then become an OR between a property search (the first clause unchanged) and a tag search (the second clause transformed), which is not supported.
+//   * Only AND relation is supported between different types of search (property, tag, spatial,...).
 //   * </p>
 //   *
 //   * @param queryParams API query parameter from where property search params need to be extracted

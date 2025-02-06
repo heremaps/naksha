@@ -1,19 +1,22 @@
 package com.here.naksha.lib.handlers;
 
-import naksha.model.XyzFeature;
-import naksha.model.XyzFeatureCollection;
-import com.here.naksha.lib.core.models.storage.*;
-import com.here.naksha.lib.core.util.storage.RequestHelper;
+import naksha.model.util.RequestHelper;
 import com.here.naksha.test.common.FileUtil;
-import com.here.naksha.test.common.JsonUtil;
-import com.here.naksha.test.common.assertions.POpAssertion;
-import naksha.model.POp;
-import naksha.model.POpType;
-import naksha.model.PRef;
-import naksha.model.ReadFeatures;
+import naksha.base.FromJsonOptions;
+import naksha.base.JvmMap;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
+import naksha.base.ToJsonOptions;
+import naksha.model.XyzFeatureCollection;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Write;
+import naksha.model.request.WriteRequest;
+import naksha.model.request.query.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -26,8 +29,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import static naksha.model.PRef.TAGS_PROP_PATH;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class TagFilterHandlerTest {
 
@@ -40,11 +43,9 @@ class TagFilterHandlerTest {
         // When: a function is called with request and tag filter configuration
         TagFilterHandler.applyFilterConditionOnRequest(request, tagFilter);
         // Then: Validate that Tags "exists" condition is added to request
-        POpAssertion.assertThatOperation(request.getPropertyOp())
-                .hasType(POpType.EXISTS)
-                .hasPRefWithPath(TAGS_PROP_PATH)
-                .existsWithTagName("violated_ftype_topology")
-        ;
+        final ITagQuery tagQuery = request.getQuery().getTags();
+        Assertions.assertInstanceOf(TagExists.class, tagQuery);
+        assertEquals("violated_ftype_topology", ((TagExists) tagQuery).getName());
     }
 
     @Test
@@ -56,71 +57,73 @@ class TagFilterHandlerTest {
         // When: a function is called with request and tag filter configuration
         TagFilterHandler.applyFilterConditionOnRequest(request, tagFilter);
         // Then: Validate that Tags "and" condition is added to request with multiple tag filters
-        POpAssertion.assertThatOperation(request.getPropertyOp())
-                .hasType(POpType.AND)
-                .hasChildrenThat(
-                        op1 -> op1.hasType(POpType.EXISTS).hasPRefWithPath(TAGS_PROP_PATH).existsWithTagName("violated_ftype_topology"),
-                        op2 -> op2.hasType(POpType.EXISTS).hasPRefWithPath(TAGS_PROP_PATH).existsWithTagName("some_other_tag")
-                )
-        ;
+        final ITagQuery tagQuery = request.getQuery().getTags();
+        Assertions.assertInstanceOf(TagAnd.class, tagQuery);
+        List<String> tagNameList = ((TagAnd) tagQuery).stream()
+                .map(tagOp -> (TagExists) tagOp)
+                .map(TagExists::getName).toList();
+        assertEquals(tagFilter.size(), tagNameList.size());
+        Assertions.assertTrue(tagNameList.contains("violated_ftype_topology"));
+        Assertions.assertTrue(tagNameList.contains("some_other_tag"));
     }
 
     @Test
     void testReadWithPOpAndSingleTagFilter() {
         // Given: ReadFeatures request with atleast one property operation
-        final POp inputPOp = POp.eq(PRef.uuid(),"some_uuid_value");
-        final ReadFeatures request = new ReadFeatures().withPropertyOp(inputPOp);
+        final PQuery pQuery = new PQuery(new Property("foo"), StringOp.EQUALS, "value");
+        final ReadFeatures request = new ReadFeatures();
+        request.getQuery().setProperties(pQuery);
         // Given: single tag filter
         final List<String> tagFilter = List.of("violated_ftype_topology");
         // When: a function is called with request and tag filter configuration
         TagFilterHandler.applyFilterConditionOnRequest(request, tagFilter);
-        // Then: Validate that Tags "and" condition is added to request including original inputPOp and Tag condition
-        POpAssertion.assertThatOperation(request.getPropertyOp())
-                .hasType(POpType.AND)
-                .hasChildrenThat(
-                        op1 -> assertEquals(inputPOp, op1.getPOp()),
-                        op2 -> op2.hasType(POpType.EXISTS).hasPRefWithPath(TAGS_PROP_PATH).existsWithTagName("violated_ftype_topology")
-                )
-        ;
+        // Then: Validate that tag query and property query are both added unaffected by each other
+        final ITagQuery tagQuery = request.getQuery().getTags();
+        Assertions.assertInstanceOf(TagExists.class, tagQuery);
+        assertEquals("violated_ftype_topology", ((TagExists) tagQuery).getName());
+        assertEquals(pQuery, request.getQuery().getProperties());
     }
 
     @Test
     void testReadWithPOpAndMultipleTagFilters() {
         // Given: ReadFeatures request with atleast one property operation
-        final POp inputPOp = POp.eq(PRef.uuid(),"some_uuid_value");
-        final ReadFeatures request = new ReadFeatures().withPropertyOp(inputPOp);
+        final PQuery pQuery = new PQuery(new Property("foo"), StringOp.EQUALS, "value");
+        final ReadFeatures request = new ReadFeatures();
+        request.getQuery().setProperties(pQuery);
         // Given: multiple tag filters
         final List<String> tagFilter = List.of("violated_ftype_topology","some_other_tag");
         // When: a function is called with request and tag filter configuration
         TagFilterHandler.applyFilterConditionOnRequest(request, tagFilter);
-        // Then: Validate that Tags "and" condition is added to request including original inputPOp
-        // and nested "and" condition between multiple Tags
-        POpAssertion.assertThatOperation(request.getPropertyOp())
-                .hasType(POpType.AND)
-                .hasChildrenThat(
-                        op1 -> assertEquals(inputPOp, op1.getPOp()),
-                        op2 -> op2.hasType(POpType.AND)
-                                .hasChildrenThat(
-                                        cop1 -> cop1.hasType(POpType.EXISTS).hasPRefWithPath(TAGS_PROP_PATH).existsWithTagName("violated_ftype_topology"),
-                                        cop2 -> cop2.hasType(POpType.EXISTS).hasPRefWithPath(TAGS_PROP_PATH).existsWithTagName("some_other_tag")
-                                )
-                )
-        ;
+        // Then: Validate that Tags "and" condition is added to request
+        // with nested "and" condition between multiple Tags
+        // and property query unaffected
+        final ITagQuery tagQuery = request.getQuery().getTags();
+        Assertions.assertInstanceOf(TagAnd.class, tagQuery);
+        List<String> tagNameList = ((TagAnd) tagQuery).stream()
+                .map(tagOp -> (TagExists) tagOp)
+                .map(TagExists::getName).toList();
+        assertEquals(tagFilter.size(), tagNameList.size());
+        Assertions.assertTrue(tagNameList.contains("violated_ftype_topology"));
+        Assertions.assertTrue(tagNameList.contains("some_other_tag"));
+        assertEquals(pQuery, request.getQuery().getProperties());
     }
 
     @Test
     void testReadWithPOpButWithoutTagFilter() {
         // Given: ReadFeatures request with atleast one property operation
-        final POp inputPOp = POp.eq(PRef.uuid(),"some_uuid_value");
-        final ReadFeatures request = new ReadFeatures().withPropertyOp(inputPOp);
+        final PQuery pQuery = new PQuery(new Property("foo"), StringOp.EQUALS, "value");
+        final ReadFeatures request = new ReadFeatures();
+        request.getQuery().setProperties(pQuery);
         // When: a function is called with request and no tag filter configuration (i.e. null)
         TagFilterHandler.applyFilterConditionOnRequest(request, null);
         // Then: Validate that existing request operation remains unchanged
-        assertEquals(inputPOp, request.getPropertyOp(), "Expected request operation same as input operation");
+        assertEquals(pQuery, request.getQuery().getProperties(), "Expected request operation same as input operation");
+        assertNull(request.getQuery().getTags(), "Expected request having no tag query but there is");
         // When: a function is called with request and empty tag filter configuration
         TagFilterHandler.applyFilterConditionOnRequest(request, List.of());
         // Then: Validate that existing request operation remains unchanged
-        assertEquals(inputPOp, request.getPropertyOp(), "Expected request operation same as input operation");
+        assertEquals(pQuery, request.getQuery().getProperties(), "Expected request operation same as input operation");
+        assertNull(request.getQuery().getTags(), "Expected request having no tag query but there is");
     }
 
     private static Stream<Arguments> writeTestData() {
@@ -176,25 +179,28 @@ class TagFilterHandlerTest {
                                final @NotNull String outputFilePath) throws JSONException {
         // Given: WriteXyzFeatures request with some tags already part of features
         final String featuresJson = FileUtil.loadFileOrFail(inputFilePath);
-        final XyzFeatureCollection inputCollection = JsonUtil.parseJson(featuresJson, XyzFeatureCollection.class);
-        final WriteXyzFeatures wf = RequestHelper.upsertFeaturesRequest("some_space", inputCollection.getFeatures());
-        // Given: Expected feature collection JSON
+        final JvmMap rawInputCollection = (JvmMap) Platform.fromJSON(featuresJson, FromJsonOptions.DEFAULT);
+        final XyzFeatureCollection inputCollection = JvmBoxingUtil.box(rawInputCollection, XyzFeatureCollection.class);
+        final WriteRequest wf = RequestHelper.upsertFeaturesRequest("some_space", inputCollection.getFeatures());
+
+        // And: Expected feature collection JSON
         final String expectedJson = FileUtil.loadFileOrFail(outputFilePath);
 
         // When: a function is called with request and given tag filter configuration
+
         TagFilterHandler.applyTagChangesOnRequest(wf, addTags, removeTags);
         // Then: Validate that the output features in the request is as expected
-        final String actualJson = covertWriteFeaturesToCollectionJson(wf.features);
+        final String actualJson = covertWriteFeaturesToCollectionJson(wf.getWrites());
         JSONAssert.assertEquals("List of output features don't match", expectedJson, actualJson, JSONCompareMode.STRICT_ORDER);
     }
 
-    private String covertWriteFeaturesToCollectionJson(final @NotNull List<XyzFeatureCodec> codecList) {
-        final List<XyzFeature> features = new ArrayList<>();
-        for (final @NotNull XyzFeatureCodec codec : codecList) {
-            features.add(codec.getFeature());
+    private String covertWriteFeaturesToCollectionJson(final @NotNull List<Write> writes) {
+        final List<NakshaFeature> features = new ArrayList<>();
+        for (final @NotNull Write write : writes) {
+            features.add(write.getFeature());
         }
         final XyzFeatureCollection outputCollection = new XyzFeatureCollection().withFeatures(features);
-        return JsonUtil.toJson(outputCollection);
+        return Platform.toJSON(outputCollection, ToJsonOptions.DEFAULT);
     }
 
 }

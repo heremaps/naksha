@@ -25,15 +25,17 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
-import com.here.naksha.lib.core.models.naksha.EventTarget;
-import com.here.naksha.lib.core.models.storage.*;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
-import java.util.*;
-
-import naksha.model.*;
+import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
+import java.util.List;
+import java.util.Objects;
+import naksha.base.JvmBoxingUtil;
+import naksha.model.XyzNs;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.*;
+import naksha.model.request.query.ITagQuery;
+import naksha.model.request.query.TagAnd;
+import naksha.model.request.query.TagExists;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -45,26 +47,24 @@ public class TagFilterHandler extends AbstractEventHandler {
 
   private final @NotNull TagFilterHandlerProperties properties;
 
-  public TagFilterHandler(
-      final @NotNull EventHandler eventHandler,
-      final @NotNull INaksha hub,
-      final @NotNull EventTarget<?> eventTarget) {
+  public TagFilterHandler(final @NotNull EventHandler eventHandler, final @NotNull INaksha hub) {
     super(hub);
-    this.properties = JsonSerializable.convert(eventHandler.getProperties(), TagFilterHandlerProperties.class);
+    this.properties = Objects.requireNonNull(
+        JvmBoxingUtil.box(eventHandler.getProperties(), TagFilterHandlerProperties.class));
   }
 
   @Override
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
-    final Request<?> request = event.getRequest();
-    if (request instanceof ReadFeatures || request instanceof WriteFeatures) {
+    final Request request = event.getRequest();
+    if (request instanceof ReadFeatures || request instanceof WriteRequest) {
       return PROCESS;
     }
     return SEND_UPSTREAM_WITHOUT_PROCESSING;
   }
 
   @Override
-  public @NotNull Result process(@NotNull IEvent event) {
-    final Request<?> request = event.getRequest();
+  public @NotNull Response process(@NotNull IEvent event) {
+    final Request request = event.getRequest();
     logger.info("Handler received request {}", request.getClass().getSimpleName());
 
     // Forward the request without changing it, if no tag configuration specified
@@ -77,7 +77,7 @@ public class TagFilterHandler extends AbstractEventHandler {
 
     if (request instanceof ReadFeatures readRequest) {
       applyFilterConditionOnRequest(readRequest, properties.getContains());
-    } else if (request instanceof WriteFeatures<?, ?, ?> wf) {
+    } else if (request instanceof WriteRequest wf) {
       applyTagChangesOnRequest(wf, properties.getAdd(), properties.getRemoveWithPrefixes());
     }
 
@@ -89,50 +89,46 @@ public class TagFilterHandler extends AbstractEventHandler {
     if (isNullOrEmpty(tagValues)) {
       return;
     }
-    final POp origPOp = readRequest.getPropertyOp();
-    final POp tagFilterOp = buildFilterOperationForTags(tagValues);
-    final POp newOp = (origPOp == null) ? tagFilterOp : POp.and(origPOp, tagFilterOp);
-    readRequest.setPropertyOp(newOp);
+    final ITagQuery tagFilterOp = buildFilterOperationForTags(tagValues);
+    readRequest.getQuery().setTags(tagFilterOp);
   }
 
-  private static POp buildFilterOperationForTags(final @NotNull List<String> tagValues) {
+  private static ITagQuery buildFilterOperationForTags(final @NotNull List<String> tagValues) {
     // Do we have only one tag? Then use EXISTS operation
     if (tagValues.size() == 1) {
-      return POp.exists(PRef.tag(tagValues.get(0)));
+      return new TagExists(tagValues.get(0));
     }
     // we have multiple tags, so use AND operation
-    final POp[] ops = new POp[tagValues.size()];
+    final TagExists[] tagExistsList = new TagExists[tagValues.size()];
     int idx = 0;
     for (final @NotNull String value : tagValues) {
-      ops[idx++] = POp.exists(PRef.tag(value));
+      tagExistsList[idx++] = new TagExists(value);
     }
-    return POp.and(ops);
+    return new TagAnd(tagExistsList);
   }
 
   public static void applyTagChangesOnRequest(
-      final @NotNull WriteFeatures<?, ?, ?> wf,
+      final @NotNull WriteRequest wf,
       final @Nullable List<String> addTags,
       final @Nullable List<String> removeTags) {
     if (isNullOrEmpty(addTags) && isNullOrEmpty(removeTags)) return;
-    List<XyzFeatureCodec> codecList = null;
-    if (wf instanceof WriteXyzFeatures wxf) {
-      codecList = wxf.features;
-    } else if (wf instanceof ContextWriteXyzFeatures cwxf) {
-      codecList = cwxf.features;
+    WriteList writeList = wf.getWrites();
+    if (wf instanceof ContextWriteXyzFeatures cwxf) {
+      writeList = cwxf.getWrites();
     }
-    if (isNotNullOrEmpty(codecList)) {
-      for (final @NotNull XyzFeatureCodec codec : codecList) {
-        applyTagChangesOnFeature(codec.getFeature(), addTags, removeTags);
+    if (isNotNullOrEmpty(writeList)) {
+      for (final @NotNull Write writeOperation : writeList) {
+        applyTagChangesOnFeature(writeOperation.getFeature(), addTags, removeTags);
       }
     }
   }
 
   private static void applyTagChangesOnFeature(
-      final @Nullable XyzFeature feature,
+      final @Nullable NakshaFeature feature,
       final @Nullable List<String> addTags,
       final @Nullable List<String> removeTags) {
     if (feature == null) return;
-    final XyzNamespace xyzNS = feature.getProperties().getXyzNamespace();
+    final XyzNs xyzNS = feature.getProperties().getXyz();
     // NOTE - we need to remove existing tags first, before adding new ones
     if (isNotNullOrEmpty(removeTags)) xyzNS.removeTagsWithPrefixes(removeTags);
     if (isNotNullOrEmpty(addTags)) xyzNS.addTags(addTags, true);

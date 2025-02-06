@@ -4,6 +4,9 @@ package naksha.psql
 
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_NUMBER
+import naksha.model.NakshaContext.NakshaContextCompanion.currentContext
+import naksha.model.NakshaError.NakshaErrorCompanion.UNAUTHORIZED
+import naksha.model.NakshaException
 import naksha.model.objects.NakshaCollection
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
@@ -61,4 +64,35 @@ open class PgMap internal constructor(
      */
     @JvmField
     val quotedId = quoteIdent(id)
+
+    /**
+     * Drop the schema.
+     *
+     * The method does auto-commit, if no [connection] was given; otherwise committing must be done explicitly.
+     * @param connection the connection to use to query information from the database; if _null_, a new connection is used temporary.
+     */
+    open fun drop(connection: PgConnection? = null) {
+        check(currentContext().su) { throw NakshaException(UNAUTHORIZED, "Only superusers may drop schemata") }
+        val conn = connOf(connection)
+        try {
+            conn.execute("DROP SCHEMA ${quoteIdent(id)} CASCADE").close()
+        } finally {
+            closeOf(conn, connection, true)
+        }
+    }
+
+    /**
+     * Returns either the given connection, or opens a new admin connection, when the given connection is _null_.
+     */
+    private fun connOf(connection: PgConnection?): PgConnection = connection ?: storage.adminConnection()
+
+    /**
+     * The counter-part of [connOf], if the connection is _null_, closes [conn], if [commitOnClose] is _true_, commit changes before closing. Does nothing, when the [connection] is not _null_ ([commitOnClose] is ignored in this case).
+     */
+    private fun closeOf(conn: PgConnection, connection: PgConnection?, commitOnClose: Boolean) {
+        if (conn !== connection) {
+            if (commitOnClose) conn.commit()
+            conn.close()
+        }
+    }
 }

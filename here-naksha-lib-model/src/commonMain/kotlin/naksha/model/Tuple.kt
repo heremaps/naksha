@@ -160,5 +160,10 @@ data class Tuple(
 
     // TODO: toByteArray - if isComplete, this method should create a single binary out of the tuple, so that it can be stored in a cache!
     // TODO: fromByteArray - restore from the binary form
+
+    /**
+     * @return previous tuple number if available
+     */
+    fun getPrevTupleNumber(): TupleNumber? = meta.prevTupleNumber
 }
 

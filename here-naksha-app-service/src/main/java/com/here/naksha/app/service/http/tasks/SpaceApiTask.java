@@ -152,7 +152,7 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
   private @Nullable Space maybePersistedSpace(String spaceId) {
     final ReadFeatures getSpace = new ReadFeatures(SPACES).withPropertyOp(POp.eq(PRef.id(), spaceId));
     try (Result rr = executeReadRequestFromSpaceStorage(getSpace)) {
-      return ResultHelper.readFeatureFromResult(rr, Space.class);
+      return ResultHelper.readFeatureFromResponse(rr, Space.class);
     } catch (NoSuchElementException e) {
       return null;
     }

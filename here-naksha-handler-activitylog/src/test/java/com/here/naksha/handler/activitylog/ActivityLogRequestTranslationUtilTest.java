@@ -1,14 +1,15 @@
 package com.here.naksha.handler.activitylog;
 
-import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PREF_ACTIVITY_LOG_ID;
-import static naksha.model.PRef.id;
-import static naksha.model.PRef.uuid;
+import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PROPERTY_ACTIVITY_LOG_ID;
+import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PROPERTY_UUID;
 
-import naksha.model.POp;
-import naksha.model.POpType;
-import naksha.model.ReadFeatures;
-import com.here.naksha.test.common.assertions.POpAssertion;
+import com.here.naksha.test.common.assertions.AssertionIPropertyQuery;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.query.*;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 class ActivityLogRequestTranslationUtilTest {
 
@@ -16,16 +17,17 @@ class ActivityLogRequestTranslationUtilTest {
   void shouldTranslateIdToUuid() {
     // Given:
     String expectedId = "some_id";
-    POp singleIdQuery = POp.eq(id(), expectedId);
-    ReadFeatures readFeatures = new ReadFeatures().withPropertyOp(singleIdQuery);
+    PQuery singleIdQuery = new PQuery(new Property(NakshaFeature.ID_KEY), StringOp.EQUALS, expectedId);
+    ReadFeatures readFeatures = new ReadFeatures();
+    readFeatures.getQuery().setProperties(singleIdQuery);
 
     // When:
     ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
 
     // Then:
-    POpAssertion.assertThatOperation(readFeatures.getPropertyOp())
-        .hasType(POpType.EQ)
-        .hasPRef(uuid())
+    AssertionIPropertyQuery.assertThatOperation(readFeatures.getQuery().getProperties())
+        .hasType(StringOp.EQUALS)
+        .hasProperty(PROPERTY_UUID)
         .hasValue(expectedId);
   }
 
@@ -34,26 +36,28 @@ class ActivityLogRequestTranslationUtilTest {
     // Given:
     String firstId = "id_1";
     String secondId = "id_2";
-    POp idsQuery = POp.or(
-        POp.eq(id(), firstId),
-        POp.eq(id(), secondId)
+    final Property idProperty = new Property(NakshaFeature.ID_KEY);
+    IPropertyQuery idsQuery = new POr(
+        new PQuery(idProperty, StringOp.EQUALS, firstId),
+            new PQuery(idProperty, StringOp.EQUALS, secondId)
     );
-    ReadFeatures readFeatures = new ReadFeatures().withPropertyOp(idsQuery);
+    ReadFeatures readFeatures = new ReadFeatures();
+    readFeatures.getQuery().setProperties(idsQuery);
 
     // When:
     ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
 
     // Then:
-    POpAssertion.assertThatOperation(readFeatures.getPropertyOp())
-        .hasType(POpType.OR)
+    AssertionIPropertyQuery.assertThatOperation(readFeatures.getQuery().getProperties())
+        .isPOr()
         .hasChildrenThat(
             first -> first
-                .hasType(POpType.EQ)
-                .hasPRef(uuid())
+                .hasType(StringOp.EQUALS)
+                .hasProperty(PROPERTY_UUID)
                 .hasValue(firstId),
             second -> second
-                .hasType(POpType.EQ)
-                .hasPRef(uuid())
+                .hasType(StringOp.EQUALS)
+                .hasProperty(PROPERTY_UUID)
                 .hasValue(secondId)
         );
   }
@@ -62,16 +66,17 @@ class ActivityLogRequestTranslationUtilTest {
   void shouldTranslateActivityLogIdToId() {
     // Given:
     String expectedId = "some_id";
-    POp singleActivityLogIdQuery = POp.eq(PREF_ACTIVITY_LOG_ID, expectedId);
-    ReadFeatures readFeatures = new ReadFeatures().withPropertyOp(singleActivityLogIdQuery);
+    PQuery singleActivityLogIdQuery = new PQuery(PROPERTY_ACTIVITY_LOG_ID, StringOp.EQUALS, expectedId);
+    ReadFeatures readFeatures = new ReadFeatures();
+    readFeatures.getQuery().setProperties(singleActivityLogIdQuery);
 
     // When:
     ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
 
     // Then:
-    POpAssertion.assertThatOperation(readFeatures.getPropertyOp())
-        .hasType(POpType.EQ)
-        .hasPRef(id())
+    AssertionIPropertyQuery.assertThatOperation(readFeatures.getQuery().getProperties())
+        .hasType(StringOp.EQUALS)
+        .hasProperty(List.of(NakshaFeature.ID_KEY))
         .hasValue(expectedId);
   }
 
@@ -80,26 +85,27 @@ class ActivityLogRequestTranslationUtilTest {
     // Given:
     String firstId = "id_1";
     String secondId = "id_2";
-    POp activityLogIdsQuery = POp.or(
-        POp.eq(PREF_ACTIVITY_LOG_ID, firstId),
-        POp.eq(PREF_ACTIVITY_LOG_ID, secondId)
+    IPropertyQuery activityLogIdsQuery = new POr(
+            new PQuery(PROPERTY_ACTIVITY_LOG_ID, StringOp.EQUALS, firstId),
+            new PQuery(PROPERTY_ACTIVITY_LOG_ID, StringOp.EQUALS, secondId)
     );
-    ReadFeatures readFeatures = new ReadFeatures().withPropertyOp(activityLogIdsQuery);
+    ReadFeatures readFeatures = new ReadFeatures();
+    readFeatures.getQuery().setProperties(activityLogIdsQuery);
 
     // When:
     ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
 
     // Then:
-    POpAssertion.assertThatOperation(readFeatures.getPropertyOp())
-        .hasType(POpType.OR)
+    AssertionIPropertyQuery.assertThatOperation(readFeatures.getQuery().getProperties())
+        .isPOr()
         .hasChildrenThat(
             first -> first
-                .hasType(POpType.EQ)
-                .hasPRef(id())
+                    .hasType(StringOp.EQUALS)
+                    .hasProperty(List.of(NakshaFeature.ID_KEY))
                 .hasValue(firstId),
             second -> second
-                .hasType(POpType.EQ)
-                .hasPRef(id())
+                    .hasType(StringOp.EQUALS)
+                    .hasProperty(List.of(NakshaFeature.ID_KEY))
                 .hasValue(secondId)
         );
   }
@@ -109,26 +115,27 @@ class ActivityLogRequestTranslationUtilTest {
     // Given:
     String id = "id";
     String activityLogId = "activity_log_id";
-    POp mixedQuery = POp.or(
-        POp.eq(id(), id),
-        POp.eq(PREF_ACTIVITY_LOG_ID, activityLogId)
+    IPropertyQuery mixedQuery = new POr(
+            new PQuery(new Property(NakshaFeature.ID_KEY), StringOp.EQUALS, id),
+            new PQuery(PROPERTY_ACTIVITY_LOG_ID, StringOp.EQUALS, activityLogId)
     );
-    ReadFeatures readFeatures = new ReadFeatures().withPropertyOp(mixedQuery);
+    ReadFeatures readFeatures = new ReadFeatures();
+    readFeatures.getQuery().setProperties(mixedQuery);
 
     // When:
     ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
 
     // Then:
-    POpAssertion.assertThatOperation(readFeatures.getPropertyOp())
-        .hasType(POpType.OR)
+    AssertionIPropertyQuery.assertThatOperation(readFeatures.getQuery().getProperties())
+        .isPOr()
         .hasChildrenThat(
             first -> first
-                .hasType(POpType.EQ)
-                .hasPRef(uuid())
+                    .hasType(StringOp.EQUALS)
+                    .hasProperty(PROPERTY_UUID)
                 .hasValue(id),
             second -> second
-                .hasType(POpType.EQ)
-                .hasPRef(id())
+                    .hasType(StringOp.EQUALS)
+                    .hasProperty(List.of(NakshaFeature.ID_KEY))
                 .hasValue(activityLogId)
         );
   }

@@ -21,7 +21,6 @@ package com.here.naksha.app.service.http.tasks;
 import static com.here.naksha.app.service.http.apis.ApiParams.*;
 import static com.here.naksha.common.http.apis.ApiParamsConst.*;
 import static naksha.diff.PatcherUtils.removeAllRemoveOp;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.HttpResponseType;
@@ -29,10 +28,12 @@ import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.util.storage.ResultHelper;
 import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
+import naksha.model.SessionOptions;
 import naksha.model.XyzFeature;
 import naksha.model.ReadFeatures;
 import naksha.model.XyzResponse;
@@ -270,7 +271,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
             er.reason, er.message, "Received error result while reading features in storage: {}", er);
       }
       try {
-        featuresToPatchFromStorage = readFeaturesFromResult(result, XyzFeature.class);
+        featuresToPatchFromStorage = ResultHelper.extractResponseItems(result, XyzFeature.class);
       } catch (NoCursor | NoSuchElementException emptyException) {
         if (responseType.equals(HttpResponseType.FEATURE)) {
           // If this is patching only 1 feature (PATCH by ID), return not found
@@ -294,18 +295,18 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
     final WriteXyzFeatures wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, patchedFeatures);
     // Forward request to NH Space Storage writer instance
-    try (final IWriteSession writer = naksha().getSpaceStorage().newWriteSession(context(), true)) {
+    try (final IWriteSession writer = naksha().getSpaceStorage().newWriteSession(SessionOptions.from(context(), true))) {
       final Result wrResult = writer.execute(wrRequest);
       if (wrResult == null) {
         // unexpected null response
-        writer.rollback(true);
+        writer.rollback();
         writer.close();
         return returnError(
             XyzError.EXCEPTION,
             "Unexpected null result.",
             "Received null result after writing patched features, rolled back.");
       } else if (wrResult instanceof ErrorResult er) {
-        writer.rollback(true);
+        writer.rollback();
         writer.close();
         try (ForwardCursor<XyzFeature, XyzFeatureCodec> resultCursor = er.getXyzFeatureCursor()) {
           if (!resultCursor.hasNext()) {

@@ -57,6 +57,8 @@ open class Property() : MetaColumn(FEATURE) {
          */
         const val XYZ = "@ns:com:here:xyz"
 
+        const val TAGS = "tags"
+
         private val PATH = NotNullProperty<Property, StringList>(StringList::class)
     }
 

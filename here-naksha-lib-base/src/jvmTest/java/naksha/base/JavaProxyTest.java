@@ -18,61 +18,56 @@
  */
 package naksha.base;
 
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import kotlin.reflect.full.IllegalCallableAccessException;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
+/**
+ * @see SampleJavaProxy definition
+ */
 class JavaProxyTest {
 
   @Test
-  void shouldAllowProxyingInJava() {
-    // Given:
-    ProxyParent parent = new ProxyParent();
+  void shouldProperlyReadAndWriteFields() {
+    // Given
+    String id = "sample_id";
+    String title = "random_title";
+    UUID version = UUID.randomUUID();
 
-    // When:
-    var child = parent.proxy(Platform.klassOf(ProxyChild.class));
+    // When
+    SampleJavaProxy javaProxy = new SampleJavaProxy();
+    javaProxy.setId(id);
+    javaProxy.setTitle(title);
+    javaProxy.setVersion(version);
 
-    // Then:
-    assertNotNull(child);
-    assertInstanceOf(ProxyChild.class, child);
+    // Then
+    assertEquals(id, javaProxy.getId());
+    assertEquals(title, javaProxy.getTitle());
+    assertEquals(version, javaProxy.getVersion());
   }
 
   @Test
-  void shouldFailForProxyWithoutNonArgConstructor() {
-    // Given:
-    ProxyParent parent = new ProxyParent();
+  void shouldReturnDefaultObjectForMissingNotNullableProperty() {
+    // Given: proxy without id set
+    SampleJavaProxy javaProxy = new SampleJavaProxy();
 
-    // Then:
-    assertThrows(IllegalArgumentException.class, () -> {
-      parent.proxy(Platform.klassOf(ProxyChildWithoutNonArgConstructor.class));
-    });
+    // When: obtaining id
+    String id = javaProxy.getId();
+
+    // Then: default value for String type ("") is returned
+    assertEquals("", id);
   }
 
   @Test
-  void shouldFailForProxyWithUnsifficientVisibility() {
-    // Given:
-    ProxyParent parent = new ProxyParent();
+  void shouldReturnCalculatedValueByDefault() {
+    // Given: proxy without uuid set (which has own initializer)
+    SampleJavaProxy javaProxy = new SampleJavaProxy();
 
-    // Then:
-    assertThrows(IllegalCallableAccessException.class, () -> {
-      parent.proxy(Platform.klassOf(ProxyChildWithoutPublicConstructor.class));
-    });
-  }
+    // When: obtaining uuid
+    UUID version = javaProxy.getVersion();
 
-  static class ProxyParent extends AnyObject {}
-
-  public static class ProxyChild extends ProxyParent {}
-
-  public static class ProxyChildWithoutPublicConstructor extends ProxyParent {
-    ProxyChildWithoutPublicConstructor() {
-      // hello from package-private
-    }
-  }
-
-  static class ProxyChildWithoutNonArgConstructor extends ProxyParent {
-    ProxyChildWithoutNonArgConstructor(String unusedParam) {}
+    // Then
+    assertEquals(SampleJavaProxy.DEFAULT_VERSION, version);
   }
 }

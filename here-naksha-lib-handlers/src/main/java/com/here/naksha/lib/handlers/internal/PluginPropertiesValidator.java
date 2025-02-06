@@ -18,21 +18,21 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.Plugin;
-import naksha.model.ErrorResult;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
+import naksha.model.NakshaError;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
 
 final class PluginPropertiesValidator {
 
   private PluginPropertiesValidator() {}
 
-  static Result pluginValidation(Plugin plugin) {
+  static Response pluginValidation(Plugin plugin) {
     if (plugin.getClassName() == null || plugin.getClassName().isEmpty()) {
-      return new ErrorResult(
-          XyzError.ILLEGAL_ARGUMENT, "Mandatory parameter '" + Plugin.CLASS_NAME + "' missing!");
+      return new ErrorResponse(
+          NakshaError.ILLEGAL_ARGUMENT, "Mandatory parameter '" + Plugin.CLASS_NAME + "' missing!");
     }
-    return new SuccessResult();
+    return new SuccessResponse();
   }
 }

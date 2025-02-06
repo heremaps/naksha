@@ -18,17 +18,17 @@
  */
 package com.here.naksha.lib.handlers;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import naksha.model.NakshaVersion;
-import naksha.geo.XyzProperties;
 import java.util.List;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.StringList;
+import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @AvailableSince(NakshaVersion.v2_0_12)
-public class DefaultViewHandlerProperties extends XyzProperties {
+public class DefaultViewHandlerProperties extends NakshaProperties {
 
   @AvailableSince(NakshaVersion.v2_0_12)
   public static final String STORAGE_ID = "storageId";
@@ -39,50 +39,28 @@ public class DefaultViewHandlerProperties extends XyzProperties {
   @AvailableSince(NakshaVersion.v2_0_15)
   public static final String VIEW_TYPE = "viewType";
 
-  @AvailableSince(NakshaVersion.v2_0_12)
-  @JsonProperty(STORAGE_ID)
-  private @Nullable String storageId;
-
-  @AvailableSince(NakshaVersion.v2_0_12)
-  @JsonProperty(SPACE_IDS)
-  private @Nullable List<String> spaceIds;
-
-  @AvailableSince(NakshaVersion.v2_0_15)
-  @JsonProperty(VIEW_TYPE)
-  private @NotNull ViewType viewType;
-
-  @AvailableSince(NakshaVersion.v2_0_12)
-  @JsonCreator
-  public DefaultViewHandlerProperties(
-      final @JsonProperty(STORAGE_ID) @Nullable String storageId,
-      final @JsonProperty(SPACE_IDS) @Nullable List<String> spaceIds) {
-    this.storageId = storageId;
-    this.spaceIds = spaceIds;
-    this.viewType = ViewType.LAYERED;
-  }
-
   public @Nullable String getStorageId() {
-    return storageId;
+    return (String) getRaw(STORAGE_ID);
   }
 
   public void setStorageId(@Nullable String storageId) {
-    this.storageId = storageId;
+    setRaw(STORAGE_ID, storageId);
   }
 
   public @Nullable List<String> getSpaceIds() {
-    return spaceIds;
+    return JvmBoxingUtil.box(get(SPACE_IDS), StringList.class);
   }
 
   public void setSpaceIds(@Nullable List<String> spaceIds) {
-    this.spaceIds = spaceIds;
+    setRaw(SPACE_IDS, StringList.fromList(spaceIds));
   }
 
   public @NotNull ViewType getViewType() {
-    return viewType;
+    return JvmBoxingUtil.box(get(VIEW_TYPE), ViewType.class);
   }
 
   public void setViewType(@NotNull ViewType viewType) {
-    this.viewType = viewType;
+    setRaw(VIEW_TYPE, viewType);
   }
 
   public enum ViewType {
