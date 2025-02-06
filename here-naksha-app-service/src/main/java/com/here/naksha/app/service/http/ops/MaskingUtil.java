@@ -31,20 +31,20 @@ public class MaskingUtil {
   private MaskingUtil() {
   }
 
-  public static void maskProperties(NakshaFeature feature, Set<String> propertiesToMask) {
-    maskProperties(feature.getProperties(), propertiesToMask);
+  public static void maskProperties(NakshaFeature feature, Set<String> propertiesToMaskLowercase) {
+    maskProperties(feature.getProperties(), propertiesToMaskLowercase);
   }
 
-  private static void maskProperties(Map<String, Object> propertiesAsMap, Set<String> propertiesToMask) {
+  private static void maskProperties(Map<String, Object> propertiesAsMap, Set<String> propertiesToMaskLowercase) {
     for (Entry<String, Object> entry : propertiesAsMap.entrySet()) {
-      if (propertiesToMask.contains(entry.getKey())) {
+      if (propertiesToMaskLowercase.contains(entry.getKey().toLowerCase())) {
         entry.setValue(MASK);
       } else if (entry.getValue() instanceof Map) {
-        maskProperties((Map<String, Object>) entry.getValue(), propertiesToMask);
+        maskProperties((Map<String, Object>) entry.getValue(), propertiesToMaskLowercase);
       } else if (entry.getValue() instanceof ArrayList array) {
         // recursive call to the nested array json
         for (Object arrayEntry : array) {
-          maskProperties((Map<String, Object>) arrayEntry, propertiesToMask);
+          maskProperties((Map<String, Object>) arrayEntry, propertiesToMaskLowercase);
         }
       }
     }
