@@ -7,6 +7,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.model.NakshaVersion
 import naksha.model.NakshaException
 import naksha.model.NakshaError
+import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.psql.PgIndex.PgIndexCompanion.gist_geo_2d
 import naksha.psql.PgIndex.PgIndexCompanion.id_txn_uid
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
@@ -19,7 +20,7 @@ import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
  * @param mapId the schema name.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-class JvmPgAdminMap internal constructor(
+class PsqlAdminMap internal constructor(
     storage: PgStorage,
     config: PgConfig,
     create: Boolean?,
@@ -60,71 +61,31 @@ class JvmPgAdminMap internal constructor(
         }
         clusterField = PsqlCluster(master, replicas)
 
+        var adminMapOid = schemaOid ?: 0
         val conn = cluster.newConnection(Naksha.adminOptions, false)
         conn.use {
-            logger.info("Query database for identifier and version from {}, schema='{}'", conn, schemaName)
-            conn.execute(
-                """CREATE SCHEMA IF NOT EXISTS "naksha~admin";
-    SET SESSION search_path TO "naksha~admin", topology, hint_plan, public;"""
-            ).close()
-            var cursor = conn.execute(
-                """
-    SELECT oid, null AS pronamespace, 'schema' AS proname FROM pg_namespace WHERE nspname = $1
-    UNION ALL
-    SELECT oid, pronamespace, proname FROM pg_proc WHERE pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1)
-                                                     AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
-    """, arrayOf(schemaName)
-            )
-            var has_naksha_version_fn = false
-            var has_naksha_storage_id_fn = false
-            cursor.use {
-                while (cursor.next()) {
-                    val proname = cursor.column("proname")
-                    when (proname) {
-                        "schema" -> _oid = cursor["oid"]
-                        "naksha_version" -> has_naksha_version_fn = true
-                        "naksha_storage_id" -> has_naksha_storage_id_fn = true
-                    }
+            if (schemaOid == null) {
+                logger.info("Create admin schema")
+                conn.execute("CREATE SCHEMA IF NOT EXISTS \"naksha~admin\";").close()
+                conn.execute("SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'naksha~admin'").use { cursor ->
+                    adminMapOid = cursor["oid"]
                 }
             }
-            // If the storage has an ID, we need to guarantee that this function is called with correct id.
-            var existingStorageId: String? = null
-            var existingVersion: Int64? = null
-            if (has_naksha_storage_id_fn) {
-                val query = "SELECT naksha_storage_id() as id" + (if (has_naksha_version_fn) ", naksha_version() as v" else "null as v")
-                cursor = conn.execute(query).fetch()
-                existingStorageId = cursor.column("id") as String?
-                existingVersion = cursor.column("v") as Int64?
-            }
-            val storage_id: String = if (existingStorageId != null) {
-                if (storageId != null && storageId != existingStorageId) {
-                    throw NakshaException(STORAGE_ID_MISMATCH, "Expect $storageId, but found $existingStorageId")
-                }
-                existingStorageId
-            } else storageId ?: PlatformUtil.randomString()
+            logger.info("Set search_path")
+            conn.execute("SET SESSION search_path TO \"naksha~admin\", topology, hint_plan, public;").close()
 
-            if (existingStorageId == null && existingVersion == null) {
-                logger.info("Schema '{}' does not exist, installing new fresh Naksha ...", schemaName)
-            } else if (override) {
-                logger.info("Force storage installation into schema '{}' via override parameter, ignore current state ...", schemaName)
-            } else if ((existingStorageId != null) xor (existingVersion != null)) {
-                logger.info(
-                    "Schema '{}' is in a broken state (id: {}, version: {}), updating it ...",
-                    schemaName, existingStorageId, if (existingVersion != null) NakshaVersion(existingVersion) else null
-                )
-            } else if (existingVersion == Int64(0)) {
-                logger.info("Schema '{}' is installed with debug code (version=0), updating it ...")
-            } else if (existingVersion == version.toInt64()) {
-                logger.info("Schema '{}' is up to date (id: '{}', version: {}), do nothing", schemaName, storage_id, existingVersion)
-                return storage_id
+            if (installedVersion == psqlVersion) {
+                logger.info("Naksha admin map is up to date at version {}, do nothing", installedVersion)
+                return adminMapOid // Kotlin should know, that the variable is not null!
+            } else if (installedVersion != null) {
+                logger.info("Naksha admin map is outdated, current installed version is {}, updating it to {}", installedVersion, psqlVersion)
             } else {
-                logger.info("Schema '{}' is installed with older ({}), updating it to {} ...", schemaName, existingVersion, version)
+                logger.info("Install new admin schema")
             }
 
-            logger.info("Install/update module system of storage '{}', schema '{}' to version {}", storage_id, schemaName, version)
             val commonJs = getResourceAsText("/common.js")
             check(commonJs != null) { "Failed to load common.js from resources" }
-            executeSqlFromResource(conn, "/common.sql", replacements = mapOf("common.js" to commonJs, "schema" to nameQuoted))
+            executeSqlFromResource(conn, "/common.sql", replacements = mapOf("common.js" to commonJs))
 
             // Install default modules and SQL functions.
             installModuleFromResource(conn, "beautify", "/beautify.min.js", autoload = true)
@@ -199,26 +160,18 @@ class JvmPgAdminMap internal constructor(
             logger.info("Installation of modules done, install naksha.sql ...")
             executeSqlFromResource(
                 conn, "/naksha.sql", replacements = mapOf(
-                    "schemaIdent" to quoteIdent(Naksha.ADMIN_MAP),
-                    "schemaLiteral" to quoteLiteral(Naksha.ADMIN_MAP),
-                    "defaultSchemaLiteral" to quoteLiteral(storage.defaultSchemaName),
-                    "version" to (version.toLong()).toString(),
-                    "storageIdLiteral" to quoteLiteral(storage_id),
+                    "version" to (psqlVersion.toLong()).toString(),
+                    "storageIdLiteral" to quoteLiteral(storageId),
+                    "storageNumber" to storageNumber.toString()
                 )
             )
             // Note: We reserve the first 1000 collection sequences for internal collections with hard-coded
             //       storage-numbers, because they have no entries in the naksha~collections table!
-            logger.info("Create collection-id sequence ...")
-            conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_COL_SEQ AS ${PgType.INT64} START 1000 CACHE 1;").close()
+            logger.info("Create transaction-seq, map-sequence, and collection-sequence ...")
+            conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64} START 1 CACHE 10;").close()
+            conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_MAP_SEQ AS ${PgType.INT64} START 1 CACHE 1;").close()
+            conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_COL_SEQ AS ${PgType.INT64} START 100 CACHE 1;").close()
 
-            logger.info("Installation done ...")
-            if (isDefault()) {
-                logger.info("Creating the default schema, therefore create transaction sequences")
-                conn.execute("""
-    CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64} START 1 CACHE 10;
-    CREATE SEQUENCE IF NOT EXISTS $NAKSHA_MAP_SEQ AS ${PgType.INT64} START 1 CACHE 1;
-    """).close()
-            }
             logger.info("Create internal collections: transactions, collections, and dictionaries")
             transactions().create_internal(
                 conn, 0, PgStorageClass.Consistent,
@@ -254,9 +207,8 @@ class JvmPgAdminMap internal constructor(
                 indices = listOf(id_txn_uid, tags_id_txn_uid)
             )
             logger.info("Done creating transactions, collections, and dictionaries")
-            refresh(conn)
-            return storage_id
         }
+        return adminMapOid
     }
 
     private fun getResourceAsText(path: String): String? =
