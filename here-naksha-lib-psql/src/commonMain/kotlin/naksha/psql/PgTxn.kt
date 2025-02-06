@@ -17,7 +17,7 @@ data class PgTxn(
      * The transaction-number.
      * @since 3.0.0
      */
-    val txn: Int64,
+    val number: Int64,
 
     /**
      * The Epoch timestamp _(milliseconds since 1 January 1970)_ when the transaction started.
@@ -26,7 +26,7 @@ data class PgTxn(
     val epoch: Int64,
 
     /**
-     * The version object, created from [txn].
+     * The version object, created from [number].
      */
-    val version: Version = Version(txn)
+    val version: Version = Version(number)
 )

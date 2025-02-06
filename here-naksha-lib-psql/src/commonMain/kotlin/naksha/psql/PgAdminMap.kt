@@ -9,7 +9,6 @@ import naksha.base.Epoch
 import naksha.base.Int64
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.FORBIDDEN
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
@@ -35,19 +34,27 @@ abstract class PgAdminMap internal constructor(
 
     /**
      * The configuration as required.
+     * @since 3.0.0
      */
     config: PgConfig,
 
     /**
      * If not _null_, overrides [StorageConfig.create].
+     * @since 3.0.0
      */
     create: Boolean?,
 
     /**
      * If not _null_, overrides [StorageConfig.upgrade].
+     * @since 3.0.0
      */
     upgrade: Boolean?
-) : PgMap(storage, Naksha.ADMIN_MAP, Naksha.ADMIN_MAP_NUMBER, 0) {
+) : PgMap(storage, NakshaMap()
+    .withStorageId(storage.id)
+    .withId(Naksha.ADMIN_MAP)
+    .withNumber(Naksha.ADMIN_MAP_NUMBER),
+    0) {
+
     /**
      * The page-size of the database (`current_setting('block_size')`).
      * @since 3.0.0
@@ -176,7 +183,7 @@ current_setting('block_size')::int4 AS bs,
 (SELECT oid FROM pg_catalog.pg_tablespace WHERE spcname = '$temp_spcname') AS temp_oid,
 (SELECT oid FROM pg_catalog.pg_tablespace WHERE spcname = '$brittle_spcname') AS brittle_oid,
 (SELECT oid FROM pg_catalog.pg_tablespace WHERE spcname = '$ephemeral_spcname') AS ephemeral_oid,
-(SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = '${Naksha.ADMIN_MAP}') AS admin_oid,
+(SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'naksha~admin') AS admin_oid,
 (SELECT oid FROM pg_catalog.pg_extension WHERE extname = 'gzip') AS gzip_oid,
 version() AS version
 ), procs AS (SELECT 
@@ -756,22 +763,3 @@ SELECT basics.*, procs.* FROM basics, procs;
      */
     abstract fun listPgCollections(conn: PgConnection, map: PgMap): PgCollectionList
 }
-
-
-/*
-
-    /**
-     * All cached maps.
-     * @since 3.0.0
-     */
-    internal val maps: AtomicMap<String, PgMap> = Platform.newAtomicMap()
-
-    /**
-     * A map between unique map-number and a map-identifier.
-     *
-     * We know that every map-number is always, permanently and immutably, bound to the same map-id, therefore this cache can be maintained next to the primary atomic id to object map.
-     * @since 3.0.0
-     */
-    internal val mapNumberToId: AtomicMap<Int, String> = Platform.newAtomicMap()
-
-*/

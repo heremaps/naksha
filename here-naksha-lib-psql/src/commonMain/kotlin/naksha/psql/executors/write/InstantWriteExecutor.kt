@@ -1,10 +1,10 @@
 package naksha.psql.executors.write
 
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.quoteIdent
 import naksha.model.objects.NakshaFeature
 import naksha.psql.*
 import naksha.psql.PgUtil.PgUtilCompanion
+import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.executors.write.WriteFeatureUtils.allColumnValues
 
 class InstantWriteExecutor(
@@ -113,8 +113,8 @@ class InstantWriteExecutor(
         flags: Flags?,
         featureId: String
     ) {
-        val dstTableName = PgUtil.quoteIdent(destinationTable.name)
-        val headTableName = PgUtil.quoteIdent(headTable.name)
+        val dstTableName = quoteIdent(destinationTable.name)
+        val headTableName = quoteIdent(headTable.name)
         val otherColumns = PgColumn.allWritableColumns
             .asSequence()
             .filterNot { it == PgColumn.txn_next }

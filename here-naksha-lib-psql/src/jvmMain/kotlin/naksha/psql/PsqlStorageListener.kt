@@ -7,9 +7,9 @@ import java.lang.ref.WeakReference
 import java.sql.Statement
 import java.util.concurrent.atomic.AtomicBoolean
 
-internal class PsqlStorageListener(storage: JvmPgStorage) : Thread("lib-psql-listener@${storage.id}"), AutoCloseable {
+internal class PsqlStorageListener(storage: PsqlStorage) : Thread("lib-psql-listener@${storage.id}"), AutoCloseable {
     private val channel = storage.channel
-    private val storageRef: WeakReference<JvmPgStorage> = WeakReference(storage)
+    private val storageRef: WeakReference<PsqlStorage> = WeakReference(storage)
     private val shutdown = AtomicBoolean(false)
     private val adminOptions = storage.adminOptions
     private val cluster = storage.cluster
@@ -71,7 +71,7 @@ internal class PsqlStorageListener(storage: JvmPgStorage) : Thread("lib-psql-lis
         }
     }
 
-    private fun processNotifications(storage: JvmPgStorage, notifications: Array<out PGNotification>) {
+    private fun processNotifications(storage: PsqlStorage, notifications: Array<out PGNotification>) {
         // TODO: Process the notifications for NakshaCache evictions !!!
         for (notification in notifications) {
             logger.info("Received notification on channel '${notification.name}': '${notification.parameter}'")

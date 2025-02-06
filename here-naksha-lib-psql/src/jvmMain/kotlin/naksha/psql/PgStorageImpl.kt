@@ -1,4 +1,3 @@
 package naksha.psql
 
-class PgStorageImpl {
-}
+class PgStorageImpl : PsqlStorage()

@@ -259,14 +259,14 @@ class Naksha private constructor() {
         }
 
         /**
-         * Tests if the given collection is an internal one.
-         * @param collectionId the collection-id to test.
-         * @return _true_ if this is an internal collection; _false_ otherwise.
+         * Tests if the given identifier is an internal one.
+         * @param id the identifier to test.
+         * @return _true_ if this is an internal identifier; _false_ otherwise.
          * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
-        fun isInternal(collectionId: String?): Boolean = collectionId != null && collectionId.startsWith(ADMIN_PREFIX)
+        fun isInternal(id: String?): Boolean = id != null && id.startsWith(ADMIN_PREFIX)
 
         /**
          * Decode the [Naksha feature][NakshaFeature] from the given [tuple][Tuple].

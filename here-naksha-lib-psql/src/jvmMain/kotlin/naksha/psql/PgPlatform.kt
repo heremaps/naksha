@@ -106,7 +106,7 @@ actual class PgPlatform {
         @JvmStatic
         actual fun newStorage(cluster: PgCluster, schemaName: String): PgStorage {
             require(cluster is PsqlCluster) { "The Java PSQL storage only works with PsqlCluster instances, please use PgUtil.newCluster" }
-            return JvmPgStorage(cluster, schemaName)
+            return PsqlStorage() // cluster, schemaName
         }
 
         /**
@@ -125,10 +125,10 @@ actual class PgPlatform {
          */
         @JvmStatic
         actual fun initTestStorage(defaultOptions: SessionOptions, params: Map<String, *>?): Boolean {
-            var testStorage = JvmPgTestStorage.storage.get()
+            var testStorage = PsqlTestStorage.storage.get()
             if (testStorage != null) return false
-            testStorage = JvmPgTestStorage.getTestOrInitStorage(defaultOptions, params)
-            return testStorage === JvmPgTestStorage.storage.get()
+            testStorage = PsqlTestStorage.getTestOrInitStorage(defaultOptions, params)
+            return testStorage === PsqlTestStorage.storage.get()
         }
 
         /**
@@ -136,13 +136,13 @@ actual class PgPlatform {
          * @return the test-storage.
          */
         @JvmStatic
-        actual fun getTestStorage(): PgStorage = JvmPgTestStorage.getTestOrInitStorage()
+        actual fun getTestStorage(): PgStorage = PsqlTestStorage.getTestOrInitStorage()
 
         /**
          * Create a new test-storage to execute tests.
          * @return the test-storage.
          */
         @JvmStatic
-        actual fun newTestStorage(): PgStorage = JvmPgTestStorage.newTestStorage()
+        actual fun newTestStorage(): PgStorage = PsqlTestStorage.newTestStorage()
     }
 }

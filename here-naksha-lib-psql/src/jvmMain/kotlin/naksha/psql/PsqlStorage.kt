@@ -14,7 +14,7 @@ import kotlin.reflect.KClass
  * @property cluster the PostgresQL cluster used by this storage.
  * @param defaultSchemaName the default schema name.
  */
-open class JvmPgStorage : PgStorage(), IStorage {
+open class PsqlStorage : PgStorage(), IStorage {
 
     override val configKlass: KClass<PgConfig> = PgConfig::class
 
@@ -42,7 +42,7 @@ open class JvmPgStorage : PgStorage(), IStorage {
     private lateinit var listener: PsqlStorageListener
 
     override fun initAdminMap(config: PgConfig, create: Boolean?, upgrade: Boolean?): PgAdminMap {
-        return JvmPgAdminMap(this, config, create, upgrade)
+        return PsqlAdminMap(this, config, create, upgrade)
     }
 
     override fun newSession(options: SessionOptions, readOnly: Boolean): PsqlSession = PsqlSession(this, options, readOnly)

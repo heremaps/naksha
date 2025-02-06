@@ -529,20 +529,6 @@ class PgColumn : JsEnum() {
             tags, ref_point, geo, feature, attachment
         )
 
-        /**
-         * All columns to generate [naksha.model.Metadata], without `txn` and `uid`, which are part of `tn` already.
-         */
-        @JvmField
-        @JsStatic
-        val metaColumn = arrayOf(
-            updated_at, created_at, author_ts, txn_next, // txn is encoded in tn
-            cv0, cv1, cv2, cv3,
-            change_count, hash, here_tile, flags,  // uid is encoded in tn
-            tn, prev_tn, base_tn,
-            id, app_id, author, origin, target, ft,
-            cs0, cs1, cs2, cs3
-        )
-
         init {
             // This is only self-check code.
             for ((i, col) in allColumns.withIndex()) {

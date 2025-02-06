@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicReference
  * A special storage that optionally starts an own docker container.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-class JvmPgTestStorage private constructor(cluster: PsqlCluster, schemaName: String) : JvmPgStorage(cluster, schemaName) {
+class PsqlTestStorage private constructor(cluster: PsqlCluster, schemaName: String) : PsqlStorage(cluster, schemaName) {
 
     internal data class DockerContainerInfo(
         val container: GenericContainer<*>,
@@ -28,7 +28,7 @@ class JvmPgTestStorage private constructor(cluster: PsqlCluster, schemaName: Str
         internal val POSTGRES_IMAGE_REPO = "docker.io/phmai/naksha-postgres:latest"
 
         @JvmField
-        internal val storage = AtomicReference<JvmPgTestStorage?>()
+        internal val storage = AtomicReference<PsqlTestStorage?>()
 
         @JvmField
         internal val DEFAULT_OPTIONS = SessionOptions(
@@ -60,14 +60,14 @@ class JvmPgTestStorage private constructor(cluster: PsqlCluster, schemaName: Str
         }
 
         @JvmStatic
-        internal fun newTestStorage(options: SessionOptions = DEFAULT_OPTIONS, params: Map<String, *>? = null): JvmPgTestStorage {
+        internal fun newTestStorage(options: SessionOptions = DEFAULT_OPTIONS, params: Map<String, *>? = null): PsqlTestStorage {
             storage.set(null)
             return getTestOrInitStorage(options, params)
         }
 
         @JvmStatic
-        internal fun getTestOrInitStorage(options: SessionOptions = DEFAULT_OPTIONS, params: Map<String, *>? = null): JvmPgTestStorage {
-            var testStorage: JvmPgTestStorage? = storage.get()
+        internal fun getTestOrInitStorage(options: SessionOptions = DEFAULT_OPTIONS, params: Map<String, *>? = null): PsqlTestStorage {
+            var testStorage: PsqlTestStorage? = storage.get()
             while (testStorage == null) {
                 optionsRef.set(options)
                 var schemaName = PgTest.TEST_SCHEMA
@@ -126,7 +126,7 @@ class JvmPgTestStorage private constructor(cluster: PsqlCluster, schemaName: Str
                         Runtime.getRuntime().addShutdownHook(containerInfo.shutdownThread)
                     }
                 }
-                testStorage = JvmPgTestStorage(PsqlCluster(psqlInstance), schemaName)
+                testStorage = PsqlTestStorage(PsqlCluster(psqlInstance), schemaName)
                 // The initialization is only successful, when there is still no existing storage.
                 if (!storage.compareAndSet(null, testStorage)) {
                     testStorage = null

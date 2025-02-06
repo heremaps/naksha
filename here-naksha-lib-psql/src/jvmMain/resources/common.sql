@@ -11,10 +11,10 @@ CREATE EXTENSION IF NOT EXISTS plv8;
 
 CREATE SCHEMA IF NOT EXISTS public;
 CREATE SCHEMA IF NOT EXISTS topology;
-CREATE SCHEMA IF NOT EXISTS ${schema};
+CREATE SCHEMA IF NOT EXISTS "naksha~admin";
 
 -- Set search path and install extension.
-SET SESSION search_path TO ${schema}, public, topology;
+SET SESSION search_path TO "naksha~admin", public, topology;
 CREATE EXTENSION IF NOT EXISTS plv8 SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS btree_gist SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS btree_gin SCHEMA public;

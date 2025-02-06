@@ -34,11 +34,12 @@ import kotlin.js.JsExport
  * ```kotlin
  * val config = PgConfig()
  *   .withId("demo")
+ *   .withClassName("naksha.psql.PgStorageImpl")
  *   .withMaster(PgInstanceConfig()
- *   .withHost("host")
- *   .withDb("testdb")
- *   .withUser("fred")
- *   .withPassword("secret"))
+ *     .withHost("host")
+ *     .withDb("testdb")
+ *     .withUser("fred")
+ *     .withPassword("secret"))
  * val storage = Naksha.useStorage(config)
  * storage.newReadSession().use { session ->
  *   ...
@@ -109,18 +110,17 @@ abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
      * Actually there are only two implementations, one for the JVM, which is able to install or upgrading SQL functions, creating schema, tables, as well as admin-collections, and the other one that is executed within the [PLV8 extension](https://plv8.github.io/) of the PostgresQL database itself, which requires that the admin-map is already setup. Future other implementations may be done for [NodeJS](https://nodejs.org/en/) or browsers (which are as well are not able to really create a new admin-map).
      *
      * This operation is executing with in the storage [lock], so that it can be sure that no other thread is doing the same thing.
-     * @param oldConfig the current configuration, if this is a forced setup call, which normally means that _create_ and _upgrade_ will be _true_ either.
      * @param config the configuration as required.
      * @param create if not _null_, overrides [StorageConfig.create].
      * @param upgrade if not _null_, overrides [StorageConfig.upgrade].
      * @return the OID of the admin schema.
      * @since 3.0.0
      */
-    protected abstract fun initAdminMap(oldConfig: PgConfig?, config: PgConfig, create: Boolean?, upgrade: Boolean?): PgAdminMap
+    protected abstract fun initAdminMap(config: PgConfig, create: Boolean?, upgrade: Boolean?): PgAdminMap
 
     // Called from invokeInitStorage, so within a lock!
     override fun initStorage(config: PgConfig, create: Boolean?, upgrade: Boolean?) {
-        _adminMap = initAdminMap(configRef.get()?.proxy(PgConfig::class), config, create, upgrade)
+        _adminMap = initAdminMap(config, create, upgrade)
     }
 
     /**
