@@ -25,19 +25,16 @@ import naksha.geo.SpBoundingBox;
 import naksha.geo.SpPolygon;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
-import naksha.model.request.query.SpIntersects;
-import naksha.model.request.query.SpTransformation;
 import org.jetbrains.annotations.NotNull;
 
-public class SpatialQueryUtil {
+public class TileToBboxUtil {
 
-  private static final SpTransformation NO_TRANSFORMATION = null;
   private static final boolean DONT_CLONE = false;
 
-  private SpatialQueryUtil() {
+  private TileToBboxUtil() {
   }
 
-  public static @NotNull SpIntersects bboxQueryForTile(
+  public static @NotNull SpPolygon bboxPolygonForTile(
       final @NotNull String tileType,
       final @NotNull String tileId,
       final int margin
@@ -46,8 +43,7 @@ public class SpatialQueryUtil {
       if (!TILE_TYPE_QUADKEY.equals(tileType)) {
         throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Tile type " + tileType + " not supported");
       }
-      SpPolygon bboxWithMarginAsPolygon = bboxForTile(tileId).addMargin(margin).toPolygon();
-      return new SpIntersects(bboxWithMarginAsPolygon, NO_TRANSFORMATION);
+      return bboxForTile(tileId).addMargin(margin).toPolygon();
     } catch (Exception ex) {
       throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Error interpreting tile input: " + ex.getMessage());
     }

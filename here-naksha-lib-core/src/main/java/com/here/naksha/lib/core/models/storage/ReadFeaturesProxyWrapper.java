@@ -83,7 +83,7 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
     return this;
   }
 
-  public ReadFeaturesProxyWrapper addCollection(String collectionId){
+  public ReadFeaturesProxyWrapper withCollection(String collectionId){
     getCollectionIds().add(collectionId);
     return this;
   }

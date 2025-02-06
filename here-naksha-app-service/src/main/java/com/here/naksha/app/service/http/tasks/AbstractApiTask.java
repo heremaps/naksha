@@ -26,7 +26,6 @@ import static naksha.model.util.ResultHelper.extractResponseItems;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 import static naksha.model.util.ResultHelper.readFeaturesGroupedByOp;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.models.IterateHandle;
@@ -36,20 +35,15 @@ import com.here.naksha.lib.core.lambdas.F1;
 import com.here.naksha.lib.core.models.ContextXyzFeatureResponse;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.util.PropertyPathUtil;
-import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import naksha.base.AnyObject;
 import naksha.base.FromJsonOptions;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
 import naksha.geo.ProxyGeoUtil;
-import naksha.geo.SpBoundingBox;
 import naksha.geo.SpGeometry;
 import naksha.model.IReadSession;
 import naksha.model.IWriteSession;
@@ -112,10 +106,10 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       final @NotNull Class<F> type,
       final @NotNull NoElementsStrategy noElementsStrategy
   ) {
-    return transformResponseToXyzFeatureResponse(response, type, noElementsStrategy);
+    return transformResponseToXyzFeatureResponse(response, type, noElementsStrategy, null);
   }
 
-  protected XyzResponse handleNoElements(NoElementsStrategy noElementsStrategy) {
+  protected XyzResponse handleNoElements(@NotNull NoElementsStrategy noElementsStrategy) {
     return verticle.sendErrorResponse(routingContext, noElementsStrategy.nakshaError);
   }
 
@@ -155,21 +149,21 @@ public abstract class AbstractApiTask<T extends XyzResponse>
         response, type, 0, DEF_ADMIN_FEATURE_LIMIT, null, preResponseProcessing);
   }
 
-  protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzCollectionResponse(
-      final @Nullable Response response, final @NotNull Class<F> type) {
+  protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzCollectionResponse(final @Nullable Response response,
+      final @NotNull Class<F> type) {
     return transformResponseToXyzCollectionResponse(response, type, DEF_ADMIN_FEATURE_LIMIT);
   }
 
   protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzCollectionResponse(
-      final @Nullable Response response, final @NotNull Class<F> type, final long maxLimit) {
+      final @Nullable Response response, final @NotNull Class<F> type, final int maxLimit) {
     return transformResponseToXyzCollectionResponse(response, type, 0, maxLimit, null, null);
   }
 
   protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzCollectionResponse(
       final @Nullable Response response,
       final @NotNull Class<F> type,
-      final long offset,
-      final long maxLimit,
+      final int offset,
+      final int maxLimit,
       final @Nullable IterateHandle handle,
       final @Nullable F1<F, F> preResponseProcessing) {
     final XyzResponse validatedErrorResponse = validateErrorResultEmptyCollection(response);
@@ -210,7 +204,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   private static String getIterateHandleAsString(
-      long featuresFound, long crtOffset, long maxLimit, final @Nullable IterateHandle handle) {
+      int featuresFound, int crtOffset, int maxLimit, final @Nullable IterateHandle handle) {
     // nothing to populate if handle is not provided OR if we don't have more features to iterate
     if (handle == null || featuresFound < maxLimit) {
       return null;
