@@ -147,13 +147,6 @@ open class PgSession(
     val uid: AtomicInt = AtomicInt(0)
 
     /**
-     * The current transaction-number; if any.
-     * @since 3.0.0
-     */
-    var txn: PgTxn? = null
-        private set
-
-    /**
      * The last [PostgreSQL Error Code](https://www.postgresql.org/docs/current/errcodes-appendix.html) or _null_, if no error has happened.
      */
     var error: PgError? = null
@@ -180,8 +173,7 @@ open class PgSession(
         var tx = transaction
         if (tx == null) {
             val txn = pgStorage.adminMap.newTxn(connection())
-            this.txn = txn
-            tx = NakshaTransaction(txn.number)
+            tx = NakshaTransaction(txn.number, txn.epoch)
             transaction = tx
         }
         return tx
@@ -214,7 +206,6 @@ open class PgSession(
      */
     private fun clear() {
         uid.set(0)
-        txn = null
         error = null
         transaction = null
         try {

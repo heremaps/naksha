@@ -4,6 +4,7 @@ package naksha.model.objects
 
 import naksha.base.Int64
 import naksha.base.NotNullProperty
+import naksha.base.Platform
 import naksha.model.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -13,7 +14,7 @@ import kotlin.js.JsName
  *
  * The [transaction-number][txn] is reserved for the client, no matter how long it takes to process the transaction.
  *
- * The [version] can be used by clients to create new tuples, and then use [ISession.execute] to persist the tuples. This is more complicated than simply using [Naksha features][naksha.model.objects.NakshaFeature] in the [ISession.execute], but allows much more fine-grained control, specifically it allows to order the execution using the `uid`. It allows to build own [Tuple] with dedicated [TupleNumber], by combining the [IStorage.number], [IMap.number], [ICollection.number], [Version], and a client side generated `uid`.
+ * The [versionField] can be used by clients to create new tuples, and then use [ISession.execute] to persist the tuples. This is more complicated than simply using [Naksha features][naksha.model.objects.NakshaFeature] in the [ISession.execute], but allows much more fine-grained control, specifically it allows to order the execution using the `uid`. It allows to build own [Tuple] with dedicated [TupleNumber], by combining the [IStorage.number], [IMap.number], [ICollection.number], [Version], and a client side generated `uid`.
  *
  * @since 3.0.0
  */
@@ -23,19 +24,24 @@ open class NakshaTransaction() : NakshaFeature() {
     /**
      * Create a new transaction with the given transaction number.
      * @param txn the transaction number.
+     * @param time the unix epoch time in milliseconds of when the transaction started.
      */
     @JsName("of")
-    constructor(txn: Int64) : this() {
+    constructor(txn: Int64, time: Int64 = Platform.currentMillis()) : this() {
         this.txn = txn
+        this.time = time
     }
 
     companion object NakshaTransaction_C {
         private val INT_0 = NotNullProperty<NakshaTransaction, Int>(Int::class, init = { _, _ -> 0 })
         private val COLLECTIONS = NotNullProperty<NakshaTransaction, NakshaTxCollectionInfoMap>(NakshaTxCollectionInfoMap::class)
         private val INT64_NULL = NotNullProperty<NakshaTransaction, Int64>(Int64::class)
+        private val TIME = NotNullProperty<NakshaTransaction, Int64>(Int64::class) { _, _ -> Platform.currentMillis() }
     }
 
     override fun defaultFeatureType(): String = "naksha.Tx"
+    override fun withId(value: String): NakshaTransaction = super.withId(value) as NakshaTransaction
+    // TODO: Rohit - add overrides for the other super methods!
 
     override var id: String
         get() {
@@ -64,21 +70,50 @@ open class NakshaTransaction() : NakshaFeature() {
             setRaw("txn", value)
         }
 
-    private var version: Version? = null
+    /**
+     * @see [txn]
+     */
+    open fun withTxn(value: Int64): NakshaTransaction {
+        txn = value
+        return this
+    }
+
+    /**
+     * The [unix epoch](https://en.wikipedia.org/wiki/Unix_time) time in milliseconds of when the transaction has started.
+     * @since 3.0.0
+     */
+    var time by TIME
+
+    // Note: We do not want the version to be stored in the JSON object, because this
+    //       is just a wrapper class for txn!
+    private var versionField: Version? = null
 
     /**
      * Returns the transaction number as [Version].
      * @return the transaction number as [Version].
      * @since 3.0.0
      */
-    fun version(): Version {
-        val txn = this.txn
-        var v = version
-        if (v == null || v.txn != txn) {
-            v = Version(txn)
-            version = v
+    var version: Version
+        get() {
+            val txn = this.txn
+            var v = versionField
+            if (v == null || v.txn != txn) {
+                v = Version(txn)
+                versionField = v
+            }
+            return v
         }
-        return v
+        set(value) {
+            txn = value.txn
+            versionField = value
+        }
+
+    /**
+     * @see [version]
+     */
+    open fun withVersion(value: Version): NakshaTransaction {
+        version = value
+        return this
     }
 
     /**

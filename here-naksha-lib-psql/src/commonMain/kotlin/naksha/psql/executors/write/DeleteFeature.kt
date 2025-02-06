@@ -74,7 +74,7 @@ class DeleteFeature(
     private fun metaForDeleted(previousMetadata: Metadata,
                                feature: NakshaFeature,
                                flags: Flags): Metadata {
-        val versionTime = session.versionTime()
+        val versionTime = session.txn
         return previousMetadata.copy(
             updatedAt = versionTime,
             authorTs = if (session.options.author == null) previousMetadata.authorTs else versionTime,
