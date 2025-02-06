@@ -6,7 +6,7 @@ import naksha.model.objects.NakshaTransaction
 /**
  * A write-request.
  */
-expect interface IWriteSession: IReadSession {
+interface IWriteSession: IReadSession {
 
     /**
      * Acquire a storage lock, that is automatically released when the session is [closed][close].
