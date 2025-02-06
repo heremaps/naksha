@@ -90,10 +90,13 @@ JBON values are always copy-on-write, that means, every modification requires to
 ### Test the lead-in byte
 The lead-in encodes the unit-type. Testing the lead-in byte is done in three levels:
 
-- Test top most two bit (unsigned shift right 6) to detect the base-type, being **tiny-value** (0), **mixed** (1), **string** (2) or **struct** (3)
-- For **mixed** (1), test again the top four bit to detect final type.
-  - If top four bits are `0111`, a switch against the full lead-in can be done.
-  - Otherwise, reference.
+Test top most two bit (unsigned shift right 6) to detect the base-type, being:
+- **mixed** (0)
+- **tiny-value** (1)
+- **string** (2)
+- **struct** (3)
+ 
+Then, ones the type base-type is known, continue to analyze the lower 6 bit.
 
 ## Scalars and fixed size
 As described in the **lead-in** section, scalars and fixed size encodings are simple, no further explanation is given.
