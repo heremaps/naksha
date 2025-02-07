@@ -23,12 +23,11 @@ internal object WriteFeatureUtils {
         featureId: String,
         session: PgSession
     ): TupleNumber = TupleNumber(
-        StoreNumber(
-            collection.map.number,
-            collection.number,
-            Naksha.partitionNumber(featureId)
-        ),
-        session.version(),
+        session.storage.number,
+        collection.map.number,
+        collection.number,
+        Naksha.partitionNumber(featureId),
+        session.useTransaction().version,
         session.uid.getAndAdd(1)
     )
 
@@ -45,8 +44,9 @@ internal object WriteFeatureUtils {
         changeCount: Int = 1 // change_count is '1' for the first version
     ): Array<Any?> {
         val meta = tuple.meta ?: throw NakshaException(ILLEGAL_STATE, "Tuple does not have metadata")
+        // TODO: This could be wrong now!
         return arrayOf(
-            tuple.tupleNumber.storeNumber,
+            tuple.tupleNumber,
             meta.updatedAt,
             meta.createdAt,
             meta.authorTs,
@@ -63,7 +63,7 @@ internal object WriteFeatureUtils {
             meta.appId,
             meta.author,
             meta.ft,
-            meta.originTupleNumber,
+            meta.tupleNumber, // TODO: What originTupleNumber, what is the replacement???
             tuple.tags,
             tuple.referencePoint,
             tuple.geo,
@@ -88,9 +88,7 @@ internal object WriteFeatureUtils {
         encodingDict: JbDictionary? = null
     ): Tuple {
         return Tuple(
-            storage = storage,
-            tupleNumber = tupleNumber,
-            state = FetchMode.FETCH_ALL,
+            meta = metadata,
             geo = PgUtil.encodeGeometry(feature?.geometry, flags),
             referencePoint = PgUtil.encodeGeometry(feature?.referencePoint, flags),
             feature = PgUtil.encodeFeature(feature, flags, encodingDict),
@@ -100,7 +98,7 @@ internal object WriteFeatureUtils {
                 encodingDict
             ),
             attachment = attachment,
-            meta = metadata
+            complete = true
         )
     }
 }

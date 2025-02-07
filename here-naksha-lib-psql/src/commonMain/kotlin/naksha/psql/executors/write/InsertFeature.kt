@@ -48,19 +48,6 @@ class InsertFeature(
         flags: Flags,
     ): Metadata {
         val versionTime = session.useTransaction().time
-        return Metadata(
-            storeNumber = tupleNumber.storeNumber,
-            version = tupleNumber.version,
-            uid = tupleNumber.uid,
-            hash = calculateHash(feature, session.options.excludePaths, session.options.excludeFn),
-            createdAt = versionTime,
-            updatedAt = versionTime,
-            author = session.options.author,
-            appId = session.options.appId,
-            flags = flags,
-            id = feature.id,
-            ft = feature.type,
-            hereTile = calculateHereTile(feature)
-        )
+        return Metadata.forOperation(session, feature, tupleNumber, Operation.CREATED)
     }
 }

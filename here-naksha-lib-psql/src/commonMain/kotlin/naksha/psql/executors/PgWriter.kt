@@ -330,7 +330,7 @@ class PgWriter(
         }
     }
 
-    private fun mapOf(write: WriteExt): PgMap = storage.adminMap.getMapById(session.useConnection(), write.mapId) ?:
+    private fun mapOf(write: WriteExt): PgMap = storage.adminMap.getPgMapById(session.useConnection(), write.mapId) ?:
         throw NakshaException(MAP_NOT_FOUND, "No such map: '${write.mapId}'")
 
     private fun collectionOf(write: WriteExt): PgCollection {

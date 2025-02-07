@@ -2,12 +2,11 @@ package naksha.psql
 
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.model.Naksha
+import naksha.jbon.JbDictionary
+import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
-import naksha.model.NakshaVersion
-import naksha.model.NakshaException
-import naksha.model.NakshaError
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
+import naksha.model.objects.NakshaMap
 import naksha.psql.PgIndex.PgIndexCompanion.gist_geo_2d
 import naksha.psql.PgIndex.PgIndexCompanion.id_txn_uid
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
@@ -41,6 +40,50 @@ class PsqlAdminMap internal constructor(
 
     override fun upgradeAdminMap(config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion, schemaOid: Int, installedVersion: NakshaVersion?) {
         upsertAdminMap(config, storageId, storageNumber, psqlVersion, schemaOid, installedVersion)
+    }
+
+    override fun createPgMap(conn: PgConnection, map: NakshaMap): PgMap {
+        TODO("Not yet implemented")
+    }
+
+    override fun deletePgMap(conn: PgConnection, map: PgMap) {
+        TODO("Not yet implemented")
+    }
+
+    override fun getPgMapById(conn: PgConnection, id: String): PgMap? {
+        TODO("Not yet implemented")
+    }
+
+    override fun getPgMapByNumber(conn: PgConnection, number: Int): PgMap? {
+        TODO("Not yet implemented")
+    }
+
+    override fun listPgMaps(conn: PgConnection): PgMapList {
+        TODO("Not yet implemented")
+    }
+
+    override fun getPgCollectionById(conn: PgConnection, map: PgMap, id: String): PgCollection? {
+        TODO("Not yet implemented")
+    }
+
+    override fun getPgCollectionByNumber(conn: PgConnection, map: PgMap, number: Int): PgCollection? {
+        TODO("Not yet implemented")
+    }
+
+    override fun listPgCollections(conn: PgConnection, map: PgMap): PgCollectionList {
+        TODO("Not yet implemented")
+    }
+
+    override fun getEncodingFlags(feature: Any?, context: Any?): Flags {
+        TODO("Not yet implemented")
+    }
+
+    override fun getDictionary(id: String): JbDictionary? {
+        TODO("Not yet implemented")
+    }
+
+    override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? {
+        TODO("Not yet implemented")
     }
 
     private fun upsertAdminMap(

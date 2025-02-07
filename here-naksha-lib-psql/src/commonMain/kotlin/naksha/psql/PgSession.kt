@@ -142,11 +142,7 @@ open class PgSession(
         conn.execute(query).close()
     }
 
-    /**
-     * The `uid` counter (unique identifier within a transaction).
-     */
-    @JvmField
-    val uid: AtomicInt = AtomicInt(0)
+    override val uid: AtomicInt = AtomicInt(0)
 
     /**
      * The last [PostgreSQL Error Code](https://www.postgresql.org/docs/current/errcodes-appendix.html) or _null_, if no error has happened.
@@ -379,18 +375,18 @@ open class PgSession(
         assertOpen()
         val conn = pgConnection
         if (conn == null && mayReadParallel()) {
-            return newReadConnection().use { pgStorage.adminMap.getMapById(it, mapId)?.nakshaMap }
+            return newReadConnection().use { pgStorage.adminMap.getPgMapById(it, mapId)?.nakshaMap }
         }
-        return pgStorage.adminMap.getMapById(conn ?: useConnection(), mapId)?.nakshaMap
+        return pgStorage.adminMap.getPgMapById(conn ?: useConnection(), mapId)?.nakshaMap
     }
 
     override fun getMapByNumber(mapNumber: Int): NakshaMap? {
         assertOpen()
         val conn = pgConnection
         if (conn == null && mayReadParallel()) {
-            return newReadConnection().use { pgStorage.adminMap.getMapByNumber(it, mapNumber)?.nakshaMap }
+            return newReadConnection().use { pgStorage.adminMap.getPgMapByNumber(it, mapNumber)?.nakshaMap }
         }
-        return pgStorage.adminMap.getMapByNumber(conn ?: useConnection(), mapNumber)?.nakshaMap
+        return pgStorage.adminMap.getPgMapByNumber(conn ?: useConnection(), mapNumber)?.nakshaMap
     }
 
     override fun refreshMaps() {
@@ -398,7 +394,7 @@ open class PgSession(
     }
 
     private fun _getCollectionById(conn: PgConnection, map: NakshaMap, collectionId: String): NakshaCollection? {
-        val pgMap = pgStorage.adminMap.getMapById(conn, map.id) ?: return null
+        val pgMap = pgStorage.adminMap.getPgMapById(conn, map.id) ?: return null
         return pgStorage.adminMap.getPgCollectionById(conn, pgMap, collectionId)?.nakshaCollection
     }
 
@@ -412,7 +408,7 @@ open class PgSession(
     }
 
     private fun _getCollectionByNumber(conn: PgConnection, map: NakshaMap, collectionNumber: Int): NakshaCollection? {
-        val pgMap = pgStorage.adminMap.getMapById(conn, map.id) ?: return null
+        val pgMap = pgStorage.adminMap.getPgMapById(conn, map.id) ?: return null
         return pgStorage.adminMap.getPgCollectionByNumber(conn, pgMap, collectionNumber)?.nakshaCollection
     }
 

@@ -1,15 +1,13 @@
 package naksha.psql.executors.write
 
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
+import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.psql.*
 import naksha.psql.executors.WriteExt
-import naksha.psql.executors.write.WriteCollectionUtils.tupleOfCollection
 import naksha.psql.executors.write.WriteFeatureUtils.allColumnValues
-import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
 
 class UpdateCollection(
     private val session: PgSession
@@ -21,47 +19,37 @@ class UpdateCollection(
             NakshaError.ILLEGAL_ARGUMENT,
             "UPDATE without collection as feature"
         )
-        val colId = write.featureId
-        if (colId == null) throw NakshaException(ILLEGAL_ARGUMENT, "Collection has no id")
-        val tuple = tupleOfCollection(
-            session = session,
-            tupleNumber = newFeatureTupleNumber(
-                map.collections(),
-                colId,
-                session
-            ),
-            feature = feature,
-            attachment = write.attachment,
-            featureId = colId,
-            flags = session.storage.defaultFlags,
-            encodingDict = map.encodingDict(colId, feature)
-        )
+        val collectionId = write.featureId ?: throw NakshaException(ILLEGAL_ARGUMENT, "Collection has no id")
+        val collection = session.storage.adminMap.getPgCollectionById(session.useConnection(), map, collectionId) ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection $collectionId not found")
+        val tuple = session.updated(map.nakshaMap, collection.nakshaCollection, feature)
 
         // update the entry in naksha~collections
-        return updateVirtualCollection(tuple, feature)
-    }
-
-    private fun updateVirtualCollection(
-        tuple: Tuple,
-        feature: NakshaFeature
-    ): Tuple? {
-        val transaction = session.transaction()
-        val conn = session.usePgConnection()
-        val statement = StringBuilder("""UPDATE $VIRT_COLLECTIONS_QUOTED SET """)
-        PgColumn.allWritableColumns.forEachIndexed {
-            index, column ->
-                statement.append(column).append(" = $").append(index+1)
-                if (index+1 < PgColumn.allWritableColumns.size) statement.append(",")
-                statement.append("\n")
-        }
-        statement.append("WHERE ${PgColumn.id} = $").append(PgColumn.allWritableColumns.size+1)
-        val cursor = conn.execute(
-            sql = statement.toString().trimIndent(),
-            args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn).plus(feature.id)
-        )
-        val affectedRows = cursor.affectedRows()
-        cursor.close()
-        if (affectedRows == 0) return null
+        //return updateVirtualCollection(tuple, feature)
+        // TODO: We need to update the collection content!
         return tuple
     }
+
+//    private fun updateVirtualCollection(
+//        tuple: Tuple,
+//        feature: NakshaFeature
+//    ): Tuple? {
+//        val transaction = session.transaction()
+//        val conn = session.usePgConnection()
+//        val statement = StringBuilder("""UPDATE $VIRT_COLLECTIONS_QUOTED SET """)
+//        PgColumn.allWritableColumns.forEachIndexed {
+//            index, column ->
+//                statement.append(column).append(" = $").append(index+1)
+//                if (index+1 < PgColumn.allWritableColumns.size) statement.append(",")
+//                statement.append("\n")
+//        }
+//        statement.append("WHERE ${PgColumn.id} = $").append(PgColumn.allWritableColumns.size+1)
+//        val cursor = conn.execute(
+//            sql = statement.toString().trimIndent(),
+//            args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn).plus(feature.id)
+//        )
+//        val affectedRows = cursor.affectedRows()
+//        cursor.close()
+//        if (affectedRows == 0) return null
+//        return tuple
+//    }
 }

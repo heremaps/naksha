@@ -25,20 +25,22 @@ class ExistingMetadataProvider(
     private val cache: MutableMap<String, MutableMap<String, Metadata>> = mutableMapOf()
 
     init {
+        // TODO: Review!
         val featuresPerCollection = writes
             .filterNotNull()
             .filter { it.op == UPDATE || it.op == UPSERT || it.op == DELETE }
             .filter { it.id != null }
             .groupBy { it.collectionId }
         for (entry in featuresPerCollection.entries) {
+            val key = entry.key ?: continue
             val idsToFetch = entry.value.map { it.id!! }.toSet()
-            val results = fetchCurrentMeta(entry.key, idsToFetch)
+            val results = fetchCurrentMeta(key, idsToFetch)
 
             val metaMap = mutableMapOf<String, Metadata>()
             for (result in results) {
                 metaMap[result.id] = result
             }
-            cache[entry.key] = metaMap
+            cache[key] = metaMap
         }
     }
 
@@ -47,8 +49,9 @@ class ExistingMetadataProvider(
     }
 
     private fun fetchCurrentMeta(collectionHeadName: String, featureIds: Set<String>): List<Metadata> {
+        // TODO: Fix me!
         val quotedHeadName = quoteIdent(collectionHeadName)
-        val sql = """SELECT ${PgColumn.metaSelect}
+        val sql = """SELECT PgColumn.metaSelect
                      FROM $quotedHeadName
                      WHERE ${PgColumn.id.ident} = ANY($1)
             """.trimMargin()
@@ -59,28 +62,29 @@ class ExistingMetadataProvider(
     }
 
     private fun metaFromRow(row: PgCursorUtil.ReadOnlyRow): Metadata {
-        val tupleNumber: TupleNumber = TupleNumber.fromFullVariant(row[PgColumn.tn])
-        val updatedAt: Int64 = row.column(PgColumn.updated_at) as? Int64 ?: Int64(0)
-        return Metadata(
-            storeNumber = tupleNumber.storeNumber,
-            updatedAt = updatedAt,
-            createdAt = row.column(PgColumn.created_at) as? Int64 ?: updatedAt,
-            authorTs = row[PgColumn.author_ts],
-            nextVersion = maybeVersion(row.column(PgColumn.txn_next)),
-            version = tupleNumber.version,
-            prevVersion = maybeVersion(row.column(PgColumn.ptxn)),
-            uid = tupleNumber.uid,
-            puid = row.column(PgColumn.puid) as? Int,
-            hash = row[PgColumn.hash],
-            changeCount = row[PgColumn.change_count],
-            hereTile = row[PgColumn.here_tile],
-            flags = row[PgColumn.flags],
-            id = row[PgColumn.id],
-            appId = row[PgColumn.app_id],
-            author = row.column(PgColumn.author) as? String,
-            ft = row.column(PgColumn.ft) as? String,
-            originTupleNumber = row.column(PgColumn.origin) as? String
-        )
+        TODO("Fix me!")
+//        val tupleNumber: TupleNumber = TupleNumber.fromFullVariant(row[PgColumn.tn])
+//        val updatedAt: Int64 = row.column(PgColumn.updated_at) as? Int64 ?: Int64(0)
+//        return Metadata(
+//            storeNumber = tupleNumber.storeNumber,
+//            updatedAt = updatedAt,
+//            createdAt = row.column(PgColumn.created_at) as? Int64 ?: updatedAt,
+//            authorTs = row[PgColumn.author_ts],
+//            nextVersion = maybeVersion(row.column(PgColumn.txn_next)),
+//            version = tupleNumber.version,
+//            prevVersion = maybeVersion(row.column(PgColumn.ptxn)),
+//            uid = tupleNumber.uid,
+//            puid = row.column(PgColumn.puid) as? Int,
+//            hash = row[PgColumn.hash],
+//            changeCount = row[PgColumn.change_count],
+//            hereTile = row[PgColumn.here_tile],
+//            flags = row[PgColumn.flags],
+//            id = row[PgColumn.id],
+//            appId = row[PgColumn.app_id],
+//            author = row.column(PgColumn.author) as? String,
+//            ft = row.column(PgColumn.ft) as? String,
+//            originTupleNumber = row.column(PgColumn.origin) as? String
+//        )
     }
 
     private fun maybeVersion(rawCursorValue: Any?): Version? {

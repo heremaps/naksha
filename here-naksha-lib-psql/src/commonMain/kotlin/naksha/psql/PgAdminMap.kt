@@ -456,7 +456,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @return the created map.
      * @since 3.0.0
      */
-    abstract fun createMap(conn: PgConnection, map: NakshaMap): PgMap
+    abstract fun createPgMap(conn: PgConnection, map: NakshaMap): PgMap
 
     /**
      * Delete a map.
@@ -464,7 +464,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @param map the map to delete.
      * @since 3.0.0
      */
-    abstract fun deleteMap(conn: PgConnection, map: PgMap)
+    abstract fun deletePgMap(conn: PgConnection, map: PgMap)
 
     /**
      * Returns the existing map with the given identifier; if any.
@@ -473,7 +473,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @return the map, if it exists; _null_ otherwise.
      * @since 3.0.0
      */
-    abstract fun getMapById(conn: PgConnection, id: String): PgMap?
+    abstract fun getPgMapById(conn: PgConnection, id: String): PgMap?
 
     /**
      * Returns the existing map with the given number; if any.
@@ -482,7 +482,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @return the map, if it exists; _null_ otherwise.
      * @since 3.0.0
      */
-    abstract fun getMapByNumber(conn: PgConnection, number: Int): PgMap?
+    abstract fun getPgMapByNumber(conn: PgConnection, number: Int): PgMap?
 
     /**
      * Returns a list of all existing maps, excluding the admin-map.
@@ -490,7 +490,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @return the list of existing maps, _(empty, when no maps exist)_.
      * @since 3.0.0
      */
-    abstract fun listMaps(conn: PgConnection): PgMapList
+    abstract fun listPgMaps(conn: PgConnection): PgMapList
 
     /**
      * Create a new [collection][PgCollection] using the given connection, and return it.

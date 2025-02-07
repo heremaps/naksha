@@ -31,8 +31,9 @@ class InstantWriteExecutor(
         val transaction = session.useTransaction()
         val conn = session.useConnection()
         val quotedCollectionId = quoteIdent(collection.id)
+        // TODO: Verify if allColumns is correct here !!!
         conn.execute(
-            sql = """ INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})
+            sql = """ INSERT INTO $quotedCollectionId(${PgColumn.allColumns.joinToString(",")})
                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
                       """.trimIndent(),
             args = allColumnValues(tuple = tuple, feature = feature, txn = transaction.txn)
@@ -69,13 +70,14 @@ class InstantWriteExecutor(
     }
 
     private fun updateStatement(headTableName: String): String {
-        val columnEqualsVariable = PgColumn.allWritableColumns.mapIndexed { index, pgColumn ->
+        // TODO: Verify if allColumns is correct here !!!
+        val columnEqualsVariable = PgColumn.allColumns.mapIndexed { index, pgColumn ->
             "${pgColumn.name}=\$${index + 1}"
         }.joinToString(separator = ",")
         val quotedHeadTable = PgUtil.quoteIdent(headTableName)
         return """ UPDATE $quotedHeadTable
                    SET $columnEqualsVariable
-                   WHERE ${PgColumn.id.ident}=$${PgColumn.allWritableColumns.size + 1}
+                   WHERE ${PgColumn.id.ident}=$${PgColumn.allColumns.size + 1}
                    """.trimIndent()
     }
 
@@ -115,7 +117,8 @@ class InstantWriteExecutor(
     ) {
         val dstTableName = quoteIdent(destinationTable.name)
         val headTableName = quoteIdent(headTable.name)
-        val otherColumns = PgColumn.allWritableColumns
+        // TODO: Verify if allColumns is correct here !!!
+        val otherColumns = PgColumn.allColumns
             .asSequence()
             .filterNot { it == PgColumn.txn_next }
             .filterNot { it == PgColumn.txn }

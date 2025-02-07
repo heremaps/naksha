@@ -3,6 +3,7 @@ package naksha.psql.executors.write
 import naksha.model.*
 import naksha.model.Metadata.Metadata_C.calculateHereTile
 import naksha.model.Metadata.Metadata_C.calculateHash
+import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
 import naksha.psql.PgSession
@@ -35,16 +36,9 @@ class UpdateFeature(
             throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Previous metadata shouldn't have 'nextVersion' but it does (${previousMetadata.nextVersion})")
         }
 
+        val map = session.storage.adminMap.getPgMapById(session.useConnection(), collection.map.id) ?: throw NakshaException(MAP_NOT_FOUND, "Map with id '${collection.map.id}' does not exist")
         val tupleNumber = newFeatureTupleNumber(collection, feature.id, session)
-        val flags = resolveFlags(collection, session)
-        val tuple = tuple(
-            session.storage,
-            tupleNumber,
-            feature,
-            metadataForNewVersion(previousMetadata, tupleNumber, feature, flags),
-            write.attachment,
-            flags
-        )
+        val tuple = session.updated(map.nakshaMap, collection.nakshaCollection, feature, tupleNumber)
 
         writeExecutor.removeFeatureFromDel(collection, feature.id)
         collection.history?.let { hstTable ->
@@ -55,30 +49,5 @@ class UpdateFeature(
         }
         writeExecutor.updateFeatureInHead(collection, tuple, feature, tupleNumber.version, previousMetadata)
         return tuple
-    }
-
-
-    private fun metadataForNewVersion(
-        previousMetadata: Metadata,
-        newTupleNumber: TupleNumber,
-        feature: NakshaFeature,
-        flags: Flags
-    ): Metadata {
-        val versionTime = session.versionTime()
-        return previousMetadata.copy(
-            updatedAt = versionTime,
-            authorTs = if (session.options.author == null) previousMetadata.authorTs else versionTime,
-            version = newTupleNumber.version,
-            prevVersion = previousMetadata.version,
-            uid = newTupleNumber.uid,
-            puid = previousMetadata.puid,
-            hash = calculateHash(feature, session.options.excludePaths, session.options.excludeFn),
-            changeCount = previousMetadata.changeCount + 1,
-            hereTile = calculateHereTile(feature),
-            flags = flags.withAction(Action.UPDATED_VALUE),
-            appId = session.options.appId,
-            author = session.options.author ?: previousMetadata.author,
-            id = feature.id
-        )
     }
 }
