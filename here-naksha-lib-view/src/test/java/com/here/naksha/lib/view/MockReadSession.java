@@ -23,6 +23,7 @@ import naksha.model.IReadSession;
 import java.util.List;
 
 import naksha.model.IStorage;
+import naksha.model.SessionOptions;
 import naksha.model.Tuple;
 import naksha.model.TupleNumber;
 import naksha.model.objects.NakshaCollection;
@@ -153,6 +154,11 @@ public class MockReadSession implements IReadSession {
 
   @Override
   public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
+    return null;
+  }
+
+  @Override
+  public @NotNull SessionOptions getOptions() {
     return null;
   }
 }

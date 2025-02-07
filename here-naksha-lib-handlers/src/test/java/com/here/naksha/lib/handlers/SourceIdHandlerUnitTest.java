@@ -203,14 +203,14 @@ class SourceIdHandlerUnitTest {
     private static WriteRequest createWriteXyzFeaturesFromFile(final String filePath) {
         final NakshaFeature feature = parseJsonFileOrFail(filePath, NakshaFeature.class);
         final WriteRequest writeRequest = new WriteRequest();
-        writeRequest.add(new Write().createFeature(null, "some_collection", feature));
+        writeRequest.add(new Write().createFeature("some_collection", feature));
         return writeRequest;
     }
 
     private static ContextWriteXyzFeatures createContextWriteXyzFeaturesFromFile(final String filePath) {
         final NakshaFeature feature = parseJsonFileOrFail(filePath, NakshaFeature.class);
         final ContextWriteXyzFeatures writeXyzFeatures = new ContextWriteXyzFeatures();
-        writeXyzFeatures.add(new Write().createFeature(null, "some_collection", feature));
+        writeXyzFeatures.add(new Write().createFeature("some_collection", feature));
         return writeXyzFeatures;
     }
 }

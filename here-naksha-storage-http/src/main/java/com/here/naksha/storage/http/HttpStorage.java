@@ -39,7 +39,10 @@ public class HttpStorage implements IStorage {
 
   private final KeyProperties defaultKeyProperties;
 
+  private final StorageConfig storageConfig;
+
   public HttpStorage(@NotNull StorageConfig storageConfig) {
+    this.storageConfig = storageConfig;
     HttpStorageProperties properties = HttpStorage.getProperties(storageConfig);
     if (properties == null) {
         throw new IllegalArgumentException("A HTTP storage must have properties containing a 'url'");
@@ -93,8 +96,7 @@ public class HttpStorage implements IStorage {
 
   @Override
   public @NotNull StorageConfig getConfig() {
-    // TODO ? should it return http config ?
-    throw new NotImplementedException("Not supported by HTTP storage");
+    return storageConfig;
   }
 
   @Override

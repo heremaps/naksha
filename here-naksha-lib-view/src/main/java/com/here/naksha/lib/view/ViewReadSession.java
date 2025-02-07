@@ -288,4 +288,9 @@ public class ViewReadSession implements IReadSession {
   public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public @NotNull SessionOptions getOptions() {
+    throw new UnsupportedOperationException();
+  }
 }

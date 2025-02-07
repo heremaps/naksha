@@ -25,6 +25,7 @@ import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
+import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaMap;
 import naksha.model.request.ErrorResponse;
@@ -165,6 +166,11 @@ public final class HttpStorageReadSession implements IReadSession {
 
   @Override
   public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
+    throw new NotImplementedException("Not supported by HTTP storage");
+  }
+
+  @Override
+  public @NotNull SessionOptions getOptions() {
     throw new NotImplementedException("Not supported by HTTP storage");
   }
 }

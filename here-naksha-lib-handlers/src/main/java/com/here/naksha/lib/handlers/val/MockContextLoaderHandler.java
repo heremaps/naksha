@@ -95,7 +95,7 @@ public class MockContextLoaderHandler extends AbstractEventHandler {
       return event.sendUpstream(forwardRequest);
     } catch (NakshaException erx) {
       logger.warn("Error processing validation request. ", erx);
-      return new ErrorResponse(erx.error);
+      return new ErrorResponse(erx.getError());
     }
   }
 

@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.core.util.storage;
+package naksha.model.util;
 
 import static java.util.Collections.emptyList;
 

@@ -21,6 +21,7 @@ package com.here.naksha.lib.handlers.internal;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.internal.NakshaFeaturePropertiesValidator.nakshaFeatureValidation;
+import static naksha.model.IStorage.ADMIN_STORAGE_ID;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
@@ -32,7 +33,6 @@ import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
-import naksha.psql.PgStorage;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,7 +67,7 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
     final NakshaContext ctx = NakshaContext.currentContext();
     final Request request = event.getRequest();
     // process request using Naksha Admin Storage instance
-    addStorageIdToStreamInfo(PgStorage.ADMIN_STORAGE_ID, ctx);
+    addStorageIdToStreamInfo(ADMIN_STORAGE_ID, ctx);
     if (request instanceof ReadRequest rr) {
       try (final IReadSession reader =
           nakshaHub().getAdminStorage().newReadSession(SessionOptions.from(ctx, false))) {

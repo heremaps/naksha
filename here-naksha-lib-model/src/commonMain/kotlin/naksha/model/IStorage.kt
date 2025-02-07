@@ -101,4 +101,12 @@ interface IStorage : IDictReader {
      * @since 3.0.0
      */
     fun getEncodingFlags(feature: Any?, context: Any? = null): Flags
+
+    companion object {
+
+        /**
+         * The storage-id of the Naksha-Hub admin storage.
+         */
+        const val ADMIN_STORAGE_ID: String = "naksha-admin"
+    }
 }

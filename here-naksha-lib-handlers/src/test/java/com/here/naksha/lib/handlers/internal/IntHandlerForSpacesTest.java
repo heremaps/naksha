@@ -18,20 +18,19 @@ import com.here.naksha.lib.core.models.naksha.Space;
 import java.util.List;
 import java.util.stream.Stream;
 import naksha.base.JvmInt64;
-import naksha.model.FetchMode;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
+import naksha.model.Metadata;
 import naksha.model.SessionOptions;
 import naksha.model.Tuple;
 import naksha.model.TupleNumber;
 import naksha.model.Version;
 import naksha.model.request.ErrorResponse;
-import naksha.model.request.ExecutedOp;
+import naksha.model.request.FeatureTuple;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
-import naksha.model.request.ResultTuple;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
@@ -60,7 +59,7 @@ class IntHandlerForSpacesTest {
   @Test
   void shouldAlwaysAllowDeletion() {
     // Given:
-    final Request writeRequest = new WriteRequest().add(new Write().deleteFeatureById(null, SPACES, "to_delete", null));
+    final Request writeRequest = new WriteRequest().add(new Write().deleteFeatureById(SPACES, "to_delete", null));
     IEvent event = eventWith(writeRequest);
 
     // And:
@@ -123,22 +122,22 @@ class IntHandlerForSpacesTest {
     Space spaceWithoutTitle = space("no_title", null, "some_desc");
     Space spaceWithoutDescription = space("no_desc", "some_title", null);
     return Stream.of(
-        named("PUT Space without title", new WriteRequest().add(new Write().upsertFeature(null, SPACES, spaceWithoutTitle))),
-        named("UPDATE Space without title", new WriteRequest().add(new Write().updateFeature(null, SPACES, spaceWithoutTitle, false))),
-        named("CREATE Space without title", new WriteRequest().add(new Write().createFeature(null, SPACES, spaceWithoutTitle))),
-        named("PUT Space without description", new WriteRequest().add(new Write().upsertFeature(null, SPACES, spaceWithoutDescription))),
+        named("PUT Space without title", new WriteRequest().add(new Write().upsertFeature(SPACES, spaceWithoutTitle, true))),
+        named("UPDATE Space without title", new WriteRequest().add(new Write().updateFeature(SPACES, spaceWithoutTitle, false))),
+        named("CREATE Space without title", new WriteRequest().add(new Write().createFeature(SPACES, spaceWithoutTitle))),
+        named("PUT Space without description", new WriteRequest().add(new Write().upsertFeature(SPACES, spaceWithoutDescription, true))),
         named("UPDATE Space without description",
-            new WriteRequest().add(new Write().updateFeature(null, SPACES, spaceWithoutDescription, false))),
-        named("CREATE Space without description", new WriteRequest().add(new Write().createFeature(null, SPACES, spaceWithoutDescription)))
+            new WriteRequest().add(new Write().updateFeature(SPACES, spaceWithoutDescription, false))),
+        named("CREATE Space without description", new WriteRequest().add(new Write().createFeature(SPACES, spaceWithoutDescription)))
     );
   }
 
   private static Stream<Named<WriteRequest>> persistingSpaceWithoutValidHandlers() {
     Space space = space("space_id", "no_desc", "some_title", List.of("handler_1", "handler_2", "handler_3"));
     return Stream.of(
-        named("PUT Space without valid handlers", new WriteRequest().add(new Write().upsertFeature(null, SPACES, space))),
-        named("UPDATE Space without valid handlers", new WriteRequest().add(new Write().updateFeature(null, SPACES, space, false))),
-        named("CREATE Space without valid handlers", new WriteRequest().add(new Write().createFeature(null, SPACES, space)))
+        named("PUT Space without valid handlers", new WriteRequest().add(new Write().upsertFeature(SPACES, space, true))),
+        named("UPDATE Space without valid handlers", new WriteRequest().add(new Write().updateFeature(SPACES, space, false))),
+        named("CREATE Space without valid handlers", new WriteRequest().add(new Write().createFeature(SPACES, space)))
     );
   }
 
@@ -190,31 +189,51 @@ class IntHandlerForSpacesTest {
       super(resultTuples(storage, ids));
     }
 
-    private static List<ResultTuple> resultTuples(IStorage storage, List<String> ids) {
+    private static List<FeatureTuple> resultTuples(IStorage storage, List<String> ids) {
       return ids.stream()
           .map(id -> {
             TupleNumber tupleNumber = testTupleNumber();
-            return new ResultTuple(storage, tupleNumber, ExecutedOp.READ, testTuple(storage, tupleNumber, id));
+            return new FeatureTuple(tupleNumber, testTuple(tupleNumber, id));
           })
           .toList();
     }
 
     private static TupleNumber testTupleNumber() {
-      return new TupleNumber(new JvmInt64(0L), new Version(0L), 0);
+      return new TupleNumber(new JvmInt64(0L), 0, 0, 0, new Version(0L), 0);
     }
 
-    private static Tuple testTuple(IStorage storage, TupleNumber tupleNumber, String id) {
-      return new Tuple(storage,
+    private static Tuple testTuple(TupleNumber tupleNumber, String id) {
+      return new Tuple(testMetadata(tupleNumber, id), null, null, null, null, null, false);
+    }
+
+    private static Metadata testMetadata(TupleNumber tupleNumber, String id) {
+      return new Metadata(
           tupleNumber,
-          FetchMode.FETCH_ID,
-          null,
-          id,
           0,
           null,
+          new JvmInt64(0),
           null,
           null,
           null,
-          null);
+          null,
+          1,
+          0,
+          0,
+          id,
+          "sampleAppId",
+          "sampleAuthor",
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
     }
   }
 }

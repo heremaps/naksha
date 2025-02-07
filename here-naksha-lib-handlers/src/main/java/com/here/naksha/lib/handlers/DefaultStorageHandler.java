@@ -44,6 +44,7 @@ import naksha.base.StringList;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
+import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
@@ -298,7 +299,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       return result;
     } catch (NakshaException ne) {
       logger.warn("Failed executing {}", wr.getClass(), ne);
-      return new ErrorResponse(ne.error);
+      return new ErrorResponse(ne.getError());
     } catch (Exception e) {
       logger.warn("Failed executing {}", wr.getClass(), e);
       return new ErrorResponse(NakshaError.EXCEPTION, "Execution unexpectedly failed", e.getMessage(), e);
@@ -378,7 +379,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull Request request,
       final @NotNull StopWatch storageTimer) {
     logger.info("Initializing Storage before reattempting write request.");
-    measuredStorageRunnable(() -> storageImpl.initStorage(null), storageTimer);
+    measuredStorageRunnable(() -> Naksha.setupStorage(storageImpl.getConfig()), storageTimer);
     logger.info("Storage initialized");
     return forwardRequestToStorage(
         ctx, request, storageImpl, collection, ATTEMPT_AFTER_STORAGE_INITIALIZATION, storageTimer);

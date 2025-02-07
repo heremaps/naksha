@@ -74,7 +74,7 @@ public class RequestHelper {
    */
   @AvailableSince(NakshaVersion.v3_0_0)
   public static <FEATURE extends NakshaFeature> @NotNull WriteRequest createFeatureRequest(
-      final @NotNull NakshaCollection collection, final @NotNull FEATURE feature) {
+      final @NotNull String collection, final @NotNull FEATURE feature) {
     return createFeaturesRequest(collection, List.of(feature));
   }
 
@@ -118,7 +118,7 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull <FEATURE extends NakshaFeature> WriteRequest upsertFeaturesRequest(
-      final @NotNull NakshaCollection collection, final @NotNull List<FEATURE> features) {
+      final @NotNull String collection, final @NotNull List<FEATURE> features) {
     final WriteRequest request = new WriteRequest();
     for (FEATURE feature : features) {
       request.add(new Write().upsertFeature(collection, feature, true));
@@ -164,7 +164,7 @@ public class RequestHelper {
    */
   @AvailableSince(NakshaVersion.v3_0_0)
   public static @NotNull WriteRequest createFeaturesRequest(
-      final @NotNull NakshaCollection collection, final @NotNull List<? extends NakshaFeature> featureList) {
+      final @NotNull String collection, final @NotNull List<? extends NakshaFeature> featureList) {
     final WriteRequest request = new WriteRequest();
     for (final NakshaFeature feature : featureList) {
       assert feature != null;

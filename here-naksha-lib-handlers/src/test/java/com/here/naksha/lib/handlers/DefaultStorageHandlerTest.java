@@ -98,7 +98,7 @@ class DefaultStorageHandlerTest {
 
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
-    WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeature(null, "different_collection", featureToCreate));
+    WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeature("different_collection", featureToCreate));
 
     // And: Handler to test
     DefaultStorageHandler handler = storageHandler(testCase.handlerProperties, testCase.space);
@@ -137,7 +137,7 @@ class DefaultStorageHandlerTest {
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
     WriteRequest writeXyzFeatures = new WriteRequest()
-        .add(new Write().createFeature(null, "different_collection", featureToCreate));
+        .add(new Write().createFeature("different_collection", featureToCreate));
 
     // And: Handler with autoCreateCollection enabled to test
     DefaultStorageHandler handler = storageHandler(testCase.handlerProperties, testCase.space);
@@ -158,7 +158,7 @@ class DefaultStorageHandlerTest {
     Write writeCollection = findSingleCreateCollectionWrite(capturedWrites);
     assertEquals(WriteOp.CREATE, writeCollection.getOp());
     assertEquals(testCase.correctCollection().getId(), writeCollection.getFeatureId());
-    assertEquals(Naksha.VIRT_COLLECTIONS, writeCollection.getCollectionId());
+    assertEquals(Naksha.COLLECTIONS_COL, writeCollection.getCollectionId());
 
     // And: write features related to the same feature in correct collection
     List<Write> featureWrites = getSingularWritesToCollection(capturedWrites, testCase.correctCollection().getId());
@@ -183,7 +183,7 @@ class DefaultStorageHandlerTest {
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
     String collectionId = handler.properties.getCollection().getId();
-    WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeature(null, collectionId, featureToCreate));
+    WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeature(collectionId, featureToCreate));
 
     // When: Processing write features
     ignoreExceptionsFrom(
@@ -213,7 +213,7 @@ class DefaultStorageHandlerTest {
 
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
-    WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeature(null, "different_collection", featureToCreate));
+    WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeature("different_collection", featureToCreate));
 
     // And: Handler with autoCreateCollection disabled to test
     DefaultStorageHandler handler = storageHandler();
@@ -230,7 +230,7 @@ class DefaultStorageHandlerTest {
   }
 
   private static Write findSingleCreateCollectionWrite(List<WriteRequest> writeRequests) {
-    List<Write> collectionWrites = getSingularWritesToCollection(writeRequests, Naksha.VIRT_COLLECTIONS);
+    List<Write> collectionWrites = getSingularWritesToCollection(writeRequests, Naksha.COLLECTIONS_COL);
     assertEquals(1, collectionWrites.size(), "Expected single collection write");
     return collectionWrites.get(0);
   }
@@ -250,7 +250,7 @@ class DefaultStorageHandlerTest {
   private static ArgumentMatcher<WriteRequest> matchesCreateCollectionRequest() {
     return writeRequest -> {
       WriteList writes = writeRequest.getWrites();
-      return writes.size() == 1 && Naksha.VIRT_COLLECTIONS.equals(writes.get(0).getCollectionId());
+      return writes.size() == 1 && Naksha.COLLECTIONS_COL.equals(writes.get(0).getCollectionId());
     };
   }
 
@@ -326,7 +326,6 @@ class DefaultStorageHandlerTest {
   private Request writeRandomFeature() {
     return new WriteRequest()
         .add(new Write().createFeature(
-            null,
             "random_collection_" + RandomUtils.nextInt(),
             new NakshaFeature("random_feature_" + RandomUtils.nextInt())
         ));

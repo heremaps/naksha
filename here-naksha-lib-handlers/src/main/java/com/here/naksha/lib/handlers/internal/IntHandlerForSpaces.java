@@ -21,7 +21,6 @@ package com.here.naksha.lib.handlers.internal;
 import static com.here.naksha.lib.handlers.NakshaAdminCollection.EVENT_HANDLERS;
 import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
-import static naksha.model.util.ResultHelper.readIdsFromResult;
 
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
@@ -30,6 +29,7 @@ import naksha.model.IReadSession;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.request.*;
+import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
 
 public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
@@ -74,7 +74,7 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
   }
 
   private List<String> missingHandlersIds(Response fetchedHandlers, List<String> expectedHandlersIds) {
-    List<String> availableHandlerIds = readIdsFromResult(fetchedHandlers);
+    List<String> availableHandlerIds = ResultHelper.readIdsFromResult(fetchedHandlers);
     return expectedHandlersIds.stream()
         .filter(expectedId -> !availableHandlerIds.contains(expectedId))
         .toList();

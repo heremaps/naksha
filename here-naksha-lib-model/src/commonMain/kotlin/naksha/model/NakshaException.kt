@@ -10,18 +10,10 @@ import kotlin.js.JsName
  * @property error the error that happened.
  * @since 3.0.0
  */
-@JsExport
-class NakshaException(
-    /**
-     * The [NakshaError] that causes this exception.
-     * @since 3.0.0
-     */
+expect class NakshaException : RuntimeException {
     val error: NakshaError
-) : RuntimeException(error.msg, error.cause) {
 
-    /**
-     * Secondary constructor to directly
-     */
-    @JsName("of")
-    constructor(code: String, msg: String, id: String? = null, cause: Throwable? = null) : this(NakshaError(code, msg, id, cause))
+    constructor(error: NakshaError)
+
+    constructor(code: String, msg: String, id: String? = null, cause: Throwable? = null)
 }

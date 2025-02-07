@@ -13,10 +13,10 @@ public class RequestTypesUtilTest {
     public void testIsCollectionsRequestType() {
         //Given: WriteRequest for only NakshaCollection
         final WriteRequest writeRequest = new WriteRequest();
-        writeRequest.add(new Write().createCollection(null, new NakshaCollection("test_collection")));
+        writeRequest.add(new Write().createCollection(new NakshaCollection("test_collection")));
         Assertions.assertTrue(RequestTypesUtil.isOnlyWriteCollections(writeRequest));
         Assertions.assertFalse(RequestTypesUtil.isOnlyWriteFeatures(writeRequest));
-        writeRequest.add(new Write().createCollection(null, new NakshaCollection("test_collection2")));
+        writeRequest.add(new Write().createCollection(new NakshaCollection("test_collection2")));
         Assertions.assertTrue(RequestTypesUtil.isOnlyWriteCollections(writeRequest));
         Assertions.assertFalse(RequestTypesUtil.isOnlyWriteFeatures(writeRequest));
     }
@@ -25,10 +25,10 @@ public class RequestTypesUtilTest {
     public void testIsFeaturesRequestType() {
         //Given: WriteRequest for only NakshaFeature
         final WriteRequest writeRequest = new WriteRequest();
-        writeRequest.add(new Write().upsertFeature(null, "coll", new NakshaFeature("feature1")));
+        writeRequest.add(new Write().upsertFeature("coll", new NakshaFeature("feature1"), true));
         Assertions.assertTrue(RequestTypesUtil.isOnlyWriteFeatures(writeRequest));
         Assertions.assertFalse(RequestTypesUtil.isOnlyWriteCollections(writeRequest));
-        writeRequest.add(new Write().upsertFeature(null, "coll", new NakshaFeature("feature2")));
+        writeRequest.add(new Write().upsertFeature("coll", new NakshaFeature("feature2"), true));
         Assertions.assertTrue(RequestTypesUtil.isOnlyWriteFeatures(writeRequest));
         Assertions.assertFalse(RequestTypesUtil.isOnlyWriteCollections(writeRequest));
     }
@@ -37,8 +37,8 @@ public class RequestTypesUtilTest {
     public void testIsNotRequestForJustOneType() {
         //Given: WriteRequest containing both types
         final WriteRequest writeRequest = new WriteRequest();
-        writeRequest.add(new Write().upsertFeature(null, "coll", new NakshaFeature("feature1")));
-        writeRequest.add(new Write().upsertCollection(null, new NakshaCollection("test_collection")));
+        writeRequest.add(new Write().upsertFeature("coll", new NakshaFeature("feature1"), true));
+        writeRequest.add(new Write().upsertCollection(new NakshaCollection("test_collection"), true));
         Assertions.assertFalse(RequestTypesUtil.isOnlyWriteFeatures(writeRequest));
         Assertions.assertFalse(RequestTypesUtil.isOnlyWriteCollections(writeRequest));
     }

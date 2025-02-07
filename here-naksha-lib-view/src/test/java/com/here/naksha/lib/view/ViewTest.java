@@ -136,7 +136,7 @@ public class ViewTest {
 
     final WriteRequest request = new WriteRequest();
     final NakshaFeature feature = new NakshaFeature("id0");
-    request.add(write.createFeature(null, feature));
+    request.add(write.createFeature("", feature));
 //    when(storage.tupleToFeature(any())).thenReturn(feature);
 
     Response success = new SuccessResponse(sampleXyzWriteResponse(1));
