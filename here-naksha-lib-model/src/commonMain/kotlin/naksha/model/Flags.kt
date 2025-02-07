@@ -273,31 +273,31 @@ inline fun Flags.withBaseTupleNumber(value: Boolean): Flags = if (value) (this o
 inline fun Flags.hasBaseTupleNumber(): Boolean = (this and HAS_BASE_TN_CLEAR) == HAS_BASE_TN_BIT
 
 /**
- * Updates the created-at value bit.
- * @param value _true_ if the [MetadataBinary] encodes the created-at value.
+ * If the `createdAt` value is encoded explicitly, otherwise the value is read from `updatedAt`.
+ * @param value _true_ if the [MetadataBinary] encodes the `createdAt` value.
  * @return the new flags.
  * @since 3.0.0
  */
 inline fun Flags.withCreateAt(value: Boolean): Flags = if (value) (this or HAS_CREATED_AT_BIT) else (this and HAS_CREATED_AT_CLEAR)
 
 /**
- * Tests if the created-at value is encoded in the [MetadataBinary].
- * @return _true_ if the created-at value is encoded in the [MetadataBinary].
+ * Tests if the `createdAt` value is encoded in the [MetadataBinary], if not, the value should be read from `updatedAt`.
+ * @return _true_ if the `createdAt` value is encoded in the [MetadataBinary].
  * @since 3.0.0
  */
 inline fun Flags.hasCreatedAt(): Boolean = (this and HAS_CREATED_AT_CLEAR) == HAS_CREATED_AT_BIT
 
 /**
- * Updates the author-ts value bit.
- * @param value _true_ if the [MetadataBinary] encodes the author-ts value.
+ * If the `authorTs` value is encoded explicitly, otherwise the value is read from `updatedAt`.
+ * @param value _true_ if the [MetadataBinary] encodes the `authorTs` value.
  * @return the new flags.
  * @since 3.0.0
  */
 inline fun Flags.withAuthorTs(value: Boolean): Flags = if (value) (this or HAS_AUTHOR_TS_BIT) else (this and HAS_AUTHOR_TS_CLEAR)
 
 /**
- * Tests if the author-ts value is encoded in the [MetadataBinary].
- * @return _true_ if the author-ts value is encoded in the [MetadataBinary].
+ * Tests if the `authorTs` value is encoded in the [MetadataBinary], if not, the value should be read from `updatedAt`.
+ * @return _true_ if the `authorTs` value is encoded in the [MetadataBinary].
  * @since 3.0.0
  */
 inline fun Flags.hasAuthorTs(): Boolean = (this and HAS_AUTHOR_TS_CLEAR) == HAS_AUTHOR_TS_BIT
