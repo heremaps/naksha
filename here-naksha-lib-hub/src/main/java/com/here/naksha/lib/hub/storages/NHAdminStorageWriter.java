@@ -18,10 +18,13 @@
  */
 package com.here.naksha.lib.hub.storages;
 
+import naksha.model.ILock;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaTransaction;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class NHAdminStorageWriter extends NHAdminStorageReader implements IWriteSession {
 
@@ -44,5 +47,25 @@ public class NHAdminStorageWriter extends NHAdminStorageReader implements IWrite
   @Override
   public void rollback() {
     session.rollback();
+  }
+
+  @Override
+  public @NotNull ILock acquireSessionLock(@NotNull String lockId) {
+    return session.acquireSessionLock(lockId);
+  }
+
+  @Override
+  public @NotNull ILock acquireTransactionLock(@NotNull String lockId) {
+    return session.acquireTransactionLock(lockId);
+  }
+
+  @Override
+  public @NotNull NakshaTransaction useTransaction() {
+    return session.useTransaction();
+  }
+
+  @Override
+  public @Nullable NakshaTransaction getTransaction() {
+    return session.getTransaction();
   }
 }

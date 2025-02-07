@@ -35,22 +35,23 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import naksha.jbon.JbDictionary;
 import naksha.model.IReadSession;
+import naksha.model.IStorage;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
 import naksha.model.StreamInfo;
-import naksha.model.Tuple;
-import naksha.model.TupleNumber;
-import naksha.model.objects.Transaction;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaMap;
 import naksha.model.request.ErrorResponse;
+import naksha.model.request.FeatureTuple;
 import naksha.model.request.ReadCollections;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
-import naksha.model.request.ResultTuple;
 import naksha.model.request.SuccessResponse;
 import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.ApiStatus;
@@ -262,7 +263,8 @@ public class NHSpaceStorageReader implements IReadSession {
    */
   @Override
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void close() {}
+  public void close() {
+  }
 
   protected void addSpaceIdToStreamInfo(final @Nullable String spaceId) {
     final StreamInfo streamInfo = sessionOptions.streamInfo;
@@ -301,42 +303,8 @@ public class NHSpaceStorageReader implements IReadSession {
     throw NOT_SUPPORTED_ERROR;
   }
 
-  @NotNull
-  @Override
-  public String getMap() {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public void setMap(@NotNull String s) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
   @Override
   public boolean isClosed() {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @NotNull
-  @Override
-  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public void fetchTuples(
-      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @NotNull
-  @Override
-  public Transaction transaction() {
     throw NOT_SUPPORTED_ERROR;
   }
 
@@ -345,5 +313,65 @@ public class NHSpaceStorageReader implements IReadSession {
   public Response executeParallel(@NotNull Request request) {
     throw new NakshaException(
         new NakshaError(NakshaError.NOT_IMPLEMENTED, "parallel execution not supported for NHSpace"));
+  }
+
+  @Override
+  public @NotNull IStorage getStorage() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @NotNull SessionOptions getOptions() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @Nullable NakshaMap getMapById(@NotNull String mapId) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @Nullable NakshaMap getMapByNumber(int mapNumber) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public void refreshMaps() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public void fetchTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, boolean fetchFromHistory, int mode) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public void refreshCollections(@NotNull NakshaMap map) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @Nullable JbDictionary getDictionary(@NotNull String id) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
+    throw NOT_SUPPORTED_ERROR;
   }
 }

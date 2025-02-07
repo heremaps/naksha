@@ -56,13 +56,16 @@ import naksha.base.Platform;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
+import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
+import naksha.model.StorageConfig;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
+import naksha.model.objects.NakshaMap;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
@@ -70,10 +73,6 @@ import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import naksha.model.util.ResultHelper;
-import naksha.psql.PgInstance;
-import naksha.psql.PsqlCluster;
-import naksha.psql.PsqlInstance;
-import naksha.psql.PsqlStorage;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -128,16 +127,24 @@ public class NakshaHub implements INaksha {
     // create storage instance upfront
     logger.info("NakshaHub initialization started.");
 
-    PgInstance master = PsqlInstance.get(storageUrl);
-    PsqlCluster pgCluster = new PsqlCluster(master); // TODO CASL-657: support clustering
+    final StorageConfig storageConfig = new StorageConfig();
+    storageConfig.setId("Naksha");
+    storageConfig.setClassName("naksha.psql.PsqlStorage");
+    // TODO force create and update?
+    storageConfig.setCreate(false);
+    storageConfig.setUpgrade(false);
+    storageConfig.setNumber(Naksha.storageNumberByHash(storageConfig.getId()));
+    storageConfig.put("masterUri", storageUrl);
+    // TODO CASL-657: support clustering
 
     //    this.psqlStorage = new PsqlStorage(PsqlStorage.ADMIN_STORAGE_ID, appName, storageUrl);
     String schema = "naksha"; // TODO CASL-657: this used to come in `storageUrl`
-    this.psqlStorage = new PsqlStorage(pgCluster, schema);
+    logger.info("Initializing Admin storage (if not already).");
+    this.psqlStorage = Naksha.useStorage(storageConfig);
     this.adminStorageInstance = new NHAdminStorage(this.psqlStorage);
     this.spaceStorageInstance = new NHSpaceStorage(this, new NakshaEventPipelineFactory(this));
     // setup backend storage DB and Hub config
-    final NakshaHubConfig finalCfg = this.storageSetup(customCfg, configId);
+    final NakshaHubConfig finalCfg = this.storageSetup(customCfg, configId, schema);
     if (finalCfg == null) {
       throw new RuntimeException("Server configuration not found! Neither in Admin storage nor a default file.");
     }
@@ -159,39 +166,26 @@ public class NakshaHub implements INaksha {
   }
 
   private @Nullable NakshaHubConfig storageSetup(
-      final @Nullable NakshaHubConfig customCfg, final @Nullable String configId) {
+      final @Nullable NakshaHubConfig customCfg, final @Nullable String configId, final String schema) {
     /**
-     * 1. Init Admin Storage
-     * 2. Create all Admin collections
-     * 3. run maintenance during startup to ensure history partitions are available
-     * 4. fetch / add latest config (ordered preference DB,Custom,Default)
+     * 1. Create all Admin collections
+     * 2. run maintenance during startup to ensure history partitions are available
+     * 3. fetch / add latest config (ordered preference DB,Custom,Default)
      */
 
-    // 1. Init Admin Storage
-    initAdminStorage(customCfg);
-
-    // 2. Create all Admin collections in Admin DB
+    // 1. Create all Admin collections in Admin DB
     final NakshaContext nakshaContext = NakshaContext.newInstance(NakshaHubConfig.defaultAppName());
+    nakshaContext.setMapId(schema);
     nakshaContext.attachToCurrentThread();
     createAdminCollections(nakshaContext);
 
     // TODO: CASL-657: verify it's not used in v3 anymore
-    //    // 3. run one-time maintenance on Admin DB to ensure history partitions are available
+    //    // 2. run one-time maintenance on Admin DB to ensure history partitions are available
     //    logger.info("Running one-time maintenance on Admin storage.");
     //    getAdminStorage().maintainNow();
 
-    // 4. fetch / add latest config
+    // 3. fetch / add latest config
     return configSetup(nakshaContext, customCfg, configId);
-  }
-
-  private void initAdminStorage(NakshaHubConfig customCfg) {
-    logger.info("Initializing Admin storage (if not already).");
-    if (customCfg != null && customCfg.storageParams != null) {
-      getAdminStorage().initStorage(customCfg.storageParams);
-    } else {
-      getAdminStorage().initStorage(null);
-    }
-    logger.info("Admin storage ready.");
   }
 
   private void createAdminCollections(NakshaContext nakshaContext) {
@@ -223,9 +217,8 @@ public class NakshaHub implements INaksha {
 
   private static WriteRequest createAdminCollectionsRequest() {
     final WriteRequest writeRequest = new WriteRequest();
-    String map = null; // "naksha"; // TODO CASL-657: where to get map from?
     for (String adminCollectionId : NakshaAdminCollection.ALL) {
-      writeRequest.add(new Write().createCollection(map, new NakshaCollection(adminCollectionId)));
+      writeRequest.add(new Write().createCollection(new NakshaCollection(adminCollectionId)));
     }
     return writeRequest;
   }
@@ -245,9 +238,12 @@ public class NakshaHub implements INaksha {
     try (final IWriteSession admin = getAdminStorage().newWriteSession(SessionOptions.from(nakshaContext, true))) {
 
       if (customCfg != null) {
-        String map = null; // TODO: CASL-657 - confirm
+        NakshaMap map = admin.getMapById(NakshaContext.mapId()); // TODO CASL-657 confirm
+        assert map != null;
+        NakshaCollection collection = admin.getCollectionById(map, NakshaAdminCollection.CONFIGS);
+        assert collection != null;
         WriteRequest writeCustomCfg = new WriteRequest()
-            .add(new Write().upsertFeature(map, NakshaAdminCollection.CONFIGS, customCfg));
+            .add(new Write().upsertFeature(collection, customCfg, true));
         Response writeCustomCfgResponse = admin.execute(writeCustomCfg);
         if (writeCustomCfgResponse instanceof SuccessResponse) {
           admin.commit();

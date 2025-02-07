@@ -18,10 +18,9 @@
  */
 package com.here.naksha.lib.hub.storages;
 
-import java.util.Map;
 import naksha.base.Int64;
-import naksha.model.ILock;
-import naksha.model.IMap;
+import naksha.base.PlatformLock;
+import naksha.jbon.JbDictionary;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
@@ -29,8 +28,7 @@ import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
-import naksha.model.Tuple;
-import naksha.model.objects.NakshaFeature;
+import naksha.model.StorageConfig;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -49,12 +47,6 @@ public class NHAdminStorage implements IStorage {
     this.psqlStorage = psqlStorage;
   }
 
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void initStorage(@Nullable Map<String, ?> params) {
-    this.psqlStorage.initStorage(params);
-  }
-
   @NotNull
   @Override
   public IWriteSession newWriteSession(@Nullable SessionOptions options) {
@@ -67,21 +59,10 @@ public class NHAdminStorage implements IStorage {
     return new NHAdminStorageReader(psqlStorage.newReadSession(options));
   }
 
-  @Override
-  public void close() {
-    psqlStorage.close();
-  }
-
   @NotNull
   @Override
   public String getId() {
     return ID_PREFIX + psqlStorage.getId();
-  }
-
-  @NotNull
-  @Override
-  public SessionOptions getAdminOptions() {
-    return psqlStorage.getAdminOptions();
   }
 
   @Override
@@ -90,60 +71,32 @@ public class NHAdminStorage implements IStorage {
   }
 
   @Override
-  public void setHardCap(int i) {
-    psqlStorage.setHardCap(i);
+  public @NotNull PlatformLock getLock() {
+    throw new NakshaException(new NakshaError(NakshaError.NOT_IMPLEMENTED, "getLock not supported"));
   }
 
   @Override
-  public boolean isInitialized() {
-    return psqlStorage.isInitialized();
-  }
-
-  @NotNull
-  @Override
-  public IMap getDefaultMap() {
-    return psqlStorage.getDefaultMap();
-  }
-
-  @NotNull
-  @Override
-  public IMap get(@NotNull String mapId) {
-    return psqlStorage.get(mapId);
-  }
-
-  @Nullable
-  @Override
-  public IMap get(int mapNumber) {
-    return psqlStorage.get(mapNumber);
+  public @NotNull StorageConfig getConfig() {
+    return psqlStorage.getConfig();
   }
 
   @Override
-  public boolean contains(@NotNull String mapId) {
-    return psqlStorage.contains(mapId);
+  public @NotNull Int64 getNumber() {
+    return psqlStorage.getNumber();
   }
 
-  @Nullable
   @Override
-  public String getMapId(int mapNumber) {
-    return psqlStorage.getMapId(mapNumber);
+  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
+    return psqlStorage.getEncodingFlags(feature, context);
   }
 
-  @NotNull
   @Override
-  public NakshaFeature tupleToFeature(@NotNull Tuple tuple) {
-    return psqlStorage.tupleToFeature(tuple);
+  public @Nullable JbDictionary getDictionary(@NotNull String id) {
+    return psqlStorage.getDictionary(id);
   }
 
-  @NotNull
   @Override
-  public Tuple featureToTuple(@NotNull NakshaFeature feature) {
-    return psqlStorage.featureToTuple(feature);
-  }
-
-  @NotNull
-  @Override
-  @Deprecated
-  public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
-    throw new NakshaException(new NakshaError(NakshaError.NOT_IMPLEMENTED, "enterLock not supported"));
+  public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
+    return psqlStorage.getEncodingDictionary(feature, context);
   }
 }

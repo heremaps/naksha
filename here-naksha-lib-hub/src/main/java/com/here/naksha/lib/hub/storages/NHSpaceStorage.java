@@ -35,17 +35,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import naksha.base.Int64;
-import naksha.model.ILock;
-import naksha.model.IMap;
+import naksha.base.PlatformLock;
+import naksha.jbon.JbDictionary;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
-import naksha.model.Tuple;
-import naksha.model.objects.NakshaFeature;
+import naksha.model.StorageConfig;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -91,82 +88,18 @@ public class NHSpaceStorage implements IStorage {
     return adminSpaces;
   }
 
-  /**
-   * Initializes the storage, create the transaction table, install needed scripts and extensions.
-   */
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void initStorage(@Nullable Map<String, ?> params) {
-    nakshaHub.getAdminStorage().initStorage(params);
-  }
-
   @NotNull
   @Override
   public String getId() {
     return nakshaHub.getAdminStorage().getId();
   }
 
-  @NotNull
-  @Override
-  public SessionOptions getAdminOptions() {
-    return nakshaHub.getAdminStorage().getAdminOptions();
-  }
 
   @Override
   public int getHardCap() {
     return nakshaHub.getAdminStorage().getHardCap();
   }
 
-  @Override
-  public void setHardCap(int i) {
-    nakshaHub.getAdminStorage().setHardCap(i);
-  }
-
-  @Override
-  public boolean isInitialized() {
-    return nakshaHub.getAdminStorage().isInitialized();
-  }
-
-  @NotNull
-  @Override
-  public IMap getDefaultMap() {
-    return nakshaHub.getAdminStorage().getDefaultMap();
-  }
-
-  @NotNull
-  @Override
-  public IMap get(@NotNull String mapId) {
-    return nakshaHub.getAdminStorage().get(mapId);
-  }
-
-  @Nullable
-  @Override
-  public IMap get(int mapNumber) {
-    return nakshaHub.getAdminStorage().get(mapNumber);
-  }
-
-  @Override
-  public boolean contains(@NotNull String mapId) {
-    return nakshaHub.getAdminStorage().contains(mapId);
-  }
-
-  @Nullable
-  @Override
-  public String getMapId(int mapNumber) {
-    return nakshaHub.getAdminStorage().getMapId(mapNumber);
-  }
-
-  @NotNull
-  @Override
-  public NakshaFeature tupleToFeature(@NotNull Tuple tuple) {
-    return nakshaHub.getAdminStorage().tupleToFeature(tuple);
-  }
-
-  @NotNull
-  @Override
-  public Tuple featureToTuple(@NotNull NakshaFeature feature) {
-    return nakshaHub.getAdminStorage().featureToTuple(feature);
-  }
 
   @NotNull
   @Override
@@ -181,13 +114,32 @@ public class NHSpaceStorage implements IStorage {
   }
 
   @Override
-  public void close() {
-    nakshaHub.getAdminStorage().close();
+  public @NotNull PlatformLock getLock() {
+    throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
   }
 
-  @NotNull
   @Override
-  public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
-    throw new NakshaException(new NakshaError(NakshaError.NOT_IMPLEMENTED, "enterLock"));
+  public @NotNull StorageConfig getConfig() {
+    throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
+  }
+
+  @Override
+  public @NotNull Int64 getNumber() {
+    throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
+  }
+
+  @Override
+  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
+    throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
+  }
+
+  @Override
+  public @Nullable JbDictionary getDictionary(@NotNull String id) {
+    throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
+  }
+
+  @Override
+  public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
+    throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
   }
 }

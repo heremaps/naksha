@@ -31,6 +31,7 @@ import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import naksha.model.ILock;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
@@ -39,11 +40,10 @@ import naksha.model.SessionOptions;
 import naksha.model.Tuple;
 import naksha.model.TupleNumber;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.Transaction;
+import naksha.model.objects.NakshaTransaction;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
-import naksha.model.request.ResultTuple;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteOp;
@@ -180,7 +180,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     Response updateSpaceRes = null;
     if (collection != null) {
       // submit Update Collection request to Custom Space based pipeline
-      WriteRequest updateCollectionReq = new WriteRequest().add(new Write().updateCollection(null, collection));
+      WriteRequest updateCollectionReq = new WriteRequest().add(new Write().updateCollection(collection, true));
       updateSpaceRes = executeSingleCollectionWrite(updateCollectionReq, space.getId());
     }
     if (collection == null || updateSpaceRes instanceof SuccessResponse) {
@@ -241,42 +241,8 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     throw NOT_SUPPORTED_ERROR;
   }
 
-  @NotNull
-  @Override
-  public String getMap() {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public void setMap(@NotNull String s) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
   @Override
   public boolean isClosed() {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @NotNull
-  @Override
-  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public void fetchTuples(
-      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @NotNull
-  @Override
-  public Transaction transaction() {
     throw NOT_SUPPORTED_ERROR;
   }
 
@@ -285,5 +251,25 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   public Response executeParallel(@NotNull Request request) {
     throw new NakshaException(
         new NakshaError(NakshaError.NOT_IMPLEMENTED, "parallel execution not supported for NHSpace"));
+  }
+
+  @Override
+  public @NotNull ILock acquireSessionLock(@NotNull String lockId) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @NotNull ILock acquireTransactionLock(@NotNull String lockId) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @NotNull NakshaTransaction useTransaction() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @Nullable NakshaTransaction getTransaction() {
+    throw NOT_SUPPORTED_ERROR;
   }
 }
