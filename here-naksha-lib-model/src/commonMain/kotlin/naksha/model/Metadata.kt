@@ -2,6 +2,7 @@
 
 package naksha.model
 
+import kotlinx.datetime.Clock
 import naksha.base.Fnv1a32
 import naksha.base.Int64
 import naksha.base.Platform
@@ -26,8 +27,8 @@ data class Metadata(
     override val flags: Flags = Flags().withAction(Action.CREATED),
     override val nextVersion: Version? = null,
     override val updatedAt: Int64 = Platform.currentMillis(),
-    override val createdAt: Int64? = updatedAt,
-    override val authorTs: Int64? = updatedAt,
+    override val createdAt: Int64? = null,
+    override val authorTs: Int64? = null,
     override val prevTupleNumber: TupleNumber? = null,
     override val baseTupleNumber: TupleNumber? = null,
     override val changeCount: Int = 1,
@@ -139,6 +140,73 @@ data class Metadata(
     override fun toString(): String = "$id:$tupleNumber"
 
     companion object Metadata_C {
+
+        /**
+         * Helper method to create the new metadata, when performing the given operation, with the given feature as outcome of the operation, in the given session.
+         *
+         * Actually this method should be used, when the new metadata need to be calculated.
+         * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given arguments are not sufficient to generate the new metadata.
+         * @param session the session for which to perform the operation.
+         * @param feature the new _(modified)_ state of the feature, for which the metadata should be created.
+         * @param tupleNumber the new [TupleNumber] that is generated for the new state.
+         * @param operation the [operation][Operation] that is performed.
+         * @param action the [action][Action] being performed, if not given, it is expected that the given [operation][Operation] has a [fixed action][Operation.action].
+         * @return the new metadata that is correct for the new state, based upon the given data.
+         */
+        @JvmStatic
+        @JsStatic
+        fun forOperation(
+            session: ISession,
+            feature: NakshaFeature,
+            tupleNumber: TupleNumber,
+            operation: Operation,
+            action: Action = operation.action ?:
+                throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "There is no default action defined for operation $operation")
+        ): Metadata {
+            var flags = session.storage.getEncodingFlags(feature, null)
+                .withOperation(operation)
+                .withAction(action)
+            val xyz = feature.properties.xyz
+            val prevTupleNumber = xyz.pguid?.tupleNumber
+            val updatedAt: Int64 = Platform.currentMillis()
+            val createdAt: Int64? = if (prevTupleNumber != null) {
+                flags = flags.withCreateAt(true)
+                xyz.createdAt
+            } else null
+            val author: String?
+            val authorTs: Int64? = if (xyz.author == null || xyz.author != session.options.author) {
+                // authorTs is always the same as updatedAt, when the author is updated.
+                // If the previous author was null, we simply always assume a change.
+                author = session.options.author
+                flags = flags.withAuthorTs(false)
+                null
+            } else {
+                // If the author stays the same as before, we need to remember the previous timestamp!
+                author = xyz.author
+                flags = flags.withAuthorTs(true)
+                xyz.authorTs
+            }
+            val baseTupleNumber = xyz.mguid?.tupleNumber
+            return Metadata(
+                tupleNumber = tupleNumber,
+                flags = flags,
+                nextVersion = null,
+                updatedAt = updatedAt,
+                createdAt = createdAt,
+                authorTs = authorTs,
+                prevTupleNumber = prevTupleNumber,
+                baseTupleNumber = baseTupleNumber,
+                changeCount = xyz.changeCount + 1,
+                hash = calculateHash(feature),
+                hereTile = calculateHereTile(feature),
+                id = feature.id,
+                appId = session.options.appId,
+                author = author,
+                origin = null, // TODO: Fix this, we need to detect foreign features!
+                target = null, // TODO: Fix this, we need to detect join operations!
+            )
+        }
+
         /**
          * Import other metadata into the heap representation.
          * @param other the other metadata.
@@ -251,13 +319,13 @@ data class Metadata(
         }
 
         /**
-         * Calculate the geo-grid value for [Metadata].
-         * @param feature the feature for which to calculate the geo-grid.
-         * @return the geo-grid value.
+         * Calculate the HERE tile-id to be stored in [Metadata].
+         * @param feature the feature for which to calculate the HERE tile-id.
+         * @return the HERE tile-id _(aka the int-key)_.
          */
         @JvmStatic
         @JsStatic
-        fun calculateGeoGrid(feature: NakshaFeature): Int {
+        fun calculateHereTile(feature: NakshaFeature): Int {
             val c = feature.referencePoint ?: feature.geometry?.calculateCentroid()
             return if (c != null) HereTile(c.latitude, c.longitude).intKey else Fnv1a32.string(0, feature.id)
         }
