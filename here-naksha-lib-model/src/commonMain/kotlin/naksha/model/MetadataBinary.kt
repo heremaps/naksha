@@ -1,6 +1,7 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.base.Platform
 import naksha.base.PlatformDataView
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_float64
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
@@ -31,7 +32,6 @@ class MetadataBinary(
      */
     offset: Int
 ) : IMetadata {
-    private var _nextTxnOffset = -1
     private var _prevTupleNumberOffset = -1
     private var _baseTupleNumberOffset = -1
     private var _createdAtOffset = -1
@@ -86,8 +86,16 @@ class MetadataBinary(
     private fun updateCache(): Boolean {
         if (_updateAtOffset < 0) {
             val flags = this.flags
-            var offset = this.offset
-
+            var offset = this.offset + 40
+            // storage-number: 8
+            // map-number: 4
+            // collection-number: 4
+            // version: 7
+            // partition-number: 1
+            // uid: 4
+            // flags: 4
+            // txn-next: 8
+            // = 40 byte fixed offset
             if (flags.hasCustomValue(0)) {
                 _cv0Offset = offset
                 offset += 8
@@ -201,8 +209,8 @@ class MetadataBinary(
     override val txnNext: Int64?
         get() {
             updateCache()
-            val nextTxnOffset = this._nextTxnOffset
-            return if (nextTxnOffset >= 0) dataview_get_int64(view, nextTxnOffset) else null
+            val value = dataview_get_int64(view, offset + 32)
+            return if (value eq 0) null else value
         }
 
     override val nextVersion: Version?
