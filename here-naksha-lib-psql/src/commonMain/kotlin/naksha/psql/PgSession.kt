@@ -275,94 +275,96 @@ open class PgSession(
     override fun fetchTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int, fetchFromHistory: Boolean, mode: FetchMode) {
         //TODO("Not yet implemented")
         // TODO: Rohit - Only if you want:
-        val cachedTuples = Naksha.cache.load(featureTuples, from, to)
+        val cachedTuples = Naksha.cache.load(featureTuples, from, to).toSet()
         val missingTuples = featureTuples.subList(from, to).filter { it !in cachedTuples }
         if (missingTuples.isNotEmpty()) {
-            fetchFromDatabase(missingTuples, fetchFromHistory, mode)?.forEachIndexed { index, dbResult ->
-                if (dbResult != null) {
-                    dbResult.tuple?.let { it1 -> Naksha.cache.store(it1) }
-                    //Update the original featureTup at the appropriate position. How as list is immutable
-                    //featureTuples[from+index] = dbResult
+            val fetchedResults = fetchFromDatabase(missingTuples, fetchFromHistory, mode) ?: return
+            val fetchedMap = fetchedResults.filterNotNull().associateBy { it }
+            featureTuples.subList(from, to).filterNotNull().forEach { tup ->
+                fetchedMap[tup]?.let { fetchedItem ->
+                    fetchedItem.tuple?.let(Naksha.cache::store)
+                    tup.tuple = fetchedItem.tuple
+                    tup.source = fetchedItem.source
                 }
             }
         }
     }
 
     private fun fetchFromDatabase( missingTuples: List<FeatureTuple?>, fetchFromHistory: Boolean, mode: FetchMode): List<FeatureTuple?>? {
-
-//        WITH source AS (
-//            -- Select all tuples needed from all collections.
-//            -- We can read all tuples using paging
-//                    -- Then we order by tuple_number, and use offset/limit here!
-//            -- This must only be done in a single table, but nothing else changes.
-//            -- Note that using tuple_number will perform an index scan, its ordered already.
-//            (SELECT ${col_number} as col_num, * FROM ${col_name} WHERE tn = ANY($1))
-//        UNION ALL
-//        ...
-//        ), meta_with_rest AS (
-//        -- Compose metadata binary, and add the other binary columns.
-//        SELECT bytea_agg(
-//                int8send(${storage_number})
-//                ||int4send(${map_number})
-//        ||int4send(col_num)
-//                ||tn -- 12 byte, txn is part of tuple_number
-//        ||int4send(flags) -- 4 byte, we're aligned to 64-bit again
-//        ||coalesce(int8send(txn_next),''::bytea)
-//                ||coalesce(int8send(cv0),''::bytea)
-//                ||coalesce(int8send(cv1),''::bytea)
-//                ||coalesce(int8send(cv2),''::bytea)
-//                ||coalesce(int8send(cv3),''::bytea)
-//                ||coalesce(prev_tn,''::bytea)
-//                ||coalesce(base_tn,''::bytea)
-//                ||coalesce(substring(int8send(created_at),3),''::bytea) -- u48
-//                ||coalesce(substring(int8send(author_ts),3),''::bytea) -- u48
-//                ||substring(int8send(updated_at), 3) -- u48
-//                ||int4send(coalesce(change_count, 1))
-//                ||int4send(coalesce(hash, 0))
-//                ||int4send(coalesce(here_tile,0))
-//                ||id::bytea||'\x00'::bytea
-//                ||coalesce(app_id,'')::bytea||'\x00'::bytea
-//                ||coalesce(author,'')::bytea||'\x00'::bytea
-//                ||coalesce(origin,'')::bytea||'\x00'::bytea
-//                ||coalesce(target,'')::bytea||'\x00'::bytea
-//                ||coalesce(ft,'')::bytea||'\x00'::bytea
-//                ||coalesce(cs0,'')::bytea||'\x00'::bytea
-//                ||coalesce(cs1,'')::bytea||'\x00'::bytea
-//                ||coalesce(cs2,'')::bytea||'\x00'::bytea
-//                ||coalesce(cs3,'')::bytea||'\x00'::bytea
-//        ) as meta, ref_point, geo, tags, feature, attachment
-//        FROM source
-//        ), tuple_objects_without_header AS (
-//        -- Create Tuple-Binary-Objects without header.
-//        SELECT bytea_agg(
-//                int4send((octet_length(meta) << 16)|octet_length(coalesce(ref_point,''::bytea)))
-//        ||int4send(octet_length(coalesce(geo,''::bytea)))
-//                ||int4send(octet_length(coalesce(tags,''::bytea)))
-//                ||int4send(octet_length(coalesce(feature,''::bytea)))
-//                ||int4send(octet_length(coalesce(attachment,''::bytea)))
-//                ||meta
-//                ||coalesce(ref_point,''::bytea)
-//                ||coalesce(geo,''::bytea)
-//                ||coalesce(tags,''::bytea)
-//                ||coalesce(feature,''::bytea)
-//                ||coalesce(attachment,''::bytea)
-//        ) as obj
-//        ), result AS (
-//        -- Join all Tuple-Binary-Objects, adding the headers, count the amount of tuples.
-//        SELECT sum(1)::int as len, bytea_agg(
-//        int4send((3 << 28)|1) -- type 3, length 1
-//        ||int4send(8 + octet_length(obj)) -- size
-//                ||obj
-//        ) as all_obj
-//        FROM tuple_objects_without_header
-//                LIMIT 16777215
-//        )
-//        -- Create the Tuple-Binary-Array, compress it.
-//        SELECT gzip(bytea_agg(
-//            int4send((4 << 28)|len) -- type 4
-//                ||int4send(8 + octet_length(all_obj)) -- size
-//                ||all_obj
-//        )) FROM result
+        if (missingTuples.isEmpty()) return null
+        val tupNumbers = missingTuples.mapNotNull{ it?.tuple?.tupleNumber }
+        //TODO: Update the query below
+        val sqlQuery = """
+        WITH source AS (
+          (SELECT :col_number as col_num, * FROM :col_name WHERE tn = ANY(:tupNumbers))
+          UNION ALL
+          ...
+        ), meta_with_rest AS (
+          SELECT bytea_agg(
+            int8send(:storage_number)
+            ||int4send(:map_number)
+            ||int4send(col_num)
+            ||tn
+            ||int4send(flags)
+            ||coalesce(int8send(txn_next),int8send(0::int8))
+            ||coalesce(int8send(cv0),''::bytea)
+            ||coalesce(int8send(cv1),''::bytea)
+            ||coalesce(int8send(cv2),''::bytea)
+            ||coalesce(int8send(cv3),''::bytea)
+            ||coalesce(prev_tn,''::bytea)
+            ||coalesce(base_tn,''::bytea)
+            ||coalesce(substring(int8send(created_at),3),''::bytea)
+            ||coalesce(substring(int8send(author_ts),3),''::bytea)
+            ||substring(int8send(updated_at), 3)
+            ||int4send(coalesce(change_count, 1))
+            ||int4send(coalesce(hash, 0))
+            ||int4send(coalesce(here_tile,0))
+            ||id::bytea||'\x00'::bytea
+            ||coalesce(app_id,'')::bytea||'\x00'::bytea
+            ||coalesce(author,'')::bytea||'\x00'::bytea
+            ||coalesce(origin,'')::bytea||'\x00'::bytea
+            ||coalesce(target,'')::bytea||'\x00'::bytea
+            ||coalesce(ft,'')::bytea||'\x00'::bytea
+            ||coalesce(cs0,'')::bytea||'\x00'::bytea
+            ||coalesce(cs1,'')::bytea||'\x00'::bytea
+            ||coalesce(cs2,'')::bytea||'\x00'::bytea
+            ||coalesce(cs3,'')::bytea||'\x00'::bytea
+          ) as meta, ref_point, geo, tags, feature, attachment
+          FROM source
+        ), tuple_objects_without_header AS (
+          SELECT bytea_agg(
+             int4send((octet_length(meta) << 16)|octet_length(coalesce(ref_point,''::bytea)))
+             ||int4send(octet_length(coalesce(geo,''::bytea)))
+             ||int4send(octet_length(coalesce(tags,''::bytea)))
+             ||int4send(octet_length(coalesce(feature,''::bytea)))
+             ||int4send(octet_length(coalesce(attachment,''::bytea)))
+             ||meta
+             ||coalesce(ref_point,''::bytea)
+             ||coalesce(geo,''::bytea)
+             ||coalesce(tags,''::bytea)
+             ||coalesce(feature,''::bytea)
+             ||coalesce(attachment,''::bytea)
+            ) as obj
+        ), result AS (
+          SELECT sum(1)::int as len, bytea_agg(
+            int4send((3 << 28)|1)
+            ||int4send(8 + octet_length(obj))
+            ||obj
+          ) as all_obj
+          FROM tuple_objects_without_header
+          LIMIT 16777215
+        )
+        SELECT gzip(bytea_agg(
+            int4send((4 << 28)|len)
+            ||int4send(8 + octet_length(all_obj))
+            ||all_obj
+        )) FROM result
+    """.trimIndent()
+        val conn = pgConnection
+        if (conn != null) {
+            val resultSet = conn.execute(sqlQuery,arrayOf(tupNumbers)).close()
+        }
+        //TODO: Convert resultSet to FeatureTuple list
         return null
     }
 
