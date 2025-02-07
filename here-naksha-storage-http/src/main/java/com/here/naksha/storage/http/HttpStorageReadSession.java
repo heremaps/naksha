@@ -20,12 +20,17 @@ package com.here.naksha.storage.http;
 
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import java.util.List;
-import naksha.model.*;
-import naksha.model.objects.Transaction;
+import naksha.jbon.JbDictionary;
+import naksha.model.IReadSession;
+import naksha.model.IStorage;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaMap;
 import naksha.model.request.ErrorResponse;
+import naksha.model.request.FeatureTuple;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
-import naksha.model.request.ResultTuple;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -62,7 +67,8 @@ public final class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public void close() {}
+  public void close() {
+  }
 
   @Override
   public int getSocketTimeout() {
@@ -94,26 +100,10 @@ public final class HttpStorageReadSession implements IReadSession {
     throw new NotImplementedException("Not supported for HTTP storage");
   }
 
-  @NotNull
-  @Override
-  public String getMap() {
-    throw new NotImplementedException("Not supported for HTTP storage");
-  }
-
-  @Override
-  public void setMap(@NotNull String s) {
-    throw new NotImplementedException("Not supported for HTTP storage");
-  }
-
   @Override
   public boolean isClosed() {
     return false;
     // TODO
-  }
-
-  @Override
-  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
-    return false;
   }
 
   @NotNull
@@ -122,21 +112,59 @@ public final class HttpStorageReadSession implements IReadSession {
     return execute(request);
   }
 
-  @NotNull
+
   @Override
-  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
-    throw new NotImplementedException("Not supported for HTTP storage");
+  public @NotNull IStorage getStorage() {
+    throw new NotImplementedException("Not supported by HTTP storage");
   }
 
   @Override
-  public void fetchTuples(
-      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
-    throw new NotImplementedException("Not supported for HTTP storage");
+  public @Nullable NakshaMap getMapById(@NotNull String mapId) {
+    throw new NotImplementedException("Not supported by HTTP storage");
   }
 
-  @NotNull
   @Override
-  public Transaction transaction() {
-    throw new NotImplementedException("Not yet supported for HTTP storage");
+  public @Nullable NakshaMap getMapByNumber(int mapNumber) {
+    return null;
+  }
+
+  @Override
+  public void refreshMaps() {
+
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
+    return null;
+  }
+
+  @Override
+  public void fetchTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, boolean fetchFromHistory, int mode) {
+    throw new NotImplementedException("Not supported by HTTP storage");
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
+    throw new NotImplementedException("Not supported by HTTP storage");
+  }
+
+  @Override
+  public void refreshCollections(@NotNull NakshaMap map) {
+
+  }
+
+  @Override
+  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
+    throw new NotImplementedException("Not supported by HTTP storage");
+  }
+
+  @Override
+  public @Nullable JbDictionary getDictionary(@NotNull String id) {
+    throw new NotImplementedException("Not supported by HTTP storage");
+  }
+
+  @Override
+  public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
+    throw new NotImplementedException("Not supported by HTTP storage");
   }
 }

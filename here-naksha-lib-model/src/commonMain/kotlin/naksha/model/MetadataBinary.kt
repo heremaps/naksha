@@ -87,10 +87,6 @@ class MetadataBinary(
         if (_updateAtOffset < 0) {
             val flags = this.flags
             var offset = this.offset
-            if (flags.hasNextVersion()) {
-                _nextTxnOffset = offset
-                offset += 8
-            } else _nextTxnOffset = -1
 
             if (flags.hasCustomValue(0)) {
                 _cv0Offset = offset

@@ -3,6 +3,7 @@
 package naksha.model
 
 import naksha.base.*
+import naksha.model.objects.NakshaFeature
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -18,7 +19,7 @@ import kotlin.js.JsName
  */
 @Suppress("unused")
 @JsExport
-open class StorageConfig : AnyObject() {
+open class StorageConfig : NakshaFeature() {
 
     companion object StorageConfig_C {
         private val ID = NotNullProperty<StorageConfig, String>(String::class)
@@ -34,23 +35,6 @@ open class StorageConfig : AnyObject() {
      * @return default classname, when none otherwise specified.
      */
     protected open fun defaultClassName(): String? = null
-
-    /**
-     * The unique storage-identifier.
-     * @since 3.0.0
-     */
-    var id by ID
-
-    /**
-     * Set the unique storage-identifier.
-     * @param id the unique storage-identifier.
-     * @return this.
-     * @since 3.0.0
-     */
-    fun withId(id: String): StorageConfig {
-        this.id = id
-        return this
-    }
 
     /**
      * The unique storage-number.

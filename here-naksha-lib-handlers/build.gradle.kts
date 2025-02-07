@@ -6,7 +6,7 @@ plugins {
 description = "Naksha Handlers library"
 dependencies {
     implementation(project(":here-naksha-lib-core"))
-    implementation(project(":here-naksha-lib-psql"))
+    implementation(project(":here-naksha-lib-model"))
     implementation(project(":here-naksha-lib-view"))
     implementation(project(":here-naksha-storage-http"))
 
