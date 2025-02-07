@@ -19,8 +19,6 @@ import naksha.model.FlagsBits.FlagsBitsCompanion.HAS_BASE_TN_BIT
 import naksha.model.FlagsBits.FlagsBitsCompanion.HAS_BASE_TN_CLEAR
 import naksha.model.FlagsBits.FlagsBitsCompanion.HAS_CREATED_AT_BIT
 import naksha.model.FlagsBits.FlagsBitsCompanion.HAS_CREATED_AT_CLEAR
-import naksha.model.FlagsBits.FlagsBitsCompanion.HAS_NEXT_VERSION_BIT
-import naksha.model.FlagsBits.FlagsBitsCompanion.HAS_NEXT_VERSION_CLEAR
 import naksha.model.FlagsBits.FlagsBitsCompanion.HAS_PREV_TN_BIT
 import naksha.model.FlagsBits.FlagsBitsCompanion.HAS_PREV_TN_CLEAR
 import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_CLEAR
@@ -243,21 +241,6 @@ inline fun Flags.withAction(value: Int): Flags = (this and ACTION_CLEAR) or (val
  * @since 3.0.0
  */
 inline fun Flags.withAction(action: Action): Flags = (this and ACTION_CLEAR) or (action.intValue)
-
-/**
- * Updates the next-version-bit.
- * @param value _true_ if the [MetadataBinary] encodes the next-version.
- * @return the new flags.
- * @since 3.0.0
- */
-inline fun Flags.withNextVersion(value: Boolean): Flags = if (value) (this or HAS_NEXT_VERSION_BIT) else (this and HAS_NEXT_VERSION_CLEAR)
-
-/**
- * Tests if the next-version is encoded in the [MetadataBinary].
- * @return _true_ if the next-version is encoded in the [MetadataBinary].
- * @since 3.0.0
- */
-inline fun Flags.hasNextVersion(): Boolean = (this and HAS_NEXT_VERSION_CLEAR) == HAS_NEXT_VERSION_BIT
 
 /**
  * Updates the previous-tuple-number bit.
