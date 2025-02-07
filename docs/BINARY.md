@@ -141,7 +141,7 @@ The metadata is encoded like following:
 
 - { tuple-number }
 - flags: u32
-- txnNext: u64 (optional, flags bit)
+- txnNext: u64 _(0 = null)_
 - cv0: f64 (optional, flags bit)
 - cv1: f64 (optional, flags bit)
 - cv2: f64 (optional, flags bit)
@@ -168,6 +168,8 @@ The metadata is encoded like following:
 Each metadata encodes at its start the tuple-number in 224-bit (28-byte). The previous tuple-number (`prev_tn`) and the base tuple-number (`base_tn`), used in auto-merging, are only encoded as 96-bit values, because they share the same _storage_, _map_, and _collection_, so the are encoded only with _version_, _partition-number_, and _uid_.
 
 The `origin` and `target` are stringified [_GUIDs_](./LIFECYCLE.md#guid). 
+
+**Note**: The `txnNext` value is always stored fully with 8-byte, because it is a value that is updated, and to be able to update the otherwise immutable data object, we always encode its with full 8-byte. The `txnNext` value is mainly for internal storage, to move the data into a history partition, it's not really intended for clients, therefore clients should ignore the value.
 
 ## Metadata-Binary-Object
 Each tuple has a pre-defined set of metadata. Optionally, metadata can have an object header like:
@@ -399,7 +401,7 @@ WITH source AS (
     ||int4send(col_num)
     ||tn -- 12 byte, txn is part of tuple_number
     ||int4send(flags) -- 4 byte, we're aligned to 64-bit again
-    ||coalesce(int8send(txn_next),''::bytea)
+    ||coalesce(int8send(txn_next),int8send(0::int8))
     ||coalesce(int8send(cv0),''::bytea)
     ||coalesce(int8send(cv1),''::bytea)
     ||coalesce(int8send(cv2),''::bytea)
