@@ -63,7 +63,7 @@ class JsInt64 internal constructor(): Int64 {
 
     override fun equals(other: Any?): Boolean = js("this.valueOf()") === _int64(other)
 
-    override fun eq(other: Any?): Boolean = js("this.valueOf()") === _int64(other)
+    override fun eq(other: Any?): Boolean = other != null && js("this.valueOf()") === _int64(other)
 
     override fun shr(bits: Int): Int64 = js("BigInt.asIntN(64, this.valueOf() >> BigInt(bits))").unsafeCast<Int64>()
 
