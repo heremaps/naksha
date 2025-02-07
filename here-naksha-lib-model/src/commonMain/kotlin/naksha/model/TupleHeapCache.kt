@@ -39,7 +39,7 @@ class TupleHeapCache : AbstractTupleCache(LATENCY_MEMORY) {
             val tupleNumber = featureTuple.tupleNumber
             val tuple = featureTuple.tuple
             if (tuple == null) {
-                val cached = tuplesByStorage[tupleNumber.storageNumber]?.get(tupleNumber)?.deref()
+                val cached = get(tupleNumber)
                 if (cached != null) {
                     featureTuple.tuple = tuple
                     featureTuple.source = this
@@ -77,6 +77,8 @@ class TupleHeapCache : AbstractTupleCache(LATENCY_MEMORY) {
     override fun doEvictDictionary(dict: JbDictionary) {}
 
     override fun doLoadAllDictionaries(): List<JbDictionary> = emptyList()
+
+    override fun get(tupleNumber: TupleNumber): Tuple? = tuplesByStorage[tupleNumber.storageNumber]?.get(tupleNumber)?.deref()
 
     override fun addedStorage(storage: IStorage) {
         tuplesByStorage.putIfAbsent(storage.number, AtomicMap())

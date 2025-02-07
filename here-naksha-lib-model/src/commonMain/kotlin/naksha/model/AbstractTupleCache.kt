@@ -105,6 +105,10 @@ abstract class AbstractTupleCache(override val cacheLatencyInMicros: Int64) : IT
         return rs
     }
 
+    final override fun set(tupleNumber: TupleNumber, tuple: Tuple) {
+        store(tuple)
+    }
+
     final override fun store(tuple: Tuple): Tuple {
         if (tuple.isComplete() || allowIncompleteTuple) performStore(tuple)
         return nextCache?.store(tuple) ?: tuple

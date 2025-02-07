@@ -48,6 +48,7 @@ interface ITupleCache : IDictManager {
      * @return the given [result-set] rs, so that the methods can be used as wrapper.
      * @since 3.0.0
      * @see [naksha.model.request.FeatureTupleList.fromByteArray]
+     * @see [get]
      */
     fun load(rs: List<FeatureTuple?>, start:Int = 0, end:Int = rs.size): List<FeatureTuple?>
 
@@ -57,7 +58,29 @@ interface ITupleCache : IDictManager {
      * @return the given [Tuple].
      * @since 3.0.0
      */
-    fun store(tuple: Tuple): Tuple
+    fun store(tuple: Tuple): Tuple {
+        set(tuple.tupleNumber, tuple)
+        return tuple
+    }
+
+    /**
+     * Read a single tuple from cache.
+     *
+     * ### Note
+     * This method is not recommended, because higher level caches will ignore it, it does not make sense to send a request to a remote cache for a single feature, the latency is too high, therefore it will only be answered by the in-memory cache.
+     * @param tupleNumber the [TupleNumber] of the [Tuple] to read.
+     * @return the [Tuple], if it is in the cache.
+     * @see [load]
+     */
+    operator fun get(tupleNumber: TupleNumber): Tuple?
+
+    /**
+     * Store or update a cached tuple.
+     *
+     * ### Note
+     * [Tuple] are immutable, except for [nextVersion][Metadata.nextVersion]. This is a mutable property, but with totally no significance in the cache. Still, because this property changes for _HEAD_ [Tuple], an update may be needed. Caches do not have to perform the update, but when they are able in some way to do it, they should do it.
+     */
+    operator fun set(tupleNumber: TupleNumber, tuple: Tuple)
 
     /**
      * Tests if the cache may contain the [Tuple] with the given [tuple-number][TupleNumber].
