@@ -1,7 +1,7 @@
 package naksha.psql.executors.write
 
 import naksha.model.*
-import naksha.model.Metadata.Metadata_C.calculateGeoGrid
+import naksha.model.Metadata.Metadata_C.calculateHereTile
 import naksha.model.Metadata.Metadata_C.calculateHash
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
@@ -74,7 +74,7 @@ class UpdateFeature(
             puid = previousMetadata.puid,
             hash = calculateHash(feature, session.options.excludePaths, session.options.excludeFn),
             changeCount = previousMetadata.changeCount + 1,
-            hereTile = calculateGeoGrid(feature),
+            hereTile = calculateHereTile(feature),
             flags = flags.withAction(Action.UPDATED_VALUE),
             appId = session.options.appId,
             author = session.options.author ?: previousMetadata.author,

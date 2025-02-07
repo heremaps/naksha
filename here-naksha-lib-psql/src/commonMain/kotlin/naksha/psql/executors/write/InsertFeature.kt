@@ -1,7 +1,7 @@
 package naksha.psql.executors.write
 
 import naksha.model.*
-import naksha.model.Metadata.Metadata_C.calculateGeoGrid
+import naksha.model.Metadata.Metadata_C.calculateHereTile
 import naksha.model.Metadata.Metadata_C.calculateHash
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
@@ -60,7 +60,7 @@ class InsertFeature(
             flags = flags,
             id = feature.id,
             ft = feature.type,
-            hereTile = calculateGeoGrid(feature)
+            hereTile = calculateHereTile(feature)
         )
     }
 }

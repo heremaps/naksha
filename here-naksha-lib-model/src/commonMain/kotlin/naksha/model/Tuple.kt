@@ -36,7 +36,7 @@ data class Tuple(
     /**
      * Geometry-Reference-Point, always a single [point][naksha.geo.SpPoint], [TWKB](https://github.com/TWKB/Specification) encoded (no compression, we never get any advantage of compression).
      *
-     * Might be _null_, when the feature does not have a reference point, in that the [geo-grid HERE tile-id][Metadata.calculateGeoGrid] is calculated from the gravitational center of the [geometry][geo], or, if the feature does not have a geometry either, then it is calculated from the [id][Metadata.id] of the feature.
+     * Might be _null_, when the feature does not have a reference point, in that the [geo-grid HERE tile-id][Metadata.calculateHereTile] is calculated from the gravitational center of the [geometry][geo], or, if the feature does not have a geometry either, then it is calculated from the [id][Metadata.id] of the feature.
      * @since 3.0.0
      */
     @JvmField val referencePoint: ByteArray? = null,

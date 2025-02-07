@@ -213,7 +213,7 @@ class Naksha private constructor() {
         }
 
         /**
-         * Quotes an identifier, this means to replace all double quotes (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
+         * Quotes an identifier, this means to replace all double quotes (`"`) with two double quotes (`""`), but only if necessary, so if not being `a-zA-Z0-9_`. This encloses the string with quotation characters, when needed.
          * @param parts the identifier parts to merge and quote.
          * @return the quoted identifier.
          */

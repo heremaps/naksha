@@ -31,13 +31,13 @@ internal object WriteCollectionUtils {
             ),
             attachment = attachment,
             meta = Metadata(
-                storeNumber = tupleNumber.storeNumber,
+                tupleNumber = tupleNumber,
+                flags = flags,
                 version = tupleNumber.version,
                 uid = tupleNumber.uid,
                 updatedAt = session.versionTime(),
                 author = session.options.author,
                 appId = session.options.appId,
-                flags = flags,
                 id = featureId,
                 ft = NakshaCollection.FEATURE_TYPE
             )

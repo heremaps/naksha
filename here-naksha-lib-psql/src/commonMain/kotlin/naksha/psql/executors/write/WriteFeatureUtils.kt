@@ -57,7 +57,7 @@ internal object WriteFeatureUtils {
             prevUid,
             changeCount,
             Metadata.calculateHash(feature),
-            Metadata.calculateGeoGrid(feature),
+            Metadata.calculateHereTile(feature),
             meta.flags,
             feature.id,
             meta.appId,

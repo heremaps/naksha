@@ -505,7 +505,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @return the created map.
      * @since 3.0.0
      */
-    fun createNakshaCollection(conn: PgConnection, map: PgMap, collection: NakshaCollection): PgCollection {
+    fun createCollection(conn: PgConnection, map: PgMap, collection: NakshaCollection): PgCollection {
         val c = PgCollection(map, collection)
         createPgCollection(conn, c)
         return c
