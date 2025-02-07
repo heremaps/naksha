@@ -150,14 +150,9 @@ open class PgSession(
     var error: PgError? = null
         private set
 
-    /**
-     * The transaction of the session, if any.
-     * @since 3.0.0
-     */
-    var transaction: NakshaTransaction? = null
-        private set
+    private var transactionValue: NakshaTransaction? = null
 
-    override fun getTransaction(): NakshaTransaction? = transaction
+    override fun getTransaction(): NakshaTransaction? = transactionValue
 
     /**
      * Return the current transaction, if no transaction started yet, starts a new one.
@@ -168,11 +163,11 @@ open class PgSession(
     override fun useTransaction(): NakshaTransaction {
         assertMutable()
         assertOpen()
-        var tx = transaction
+        var tx = transactionValue
         if (tx == null) {
             val txn = pgStorage.adminMap.newTxn(useConnection())
             tx = NakshaTransaction(txn.number, txn.epoch)
-            transaction = tx
+            transactionValue = tx
         }
         return tx
     }
@@ -187,7 +182,7 @@ open class PgSession(
 
             is ReadRequest -> {
                 val response = PgReader(this, request).execute()
-                if (transaction == null) {
+                if (transactionValue == null) {
                     // If this read was performed on a blank session, without a pending transaction, then we can release the connection.
                     pgConnection?.close()
                     pgConnection = null
@@ -205,7 +200,7 @@ open class PgSession(
     private fun clear() {
         uid.set(0)
         error = null
-        transaction = null
+        transactionValue = null
         try {
             pgConnection?.close()
         } catch (ignore: Throwable) {
@@ -219,7 +214,7 @@ open class PgSession(
         assertOpen()
         assertMutable()
         if (conn != null) {
-            val tx = transaction
+            val tx = transactionValue
             if (tx != null) {
                 try {
                     val writeTxReq = WriteRequest()

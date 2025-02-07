@@ -216,39 +216,39 @@ class PsqlAdminMap internal constructor(
             conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_COL_SEQ AS ${PgType.INT64} START 100 CACHE 1;").close()
 
             logger.info("Create internal collections: transactions, collections, and dictionaries")
-            transactions().create_internal(
-                conn, 0, PgStorageClass.Consistent,
-                storeHistory = false,
-                storedDeleted = false,
-                storeMeta = true,
-                indices = listOf(
-                    id_txn_uid,
-                    gist_geo_2d,
-                    tags_id_txn_uid,
-                    app_id_updatedAt_id_txn_uid,
-                    author_ts_id_txn_uid
-                )
-            )
-            collections().create_internal(
-                conn, 0, PgStorageClass.Consistent,
-                storeHistory = true,
-                storedDeleted = true,
-                storeMeta = true,
-                indices = listOf(
-                    id_txn_uid,
-                    gist_geo_2d,
-                    tags_id_txn_uid,
-                    app_id_updatedAt_id_txn_uid,
-                    author_ts_id_txn_uid
-                )
-            )
-            dictionaries().create_internal(
-                conn, 0, PgStorageClass.Consistent,
-                storeHistory = true,
-                storedDeleted = true,
-                storeMeta = true,
-                indices = listOf(id_txn_uid, tags_id_txn_uid)
-            )
+//            transactions.create_internal(
+//                conn, 0, PgStorageClass.Consistent,
+//                storeHistory = false,
+//                storedDeleted = false,
+//                storeMeta = true,
+//                indices = listOf(
+//                    id_txn_uid,
+//                    gist_geo_2d,
+//                    tags_id_txn_uid,
+//                    app_id_updatedAt_id_txn_uid,
+//                    author_ts_id_txn_uid
+//                )
+//            )
+//            collections().create_internal(
+//                conn, 0, PgStorageClass.Consistent,
+//                storeHistory = true,
+//                storedDeleted = true,
+//                storeMeta = true,
+//                indices = listOf(
+//                    id_txn_uid,
+//                    gist_geo_2d,
+//                    tags_id_txn_uid,
+//                    app_id_updatedAt_id_txn_uid,
+//                    author_ts_id_txn_uid
+//                )
+//            )
+//            dictionaries().create_internal(
+//                conn, 0, PgStorageClass.Consistent,
+//                storeHistory = true,
+//                storedDeleted = true,
+//                storeMeta = true,
+//                indices = listOf(id_txn_uid, tags_id_txn_uid)
+//            )
             logger.info("Done creating transactions, collections, and dictionaries")
         }
         return adminMapOid

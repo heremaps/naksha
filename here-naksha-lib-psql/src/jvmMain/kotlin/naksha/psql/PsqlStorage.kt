@@ -45,7 +45,7 @@ open class PsqlStorage : PgStorage(), IStorage {
         return PsqlAdminMap(this, config, create, upgrade)
     }
 
-    override fun newSession(options: SessionOptions, readOnly: Boolean): PsqlSession = PsqlSession(this, options, readOnly)
+    override fun newSession(options: SessionOptions, readOnly: Boolean): PgSession = PgSession(this, options, readOnly)
     override fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection {
         TODO("Not yet implemented")
     }

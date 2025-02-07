@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicReference
  * A special storage that optionally starts an own docker container.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-class PsqlTestStorage private constructor(cluster: PsqlCluster, schemaName: String) : PsqlStorage(cluster, schemaName) {
+class PsqlTestStorage private constructor(cluster: PsqlCluster, schemaName: String) : PsqlStorage() { // cluster, schemaName
 
     internal data class DockerContainerInfo(
         val container: GenericContainer<*>,
@@ -151,10 +151,10 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster, schemaName: Stri
 
     }
 
-    override fun shutdownStorage() {
+    fun shutdownStorage() {
         storage.compareAndSet(this, null)
         try {
-            super.shutdownStorage()
+            super.shutdownStorage(true)
         } catch (e: Exception) {
             logger.info("Error while trying to close the test storage: {}", e)
         }
