@@ -42,6 +42,12 @@ interface ISession : IDictReader, AutoCloseable {
      */
     var lockTimeout: Int
 
+    /**
+     * The session options used for this session.
+     * @since 3.0.0
+     */
+    val options: SessionOptions
+
     // TODO: Define a streaming API (full table scan) to consume all features from a collection.
     //       This API is designed to backup data, or to execute a read request with a huge cardinality,
     //       therefore it should always operate on snapshots (specific versions).

@@ -67,28 +67,30 @@ open class PgSession(
         if (_closed) throw NakshaException(ILLEGAL_STATE, "Connection closed")
     }
 
+    private var optionsValue: SessionOptions = options ?: SessionOptions()
+
     /**
      * The options when opening new connections. The options are mostly immutable, except for the timeout values, for which there are dedicated setter.
      */
-    var options: SessionOptions = options ?: SessionOptions()
-        private set
+    override val options: SessionOptions
+        get() = optionsValue
 
     override var socketTimeout: Int
         get() = options.socketTimeout
         set(value) {
-            options = options.copy(socketTimeout = value)
+            optionsValue = options.copy(socketTimeout = value)
         }
 
     override var stmtTimeout: Int
         get() = options.stmtTimeout
         set(value) {
-            options = options.copy(stmtTimeout = value)
+            optionsValue = options.copy(stmtTimeout = value)
         }
 
     override var lockTimeout: Int
         get() = options.lockTimeout
         set(value) {
-            options = options.copy(lockTimeout = value)
+            optionsValue = options.copy(lockTimeout = value)
         }
 
     /**
