@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import kotlinx.datetime.Clock
 import naksha.base.Fnv1a32
 import naksha.base.Int64
 import naksha.base.Platform
@@ -152,11 +151,13 @@ data class Metadata(
          * @param operation the [operation][Operation] that is performed.
          * @param action the [action][Action] being performed, if not given, it is expected that the given [operation][Operation] has a [fixed action][Operation.action].
          * @return the new metadata that is correct for the new state, based upon the given data.
+         * @since 3.0.0
+         * @see [IWriteSession.newTupleNumber]
          */
         @JvmStatic
         @JsStatic
         fun forOperation(
-            session: ISession,
+            session: IWriteSession,
             feature: NakshaFeature,
             tupleNumber: TupleNumber,
             operation: Operation,

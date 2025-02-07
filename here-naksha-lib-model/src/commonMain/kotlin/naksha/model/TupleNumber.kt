@@ -138,8 +138,9 @@ data class TupleNumber(
 
     companion object TupleNumber_C {
         /**
-         * The _HEAD_ [TupleNumber], to be used when a [tuple-number][TupleNumber] is not yet persisted anywhere. This happens for various reasons, for example when a [Tuple] is created in the client at runtime, and not yet persisted in any storage, therefore does not yet have a tuple-number.
+         * The _HEAD_ [TupleNumber], to be used when a [tuple-number][TupleNumber] is not yet available. This happens for various reasons, for example when a [Tuple] is created in the client at runtime, and not yet persisted in any storage, therefore does not yet have a tuple-number.
          * @since 3.0.0
+         * @see [IWriteSession.newTupleNumber]
          */
         val HEAD = TupleNumber(Int64(0), 0, 0, 0, Version.HEAD, 0)
     }
