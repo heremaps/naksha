@@ -2,7 +2,6 @@ package naksha.psql.executors.write
 
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.quoteIdent
-import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
 import naksha.psql.PgColumn
@@ -48,7 +47,7 @@ class BulkWriteExecutor(
         var plan = insertToHead[collection]
         if (plan == null) {
             val quotedCollectionId = quoteIdent(collection.id)
-            plan = session.connection().prepare(
+            plan = session.useConnection().prepare(
                 """INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})
                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
                       """.trimIndent(),
@@ -129,7 +128,7 @@ class BulkWriteExecutor(
             }.joinToString(separator = ",")
             val quotedHeadTable = collection.head.quotedName
 
-            val conn = session.connection()
+            val conn = session.useConnection()
             plan = conn.prepare(
                 sql = """ UPDATE $quotedHeadTable
                    SET $columnEqualsVariable
@@ -183,7 +182,7 @@ class BulkWriteExecutor(
         val columnNames = columns.joinToString(separator = ",")
         val copyColumnNames = columnsToCopy.joinToString(separator = ",")
 
-        return session.connection().prepare(
+        return session.useConnection().prepare(
             sql = """
                 INSERT INTO $dstTableName($columnNames)
                 SELECT $1,
@@ -199,6 +198,6 @@ class BulkWriteExecutor(
 
     private fun executeDelete(quotedTable: String, idsToDelete: Set<String>) {
         val SQL = "DELETE FROM $quotedTable WHERE ${PgColumn.id.ident} = ANY($1)"
-        session.connection().execute(SQL, arrayOf(idsToDelete.toTypedArray())).close()
+        session.useConnection().execute(SQL, arrayOf(idsToDelete.toTypedArray())).close()
     }
 }

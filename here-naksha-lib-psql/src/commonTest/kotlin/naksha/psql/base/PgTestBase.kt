@@ -29,7 +29,7 @@ abstract class PgTestBase(val collection: NakshaCollection? = null) {
         get() = env.storage
 
     protected fun useConnection(): PgConnection =
-        env.pgSession.connection()
+        env.pgSession.useConnection()
 
     protected fun insertFeature(feature: NakshaFeature, sessionOptions: SessionOptions? = null) =
         insertFeatures(listOf(feature), sessionOptions)

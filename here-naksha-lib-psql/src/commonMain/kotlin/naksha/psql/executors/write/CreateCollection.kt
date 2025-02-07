@@ -2,7 +2,6 @@ package naksha.psql.executors.write
 
 import naksha.base.Int64
 import naksha.base.PlatformUtil
-import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -40,7 +39,7 @@ class CreateCollection(
         // Create the tables
         val collection = map[colId]
         collection.create(
-            connection = session.connection(),
+            connection = session.useConnection(),
             partitions = feature.partitions,
             storageClass = PgStorageClass.of(feature.storageClass),
             indices = PgIndex.DEFAULT_INDICES,
@@ -57,7 +56,7 @@ class CreateCollection(
         feature: NakshaFeature
     ): Tuple {
         val transaction = session.useTransaction()
-        val conn = session.connection()
+        val conn = session.useConnection()
         conn.execute(
             sql = """ INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})
                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)

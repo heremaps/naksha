@@ -99,7 +99,8 @@ interface IMetadata {
      *
      * If not being _null_, then the next state can be found by searching for the [Tuple] with the [prevTupleNumber] matching this [tupleNumber].
      *
-     * If this is _null_, there is no guarantee that the state has not changed meanwhile, so this acts as an inverse bloom filter, if the value is set, you can be sure that this [Tuple] is a historic one, otherwise it is only likely that this [Tuple] is the latest one (HEAD state).
+     * ### Warning
+     * If this property is _null_, there is no guarantee that the state has not changed meanwhile, so this acts as an inverse bloom filter, if the value is set, you can be sure that this [Tuple] is a historic one, otherwise it is only likely that this [Tuple] is the latest one _(HEAD state)_.
      * @since 3.0.0
      */
     val nextVersion: Version?

@@ -9,7 +9,6 @@ import naksha.model.request.SuccessResponse
 import naksha.psql.PgCollection
 import naksha.psql.PgSession
 import naksha.psql.executors.PgReader
-import naksha.psql.executors.TupleCachingUtils.cachedTupleNumber
 import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
 import naksha.psql.executors.write.WriteFeatureUtils.resolveFlags

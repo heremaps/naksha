@@ -54,7 +54,7 @@ class TestEnv(dropSchema: Boolean, initStorage: Boolean, enableInfoLogs: Boolean
         get() {
             var c = _pgConnection
             if (c == null) {
-                c = pgSession.connection()
+                c = pgSession.useConnection()
                 _pgConnection = c
             }
             return c

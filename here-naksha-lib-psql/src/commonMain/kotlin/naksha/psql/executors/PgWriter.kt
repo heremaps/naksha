@@ -3,9 +3,11 @@ package naksha.psql.executors
 import naksha.base.Int64
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.cache
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.CONFLICT
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.model.objects.NakshaCollection
@@ -49,7 +51,7 @@ class PgWriter(
     /**
      * The connection to use.
      */
-    val conn: PgConnection = session.connection()
+    val conn: PgConnection = session.useConnection()
 
     /**
      * The writes to act upon.
@@ -295,7 +297,7 @@ class PgWriter(
 
     private fun cachedTupleNumber(write: WriteExt, tuple: Tuple): TupleNumber {
         tuples[write.i] = tuple
-        Naksha.cache.store(tuple)
+        cache.store(tuple)
         return tuple.tupleNumber
     }
 
@@ -315,30 +317,21 @@ class PgWriter(
     private fun updatePrevTupleCache(newTuple: Tuple) {
         val prevTupleNumber = newTuple.getPrevTupleNumber()
         if (prevTupleNumber != null) {
-            val prevTuple = tupleCache[prevTupleNumber]
+            val prevTuple = cache[prevTupleNumber]
             if (prevTuple != null) {
-                val updatedMeta = prevTuple.meta?.copy(nextVersion = newTuple.meta?.version)
-                tupleCache[prevTupleNumber] = prevTuple.copy(meta = updatedMeta)
+                val updatedMeta = prevTuple.meta.copy(nextVersion = newTuple.meta.version)
+                cache[prevTupleNumber] = prevTuple.copy(meta = updatedMeta)
             }
         }
     }
 
-    private fun mapOf(write: WriteExt): PgMap {
-        val mapId = write.mapId
-        if (mapId !in storage) throw NakshaException(MAP_NOT_FOUND, "No such map: '$mapId'")
-        val map = storage[mapId]
-        if (!map.exists(conn)) throw NakshaException(MAP_NOT_FOUND, "No such map: '$mapId'")
-        return map
-    }
+    private fun mapOf(write: WriteExt): PgMap = storage.adminMap.getMapById(session.useConnection(), write.mapId) ?:
+        throw NakshaException(MAP_NOT_FOUND, "No such map: '${write.mapId}'")
 
     private fun collectionOf(write: WriteExt): PgCollection {
+        val collectionId = write.collectionId ?: throw NakshaException(ILLEGAL_ARGUMENT, "Missing collection id")
         val map = mapOf(write)
-        val collectionId = write.collectionId
-        val collection = map[collectionId]
-        if (!collection.exists(conn)) throw NakshaException(
-            COLLECTION_NOT_FOUND,
-            "No such collection: $collectionId"
-        )
-        return collection
+        val collection = storage.adminMap.getPgCollectionById(session.useConnection(), map, collectionId)
+        return collection ?: throw NakshaException(COLLECTION_NOT_FOUND, "No such collection: $collectionId")
     }
 }

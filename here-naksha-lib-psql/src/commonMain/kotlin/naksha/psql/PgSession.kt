@@ -120,7 +120,7 @@ open class PgSession(
      * If none is yet acquired, acquires on from the pools and returns it. This connection is shared and must not be closed, it will automatically be closed when either [rollback] or [commit] are invoked.
      * @return the shared PostgresQL connection.
      */
-    fun connection(): PgConnection {
+    fun useConnection(): PgConnection {
         assertOpen()
         var conn = pgConnection
         if (conn == null) {
@@ -131,7 +131,7 @@ open class PgSession(
     }
 
     /**
-     * Internally invoked by [connection] to initialize the connection.
+     * Internally invoked by [useConnection] to initialize the connection.
      * @param conn the connection to initialize.
      * @param query the query to executed, can be modified, when overriding this method.
      */
@@ -172,7 +172,7 @@ open class PgSession(
         assertOpen()
         var tx = transaction
         if (tx == null) {
-            val txn = pgStorage.adminMap.newTxn(connection())
+            val txn = pgStorage.adminMap.newTxn(useConnection())
             tx = NakshaTransaction(txn.number, txn.epoch)
             transaction = tx
         }
@@ -270,13 +270,13 @@ open class PgSession(
     @v30_experimental
     override fun acquireSessionLock(lockId: String): ILock {
         assertOpen()
-        return PgLock(this, connection(), lockId, true)
+        return PgLock(this, useConnection(), lockId, true)
     }
 
     @v30_experimental
     override fun acquireTransactionLock(lockId: String): ILock {
         assertOpen()
-        return PgLock(this, connection(), lockId, false)
+        return PgLock(this, useConnection(), lockId, false)
     }
 
     override fun fetchTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int, fetchFromHistory: Boolean, mode: FetchMode) {
@@ -379,7 +379,7 @@ open class PgSession(
         if (conn == null && mayReadParallel()) {
             return newReadConnection().use { pgStorage.adminMap.getMapById(it, mapId)?.nakshaMap }
         }
-        return pgStorage.adminMap.getMapById(conn ?: connection(), mapId)?.nakshaMap
+        return pgStorage.adminMap.getMapById(conn ?: useConnection(), mapId)?.nakshaMap
     }
 
     override fun getMapByNumber(mapNumber: Int): NakshaMap? {
@@ -388,7 +388,7 @@ open class PgSession(
         if (conn == null && mayReadParallel()) {
             return newReadConnection().use { pgStorage.adminMap.getMapByNumber(it, mapNumber)?.nakshaMap }
         }
-        return pgStorage.adminMap.getMapByNumber(conn ?: connection(), mapNumber)?.nakshaMap
+        return pgStorage.adminMap.getMapByNumber(conn ?: useConnection(), mapNumber)?.nakshaMap
     }
 
     override fun refreshMaps() {
@@ -406,7 +406,7 @@ open class PgSession(
         if (conn == null && mayReadParallel()) {
             return newReadConnection().use { _getCollectionById(it, map, collectionId) }
         }
-        return _getCollectionById(conn ?: connection(), map, collectionId)
+        return _getCollectionById(conn ?: useConnection(), map, collectionId)
     }
 
     private fun _getCollectionByNumber(conn: PgConnection, map: NakshaMap, collectionNumber: Int): NakshaCollection? {
@@ -420,7 +420,7 @@ open class PgSession(
         if (conn == null && mayReadParallel()) {
             return newReadConnection().use { _getCollectionByNumber(it, map, collectionNumber) }
         }
-        return _getCollectionByNumber(conn ?: connection(), map, collectionNumber)
+        return _getCollectionByNumber(conn ?: useConnection(), map, collectionNumber)
     }
 
     override fun refreshCollections(map: NakshaMap) {

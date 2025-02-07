@@ -1,11 +1,9 @@
 package naksha.psql.executors.write
 
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.PlatformLogger
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
-import naksha.model.objects.NakshaCollection
 import naksha.psql.*
 import naksha.psql.executors.WriteExt
 
@@ -23,7 +21,7 @@ class DropCollection(private val session: PgSession) {
             "DROP without collectionId (expected in write's 'featureId')"
         )
         val pgCollection = map[collectionId]
-        val conn = session.connection()
+        val conn = session.useConnection()
         try {
             /**
              * TODO:
