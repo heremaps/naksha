@@ -7,8 +7,10 @@ import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
 import naksha.psql.PgCollection
+import naksha.psql.PgMap
 import naksha.psql.PgSession
 import naksha.psql.executors.PgReader
+import naksha.psql.executors.PgWriter
 import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
 import naksha.psql.executors.write.WriteFeatureUtils.resolveFlags
@@ -22,7 +24,7 @@ class DeleteFeature(
         val featureId = write.featureId ?: throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "No feature ID provided")
 
         val tupleNumber = newFeatureTupleNumber(collection, featureId, session)
-        val flags = resolveFlags(collection, session).action(Action.DELETED)
+        val flags = resolveFlags(collection, session).withAction(Action.DELETED)
 
         val readFeatures = ReadFeatures(collection.id)
         readFeatures.featureIds.add(featureId)
@@ -60,28 +62,38 @@ class DeleteFeature(
                 session.storage,
                 tupleNumber,
                 feature = feature,
-                metadata = metaForDeleted(metadata,feature,flags),
+                metadata = metaForDeleted(metadata, feature, flags, collection),
                 write.attachment,
                 flags
             )
-            return cachedTupleNumber(write, tuple, tupleList)
+            return PgWriter.cachedTupleNumber(write, tuple, tupleList)
         }
         return tupleNumber
     }
 
-    private fun metaForDeleted(previousMetadata: Metadata,
-                               feature: NakshaFeature,
-                               flags: Flags): Metadata {
-        val versionTime = session.txn
+    private fun metaForDeleted(
+        previousMetadata: Metadata,
+        feature: NakshaFeature,
+        flags: Flags,
+        collection: PgCollection
+    ): Metadata {
+        val versionTime = session.useTransaction().time
+        val tupleNumber = TupleNumber(
+            session.storage.number,
+            collection.map.number,
+            collection.number,
+            Naksha.partitionNumber(feature.id),
+            session.useTransaction().version,
+            session.uid.getAndAdd(1)
+        )
         return previousMetadata.copy(
+            tupleNumber = tupleNumber,
             updatedAt = versionTime,
             authorTs = if (session.options.author == null) previousMetadata.authorTs else versionTime,
-            prevVersion = previousMetadata.version,
-            uid = session.uid.getAndAdd(1),
-            puid = previousMetadata.puid,
+            prevTupleNumber = previousMetadata.tupleNumber,
             hash = calculateHash(feature, session.options.excludePaths, session.options.excludeFn),
             changeCount = previousMetadata.changeCount + 1,
-            geoGrid = calculateHereTile(feature),
+            hereTile = calculateHereTile(feature),
             flags = flags,
             appId = session.options.appId,
             author = session.options.author ?: previousMetadata.author,

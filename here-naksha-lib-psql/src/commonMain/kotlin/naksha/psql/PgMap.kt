@@ -100,4 +100,6 @@ open class PgMap internal constructor(
             return number
         }
     }
+
+    // TODO: We should have alias methods to manage collections, that redirect to storage.adminMap.{name} !!!
 }

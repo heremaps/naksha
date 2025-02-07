@@ -47,11 +47,12 @@ class BulkWriteExecutor(
         var plan = insertToHead[collection]
         if (plan == null) {
             val quotedCollectionId = quoteIdent(collection.id)
+            // TODO: Verify if allColumns is correct !!!
             plan = session.useConnection().prepare(
-                """INSERT INTO $quotedCollectionId(${PgColumn.allWritableColumns.joinToString(",")})
+                """INSERT INTO $quotedCollectionId(${PgColumn.allColumns.joinToString(",")})
                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
                       """.trimIndent(),
-                PgColumn.allWritableColumns.map { it.type.text }.toTypedArray()
+                PgColumn.allColumns.map { it.type.text }.toTypedArray()
             )
             insertToHead[collection] = plan
         }
@@ -123,18 +124,20 @@ class BulkWriteExecutor(
     ) {
         var plan = updateHead[collection]
         if (plan == null) {
-            val columnEqualsVariable = PgColumn.allWritableColumns.mapIndexed { index, pgColumn ->
+            // TODO: Verify if allColumns is correct !!!
+            val columnEqualsVariable = PgColumn.allColumns.mapIndexed { index, pgColumn ->
                 "${pgColumn.name}=\$${index + 1}"
             }.joinToString(separator = ",")
             val quotedHeadTable = collection.head.quotedName
 
             val conn = session.useConnection()
+            // TODO: Verify if allColumns is correct !!!
             plan = conn.prepare(
                 sql = """ UPDATE $quotedHeadTable
                    SET $columnEqualsVariable
-                   WHERE ${PgColumn.id.ident}=$${PgColumn.allWritableColumns.size + 1}
+                   WHERE ${PgColumn.id.ident}=$${PgColumn.allColumns.size + 1}
                    """.trimIndent(),
-                PgColumn.allWritableColumns.map { it.type.text }.toTypedArray()
+                PgColumn.allColumns.map { it.type.text }.toTypedArray()
             )
             updateHead[collection] = plan
         }
@@ -174,7 +177,8 @@ class BulkWriteExecutor(
     private fun createCopyPlan(headTableName: String, dstTableName: String): PgPlan {
 
         val columnsToOverride = mutableListOf(PgColumn.txn_next, PgColumn.txn, PgColumn.uid, PgColumn.flags)
-        val columnsToCopy = PgColumn.allWritableColumns.minus(columnsToOverride.toSet())
+        // TODO: Verify if allColumns is correct !!!
+        val columnsToCopy = PgColumn.allColumns.minus(columnsToOverride.toSet())
         val columns = mutableListOf<PgColumn>()
         columns.addAll(columnsToOverride)
         columns.addAll(columnsToCopy)

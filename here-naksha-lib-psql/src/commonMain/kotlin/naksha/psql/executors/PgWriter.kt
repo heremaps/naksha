@@ -47,6 +47,13 @@ class PgWriter(
      */
     @JvmField val writeExecutor: WriteExecutor,
 ) {
+    companion object PgWriter_C {
+        fun cachedTupleNumber(write: WriteExt, tuple: Tuple, tupleList: TupleList?): TupleNumber {
+            if (tupleList != null) tupleList[write.i] = tuple
+            cache.store(tuple)
+            return tuple.tupleNumber
+        }
+    }
 
     /**
      * The connection to use.
@@ -187,7 +194,8 @@ class PgWriter(
                     when (write.op) {
                         WriteOp.CREATE -> cachedTupleNumber(
                             write,
-                            CreateCollection(session).execute(mapOf(write), write)
+                            CreateCollection(session).execute(mapOf(write), write),
+                            tuples
                         )
 
                         WriteOp.UPSERT -> {
@@ -199,7 +207,8 @@ class PgWriter(
                             ) {
                                 cachedTupleNumber(
                                     write,
-                                    CreateCollection(session).execute(mapOf(write), write)
+                                    CreateCollection(session).execute(mapOf(write), write),
+                                    tuples
                                 )
                             } else {
                                 val updatedTuple = UpdateCollection(session).execute(mapOf(write), write)
@@ -208,7 +217,7 @@ class PgWriter(
                                         "Collection does not exist but was processed for update during upserting: ${write.id}"
                                     )
                                 updatePrevTupleCache(updatedTuple)
-                                cachedTupleNumber(write, updatedTuple)
+                                cachedTupleNumber(write, updatedTuple, tuples)
                             }
                         }
                         WriteOp.UPDATE -> {
@@ -219,7 +228,7 @@ class PgWriter(
                                     write.featureId ?: "Unknown null collection requested to be updated"
                                 )
                             updatePrevTupleCache(updatedTuple)
-                            cachedTupleNumber(write, updatedTuple)
+                            cachedTupleNumber(write, updatedTuple, tuples)
                         }
 
                         WriteOp.DELETE, WriteOp.PURGE -> DropCollection(session).execute(
@@ -237,7 +246,8 @@ class PgWriter(
                     when (write.op) {
                         WriteOp.CREATE -> cachedTupleNumber(
                             write,
-                            InsertFeature(session, writeExecutor).execute(collection, write)
+                            InsertFeature(session, writeExecutor).execute(collection, write),
+                            tuples
                         )
 
                         WriteOp.UPSERT -> {
@@ -246,7 +256,8 @@ class PgWriter(
                             {
                                 cachedTupleNumber(
                                     write,
-                                    InsertFeature(session, writeExecutor).execute(collection, write)
+                                    InsertFeature(session, writeExecutor).execute(collection, write),
+                                    tuples
                                 )
                             } else {
                                 updateFeature(collection, previousMetadataProvider, write)
@@ -295,12 +306,6 @@ class PgWriter(
         )
     }
 
-    private fun cachedTupleNumber(write: WriteExt, tuple: Tuple): TupleNumber {
-        tuples[write.i] = tuple
-        cache.store(tuple)
-        return tuple.tupleNumber
-    }
-
     private fun updateFeature(collection: PgCollection, previousMetadataProvider: ExistingMetadataProvider, write: WriteExt): TupleNumber {
         val updatedTuple = UpdateFeature(
             session,
@@ -308,7 +313,7 @@ class PgWriter(
             writeExecutor
         ).execute(collection, write)
         updatePrevTupleCache(updatedTuple)
-        return cachedTupleNumber(write, updatedTuple)
+        return cachedTupleNumber(write, updatedTuple, tuples)
     }
 
     /**

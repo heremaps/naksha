@@ -3,7 +3,6 @@ package naksha.psql.executors.write
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_QUOTED
 import naksha.psql.*
 import naksha.psql.executors.WriteExt
 
@@ -20,7 +19,8 @@ class DropCollection(private val session: PgSession) {
             NakshaError.ILLEGAL_ARGUMENT,
             "DROP without collectionId (expected in write's 'featureId')"
         )
-        val pgCollection = map[collectionId]
+        // If no such collection exists, we're done.
+        val pgCollection = map.storage.adminMap.getPgCollectionById(session.useConnection(), map, collectionId) ?: return null
         val conn = session.useConnection()
         try {
             /**
@@ -28,14 +28,11 @@ class DropCollection(private val session: PgSession) {
              *      The code below does not cover writing deleted collection to history
              *      This will be addressed in: CASL-537
              */
-            pgCollection.drop(conn)
-            removeCollectionFromVirtualCollections(collectionId, conn)
+            map.storage.adminMap.deletePgCollection(session.useConnection(), pgCollection)
+            // This job is now done by admin-map!
+            //removeCollectionFromVirtualCollections(collectionId, conn)
             conn.commit()
-            return if (pgCollection._number == null) {
-                null
-            } else {
-                collectionTupleNumber(pgCollection)
-            }
+            return collectionTupleNumber(pgCollection)
         } catch (e: Exception) {
             logger.info("Exception when dropping collection $collectionId, rolling back and throwing exception down the chain", e)
             conn.rollback()
@@ -43,15 +40,8 @@ class DropCollection(private val session: PgSession) {
         }
     }
 
-    private fun removeCollectionFromVirtualCollections(collectionId: String, connection: PgConnection){
-        connection.execute(
-            sql = "DELETE FROM $VIRT_COLLECTIONS_QUOTED WHERE ${PgColumn.id.ident}=$1",
-            args = arrayOf(collectionId)
-        ).close()
-    }
-
     private fun collectionTupleNumber(collection: PgCollection): TupleNumber =
-        TupleNumber(StoreNumber(collection.map.number, collection.number, 0), session.version(), newUid())
+        TupleNumber(collection.map.storage.number, collection.map.number, collection.number, 0, session.useTransaction().version, newUid())
 
     private fun newUid(): Int = session.uid.getAndAdd(1)
 }
