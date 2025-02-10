@@ -101,8 +101,6 @@ import naksha.model.NotModifiedResponse;
 import naksha.model.StreamInfo;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.ErrorResponse;
-import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -618,7 +616,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
    *
    * @param routingContext The routing context for which to send the response.
    * @param responseType   The response type to return.
-   * @param xyzResponse       The response to send.
+   * @param xyzResponse    The response to send.
    * @return XyzResponse object representing actual response content
    */
   public XyzResponse sendXyzResponse(
@@ -629,7 +627,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
       if (xyzResponse instanceof HttpXyzErrorResponse er) {
         sendRawResponse(
             routingContext,
-            mapErrorCodeToHttpStatus(er.getError().getCode()),
+            mapErrorCodeToHttpStatus(er.getErrorCode()),
             APPLICATION_JSON,
             Buffer.buffer(Platform.toJSON(er, ToJsonOptions.DEFAULT)));
         return xyzResponse;
