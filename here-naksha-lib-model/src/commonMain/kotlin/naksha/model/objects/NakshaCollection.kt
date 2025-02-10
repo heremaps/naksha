@@ -1,4 +1,4 @@
-@file:Suppress("OPT_IN_USAGE")
+@file:Suppress("OPT_IN_USAGE", "LeakingThis")
 
 package naksha.model.objects
 
@@ -23,21 +23,28 @@ open class NakshaCollection() : NakshaFeature() {
 
     /**
      * Create a Naksha collection with settings.
+     * @param id the collection-identifier.
+     * @param mapId the map-identifier in which to create the collection; defaults to [NakshaContext.mapId]
+     * @param partitions the partitions to create; defaults to `1`
+     * @param storage_class the [storage-class][storageClass] to create; defaults to `null`
+     * @param store_deleted if [deleted states should be stored][storeDeleted]
      */
     @JsName("of")
     @JvmOverloads
     constructor(
         id: String,
+        mapId: String = NakshaContext.mapId(),
         partitions: Int = 1,
-        storageClass: String? = null,
-        storeDeleted: StoreMode = StoreMode.ON,
+        storage_class: String? = null,
+        store_deleted: StoreMode = StoreMode.ON,
         storeHistory: StoreMode = StoreMode.ON,
         storeMeta: StoreMode = StoreMode.ON,
     ) : this() {
         this.id = id
-        this.storageClass = storageClass
+        this.mapId = mapId
+        this.storageClass = storage_class
         this.partitions = partitions
-        this.storeDeleted = storeDeleted
+        this.storeDeleted = store_deleted
         this.storeHistory = storeHistory
         this.storeMeta = storeMeta
     }
@@ -127,7 +134,7 @@ open class NakshaCollection() : NakshaFeature() {
      * The storageClass decides where the collection is created.
      *
      * The possible values are implementation specific, but the general ones are:
-     * - `consistent`: The default storage type, which should be perfectly safe.
+     * - `consistent`: The default storage type, which should be perfectly safe; used as well when `null` is given.
      * - `ephemeral`: Force all the tables of the collection to be created on ephemeral storage, optionally distributed across multiple local disks. This drastically improves the read and write performance, but no backups are done, no read-replicas are available. The data normally survives a server crash, unless the physical instance on which the data is stored is lost.
      * - `brittle`: Force all the tables of the collection to be created on ephemeral storage, and to be unlogged, optionally distributed across multiple local SSDs. Any server crash can corrupt the data. This is the fastest way to store data, but the least reliable.
      * - `temporary`: The collection is created in temporary space _(when possible, on ephemeral storage)_, it is unlogged, and automatically deleted when the session is closed. The weakest form to store data.
@@ -206,56 +213,47 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [encodeDict]
      */
-    open fun withEncode(value: String?): NakshaCollection {
+    open fun withEncodeDict(value: String?): NakshaCollection {
         this.encodeDict = value
         return this
     }
 
     /**
-     * If [StoreMode.OFF] there will be no history table in the database for features in this collection,
-     * which boosts performance in certain operations.
+     * If [StoreMode.OFF] there will be no history table in the database for features in this collection, which boosts performance in certain operations.
      */
     var storeHistory by STORE_HISTORY
 
+    /**
+     * @see [storeHistory]
+     */
     open fun withStoreHistory(value: StoreMode): NakshaCollection {
         this.storeHistory = value
         return this
     }
 
     /**
-     * If [StoreMode.OFF] there will be no table in the database for deleted features from this collection,
-     * which boosts performance in certain operations.
+     * If [StoreMode.OFF] there will be no table in the database for deleted features from this collection, which boosts performance in certain operations, but impact views as provided by `lib-view`.
      */
     var storeDeleted by STORE_DELETED
 
+    /**
+     * @see [storeDeleted]
+     */
     open fun withStoreDeleted(value: StoreMode): NakshaCollection {
         this.storeDeleted = value
         return this
     }
 
     /**
-     * If [StoreMode.OFF] there will be no meta table in the database for statistics of features in this collection,
-     * which boosts performance in certain operations.
+     * If [StoreMode.OFF] there will be no meta table in the database for statistics of features in this collection, this can save money and storage cost, by not generating statistical data, but may avoid certain use cases, like optimal tile distribution queries.
      */
     var storeMeta by STORE_META
 
+    /**
+     * @see [storeMeta]
+     */
     open fun withStoreMeta(value: StoreMode): NakshaCollection {
         this.storeMeta = value
-        return this
-    }
-
-    /**
-     * If autoPurge is enabled, deleted features are purged and no shadow state is kept available. To permanently disable the shadow, use [disableShadow].
-     *
-     * Note that if [storeHistory] is ON, the deleted features will still be around in the history. This mainly effects `lib-view`.
-     * @since 3.0.0
-     */
-    var autoPurge by AUTO_PURGE
-    /**
-     * @see [autoPurge]
-     */
-    open fun withAutoPurge(value: Boolean): NakshaCollection {
-        this.autoPurge = value
         return this
     }
 

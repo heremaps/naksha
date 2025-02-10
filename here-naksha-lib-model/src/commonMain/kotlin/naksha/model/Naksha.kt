@@ -38,6 +38,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -292,6 +293,7 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
+        @JvmOverloads
         fun decodeTuple(tuple: Tuple, dictionaryReader: IDictReader? = null): NakshaFeature {
             val sn = tuple.storageNumber
             val meta = tuple.meta
@@ -320,6 +322,7 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
+        @JvmOverloads
         fun encodeTuple(feature: NakshaFeature, dictionary: IDict? = null, flags: Flags? = null): Tuple {
             val xyz = feature.properties.xyz
             val meta = Metadata.fromXyzNs(xyz) ?: Metadata.UNDEFINED
