@@ -18,9 +18,18 @@
  */
 package com.here.naksha.lib.view;
 
+import naksha.base.AtomicInt;
+import naksha.model.Action;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
+import naksha.model.Metadata;
+import naksha.model.Operation;
 import naksha.model.SessionOptions;
+import naksha.model.Tuple;
+import naksha.model.TupleNumber;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaMap;
 import naksha.model.objects.NakshaTransaction;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
@@ -107,5 +116,39 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   @Override
   public @Nullable NakshaTransaction getTransaction() {
     return getSession().getTransaction();
+  }
+
+  @Override
+  public @NotNull AtomicInt getUid() {
+    return getSession().getUid();
+  }
+
+  @Override
+  public @NotNull TupleNumber newTupleNumber(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull String featureId) {
+    return getSession().newTupleNumber(map, collection, featureId);
+  }
+
+  @Override
+  public @NotNull Metadata metadataFor(@NotNull NakshaFeature feature, @NotNull TupleNumber tupleNumber, @NotNull Operation operation,
+      @NotNull Action action) {
+    return getSession().metadataFor(feature, tupleNumber, operation, action);
+  }
+
+  @Override
+  public @NotNull Tuple created(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
+      @Nullable TupleNumber tupleNumber) {
+    return getSession().created(map, collection, feature, tupleNumber);
+  }
+
+  @Override
+  public @NotNull Tuple updated(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
+      @Nullable TupleNumber tupleNumber) {
+    return getSession().updated(map, collection, feature, tupleNumber);
+  }
+
+  @Override
+  public @NotNull Tuple deleted(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
+      @Nullable TupleNumber tupleNumber) {
+    return getSession().deleted(map, collection, feature, tupleNumber);
   }
 }
