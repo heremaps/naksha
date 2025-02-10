@@ -67,7 +67,7 @@ abstract class PsqlTests {
     NakshaContext.currentContext().setAuthor("PsqlStorageTest");
     NakshaContext.currentContext().setAppId("naksha-lib-view-unit-tests");
     nakshaContext = NakshaContext.currentContext().withAppId(TEST_APP_ID).withAuthor(TEST_AUTHOR);
-    storage = Naksha.useStorage(Naksha.getLOCAL_DOCKER_CONFIG());
+    storage = Naksha.useStorage(Naksha.getLOCAL_TEST_STORAGE_CONFIG());
     session = storage.newWriteSession(new SessionOptions());
     assertNotNull(storage);
     assertNotNull(session);
@@ -91,7 +91,7 @@ abstract class PsqlTests {
     }
     if (storage != null) {
       try {
-        Naksha.removeStorage(Naksha.getLOCAL_DOCKER_CONFIG());
+        Naksha.removeStorage(Naksha.getLOCAL_TEST_STORAGE_CONFIG());
       } catch (Exception e) {
         log.atError().setMessage("Failed to close storage").setCause(e).log();
       } finally {

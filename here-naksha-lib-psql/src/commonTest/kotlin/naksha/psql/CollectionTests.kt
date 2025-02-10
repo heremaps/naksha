@@ -25,7 +25,7 @@ class CollectionTests : PgTestBase(collection = null) {
         // When: creating empty collection
         executeWrite(
             WriteRequest().add(
-                Write().createCollection(null, collection)
+                Write().createCollection(collection)
             )
         )
 

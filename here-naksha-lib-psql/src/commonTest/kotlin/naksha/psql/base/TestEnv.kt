@@ -3,26 +3,33 @@
 package naksha.psql.base
 
 import naksha.base.PlatformUtil
+import naksha.model.Naksha
 import naksha.model.NakshaContext
 import naksha.model.SessionOptions
 import naksha.psql.*
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
+import kotlin.jvm.JvmField
 
 /**
  * Abstract class for all tests using connection to db.
  */
 @Suppress("MemberVisibilityCanBePrivate")
 @JsExport
-class TestEnv(dropSchema: Boolean, initStorage: Boolean, enableInfoLogs: Boolean = false) {
+class TestEnv(
+    dropSchema: Boolean,
+    enableInfoLogs: Boolean = false,
+    @JvmField val defaultMapId: String = "unit_test_map"
+) {
     init {
         PlatformUtil.ENABLE_INFO = enableInfoLogs
     }
 
-    companion object TestBasicsCompanion {
-    }
-
-    val storage = PgPlatform.newTestStorage()
+    /**
+     * The test local storage using [Naksha.LOCAL_TEST_STORAGE_CONFIG].
+     */
+    @JvmField
+    val storage = Naksha.useStorage(Naksha.LOCAL_TEST_STORAGE_CONFIG) as PgStorage
 
     /**
      * The default [NakshaContext] to be used when opening new PostgresQL sessions via [PgStorage.newWriteSession] or
@@ -63,19 +70,14 @@ class TestEnv(dropSchema: Boolean, initStorage: Boolean, enableInfoLogs: Boolean
     fun dropSchema() {
         val conn = storage.newConnection(options, false) { _, _ -> }
         conn.use {
-            conn.execute("DROP SCHEMA IF EXISTS ${quoteIdent(storage.defaultSchemaName)} CASCADE")
-                .close()
+            conn.execute("""DROP SCHEMA IF EXISTS ${quoteIdent(defaultMapId)} CASCADE;
+DROP SCHEMA IF EXISTS ${quoteIdent(Naksha.ADMIN_MAP)} CASCADE;""").close()
             conn.commit()
         }
     }
 
-    fun initStorage() {
-        storage.initStorage(mapOf(PgUtil.ID to PgTest.TEST_STORAGE_ID, PgUtil.CONTEXT to context))
-    }
-
     init {
         if (dropSchema) dropSchema()
-        if (initStorage) initStorage()
         context.attachToCurrentThread()
     }
 }
