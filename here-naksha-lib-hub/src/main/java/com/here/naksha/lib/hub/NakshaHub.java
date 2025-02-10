@@ -27,11 +27,11 @@ import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.DefaultRequestLimitManager;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.IRequestLimitManager;
+import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.exceptions.StorageNotFoundException;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.ExtensionConfig;
@@ -43,14 +43,14 @@ import com.here.naksha.lib.core.view.ViewDeserialize;
 import com.here.naksha.lib.extmanager.ExtensionManager;
 import com.here.naksha.lib.extmanager.IExtensionManager;
 import com.here.naksha.lib.extmanager.helpers.AmazonS3Helper;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.hub.storages.NHAdminStorage;
 import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-
+import naksha.base.AnyObject;
 import naksha.base.FromJsonOptions;
+import naksha.base.JvmAnyObjectUtil;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
 import naksha.model.IReadSession;
@@ -63,6 +63,7 @@ import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
+import naksha.model.objects.NakshaProperties;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
@@ -261,7 +262,7 @@ public class NakshaHub implements INaksha {
                 error.getCause()));
           }
           throw unchecked(new Exception("Unable to add custom config in Admin DB (unexpected response: "
-              + writeCustomCfgResponse + ")"));
+                                        + writeCustomCfgResponse + ")"));
         }
       }
 
@@ -351,7 +352,7 @@ public class NakshaHub implements INaksha {
             error.getCause()));
       }
       throw unchecked(new Exception("Unable to read custom/default config from Admin DB (unexpected response: "
-          + readAdminConfigsResp + ")"));
+                                    + readAdminConfigsResp + ")"));
     }
   }
 
@@ -398,7 +399,7 @@ public class NakshaHub implements INaksha {
       String extensionId = bits[bits.length - 1];
 
       filePath = "s3://" + bucketName + "/" + extensionPath + extensionId + "-" + version + "."
-          + nakshaHubConfig.env.toLowerCase().toLowerCase() + ".json";
+                 + nakshaHubConfig.env.toLowerCase().toLowerCase() + ".json";
       String exJson;
       try {
         exJson = s3Helper.getFileContent(filePath);
@@ -453,16 +454,32 @@ public class NakshaHub implements INaksha {
           NakshaError error = errorResponse.getError();
           throw unchecked(new Exception(
               "Exception fetching storage details for id '" + storageId + "' (error code: "
-                  + error.getCode() + ")",
+              + error.getCode() + ")",
               error.getCause()));
         }
         throw unchecked(new Exception("Exception fetching storage details for id '" + storageId
-            + "' (unknown response: " + readStorageByIdResp + " )"));
+                                      + "' (unknown response: " + readStorageByIdResp + " )"));
       }
     }
   }
 
+  // TODO: CASL-681: switch to new storage instance mechanism once it is done
   private IStorage storageInstance(@NotNull Storage storage) {
+
+    // TODO: remove the hacky hack
+    if ("naksha.psql.PsqlStorage".equals(storage.getClassName())) {
+      NakshaProperties properties = storage.getProperties();
+      AnyObject dbConfig = JvmAnyObjectUtil.getProperty(properties, "dbConfig", AnyObject.class);
+      PsqlInstance psqlInstance = PsqlInstance.get(
+          dbConfig.get("host").toString(),
+          Integer.parseInt(dbConfig.get("port").toString()),
+          dbConfig.get("db").toString(),
+          dbConfig.get("user").toString(),
+          dbConfig.get("password").toString()
+      );
+      PsqlCluster singleNodeCluster = new PsqlCluster(psqlInstance);
+      return new PsqlStorage(singleNodeCluster, dbConfig.get("schema").toString());
+    }
     Fe1<IStorage, Storage> constructor = getStorageConstructor(storage.getClassName(), Storage.class);
     try {
       return constructor.call(storage);

@@ -5,6 +5,7 @@ import static com.here.naksha.lib.psql.PsqlStorageConfig.configFromFileOrEnv;
 import com.here.naksha.lib.psql.PsqlStorageConfig;
 import org.jetbrains.annotations.NotNull;
 
+// TODO (Jakub): next step from here:
 public class TestPsqlStorageConfigs {
   private TestPsqlStorageConfigs(){}
 
@@ -13,5 +14,4 @@ public class TestPsqlStorageConfigs {
 
   public static final @NotNull PsqlStorageConfig dataDbConfig =
       configFromFileOrEnv("test_data_db.url", "NAKSHA_TEST_DATA_DB_URL", "naksha_data_schema");
-
 }

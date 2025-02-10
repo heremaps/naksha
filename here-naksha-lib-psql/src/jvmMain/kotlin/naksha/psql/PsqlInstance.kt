@@ -25,6 +25,7 @@ class PsqlInstance : PgInstance {
         private val connCounter = AtomicLong(1)
 
         @JvmStatic
+        @JvmOverloads
         fun get(host: String, port: Int = 5432, database: String, user: String, password: String, readOnly: Boolean = false): PsqlInstance {
             val i = PsqlInstance(host, port, database, user, password, readOnly)
             val existing = instancePool.putIfAbsent(i.url, i)

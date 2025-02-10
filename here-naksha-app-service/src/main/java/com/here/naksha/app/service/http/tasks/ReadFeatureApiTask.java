@@ -145,7 +145,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       };
     } catch (NakshaException nakshaException) {
       logger.warn("Known exception while processing request. ", nakshaException);
-      return verticle.sendErrorResponse(routingContext, nakshaException.erroGr);
+      return verticle.sendErrorResponse(routingContext, nakshaException.error);
     } catch (Exception unknownException) {
       logger.error("Unexpected error while processing request. ", unknownException);
       return verticle.sendErrorResponse(
