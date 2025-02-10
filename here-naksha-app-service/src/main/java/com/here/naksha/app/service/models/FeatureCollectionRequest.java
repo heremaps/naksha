@@ -19,7 +19,6 @@
 package com.here.naksha.app.service.models;
 
 import java.util.List;
-import naksha.base.AnyObject;
 import naksha.base.JvmAnyObjectUtil;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
