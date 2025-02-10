@@ -258,4 +258,25 @@ interface IMetadata {
      * @since 3.0.0
      */
     val guid: Guid
+
+    /**
+     * Returns the [updatedAt] timestamp.
+     * @return the [updatedAt] timestamp.
+     * @since 3.0.0
+     */
+    fun useUpdatedAt(): Int64 = updatedAt
+
+    /**
+     * Returns the [createdAt] timestamp.
+     * @return the [createdAt] timestamp.
+     * @since 3.0.0
+     */
+    fun useCreatedAt(): Int64 = createdAt ?: updatedAt
+
+    /**
+     * Returns the [authorTs] timestamp.
+     * @return the [authorTs] timestamp.
+     * @since 3.0.0
+     */
+    fun useAuthorTs(): Int64 = authorTs ?: updatedAt
 }

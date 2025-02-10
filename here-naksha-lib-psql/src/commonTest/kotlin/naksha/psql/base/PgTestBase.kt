@@ -1,7 +1,6 @@
 package naksha.psql.base
 
 import naksha.base.AtomicMap
-import naksha.model.NakshaContext
 import naksha.model.SessionOptions
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -88,7 +87,7 @@ abstract class PgTestBase(internal var collectionField: NakshaCollection? = null
 
     protected fun dropCollection() {
         if (initializedCollections.remove(this::class) == true) {
-            val deleteCollectionRequest = WriteRequest().add(Write().deleteCollectionById(env.defaultMapId, collection.id))
+            val deleteCollectionRequest = WriteRequest().add(Write().deleteCollectionById(env.mapId, collection.id))
             storage.newWriteSession().use { session ->
                 val response = session.execute(deleteCollectionRequest)
                 assertIs<SuccessResponse>(response)
@@ -102,7 +101,7 @@ abstract class PgTestBase(internal var collectionField: NakshaCollection? = null
         val collection = collectionField
         if (collection != null && initializedCollections.putIfAbsent(this::class, true) == null) {
             val request = WriteRequest()
-            val testMap = NakshaMap(env.storage.id, env.defaultMapId)
+            val testMap = NakshaMap(env.storage.id, env.mapId)
             request.writes += Write().createMap(testMap)
             request.writes += Write().createCollection(collection)
             storage.newWriteSession().use { session ->

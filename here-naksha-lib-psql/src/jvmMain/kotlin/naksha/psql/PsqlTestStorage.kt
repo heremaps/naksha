@@ -70,7 +70,7 @@ class PsqlTestStorage private constructor(cluster: PsqlCluster, schemaName: Stri
             var testStorage: PsqlTestStorage? = storage.get()
             while (testStorage == null) {
                 optionsRef.set(options)
-                var schemaName = PgTest.TEST_SCHEMA
+                var schemaName = PgTest.TEST_MAP_ID
 
                 // Process parameters and environment variables to modify other defaults.
                 var url: String? = null

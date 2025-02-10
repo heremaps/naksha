@@ -34,7 +34,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
         // When: executing feature write request
         executeWrite(
             WriteRequest().add(
-                Write().createFeature(null, collection!!.id, feature)
+                Write().createFeature(collection, feature)
             )
         )
 
@@ -214,7 +214,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
 
     private fun executeSpatialQuery(spatialQuery: ISpatialQuery): SuccessResponse {
         return executeRead(ReadFeatures().apply {
-            collectionIds += collection!!.id
+            collectionIds += collection.id
             query.spatial = spatialQuery
         })
     }

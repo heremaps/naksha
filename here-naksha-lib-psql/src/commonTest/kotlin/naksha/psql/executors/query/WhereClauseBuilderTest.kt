@@ -2,7 +2,6 @@ package naksha.psql.executors.query
 
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpPolygon
-import naksha.model.objects.NakshaCollection
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
 import kotlin.test.Test
@@ -21,7 +20,7 @@ class WhereClauseBuilderTest {
                     MetaQuery(MetaColumn.appId(), StringOp.EQUALS, "someApp"),
                     MetaQuery(MetaColumn.author(), StringOp.STARTS_WITH, "someAuthor")
                 ),
-                MetaNot(MetaQuery(MetaColumn.type(), StringOp.EQUALS, "notTheType"))
+                MetaNot(MetaQuery(MetaColumn.featureType(), StringOp.EQUALS, "notTheType"))
             )
             query.spatial = SpAnd(
                 SpNot(SpIntersects(SpPolygon(SpBoundingBox(1.0, 2.0, 3.0, 4.0)))),

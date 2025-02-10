@@ -5,7 +5,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import naksha.model.Naksha
 import naksha.model.NakshaContext
-import naksha.model.StoreNumber
+import naksha.model.TupleNumber
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -32,7 +32,7 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
         val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
 
         // When
-        val writeOp = Write().createFeature(null, collection!!.id, feature)
+        val writeOp = Write().createFeature(collection, feature)
         val persistedTuples = executeWrite(WriteRequest().add(writeOp)).tuples
 
         // Then:
@@ -53,7 +53,7 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
         val feature = ProxyFeatureGenerator.generateRandomFeature()
 
         // When
-        val writeOp = Write().createFeature(null, collection!!.id, feature)
+        val writeOp = Write().createFeature(collection, feature)
         val persistedTuples = executeWrite(WriteRequest().add(writeOp)).tuples
 
         // Then: we persisted single tuple correctly
@@ -62,16 +62,14 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
         assertEquals(feature.id, persistedTuple.id())
 
         // And: `storeNumber` checks out
-        val pgMap = storage[NakshaContext.mapId()]
-        val pgCollection = pgMap[collection.id]
-        assertEquals(
-            expected = StoreNumber(
-                mapNum = pgMap.number,
-                colNum = pgCollection.number,
-                partitionNumber = Naksha.partitionNumber(feature.id)
-            ),
-            actual = persistedTuple.tupleNumber.storeNumber
-        )
+        val pgMap = storage.adminMap.getPgMapById(env.pgConnection, collection.mapId)
+        require(pgMap != null) { "Missing map ${collection.mapId}" }
+        val pgCollection = storage.adminMap.getPgCollectionById(env.pgConnection, pgMap, collection.id)
+        require(pgCollection != null) { "Missing collection ${collection.id}" }
+        assertEquals(storage.number, persistedTuple.tupleNumber.storageNumber)
+        assertEquals(pgMap.number, persistedTuple.tupleNumber.mapNumber)
+        assertEquals(pgCollection.number, persistedTuple.tupleNumber.collectionNumber)
+        assertEquals(Naksha.partitionNumber(feature.id), persistedTuple.tupleNumber.partitionNumber)
     }
 
     @Test
@@ -83,11 +81,7 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
         val writeRequest = WriteRequest()
         features.forEach { feature ->
             writeRequest.add(
-                Write().createFeature(
-                    map = null,
-                    collectionId = collection!!.id,
-                    feature = feature
-                )
+                Write().createFeature(collection, feature)
             )
         }
         val persistedTuples = executeWrite(writeRequest).tuples

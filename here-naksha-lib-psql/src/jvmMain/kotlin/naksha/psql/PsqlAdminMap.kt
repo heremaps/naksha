@@ -32,7 +32,7 @@ class PsqlAdminMap internal constructor(
      * The cluster.
      * @since 3.0.0
      */
-    internal val cluster: PgCluster
+    val cluster: PgCluster
         get() = clusterField ?: throw NakshaException(NakshaError.ILLEGAL_STATE, "Initialization not finished")
 
     override fun createAdminMap(config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion): Int

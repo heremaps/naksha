@@ -45,7 +45,7 @@ class CollectionTests : PgTestBase(null) {
         // When: Collection gets deleted
         executeWrite(
             WriteRequest().add(
-                Write().deleteCollectionById(env.defaultMapId, collection.id)
+                Write().deleteCollectionById(env.mapId, collection.id)
             )
         )
 

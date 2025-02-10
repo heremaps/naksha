@@ -175,11 +175,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
 
         // And:
         val featuresByType = executeMetaQuery(
-            MetaQuery(
-                column = MetaColumn.type(),
-                op = StringOp.EQUALS,
-                value = inputFeature.type
-            )
+            MetaQuery(MetaColumn.featureType(), StringOp.EQUALS, inputFeature.type)
         ).features
 
         // Then:
@@ -199,11 +195,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
 
         // And:
         val featuresByTypePrefix = executeMetaQuery(
-            MetaQuery(
-                column = MetaColumn.type(),
-                op = StringOp.STARTS_WITH,
-                value = "quite"
-            )
+            MetaQuery(MetaColumn.featureType(), StringOp.STARTS_WITH, "quite")
         ).features
 
         // Then:
@@ -218,7 +210,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         val author = "some_author"
         val featureToCreate = ProxyFeatureGenerator.generateRandomFeature()
         val writeFeaturesReq = WriteRequest().apply {
-            add(Write().createFeature(null, collection!!.id, featureToCreate))
+            add(Write().createFeature(collection, featureToCreate))
         }
 
         // When: executing feature write request with sepcific appId and author
@@ -226,7 +218,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
 
         // And: execute
         val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
-            collectionIds += collection!!.id
+            collectionIds += collection.id
             query.metadata = MetaAnd(
                 MetaQuery(MetaColumn.author(), StringOp.EQUALS, author),
                 MetaQuery(MetaColumn.appId(), StringOp.STARTS_WITH, appId.substring(0, 2))
@@ -294,20 +286,16 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
                 MetaQuery(
                     MetaColumn.createdAt(),
                     DoubleOp.GT,
-                    insertedFeatureMeta.createdAt - 100
+                    insertedFeatureMeta.useCreatedAt() - 100
                 ),
                 MetaQuery(
                     MetaColumn.createdAt(),
                     DoubleOp.LT,
-                    insertedFeatureMeta.createdAt + 100
+                    insertedFeatureMeta.useCreatedAt() + 100
                 ),
-                MetaQuery(
-                    MetaColumn.type(),
-                    StringOp.EQUALS,
-                    inputFeature.type
-                )
+                MetaQuery(MetaColumn.featureType(), StringOp.EQUALS, inputFeature.type)
             )
-        );
+        )
 
         // Then:
         assertEquals(1, featuresCreatedInFrame.features.size)
@@ -338,12 +326,12 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
                     insertedFeatureMeta.updatedAt + 100
                 ),
                 MetaQuery(
-                    MetaColumn.type(),
+                    MetaColumn.featureType(),
                     StringOp.EQUALS,
                     inputFeature.type
                 )
             )
-        );
+        )
 
         // Then:
         assertEquals(1, featuresUpdatedInFrame.features.size)
@@ -382,7 +370,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
 
         // And: execute
         val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
-            collectionIds += collection!!.id
+            collectionIds += collection.id
             query.metadata = MetaOr(
                 MetaQuery(MetaColumn.author(), StringOp.EQUALS, "this_is_totally_off"),
                 MetaQuery(MetaColumn.appId(), StringOp.STARTS_WITH, appId.substring(0, 2))
@@ -398,14 +386,14 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
     private fun insertFeatureAndGetMeta(feature: NakshaFeature): Metadata {
         insertFeature(feature = feature)
         return executeRead(ReadFeatures().apply {
-            collectionIds += collection!!.id
+            collectionIds += collection.id
             featureIds += feature.id
-        }).tuples[0]!!.tuple!!.meta!!
+        }).tuples[0]!!.tuple!!.meta
     }
 
     private fun executeMetaQuery(metaQuery: IMetaQuery): SuccessResponse {
         return executeRead(ReadFeatures().apply {
-            collectionIds += collection!!.id
+            collectionIds += collection.id
             query.metadata = metaQuery
         })
     }

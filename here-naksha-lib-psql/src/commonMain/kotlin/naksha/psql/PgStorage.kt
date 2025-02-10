@@ -82,7 +82,7 @@ abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
     /**
      * The OID of the admin-map, set by [initStorage].
      */
-    val adminMap: PgAdminMap
+    open val adminMap: PgAdminMap
         get() {
             return _adminMap ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
         }

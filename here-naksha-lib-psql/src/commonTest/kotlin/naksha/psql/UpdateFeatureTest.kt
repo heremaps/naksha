@@ -24,7 +24,7 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
             }
         }
         val writeInitialFeature = WriteRequest().add(
-            Write().createFeature(null, collection!!.id, initialFeature)
+            Write().createFeature(collection, initialFeature)
         )
 
         // And: Updated state of feature
@@ -35,7 +35,7 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
             }
         }
         val updateFeaturesReq = WriteRequest().add(
-            Write().updateFeature(null, collection.id, featureToUpdate)
+            Write().updateFeature(collection, featureToUpdate, true)
         )
 
         // When: Writing initial version of feature
@@ -66,8 +66,8 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
                     .hasXyzThat { retrievedXyz ->
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
-                            .hasProperty("author", PgTest.TEST_APP_AUTHOR!!)
-                            .hasProperty("action", Action.UPDATED_VALUE)
+                            .hasProperty("author", PgTest.TEST_APP_AUTHOR)
+                            .hasProperty("action", Action.UPDATED)
                             .hasProperty("changeCount", 2)
                     }
             }
@@ -78,7 +78,7 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
         // Given: Initial state of feature
         val initialFeature = NakshaFeature().apply { id = "feature_2" }
         val writeInitialFeature = WriteRequest().add(
-            Write().createFeature(null, collection!!.id, initialFeature)
+            Write().createFeature(collection, initialFeature)
         )
 
         // And: Updated state of feature
@@ -87,7 +87,7 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
             properties = NakshaProperties().apply { put("new_attr", "some_value") }
         }
         val updateFeaturesReq = WriteRequest().add(
-            Write().updateFeature(null, collection.id, featureToUpdate)
+            Write().updateFeature(collection, featureToUpdate, true)
         )
 
         // When: Writing initial version of feature
@@ -112,29 +112,29 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
         val previousTuple = retrievedHstCreatedTupleResult.tuple
         assertNotNull(updatedTuple)
         assertNotNull(previousTuple)
-        assertEquals(updatedTuple.meta?.prevVersion, retrievedHstCreatedTupleResult.tupleNumber.version)
-        assertEquals(updatedTuple.meta?.version, retrievedUpdatedTupleResult.tupleNumber.version)
-        assertEquals(previousTuple.meta?.version, retrievedHstCreatedTupleResult.tupleNumber.version)
-        assertEquals(previousTuple.meta?.nextVersion, retrievedUpdatedTupleResult.tupleNumber.version)
-        assertNotEquals(previousTuple.meta?.flags, updatedTuple.meta?.flags)
-        assertEquals(1, previousTuple.meta?.changeCount)
-        assertEquals(2, updatedTuple.meta?.changeCount)
+        assertEquals(updatedTuple.meta.prevTupleNumber, retrievedHstCreatedTupleResult.tupleNumber)
+        assertEquals(updatedTuple.meta.version, retrievedUpdatedTupleResult.tupleNumber.version)
+        assertEquals(previousTuple.meta.version, retrievedHstCreatedTupleResult.tupleNumber.version)
+        assertEquals(previousTuple.meta.nextVersion, retrievedUpdatedTupleResult.tupleNumber.version)
+        assertNotEquals(previousTuple.meta.flags, updatedTuple.meta.flags)
+        assertEquals(1, previousTuple.meta.changeCount)
+        assertEquals(2, updatedTuple.meta.changeCount)
         assertEquals(previousTuple.geo, updatedTuple.geo)
         assertEquals(previousTuple.tags, updatedTuple.tags)
         assertNotEquals(previousTuple.feature, updatedTuple.feature)
         assertEquals(previousTuple.referencePoint, updatedTuple.referencePoint)
         assertNull(previousTuple.toNakshaFeature().properties["new_attr"])
         assertEquals("some_value", updatedTuple.toNakshaFeature().properties["new_attr"])
-        assertEquals(previousTuple.meta?.createdAt, updatedTuple.meta?.createdAt)
-        assertNotEquals(updatedTuple.meta?.createdAt, updatedTuple.meta?.updatedAt)
-        assertEquals(previousTuple.meta?.updatedAt, previousTuple.meta?.createdAt)
-        assertNull(previousTuple.meta?.prevVersion)
-        assertEquals(previousTuple.meta?.geoGrid, updatedTuple.meta?.geoGrid)
-        assertEquals(0, updatedTuple.meta?.uid)
-        assertEquals(0, previousTuple.meta?.uid)
+        assertEquals(previousTuple.meta.createdAt, updatedTuple.meta.createdAt)
+        assertNotEquals(updatedTuple.meta.createdAt, updatedTuple.meta.updatedAt)
+        assertEquals(previousTuple.meta.updatedAt, previousTuple.meta.createdAt)
+        assertNull(previousTuple.meta.prevTupleNumber)
+        assertEquals(previousTuple.meta.hereTile, updatedTuple.meta.hereTile)
+        assertEquals(0, updatedTuple.meta.uid)
+        assertEquals(0, previousTuple.meta.uid)
         assertEquals(0, updatedTuple.tupleNumber.uid)
         assertEquals(0, previousTuple.tupleNumber.uid)
-        assertNotEquals(previousTuple.meta?.authorTs, updatedTuple.meta?.authorTs)
+        assertNotEquals(previousTuple.meta.authorTs, updatedTuple.meta.authorTs)
     }
 
     @Test
@@ -143,7 +143,7 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
         val feature = NakshaFeature().apply { id = featureId }
         val response = executeWriteErrorResponse(
             WriteRequest().add(
-                Write().updateFeature(null, collection!!.id, feature)
+                Write().updateFeature(collection, feature, true)
             )
         )
         assertEquals(NakshaError.FEATURE_NOT_FOUND, response.error.code)

@@ -2,47 +2,38 @@
 
 package naksha.psql
 
-import naksha.psql.PgPlatform.PgPlatformCompanion.getTestStorage
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmField
 
+/**
+ * General test setup.
+ * @since 3.0.0
+ */
 @JsExport
 class PgTest {
     companion object PgTest_C {
         /**
          * The default storage identifier for testing.
          */
-        @JvmField
-        @JsStatic
-        val TEST_STORAGE_ID = "naksha_psql_test"
+        const val TEST_STORAGE_ID = "naksha_psql_test"
 
         /**
          * The default application name to use for testing.
          */
-        @JvmField
-        @JsStatic
-        val TEST_APP_NAME: String = "naksha.psql.testApp"
+        const val TEST_APP_NAME = "naksha.psql.testApp"
 
         /**
          * The default application identifier to use for testing.
          */
-        @JvmField
-        @JsStatic
-        val TEST_APP_ID: String = "naksha.psql.testAppId"
+        const val TEST_APP_ID = "naksha.psql.testAppId"
 
         /**
          * The default author to use for testing.
          */
-        @JvmField
-        @JsStatic
-        val TEST_APP_AUTHOR: String? = "naksha.psql.testAuthor"
+        const val TEST_APP_AUTHOR = "naksha.psql.testAuthor"
 
         /**
-         * The default schema to use for testing.
+         * The default test map-id (schema) to use for testing.
          */
-        @JvmField
-        @JsStatic
-        val TEST_SCHEMA: String = "naksha_psql_test"
+        const val TEST_MAP_ID = "naksha_psql_test"
     }
 }

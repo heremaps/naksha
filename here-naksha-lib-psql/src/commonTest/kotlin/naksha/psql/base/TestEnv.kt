@@ -19,12 +19,12 @@ import kotlin.jvm.JvmField
 class TestEnv(
     dropSchema: Boolean,
     enableInfoLogs: Boolean = false,
-    @JvmField val defaultMapId: String = "unit_test_map"
+    @JvmField val mapId: String = PgTest.TEST_MAP_ID
 ) {
     init {
         PlatformUtil.ENABLE_INFO = enableInfoLogs
-        NakshaContext.defaultMapId.set(defaultMapId)
-        NakshaContext.currentContext().mapId = defaultMapId
+        NakshaContext.defaultMapId.set(mapId)
+        NakshaContext.currentContext().mapId = mapId
     }
 
     /**
@@ -72,7 +72,7 @@ class TestEnv(
     fun dropSchema() {
         val conn = storage.newConnection(options, false) { _, _ -> }
         conn.use {
-            conn.execute("""DROP SCHEMA IF EXISTS ${quoteIdent(defaultMapId)} CASCADE;
+            conn.execute("""DROP SCHEMA IF EXISTS ${quoteIdent(mapId)} CASCADE;
 DROP SCHEMA IF EXISTS ${quoteIdent(Naksha.ADMIN_MAP)} CASCADE;""").close()
             conn.commit()
         }

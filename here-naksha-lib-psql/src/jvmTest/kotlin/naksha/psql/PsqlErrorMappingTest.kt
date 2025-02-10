@@ -17,11 +17,7 @@ class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
     fun shouldReturnMissingCollectionError() {
         // Given
         val writeFeatureToMissingCollection = WriteRequest().add(
-            Write().createFeature(
-                null,
-                "missing_collection",
-                generateRandomFeature()
-            )
+            Write().createFeature(env.mapId, "missing_collection", generateRandomFeature())
         )
 
         // When
@@ -38,10 +34,7 @@ class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
     fun shouldReturnConflictingCollectionError() {
         // Given
         val createAlreadyExistingCollection = WriteRequest().add(
-            Write().createCollection(
-                null,
-                NakshaCollection(collection!!.id)
-            )
+            Write().createCollection(NakshaCollection(collection.id))
         )
 
         // When
@@ -62,13 +55,7 @@ class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
 
         // And
         val writeFeatureWithConflictingId = WriteRequest().add(
-            Write().createFeature(
-                null,
-                collection!!.id,
-                generateRandomFeature().apply {
-                    id = feature.id
-                }
-            )
+            Write().createFeature(collection, generateRandomFeature().withId(feature.id))
         )
 
         // When

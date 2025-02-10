@@ -17,6 +17,7 @@ import kotlin.reflect.KClass
 open class PsqlStorage : PgStorage(), IStorage {
 
     override val configKlass: KClass<PgConfig> = PgConfig::class
+    override val adminMap: PgAdminMap = super.adminMap as PsqlAdminMap
 
     override fun afterInit() {
         TODO("Not yet implemented")
