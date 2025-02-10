@@ -31,15 +31,21 @@ import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import naksha.base.AtomicInt;
+import naksha.model.Action;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
+import naksha.model.Metadata;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
+import naksha.model.Operation;
 import naksha.model.SessionOptions;
 import naksha.model.Tuple;
 import naksha.model.TupleNumber;
 import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaMap;
 import naksha.model.objects.NakshaTransaction;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
@@ -270,6 +276,40 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
 
   @Override
   public @Nullable NakshaTransaction getTransaction() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @NotNull AtomicInt getUid() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @NotNull TupleNumber newTupleNumber(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull String featureId) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @NotNull Metadata metadataFor(@NotNull NakshaFeature feature, @NotNull TupleNumber tupleNumber, @NotNull Operation operation,
+      @NotNull Action action) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @NotNull Tuple created(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
+      @Nullable TupleNumber tupleNumber) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @NotNull Tuple updated(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
+      @Nullable TupleNumber tupleNumber) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @NotNull Tuple deleted(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
+      @Nullable TupleNumber tupleNumber) {
     throw NOT_SUPPORTED_ERROR;
   }
 }

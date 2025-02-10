@@ -18,17 +18,26 @@
  */
 package com.here.naksha.lib.hub.mock;
 
-import java.sql.SQLException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import naksha.base.AtomicInt;
+import naksha.model.Action;
+import naksha.model.ILock;
 import naksha.model.IWriteSession;
+import naksha.model.Metadata;
 import naksha.model.Naksha;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
+import naksha.model.Operation;
+import naksha.model.Tuple;
+import naksha.model.TupleNumber;
+import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaTransaction;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
@@ -36,6 +45,7 @@ import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteOp;
 import naksha.model.request.WriteRequest;
+import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -49,7 +59,7 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
   public @NotNull Response execute(@NotNull Request request) {
     if (request instanceof WriteRequest wr) {
       for (Write write : wr.getWrites()) {
-        if (Naksha.VIRT_COLLECTIONS.equals(write.getCollectionId())) {
+        if (Naksha.COLLECTIONS_COL.equals(write.getCollectionId())) {
           executeWriteCollection(write);
         } else {
           executeWriteFeature(write);
@@ -224,5 +234,59 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
   @Override
   public void rollback() {
     // do nothing
+  }
+
+  @Override
+  public @NotNull AtomicInt getUid() {
+    return null;
+  }
+
+  @Override
+  public @NotNull ILock acquireSessionLock(@NotNull String lockId) {
+    return null;
+  }
+
+  @Override
+  public @NotNull ILock acquireTransactionLock(@NotNull String lockId) {
+    return null;
+  }
+
+  @Override
+  public @NotNull NakshaTransaction useTransaction() {
+    return null;
+  }
+
+  @Override
+  public @Nullable NakshaTransaction getTransaction() {
+    return null;
+  }
+
+  @Override
+  public @NotNull TupleNumber newTupleNumber(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull String featureId) {
+    throw new NotImplementedException();
+  }
+
+  @Override
+  public @NotNull Metadata metadataFor(@NotNull NakshaFeature feature, @NotNull TupleNumber tupleNumber, @NotNull Operation operation,
+      @NotNull Action action) {
+    throw new NotImplementedException();
+  }
+
+  @Override
+  public @NotNull Tuple created(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
+      @Nullable TupleNumber tupleNumber) {
+    throw new NotImplementedException();
+  }
+
+  @Override
+  public @NotNull Tuple updated(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
+      @Nullable TupleNumber tupleNumber) {
+    throw new NotImplementedException();
+  }
+
+  @Override
+  public @NotNull Tuple deleted(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
+      @Nullable TupleNumber tupleNumber) {
+    throw new NotImplementedException();
   }
 }

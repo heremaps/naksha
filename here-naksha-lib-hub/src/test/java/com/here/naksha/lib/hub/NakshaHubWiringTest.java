@@ -172,9 +172,9 @@ class NakshaHubWiringTest {
     final EventHandler eventHandler =
         parseJsonFileOrFail("createFeature/create_event_handler.json", EventHandler.class);
     final Space space = parseJsonFileOrFail("createFeature/create_space.json", Space.class);
+    // TODO: CASL-764
     final IStorage storageImpl = PluginCache.getStorageConstructor(storage.getClassName(), Storage.class)
         .call(storage);
-    storageImpl.initStorage(null); // TODO: CASL-764
 
     // And: mock in place to return given Storage, EventHandler and Space objects, when requested from Admin Storage
     final IStorage spyStorageImpl = spy(storageImpl);

@@ -27,21 +27,23 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import naksha.geo.ProxyGeoUtil;
 import naksha.geo.SpGeometry;
+import naksha.jbon.JbDictionary;
 import naksha.model.IReadSession;
+import naksha.model.IStorage;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
+import naksha.model.SessionOptions;
 import naksha.model.TagMap;
-import naksha.model.Tuple;
-import naksha.model.TupleNumber;
+import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
-import naksha.model.objects.Transaction;
+import naksha.model.objects.NakshaMap;
 import naksha.model.request.ErrorResponse;
+import naksha.model.request.FeatureTuple;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Request;
 import naksha.model.request.RequestQuery;
 import naksha.model.request.Response;
-import naksha.model.request.ResultTuple;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.query.ISpatialQuery;
 import naksha.model.request.query.ITagQuery;
@@ -78,7 +80,7 @@ public class NHAdminReaderMock implements IReadSession {
   /**
    * Execute the given read-request.
    *
-   * @param readRequest
+   * @param request
    * @return the result.
    */
   @Override
@@ -254,47 +256,74 @@ public class NHAdminReaderMock implements IReadSession {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 
-  @NotNull
-  @Override
-  public String getMap() {
-    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
-  }
-
-  @Override
-  public void setMap(@NotNull String s) {
-    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
-  }
-
   @Override
   public boolean isClosed() {
-    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
-  }
-
-  @Override
-  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
-    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
-  }
-
-  @NotNull
-  @Override
-  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
-    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
-  }
-
-  @Override
-  public void fetchTuples(@NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
-    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
-  }
-
-  @NotNull
-  @Override
-  public Transaction transaction() {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 
   @NotNull
   @Override
   public Response executeParallel(@NotNull Request request) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public @NotNull IStorage getStorage() {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public @NotNull SessionOptions getOptions() {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public @Nullable NakshaMap getMapById(@NotNull String mapId) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public @Nullable NakshaMap getMapByNumber(int mapNumber) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public void refreshMaps() {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public void fetchTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, boolean fetchFromHistory, int mode) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public void refreshCollections(@NotNull NakshaMap map) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public @Nullable JbDictionary getDictionary(@NotNull String id) {
+    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 }

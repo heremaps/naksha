@@ -78,7 +78,7 @@ class NHSpaceStorageWriterTest {
 
     // And: delete space request
     WriteRequest deleteSpaceRequest = new WriteRequest().add(
-        new Write().deleteFeatureById(null, NakshaAdminCollection.SPACES, CUSTOM_SPACE));
+        new Write().deleteFeatureById(NakshaAdminCollection.SPACES, CUSTOM_SPACE, null));
 
     // When: executing delete space request
     Response result = writer.execute(deleteSpaceRequest);
@@ -91,7 +91,7 @@ class NHSpaceStorageWriterTest {
     assertThatWriteRequest(requestsPassedToPipeline.get(0))
         .hasSingleWriteThat(write -> write
             .hasOp(WriteOp.PURGE)
-            .hasCollectionId(Naksha.VIRT_COLLECTIONS)
+            .hasCollectionId(Naksha.COLLECTIONS_COL)
             .hasId(CUSTOM_SPACE)
         );
 
@@ -114,7 +114,7 @@ class NHSpaceStorageWriterTest {
 
     // And: delete space request
     WriteRequest deleteSpaceRequest = new WriteRequest().add(
-        new Write().deleteFeatureById(null, NakshaAdminCollection.SPACES, CUSTOM_SPACE));
+        new Write().deleteFeatureById(NakshaAdminCollection.SPACES, CUSTOM_SPACE, null));
 
     // When: executing delete space request
     Response response = writer.execute(deleteSpaceRequest);
@@ -127,7 +127,7 @@ class NHSpaceStorageWriterTest {
     assertThatWriteRequest(requestsPassedToPipeline.get(0))
         .hasSingleWriteThat(write -> write
             .hasOp(WriteOp.PURGE)
-            .hasCollectionId(Naksha.VIRT_COLLECTIONS)
+            .hasCollectionId(Naksha.COLLECTIONS_COL)
             .hasId(CUSTOM_SPACE)
         );
 
@@ -143,7 +143,7 @@ class NHSpaceStorageWriterTest {
 
     // And: delete space request
     WriteRequest deleteSpaceRequest = new WriteRequest().add(
-        new Write().deleteFeatureById(null, NakshaAdminCollection.SPACES, CUSTOM_SPACE));
+        new Write().deleteFeatureById(NakshaAdminCollection.SPACES, CUSTOM_SPACE, null));
 
     // When: executing delete space request
     Response response = writer.execute(deleteSpaceRequest);
@@ -156,7 +156,7 @@ class NHSpaceStorageWriterTest {
     assertThatWriteRequest(requestsPassedToPipeline.get(0))
         .hasSingleWriteThat(write -> write
             .hasOp(WriteOp.PURGE)
-            .hasCollectionId(Naksha.VIRT_COLLECTIONS)
+            .hasCollectionId(Naksha.COLLECTIONS_COL)
             .hasId(CUSTOM_SPACE)
         );
 
@@ -197,7 +197,7 @@ class NHSpaceStorageWriterTest {
   private ArgumentMatcher<WriteRequest> writeCollectionRequest() {
     return writeRequest -> {
       List<Write> writes = writeRequest.getWrites();
-      return writes.size() == 1 && writes.get(0).getCollectionId().equals(Naksha.VIRT_COLLECTIONS);
+      return writes.size() == 1 && writes.get(0).getCollectionId().equals(Naksha.COLLECTIONS_COL);
     };
   }
 
