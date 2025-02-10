@@ -1,6 +1,7 @@
 package naksha.psql.base
 
 import naksha.base.AtomicMap
+import naksha.model.NakshaContext
 import naksha.model.SessionOptions
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature

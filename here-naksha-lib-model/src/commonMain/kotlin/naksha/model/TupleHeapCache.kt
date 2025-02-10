@@ -94,6 +94,10 @@ class TupleHeapCache : AbstractTupleCache(LATENCY_MEMORY) {
         tuplesByStorage = AtomicMap()
     }
 
+    override fun clear(storage: IStorage) {
+        tuplesByStorage.remove(storage.number)
+    }
+
     override fun gc() {
         for (cacheLine in tuplesByStorage.values) {
             for (e in cacheLine) {

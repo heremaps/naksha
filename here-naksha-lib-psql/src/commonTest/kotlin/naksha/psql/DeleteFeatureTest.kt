@@ -1,8 +1,6 @@
 package naksha.psql
 
 import naksha.model.*
-import naksha.model.Action.ActionEnumCompanion.CREATED
-import naksha.model.Action.ActionEnumCompanion.DELETED
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
@@ -11,6 +9,7 @@ import naksha.model.request.WriteRequest
 import naksha.psql.base.PgTestBase
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertSame
 
 class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c")) {
 
@@ -22,10 +21,10 @@ class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c")) 
             id = featureId
         }
         val writeInitialFeature = WriteRequest().add(
-            Write().createFeature(null, collection!!.id, initialFeature)
+            Write().createFeature(collection.mapId, collection.id, initialFeature)
         )
         val deleteFeaturesReq = WriteRequest().add(
-            Write().deleteFeatureById(null, collection.id, featureId)
+            Write().deleteFeatureById(collection.mapId, collection.id, featureId)
         )
 
         // When: Writing initial version of feature
@@ -49,8 +48,8 @@ class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c")) 
             queryHistory = true
         })
         assertEquals(2, historyResponse.features.size)
-        assertEquals(CREATED, historyResponse.tuples[0]?.tuple?.flags?.actionEnum())
-        assertEquals(DELETED, historyResponse.tuples[1]?.tuple?.flags?.actionEnum())
+        assertSame(Action.CREATED, historyResponse.tuples[0]?.tuple?.meta?.flags?.actionEnum())
+        assertSame(Action.DELETED, historyResponse.tuples[1]?.tuple?.meta?.flags?.actionEnum())
 
         // verify if delete table contains element
         val deleteTableResponse = executeRead(ReadFeatures().apply {

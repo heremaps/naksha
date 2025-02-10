@@ -4,7 +4,6 @@ import naksha.model.Naksha
 import naksha.model.NakshaCache
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.Transaction
 import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
 import naksha.model.request.Write

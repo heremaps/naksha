@@ -20,7 +20,7 @@ class PartitioningTest : PgTestBase() {
             id = "feature_partitioned",
             partitions = numberOfPartitions
         )
-        val writeOp = Write().createCollection(map = null, collection = partitionedCollection)
+        val writeOp = Write().createCollection(partitionedCollection)
         val writeRequest = WriteRequest().add(writeOp)
 
         // when
@@ -65,7 +65,7 @@ class PartitioningTest : PgTestBase() {
             id = "feature_partitioned_insert_check",
             partitions = numberOfPartitions
         )
-        val writeOp = Write().createCollection(map = null, collection = partitionedCollection)
+        val writeOp = Write().createCollection(partitionedCollection)
         val writeRequest = WriteRequest().add(writeOp)
         storage.newWriteSession().use { session ->
             session.execute(writeRequest)
@@ -73,7 +73,7 @@ class PartitioningTest : PgTestBase() {
         }
 
         // when
-        val writeFeatureOp = Write().createFeature(null, partitionedCollection.id, NakshaFeature("f1"))
+        val writeFeatureOp = Write().createFeature(partitionedCollection, NakshaFeature("f1"))
         val writeFeatureRequest = WriteRequest().add(writeFeatureOp)
         storage.newWriteSession().use { session ->
             val result = session.execute(writeFeatureRequest)
@@ -100,7 +100,7 @@ class PartitioningTest : PgTestBase() {
             id = "zero_partitions",
             partitions = numberOfPartitions
         )
-        val writeOp = Write().createCollection(map = null, collection = partitionedCollection)
+        val writeOp = Write().createCollection(partitionedCollection)
         val writeRequest = WriteRequest().add(writeOp)
 
         // when
@@ -119,7 +119,7 @@ class PartitioningTest : PgTestBase() {
             id = "to_many_partitions",
             partitions = numberOfPartitions
         )
-        val writeOp = Write().createCollection(map = null, collection = partitionedCollection)
+        val writeOp = Write().createCollection(partitionedCollection)
         val writeRequest = WriteRequest().add(writeOp)
 
         // when

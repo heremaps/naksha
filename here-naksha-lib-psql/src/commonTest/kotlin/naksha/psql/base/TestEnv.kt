@@ -23,6 +23,8 @@ class TestEnv(
 ) {
     init {
         PlatformUtil.ENABLE_INFO = enableInfoLogs
+        NakshaContext.defaultMapId.set(defaultMapId)
+        NakshaContext.currentContext().mapId = defaultMapId
     }
 
     /**

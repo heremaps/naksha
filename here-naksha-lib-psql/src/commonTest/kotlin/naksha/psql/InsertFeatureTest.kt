@@ -2,7 +2,7 @@ package naksha.psql
 
 import naksha.geo.SpBoundingBox
 import naksha.model.Action
-import naksha.model.NakshaCache
+import naksha.model.Naksha
 import naksha.model.NakshaError
 import naksha.model.TagList
 import naksha.model.objects.NakshaCollection
@@ -29,10 +29,10 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
         // Given: features to create
         val featureToCreate = generateRandomFeature()
         val xyz = featureToCreate.properties.xyz
-        xyz.tags?.clear()
-        xyz.addTag("wicked", false)
+        xyz.tags.clear()
+        xyz.tags.addTag("wicked", false)
         val writeFeaturesReq = WriteRequest().apply {
-            add(Write().createFeature(null, collection!!.id, featureToCreate))
+            add(Write().createFeature(collection.mapId, collection.id, featureToCreate))
         }
 
         // When: executing feature write request
@@ -40,7 +40,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
 
         // And: reading all features from collection
         val retrievedFeatures = executeRead(ReadFeatures().apply {
-            collectionIds += collection!!.id
+            collectionIds += collection.id
             featureIds += featureToCreate.id
         }).features
 
@@ -74,7 +74,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
         val featuresToCreate = generateRandomFeatures(count = 10)
         val writeFeaturesReq = WriteRequest().apply {
             featuresToCreate.forEach { featureToCreate ->
-                add(Write().createFeature(null, collection!!.id, featureToCreate))
+                add(Write().createFeature(collection.mapId, collection.id, featureToCreate))
             }
         }
 
@@ -83,7 +83,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
 
         // And: reading all features from collection
         val retrievedFeatures = executeRead(ReadFeatures().apply {
-            collectionIds += collection!!.id
+            collectionIds += collection.id
         }).features
 
         // Then: we got 10 features
@@ -110,12 +110,12 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
                 }
         }
 
-        NakshaCache.tupleCache(env.storage.id).clear()
+        Naksha.cache.clear(env.storage)
 
         // Read only one feature by ID.
         val expectFeature = featuresToCreate[0]
         val featuresByIdResponse = executeRead(ReadFeatures().apply {
-            collectionIds += collection!!.id
+            collectionIds += collection.id
             featureIds.add(expectFeature.id)
         })
         assertEquals(1, featuresByIdResponse.size)
@@ -124,7 +124,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
 
         // Read only one feature by bounding box.
         val featuresByBBox = executeRead(ReadFeatures().apply {
-            collectionIds += collection!!.id
+            collectionIds += collection.id
             query.spatial =
                 SpIntersects(SpBoundingBox(expectFeature.geometry).addMargin(0.0000001).toPolygon())
         })
@@ -143,11 +143,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
 
         // And
         val writeReq = WriteRequest().add(
-            Write().createFeature(
-                map = null,
-                collectionId = collection!!.id,
-                feature = featureWithDuplicatedId
-            )
+            Write().createFeature(collection.mapId, collection.id, featureWithDuplicatedId)
         )
         val insertDuplicateResponse = env.storage.newWriteSession().use { session ->
             session.execute(writeReq)

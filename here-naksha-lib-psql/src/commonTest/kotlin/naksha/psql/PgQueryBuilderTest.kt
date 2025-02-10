@@ -2,14 +2,11 @@ package naksha.psql
 
 import naksha.geo.PointCoord
 import naksha.geo.SpGeometry
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
 import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
 import naksha.model.request.RequestQuery
 import naksha.model.request.query.*
 import naksha.model.request.query.StringOp.QStringOpCompanion.EQUALS
-import naksha.model.request.query.TupleColumn.TupleColumn_C.ID
-import naksha.model.request.query.TupleColumn.TupleColumn_C.UID
 import naksha.psql.base.PgTestBase
 import naksha.psql.executors.query.PgQueryBuilder
 import kotlin.test.Test

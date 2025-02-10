@@ -15,7 +15,7 @@ import naksha.model.request.WriteRequest
 import naksha.psql.base.PgTestBase
 import kotlin.test.*
 
-class CollectionTests : PgTestBase(collection = null) {
+class CollectionTests : PgTestBase(null) {
 
     @Test
     fun shouldDropCollection() {
@@ -45,7 +45,7 @@ class CollectionTests : PgTestBase(collection = null) {
         // When: Collection gets deleted
         executeWrite(
             WriteRequest().add(
-                Write().deleteCollectionById(null, collectionId = collection.id)
+                Write().deleteCollectionById(env.defaultMapId, collection.id)
             )
         )
 
@@ -64,14 +64,11 @@ class CollectionTests : PgTestBase(collection = null) {
         val collection = NakshaCollection("check_db_columns_test")
         executeWrite(
             WriteRequest().add(
-                Write().createCollection(null, collection)
+                Write().createCollection(collection)
             )
         )
         val cursor = useConnection().execute(
-            sql = """ SELECT column_name
-                    FROM information_schema.columns
-                    WHERE table_name = $1
-            """.trimIndent(),
+            sql = "SELECT column_name FROM information_schema.columns WHERE table_name = $1",
             args = arrayOf(collection.id)
         )
         val columns = mutableListOf<String>()
@@ -88,7 +85,7 @@ class CollectionTests : PgTestBase(collection = null) {
         val collection = NakshaCollection("check_db_indices_test")
         executeWrite(
             WriteRequest().add(
-                Write().createCollection(null, collection)
+                Write().createCollection(collection)
             )
         )
         val currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
@@ -126,7 +123,7 @@ class CollectionTests : PgTestBase(collection = null) {
         )
         executeWrite(
             WriteRequest().add(
-                Write().createCollection(null, collection)
+                Write().createCollection(collection)
             )
         )
         val hstTableName = "$collectionName\$hst"
@@ -148,7 +145,7 @@ class CollectionTests : PgTestBase(collection = null) {
         readFeature.featureIds.add(feature.id)
         executeWrite(
             WriteRequest().add(
-                Write().createFeature(null, collectionName, feature)
+                Write().createFeature(collection, feature)
             )
         )
         val insertedFeatureResponse = executeRead(readFeature)
@@ -156,14 +153,14 @@ class CollectionTests : PgTestBase(collection = null) {
         feature.properties["foo"] = "bar"
         executeWrite(
             WriteRequest().add(
-                Write().updateFeature(null, collectionName, feature)
+                Write().updateFeature(collection, feature, true)
             )
         )
         val updatedFeatureResponse = executeRead(readFeature)
         assertEquals("bar", updatedFeatureResponse.features[0]?.properties!!["foo"])
         executeWrite(
             WriteRequest().add(
-                Write().deleteFeatureById(null, collectionName, feature.id)
+                Write().deleteFeatureById(collection, feature.id)
             )
         )
         val deletedFeatureResponse = executeRead(readFeature)
@@ -175,11 +172,11 @@ class CollectionTests : PgTestBase(collection = null) {
         val collectionName = "check_no_del_table_test"
         val collection = NakshaCollection(
             id = collectionName,
-            storeDeleted = StoreMode.OFF
+            store_deleted = StoreMode.OFF
         )
         executeWrite(
             WriteRequest().add(
-                Write().createCollection(null, collection)
+                Write().createCollection(collection)
             )
         )
         val delTableName = "$collectionName\$del"
@@ -201,7 +198,7 @@ class CollectionTests : PgTestBase(collection = null) {
         readFeature.featureIds.add(feature.id)
         executeWrite(
             WriteRequest().add(
-                Write().createFeature(null, collectionName, feature)
+                Write().createFeature(collection, feature)
             )
         )
         val insertedFeatureResponse = executeRead(readFeature)
@@ -209,14 +206,14 @@ class CollectionTests : PgTestBase(collection = null) {
         feature.properties["foo"] = "bar"
         executeWrite(
             WriteRequest().add(
-                Write().updateFeature(null, collectionName, feature)
+                Write().updateFeature(collection, feature, true)
             )
         )
         val updatedFeatureResponse = executeRead(readFeature)
         assertEquals("bar", updatedFeatureResponse.features[0]?.properties!!["foo"])
         executeWrite(
             WriteRequest().add(
-                Write().deleteFeatureById(null, collectionName, feature.id)
+                Write().deleteFeatureById(collection, feature.id)
             )
         )
         val deletedFeatureResponse = executeRead(readFeature)
@@ -229,20 +226,20 @@ class CollectionTests : PgTestBase(collection = null) {
         val collection = NakshaCollection(id = collectionName)
         executeWrite(
             WriteRequest().add(
-                Write().createCollection(null, collection)
+                Write().createCollection(collection)
             )
         )
         // update collection
         collection.storeDeleted = StoreMode.SUSPEND
         val response = executeWrite(
             WriteRequest().add(
-                Write().updateCollection(null, collection)
+                Write().updateCollection(collection ,true)
             )
         )
         val responseCollection = response.features[0]!!.proxy(NakshaCollection::class)
         assertEquals(StoreMode.SUSPEND, responseCollection.storeDeleted)
         val selectCollectionFromVirt = ReadFeatures().apply {
-            collectionIds += Naksha.VIRT_COLLECTIONS
+            collectionIds += Naksha.COLLECTIONS_COL
             featureIds += collection.id
         }
         val colRead = executeRead(selectCollectionFromVirt).features[0]!!.proxy(NakshaCollection::class)
@@ -257,7 +254,7 @@ class CollectionTests : PgTestBase(collection = null) {
         collection.storeDeleted = StoreMode.SUSPEND
         val response = executeWriteErrorResponse(
             WriteRequest().add(
-                Write().updateCollection(null, collection)
+                Write().updateCollection(collection, true)
             )
         )
         assertEquals(NakshaError.COLLECTION_NOT_FOUND, response.error.code)
@@ -271,7 +268,7 @@ class CollectionTests : PgTestBase(collection = null) {
         // create collection using upsert
         val response = executeWrite(
             WriteRequest().add(
-                Write().upsertCollection(null, collection)
+                Write().upsertCollection(collection, true)
             )
         )
         val createdCollection = response.features[0]!!.proxy(NakshaCollection::class)
@@ -280,7 +277,7 @@ class CollectionTests : PgTestBase(collection = null) {
         // update collection using upsert
         val updateResponse = executeWrite(
             WriteRequest().add(
-                Write().upsertCollection(null, collection)
+                Write().upsertCollection(collection, true)
             )
         )
         val updatedCollection = updateResponse.features[0]!!.proxy(NakshaCollection::class)
@@ -295,7 +292,7 @@ class CollectionTests : PgTestBase(collection = null) {
         // when
         val response = executeWrite(
             WriteRequest().add(
-                Write().deleteCollectionById(null, collectionName)
+                Write().deleteCollectionById(collectionId = collectionName)
             )
         )
 
@@ -309,7 +306,7 @@ class CollectionTests : PgTestBase(collection = null) {
         val collectionId = "test_create_existing_collection"
         executeWrite(
             WriteRequest().add(
-                Write().createCollection(null, NakshaCollection(collectionId))
+                Write().createCollection(NakshaCollection(collectionId))
             )
         )
 
@@ -317,7 +314,7 @@ class CollectionTests : PgTestBase(collection = null) {
         val response = env.storage.newWriteSession().use { session ->
             session.execute(
                 WriteRequest().add(
-                    Write().createCollection(null, NakshaCollection(collectionId))
+                    Write().createCollection(NakshaCollection(collectionId))
                 )
             )
         }

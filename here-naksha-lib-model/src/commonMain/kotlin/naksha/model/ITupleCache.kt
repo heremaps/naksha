@@ -6,6 +6,7 @@ import naksha.base.Int64
 import naksha.jbon.IDictManager
 import naksha.model.request.FeatureTuple
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * The interface to a [Tuple] cache. Caches do only store complete tuple.
@@ -116,6 +117,14 @@ interface ITupleCache : IDictManager {
      * @since 3.0.0
      */
     fun clear()
+
+    /**
+     * Removes all cache entries for the given storage.
+     * @param storage the storage for which to clear cache entries.
+     * @since 3.0.0
+     */
+    @JsName("clearForStorage")
+    fun clear(storage: IStorage)
 
     /**
      * Performs a garbage collection, remove all expired [Tuple] from the cache.

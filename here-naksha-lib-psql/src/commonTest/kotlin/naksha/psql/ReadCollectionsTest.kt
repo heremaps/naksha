@@ -12,7 +12,7 @@ class ReadCollectionsTest : PgTestBase(
     collection = NakshaCollection(
         id = "read_collections_c",
         partitions = 2,
-        storeDeleted = ON,
+        store_deleted = ON,
         storeHistory = ON,
         storeMeta = ON,
     )
