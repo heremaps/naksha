@@ -314,7 +314,7 @@ open class PgSession(
         val writeTxReq = WriteRequest()
         val writeTx = Write()
         writeTxReq.add(writeTx)
-        writeTx.upsertFeature(collectionId = VIRT_TRANSACTIONS, feature = transaction())
+        writeTx.upsertFeature(null, collectionId = VIRT_TRANSACTIONS, feature = transaction())
         PgWriter(this, writeTxReq, InstantWriteExecutor(this)).execute()
     }
 

@@ -31,7 +31,8 @@ import org.jetbrains.annotations.NotNull;
 @AvailableSince(NakshaVersion.v2_0_7)
 public class RequestHelper {
 
-  private RequestHelper() {}
+  private RequestHelper() {
+  }
 
   /**
    * Helper method to create ReadFeatures request for reading feature by given Id from given storage collection name.
@@ -137,7 +138,7 @@ public class RequestHelper {
       final @NotNull String collectionName, final @NotNull List<String> ids) {
     final WriteRequest request = new WriteRequest();
     for (String id : ids) {
-      request.add(new Write().deleteFeatureById(null, collectionName, id, null));
+      request.add(new Write().deleteFeatureById(null, collectionName, id));
     }
     return request;
   }
@@ -151,7 +152,7 @@ public class RequestHelper {
    */
   public static @NotNull WriteRequest deleteFeatureByIdRequest(
       final @NotNull String collectionName, final @NotNull String id) {
-    final Write write = new Write().deleteFeatureById(null, collectionName, id, null);
+    final Write write = new Write().deleteFeatureById(null, collectionName, id);
     return new WriteRequest().add(write);
   }
 

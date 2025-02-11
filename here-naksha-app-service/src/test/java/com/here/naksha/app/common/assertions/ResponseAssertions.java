@@ -27,12 +27,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.app.common.TestUtil;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
-import naksha.model.XyzFeature;
-import naksha.model.XyzFeatureCollection;
+import naksha.model.NakshaFeatureCollection;
 import naksha.geo.XyzReference;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Optional;
+import naksha.model.mom.MomReference;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
@@ -44,7 +45,7 @@ import org.skyscreamer.jsonassert.comparator.ArraySizeComparator;
 public class ResponseAssertions {
 
   private final HttpResponse<String> subject;
-  private XyzFeatureCollection collectionResponse;
+  private NakshaFeatureCollection collectionResponse;
 
   private ResponseAssertions(HttpResponse<String> subject) {
     this.subject = subject;
@@ -116,10 +117,10 @@ public class ResponseAssertions {
 
   public ResponseAssertions hasInsertedIdsMatchingFeatureIds(final @Nullable String prefixId) {
     if (collectionResponse == null) {
-      collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+      collectionResponse = parseJson(subject.body(), NakshaFeatureCollection.class);
     }
     final List<String> insertedIds = collectionResponse.getInserted();
-    final List<XyzFeature> features = collectionResponse.getFeatures();
+    final List<NakshaFeature> features = collectionResponse.getFeatures();
     for (int i = 0; i < insertedIds.size(); i++) {
       if (prefixId != null) {
         assertTrue(
@@ -142,10 +143,10 @@ public class ResponseAssertions {
 
   public ResponseAssertions hasUpdatedIdsMatchingFeatureIds(final @Nullable String prefixId) {
     if (collectionResponse == null) {
-      collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+      collectionResponse = parseJson(subject.body(), NakshaFeatureCollection.class);
     }
     final List<String> updatedIds = collectionResponse.getUpdated();
-    final List<XyzFeature> features = collectionResponse.getFeatures();
+    final List<NakshaFeature> features = collectionResponse.getFeatures();
     for (int i = 0; i < updatedIds.size(); i++) {
       if (prefixId != null) {
         assertTrue(
@@ -162,10 +163,10 @@ public class ResponseAssertions {
 
   public ResponseAssertions hasFeatureReferencedByViolations(int featureIdx, int[] violationIndices) {
     if (collectionResponse == null) {
-      collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+      collectionResponse = parseJson(subject.body(), NakshaFeatureCollection.class);
     }
-    final List<XyzFeature> features = collectionResponse.getFeatures();
-    final List<XyzFeature> violations = collectionResponse.getViolations();
+    final List<NakshaFeature> features = collectionResponse.getFeatures();
+    final List<NakshaFeature> violations = collectionResponse.getViolations();
     // obtain feature Id
     final String fId = features.get(featureIdx).getId();
     assertNotNull(fId, "Feature Id at index " + featureIdx + " found null");
@@ -173,9 +174,9 @@ public class ResponseAssertions {
     assertNotNull(violations, "No violations found in response");
     for (int i = 0; i < violationIndices.length; i++) {
       int vIdx = violationIndices[i];
-      final List<XyzReference> references = violations.get(vIdx).getProperties().getReferences();
+      final List<MomReference> references = violations.get(vIdx).getProperties().getReferences();
       assertNotNull(references, "References missing for violation at idx " + vIdx);
-      for (final XyzReference reference : references) {
+      for (final MomReference reference : references) {
         assertNotNull(reference.getId(), "Id missing in references for violation at idx " + vIdx);
         assertEquals(fId, reference.getId(), "Referenced featured id doesn't match for Violation at idx " + vIdx);
       }
@@ -186,10 +187,10 @@ public class ResponseAssertions {
 
   public ResponseAssertions hasUuids() {
     if (collectionResponse == null) {
-      collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+      collectionResponse = parseJson(subject.body(), NakshaFeatureCollection.class);
     }
-    final List<XyzFeature> features = collectionResponse.getFeatures();
-    for (final XyzFeature feature : features) {
+    final List<NakshaFeature> features = collectionResponse.getFeatures();
+    for (final NakshaFeature feature : features) {
       assertNotNull(
           feature.getProperties().getXyzNamespace().getUuid(),
           "UUID found missing in response for feature id " + feature.getId());
@@ -199,27 +200,27 @@ public class ResponseAssertions {
 
   public ResponseAssertions hasNoViolations() {
     if (collectionResponse == null) {
-      collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+      collectionResponse = parseJson(subject.body(), NakshaFeatureCollection.class);
     }
     assertNull(collectionResponse.getViolations(), "No violations were expected");
     return this;
   }
 
   public ResponseAssertions hasNoNextPageToken() {
-    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), NakshaFeatureCollection.class);
     assertNull(collectionResponse.getNextPageToken(), "No nextPageToken was expected");
     return this;
   }
 
   public ResponseAssertions hasFeatureCount(int count) {
-    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), NakshaFeatureCollection.class);
     assertEquals(count, collectionResponse.getFeatures().size(), "Feature count in the response doesn't match");
     return this;
   }
 
   public ResponseAssertions hasFeatureIdsAmongst(final @NotNull List<String> fIds) {
-    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
-    for (final XyzFeature feature : collectionResponse.getFeatures()) {
+    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), NakshaFeatureCollection.class);
+    for (final NakshaFeature feature : collectionResponse.getFeatures()) {
       assertTrue(fIds.contains(feature.getId()), "No matching feature found in response with given Id : "+ feature.getId());
     }
     return this;

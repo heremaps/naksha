@@ -151,8 +151,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     @JvmOverloads
-    fun createFeature(map: String = NakshaContext.mapId(), collectionId: String, feature: NakshaFeature): Write {
-        this.mapId = map 
+    fun createFeature(map: String?, collectionId: String, feature: NakshaFeature): Write {
+        this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = collectionId
         this.op = WriteOp.CREATE
         this.id = feature.id
@@ -170,8 +170,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     @JvmOverloads
-    fun updateFeature(map: String = NakshaContext.mapId(), collectionId: String, feature: NakshaFeature, atomic: Boolean = false): Write {
-        this.mapId = map 
+    fun updateFeature(map: String?, collectionId: String, feature: NakshaFeature, atomic: Boolean = false): Write {
+        this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = collectionId
         this.op = WriteOp.UPDATE
         this.id = feature.id
@@ -188,8 +188,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     @JvmOverloads
-    fun upsertFeature(map: String = NakshaContext.mapId(), collectionId: String, feature: NakshaFeature): Write {
-        this.mapId = map 
+    fun upsertFeature(map: String?, collectionId: String, feature: NakshaFeature): Write {
+        this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = collectionId
         this.op = WriteOp.UPSERT
         this.id = feature.id
@@ -207,8 +207,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     @JvmOverloads
-    fun deleteFeature(map: String = NakshaContext.mapId(), collectionId: String, feature: NakshaFeature, atomic: Boolean = false): Write {
-        this.mapId = map 
+    fun deleteFeature(map: String?, collectionId: String, feature: NakshaFeature, atomic: Boolean = false): Write {
+        this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = collectionId
         this.op = WriteOp.DELETE
         this.id = feature.id
@@ -226,8 +226,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     @JvmOverloads
-    fun deleteFeatureById(map: String = NakshaContext.mapId(), collectionId: String, id: String, version: Int64? = null): Write {
-        this.mapId = map 
+    fun deleteFeatureById(map: String?, collectionId: String, id: String, version: Int64? = null): Write {
+        this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = collectionId
         this.op = WriteOp.DELETE
         this.id = id
@@ -243,8 +243,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     @JvmOverloads
-    fun createCollection(map: String = NakshaContext.mapId(), collection: NakshaCollection): Write {
-        this.mapId = map
+    fun createCollection(map: String?, collection: NakshaCollection): Write {
+        this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = VIRT_COLLECTIONS
         this.op = WriteOp.CREATE
         this.id = collection.id
@@ -261,8 +261,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     @JvmOverloads
-    fun updateCollection(map: String = NakshaContext.mapId(), collection: NakshaCollection, atomic: Boolean = false): Write {
-        this.mapId = map 
+    fun updateCollection(map: String?, collection: NakshaCollection, atomic: Boolean = false): Write {
+        this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = VIRT_COLLECTIONS
         this.op = WriteOp.UPDATE
         this.id = collection.id
@@ -278,8 +278,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     @JvmOverloads
-    fun upsertCollection(map: String = NakshaContext.mapId(), collection: NakshaCollection): Write {
-        this.mapId = map 
+    fun upsertCollection(map: String?, collection: NakshaCollection): Write {
+        this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = VIRT_COLLECTIONS
         this.op = WriteOp.UPSERT
         this.id = collection.id
@@ -296,8 +296,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     @JvmOverloads
-    fun deleteCollection(map: String = NakshaContext.mapId(), collection: NakshaCollection, atomic: Boolean = false): Write {
-        this.mapId = map 
+    fun deleteCollection(map: String?, collection: NakshaCollection, atomic: Boolean = false): Write {
+        this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = VIRT_COLLECTIONS
         this.op = WriteOp.DELETE
         this.id = collection.id
@@ -314,8 +314,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     @JvmOverloads
-    fun deleteCollectionById(map: String = NakshaContext.mapId(), collectionId: String, version: Int64? = null): Write {
-        this.mapId = map 
+    fun deleteCollectionById(map: String?, collectionId: String, version: Int64? = null): Write {
+        this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = VIRT_COLLECTIONS
         this.op = WriteOp.DELETE
         this.id = collectionId
@@ -333,8 +333,8 @@ open class Write : AnyObject() {
      * @since 3.0.0
      */
     @JvmOverloads
-    fun purgeCollectionById(map: String = NakshaContext.mapId(), collectionId: String, version: Int64? = null): Write {
-        this.mapId = map 
+    fun purgeCollectionById(map: String?, collectionId: String, version: Int64? = null): Write {
+        this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = VIRT_COLLECTIONS
         this.op = WriteOp.PURGE
         this.id = collectionId

@@ -31,13 +31,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
-import naksha.model.XyzFeature;
 import naksha.model.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
+import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Named;
@@ -161,13 +161,13 @@ class SpaceApiTest extends ApiTest {
     // Then: Expect all saved spaces are returned
     assertEquals(200, response.statusCode(), "ResCode mismatch");
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
-    List<XyzFeature> returnedXyzFeatures =
+    List<NakshaFeature> returnedXyzFeatures =
         parseJson(response.body(), XyzFeatureCollection.class).getFeatures();
     boolean allReturnedFeaturesAreSpaces =
         returnedXyzFeatures.stream().allMatch(feature -> Space.class.isAssignableFrom(feature.getClass()));
     Assertions.assertTrue(allReturnedFeaturesAreSpaces);
     List<String> spaceIds =
-        returnedXyzFeatures.stream().map(XyzFeature::getId).toList();
+        returnedXyzFeatures.stream().map(NakshaFeature::getId).toList();
     Assertions.assertTrue(spaceIds.containsAll(expectedSpaceIds));
   }
 

@@ -5,7 +5,6 @@ import static org.testcontainers.containers.InternetProtocol.TCP;
 import static org.testcontainers.containers.wait.strategy.WaitAllStrategy.Mode.WITH_MAXIMUM_OUTER_TIMEOUT;
 
 import naksha.model.NakshaVersion;
-import com.here.naksha.lib.psql.PsqlStorage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -13,6 +12,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import naksha.psql.PgStorage;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,9 +53,9 @@ public class PostgresContainer {
 
   public String getJdbcUrl() {
     return "jdbc:postgresql://localhost:" + LOCALHOST_PORT + "/postgres?user=postgres&password=password"
-        + "&schema=" + TestPsqlStorageConfigs.dataDbConfig.schema()
-        + "&app=" + "Naksha/v" + NakshaVersion.latest
-        + "&id=" + PsqlStorage.ADMIN_STORAGE_ID;
+           + "&schema=" + TestPsqlStorageConfigs.dataDbConfig.schema()
+           + "&app=" + "Naksha/v" + NakshaVersion.latest
+           + "&id=" + PgStorage.ADMIN_STORAGE_ID;
   }
 
   public static PostgresContainer startedPostgresContainer() {

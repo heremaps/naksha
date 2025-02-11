@@ -20,15 +20,18 @@ package com.here.naksha.app.common;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.here.naksha.app.init.TestPsqlConfig;
 import com.here.naksha.app.init.TestPsqlStorageConfigs;
 import com.here.naksha.app.service.http.auth.NakshaAuthProvider;
+import naksha.base.FromJsonOptions;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
 import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.IoHelp.LoadedBytes;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import com.here.naksha.lib.hub.NakshaHubConfig;
-import com.here.naksha.lib.psql.PsqlStorageConfig;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.net.http.HttpResponse;
@@ -42,6 +45,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 
@@ -55,7 +59,7 @@ public class TestUtil {
   public static String loadFileOrFail(final @NotNull String rootPath, final @NotNull String fileName) {
     try {
       String json = new String(Files.readAllBytes(Paths.get(rootPath + fileName)));
-      final PsqlStorageConfig dataDbConfig = TestPsqlStorageConfigs.dataDbConfig;
+      final TestPsqlConfig dataDbConfig = TestPsqlStorageConfigs.dataDbConfig;
       json = json.replace("${dataDb.host}", dataDbConfig.host());
       json = json.replace("${dataDb.port}", Integer.toString(dataDbConfig.port()));
       json = json.replace("${dataDb.db}", dataDbConfig.db());
@@ -64,7 +68,7 @@ public class TestUtil {
       json = json.replace("${dataDb.user}", dataDbConfig.user());
       json = json.replace("${dataDb.password}", dataDbConfig.password());
       json = json.replace("${dataDb.port}", Integer.toString(dataDbConfig.port()));
-      final PsqlStorageConfig adminDbConfig = TestPsqlStorageConfigs.adminDbConfig;
+      final TestPsqlConfig adminDbConfig = TestPsqlStorageConfigs.adminDbConfig;
       json = json.replace("${adminDb.host}", adminDbConfig.host());
       json = json.replace("${adminDb.port}", Integer.toString(adminDbConfig.port()));
       json = json.replace("${adminDb.db}", adminDbConfig.db());
@@ -85,14 +89,7 @@ public class TestUtil {
   }
 
   public static <T> T parseJson(final @NotNull String jsonStr, final @NotNull Class<T> type) {
-    T obj = null;
-    try (final Json json = Json.get()) {
-      obj = json.reader(ViewDeserialize.Storage.class).forType(type).readValue(jsonStr);
-    } catch (Exception ex) {
-      Assertions.fail("Unable tor parse jsonStr " + jsonStr, ex);
-      return null;
-    }
-    return obj;
+    return JvmBoxingUtil.box(Platform.fromJSON(jsonStr, FromJsonOptions.DEFAULT), type);
   }
 
   public static <T> T parseJsonFileOrFail(final @NotNull String fileName, final @NotNull Class<T> type) {
@@ -105,7 +102,7 @@ public class TestUtil {
   }
 
   public static @NotNull NakshaContext newTestNakshaContext() {
-    final NakshaContext nakshaContext = new NakshaContext().withAppId(NakshaHubConfig.defaultAppName());
+    final NakshaContext nakshaContext = NakshaContext.newInstance(NakshaHubConfig.defaultAppName());
     nakshaContext.attachToCurrentThread();
     return nakshaContext;
   }
