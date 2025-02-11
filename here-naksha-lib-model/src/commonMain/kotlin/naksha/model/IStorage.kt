@@ -4,6 +4,8 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.base.PlatformLock
+import naksha.base.fn.Fn1
+import naksha.base.fn.Fx1
 import naksha.jbon.IDictReader
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -82,6 +84,17 @@ interface IStorage : IDictReader {
     fun newWriteSession(options: SessionOptions? = null): IWriteSession
 
     /**
+     * Open a new write-session and execute the given lambda, ensuring that the session is closed after the lambda returns.
+     * @param options the session-options.
+     * @param lambda the lambda to execute in a try block, ensuring that the session is closed.
+     * @return the result of the lambda.
+     */
+    fun <T> useWriteSession(options: SessionOptions? = null, lambda: Fn1<T, IWriteSession>): T {
+        val session = newWriteSession(options)
+        return session.use { lambda.call(session) }
+    }
+
+    /**
      * Open a new read-only session. The [SessionOptions] can be used to guarantee, that the session relates to the master-node, if replication lags are not acceptable.
      *
      * - Throws [NakshaError.UNINITIALIZED], if the storage failed to initialize.
@@ -90,6 +103,17 @@ interface IStorage : IDictReader {
      * @since 2.0.7
      */
     fun newReadSession(options: SessionOptions? = null): IReadSession
+
+    /**
+     * Open a new read-session and execute the given lambda, ensuring that the session is closed after the lambda returns.
+     * @param options the session-options.
+     * @param lambda the lambda to execute in a try block, ensuring that the session is closed.
+     * @return the result of the lambda.
+     */
+    fun <T> useReadSession(options: SessionOptions? = null, lambda: Fn1<T, IReadSession>): T {
+        val session = newReadSession(options)
+        return session.use { lambda.call(session) }
+    }
 
     /**
      * The best flags to encode the given feature.

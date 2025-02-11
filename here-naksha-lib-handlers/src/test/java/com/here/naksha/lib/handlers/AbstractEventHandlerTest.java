@@ -85,6 +85,6 @@ class AbstractEventHandlerTest {
     eventHandler.addStorageIdToStreamInfo(storageId, nakshaContext);
 
     // Then: StreamInfo was enriched with StorageId
-    verify(streamInfo).setStorageIdIfMissing(storageId);
+    verify(streamInfo).withStorageIdIfMissing(storageId);
   }
 }

@@ -39,7 +39,6 @@ import static io.vertx.core.http.HttpMethod.OPTIONS;
 import static io.vertx.core.http.HttpMethod.PATCH;
 import static io.vertx.core.http.HttpMethod.POST;
 import static io.vertx.core.http.HttpMethod.PUT;
-import static naksha.model.response.NakshaError.ILLEGAL_ARGUMENT;
 
 import com.here.naksha.app.service.AbstractNakshaHubVerticle;
 import com.here.naksha.app.service.NakshaApp;
@@ -80,7 +79,6 @@ import java.util.regex.Pattern;
 
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
-import naksha.model.response.NakshaError;
 import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -430,7 +428,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
   public @NotNull Response sendErrorResponse(
       final @NotNull RoutingContext routingContext,
       final @NotNull NakshaError xyzError) {
-    final ErrorResponse response = new ErrorResponse(xyzError, message, AccessLogUtil.getStreamId(routingContext));
+    final ErrorResponse response = new ErrorResponse(xyzError, AccessLogUtil.getStreamId(routingContext));
     sendRawResponse(
         routingContext,
         mapErrorToHttpStatus(response.getError()),

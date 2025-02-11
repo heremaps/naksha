@@ -269,7 +269,7 @@ public class NHSpaceStorageReader implements IReadSession {
   protected void addSpaceIdToStreamInfo(final @Nullable String spaceId) {
     final StreamInfo streamInfo = sessionOptions.streamInfo;
     if (streamInfo != null) {
-      streamInfo.setSpaceIdIfMissing(spaceId);
+      streamInfo.withSpaceIdIfMissing(spaceId);
     }
   }
 

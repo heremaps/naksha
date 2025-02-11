@@ -122,10 +122,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   }
 
   private void addStorageTimeToStreamInfo(StopWatch storageTimer, NakshaContext ctx) {
-    StreamInfo streamInfo = ctx.getStreamInfo();
-    if (streamInfo != null) {
-      streamInfo.increaseTimeInStorage(NANOSECONDS.toMillis(storageTimer.getNanoTime()));
-    }
+    ctx.getStreamInfo().addTimeInStorage((int)NANOSECONDS.toMillis(storageTimer.getNanoTime()));
   }
 
   private <T> T measuredStorageSupplier(Supplier<T> operation, StopWatch stopWatch) {
@@ -193,9 +190,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   private @NotNull Response singleRead(
       final @NotNull NakshaContext ctx, final @NotNull IStorage storageImpl, final @NotNull ReadFeatures rf) {
-    try (final IReadSession reader = storageImpl.newReadSession(SessionOptions.from(ctx, false))) {
-      return reader.execute(rf);
-    }
+    return storageImpl.useReadSession(SessionOptions.from(ctx, false), (reader) -> reader.execute(rf));
   }
 
   private @NotNull Response forwardWriteFeatures(
@@ -286,24 +281,25 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     }
   }
 
-  private @NotNull Response singleWrite(
-      @NotNull NakshaContext ctx, @NotNull IStorage storageImpl, @NotNull WriteRequest wr) {
-    try (final IWriteSession writer = storageImpl.newWriteSession(SessionOptions.from(ctx, true))) {
-      final Response result = writer.execute(wr);
-      if (result instanceof SuccessResponse) {
-        writer.commit();
-      } else {
-        logger.warn("Failed executing {}, expected success but got: {}", wr.getClass(), result);
-        writer.rollback();
+  private @NotNull Response singleWrite(@NotNull NakshaContext ctx, @NotNull IStorage storageImpl, @NotNull WriteRequest wr) {
+    return storageImpl.useWriteSession(SessionOptions.from(ctx, true), (writer) -> {
+      try {
+        final Response result = writer.execute(wr);
+        if (result instanceof SuccessResponse) {
+          writer.commit();
+        } else {
+          logger.warn("Failed executing {}, expected success but got: {}", wr.getClass(), result);
+          writer.rollback();
+        }
+        return result;
+      } catch (NakshaException ne) {
+        logger.warn("Failed executing {}", wr.getClass(), ne);
+        return new ErrorResponse(ne.getError());
+      } catch (Exception e) {
+        logger.warn("Failed executing {}", wr.getClass(), e);
+        return new ErrorResponse(NakshaError.EXCEPTION, "Execution unexpectedly failed", e.getMessage(), e);
       }
-      return result;
-    } catch (NakshaException ne) {
-      logger.warn("Failed executing {}", wr.getClass(), ne);
-      return new ErrorResponse(ne.getError());
-    } catch (Exception e) {
-      logger.warn("Failed executing {}", wr.getClass(), e);
-      return new ErrorResponse(NakshaError.EXCEPTION, "Execution unexpectedly failed", e.getMessage(), e);
-    }
+    });
   }
 
   private @NotNull Response reattemptFeatureRequest(

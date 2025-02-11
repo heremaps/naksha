@@ -144,6 +144,7 @@ class Naksha private constructor() {
          * @param id the identifier.
          * @return _true_ if the identifier is valid; _false_ otherwise.
          * @since 3.0.0
+         * @see [verifyId]
          */
         @JsStatic
         @JvmStatic
@@ -166,10 +167,15 @@ class Naksha private constructor() {
         }
 
         /**
-         * Tests if the given **id** is a valid identifier, otherwise throws an [NakshaError.ILLEGAL_ID].
+         * Tests if the given **id** is a valid identifier, so matches:
+         *
+         * `[a-z][a-z0-9_:-]{31}`
+         *
+         * If the given identifier is invalid, the methods throws [NakshaError.ILLEGAL_ID].
          * @param id the identifier to test.
          * @return the given identifier, tested.
          * @since 3.0.0
+         * @see [isValidId]
          */
         @JsStatic
         @JvmStatic
@@ -268,7 +274,7 @@ class Naksha private constructor() {
         fun storageNumberByHash(storageId: String): Int64 {
             val hash = Platform.md5(storageId)
             val view = Binary(Platform.newDataView(hash))
-            return view.getInt64(8) and Int64(0x00ff_ffff_ffff_ffff)
+            return view.getInt64(8) and Int64(0x7fff_ffff_ffff_ffff)
         }
 
         /**
