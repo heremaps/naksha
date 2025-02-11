@@ -212,43 +212,49 @@ This is out of the scope of this documentation, as it is an even more complex op
 ## Long-Term Outlook
 The lifecycle was designed so that every mobile phone, every car, every device, can be an own storage, and that users can split each storage logically into maps, and collections.
 
+### Storage-Numbers
 We intend to split the 64-bit storage-number into parts, for example:
 
 ```
-  PAS CHUNK  BLOCK    NUMBER   
+   HS  C    BLOCK    NUMBER   
   [00][00]:[0000:00][00:0000]
 
-- PUBLIC: 1-bit
-- ANONYM: 1-bit
-- SEGMENT: Segment, 6-bit
-- CHUNK: Allocation chunk, 8-bit
-- BLOCK: Allocation block, 24-bit
-- NUMBER: Allocation number, 24-bit
+- H: MD5-hash number, 1-bit
+- S: Segment, 7-bit
+- C: Chunk, 8-bit
+- BLOCK: Block, 24-bit
+- NUMBER: Number, 24-bit
 ```
 
-The idea is to split a storage-number logically into:
+#### Segments
+If the highest bit is unset (`0`), the rest of the bits are segmented. The idea is to split storage-numbers logically into the following segments:
 
-- public addresses
-- anonymous addresses
-- private addresses within HERE _(not public, not anonymous)_
-- hash-address based upon MD5-hash of storage-id _(segment is 0)_
-- reserved-addresses _(segment > 0)_, which persist out of _segment_, _chunk_, _block_, and _number_
+- md5-segments
+  - The highest bit is always set (`1`), the storage-id is the lower 64-bit _(big-endian encoding)_ of the MD5-hash above the storage-id, with the highest bit being forcefully set _(`1`)_, so generally `hashLow or -9223372036854775808`. 
+- private segments _(segment 0..63)_
+  - HERE normally uses segment `0` internally _(alias `here`)_ and other segments for customers
+  - every vendor uses these segments individually
+  - these segments are not globally unique, they are only unique per vendor
+  - vendors can cooperate share private segments to improve interoperability
+- reserved shared special segments _(segment 64..125)_
+- anonymous segment _(segment = 126, `9,079,256,848,778,919,936`, alias `anonym`)_
+- public segment _(segment = 127, `9,151,314,442,816,847,872`, alias `public`)
 
+#### Human Readable Notation
 The suggested stringified human- and machine-readable notation would be:
 
-`urn:here:naksha:sn:{pa}:{seg}:{chunk}:{block}:{number}`
+- decimal: `urn:here:naksha:sn:raw:{decimal}`
+- md5: `urn:here:naksha:sn:md5:{decimal-without-high-bit}`
+- alias: `urn:here:naksha:sn:{alias}:{chunk}:{block}:{number}`
+- numeric: `urn:here:naksha:sn:{segment}:{chunk}:{block}:{number}`
 
-For example `urn:here:naksha:sn::1:5:1:19`, but as this is for human-readable notation, the URN prefix (`urn:here:naksha`) is not necessary, and can be moved, truncating the string to `sn::1:5:1:19`, which means private storage, segment `1`, chunk `5`, block `1`, and number `19`, resulting in the final 64-bit value `5910974527701010` (`(1*2^52)+(5*2^48)+(1*2^24)+19`).
+For example `urn:here:naksha:sn:here:5:1:19`, but as this is for human-readable notation, the URN prefix (`urn:here:naksha`) is not necessary, and can be moved, truncating the string to `sn:here:5:1:19`, which means segment `0` _(HERE)_, chunk `5`, block `1`, and number `19`. This can be encoded as well decimal as `sn:decimal:1407374900330520` (`(0*2^56) + (5*2^48) + (1*2^24) + 19`).
 
-If all the 8 high bits are zero, the storage-number is the lower 52-bit (big endian) of the MD5-hash above the UTF-8 encoded bytes of the storage-id.
+**Note**: The only aliases that are guaranteed to be known by all parsers are `public` and `anonym`, so avoid aliases for other segments, rather use **decimal** or **numeric** notation!
 
-If the `PUBLIC` bit is set, the prefix is changed to `public`, for example `sn:public:1:5:1:19`, if the segment is part of the privacy extension, it becomes `sn:anonym:1:5:1:19`. The public flag just changes the storage-number into the public shared namespace, but the anonymous flag indicates a [privacy storage-number](#privacy-extension).
+If the **public** segment is used _(`127`)_, the alias `public` should be used, for example `sn:public:5:1:19`, if the segment is the privacy extension segment _(`126`)_, it becomes `sn:anonym:5:1:19`. The anonymous alias indicates a [privacy storage-number](#privacy-extension).
 
-We allocate segment `0` for storage-numbers which are derived from the storage-id using MD5-hash, all other segments are reserved, distributed and managed by a central authority.
-
-Within the private HERE address-space, we reserve segment `1` for HERE internal storage-numbers, all other segments are reserved for customer specific addresses.
-
-For example, smaller customers are merged into shared blocks, while bigger customers will receive own blocks or chunks, so they can subdivide their storage-numbers. Some important huge customers may get a whole segment.
+Normally smaller customers are merged into shared blocks, while bigger customers will receive own blocks or even chunks, so they can subdivide their storage-numbers further. Some important huge customers may get a whole segment.
 
 ### Goal
 For example, a car company could acquire a block or segment of storage-numbers from Naksha to allocate an individual storage-number to each car. They could synchronize this with a car identifier, and assign an own storage-number to each car. A company that manages buildings could use for each building an own dedicated storage-number, then create and own map for each flat, with one collection per room. These are just rough ideas.
@@ -273,6 +279,6 @@ The privacy extension alone does not guarantee real privacy, because it only obf
 **This need to be improved and is just a first concept draft.**
 
 ### Storage-Numbers
-All storage-numbers between `0` and `9223372036854775807` are reserved for private usage, which means every vendor (like [HERE Technologies](https://www.here.com/)) can make an own dedicated namespace, and privately distribute storage-numbers to devices, services, or whatever.
+All storage-numbers in segments `0` to `63` are reserved for private usage, which means every vendor (like [HERE Technologies](https://www.here.com/)) can make an own dedicated namespace, and privately distribute storage-numbers to devices, services, or whatever.
 
-The storage-numbers between `-9223372036854775808` and `-1` are reserved for a global public namespace. As every storage always has an `id` and `number`, the idea is to create some form of public DNS for storages, maybe in cooperation with the [OpenStreetMap Foundation](https://osmfoundation.org/). So that everybody can register namespaces the same way that domains can be registered.
+The storage-numbers being bigger than `9,151,314,442,816,847,872` are reserved for a global public namespace. As every storage always has an `id` and `number`, the idea is to create some form of public DNS for storages, maybe in cooperation with the [OpenStreetMap Foundation](https://osmfoundation.org/). So that everybody can register namespaces the same way that domains can be registered.
