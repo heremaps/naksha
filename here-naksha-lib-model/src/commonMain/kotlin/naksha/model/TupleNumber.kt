@@ -14,7 +14,7 @@ import kotlin.jvm.JvmField
  *
  * The tuple-number is stringified into:
  * ```
- * {storage}:{map}:{collection}:{partition}:{year}:{month}:{day}:{seq}:{uid}
+ * {storage-id}:{map-id}:{collection-id}:{partition-id}:{year}:{month}:{day}:{seq}:{uid}
  * ```
  *
  * - There are no two [tuples][Tuple] with the same [tuple-number][TupleNumber]; world-wide.

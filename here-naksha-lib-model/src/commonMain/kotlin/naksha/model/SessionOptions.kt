@@ -2,11 +2,13 @@
 
 package naksha.model
 
+import naksha.base.PlatformUtil
 import naksha.base.fn.Fn3
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -16,7 +18,7 @@ import kotlin.jvm.JvmStatic
  * @since 3.0.0
  */
 @JsExport
-data class SessionOptions(
+data class SessionOptions @JvmOverloads constructor(
     /**
      * An arbitrary name for debug logs, in `lib-psql` this will be used in the database connection as name and shown in `pg_stat_activity`.
      * @since 3.0.0
@@ -102,10 +104,16 @@ data class SessionOptions(
 
     /**
      * Stream information.
+     * @since 3.0.0
      */
     @JvmField
-    val streamInfo: StreamInfo? = null
+    var streamInfo: StreamInfo = NakshaContext.currentContext().streamInfo,
 ) {
+    /**
+     * The stream-identifier for this session.
+     * @since 3.0.0
+     */
+    val streamId: String = streamInfo.streamId
 
     /**
      * Returns the actor, which is either the [author], or if no [author] is available, the [appId].
@@ -122,6 +130,7 @@ data class SessionOptions(
          */
         @JvmStatic
         @JsStatic
+        @JvmOverloads
         fun from(context: NakshaContext?, useMaster: Boolean = false): SessionOptions {
             val c = context ?: NakshaContext.currentContext()
             return SessionOptions(

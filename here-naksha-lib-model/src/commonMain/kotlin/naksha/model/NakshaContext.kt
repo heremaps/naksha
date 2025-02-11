@@ -17,8 +17,19 @@ import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
+// TODO: As multiple threads can share the same context, we need to make it thread safe, so use AtomicMap in the background!
+//       Basically, this needs to be done the same way that StreamInfo was made thread safe!
+//       We can derive both from the same base class, something like ThreadSafeObject or whatever.
+
 /**
- * The Naksha Context is a thread-local that stores credentials, and shared request information. The main purpose is to ensure that all entities can perform authorization. It is normally created, when a new request is started, using the static [newInstance] factory method, and then attached to the current thread.
+ * The Naksha Context is a thread-local that stores credentials, and shared request information.
+ *
+ * The main purpose is to ensure that all entities can perform authorization, and share debugging information, like the stream-identifier for logging. It is recommended that each application creates its own stream-information class, with own special properties next to the shared general ones.
+ *
+ * It is normally created, when a new request is started, using the static [newInstance] factory method, and then attached to the current thread:
+ *
+ * ```kotlin
+ * ```
  * @since 2.0.5
  * @see newInstance
  * @see attachToCurrentThread
@@ -100,27 +111,63 @@ open class NakshaContext protected constructor() {
         return this
     }
 
-    private var _streamId: String? = null
+    private var _streamInfo: StreamInfo? = null
 
     /**
-     * The stream-identifier being used in logging to group log entries that belong to the same request.
-     * @since 2.0.7
+     * The stream-information.
+     * @since 3.0.0
      */
-    open var streamId: String
+    open var streamInfo: StreamInfo
         get() {
-            var s = _streamId
+            var s = _streamInfo
             if (s == null) {
-                s = PlatformUtil.randomString()
-                _streamId = s
+                s = streamInfoConstructorRef.call()
+                _streamInfo = s
             }
             return s
         }
         set(value) {
-            _streamId = value
+            _streamInfo = value
+        }
+
+    /**
+     * @see [streamInfo]
+     */
+    open fun withStreamInfo(value: StreamInfo): NakshaContext {
+        streamInfo = value
+        return this
+    }
+
+    /**
+     * The stream-identifier being used in logging to group log entries that belong to the same request.
+     *
+     * ### Warning
+     * Changing the stream-identifier causes a new [StreamInfo] to be created, so [streamInfo] will change too!
+     * @since 2.0.7
+     */
+    open var streamId: String
+        get() {
+            var s = _streamInfo
+            if (s == null) {
+                s = streamInfoConstructorRef.call()
+                _streamInfo = s
+            }
+            return s.streamId
+        }
+        set(value) {
+            val s = _streamInfo
+            if (s != null && s.streamId == value) return
+            // Create a new stream-information with the desired stream-id.
+            val info = streamInfoConstructorRef.call()
+            info.streamId = value
+            _streamInfo = s
         }
 
     /**
      * Changes the stream-id and returns the [NakshaContext].
+     *
+     * ### Warning
+     * Changing the stream-identifier causes a new [StreamInfo] to be created, so [streamInfo] will change too!
      * @param streamId the new stream-id.
      * @return this.
      * @since 2.0.7
@@ -345,11 +392,6 @@ open class NakshaContext protected constructor() {
         return this
     }
 
-    /**
-     * Stream information.
-     */
-    open var streamInfo: StreamInfo? = null
-
     @Suppress("OPT_IN_USAGE")
     companion object NakshaContextCompanion {
         /**
@@ -455,6 +497,22 @@ open class NakshaContext protected constructor() {
         fun author(): String? = currentContext().author
 
         /**
+         * Returns the current stream-information.
+         * @return the current stream-information.
+         */
+        @JvmStatic
+        @JsStatic
+        fun streamInfo(): StreamInfo = currentContext().streamInfo
+
+        /**
+         * Returns the current stream-identifier.
+         * @return the current stream-identifier.
+         */
+        @JvmStatic
+        @JsStatic
+        fun streamId(): String = currentContext().streamId
+
+        /**
          * The thread local that stores the [NakshaContext].
          */
         @JvmStatic
@@ -468,6 +526,13 @@ open class NakshaContext protected constructor() {
         var constructorRef: Fn0<NakshaContext> = Fn0(::NakshaContext)
 
         /**
+         * The default constructor to call to create [StreamInfo] instances, can be overridden by application code in bootstrap to ensure that all stream-information are some custom application specific instances.
+         */
+        @JvmStatic
+        @JsStatic
+        val streamInfoConstructorRef: Fn0<StreamInfo> = Fn0(::StreamInfo)
+
+        /**
          * Can be overridden by application code to modify the thread local context gathering.
          */
         @JvmStatic
@@ -479,22 +544,22 @@ open class NakshaContext protected constructor() {
          * ```
          * val context = NakshaContext.newInstance("app","user").attachToCurrentThread()
          * ```
-         * @param appId The application-id for which to create the context.
-         * @param author The author.
+         * @param appId the application-id for which to create the context.
+         * @param author the author.
+         * @param streamId the stream-identifier to use, if _null_, a random identifier is generated.
          * @param su If the user is a permanent super-user.
          */
-        // TODO: Kotlin-Compiler-Bug: We need open, otherwise Java can't create another static method with the same name in extending class!
+        // TODO: Kotlin-Compiler-Bug:
+        //       We need open, otherwise Java can't create another static method with the same name in extending class!
         @Suppress("NON_FINAL_MEMBER_IN_OBJECT")
         @JvmStatic
-        @JvmOverloads
         @JsStatic
+        @JvmOverloads
         open fun newInstance(appId: String, author: String? = null, streamId: String? = null, su: Boolean = false): NakshaContext {
             val context = constructorRef.call()
             context.appId = appId
             context.author = author
-            if (streamId != null) {
-                context.streamId = streamId
-            }
+            if (streamId != null) context.streamId = streamId
             context.su = su
             return context
         }
