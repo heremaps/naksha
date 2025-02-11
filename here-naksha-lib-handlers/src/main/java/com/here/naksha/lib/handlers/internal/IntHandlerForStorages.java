@@ -87,11 +87,7 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
       try {
         httpStorageProperties = JvmBoxingUtil.box(storage.getProperties(), HttpStorageProperties.class);
       } catch (Exception e) {
-        return new ErrorResponse(
-            NakshaError.ILLEGAL_ARGUMENT,
-            "Unable to convert 'properties' to " + HttpStorageProperties.class.getName(),
-            null,
-            e);
+        return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT, "Unable to convert 'properties' to " + HttpStorageProperties.class.getName());
       }
       return httpStoragePropertiesValidation(httpStorageProperties);
     }

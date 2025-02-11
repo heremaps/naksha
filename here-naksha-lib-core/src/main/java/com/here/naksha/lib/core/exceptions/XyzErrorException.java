@@ -31,7 +31,7 @@ public class XyzErrorException extends RuntimeException {
 
   public XyzErrorException(@NotNull Throwable reason) {
     super(reason.getMessage(), reason);
-    this.nakshaError = new NakshaError(EXCEPTION, reason.getMessage(), null, null);
+    this.nakshaError = new NakshaError(EXCEPTION, reason.getMessage());
   }
 
   public XyzErrorException(@NotNull String code, @NotNull String message) {

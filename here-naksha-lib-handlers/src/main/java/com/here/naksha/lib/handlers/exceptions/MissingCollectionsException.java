@@ -31,6 +31,6 @@ public final class MissingCollectionsException extends RuntimeException {
   }
 
   public ErrorResponse toErrorResponse() {
-    return new ErrorResponse(COLLECTION_NOT_FOUND, getMessage(), null, this);
+    return new ErrorResponse(COLLECTION_NOT_FOUND, getMessage(), this);
   }
 }

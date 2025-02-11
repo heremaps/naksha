@@ -297,7 +297,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         return new ErrorResponse(ne.getError());
       } catch (Exception e) {
         logger.warn("Failed executing {}", wr.getClass(), e);
-        return new ErrorResponse(NakshaError.EXCEPTION, "Execution unexpectedly failed", e.getMessage(), e);
+        return new ErrorResponse(NakshaError.EXCEPTION, "Execution unexpectedly failed", e);
       }
     });
   }

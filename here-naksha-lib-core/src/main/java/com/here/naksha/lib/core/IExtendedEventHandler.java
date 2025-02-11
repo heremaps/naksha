@@ -128,21 +128,13 @@ public interface IExtendedEventHandler {
         initialize(eventContext);
         return processGetStorageStatisticsEvent((GetStorageStatisticsEvent) event);
       }
-      return new ErrorResponse(new NakshaError(
-          NOT_IMPLEMENTED,
-          "Unknown event type '" + event.getClass().getSimpleName() + "'",
-          event.getStreamId(),
-          null));
+      return new ErrorResponse(new NakshaError(NOT_IMPLEMENTED, "Unknown event type '" + event.getClass().getSimpleName() + "'"));
     } catch (Exception e) {
       currentLogger()
           .atError("Uncaught exception in event processor")
           .setCause(e)
           .log();
-      return new ErrorResponse(new NakshaError(
-          EXCEPTION,
-          "Unexpected exception in storage connector: " + e.getMessage(),
-          event.getStreamId(),
-          null));
+      return new ErrorResponse(new NakshaError(EXCEPTION, "Unexpected exception in storage connector: " + e.getMessage()));
     }
   }
 

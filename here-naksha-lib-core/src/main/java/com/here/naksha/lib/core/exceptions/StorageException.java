@@ -50,7 +50,7 @@ public class StorageException extends RuntimeException {
    */
   public StorageException(@NotNull String errorCode, @NotNull String message) {
     super(message);
-    this.nakshaError = new NakshaError(errorCode, message, null, null);
+    this.nakshaError = new NakshaError(errorCode, message);
   }
 
   /**
@@ -96,7 +96,7 @@ public class StorageException extends RuntimeException {
   @AvailableSince(NakshaVersion.v2_0_8)
   public @NotNull NakshaError toNakshaError() {
     if (nakshaError == null) {
-      nakshaError = new NakshaError(EXCEPTION, "Newly created unknown error", null, null);
+      nakshaError = new NakshaError(EXCEPTION, "Newly created unknown error");
     }
     return nakshaError;
   }

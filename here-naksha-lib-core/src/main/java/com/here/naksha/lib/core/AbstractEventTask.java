@@ -64,7 +64,7 @@ public abstract class AbstractEventTask<EVENT extends Event> extends AbstractTas
   @Deprecated
   protected @NotNull Response errorResponse(@NotNull Throwable throwable) {
     return new ErrorResponse(
-        new NakshaError(EXCEPTION, "Unknown error", context().getStreamId(), throwable));
+        new NakshaError(EXCEPTION, "Unknown error", throwable));
   }
 
   /**

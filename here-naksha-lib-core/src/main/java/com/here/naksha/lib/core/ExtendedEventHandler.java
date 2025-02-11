@@ -87,7 +87,7 @@ public class ExtendedEventHandler<HANDLER extends EventHandler> implements IExte
    */
   @Deprecated
   protected @NotNull Response errorResponse(@NotNull String error, @NotNull CharSequence message) {
-    return new ErrorResponse(new NakshaError(error, message.toString(), event.getStreamId(), null));
+    return new ErrorResponse(new NakshaError(error, message.toString()));
   }
 
   /**

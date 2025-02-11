@@ -23,6 +23,7 @@ import com.here.naksha.storage.http.cache.RequestSenderCache;
 import naksha.base.Int64;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.PlatformLock;
+import naksha.base.fn.Fn1;
 import naksha.jbon.JbDictionary;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
