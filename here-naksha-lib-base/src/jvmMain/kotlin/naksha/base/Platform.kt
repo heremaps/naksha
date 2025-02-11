@@ -446,6 +446,9 @@ actual class Platform {
         internal val toJsonOptions = ThreadLocal<ToJsonOptions>()
 
         @JvmStatic
+        actual fun toJSON(obj: Any?): String = toJSON(obj, ToJsonOptions.DEFAULT)
+
+        @JvmStatic
         actual fun toJSON(obj: Any?, options: ToJsonOptions): String {
             toJsonOptions.set(options)
             return objectMapper.get().writeValueAsString(obj)
@@ -453,6 +456,9 @@ actual class Platform {
 
         @JvmField
         internal val fromJsonOptions = ThreadLocal<FromJsonOptions>()
+
+        @JvmStatic
+        actual fun fromJSON(json: String): Any? = fromJSON(json, FromJsonOptions.DEFAULT)
 
         @JvmStatic
         actual fun fromJSON(json: String, options: FromJsonOptions): Any? {

@@ -540,11 +540,11 @@ if (obj instanceof Object) {
 return obj;
 """).unsafeCast<T?>()
 
-        /**
-         * Serialize the given value to JSON.
-         * @param obj The object to serialize.
-         * @return The JSON.
-         */
+        @JsName("toJson")
+        @JsStatic
+        actual fun toJSON(obj: Any?): String = toJSON(obj, ToJsonOptions.DEFAULT)
+
+        @JsName("toJsonWithOptions")
         @JsStatic
         actual fun toJSON(obj: Any?, options: ToJsonOptions): String {
             val o = if (obj is Proxy) obj.platformObject() else obj
@@ -558,11 +558,11 @@ return obj;
             ).unsafeCast<String>()
         }
 
-        /**
-         * Deserialize the given JSON.
-         * @param json The JSON string to parse.
-         * @return The parsed JSON.
-         */
+        @JsName("fromJson")
+        @JsStatic
+        actual fun fromJSON(json: String): Any? = fromJSON(json, FromJsonOptions.DEFAULT)
+
+        @JsName("fromJsonWithOptions")
         @JsStatic
         actual fun fromJSON(json: String, options: FromJsonOptions): Any? = js(
             """JSON.parse(json, function(k, v) {

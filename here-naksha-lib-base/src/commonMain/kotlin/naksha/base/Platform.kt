@@ -445,14 +445,32 @@ expect class Platform {
 
         /**
          * Serialize the given value to JSON.
-         * @param obj The object to serialize.
-         * @return The JSON.
+         * @param obj the object to serialize.
+         * @return the JSON string.
+         * @see [ToJsonOptions.DEFAULT]
+         */
+        fun toJSON(obj: Any?): String
+
+        /**
+         * Serialize the given value to JSON.
+         * @param obj the object to serialize.
+         * @param options the options to use; defaults to [ToJsonOptions.DEFAULT].
+         * @return the JSON string.
          */
         fun toJSON(obj: Any?, options: ToJsonOptions = ToJsonOptions.DEFAULT): String
 
         /**
          * Deserialize the given JSON.
          * @param json The JSON string to parse.
+         * @return The parsed JSON.
+         * @see [FromJsonOptions.DEFAULT]
+         */
+        fun fromJSON(json: String): Any?
+
+        /**
+         * Deserialize the given JSON.
+         * @param json the JSON string to parse.
+         * @param options the options to use; defaults to [FromJsonOptions.DEFAULT].
          * @return The parsed JSON.
          */
         fun fromJSON(json: String, options: FromJsonOptions = FromJsonOptions.DEFAULT): Any?
