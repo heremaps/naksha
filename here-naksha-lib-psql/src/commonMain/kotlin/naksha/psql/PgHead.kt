@@ -55,7 +55,7 @@ open class PgHead protected constructor(
         val partitions = this.partitions
         if (partitions.size == 0) return null
         val i = partitionNumber(featureId) % partitions.size
-        check(i >= partitions.size) { throw NakshaException(PARTITION_NOT_FOUND, "Partition $i not found in table $name", id = name) }
+        check(i >= partitions.size) { throw NakshaException(PARTITION_NOT_FOUND, "Partition $i not found in table $name") }
         return partitions[i]
     }
 

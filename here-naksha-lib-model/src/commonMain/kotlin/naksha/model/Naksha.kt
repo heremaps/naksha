@@ -181,12 +181,12 @@ class Naksha private constructor() {
         @JvmStatic
         fun verifyId(id: String?): String {
             if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_ID_LENGTH) {
-                throw NakshaException(ILLEGAL_ID, "The given identifier is null, empty or has more than 32 characters", id = id)
+                throw NakshaException(ILLEGAL_ID, "The given identifier is null, empty or has more than 32 characters")
             }
             var i = 0
             var c = id[i++]
             if (c.code < 'a'.code || c.code > 'z'.code) {
-                throw NakshaException(ILLEGAL_ID, "The first character must be a-z, but was $c", id = id)
+                throw NakshaException(ILLEGAL_ID, "The first character must be a-z, but was $c")
             }
             while (i < id.length) {
                 c = id[i++]
@@ -194,7 +194,7 @@ class Naksha private constructor() {
                     in 'a'.code..'z'.code -> continue
                     in '0'.code..'9'.code -> continue
                     '_'.code, ':'.code, '-'.code -> continue
-                    else -> throw NakshaException(ILLEGAL_ID, "Invalid character at index $i: '$c', expected [a-z0-9_:-]", id = id)
+                    else -> throw NakshaException(ILLEGAL_ID, "Invalid character at index $i: '$c', expected [a-z0-9_:-]")
                 }
             }
             return id
@@ -666,7 +666,7 @@ class Naksha private constructor() {
         @JvmStatic
         @JsStatic
         fun useStorageById(storageId: String): IStorage = storagesById[storageId]
-            ?: throw NakshaException(STORAGE_NOT_FOUND, "No storage found for storage-id: $storageId", id=storageId)
+            ?: throw NakshaException(STORAGE_NOT_FOUND, "No storage found for storage-id: $storageId")
 
         /**
          * Returns the storage with the given number.
@@ -677,7 +677,7 @@ class Naksha private constructor() {
         @JvmStatic
         @JsStatic
         fun useStorageByNumber(storageNumber: Int64): IStorage = storagesByNumber[storageNumber]
-            ?: throw NakshaException(STORAGE_NOT_FOUND, "No storage found for storage-number: $storageNumber", id=storageNumber.toString())
+            ?: throw NakshaException(STORAGE_NOT_FOUND, "No storage found for storage-number: $storageNumber")
 
         /**
          * Remove the given storage, invoke [AbstractStorage.shutdownStorage] so that all cached [Tuple] of this storage are removed, eventually returning the removed and shutdown storage.

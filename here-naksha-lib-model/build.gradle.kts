@@ -17,6 +17,9 @@ plugins {
 kotlin {
     jvm {
         withJava()
+        compilerOptions {
+            freeCompilerArgs = listOf("-Xjvm-default=all")
+        }
     }
 
     js(IR) {

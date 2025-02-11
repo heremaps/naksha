@@ -20,15 +20,13 @@ open class NakshaError() : AnyObject() {
      * Create a new error from the given arguments.
      * @param code the error code.
      * @param msg a human-readable message.
-     * @param id the identifier of the object that relates to the error; if any.
      * @param cause the origin exception that caused this error; if any.
      */
     @JsName("of")
     @JvmOverloads
-    constructor(code: String, msg: String, id: String? = null, cause: Throwable? = null) : this() {
+    constructor(code: String, msg: String, cause: Throwable? = null) : this() {
         this.code = code
         this.msg = msg
-        this.id = id
         this.cause = cause
     }
 
@@ -244,11 +242,6 @@ open class NakshaError() : AnyObject() {
     var msg by MSG
 
     /**
-     * The identifier of the object that relates to the error; if any.
-     */
-    var id by ID
-
-    /**
      * The origin exception that caused this error; if any.
      */
     var cause by THROWABLE
@@ -258,7 +251,6 @@ open class NakshaError() : AnyObject() {
         return other is NakshaError
                 && code == other.code
                 && msg == other.msg
-                && id == other.id
                 && cause == other.cause
     }
 
