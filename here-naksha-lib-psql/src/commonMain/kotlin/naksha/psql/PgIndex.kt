@@ -8,8 +8,6 @@ import naksha.model.request.query.SortOrder.SortOrderCompanion.DESCENDING
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.PgColumn.PgColumnCompanion.id as c_id
 import naksha.psql.PgColumn.PgColumnCompanion.tn as c_tn
-import naksha.psql.PgColumn.PgColumnCompanion.prev_tn as c_prev_tn
-import naksha.psql.PgColumn.PgColumnCompanion.base_tn as c_base_tn
 import naksha.psql.PgColumn.PgColumnCompanion.txn as c_txn
 import naksha.psql.PgColumn.PgColumnCompanion.uid as c_uid
 import naksha.psql.PgColumn.PgColumnCompanion.txn_next as c_txn_next
@@ -60,7 +58,7 @@ CREATE ${if (unique) "UNIQUE " else ""}INDEX IF NOT EXISTS ${quoteIdent(id(table
 USING $using
 ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)" else ""} ${table.TABLESPACE};"""
 
-    companion object PgIndexCompanion {
+    companion object PgIndex_C {
         /**
          * The primary key about the tuple-number.
          *
@@ -128,14 +126,14 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         }
 
         /**
-         * A non-unique index above the [PgColumn.id], [PgColumn.txn], and [PgColumn.uid] column.
+         * A non-unique index above the [PgColumn.id], [PgColumn.txn], [PgColumn.uid], and [PgColumn.txn_next] column.
          *
          * We do not need uniqueness, because we already have a unique index for [tn][tn_pkey], which includes `txn`, and `uid`, combined with the unique index above [id][id_unique] in HEAD, DELETED, and META, it is passively guaranteed that the combination (`id`, `txn`, `uid`) is unique in all tables, including HISTORY.
          */
         @JvmField
         @JsStatic
-        val id_txn_uid = def(PgIndex::class, "itu") { self ->
-            self.name = "id_txn_uid"
+        val id = def(PgIndex::class, "itu") { self ->
+            self.name = "id"
             self.columns = listOf(c_id, c_txn, c_uid, c_txn_next)
             self.naturalOrder = listOf(DESCENDING, DESCENDING, DESCENDING, DESCENDING)
             self.includes = listOf(c_tn)
@@ -596,12 +594,12 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         }
 
         /**
-         * The list of default indices that are added, when _null_ is provided as index list to create.
+         * The list of default index names to be are added, when _null_ is provided as index list to create.
          */
         @JvmField
         @JsStatic
         var DEFAULT_INDICES = listOf(
-            id_txn_uid,
+            id,
             here_tile,
             app_id,
             author,
@@ -617,7 +615,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
     private var _name: String? = null
 
     /**
-     * The official index name.
+     * The official index name to be used in [naksha.model.objects.NakshaCollection.indices].
      * @since 3.0.0
      */
     var name: String

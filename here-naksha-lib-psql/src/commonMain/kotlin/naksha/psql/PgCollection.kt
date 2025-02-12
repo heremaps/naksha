@@ -150,31 +150,3 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
         }
     }
 }
-
-//
-// PgCollection(map: PgMap, feature: NakshaCollection)
-// PgCollection(map: PgMap, tuple: Tuple)
-//   - requires a NakshaCollection, which is used as configuration
-//     note: we do no longer read data from the database, because this is too slow
-//           when a PgCollection is created, it should be an instance action, not requiring any DB access, it only parses the config!
-//   - low level helper that allows reading and writing data
-//   - the NakshaCollections of the internal collections are immutable
-//
-// - state: FeatureTuple
-// - exists(session: IReadSession) - tests if this collection exists physically
-// - drop(session: IWriteSession) - drop this collection physically in the database
-// - streamVersion(session: IReadSession, version: Version): PgStream - see BINARY.md
-//   In the PgStream we then can perform read(), and readMore(n) to read more results
-// - queryHead(session: IReadSession, queries: ?): TupleNumberBinaryArray - see BINARY.md
-// - queryHistory(session: IReadSession, minVersion: Version?, version: Version, queries: ?): TupleNumberBinaryArray - see BINARY.md
-// - queryMultiVersion(session: IReadSession, minVersion: Version?, version: Version, versions: Int, queries: ?): TupleNumberBinaryArray - see BINARY.md
-//   All queries should be moved into a query helper, that can select from a single collection, multiple collection, or even multiple maps
-//   It should allow sorting or searching by any column, and by tags, but not properties or attachment.
-// - getTuples(session: IReadSession, ids) - see BINARY.md
-// - write(session: IWriteSession, req: List<Write>): Response
-//   this needs to be optimal performing, so we need always to use bulk-writer!
-//
-// To read from multiple collections, we need to read from them in parallel, then join the results
-// We need code to join results
-// We can order in the database, but actually this requires heavy CPU usage in the database, which does not scale!
-//

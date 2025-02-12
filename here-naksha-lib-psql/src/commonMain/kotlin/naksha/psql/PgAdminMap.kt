@@ -9,7 +9,6 @@ import kotlinx.datetime.toLocalDateTime
 import naksha.base.Epoch
 import naksha.base.Int64
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.fn.Fx2
 import naksha.jbon.IDictReader
 import naksha.jbon.JbDictionary
 import naksha.model.*
@@ -591,7 +590,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                 if (index != PgIndex.tn_pkey
                     //&& index != PgIndex.id_txn_uid_unique
                     // We do not need this index, because it would only duplicate the stronger unique one!
-                    && index != PgIndex.id_txn_uid) history.createIndex(conn, index)
+                    && index != PgIndex.id) history.createIndex(conn, index)
             }
         }
     }

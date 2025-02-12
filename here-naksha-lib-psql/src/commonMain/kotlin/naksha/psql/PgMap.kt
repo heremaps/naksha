@@ -53,16 +53,24 @@ open class PgMap internal constructor(
     var colNumberSequenceOid: Int = colNumberSequenceOid
         protected set
 
+    private var _collections: PgCollection? = null
+
     /**
-     * The collections' collection.
+     * The collections' collection of the map.
      * @since 3.0.0
      */
-    @Suppress("LeakingThis")
-    @JvmField val collections: PgCollection = PgCollection(this, NakshaCollection()
-        .withMapId(id)
-        .withId(COLLECTIONS_COL)
-        .withNumber(COLLECTIONS_COL_NUMBER)
-    )
+    val collections: PgCollection
+        get() {
+            var c = _collections
+            if (c == null) {
+                c = PgCollection(this, NakshaCollection()
+                    .withMapId(id)
+                    .withId(COLLECTIONS_COL)
+                    .withNumber(COLLECTIONS_COL_NUMBER))
+                _collections = c
+            }
+            return c
+        }
 
     /**
      * The map-identifier quoted optionally in double quotes.
