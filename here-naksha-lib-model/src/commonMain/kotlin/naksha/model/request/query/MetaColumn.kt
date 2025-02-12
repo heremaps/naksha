@@ -10,8 +10,8 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 /**
- * The columns of a [tuple][naksha.model.Tuple], that can be used in [queries][naksha.model.request.RequestQuery] via [MetaQuery][naksha.model.request.query.MetaQuery].
- * @since 3.0.0
+ * The meta columns reference for a [tuple][naksha.model.Tuple]; can be used in [queries][naksha.model.request.RequestQuery] via [MetaQuery][naksha.model.request.query.MetaQuery].
+ * @since 3.0
  */
 @JsExport
 open class MetaColumn() : AnyObject() {
@@ -32,7 +32,7 @@ open class MetaColumn() : AnyObject() {
 
     companion object TupleColumn_C {
         /**
-         * The reference to the [feature-id][naksha.model.Tuple.id].
+         * The name of the virtual columns that stores the [feature-id][naksha.model.Tuple.id].
          *
          * Supported [query operations][AnyOp] are:
          * - [StringOp]
@@ -49,7 +49,7 @@ open class MetaColumn() : AnyObject() {
         fun id(): MetaColumn = MetaColumn(ID)
 
         /**
-         * The reference to the [creation timestamp][naksha.model.Metadata.createdAt].
+         * The name of the virtual columns that stores the [creation timestamp][naksha.model.Metadata.createdAt].
          *
          * This value is exposed through [naksha.model.XyzNs.createdAt].
          *
@@ -68,7 +68,7 @@ open class MetaColumn() : AnyObject() {
         fun createdAt(): MetaColumn = MetaColumn(CREATED_AT)
 
         /**
-         * The reference to the [update timestamp][naksha.model.Metadata.updatedAt].
+         * The name of the virtual columns that stores the [update timestamp][naksha.model.Metadata.updatedAt].
          *
          * This value is exposed through [naksha.model.XyzNs.updatedAt].
          *
@@ -87,7 +87,7 @@ open class MetaColumn() : AnyObject() {
         fun updatedAt(): MetaColumn = MetaColumn(UPDATED_AT)
 
         /**
-         * The reference to the [encoding flags and actions][naksha.model.Metadata.flags].
+         * The name of the virtual columns that stores the [encoding flags and actions][naksha.model.Metadata.flags].
          *
          * This value is exposed through [naksha.model.XyzNs.flags].
          *
@@ -106,7 +106,7 @@ open class MetaColumn() : AnyObject() {
         fun flags(): MetaColumn = MetaColumn(FLAGS)
 
         /**
-         * The reference to the binary [operation][naksha.model.Operation], which actually is a subset of bits from the [flags][naksha.model.Metadata.flags].
+         * The name of the virtual columns that stores the binary [operation][naksha.model.Operation], which actually is a subset of bits from the [flags][naksha.model.Metadata.flags].
          *
          * This value is exposed through [naksha.model.XyzNs.operation].
          *
@@ -125,7 +125,7 @@ open class MetaColumn() : AnyObject() {
         fun operation(): MetaColumn = MetaColumn(OPERATION)
 
         /**
-         * The reference to the binary [action][naksha.model.Action], which actually is a subset of bits from the [flags][naksha.model.Metadata.flags].
+         * The name of the virtual columns that stores the binary [action][naksha.model.Action], which actually is a subset of bits from the [flags][naksha.model.Metadata.flags].
          *
          * This value is exposed through [naksha.model.XyzNs.action].
          *
@@ -144,7 +144,7 @@ open class MetaColumn() : AnyObject() {
         fun action(): MetaColumn = MetaColumn(ACTION)
 
         /**
-         * The reference to the [hash][naksha.model.Metadata.calculateHash].
+         * The name of the virtual columns that stores the [hash][naksha.model.Metadata.calculateHash].
          *
          * This value is exposed through [naksha.model.XyzNs.hash].
          *
@@ -163,7 +163,7 @@ open class MetaColumn() : AnyObject() {
         fun hash(): MetaColumn = MetaColumn(HASH)
 
         /**
-         * The reference to the [change-count][naksha.model.Metadata.changeCount].
+         * The name of the virtual columns that stores the [change-count][naksha.model.Metadata.changeCount].
          *
          * This value is exposed through [naksha.model.XyzNs.changeCount].
          *
@@ -182,7 +182,7 @@ open class MetaColumn() : AnyObject() {
         fun changeCount(): MetaColumn = MetaColumn(CHANGE_COUNT)
 
         /**
-         * The reference to the [next version][naksha.model.Metadata.nextVersion].
+         * The name of the virtual columns that stores the [next version][naksha.model.Metadata.nextVersion].
          *
          * Supported [query operations][AnyOp] are:
          * - [DoubleOp]
@@ -199,7 +199,7 @@ open class MetaColumn() : AnyObject() {
         fun nextVersion(): MetaColumn = MetaColumn(NEXT_VERSION)
 
         /**
-         * The reference to the [version][naksha.model.Metadata.version] (_transaction number_).
+         * The name of the virtual columns that stores the [version][naksha.model.Metadata.version] (_transaction number_).
          *
          * This value is exposed through [naksha.model.XyzNs.version].
          *
@@ -218,7 +218,7 @@ open class MetaColumn() : AnyObject() {
         fun version(): MetaColumn = MetaColumn(VERSION)
 
         /**
-         * The reference to the [uid][naksha.model.Metadata.uid].
+         * The name of the virtual columns that stores the [uid][naksha.model.Metadata.uid].
          *
          * This value is exposed through [naksha.model.XyzNs.uid].
          *
@@ -237,7 +237,7 @@ open class MetaColumn() : AnyObject() {
         fun uid(): MetaColumn = MetaColumn(UID)
 
         /**
-         * The reference to the [tuple-number][naksha.model.Metadata.tupleNumber].
+         * The name of the virtual column that stores the [tuple-number][naksha.model.Metadata.tupleNumber], encoded as 96-bit variant, as generated by [TupleNumber.toByteArray][naksha.model.TupleNumber.toByteArray].
          *
          * This value is part of the [naksha.model.XyzNs.uuid].
          *
@@ -255,7 +255,7 @@ open class MetaColumn() : AnyObject() {
         fun tupleNumber(): MetaColumn = MetaColumn(TUPLE_NUMBER)
 
         /**
-         * The reference to the [previous tuple-number][naksha.model.Metadata.prevTupleNumber].
+         * The name of the virtual column that stores the [previous tuple-number][naksha.model.Metadata.prevTupleNumber], encoded as 96-bit variant, as generated by [TupleNumber.toByteArray][naksha.model.TupleNumber.toByteArray].
          *
          * This value is part of the [naksha.model.XyzNs.puuid].
          *
@@ -275,7 +275,7 @@ open class MetaColumn() : AnyObject() {
         fun prevTupleNumber(): MetaColumn = MetaColumn(PREV_TUPLE_NUMBER)
 
         /**
-         * The reference to the [previous tuple-number][naksha.model.Metadata.baseTupleNumber].
+         * The name of the virtual column that stores the [previous tuple-number][naksha.model.Metadata.baseTupleNumber], encoded as 96-bit variant, as generated by [TupleNumber.toByteArray][naksha.model.TupleNumber.toByteArray].
          *
          * This value is part of the [naksha.model.XyzNs.muuid].
          *
@@ -295,7 +295,7 @@ open class MetaColumn() : AnyObject() {
         fun baseTupleNumber(): MetaColumn = MetaColumn(BASE_TUPLE_NUMBER)
 
         /**
-         * The reference to the [binary HERE tile number][naksha.geo.HereTile], indexing the [metadata HERE tile number][naksha.model.Metadata.hereTile].
+         * The name of the virtual column that stores the [binary HERE tile number][naksha.geo.HereTile], indexing the [metadata HERE tile number][naksha.model.Metadata.hereTile].
          *
          * The [binary HERE tile number][naksha.geo.HereTile] where the [reference-point][naksha.model.objects.NakshaFeature.referencePoint] of the [feature][naksha.model.objects.NakshaFeature] is located. It is possible to search directly the grid, but another options is to use the specialise [SpRefInHereTile] query. While this is more flexible, the specialised query will have a much better cache rate, and may run much faster.
          *
@@ -316,7 +316,7 @@ open class MetaColumn() : AnyObject() {
         fun hereTile(): MetaColumn = MetaColumn(HERE_TILE)
 
         /**
-         * The property reference to the [author][naksha.model.Metadata.author].
+         * The name of the virtual column that stores the [author][naksha.model.Metadata.author].
          *
          * This value is exposed as [naksha.model.XyzNs.author].
          *
@@ -337,7 +337,7 @@ open class MetaColumn() : AnyObject() {
         fun author(): MetaColumn = MetaColumn(AUTHOR)
 
         /**
-         * The property reference to the [origin][naksha.model.Metadata.origin].
+         * The name of the virtual column that stores the [origin][naksha.model.Metadata.origin] as string.
          *
          * This value is exposed as [naksha.model.XyzNs.origin].
          *
@@ -358,7 +358,7 @@ open class MetaColumn() : AnyObject() {
         fun origin(): MetaColumn = MetaColumn(ORIGIN)
 
         /**
-         * The property reference to the [target][naksha.model.Metadata.target].
+         * The name of the virtual column that stores the [target][naksha.model.Metadata.target] as string.
          *
          * This value is exposed as [naksha.model.XyzNs.target].
          *
@@ -379,7 +379,7 @@ open class MetaColumn() : AnyObject() {
         fun target(): MetaColumn = MetaColumn(TARGET)
 
         /**
-         * The property reference to the [author change timestamp][naksha.model.Metadata.authorTs].
+         * The name of the virtual columns that stores the [author change timestamp][naksha.model.Metadata.authorTs].
          *
          * This value is exposed as [naksha.model.XyzNs.authorTs].
          *
@@ -400,7 +400,7 @@ open class MetaColumn() : AnyObject() {
         fun authorTs(): MetaColumn = MetaColumn(AUTHOR_TS)
 
         /**
-         * The property reference to the [author change timestamp][naksha.model.Metadata.appId].
+         * The name of the virtual columns that stores the [author change timestamp][naksha.model.Metadata.appId].
          *
          * This value is exposed as [naksha.model.XyzNs.appId].
          *
@@ -419,7 +419,7 @@ open class MetaColumn() : AnyObject() {
         fun appId(): MetaColumn = MetaColumn(APP_ID)
 
         /**
-         * The reference to the [type][naksha.model.Metadata.ft].
+         * The name of the virtual columns that stores the [type][naksha.model.Metadata.ft].
          *
          * This value is exposed as [naksha.model.XyzNs.featureType].
          *
@@ -440,7 +440,7 @@ open class MetaColumn() : AnyObject() {
         fun featureType(): MetaColumn = MetaColumn(FEATURE_TYPE)
 
         /**
-         * The reference to the [cv][naksha.model.Metadata.cv0] (_custom value_).
+         * The name of the virtual columns that stores the [cv][naksha.model.Metadata.cv0] (_custom value_).
          *
          * This value is exposed through [naksha.model.XyzNs.cv0].
          *
@@ -459,7 +459,7 @@ open class MetaColumn() : AnyObject() {
         fun cv0(): MetaColumn = MetaColumn(CV0)
 
         /**
-         * The reference to the [cv][naksha.model.Metadata.cv1] (_custom value_).
+         * The name of the virtual columns that stores the [cv][naksha.model.Metadata.cv1] (_custom value_).
          *
          * This value is exposed through [naksha.model.XyzNs.cv1].
          *
@@ -478,7 +478,7 @@ open class MetaColumn() : AnyObject() {
         fun cv1(): MetaColumn = MetaColumn(CV1)
 
         /**
-         * The reference to the [cv][naksha.model.Metadata.cv2] (_custom value_).
+         * The name of the virtual columns that stores the [cv][naksha.model.Metadata.cv2] (_custom value_).
          *
          * This value is exposed through [naksha.model.XyzNs.cv2].
          *
@@ -497,7 +497,7 @@ open class MetaColumn() : AnyObject() {
         fun cv2(): MetaColumn = MetaColumn(CV2)
 
         /**
-         * The reference to the [cv][naksha.model.Metadata.cv3] (_custom value_).
+         * The name of the virtual columns that stores the [cv][naksha.model.Metadata.cv3] (_custom value_).
          *
          * This value is exposed through [naksha.model.XyzNs.cv3].
          *
@@ -516,7 +516,7 @@ open class MetaColumn() : AnyObject() {
         fun cv3(): MetaColumn = MetaColumn(CV3)
 
         /**
-         * The reference to the [first custom value][naksha.model.Metadata.cs0].
+         * The name of the virtual columns that stores the [first custom value][naksha.model.Metadata.cs0].
          *
          * This value is exposed as [naksha.model.XyzNs.cs0].
          *
@@ -537,7 +537,7 @@ open class MetaColumn() : AnyObject() {
         fun cs0(): MetaColumn = MetaColumn(CS0)
 
         /**
-         * The reference to the [first custom value][naksha.model.Metadata.cs1].
+         * The name of the virtual columns that stores the [first custom value][naksha.model.Metadata.cs1].
          *
          * This value is exposed as [naksha.model.XyzNs.cs1].
          *
@@ -558,7 +558,7 @@ open class MetaColumn() : AnyObject() {
         fun cs1(): MetaColumn = MetaColumn(CS1)
 
         /**
-         * The reference to the [first custom value][naksha.model.Metadata.cs2].
+         * The name of the virtual columns that stores the [first custom value][naksha.model.Metadata.cs2].
          *
          * This value is exposed as [naksha.model.XyzNs.cs2].
          *
@@ -579,7 +579,7 @@ open class MetaColumn() : AnyObject() {
         fun cs2(): MetaColumn = MetaColumn(CS2)
 
         /**
-         * The reference to the [first custom value][naksha.model.Metadata.cs3].
+         * The name of the virtual columns that stores the [first custom value][naksha.model.Metadata.cs3].
          *
          * This value is exposed as [naksha.model.XyzNs.cs3].
          *
@@ -600,7 +600,7 @@ open class MetaColumn() : AnyObject() {
         fun cs3(): MetaColumn = MetaColumn(CS3)
 
         /**
-         * The reference to the [feature][naksha.model.Tuple.feature].
+         * The name of the virtual columns that stores the [feature][naksha.model.Tuple.feature].
          *
          * This can only be queried using a special [property query][IPropertyQuery].
          */
@@ -615,7 +615,7 @@ open class MetaColumn() : AnyObject() {
         fun feature(): MetaColumn = MetaColumn(FEATURE)
 
         /**
-         * The reference to the [geometry][naksha.model.Tuple.geo].
+         * The name of the virtual columns that stores the [geometry][naksha.model.Tuple.geo].
          *
          * This can only be queried using a special [spatial query][ISpatialQuery].
          */
@@ -630,7 +630,7 @@ open class MetaColumn() : AnyObject() {
         fun geometry(): MetaColumn = MetaColumn(GEOMETRY)
 
         /**
-         * The reference to the [reference point][naksha.model.Tuple.referencePoint].
+         * The name of the virtual columns that stores the [reference point][naksha.model.Tuple.referencePoint].
          *
          * This can only be queried using a special [spatial query][ISpatialQuery].
          */
@@ -645,7 +645,7 @@ open class MetaColumn() : AnyObject() {
         fun referencePoint(): MetaColumn = MetaColumn(REF_POINT)
 
         /**
-         * The reference to the [tags][naksha.model.Tuple.tags].
+         * The name of the virtual columns that stores the [tags][naksha.model.Tuple.tags].
          *
          * This can only be queried using a special [tag query][ITagQuery].
          */
@@ -660,7 +660,7 @@ open class MetaColumn() : AnyObject() {
         fun tags(): MetaColumn = MetaColumn(TAGS)
 
         /**
-         * The reference to the [attachment][naksha.model.Tuple.attachment].
+         * The name of the virtual columns that stores the [attachment][naksha.model.Tuple.attachment].
          *
          * Attachments can't be queried!
          */
@@ -674,11 +674,11 @@ open class MetaColumn() : AnyObject() {
         @JsStatic
         fun attachment(): MetaColumn = MetaColumn(ATTACHMENT)
 
-        private val STRING = NotNullProperty<MetaColumn, String>(String::class) { _, _ -> "" }
+        private val NAME = NotNullProperty<MetaColumn, String>(String::class) { _, _ -> "" }
     }
 
     /**
      * The name of the field.
      */
-    var name by STRING
+    var name by NAME
 }

@@ -388,7 +388,8 @@ SELECT basics.*, procs.* FROM basics, procs;
             val txInstant = Instant.fromEpochMilliseconds(txts.toLong())
             val txDate = txInstant.toLocalDateTime(TimeZone.UTC)
             if (version.year() != txDate.year || version.month() != txDate.monthNumber || version.day() != txDate.dayOfMonth) {
-                logger.info("Transaction counter is in wrong day, acquire advisory lock")
+                logger.info("Transaction counter is in wrong day")
+                logger.info("Acquire advisory lock")
                 conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
                 try {
                     val c2 = conn.execute("SELECT nextval($1) as txn", arrayOf(txnSequenceOid)).fetch()

@@ -1,4 +1,4 @@
-package naksha.psql.executors.query
+package naksha.psql
 
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
@@ -6,7 +6,6 @@ import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ReadRequest
-import naksha.psql.*
 import naksha.psql.PgColumn.PgColumnCompanion.id
 import naksha.psql.PgColumn.PgColumnCompanion.tn
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
@@ -34,6 +33,7 @@ class PgQueryBuilder(val session: PgSession, val request: ReadRequest) {
 
     private fun readCollections(req: ReadCollections): PgQuery {
         val rf = ReadFeatures()
+        rf.mapId
         rf.collectionIds += NKC_TABLE
         rf.resultFilters = req.resultFilters
         rf.limit = req.limit
@@ -79,7 +79,7 @@ class PgQueryBuilder(val session: PgSession, val request: ReadRequest) {
             if (req.limit != null && req.orderBy == null && req.returnHandle != true) req.limit else null
         queryBuilder.append("SELECT gzip(bytea_agg($tn)) AS rs FROM (SELECT $tn FROM (\n")
         val quotedTablesToQuery = req.getQuotedTablesToQuery()
-        val whereClause = WhereClauseBuilder(req).build()
+        val whereClause = PgQueryWhereBuilder(req).build()
         for (table in quotedTablesToQuery.withIndex()) {
             queryBuilder.append("\t(SELECT $tn, $id FROM ${table.value}")
             if (whereClause != null) queryBuilder.append(whereClause.sql)

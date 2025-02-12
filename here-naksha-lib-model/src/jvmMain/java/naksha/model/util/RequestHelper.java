@@ -43,7 +43,7 @@ public class RequestHelper {
   @AvailableSince(NakshaVersion.v3_0_0)
   public static @NotNull ReadFeatures readFeaturesByIdRequest(
       final @NotNull String collectionName, final @NotNull String featureId) {
-    final ReadFeatures readFeatures = new ReadFeatures(collectionName);
+    final ReadFeatures readFeatures = new ReadFeatures().addCollectionId(collectionName);
     readFeatures.getFeatureIds().add(featureId);
     return readFeatures;
   }
@@ -58,7 +58,7 @@ public class RequestHelper {
   @AvailableSince(NakshaVersion.v3_0_0)
   public static @NotNull ReadFeatures readFeaturesByIdsRequest(
       final @NotNull String collectionName, final @NotNull List<@NotNull String> featureIds) {
-    final ReadFeatures readFeatures = new ReadFeatures(collectionName);
+    final ReadFeatures readFeatures = new ReadFeatures().addCollectionId(collectionName);
     readFeatures.getFeatureIds().addAll(featureIds);
     return readFeatures;
   }

@@ -8,7 +8,6 @@ import naksha.model.request.RequestQuery
 import naksha.model.request.query.*
 import naksha.model.request.query.StringOp.QStringOpCompanion.EQUALS
 import naksha.psql.base.PgTestBase
-import naksha.psql.executors.query.PgQueryBuilder
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

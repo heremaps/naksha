@@ -6,9 +6,13 @@ import naksha.model.Naksha
 import kotlin.js.JsExport
 
 /**
- * Perform a read from the transaction log.
- *
- * Note that the [featureIds] are the [versions][naksha.model.Version] converted to a string, which can be done by calling [transaction.toId()][naksha.model.Version.toId], which basically is just the [transaction number][naksha.model.Version.txn] as string.
+ * Perform a read from the transaction log to query for [transaction features][naksha.model.objects.NakshaTransaction].
+ * @since 3.0
  */
 @JsExport
-open class ReadTransactions : ReadFeatures(Naksha.TRANSACTIONS_COL)
+open class ReadTransactions : ReadFeatures() {
+    init {
+        mapId = Naksha.ADMIN_MAP
+        collectionIds.add(Naksha.TRANSACTIONS_COL)
+    }
+}

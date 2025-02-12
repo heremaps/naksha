@@ -3,10 +3,7 @@ package naksha.psql
 import naksha.model.Naksha
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
-import naksha.model.request.ReadFeatures
-import naksha.model.request.SuccessResponse
-import naksha.model.request.Write
-import naksha.model.request.WriteRequest
+import naksha.model.request.*
 import naksha.psql.base.PgTestBase
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -31,7 +28,7 @@ class TransactionsTest : PgTestBase(NakshaCollection("transaction_test")) {
         val savedFeatureVersion = savedTuples[0]?.tuple?.meta?.version
 
         // when - read all transactions
-        val readRequest = ReadFeatures(Naksha.TRANSACTIONS_COL)
+        val readRequest = ReadTransactions()
         readRequest.featureIds.add(savedFeatureVersion?.txn.toString())
         val readResponse = storage.newReadSession().execute(readRequest) as SuccessResponse
         readSession.fetchTuples(readResponse.tuples)
@@ -80,7 +77,7 @@ class TransactionsTest : PgTestBase(NakshaCollection("transaction_test")) {
         writeSession.commit()
 
         // then
-        val readRequest = ReadFeatures(Naksha.TRANSACTIONS_COL).apply {
+        val readRequest = ReadTransactions().apply {
             featureIds += transactionId
         }
         val readResponse = storage.newReadSession().execute(readRequest) as SuccessResponse

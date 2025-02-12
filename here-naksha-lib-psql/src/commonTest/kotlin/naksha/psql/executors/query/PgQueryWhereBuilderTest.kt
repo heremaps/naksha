@@ -4,11 +4,12 @@ import naksha.geo.SpBoundingBox
 import naksha.geo.SpPolygon
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
+import naksha.psql.PgQueryWhereBuilder
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-class WhereClauseBuilderTest {
+class PgQueryWhereBuilderTest {
 
     @Test
     fun shouldCreateComposedWhereClause() {
@@ -32,7 +33,7 @@ class WhereClauseBuilderTest {
         }
 
         // When
-        val query = WhereClauseBuilder(req).build()
+        val query = PgQueryWhereBuilder(req).build()
 
         // Then
         assertNotNull(query)

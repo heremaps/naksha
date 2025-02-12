@@ -26,7 +26,8 @@ class DeleteFeature(
         val tupleNumber = session.newTupleNumber(map.nakshaMap, collection.nakshaCollection, collectionId)
         val flags = resolveFlags(collection, session).withAction(Action.DELETED)
 
-        val readFeatures = ReadFeatures(collection.id)
+        val readFeatures = ReadFeatures()
+        readFeatures.collectionIds.add(collection.id)
         readFeatures.featureIds.add(collectionId)
         val response = PgReader(session, readFeatures).execute().proxy(SuccessResponse::class)
 

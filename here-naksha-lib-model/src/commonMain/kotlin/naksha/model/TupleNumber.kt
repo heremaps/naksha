@@ -6,6 +6,7 @@ import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
+import naksha.base.toInt64
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
@@ -124,14 +125,17 @@ data class TupleNumber(
     fun toGuid(featureId: String): Guid = Guid(featureId, this)
 
     /**
-     * Encode this [tuple-number][TupleNumber] into its 96-bit (_12-byte_) binary encoding, which does only store [version] and [uid]. This variant is used to query data sinks, for example Postgres.
+     * Encode this [tuple-number][TupleNumber] into its 96-bit (_12-byte_) binary encoding, which does only store [version], [partitionNumber], and [uid]. This variant is used in storage systems like for example Postgres, specifically in [MetaColumn.TUPLE_NUMBER][naksha.model.request.query.MetaColumn.TUPLE_NUMBER].
      * @return the 96-bit binary encoded [tuple-number][TupleNumber].
      * @since 3.0.0
+     * @see [naksha.model.request.query.MetaColumn.TUPLE_NUMBER]
+     * @see [naksha.model.request.query.MetaColumn.PREV_TUPLE_NUMBER]
+     * @see [naksha.model.request.query.MetaColumn.BASE_TUPLE_NUMBER]
      */
     fun toByteArray(): ByteArray {
         val byteArray = ByteArray(12)
         val view = Platform.newDataView(byteArray)
-        dataview_set_int64(view, 0, version.txn)
+        dataview_set_int64(view, 0, (version.txn shl 8) or partitionNumber.toInt64())
         dataview_set_int32(view, 8, uid)
         return byteArray
     }

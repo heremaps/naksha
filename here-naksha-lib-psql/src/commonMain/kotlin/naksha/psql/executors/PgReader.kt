@@ -6,7 +6,7 @@ import naksha.model.TupleNumberBinaryArray
 import naksha.model.Version
 import naksha.model.request.*
 import naksha.psql.*
-import naksha.psql.executors.query.PgQueryBuilder
+import naksha.psql.PgQueryBuilder
 import kotlin.jvm.JvmField
 
 class PgReader(

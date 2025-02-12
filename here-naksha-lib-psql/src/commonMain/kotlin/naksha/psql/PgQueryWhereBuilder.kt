@@ -1,4 +1,4 @@
-package naksha.psql.executors.query
+package naksha.psql
 
 import naksha.geo.HereTile
 import naksha.geo.SpGeometry
@@ -6,11 +6,8 @@ import naksha.model.*
 import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
-import naksha.psql.PgColumn
-import naksha.psql.PgType
-import naksha.psql.PgUtil
 
-class WhereClauseBuilder(private val request: ReadFeatures) {
+class PgQueryWhereBuilder(private val request: ReadFeatures) {
 
     private val argValues: MutableList<Any?> = mutableListOf()
     private val argTypes: MutableList<String> = mutableListOf()

@@ -12,57 +12,79 @@ import kotlin.js.JsName
  *
  * If a logical **OR** between the different condition is needed, for example search for features being in a certain bounding box **or** having a certain tag, then two read-requests should be executed, and joined by the client. These queries can be executed in parallel using two distinct sessions to improve the performance.
  *
- * Read requests by default return full [rows][naksha.model.Tuple], but allows to unselect some parts via [returnColumns]. Beware, that there is no guarantee what the storage will do, but it may improve the performance.
- *
  * @since 3.0.0
  */
 @JsExport
-open class ReadFeatures() : ReadRequest() {
-
-    /**
-     * Create a new read-features request for the given collections.
-     * @param collectionIds the collection identifiers.
-     * @since 3.0.0
-     */
-    @JsName("forCollections")
-    constructor(vararg collectionIds: String) : this() {
-        this.collectionIds.addAll(collectionIds)
-    }
+open class ReadFeatures : ReadRequest() {
 
     companion object ReadFeatures_C {
-        private val STRING_NULL = NullableProperty<ReadRequest, String>(String::class)
-        private val BOOLEAN = NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
-        private val INT_1 = NotNullProperty<ReadRequest, Int>(Int::class) { _, _ -> 1 }
-        private val INT64_NULL = NullableProperty<ReadRequest, Int64>(Int64::class)
+        private val STRING_OR_NULL = NullableProperty<ReadRequest, String>(String::class)
+        private val BOOLEAN_OR_FALSE = NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
+        private val INT_OR_1 = NotNullProperty<ReadRequest, Int>(Int::class) { _, _ -> 1 }
+        private val INT64_OR_NULL = NullableProperty<ReadRequest, Int64>(Int64::class)
         private val STRING_LIST = NotNullProperty<ReadRequest, StringList>(StringList::class)
-        private val ORDER_BY_NULL = NullableProperty<ReadRequest, OrderBy>(OrderBy::class)
+        private val ORDER_BY_OR_NULL = NullableProperty<ReadRequest, OrderBy>(OrderBy::class)
         private val GUID_LIST = NotNullProperty<ReadRequest, GuidList>(GuidList::class)
         private val QUERY = NotNullProperty<ReadRequest, RequestQuery>(RequestQuery::class)
     }
 
     /**
-     * The map from which to read.
+     * The id of the map from which to read.
      *
-     * If being an empty string, the default map is read, if being _null_, the [map from the context][naksha.model.NakshaContext.mapId] should be queried.
-     * @since 3.0.0
+     * If being _null_, the [map-id from the context][naksha.model.NakshaContext.mapId] is used.
+     * @since 3.0
      */
-    var map by STRING_NULL
+     var mapId by STRING_OR_NULL
 
     /**
-     * The collections to query, should not be left empty.
-     * @since 3.0.0
+     * @see [mapId]
+     */
+    open fun withMapId(value: String?): ReadFeatures {
+        mapId = value
+        return this
+    }
+
+    /**
+     * Ids of collections to read.
+     * @since 3.0
      */
     var collectionIds by STRING_LIST
 
     /**
+     * Adds the given collection-id into [collectionIds], if it is not already in it.
+     * @param collectionId the collection-id to add.
+     * @return this.
+     * @since 3.0
+     */
+    open fun addCollectionId(collectionId: String?): ReadFeatures {
+        if (!collectionIds.contains(collectionId)) collectionIds.add(collectionId)
+        return this
+    }
+
+    /**
+     * Adds the given collection-ids into [collectionIds], if it is not already in it.
+     * @param collectionIds the collection-ids to add.
+     * @return this.
+     * @since 3.0
+     */
+    open fun addCollectionIds(vararg collectionIds: String): ReadFeatures {
+        val ids = this.collectionIds
+        @Suppress("SENSELESS_COMPARISON")
+        if (collectionIds != null && collectionIds.isNotEmpty()) {
+            for (id in collectionIds) if (!ids.contains(id)) ids.add(id)
+        }
+        return this
+    }
+
+    /**
      * Extend the request to search through deleted features.
      */
-    var queryDeleted by BOOLEAN
+    var queryDeleted by BOOLEAN_OR_FALSE
 
     /**
      * Extend the request to search through historic states of features.
      */
-    var queryHistory by BOOLEAN
+    var queryHistory by BOOLEAN_OR_FALSE
 
     /**
      * Defines how many rows (versions) of each matching feature should be returned.
@@ -74,21 +96,21 @@ open class ReadFeatures() : ReadRequest() {
      * If multiple versions are requested, the execution may become drastically slower, therefore this feature should be used with care!
      * @since 3.0.0
      */
-    var versions by INT_1
+    var versions by INT_OR_1
 
     /**
      * Limit the read to all rows with the given minimal version, _null_ if no limit.
      * @since 3.0.0
      */
-    var minVersion by INT64_NULL
+    var minVersion by INT64_OR_NULL
 
     /**
-     * Limit the read to all features with a maximal version, _null_ if no limit _(latest)_.
+     * Limit the read to all features with a specific maximum version, _null_ if no limit _(latest/HEAD version)_.
      *
-     * This effectively is a request for a specific version, if no [minVersion] is set, and [versions] is default or explicitly 1.
+     * **Note**: This effectively is a request for a specific version, if no [minVersion] is set, and [versions] is default or explicitly 1.
      * @since 3.0.0
      */
-    var version by INT64_NULL
+    var version by INT64_OR_NULL
 
     /**
      * Order the result-set like given; this is an expensive operation and should be avoided.
@@ -97,7 +119,7 @@ open class ReadFeatures() : ReadRequest() {
      *
      * Note that the [deterministic ordering][OrderBy.deterministic] will always be selected implicitly by the storage, when a [_handle_ is requested][returnHandle], and no explicit [orderBy] was provided. Creating a _handle_ always need an order, to be able to seek in the result-set.
      */
-    var orderBy by ORDER_BY_NULL
+    var orderBy by ORDER_BY_OR_NULL
 
     /**
      * Add all features that match the given IDs into the result-set.
@@ -118,4 +140,19 @@ open class ReadFeatures() : ReadRequest() {
      * @since 3.0.0
      */
     var query by QUERY
+
+    /**
+     * Tests whether this request is effectively a query for all features in _HEAD/latest_ state, so it has no actual conditions, does only request one version of each feature, and does not touch history or deletion table.
+     *
+     * The method ignores optionally provided [ordering][orderBy].
+     * @return _true_ if the query is effectively reading of all _HEAD/latest_ states of all features; _false_ otherwise.
+     */
+    fun isReadAllFromHead(): Boolean = minVersion == null
+            && !queryDeleted
+            && !queryHistory
+            && versions == 1
+            && version == null
+            && featureIds.isEmpty()
+            && guids.isEmpty()
+            && query.hasNoConditions()
 }
