@@ -3,6 +3,7 @@ package com.here.naksha.app.init;
 import static com.here.naksha.app.init.TestPsqlConfig.configFromFileOrEnv;
 import org.jetbrains.annotations.NotNull;
 
+// TODO CASL-834: replace these with StoragConfig once it is provided
 public class TestPsqlStorageConfigs {
   private TestPsqlStorageConfigs(){}
 

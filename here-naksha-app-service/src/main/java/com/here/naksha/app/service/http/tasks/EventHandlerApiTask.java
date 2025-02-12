@@ -27,10 +27,15 @@ import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
+import naksha.base.FromJsonOptions;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.JvmJsonUtil;
+import naksha.base.Platform;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
@@ -150,12 +155,8 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
   }
 
   private @NotNull EventHandler handlerFromRequestBody() throws JsonProcessingException {
-    try (final Json json = Json.get()) {
-      final String bodyJson = routingContext.body().asString();
-      return json.reader(ViewDeserialize.User.class)
-          .forType(EventHandler.class)
-          .readValue(bodyJson);
-    }
+    final String bodyJson = routingContext.body().asString();
+    return JvmJsonUtil.readJsonAs(bodyJson, EventHandler.class);
   }
 
   private static String mismatchMsg(String handlerIdFromPath, EventHandler handlerToUpdate) {

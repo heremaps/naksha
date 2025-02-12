@@ -52,6 +52,7 @@ import naksha.base.AnyObject;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmAnyObjectUtil;
 import naksha.base.JvmBoxingUtil;
+import naksha.base.JvmJsonUtil;
 import naksha.base.Platform;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
@@ -133,7 +134,7 @@ public class NakshaHub implements INaksha {
     PsqlCluster pgCluster = new PsqlCluster(master); // TODO CASL-657: support clustering
 
     //    this.psqlStorage = new PsqlStorage(PsqlStorage.ADMIN_STORAGE_ID, appName, storageUrl);
-    String schema = "naksha"; // TODO CASL-657: this used to come in `storageUrl`
+    String schema = "naksha_data_schema"; // TODO CASL-657: this used to come in `storageUrl`
     this.psqlStorage = new PsqlStorage(pgCluster, schema);
     this.adminStorageInstance = new NHAdminStorage(this.psqlStorage);
     this.spaceStorageInstance = new NHSpaceStorage(this, new NakshaEventPipelineFactory(this));
@@ -316,9 +317,7 @@ public class NakshaHub implements INaksha {
   private NakshaHubConfig readHubDefaultConfigFromFile() {
     try (final Json json = Json.get()) {
       final String configJson = IoHelp.readResource("config/" + DEF_CFG_ID + ".json");
-      NakshaHubConfig defCfg = json.reader(ViewDeserialize.Storage.class)
-          .forType(NakshaHubConfig.class)
-          .readValue(configJson);
+      NakshaHubConfig defCfg = JvmJsonUtil.readJsonAs(configJson, NakshaHubConfig.class);
       defCfg.setId(DEF_CFG_ID); // overwrite Id to desired value
       return defCfg;
     } catch (Exception e) {

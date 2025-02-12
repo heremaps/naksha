@@ -30,10 +30,9 @@ import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
-import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
 import java.util.Set;
+import naksha.base.JvmJsonUtil;
 import naksha.base.StringList;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
@@ -163,13 +162,9 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
     return storage;
   }
 
-  private @NotNull Storage storageFromRequestBody() throws JsonProcessingException {
-    try (final Json json = Json.get()) {
-      final String bodyJson = routingContext.body().asString();
-      return json.reader(ViewDeserialize.User.class)
-          .forType(Storage.class)
-          .readValue(bodyJson);
-    }
+  private @NotNull Storage storageFromRequestBody() {
+    final String bodyJson = routingContext.body().asString();
+    return JvmJsonUtil.readJsonAs(bodyJson, Storage.class);
   }
 
   private static String mismatchMsg(String storageIdFromPath, Storage storageFromBody) {

@@ -38,7 +38,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.UUID;
-import naksha.geo.XyzProperties;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import org.junit.jupiter.api.Assertions;

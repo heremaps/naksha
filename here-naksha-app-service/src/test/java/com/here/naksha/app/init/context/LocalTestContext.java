@@ -6,6 +6,7 @@ import com.here.naksha.app.init.TestPsqlConfig;
 import com.here.naksha.app.init.TestPsqlStorageConfigs;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
+import naksha.psql.PgCursor;
 import naksha.psql.PsqlCluster;
 import naksha.psql.PsqlInstance;
 import naksha.psql.PsqlSession;
@@ -29,12 +30,14 @@ public class LocalTestContext extends TestContext {
     // TODO CASL-834: switch to proper schema dropping
   void setupStorage() {
     super.setupStorage();
-    log.info("Cleaning up schema for url: {}", STORAGE_CONFIG.url());
     if (!STORAGE_CONFIG.url().isBlank()) {
+      log.info("Dropping schema {} for url: {}", STORAGE_CONFIG.schema(), STORAGE_CONFIG.url());
       SessionOptions sessionOptions = SessionOptions.from(NakshaContext.currentContext(), true);
       try (PsqlSession session = storage().newSession(sessionOptions, false)) {
-        session.usePgConnection().execute("DROP SCHEMA " + STORAGE_CONFIG.schema() + ";", null);
+        session.usePgConnection().execute("DROP SCHEMA IF EXISTS " + STORAGE_CONFIG.schema() + " CASCADE;", null);
+        session.commit();
       }
+      log.info("Dropped schema: {}", STORAGE_CONFIG.schema());
     }
   }
 
