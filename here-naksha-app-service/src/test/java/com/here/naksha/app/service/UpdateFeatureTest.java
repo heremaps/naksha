@@ -165,7 +165,7 @@ class UpdateFeatureTest extends ApiTest {
           insertedFeatures.get(i).getId(),
           "Mismatch between inserted v/s feature ID in the response at idx : " + i);
       assertNotNull(
-          insertedFeatures.get(i).getProperties().getXyzNamespace().getUuid(),
+          insertedFeatures.get(i).getProperties().getXyz().getUuid(),
           "UUID found missing in response for feature at idx : " + i);
     }
   }
