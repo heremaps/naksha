@@ -68,14 +68,15 @@ class PsqlAdminMap internal constructor(
         TODO("Not yet implemented")
     }
 
-    override fun createAdminMap(config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion): Int
-            = upsertAdminMap(config, storageId, storageNumber, psqlVersion, null, null)
+    override fun createAdminMap(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion): Int
+            = upsertAdminMap(conn, config, storageId, storageNumber, psqlVersion, null, null)
 
-    override fun upgradeAdminMap(config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion, schemaOid: Int, installedVersion: NakshaVersion?) {
-        upsertAdminMap(config, storageId, storageNumber, psqlVersion, schemaOid, installedVersion)
+    override fun upgradeAdminMap(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion, schemaOid: Int, installedVersion: NakshaVersion?) {
+        upsertAdminMap(conn, config, storageId, storageNumber, psqlVersion, schemaOid, installedVersion)
     }
 
     private fun upsertAdminMap(
+        conn: PgConnection,
         config: PgConfig,
         storageId: String,
         storageNumber: Int64,
@@ -84,117 +85,115 @@ class PsqlAdminMap internal constructor(
         installedVersion: NakshaVersion?
     ): Int {
         var adminMapOid = schemaOid ?: 0
-        val conn = storage.newConnection(Naksha.adminOptions, false)
-        conn.use {
-            if (schemaOid == null) {
-                logger.info("Create admin schema")
-                conn.execute("CREATE SCHEMA IF NOT EXISTS \"naksha~admin\";").close()
-                conn.execute("SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'naksha~admin'").use { cursor ->
-                    adminMapOid = cursor["oid"]
-                }
+        if (schemaOid == null) {
+            logger.info("Create admin schema")
+            conn.execute("CREATE SCHEMA IF NOT EXISTS \"naksha~admin\";").close()
+            conn.execute("SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'naksha~admin'").fetch().use { cursor ->
+                adminMapOid = cursor["oid"]
             }
-            logger.info("Set search_path")
-            conn.execute("SET SESSION search_path TO \"naksha~admin\", topology, hint_plan, public;").close()
+        }
+        logger.info("Set search_path")
+        conn.execute("SET SESSION search_path TO \"naksha~admin\", topology, hint_plan, public;").close()
 
-            if (installedVersion == psqlVersion) {
-                logger.info("Naksha admin map is up to date at version {}, do nothing", installedVersion)
-                return adminMapOid // Kotlin should know, that the variable is not null!
-            } else if (installedVersion != null) {
-                logger.info("Naksha admin map is outdated, current installed version is {}, updating it to {}", installedVersion, psqlVersion)
-            } else {
-                logger.info("Install new admin schema")
-            }
+        if (installedVersion == psqlVersion) {
+            logger.info("Naksha admin map is up to date at version {}, do nothing", installedVersion)
+            return adminMapOid // Kotlin should know, that the variable is not null!
+        } else if (installedVersion != null) {
+            logger.info("Naksha admin map is outdated, current installed version is {}, updating it to {}", installedVersion, psqlVersion)
+        } else {
+            logger.info("Install new admin schema")
+        }
 
-            val commonJs = getResourceAsText("/common.js")
-            check(commonJs != null) { "Failed to load common.js from resources" }
-            executeSqlFromResource(conn, "/common.sql", replacements = mapOf("common.js" to commonJs))
+        val commonJs = getResourceAsText("/common.js")
+        check(commonJs != null) { "Failed to load common.js from resources" }
+        executeSqlFromResource(conn, "/common.sql", replacements = mapOf("common.js" to commonJs))
 
-            // Install default modules and SQL functions.
-            installModuleFromResource(conn, "beautify", "/beautify.min.js", autoload = true)
-            executeSqlFromResource(conn, "/beautify.sql")
+        // Install default modules and SQL functions.
+        installModuleFromResource(conn, "beautify", "/beautify.min.js", autoload = true)
+        executeSqlFromResource(conn, "/beautify.sql")
 
-            installModuleFromResource(conn, "lz4_util", "/lz4_util.js")
-            installModuleFromResource(conn, "lz4_xxhash", "/lz4_xxhash.js")
-            installModuleFromResource(conn, "lz4", "/lz4.js", beautify = false, autoload = true)
-            executeSqlFromResource(conn, "/lz4.sql")
+        installModuleFromResource(conn, "lz4_util", "/lz4_util.js")
+        installModuleFromResource(conn, "lz4_xxhash", "/lz4_xxhash.js")
+        installModuleFromResource(conn, "lz4", "/lz4.js", beautify = false, autoload = true)
+        executeSqlFromResource(conn, "/lz4.sql")
 
-            installModuleFromResource(conn, "pako", "/pako.js", beautify = false, autoload = true)
-            executeSqlFromResource(conn, "/pako.sql")
+        installModuleFromResource(conn, "pako", "/pako.js", beautify = false, autoload = true)
+        executeSqlFromResource(conn, "/pako.sql")
 
-            // If the client initializes the module system, automatically load all these modules.
-            // This is much faster eventually, because it will directly load all of them into the cache.
-            installModuleFromResource(
-                conn, "joda", "/js-joda.js",
-                paths = arrayOf("@js-joda/core"),
-                beautify = false,
-                autoload = true
+        // If the client initializes the module system, automatically load all these modules.
+        // This is much faster eventually, because it will directly load all of them into the cache.
+        installModuleFromResource(
+            conn, "joda", "/js-joda.js",
+            paths = arrayOf("@js-joda/core"),
+            beautify = false,
+            autoload = true
+        )
+        installModuleFromResource(
+            conn, "kotlin",
+            "/kotlin-kotlin-stdlib.mjs",
+            paths = arrayOf("./kotlin-kotlin-stdlib.mjs"),
+            beautify = false,
+            autoload = true
+        )
+        installModuleFromResource(
+            conn,
+            "kotlinx_date_time",
+            "/Kotlin-DateTime-library-kotlinx-datetime.mjs",
+            paths = arrayOf("./Kotlin-DateTime-library-kotlinx-datetime.mjs"),
+            beautify = false,
+            autoload = true
+        )
+        installModuleFromResource(
+            conn, "naksha_base",
+            "/naksha_base.mjs",
+            paths = arrayOf("./naksha_base.mjs"),
+            beautify = false,
+            autoload = true
+        )
+        installModuleFromResource(
+            conn, "naksha_jbon",
+            "/naksha_jbon.mjs",
+            paths = arrayOf("./naksha_jbon.mjs"),
+            beautify = false,
+            autoload = true
+        )
+        installModuleFromResource(
+            conn, "naksha_geo",
+            "/naksha_geo.mjs",
+            paths = arrayOf("./naksha_geo.mjs"),
+            beautify = false,
+            autoload = true
+        )
+        installModuleFromResource(
+            conn, "naksha_model",
+            "/naksha_model.mjs",
+            paths = arrayOf("./naksha_model.mjs"),
+            beautify = false,
+            autoload = true
+        )
+        installModuleFromResource(
+            conn, "naksha_psql",
+            "/naksha_psql.mjs",
+            paths = arrayOf("./naksha_psql.mjs"),
+            beautify = false,
+            autoload = true
+        )
+        logger.info("Installation of modules done, install naksha.sql ...")
+        executeSqlFromResource(
+            conn, "/naksha.sql", replacements = mapOf(
+                "version" to (psqlVersion.toLong()).toString(),
+                "storageIdLiteral" to quoteLiteral(storageId),
+                "storageNumber" to storageNumber.toString()
             )
-            installModuleFromResource(
-                conn, "kotlin",
-                "/kotlin-kotlin-stdlib.mjs",
-                paths = arrayOf("./kotlin-kotlin-stdlib.mjs"),
-                beautify = false,
-                autoload = true
-            )
-            installModuleFromResource(
-                conn,
-                "kotlinx_date_time",
-                "/Kotlin-DateTime-library-kotlinx-datetime.mjs",
-                paths = arrayOf("./Kotlin-DateTime-library-kotlinx-datetime.mjs"),
-                beautify = false,
-                autoload = true
-            )
-            installModuleFromResource(
-                conn, "naksha_base",
-                "/naksha_base.mjs",
-                paths = arrayOf("./naksha_base.mjs"),
-                beautify = false,
-                autoload = true
-            )
-            installModuleFromResource(
-                conn, "naksha_jbon",
-                "/naksha_jbon.mjs",
-                paths = arrayOf("./naksha_jbon.mjs"),
-                beautify = false,
-                autoload = true
-            )
-            installModuleFromResource(
-                conn, "naksha_geo",
-                "/naksha_geo.mjs",
-                paths = arrayOf("./naksha_geo.mjs"),
-                beautify = false,
-                autoload = true
-            )
-            installModuleFromResource(
-                conn, "naksha_model",
-                "/naksha_model.mjs",
-                paths = arrayOf("./naksha_model.mjs"),
-                beautify = false,
-                autoload = true
-            )
-            installModuleFromResource(
-                conn, "naksha_psql",
-                "/naksha_psql.mjs",
-                paths = arrayOf("./naksha_psql.mjs"),
-                beautify = false,
-                autoload = true
-            )
-            logger.info("Installation of modules done, install naksha.sql ...")
-            executeSqlFromResource(
-                conn, "/naksha.sql", replacements = mapOf(
-                    "version" to (psqlVersion.toLong()).toString(),
-                    "storageIdLiteral" to quoteLiteral(storageId),
-                    "storageNumber" to storageNumber.toString()
-                )
-            )
-            // Note: We reserve the first 1000 collection sequences for internal collections with hard-coded
-            //       storage-numbers, because they have no entries in the naksha~collections table!
-            logger.info("Create transaction-seq, map-sequence, and collection-sequence ...")
-            conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64} START 1 CACHE 10;").close()
-            conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_MAP_SEQ AS ${PgType.INT64} START 1 CACHE 1;").close()
-            conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_COL_SEQ AS ${PgType.INT64} START 100 CACHE 1;").close()
+        )
+        // Note: We reserve the first 1000 collection sequences for internal collections with hard-coded
+        //       storage-numbers, because they have no entries in the naksha~collections table!
+        logger.info("Create transaction-seq, map-sequence, and collection-sequence ...")
+        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64} START 1 CACHE 10;").close()
+        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_MAP_SEQ AS ${PgType.INT64} START 1 CACHE 1;").close()
+        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_COL_SEQ AS ${PgType.INT64} START 100 CACHE 1;").close()
 
-            logger.info("Create internal collections: transactions, collections, and dictionaries")
+        logger.info("Create internal collections: transactions, collections, and dictionaries")
 //            transactions.create_internal(
 //                conn, 0, PgStorageClass.Consistent,
 //                storeHistory = false,
@@ -228,8 +227,7 @@ class PsqlAdminMap internal constructor(
 //                storeMeta = true,
 //                indices = listOf(id_txn_uid, tags_id_txn_uid)
 //            )
-            logger.info("Done creating transactions, collections, and dictionaries")
-        }
+        logger.info("Done creating transactions, collections, and dictionaries")
         return adminMapOid
     }
 

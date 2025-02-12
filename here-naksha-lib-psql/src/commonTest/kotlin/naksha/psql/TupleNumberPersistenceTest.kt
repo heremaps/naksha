@@ -4,8 +4,6 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import naksha.model.Naksha
-import naksha.model.NakshaContext
-import naksha.model.TupleNumber
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -62,14 +60,16 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
         assertEquals(feature.id, persistedTuple.id())
 
         // And: `storeNumber` checks out
-        val pgMap = storage.adminMap.getPgMapById(env.pgConnection, collection.mapId)
-        require(pgMap != null) { "Missing map ${collection.mapId}" }
-        val pgCollection = storage.adminMap.getPgCollectionById(env.pgConnection, pgMap, collection.id)
-        require(pgCollection != null) { "Missing collection ${collection.id}" }
-        assertEquals(storage.number, persistedTuple.tupleNumber.storageNumber)
-        assertEquals(pgMap.number, persistedTuple.tupleNumber.mapNumber)
-        assertEquals(pgCollection.number, persistedTuple.tupleNumber.collectionNumber)
-        assertEquals(Naksha.partitionNumber(feature.id), persistedTuple.tupleNumber.partitionNumber)
+        storage.adminConnection().use { conn ->
+            val pgMap = storage.adminMap.getPgMapById(conn, collection.mapId)
+            require(pgMap != null) { "Missing map ${collection.mapId}" }
+            val pgCollection = storage.adminMap.getPgCollectionById(conn, pgMap, collection.id)
+            require(pgCollection != null) { "Missing collection ${collection.id}" }
+            assertEquals(storage.number, persistedTuple.tupleNumber.storageNumber)
+            assertEquals(pgMap.number, persistedTuple.tupleNumber.mapNumber)
+            assertEquals(pgCollection.number, persistedTuple.tupleNumber.collectionNumber)
+            assertEquals(Naksha.partitionNumber(feature.id), persistedTuple.tupleNumber.partitionNumber)
+        }
     }
 
     @Test

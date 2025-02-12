@@ -6,7 +6,6 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaMap
 import naksha.model.request.*
-import naksha.psql.PgConnection
 import naksha.psql.PgStorage
 import kotlin.reflect.KClass
 import kotlin.test.BeforeTest
@@ -23,7 +22,7 @@ import kotlin.test.assertIs
 abstract class PgTestBase(internal var collectionField: NakshaCollection? = null) {
 
     val env by lazy {
-       TestEnv(dropSchema = true, enableInfoLogs = true)
+       TestEnv(deleteMap = true, enableInfoLogs = true)
     }
 
     val collection: NakshaCollection
@@ -31,9 +30,6 @@ abstract class PgTestBase(internal var collectionField: NakshaCollection? = null
 
     val storage: PgStorage
         get() = env.storage
-
-    protected fun useConnection(): PgConnection =
-        env.pgSession.useConnection()
 
     protected fun insertFeature(feature: NakshaFeature, sessionOptions: SessionOptions? = null) =
         insertFeatures(listOf(feature), sessionOptions)

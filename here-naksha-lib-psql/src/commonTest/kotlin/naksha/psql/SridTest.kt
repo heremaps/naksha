@@ -200,12 +200,11 @@ class SridTest : PgTestBase() {
                 FROM $collectionName
                 WHERE ${PgColumn.id} = '$featureId'
             """.trimIndent()
-            val cursor = useConnection().execute(sql)
-            val res = cursor.use {
-                cursor.next()
-                cursor.column("srid")
+            storage.adminConnection().use { conn ->
+                conn.execute(sql).fetch().use { cursor ->
+                    cursor.column("srid") as Int
+                }
             }
-            res as Int
         } catch (e: Exception) {
             throw Exception("Failed selecting srid for flags: $flags", e)
         }

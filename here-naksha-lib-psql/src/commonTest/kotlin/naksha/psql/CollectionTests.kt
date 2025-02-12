@@ -67,17 +67,17 @@ class CollectionTests : PgTestBase(null) {
                 Write().createCollection(collection)
             )
         )
-        val cursor = useConnection().execute(
-            sql = "SELECT column_name FROM information_schema.columns WHERE table_name = $1",
-            args = arrayOf(collection.id)
-        )
-        val columns = mutableListOf<String>()
-        while (cursor.next()) {
-            columns.add(cursor["column_name"])
+        storage.adminConnection().use { conn ->
+            val columns = mutableListOf<String>()
+            conn.execute(
+                sql = "SELECT column_name FROM information_schema.columns WHERE table_name = $1",
+                args = arrayOf(collection.id)
+            ).use { cursor ->
+                while (cursor.next()) columns.add(cursor["column_name"])
+                assertEquals(PgColumn.allColumns.size, columns.size)
+                assertTrue(PgColumn.allColumns.all { column -> columns.contains(column.name) })
+            }
         }
-        assertEquals(PgColumn.allColumns.size, columns.size)
-        assertTrue(PgColumn.allColumns.all { column -> columns.contains(column.name) })
-        cursor.close()
     }
 
     @Test
@@ -98,20 +98,17 @@ class CollectionTests : PgTestBase(null) {
     }
 
     private fun checkAllDefaultIndicesCreatedForTable(tableName: String) {
-        val cursor = useConnection().execute(
-            sql = """ SELECT indexname
-                    FROM pg_indexes
-                    WHERE tablename = $1;
-            """.trimIndent(),
-            args = arrayOf(tableName)
-        )
-        val indices = mutableListOf<String>()
-        while (cursor.next()) {
-            indices.add(cursor["indexname"])
+        storage.adminConnection().use { conn ->
+            conn.execute(
+                sql = "SELECT indexname FROM pg_indexes WHERE tablename = $1;",
+                args = arrayOf(tableName)
+            ).use { cursor ->
+                val indices = mutableListOf<String>()
+                while (cursor.next()) indices.add(cursor["indexname"])
+                assertTrue(PgIndex.DEFAULT_INDICES.size <= indices.size)
+                assertTrue(PgIndex.DEFAULT_INDICES.all { index -> indices.any { addedIndex -> addedIndex.contains(index) } })
+            }
         }
-        assertTrue(PgIndex.DEFAULT_INDICES.size <= indices.size)
-        assertTrue(PgIndex.DEFAULT_INDICES.all { index -> indices.any { addedIndex -> addedIndex.contains(index) } })
-        cursor.close()
     }
 
     @Test
@@ -127,17 +124,15 @@ class CollectionTests : PgTestBase(null) {
             )
         )
         val hstTableName = "$collectionName\$hst"
-        val cursor = useConnection().execute(
-            sql = """ SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_name = $1 
-                    )
-            """.trimIndent(),
-            args = arrayOf(hstTableName)
-        )
-        // Check that hst table was not created
-        assertFalse(cursor.fetch()["exists"])
-        cursor.close()
+        storage.adminConnection().use { conn ->
+            conn.execute(
+                sql = "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)",
+                args = arrayOf(hstTableName)
+            ).use { cursor ->
+                // Check that hst table was not created
+                assertFalse(cursor.fetch()["exists"])
+            }
+        }
         // Check that creating, updating and deleting features still work
         val feature = NakshaFeature()
         val readFeature = ReadFeatures()
@@ -180,17 +175,14 @@ class CollectionTests : PgTestBase(null) {
             )
         )
         val delTableName = "$collectionName\$del"
-        val cursor = useConnection().execute(
-            sql = """ SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_name = $1 
-                    )
-            """.trimIndent(),
-            args = arrayOf(delTableName)
-        )
-        // Check that del table was not created
-        assertFalse(cursor.fetch()["exists"])
-        cursor.close()
+        storage.adminConnection().use { conn ->
+            conn.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1",
+                args = arrayOf(delTableName)
+            ).use { cursor ->
+                // Check that del table was not created
+                assertFalse(cursor.fetch()["exists"])
+            }
+        }
         // Check that creating, updating and deleting features still work
         val feature = NakshaFeature()
         val readFeature = ReadFeatures()

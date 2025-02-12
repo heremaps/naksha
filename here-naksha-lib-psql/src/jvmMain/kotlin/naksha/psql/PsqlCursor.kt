@@ -166,6 +166,10 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
         return columnIndices()[name] != null
     }
 
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun valueOrNull(rs: ResultSet, value: Any?): Any?
+        = if (rs.wasNull()) null else value
+
     /**
      * Returns the value as returned by the database.
      * @param index the SQL index, starting from 1.
@@ -174,21 +178,22 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
      * @return the value.
      */
     private fun columnValue(index: Int, type: String, rs: ResultSet): Any? = when (type) {
+        // TODO: We need to check which values can simply read using getObject, so we can avoid the null-casting.
+        //       However, we want to return Integer for short and Int64 for long, so some hacks are needed, just which?
         "null" -> null
         "text", "varchar", "character", "char", "json", "uuid", "inet", "cidr", "macaddr", "xml", "internal",
         "point", "line", "lseg", "box", "path", "polygon", "circle", "int4range", "int8range", "numrange",
-        "tsrange", "tstzrange", "daterange" -> rs.getString(index)
-
-        "smallint", "int2" -> rs.getShort(index).toInt()
-        "integer", "int4", "xid4", "oid" -> rs.getInt(index)
-        "bigint", "int8", "xid8" -> longToInt64(rs.getLong(index))
-        "real" -> rs.getFloat(index).toDouble()
-        "double precision" -> rs.getDouble(index)
-        "numeric" -> rs.getBigDecimal(index)
-        "boolean" -> rs.getBoolean(index)
-        "timestamp" -> longToInt64(rs.getTimestamp(index).toInstant().toEpochMilli())
-        "date" -> longToInt64(rs.getDate(index).toInstant().toEpochMilli())
-        "bytea" -> rs.getBytes(index)
+        "tsrange", "tstzrange", "daterange" -> valueOrNull(rs, rs.getString(index))
+        "smallint", "int2" -> valueOrNull(rs, rs.getShort(index).toInt())
+        "integer", "int4", "xid4", "oid" -> valueOrNull(rs, rs.getInt(index))
+        "bigint", "int8", "xid8" -> valueOrNull(rs, longToInt64(rs.getLong(index)))
+        "real" -> valueOrNull(rs, rs.getFloat(index).toDouble())
+        "double precision" -> valueOrNull(rs, rs.getDouble(index))
+        "numeric" -> valueOrNull(rs, rs.getBigDecimal(index))
+        "bool", "boolean" -> valueOrNull(rs, rs.getBoolean(index))
+        "timestamp" -> valueOrNull(rs, longToInt64(rs.getTimestamp(index).toInstant().toEpochMilli()))
+        "date" -> valueOrNull(rs, longToInt64(rs.getDate(index).toInstant().toEpochMilli()))
+        "bytea" -> valueOrNull(rs, rs.getBytes(index))
         "jsonb" -> Platform.fromJSON(rs.getString(index))
         "array" -> rs.getArray(index)
         else -> rs.getObject(index)

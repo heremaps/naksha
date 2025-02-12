@@ -180,7 +180,11 @@ abstract class PgAdminMap internal constructor(
             conn.autoCommit = false
 
             logger.info("Query basic database information")
-            var cursor = conn.execute(
+            val has_naksha_version: Boolean?
+            val has_naksha_storage_id: Boolean?
+            val has_naksha_storage_number: Boolean?
+            val admin_schema_oid: Int?
+            conn.execute(
                 """
 WITH basics AS (SELECT 
 current_setting('block_size')::int4 AS bs, 
@@ -197,12 +201,7 @@ version() AS version
 )
 SELECT basics.*, procs.* FROM basics, procs;
 """
-            ).fetch()
-            val has_naksha_version: Boolean?
-            val has_naksha_storage_id: Boolean?
-            val has_naksha_storage_number: Boolean?
-            val admin_schema_oid: Int?
-            cursor.use {
+            ).fetch().use { cursor ->
                 pageSize = cursor["bs"]
                 val tupleSize = pageSize - 32
                 maxTupleSize = if (tupleSize > MAX_POSTGRES_TOAST_TUPLE_TARGET) {
@@ -243,10 +242,10 @@ SELECT basics.*, procs.* FROM basics, procs;
                 val end = v.indexOf(' ', start)
                 postgresVersion = NakshaVersion.of(v.substring(start, end))
 
-                admin_schema_oid = cursor["admin_oid"]
-                has_naksha_version = cursor["has_naksha_version"]
-                has_naksha_storage_id = cursor["has_naksha_storage_id"]
-                has_naksha_storage_number = cursor["has_naksha_storage_number"]
+                admin_schema_oid = cursor.column("admin_oid") as Int?
+                has_naksha_version = cursor.column("has_naksha_version") as Boolean?
+                has_naksha_storage_id = cursor.column("has_naksha_storage_id") as Boolean?
+                has_naksha_storage_number = cursor.column("has_naksha_storage_number") as Boolean?
             }
             // Note: PostgresQL parses the query before it evaluates it, therefore, we must not access a schema that does not exist.
             //       This forces us to execute the version read as a second query, ones we are sure that the schema and function exist.
@@ -254,13 +253,12 @@ SELECT basics.*, procs.* FROM basics, procs;
             var installed_storage_id: String? = null
             var installed_storage_number: Int64? = null
             if (admin_schema_oid != null && has_naksha_version == true && has_naksha_storage_id == true && has_naksha_storage_number == true) {
-                cursor =
-                    conn.execute("SELECT \"${Naksha.ADMIN_MAP}\".naksha_version() AS v, \"${Naksha.ADMIN_MAP}\".naksha_storage_id() AS id, \"${Naksha.ADMIN_MAP}\".naksha_storage_number() AS n")
-                        .fetch()
-                val v: Int64 = cursor["v"]
-                installed_version = NakshaVersion(v)
-                installed_storage_id = cursor["id"]
-                installed_storage_number = cursor["n"]
+                conn.execute("SELECT \"${Naksha.ADMIN_MAP}\".naksha_version() AS v, \"${Naksha.ADMIN_MAP}\".naksha_storage_id() AS id, \"${Naksha.ADMIN_MAP}\".naksha_storage_number() AS n").fetch().use { cursor ->
+                    val v: Int64 = cursor["v"]
+                    installed_version = NakshaVersion(v)
+                    installed_storage_id = cursor["id"]
+                    installed_storage_number = cursor["n"]
+                }
             }
             if (doOverride || installed_version != psql_version || admin_schema_oid == null) {
                 if (!NakshaContext.currentContext().su) {
@@ -278,11 +276,11 @@ SELECT basics.*, procs.* FROM basics, procs;
                 if (admin_schema_oid == null) {
                     if (!doCreate) throw NakshaException(FORBIDDEN, "Creation of admin-map needed, but forbidden")
                     logger.info("Install Naksha admin schema in version $psql_version for storage $id / $number")
-                    schemaOid = createAdminMap(config, id, number, psql_version)
+                    schemaOid = createAdminMap(conn, config, id, number, psql_version)
                 } else {
                     if (!doUpgrade) throw NakshaException(FORBIDDEN, "Upgrade of admin-map needed, but forbidden")
                     logger.info("Upgrade Naksha admin schema from $installed_version to $psql_version for storage $id / $number")
-                    upgradeAdminMap(config, id, number, psql_version, admin_schema_oid, installed_version)
+                    upgradeAdminMap(conn, config, id, number, psql_version, admin_schema_oid, installed_version)
                     schemaOid = admin_schema_oid
                 }
                 logger.info("Installation done, commit changes")
@@ -299,15 +297,14 @@ SELECT basics.*, procs.* FROM basics, procs;
                 }
                 schemaOid = admin_schema_oid
             }
-            logger.info("Load OID of sequence counters from admin schema (oid=$schemaOid)")
-            cursor = conn.execute(
+            logger.info("Load OID of sequence counters from admin schema (schema-oid=$schemaOid)")
+            conn.execute(
                 """SELECT 
 (SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_TXN_SEQ') AS txn_oid,
 (SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_MAP_SEQ') AS map_oid,
 (SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_COL_SEQ') AS col_oid
 """
-            ).fetch()
-            cursor.use {
+            ).fetch().use { cursor ->
                 txnSequenceOid = cursor["txn_oid"]
                 mapNumberSequenceOid = cursor["map_oid"]
                 colNumberSequenceOid = cursor["col_oid"]
@@ -320,6 +317,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      * Helper to create the admin schema, install all SQL functions, scripts, and create the internal collections for transactions, maps, and dictionaries.
      *
      * **Note**: At the time of calling this method, [schemaOid] has not been initialized!
+     * @param conn the connection to use to perform initialization work.
      * @param config the configuration.
      * @param storageId the storage-id to install.
      * @param storageNumber the storage-number to install.
@@ -327,12 +325,19 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @return the admin schema `OID`.
      * @since 3.0.0
      */
-    protected abstract fun createAdminMap(config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion): Int
+    protected abstract fun createAdminMap(
+        conn: PgConnection,
+        config: PgConfig,
+        storageId: String,
+        storageNumber: Int64,
+        psqlVersion: NakshaVersion
+    ): Int
 
     /**
      * Helper to upgrade the admin schema, upgrade all SQL functions, scripts, and upgrade the internal collections in the admin-map.
      *
      * **Note**: At the time of calling this method, [schemaOid] has not been initialized!
+     * @param conn the connection to use to perform initialization work.
      * @param config the configuration.
      * @param storageId the storage-id to install.
      * @param storageNumber the storage-number to install.
@@ -342,6 +347,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @since 3.0.0
      */
     protected abstract fun upgradeAdminMap(
+        conn: PgConnection,
         config: PgConfig,
         storageId: String,
         storageNumber: Int64,

@@ -32,7 +32,7 @@ do $$ begin
 end; $$ language 'plpgsql';
 
 -- Update search-path, extension may have changed it!
-SET SESSION search_path TO ${schema}, public, topology;
+SET SESSION search_path TO "naksha~admin", public, topology;
 create table if not exists es_modules (name text primary key, paths text[], source text, autoload bool default false);
 create index if not exists es_modules_paths_idx on es_modules using gin(paths);
 create index if not exists es_modules_autoload_idx on es_modules using btree(autoload);
