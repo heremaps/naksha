@@ -4,8 +4,13 @@ import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaException
 import naksha.model.TupleNumberByteArray
 import naksha.model.Version
-import naksha.model.request.*
-import naksha.psql.*
+import naksha.model.request.ErrorResponse
+import naksha.model.request.ReadRequest
+import naksha.model.request.Response
+import naksha.model.request.SuccessResponse
+import naksha.psql.PgConnection
+import naksha.psql.PgSession
+import naksha.psql.PgStorage
 import naksha.psql.executors.query.PgQueryBuilder
 import kotlin.jvm.JvmField
 
@@ -44,11 +49,20 @@ class PgReader(
         val plan = connection.prepare(query.sql, query.argTypes)
         plan.use {
             val allBytes: ByteArray?
-            val cursor = plan.execute(query.argValues)
+            val cursor = try {
+                plan.execute(query.argValues)
+            } catch (nakshaException: NakshaException) {
+                return ErrorResponse(nakshaException)
+            }
             cursor.use {
                 allBytes = if (cursor.next()) cursor.column("rs") as ByteArray else null
             }
-            if (allBytes == null) throw NakshaException(EXCEPTION, "Failed to execute query for unknown reason")
+            if (allBytes == null) return ErrorResponse(
+                NakshaException(
+                    EXCEPTION,
+                    "Failed to execute query for unknown reason"
+                )
+            )
             val tupleNumberBytes = TupleNumberByteArray.fromGzip(storage, allBytes)
             return SuccessResponse(
                 PgResultSet(

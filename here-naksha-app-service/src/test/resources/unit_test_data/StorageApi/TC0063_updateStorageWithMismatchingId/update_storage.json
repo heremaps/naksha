@@ -3,7 +3,7 @@
   "type": "Storage",
   "title": "UniMap Moderation Dev Storage",
   "description": "Storage that should not be placed under 'not-really-um-mod-dev'",
-  "className": "com.here.naksha.lib.psql.PsqlStorage",
+  "className": "naksha.psql.PsqlStorage",
   "properties": {
     "dbConfig": {
       "host": "localhost",

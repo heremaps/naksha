@@ -20,6 +20,7 @@ package com.here.naksha.lib.hub;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.models.PluginCache.getStorageConstructor;
+import static java.util.Objects.requireNonNull;
 import static naksha.model.Action.CREATED;
 import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
@@ -39,7 +40,6 @@ import com.here.naksha.lib.core.models.features.Extension;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.view.ViewDeserialize;
 import com.here.naksha.lib.extmanager.ExtensionManager;
 import com.here.naksha.lib.extmanager.IExtensionManager;
 import com.here.naksha.lib.extmanager.helpers.AmazonS3Helper;
@@ -59,6 +59,7 @@ import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
+import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
@@ -468,16 +469,16 @@ public class NakshaHub implements INaksha {
     // TODO: remove the hacky hack
     if ("naksha.psql.PsqlStorage".equals(storage.getClassName())) {
       NakshaProperties properties = storage.getProperties();
-      AnyObject dbConfig = JvmAnyObjectUtil.getProperty(properties, "dbConfig", AnyObject.class);
+      AnyObject instanceConfig = requireNonNull(JvmAnyObjectUtil.getProperty(properties, "master", AnyObject.class));
       PsqlInstance psqlInstance = PsqlInstance.get(
-          dbConfig.get("host").toString(),
-          Integer.parseInt(dbConfig.get("port").toString()),
-          dbConfig.get("db").toString(),
-          dbConfig.get("user").toString(),
-          dbConfig.get("password").toString()
+          requireNonNull(instanceConfig.get("host")).toString(),
+          Integer.parseInt(requireNonNull(instanceConfig.get("port")).toString()),
+          requireNonNull(instanceConfig.get("db")).toString(),
+          requireNonNull(instanceConfig.get("user")).toString(),
+          requireNonNull(instanceConfig.get("password")).toString()
       );
       PsqlCluster singleNodeCluster = new PsqlCluster(psqlInstance);
-      return new PsqlStorage(singleNodeCluster, dbConfig.get("schema").toString());
+      return new PsqlStorage(singleNodeCluster, requireNonNull(properties.get("schema")).toString());
     }
     Fe1<IStorage, Storage> constructor = getStorageConstructor(storage.getClassName(), Storage.class);
     try {

@@ -58,6 +58,7 @@ import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteOp;
 import naksha.model.request.WriteRequest;
+import naksha.psql.NakshaExceptionMapper;
 import org.apache.commons.lang3.time.StopWatch;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;

@@ -218,7 +218,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     try (IReadSession readSession = nakshaHub().getSpaceStorage().newReadSession(new SessionOptions())) {
       Response result = readSession.execute(findStorageById);
       List<String> fetchedIds = ResultHelper.readIdsFromResult(result);
-      if (fetchedIds.size() == 1 && fetchedIds.get(0).equals(storageId)) {
+      if (fetchedIds.size() == 1 && storageId.equals(fetchedIds.get(0))) {
         return new SuccessResponse();
       }
     }

@@ -269,29 +269,23 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     if (response instanceof SuccessResponse successResponse) {
       featuresToPatchFromStorage = ResultHelper.extractResponseItems(successResponse, NakshaFeature.class);
     } else if (response instanceof ErrorResponse errorResponse) {
-      return sendError(
-          errorResponse.getError(),
-          "Error encountered while reading features from storage: {}",
-          featureIds);
+      logger.error("Error encountered while reading features from storage. Feature ids: {}, error: {}", featureIds,
+          errorResponse.getError());
+      return verticle.sendErrorResponse(routingContext, errorResponse.getError());
     } else {
-      return sendError(
-          NakshaError.EXCEPTION,
-          "Unexpected response while reading features from storage: " + response,
-          "Unexpected null result while reading features from storage: {}",
-          featureIds);
+      logger.error("Unexpected response while reading features from storage. Feature ids: {}, unknown response: {}", featureIds, response);
+      return verticle.sendErrorResponse(routingContext,
+          new NakshaError(NakshaError.EXCEPTION, "Unexpected response while reading features from storage: " + response));
     }
     if (featuresToPatchFromStorage.isEmpty()) {
       if (responseType == HttpResponseType.FEATURE) {
-        return sendError(
-            NakshaError.NOT_FOUND,
-            "Feature does not exist.",
-            "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature does not exist.");
+        logger.error(
+            "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature ({}) does not exist.",
+            featureIds);
+        return verticle.sendErrorResponse(routingContext, new NakshaError(NakshaError.NOT_FOUND, "Feature does not exist."));
       } else if (!responseType.equals(HttpResponseType.FEATURE_COLLECTION)) {
-        return sendError(
-            NakshaError.EXCEPTION,
-            "Internal server error.",
-            "Unsupported HttpResponseType was called: {}",
-            responseType);
+        logger.error("Unsupported HttpResponseType was called: {}", responseType);
+        return verticle.sendErrorResponse(routingContext, new NakshaError(NakshaError.EXCEPTION, "Internal server error."));
       }
       // Else none of the features exists in storage, will create them later
     }
@@ -308,10 +302,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         // unexpected null response
         writer.rollback();
         writer.close();
-        return sendError(
-            NakshaError.EXCEPTION,
-            "Unexpected null result.",
-            "Received null result after writing patched features, rolled back.");
+        return verticle.sendErrorResponse(routingContext, new NakshaError(NakshaError.EXCEPTION, "Unexpected null result."));
       } else if (wrResponse instanceof ErrorResponse er) {
         writer.rollback();
         writer.close();
@@ -319,15 +310,15 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         if (NakshaError.CONFLICT.equals(er.getError())) {
           if (retry >= MAX_RETRY_ATTEMPT) {
             NakshaError error = er.getError();
-            return sendError(
-                NakshaError.EXCEPTION,
-                "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: " + error,
-                "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: {}", error);
+            String msg = "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: " + error;
+            logger.error(msg, er.getError().getCause());
+            return verticle.sendErrorResponse(routingContext, new NakshaError(NakshaError.EXCEPTION, msg));
           }
           return attemptFeaturesPatching(
               spaceId, featuresFromRequest, responseType, addTags, removeTags, retry + 1);
         } else {
-          return sendError(er.getError(), "Received error result {}", er);
+          logger.error("Received error result {}", er);
+          return verticle.sendErrorResponse(routingContext, er.getError());
         }
       } else {
         if (responseType.equals(HttpResponseType.FEATURE)) {
@@ -368,15 +359,6 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       patchedFeatureList.add(featureToPatch);
     }
     return patchedFeatureList;
-  }
-
-  private XyzResponse sendError(String errorCode, String errorMsg, String internalLogMsg, Object... logArgs) {
-    return sendError(new NakshaError(errorCode, errorMsg), internalLogMsg, logArgs);
-  }
-
-  private XyzResponse sendError(NakshaError nakshaError, String internalLogMsg, Object... logArgs) {
-    logger.error(internalLogMsg, logArgs);
-    return verticle.sendErrorResponse(routingContext, nakshaError);
   }
 
   private void addTagsToFeature(NakshaFeature feature, List<String> addTags) {
