@@ -124,18 +124,6 @@ class Naksha private constructor() {
         const val MAX_ID_LENGTH = 42 // The answer to everything ;-)
 
         /**
-         * Default test configuration for the local test storage.
-         *
-         * Every implementation handle this specific configuration special internally. Some storages (like `lib-psql`) will start a local docker container, other may not need it (for example `lib-sqlite`), but create some temporary files. Technically, the idea of this shared pseudo configuration is to allow each storage to come up with some easy to use local test setup.
-         *
-         * The only requirement for this configuration it, that there is docker installed locally on the system.
-         * @since 3.0.0
-         */
-        @JvmStatic
-        @JsStatic
-        val LOCAL_TEST_STORAGE_CONFIG: StorageConfig = (fromJSON("""{"id":"local_test"}""") as PlatformMap).proxy(StorageConfig::class)
-
-        /**
          * Tests if the given **id** is a valid identifier, so matches:
          *
          * `[a-z][a-z0-9_:-]{31}`

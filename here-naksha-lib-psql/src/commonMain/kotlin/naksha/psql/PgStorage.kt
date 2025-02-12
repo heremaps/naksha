@@ -77,7 +77,7 @@ import kotlin.js.JsExport
 @JsExport
 abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
 
-    private var _adminMap: PgAdminMap? = null
+    protected var _adminMap: PgAdminMap? = null
 
     /**
      * The OID of the admin-map, set by [initStorage].

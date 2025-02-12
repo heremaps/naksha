@@ -3,10 +3,12 @@
 package naksha.model
 
 import naksha.base.*
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaFeature
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 
 /**
  * The base class for all storage configurations.
@@ -28,6 +30,24 @@ open class StorageConfig : NakshaFeature() {
         private val HARDCAP = NotNullProperty<StorageConfig, Int>(Int::class) { _, _ -> 0 }
         private val CREATE = NotNullProperty<StorageConfig, Boolean>(Boolean::class) { _, _ -> false }
         private val UPGRADE = NotNullProperty<StorageConfig, Boolean>(Boolean::class) { _, _ -> false }
+
+        /**
+         * Helper class to parse a JSON configuration into a [StorageConfig].
+         * - Throws [NakshaError.ILLEGAL_ARGUMENT] if the given JSON is invalid.
+         * @param json the JSON string.
+         * @param fromJsonOptions optional parser options, defaults to [FromJsonOptions.DEFAULT].
+         * @return the parsed JSON configuration.
+         * @since 3.0
+         */
+        @JvmOverloads
+        fun fromJSON(json: String, fromJsonOptions: FromJsonOptions? = null): StorageConfig {
+            try {
+                return (Platform.fromJSON(json, fromJsonOptions ?: FromJsonOptions.DEFAULT) as PlatformMap).proxy(StorageConfig::class)
+            } catch (e: Exception) {
+                if (e is NakshaException) throw e
+                throw NakshaException(ILLEGAL_ARGUMENT, "Failed to parse JSON: $json", e)
+            }
+        }
     }
 
     /**

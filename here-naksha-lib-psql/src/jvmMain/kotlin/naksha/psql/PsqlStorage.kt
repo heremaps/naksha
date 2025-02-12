@@ -9,15 +9,12 @@ import kotlin.reflect.KClass
 
 /**
  * The Java implementation of the [PgStorage], classname `naksha.psql.JvmPgStorage`.
- *
- * @constructor Creates a new PSQL storage.
- * @property cluster the PostgresQL cluster used by this storage.
- * @param defaultSchemaName the default schema name.
  */
 open class PsqlStorage : PgStorage(), IStorage {
 
     override val configKlass: KClass<PgConfig> = PgConfig::class
-    override val adminMap: PgAdminMap = super.adminMap as PsqlAdminMap
+    override val adminMap: PgAdminMap
+        get() = super.adminMap as PsqlAdminMap
 
     override fun afterInit() {
         TODO("Not yet implemented")

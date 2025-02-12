@@ -11,4 +11,18 @@ import kotlin.js.JsExport
  * @since 3.0.0
  */
 @JsExport
-class PgInstanceConfigList : ListProxy<PgInstanceConfig>(PgInstanceConfig::class)
+class PgInstanceConfigList : ListProxy<PgInstanceConfig>(PgInstanceConfig::class) {
+
+    /**
+     * Add a configuration based upon the given URI.
+     * @param uri the URI to parse, formatted like `jdbc:postgresql://{host}[:{port}]/{db}?user={user}&password={password}`.
+     * @since 3.0
+     */
+    fun addUri(uri: String): PgInstanceConfigList {
+        add(PgInstanceConfig.fromUri(uri))
+        return this
+    }
+}
+
+// TODO: Add helper method to add an instance config by URL like:
+//       addByUrl("jdbc:...")

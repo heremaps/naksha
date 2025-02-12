@@ -6,6 +6,7 @@ import naksha.base.PlatformUtil
 import naksha.model.Naksha
 import naksha.model.NakshaContext
 import naksha.model.SessionOptions
+import naksha.model.StorageConfig
 import naksha.psql.*
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
@@ -28,10 +29,15 @@ class TestEnv(
     }
 
     /**
-     * The test local storage using [Naksha.LOCAL_TEST_STORAGE_CONFIG].
+     * The test local storage.
+     *
+     * **Note**: You can override the docker-config via environment variable `NAKSHA_TEST_PSQL_DB_URL`, for example
      */
     @JvmField
-    val storage = Naksha.useStorage(Naksha.LOCAL_TEST_STORAGE_CONFIG) as PgStorage
+    val storage = Naksha.useStorage(StorageConfig.fromJSON("""{
+  "id": "local_psql_test_storage",
+  "className": "naksha.psql.PsqlTestStorage"
+}""")) as PgStorage
 
     /**
      * The default [NakshaContext] to be used when opening new PostgresQL sessions via [PgStorage.newWriteSession] or

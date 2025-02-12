@@ -4,38 +4,85 @@ package naksha.psql
 
 import naksha.base.AnyObject
 import naksha.base.NotNullProperty
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaException
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
  * The configuration of a single PostgresQL instance.
- * @since 3.0.0
+ * @since 3.0
  */
 @Suppress("unused")
 @JsExport
 class PgInstanceConfig : AnyObject() {
     companion object PgInstanceConfig_C {
-        private val STRING = NotNullProperty<PgInstanceConfig, String>(String::class)
-        private val PORT = NotNullProperty<PgInstanceConfig, Int>(Int::class) { _,_ -> 5432 }
+        internal const val DEFAULT_DB = "postgres"
+        internal const val DEFAULT_USER = "postgres"
+        internal const val DEFAULT_PASSWORD = "password"
+        internal const val DEFAULT_PORT = 5432
+        private val HOST = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> "localhost" }
+        private val PORT = NotNullProperty<PgInstanceConfig, Int>(Int::class) { _,_ -> DEFAULT_PORT }
+        private val DATABASE = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_PASSWORD }
+        private val USER = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_USER }
+        private val PASSWORD = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_PASSWORD }
         private val CONNECTION_LIMIT = NotNullProperty<PgInstanceConfig, Int>(Int::class) { self,_ ->
             // Compatibility hack, see:
             // https://github.com/heremaps/naksha/blob/v2/here-naksha-app-service/src/test/resources/unit_test_data/StorageApi/TC0001_createStorage/create_storage.json
             val raw = self.getRaw("maxPoolSize")
             if (raw is Number) raw.toInt() else 1024
         }
+        private const val EXPECTED_URI_FORMAT = "jdbc:postgresql://{host}[:{port}]/{db}?user={user}&password={password}"
+
+        /**
+         * Parses the given URI into a [PgInstanceConfig], the URI should look like: `jdbc:postgresql://{host}[:{port}]/{db}?user={user}&password={password}`
+         * - Throws [ILLEGAL_ARGUMENT] if the given string is not well formatted.
+         * @param uri the URI to parse.
+         * @return the configuration generated form it.
+         * @since 3.0
+         */
+        fun fromUri(uri: String): PgInstanceConfig {
+            val questionMarkIndex = uri.indexOf("?")
+            if (questionMarkIndex < 0) {
+                throw NakshaException(ILLEGAL_ARGUMENT, "Missing query parameters, URI should be like: $EXPECTED_URI_FORMAT")
+            }
+            val query = uri.substring(questionMarkIndex+1, uri.length)
+                .split("&")
+                .map { it.split("=", limit = 2) }
+                .associate { if (it.size==2) it[0] to it[1] else it[0] to null }
+
+            if (!uri.startsWith("jdbc:postgresql://")) {
+                throw NakshaException(ILLEGAL_ARGUMENT, "Wrong URI prefix, URI should be like: $EXPECTED_URI_FORMAT")
+            }
+            val user = query["user"] ?: throw NakshaException(ILLEGAL_ARGUMENT, "Missing '&user', URI should be like: $EXPECTED_URI_FORMAT")
+            val password = query["password"] ?: throw NakshaException(ILLEGAL_ARGUMENT, "Missing '&password', URI should be like: $EXPECTED_URI_FORMAT")
+            val urlParts = uri.substring("jdbc:postgresql://".length, questionMarkIndex).split(':', '/')
+            if(urlParts.size != 2 && urlParts.size != 3) {
+                throw NakshaException(ILLEGAL_ARGUMENT, "The database URI is not well formatted, should be: $EXPECTED_URI_FORMAT")
+            }
+            val host: String = urlParts[0]
+            val port: Int
+            try {
+                port = if (urlParts.size == 2) 5432 else urlParts[1].toInt()
+            } catch (e: NumberFormatException) {
+                throw NakshaException(ILLEGAL_ARGUMENT, "Illegal port number '${urlParts[1]}', URI should be like: $EXPECTED_URI_FORMAT")
+            }
+            val database: String = if (urlParts.size == 2) urlParts[1] else urlParts[2]
+            return PgInstanceConfig().withDb(database).withHost(host).withPort(port).withUser(user).withPassword(password)
+        }
     }
 
     /**
      * The host to connect to.
-     * @since 3.0.0
+     * @since 3.0
      */
-    var host by STRING
+    var host by HOST
 
     /**
      * Set the host.
      * @param host the host.
      * @return this.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun withHost(host: String): PgInstanceConfig {
         this.host = host
@@ -44,7 +91,7 @@ class PgInstanceConfig : AnyObject() {
 
     /**
      * The port to connect to, defaults to `5432`.
-     * @since 3.0.0
+     * @since 3.0
      */
     var port by PORT
 
@@ -52,7 +99,7 @@ class PgInstanceConfig : AnyObject() {
      * Set the port.
      * @param port the port.
      * @return this.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun withPort(port: Int): PgInstanceConfig {
         this.port = port
@@ -61,15 +108,15 @@ class PgInstanceConfig : AnyObject() {
 
     /**
      * The database to open.
-     * @since 3.0.0
+     * @since 3.0
      */
-    var db by STRING
+    var db by DATABASE
 
     /**
      * Set the database.
      * @param db the database.
      * @return this.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun withDb(db: String): PgInstanceConfig {
         this.db = db
@@ -78,15 +125,15 @@ class PgInstanceConfig : AnyObject() {
 
     /**
      * The user to authenticate with.
-     * @since 3.0.0
+     * @since 3.0
      */
-    var user by STRING
+    var user by USER
 
     /**
      * Set the user.
      * @param user the user.
      * @return this.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun withUser(user: String): PgInstanceConfig {
         this.user = user
@@ -95,15 +142,15 @@ class PgInstanceConfig : AnyObject() {
 
     /**
      * The password to authenticate with.
-     * @since 3.0.0
+     * @since 3.0
      */
-    var password by STRING
+    var password by PASSWORD
 
     /**
      * Set the password.
      * @param password the password.
      * @return this.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun withPassword(password: String): PgInstanceConfig {
         this.password = password
@@ -114,7 +161,7 @@ class PgInstanceConfig : AnyObject() {
      * The maximum amount of connections this instance can handle.
      *
      * All master instances must at least support one admin-connection, additionally to this limit.
-     * @since 3.0.0
+     * @since 3.0
      */
     var connectionLimit by CONNECTION_LIMIT
 
@@ -122,10 +169,16 @@ class PgInstanceConfig : AnyObject() {
      * Set the connection-limit.
      * @param connectionLimit the connection-limit.
      * @return this.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun withConnectionLimit(connectionLimit: Int): PgInstanceConfig {
         this.connectionLimit = connectionLimit
         return this
     }
+
+    /**
+     * Returns the standard JDBC URI, basically `jdbc:postgresql://{host}:{port}/{db}?user={user}&password={password}&ssl=true`.
+     * @return the JDBC URI.
+     */
+    override fun toString(): String = "jdbc:postgresql://${host}:${port}/${db}?user=${user}&password=${password}&ssl=true"
 }

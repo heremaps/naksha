@@ -21,13 +21,13 @@ open class PgMap internal constructor(
      * The reference to the storage.
      * @since 3.0.0
      */
-    @JvmField val storage: PgStorage,
+    open val storage: PgStorage,
 
     /**
      * The HEAD state of the map.
      * @since 3.0.0
      */
-    @JvmField val nakshaMap: NakshaMap,
+    val nakshaMap: NakshaMap,
 
     /**
      * The OID of the collection-number sequence.
@@ -38,12 +38,12 @@ open class PgMap internal constructor(
     /**
      * The map-id.
      */
-    @JvmField val id: String = nakshaMap.id,
+    val id: String = nakshaMap.id,
 
     /**
      * The map-number.
      */
-    @JvmField val number: Int = nakshaMap.number ?: throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "map number missing"),
+    val number: Int = nakshaMap.number ?: throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "map number missing"),
 ) {
 
     /**

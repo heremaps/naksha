@@ -26,6 +26,9 @@ class PsqlAdminMap internal constructor(
     upgrade: Boolean?
 ) : PgAdminMap(storage, config, create, upgrade) {
 
+    override val storage: PsqlStorage
+        get() = super.storage as PsqlStorage
+
     private var clusterField: PgCluster? = null
 
     /**
