@@ -76,7 +76,7 @@ class PsqlTestStorage : PsqlStorage() {
         }
     }
 
-    override fun initAdminMap(config: PgConfig, create: Boolean?, upgrade: Boolean?): PgAdminMap {
+    override fun initStorage(config: PgConfig, create: Boolean?, upgrade: Boolean?) {
         var master = config.getMasterOrNull()
         if (master == null) {
             // - read from environment
@@ -86,6 +86,10 @@ class PsqlTestStorage : PsqlStorage() {
             if (master == null) master = startDocker()
             config.master = master
         }
+        super.initStorage(config, create, upgrade)
+    }
+
+    override fun newAdminMap(config: PgConfig, create: Boolean?, upgrade: Boolean?): PsqlAdminMap {
         return PsqlAdminMap(this, config, create, upgrade)
     }
 }

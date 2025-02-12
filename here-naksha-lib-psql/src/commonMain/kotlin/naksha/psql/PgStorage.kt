@@ -2,10 +2,8 @@
 
 package naksha.psql
 
-import naksha.base.*
 import naksha.base.fn.Fx2
 import naksha.model.*
-import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import kotlin.js.JsExport
 
@@ -71,61 +69,29 @@ import kotlin.js.JsExport
  *
  * ### JavaScript / Node
  * TBD, technically every connection can be represented by a real PostgresQL connection, the same way Java does it.
- * @since 3.0.0
+ * @since 3.0
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
 abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
 
+    /**
+     * The internal private property of the admin-map, set by [initStorage].
+     * @since 3.0
+     */
     protected var _adminMap: PgAdminMap? = null
 
     /**
-     * The OID of the admin-map, set by [initStorage].
+     * The admin-map, set by [initStorage].
+     * @since 3.0
      */
     open val adminMap: PgAdminMap
-        get() {
-            return _adminMap ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
-        }
-
-    /**
-     * Test if this storage has the given _id_ and _number_.
-     * - Throws [STORAGE_ID_MISMATCH], if an invalid _id_ or _number_ was given.
-     * @param id the expected _id_.
-     * @param number the expected _number_.
-     * @return _true_ if the current _id_ and _number_ are the given-expected ones; _false_ if the storage is not initialized.
-     */
-//    internal fun isIdAndNumber(id: String, number: Int64): Boolean {
-//        if (this.id != id) {
-//            throw NakshaException(STORAGE_ID_MISMATCH, "The storage-id is '${this.id}', but was expected to be '$id'")
-//        }
-//        if (this.number != number) {
-//            throw NakshaException(STORAGE_ID_MISMATCH, "The storage-number is '${this.number}', but was expected to be '$number'")
-//        }
-//        return true
-//    }
-
-    /**
-     * An internal method invoked by [initStorage] to create the admin-map instance. The implementation will instantiate the concrete implementation of [PgAdminMap].
-     *
-     * Actually there are only two implementations, one for the JVM, which is able to install or upgrading SQL functions, creating schema, tables, as well as admin-collections, and the other one that is executed within the [PLV8 extension](https://plv8.github.io/) of the PostgresQL database itself, which requires that the admin-map is already setup. Future other implementations may be done for [NodeJS](https://nodejs.org/en/) or browsers (which are as well are not able to really create a new admin-map).
-     *
-     * This operation is executing with in the storage [lock], so that it can be sure that no other thread is doing the same thing.
-     * @param config the configuration as required.
-     * @param create if not _null_, overrides [StorageConfig.create].
-     * @param upgrade if not _null_, overrides [StorageConfig.upgrade].
-     * @return the OID of the admin schema.
-     * @since 3.0.0
-     */
-    protected abstract fun initAdminMap(config: PgConfig, create: Boolean?, upgrade: Boolean?): PgAdminMap
-
-    // Called from invokeInitStorage, so within a lock!
-    override fun initStorage(config: PgConfig, create: Boolean?, upgrade: Boolean?) {
-        _adminMap = initAdminMap(config, create, upgrade)
-    }
+        get() = _adminMap ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
 
     /**
      * The default flags to use for the storage.
      * @return default flags to use for the storage.
+     * @since 3.0
      */
     internal val defaultFlags: Flags = Flags()
         .withFeatureEncoding(FeatureEncoding.JBON_GZIP)
@@ -145,6 +111,7 @@ abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
      * @param options the session options.
      * @param readOnly if the session should be read-only.
      * @return the session.
+     * @since 3.0
      */
     open fun newSession(options: SessionOptions, readOnly: Boolean): PgSession = PgSession(this, options, readOnly)
 
@@ -162,15 +129,9 @@ abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
      * @param options the options for the connection.
      * @param readOnly if the connection should be read-only.
      * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the connection. It may just use this string, perform arbitrary additional work, or suppress initialization completely.
-     * @since 3.0.0
+     * @since 3.0
      */
     abstract fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>? = null): PgConnection
-//    {
-//        val conn = cluster.newConnection(options, readOnly)
-//        val query = "SET SESSION search_path TO \"naksha~admin\", hint_plan, public, topology;\n"
-//        if (init != null) init.call(conn, query) else conn.execute(query).close()
-//        return conn
-//    }
 
     /**
      * Opens an admin connection.
@@ -180,28 +141,7 @@ abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
      * **WARNING**: This method is only for internal purpose, to avoid breaking the code on `PLV8`.
      *
      * @return the admin connection that does not count against connection-limit, to be closed after usage.
-     * @since 3.0.0
+     * @since 3.0
      */
     abstract fun adminConnection(): PgConnection
-    //    = newConnection(options, false, init)
 }
-
-// PgSession(storage: PgStorage)
-// - commit()
-//   - before committing we need to write the transaction
-//   - we need to do it as last action, short before we commit, because this allows us to create the admin map, and then to insert the transaction-log into the transaction-log table we just created within the same session
-//   - as transactions are always persisted in the admin-map, we know it exists!
-
-// PgStorage(config: PgConfig)
-// - on init
-//   - read the admin data, and create a root PgMap (`adminMap: PgMap`)
-//   - optionally create/upgrade storage
-//     - create admin schema
-//     - install scripts, plv8, ...
-//     - create map-sequence (managed by PgStorage)
-//     - core collections using PgCollection
-//
-//  createAdminMap(): PgAdminMap
-//  upgradeAdminMap(): PgAdminMap
-//  adminMap: PgAdminMap
-

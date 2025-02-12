@@ -14,7 +14,7 @@ internal class PsqlStorageListener(storage: PsqlStorage) : Thread("lib-psql-list
     private val shutdown = AtomicBoolean(false)
     private val adminOptions = Naksha.adminOptions
     private val adminMap = storage.adminMap as PsqlAdminMap
-    private val cluster = adminMap.cluster
+    private val cluster = storage.cluster
     private val e = Exception()
 
     init {

@@ -26,6 +26,7 @@ class PgInstanceConfig : AnyObject() {
         private val DATABASE = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_PASSWORD }
         private val USER = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_USER }
         private val PASSWORD = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_PASSWORD }
+        private val READ_ONLY = NotNullProperty<PgInstanceConfig, Boolean>(Boolean::class) { _,_ -> false }
         private val CONNECTION_LIMIT = NotNullProperty<PgInstanceConfig, Int>(Int::class) { self,_ ->
             // Compatibility hack, see:
             // https://github.com/heremaps/naksha/blob/v2/here-naksha-app-service/src/test/resources/unit_test_data/StorageApi/TC0001_createStorage/create_storage.json
@@ -54,8 +55,10 @@ class PgInstanceConfig : AnyObject() {
             if (!uri.startsWith("jdbc:postgresql://")) {
                 throw NakshaException(ILLEGAL_ARGUMENT, "Wrong URI prefix, URI should be like: $EXPECTED_URI_FORMAT")
             }
-            val user = query["user"] ?: throw NakshaException(ILLEGAL_ARGUMENT, "Missing '&user', URI should be like: $EXPECTED_URI_FORMAT")
-            val password = query["password"] ?: throw NakshaException(ILLEGAL_ARGUMENT, "Missing '&password', URI should be like: $EXPECTED_URI_FORMAT")
+            val user = query["user"] ?: throw NakshaException(ILLEGAL_ARGUMENT, "Missing 'user', URI should be like: $EXPECTED_URI_FORMAT")
+            val password = query["password"] ?: throw NakshaException(ILLEGAL_ARGUMENT, "Missing 'password', URI should be like: $EXPECTED_URI_FORMAT")
+            val ro = query["readOnly"]
+            val isWriter = ro == null || "false".equals(ro, true)
             val urlParts = uri.substring("jdbc:postgresql://".length, questionMarkIndex).split(':', '/')
             if(urlParts.size != 2 && urlParts.size != 3) {
                 throw NakshaException(ILLEGAL_ARGUMENT, "The database URI is not well formatted, should be: $EXPECTED_URI_FORMAT")
@@ -68,7 +71,11 @@ class PgInstanceConfig : AnyObject() {
                 throw NakshaException(ILLEGAL_ARGUMENT, "Illegal port number '${urlParts[1]}', URI should be like: $EXPECTED_URI_FORMAT")
             }
             val database: String = if (urlParts.size == 2) urlParts[1] else urlParts[2]
-            return PgInstanceConfig().withDb(database).withHost(host).withPort(port).withUser(user).withPassword(password)
+            return PgInstanceConfig()
+                .withDb(database)
+                .withHost(host).withPort(port)
+                .withUser(user).withPassword(password)
+                .withReadOnly(!isWriter)
         }
     }
 
@@ -158,6 +165,23 @@ class PgInstanceConfig : AnyObject() {
     }
 
     /**
+     * If the instance is read-only (replica).
+     * @since 3.0
+     */
+    var readOnly by READ_ONLY
+
+    /**
+     * Set the read-only attribute.
+     * @param readOnly if the instance is read-only (replica).
+     * @return this.
+     * @since 3.0
+     */
+    fun withReadOnly(readOnly: Boolean): PgInstanceConfig {
+        this.readOnly = readOnly
+        return this
+    }
+
+    /**
      * The maximum amount of connections this instance can handle.
      *
      * All master instances must at least support one admin-connection, additionally to this limit.
@@ -177,8 +201,9 @@ class PgInstanceConfig : AnyObject() {
     }
 
     /**
-     * Returns the standard JDBC URI, basically `jdbc:postgresql://{host}:{port}/{db}?user={user}&password={password}&ssl=true`.
+     * Returns the standard JDBC URI, basically `jdbc:postgresql://{host}:{port}/{db}?user={user}&password={password}&ssl=true[&readOnly]`.
      * @return the JDBC URI.
      */
-    override fun toString(): String = "jdbc:postgresql://${host}:${port}/${db}?user=${user}&password=${password}&ssl=true"
+    override fun toString(): String
+        = "jdbc:postgresql://${host}:${port}/${db}?user=${user}&password=${password}&ssl=true${if (readOnly) "&readOnly" else ""}"
 }

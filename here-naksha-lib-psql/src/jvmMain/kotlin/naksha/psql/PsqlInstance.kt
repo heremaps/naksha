@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.base.Fnv1a32
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.model.SessionOptions
 import org.postgresql.PGProperty.*
@@ -17,7 +16,7 @@ import kotlin.math.min
 /**
  * Information about a PostgresQL instance.
  */
-class PsqlInstance : PgInstance {
+class PsqlInstance(private val config: PgInstanceConfig) : PgInstance {
     companion object {
         private const val EXPECTED_URL_FORMAT = "jdbc:postgresql://{host}[:{port}]/{db}?user={user}&password={password}"
 
@@ -34,32 +33,32 @@ class PsqlInstance : PgInstance {
          * @param readOnly if the server is a read-replicate _(read-only instance)_.
          */
         @JvmStatic
-        fun get(host: String, port: Int = 5432, database: String, user: String, password: String, readOnly: Boolean = false): PsqlInstance {
-            val i = PsqlInstance(host, port, database, user, password, readOnly)
-            val existing = instancePool.putIfAbsent(i.url, i)
-            return existing ?: i
-        }
+        fun get(host: String, port: Int = 5432, database: String, user: String, password: String, readOnly: Boolean = false): PsqlInstance
+            = get(PgInstanceConfig()
+                .withHost(host).withPort(port)
+                .withDb(database).withUser(user).withPassword(password)
+                .withReadOnly(readOnly))
 
         /**
          * Return the _Postgres Server Instance_ for the given connection data.
-         * @param url the [JDBC connection string](https://jdbc.postgresql.org/documentation/use/) of the PostgresQL server, for example `jdbc:postgresql://localhost:5432/testdb?user=fred&password=secret&ssl=true`.
+         * @param uri the [JDBC connection string](https://jdbc.postgresql.org/documentation/use/) of the PostgresQL server, for example `jdbc:postgresql://localhost:5432/testdb?user=fred&password=secret&ssl=true`.
          */
         @JvmStatic
-        fun get(url: String): PsqlInstance {
-            var existing = instancePool[url]
+        fun get(uri: String): PsqlInstance
+            = get(PgInstanceConfig.fromUri(uri))
+
+        /**
+         * Return the _Postgres Server Instance_ for the given instance configuration.
+         * @param instanceConfig the instance configuration.
+         * @return the instance.
+         */
+        fun get(instanceConfig: PgInstanceConfig): PsqlInstance {
+            var existing = instancePool[instanceConfig.toString()]
             if (existing != null) return existing
-            val i = PsqlInstance(url)
+            val i = PsqlInstance(instanceConfig)
             existing = instancePool.putIfAbsent(i.url, i)
             return existing ?: i
         }
-    }
-
-    private constructor(host: String, port: Int = 5432, database: String, user: String, password: String, readOnly: Boolean = false) {
-        this.hostSpec = HostSpec(host, port)
-        this.database = database
-        this.user = user
-        this.password = password
-        this.readOnly = readOnly
     }
 
     internal data class PooledPgConnection(
@@ -82,35 +81,10 @@ class PsqlInstance : PgInstance {
      */
     internal val connectionPool = ConcurrentHashMap<Long, PooledPgConnection>()
 
-    private constructor(url: String) {
-        // TODO: Improve parsing
-        require(url.startsWith("jdbc:postgresql://")) { "The given URL should be like: $EXPECTED_URL_FORMAT" }
-        val i = url.indexOf("?")
-        require(i > 0) { "Missing query parameters, URL should be like: $EXPECTED_URL_FORMAT" }
-        val params = url.substring(i + 1, url.length)
-            .split("&")
-            .map { it.split("=") }
-            .groupBy({ it[0] }, { it[1] })
-        val parts = url.substring("jdbc:postgresql://".length, i).split(':', '/')
-        require(parts.size == 2 || parts.size == 3) { "The database URL is not well formatted, should be: $EXPECTED_URL_FORMAT" }
-        val user = params["user"]?.get(0)
-        require(user != null) { "Missing user parameter: '&user={user}'" }
-        val password = params["password"]?.get(0)
-        require(password != null) { "Missing password parameter: '&password={password}'" }
-        val host: String = parts[0]
-        val port: Int = if (parts.size == 2) 5432 else parts[1].toInt()
-        val database: String = if (parts.size == 2) parts[1] else parts[2]
-        this.hostSpec = HostSpec(host, port)
-        this.database = database
-        this.user = user
-        this.password = password
-        this.readOnly = params.contains("readOnly") || params.contains("readonly")
-    }
-
     /**
      * The host specification.
      */
-    val hostSpec: HostSpec
+    val hostSpec: HostSpec = HostSpec(config.host, config.port)
 
     /**
      * The host to connect to.
@@ -128,41 +102,36 @@ class PsqlInstance : PgInstance {
      * The database to open.
      */
     override val database: String
+        get() = config.db
 
     /**
      * The user to authenticate with.
      */
     override val user: String
+        get() = config.user
 
     /**
      * The password to authenticate with.
      */
     override val password: String
+        get() = config.password
 
     /**
      * If the instance is a read-replica (read-only instance).
      */
     override val readOnly: Boolean
-
-    private var _url: String? = null
+        get() = config.readOnly
 
     /**
      * The JDBC url. **Beware** that this URL does contain the password in clear text.
      */
     override val url: String
-        get() {
-            var url = _url
-            if (url == null) {
-                url = "jdbc:postgresql://$host${if (port == 5432) "" else ":$port"}/$database?user=$user&password=$password"
-                _url = url
-            }
-            return url
-        }
+        get() = config.toString()
 
-    override var connectionLimit: Int = 1024
-        get() = field
+    override var connectionLimit: Int
+        get() = config.connectionLimit
         set(value) {
-            field = min(8192, max(0, value))
+            config.connectionLimit = min(8192, max(0, value))
         }
 
     override fun openConnection(options: SessionOptions, readOnly: Boolean): PsqlConnection {
@@ -220,19 +189,10 @@ class PsqlInstance : PgInstance {
 
     override fun equals(other: Any?): Boolean = other is PsqlInstance && url == other.url
     override fun hashCode(): Int = url.hashCode()
-    private var _string: String? = null
 
     /**
-     * Returns the JDBC URL of this instance, but the password is obfuscated (replace with a FNV1a hash).
+     * Returns the JDBC URL of this instance.
      * @return the JDBC URL of this instance with obfuscated password.
      */
-    override fun toString(): String {
-        var string = _string
-        if (string == null) {
-            val pwdHash = Fnv1a32.string(0, password)
-            string = "jdbc:postgresql://$host${if (port == 5432) "" else ":$port"}/$database?user=$user&password=$pwdHash"
-            _string = string
-        }
-        return string
-    }
+    override fun toString(): String = url
 }

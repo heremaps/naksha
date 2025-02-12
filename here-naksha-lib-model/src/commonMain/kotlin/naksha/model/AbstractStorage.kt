@@ -37,13 +37,13 @@ abstract class AbstractStorage<CONFIG : StorageConfig> : IStorage {
     private var _number: Int64? = null
 
     override val config: CONFIG
-        get() = configRef.get() ?: throw NakshaException(UNINITIALIZED, "initStorage not called")
+        get() = configRef.get() ?: throwUninitialized()
 
     override val id: String
-        get() = _id ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+        get() = _id ?: throwUninitialized()
 
     override val number: Int64
-        get() = _number ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+        get() = _number ?: throwUninitialized()
 
     override var hardCap: Int = 16777216
         set(value) {
@@ -72,10 +72,10 @@ abstract class AbstractStorage<CONFIG : StorageConfig> : IStorage {
         lock.acquire().use {
             if (configRef.get() == null || create==true || upgrade==true) {
                 val _config = config.proxy(configKlass)
-                this.hardCap = config.hardCap
-                initStorage(_config, create, upgrade)
                 this._id = config.id
                 this._number = config.number
+                this.hardCap = config.hardCap
+                initStorage(_config, create, upgrade)
                 this.configRef.set(_config)
                 afterInit()
             }
@@ -101,6 +101,23 @@ abstract class AbstractStorage<CONFIG : StorageConfig> : IStorage {
     // Needed by caching sub-system only!
     internal fun invokeShutdownStorage(dropCache: Boolean) {
         shutdownStorage(dropCache)
+    }
+
+    /**
+     * Helper method to always throw the same exception, when the storage is not initialized, but initialization is required.
+     */
+    fun throwUninitialized(): Nothing {
+        throw NakshaException(UNINITIALIZED, "initStorage not called")
+    }
+
+    /**
+     * Ensures that the storage is initialized, otherwise throws an [NakshaError.UNINITIALIZED], to be used like `storage.useInitialized().id`.
+     * @return this.
+     * @since 3.0
+     */
+    fun useInitialized(): IStorage {
+        if (!initialized) throwUninitialized()
+        return this
     }
 
     /**

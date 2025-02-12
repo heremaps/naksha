@@ -25,6 +25,8 @@ class TestEnv(
     init {
         PlatformUtil.ENABLE_INFO = enableInfoLogs
         NakshaContext.defaultMapId.set(mapId)
+        NakshaContext.defaultAppName.set(PgTest.TEST_APP_NAME)
+        NakshaContext.defaultAppId.set(PgTest.TEST_APP_ID)
         NakshaContext.currentContext().mapId = mapId
     }
 

@@ -4,12 +4,7 @@ import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.jbon.JbDictionary
 import naksha.model.*
-import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
-import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.objects.NakshaMap
-import naksha.psql.PgIndex.PgIndexCompanion.gist_geo_2d
-import naksha.psql.PgIndex.PgIndexCompanion.id_txn_uid
-import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
 
 /**
@@ -28,22 +23,6 @@ class PsqlAdminMap internal constructor(
 
     override val storage: PsqlStorage
         get() = super.storage as PsqlStorage
-
-    private var clusterField: PgCluster? = null
-
-    /**
-     * The cluster.
-     * @since 3.0.0
-     */
-    val cluster: PgCluster
-        get() = clusterField ?: throw NakshaException(NakshaError.ILLEGAL_STATE, "Initialization not finished")
-
-    override fun createAdminMap(config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion): Int
-        = upsertAdminMap(config, storageId, storageNumber, psqlVersion, null, null)
-
-    override fun upgradeAdminMap(config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion, schemaOid: Int, installedVersion: NakshaVersion?) {
-        upsertAdminMap(config, storageId, storageNumber, psqlVersion, schemaOid, installedVersion)
-    }
 
     override fun createPgMap(conn: PgConnection, map: NakshaMap): PgMap {
         TODO("Not yet implemented")
@@ -89,6 +68,13 @@ class PsqlAdminMap internal constructor(
         TODO("Not yet implemented")
     }
 
+    override fun createAdminMap(config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion): Int
+            = upsertAdminMap(config, storageId, storageNumber, psqlVersion, null, null)
+
+    override fun upgradeAdminMap(config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion, schemaOid: Int, installedVersion: NakshaVersion?) {
+        upsertAdminMap(config, storageId, storageNumber, psqlVersion, schemaOid, installedVersion)
+    }
+
     private fun upsertAdminMap(
         config: PgConfig,
         storageId: String,
@@ -97,18 +83,8 @@ class PsqlAdminMap internal constructor(
         schemaOid: Int?,
         installedVersion: NakshaVersion?
     ): Int {
-        logger.info("Create cluster for storage '$storageId'")
-        val master = PsqlInstance.get(config.masterUri)
-        val replicas = mutableListOf<PgInstance>()
-        for (replicaUri in config.replicaUris) {
-            if (replicaUri == null) continue
-            val replica = PsqlInstance.get(replicaUri)
-            if (!replicas.contains(replica)) replicas.add(replica)
-        }
-        clusterField = PsqlCluster(master, replicas)
-
         var adminMapOid = schemaOid ?: 0
-        val conn = cluster.newConnection(Naksha.adminOptions, false)
+        val conn = storage.newConnection(Naksha.adminOptions, false)
         conn.use {
             if (schemaOid == null) {
                 logger.info("Create admin schema")

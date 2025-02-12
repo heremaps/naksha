@@ -1,4 +1,5 @@
 @file:OptIn(ExperimentalJsExport::class)
+@file:Suppress("LeakingThis")
 
 package naksha.psql
 
@@ -8,6 +9,7 @@ import kotlinx.datetime.toLocalDateTime
 import naksha.base.Epoch
 import naksha.base.Int64
 import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.fn.Fx2
 import naksha.jbon.IDictReader
 import naksha.jbon.JbDictionary
 import naksha.model.*

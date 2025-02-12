@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fx2
 import naksha.jbon.JbDictionary
 import naksha.model.*
@@ -13,16 +14,18 @@ import kotlin.reflect.KClass
 open class PsqlStorage : PgStorage(), IStorage {
 
     override val configKlass: KClass<PgConfig> = PgConfig::class
-    override val adminMap: PgAdminMap
+
+    override val adminMap: PsqlAdminMap
         get() = super.adminMap as PsqlAdminMap
 
-    override fun afterInit() {
-        TODO("Not yet implemented")
-    }
+    private var _cluster: PgCluster? = null
 
-    override fun shutdownStorage(dropCache: Boolean) {
-        TODO("Not yet implemented")
-    }
+    /**
+     * The cluster, set by [initStorage].
+     * @since 3.0.0
+     */
+    val cluster: PgCluster
+        get() = _cluster ?: throwUninitialized()
 
     private var _channel: String? = null
 
@@ -32,24 +35,36 @@ open class PsqlStorage : PgStorage(), IStorage {
      * - Will throw [UNINITIALIZED] if read before [initStorage].
      * - Will throw [ILLEGAL_STATE] if change after [initStorage]
      */
-    var channel: String
-        get() = _channel ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
-        private set(value) {
-            _channel = value
+    val channel: String
+        get() = _channel ?: throwUninitialized()
+
+    override fun initStorage(config: PgConfig, create: Boolean?, upgrade: Boolean?) {
+        // Note: We need to initialize cluster first, so that newConnection and adminConnection calls work.
+        //       The PsqlAdminMap will use connections!
+        var c = _cluster
+        if (c == null) {
+            logger.info("Create cluster for storage '${id}'")
+            val master = PsqlInstance.get(config.masterUri)
+            val replicas = mutableListOf<PgInstance>()
+            for (replicaUri in config.replicaUris) {
+                if (replicaUri == null) continue
+                val replica = PsqlInstance.get(replicaUri)
+                if (!replicas.contains(replica)) replicas.add(replica)
+            }
+            c = PsqlCluster(master, replicas)
+            _cluster = c
         }
-    private lateinit var listener: PsqlStorageListener
-
-    override fun initAdminMap(config: PgConfig, create: Boolean?, upgrade: Boolean?): PgAdminMap {
-        return PsqlAdminMap(this, config, create, upgrade)
+        _adminMap = newAdminMap(config, create, upgrade)
+        // TODO: Setup the channel and the listener!
+        //       See PsqlStorageListener!
     }
 
-    override fun newSession(options: SessionOptions, readOnly: Boolean): PgSession = PgSession(this, options, readOnly)
-    override fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection {
-        TODO("Not yet implemented")
-    }
+    protected open fun newAdminMap(config: PgConfig, create: Boolean?, upgrade: Boolean?): PsqlAdminMap
+        = PsqlAdminMap(this, config, create, upgrade)
 
-    override fun adminConnection(): PgConnection {
-        TODO("Not yet implemented")
+    override fun newSession(options: SessionOptions, readOnly: Boolean): PgSession {
+        useInitialized()
+        return PgSession(this, options, readOnly)
     }
 
     override fun getEncodingFlags(feature: Any?, context: Any?): Flags = adminMap.getEncodingFlags(feature, context)
@@ -57,4 +72,21 @@ open class PsqlStorage : PgStorage(), IStorage {
     override fun getDictionary(id: String): JbDictionary? = adminMap.getDictionary(id)
 
     override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? = adminMap.getEncodingDictionary(feature, context)
+
+    override fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection {
+        val conn = cluster.newConnection(options, readOnly)
+        val query = "SET SESSION search_path TO \"naksha~admin\", hint_plan, public, topology;\n"
+        if (init != null) init.call(conn, query) else conn.execute(query).close()
+        return conn
+    }
+
+    override fun adminConnection(): PgConnection = newConnection(Naksha.adminOptions, false)
+
+    override fun afterInit() {
+        // TODO: Do we need anything?
+    }
+
+    override fun shutdownStorage(dropCache: Boolean) {
+        // TODO: Do we need anything?
+    }
 }

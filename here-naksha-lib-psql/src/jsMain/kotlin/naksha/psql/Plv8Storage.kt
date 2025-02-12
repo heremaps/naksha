@@ -13,10 +13,6 @@ import kotlin.reflect.KClass
  */
 @JsExport
 class Plv8Storage : PgStorage() {
-    override fun initAdminMap(config: PgConfig, create: Boolean?, upgrade: Boolean?): PgAdminMap {
-        TODO("Not yet implemented")
-    }
-
     override fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection {
         TODO("Not yet implemented")
     }
@@ -27,6 +23,10 @@ class Plv8Storage : PgStorage() {
 
     override val configKlass: KClass<PgConfig>
         get() = TODO("Not yet implemented")
+
+    override fun initStorage(config: PgConfig, create: Boolean?, upgrade: Boolean?) {
+        TODO("Not yet implemented")
+    }
 
     override fun afterInit() {
         TODO("Not yet implemented")
