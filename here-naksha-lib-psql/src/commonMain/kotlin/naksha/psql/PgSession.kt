@@ -386,10 +386,6 @@ open class PgSession(
         return pgStorage.adminMap.getPgMapByNumber(conn ?: useConnection(), mapNumber)?.nakshaMap
     }
 
-    override fun refreshMaps() {
-        // TODO: Implement me, for now we ignore the call.
-    }
-
     private fun _getCollectionById(conn: PgConnection, map: NakshaMap, collectionId: String): NakshaCollection? {
         val pgMap = pgStorage.adminMap.getPgMapById(conn, map.id) ?: return null
         return pgStorage.adminMap.getPgCollectionById(conn, pgMap, collectionId)?.nakshaCollection
@@ -416,10 +412,6 @@ open class PgSession(
             return newReadConnection().use { _getCollectionByNumber(it, map, collectionNumber) }
         }
         return _getCollectionByNumber(conn ?: useConnection(), map, collectionNumber)
-    }
-
-    override fun refreshCollections(map: NakshaMap) {
-        // TODO: Implement me, for now we ignore the call.
     }
 
     override fun executeParallel(request: Request): Response = execute(request)

@@ -115,8 +115,6 @@ open class PgCollection internal constructor(
         meta = if (nakshaCollection.storeMeta == StoreMode.OFF) null else PgMeta(head)
     }
 
-    // TODO: We need this rather integrated in createPgCollection in admin-map!
-
     /**
      * Add the before and after triggers.
      * @param sql The SQL API.

@@ -282,8 +282,29 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [indices]
      */
-    open fun withIndices(value: StringList): NakshaCollection {
-        this.indices = value
+    open fun withIndex(value: String): NakshaCollection {
+        var indices = this.indices
+        if (indices == null) {
+            indices = StringList()
+            this.indices = indices
+        }
+        if (!indices.contains(value)) indices.add(value)
+        return this
+    }
+
+    /**
+     * @see [indices]
+     */
+    open fun withIndices(vararg values: String): NakshaCollection {
+        @Suppress("SENSELESS_COMPARISON")
+        if (values != null && values.isNotEmpty()) {
+            var indices = this.indices
+            if (indices == null) {
+                indices = StringList()
+                this.indices = indices
+            }
+            for (value in values) if (!indices.contains(value)) indices.add(value)
+        }
         return this
     }
 
@@ -397,7 +418,7 @@ open class NakshaCollection() : NakshaFeature() {
         private val INT_NULL = NullableProperty<NakshaCollection, Int>(Int::class)
         private val MAP_ID = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> NakshaContext.mapId() }
         private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)
-        private val INDICES = NotNullProperty<NakshaCollection, StringList>(StringList::class)
+        private val INDICES = NullableProperty<NakshaCollection, StringList>(StringList::class)
         private val MAX_AGE = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> Int64(-1) }
         private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 10_485_760 }
         private val _ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }

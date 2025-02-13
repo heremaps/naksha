@@ -118,14 +118,6 @@ interface ISession : IDictReader, AutoCloseable {
     fun getMapByNumber(mapNumber: Int): NakshaMap?
 
     /**
-     * Update the internal cache.
-     *
-     * Note, calling this method does not give a guarantee that everything is visible, because when the cache is refreshed while another client modifies the storage, there can be only microseconds between the read and write, which means, when the read returns, the information is already outdated.
-     * @since 3.0.0
-     */
-    fun refreshMaps()
-
-    /**
      * Returns the collection for the given identifier.
      *
      * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return maps that were created in the current session, but beware that these collections may eventually fail to commit.
@@ -166,14 +158,6 @@ interface ISession : IDictReader, AutoCloseable {
      * @since 3.0.0
      */
     fun getCollectionByNumber(map: NakshaMap, collectionNumber: Int): NakshaCollection?
-
-    /**
-     * Update the internal cache.
-     *
-     * Note, calling this method does not give a guarantee that everything is visible, because when the cache is refreshed while another client modifies the storage, there can be only microseconds between the read and write, which means, when the read returns, the information is already outdated.
-     * @since 3.0.0
-     */
-    fun refreshCollections(map: NakshaMap)
 
     /**
      * The best flags to encode the given feature.

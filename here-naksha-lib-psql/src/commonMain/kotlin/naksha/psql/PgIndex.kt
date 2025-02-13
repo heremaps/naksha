@@ -53,10 +53,11 @@ import kotlin.reflect.KClass
 @Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate")
 @JsExport
 open class PgIndex : JsEnum() {
-    protected fun sql(using: String, table: PgTable, unique: Boolean, addFillFactor: Boolean): String = """
+    protected fun sql(using: String, table: PgTable, unique: Boolean, addFillFactor: Boolean, where: String?): String = """
 CREATE ${if (unique) "UNIQUE " else ""}INDEX IF NOT EXISTS ${quoteIdent(id(table))} ON ${table.quotedName}
 USING $using
-${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)" else ""} ${table.TABLESPACE};"""
+${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)" else ""} ${table.TABLESPACE}
+${if (where==null) "" else "WHERE $where"};"""
 
     companion object PgIndex_C {
         /**
@@ -75,7 +76,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
                 conn.execute(
                     self.sql(
                         """btree ($c_tn DESC)""",
-                        table, unique = true, addFillFactor = true
+                        table, unique = true, addFillFactor = true, where = null
                     )
                 ).close()
             }
@@ -84,7 +85,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
         /**
          * A unique index above the [PgColumn.id] column.
          *
-         * - Automatically added to [HEAD][PgHead], [DELETED][PgDeleted], and [META][PgMeta] tables in [PgCollection.create].
+         * - Automatically added to [HEAD][PgHead], [DELETED][PgDeleted], and [META][PgMeta] tables in [PgAdminMap.createPgCollection].
          */
         @JvmField
         @JsStatic
@@ -97,7 +98,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
                 conn.execute(
                     self.sql(
                         """btree ($c_id text_pattern_ops DESC) INCLUDE ($c_tn)""",
-                        table, unique = true, addFillFactor = true
+                        table, unique = true, addFillFactor = true, where = null
                     )
                 ).close()
             }
@@ -119,7 +120,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
                 conn.execute(
                     self.sql(
                         """btree ($c_txn DESC) INCLUDE ($c_id)""",
-                        table, unique = true, addFillFactor = true
+                        table, unique = true, addFillFactor = true, where = null
                     )
                 ).close()
             }
@@ -141,7 +142,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
                 conn.execute(
                     self.sql(
                         """btree ($c_id text_pattern_ops DESC, $c_txn DESC, $c_uid DESC, $c_txn_next DESC) INCLUDE ($c_tn)""",
-                        table, unique = false, addFillFactor = true
+                        table, unique = false, addFillFactor = true, where = null
                     )
                 ).close()
             }
@@ -161,7 +162,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
                 conn.execute(
                     self.sql(
                         "btree ($c_here_tile DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid DESC, $c_txn_next DESC) INCLUDE ($c_tn)",
-                        table, unique = false, addFillFactor = true
+                        table, unique = false, addFillFactor = true, where = null
                     )
                 ).close()
             }
@@ -186,7 +187,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
                 conn.execute(
                     self.sql(
                         """btree ($c_app_id text_pattern_ops DESC, $c_updated_at DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid DESC, $c_txn_next DESC) INCLUDE ($c_tn)""",
-                        table, unique = false, addFillFactor = true
+                        table, unique = false, addFillFactor = true, where = null
                     )
                 ).close()
             }
@@ -211,7 +212,7 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
                 conn.execute(
                     self.sql(
                         """btree (naksha_author($c_author, $c_app_id) text_pattern_ops DESC, naksha_author_ts($c_author_ts, $c_updated_at) DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid DESC, $c_txn_next DESC) INCLUDE ($c_tn)""",
-                        table, unique = false, addFillFactor = true
+                        table, unique = false, addFillFactor = true, where = null
                     )
                 ).close()
             }
@@ -228,8 +229,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gin (naksha_tags($c_tags, $c_flags)) WHERE naksha_tags($c_tags, $c_flags) IS NOT NULL""",
-                        table, unique = false, addFillFactor = false
+                        """gin (naksha_tags($c_tags, $c_flags))""",
+                        table, unique = false, addFillFactor = false ,where = "naksha_tags($c_tags, $c_flags) IS NOT NULL"
                     )
                 ).close()
             }
@@ -246,8 +247,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """spgist (naksha_ref_point($c_ref_point, $c_flags)) WHERE naksha_ref_point($c_ref_point, $c_flags) IS NOT NULL""",
-                        table, unique = false, addFillFactor = true
+                        """spgist (naksha_ref_point($c_ref_point))""",
+                        table, unique = false, addFillFactor = true, where = "naksha_ref_point($c_ref_point) IS NOT NULL"
                     )
                 ).close()
             }
@@ -264,8 +265,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gist (naksha_2d($c_geo, $c_flags)) WHERE naksha_2d($c_geo, $c_flags) IS NOT NULL""",
-                        table, unique = false, addFillFactor = true
+                        """gist (naksha_2d($c_geo, $c_flags))""",
+                        table, unique = false, addFillFactor = true, where = "naksha_2d($c_geo, $c_flags) IS NOT NULL"
                     )
                 ).close()
             }
@@ -282,8 +283,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gist (naksha_3d($c_geo, $c_flags)) WHERE naksha_3d($c_geo, $c_flags) IS NOT NULL""",
-                        table, unique = false, addFillFactor = true
+                        """gist (naksha_3d($c_geo, $c_flags))""",
+                        table, unique = false, addFillFactor = true, where = "naksha_3d($c_geo, $c_flags) IS NOT NULL"
                     )
                 ).close()
             }
@@ -300,8 +301,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gist (naksha_4d($c_geo, $c_flags)) WHERE naksha_4d($c_geo, $c_flags) IS NOT NULL""",
-                        table, unique = false, addFillFactor = true
+                        """gist (naksha_4d($c_geo, $c_flags))""",
+                        table, unique = false, addFillFactor = true, where = "naksha_4d($c_geo, $c_flags) IS NOT NULL"
                     )
                 ).close()
             }
@@ -318,8 +319,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """spgist (naksha_2d($c_geo, $c_flags)) WHERE naksha_2d($c_geo, $c_flags) IS NOT NULL""",
-                        table, unique = false, addFillFactor = true
+                        """spgist (naksha_2d($c_geo, $c_flags))""",
+                        table, unique = false, addFillFactor = true, where = "naksha_2d($c_geo, $c_flags) IS NOT NULL"
                     )
                 ).close()
             }
@@ -336,8 +337,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """spgist (naksha_3d($c_geo, $c_flags)) WHERE naksha_3d($c_geo, $c_flags) IS NOT NULL""",
-                        table, unique = false, addFillFactor = true
+                        """spgist (naksha_3d($c_geo, $c_flags))""",
+                        table, unique = false, addFillFactor = true, where = "naksha_3d($c_geo, $c_flags) IS NOT NULL"
                     )
                 ).close()
             }
@@ -354,8 +355,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """spgist (naksha_4d($c_geo, $c_flags)) WHERE naksha_4d($c_geo, $c_flags) IS NOT NULL""",
-                        table, unique = false, addFillFactor = true
+                        """spgist (naksha_4d($c_geo, $c_flags))""",
+                        table, unique = false, addFillFactor = true, where = "naksha_4d($c_geo, $c_flags) IS NOT NULL"
                     )
                 ).close()
             }
@@ -374,8 +375,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_ft text_pattern_ops DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid DESC, $c_txn_next DESC) INCLUDE ($c_tn) WHERE $c_ft IS NOT NULL",
-                        table, unique = false, addFillFactor = true
+                        "btree ($c_ft text_pattern_ops DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid DESC, $c_txn_next DESC) INCLUDE ($c_tn)",
+                        table, unique = false, addFillFactor = true, where = "$c_ft IS NOT NULL"
                     )
                 ).close()
             }
@@ -394,8 +395,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cv0 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn) WHERE $c_cv0 IS NOT NULL",
-                        table, unique = false, addFillFactor = true
+                        "btree ($c_cv0 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn)",
+                        table, unique = false, addFillFactor = true, where = "$c_cv0 IS NOT NULL"
                     )
                 ).close()
             }
@@ -414,8 +415,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cv1 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn) WHERE $c_cv1 IS NOT NULL",
-                        table, unique = false, addFillFactor = true
+                        "btree ($c_cv1 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn)",
+                        table, unique = false, addFillFactor = true, where = "$c_cv1 IS NOT NULL"
                     )
                 ).close()
             }
@@ -434,8 +435,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cv2 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn) WHERE $c_cv2 IS NOT NULL",
-                        table, unique = false, addFillFactor = true
+                        "btree ($c_cv2 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn)",
+                        table, unique = false, addFillFactor = true, where = "$c_cv2 IS NOT NULL"
                     )
                 ).close()
             }
@@ -454,8 +455,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cv3 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn) WHERE $c_cv3 IS NOT NULL",
-                        table, unique = false, addFillFactor = true
+                        "btree ($c_cv3 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn)",
+                        table, unique = false, addFillFactor = true, where = "$c_cv3 IS NOT NULL"
                     )
                 ).close()
             }
@@ -474,8 +475,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cs0 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn) WHERE $c_cs0 IS NOT NULL",
-                        table, unique = false, addFillFactor = true
+                        "btree ($c_cs0 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn)",
+                        table, unique = false, addFillFactor = true, where = "$c_cs0 IS NOT NULL"
                     )
                 ).close()
             }
@@ -494,8 +495,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cs1 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn) WHERE $c_cs1 IS NOT NULL",
-                        table, unique = false, addFillFactor = true
+                        "btree ($c_cs1 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn)",
+                        table, unique = false, addFillFactor = true, where = "$c_cs1 IS NOT NULL"
                     )
                 ).close()
             }
@@ -514,8 +515,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cs2 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn) WHERE $c_cs2 IS NOT NULL",
-                        table, unique = false, addFillFactor = true
+                        "btree ($c_cs2 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn)",
+                        table, unique = false, addFillFactor = true, where = "$c_cs2 IS NOT NULL"
                     )
                 ).close()
             }
@@ -534,8 +535,8 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cs3 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn) WHERE $c_cs3 IS NOT NULL",
-                        table, unique = false, addFillFactor = true
+                        "btree ($c_cs3 DESC, $c_txn DESC, $c_txn_next DESC) INCLUDE ($c_tn)",
+                        table, unique = false, addFillFactor = true, where = "$c_cs3 IS NOT NULL"
                     )
                 ).close()
             }

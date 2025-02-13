@@ -17,7 +17,7 @@ class NakshaExceptionMapperTest {
     @MethodSource("timeoutCauses")
     fun shouldConvertTimeouts(/* Given */ timeoutCause: Exception) {
         // When
-        val nakshaException = NakshaExceptionMapper.nakshaExceptionFrom(timeoutCause)
+        val nakshaException = NakshaExceptionMapper.nakshaExceptionFrom(timeoutCause, null)
 
         // Then
         assertEquals(NakshaError.TIMEOUT, nakshaException.error.code)
@@ -28,7 +28,7 @@ class NakshaExceptionMapperTest {
     @MethodSource("sqlCausesAndExpectedCodes")
     fun shouldConvertSqlExceptions(/* Given */ sqlCause: SQLException, code: String) {
         // When
-        val nakshaException = NakshaExceptionMapper.nakshaExceptionFrom(sqlCause)
+        val nakshaException = NakshaExceptionMapper.nakshaExceptionFrom(sqlCause ,null)
 
         // Then
         assertEquals(code, nakshaException.error.code)
@@ -41,7 +41,7 @@ class NakshaExceptionMapperTest {
         val customException = CustomTestException()
 
         // When
-        val nakshaException = NakshaExceptionMapper.nakshaExceptionFrom(customException)
+        val nakshaException = NakshaExceptionMapper.nakshaExceptionFrom(customException, null)
 
         // Then
         assertEquals(NakshaError.EXCEPTION, nakshaException.error.code)

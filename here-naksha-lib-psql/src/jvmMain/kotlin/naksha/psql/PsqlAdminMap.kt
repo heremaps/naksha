@@ -8,10 +8,7 @@ import naksha.model.objects.NakshaMap
 import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
 
 /**
- * Information about the database and connection, that need only to be queried ones per session.
- * @constructor Creates and initializes a new database information object.
- * @param storage the PostgresQL storage in which this schema is stored.
- * @param mapId the schema name.
+ * Information about the database and connection.
  */
 @Suppress("MemberVisibilityCanBePrivate")
 class PsqlAdminMap internal constructor(
@@ -26,10 +23,14 @@ class PsqlAdminMap internal constructor(
 
     override fun createPgMap(conn: PgConnection, map: NakshaMap): PgMap {
         TODO("Not yet implemented")
+        // TODO: We must not modify the cache, rather we send a notification about the change, so
+        //       that when the transaction is committed, we get that information back and update the cache!
     }
 
     override fun deletePgMap(conn: PgConnection, map: PgMap) {
         TODO("Not yet implemented")
+        // TODO: We must not modify the cache, rather we send a notification about the change, so
+        //       that when the transaction is committed, we get that information back and update the cache!
     }
 
     override fun getPgMapById(conn: PgConnection, id: String): PgMap? {
@@ -194,30 +195,10 @@ class PsqlAdminMap internal constructor(
         conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_COL_SEQ AS ${PgType.INT64} START 100 CACHE 1;").close()
 
         logger.info("Create internal collections: transactions, collections, and dictionaries")
-        collections.let {
-            it.head.create(conn)
-            it.deleted?.create(conn)
-            it.history?.create(conn)
-            it.meta?.create(conn)
-        }
-        transactions.let {
-            it.head.create(conn)
-            it.deleted?.create(conn)
-            it.history?.create(conn)
-            it.meta?.create(conn)
-        }
-        maps.let {
-            it.head.create(conn)
-            it.deleted?.create(conn)
-            it.history?.create(conn)
-            it.meta?.create(conn)
-        }
-        dictionaries.let {
-            it.head.create(conn)
-            it.deleted?.create(conn)
-            it.history?.create(conn)
-            it.meta?.create(conn)
-        }
+        createPgCollection(conn, collections)
+        createPgCollection(conn, transactions)
+        createPgCollection(conn, maps)
+        createPgCollection(conn, dictionaries)
         logger.info("Done creating transactions, collections, and dictionaries")
         return adminMapOid
     }
@@ -291,4 +272,16 @@ class PsqlAdminMap internal constructor(
                 "ON CONFLICT (name) DO UPDATE SET paths=\$2, autoload=\$3, source=$dollar4"
         conn.execute(query, arrayOf(name, paths, autoload, code)).close()
     }
+
+    /**
+     * All maps by their number.
+     */
+    private val primaryMapCacheByNumber = AtomicMap<Int, PsqlAdminMapCache>()
+
+    /**
+     * All maps by their id.
+     */
+    private val secondaryMapCacheById = AtomicMap<String, PsqlAdminMapCache>()
 }
+
+// TODO: We need to add listeners to update the caches!

@@ -20,38 +20,46 @@ object NakshaExceptionMapper {
 
 
     /**
-     * Maps [throwable] to appropriate [NakshaException] is possible. Main purpose of this function is selecting proper [NakshaError.code] depending on supplied [throwable].
-     * Additionally, it can prepend some custom message that will become part of [NakshaException.message] (only if [msgResolver] is supplied).
+     * Maps [throwable] to appropriate [NakshaException].
      *
-     * @param throwable original [Throwable] to map
-     * @param msgResolver optional [Throwable] consumer to produce message prefix ([String]) from
+     * Main purpose of this function is selecting proper [NakshaError.code] depending on supplied [throwable]. Additionally, it can prepend some custom message that will become part of [NakshaException.message].
+     *
+     * @param throwable original [Throwable] to map.
+     * @param sql if the exception happens while executing some SQL query, the query that has been executed.
      */
-    fun nakshaExceptionFrom(throwable: Throwable): NakshaException {
+    fun nakshaExceptionFrom(throwable: Throwable, sql: String?): NakshaException {
+        if (throwable is NakshaException) return throwable
         return nakshaExceptionFrom(
             throwable = throwable,
-            topLevelCause = null
+            topLevelCause = null,
+            sql = sql
         )
     }
 
     /**
-     * Same as [nakshaExceptionFrom] that accepts just [throwable] and [msgResolver]
-     * The only difference (and the reason for this being private) is [topLevelCause] that is internally handled as potential cause to override the [NakshaException.cause] - needed for cases like [BatchUpdateException]
+     * Internal variant of [nakshaExceptionFrom].
+     *
+     * The difference (and the reason for this being private) is [topLevelCause], that is internally handled as potential cause to override the [NakshaException.cause] - needed for cases like [BatchUpdateException].
+     *
+     * @param throwable original [Throwable] to map.
+     * @param topLevelCause potential cause to override the [NakshaException.cause].
+     * @param sql if the exception happens while executing some SQL query, the query that has been executed.
      */
     private fun nakshaExceptionFrom(
         throwable: Throwable,
-        topLevelCause: Throwable? = null
+        topLevelCause: Throwable?,
+        sql: String?,
     ): NakshaException {
         return when (throwable) {
-            is BatchUpdateException -> nakshaExceptionFromBatch(throwable)
-            is PSQLException -> nakshaExceptionFromPsql(throwable, topLevelCause)
-            is SQLException -> nakshaExceptionFromSql(throwable, topLevelCause)
-            is java.net.SocketTimeoutException -> timeout(throwable, topLevelCause)
-            is java.util.concurrent.TimeoutException -> timeout(throwable, topLevelCause)
-
+            is BatchUpdateException -> nakshaExceptionFromBatch(throwable, sql)
+            is PSQLException -> nakshaExceptionFromPsql(throwable, topLevelCause, sql)
+            is SQLException -> nakshaExceptionFromSql(throwable, topLevelCause, sql)
+            is java.net.SocketTimeoutException -> timeout(throwable, topLevelCause, sql)
+            is java.util.concurrent.TimeoutException -> timeout(throwable, topLevelCause, sql)
             else -> NakshaException(
                 NakshaError(
                     code = NakshaError.EXCEPTION,
-                    msg = "Exception occurred",
+                    msg = if (sql != null) "Exception while executing SQL query '$sql'" else throwable.message ?: "Exception without message",
                     cause = throwable
                 )
             )
@@ -60,42 +68,57 @@ object NakshaExceptionMapper {
 
     /**
      * [BatchUpdateException] usually wraps other exception - in that case, we extract the cause and handle it directly.
-     * If the cause is missing, we treat it as any other [SQLException] - it might contain [SQLException.SQLState] which could be used for determining proper [NakshaError.code]
+     *
+     * If the cause is missing, we treat it as any other [SQLException] - it might contain [SQLException.SQLState] which could be used for determining proper [NakshaError.code].
+     * @param bue the batch-update-exception.
+     * @param sql if the exception happens while executing some SQL query, the query that has been executed.
      */
-    private fun nakshaExceptionFromBatch(bue: BatchUpdateException): NakshaException {
+    private fun nakshaExceptionFromBatch(bue: BatchUpdateException, sql: String? = null): NakshaException {
         val cause = bue.cause
         return if (cause != null) {
-            nakshaExceptionFrom(throwable = cause, topLevelCause = bue)
+            nakshaExceptionFrom(throwable = cause, topLevelCause = bue, sql = sql)
         } else {
-            nakshaExceptionFromSql(sqlException = bue, topLevelCause = null)
+            nakshaExceptionFromSql(sqlException = bue, topLevelCause = null, sql = sql)
         }
     }
 
     /**
-     * [PSQLException] is a subclass of [SQLException] so in most cases it will be handled by [nakshaExceptionFromSql]
-     * The only exception (hehe) from this rule is when the cause is [java.net.SocketTimeoutException] - in that case we already know we should treat is as [NakshaError.TIMEOUT]
+     * [PSQLException] is a subclass of [SQLException], so in most cases it will be handled by [nakshaExceptionFromSql].
+     *
+     * The only exception to this rule is when the cause is [java.net.SocketTimeoutException] - in that case we already know we should treat is as [NakshaError.TIMEOUT].
+     *
+     * @param exception the [PSQLException].
+     * @param topLevelCause potential cause to override the [NakshaException.cause].
+     * @param sql if the exception happens while executing some SQL query, the query that has been executed.
      */
     private fun nakshaExceptionFromPsql(
         exception: PSQLException,
-        topLevelCause: Throwable? = null
+        topLevelCause: Throwable? = null,
+        sql: String? = null
     ): NakshaException {
         return when (exception.cause) {
             is java.net.SocketTimeoutException -> timeout(exception, topLevelCause)
             else -> nakshaExceptionFromSql(
                 sqlException = exception,
-                topLevelCause = topLevelCause
+                topLevelCause = topLevelCause,
+                sql = sql
             )
         }
     }
 
     /**
-     * Mapping [SQLException] is based on [SQLException.SQLState] which is mapped to certain [NakshaError.code]
-     * Apart from mapping the [NakshaError.code] we also include [NakshaException.cause] from the [sqlException]
-     * In some cases, this method is used for mapping the nested exception (see [nakshaExceptionFromBatch] for example), then the [topLevelCause] is used to preserve the original cause.
+     * Mapping [SQLException] is based on [SQLException.SQLState] which is mapped to certain [NakshaError.code].
+     *
+     * Apart from mapping the [NakshaError.code] we also include [NakshaException.cause] from the [sqlException]. In some cases, this method is used for mapping the nested exception (see [nakshaExceptionFromBatch] for example), then the [topLevelCause] is used to preserve the original cause.
+     *
+     * @param sqlException the SQL exception.
+     * @param topLevelCause potential cause to override the [NakshaException.cause].
+     * @param sql if the exception happens while executing some SQL query, the query that has been executed.
      */
     private fun nakshaExceptionFromSql(
         sqlException: SQLException,
-        topLevelCause: Throwable? = null
+        topLevelCause: Throwable? = null,
+        sql: String? = null
     ): NakshaException {
         if (sqlException is java.sql.SQLTimeoutException) {
             return timeout(sqlException, topLevelCause)
@@ -111,14 +134,9 @@ object NakshaExceptionMapper {
             ERR_NO_DATA -> NakshaError.NOT_FOUND
             else -> NakshaError.EXCEPTION
         }
-        return NakshaException(
-            NakshaError(
-                code = errorCode,
-                msg = sqlException.message
-                    ?: "SQL Exception occurred (sqlState: '${sqlException.sqlState}')",
-                cause = topLevelCause ?: sqlException
-            )
-        )
+        var msg = if (sql != null) "Failed to execute query '$sql', reason: " else "Failed to execute unknown query, reason: "
+        msg += sqlException.message ?: "${sqlException.sqlState}: No message"
+        return NakshaException(NakshaError(code = errorCode, msg = msg, cause = topLevelCause ?: sqlException))
     }
 
     /**
@@ -130,12 +148,13 @@ object NakshaExceptionMapper {
      */
     private fun timeout(
         timeoutException: Exception,
-        topLevelCause: Throwable? = null
+        topLevelCause: Throwable? = null,
+        sql: String? = null
     ): NakshaException {
         return NakshaException(
             NakshaError(
                 code = NakshaError.TIMEOUT,
-                msg = "Timeout exception occurred",
+                msg = "Timeout while executing '${sql ?: "unknown query"}'",
                 cause = topLevelCause ?: timeoutException
             )
         )

@@ -456,7 +456,7 @@ SELECT basics.*, procs.* FROM basics, procs;
     /**
      * Create a new [map][PgMap] using the given connection, and return it.
      *
-     * **Note**: Does not commit the given connection, therefore the map is not yet persisted, but can be used through the given connection.
+     * **Note**: Does not commit the given connection, therefore the map is not yet persisted, but can be used through the given connection. The method neither creates the corresponding entry in the collection's collection of the admin-map, it only creates the schema and collection-number sequence counter!
      *
      * - Throws [NakshaError.MAP_EXISTS] if such a map exists already.
      * @param conn the connection to use to access the database.
@@ -468,6 +468,8 @@ SELECT basics.*, procs.* FROM basics, procs;
 
     /**
      * Delete a map.
+     *
+     * **Note**: Does not commit the given connection, therefore the map is not yet physically deleted. The method neither deletes the corresponding entry from the collection's collection of the admin-map, it only drops the schema!
      * @param conn the connection to use to access the database.
      * @param map the map to delete.
      * @since 3.0.0
@@ -532,9 +534,17 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @since 3.0.0
      */
     open fun createPgCollection(conn: PgConnection, collection: PgCollection) {
-        val indices: List<PgIndex> = mutableListOf()
-        for (index in collection.nakshaCollection.indices) {
-            // TODO: Fill indices!
+        val indices: List<PgIndex>
+        val indexNames = collection.nakshaCollection.indices
+        if (indexNames == null) {
+            indices = PgIndex.DEFAULT_INDICES
+        } else {
+            indices = mutableListOf()
+            for (indexName in indexNames) {
+                if (indexName == null) continue
+                val index = PgIndex.of(indexName)
+                if (index != null && !indices.contains(index)) indices.add(index)
+            }
         }
         val NOW = Epoch()
 
@@ -740,7 +750,7 @@ SELECT basics.*, procs.* FROM basics, procs;
         if (deleted != null) SQL += "DROP TABLE IF EXISTS ${deleted.quotedName} CASCADE;"
         val meta = collections.meta
         if (meta != null) SQL += "DROP TABLE IF EXISTS ${meta.quotedName} CASCADE;"
-        logger.info("Drop collection {}: {}", collection.id, SQL)
+        logger.info("Dropped collection {}@{}", collection.id, collection.number)
         conn.execute(SQL).close()
     }
 
