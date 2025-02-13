@@ -54,7 +54,7 @@ class PsqlTestStorage : PsqlStorage() {
             container.start()
             val port = container.getMappedPort(5432)
             logger.info("Docker container listening on port {}", port)
-            val instanceConfig = PgInstanceConfig().withDb(db).withUser(user).withPassword(password)
+            val instanceConfig = PgInstanceConfig().withDb(db).withUser(user).withPassword(password).withPort(port)
             containerInfo = PsqlTestDockerContainerInfo(container, instanceConfig, Thread(::shutdownDocker))
             dockerContainerInfo.set(containerInfo)
             Runtime.getRuntime().addShutdownHook(containerInfo.shutdownThread)
