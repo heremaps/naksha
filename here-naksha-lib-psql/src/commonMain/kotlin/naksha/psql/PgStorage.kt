@@ -75,11 +75,7 @@ import kotlin.js.JsExport
 @JsExport
 abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
 
-    /**
-     * The internal private property of the admin-map, set by [initStorage].
-     * @since 3.0
-     */
-    protected var _adminMap: PgAdminMap? = null
+    private var _adminMap: PgAdminMap? = null
 
     /**
      * The admin-map, set by [initStorage].
@@ -87,6 +83,14 @@ abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
      */
     open val adminMap: PgAdminMap
         get() = _adminMap ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+
+    /**
+     * Private setter for the admin map, to be used in the deriving storage class.
+     * @since 3.0
+     */
+    protected fun setAdminMap(adminMap: PgAdminMap) {
+        _adminMap = adminMap
+    }
 
     /**
      * The default flags to use for the storage.

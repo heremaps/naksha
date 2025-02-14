@@ -55,7 +55,7 @@ class PgQueryWhereBuilderTest {
                 ) 
             )  
         """.trimIndent(),
-            query.sql
+            query.where
         )
         assertNotNull(query)
     }

@@ -7,15 +7,24 @@ import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
 
-class PgQueryWhereBuilder(private val request: ReadFeatures) {
+/**
+ * Helper to convert a [ReadFeatures] request into a sql `WHERE` query.
+ * @param request the request to wrap.
+ * @since 3.0
+ * @see [build]
+ */
+internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
 
     private val argValues: MutableList<Any?> = mutableListOf()
-    private val argTypes: MutableList<String> = mutableListOf()
+    private val argTypes: MutableList<PgType> = mutableListOf()
     private val where = StringBuilder()
 
-    data class WhereClause(val sql: String, val argValues: List<Any?>, val argTypes: List<String>)
-
-    fun build(): WhereClause? {
+    /**
+     * Convert the request into a `WHERE` query.
+     * @return the [PgQueryWhereClause].
+     * @since 3.0
+     */
+    fun build(): PgQueryWhereClause? {
         whereFeatureId()
         whereGuids()
         whereVersion()
@@ -26,7 +35,7 @@ class PgQueryWhereBuilder(private val request: ReadFeatures) {
         return if (where.isBlank()) {
             null
         } else {
-            WhereClause(sql = " WHERE $where", argValues = argValues, argTypes = argTypes)
+            PgQueryWhereClause(where = where.toString(), argValues = argValues, argTypes = argTypes)
         }
     }
 
@@ -60,7 +69,16 @@ class PgQueryWhereBuilder(private val request: ReadFeatures) {
     }
 
     private fun whereVersion() {
-        // TODO: request.version and request.minVersion
+        val txn = request.version
+        if (txn != null) {
+            if (where.isNotEmpty()) where.append(" AND ")
+            where.append("${PgColumn.txn} <= $txn")
+        }
+        val min_txn = request.minVersion
+        if (min_txn != null) {
+            if (where.isNotEmpty()) where.append(" AND ")
+            where.append("${PgColumn.txn} >= $min_txn")
+        }
     }
 
     private fun whereSpatial() {
@@ -115,7 +133,7 @@ class PgQueryWhereBuilder(private val request: ReadFeatures) {
 
     private fun nakshaGeometry(geometry: SpGeometry, geoEncoding: Int): String {
         val flags = Flags().geoGzipOff().withGeoEncoding(geoEncoding)
-        val geoBytes = PgUtil.encodeGeometry(geometry, flags)
+        val geoBytes = Naksha.encodeGeometry(geometry, flags)
         val geoBytesPlaceholder = placeholderForArg(geoBytes, PgType.BYTE_ARRAY)
         return "naksha_geometry($geoBytesPlaceholder, $flags)"
     }
@@ -375,7 +393,7 @@ class PgQueryWhereBuilder(private val request: ReadFeatures) {
 
     private fun placeholderForArg(value: Any?, type: PgType): String {
         argValues.add(value)
-        argTypes.add(type.toString())
+        argTypes.add(type)
         return "\$${argTypes.size}"
     }
 

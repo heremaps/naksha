@@ -5,7 +5,6 @@ package naksha.model.request
 import naksha.base.*
 import naksha.model.GuidList
 import kotlin.js.JsExport
-import kotlin.js.JsName
 
 /**
  * Read features from a collection of a map of a storage.
@@ -20,6 +19,7 @@ open class ReadFeatures : ReadRequest() {
     companion object ReadFeatures_C {
         private val STRING_OR_NULL = NullableProperty<ReadRequest, String>(String::class)
         private val BOOLEAN_OR_FALSE = NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
+        private val BOOLEAN_OR_TRUE = NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> true }
         private val INT_OR_1 = NotNullProperty<ReadRequest, Int>(Int::class) { _, _ -> 1 }
         private val INT64_OR_NULL = NullableProperty<ReadRequest, Int64>(Int64::class)
         private val STRING_LIST = NotNullProperty<ReadRequest, StringList>(StringList::class)
@@ -77,14 +77,18 @@ open class ReadFeatures : ReadRequest() {
     }
 
     /**
-     * Extend the request to search through deleted features.
+     * Extend the request to search through lately deleted features _(defaults to `false`)_.
+     *
+     * Actually, unless explicitly disabled, deleted features are stored in a shadow table, this information is used in views, so that a feature being deleted in a higher level layer are removed from the view, rather than to show their deleted counterpart read from a lower level layer. In other words, `lib-view` will always enable this, and won't work correctly, unless the deleted features are available.
      */
     var queryDeleted by BOOLEAN_OR_FALSE
 
     /**
-     * Extend the request to search through historic states of features.
+     * Extend the request to search through historic states of features _(defaults to `true`)_.
+     *
+     * If enabled, history will be searched if either [version], or [minVersion] are given, or [versions] is greater than `1`. In other words, as long as [version], and [minVersion] are `null`, and [versions] is `1`, this property is ignored, no history search is done anyway. If this property is explicitly set to `false`, then no history search will be applied, even when any of the above properties are modified. This can be used by applications to search in _HEAD_ for features that are within a specific version range within _HEAD_ (current live data).
      */
-    var queryHistory by BOOLEAN_OR_FALSE
+    var queryHistory by BOOLEAN_OR_TRUE
 
     /**
      * Defines how many rows (versions) of each matching feature should be returned.

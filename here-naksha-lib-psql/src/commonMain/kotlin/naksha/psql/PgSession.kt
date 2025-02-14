@@ -103,18 +103,41 @@ open class PgSession(
      * Tests if reading in parallel is applicable for this session.
      * @return _true_ if multiple read-connections can be used in parallel for this session; _false_ otherwise.
      */
-    fun mayReadParallel(): Boolean = pgConnection == null && options.parallel
+    val mayReadParallel: Boolean
+        get() = pgConnection == null && options.parallel
 
     /**
-     * Opens a new read connection for the session.
-     * - Throws [NakshaError.ILLEGAL_STATE] if the session is [closed][isClosed] or the session may [not be read in parallel right now][mayReadParallel].
+     * Opens a new read connection for parallel reading the session.
+     *
+     * Currently, the main target platform for this method are JVM based languages.
+     * - Throws [NakshaError.ILLEGAL_STATE] if the session is [closed][isClosed] or the session [may not be read in parallel][mayReadParallel].
      * @return a new read-only connection for this session, which must be closed when done reading.
      */
-    fun newReadConnection(): PgConnection {
+    fun newReadConnection(): PgSessionReadConn {
         assertOpen()
-        if (!mayReadParallel()) throw NakshaException(ILLEGAL_STATE, "Session can't be read in parallel right now")
-        return storage.newConnection(options, readOnly, this::initConnection)
+        if (!mayReadParallel) throw NakshaException(ILLEGAL_STATE, "Session can't be read in parallel right now")
+        return PgSessionReadConn(storage.newConnection(options, readOnly, this::initConnection), true)
     }
+
+    /**
+     * Returns a single shared read-connection that must be closed after reading.
+     *
+     * This implementation returns a wrapped [pgConnection], the usage is like:
+     * ```kotlin
+     * (
+     *   if (session.mayReadParallel)
+     *     session.newReadConnection()
+     *   else
+     *     session.readConnection()
+     * ).use {
+     *   // use it.conn
+     * }
+     * ```
+     *
+     * - Throws [NakshaError.ILLEGAL_STATE] if the session is [closed][isClosed].
+     * @return a single shared read-connection.
+     */
+    fun readConnection(): PgSessionReadConn = PgSessionReadConn(useConnection(), closeUnderlying = false)
 
     /**
      * Returns a single shared PostgresQL session connection.
@@ -370,48 +393,82 @@ open class PgSession(
 
     override fun getMapById(mapId: String): NakshaMap? {
         assertOpen()
-        val conn = pgConnection
-        if (conn == null && mayReadParallel()) {
-            return newReadConnection().use { pgStorage.adminMap.getPgMapById(it, mapId)?.nakshaMap }
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            pgStorage.adminMap.getPgMapById(it.conn, mapId)?.nakshaMap
         }
-        return pgStorage.adminMap.getPgMapById(conn ?: useConnection(), mapId)?.nakshaMap
+    }
+
+    /**
+     * Returns the [PgMap] for the given id.
+     * @param mapId the map-id.
+     * @return the [PgMap]; _null_ if the map does not yet exist.
+     */
+    fun getPgMapById(mapId: String): PgMap? {
+        assertOpen()
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            pgStorage.adminMap.getPgMapById(it.conn, mapId)
+        }
     }
 
     override fun getMapByNumber(mapNumber: Int): NakshaMap? {
         assertOpen()
-        val conn = pgConnection
-        if (conn == null && mayReadParallel()) {
-            return newReadConnection().use { pgStorage.adminMap.getPgMapByNumber(it, mapNumber)?.nakshaMap }
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            pgStorage.adminMap.getPgMapByNumber(it.conn, mapNumber)?.nakshaMap
         }
-        return pgStorage.adminMap.getPgMapByNumber(conn ?: useConnection(), mapNumber)?.nakshaMap
     }
 
-    private fun _getCollectionById(conn: PgConnection, map: NakshaMap, collectionId: String): NakshaCollection? {
-        val pgMap = pgStorage.adminMap.getPgMapById(conn, map.id) ?: return null
-        return pgStorage.adminMap.getPgCollectionById(conn, pgMap, collectionId)?.nakshaCollection
+    /**
+     * Returns the [PgMap] for the given number.
+     * @param mapNumber the map-number.
+     * @return the [PgMap]; _null_ if the map does not yet exist.
+     */
+    fun getPgMapByNumber(mapNumber: Int): PgMap? {
+        assertOpen()
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            pgStorage.adminMap.getPgMapByNumber(it.conn, mapNumber)
+        }
     }
 
     override fun getCollectionById(map: NakshaMap, collectionId: String): NakshaCollection? {
         assertOpen()
-        val conn = pgConnection
-        if (conn == null && mayReadParallel()) {
-            return newReadConnection().use { _getCollectionById(it, map, collectionId) }
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            val pgMap = pgStorage.adminMap.getPgMapById(it.conn, map.id) ?: return null
+            pgStorage.adminMap.getPgCollectionById(it.conn, pgMap, collectionId)?.nakshaCollection
         }
-        return _getCollectionById(conn ?: useConnection(), map, collectionId)
     }
 
-    private fun _getCollectionByNumber(conn: PgConnection, map: NakshaMap, collectionNumber: Int): NakshaCollection? {
-        val pgMap = pgStorage.adminMap.getPgMapById(conn, map.id) ?: return null
-        return pgStorage.adminMap.getPgCollectionByNumber(conn, pgMap, collectionNumber)?.nakshaCollection
+    /**
+     * Returns the [PgCollection] for the given id.
+     * @param pgMap the [PgMap] in which to search for the collection.
+     * @param collectionId the collection-id.
+     * @return the [PgCollection]; _null_ if the collection does not yet exist.
+     */
+    fun getPgCollectionById(pgMap: PgMap, collectionId: String): PgCollection? {
+        assertOpen()
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            pgStorage.adminMap.getPgCollectionById(it.conn, pgMap, collectionId)
+        }
     }
 
     override fun getCollectionByNumber(map: NakshaMap, collectionNumber: Int): NakshaCollection? {
         assertOpen()
-        val conn = pgConnection
-        if (conn == null && mayReadParallel()) {
-            return newReadConnection().use { _getCollectionByNumber(it, map, collectionNumber) }
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            val pgMap = pgStorage.adminMap.getPgMapById(it.conn, map.id) ?: return null
+            pgStorage.adminMap.getPgCollectionByNumber(it.conn, pgMap, collectionNumber)?.nakshaCollection
         }
-        return _getCollectionByNumber(conn ?: useConnection(), map, collectionNumber)
+    }
+
+    /**
+     * Returns the [PgCollection] for the given number.
+     * @param pgMap the [PgMap] in which to search for the collection.
+     * @param collectionNumber the collection-number.
+     * @return the [PgCollection]; _null_ if the collection does not yet exist.
+     */
+    fun getPgCollectionByNumber(pgMap: PgMap, collectionNumber: Int): PgCollection? {
+        assertOpen()
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            pgStorage.adminMap.getPgCollectionByNumber(it.conn, pgMap, collectionNumber)
+        }
     }
 
     override fun executeParallel(request: Request): Response = execute(request)
