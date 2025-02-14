@@ -1,4 +1,3 @@
-@file:Suppress("NOTHING_TO_INLINE")
 @file:OptIn(ExperimentalJsStatic::class)
 
 package naksha.model
@@ -13,9 +12,17 @@ import kotlin.jvm.JvmField
 // This will be exposed
 // - in JavaScript at the namespace: naksha.model.{name}
 // - jn Java at the class naksha.model.StaticKt.{name}
-
+@Deprecated("Replace with Action enumeration class",
+    replaceWith = ReplaceWith("Action.CREATED.intValue"),
+    level = DeprecationLevel.WARNING)
 const val ACTION_CREATE = 0
+@Deprecated("Replace with Action enumeration class",
+    replaceWith = ReplaceWith("Action.UPDATED.intValue"),
+    level = DeprecationLevel.WARNING)
 const val ACTION_UPDATE = 1
+@Deprecated("Replace with Action enumeration class",
+    replaceWith = ReplaceWith("Action.DELETED.intValue"),
+    level = DeprecationLevel.WARNING)
 const val ACTION_DELETE = 2
 
 /**
@@ -70,9 +77,12 @@ val LATENCY_MEMORY = Int64(1)
  * ```
  * @since 3.0.0
  */
+@Deprecated("Replaced with official DEFAULT_FLAGS in Naksha",
+    replaceWith = ReplaceWith("Naksha.DEFAULT_FLAGS"),
+    level = DeprecationLevel.WARNING)
 @JvmField
 @JsStatic
-val DEFAULT_FLAGS = Flags(GeoEncoding.TWKB, FeatureEncoding.JBON_GZIP, TagsEncoding.JSON_GZIP, ACTION_CREATE)
+val DEFAULT_FLAGS = Naksha.DEFAULT_FLAGS
 
 /**
  * The [meta][Tuple.meta] bit.

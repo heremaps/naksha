@@ -124,6 +124,12 @@ class Naksha private constructor() {
         const val MAX_ID_LENGTH = 42 // The answer to everything ;-)
 
         /**
+         *
+         */
+        @JvmField
+        var DEFAULT_FLAGS = Flags(TWKB, JBON_GZIP, TagsEncoding.JSON_GZIP, ACTION_CREATE)
+
+        /**
          * Tests if the given **id** is a valid identifier, so matches:
          *
          * `[a-z][a-z0-9_:-]{31}`
