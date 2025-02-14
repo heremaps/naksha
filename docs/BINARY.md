@@ -41,15 +41,6 @@ When data is binary encoded in-memory, a header is not needed, as it is clear wh
 
 The length describes the amount of elements encoded, the size is the total size in byte, that belong to this binary. This includes the header size itself, an empty object/array has a minimal header of 8-byte, the size is therefore 8. A size less than 8 is an invalid header. The type is one of the following values:
 
-- `0`: Tuple-Number-Array
-- `1`: Metadata-Binary-Object
-- `2`: Metadata-Binary-Array
-- `3`: Tuple-Binary-Object
-- `4`: Tuple-Binary-Array
-- `5..7`: Reserved
-
-The subtype is dependent on the type, and the possible values are described when the types are described. Each type can have additional _type-specific-header_ values, they are described with the type.
-
 ### Extensions
 Extensions have been added as optional header information. They are here to allow extra headers with context information, as well as allowing applications to store own arbitrary metadata. The extension block has a single small header, being:
 
@@ -89,6 +80,16 @@ Applications can encode application specific data in the custom-extensions. Ther
 
 Every _custom-type_ must only occur ones in the extension block!
 
+## Binary Types
+- `0`: [Tuple-Number-Array](#tuple-number-binary-array)
+- `1`: [Metadata-Binary-Object](#metadata-binary-object)
+- `2`: [Metadata-Binary-Array](#metadata-binary-array)
+- `3`: [Tuple-Binary-Object](#tuple-binary-object)
+- `4`: [Tuple-Binary-Array](#tuple-binary-array)
+- `5..7`: Reserved
+
+The subtype is dependent on the type, and the possible values are described when the types are described. Each type can have additional _type-specific-header_ values, they are described with the type.
+
 ## Tuple-Number
 As said, a **Tuple** is an immutable state of a feature. To address tuples, unique identifier are needed, they are called **Tuple-Number**, and are encoded like following:
 
@@ -125,8 +126,7 @@ When tuple-numbers are persisted, they are always encoded in arrays, even when o
 - **collection-number**: u32 (optional, only when subtype > 2)
 - { tuple-numbers ... }
 
-The subtype is defined as:
-
+### Subtypes
 - `0`: All tuple-numbers are full encoded (224-bit, 28-byte, encoding).
 - `1`: The storage-number is shared, and stored in the header (160-bit, 20-byte encoding).
 - `2`: The storage-, and map-number are shared, and stored in the header (128-bit, 16-byte encoding).
@@ -184,6 +184,9 @@ Each tuple has a pre-defined set of metadata. Optionally, metadata can have an o
 
 This object header is normally not used, except the metadata need to appear in any binary, where the type need to be detected at runtime.
 
+### Subtypes
+This has no subtypes, therefore the subtype is always `0`.
+
 ## Metadata-Binary-Array
 When multiple metadata are stored in an array, the binary object has a header that is encoded like following:
 
@@ -200,6 +203,7 @@ When multiple metadata are stored in an array, the binary object has a header th
 
 **Note**: The array does not store metadata-objects, only the metadata, so without object header!
 
+### Subtypes
 The subtype is defined the same way it is done for the [Tuple-Number-Binary-Array](#Tuple-Number-Binary-Array):
 
 - `0`: All tuple-numbers are full encoded (224-bit, 28-byte, encoding).
@@ -233,6 +237,9 @@ Encoding a full tuple requires header, because it is a complex object. Each tupl
 
 **Note**: The tuple does not store metadata-object, only the metadata, so without object header!
 
+### Subtypes
+This has no subtypes, therefore the subtype is always `0`.
+
 ## Tuple-Binary-Array
 If multiple tuples should be encoded in a single byte-stream, they should have yet another header, being:
 
@@ -247,6 +254,9 @@ If multiple tuples should be encoded in a single byte-stream, they should have y
 Note that this array allows iteration, but not direct seeking, so basically the same way that [JBON](./JBON.md) does.
 
 It is recommended to not compress the individual parts of a tuple, when converting into the binary form, but rather to compress the whole array eventually, to increase the compression rate.
+
+### Subtypes
+This has no subtypes, therefore the subtype is always `0`.
 
 ## Dictionaries
 There is no specific format for dictionaries, they can be encoded either as [Tuple-Binary-Array](#Tuple-Binary-Array), or as features. If encoded as features, the recommendation is to encode them as:
