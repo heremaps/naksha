@@ -33,15 +33,24 @@ import java.util.Optional;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.mom.MomReference;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
 import org.junit.jupiter.api.Assertions;
+import org.skyscreamer.jsonassert.Customization;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.skyscreamer.jsonassert.comparator.ArraySizeComparator;
+import org.skyscreamer.jsonassert.comparator.CustomComparator;
+import org.skyscreamer.jsonassert.comparator.JSONComparator;
 
 public class ResponseAssertions {
+
+  public static JSONComparator STRICT_JSON_COMPARISON = new CustomComparator(JSONCompareMode.STRICT);
+  public static JSONComparator LENIENT_JSON_COMPARISON = new CustomComparator(JSONCompareMode.LENIENT);
+  // TODO: CASL-681 fix/analyze XYZ ignoring part
+  public static JSONComparator STRICT_JSON_COMPARISON_WITHOUT_XYZ = new CustomComparator(JSONCompareMode.STRICT, new Customization("features[*].properties.@ns:com:here:xyz", (left, right) -> true));
 
   private final HttpResponse<String> subject;
   private XyzFeatureCollection collectionResponse;
@@ -88,8 +97,19 @@ public class ResponseAssertions {
     String actualBody = subject.body();
     Assertions.assertNotNull(actualBody, "Response body is null");
     try {
-      JSONAssert.assertEquals(failureMessage, expectedJsonBody, actualBody,
-          (strictChecking) ? JSONCompareMode.STRICT : JSONCompareMode.LENIENT);
+      JSONAssert.assertEquals(failureMessage, expectedJsonBody, actualBody, strictChecking ? STRICT_JSON_COMPARISON : LENIENT_JSON_COMPARISON);
+    } catch (JSONException e) {
+      Assertions.fail("Unable to parse response body", e);
+    }
+    return this;
+  }
+
+  // TODO: CASL-681: switch to this method
+  public ResponseAssertions hasJsonBody(String expectedJsonBody, String failureMessage, JSONComparator jsonComparator) {
+    String actualBody = subject.body();
+    Assertions.assertNotNull(actualBody, "Response body is null");
+    try {
+      JSONAssert.assertEquals(failureMessage, expectedJsonBody, actualBody, jsonComparator);
     } catch (JSONException e) {
       Assertions.fail("Unable to parse response body", e);
     }

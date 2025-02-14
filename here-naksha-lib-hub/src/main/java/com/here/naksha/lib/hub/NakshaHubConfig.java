@@ -37,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * // TODO: CASL-681: refactor this to Map-based proxy - it must be persisted
  * The Naksha-Hub service configuration.
  */
 @JsonTypeName(value = "Config")

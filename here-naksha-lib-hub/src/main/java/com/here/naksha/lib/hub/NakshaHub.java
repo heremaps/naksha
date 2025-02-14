@@ -48,6 +48,7 @@ import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import naksha.base.AnyObject;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmAnyObjectUtil;
@@ -463,28 +464,33 @@ public class NakshaHub implements INaksha {
     }
   }
 
-  // TODO: CASL-681: switch to new storage instance mechanism once it is done
-  private IStorage storageInstance(@NotNull Storage storage) {
 
-    // TODO: remove the hacky hack
+  // TODO: CASL-681: switch to new storage instance mechanism once it is done
+  private ConcurrentHashMap<String, PsqlStorage> psqlStoragePseudoCacheToBeDefinitelyDeleted = new ConcurrentHashMap<>();
+
+  private IStorage storageInstance(@NotNull Storage storage) {
+    // TODO: CASL-681 remove the hacky hack
     if ("naksha.psql.PsqlStorage".equals(storage.getClassName())) {
-      NakshaProperties properties = storage.getProperties();
-      AnyObject instanceConfig = requireNonNull(JvmAnyObjectUtil.getProperty(properties, "master", AnyObject.class));
-      PsqlInstance psqlInstance = PsqlInstance.get(
-          requireNonNull(instanceConfig.get("host")).toString(),
-          Integer.parseInt(requireNonNull(instanceConfig.get("port")).toString()),
-          requireNonNull(instanceConfig.get("db")).toString(),
-          requireNonNull(instanceConfig.get("user")).toString(),
-          requireNonNull(instanceConfig.get("password")).toString()
-      );
-      PsqlCluster singleNodeCluster = new PsqlCluster(psqlInstance);
-      return new PsqlStorage(singleNodeCluster, requireNonNull(properties.get("schema")).toString());
-    }
-    Fe1<IStorage, Storage> constructor = getStorageConstructor(storage.getClassName(), Storage.class);
-    try {
-      return constructor.call(storage);
-    } catch (Exception e) {
-      throw unchecked(e);
+      return psqlStoragePseudoCacheToBeDefinitelyDeleted.computeIfAbsent(storage.getId(), id -> {
+        NakshaProperties properties = storage.getProperties();
+        AnyObject instanceConfig = requireNonNull(JvmAnyObjectUtil.getProperty(properties, "master", AnyObject.class));
+        PsqlInstance psqlInstance = PsqlInstance.get(
+            requireNonNull(instanceConfig.get("host")).toString(),
+            Integer.parseInt(requireNonNull(instanceConfig.get("port")).toString()),
+            requireNonNull(instanceConfig.get("db")).toString(),
+            requireNonNull(instanceConfig.get("user")).toString(),
+            requireNonNull(instanceConfig.get("password")).toString()
+        );
+        PsqlCluster singleNodeCluster = new PsqlCluster(psqlInstance);
+        return new PsqlStorage(singleNodeCluster, requireNonNull(properties.get("schema")).toString());
+      });
+    } else {
+      Fe1<IStorage, Storage> constructor = getStorageConstructor(storage.getClassName(), Storage.class);
+      try {
+        return constructor.call(storage);
+      } catch (Exception e) {
+        throw unchecked(e);
+      }
     }
   }
 }

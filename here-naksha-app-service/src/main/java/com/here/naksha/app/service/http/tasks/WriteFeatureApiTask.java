@@ -124,7 +124,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     }
   }
 
-  private @NotNull XyzResponse executeCreateOrPatchFeatures() throws Exception {
+  private @NotNull XyzResponse executeCreateOrPatchFeatures() {
     // Deserialize input request
     final FeatureCollectionRequest collectionRequest = parseRequestBodyAs(FeatureCollectionRequest.class);
     final NakshaFeatureList features = collectionRequest.getFeatures();

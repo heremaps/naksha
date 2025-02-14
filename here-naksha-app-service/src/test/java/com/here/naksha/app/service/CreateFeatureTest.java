@@ -25,6 +25,7 @@ import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJson;
 import static com.here.naksha.app.common.TestUtil.parseJsonFileOrFail;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.STRICT_JSON_COMPARISON_WITHOUT_XYZ;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -75,7 +76,7 @@ class CreateFeatureTest extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match", STRICT_JSON_COMPARISON_WITHOUT_XYZ)
         .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
         .hasInsertedIdsMatchingFeatureIds(null)
         .hasUuids();

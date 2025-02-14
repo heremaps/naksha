@@ -291,7 +291,11 @@ open class PgSession(
     override fun execute(request: Request): Response { // SuccessResponse
         when (request) {
             is WriteRequest -> {
-                transaction()
+                try {
+                    transaction()
+                } catch (nakshaException: NakshaException) {
+                    return ErrorResponse(nakshaException)
+                }
                 val response = PgWriter(this, request, BulkWriteExecutor(this)).execute()
                 return response
             }
