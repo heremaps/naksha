@@ -79,6 +79,7 @@ kotlin {
 
                 implementation(Lib.kotlinx_datetime)
                 implementation(Lib.postgres)
+                implementation(Lib.caffeine)
             }
             // TODO: We should replace ${project.buildDir} with ${layout.buildDirectory}, but this is not the same:
             // println("------------ ${project.buildDir}/dist/js/productionExecutable/")

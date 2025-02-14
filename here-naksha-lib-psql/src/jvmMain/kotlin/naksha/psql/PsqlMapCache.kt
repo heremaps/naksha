@@ -1,82 +1,69 @@
 package naksha.psql
 
-import com.github.benmanes.caffeine.cache.*
-import naksha.base.*
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.CacheLoader
+import com.github.benmanes.caffeine.cache.LoadingCache
+import com.github.benmanes.caffeine.cache.Caffeine
+import com.github.benmanes.caffeine.cache.Expiry
+import com.github.benmanes.caffeine.cache.RemovalCause
+import naksha.base.AtomicMap
 import java.util.concurrent.TimeUnit
 
 /**
- * A cache for a specific map, which by itself will cache the collections.
- *
- * @property adminMap the admin-map to which this cache entry belongs.
- * @property id the map-id.
- * @property number the map-number.
+ * [Coffeine](https://github.com/ben-manes/caffeine) cache loader to load a [PgMap] wrapper, being [PsqlMap]. This will as well then offer a child cache, that is used for the [collection's][PgCollection].
  * @since 3.0
  */
-data class PsqlMap(val adminMap: PsqlAdminMap, val id: String, val number: Int)
-    : CacheLoader<Int, PsqlCollection?>, Expiry<Int, PsqlCollection> {
+class PsqlMapCache(@JvmField val adminMap: PsqlAdminMap): CacheLoader<Int, PsqlMap?>, Expiry<Int, PsqlMap> {
 
     /**
-     * Tests if the underlying [PgMap] still exist.
-     * @return `true` if the map exists; `false` if this is a tombstone cache entry.
+     * Returns the [PsqlMap] by map-id, if not being in cache, loads it into the cache.
+     * @param id the map-id.
+     * @return the [PsqlMap].
      */
-    fun exists(): Boolean = head.get() != null
-
-    /**
-     * The current HEAD state, _null_ if the map does not exist _(after being deleted)_.
-     */
-    val head = AtomicRef<PgMap>(null)
-
-    // ----------------------------< Children management aka collection caching >------------------------------------------
-
-    /**
-     * Returns the [PsqlCollection] by collection-id, if not being in cache, loads it into the cache.
-     * @param id the collection-id.
-     * @return the [PsqlCollection].
-     */
-    operator fun get(id: String?): PsqlCollection? {
+    operator fun get(id: String?): PsqlMap? {
         if (id == null) return null
         val number = numberById[id] ?: return loadById(id)
         return cache.get(number, this::load)
     }
 
-    operator fun get(number: Int): PsqlCollection? = cache.get(number, this::load)
+    operator fun get(number: Int): PsqlMap? = cache.get(number, this::load)
 
     /**
-     * All collections by their number (**primary**).
+     * All maps by their number (**primary**).
      * @since 3.0
      */
-    private val cache: Cache<Int, PsqlCollection?> = Caffeine.newBuilder()
+    private val cache: Cache<Int, PsqlMap?> = Caffeine.newBuilder()
         // TODO: Optimize settings!
         .removalListener(this::onEviction)
         .expireAfter(this)
         .build(this)
 
     /**
-     * Translates the collection-id into a number for items being in cache.
+     * Translates the map-id into a number for items being in cache.
      * @since 3.0.0
      */
     private val numberById = AtomicMap<String, Int>()
 
     /**
-     * Called by Caffeine, when a cached entry is removed.
-     * @param collectionNumber the collection-number of the collection being removed
-     * @param psqlCollection the value that is removed
+     * Called by Caffeine, when a cached map is removed.
+     * @param mapNumber the map-number _(aka key)_
+     * @param psqlMap the value that is removed
      * @param cause the reason for the removal
      * @since 3.0
      * @see [Caffeine.removalListener]
      */
-    private fun onEviction(collectionNumber: Int?, psqlCollection: PsqlCollection?, cause: RemovalCause) {
-        if (psqlCollection != null) {
-            numberById.remove(psqlCollection.id, psqlCollection.number)
+    private fun onEviction(mapNumber: Int?, psqlMap: PsqlMap?, cause: RemovalCause) {
+        if (psqlMap != null) {
+            numberById.remove(psqlMap.id, psqlMap.number)
         }
     }
 
     /**
      * Load a cache entry using the `id`.
-     * @param id the collection-id.
-     * @return the loaded [PsqlCollection]; null if the collection does not exist.
+     * @param id the map-id.
+     * @return the loaded [PsqlMap]; null if the map does not exist.
      */
-    private fun loadById(id: String): PsqlCollection? {
+    private fun loadById(id: String): PsqlMap? {
         // TODO: Implement me
         // TODO: Add entry into numberById
         // TODO: Add into cache!
@@ -93,7 +80,7 @@ data class PsqlMap(val adminMap: PsqlAdminMap, val id: String, val number: Int)
      * @throws Exception or Error, in which case the mapping is unchanged
      * @throws InterruptedException if this method is interrupted. [InterruptedException] is treated like any other [Exception] in all respects except that, when it is caught, the thread's interrupt status is set
      */
-    override fun load(key: Int): PsqlCollection? {
+    override fun load(key: Int): PsqlMap? {
         // TODO: Implement me
         // TODO: Add entry into numberById
         return null
@@ -113,16 +100,16 @@ data class PsqlMap(val adminMap: PsqlAdminMap, val id: String, val number: Int)
      * @throws Exception or Error, in which case the mappings are unchanged
      * @throws InterruptedException if this method is interrupted. [InterruptedException] is treated like any other [Exception] in all respects except that, when it is caught, the thread's interrupt status is set
      */
-    override fun loadAll(keys: Set<Int>): Map<Int, PsqlCollection> {
+    override fun loadAll(keys: Set<Int>): Map<Int, PsqlMap> {
         // TODO: Implement me
         return mapOf()
     }
 
     /**
-     * Returns all [collection's][PsqlCollection] that are currently available.
-     * @return all [collection's][PsqlCollection] that are currently available.
+     * Returns all [map's][PsqlMap] that are currently available.
+     * @return all [map's][PsqlMap] that are currently available.
      */
-    fun getAll(): List<PsqlCollection> {
+    fun getAll(): List<PsqlMap> {
         TODO("Implement me")
     }
 
@@ -139,7 +126,7 @@ data class PsqlMap(val adminMap: PsqlAdminMap, val id: String, val number: Int)
      * @throws Exception or Error, in which case the mapping is unchanged
      * @throws InterruptedException if this method is interrupted. [InterruptedException] is treated like any other [Exception] in all respects except that, when it is caught, the thread's interrupt status is set
      */
-    override fun reload(key: Int, oldValue: PsqlCollection): PsqlCollection? {
+    override fun reload(key: Int, oldValue: PsqlMap): PsqlMap? {
         if (!oldValue.exists()) return null
         return oldValue
     }
@@ -154,7 +141,7 @@ data class PsqlMap(val adminMap: PsqlAdminMap, val id: String, val number: Int)
      * @param currentTime the ticker's current time, in nanoseconds
      * @return the length of time before the entry expires, in nanoseconds
      */
-    override fun expireAfterCreate(key: Int, value: PsqlCollection, currentTime: Long): Long {
+    override fun expireAfterCreate(key: Int, value: PsqlMap, currentTime: Long): Long {
         if (!value.exists()) return TimeUnit.SECONDS.toNanos(5)
         return TimeUnit.MINUTES.toNanos(15)
     }
@@ -171,7 +158,7 @@ data class PsqlMap(val adminMap: PsqlAdminMap, val id: String, val number: Int)
      * @param currentDuration the entry's current duration, in nanoseconds
      * @return the length of time before the entry expires, in nanoseconds
      */
-    override fun expireAfterUpdate(key: Int, value: PsqlCollection, currentTime: Long, currentDuration: Long): Long {
+    override fun expireAfterUpdate(key: Int, value: PsqlMap, currentTime: Long, currentDuration: Long): Long {
         if (!value.exists()) return currentDuration
         return TimeUnit.MINUTES.toNanos(15)
     }
@@ -188,7 +175,7 @@ data class PsqlMap(val adminMap: PsqlAdminMap, val id: String, val number: Int)
      * @param currentDuration the entry's current duration, in nanoseconds
      * @return the length of time before the entry expires, in nanoseconds
      */
-    override fun expireAfterRead(key: Int, value: PsqlCollection, currentTime: Long, currentDuration: Long): Long {
+    override fun expireAfterRead(key: Int, value: PsqlMap, currentTime: Long, currentDuration: Long): Long {
         if (!value.exists()) return currentDuration
         return TimeUnit.MINUTES.toNanos(15)
     }

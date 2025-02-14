@@ -58,6 +58,7 @@ object Lib {
     val commons_lang3 = "org.apache.commons:commons-lang3:3.12.0"
     val jodah_expiringmap = "net.jodah:expiringmap:0.5.10"
     val caffinitas_ohc = "org.caffinitas.ohc:ohc-core:0.7.4"
+    val caffeine = "com.github.ben-manes.caffeine:caffeine:3.2.0"
     val lmax_disruptor = "com.lmax:disruptor:3.4.4"
     val mchange_commons = "com.mchange:mchange-commons-java:0.2.20"
     val mchange_c3p0 = "com.mchange:c3p0:0.9.5.5"

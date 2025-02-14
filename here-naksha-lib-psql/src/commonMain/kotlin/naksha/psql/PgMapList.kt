@@ -11,4 +11,12 @@ import kotlin.js.JsExport
  * @since 3.0.0
  */
 @JsExport
-class PgMapList : ListProxy<PgMap>(PgMap::class)
+class PgMapList : ListProxy<PgMap>(PgMap::class) {
+    /**
+     * Add all given maps
+     */
+    fun withAll(maps: List<PgMap?>): PgMapList {
+        addAll(maps)
+        return this
+    }
+}

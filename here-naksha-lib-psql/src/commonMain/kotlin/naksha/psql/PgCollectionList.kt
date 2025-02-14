@@ -11,4 +11,12 @@ import kotlin.js.JsExport
  * @since 3.0.0
  */
 @JsExport
-class PgCollectionList : ListProxy<PgCollection>(PgCollection::class)
+class PgCollectionList : ListProxy<PgCollection>(PgCollection::class) {
+    /**
+     * Add all given collections.
+     */
+    fun withAll(maps: List<PgCollection?>): PgCollectionList {
+        addAll(maps)
+        return this
+    }
+}

@@ -54,9 +54,8 @@ open class PsqlStorage : PgStorage(), IStorage {
             c = PsqlCluster(master, replicas)
             _cluster = c
         }
-        _adminMap = newAdminMap(config, create, upgrade)
-        // TODO: Setup the channel and the listener!
-        //       See PsqlStorageListener!
+        setAdminMap(newAdminMap(config, create, upgrade))
+        adminMap.start()
     }
 
     protected open fun newAdminMap(config: PgConfig, create: Boolean?, upgrade: Boolean?): PsqlAdminMap

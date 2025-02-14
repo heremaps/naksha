@@ -18,6 +18,8 @@ import kotlin.js.JsExport
  */
 @JsExport
 class TupleHeapCache : AbstractTupleCache(LATENCY_MEMORY) {
+    // TODO: Review Caffeine, we should use it!
+    //       https://github.com/ben-manes/caffeine
     // TODO: !!! We should not store data only using weak-references. !!!
     //       This is many bad side effects, one very bad is that when an eviction happens, everything is evicted at ones!
     //       We should define a minimum cache size in bytes, and keep GZIP compressed full tuples, in binary encoding, in it.

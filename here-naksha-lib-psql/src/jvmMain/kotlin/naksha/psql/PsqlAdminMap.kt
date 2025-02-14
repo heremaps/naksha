@@ -8,7 +8,8 @@ import naksha.model.objects.NakshaMap
 import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
 
 /**
- * Information about the database and connection.
+ * The admin-map of the [PsqlStorage].
+ * @since 3.0
  */
 @Suppress("MemberVisibilityCanBePrivate")
 class PsqlAdminMap internal constructor(
@@ -33,40 +34,46 @@ class PsqlAdminMap internal constructor(
         //       that when the transaction is committed, we get that information back and update the cache!
     }
 
-    override fun getPgMapById(conn: PgConnection, id: String): PgMap? {
-        TODO("Not yet implemented")
-    }
+    override fun getPgMapById(conn: PgConnection, id: String): PgMap? = mapCache[id]?.head?.get()
 
-    override fun getPgMapByNumber(conn: PgConnection, number: Int): PgMap? {
-        TODO("Not yet implemented")
-    }
+    override fun getPgMapByNumber(conn: PgConnection, number: Int): PgMap? = mapCache[number]?.head?.get()
 
-    override fun listPgMaps(conn: PgConnection): PgMapList {
-        TODO("Not yet implemented")
-    }
+    override fun listPgMaps(conn: PgConnection): PgMapList = PgMapList().withAll(
+        mapCache.getAll().map { it.head.get() }.filterNotNull()
+    )
 
     override fun getPgCollectionById(conn: PgConnection, map: PgMap, id: String): PgCollection? {
-        TODO("Not yet implemented")
+        val psqlMap = mapCache[map.number] ?: return null
+        return psqlMap[id]?.head?.get()
     }
 
     override fun getPgCollectionByNumber(conn: PgConnection, map: PgMap, number: Int): PgCollection? {
-        TODO("Not yet implemented")
+        val psqlMap = mapCache[map.number] ?: return null
+        return psqlMap[number]?.head?.get()
     }
 
     override fun listPgCollections(conn: PgConnection, map: PgMap): PgCollectionList {
-        TODO("Not yet implemented")
+        val list = PgCollectionList()
+        val collections = mapCache[map.number]?.getAll()
+        if (collections != null) {
+            for (collection in collections) {
+                val pgCollection = collection.head.get() ?: continue
+                list.add(pgCollection)
+            }
+        }
+        return list
     }
 
-    override fun getEncodingFlags(feature: Any?, context: Any?): Flags {
-        TODO("Not yet implemented")
-    }
+    override fun getEncodingFlags(feature: Any?, context: Any?): Flags = Naksha.DEFAULT_FLAGS
 
     override fun getDictionary(id: String): JbDictionary? {
-        TODO("Not yet implemented")
+        // TODO: Implement me!
+        return null
     }
 
     override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? {
-        TODO("Not yet implemented")
+        // TODO: Implement me!
+        return null
     }
 
     override fun createAdminMap(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion): Int
@@ -76,6 +83,10 @@ class PsqlAdminMap internal constructor(
         upsertAdminMap(conn, config, storageId, storageNumber, psqlVersion, schemaOid, installedVersion)
     }
 
+    /**
+     * Upserts the naksha admin-map (aka `naksha~admin` schema).
+     * @since 3.0
+     */
     private fun upsertAdminMap(
         conn: PgConnection,
         config: PgConfig,
@@ -211,6 +222,7 @@ class PsqlAdminMap internal constructor(
      * @param text the text in which to replace.
      * @param replacements a map where the key, expanded to `${key}`, should be replaced with the values.
      * @return the given text, but with replacements done.
+     * @since 3.0
      */
     private fun applyReplacements(text: String, replacements: Map<String, String>?): String {
         if (replacements != null) {
@@ -235,6 +247,7 @@ class PsqlAdminMap internal constructor(
      * @param conn The connection to use for the installation.
      * @param path The file-path, for example `/lz4.sql`.
      * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
+     * @since 3.0
      */
     private fun executeSqlFromResource(conn: PgConnection, path: String, replacements: Map<String, String>? = null) {
         val resourceAsText = getResourceAsText(path)
@@ -252,6 +265,7 @@ class PsqlAdminMap internal constructor(
      * @param beautify If the source should be beautified before insertion.
      * @param extraCode Additional code to be executed, appended at the end of the module.
      * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
+     * @since 3.0
      */
     private fun installModuleFromResource(
         conn: PgConnection,
@@ -274,14 +288,16 @@ class PsqlAdminMap internal constructor(
     }
 
     /**
-     * All maps by their number.
+     * The cache loader.
+     * @since 3.0
      */
-    private val primaryMapCacheByNumber = AtomicMap<Int, PsqlAdminMapCache>()
+    internal val mapCache = PsqlMapCache(this)
 
     /**
-     * All maps by their id.
+     * Bootstrap the admin-map, which means reading the cache initially, then start the background job to keep track of changes.
+     * @since 3.0
      */
-    private val secondaryMapCacheById = AtomicMap<String, PsqlAdminMapCache>()
+    internal fun start() {
+        // TODO: We need to add listeners to update the caches!
+    }
 }
-
-// TODO: We need to add listeners to update the caches!
