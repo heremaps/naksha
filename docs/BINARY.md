@@ -96,19 +96,19 @@ As said, a **Tuple** is an immutable state of a feature. To address tuples, uniq
 - storage-number: u64 _(optional in array)_
 - map-number: u32 _(optional in array)_
 - collection-number: u32 _(optional in array)_
-- version: u56 _(u64 read shr 8, year:u15, month:u4, day:u5, sequence:u32)_
-- partition-number: u8
+- feature-number: u64
+- version: u64 _(reserved: u8, year:u15, month:u4, day:u5, sequence:u32)_
 - uid: u32
 
-When tuple-numbers are encoded, they are always encoded in an array, and the values storage-, map-, and collection-number, can be shared in the header, so the array header can declare for each of them a shared value that is valid for all encoded tuple-numbers. This can reduce the storage size. If encoded standalone, all values need to be encoded, which makes a tuple-number a 224-bit value (28-byte). In an array, each tuple-number can be reduced to 92-bit (12-byte), when they come from the same storage, map and collection.
+When tuple-numbers are encoded, they are always encoded in an array, and the values storage-, map-, and collection-number, can be shared in the header, so the array header can declare for each of them a shared value that is valid for all encoded tuple-numbers. This can reduce the storage size. If encoded standalone, all values need to be encoded, which makes a tuple-number a 288-bit value (36-byte). In an array, each tuple-number can be reduced to 160-bit (20-byte), when they come from the same storage, map and collection.
 
 The **storage-number**, **map-number**, and **collection-number** are just unique identifiers of the storage, map, and collection in which all tuples of the feature, to which this tuple-number belongs, are stored.
 
-The **partition-number** identifies the partition in which all tuples of a feature should be stored. It is the first byte of the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id, and ensures that all states of a feature are always stores in the same partition. The storage can decide how many partitions are used, and then divide the partition-number by the number of used partitions, the rest is the effective partition index:
+The **storage-number** is normally the highest 64-bit of the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the **feature-id**, but in case of collisions can be different _(which rarely happens)_. Note that even when an alternative value is selected due to collision, the highest 8-bit are always the same, to ensure that the **partition-number**, which identifies the partition in which all tuples of a feature should be stored, is the consistent. So, the **partition-number** is always the highest 8-bit of the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the **feature-id**, and ensures that all states of a feature are always stores in the same partition. The storage can decide how many partitions are used, and then divide the partition-number by the number of used partitions, the rest is the effective partition index:
 
 `partitionIndex = partitionNumber % partitionCount`
 
-The **version** encodes the year, month, and day when the transaction started (UTC) that was used to create this tuple/state, plus a unique sequence-number of the transaction within that day. The version `0` is equivalent to `null`, and represents **the** temporary version, that is shared by all tuples that are not persisted, and are only build in memory, for example for testing, or as inbetween states.
+The **version** encodes the year, month, and day when the transaction started (UTC) that was used to create this tuple/state, plus a unique sequence-number of the transaction within that day. The version `0` is equivalent to `null`, and represents **the** _HEAD_ version. This version is as well used for all tuples that are not persisted, and are only build in memory, for example for testing, or as in between states.
 
 The **uid** is the transaction local unique state identifier, if multiple new states are created within a single transaction. It is forbidden to generate multiple states of the same feature within a single transaction, the reason is the meaning of the _next-version_ property, see below. Tuples are generated in order, so they can be timely ordered by _uid_. This allows to order all changes by _version_ and _uid_ to get a reliable order, which is important for paging algorithm or to split big transactions into chunks.
 
@@ -127,10 +127,10 @@ When tuple-numbers are persisted, they are always encoded in arrays, even when o
 - { tuple-numbers ... }
 
 ### Subtypes
-- `0`: All tuple-numbers are full encoded (224-bit, 28-byte, encoding).
-- `1`: The storage-number is shared, and stored in the header (160-bit, 20-byte encoding).
-- `2`: The storage-, and map-number are shared, and stored in the header (128-bit, 16-byte encoding).
-- `3`: The storage-, map-, and collection-number are shared, and stored in the header (96-bit, 12-byte encoding).
+- `0`: All tuple-numbers are full encoded (288-bit, 36-byte, encoding).
+- `1`: The storage-number is shared, and stored in the header (224-bit, 28-byte encoding).
+- `2`: The storage-, and map-number are shared, and stored in the header (192-bit, 24-byte encoding).
+- `3`: The storage-, map-, and collection-number are shared, and stored in the header (160-bit, 20-byte encoding).
 
 The last variant is generally used within storages, when a single collection is read, to reduce the amount of data that need to be transferred to the client.
 
@@ -285,18 +285,18 @@ The following query is how Naksha `lib-psql` will perform a search in the databa
 
 ```sql
 WITH query AS (
- (SELECT ${col_number} as col_num, id, tn FROM ${col_name} WHERE ...)
+ (SELECT ${col_number} as col_num, tn FROM ${col_head_table} WHERE ...)
  UNION ALL
  ...
 ), result AS (
   SELECT DISTINCT col_num, tn
   FROM query
-  ORDER BY col_num, id, tn
+  ORDER BY col_num, tn
   LIMIT 16777215
 )
 SELECT gzip( -- compress the binary
  int4send((2 << 24)|sum(1)::int)|| -- type (2), subtype (0), length
- int4send(20 + sum(1)::int*16)|| -- size
+ int4send(20 + sum(1)::int*24)|| -- size
  int8send(${storage_number})|| -- shared storage-number
  int4send(${map_number})|| -- shared map-number
  bytea_agg(int4send(col_num)||tn) -- aggregate all tuple-number
@@ -304,30 +304,30 @@ SELECT gzip( -- compress the binary
 ```
 This query guarantees, that all tuples are ordered by collection, feature-id, version, uid.
 
-We need to limit the result to `2^24-1`, because this is the maximum length we can encode in the binary. This leads to a maximum result size of `20 + (16777215 * 16)`, which is 256 MiB, what as well protects us in producing or reading too big result-sets.
+We need to limit the result to `2^24-1`, because this is the maximum length we can encode in the binary. This leads to a maximum result size of `20 + (16777215 * 24)`, which is 402,653,180 byte, or 384 MiB, what protects us in producing, not to read too big result-sets.
 
 ### History Search
 If the HISTORY need to be queried too, then there are two basic cases. A specific version is requested, then only the selects need to be changed:
 ```sql
 WITH query AS (
   -- Select from HEAD.
-  (SELECT ${col_number} as col_num, id, tn FROM ${col_name} 
+  (SELECT ${col_number} as col_num, tn FROM ${col_head_table} 
    WHERE txn <= $1 AND ...)
   UNION ALL
   -- Select from HISTORY.
-  (SELECT ${col_number} as col_num, id, tn FROM ${col_name_hst} 
+  (SELECT ${col_number} as col_num, tn FROM ${col_history_table} 
     WHERE txn <= $1 AND txn_next > $1 AND ...)
   UNION ALL
   ...
 ), result AS (
   SELECT DISTINCT col_num, tn
   FROM query
-  ORDER BY col_num, id, tn
+  ORDER BY col_num, tn
   LIMIT 16777215
 )
 SELECT gzip( -- compress the binary
  int4send((2 << 24)|sum(1)::int)|| -- type (2), subtype (0), length
- int4send(20 + sum(1)::int*16)|| -- size
+ int4send(20 + sum(1)::int*24)|| -- size
  int8send(${storage_number})|| -- shared storage-number
  int4send(${map_number})|| -- shared map-number
  bytea_agg(int4send(col_num)||tn) -- aggregate all tuple-number
@@ -343,34 +343,34 @@ If the client wants multiple tuples before the given _version_, we need to fetch
 ```sql
 -- Select from HEAD.
 WITH query AS (
-(SELECT ${col_number} as col_num, id, tn, txn, uid FROM ${col_name} 
+(SELECT ${col_number} as col_num, fn, tn, txn, uid FROM ${col_head_table} 
  WHERE txn <= $1 AND ...)
 UNION ALL
 -- Select from HISTORY
-(SELECT ${col_number} as col_num, id, tn, txn, uid FROM ${col_name}$hst 
+(SELECT ${col_number} as col_num, fn, tn, txn, uid FROM ${col_history_table} 
   WHERE txn <= $1 AND ...) -- we do not limit by 'AND txn_next > $1' 
 UNION ALL
  ...
 ), without_duplicates AS (
-  SELECT DISTINCT col_num, id, tn, txn, uid
+  SELECT DISTINCT col_num, tn, txn, uid
   FROM query
 ), query_with_v AS (
   SELECT
     col_num,
-    id,
+    fn,
     tn,
-    ROW_NUMBER() OVER (PARTITION BY id ORDER BY txn, uid DESC) AS v
+    ROW_NUMBER() OVER (PARTITION BY fn ORDER BY txn, uid DESC) AS v
   FROM without_duplicates
 ), result AS (
   SELECT col_num, tn
   FROM query_with_v
   WHERE v <= 2 -- this selects the latest n version!!!
-  ORDER BY col_num, id, tn
+  ORDER BY col_num, tn
   LIMIT 16777215
 )
 SELECT gzip( -- compress the binary
  int4send((2 << 24)|sum(1)::int)|| -- type (2), subtype (0), length
- int4send(20 + sum(1)::int*16)|| -- size
+ int4send(20 + sum(1)::int*24)|| -- size
  int8send(${storage_number})|| -- shared storage-number
  int4send(${map_number})|| -- shared collection-number
  bytea_agg(int4send(col_num)||tn) -- aggregate all tuple-number
@@ -380,7 +380,7 @@ Note, it is strongly recommended to increment the `work_mem` to `1G`, so that we
 
 **We transfer up to 16.7 millions rows at ones!**
 
-Beware, as we order by feature-id, and the same feature-id always produce the same partition-number, this means, the partition-number in the tuple-number does not affect ordering. This only works, because numbers are stored in [Big-Endian byte-order](https://en.wikipedia.org/wiki/Endianness).
+As we order by **tuple-number**, we order all features by their **feature-id** as well, randomizing the features as much as possible across the partitions, because the lowest 8-bit of the **tuple-number** encode the **partition-number** _(using [Big-Endian byte-order](https://en.wikipedia.org/wiki/Endianness) byte ordering)_. This allows concurrent reading from partitions, when bigger result-sets are loaded in chunks, for example, when we have 5 million results, loading the first 100k will be scattered, if used, above all 256 partitions, allowing us to load around 400 features from each partition in parallel, which actually allows to use all bandwidth of an EC2 instance (as a single connection is mostly limited to 5 Gbps).
 
 This query allows to search for tuples in HEAD, HISTORY, DELETED, and in multiple collections at the same time. It does not allow to query multiple maps at ones. The query returns the results compressed, and compression will have a big impact on size, because we know that at least the collection-number repeats itself often, and we know that very likely the version, and partition-number, will repeat them self as well. Testing showed that GZIP reduces the result to less than 25% of the original, sometimes even less. This means that for the maximum of 16,777,215 features in a result-set, we have a raw size of 256 MiB, which can be compressed down to less than 64 MiB, case dependent. As the results are ordered, we can store the result-set in some cache, and then allow iteration using a handle.
 

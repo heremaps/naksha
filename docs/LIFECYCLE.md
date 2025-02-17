@@ -16,26 +16,28 @@ The maximum number of features per collection can be increased by partitioning t
 Note that dictionaries, transaction, basically everything in Naksha is a feature and follows the same lifecycle.
 
 ### Tuple-Numbers
-As said, a **Tuple** is an immutable state of a feature. To address these states, unique identifier are needed, which are called **Tuple-Number**. A tuple-number persists out of the following logical parts:
+As said, a **Tuple** is an immutable state of a feature. To address these states, unique identifier are needed, which are called **Tuple-Number**. A tuple-number persists out of the following parts:
 
 - storage-number: u64
 - map-number: u32
 - collection-number: u32
-- version: u56
-- partition-number: u8
+- feature-number: u64
+- version: u64
 - uid: u32
 
-The **storage-number**, **map-number**, and **collection-number** are just unique identifiers of the storage, map, and collection in which all tuples of the feature, to which this tuple-number belongs, are stored.
+The **storage-number**, **map-number**, **collection-number**, and **feature-number** are unique identifiers of the storage, map, collection and feature.
 
-The **partition-number** identifies the partition in which all tuples of a feature should be stored. It is the first byte of the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id, and ensures that all states of a feature are always stores in the same partition. The storage can decide how many partitions are used, and then divide the partition-number by the number of used partitions, the rest is the effective partition index:
+The **feature-number** is _(unless in case of a hash collisions)_ the lower 64-bit of the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the **feature-id**. The lowest 8-bit of the **feature-number** are the **partition-number**, which identifies the partition in which all tuples of a feature should be stored. This ensures that all states of a feature are always stores in the same partition. The storage can decide how many partitions are eventually used, and then divide the partition-number by the number of used partitions, the rest is the effective partition index:
 
 `partitionIndex = partitionNumber % partitionCount`
 
-The **version** encodes the year, month, and day when the transaction started (UTC) that was used to create this tuple/state, plus a unique sequence-number within that day. The version `0` is equivalent to `null`, and represents the temporary version, a version shared by all tuples that are not persisted, and are only build in memory, for example for testing, or as inbetween states.
+The **version** encodes the year, month, and day when the transaction started (UTC) that was used to create this tuple/state, plus a unique sequence-number within that day. The version `0` is equivalent to `null`, and represents the temporary version, a version shared by all tuples that are not persisted, and are only build in memory, for example for testing, or as in between states.
 
 The **uid** is the transaction local unique ordering tuple identifier, if multiple new tuples are created within a single transaction. It is forbidden to generate multiple tuples of the same feature within the same transaction. The reason is how the history is organized (_next-version_). Tuples are generated in order, so they can be timely ordered by _uid_. This allows to order all changes by _version_ and _uid_ to get a reliable order, which is important for paging algorithm, to split big transactions into chunks, or when ordering in queued.
 
 This way of creating the tuple-numbers, allows us to only make one call into the database to query a new transaction number from a sequence, after this we can create new world-wide unique tuple-numbers, without any need for the database. Even this initial call is a non-blocking operation, so that two transactions never need any synchronization, we use optimistic locking, if two clients modify the same data, the conflict is later resolved ([see auto-merge](#merged)).
+
+There is one race condition through, if two distinct **feature-id** hash to the same 64-bit **feature-number**. In that case the **feature-number** is incremented by 1, ensuring that the highest 8-bit stay the same, until a replacement **feature-number** is found. This means, there is no 100% guarantee of having a 1 to 1 relation between **feature-id** and **feature-number**, but a guarantee that each **feature-number** has only exact one **feature-id**.
 
 ### GUID
 A _GUID_ is a combination of a feature-id with a tuple-number.
@@ -46,13 +48,13 @@ When exposing features to the public, what is actually exposed are tuples, so sp
 
 The path and name have historic reasons, and is kept for downward compatibility. The value is the stringified _GUID_, being in the format:
 
-`urn:here:naksha:guid:{feature-id}:{storage-number}:{map-number}:{collection-number}:{partition-number}:{year}:{month}:{day}:{seq}:{uid}`
+`urn:here:naksha:guid:{feature-number}:{storage-number}:{map-number}:{collection-number}:{year}:{month}:{day}:{seq}:{uid}`
 
-When clients create new tuples, these tuples are not yet persisted in any storage, therefore they do not know the tuple-number the new _Tuple_ will become, except they are created in a client that directly uses the _storage_, and therefore has access to transactions, which is not the case for REST clients. However, even REST clients sometimes need to create references to new states (_tuples_), for this purpose it is allowed to shorten the _GUID_, so that it refers simply to the latest state:
+When clients create new tuples, these tuples are not yet persisted in any storage, therefore they do not know the tuple-number the new _Tuple_ will become, except they are created in a client that directly uses the _storage_, and therefore has access to transactions, which is not the case for REST clients. However, even REST clients sometimes need to create references to new states (_tuples_), for this purpose it is allowed to use a _HEAD_ reference as _GUID_ replacement, so that it refers simply to the latest state:
 
-`urn:here:naksha:guid:{feature-id}`
+`urn:here:naksha:head:{feature-id}`
 
-This _GUID_ simply refers to the _HEAD_ state of a feature in any storage. Parsing such a _GUID_ results in the tuple-number being `TupleNumber.ANY_HEAD`.
+This refers to the _HEAD_ state of a feature in any storage. Parsing such a value from a `uuid` property results in the tuple-number being `TupleNumber.HEAD` _(which is the value `0`).
 
 ### Versions and Transactions
 As already described, all features are a timeline of states, called _Tuple_, and each state is assigned a globally unique immutable identifier, called _Tuple-Number_. Each storage is assigned a globally unique storage-number, so a storage does never need to contact any other storage, when it generates new _Tuple_ with new _Tuple-Numbers_.
