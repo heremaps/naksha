@@ -20,13 +20,15 @@ package com.here.naksha.storage.http;
 
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import java.util.List;
+
+import naksha.jbon.JbDictionary;
 import naksha.model.*;
-import naksha.model.objects.Transaction;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaMap;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.FeatureTuple;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
-import naksha.model.request.ResultTuple;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -124,11 +126,6 @@ public final class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
-    return null;
-  }
-
-  @Override
   public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, boolean fetchFromHistory, int mode) {
     throw new NotImplementedException("Not supported by HTTP storage");
   }
@@ -155,6 +152,12 @@ public final class HttpStorageReadSession implements IReadSession {
 
   @Override
   public @NotNull SessionOptions getOptions() {
+    throw new NotImplementedException("Not supported by HTTP storage");
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
+    // TODO: Technically, this translates into creating an ReadCollections query!
     throw new NotImplementedException("Not supported by HTTP storage");
   }
 }

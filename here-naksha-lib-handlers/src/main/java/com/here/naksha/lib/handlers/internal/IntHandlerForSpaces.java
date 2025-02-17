@@ -67,7 +67,7 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
     List<String> expectedHandlerIds = space.getEventHandlerIds();
     ReadFeatures getEventHandlersRequest = readFeaturesByIdsRequest(EVENT_HANDLERS, expectedHandlerIds);
     try (IReadSession readSession =
-        nakshaHub().getSpaceStorage().newReadSession(SessionOptions.from(currentContext(), false))) {
+        nakshaHub().getSpaceStorage().newReadSession(SessionOptions.from(currentContext()))) {
       Response result = readSession.execute(getEventHandlersRequest);
       return missingHandlersIds(result, expectedHandlerIds);
     }

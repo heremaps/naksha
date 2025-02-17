@@ -58,7 +58,7 @@ class PgReader(
                     "Failed to execute query for unknown reason"
                 )
             )
-            val tupleNumberBytes = TupleNumberByteArray.fromGzip(storage, allBytes)
+            val tupleNumberBytes = TupleNumberBinaryArray.fromGzip(allBytes)
             return SuccessResponse(
                 PgResultSet(
                     storage,

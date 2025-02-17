@@ -129,6 +129,17 @@ interface ISession : IDictReader, AutoCloseable {
     fun getCollectionById(map: NakshaMap, collectionId: String): NakshaCollection?
 
     /**
+     * Returns the collection for the given number.
+     *
+     * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return maps that were created in the current session, but beware that these collections may eventually fail to commit.
+     * @param map the map to query.
+     * @param collectionNumber the collection-number for which to return the latest HEAD state.
+     * @return the collection; _null_ if no such collection exists.
+     * @since 3.0.0
+     */
+    fun getCollectionByNumber(map: NakshaMap, collectionNumber: Int): NakshaCollection?
+
+    /**
      * Load all tuples into the given [feature-tuples][FeatureTuple].
      *
      * [Tuple] that can't be fetched will still be _null_ after the method returns. The method should query the [Naksha.cache] before actually loading the [Tuple] from the storage.
@@ -147,17 +158,6 @@ interface ISession : IDictReader, AutoCloseable {
         fetchFromHistory: Boolean = false,
         mode: FetchMode = FETCH_ALL
     )
-
-    /**
-     * Returns the collection for the given number.
-     *
-     * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return maps that were created in the current session, but beware that these collections may eventually fail to commit.
-     * @param map the map to query.
-     * @param collectionNumber the collection-number for which to return the latest HEAD state.
-     * @return the collection; _null_ if no such collection exists.
-     * @since 3.0.0
-     */
-    fun getCollectionByNumber(map: NakshaMap, collectionNumber: Int): NakshaCollection?
 
     /**
      * The best flags to encode the given feature.
