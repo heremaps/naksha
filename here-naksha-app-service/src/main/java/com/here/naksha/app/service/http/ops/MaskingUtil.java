@@ -18,32 +18,33 @@
  */
 package com.here.naksha.app.service.http.ops;
 
-import naksha.model.XyzFeature;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import naksha.model.objects.NakshaFeature;
 
 public class MaskingUtil {
 
   static final String MASK = "xxxxxx";
 
-  private MaskingUtil() {}
-
-  public static void maskProperties(XyzFeature feature, Set<String> propertiesToMask) {
-    maskProperties(feature.getProperties(), propertiesToMask);
+  private MaskingUtil() {
   }
 
-  private static void maskProperties(Map<String, Object> propertiesAsMap, Set<String> propertiesToMask) {
+  public static void maskProperties(NakshaFeature feature, Set<String> propertiesToMaskLowercase) {
+    maskProperties(feature.getProperties(), propertiesToMaskLowercase);
+  }
+
+  private static void maskProperties(Map<String, Object> propertiesAsMap, Set<String> propertiesToMaskLowercase) {
     for (Entry<String, Object> entry : propertiesAsMap.entrySet()) {
-      if (propertiesToMask.contains(entry.getKey())) {
+      if (propertiesToMaskLowercase.contains(entry.getKey().toLowerCase())) {
         entry.setValue(MASK);
       } else if (entry.getValue() instanceof Map) {
-        maskProperties((Map<String, Object>) entry.getValue(), propertiesToMask);
+        maskProperties((Map<String, Object>) entry.getValue(), propertiesToMaskLowercase);
       } else if (entry.getValue() instanceof ArrayList array) {
         // recursive call to the nested array json
         for (Object arrayEntry : array) {
-          maskProperties((Map<String, Object>) arrayEntry, propertiesToMask);
+          maskProperties((Map<String, Object>) arrayEntry, propertiesToMaskLowercase);
         }
       }
     }

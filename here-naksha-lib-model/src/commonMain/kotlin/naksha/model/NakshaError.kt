@@ -254,5 +254,5 @@ open class NakshaError() : AnyObject() {
                 && cause == other.cause
     }
 
-    override fun toString(): String = code
+    override fun toString(): String = "NakshaError(code=$code, msg=$msg, id=$id)"
 }

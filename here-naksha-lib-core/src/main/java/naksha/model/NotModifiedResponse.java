@@ -18,14 +18,8 @@
  */
 package naksha.model;
 
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import naksha.model.request.Response;
+import com.here.naksha.lib.core.models.payload.XyzResponse;
 
-@JsonTypeName(value = "NotModifiedResponse")
-public class NotModifiedResponse extends Response {
+public class NotModifiedResponse extends XyzResponse {
 
-  @Override
-  public int resultSize() {
-    return 0;
-  }
 }

@@ -19,29 +19,28 @@
 package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
-import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
 import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJson;
 import static com.here.naksha.app.common.TestUtil.parseJsonFileOrFail;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.STRICT_JSON_COMPARISON_WITHOUT_XYZ;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.net.URLEncoder;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.UUID;
-
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -58,7 +57,7 @@ class CreateFeatureTest extends ApiTest {
   }
 
   @BeforeAll
-  static void setup(){
+  static void setup() {
     setupSpaceAndRelatedResources(nakshaClient, "CreateFeatures/setup");
   }
 
@@ -77,7 +76,7 @@ class CreateFeatureTest extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match", STRICT_JSON_COMPARISON_WITHOUT_XYZ)
         .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
         .hasInsertedIdsMatchingFeatureIds(null)
         .hasUuids();
@@ -154,10 +153,10 @@ class CreateFeatureTest extends ApiTest {
 
     // Given: addTags API query param
     final String tagQueryParam = "addTags=100"
-        + "&addTags=New_Normalized_Tag"
-        + "&addTags=" + urlEncoded("@New_Non_Normalized_Tag")
-        + "&addTags=Existing_Normalized_Tag"
-        + "&addTags=" + urlEncoded("@Existing_Non_Normalized_Tag");
+                                 + "&addTags=New_Normalized_Tag"
+                                 + "&addTags=" + urlEncoded("@New_Non_Normalized_Tag")
+                                 + "&addTags=Existing_Normalized_Tag"
+                                 + "&addTags=" + urlEncoded("@Existing_Non_Normalized_Tag");
     // Given: Create Features request
     final String bodyJson = loadFileOrFail("CreateFeatures/TC0303_createFeaturesWithAddTags/create_features.json");
     final String expectedBodyPart = loadFileOrFail("CreateFeatures/TC0303_createFeaturesWithAddTags/feature_response_part.json");
@@ -187,8 +186,8 @@ class CreateFeatureTest extends ApiTest {
 
     // Given: removeTags API query param
     final String tagQueryParam = "removeTags=non_existing_tag"
-        + "&removeTags=Existing_Normalized_Tag"
-        + "&removeTags=" + URLEncoder.encode("@Existing_Non_Normalized_Tag", UTF_8);
+                                 + "&removeTags=Existing_Normalized_Tag"
+                                 + "&removeTags=" + URLEncoder.encode("@Existing_Non_Normalized_Tag", UTF_8);
     // Given: Create Features request
     final String bodyJson = loadFileOrFail("CreateFeatures/TC0304_createFeaturesWithRemoveTags/create_features.json");
     final String expectedBodyPart =
@@ -232,8 +231,8 @@ class CreateFeatureTest extends ApiTest {
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
         .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match")
-            .hasMatchingInsertedCount(2)
-            .hasInsertedIdsMatchingFeatureIds(null);
+        .hasMatchingInsertedCount(2)
+        .hasInsertedIdsMatchingFeatureIds(null);
   }
 
   @Test
@@ -298,11 +297,11 @@ class CreateFeatureTest extends ApiTest {
     // Given: existing feature is fetched
     final HttpResponse<String> getResponse =
         getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features/my-custom-id-309-1", streamId);
-    final XyzFeature feature = parseJson(getResponse.body(), XyzFeature.class);
+    final NakshaFeature feature = parseJson(getResponse.body(), NakshaFeature.class);
     Assertions.assertNotNull(feature);
-    final XyzProperties newPropsOldUuid = feature.getProperties();
-    final XyzProperties newPropsOutdatedUuid = newPropsOldUuid.deepClone();
-    final XyzProperties nullUuidProps = new XyzProperties();
+    final NakshaProperties newPropsOldUuid = feature.getProperties();
+    final NakshaProperties newPropsOutdatedUuid = newPropsOldUuid.copy(true);
+    final NakshaProperties nullUuidProps = new NakshaProperties();
     // Correct UUID
     newPropsOldUuid.put("speedLimit", "30");
     newPropsOldUuid.put("newProperty", "was patched in");
@@ -328,9 +327,9 @@ class CreateFeatureTest extends ApiTest {
     // Perform first assertions
     final String firstResponse = loadFileOrFail("CreateFeatures/TC0309_createFeaturesWithUuid/first_response.json");
     assertThat(responsePatchSuccess)
-            .hasStreamIdHeader(getHeader(responsePatchSuccess, HDR_STREAM_ID))
-            .hasStatus(200)
-            .hasJsonBody(firstResponse);
+        .hasStreamIdHeader(getHeader(responsePatchSuccess, HDR_STREAM_ID))
+        .hasStatus(200)
+        .hasJsonBody(firstResponse);
 
     // Execute request, outdated UUID, should fail
     feature.setProperties(newPropsOutdatedUuid);
@@ -362,9 +361,9 @@ class CreateFeatureTest extends ApiTest {
     // Perform third assertions
     final String thirdResponse = loadFileOrFail("CreateFeatures/TC0309_createFeaturesWithUuid/third_response.json");
     assertThat(responseSuccessNoUuidGiven)
-            .hasStreamIdHeader(getHeader(responsePatchSuccess, HDR_STREAM_ID))
-            .hasStatus(200)
-            .hasJsonBody(thirdResponse);
+        .hasStreamIdHeader(getHeader(responsePatchSuccess, HDR_STREAM_ID))
+        .hasStatus(200)
+        .hasJsonBody(thirdResponse);
   }
 
   // TODO : This test is disabled for now due to failure in FibMap for generating payload bigger than 6MB
@@ -418,21 +417,21 @@ class CreateFeatureTest extends ApiTest {
 
     // Then: Perform assertions that we get success (and not 413 - Request Entity Too Large)
     assertThat(response)
-            .hasStatus(200)
-            .hasStreamIdHeader(streamId)
-            .hasResBodySizeGTE(expBodySize)
-            ;
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasResBodySizeGTE(expBodySize)
+    ;
 
     // When: We query the same Feature from NakshaHub
     streamId = UUID.randomUUID().toString();
     final String idQueryParam = "id=%s".formatted(urlEncoded("feature-id-20485579"));
-    response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?"+idQueryParam, streamId, timeout, null);
+    response = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?" + idQueryParam, streamId, timeout, null);
 
     // Then: Perform assertions that we get success (and not 413 - Request Entity Too Large)
     assertThat(response)
-            .hasStatus(200)
-            .hasStreamIdHeader(streamId)
-            .hasResBodySizeGTE(expBodySize)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasResBodySizeGTE(expBodySize)
     ;
   }
 

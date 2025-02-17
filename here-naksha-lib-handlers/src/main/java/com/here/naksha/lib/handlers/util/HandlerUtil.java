@@ -19,7 +19,7 @@
 package com.here.naksha.lib.handlers.util;
 
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
-import com.here.naksha.lib.handlers.val.ContextXyzFeatureResult;
+import com.here.naksha.lib.core.models.ContextXyzFeatureResponse;
 import java.util.ArrayList;
 import java.util.List;
 import naksha.base.JvmBoxingUtil;
@@ -43,12 +43,12 @@ public final class HandlerUtil {
 
   private HandlerUtil() {}
 
-  public static @NotNull ContextXyzFeatureResult createContextResultFromFeatureList(
+  public static @NotNull ContextXyzFeatureResponse createContextResultFromFeatureList(
       final @NotNull List<NakshaFeature> features,
       final @Nullable List<NakshaFeature> context,
       final @Nullable List<NakshaFeature> violations) {
     // Create ContextResult with cursor, context and violations
-    final ContextXyzFeatureResult ctxResult = new ContextXyzFeatureResult();
+    final ContextXyzFeatureResponse ctxResult = new ContextXyzFeatureResponse();
     ctxResult.setFeatures(features);
     ctxResult.setContext(context);
     ctxResult.setViolations(violations);

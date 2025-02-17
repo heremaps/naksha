@@ -3,7 +3,7 @@ package com.here.naksha.handler.activitylog;
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PROPERTY_ACTIVITY_LOG_ID;
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PROPERTY_UUID;
 
-import com.here.naksha.test.common.assertions.AssertionIPropertyQuery;
+import com.here.naksha.test.common.assertions.PropertyQueryAssertions;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.query.*;
@@ -25,8 +25,8 @@ class ActivityLogRequestTranslationUtilTest {
     ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
 
     // Then:
-    AssertionIPropertyQuery.assertThatOperation(readFeatures.getQuery().getProperties())
-        .hasType(StringOp.EQUALS)
+    PropertyQueryAssertions.assertThatPropertyQuery(readFeatures.getQuery().getProperties())
+        .hasOp(StringOp.EQUALS)
         .hasProperty(PROPERTY_UUID)
         .hasValue(expectedId);
   }
@@ -48,15 +48,15 @@ class ActivityLogRequestTranslationUtilTest {
     ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
 
     // Then:
-    AssertionIPropertyQuery.assertThatOperation(readFeatures.getQuery().getProperties())
+    PropertyQueryAssertions.assertThatPropertyQuery(readFeatures.getQuery().getProperties())
         .isPOr()
         .hasChildrenThat(
             first -> first
-                .hasType(StringOp.EQUALS)
+                .hasOp(StringOp.EQUALS)
                 .hasProperty(PROPERTY_UUID)
                 .hasValue(firstId),
             second -> second
-                .hasType(StringOp.EQUALS)
+                .hasOp(StringOp.EQUALS)
                 .hasProperty(PROPERTY_UUID)
                 .hasValue(secondId)
         );
@@ -74,8 +74,8 @@ class ActivityLogRequestTranslationUtilTest {
     ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
 
     // Then:
-    AssertionIPropertyQuery.assertThatOperation(readFeatures.getQuery().getProperties())
-        .hasType(StringOp.EQUALS)
+    PropertyQueryAssertions.assertThatPropertyQuery(readFeatures.getQuery().getProperties())
+        .hasOp(StringOp.EQUALS)
         .hasProperty(List.of(NakshaFeature.ID_KEY))
         .hasValue(expectedId);
   }
@@ -96,15 +96,15 @@ class ActivityLogRequestTranslationUtilTest {
     ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
 
     // Then:
-    AssertionIPropertyQuery.assertThatOperation(readFeatures.getQuery().getProperties())
+    PropertyQueryAssertions.assertThatPropertyQuery(readFeatures.getQuery().getProperties())
         .isPOr()
         .hasChildrenThat(
             first -> first
-                    .hasType(StringOp.EQUALS)
+                    .hasOp(StringOp.EQUALS)
                     .hasProperty(List.of(NakshaFeature.ID_KEY))
                 .hasValue(firstId),
             second -> second
-                    .hasType(StringOp.EQUALS)
+                    .hasOp(StringOp.EQUALS)
                     .hasProperty(List.of(NakshaFeature.ID_KEY))
                 .hasValue(secondId)
         );
@@ -126,15 +126,15 @@ class ActivityLogRequestTranslationUtilTest {
     ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
 
     // Then:
-    AssertionIPropertyQuery.assertThatOperation(readFeatures.getQuery().getProperties())
+    PropertyQueryAssertions.assertThatPropertyQuery(readFeatures.getQuery().getProperties())
         .isPOr()
         .hasChildrenThat(
             first -> first
-                    .hasType(StringOp.EQUALS)
+                    .hasOp(StringOp.EQUALS)
                     .hasProperty(PROPERTY_UUID)
                 .hasValue(id),
             second -> second
-                    .hasType(StringOp.EQUALS)
+                    .hasOp(StringOp.EQUALS)
                     .hasProperty(List.of(NakshaFeature.ID_KEY))
                 .hasValue(activityLogId)
         );

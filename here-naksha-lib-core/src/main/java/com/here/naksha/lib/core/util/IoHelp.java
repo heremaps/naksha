@@ -42,6 +42,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
+ * TODO CASL-780: this is used in couple of places but there were some issues in v2nwrt this class. Refactor/remove/migrate
  * IO helper class.
  */
 @SuppressWarnings("unused")

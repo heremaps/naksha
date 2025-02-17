@@ -16,7 +16,7 @@ import com.here.naksha.lib.common.TestNakshaContext;
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.handlers.NakshaAdminCollection;
+import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.List;
 import java.util.Map;

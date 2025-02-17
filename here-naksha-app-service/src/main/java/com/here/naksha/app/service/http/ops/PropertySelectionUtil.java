@@ -19,12 +19,10 @@
 package com.here.naksha.app.service.http.ops;
 
 import static com.here.naksha.common.http.apis.ApiParamsConst.PROP_SELECTION;
-import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.*;
+import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.AMPERSAND;
+import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.COMMA;
+import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.END;
 
-import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.payload.events.QueryDelimiter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
@@ -32,27 +30,32 @@ import com.here.naksha.lib.core.util.ValueList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class PropertySelectionUtil {
 
   private static final String SHORT_PROP_PREFIX = "p.";
-  private static final String FULL_PROP_PREFIX = XyzFeature.PROPERTIES + ".";
+  private static final String FULL_PROP_PREFIX = NakshaFeature.PROPERTIES_KEY + ".";
   private static final String SHORT_XYZ_PROP_PREFIX = "f.";
-  private static final String FULL_XYZ_PROP_PREFIX = FULL_PROP_PREFIX + XyzProperties.XYZ_NAMESPACE + ".";
+  private static final String FULL_XYZ_PROP_PREFIX = FULL_PROP_PREFIX + NakshaProperties.XYZ_KEY + ".";
   private static final String XYZ_PROP_ID = "f.id";
   private static final String PROP_ID = "id";
   private static final String PROP_FEATURE_TYPE = "type";
   private static final String SHORT_GEOM_PREFIX = "g.";
-  private static final String FULL_GEOM_PREFIX = XyzFeature.GEOMETRY + ".";
+  private static final String FULL_GEOM_PREFIX = NakshaFeature.GEOMETRY_KEY + ".";
 
-  private PropertySelectionUtil() {}
+  private PropertySelectionUtil() {
+  }
 
   /**
-   * Function builds unique Set of property paths based on key:value pairs supplied as API query parameter "selection".
-   * We iterate through all the values, split them based on delimiter "," and expand them into its full form,
-   * that can be used as Json path while extracting fields from the GeoJson feature.
+   * Function builds unique Set of property paths based on key:value pairs supplied as API query parameter "selection". We iterate through
+   * all the values, split them based on delimiter "," and expand them into its full form, that can be used as Json path while extracting
+   * fields from the GeoJson feature.
    *
    * <pre>
    * So query params :
@@ -78,9 +81,13 @@ public class PropertySelectionUtil {
    */
   public static @Nullable Set<String> buildPropPathSetFromQueryParams(
       final @Nullable QueryParameterList queryParams) {
-    if (queryParams == null) return null;
+    if (queryParams == null) {
+      return null;
+    }
     QueryParameter propParams = queryParams.get(PROP_SELECTION);
-    if (propParams == null) return null;
+    if (propParams == null) {
+      return null;
+    }
 
     // prop path set to be returned
     Set<String> gPropPathSet = null;
@@ -102,8 +109,8 @@ public class PropertySelectionUtil {
         }
         final QueryDelimiter delimiter = delimList.get(delimIdx++);
         if (delimiter != AMPERSAND && delimiter != END && delimiter != COMMA) {
-          throw new XyzErrorException(
-              XyzError.ILLEGAL_ARGUMENT,
+          throw new NakshaException(
+              NakshaError.ILLEGAL_ARGUMENT,
               "Invalid delimiter " + delimiter + " for parameter " + PROP_SELECTION);
         }
         if (gPropPathSet == null) {
@@ -111,12 +118,12 @@ public class PropertySelectionUtil {
           // add standard properties
           gPropPathSet.add(PROP_ID);
           gPropPathSet.add(PROP_FEATURE_TYPE);
-          gPropPathSet.add(XyzFeature.GEOMETRY);
+          gPropPathSet.add(NakshaFeature.GEOMETRY_KEY);
         }
         final String expandedPath = expandPropSelectionPath(path);
         // remove entire "geometry" object, if it is already (partially) requested
         if (expandedPath.startsWith(FULL_GEOM_PREFIX)) {
-          gPropPathSet.remove(XyzFeature.GEOMETRY);
+          gPropPathSet.remove(NakshaFeature.GEOMETRY_KEY);
         }
         gPropPathSet.add(expandedPath);
       }

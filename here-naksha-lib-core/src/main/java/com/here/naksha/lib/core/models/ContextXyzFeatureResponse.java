@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.handlers.val;
+package com.here.naksha.lib.core.models;
 
 import java.util.List;
 import naksha.base.JvmBoxingUtil;
@@ -28,7 +28,8 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ContextXyzFeatureResult extends SuccessResponse {
+//  TODO (CASL-780): this needs to prevail but not here
+public class ContextXyzFeatureResponse extends SuccessResponse {
 
   private static final String CONTEXT_KEY = "context";
   private static final String VIOLATIONS_KEY = "violations";

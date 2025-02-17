@@ -21,22 +21,22 @@ package com.here.naksha.lib.hub.mock;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
 
+import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import com.here.naksha.lib.handlers.NakshaAdminCollection;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import naksha.base.Int64;
-import naksha.base.PlatformLock;
-import naksha.jbon.JbDictionary;
+import naksha.model.ILock;
+import naksha.model.IMap;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
-import naksha.model.StorageConfig;
+import naksha.model.Tuple;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
@@ -93,12 +93,28 @@ public class NHAdminMock implements IStorage {
     throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
   }
 
+  @NotNull
+  @Override
+  public SessionOptions getAdminOptions() {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
   @Override
   public int getHardCap() {
     throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
   }
 
+  @Override
+  public void setHardCap(int i) {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
 
+  @Override
+  public boolean isInitialized() {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @Override
   public void initStorage(@Nullable Map<String, ?> params) {
     final NakshaContext ctx = NakshaContext.newInstance("naksha_mock");
     ctx.attachToCurrentThread();
@@ -107,18 +123,58 @@ public class NHAdminMock implements IStorage {
     try (final IWriteSession admin = newWriteSession(SessionOptions.from(ctx, true))) {
       WriteRequest writeAdminCollections = new WriteRequest();
       for (final String name : NakshaAdminCollection.ALL) {
-        Write write = new Write().createCollection(new NakshaCollection(name));
+        Write write = new Write().createCollection(null, new NakshaCollection(name));
         writeAdminCollections.add(write);
       }
       final Response response = admin.execute(writeAdminCollections);
       if (response instanceof ErrorResponse errorResponse) {
         admin.rollback();
         NakshaError error = errorResponse.getError();
-        throw unchecked(
-            new Exception("Unable to create Admin collections in Mock storage (code: " + error.getCode() + " )", error.getCause()));
+        throw unchecked(new Exception("Unable to create Admin collections in Mock storage (code: " + error.getCode() + " )", error.getCause()));
       }
       admin.commit();
     }
+  }
+
+  @NotNull
+  @Override
+  public IMap getDefaultMap() {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @NotNull
+  @Override
+  public IMap get(@NotNull String mapId) {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @Nullable
+  @Override
+  public IMap get(int mapNumber) {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @Override
+  public boolean contains(@NotNull String mapId) {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @Nullable
+  @Override
+  public String getMapId(int mapNumber) {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @NotNull
+  @Override
+  public NakshaFeature tupleToFeature(@NotNull Tuple tuple) {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  }
+
+  @NotNull
+  @Override
+  public Tuple featureToTuple(@NotNull NakshaFeature feature) {
+    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
   }
 
   @NotNull
@@ -134,32 +190,13 @@ public class NHAdminMock implements IStorage {
   }
 
   @Override
-  public @NotNull PlatformLock getLock() {
+  public void close() {
     throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
   }
 
+  @NotNull
   @Override
-  public @NotNull StorageConfig getConfig() {
-    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
-  }
-
-  @Override
-  public @NotNull Int64 getNumber() {
-    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
-  }
-
-  @Override
-  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
-    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
-  }
-
-  @Override
-  public @Nullable JbDictionary getDictionary(@NotNull String id) {
-    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
-  }
-
-  @Override
-  public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
+  public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
     throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
   }
 }

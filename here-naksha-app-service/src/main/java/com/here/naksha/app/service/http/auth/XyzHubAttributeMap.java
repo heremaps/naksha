@@ -20,10 +20,10 @@ package com.here.naksha.app.service.http.auth;
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.auth.AttributeMap;
-import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.util.List;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 
 public class XyzHubAttributeMap extends AttributeMap {
@@ -65,12 +65,12 @@ public class XyzHubAttributeMap extends AttributeMap {
    * @param feature The feature for which to return the attribute map.
    * @return The attribute map of the given feature.
    */
-  public static @NotNull AttributeMap ofFeature(@NotNull XyzFeature feature) {
+  public static @NotNull AttributeMap ofFeature(@NotNull NakshaFeature feature) {
     final AttributeMap attributeMap = new AttributeMap();
     attributeMap.withValue(XyzHubAttributeMap.ID, feature.getId());
     attributeMap.withValue(
         XyzHubAttributeMap.AUTHOR,
-        feature.getProperties().getXyzNamespace().getAuthor());
+        feature.getProperties().getXyz().getAuthor());
     return attributeMap;
   }
 
@@ -85,7 +85,7 @@ public class XyzHubAttributeMap extends AttributeMap {
     attributeMap.withValue(XyzHubAttributeMap.SPACE, space.getId());
     attributeMap.withValue(
         XyzHubAttributeMap.AUTHOR,
-        space.getProperties().getXyzNamespace().getAuthor());
+        space.getProperties().getXyz().getAuthor());
     if (space.getPackages() != null) {
       attributeMap.withValue(XyzHubAttributeMap.PACKAGES, space.getPackages()); // oneOf
     }
@@ -115,9 +115,9 @@ public class XyzHubAttributeMap extends AttributeMap {
     attributeMap.withValue(XyzHubAttributeMap.CONNECTOR, eventHandler.getId());
     attributeMap.withValue(
         XyzHubAttributeMap.AUTHOR,
-        eventHandler.getProperties().getXyzNamespace().getAuthor());
-    if (eventHandler.getPackages() != null) {
-      attributeMap.withValue(XyzHubAttributeMap.PACKAGES, eventHandler.getPackages()); // oneOf
+        eventHandler.getProperties().getXyz().getAuthor());
+    if (eventHandler.get(XyzHubAttributeMap.PACKAGES) != null) {
+      attributeMap.withValue(XyzHubAttributeMap.PACKAGES, eventHandler.get(XyzHubAttributeMap.PACKAGES)); // oneOf
     }
     return attributeMap;
   }

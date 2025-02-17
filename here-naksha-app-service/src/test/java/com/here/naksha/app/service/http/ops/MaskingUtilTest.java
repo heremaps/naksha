@@ -1,20 +1,19 @@
 package com.here.naksha.app.service.http.ops;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import naksha.model.XyzFeature;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Test;
 
 class MaskingUtilTest {
 
   @Test
-  void shouldMaskProperties(){
+  void shouldMaskProperties() {
     // Given
-    XyzFeature feature = featureWithProps(mutableMapOf(
+    NakshaFeature feature = featureWithProps(mutableMapOf(
         "sensitiveObject", mutableMapOf(
             "some_entry_1", 123,
             "some_entry_2", "lorem ipsum"
@@ -58,21 +57,21 @@ class MaskingUtilTest {
                 )
             )
         )
-    ), feature.getProperties().asMap());
+    ), feature.getProperties());
   }
 
-  private static XyzFeature featureWithProps(Map<String, Object> props){
-    XyzFeature xyzFeature = new XyzFeature();
+  private static NakshaFeature featureWithProps(Map<String, Object> props) {
+    NakshaFeature xyzFeature = new NakshaFeature();
     xyzFeature.getProperties().putAll(props);
     return xyzFeature;
   }
 
   // We use this instead of simple `Map::of` because `MaskingUtil` relies on properties' `entrySet`
   // `Map::of` return immutable map, which entries do not support `Entry::setValue` method
-  private static Map<String, Object> mutableMapOf(Object... args){
+  private static Map<String, Object> mutableMapOf(Object... args) {
     HashMap<String, Object> map = new HashMap<>();
-    for(int i = 0; i < args.length; i += 2){
-      map.put(args[i].toString(), args[i+1]);
+    for (int i = 0; i < args.length; i += 2) {
+      map.put(args[i].toString(), args[i + 1]);
     }
     return map;
   }

@@ -20,18 +20,13 @@ package com.here.naksha.storage.http;
 
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import java.util.List;
-import naksha.jbon.JbDictionary;
-import naksha.model.IReadSession;
-import naksha.model.IStorage;
-import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
-import naksha.model.SessionOptions;
-import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaMap;
+import naksha.model.*;
+import naksha.model.objects.Transaction;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.FeatureTuple;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
+import naksha.model.request.ResultTuple;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -61,15 +56,14 @@ public final class HttpStorageReadSession implements IReadSession {
   public @NotNull Response execute(@NotNull Request readRequest) {
     try {
       return HttpStorageReadExecute.execute(context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
-    } catch (Exception e) {
-      log.warn("We got exception while executing Read request.", e);
-      return new ErrorResponse(NakshaError.EXCEPTION, e.getMessage(), e);
+    } catch (Exception exception) {
+      log.warn("We got exception while executing Read request.", exception);
+      return new ErrorResponse(NakshaError.EXCEPTION, exception.getMessage(), exception);
     }
   }
 
   @Override
-  public void close() {
-  }
+  public void close() {}
 
   @Override
   public int getSocketTimeout() {

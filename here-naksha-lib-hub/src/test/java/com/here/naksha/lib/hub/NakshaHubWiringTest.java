@@ -35,7 +35,7 @@ import static org.mockito.Mockito.when;
 import com.here.naksha.lib.core.EndPipelineHandler;
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
-import com.here.naksha.lib.handlers.NakshaAdminCollection;
+import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.models.PluginCache;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;

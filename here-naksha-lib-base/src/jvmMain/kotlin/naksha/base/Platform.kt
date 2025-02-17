@@ -231,11 +231,6 @@ actual class Platform {
         actual fun isProxyKlass(klass: KClass<*>): Boolean = Proxy::class.isSuperclassOf(klass)
 
         @JvmStatic
-        actual fun <T : Any> klassFor(constructor: KFunction<T>): KClass<T> {
-            TODO("Implement me!")
-        }
-
-        @JvmStatic
         actual fun <T : Any> klassForName(name: String): KClass<T> {
             try {
                 @Suppress("UNCHECKED_CAST")
@@ -255,7 +250,7 @@ actual class Platform {
          * @return The Kotlin class.
          */
         @JvmStatic
-        fun <T : Any> klassOf(javaClass: Class<T>): KClass<T> = javaClass.kotlin
+        fun <T : Any> klassFor(javaClass: Class<T>): KClass<T> = javaClass.kotlin
 
         /**
          * Returns the Java class of the given Kotlin class.

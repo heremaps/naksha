@@ -26,11 +26,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import naksha.model.Action;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.FeatureTuple;
-import naksha.model.request.FeatureTupleList;
+import naksha.model.request.ExecutedOp;
 import naksha.model.request.Response;
+import naksha.model.request.ResultTuple;
+import naksha.model.request.ResultTupleList;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -75,7 +76,7 @@ public class ResultHelper {
         continue; // skip initial records till we reach to desired offset
       }
       try {
-        features.add(featureType.cast(iterator.next()));
+        features.add(JvmBoxingUtil.box(iterator.next(), featureType));
         cnt++;
       } catch (ClassCastException | NullPointerException e) {
         throw new RuntimeException(e);
@@ -92,13 +93,15 @@ public class ResultHelper {
    * @param type   the type of feature
    * @return the feature of type T if found, else null
    */
-  public static <T> @Nullable T readFeatureFromResponse(
-      final @NotNull SuccessResponse result, final @NotNull Class<T> type) {
-    final List<NakshaFeature> rows = result.getFeatures();
-    if (rows.isEmpty()) {
+  public static <T extends NakshaFeature> @Nullable T readFeatureFromResponse(
+      final @NotNull SuccessResponse result,
+      final @NotNull Class<T> type
+  ) {
+    final List<NakshaFeature> features = result.getFeatures();
+    if (features.isEmpty()) {
       return null;
     }
-    return type.cast(rows.get(0));
+    return JvmBoxingUtil.box(features.get(0), type);
   }
 
   public static List<String> readIdsFromResult(final @NotNull Response result) {

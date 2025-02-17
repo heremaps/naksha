@@ -44,12 +44,21 @@ class PgReader(
         val plan = connection.prepare(query.sql, query.argTypes)
         plan.use {
             val allBytes: ByteArray?
-            val cursor = plan.execute(query.argValues)
+            val cursor = try {
+                plan.execute(query.argValues)
+            } catch (nakshaException: NakshaException) {
+                return ErrorResponse(nakshaException)
+            }
             cursor.use {
                 allBytes = if (cursor.next()) cursor.column("rs") as ByteArray else null
             }
-            if (allBytes == null) throw NakshaException(EXCEPTION, "Failed to execute query for unknown reason")
-            val tupleNumberBytes = TupleNumberBinaryArray.fromGzip(allBytes)
+            if (allBytes == null) return ErrorResponse(
+                NakshaException(
+                    EXCEPTION,
+                    "Failed to execute query for unknown reason"
+                )
+            )
+            val tupleNumberBytes = TupleNumberByteArray.fromGzip(storage, allBytes)
             return SuccessResponse(
                 PgResultSet(
                     storage,

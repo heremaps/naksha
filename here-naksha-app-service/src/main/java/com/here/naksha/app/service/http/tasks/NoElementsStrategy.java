@@ -18,18 +18,21 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import com.here.naksha.lib.core.models.XyzError;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
 
 public enum NoElementsStrategy {
-  FAIL_ON_NO_ELEMENTS(
-      XyzError.EXCEPTION, "Unexpected error while saving feature, the result cursor is empty / does not exist"),
-  NOT_FOUND_ON_NO_ELEMENTS(XyzError.NOT_FOUND, "The desired feature does not exist.");
+  FAIL_ON_NO_ELEMENTS(new NakshaError(
+      NakshaError.EXCEPTION, "Unexpected error while saving feature, the result cursor is empty / does not exist")),
+  NOT_FOUND_ON_NO_ELEMENTS(new NakshaError(NakshaError.NOT_FOUND, "The desired feature does not exist."));
 
-  final XyzError xyzError;
-  final String message;
+  final NakshaError nakshaError;
 
-  NoElementsStrategy(XyzError xyzError, String message) {
-    this.xyzError = xyzError;
-    this.message = message;
+  NoElementsStrategy(NakshaError nakshaError) {
+    this.nakshaError = nakshaError;
+  }
+
+  public NakshaException asException() {
+    return new NakshaException(nakshaError);
   }
 }

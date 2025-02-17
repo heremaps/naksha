@@ -20,27 +20,36 @@ package com.here.naksha.app.service.http.ops;
 
 import static com.here.naksha.common.http.apis.ApiParamsConst.TILE_TYPE_QUADKEY;
 
-import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
+import naksha.geo.SpBoundingBox;
+import naksha.geo.SpPolygon;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
 import org.jetbrains.annotations.NotNull;
-import org.locationtech.jts.geom.Geometry;
 
-public class SpatialUtil {
+public class TileToBboxUtil {
 
-  private SpatialUtil() {}
+  private static final boolean DONT_CLONE = false;
 
-  public static @NotNull Geometry buildGeometryForTile(
-      final @NotNull String tileType, final @NotNull String tileId, final int margin) {
+  private TileToBboxUtil() {
+  }
+
+  public static @NotNull SpPolygon bboxPolygonForTile(
+      final @NotNull String tileType,
+      final @NotNull String tileId,
+      final int margin
+  ) {
     try {
       if (!TILE_TYPE_QUADKEY.equals(tileType)) {
-        throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Tile type " + tileType + " not supported");
+        throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Tile type " + tileType + " not supported");
       }
-      return WebMercatorTile.forQuadkey(tileId)
-          .getExtendedBBoxAsPolygon(margin)
-          .getGeometry();
+      return bboxForTile(tileId).addMargin(margin).toPolygon();
     } catch (Exception ex) {
-      throw new XyzErrorException(XyzError.ILLEGAL_ARGUMENT, "Error interpreting tile input: " + ex.getMessage());
+      throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Error interpreting tile input: " + ex.getMessage());
     }
+  }
+
+  private static SpBoundingBox bboxForTile(String tileId) {
+    return WebMercatorTile.forQuadkey(tileId).getBBox(DONT_CLONE);
   }
 }

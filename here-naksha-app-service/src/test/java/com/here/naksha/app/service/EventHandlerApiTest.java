@@ -27,7 +27,6 @@ import static org.junit.jupiter.api.Named.named;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.CommonApiTestSetup;
 import com.here.naksha.app.common.NakshaTestWebClient;
-import naksha.model.XyzFeature;
 import naksha.model.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import java.io.IOException;
@@ -37,6 +36,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
+import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Named;
@@ -369,13 +369,13 @@ class EventHandlerApiTest extends ApiTest {
         .hasStreamIdHeader(streamId);
 
     // And: all saved handlers are returned
-    List<XyzFeature> returnedXyzFeatures =
+    List<NakshaFeature> returnedXyzFeatures =
         parseJson(response.body(), XyzFeatureCollection.class).getFeatures();
     boolean allReturnedFeaturesAreEventHandlers = returnedXyzFeatures.stream()
         .allMatch(feature -> EventHandler.class.isAssignableFrom(feature.getClass()));
     Assertions.assertTrue(allReturnedFeaturesAreEventHandlers);
     List<String> eventHandlerIds =
-        returnedXyzFeatures.stream().map(XyzFeature::getId).toList();
+        returnedXyzFeatures.stream().map(NakshaFeature::getId).toList();
     Assertions.assertTrue(eventHandlerIds.containsAll(expectedHandlerIds));
   }
 

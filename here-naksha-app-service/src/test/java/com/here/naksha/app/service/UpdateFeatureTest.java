@@ -29,7 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
-import naksha.model.XyzFeature;
 import naksha.model.XyzFeatureCollection;
 import naksha.geo.XyzProperties;
 import java.io.IOException;
@@ -37,6 +36,8 @@ import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -152,7 +153,7 @@ class UpdateFeatureTest extends ApiTest {
     final XyzFeatureCollection responseFeatureCollection = parseJson(response.body(), XyzFeatureCollection.class);
     Assertions.assertNotNull(responseFeatureCollection);
     final List<String> inserted = responseFeatureCollection.getInserted();
-    final List<XyzFeature> insertedFeatures = responseFeatureCollection.getFeatures();
+    final List<NakshaFeature> insertedFeatures = responseFeatureCollection.getFeatures();
     JSONAssert.assertEquals(
         "{inserted:[" + inserted.size() + "]}",
         response.body(),
@@ -164,7 +165,7 @@ class UpdateFeatureTest extends ApiTest {
           insertedFeatures.get(i).getId(),
           "Mismatch between inserted v/s feature ID in the response at idx : " + i);
       assertNotNull(
-          insertedFeatures.get(i).getProperties().getXyzNamespace().getUuid(),
+          insertedFeatures.get(i).getProperties().getXyz().getUuid(),
           "UUID found missing in response for feature at idx : " + i);
     }
   }
@@ -175,11 +176,11 @@ class UpdateFeatureTest extends ApiTest {
     final String streamId = UUID.randomUUID().toString();
     final HttpResponse<String> getResponse =
         getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features/my-custom-feature-2", streamId);
-    final XyzFeature feature = parseJson(getResponse.body(), XyzFeature.class);
+    final NakshaFeature feature = parseJson(getResponse.body(), NakshaFeature.class);
     Assertions.assertNotNull(feature);
-    final XyzProperties newPropsOldUuid = feature.getProperties();
-    final XyzProperties newPropsOutdatedUuid = newPropsOldUuid.deepClone();
-    final XyzProperties nullUuidProps = new XyzProperties();
+    final NakshaProperties newPropsOldUuid = feature.getProperties();
+    final NakshaProperties newPropsOutdatedUuid = newPropsOldUuid.copy(true);
+    final NakshaProperties nullUuidProps = new NakshaProperties();
     // Old UUID
     newPropsOldUuid.put("speedLimit", "30");
     // New UUID
@@ -206,7 +207,7 @@ class UpdateFeatureTest extends ApiTest {
     final XyzFeatureCollection responseFeatureCollection =
         parseJson(responseUpdateSuccess.body(), XyzFeatureCollection.class);
     Assertions.assertNotNull(responseFeatureCollection);
-    final XyzFeature updatedFeature =
+    final NakshaFeature updatedFeature =
         responseFeatureCollection.getFeatures().get(0);
     Assertions.assertEquals("30", updatedFeature.getProperties().get("speedLimit"));
 
@@ -241,7 +242,7 @@ class UpdateFeatureTest extends ApiTest {
     assertEquals(200, responseOverriding.statusCode(), "ResCode mismatch");
     final XyzFeatureCollection featureCollection = parseJson(responseOverriding.body(), XyzFeatureCollection.class);
     Assertions.assertNotNull(featureCollection);
-    final XyzFeature overridenFeature = featureCollection.getFeatures().get(0);
+    final NakshaFeature overridenFeature = featureCollection.getFeatures().get(0);
     Assertions.assertEquals("yesyesyes", overridenFeature.getProperties().get("overriden"));
     // Old properties like speedLimit should no longer be available
     // The feature has been completely overwritten by the PUT request with null UUID
@@ -258,11 +259,11 @@ class UpdateFeatureTest extends ApiTest {
 
     final HttpResponse<String> getResponse =
         getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features/tc_506_test_feature", streamId);
-    final XyzFeature feature = parseJson(getResponse.body(), XyzFeature.class);
+    final NakshaFeature feature = parseJson(getResponse.body(), NakshaFeature.class);
     Assertions.assertNotNull(feature);
 
     // When: preparing new properties
-    final XyzProperties newPropsOldUuid = feature.getProperties();
+    final NakshaProperties newPropsOldUuid = feature.getProperties();
     newPropsOldUuid.put("speedLimit", "30");
     newPropsOldUuid.put("this_test_id", "tc_506");
     // And: executing new properties update
@@ -276,12 +277,12 @@ class UpdateFeatureTest extends ApiTest {
         .hasStreamIdHeader(streamId);
 
     // And: update properties match
-    final XyzFeature updatedFeature = parseJson(responseUpdateSuccess.body(), XyzFeature.class);
+    final NakshaFeature updatedFeature = parseJson(responseUpdateSuccess.body(), NakshaFeature.class);
     Assertions.assertEquals("30", updatedFeature.getProperties().get("speedLimit"));
     Assertions.assertEquals("tc_506", updatedFeature.getProperties().get("this_test_id"));
 
     // When: trying to update with outdated UUID
-    final XyzProperties newPropsOutdatedUuid = newPropsOldUuid.deepClone();
+    final NakshaProperties newPropsOutdatedUuid = newPropsOldUuid.copy(true);
     newPropsOutdatedUuid.put("speedLimit", "120");
     feature.setProperties(newPropsOutdatedUuid);
     final HttpResponse<String> responseUpdateFail = getNakshaClient()
@@ -291,7 +292,7 @@ class UpdateFeatureTest extends ApiTest {
     assertThat(responseUpdateFail).hasStatus(409);
 
     // When: updating with null uuid props
-    final XyzProperties nullUuidProps = new XyzProperties();
+    final NakshaProperties nullUuidProps = new NakshaProperties();
     nullUuidProps.put("uuid", null);
     nullUuidProps.put("overriden", "yesyesyes");
     feature.setProperties(nullUuidProps);
@@ -300,7 +301,7 @@ class UpdateFeatureTest extends ApiTest {
 
     // Then: update suceeds
     assertThat(responseOverriding).hasStatus(200);
-    final XyzFeature overridenFeature = parseJson(responseOverriding.body(), XyzFeature.class);
+    final NakshaFeature overridenFeature = parseJson(responseOverriding.body(), NakshaFeature.class);
     Assertions.assertEquals("yesyesyes", overridenFeature.getProperties().get("overriden"));
     // Old properties like isImportant should no longer be available
     // The feature has been completely overwritten by the PUT request with null UUID

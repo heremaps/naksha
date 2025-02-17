@@ -25,6 +25,12 @@ import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import com.here.naksha.lib.core.view.ViewSerialize;
 import java.io.IOException;
+import naksha.base.AnyObject;
+import naksha.base.FromJsonOptions;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.JvmJsonUtil;
+import naksha.base.Platform;
+import naksha.model.objects.NakshaFeatureList;
 import org.jetbrains.annotations.NotNull;
 
 public class MockUtil {
@@ -67,11 +73,7 @@ public class MockUtil {
     return jsonStr;
   }
 
-  public static <T> T parseJsonFile(final @NotNull String filePath, final @NotNull Class<T> type) {
-    return parseJson(loadFile(filePath), type);
-  }
-
-  public static <T> T parseJsonFile(final @NotNull String filePath, final @NotNull TypeReference<T> type) {
-    return parseJson(loadFile(filePath), type);
+  public static NakshaFeatureList parseFeatures(final @NotNull String featuresFile) {
+    return JvmBoxingUtil.box(Platform.fromJSON(loadFile(featuresFile), FromJsonOptions.DEFAULT), NakshaFeatureList.class);
   }
 }

@@ -19,31 +19,30 @@
 package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.apis.ApiParams.extractMandatoryPathParam;
+import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.SPACE_ID;
 import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.XyzError;
-import naksha.model.XyzFeature;
 import com.here.naksha.lib.core.models.naksha.Space;
-import naksha.model.XyzResponse;
-import naksha.model.POp;
-import naksha.model.PRef;
-import naksha.model.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
-import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.util.storage.RequestHelper;
-import com.here.naksha.lib.core.util.storage.ResultHelper;
-import com.here.naksha.lib.core.view.ViewDeserialize;
+import com.here.naksha.lib.core.models.payload.XyzResponse;
 import io.vertx.ext.web.RoutingContext;
-import java.util.NoSuchElementException;
+import naksha.base.FromJsonOptions;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
+import naksha.base.StringList;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Response;
+import naksha.model.request.Write;
+import naksha.model.request.WriteRequest;
+import naksha.model.util.RequestHelper;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,7 +73,8 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
    * Initializes this task.
    */
   @Override
-  protected void init() {}
+  protected void init() {
+  }
 
   /**
    * Execute this task.
@@ -92,32 +92,29 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
         case DELETE_SPACE -> executeDeleteSpace();
         default -> executeUnsupported();
       };
+    } catch (NakshaException nakshaException) {
+      logger.warn("Known exception while processing request. ", nakshaException);
+      return verticle.sendErrorResponse(routingContext, nakshaException.error);
     } catch (Exception ex) {
-      if (ex instanceof XyzErrorException xyz) {
-        logger.warn("Known exception while processing request. ", ex);
-        return verticle.sendErrorResponse(routingContext, xyz.xyzError, xyz.getMessage());
-      } else {
-        logger.error("Unexpected error while processing request. ", ex);
-        return verticle.sendErrorResponse(
-            routingContext, XyzError.EXCEPTION, "Internal error : " + ex.getMessage());
-      }
+      logger.error("Unexpected error while processing request. ", ex);
+      return verticle.sendErrorResponse(
+          routingContext, NakshaError.EXCEPTION, "Internal error : " + ex.getMessage());
     }
   }
 
   private XyzResponse executeDeleteSpace() {
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
-    final WriteXyzFeatures wr = new WriteXyzFeatures(SPACES).delete(spaceId, null);
-    try (Result wrResult = executeWriteRequestFromSpaceStorage(wr)) {
-      return transformDeleteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
-    }
+    final WriteRequest wr = new WriteRequest().add(new Write().deleteFeatureById(null, spaceId, SPACES));
+
+    Response response = executeWriteRequestFromSpaceStorage(wr);
+    return transformResponseToXyzFeatureResponse(response, NakshaFeature.class, NOT_FOUND_ON_NO_ELEMENTS);
   }
 
   private @NotNull XyzResponse executeCreateSpace() throws JsonProcessingException {
     final Space newSpace = spaceFromRequestBody();
-    final WriteXyzFeatures wrRequest = RequestHelper.createFeatureRequest(SPACES, newSpace, false);
-    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
-      return transformWriteResultToXyzFeatureResponse(wrResult, Space.class);
-    }
+    final WriteRequest wrRequest = RequestHelper.createFeatureRequest(SPACES, newSpace);
+    Response response = executeWriteRequestFromSpaceStorage(wrRequest);
+    return transformResponseToXyzFeatureResponse(response, Space.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
   }
 
   private @NotNull XyzResponse executeUpdateSpace() throws JsonProcessingException {
@@ -125,44 +122,31 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
     final Space spaceFromBody = spaceFromRequestBody();
     if (!spaceFromBody.getId().equals(spaceIdFromPath)) {
       return verticle.sendErrorResponse(
-          routingContext, XyzError.ILLEGAL_ARGUMENT, mismatchMsg(spaceIdFromPath, spaceFromBody));
+          routingContext, NakshaError.ILLEGAL_ARGUMENT, mismatchMsg(spaceIdFromPath, spaceFromBody));
     } else {
-      final WriteXyzFeatures updateSpaceReq = RequestHelper.updateFeatureRequest(SPACES, spaceFromBody);
-      try (Result updateSpaceResult = executeWriteRequestFromSpaceStorage(updateSpaceReq)) {
-        return transformWriteResultToXyzFeatureResponse(updateSpaceResult, Space.class);
-      }
+      final WriteRequest updateSpaceReq = RequestHelper.updateFeatureRequest(SPACES, spaceFromBody);
+      Response updateSpaceResponse = executeWriteRequestFromSpaceStorage(updateSpaceReq);
+      return transformResponseToXyzFeatureResponse(updateSpaceResponse, Space.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
     }
   }
 
   private @NotNull XyzResponse executeGetSpaces() {
     final ReadFeatures request = new ReadFeatures(SPACES);
-    try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzCollectionResponse(rdResult, Space.class);
-    }
+    Response response = executeReadRequestFromSpaceStorage(request);
+    return transformResponseToXyzCollectionResponse(response, Space.class);
   }
 
   private @NotNull XyzResponse executeGetSpaceById() {
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
-    final ReadFeatures request = new ReadFeatures(SPACES).withPropertyOp(POp.eq(PRef.id(), spaceId));
-    try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzFeatureResponse(rdResult, Space.class);
-    }
-  }
-
-  private @Nullable Space maybePersistedSpace(String spaceId) {
-    final ReadFeatures getSpace = new ReadFeatures(SPACES).withPropertyOp(POp.eq(PRef.id(), spaceId));
-    try (Result rr = executeReadRequestFromSpaceStorage(getSpace)) {
-      return ResultHelper.readFeatureFromResponse(rr, Space.class);
-    } catch (NoSuchElementException e) {
-      return null;
-    }
+    final ReadFeatures request = new ReadFeatures(SPACES);
+    request.setFeatureIds(StringList.of(spaceId));
+    Response response = executeReadRequestFromSpaceStorage(request);
+    return transformResponseToXyzFeatureResponse(response, Space.class, NOT_FOUND_ON_NO_ELEMENTS);
   }
 
   private Space spaceFromRequestBody() throws JsonProcessingException {
-    try (final Json json = Json.get()) {
-      final String bodyJson = routingContext.body().asString();
-      return json.reader(ViewDeserialize.User.class).forType(Space.class).readValue(bodyJson);
-    }
+    final String bodyJson = routingContext.body().asString();
+    return JvmBoxingUtil.box(Platform.fromJSON(bodyJson, FromJsonOptions.DEFAULT), Space.class);
   }
 
   private static String mismatchMsg(String spaceIdFromPath, Space spaceFromBody) {

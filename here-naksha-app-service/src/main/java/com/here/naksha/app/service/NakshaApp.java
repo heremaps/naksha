@@ -28,7 +28,6 @@ import com.here.naksha.app.service.metrics.OTelMetrics;
 import com.here.naksha.app.service.util.UrlUtil;
 import com.here.naksha.lib.core.INaksha;
 import naksha.model.Naksha;
-import naksha.model.NakshaVersion;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.hub.NakshaHubFactory;
 import com.here.naksha.lib.hub.util.ConfigUtil;
@@ -42,11 +41,17 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import naksha.model.NakshaVersion;
+import naksha.psql.PgStorage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -64,10 +69,10 @@ public final class NakshaApp extends Thread {
 
   private static final String DEFAULT_SCHEMA = "naksha";
 
-  private static final String EXAMPLE_URL = "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd"
-      + "&schema=" + DEFAULT_SCHEMA
-      + "&app=" + NakshaHubConfig.defaultAppName()
-      + "&id=" + Naksha.storageNumberByHash("naksha-hub:admin:db");
+  private static final String DEFAULT_URL = "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd"
+                                            + "&schema=" + DEFAULT_SCHEMA
+                                            + "&app=" + NakshaHubConfig.defaultAppName()
+                                            + "&id=" + PgStorage.ADMIN_STORAGE_ID;
   private final AtomicReference<Boolean> stopInstance = new AtomicReference<>(false);
 
   /**
@@ -105,7 +110,7 @@ public final class NakshaApp extends Thread {
     err.println("        java -jar naksha.jar default-config");
     err.println(" ");
     err.println("    Example 2 : Start service with given config and custom database URL");
-    err.println("        java -jar naksha.jar default-config '" + EXAMPLE_URL + "'");
+    err.println("        java -jar naksha.jar default-config '" + DEFAULT_URL + "'");
     err.println(" ");
     err.println("    Example 3 : Start service with mock config (with in-memory hub)");
     err.println("        java -jar naksha.jar mock-config");
@@ -127,7 +132,7 @@ public final class NakshaApp extends Thread {
     switch (args.length) {
       case 1 -> {
         cfgId = args[0];
-        url = EXAMPLE_URL;
+        url = DEFAULT_URL;
         log.info("Starting with config `{}` and default database...", cfgId);
       }
       case 2 -> {
@@ -135,7 +140,7 @@ public final class NakshaApp extends Thread {
         url = args[1];
         if (!url.startsWith("jdbc:postgresql://")) {
           throw new IllegalArgumentException("Missing or invalid argument <url>, must be a value like '"
-              + EXAMPLE_URL + "', got '" + url + "' instead");
+                                             + DEFAULT_URL + "', got '" + url + "' instead");
         }
         log.info("Starting with config `{}` and custom database URL...", cfgId);
       }

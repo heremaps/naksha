@@ -931,7 +931,7 @@ open class JbEncoder(var global: IDict? = null) : Binary() {
             is ListProxy<*> -> encodeList(value)
             is Array<*> -> encodeArray(value as Array<Any?>)
             null -> encodeNull()
-            else -> throw IllegalArgumentException()
+            else -> throw IllegalArgumentException("Could not encode value for type: ${value::class}")
         }
         return start
     }

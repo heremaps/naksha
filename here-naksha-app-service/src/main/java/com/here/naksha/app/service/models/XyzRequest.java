@@ -20,11 +20,9 @@ package com.here.naksha.app.service.models;
 
 import com.fasterxml.jackson.annotation.*;
 import com.here.naksha.lib.core.models.Typed;
-import com.here.naksha.lib.core.models.payload.responses.*;
+import naksha.base.AnyObject;
 
 /**
  * All classes that represent a valid response of any remote procedure to the XYZ Hub need to extend this class.
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonSubTypes({@JsonSubTypes.Type(value = FeatureCollectionRequest.class, name = "FeatureCollection")})
-public abstract class XyzRequest implements Typed {}
+public abstract class XyzRequest extends AnyObject {}

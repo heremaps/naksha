@@ -20,9 +20,10 @@ package com.here.naksha.lib.handlers.val;
 
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
-import static com.here.naksha.lib.handlers.util.MockUtil.*;
+import static com.here.naksha.lib.handlers.util.MockUtil.parseFeatures;
+import static com.here.naksha.lib.handlers.util.MockUtil.parseJson;
+import static com.here.naksha.lib.handlers.util.MockUtil.toJson;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
@@ -53,9 +54,7 @@ public class MockValidationHandler extends AbstractEventHandler {
   protected @NotNull NakshaProperties properties;
 
   private static final String MOCK_VIOLATIONS_FILE = "mock_data/dry_run_violations.json";
-  private static final TypeReference<List<NakshaFeature>> LIST_FEATURE_TYPE_REF = new TypeReference<>() {};
-  private static final List<NakshaFeature> mockViolations =
-      parseJsonFile(MOCK_VIOLATIONS_FILE, LIST_FEATURE_TYPE_REF);
+  private static final List<NakshaFeature> mockViolations = parseFeatures(MOCK_VIOLATIONS_FILE);
   private static final int totalViolations = mockViolations.size();
 
   public MockValidationHandler(

@@ -196,9 +196,14 @@ open class PgSession(
     }
 
     override fun execute(request: Request): Response {
+        // TODO: Verify that we always return an Response, no exceptions!
         when (request) {
             is WriteRequest -> {
-                useTransaction()
+                try {
+                    transaction()
+                } catch (nakshaException: NakshaException) {
+                    return ErrorResponse(nakshaException)
+                }
                 val response = PgWriter(this, request, BulkWriteExecutor(this)).execute()
                 return response
             }

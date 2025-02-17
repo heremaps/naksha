@@ -23,10 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
-import naksha.model.XyzFeature;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
+import naksha.base.Platform;
+import naksha.base.ToJsonOptions;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +70,7 @@ public abstract class AbstractDataIngest {
     // Prepare REST API request
     final FeatureCollectionRequest collectionRequest =
         parseJsonFileOrFail(DATA_ROOT_FOLDER, filePath, FeatureCollectionRequest.class);
-    final List<XyzFeature> features = (List<XyzFeature>) collectionRequest.getFeatures();
+    final List<NakshaFeature> features = collectionRequest.getFeatures();
     nullifyUuid(features);
     final String streamId = UUID.randomUUID().toString();
 
@@ -99,18 +101,18 @@ public abstract class AbstractDataIngest {
   }
 
   private String prepareNextBatchRequest(
-      final @NotNull List<XyzFeature> features,
+      final @NotNull List<NakshaFeature> features,
       final int totalFeatures,
       final int crtIdx,
       final int reqBatchSize) {
     final FeatureCollectionRequest request = new FeatureCollectionRequest();
     int endIdx = Math.min(crtIdx + reqBatchSize, totalFeatures);
-    return request.withFeatures(features.subList(crtIdx, endIdx)).serialize();
+    return Platform.toJSON(request.withFeatures(features.subList(crtIdx, endIdx)), ToJsonOptions.DEFAULT);
   }
 
-  private void nullifyUuid(final @NotNull List<XyzFeature> features) {
-    for (final XyzFeature feature : features) {
-      feature.getProperties().getXyzNamespace().setUuid(null);
+  private void nullifyUuid(final @NotNull List<NakshaFeature> features) {
+    for (final NakshaFeature feature : features) {
+      feature.getProperties().getXyz().remove("uuid");
     }
   }
 }

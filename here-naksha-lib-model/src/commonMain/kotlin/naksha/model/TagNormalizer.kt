@@ -7,6 +7,7 @@ import naksha.base.Platform
 import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
 import naksha.model.TagNormalizer.TagNormalizer_C.splitNormalizedTag
 import kotlin.js.JsExport
+import kotlin.jvm.JvmStatic
 
 /**
  * An object used for Tag normalization and splitting.
@@ -54,6 +55,7 @@ class TagNormalizer private constructor() {
         /**
          * Main method for raw tag normalization. See[TagNormalizer] doc for more
          */
+        @JvmStatic
         fun normalizeTag(tag: String): String {
             val policy = policyFor(tag)
             val normalized = Platform.normalize(tag, policy.normalizerForm)

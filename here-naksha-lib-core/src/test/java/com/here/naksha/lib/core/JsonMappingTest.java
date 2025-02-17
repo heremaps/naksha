@@ -42,7 +42,7 @@ public class JsonMappingTest {
     final String json =
         "{\"type\":\"Feature\", \"id\": \"xyz123\", \"properties\":{\"x\":5}, \"otherProperty\": \"123\"}";
     JvmMap jvmMap = (JvmMap) Platform.fromJSON(json, FromJsonOptions.DEFAULT);
-    final NakshaFeature obj = jvmMap.proxy(Platform.klassOf(NakshaFeature.class));
+    final NakshaFeature obj = jvmMap.proxy(Platform.klassFor(NakshaFeature.class));
     assertNotNull(obj);
 
     assertEquals(5, (int) obj.getProperties().get("x"));
@@ -53,7 +53,7 @@ public class JsonMappingTest {
   public void testSerializeFeature() throws Exception {
       final String raw = "{\"type\":\"Feature\", \"id\": \"xyz123\", \"properties\":{\"x\":5}}";
       JvmMap jvmMap = (JvmMap) Platform.fromJSON(raw, FromJsonOptions.DEFAULT);
-      final NakshaFeature obj = jvmMap.proxy(Platform.klassOf(NakshaFeature.class));      assertNotNull(obj);
+      final NakshaFeature obj = jvmMap.proxy(Platform.klassFor(NakshaFeature.class));      assertNotNull(obj);
 
       obj.getProperties().put("y", 7);
       String result = Platform.toJSON(obj, ToJsonOptions.DEFAULT);
@@ -76,7 +76,7 @@ public class JsonMappingTest {
         "{\"type\":\"ErrorResponse\",\"error\":\"NotImplemented\",\"errorMessage\":\"Hello World!\"}";
     JvmObject jvmMap = (JvmObject) Platform.fromJSON(json, FromJsonOptions.DEFAULT);
     //TODO(lib-core test)
-//    final ErrorResponse obj = jvmMap.proxy(Platform.klassOf(ErrorResponse.class));
+//    final ErrorResponse obj = jvmMap.proxy(Platform.klassFor(ErrorResponse.class));
 //    assertNotNull(obj);
 //    assertSame(NakshaErrorCode.NOT_IMPLEMENTED, obj.error.code);
 //    assertEquals("Hello World!", obj.error.message);

@@ -409,7 +409,7 @@ open class NakshaCollection() : NakshaFeature() {
          */
         const val ESTIMATED_DELETED_FEATURES = "estimatedDeletedFeatures"
 
-        private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 0 }
+        private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 1 }
         private val GEO_INDEX = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> DEFAULT_GEO_INDEX }
         private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String::class)

@@ -2,7 +2,7 @@ package com.here.naksha.lib.handlers.util;
 
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 
-import com.here.naksha.lib.handlers.val.ContextXyzFeatureResult;
+import com.here.naksha.lib.core.models.ContextXyzFeatureResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -23,7 +23,7 @@ class HandlerUtilTest {
     List<NakshaFeature> violations = randomFeatures();
 
     // When
-    ContextXyzFeatureResult contextXyzFeatureResult = HandlerUtil.createContextResultFromFeatureList(features, context, violations);
+    ContextXyzFeatureResponse contextXyzFeatureResult = HandlerUtil.createContextResultFromFeatureList(features, context, violations);
 
     // Then
     assertSameIds(features, contextXyzFeatureResult.getFeatures());

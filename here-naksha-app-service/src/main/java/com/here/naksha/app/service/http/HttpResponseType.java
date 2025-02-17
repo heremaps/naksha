@@ -20,7 +20,6 @@ package com.here.naksha.app.service.http;
 
 import naksha.model.XyzResponseType;
 import com.here.naksha.lib.core.models.payload.events.feature.GetFeaturesByTileResponseType;
-import naksha.model.ErrorResponse;
 import com.here.naksha.lib.core.util.MIMEType;
 import io.vertx.ext.web.MIMEHeader;
 import io.vertx.ext.web.impl.ParsableMIMEValue;
@@ -28,7 +27,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * An enumeration with all responses that should be returned to the client. If the required response type is not available an
- * {@link ErrorResponse} with content-type {@link MIMEType#APPLICATION_JSON} should be returned.
+ * {@link naksha.model.request.ErrorResponse} with content-type {@link MIMEType#APPLICATION_JSON} should be returned.
  */
 @SuppressWarnings("unused")
 public class HttpResponseType extends XyzResponseType {
