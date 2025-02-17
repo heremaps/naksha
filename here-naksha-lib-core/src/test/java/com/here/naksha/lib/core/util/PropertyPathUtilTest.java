@@ -1,6 +1,9 @@
 package com.here.naksha.lib.core.util;
 
 import com.here.naksha.lib.core.common.TestUtil;
+import naksha.base.JvmJsonUtil;
+import naksha.base.Platform;
+import naksha.base.ToJsonOptions;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -128,7 +131,7 @@ class PropertyPathUtilTest {
     ) throws JSONException {
         // Given: Input Feature content
         final String featureJson = TestUtil.loadFileOrFail(TEST_DATA_FOLDER, inputFilePath); // "JsonTest/Input.json");
-        final NakshaFeature feature = TestUtil.parseJson(featureJson, NakshaFeature.class);
+        final NakshaFeature feature = JvmJsonUtil.readJsonAs(featureJson, NakshaFeature.class);
 
         // Given: Expected Feature content
         final String expectedJsonData = TestUtil.loadFileOrFail(TEST_DATA_FOLDER, expectedFilePath); // "JsonTest/Expected.json");
@@ -138,7 +141,7 @@ class PropertyPathUtilTest {
 
         // Then: validate output Json content matches the expectations
         assertNotNull(newF);
-        final String actualJsonData = TestUtil.toJson(newF);
+        final String actualJsonData = Platform.toJSON(newF, ToJsonOptions.DEFAULT);
         JSONAssert.assertEquals("Extracted property map doesn't match", expectedJsonData, actualJsonData, JSONCompareMode.STRICT);
     }
 

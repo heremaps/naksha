@@ -24,7 +24,7 @@ import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.handlers.NakshaAdminCollection;
+import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.ExtensionConfig;
 import com.here.naksha.lib.core.models.PluginCache;

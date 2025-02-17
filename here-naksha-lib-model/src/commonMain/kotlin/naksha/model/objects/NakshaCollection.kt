@@ -44,7 +44,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * If partitions is given, then collection is internally partitioned in the storage, and optimised for large quantities of features. The default is no partitions, for around every 10 to 20 million features expected to be stored in a collection, one more partition should be requested, with a minimum of 2 partitions.
      *
-     * Note that `lib-psql` will allow values between 2 and 256 and 0, to disable partitioning.
+     * Note that `lib-psql` will allow values between 1 and 256.
      *
      * Beware that in AWS ever point-to-point connection is generally limited to 5 Gbps. To reach the full limit of a database, the maximum number of partitions is needed, which allow 40 * 5 Gbps = 200 Gbps throughput. The database instances currently have a maximum of 200 Gbps network bandwidth, plus 100 Gbps of EBS throughput, plus a large in-memory cache, which normally allows to satisfy up to 200 Gbps for a short moment of time. As the CPU load is very high in this use-case, it is strongly recommended to use the following encodings:
      *
@@ -196,7 +196,7 @@ open class NakshaCollection() : NakshaFeature() {
         @JsStatic
         val BEFORE_ESTIMATION = Int64(-1)
 
-        private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 0 }
+        private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 1 }
         private val GEO_INDEX = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> DEFAULT_GEO_INDEX }
         private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String::class)

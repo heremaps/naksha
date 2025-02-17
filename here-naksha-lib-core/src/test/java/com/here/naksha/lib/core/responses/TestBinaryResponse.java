@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.core.responses;
 
+import static naksha.model.BinaryResponse.binaryResponse;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -39,7 +40,7 @@ public class TestBinaryResponse {
 
   @Test
   public void testSerialize() {
-    final BinaryResponse br = new BinaryResponse(SAMPLE_TEXT.getBytes(), MIME_TYPE);
+    final BinaryResponse br = binaryResponse(SAMPLE_TEXT.getBytes(), MIME_TYPE);
     assertEquals(CALCULATED_ETAG, br.getEtag());
     assertArrayEquals(SAMPLE_BYTES, br.toByteArray());
   }
@@ -54,7 +55,7 @@ public class TestBinaryResponse {
 
   @Test
   public void testOverrideEtag() {
-    final BinaryResponse br = new BinaryResponse(SAMPLE_TEXT.getBytes(), MIME_TYPE);
+    final BinaryResponse br = binaryResponse(SAMPLE_TEXT.getBytes(), MIME_TYPE);
     br.setEtag(SAMPLE_ETAG);
     assertEquals(SAMPLE_ETAG, br.getEtag());
   }

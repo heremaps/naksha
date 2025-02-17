@@ -17,6 +17,7 @@ object NakshaExceptionMapper {
     const val ERR_INVALID_PARAMETER_VALUE = "22023"
     const val ERR_UNIQUE_VIOLATION = "23505"
     const val ERR_NO_DATA = "02000"
+    const val UNDEFINED_TABLE = "42P01"
 
 
     /**
@@ -103,7 +104,7 @@ object NakshaExceptionMapper {
         val errorCode = when (sqlException.sqlState) {
             ERR_UNINITIALIZED -> NakshaError.EXCEPTION
             ERR_COLLECTION_EXISTS -> NakshaError.CONFLICT
-            ERR_COLLECTION_NOT_EXISTS -> NakshaError.COLLECTION_NOT_FOUND
+            ERR_COLLECTION_NOT_EXISTS, UNDEFINED_TABLE -> NakshaError.COLLECTION_NOT_FOUND
             ERR_CONFLICT -> NakshaError.CONFLICT
             ERR_CHECK_VIOLATION -> NakshaError.EXCEPTION
             ERR_INVALID_PARAMETER_VALUE -> NakshaError.ILLEGAL_ARGUMENT

@@ -18,56 +18,52 @@
  */
 package com.here.naksha.app.service.models;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import naksha.base.AnyObject;
+import naksha.base.FromJsonOptions;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
+import naksha.base.ToJsonOptions;
 import org.jetbrains.annotations.NotNull;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class IterateHandle implements JsonSerializable {
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  private long offset;
+public class IterateHandle extends AnyObject {
 
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  private long limit;
+  private static final String OFFSET_KEY = "offset";
+  private static final String LIMIT_KEY = "limit";
 
-  public long getOffset() {
-    return offset;
+  public int getOffset() {
+    return (int) getRaw(OFFSET_KEY);
   }
 
-  public void setOffset(long offset) {
-    this.offset = offset;
+  public void setOffset(int offset) {
+    setRaw(OFFSET_KEY, offset);
   }
 
-  public IterateHandle withOffset(long offset) {
+  public IterateHandle withOffset(int offset) {
     setOffset(offset);
     return this;
   }
 
-  public long getLimit() {
-    return limit;
+  public int getLimit() {
+    return (int) getRaw(LIMIT_KEY);
   }
 
-  public void setLimit(long limit) {
-    this.limit = limit;
+  public void setLimit(int limit) {
+    setRaw(LIMIT_KEY, limit);
   }
 
-  public IterateHandle withLimit(long limit) {
+  public IterateHandle withLimit(int limit) {
     setLimit(limit);
     return this;
   }
 
   public String base64EncodedSerializedJson() {
-    return Base64.getEncoder().encodeToString(this.serialize().getBytes(StandardCharsets.UTF_8));
+    return Base64.getEncoder().encodeToString(Platform.toJSON(this, ToJsonOptions.DEFAULT).getBytes(StandardCharsets.UTF_8));
   }
 
   public static IterateHandle base64DecodedDeserializedJson(final @NotNull String handle) {
-    return JsonSerializable.deserialize(Base64.getDecoder().decode(handle), IterateHandle.class);
+    final String json = new String(Base64.getDecoder().decode(handle));
+    return JvmBoxingUtil.box(Platform.fromJSON(json, FromJsonOptions.DEFAULT), IterateHandle.class);
   }
 }

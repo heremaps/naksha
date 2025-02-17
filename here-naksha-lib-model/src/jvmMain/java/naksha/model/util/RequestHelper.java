@@ -31,7 +31,8 @@ import org.jetbrains.annotations.NotNull;
 @AvailableSince(NakshaVersion.v2_0_7)
 public class RequestHelper {
 
-  private RequestHelper() {}
+  private RequestHelper() {
+  }
 
   /**
    * Helper method to create ReadFeatures request for reading feature by given Id from given storage collection name.
@@ -137,7 +138,7 @@ public class RequestHelper {
       final @NotNull String collectionName, final @NotNull List<String> ids) {
     final WriteRequest request = new WriteRequest();
     for (String id : ids) {
-      request.add(new Write().deleteFeatureById(null, collectionName, id, null));
+      request.add(new Write().deleteFeatureById(null, collectionName, id));
     }
     return request;
   }
@@ -151,7 +152,7 @@ public class RequestHelper {
    */
   public static @NotNull WriteRequest deleteFeatureByIdRequest(
       final @NotNull String collectionName, final @NotNull String id) {
-    final Write write = new Write().deleteFeatureById(null, collectionName, id, null);
+    final Write write = new Write().deleteFeatureById(null, collectionName, id);
     return new WriteRequest().add(write);
   }
 
@@ -186,23 +187,6 @@ public class RequestHelper {
     return writeRequest;
   }
 
-  //  /**
-  //   * Helper function that returns Geometry representing BoundingBox for the co-ordinates supplied as arguments.
-  //   *
-  //   * @param west  west co-ordinate
-  //   * @param south south co-ordinate
-  //   * @param east  east co-ordinate
-  //   * @param north north co-ordinate
-  //   * @return Geometry representing BBox envelope
-  //   */
-  //  public static @NotNull Geometry createBBoxEnvelope(
-  //      final double west, final double south, final double east, final double north) {
-  //    MultiPointCoord multiPoint = new MultiPointCoord();
-  //    multiPoint.add(new PointCoord(west, south));
-  //    multiPoint.add(new PointCoord(east, north));
-  //    return ProxyGeoUtil.toJtsMultiPoint(multiPoint);
-  //  }
-
   // TODO: cleanup as part of CASL-784
   //
   //  /**
@@ -212,16 +196,16 @@ public class RequestHelper {
   //   * @param propPath the JSON path to be used for property search
   //   * @return PRef instance of PRef or NonIndexedPRef
   //   */
-  //  public static @NotNull PRef pRefFromPropPath(final @NotNull String[] propPath) {
-  //    // check if we can use standard PRef (on indexed properties)
-  //    for (final String[] path : pRefPathMap().keySet()) {
-  //      if (Arrays.equals(path, propPath)) {
-  //        return pRefPathMap().get(path);
-  //      }
-  //    }
-  //    // fallback to non-standard PRef (non-indexed properties)
-  //    return PRef.nonIndexedPref(propPath);
-  //  }
+//    public static @NotNull PRef pRefFromPropPath(final @NotNull String[] propPath) {
+//      // check if we can use standard PRef (on indexed properties)
+//      for (final String[] path : pRefPathMap().keySet()) {
+//        if (Arrays.equals(path, propPath)) {
+//          return pRefPathMap().get(path);
+//        }
+//      }
+//      // fallback to non-standard PRef (non-indexed properties)
+//      return PRef.nonIndexedPref(propPath);
+//    }
   //
   //  public static void combineOperationsForRequestAs(
   //      final @NotNull ReadFeatures request, final OpType opType, @Nullable Op... operations) {

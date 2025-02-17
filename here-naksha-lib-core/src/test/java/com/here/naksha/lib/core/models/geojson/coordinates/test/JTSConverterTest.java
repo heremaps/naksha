@@ -40,7 +40,7 @@ public class JTSConverterTest {
         .toURI()));
     String featureText = new String(bytes);
     JvmMap jvmMap = (JvmMap) Platform.fromJSON(featureText, FromJsonOptions.DEFAULT);
-    NakshaFeature feature = jvmMap.proxy(Platform.klassOf(NakshaFeature.class));
+    NakshaFeature feature = jvmMap.proxy(Platform.klassFor(NakshaFeature.class));
 
     SpGeometry sourceGeometry = feature.getGeometry();
     org.locationtech.jts.geom.Geometry jtsGeometry = ProxyGeoUtil.toJtsGeometry(sourceGeometry);

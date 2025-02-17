@@ -15,6 +15,10 @@ open class StringList : ListProxy<String>(String::class){
         @JvmStatic
         fun fromList(strings: List<String>): StringList =
             StringList().apply { addAll(strings) }
+
+        @JvmStatic
+        fun of(vararg strings: String): StringList =
+            StringList().apply { addAll(strings) }
     }
 }
 

@@ -18,11 +18,11 @@
  */
 package naksha.model;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import static naksha.base.JvmAnyObjectUtil.getProperty;
+
 import com.google.flatbuffers.FlatBufferBuilder;
 import com.here.naksha.lib.core.bin.ConnectorPayload;
+import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.util.Hasher;
 import com.here.naksha.lib.core.view.ViewSerialize;
 import java.nio.ByteBuffer;
@@ -31,55 +31,36 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A wrapper class which is based on {@link Response} for binary responses from connectors.
- * Internally it uses an actual binary representation for the payload.
+ * A wrapper class which is based on {@link Response} for binary responses from connectors. Internally it uses an actual binary
+ * representation for the payload.
  *
  * <p>An instance of {@link ConnectorPayload} will be used internally to convert it to binary form.
  * For all other protocol versions the payload will be encoded as JSON.
- *
  */
-public class BinaryResponse extends Response {
-
-  @JsonCreator
-  public BinaryResponse(@JsonProperty byte @NotNull [] bytes, @JsonProperty @NotNull String mimeType) {
-    this.bytes = bytes;
-    this.mimeType = mimeType;
-    setCalculatedEtag("\"" + Hasher.getHash(bytes) + "\"");
-  }
+public class BinaryResponse extends XyzResponse {
 
   public static final String BINARY_SUPPORT_VERSION = "0.6.0";
 
-  @JsonProperty
-  private final @NotNull String mimeType;
+  private static final String BYTES_KEY = "bytes";
+  private static final String MIME_TYPE_KEY = "mimeType";
 
-  @JsonProperty
-  private final byte @NotNull [] bytes;
-
-  @JsonIgnore
-  private boolean etagNeedsRecalculation;
-
-  @JsonIgnore
-  private @Nullable String calculatedEtag;
+  public static BinaryResponse binaryResponse(
+      byte @NotNull [] bytes,
+      @NotNull String mimeType
+  ) {
+    BinaryResponse binaryResponse = new BinaryResponse();
+    binaryResponse.put(BYTES_KEY, bytes);
+    binaryResponse.put(MIME_TYPE_KEY, mimeType);
+    binaryResponse.setEtag("\"" + Hasher.getHash(bytes) + "\"");
+    return binaryResponse;
+  }
 
   public @NotNull String getMimeType() {
-    return mimeType;
+    return getProperty(this, MIME_TYPE_KEY, String.class);
   }
 
   public byte @NotNull [] getBytes() {
-    return bytes;
-  }
-
-  public @Nullable String getEtag() {
-    if (etagNeedsRecalculation) {
-      setCalculatedEtag("\"" + Hasher.getHash(bytes) + "\"");
-    }
-    return calculatedEtag;
-  }
-
-  @JsonIgnore
-  private void setCalculatedEtag(@Nullable String etag) {
-    calculatedEtag = etag;
-    etagNeedsRecalculation = false;
+    return getProperty(this, BYTES_KEY, byte[].class);
   }
 
   public byte @NotNull [] toByteArray(@Nullable Class<? extends ViewSerialize> viewClass) {
@@ -109,7 +90,7 @@ public class BinaryResponse extends Response {
     final byte[] bytes = buffer2ByteArray(byteBuffer);
     final String mimeType = payload.mimeType();
     assert mimeType != null;
-    final BinaryResponse binaryResponse = new BinaryResponse(bytes, mimeType);
+    final BinaryResponse binaryResponse = binaryResponse(bytes, mimeType);
     binaryResponse.setEtag(payload.etag());
     return binaryResponse;
   }
@@ -118,20 +99,5 @@ public class BinaryResponse extends Response {
     byte[] byteArray = new byte[buffer.remaining()];
     buffer.get(byteArray);
     return byteArray;
-  }
-
-  /**
-   * Set the e-tag (a hash above all features), when it was calculated.
-   *
-   * @param etag the e-tag, if null, the e-tag is removed.
-   */
-  @SuppressWarnings("WeakerAccess")
-  public void setEtag(String etag) {
-    this.calculatedEtag = etag;
-  }
-
-  @Override
-  public int resultSize() {
-    return 0;
   }
 }

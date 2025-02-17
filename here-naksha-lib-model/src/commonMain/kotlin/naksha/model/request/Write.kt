@@ -150,6 +150,7 @@ open class Write : AnyObject() {
      * @param feature the feature to create.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun createFeature(map: String?, collectionId: String, feature: NakshaFeature): Write {
         this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = collectionId
@@ -186,6 +187,7 @@ open class Write : AnyObject() {
      * @param feature the new state of the feature.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun upsertFeature(map: String?, collectionId: String, feature: NakshaFeature): Write {
         this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = collectionId
@@ -240,6 +242,7 @@ open class Write : AnyObject() {
      * @param collection the collection to create.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun createCollection(map: String?, collection: NakshaCollection): Write {
         this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = VIRT_COLLECTIONS
@@ -274,6 +277,7 @@ open class Write : AnyObject() {
      * @param collection the new state of the collection.
      * @since 3.0.0
      */
+    @JvmOverloads
     fun upsertCollection(map: String?, collection: NakshaCollection): Write {
         this.mapId = map ?: NakshaContext.mapId()
         this.collectionId = VIRT_COLLECTIONS

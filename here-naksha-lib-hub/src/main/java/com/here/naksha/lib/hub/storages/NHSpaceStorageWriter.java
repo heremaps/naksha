@@ -26,11 +26,13 @@ import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
-import com.here.naksha.lib.handlers.NakshaAdminCollection;
+import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
@@ -91,8 +93,12 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   }
 
   private @NotNull Response executeSingleCollectionWrite(final @NotNull WriteRequest writeRequest) {
-    String spaceId = singleCollectionIdFrom(writeRequest);
-    return executeSingleCollectionWrite(writeRequest, spaceId);
+    List<Write> collectionWrites = writeRequest.getWrites();
+    if(collectionWrites.size() != 1){
+      throw new IllegalArgumentException(
+          "Currently supporting WriteRequest for single collection only, got multiple: " + collectionWrites.size());
+    }
+    return executeSingleCollectionWrite(writeRequest, collectionWrites.get(0).getCollectionId());
   }
 
   private @NotNull Response executeSingleCollectionWrite(
@@ -192,13 +198,12 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   }
 
   private String singleCollectionIdFrom(WriteRequest writeRequest) {
-    List<Write> writes = writeRequest.getWrites();
-    if (writes.size() != 1) {
+    List<String> distinctCollectionIds = writeRequest.getWrites().stream().map(Write::getCollectionId).distinct().toList();
+    if (distinctCollectionIds.size() != 1) {
       throw new IllegalArgumentException(
-          "Currently supporting WriteRequest for single collection only, got " + writes.size() + " instead");
+          "Expected Writes of WriteRequest to indicate single collection, got multiple: " + distinctCollectionIds);
     }
-    return Objects.requireNonNull(writes.get(0), "Got empty (null) Write instruction within WriteRequest")
-        .getCollectionId();
+    return Objects.requireNonNull(distinctCollectionIds.get(0), "Got empty (null) Write instruction within WriteRequest");
   }
 
   @Override

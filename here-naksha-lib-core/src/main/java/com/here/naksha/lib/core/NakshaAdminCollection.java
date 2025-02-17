@@ -16,11 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.lib.handlers;
+package com.here.naksha.lib.core;
 
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
+//  TODO (CASL-780): this needs to prevail but not here
 /**
  * All well-known collections of the Naksha-Hub itself. Still, not all Naksha-Hubs may support them, for example the Naksha extension
  * library currently does not support any collection out of the box!

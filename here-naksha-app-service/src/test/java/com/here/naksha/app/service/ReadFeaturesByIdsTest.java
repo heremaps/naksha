@@ -21,7 +21,7 @@ package com.here.naksha.app.service;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.assertions.ResponseAssertions;
-import naksha.model.XyzFeature;
+import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -150,9 +150,9 @@ class ReadFeaturesByIdsTest extends ApiTest {
         .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
 
     // Then: also match individual JSON attributes (in addition to whole object comparison above)
-    final XyzFeature feature = parseJson(response.body(), XyzFeature.class);
+    final NakshaFeature feature = parseJson(response.body(), NakshaFeature.class);
     assertNotNull(
-        feature.getProperties().getXyzNamespace().getUuid(), "UUID found missing in response for feature");
+        feature.getProperties().getXyz().getUuid(), "UUID found missing in response for feature");
   }
 
   @Test

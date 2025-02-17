@@ -21,11 +21,19 @@ package com.here.naksha.app.service.util.logging;
 import static com.here.naksha.app.service.http.NakshaHttpHeaders.STREAM_ID;
 import static com.here.naksha.app.service.http.auth.actions.JwtUtil.extractJwtPayloadFromContext;
 import static com.here.naksha.common.http.apis.ApiParamsConst.ACCESS_TOKEN;
-import static io.vertx.core.http.HttpHeaders.*;
-import static io.vertx.core.http.HttpMethod.*;
+import static io.vertx.core.http.HttpHeaders.ACCEPT;
+import static io.vertx.core.http.HttpHeaders.CONTENT_TYPE;
+import static io.vertx.core.http.HttpHeaders.ORIGIN;
+import static io.vertx.core.http.HttpHeaders.REFERER;
+import static io.vertx.core.http.HttpHeaders.USER_AGENT;
+import static io.vertx.core.http.HttpMethod.PATCH;
+import static io.vertx.core.http.HttpMethod.POST;
+import static io.vertx.core.http.HttpMethod.PUT;
 
 import com.here.naksha.app.service.http.auth.JWTPayload;
-import naksha.model.StreamInfo;
+import com.here.naksha.app.service.util.logging.AccessLog.ClientInfo;
+import com.here.naksha.app.service.util.logging.AccessLog.RequestInfo;
+import com.here.naksha.app.service.util.logging.AccessLog.ResponseInfo;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
@@ -33,6 +41,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import naksha.base.Platform;
+import naksha.base.ToJsonOptions;
+import naksha.model.StreamInfo;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -141,7 +152,9 @@ public class AccessLogUtil {
    * @param context the routing context.
    */
   public static void addRequestInfo(final @Nullable RoutingContext context) {
-    if (context == null) return;
+    if (context == null) {
+      return;
+    }
     final String streamId = getStreamId(context);
     final AccessLog accessLog = getOrCreateAccessLog(context);
     final HttpMethod method = context.request().method();
@@ -150,71 +163,82 @@ public class AccessLogUtil {
     MDC.put("streamId", streamId);
     logger.info("Request {} - {}", method.name(), getObscuredURI(uri));
 
-    accessLog.reqInfo.method = method.name();
+    RequestInfo reqInfo = accessLog.getReqInfo();
+    reqInfo.setMethod(method.name());
     final int endPos = uri.indexOf("?"); // query parameters not required for now
-    accessLog.reqInfo.uri = (endPos > 0) ? uri.substring(0, endPos) : uri;
-    accessLog.reqInfo.referer = context.request().getHeader(REFERER);
-    accessLog.reqInfo.origin = context.request().getHeader(ORIGIN);
+    reqInfo.setUri((endPos > 0) ? uri.substring(0, endPos) : uri);
+    reqInfo.setReferer(context.request().getHeader(REFERER));
+    reqInfo.setOrigin(context.request().getHeader(ORIGIN));
     if (POST.equals(method) || PUT.equals(method) || PATCH.equals(method)) {
-      accessLog.reqInfo.size = context.body() == null ? 0 : context.body().length();
+      reqInfo.setRequestSize(context.body() == null ? 0 : context.body().length());
     }
-    accessLog.clientInfo.ip = getIp(context);
-    accessLog.clientInfo.remoteAddress =
-        context.request().connection().remoteAddress().toString();
-    accessLog.clientInfo.userAgent = context.request().getHeader(USER_AGENT);
-    accessLog.clientInfo.realm = context.request().getHeader(REALM);
-    accessLog.reqInfo.contentType = context.request().getHeader(CONTENT_TYPE);
-    accessLog.reqInfo.accept = context.request().getHeader(ACCEPT);
+    reqInfo.setContentType(context.request().getHeader(CONTENT_TYPE));
+    reqInfo.setAccept(context.request().getHeader(ACCEPT));
 
-    context.put(STREAM_INFO_CTX_KEY, accessLog.streamInfo);
+    ClientInfo clientInfo = accessLog.getClientInfo();
+    clientInfo.setIp(getIp(context));
+    clientInfo.setRemoteAddress(context.request().connection().remoteAddress().toString());
+    clientInfo.setUserAgent(context.request().getHeader(USER_AGENT));
+    clientInfo.setRealm(context.request().getHeader(REALM));
+
+    context.put(STREAM_INFO_CTX_KEY, accessLog.getStreamInfo());
   }
 
   /**
-   * Add the response information into the AccessLog object.
-   * As the authentication is done after the request has been received, this method will as well add
-   * the clientInfo to the request information. So, even while the clientInfo is part of the request
-   * information, for technical reasons it's added together with the response information,
-   * because the JWT token is processed after the {@link #addRequestInfo(RoutingContext)} was invoked
-   * and therefore this method does not have the necessary information.
+   * Add the response information into the AccessLog object. As the authentication is done after the request has been received, this method
+   * will as well add the clientInfo to the request information. So, even while the clientInfo is part of the request information, for
+   * technical reasons it's added together with the response information, because the JWT token is processed after the
+   * {@link #addRequestInfo(RoutingContext)} was invoked and therefore this method does not have the necessary information.
    *
    * @param context the routing context
    */
   public static @Nullable AccessLog addResponseInfo(final @Nullable RoutingContext context) {
-    if (context == null) return null;
+    if (context == null) {
+      return null;
+    }
     final AccessLog accessLog = getAccessLog(context);
-    if (accessLog == null) return null;
-    accessLog.respInfo.statusCode = context.response().getStatusCode();
-    accessLog.respInfo.statusMsg = context.response().getStatusMessage();
-    accessLog.respInfo.size = context.response().bytesWritten();
-    accessLog.respInfo.contentType = context.response().headers().get(CONTENT_TYPE);
+    if (accessLog == null) {
+      return null;
+    }
 
+    final ResponseInfo respInfo = accessLog.getRespInfo();
+    respInfo.setStatusCode(context.response().getStatusCode());
+    respInfo.setStatusMsg(context.response().getStatusMessage());
+    respInfo.setResponseSize(context.response().bytesWritten());
+    respInfo.setContentType(context.response().headers().get(CONTENT_TYPE));
+
+    final ClientInfo clientInfo = accessLog.getClientInfo();
     final JWTPayload tokenPayload = extractJwtPayloadFromContext(context);
     if (tokenPayload != null) {
-      accessLog.clientInfo.userId = tokenPayload.userId;
-      accessLog.clientInfo.appId = tokenPayload.appId;
+      clientInfo.setUserId(tokenPayload.userId);
+      clientInfo.setAppId(tokenPayload.appId);
     }
     return accessLog;
   }
 
   public static void writeAccessLog(final @Nullable RoutingContext context) {
-    if (context == null) return;
+    if (context == null) {
+      return;
+    }
     final AccessLog accessLog = getAccessLog(context);
-    if (accessLog == null) return;
+    if (accessLog == null) {
+      return;
+    }
 
-    logger.info(accessLog.serialize());
+    logger.info(Platform.toJSON(accessLog, ToJsonOptions.DEFAULT));
 
     // Log relevant details for generating API metrics
-    final AccessLog.RequestInfo req = accessLog.reqInfo;
-    final AccessLog.ResponseInfo res = accessLog.respInfo;
-    final StreamInfo si = accessLog.streamInfo;
+    final AccessLog.RequestInfo req = accessLog.getReqInfo();
+    final AccessLog.ResponseInfo res = accessLog.getRespInfo();
+    final StreamInfo si = accessLog.getStreamInfo();
     logger.info(
         "[REST API stats => eventType,spaceId,storageId,method,uri,status,timeTakenMs,resSize] - RESTAPIStats {} {} {} {} {} {} {}",
         (si == null || si.getSpaceId() == null || si.getSpaceId().isEmpty()) ? "-" : si.getSpaceId(),
         (si == null || si.getStorageId() == null || si.getStorageId().isEmpty()) ? "-" : si.getStorageId(),
-        req.method,
-        req.uri,
-        res.statusCode,
-        accessLog.ms,
-        res.size);
+        req.getMethod(),
+        req.getUri(),
+        res.getStatusCode(),
+        accessLog.getMs(),
+        res.getResponseSize());
   }
 }

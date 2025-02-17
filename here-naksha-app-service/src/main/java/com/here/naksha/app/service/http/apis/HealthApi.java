@@ -44,8 +44,6 @@ public class HealthApi extends Api {
   public void addManualRoutes(@NotNull Router router) {
     router.route(HttpMethod.GET, "/").handler(this::onHealthStatus);
     router.route(HttpMethod.GET, "/hub").handler(this::onHealthStatus);
-    // Legacy.
-    // router.route(HttpMethod.GET, "/hub/health-status").handler(this::onHealthStatus);
   }
 
   private void onHealthStatus(final RoutingContext context) {

@@ -198,9 +198,9 @@ object ProxyGeoUtil {
     @JvmStatic
     fun toJtsCoordinate(coords: PointCoord): Coordinate =
         if (coords.hasAltitude())
-            Coordinate(coords.getLongitude(), coords.getLatitude())
-        else
             Coordinate(coords.getLongitude(), coords.getLatitude(), coords.getAltitude())
+        else
+            Coordinate(coords.getLongitude(), coords.getLatitude())
 
     /**
      * Converts proxy model to JTS [Geometry] using [factory] with default SRID: 4326

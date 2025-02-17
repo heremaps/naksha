@@ -4,11 +4,13 @@ import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.CommonApiTestSetup;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.TestUtil;
-import naksha.model.XyzFeature;
 import naksha.model.XyzFeatureCollection;
 import naksha.geo.XyzProperties;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
+import naksha.model.XyzNs;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -390,8 +392,8 @@ class ActivityLogApiTest extends ApiTest {
   }
 
   private FeatureMetadata featureMetadataFromFeatureResp(String featureResponse) {
-    XyzFeature feature = JsonSerializable.deserialize(featureResponse, XyzFeature.class);
-    return FeatureMetadata.from(feature.getProperties().getXyzNamespace());
+    NakshaFeature feature = JsonSerializable.deserialize(featureResponse, NakshaFeature.class);
+    return FeatureMetadata.from(feature.getProperties().getXyz());
   }
 
   private FeatureMetadata featureMetadataFromCollectionResp(String featureCollectionResponseJson) {
@@ -403,8 +405,8 @@ class ActivityLogApiTest extends ApiTest {
   private List<FeatureMetadata> featuresMetadata(String featureCollectionResponseJson) {
     return JsonSerializable.deserialize(featureCollectionResponseJson, XyzFeatureCollection.class)
         .getFeatures().stream()
-        .map(XyzFeature::getProperties)
-        .map(XyzProperties::getXyzNamespace)
+        .map(NakshaFeature::getProperties)
+        .map(NakshaProperties::getXyz)
         .map(FeatureMetadata::from)
         .toList();
   }
@@ -422,8 +424,8 @@ class ActivityLogApiTest extends ApiTest {
 
   private record FeatureMetadata(String uuid, long createdAt, long updatedAt) {
 
-    static FeatureMetadata from(XyzNamespace xyzNamespace) {
-      return new FeatureMetadata(xyzNamespace.getUuid(), xyzNamespace.getCreatedAt(), xyzNamespace.getUpdatedAt());
+    static FeatureMetadata from(XyzNs xyzNamespace) {
+      return new FeatureMetadata(xyzNamespace.getUuid(), xyzNamespace.getCreatedAt().toLong(), xyzNamespace.getUpdatedAt().toLong());
     }
   }
 }

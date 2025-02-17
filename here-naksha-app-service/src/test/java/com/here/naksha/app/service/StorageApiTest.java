@@ -18,25 +18,24 @@
  */
 package com.here.naksha.app.service;
 
-import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
 import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJson;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.CommonApiTestSetup;
-import naksha.model.XyzFeature;
-import naksha.model.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import naksha.model.XyzFeatureCollection;
+import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
@@ -173,21 +172,21 @@ class StorageApiTest extends ApiTest {
     // Then: Expect all saved storages are returned
     assertEquals(200, response.statusCode(), "ResCode mismatch");
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
-    List<XyzFeature> returnedXyzFeatures =
+    List<NakshaFeature> returnedXyzFeatures =
         parseJson(response.body(), XyzFeatureCollection.class).getFeatures();
     boolean allReturnedFeaturesAreStorages =
         returnedXyzFeatures.stream().allMatch(feature -> Storage.class.isAssignableFrom(feature.getClass()));
     Assertions.assertTrue(allReturnedFeaturesAreStorages);
     List<String> storageIds =
-        returnedXyzFeatures.stream().map(XyzFeature::getId).toList();
+        returnedXyzFeatures.stream().map(NakshaFeature::getId).toList();
     Assertions.assertTrue(storageIds.containsAll(expectedStorageIds));
     final JsonNode jsonNode = new ObjectMapper().readTree(response.body());
     for (JsonNode storage : jsonNode.get("features")) {
       for (String storageId : storageIds) {
-        if (Objects.equals(storage.get("id").toString(),storageId)) {
-          assertEquals("xxxxxx",storage.get("properties").get("master").get("password").toString());
+        if (Objects.equals(storage.get("id").toString(), storageId)) {
+          assertEquals("xxxxxx", storage.get("properties").get("master").get("password").toString());
           for (JsonNode node : storage.get("properties").get("reader")) {
-            assertEquals("xxxxxx",node.get("password").toString());
+            assertEquals("xxxxxx", node.get("password").toString());
           }
         }
       }
@@ -274,21 +273,21 @@ class StorageApiTest extends ApiTest {
     // Test API : DELETE /hub/storages/{storageId}
     // Given: send request to create a storage
     final String streamId = UUID.randomUUID().toString();
-    CommonApiTestSetup.createStorage(getNakshaClient(),"StorageApi/TC0080_deleteStorage/create_storage.json");
+    CommonApiTestSetup.createStorage(getNakshaClient(), "StorageApi/TC0080_deleteStorage/create_storage.json");
     // When: send request to delete the storage
     final HttpResponse<String> response =
-            getNakshaClient().delete("hub/storages/storage-to-delete", streamId);
+        getNakshaClient().delete("hub/storages/storage-to-delete", streamId);
 
     // Then: the delete request is successful
     assertThat(response)
-            .hasStatus(200)
-            .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
+        .hasStatus(200)
+        .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
     // and the storage does not exist anymore
     final HttpResponse<String> getResponse =
-            getNakshaClient().get("hub/storages/storage-to-delete", streamId);
+        getNakshaClient().get("hub/storages/storage-to-delete", streamId);
     assertThat(getResponse)
-            .hasStatus(404)
-            .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
+        .hasStatus(404)
+        .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
   }
 
   @Test
@@ -296,24 +295,24 @@ class StorageApiTest extends ApiTest {
     // Test API : DELETE /hub/storages/{storageId}
     // Given: create a storage, and an event handler bound to this storage
     final String streamId = UUID.randomUUID().toString();
-    CommonApiTestSetup.createStorage(getNakshaClient(),"StorageApi/TC0081_deleteStorageInUse/create_storage.json");
-    CommonApiTestSetup.createHandler(getNakshaClient(),"StorageApi/TC0081_deleteStorageInUse/create_handler.json");
+    CommonApiTestSetup.createStorage(getNakshaClient(), "StorageApi/TC0081_deleteStorageInUse/create_storage.json");
+    CommonApiTestSetup.createHandler(getNakshaClient(), "StorageApi/TC0081_deleteStorageInUse/create_handler.json");
     // When: send the request to delete the storage
     final HttpResponse<String> response =
-            getNakshaClient().delete("hub/storages/storage-still-with-handlers", streamId);
+        getNakshaClient().delete("hub/storages/storage-still-with-handlers", streamId);
 
     // Then: the delete request should fail because an event handler is still bound to this storage
     final String expectedResponse = loadFileOrFail("StorageApi/TC0081_deleteStorageInUse/response.json");
     assertThat(response)
-            .hasStatus(409)
-            .hasJsonBody(expectedResponse)
-            .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
+        .hasStatus(409)
+        .hasJsonBody(expectedResponse)
+        .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
     // and the storage still exists
     final HttpResponse<String> getResponse =
-            getNakshaClient().get("hub/storages/storage-still-with-handlers", streamId);
+        getNakshaClient().get("hub/storages/storage-still-with-handlers", streamId);
     assertThat(getResponse)
-            .hasStatus(200)
-            .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
+        .hasStatus(200)
+        .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
   }
 
   @Test
@@ -324,11 +323,11 @@ class StorageApiTest extends ApiTest {
 
     // When: send delete request
     final HttpResponse<String> response =
-            getNakshaClient().delete("hub/storages/unreal-storage-cannot-delete", streamId);
+        getNakshaClient().delete("hub/storages/unreal-storage-cannot-delete", streamId);
 
     // Then: the delete request fails because that storage does not exist
     assertThat(response)
-            .hasStatus(404)
-            .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
+        .hasStatus(404)
+        .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
   }
 }

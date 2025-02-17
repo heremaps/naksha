@@ -1,6 +1,7 @@
 package naksha.diff
 
 import kotlin.jvm.JvmOverloads
+import kotlin.jvm.JvmStatic
 
 class DifferenceCalculator private constructor() {
     companion object DifferenceCalculator_C {
@@ -20,6 +21,7 @@ class DifferenceCalculator private constructor() {
          * @since 3.0.0
          */
         @JvmOverloads
+        @JvmStatic
         fun calculateDifference(
             source: Any?,
             target: Any?,

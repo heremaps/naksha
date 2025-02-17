@@ -10,6 +10,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 
 /**
  * Tests for an intersection of features geometry with the given one.
@@ -34,6 +35,7 @@ open class SpIntersects() : AnyObject(), ISpatialQuery {
      * @property transformation the optional transformation to apply to the given geometry.
      */
     @JsName("of")
+    @JvmOverloads
     constructor(geometry: SpGeometry, transformation: SpTransformation? = null) :this() {
         this.geometry = geometry
         this.transformation = transformation

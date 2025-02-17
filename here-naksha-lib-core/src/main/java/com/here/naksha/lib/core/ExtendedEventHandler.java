@@ -44,8 +44,8 @@ import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Default implementation of an extended event handler that allows to only implement handling for
- * supported events, and optionally of some post-processing.
+ * Default implementation of an extended event handler that allows to only implement handling for supported events, and optionally of some
+ * post-processing.
  */
 @Deprecated
 public class ExtendedEventHandler<HANDLER extends EventHandler> implements IExtendedEventHandler {
@@ -81,13 +81,13 @@ public class ExtendedEventHandler<HANDLER extends EventHandler> implements IExte
   /**
    * Creates an error response to return.
    *
-   * @param error the error type.
+   * @param error   the error type.
    * @param message the error message.
    * @return the generated error response.
    */
   @Deprecated
   protected @NotNull Response errorResponse(@NotNull String error, @NotNull CharSequence message) {
-    return new ErrorResponse(new NakshaError(error, message.toString(), event.getStreamId(), null));
+    return new ErrorResponse(new NakshaError(error, message.toString(), null, event.getStreamId()));
   }
 
   /**

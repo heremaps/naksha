@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import static com.here.naksha.lib.handlers.NakshaAdminCollection.EVENT_HANDLERS;
+import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
 import static com.here.naksha.lib.handlers.internal.PluginPropertiesValidator.pluginValidation;
 
 import com.here.naksha.lib.core.INaksha;
@@ -40,7 +40,11 @@ import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.*;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
@@ -62,18 +66,18 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
   }
 
   @Override
-  protected @NotNull Response validateWrite(Write codec) {
-    final EWriteOp operation = EWriteOp.get(codec.getOp());
+  protected @NotNull Response validateWrite(Write write) {
+    final EWriteOp operation = EWriteOp.get(write.getOp());
     if (operation.equals(EWriteOp.DELETE)) {
       // For DELETE, only the feature ID is needed, other JSON properties are irrelevant
-      return noActiveHandlerValidation(codec);
+      return noActiveHandlerValidation(write);
     }
     // For non-DELETE write request
-    Response basicValidation = super.validateWrite(codec);
+    Response basicValidation = super.validateWrite(write);
     if (basicValidation instanceof ErrorResponse) {
       return basicValidation;
     }
-    final Storage storage = (Storage) codec.getFeature();
+    final Storage storage = (Storage) write.getFeature();
     Response pluginValidation = pluginValidation(storage);
     if (pluginValidation instanceof ErrorResponse) {
       return pluginValidation;
@@ -86,12 +90,11 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
       HttpStorageProperties httpStorageProperties;
       try {
         httpStorageProperties = JvmBoxingUtil.box(storage.getProperties(), HttpStorageProperties.class);
-      } catch (Exception e) {
+      } catch (Exception exception) {
         return new ErrorResponse(
             NakshaError.ILLEGAL_ARGUMENT,
             "Unable to convert 'properties' to " + HttpStorageProperties.class.getName(),
-            null,
-            e);
+            exception);
       }
       return httpStoragePropertiesValidation(httpStorageProperties);
     }

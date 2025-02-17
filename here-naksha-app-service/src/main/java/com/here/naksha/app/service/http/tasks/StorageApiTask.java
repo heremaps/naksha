@@ -19,6 +19,8 @@
 package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.ops.MaskingUtil.maskProperties;
+import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
+import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.STORAGE_ID;
 import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
 
@@ -26,22 +28,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.NakshaContext;
-import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.naksha.Storage;
-import naksha.model.XyzResponse;
-import naksha.model.POp;
-import naksha.model.PRef;
-import naksha.model.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
-import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.util.storage.RequestHelper;
-import com.here.naksha.lib.core.view.ViewDeserialize;
-import com.here.naksha.lib.psql.PsqlInstanceConfig;
+import com.here.naksha.lib.core.models.payload.XyzResponse;
 import io.vertx.ext.web.RoutingContext;
 import java.util.Set;
+import naksha.base.JvmJsonUtil;
+import naksha.base.StringList;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Response;
+import naksha.model.request.WriteRequest;
+import naksha.model.util.RequestHelper;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,8 +49,8 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
 
   private static final Logger logger = LoggerFactory.getLogger(StorageApiTask.class);
 
-  private static final Set<String> SENSITIVE_PROPERTIES =
-      Set.of(PsqlInstanceConfig.PASSWORD, "Authorization", "authorization");
+  private static final Set<String> SENSITIVE_PROPERTIES_LOWERCASE =
+      Set.of("password", "authorization");
   private final @NotNull StorageApiReqType reqType;
 
   public enum StorageApiReqType {
@@ -76,7 +75,8 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
    * Initializes this task.
    */
   @Override
-  protected void init() {}
+  protected void init() {
+  }
 
   /**
    * Execute this task.
@@ -94,35 +94,32 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
         case DELETE_STORAGE -> executeDeleteStorage();
         default -> executeUnsupported();
       };
+    } catch (NakshaException nakshaException) {
+      logger.warn("Known exception while processing request. ", nakshaException);
+      return verticle.sendErrorResponse(routingContext, nakshaException.error);
     } catch (Exception ex) {
-      if (ex instanceof XyzErrorException xyz) {
-        logger.warn("Known exception while processing request. ", ex);
-        return verticle.sendErrorResponse(routingContext, xyz.xyzError, xyz.getMessage());
-      } else {
-        logger.error("Unexpected error while processing request. ", ex);
-        return verticle.sendErrorResponse(
-            routingContext, XyzError.EXCEPTION, "Internal error : " + ex.getMessage());
-      }
+      logger.error("Unexpected error while processing request. ", ex);
+      return verticle.sendErrorResponse(
+          routingContext, NakshaError.EXCEPTION, "Internal error : " + ex.getMessage());
     }
   }
 
   private @NotNull XyzResponse executeGetStorages() {
     final ReadFeatures request = new ReadFeatures(STORAGES);
-    try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzCollectionResponse(
-          rdResult, Storage.class, this::storageWithMaskedSensitiveProperties);
-    }
+    Response response = executeReadRequestFromSpaceStorage(request);
+    return transformResponseToXyzCollectionResponse(response, Storage.class, this::storageWithMaskedSensitiveProperties);
   }
 
   private @NotNull XyzResponse executeGetStorageById() {
     final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
-    final ReadFeatures request = new ReadFeatures(STORAGES).withPropertyOp(POp.eq(PRef.id(), storageId));
+    final ReadFeatures request = new ReadFeatures(STORAGES);
+    request.setFeatureIds(StringList.of(storageId));
     return transformedResponseTo(request);
   }
 
   private @NotNull XyzResponse executeCreateStorage() throws JsonProcessingException {
     final Storage newStorage = storageFromRequestBody();
-    final WriteXyzFeatures wrRequest = RequestHelper.createFeatureRequest(STORAGES, newStorage, false);
+    final WriteRequest wrRequest = RequestHelper.createFeatureRequest(STORAGES, newStorage);
     return transformedResponseTo(wrRequest);
   }
 
@@ -131,50 +128,43 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
     final Storage storageFromBody = storageFromRequestBody();
     if (!storageFromBody.getId().equals(storageIdFromPath)) {
       return verticle.sendErrorResponse(
-          routingContext, XyzError.ILLEGAL_ARGUMENT, mismatchMsg(storageIdFromPath, storageFromBody));
+          routingContext, NakshaError.ILLEGAL_ARGUMENT, mismatchMsg(storageIdFromPath, storageFromBody));
     } else {
-      final WriteXyzFeatures updateStorageReq = RequestHelper.updateFeatureRequest(STORAGES, storageFromBody);
+      final WriteRequest updateStorageReq = RequestHelper.updateFeatureRequest(STORAGES, storageFromBody);
       return transformedResponseTo(updateStorageReq);
     }
   }
 
   private @NotNull XyzResponse executeDeleteStorage() {
     final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
-    final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureByIdRequest(STORAGES, storageId);
-    try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
-      return transformDeleteResultToXyzFeatureResponse(
-          wrResult, Storage.class, this::storageWithMaskedSensitiveProperties);
-    }
+    final WriteRequest wrRequest = RequestHelper.deleteFeatureByIdRequest(STORAGES, storageId);
+    Response response = executeWriteRequestFromSpaceStorage(wrRequest);
+    return transformResponseToXyzFeatureResponse(response, Storage.class, NOT_FOUND_ON_NO_ELEMENTS,
+        this::storageWithMaskedSensitiveProperties);
   }
 
   @NotNull
   private XyzResponse transformedResponseTo(ReadFeatures request) {
-    try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzFeatureResponse(
-          rdResult, Storage.class, this::storageWithMaskedSensitiveProperties);
-    }
+    Response response = executeReadRequestFromSpaceStorage(request);
+    return transformResponseToXyzFeatureResponse(
+        response, Storage.class, NOT_FOUND_ON_NO_ELEMENTS, this::storageWithMaskedSensitiveProperties);
   }
 
   @NotNull
-  private XyzResponse transformedResponseTo(WriteXyzFeatures updateStorageReq) {
-    try (Result updateStorageResult = executeWriteRequestFromSpaceStorage(updateStorageReq)) {
-      return transformWriteResultToXyzFeatureResponse(
-          updateStorageResult, Storage.class, this::storageWithMaskedSensitiveProperties);
-    }
+  private XyzResponse transformedResponseTo(WriteRequest updateStorageReq) {
+    Response updateStorageResult = executeWriteRequestFromSpaceStorage(updateStorageReq);
+    return transformResponseToXyzFeatureResponse(updateStorageResult, Storage.class, FAIL_ON_NO_ELEMENTS,
+        this::storageWithMaskedSensitiveProperties);
   }
 
   private Storage storageWithMaskedSensitiveProperties(Storage storage) {
-    maskProperties(storage, SENSITIVE_PROPERTIES);
+    maskProperties(storage, StorageApiTask.SENSITIVE_PROPERTIES_LOWERCASE);
     return storage;
   }
 
-  private @NotNull Storage storageFromRequestBody() throws JsonProcessingException {
-    try (final Json json = Json.get()) {
-      final String bodyJson = routingContext.body().asString();
-      return json.reader(ViewDeserialize.User.class)
-          .forType(Storage.class)
-          .readValue(bodyJson);
-    }
+  private @NotNull Storage storageFromRequestBody() {
+    final String bodyJson = routingContext.body().asString();
+    return JvmJsonUtil.readJsonAs(bodyJson, Storage.class);
   }
 
   private static String mismatchMsg(String storageIdFromPath, Storage storageFromBody) {

@@ -344,9 +344,17 @@ actual class Platform {
         @JsStatic
         actual fun isProxyKlass(klass: KClass<*>): Boolean = isAssignable(klass, Proxy::class)
 
+        /**
+         * Returns the [KClass] created **by** the given constructor. This is mainly for JavaScript, it will simply query a cached and if not
+         * found, it will create an instance, query the [KClass] using [klassOf] and add it into the cache. Therefore, the cost of
+         * creating an instance to get the [KClass] is only paid ones in the lifetime of an application.
+         * @param constructor The constructor.
+         * @return The [KClass] that is created **by** this constructor.
+         * @throws IllegalArgumentException If the given constructor does not create any valid Kotlin object.
+         */
         @Suppress("NON_EXPORTABLE_TYPE")
         @JsStatic
-        actual fun <T : Any> klassFor(constructor: KFunction<T>): KClass<out T>
+        fun <T : Any> klassFor(constructor: KFunction<T>): KClass<out T>
             = (js("Object.create(constructor.prototype)") as T)::class
 
         @Suppress("UNCHECKED_CAST", "NON_EXPORTABLE_TYPE")

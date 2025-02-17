@@ -27,21 +27,30 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.app.common.TestUtil;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
-import naksha.model.XyzFeature;
-import naksha.model.XyzFeatureCollection;
-import naksha.geo.XyzReference;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Optional;
+import naksha.model.XyzFeatureCollection;
+import naksha.model.mom.MomReference;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
 import org.junit.jupiter.api.Assertions;
+import org.skyscreamer.jsonassert.Customization;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.skyscreamer.jsonassert.comparator.ArraySizeComparator;
+import org.skyscreamer.jsonassert.comparator.CustomComparator;
+import org.skyscreamer.jsonassert.comparator.JSONComparator;
 
 public class ResponseAssertions {
+
+  public static JSONComparator STRICT_JSON_COMPARISON = new CustomComparator(JSONCompareMode.STRICT);
+  public static JSONComparator LENIENT_JSON_COMPARISON = new CustomComparator(JSONCompareMode.LENIENT);
+  // TODO: CASL-681 fix/analyze XYZ ignoring part
+  public static JSONComparator STRICT_JSON_COMPARISON_WITHOUT_XYZ = new CustomComparator(JSONCompareMode.STRICT, new Customization("features[*].properties.@ns:com:here:xyz", (left, right) -> true));
 
   private final HttpResponse<String> subject;
   private XyzFeatureCollection collectionResponse;
@@ -88,8 +97,19 @@ public class ResponseAssertions {
     String actualBody = subject.body();
     Assertions.assertNotNull(actualBody, "Response body is null");
     try {
-      JSONAssert.assertEquals(failureMessage, expectedJsonBody, actualBody,
-              (strictChecking) ? JSONCompareMode.STRICT : JSONCompareMode.LENIENT);
+      JSONAssert.assertEquals(failureMessage, expectedJsonBody, actualBody, strictChecking ? STRICT_JSON_COMPARISON : LENIENT_JSON_COMPARISON);
+    } catch (JSONException e) {
+      Assertions.fail("Unable to parse response body", e);
+    }
+    return this;
+  }
+
+  // TODO: CASL-681: switch to this method
+  public ResponseAssertions hasJsonBody(String expectedJsonBody, String failureMessage, JSONComparator jsonComparator) {
+    String actualBody = subject.body();
+    Assertions.assertNotNull(actualBody, "Response body is null");
+    try {
+      JSONAssert.assertEquals(failureMessage, expectedJsonBody, actualBody, jsonComparator);
     } catch (JSONException e) {
       Assertions.fail("Unable to parse response body", e);
     }
@@ -99,7 +119,7 @@ public class ResponseAssertions {
   public ResponseAssertions hasResBodySizeGTE(long minExpBodySize) {
     final long actualSize = subject.body().length();
     assertTrue(actualSize >= minExpBodySize,
-            "Response body size not big enough. Expected %s bytes, actual %s bytes".formatted(minExpBodySize, actualSize));
+        "Response body size not big enough. Expected %s bytes, actual %s bytes".formatted(minExpBodySize, actualSize));
     return this;
   }
 
@@ -119,7 +139,7 @@ public class ResponseAssertions {
       collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
     }
     final List<String> insertedIds = collectionResponse.getInserted();
-    final List<XyzFeature> features = collectionResponse.getFeatures();
+    final List<NakshaFeature> features = collectionResponse.getFeatures();
     for (int i = 0; i < insertedIds.size(); i++) {
       if (prefixId != null) {
         assertTrue(
@@ -145,7 +165,7 @@ public class ResponseAssertions {
       collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
     }
     final List<String> updatedIds = collectionResponse.getUpdated();
-    final List<XyzFeature> features = collectionResponse.getFeatures();
+    final List<NakshaFeature> features = collectionResponse.getFeatures();
     for (int i = 0; i < updatedIds.size(); i++) {
       if (prefixId != null) {
         assertTrue(
@@ -164,8 +184,8 @@ public class ResponseAssertions {
     if (collectionResponse == null) {
       collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
     }
-    final List<XyzFeature> features = collectionResponse.getFeatures();
-    final List<XyzFeature> violations = collectionResponse.getViolations();
+    final List<NakshaFeature> features = collectionResponse.getFeatures();
+    final List<NakshaFeature> violations = collectionResponse.getViolations();
     // obtain feature Id
     final String fId = features.get(featureIdx).getId();
     assertNotNull(fId, "Feature Id at index " + featureIdx + " found null");
@@ -173,9 +193,9 @@ public class ResponseAssertions {
     assertNotNull(violations, "No violations found in response");
     for (int i = 0; i < violationIndices.length; i++) {
       int vIdx = violationIndices[i];
-      final List<XyzReference> references = violations.get(vIdx).getProperties().getReferences();
+      final List<MomReference> references = violations.get(vIdx).getProperties().getReferences();
       assertNotNull(references, "References missing for violation at idx " + vIdx);
-      for (final XyzReference reference : references) {
+      for (final MomReference reference : references) {
         assertNotNull(reference.getId(), "Id missing in references for violation at idx " + vIdx);
         assertEquals(fId, reference.getId(), "Referenced featured id doesn't match for Violation at idx " + vIdx);
       }
@@ -188,10 +208,10 @@ public class ResponseAssertions {
     if (collectionResponse == null) {
       collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
     }
-    final List<XyzFeature> features = collectionResponse.getFeatures();
-    for (final XyzFeature feature : features) {
+    final List<NakshaFeature> features = collectionResponse.getFeatures();
+    for (final NakshaFeature feature : features) {
       assertNotNull(
-          feature.getProperties().getXyzNamespace().getUuid(),
+          feature.getProperties().getXyz().getUuid(),
           "UUID found missing in response for feature id " + feature.getId());
     }
     return this;
@@ -206,21 +226,27 @@ public class ResponseAssertions {
   }
 
   public ResponseAssertions hasNoNextPageToken() {
-    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    if (collectionResponse == null) {
+      collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    }
     assertNull(collectionResponse.getNextPageToken(), "No nextPageToken was expected");
     return this;
   }
 
   public ResponseAssertions hasFeatureCount(int count) {
-    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    if (collectionResponse == null) {
+      collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    }
     assertEquals(count, collectionResponse.getFeatures().size(), "Feature count in the response doesn't match");
     return this;
   }
 
   public ResponseAssertions hasFeatureIdsAmongst(final @NotNull List<String> fIds) {
-    if (collectionResponse==null) collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
-    for (final XyzFeature feature : collectionResponse.getFeatures()) {
-      assertTrue(fIds.contains(feature.getId()), "No matching feature found in response with given Id : "+ feature.getId());
+    if (collectionResponse == null) {
+      collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    }
+    for (final NakshaFeature feature : collectionResponse.getFeatures()) {
+      assertTrue(fIds.contains(feature.getId()), "No matching feature found in response with given Id : " + feature.getId());
     }
     return this;
   }

@@ -2,17 +2,11 @@ package com.here.naksha.app.data;
 
 import static java.util.stream.Stream.generate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.TestUtil;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
-import naksha.geo.BBox;
-import naksha.geo.LineStringCoordinates;
-import naksha.geo.PointCoordinates;
-import naksha.model.XyzFeature;
-import naksha.geo.XyzLineString;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
@@ -22,6 +16,13 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
+import naksha.base.Platform;
+import naksha.base.ToJsonOptions;
+import naksha.geo.LineStringCoord;
+import naksha.geo.PointCoord;
+import naksha.geo.SpBoundingBox;
+import naksha.geo.SpLineString;
+import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
@@ -59,7 +60,8 @@ class GenerativeDataIngest extends AbstractDataIngest {
     setNHSpaceId("ingest_test_space");
     setNakshaClient(new NakshaTestWebClient(nhUrl, 10, 90));
 
-    logger.info("Ingesting {} tiles with {} generated Topology features each, using NH Url [{}], in Space [{}]", tileIds.size(), FEATURES_PER_TILE, nhUrl, nhSpaceId);
+    logger.info("Ingesting {} tiles with {} generated Topology features each, using NH Url [{}], in Space [{}]", tileIds.size(),
+        FEATURES_PER_TILE, nhUrl, nhSpaceId);
 
     ingestRandomFeatures(FEATURES_PER_TILE);
   }
@@ -68,7 +70,7 @@ class GenerativeDataIngest extends AbstractDataIngest {
     String streamId = UUID.randomUUID().toString();
     int maxTilesInBatch = FEATURES_IN_BATCH_LIMIT / featuresPerTile;
     int ingestedTiles = 0;
-    while (ingestedTiles < tileIds.size()){
+    while (ingestedTiles < tileIds.size()) {
       int currentBatchTilesCount = Math.min(maxTilesInBatch, tileIds.size() - ingestedTiles);
       List<String> tilesInBatch = tileIds.subList(ingestedTiles, ingestedTiles + currentBatchTilesCount);
       String batchRequest = batchRequest(tilesInBatch, featuresPerTile);
@@ -88,21 +90,22 @@ class GenerativeDataIngest extends AbstractDataIngest {
         "ResCode mismatch while importing batch with streamId" + streamId);
   }
 
-  private String batchRequest(List<String> tileIds, int featuresPerTile){
-    List<XyzFeature> featuresInBatch = tileIds.stream()
+  private String batchRequest(List<String> tileIds, int featuresPerTile) {
+    List<NakshaFeature> featuresInBatch = tileIds.stream()
         .map(tileId -> featuresForTile(tileId, featuresPerTile))
         .flatMap(List::stream)
         .toList();
-    return new FeatureCollectionRequest()
-        .withFeatures(featuresInBatch)
-        .serialize();
+    FeatureCollectionRequest request = new FeatureCollectionRequest()
+        .withFeatures(featuresInBatch);
+    return Platform.toJSON(request, ToJsonOptions.DEFAULT);
   }
 
-  private List<XyzFeature> featuresForTile(String tileId, int count){
+  private List<NakshaFeature> featuresForTile(String tileId, int count) {
     return generate(() -> topologyFeatureGenerator.randomFeatureForTile(tileId))
         .limit(count)
         .toList();
   }
+
   private boolean isGeneratedFeaturesIngestEnabled() {
     return GENERATED_FEATURES_INGEST_ENABLED;
   }
@@ -122,35 +125,35 @@ class GenerativeDataIngest extends AbstractDataIngest {
 
     private static final AtomicLong COUNTER = new AtomicLong(0);
     private final Random random;
-    private final XyzFeature baseFeature;
+    private final NakshaFeature baseFeature;
 
     public TopologyFeatureGenerator(Random random) {
       this.random = random;
-      this.baseFeature = TestUtil.parseJsonFileOrFail(SAMPLES_DIR, BASE_JSON, XyzFeature.class);
+      this.baseFeature = TestUtil.parseJsonFileOrFail(SAMPLES_DIR, BASE_JSON, NakshaFeature.class);
     }
 
-    XyzFeature randomFeatureForTile(String tileId) {
-      XyzFeature generated = new XyzFeature(ID_PREFIX + COUNTER.incrementAndGet());
+    NakshaFeature randomFeatureForTile(String tileId) {
+      NakshaFeature generated = new NakshaFeature(ID_PREFIX + COUNTER.incrementAndGet());
       generated.setProperties(baseFeature.getProperties());
       generated.setGeometry(randomLineInTile(tileId));
       generated.setBbox(null);
       return generated;
     }
 
-    private XyzLineString randomLineInTile(String tileId) {
-      BBox tileBbox = WebMercatorTile.forQuadkey(tileId).getBBox(false);
-      double lonDist = tileBbox.maxLon() - tileBbox.minLon();
-      double latDist = tileBbox.maxLat() - tileBbox.minLat();
-      double currentLon = tileBbox.minLon() + random.nextDouble(lonDist);
-      double currentLat = tileBbox.minLat() + random.nextDouble(latDist);
+    private SpLineString randomLineInTile(String tileId) {
+      SpBoundingBox tileBbox = WebMercatorTile.forQuadkey(tileId).getBBox(false);
+      double lonDist = tileBbox.getMaxLongitude() - tileBbox.getMinLongitude();
+      double latDist = tileBbox.getMaxLatitude() - tileBbox.getMinLatitude();
+      double currentLon = tileBbox.getMinLatitude() + random.nextDouble(lonDist);
+      double currentLat = tileBbox.getMinLatitude() + random.nextDouble(latDist);
       int pointsInLine = random.nextInt(2, 10);
-      LineStringCoordinates coordinates = new LineStringCoordinates();
+      LineStringCoord coordinates = new LineStringCoord();
       for (int i = 0; i < pointsInLine; i++) {
-        coordinates.add(new PointCoordinates(currentLon, currentLat));
-        currentLon = currentLon + random.nextDouble(tileBbox.maxLon() - currentLon);
-        currentLat = currentLat + random.nextDouble(tileBbox.maxLat() - currentLat);
+        coordinates.add(new PointCoord(currentLon, currentLat));
+        currentLon = currentLon + random.nextDouble(tileBbox.getMaxLongitude() - currentLon);
+        currentLat = currentLat + random.nextDouble(tileBbox.getMaxLatitude() - currentLat);
       }
-      return new XyzLineString().withCoordinates(coordinates);
+      return new SpLineString(coordinates);
     }
   }
 }

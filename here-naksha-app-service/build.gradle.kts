@@ -11,6 +11,7 @@ dependencies {
     //implementation(project(":here-naksha-lib-extension"))
     implementation(project(":here-naksha-lib-hub"))
     implementation(project(":here-naksha-common-http"))
+    implementation(project(":here-naksha-lib-diff"))
 
     implementation(Lib.log4j_slf4j)
     implementation(Lib.log4j_api)

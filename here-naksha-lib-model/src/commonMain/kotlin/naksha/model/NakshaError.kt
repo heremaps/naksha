@@ -25,7 +25,7 @@ open class NakshaError() : AnyObject() {
      */
     @JsName("of")
     @JvmOverloads
-    constructor(code: String, msg: String, id: String? = null, cause: Throwable? = null) : this() {
+    constructor(code: String, msg: String, cause: Throwable? = null, id: String? = null) : this() {
         this.code = code
         this.msg = msg
         this.id = id
@@ -249,5 +249,5 @@ open class NakshaError() : AnyObject() {
                 && cause == other.cause
     }
 
-    override fun toString(): String = code
+    override fun toString(): String = "NakshaError(code=$code, msg=$msg, id=$id)"
 }

@@ -2,7 +2,7 @@ package com.here.naksha.handler.activitylog;
 
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.*;
 import static com.here.naksha.handler.activitylog.assertions.ActivityLogSuccessResultAssertions.assertThatResult;
-import static com.here.naksha.test.common.assertions.AssertionIPropertyQuery.assertThatOperation;
+import static com.here.naksha.test.common.assertions.PropertyQueryAssertions.assertThatPropertyQuery;
 import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -23,7 +23,7 @@ import com.here.naksha.handler.activitylog.util.DatahubSamplesUtil;
 import com.here.naksha.handler.activitylog.util.DatahubSamplesUtil.DatahubSample;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.test.common.assertions.AssertionIPropertyQuery;
+import com.here.naksha.test.common.assertions.PropertyQueryAssertions;
 import naksha.base.JvmInt64;
 import naksha.model.*;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
@@ -154,14 +154,14 @@ class ActivityLogHandlerTest {
     assertEquals(List.of(SPACE_ID), requestPassedToSpaceStorage.getCollectionIds(),
         "Transformed request should use 'spaceId' from handler's properties");
     assertEquals(Integer.MAX_VALUE,requestPassedToSpaceStorage.getVersions(), "Transformed request should return all versions of feature");
-    assertThatOperation(requestPassedToSpaceStorage.getQuery().getProperties()) // POp for id and activityLogId should be transformed
+    assertThatPropertyQuery(requestPassedToSpaceStorage.getQuery().getProperties()) // POp for id and activityLogId should be transformed
         .hasChildrenThat(
             first -> first
-                .hasType(StringOp.EQUALS)
+                .hasOp(StringOp.EQUALS)
                 .hasProperty(PROPERTY_UUID)
                 .hasValue(featureUuid),
             second -> second
-                .hasType(StringOp.EQUALS)
+                .hasOp(StringOp.EQUALS)
                 .hasProperty(List.of(NakshaFeature.ID_KEY))
                 .hasValue(featureId)
         );
@@ -272,16 +272,16 @@ class ActivityLogHandlerTest {
     ReadFeatures secondRequest = requestPassedToSpace.get(1);
     assertEquals(Integer.MAX_VALUE,secondRequest.getVersions());
     assertEquals(List.of(SPACE_ID), secondRequest.getCollectionIds());
-    AssertionIPropertyQuery.assertThatOperation(secondRequest.getQuery().getProperties())
+    PropertyQueryAssertions.assertThatPropertyQuery(secondRequest.getQuery().getProperties())
         .isPOr()
         .hasChildrenThat(
             first -> first
                 .hasProperty(PROPERTY_UUID)
-                .hasType(StringOp.EQUALS)
+                .hasOp(StringOp.EQUALS)
                 .hasValue("puuid_2"),
             second -> second
                 .hasProperty(PROPERTY_UUID)
-                .hasType(StringOp.EQUALS)
+                .hasOp(StringOp.EQUALS)
                 .hasValue("puuid_1")
         );
 

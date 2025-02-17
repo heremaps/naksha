@@ -291,7 +291,11 @@ open class PgSession(
     override fun execute(request: Request): Response { // SuccessResponse
         when (request) {
             is WriteRequest -> {
-                transaction()
+                try {
+                    transaction()
+                } catch (nakshaException: NakshaException) {
+                    return ErrorResponse(nakshaException)
+                }
                 val response = PgWriter(this, request, BulkWriteExecutor(this)).execute()
                 return response
             }
@@ -314,7 +318,7 @@ open class PgSession(
         val writeTxReq = WriteRequest()
         val writeTx = Write()
         writeTxReq.add(writeTx)
-        writeTx.upsertFeature(null, VIRT_TRANSACTIONS, transaction())
+        writeTx.upsertFeature(null, collectionId = VIRT_TRANSACTIONS, feature = transaction())
         PgWriter(this, writeTxReq, InstantWriteExecutor(this)).execute()
     }
 

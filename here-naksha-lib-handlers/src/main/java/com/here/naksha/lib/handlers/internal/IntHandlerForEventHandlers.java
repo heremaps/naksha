@@ -19,8 +19,8 @@
 package com.here.naksha.lib.handlers.internal;
 
 import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
-import static com.here.naksha.lib.handlers.NakshaAdminCollection.SPACES;
-import static com.here.naksha.lib.handlers.NakshaAdminCollection.STORAGES;
+import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
+import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
 import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.*;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 
@@ -218,7 +218,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     try (IReadSession readSession = nakshaHub().getSpaceStorage().newReadSession(new SessionOptions())) {
       Response result = readSession.execute(findStorageById);
       List<String> fetchedIds = ResultHelper.readIdsFromResult(result);
-      if (fetchedIds.size() == 1 && fetchedIds.get(0).equals(storageId)) {
+      if (fetchedIds.size() == 1 && storageId.equals(fetchedIds.get(0))) {
         return new SuccessResponse();
       }
     }
