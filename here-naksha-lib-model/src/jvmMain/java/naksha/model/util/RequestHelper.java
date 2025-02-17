@@ -19,6 +19,8 @@
 package naksha.model.util;
 
 import java.util.List;
+
+import naksha.model.NakshaContext;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
@@ -138,7 +140,7 @@ public class RequestHelper {
       final @NotNull NakshaCollection collection, final @NotNull List<String> ids) {
     final WriteRequest request = new WriteRequest();
     for (String id : ids) {
-      request.add(new Write().deleteFeatureById(null, collectionName, id));
+      request.add(new Write().deleteFeatureById(collection, id));
     }
     return request;
   }
@@ -146,13 +148,14 @@ public class RequestHelper {
   /**
    * Helper method to create WriteFeatures request for deleting given feature.
    *
-   * @param collection     the storage collection
+   * @param collectionName     the storage collection
    * @param id             feature object to be deleted
    * @return WriteFeatures request that can be used against IStorage methods
    */
+  @Deprecated
   public static @NotNull WriteRequest deleteFeatureByIdRequest(
       final @NotNull String collectionName, final @NotNull String id) {
-    final Write write = new Write().deleteFeatureById(null, collectionName, id);
+    final Write write = new Write().deleteFeatureById(NakshaContext.mapId(), collectionName, id);
     return new WriteRequest().add(write);
   }
 

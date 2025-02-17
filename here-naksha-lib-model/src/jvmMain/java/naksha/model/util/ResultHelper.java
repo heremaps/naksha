@@ -27,11 +27,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import naksha.base.JvmBoxingUtil;
+import naksha.model.Action;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.ExecutedOp;
+import naksha.model.request.FeatureTuple;
+import naksha.model.request.FeatureTupleList;
 import naksha.model.request.Response;
-import naksha.model.request.ResultTuple;
-import naksha.model.request.ResultTupleList;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -159,7 +159,7 @@ public class ResultHelper {
   }
 
   /**
-   * Helper method to fetch features from given Result and return a map of multiple lists grouped by {@link ExecutedOp} of features with
+   * Helper method to fetch features from given Result and return a map of multiple lists of features with
    * type T. Returned list is not limited - to set the upper bound, use sibling method with limit argument.
    *
    * @param result      the Result which is to be read

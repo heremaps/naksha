@@ -200,7 +200,7 @@ open class PgSession(
         when (request) {
             is WriteRequest -> {
                 try {
-                    transaction()
+                    useTransaction()
                 } catch (nakshaException: NakshaException) {
                     return ErrorResponse(nakshaException)
                 }
