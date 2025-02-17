@@ -164,7 +164,18 @@ expect class Platform {
          * @throws IllegalArgumentException If the given object has no valid [KClass].
          */
         fun <T : Any> klassOf(o: T): KClass<T>
-        // fun <T: Any> klassOf(javaClass: Class<T>): KClass<T> // <-- Java-only
+
+        /**
+         * A reflective method to turn a full qualified classname into a klass instance.
+         *
+         * - In the JVM this method will use `Class.forName` to find the class, initialize it, and then return the Kotlin class of it.
+         * - In JavaScript this method will use `globalThis` to find the constructor, so `com.here.example.Foo` will resolve into `globalThis.com.here.example.Foo`, this is expected to be a constructor function, then using [klassFor] to resolve it into the Kotlin class.
+         * @param name the full qualified name of the Klass.
+         * @return the Klass.
+         * @since 3.0.0
+         * @throws IllegalArgumentException if no such Klass is found.
+         */
+        fun <T : Any> klassForName(name: String): KClass<T>
 
         /**
          * Intern the given string and perform a [NFC](https://unicode.org/reports/tr15/) (Canonical Decomposition,
