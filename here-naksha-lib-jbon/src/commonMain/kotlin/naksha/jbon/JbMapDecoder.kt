@@ -12,7 +12,9 @@ import kotlin.js.JsExport
 @JsExport
 class JbMapDecoder : JbEntryArray<JbMapDecoder>() {
 
-    override fun parseHeader() {
+    override fun onMap() {}
+
+    override fun doParseHeader() {
         check(unitType == TYPE_MAP) { "Mapped structure is no map, but ${JbDecoder.unitTypeName(unitType)}" }
         valueReader.mapReader(reader)
         index = -1

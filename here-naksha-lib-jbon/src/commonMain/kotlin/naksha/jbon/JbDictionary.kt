@@ -38,7 +38,9 @@ class JbDictionary : JbStructDecoder<JbDictionary>(), IDict {
      */
     private val indexToOffset = ArrayList<Int>()
 
-    override fun parseHeader() {
+    override fun onMap() {}
+
+    override fun doParseHeader() {
         id = if (reader.isString()) reader.decodeString() else null
         reader.nextUnit()
     }

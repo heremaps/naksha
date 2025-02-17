@@ -21,8 +21,8 @@ open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(d
         return this
     }
 
-    override fun parseHeader() {
-        super.parseHeader()
+    override fun doParseHeader() {
+        super.doParseHeader()
         check(reader.isMap()) { "Failed to parse feature payload, expected map, but found ${JbDecoder.unitTypeName(reader.unitType())}" }
         if (!this::_map.isInitialized) _map = JbMapDecoder()
         _map.mapReader(reader)

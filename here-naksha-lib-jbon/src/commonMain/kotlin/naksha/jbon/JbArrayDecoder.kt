@@ -10,7 +10,9 @@ import kotlin.js.JsExport
 @JsExport
 class JbArrayDecoder : JbEntryArray<JbArrayDecoder>() {
 
-    override fun parseHeader() {
+    override fun onMap() {}
+
+    override fun doParseHeader() {
         check(unitType == TYPE_ARRAY) { "Mapped structure is no array, but ${JbDecoder.unitTypeName(unitType)}" }
         index = -1
         length = if (bodySize() == 0) 0 else Int.MAX_VALUE
