@@ -298,7 +298,7 @@ public class NHAdminReaderMock implements IReadSession {
   }
 
   @Override
-  public void fetchTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, boolean fetchFromHistory, int mode) {
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, boolean fetchFromHistory, int mode) {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 

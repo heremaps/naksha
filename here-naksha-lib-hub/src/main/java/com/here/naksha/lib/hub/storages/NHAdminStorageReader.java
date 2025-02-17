@@ -131,8 +131,8 @@ public class NHAdminStorageReader implements IReadSession {
   }
 
   @Override
-  public void fetchTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, boolean fetchFromHistory, int mode) {
-    session.fetchTuples(featureTuples, from, to, fetchFromHistory, mode);
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, boolean fetchFromHistory, int mode) {
+    session.loadTuples(featureTuples, from, to, fetchFromHistory, mode);
   }
 
   @Override

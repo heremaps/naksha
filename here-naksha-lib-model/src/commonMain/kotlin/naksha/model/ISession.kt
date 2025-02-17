@@ -129,9 +129,9 @@ interface ISession : IDictReader, AutoCloseable {
     fun getCollectionById(map: NakshaMap, collectionId: String): NakshaCollection?
 
     /**
-     * Fetches all tuples in the given result-tuples.
+     * Load all tuples into the given [feature-tuples][FeatureTuple].
      *
-     * [Tuple] that can't be fetched will still be _null_ after the method returns.
+     * [Tuple] that can't be fetched will still be _null_ after the method returns. The method should query the [Naksha.cache] before actually loading the [Tuple] from the storage.
      *
      * @param featureTuples a list of result-tuples to fetch.
      * @param from the index of the first result-tuples to fetch; default is `0`.
@@ -140,7 +140,7 @@ interface ISession : IDictReader, AutoCloseable {
      * @param mode the fetch mode; default is [FETCH_ALL].
      * @since 3.0.0
      */
-    fun fetchTuples(
+    fun loadTuples(
         featureTuples: List<FeatureTuple?>,
         from: Int = 0,
         to: Int = featureTuples.size,

@@ -295,9 +295,8 @@ open class PgSession(
         return PgLock(this, useConnection(), lockId, false)
     }
 
-    override fun fetchTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int, fetchFromHistory: Boolean, mode: FetchMode) {
-        //TODO("Not yet implemented")
-        // TODO: Rohit - Only if you want:
+    override fun loadTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int, fetchFromHistory: Boolean, mode: FetchMode) {
+        // TODO: Caching is only done by
         val cachedTuples = Naksha.cache.load(featureTuples, from, to).toSet()
         val missingTuples = featureTuples.subList(from, to).filter { it !in cachedTuples }
         if (missingTuples.isNotEmpty()) {
@@ -305,7 +304,7 @@ open class PgSession(
             val fetchedMap = fetchedResults.filterNotNull().associateBy { it }
             featureTuples.subList(from, to).filterNotNull().forEach { tup ->
                 fetchedMap[tup]?.let { fetchedItem ->
-                    fetchedItem.tuple?.let(Naksha.cache::store)
+                    // fetchedItem.tuple?.let(Naksha.cache::store)
                     tup.tuple = fetchedItem.tuple
                     tup.source = fetchedItem.source
                 }

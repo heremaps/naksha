@@ -245,23 +245,11 @@ class Naksha private constructor() {
         }
 
         /**
-         * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the
-         * given feature-id. When there are less than 256 partitions, the value must be divided by the number of partitions, and the rest
-         * addresses the partition, for example for 4 partitions do `partitionNumber(id) % 4`, what will be a value between 0 and 3.
-         *
-         * @param featureId the feature id.
-         * @return the partition number of the feature, a value between 0 and 255.
-         * @since 3.0.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun partitionNumber(featureId: String?): Int = if (featureId == null) 0 else Platform.md5(featureId)[0].toInt() and 255
-
-        /**
-         * Helper method to calculate a valid storage-number from a given storage-id.
+         * A method to calculate a valid storage-number from a given storage-id.
          *
          * @param storageId the storage-id.
          * @return the storage-number.
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
@@ -270,6 +258,74 @@ class Naksha private constructor() {
             val view = Binary(Platform.newDataView(hash))
             return view.getInt64(8) and Int64(0x7fff_ffff_ffff_ffff)
         }
+
+        /**
+         * Calculates the partition number between 0 and 255 from the given feature-id.
+         *
+         * This is the unsigned value of the last byte of the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the given feature-id. When there are less than 256 partitions, the value must be divided by the number of partitions, and the rest addresses the partition, for example for 4 partitions do `partitionNumber(id) % 4`, what will be a value between 0 and 3.
+         *
+         * @param featureId the feature id.
+         * @return the partition number of the feature, a value between 0 and 255.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionNumber(featureId: String?): Int = if (featureId == null) 0 else Platform.md5(featureId)[15].toInt() and 255
+
+        /**
+         * A method to calculate the feature-number (`fn`) from a given feature-id.
+         *
+         * Actually, this method will calculate the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id and return the lower 64-bit as feature-number. Considering the [birthday paradox](https://betterexplained.com/articles/understanding-the-birthday-paradox/), we can assume that for the maximum of 2^40 features in a collection, there will be around 32,000 collisions, when using 2^32 features _(4 billion)_ we only get 1 collision, while for less than 1 billion features we will not encounter any collision _(or, it is unlikely)_.
+         *
+         * ### Collision handling
+         * As collisions in feature numbers are not totally avoidable, the strategy in case of a collision should be to increment to the feature-number until an unused number is found, not modifying the top 8-bit. The generally programming way is
+         * ```
+         * new_fn = ((fn + 1) & 0x00ff_ffff) |
+         *          (fn & 0xff00_0000)
+         * ```
+         * Within SQL, this looks generally like:
+         * ```
+         * WITH t AS (SELECT -1::bigint as fn)
+         * SELECT ((t.fn + 1::bigint) & 72057594037927935::bigint)
+         *      | (t.fn & -72057594037927936::bigint)
+         * AS new_fn, t.fn as old_fn FROM t;
+         * ```
+         * Naksha adds a SQL function to simplify the increase, named `naksha_fn_inc`, which returns the incremented feature-number. Eventually, to find the next not colliding number, the following query can be used:
+         *
+         * ```sql
+         * SELECT naksha_fn_inc(t1.fn) AS fn FROM "table" t1
+         * LEFT JOIN "table" t2 ON naksha_fn_inc(t1.fn) = t2.fn
+         *   WHERE t2.fn IS NULL ORDER BY t1.fn LIMIT 1;
+         * ```
+         *
+         * ### Note
+         * Generally, the estimated number of collisions is calculated as `n^2 / 2N` with `n` being the number of features and `N` being the entropy, so the maximum amount of numbers available _(so here 2^64)_. The collision possibility can be estimated via `1 - e^( -(n^2 / 2N) )`, for example, for 1 billion features it will be `1 - e^( -(2^60 / 2^65) )`, which results in around 3.1 percent, for 4 billion features it grows to `1 - e^( -(2^64 / 2^65) )` to around 39.3 percent, reaching 100% for around 34 billion features _(there is expected to be at least one collision)_. Beware, just because a collision is unlikely, does not mean there will be none!
+         *
+         * @param featureId the feature-id.
+         * @return the feature-number.
+         */
+        @JsStatic
+        @JvmStatic
+        fun featureNumberById(featureId: String): Int64 {
+            val hash = Platform.md5(featureId)
+            val view = Binary(Platform.newDataView(hash))
+            return view.getInt64(8)
+        }
+
+        private val FN_CLEAR_HIGH8 = Int64(72057594037927935L)
+        private val FN_CLEAR_LOW56 = Int64(-72057594037927936L)
+
+        /**
+         * Increment the feature-number programmatically in case of collision. This method implements the same behavior as the SQL function `naksha_fn_inc`.
+         *
+         * @param featureNumber the feature-number to increase.
+         * @return the next feature-number that has the same partition-number.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun featureNumberInc(featureNumber: Int64): Int64
+            = ((featureNumber+1) and FN_CLEAR_HIGH8) or (featureNumber and FN_CLEAR_LOW56)
 
         /**
          * Tests if the given identifier is an internal one.
@@ -297,7 +353,7 @@ class Naksha private constructor() {
         fun decodeTuple(tuple: Tuple, dictionaryReader: IDictReader? = null): NakshaFeature {
             val sn = tuple.storageNumber
             val meta = tuple.meta
-            val dictReader = dictionaryReader ?: getStorageByNumber(sn) ?: cache
+            val dictReader = dictionaryReader ?: getStorageByNumber(sn) ?: cache.getDictReader(sn)
             val feature = decodeFeature(tuple.feature, meta.flags, dictReader) ?: NakshaFeature()
             feature.properties.xyz = XyzNs.fromMetadata(meta)
             val xyz = feature.properties.xyz
@@ -705,22 +761,7 @@ class Naksha private constructor() {
         }
 
         /**
-         * The reference to the first [tuple-cache][ITupleCache].
-         *
-         * By default, this will be the [TupleHeapCache], applications can reorganize the cache, for example add a second-level cache (like local filesystem or localhost redis), third-level (remote redis), fourth-level (S3 buckets) or whatever wanted.
-         *
-         * It is strongly recommended to only use caches that extend [AbstractTupleCache], and then simply to call [start][AbstractTupleCache.start], which will initialize the cache, acquire the [lock], and add the cache to the correct position in the cache chain, releasing the [lock]. This base class ensures that all contracts of [ITupleCache] are followed as specified.
-         *
-         * - **Warning**: It is highly recommended to keep the [TupleHeapCache] as the first level cache, even while it is possible to remove or replace it, it is strongly discouraged, because many libraries take advantage of the heap-cache and intrinsically expect it to be there!
-         * - **Warning**: Setting the cache to _null_ can cause plenty of unexpected exceptions, because a lot of code requires some cache via [cache].
-         * @since 3.0.0
-         */
-        @JvmField
-        @JsStatic
-        val cacheRef = AtomicRef<ITupleCache>(TupleHeapCache())
-
-        /**
-         * Returns the [tuple cache][ITupleCache], usage like:
+         * The [tuple cache][TupleCache], usage like:
          * ```kotlin
          * // rs = ResultTupleList
          * val result = Naksha.cache.load(rs)
@@ -730,13 +771,11 @@ class Naksha private constructor() {
          * final ResultTupleList result = Naksha.cache.load(rs, 0, rs.size())
          * ```
          * - Throws [ILLEGAL_STATE], if no cache is available ([cacheRef] is _null_). This only happens, when an application explicitly removes all caches.
-         * @return the [cache][ITupleCache] for [Tuple].
          * @since 3.0.0
          */
         @JvmStatic
         @JsStatic
-        val cache: ITupleCache
-            get() = cacheRef.get() ?: throw NakshaException(ILLEGAL_STATE, "No cache available")
+        val cache = TupleCache()
 
         private val _adminOptions: AtomicRef<SessionOptions> = AtomicRef(null)
 

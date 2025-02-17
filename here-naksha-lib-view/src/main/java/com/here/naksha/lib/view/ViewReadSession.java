@@ -236,7 +236,7 @@ public class ViewReadSession implements IReadSession {
   }
 
   @Override
-  public void fetchTuples(
+  public void loadTuples(
       @NotNull List<? extends FeatureTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {}
 
   @Override
@@ -255,22 +255,12 @@ public class ViewReadSession implements IReadSession {
   }
 
   @Override
-  public void refreshMaps() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
     throw new UnsupportedOperationException();
   }
 
   @Override
   public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void refreshCollections(@NotNull NakshaMap map) {
     throw new UnsupportedOperationException();
   }
 

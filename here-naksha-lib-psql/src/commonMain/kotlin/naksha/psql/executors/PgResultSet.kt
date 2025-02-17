@@ -134,8 +134,8 @@ class PgResultSet(
         if (a == null) return 1
         if (b == null) return -1
 
-        val afid = a.id()
-        val bfid = b.id()
+        val afid = a.id
+        val bfid = b.id
         if (afid != bfid) {
             if (afid == null) return 1
             if (bfid == null) return -1
@@ -212,7 +212,7 @@ class PgResultSet(
             if (i <= fetched_till) {
                 val available = i - removed
                 val to = min(((end - available + 50) * 1.1).toInt(), all.size)
-                session.fetchTuples(all, from = i, to = to, mode = FETCH_ALL)
+                session.loadTuples(all, from = i, to = to, mode = FETCH_ALL)
                 fetched_till = to
             }
             var row = all[i]

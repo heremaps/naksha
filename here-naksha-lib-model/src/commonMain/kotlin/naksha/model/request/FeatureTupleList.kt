@@ -6,7 +6,9 @@ import naksha.base.ListProxy
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -25,17 +27,20 @@ open class FeatureTupleList : ListProxy<FeatureTuple>(FeatureTuple::class) {
          * ```
          *
          * @param array the tuple-number binary.
+         * @param from the index of the first entry to convert.
+         * @param to the index of the first entry **not** to convert.
          * @return the given binary converted into a list of result-tuples.
          * @since 3.0.0
          */
         @JvmStatic
         @JsStatic
-        fun fromByteArray(array: TupleNumberBinaryArray): FeatureTupleList {
+        @JvmOverloads
+        fun fromByteArray(array: TupleNumberBinaryArray, from: Int = 0, to: Int = array.size): FeatureTupleList {
             val rs = FeatureTupleList()
-            val length = array.size
+            val length = to - from
             rs.setCapacity(length)
-            var i = 0
-            while (i < length) {
+            var i = from
+            while (i < to) {
                 val tupleNumber = array[i] ?: throw NakshaException(ILLEGAL_STATE, "Invalid tuple-number at index $i")
                 val featureTuple = FeatureTuple(tupleNumber)
                 rs.add(featureTuple)
@@ -45,7 +50,7 @@ open class FeatureTupleList : ListProxy<FeatureTuple>(FeatureTuple::class) {
         }
 
         /**
-         * Convert the given array of tuple-number into a list of feature-tuple to be loaded using [ISession.fetchTuples].
+         * Convert the given array of tuple-number into a list of feature-tuple to be loaded using [ISession.loadTuples].
          * @param array the array of tuple-number.
          * @return a list of [FeatureTuple] with the logically same content as the given array.
          * @since 3.0.0
@@ -65,5 +70,70 @@ open class FeatureTupleList : ListProxy<FeatureTuple>(FeatureTuple::class) {
             }
             return rs
         }
+    }
+
+    /**
+     * Returns the [feature-tuple][FeatureTuple] with the given [tuple-number][TupleNumber].
+     *
+     * @param tupleNumber the [TupleNumber] to search for.
+     * @return the [FeatureTuple] with the given [TupleNumber] or `null`, if no such feature is within the list.
+     */
+    operator fun get(tupleNumber: TupleNumber): FeatureTuple? {
+        val i = indexOf(tupleNumber)
+        return if (i >= 0) get(i) else null
+    }
+
+    /**
+     * Searches for a [feature-tuple][FeatureTuple] with the given [tuple-number][TupleNumber].
+     * @param tupleNumber the [TupleNumber] to search for.
+     * @param from the index to start searching at; defaults to `0`.
+     * @param to the index to end the search at (exclusive); defaults to [size].
+     * @return the index of the next [FeatureTuple] with the given `id` or `null`, if no such feature is within the list.
+     */
+    @JsName("indexOfTupleNumber")
+    @JvmOverloads
+    fun indexOf(tupleNumber: TupleNumber, from: Int = 0, to: Int = size): Int {
+        for (i in from until to) {
+            val featureTuple = get(i) ?: continue
+            if (featureTuple.tupleNumber == tupleNumber) return i
+        }
+        return -1
+    }
+
+    /**
+     * Searches for a [feature-tuple][FeatureTuple] with the given [tuple-number][TupleNumber].
+     * @param id the feature-id to search for.
+     * @param from the index to start searching at; defaults to `0`.
+     * @param to the index to end the search at (exclusive); defaults to [size].
+     * @return the index of the next [FeatureTuple] with the given [TupleNumber] or `null`, if no such feature is within the list.
+     */
+    @JsName("indexOfId")
+    @JvmOverloads
+    fun indexOf(id: String, from: Int = 0, to: Int = size): Int {
+        for (i in from until to) {
+            val featureTuple = get(i) ?: continue
+            if (featureTuple.id == id) return i
+        }
+        return -1
+    }
+
+    /**
+     * Convert this [feature-tuple list][FeatureTupleList] into a pure list of [Tuple].
+     * @param from the index of the first value to convert, defaults to `0`.
+     * @param to the index of the fist value **not** to convert, defaults to [size].
+     * @return the list of [Tuple].
+     * @since 3.0
+     */
+    @JvmOverloads
+    fun toTupleList(from:Int=0, to:Int=size): List<Tuple> {
+        val list = mutableListOf<Tuple>()
+        for (i in from until to) {
+            val ft = this[i]
+            if (ft != null) {
+                val tuple = ft.tuple
+                if (tuple != null) list.add(tuple)
+            }
+        }
+        return list
     }
 }

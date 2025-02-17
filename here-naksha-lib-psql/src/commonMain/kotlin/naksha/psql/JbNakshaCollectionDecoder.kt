@@ -45,8 +45,8 @@ class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbFeatureDecoder(di
         return this
     }
 
-    override fun parseHeader() {
-        super.parseHeader()
+    override fun doParseHeader() {
+        super.doParseHeader()
         val map = root()
         while (map.next() && map.ok()) {
             val key = map.key()

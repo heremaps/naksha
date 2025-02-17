@@ -325,7 +325,7 @@ class PgWriter(
             val prevTuple = cache[prevTupleNumber]
             if (prevTuple != null) {
                 val updatedMeta = prevTuple.meta.copy(nextVersion = newTuple.meta.version)
-                cache[prevTupleNumber] = prevTuple.copy(meta = updatedMeta)
+                cache.store(prevTuple.copy(meta = updatedMeta))
             }
         }
     }

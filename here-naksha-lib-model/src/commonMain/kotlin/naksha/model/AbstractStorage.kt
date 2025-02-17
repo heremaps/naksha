@@ -134,6 +134,6 @@ abstract class AbstractStorage<CONFIG : StorageConfig> : IStorage {
      * @since 3.0.0
      */
     protected open fun dropCache() {
-        Naksha.cache.removedStorage(this)
+        // Naksha.cache.removedStorage(this)
     }
 }

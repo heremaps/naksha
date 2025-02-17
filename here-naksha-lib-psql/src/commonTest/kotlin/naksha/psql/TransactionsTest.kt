@@ -24,14 +24,14 @@ class TransactionsTest : PgTestBase(NakshaCollection("transaction_test")) {
         Naksha.cache.clear(storage)
 
         val readSession = storage.newReadSession()
-        readSession.fetchTuples(savedTuples.asList())
+        readSession.loadTuples(savedTuples.asList())
         val savedFeatureVersion = savedTuples[0]?.tuple?.meta?.version
 
         // when - read all transactions
         val readRequest = ReadTransactions()
         readRequest.featureIds.add(savedFeatureVersion?.txn.toString())
         val readResponse = storage.newReadSession().execute(readRequest) as SuccessResponse
-        readSession.fetchTuples(readResponse.tuples)
+        readSession.loadTuples(readResponse.tuples)
 
         // then
         assertEquals(savedFeatureVersion, readResponse.tuples[0]?.tuple?.meta?.version)

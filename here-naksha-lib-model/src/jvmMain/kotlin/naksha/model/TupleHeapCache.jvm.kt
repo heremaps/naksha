@@ -1,0 +1,98 @@
+@file:Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
+
+package naksha.model
+
+import naksha.base.AtomicMap
+import naksha.base.Int64
+import naksha.base.WeakRef
+import naksha.jbon.IDictReader
+import naksha.model.request.FeatureTuple
+
+actual class TupleHeapCache : ITupleCache {
+    override val latencyInMicros: Int64
+        get() = LATENCY_MEMORY
+
+    // TODO: Review Caffeine, we should use it!
+    //       https://github.com/ben-manes/caffeine
+    // TODO: !!! We should not store data only using weak-references. !!!
+    //       This is many bad side effects, one very bad is that when an eviction happens, everything is evicted at ones!
+    //       We should define a minimum cache size in bytes, and keep GZIP compressed full tuples, in binary encoding, in it.
+    //       We should define a maximum cache size in bytes, and we use soft-references for this one (binary encoding).
+    //       Eventually we should use all other available additional memory via weak-references for caching.
+    //       All heap references should always be weak-referred to be collectable under memory pressure.
+    //       The partial tuples should use only weak-references, they are very unhandy anyway and should be avoided.
+    private var tuplesByStorage = AtomicMap<Int64, AtomicMap<TupleNumber, WeakRef<Tuple>>>()
+
+    override fun get(tupleNumber: TupleNumber): Tuple?
+        = tuplesByStorage[tupleNumber.storageNumber]?.get(tupleNumber)?.deref()
+
+    override fun load(tupleNumbers: TupleNumberBinaryArray, from: Int, to: Int): List<Tuple>? {
+        val result = mutableListOf<Tuple>()
+        var i = from
+        while (i < to) {
+            val tupleNumber = tupleNumbers[i++] ?: continue
+            val cached = get(tupleNumber)?: continue
+            result.add(cached)
+        }
+        return result
+    }
+
+    override fun loadFeatureTuple(featureTuples: List<FeatureTuple?>, from: Int, to: Int): Int {
+        var loaded = 0
+        var i = from
+        while (i < to) {
+            val featureTuple = featureTuples[i++] ?: continue
+            val tupleNumber = featureTuple.tupleNumber
+            val tuple = featureTuple.tuple
+            if (tuple != null) continue
+            val cached = get(tupleNumber) ?: continue
+            loaded++
+            featureTuple.tuple = cached
+            featureTuple.source = this
+        }
+        return loaded
+    }
+
+    override fun put(tuple: Tuple) {
+        TODO("Not yet implemented")
+    }
+
+    override fun store(tuples: List<Tuple>) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onStorageAdd(storage: IStorage) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onStorageRemove(storage: IStorage) {
+        TODO("Not yet implemented")
+    }
+
+    override fun getDictReader(storageNumber: Int64): IDictReader? {
+        TODO("Not yet implemented")
+    }
+
+    override fun clear() {
+        TODO("Not yet implemented")
+    }
+
+    override fun clear(storage: IStorage) {
+        TODO("Not yet implemented")
+    }
+
+    override fun gc() {
+        TODO("Not yet implemented")
+    }
+
+    actual companion object TupleHeapCache_C {
+        /**
+         * Returns the head-cache implementation.
+         * @return the head-cache implementation.
+         * @since 3.0
+         */
+        actual fun getInstance(): TupleHeapCache {
+            TODO("Not yet implemented")
+        }
+    }
+}

@@ -41,7 +41,8 @@ open class FeatureTuple(
      * @return the feature-id, if available.
      * @since 3.0.0
      */
-    fun id() : String? = tuple?.meta?.id
+    val id: String?
+        get() = tuple?.meta?.id
 
     private var doNotUpdate: Boolean = false
     private var cachedTuple: Tuple? = null

@@ -130,28 +130,18 @@ public final class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public void refreshMaps() {
-
-  }
-
-  @Override
   public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
     return null;
   }
 
   @Override
-  public void fetchTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, boolean fetchFromHistory, int mode) {
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, boolean fetchFromHistory, int mode) {
     throw new NotImplementedException("Not supported by HTTP storage");
   }
 
   @Override
   public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
     throw new NotImplementedException("Not supported by HTTP storage");
-  }
-
-  @Override
-  public void refreshCollections(@NotNull NakshaMap map) {
-
   }
 
   @Override

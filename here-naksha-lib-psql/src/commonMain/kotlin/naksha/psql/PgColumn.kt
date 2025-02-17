@@ -111,10 +111,24 @@ class PgColumn : JsEnum() {
          * Returns the columns instance for the given name,
          * @param columnName the column name.
          * @return the column enumeration value.
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
         fun of(columnName: String): PgColumn = get(columnName, PgColumn::class)
+
+        /**
+         * The **feature-number** calculated from the **feature-id**.
+         * @see [naksha.model.Naksha.featureNumberById]
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val fn = def(PgColumn::class, "fn") { self ->
+            self._i = 0
+            self._type = PgType.INT64
+            self._extra = "NOT NULL"
+        }
 
         /**
          * The epoch timestamp in millisecond when the [tuple][naksha.model.Tuple] was produced, which is the last time the feature was modified.
@@ -122,7 +136,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val updated_at = def(PgColumn::class, "updated_at") { self ->
-            self._i = 0
+            self._i = 1
             self._type = PgType.INT64
             self._extra = "NOT NULL"
         }
@@ -133,7 +147,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val created_at = def(PgColumn::class, "created_at") { self ->
-            self._i = 1
+            self._i = 2
             self._type = PgType.INT64
         }
 
@@ -143,7 +157,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val author_ts = def(PgColumn::class, "author_ts") { self ->
-            self._i = 2
+            self._i = 3
             self._type = PgType.INT64
         }
 
@@ -153,7 +167,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val txn = def(PgColumn::class, "txn") { self ->
-            self._i = 3
+            self._i = 4
             self._type = PgType.INT64
             self._extra = "NOT NULL"
         }
@@ -164,7 +178,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val txn_next = def(PgColumn::class, "txn_next") { self ->
-            self._i = 4
+            self._i = 5
             self._type = PgType.INT64
         }
 
@@ -174,16 +188,6 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val cv0 = def(PgColumn::class, "cv0") { self ->
-            self._i = 5
-            self._type = PgType.DOUBLE
-        }
-
-        /**
-         * If this has a custom value, otherwise _null_.
-         */
-        @JvmField
-        @JsStatic
-        val cv1 = def(PgColumn::class, "cv1") { self ->
             self._i = 6
             self._type = PgType.DOUBLE
         }
@@ -193,7 +197,7 @@ class PgColumn : JsEnum() {
          */
         @JvmField
         @JsStatic
-        val cv2 = def(PgColumn::class, "cv2") { self ->
+        val cv1 = def(PgColumn::class, "cv1") { self ->
             self._i = 7
             self._type = PgType.DOUBLE
         }
@@ -203,12 +207,22 @@ class PgColumn : JsEnum() {
          */
         @JvmField
         @JsStatic
-        val cv3 = def(PgColumn::class, "cv3") { self ->
+        val cv2 = def(PgColumn::class, "cv2") { self ->
             self._i = 8
             self._type = PgType.DOUBLE
         }
 
-        //= 9 * 8 = 71 byte
+        /**
+         * If this has a custom value, otherwise _null_.
+         */
+        @JvmField
+        @JsStatic
+        val cv3 = def(PgColumn::class, "cv3") { self ->
+            self._i = 9
+            self._type = PgType.DOUBLE
+        }
+
+        //= 10 * 8 = 80 byte
 
         /**
          * The [version][naksha.model.Version] (aka transaction) of this [tuple][naksha.model.Tuple] (state).
@@ -216,7 +230,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val uid = def(PgColumn::class, "uid") { self ->
-            self._i = 9
+            self._i = 10
             self._type = PgType.INT
             self._extra = "NOT NULL"
         }
@@ -227,7 +241,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val change_count = def(PgColumn::class, "change_count") { self ->
-            self._i = 10
+            self._i = 11
             self._type = PgType.INT
             self._extra = "NOT NULL DEFAULT 1"
         }
@@ -238,7 +252,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val hash = def(PgColumn::class, "hash") { self ->
-            self._i = 11
+            self._i = 12
             self._type = PgType.INT
             self._extra = "NOT NULL"
         }
@@ -249,7 +263,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val here_tile = def(PgColumn::class, "here_tile") { self ->
-            self._i = 12
+            self._i = 13
             self._type = PgType.INT
             self._extra = "NOT NULL"
         }
@@ -260,12 +274,12 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val flags = def(PgColumn::class, "flags") { self ->
-            self._i = 13
+            self._i = 14
             self._type = PgType.INT
             self._extra = "NOT NULL"
         }
 
-        //= 71 + 5 * 4 = 91 byte
+        //= 80 + 5 * 4 = 100 byte
 
         /**
          * The [tuple-number][naksha.model.TupleNumber] of this row in 96-bit encoding.
@@ -278,7 +292,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val tn = def(PgColumn::class, "tn") { self ->
-            self._i = 14
+            self._i = 15
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE PLAIN NOT NULL"
         }
@@ -294,7 +308,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val prev_tn = def(PgColumn::class, "prev_tn") { self ->
-            self._i = 15
+            self._i = 16
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE PLAIN"
         }
@@ -318,7 +332,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val base_tn = def(PgColumn::class, "base_tn") { self ->
-            self._i = 16
+            self._i = 17
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE PLAIN"
         }
@@ -329,7 +343,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val id = def(PgColumn::class, "id") { self ->
-            self._i = 17
+            self._i = 18
             self._type = PgType.STRING
             self._extra = "STORAGE PLAIN NOT NULL COLLATE \"C\""
         }
@@ -340,7 +354,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val app_id = def(PgColumn::class, "app_id") { self ->
-            self._i = 18
+            self._i = 19
             self._type = PgType.STRING
             self._extra = "STORAGE PLAIN NOT NULL COLLATE \"C\""
         }
@@ -351,7 +365,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val author = def(PgColumn::class, "author") { self ->
-            self._i = 19
+            self._i = 20
             self._type = PgType.STRING
             self._extra = "STORAGE PLAIN NOT NULL COLLATE \"C\""
         }
@@ -376,7 +390,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val origin = def(PgColumn::class, "origin") { self ->
-            self._i = 20
+            self._i = 21
             self._type = PgType.STRING
             self._extra = "STORAGE PLAIN COLLATE \"C\""
         }
@@ -390,7 +404,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val target = def(PgColumn::class, "target") { self ->
-            self._i = 21
+            self._i = 22
             self._type = PgType.STRING
             self._extra = "STORAGE PLAIN COLLATE \"C\""
         }
@@ -401,17 +415,6 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val ft = def(PgColumn::class, "ft") { self ->
-            self._i = 22
-            self._type = PgType.STRING
-            self._extra = "STORAGE PLAIN COLLATE \"C\""
-        }
-
-        /**
-         * A custom string, _null_ if not used.
-         */
-        @JvmField
-        @JsStatic
-        val cs0 = def(PgColumn::class, "cs0") { self ->
             self._i = 23
             self._type = PgType.STRING
             self._extra = "STORAGE PLAIN COLLATE \"C\""
@@ -422,7 +425,7 @@ class PgColumn : JsEnum() {
          */
         @JvmField
         @JsStatic
-        val cs1 = def(PgColumn::class, "cs1") { self ->
+        val cs0 = def(PgColumn::class, "cs0") { self ->
             self._i = 24
             self._type = PgType.STRING
             self._extra = "STORAGE PLAIN COLLATE \"C\""
@@ -433,7 +436,7 @@ class PgColumn : JsEnum() {
          */
         @JvmField
         @JsStatic
-        val cs2 = def(PgColumn::class, "cs2") { self ->
+        val cs1 = def(PgColumn::class, "cs1") { self ->
             self._i = 25
             self._type = PgType.STRING
             self._extra = "STORAGE PLAIN COLLATE \"C\""
@@ -444,8 +447,19 @@ class PgColumn : JsEnum() {
          */
         @JvmField
         @JsStatic
-        val cs3 = def(PgColumn::class, "cs3") { self ->
+        val cs2 = def(PgColumn::class, "cs2") { self ->
             self._i = 26
+            self._type = PgType.STRING
+            self._extra = "STORAGE PLAIN COLLATE \"C\""
+        }
+
+        /**
+         * A custom string, _null_ if not used.
+         */
+        @JvmField
+        @JsStatic
+        val cs3 = def(PgColumn::class, "cs3") { self ->
+            self._i = 27
             self._type = PgType.STRING
             self._extra = "STORAGE PLAIN COLLATE \"C\""
         }
@@ -455,7 +469,7 @@ class PgColumn : JsEnum() {
         // - app_id and author are not more than 30 byte
         // - origin and target are not more 60 byte
         // - some byte reserved for cs0, cs1, cs2, cs3 (60 byte total)
-        //= 91 + 60 + 60 + 120 + 60 = 391 byte
+        //= 100 + 60 + 60 + 120 + 60 = 400 byte
 
         /**
          * The [tags][naksha.model.TagMap] of the [tuple][naksha.model.Tuple], stored as map.
@@ -463,7 +477,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val tags = def(PgColumn::class, "tags") { self ->
-            self._i = 27
+            self._i = 28
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE EXTERNAL"
         }
@@ -474,7 +488,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val ref_point = def(PgColumn::class, "ref_point") { self ->
-            self._i = 28
+            self._i = 29
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE EXTERNAL"
         }
@@ -485,7 +499,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val geo = def(PgColumn::class, "geo") { self ->
-            self._i = 29
+            self._i = 30
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE EXTERNAL"
         }
@@ -498,7 +512,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val feature = def(PgColumn::class, "feature") { self ->
-            self._i = 30
+            self._i = 31
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE EXTERNAL"
         }
@@ -509,7 +523,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val attachment = def(PgColumn::class, "attachment") { self ->
-            self._i = 31
+            self._i = 32
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE EXTENDED"
         }
@@ -520,7 +534,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val allColumns = listOf(
-            updated_at, created_at, author_ts, txn, txn_next,
+            fn, updated_at, created_at, author_ts, txn, txn_next,
             cv0, cv1, cv2, cv3,
             uid, change_count, hash, here_tile, flags,
             tn, prev_tn, base_tn,
@@ -544,6 +558,7 @@ class PgColumn : JsEnum() {
         @JvmStatic
         @JsStatic
         fun ofRowColumn(metaColumn: MetaColumn): PgColumn? = when (metaColumn.name) {
+            MetaColumn.FN -> fn
             MetaColumn.UPDATED_AT -> updated_at
             MetaColumn.CREATED_AT -> created_at
             MetaColumn.AUTHOR_TS -> author_ts

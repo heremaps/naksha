@@ -103,7 +103,7 @@ public class MockReadSession implements IReadSession {
   private String map = "";
 
   @Override
-  public void fetchTuples(@NotNull List<? extends FeatureTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
+  public void loadTuples(@NotNull List<? extends FeatureTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
 
   }
 

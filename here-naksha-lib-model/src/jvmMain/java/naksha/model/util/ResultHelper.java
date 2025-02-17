@@ -112,7 +112,7 @@ public class ResultHelper {
     final Iterator<FeatureTuple> iterator = resultTuples.iterator();
     final List<String> ids = new ArrayList<>();
     while (iterator.hasNext()) {
-      ids.add(iterator.next().id());
+      // ids.add(iterator.next().id());
     }
     return ids;
   }

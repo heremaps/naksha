@@ -36,7 +36,7 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
         // Then:
         assertEquals(1, persistedTuples.size)
         val persistedTuple = persistedTuples[0]!!
-        assertEquals(feature.id, persistedTuple.id())
+        assertEquals(feature.id, persistedTuple.id)
 
         // And: version stores date information
         val version = persistedTuple.tupleNumber.version
@@ -57,7 +57,7 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
         // Then: we persisted single tuple correctly
         assertEquals(1, persistedTuples.size)
         val persistedTuple = persistedTuples[0]!!
-        assertEquals(feature.id, persistedTuple.id())
+        assertEquals(feature.id, persistedTuple.id)
 
         // And: `storeNumber` checks out
         storage.adminConnection().use { conn ->
@@ -91,7 +91,7 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
         (0..19).forEach { index ->
             val tuple = persistedTuples[index]!!
             assertEquals(index, tuple.tupleNumber.uid)
-            assertEquals(features[index].id, tuple.id())
+            assertEquals(features[index].id, tuple.id)
         }
     }
 }

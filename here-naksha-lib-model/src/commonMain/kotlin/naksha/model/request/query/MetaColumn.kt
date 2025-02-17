@@ -68,6 +68,25 @@ open class MetaColumn() : AnyObject() {
         fun createdAt(): MetaColumn = MetaColumn(CREATED_AT)
 
         /**
+         * The name of the virtual columns that stores the feature-number.
+         *
+         * This value is exposed through [naksha.model.XyzNs.uuid].
+         *
+         * Supported [query operations][AnyOp] are:
+         * - [DoubleOp]
+         * - [AnyOp.IS_ANY_OF]
+         */
+        const val FN = "fn"
+
+        /**
+         * Returns a new meta-column for [FN].
+         * @return a new meta-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun fn(): MetaColumn = MetaColumn(FN)
+
+        /**
          * The name of the virtual columns that stores the [update timestamp][naksha.model.Metadata.updatedAt].
          *
          * This value is exposed through [naksha.model.XyzNs.updatedAt].

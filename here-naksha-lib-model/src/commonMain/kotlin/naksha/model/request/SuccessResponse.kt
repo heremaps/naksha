@@ -4,7 +4,6 @@ package naksha.model.request
 
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaFeatureList
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -47,7 +46,7 @@ open class SuccessResponse @Deprecated("Use secondary", ReplaceWith("SuccessResp
             val rs = self.resultSet
             if (rs != null) {
                 val tuples = rs.result
-                rs.session.fetchTuples(tuples)
+                rs.session.loadTuples(tuples)
                 for (tuple in tuples) features.add(tuple?.feature)
             }
             features

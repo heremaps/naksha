@@ -13,6 +13,7 @@ import naksha.model.request.FeatureTupleList.FeatureTupleList_C.fromByteArray
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -226,17 +227,20 @@ data class TupleNumberBinaryArray(
     /**
      * Calculate the MD5 hash above the [bytes].
      * @return the MD5 hash above the [bytes].
-     * @since 3.0.0
+     * @since 3.0
      */
     fun md5(): ByteArray = Platform.md5(bytes)
 
     /**
      * Helper method to convert this binary into a [FeatureTupleList].
      *
+     * @param from the index of the first entry to convert.
+     * @param to the index of the first entry **not** to convert.
      * @return the [FeatureTupleList].
-     * @since 3.0.0
+     * @since 3.0
      */
-    fun toResultTupleList(): FeatureTupleList = fromByteArray(this)
+    @JvmOverloads
+    fun toFeatureTupleList(from:Int=0, to:Int=size): FeatureTupleList = fromByteArray(this, from, to)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
