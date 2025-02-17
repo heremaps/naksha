@@ -196,6 +196,26 @@ public class ValueList extends ArrayList<@Nullable Object> {
   }
 
   /**
+   * Test if the value is explicitly an integer.
+   *
+   * @param n The parameter number.
+   * @return {@code true} if the value is explicitly an int; {@code false} otherwise.
+   */
+  public boolean isInt(int n) {
+    return getOrNull(n) instanceof Integer;
+  }
+
+  public @Nullable Integer getInt(int n) {
+    final Object value = getOrNull(n);
+    return (Integer) (value instanceof Integer ? value : null);
+  }
+
+  public int getInt(int n, int defaultValue) {
+    final Integer value = getInt(n);
+    return value == null ? defaultValue : value;
+  }
+
+  /**
    * Test if the value is explicitly a double.
    *
    * @param n The parameter number.

@@ -208,7 +208,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final double north = ApiParams.extractQueryParamAsDouble(queryParams, NORTH, true);
     final double east = ApiParams.extractQueryParamAsDouble(queryParams, EAST, true);
     final double south = ApiParams.extractQueryParamAsDouble(queryParams, SOUTH, true);
-    int limit = (int) ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+    int limit = ApiParams.extractQueryParamAsInt(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
     final boolean clip = ApiParams.extractQueryParamAsBoolean(queryParams, CLIP_GEO, false);
     // validate values
@@ -266,7 +266,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final boolean clip = ApiParams.extractQueryParamAsBoolean(queryParams, CLIP_GEO, false);
     final long margin = ApiParams.extractQueryParamAsLong(queryParams, MARGIN, false);
     ApiParams.validateParamRange(MARGIN, margin, 0, Integer.MAX_VALUE);
-    int limit = (int) ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+    int limit = ApiParams.extractQueryParamAsInt(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
 
@@ -313,7 +313,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       return verticle.sendErrorResponse(
           routingContext, NakshaError.ILLEGAL_ARGUMENT, "Missing mandatory query parameters");
     }
-    int limit = (int) ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+    int limit = ApiParams.extractQueryParamAsInt(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
@@ -350,7 +350,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // extract limit parameter
     int offset = 0;
-    int clientLimit = (int) ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+    int clientLimit = ApiParams.extractQueryParamAsInt(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     // extract handle parameter
     IterateHandle handle = ApiParams.extractQueryParamAsIterateHandle(queryParams, HANDLE);
     // create new "handle" if not already provided, or overwrite parameters based on "handle"
@@ -393,7 +393,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final String refSpaceId = ApiParams.extractParamAsString(queryParams, REF_SPACE_ID);
     final String refFeatureId = ApiParams.extractParamAsString(queryParams, REF_FEATURE_ID);
     final long radius = ApiParams.extractQueryParamAsLong(queryParams, RADIUS, false, 0);
-    int limit = (int) ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+    int limit = ApiParams.extractQueryParamAsInt(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
@@ -474,7 +474,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final QueryParameterList queryParams = queryParamsFromRequest(routingContext);
     // NOTE : queryParams can be null. Subsequent steps should respect the same.
     final long radius = ApiParams.extractQueryParamAsLong(queryParams, RADIUS, false, 0);
-    int limit = (int) ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+    int limit = ApiParams.extractQueryParamAsInt(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;

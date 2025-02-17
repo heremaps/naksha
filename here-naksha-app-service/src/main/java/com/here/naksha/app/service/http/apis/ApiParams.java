@@ -117,16 +117,34 @@ public final class ApiParams {
       final @NotNull String key,
       final boolean isMandatory,
       final long defVal) {
+    return extractTypedQueryParam(queryParams, key, isMandatory, defVal, Long.class);
+  }
+
+  public static int extractQueryParamAsInt(
+      final @Nullable QueryParameterList queryParams,
+      final @NotNull String key,
+      final boolean isMandatory,
+      final int defVal) {
+    return extractTypedQueryParam(queryParams, key, isMandatory, defVal, Integer.class);
+  }
+
+  public static <T> T extractTypedQueryParam(
+      final @Nullable QueryParameterList queryParams,
+      final @NotNull String key,
+      final boolean isMandatory,
+      final T defVal,
+      final Class<T> type) {
     final QueryParameter queryParam = extractQueryParamForKey(queryParams, key, isMandatory);
     if (queryParam == null && !isMandatory) {
       return defVal;
     }
     final ValueList values = queryParam.values();
-    if (!values.isLong(0)) {
+    final Object value = values.get(0);
+    if (!type.isInstance(value)) {
       throw new NakshaException(
           NakshaError.ILLEGAL_ARGUMENT, "Invalid value " + values.getString(0) + " for parameter " + key);
     }
-    return values.getLong(0, defVal);
+    return type.cast(value);
   }
 
   public static void validateParamRange(

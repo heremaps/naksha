@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import naksha.base.AnyObject;
+import naksha.base.Platform;
 import naksha.model.StreamInfo;
 
 public class AccessLog extends AccessLogExtended {

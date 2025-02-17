@@ -47,7 +47,7 @@ class ParentProxyingTest {
 
     // Then:
     assertThrows(IllegalArgumentException.class, () -> {
-      parent.proxy(Platform.klassOf(ProxyChildWithoutNonArgConstructor.class));
+      parent.proxy(Platform.klassFor(ProxyChildWithoutNonArgConstructor.class));
     });
   }
 
@@ -58,7 +58,7 @@ class ParentProxyingTest {
 
     // Then:
     assertThrows(IllegalCallableAccessException.class, () -> {
-      parent.proxy(Platform.klassOf(ProxyChildWithoutPublicConstructor.class));
+      parent.proxy(Platform.klassFor(ProxyChildWithoutPublicConstructor.class));
     });
   }
 

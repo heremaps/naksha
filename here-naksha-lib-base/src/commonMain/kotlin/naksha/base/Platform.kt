@@ -158,16 +158,6 @@ expect class Platform {
         fun isProxyKlass(klass: KClass<*>): Boolean
 
         /**
-         * Returns the [KClass] created **by** the given constructor. This is mainly for JavaScript, it will simply query a cached and if not
-         * found, it will create an instance, query the [KClass] using [klassOf] and add it into the cache. Therefore, the cost of
-         * creating an instance to get the [KClass] is only paid ones in the lifetime of an application.
-         * @param constructor The constructor.
-         * @return The [KClass] that is created **by** this constructor.
-         * @throws IllegalArgumentException If the given constructor does not create any valid Kotlin object.
-         */
-        fun <T : Any> klassFor(constructor: KFunction<T>): KClass<out T>
-
-        /**
          * Returns the [KClass] **of** the given object.
          * @param o The object to query.
          * @return The [KClass] **of** the given object.

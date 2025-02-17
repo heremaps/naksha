@@ -1,20 +1,20 @@
 package naksha.base
 
+import naksha.base.Platform.PlatformCompanion.klassFor
 import naksha.base.fn.Fn2
-import kotlin.jvm.internal.Reflection
 
 object JvmAnyObjectUtil {
 
     @JvmStatic
-    fun <T> getProperty(owner: AnyObject, key: String, type: Class<T>): T? =
-        owner.getAs(key, Reflection.getOrCreateKotlinClass(type)) as T?
+    fun <T : Any> getProperty(owner: AnyObject, key: String, type: Class<T>): T? =
+        owner.getAs(key, klassFor(type))
 
     @JvmStatic
     @JvmOverloads
-    fun <T> getOrCreateProperty(
+    fun <T : Any> getOrCreateProperty(
         owner: AnyObject,
         key: String,
         type: Class<T>,
         init: Fn2<out T?, in AnyObject, in String>? = null
-    ): T = owner.getOrCreate(key, Reflection.getOrCreateKotlinClass(type), init) as T
+    ): T = owner.getOrCreate(key, klassFor(type), init)
 }
