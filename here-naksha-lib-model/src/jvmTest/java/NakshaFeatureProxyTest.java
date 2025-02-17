@@ -19,8 +19,10 @@
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import kotlin.reflect.KClass;
 import kotlin.reflect.full.IllegalCallableAccessException;
 import naksha.base.Platform;
+import naksha.base.Proxy;
 import naksha.geo.PointCoord;
 import naksha.geo.SpPoint;
 import naksha.model.objects.NakshaFeature;
@@ -36,7 +38,7 @@ class NakshaFeatureProxyTest {
     nakshaFeature.setGeometry(new SpPoint(new PointCoord(10, 20)));
 
     // When:
-    CustomFeature proxiedFeature = nakshaFeature.proxy(Platform.klassOf(CustomFeature.class));
+    CustomFeature proxiedFeature = nakshaFeature.proxy(Platform.klassFor(CustomFeature.class));
 
     // Then:
     assertEquals(nakshaFeature.getId(), proxiedFeature.getId());
@@ -50,7 +52,7 @@ class NakshaFeatureProxyTest {
 
     // Then:
     assertThrows(IllegalArgumentException.class, () -> {
-      nakshaFeature.proxy(Platform.klassOf(CustomFeatureWithoutNonArgConstructor.class));
+      nakshaFeature.proxy(Platform.klassFor(CustomFeatureWithoutNonArgConstructor.class));
     });
   }
 
@@ -61,7 +63,7 @@ class NakshaFeatureProxyTest {
 
     // Then:
     assertThrows(IllegalCallableAccessException.class, () -> {
-      nakshaFeature.proxy(Platform.klassOf(NonPublicCustomFeature.class));
+      nakshaFeature.proxy(Platform.klassFor(NonPublicCustomFeature.class));
     });
   }
 
