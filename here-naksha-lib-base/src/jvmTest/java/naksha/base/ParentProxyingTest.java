@@ -33,7 +33,7 @@ class ParentProxyingTest {
     ProxyParent parent = new ProxyParent();
 
     // When:
-    var child = parent.proxy(Platform.klassOf(ProxyChild.class));
+    var child = parent.proxy(Platform.klassFor(ProxyChild.class));
 
     // Then:
     assertNotNull(child);
