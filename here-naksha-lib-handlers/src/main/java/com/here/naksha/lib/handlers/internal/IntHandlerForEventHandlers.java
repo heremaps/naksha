@@ -18,26 +18,36 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
 import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
 import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
-import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.*;
+import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
+import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.ADD_VALUES;
+import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.CONTAINS_VALUES;
+import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.REMOVE_W_PREFIXES;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.handlers.*;
+import com.here.naksha.lib.handlers.DefaultStorageHandler;
+import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
+import com.here.naksha.lib.handlers.DefaultViewHandler;
+import com.here.naksha.lib.handlers.DefaultViewHandlerProperties;
+import com.here.naksha.lib.handlers.TagFilterHandler;
+import com.here.naksha.lib.handlers.TagFilterHandlerProperties;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import naksha.base.JvmBoxingUtil;
-import naksha.model.IReadSession;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.*;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
@@ -158,32 +168,27 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
   }
 
   private Response spaceExistenceValidation(List<String> spaceIds) {
-
     ReadFeatures readFeaturesRequest = RequestHelper.readFeaturesByIdsRequest(SPACES, spaceIds);
-
-    try (final IReadSession readSession = nakshaHub().getAdminStorage().newReadSession(new SessionOptions())) {
+    return nakshaHub().getAdminStorage().useReadSession(new SessionOptions(), readSession -> {
       final Response readResult = readSession.execute(readFeaturesRequest);
-      try {
-        if (readResult instanceof ErrorResponse errorResponse) {
-          throw new NoSuchElementException(errorResponse.getError().getCause());
-        }
-        List<Space> spaces = ResultHelper.extractResponseItems((SuccessResponse) readResult, Space.class);
-
+      if (readResult instanceof ErrorResponse errorResponse) {
+        return errorResponse;
+      } else if (readResult instanceof SuccessResponse successResponse) {
+        List<Space> spaces = ResultHelper.extractResponseItems(successResponse, Space.class);
         if (spaces.size() != spaceIds.size()) {
           return new ErrorResponse(
               NakshaError.ILLEGAL_ARGUMENT,
               "Mandatory parameter %s contains space which is not created!"
                   .formatted(DefaultViewHandlerProperties.SPACE_IDS));
         }
-
-      } catch (NoSuchElementException e) {
+        return new SuccessResponse();
+      } else {
         return new ErrorResponse(
-            NakshaError.ILLEGAL_ARGUMENT,
-            "Mandatory parameter %s contains space which is not created!"
-                .formatted(DefaultViewHandlerProperties.SPACE_IDS));
+            NakshaError.EXCEPTION,
+            "Unexpected response while validating space '%s', error: %s"
+                .formatted(DefaultViewHandlerProperties.SPACE_IDS, readResult));
       }
-    }
-    return new SuccessResponse();
+    });
   }
 
   private boolean handlerClassMatches(@NotNull Class<?> requestedClass, @NotNull EventHandler eventHandler) {
@@ -215,14 +220,15 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
    */
   private @NotNull Response storageExistenceValidation(@NotNull String storageId) {
     ReadFeatures findStorageById = readFeaturesByIdRequest(STORAGES, storageId);
-    try (IReadSession readSession = nakshaHub().getSpaceStorage().newReadSession(new SessionOptions())) {
+    return nakshaHub().getSpaceStorage().useReadSession(new SessionOptions(), readSession -> {
       Response result = readSession.execute(findStorageById);
       List<String> fetchedIds = ResultHelper.readIdsFromResult(result);
       if (fetchedIds.size() == 1 && storageId.equals(fetchedIds.get(0))) {
         return new SuccessResponse();
+      } else {
+        return new ErrorResponse(NakshaError.NOT_FOUND, "Could not find storage with id: " + storageId);
       }
-    }
-    return new ErrorResponse(NakshaError.NOT_FOUND, "Could not find storage with id: " + storageId);
+    });
   }
 
   private Response noActiveSpaceValidation(Write codec) {
@@ -236,10 +242,10 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     }
     // Scan through all spaces with JSON property "eventHandlerIds" containing the targeted handler ID
     final Property pRef = new Property(EVENT_HANDLER_IDS);
-    final PQuery activeSpacesPOp = new PQuery(pRef, AnyOp.CONTAINS, new String[] {handlerId});
-    final ReadFeatures readActiveHandlersRequest = new ReadFeatures(SPACES);
+    final PQuery activeSpacesPOp = new PQuery(pRef, AnyOp.CONTAINS, new String[]{handlerId});
+    final ReadFeatures readActiveHandlersRequest = new ReadFeatures().addCollectionId(SPACES);
     readActiveHandlersRequest.getQuery().setProperties(activeSpacesPOp);
-    try (final IReadSession readSession = nakshaHub().getAdminStorage().newReadSession(new SessionOptions())) {
+    return nakshaHub().getAdminStorage().useReadSession(new SessionOptions(), readSession -> {
       final Response readResult = readSession.execute(readActiveHandlersRequest);
       if (!(readResult instanceof SuccessResponse)) {
         return readResult;
@@ -255,6 +261,6 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
           spaces.stream().map(NakshaFeature::getId).toList();
       return new ErrorResponse(
           NakshaError.CONFLICT, "The event handler is still in use by these spaces: " + spaceIds);
-    }
+    });
   }
 }

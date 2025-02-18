@@ -5,6 +5,7 @@ package naksha.model
 import naksha.base.fn.Fn3
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
@@ -155,6 +156,13 @@ data class SessionOptions @JvmOverloads constructor(
                 streamInfo = c.streamInfo,
                 authToken = authToken,
             )
+        }
+
+        @JvmStatic
+        @JsStatic
+        @JsName("fromWithNullToken")
+        fun from(context: NakshaContext, useMaster: Boolean): SessionOptions {
+            return from(context, null, useMaster)
         }
     }
 }

@@ -182,6 +182,9 @@ actual class Platform {
         actual fun newAtomicInt(startValue: Int): AtomicInt = JsAtomicInt(startValue)
 
         @JsStatic
+        actual fun newAtomicInt64(startValue: Int64): AtomicInt64 = JsAtomicInt64(startValue)
+
+        @JsStatic
         actual fun newList(vararg entries: Any?): PlatformList {
             val array = js("[]").unsafeCast<PlatformList>()
             if (entries.isNotEmpty()) {

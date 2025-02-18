@@ -27,12 +27,16 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
-import naksha.model.IReadSession;
-import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.*;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.ReadRequest;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,15 +81,16 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
         return er;
       }
       // persist in storage
-      final IWriteSession writer = nakshaHub().getAdminStorage().newWriteSession(SessionOptions.from(ctx, true));
-      final Response result = writer.execute(wr);
-      if (result instanceof SuccessResponse) {
-        writer.commit();
-      } else {
-        logger.warn("Failed writing feature request to admin storage, expected success but got: {}", result);
-        writer.rollback();
-      }
-      return result;
+      return nakshaHub().getAdminStorage().useWriteSession(SessionOptions.from(ctx, null, true), writer -> {
+        final Response result = writer.execute(wr);
+        if (result instanceof SuccessResponse) {
+          writer.commit();
+        } else {
+          logger.warn("Failed writing feature request to admin storage, expected success but got: {}", result);
+          writer.rollback();
+        }
+        return result;
+      });
     } else {
       return notImplemented(request);
     }

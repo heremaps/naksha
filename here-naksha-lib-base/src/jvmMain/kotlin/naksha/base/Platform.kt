@@ -273,6 +273,12 @@ actual class Platform {
         actual fun newAtomicInt(startValue: Int): AtomicInt = JvmAtomicInt(startValue)
 
         @JvmStatic
+        actual fun newAtomicInt64(startValue: Int64): AtomicInt64 = JvmAtomicInt64(startValue)
+
+        @JvmStatic
+        fun newAtomicInt64(startValue: Long): AtomicInt64 = JvmAtomicInt64(startValue)
+
+        @JvmStatic
         actual fun newList(vararg entries: Any?): PlatformList = JvmList(*entries)
 
         @JvmStatic

@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import naksha.base.JvmBoxingUtil;
-import naksha.model.IReadSession;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
@@ -168,11 +167,9 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
     final Property property =
         new Property(NakshaFeature.PROPERTIES_KEY, DefaultStorageHandlerProperties.STORAGE_ID);
     final PQuery activeHandlersPOp = new PQuery(property, StringOp.EQUALS, storageId);
-    final ReadFeatures readActiveHandlersRequest = new ReadFeatures(EVENT_HANDLERS);
+    final ReadFeatures readActiveHandlersRequest = new ReadFeatures().addCollectionId(EVENT_HANDLERS);
     readActiveHandlersRequest.getQuery().setProperties(activeHandlersPOp);
-    try (final IReadSession readSession = nakshaHub()
-        .getAdminStorage()
-        .newReadSession(SessionOptions.from(NakshaContext.currentContext(), false))) {
+    return nakshaHub().getAdminStorage().useReadSession(SessionOptions.from(NakshaContext.currentContext()), readSession -> {
       final Response readResult = readSession.execute(readActiveHandlersRequest);
       if (!(readResult instanceof SuccessResponse)) {
         return readResult;
@@ -192,6 +189,6 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
       readSession.close();
       return new ErrorResponse(
           NakshaError.CONFLICT, "The storage is still in use by these event handlers: " + handlerIds);
-    }
+    });
   }
 }

@@ -25,6 +25,7 @@ import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttemp
 import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.FIRST_ATTEMPT;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static naksha.base.Platform.longToInt64;
 import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
 
 import com.here.naksha.lib.core.IEvent;
@@ -40,13 +41,11 @@ import java.util.Objects;
 import java.util.function.Supplier;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.StringList;
-import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
-import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.StreamInfo;
 import naksha.model.objects.NakshaCollection;
@@ -123,7 +122,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   private void addStorageTimeToStreamInfo(StopWatch storageTimer, NakshaContext ctx) {
     StreamInfo streamInfo = ctx.getStreamInfo();
     if (streamInfo != null) {
-      streamInfo.increaseTimeInStorage(NANOSECONDS.toMillis(storageTimer.getNanoTime()));
+      streamInfo.addTimeInStorage(longToInt64(NANOSECONDS.toMillis(storageTimer.getNanoTime())));
     }
   }
 
@@ -192,9 +191,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   private @NotNull Response singleRead(
       final @NotNull NakshaContext ctx, final @NotNull IStorage storageImpl, final @NotNull ReadFeatures rf) {
-    try (final IReadSession reader = storageImpl.newReadSession(SessionOptions.from(ctx, false))) {
-      return reader.execute(rf);
-    }
+    return storageImpl.useReadSession(SessionOptions.from(ctx), reader -> reader.execute(rf));
   }
 
   private @NotNull Response forwardWriteFeatures(
@@ -287,22 +284,20 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   private @NotNull Response singleWrite(
       @NotNull NakshaContext ctx, @NotNull IStorage storageImpl, @NotNull WriteRequest wr) {
-    try (final IWriteSession writer = storageImpl.newWriteSession(SessionOptions.from(ctx, true))) {
+    return storageImpl.useWriteSession(SessionOptions.from(ctx, true), writer -> {
       final Response result = writer.execute(wr);
       if (result instanceof SuccessResponse) {
         writer.commit();
-      } else {
-        logger.warn("Failed executing {}, expected success but got: {}", wr.getClass(), result);
+        return result;
+      } else if (result instanceof ErrorResponse errorResponse) {
+        logger.warn("Failed executing {}, expected success but got ErrorResponse: {}", wr.getClass(), errorResponse.getError());
         writer.rollback();
+        return errorResponse;
+      } else {
+        logger.warn("Failed executing {}, unexpected result: {}", wr.getClass(), result);
+        return new ErrorResponse(NakshaError.EXCEPTION, "Execution unexpectedly failed due to unknown result: " + result);
       }
-      return result;
-    } catch (NakshaException ne) {
-      logger.warn("Failed executing {}", wr.getClass(), ne);
-      return new ErrorResponse(ne.error);
-    } catch (Exception e) {
-      logger.warn("Failed executing {}", wr.getClass(), e);
-      return new ErrorResponse(NakshaError.EXCEPTION, "Execution unexpectedly failed", e);
-    }
+    });
   }
 
   private @NotNull Response reattemptFeatureRequest(
@@ -488,24 +483,25 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull NakshaContext ctx,
       final @NotNull IStorage storageImpl,
       final @NotNull NakshaCollection collection) {
-    final IWriteSession writer = storageImpl.newWriteSession(SessionOptions.from(ctx, true));
-    final Response result = writer.execute(createWriteCollectionsRequest(collection));
-    if (result instanceof SuccessResponse) {
-      writer.commit();
-      return result;
-    } else if (result instanceof ErrorResponse errorResponse) {
-      logger.error(
-          "Error result while creating collection {}. Error: {}. Executing rollback",
-          collection.getId(),
-          ((ErrorResponse) result).getError());
-      writer.rollback();
-      return new ErrorResponse(errorResponse.getError());
-    } else {
-      String msg = "Unexpected result while creating collection " + collection.getId() + ". Result: " + result;
-      logger.error(msg);
-      writer.rollback();
-      return new ErrorResponse(NakshaError.EXCEPTION, msg);
-    }
+    return storageImpl.useWriteSession(SessionOptions.from(ctx, true), writer -> {
+      final Response result = writer.execute(createWriteCollectionsRequest(collection));
+      if (result instanceof SuccessResponse) {
+        writer.commit();
+        return result;
+      } else if (result instanceof ErrorResponse errorResponse) {
+        logger.error(
+            "Error result while creating collection {}. Error: {}. Executing rollback",
+            collection.getId(),
+            errorResponse.getError());
+        writer.rollback();
+        return new ErrorResponse(errorResponse.getError());
+      } else {
+        String msg = "Unexpected result while creating collection " + collection.getId() + ". Result: " + result;
+        logger.error(msg);
+        writer.rollback();
+        return new ErrorResponse(NakshaError.EXCEPTION, msg);
+      }
+    });
   }
 
   enum OperationAttempt {

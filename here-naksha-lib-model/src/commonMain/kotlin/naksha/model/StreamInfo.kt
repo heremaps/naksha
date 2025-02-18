@@ -78,7 +78,9 @@ open class StreamInfo() {
      */
     open var spaceId: String?
         get() = data[SPACE_ID] as String?
-        set(value) { data.putOrRemove(SPACE_ID, value) }
+        set(value) {
+            data.putOrRemove(SPACE_ID, value)
+        }
 
     /**
      * Set the space-id, if it is yet missing.
@@ -95,7 +97,9 @@ open class StreamInfo() {
      */
     open var storageId: String?
         get() = data[STORAGE_ID] as String?
-        set(value) { data.putOrRemove(STORAGE_ID, value) }
+        set(value) {
+            data.putOrRemove(STORAGE_ID, value)
+        }
 
     /**
      * Set the storage-id, if it is yet missing.
@@ -118,14 +122,14 @@ open class StreamInfo() {
         return arrayOf(spaceId, storageId).contentHashCode()
     }
 
-    private var timeInStorageMs = AtomicInt(0)
+    private var timeInStorageMs = AtomicInt64(0)
 
     /**
      * Add timer value.
      * @param deltaMillis the amount of milliseconds to add or subtract.
      * @return this.
      */
-    open fun addTimeInStorage(deltaMillis: Int): StreamInfo {
+    open fun addTimeInStorage(deltaMillis: Int64): StreamInfo {
         timeInStorageMs.addAndGet(deltaMillis)
         return this
     }
@@ -134,7 +138,7 @@ open class StreamInfo() {
      * Returns the current timer value.
      * @return the current timer value.
      */
-    open fun getTimeInStorageMs(): Int  = timeInStorageMs.get()
+    open fun getTimeInStorageMs(): Int64 = timeInStorageMs.get()
 
     /**
      * Internally used to print a value within [toColonSeparatedString].

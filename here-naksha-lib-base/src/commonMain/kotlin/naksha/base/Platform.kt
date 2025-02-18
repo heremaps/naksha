@@ -223,6 +223,13 @@ expect class Platform {
         fun newAtomicInt(startValue: Int): AtomicInt
 
         /**
+         * Create a new atomic 64-bytes based integer (long).
+         * @param startValue the initial value.
+         * @return the atomic integer.
+         */
+        fun newAtomicInt64(startValue: Int64): AtomicInt64
+
+        /**
          * Creates a new byte-array of the given size.
          * @param size The size in byte.
          * @return The byte-array of the given size.

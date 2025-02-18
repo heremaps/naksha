@@ -18,7 +18,9 @@
  */
 package com.here.naksha.lib.handlers;
 
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.*;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
@@ -26,7 +28,11 @@ import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.handlers.DefaultViewHandlerProperties.ViewType;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
-import com.here.naksha.lib.view.*;
+import com.here.naksha.lib.view.IView;
+import com.here.naksha.lib.view.MissingIdResolver;
+import com.here.naksha.lib.view.ViewLayer;
+import com.here.naksha.lib.view.ViewLayerCollection;
+import com.here.naksha.lib.view.ViewReadSession;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
 import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
@@ -35,8 +41,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import naksha.base.JvmBoxingUtil;
-import naksha.model.*;
-import naksha.model.request.*;
+import naksha.model.IStorage;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.SessionOptions;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,8 +132,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
   }
 
   private Response forwardWriteFeatures(NakshaContext ctx, IView view, WriteRequest wr) {
-    final IWriteSession writeSession = view.newWriteSession(SessionOptions.from(ctx, true));
-    return writeSession.execute(wr);
+    return view.useWriteSession(SessionOptions.from(ctx, null, true), writeSession -> writeSession.execute(wr));
   }
 
   private Response forwardReadFeatures(NakshaContext ctx, IView view, ReadFeatures rf) {
@@ -132,9 +144,8 @@ public class DefaultViewHandler extends AbstractEventHandler {
       final Set<ViewLayer> obligatoryLayers = getObligatoryLayers(view.getViewCollection());
       resolver = new ObligatoryLayersResolver(obligatoryLayers);
     }
-    try (final ViewReadSession reader = (ViewReadSession) view.newReadSession(SessionOptions.from(ctx, false))) {
-      return reader.execute(rf, new MergeByStoragePriority(), resolver);
-    }
+    return view.useReadSession(SessionOptions.from(ctx),
+        readSession -> ((ViewReadSession) readSession).execute(rf, new MergeByStoragePriority(), resolver));
   }
 
   private ViewLayerCollection prepareViewLayerCollection(IStorage nhStorage, List<String> spaceIds) {
