@@ -124,52 +124,56 @@ When tuple-numbers are persisted, they are always encoded in arrays, even when o
 - **storage-number**: u64 (optional, only when subtype > 0)
 - **map-number**: u32 (optional, only when subtype > 1)
 - **collection-number**: u32 (optional, only when subtype > 2)
+- **feature-number**: u64 (optional, only when subtype > 3)
 - { tuple-numbers ... }
 
 ### Subtypes
-- `0`: All tuple-numbers are full encoded (288-bit, 36-byte, encoding).
+- `0`: The tuple-numbers is full encoded (288-bit, 36-byte, encoding).
 - `1`: The storage-number is shared, and stored in the header (224-bit, 28-byte encoding).
 - `2`: The storage-, and map-number are shared, and stored in the header (192-bit, 24-byte encoding).
 - `3`: The storage-, map-, and collection-number are shared, and stored in the header (160-bit, 20-byte encoding).
+- `4`: The storage-, map-, collection, and feature-number are shared, and stored in the header (96-bit, 12-byte encoding).
 
-The last variant is generally used within storages, when a single collection is read, to reduce the amount of data that need to be transferred to the client.
+Variant `3` is generally used within storages, when a single collection is read, to reduce the amount of data that need to be transferred to the client.
 
-When result-sets are encoded (for example persisting handles), they are encoded as tuple-arrays, with an extension header that stores the metadata, like the handle-id, and maybe validation state of this result-set, if not all tuples have been filters, in that case optionally the filter to apply.
+Variant `4` is a bit exotic, and mainly used when multiple versions of a single feature should be encoded into one binary.
+
+When result-sets are encoded (for example persisting handles), they are often encoded as tuple-arrays with an arbitrary custom extension header that stores some metadata, like the handle-id, filter state of this result-set, if not all tuples have been filters, aso.
 
 ## Metadata-Binary
 The metadata is encoded like following:
 
-- { tuple-number }
+- { tuple-number: u288 _(36 byte)_ }
 - flags: u32
-- txnNext: u64 _(0 = null)_
+- txn_next: u64 _(0 = null)_
 - cv0: f64 (optional, flags bit)
 - cv1: f64 (optional, flags bit)
 - cv2: f64 (optional, flags bit)
 - cv3: f64 (optional, flags bit)
-- { prev_tn: 96-bit tuple-number, optional, flags bit }
-- { base_tn: 96-bit tuple-number, optional, flags bit }
-- createdAt: u48 (optional, flags bit)
-- authorTs: u48 (optional, flags bit)
-- updatedAt: u48
-- changeCount: u32
+- { prev_tn: 96-bit _(12 byte)_ tuple-number, optional, flags bit }
+- { base_tn: 96-bit _(12 byte)_ tuple-number, optional, flags bit }
+- created_at: u48 (optional, flags bit)
+- author_ts: u48 (optional, flags bit)
+- updated_at: u48
+- change_count: u32
 - hash: u32
 - hereTile: u32
 - id: cstring
-- appId: cstring
+- app_id: cstring
 - author: cstring
 - origin: cstring
 - target: cstring
-- ft: cstring
+- ft: cstring _(feature-type)_
 - cs0: cstring
 - cs1: cstring
 - cs2: cstring
 - cs3: cstring
 
-Each metadata encodes at its start the tuple-number in 224-bit (28-byte). The previous tuple-number (`prev_tn`) and the base tuple-number (`base_tn`), used in auto-merging, are only encoded as 96-bit values, because they share the same _storage_, _map_, and _collection_, so the are encoded only with _version_, _partition-number_, and _uid_.
+Each metadata encodes at its start the tuple-number in 288-bit (36-byte). The previous tuple-number (`prev_tn`) and the base tuple-number (`base_tn`), used in auto-merging, are only encoded as 96-bit values _(12 byte)_, because they are in the same _storage_, _map_, and _collection_, and relate to the same _feature_, so they are encoded only with _version_ and _uid_.
 
 The `origin` and `target` are stringified [_GUIDs_](./LIFECYCLE.md#guid). 
 
-**Note**: The `txnNext` value is always stored fully with 8-byte, because it is a value that is updated, and to be able to update the otherwise immutable data object, we always encode its with full 8-byte. The `txnNext` value is mainly for internal storage, to move the data into a history partition, it's not really intended for clients, therefore clients should ignore the value.
+**Note**: The `txn_next` value is always stored fully with 8-byte, because it is a value that is updated, and to be able to update the otherwise immutable data object, we always encode its with full 8-byte. The `txn_next` value is mainly for internal storage, to move the data into a history partition, it's not really intended for clients, therefore clients should ignore the value.
 
 ## Metadata-Binary-Object
 Each tuple has a pre-defined set of metadata. Optionally, metadata can have an object header like:
@@ -196,9 +200,10 @@ When multiple metadata are stored in an array, the binary object has a header th
 - length: u24 {u32 read & 16777215}
 - size: u32
 - _{ extensions ... }_
-- **storage-number**: u64 (BE read, optional, only when subtype > 0)
-- **map-number**: u32 (BE read, optional, only when subtype > 1)
-- **collection-number**: u32 (BE read, optional, only when subtype > 2)
+- **storage-number**: u64 (BE, optional, only when subtype > 0)
+- **map-number**: u32 (BE, optional, only when subtype > 1)
+- **collection-number**: u32 (BE, optional, only when subtype > 2)
+- **feature-number**: u64 (BE, optional, only when subtype > 3)
 - _{ metadata ... }_
 
 **Note**: The array does not store metadata-objects, only the metadata, so without object header!
@@ -206,12 +211,11 @@ When multiple metadata are stored in an array, the binary object has a header th
 ### Subtypes
 The subtype is defined the same way it is done for the [Tuple-Number-Binary-Array](#Tuple-Number-Binary-Array):
 
-- `0`: All tuple-numbers are full encoded (224-bit, 28-byte, encoding).
-- `1`: The storage-number is shared, and stored in the header (160-bit, 20-byte encoding).
-- `2`: The storage-, and map-number are shared, and stored in the header (128-bit, 16-byte encoding).
-- `3`: The storage-, map-, and collection-number are shared, and stored in the header (96-bit, 12-byte encoding).
-
-This means, the tuple-number at the start of each encoded metadata can be reduced to only 96-bit (12-byte), which saves some memory for bigger arrays.
+- `0`: All tuple-numbers are full encoded (288-bit, 36-byte, encoding).
+- `1`: The storage-number is shared, and stored in the header (224-bit, 28-byte encoding).
+- `2`: The storage-, and map-number are shared, and stored in the header (192-bit, 24-byte encoding).
+- `3`: The storage-, map-, and collection-number are shared, and stored in the header (160-bit, 20-byte encoding).
+- `4`: The storage-, map-, collection, and feature-number are shared, and stored in the header (96-bit, 12-byte encoding).
 
 ## Tuple-Binary-Object
 Encoding a full tuple requires header, because it is a complex object. Each tuple is encoded like:
