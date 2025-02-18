@@ -7,6 +7,8 @@ import kotlinx.coroutines.runBlocking
 import naksha.base.JvmMap
 import naksha.base.Platform
 import naksha.base.PlatformUtil
+import naksha.model.Naksha.NakshaCompanion.featureNumber
+import naksha.model.Naksha.NakshaCompanion.hashId
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -109,7 +111,7 @@ class Plv8PerfTest : PgTestBase(
         // Prepare
         val allFeatures = generateFeatures(featureSource, numberOfFeaturesInBatch * numberOfBatches)
         val groupedFeatures =
-            allFeatures.groupBy { "${partitionNumber(it.id) % NUM_OF_PARTITIONS}_${Random.nextInt(0, numberOfBatchesPerPartition)}" }
+            allFeatures.groupBy { "${partitionNumber(featureNumber(hashId(it.id))) % NUM_OF_PARTITIONS}_${Random.nextInt(0, numberOfBatchesPerPartition)}" }
 
         val batchRequests = mutableListOf<WriteRequest>()
         for (requestFeatures in groupedFeatures.values) {
@@ -138,7 +140,7 @@ class Plv8PerfTest : PgTestBase(
         // Prepare
         val allFeatures = generateFeatures(featureSource, numberOfFeaturesInBatch * numberOfBatches)
         val groupedFeatures =
-            allFeatures.groupBy { "${partitionNumber(it.id) % NUM_OF_PARTITIONS}_${Random.nextInt(0, numberOfBatchesPerPartition)}" }
+            allFeatures.groupBy { "${partitionNumber(featureNumber(hashId(it.id))) % NUM_OF_PARTITIONS}_${Random.nextInt(0, numberOfBatchesPerPartition)}" }
 
         val batchRequests = mutableListOf<WriteRequest>()
         for (requestFeatures in groupedFeatures.values) {

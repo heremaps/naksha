@@ -54,6 +54,8 @@ data class Metadata(
         get() = tupleNumber.mapNumber
     override val collectionNumber: Int
         get() = tupleNumber.collectionNumber
+    override val featureNumber: Int64
+        get() = tupleNumber.featureNumber
     override val partitionNumber: Int
         get() = tupleNumber.partitionNumber
     override val version: Version
@@ -244,6 +246,7 @@ data class Metadata(
          * Creates the [Metadata] from the given [XYZ namespace][XyzNs].
          *
          * If the given [XYZ namespace][XyzNs] is not from an existing, really stored feature, then the method returns _null_, what means, that the feature to which this [XYZ namespace][XyzNs] is attached is a client modified version.
+         * @param featureId the **feature-id**.
          * @param xyz the [XYZ namespace][XyzNs].
          * @return the [Metadata] created from it.
          * @since 3.0.0
@@ -251,7 +254,7 @@ data class Metadata(
          */
         @JvmStatic
         @JsStatic
-        fun fromXyzNs(xyz: XyzNs): Metadata? {
+        fun fromXyzNs(featureId: String, xyz: XyzNs): Metadata? {
             val guid = xyz.guid ?: return null
             val next = xyz.nextVersion
             return Metadata(
@@ -268,7 +271,7 @@ data class Metadata(
                 hereTile = xyz.hereTile ?: 0, // TODO: Fix me, update!
                 appId = xyz.appId,
                 author = xyz.author,
-                id = guid.featureId,
+                id = featureId,
                 origin = xyz.origin,
                 target = xyz.target,
                 ft = xyz.featureType,

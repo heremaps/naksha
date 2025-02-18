@@ -4,6 +4,8 @@ import naksha.base.Int64
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.Naksha.NakshaCompanion.cache
+import naksha.model.Naksha.NakshaCompanion.featureNumber
+import naksha.model.Naksha.NakshaCompanion.hashId
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.CONFLICT
@@ -122,16 +124,16 @@ class PgWriter(
      * @param collectionNumber the collection-number of the collection.
      * @return a new tuple-number.
      */
-    fun newCollectionTupleNumber(map: PgMap, collectionNumber: Int): TupleNumber =
-        TupleNumber(session.storage.number, map.number, collectionNumber, 0, version, newUid())
+//    fun newCollectionTupleNumber(map: PgMap, collectionNumber: Int): TupleNumber =
+//        TupleNumber(session.storage.number, map.number, collectionNumber, 0, version, newUid())
 
     /**
      * Creates a new tuple-number for an existing collection.
      * @param collection the collection for which to return a new tuple-number.
      * @return a new tuple-number.
      */
-    fun newCollectionTupleNumber(collection: PgCollection): TupleNumber =
-        TupleNumber(session.storage.number, collection.map.number, collection.number, 0, version, newUid())
+//    fun newCollectionTupleNumber(collection: PgCollection): TupleNumber =
+//        TupleNumber(session.storage.number, collection.map.number, collection.number, 0, version, newUid())
 
     /**
      * Creates a new tuple-number for a feature.
@@ -144,7 +146,7 @@ class PgWriter(
             session.storage.number,
             collection.map.number,
             collection.number,
-            partitionNumber(featureId),
+            featureNumber(hashId(featureId)),
             version,
             newUid()
         )
@@ -289,7 +291,7 @@ class PgWriter(
         }
 
         // If everything was done perfectly, fine.
-        val tupleNumberByteArray = TupleNumberBinaryArray(tupleNumbers.toByteArray())
+        val tupleNumberByteArray = TupleNumberBinaryArray.fromByteArray(tupleNumbers.toByteArray())
         session.useTransaction().featuresModified += tupleNumbers.size
         return SuccessResponse(
             PgResultSet(

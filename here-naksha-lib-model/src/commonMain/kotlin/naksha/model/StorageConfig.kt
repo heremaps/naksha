@@ -3,11 +3,12 @@
 package naksha.model
 
 import naksha.base.*
+import naksha.model.Naksha.NakshaCompanion.hashId
+import naksha.model.Naksha.NakshaCompanion.storageNumber
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaFeature
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
-import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
 
 /**
@@ -26,7 +27,7 @@ open class StorageConfig : NakshaFeature() {
     companion object StorageConfig_C {
         private val ID = NotNullProperty<StorageConfig, String>(String::class)
         private val CLASSNAME = NotNullProperty<StorageConfig, String>(String::class) { self, _ -> self.defaultClassName() }
-        private val NUMBER = NotNullProperty<StorageConfig, Int64>(Int64::class) { self, _ -> Naksha.storageNumberByHash(self.id) }
+        private val NUMBER = NotNullProperty<StorageConfig, Int64>(Int64::class) { self, _ -> storageNumber(hashId(self.id)) }
         private val HARDCAP = NotNullProperty<StorageConfig, Int>(Int::class) { _, _ -> 0 }
         private val CREATE = NotNullProperty<StorageConfig, Boolean>(Boolean::class) { _, _ -> false }
         private val UPGRADE = NotNullProperty<StorageConfig, Boolean>(Boolean::class) { _, _ -> false }

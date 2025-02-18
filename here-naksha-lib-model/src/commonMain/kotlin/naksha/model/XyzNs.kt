@@ -222,8 +222,8 @@ class XyzNs : AnyObject() {
             return AnyObject().apply {
                 setRaw(UUID, guid.toString())
                 if (nextVersion != null) setRaw(NEXT, nextVersion.txn)
-                if (prev_tn != null) setRaw(PUUID, prev_tn.toGuid(meta.id).toString())
-                if (base_tn != null) setRaw(MUUID, base_tn.toGuid(meta.id).toString())
+                if (prev_tn != null) setRaw(PUUID, Guid(meta.id, prev_tn).toString())
+                if (base_tn != null) setRaw(MUUID, Guid(meta.id, base_tn).toString())
                 if (meta.createdAt != meta.updatedAt) setRaw(CREATED_AT, meta.createdAt)
                 if (meta.authorTs != meta.updatedAt) setRaw(AUTHOR_TS, meta.authorTs)
                 setRaw(UPDATED_AT, meta.updatedAt)

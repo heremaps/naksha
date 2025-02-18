@@ -1,8 +1,8 @@
 package naksha.psql.executors.write
 
 import naksha.model.*
-import naksha.model.Metadata.Metadata_C.calculateHereTile
-import naksha.model.Metadata.Metadata_C.calculateHash
+import naksha.model.Naksha.NakshaCompanion.featureNumber
+import naksha.model.Naksha.NakshaCompanion.hashId
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
 import naksha.psql.PgSession
@@ -25,8 +25,8 @@ class InsertFeature(
         require(feature.id == write.featureId) {
             "Feature id in payload (${feature.id}) and write request (${write.featureId}) are different"
         }
-
-        val tupleNumber = newFeatureTupleNumber(collection, feature.id, session)
+        val featureNumber = featureNumber(hashId(feature.id))
+        val tupleNumber = newFeatureTupleNumber(collection, featureNumber, session)
         val flags = resolveFlags(collection, session)
         val tuple = tuple(
             session.storage,

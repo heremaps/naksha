@@ -119,7 +119,7 @@ class PgColumn : JsEnum() {
 
         /**
          * The **feature-number** calculated from the **feature-id**.
-         * @see [naksha.model.Naksha.featureNumberById]
+         * @see [naksha.model.Naksha.featureNumber]
          * @since 3.0
          */
         @JvmField
@@ -301,8 +301,7 @@ class PgColumn : JsEnum() {
          * The [previous tuple-number][naksha.model.TupleNumber], using the 96-bit encoding.
          *
          * The encoding stores, in order, Big-Endian encoded:
-         * - version: 56
-         * - partition-number: 8 _(extract via `get_byte(tuple_number, 7)`)_
+         * - version: 64
          * - uid: 32
          */
         @JvmField
@@ -325,8 +324,7 @@ class PgColumn : JsEnum() {
          * This technically allows to calculate back, what the client actually modified. For this, the difference between _HEAD_ and _BASE_ is calculated, and then the difference between [prev_tn] and _BASE_ is subtracted, resulting in a patch that can be applied to _BASE_ to receive the original _NEW_ state the client had in memory and wanted to persist. This difference will as well document which properties were changed by the client.
          *
          * The encoding stores, in order, Big-Endian encoded:
-         * - version: 56
-         * - partition-number: 8 _(extract via `get_byte(tuple_number, 7)`)_
+         * - version: 64
          * - uid: 32
          */
         @JvmField

@@ -61,7 +61,6 @@ import naksha.model.IWriteSession;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
-import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
 import naksha.model.StorageConfig;
@@ -140,7 +139,7 @@ public class NakshaHub implements INaksha {
     // TODO force create and update?
     storageConfig.setCreate(false);
     storageConfig.setUpgrade(false);
-    storageConfig.setNumber(Naksha.storageNumberByHash(storageConfig.getId()));
+    storageConfig.setNumber(Naksha.storageNumber(storageConfig.getId()));
     storageConfig.put("masterUri", storageUrl);
     // TODO CASL-657: support clustering
 

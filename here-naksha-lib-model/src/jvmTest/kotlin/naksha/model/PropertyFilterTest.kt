@@ -3,6 +3,9 @@ package naksha.model
 import naksha.base.AnyObject
 import naksha.base.Int64
 import naksha.jbon.JbEncoder
+import naksha.model.Naksha.NakshaCompanion.featureNumber
+import naksha.model.Naksha.NakshaCompanion.hashId
+import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.PropertyFilter
 import naksha.model.request.ReadFeatures
@@ -39,7 +42,7 @@ class PropertyFilterTest {
             val collectionNumber = 0
             val version = Version(0)
             val flags = Flags()
-            val tupleNumber = TupleNumber(storageNumber, mapNumber, collectionNumber, Naksha.partitionNumber(feature.id), version,0)
+            val tupleNumber = TupleNumber(storageNumber, mapNumber, collectionNumber, featureNumber(hashId(feature.id)), version,0)
             val tuple = Tuple(
                 meta = Metadata(
                     tupleNumber = tupleNumber,

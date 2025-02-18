@@ -10,6 +10,7 @@ import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -50,37 +51,13 @@ class BinaryUtil private constructor() {
         const val TYPE_TUPLE_ARRAY = 4
 
         /**
-         * The subtype _(of the Tuple-Number-Array)_ to signal that all tuple-numbers are full encoded (224-bit, 28-byte, encoding).
-         * @since 3.0.0
-         */
-        const val SUBTYPE_TNA_28_BYTE = 0
-
-        /**
-         * The subtype _(of the Tuple-Number-Array)_ to signal that the storage-number is shared and stored in the header _(20-byte/160-bit tuple-number encoding)_.
-         * @since 3.0.0
-         */
-        const val SUBTYPE_TNA_20_BYTE = 1
-
-        /**
-         * The subtype _(of the Tuple-Number-Array)_ to signal that the storage-, and map-number are shared, and stored in the header _(16-byte/128-bit tuple-number encoding)_.
-         * @since 3.0.0
-         */
-        const val SUBTYPE_TNA_16_BYTE = 2
-
-        /**
-         * The subtype _(of the Tuple-Number-Array)_ to signal that the storage-, map-, and collection-number are shared, and stored in the header _(12-byte/96-bit tuple-number encoding)_.
-         * @since 3.0.0
-         */
-        const val SUBTYPE_TNA_12_BYTE = 3
-
-        /**
-         * Write or update a header without any extensions.
+         * Write or update a header without any extensions _(therefore simple)_.
          *
          * This method does not perform any checks upon the given values, it will simply encode what was given, taking the risk that the result is invalid.
          * @param view the view into the binary.
          * @param offset the byte-offset in the view where the binary starts.
          * @param type the type to write, should be a value of [TYPE_TUPLE_NUMBER_ARRAY], [TYPE_METADATA_OBJECT], [TYPE_METADATA_ARRAY], [TYPE_TUPLE_OBJECT], or [TYPE_TUPLE_ARRAY].
-         * @param subtype the subtype to write, depends on type.
+         * @param subtype the subtype to write, depends on type (see e.g. [TupleNumberVariant.subType]).
          * @param length the length (number of entities).
          * @param size the size including the header (which is 8-byte), the client knows this, because it needs to allocate the buffer.
          * @return the offset where to start writing the content.
@@ -185,47 +162,57 @@ class BinaryUtil private constructor() {
 
         /**
          * Read a binary encoded [TupleNumber]; can be used to fetch four encodings:
-         * - 96-bit (12-byte), when storage-, map-, and collection-number given.
-         * - 128-bit (16-byte), when storage- and map-number given.
-         * - 160-bit (20-byte), when storage-number given.
-         * - 224-bit (28-byte), otherwise.
+         * - 96-bit (12-byte), when storage-, map-, collection, and feature-number given.
+         * - 160-bit (20-byte), when storage-, map-, and collection-number given.
+         * - 192-bit (24-byte), when storage- and map-number given.
+         * - 224-bit (28-byte), when storage-number given.
+         * - 288-bit (36-byte), when nothing is given.
          * @param view the view to read.
          * @param offset the byte-offset in the view.
          * @param storageNumber if the storage-number is not encoded.
          * @param mapNumber if the map-number is not encoded.
          * @param collectionNumber if the collection-number is not encoded.
+         * @param featureNumber if the feature-number is not encoded.
          * @return the decoded [TupleNumber]; _null_ if [offset] is negative.
          */
-        @JvmStatic
         @JsStatic
+        @JvmStatic
+        @JvmOverloads
         fun readTupleNumber(
             view: PlatformDataView,
             offset: Int,
             storageNumber: Int64? = null,
             mapNumber: Int? = null,
-            collectionNumber: Int? = null
+            collectionNumber: Int? = null,
+            featureNumber: Int64? = null
         ): TupleNumber? {
             var pos = if (offset >= 0) offset else return null
-            val sn: Int64
+            val sn: Int64 // storage-number
             if (storageNumber == null) {
                 sn = dataview_get_int64(view, pos)
                 pos += 8
             } else sn = storageNumber
-            val mn: Int
-            if (storageNumber == null || mapNumber == null) {
+
+            val mn: Int // map-number
+            if (mapNumber == null) {
                 mn = dataview_get_int32(view, pos)
                 pos += 4
             } else mn = mapNumber
-            val cn: Int
-            if (storageNumber == null || mapNumber == null || collectionNumber == null) {
+
+            val cn: Int // collection-number
+            if (collectionNumber == null) {
                 cn = dataview_get_int32(view, pos)
                 pos += 4
             } else cn = collectionNumber
-            val raw = dataview_get_int64(view, pos)
-            val pn = raw.toInt() and 0xff
-            val txn = (raw shr 8) and Int64(0x00ff_ffff_ffff_ffffL)
+
+            val fn: Int64 // feature-number
+            if (featureNumber == null) {
+                fn = dataview_get_int64(view, pos)
+                pos += 8
+            } else fn = featureNumber
+            val txn = dataview_get_int64(view, pos)
             val uid = dataview_get_int32(view, pos + 8)
-            return TupleNumber(sn, mn, cn, pn, Version(txn), uid)
+            return TupleNumber(sn, mn, cn, fn, Version(txn), uid)
         }
     }
 }

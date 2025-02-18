@@ -1,6 +1,7 @@
 package naksha.psql.executors.write
 
 import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.toInt64
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.psql.*
@@ -41,7 +42,7 @@ class DropCollection(private val session: PgSession) {
     }
 
     private fun collectionTupleNumber(collection: PgCollection): TupleNumber =
-        TupleNumber(collection.map.storage.number, collection.map.number, collection.number, 0, session.useTransaction().version, newUid())
+        TupleNumber(collection.map.storage.number, collection.map.number, collection.number, collection.number.toInt64(), session.useTransaction().version, newUid())
 
     private fun newUid(): Int = session.uid.getAndAdd(1)
 }

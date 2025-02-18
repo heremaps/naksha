@@ -1,8 +1,12 @@
 package naksha.psql.executors.write
 
 import naksha.base.PlatformUtil
+import naksha.base.toInt64
 import naksha.model.*
+import naksha.model.Naksha.NakshaCompanion.featureNumber
+import naksha.model.Naksha.NakshaCompanion.hashId
 import naksha.model.Naksha.NakshaCompanion.quoteIdent
+import naksha.model.SessionUtil.SessionUtil_C.newTupleNumber
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.psql.*
@@ -20,8 +24,7 @@ class CreateCollection(
             "CREATE without feature"
         )
         val collectionId = write.featureId ?: PlatformUtil.randomString()
-        val collectionNumber = newCollectionNumber(map)
-        val tupleNumber = newCollectionTupleNumber(map, collectionNumber)
+        val tupleNumber = newTupleNumber(session, map.nakshaMap, collection)
         val metadata = Metadata.forOperation(session, collection, tupleNumber, Operation.CREATED)
         val dictionary = session.storage.getEncodingDictionary(collection, null)
         val tuple = Tuple(
@@ -65,8 +68,8 @@ class CreateCollection(
      * @param collectionNumber the collection-number of the collection.
      * @return a new tuple-number.
      */
-    private fun newCollectionTupleNumber(map: PgMap, collectionNumber: Int): TupleNumber =
-        TupleNumber(session.storage.number, map.number, collectionNumber, 0, session.useTransaction().version, newUid())
+//    private fun newCollectionTupleNumber(map: PgMap, collectionNumber: Int): TupleNumber =
+//        TupleNumber(session.storage.number, map.number, collectionNumber, 0, session.useTransaction().version, newUid())
 
     /**
      * Generate a new collection-number.

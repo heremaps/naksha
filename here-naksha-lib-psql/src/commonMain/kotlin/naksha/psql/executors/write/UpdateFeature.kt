@@ -3,6 +3,8 @@ package naksha.psql.executors.write
 import naksha.model.*
 import naksha.model.Metadata.Metadata_C.calculateHereTile
 import naksha.model.Metadata.Metadata_C.calculateHash
+import naksha.model.Naksha.NakshaCompanion.featureNumber
+import naksha.model.Naksha.NakshaCompanion.hashId
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
@@ -37,8 +39,9 @@ class UpdateFeature(
         }
 
         val map = session.storage.adminMap.getPgMapById(session.useConnection(), collection.map.id) ?: throw NakshaException(MAP_NOT_FOUND, "Map with id '${collection.map.id}' does not exist")
-        val tupleNumber = newFeatureTupleNumber(collection, feature.id, session)
-        val tuple = session.updated(map.nakshaMap, collection.nakshaCollection, feature, tupleNumber)
+        val featureNumber = featureNumber(hashId(feature.id))
+        val tupleNumber = newFeatureTupleNumber(collection, featureNumber, session)
+        val tuple = SessionUtil.updated(session, map.nakshaMap, collection.nakshaCollection, feature, tupleNumber)
 
         writeExecutor.removeFeatureFromDel(collection, feature.id)
         collection.history?.let { hstTable ->

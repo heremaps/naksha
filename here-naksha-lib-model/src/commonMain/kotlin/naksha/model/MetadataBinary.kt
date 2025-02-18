@@ -1,12 +1,10 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.base.Platform
 import naksha.base.PlatformDataView
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_float64
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int8
 import naksha.model.BinaryUtil.BinaryUtil_C.readTimestamp
 import naksha.model.BinaryUtil.BinaryUtil_C.readTupleNumber
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
@@ -32,6 +30,7 @@ class MetadataBinary(
      */
     offset: Int
 ) : IMetadata {
+    // The offset of optional fields, -1 if the field is not part of the encoding.
     private var _prevTupleNumberOffset = -1
     private var _baseTupleNumberOffset = -1
     private var _createdAtOffset = -1
@@ -41,6 +40,7 @@ class MetadataBinary(
     private var _cv1Offset = -1
     private var _cv2Offset = -1
     private var _cv3Offset = -1
+    // The cached values.
     private var _tupleNumber = TupleNumber.HEAD
     private var _version: Version = Version.HEAD
     private var _nextVersion: Version? = Version.HEAD
@@ -49,7 +49,6 @@ class MetadataBinary(
     private var _guid: Guid? = null
     private var _originGuid: Guid? = null
     private var _targetGuid: Guid? = null
-
     private var _id: String? = null
     private var _appId: String? = null
     private var _author: String? = null
@@ -61,6 +60,11 @@ class MetadataBinary(
     private var _cs2: String? = null
     private var _cs3: String? = null
     private var _end = -1
+
+    /**
+     * Clears the cached values and offsets.
+     * @since 3.0
+     */
     private fun clearCache() {
         _tupleNumber = TupleNumber.HEAD
         _updateAtOffset = -1
@@ -83,19 +87,24 @@ class MetadataBinary(
         _cs3 = null
         _end = -1
     }
+
+    /**
+     * Calculates all offsets which are relative, parse strings from the header.
+     * @return `true` if the offsets and caches were updated, `false` if they were already up-to-date.
+     */
     private fun updateCache(): Boolean {
         if (_updateAtOffset < 0) {
             val flags = this.flags
-            var offset = this.offset + 40
             // storage-number: 8
             // map-number: 4
             // collection-number: 4
-            // version: 7
-            // partition-number: 1
+            // feature-number: 8
+            // version: 8
             // uid: 4
             // flags: 4
             // txn-next: 8
-            // = 40 byte fixed offset
+            // = 48 byte, we skip this fixed header:
+            var offset = this.offset + 48
             if (flags.hasCustomValue(0)) {
                 _cv0Offset = offset
                 offset += 8
@@ -152,8 +161,8 @@ class MetadataBinary(
     }
 
     /**
-     * The offset in the view where the metadata binary encoding starts.
-     * @since 3.0.0
+     * The offset in the view where the metadata binary encoding starts _(behind the tuple-number)_.
+     * @since 3.0
      */
     var offset: Int = offset
         set(value) {
@@ -170,13 +179,30 @@ class MetadataBinary(
     override val collectionNumber: Int
         get() = dataview_get_int32(view, offset + 12)
 
-    // Note, the lowest byte of the txn encodes the partition-number.
-    override val txn: Int64
-        get() = dataview_get_int64(view, offset + 16) shr 8
+    override val featureNumber: Int64
+        get() = dataview_get_int64(view, offset + 16)
 
     // Note, the lowest byte of the txn encodes the partition-number.
-    override val partitionNumber: Int
-        get() = dataview_get_int8(view, offset + 16 + 7).toInt() and 255
+    override val txn: Int64
+        get() = dataview_get_int64(view, offset + 24)
+
+    override val uid: Int
+        get() = dataview_get_int32(view, offset + 32)
+
+    override val flags: Flags
+        get() = dataview_get_int32(view, offset + 36)
+
+    override val txnNext: Int64?
+        get() {
+            updateCache()
+            val value = dataview_get_int64(view, offset + 40)
+            return if (value eq 0) null else value
+        }
+
+    // 48 byte fixed size header ends here !!!
+
+    // Note, the lowest byte of the txn encodes the partition-number.
+    override val partitionNumber: Int get() = Naksha.partitionNumber(featureNumber)
 
     override val version: Version
         get() {
@@ -189,28 +215,15 @@ class MetadataBinary(
             return version
         }
 
-    override val uid: Int
-        get() = dataview_get_int32(view, offset + 24)
-
     override val tupleNumber: TupleNumber
         get() {
             updateCache()
             var tupleNumber = this._tupleNumber
             if (tupleNumber == TupleNumber.HEAD) {
-                tupleNumber = TupleNumber(storageNumber, mapNumber, collectionNumber, partitionNumber, version, uid)
+                tupleNumber = TupleNumber(storageNumber, mapNumber, collectionNumber, featureNumber, version, uid)
                 this._tupleNumber = tupleNumber
             }
             return tupleNumber
-        }
-
-    override val flags: Flags
-        get() = dataview_get_int32(view, offset + 28)
-
-    override val txnNext: Int64?
-        get() {
-            updateCache()
-            val value = dataview_get_int64(view, offset + 32)
-            return if (value eq 0) null else value
         }
 
     override val nextVersion: Version?
@@ -231,7 +244,7 @@ class MetadataBinary(
             var value = this._prevTupleNumber
             if (value === TupleNumber.HEAD) {
                 val tn = this.tupleNumber
-                value = readTupleNumber(view, _prevTupleNumberOffset, tn.storageNumber, tn.mapNumber, tn.collectionNumber)
+                value = readTupleNumber(view, _prevTupleNumberOffset, tn.storageNumber, tn.mapNumber, tn.collectionNumber, tn.featureNumber)
                 this._prevTupleNumber = value
             }
             return value
@@ -243,7 +256,7 @@ class MetadataBinary(
             var value = this._baseTupleNumber
             if (value === TupleNumber.HEAD) {
                 val tn = this.tupleNumber
-                value = readTupleNumber(view, _baseTupleNumberOffset, tn.storageNumber, tn.mapNumber, tn.collectionNumber)
+                value = readTupleNumber(view, _baseTupleNumberOffset, tn.storageNumber, tn.mapNumber, tn.collectionNumber, tn.featureNumber)
                 this._baseTupleNumber = value
             }
             return value

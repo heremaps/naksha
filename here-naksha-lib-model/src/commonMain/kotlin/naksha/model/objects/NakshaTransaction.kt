@@ -2,6 +2,7 @@
 
 package naksha.model.objects
 
+import naksha.base.AtomicInt
 import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.base.Platform
@@ -126,9 +127,11 @@ open class NakshaTransaction() : NakshaFeature() {
         return this
     }
 
+    private var _uid: AtomicInt = AtomicInt(-1)
+
     /**
-     * The next `uid`.
-     * @since 3.0.0
+     * The `uid` counter (unique identifier within a transaction).
+     * @since 3.0
      */
     var uid by INT_0
 

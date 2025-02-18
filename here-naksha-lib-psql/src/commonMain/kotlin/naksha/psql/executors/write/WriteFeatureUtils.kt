@@ -20,13 +20,13 @@ internal object WriteFeatureUtils {
      */
     internal fun newFeatureTupleNumber(
         collection: PgCollection,
-        featureId: String,
+        featureNumber: Int64,
         session: PgSession
     ): TupleNumber = TupleNumber(
         session.storage.number,
         collection.map.number,
         collection.number,
-        Naksha.partitionNumber(featureId),
+        featureNumber,
         session.useTransaction().version,
         session.uid.getAndAdd(1)
     )

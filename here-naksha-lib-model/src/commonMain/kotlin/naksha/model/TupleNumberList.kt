@@ -7,13 +7,13 @@ import naksha.base.ListProxy
 import naksha.base.Platform
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
-import naksha.base.toInt64
-import naksha.model.BinaryUtil.BinaryUtil_C.SUBTYPE_TNA_12_BYTE
-import naksha.model.BinaryUtil.BinaryUtil_C.SUBTYPE_TNA_16_BYTE
-import naksha.model.BinaryUtil.BinaryUtil_C.SUBTYPE_TNA_20_BYTE
-import naksha.model.BinaryUtil.BinaryUtil_C.SUBTYPE_TNA_28_BYTE
 import naksha.model.BinaryUtil.BinaryUtil_C.TYPE_TUPLE_NUMBER_ARRAY
 import naksha.model.BinaryUtil.BinaryUtil_C.writeSimpleHeader
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B192
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B224
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B288
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B96
 import kotlin.js.JsExport
 
 /**
@@ -32,93 +32,119 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
     fun toByteArray(): ByteArray {
         var length = this.size
         if (length == 0) return byteArrayOf()
-        // The first loop detects if all tuples share the same storage, map, and collection, which allows a more compact encoding.
-        // A side effect is, that we can find out how many null values we have.
+        // The first loop rounds loads the storage-, map-, collection-, and feature-number of the first tuple-number
+        // All further loops remove null values, and they detect,
+        //   if the tuple-numbers share storage-, map-, collection-, and/or feature-number
         // Note, this code is not thread safe, no other thread must modify the list while we iterate it.
-        val MINUS_ONE = Int64(-1)
-        var storageNumber: Int64? = MINUS_ONE
+        var variant: TupleNumberVariant? = null
+        var storageNumber: Int64? = null
         var mapNumber: Int? = -1
         var collectionNumber: Int? = -1
+        var featureNumber: Int64? = null
         for (tupleNumber in this) {
             if (tupleNumber == null) {
                 length--
                 continue
             }
-            // Init with actual values of this tuple.
-            if (storageNumber === MINUS_ONE) {
+            if (variant == null) {
+                // We found a first tuple, we hope that each tuple can be encoded in 96-bit only.
+                variant = B96
                 storageNumber = tupleNumber.storageNumber
                 mapNumber = tupleNumber.mapNumber
                 collectionNumber = tupleNumber.collectionNumber
+                featureNumber = tupleNumber.featureNumber
                 continue
             }
-            // We know already that we have different storages.
-            if (storageNumber == null) continue
             if (storageNumber != tupleNumber.storageNumber) {
+                // We need to encode all values individually
+                variant = B288
                 storageNumber = null
                 mapNumber = null
                 collectionNumber = null
-                continue
+                featureNumber = null
+                break
             }
-            // We know already that we have different maps.
-            if (mapNumber == null) continue
+            if (variant === B224) continue
             if (mapNumber != tupleNumber.mapNumber) {
-                // We have different maps, we can share storage, but not
+                // We need to encode individual map-, collection-, and feature-numbers
+                variant = B224
                 mapNumber = null
                 collectionNumber = null
+                featureNumber = null
                 continue
             }
-            if (collectionNumber == null) continue
-            if (storageNumber != tupleNumber.storageNumber) collectionNumber = null
+            if (variant === B192) continue
+            if (collectionNumber != tupleNumber.collectionNumber) {
+                // We need to encode individual collection-, and feature-numbers
+                variant = B192
+                collectionNumber = null
+                featureNumber = null
+                continue
+            }
+            if (variant === B160) continue // We need to encode at least individual feature-numbers
+            if (featureNumber != tupleNumber.featureNumber) {
+                // We need to encode individual feature-numbers
+                variant = B160
+                featureNumber = null
+                continue
+            }
+            // So far, we found the same storage-, map-, collection-, and feature-numbers for all tuple-numbers.
+            check(variant === B96)
         }
-        if (length == 0) return byteArrayOf()
-        // 28 = storage:8, map:4, collection:4, version:8, uid:4
-        // 20 = map:4, collection:4, version:8, uid:4
-        // 16 = collection:4, version:8, uid:4
-        // 12 = version:8, uid:4
-        val entrySize = if (storageNumber == null) 28 else if (mapNumber == null) 20 else if (collectionNumber == null) 16 else 12
-        val SIZE = 8 + length * entrySize
+        // If the list is empty, return empty bytes.
+        if (variant == null || length == 0) return byteArrayOf()
+        // Dependent on which variant is the smallest, we will encode for each tuple-number:
+        // 36 byte = storage:8, map:4, collection:4, feature:8, version:8, uid:4
+        // 28 byte = map:4, collection:4, feature:8, version:8, uid:4
+        // 24 byte = collection:4, feature:8, version:8, uid:4
+        // 20 byte = feature:8, version:8, uid:4
+        // 12 byte = version:8, uid:4
+        val SIZE = 8 + variant.sharedBytes + variant.encodingBytes * length
         val bytes = ByteArray(SIZE)
         val view = Platform.newDataView(bytes)
-        var end = when (entrySize) {
-            28 -> writeSimpleHeader(view, 0, TYPE_TUPLE_NUMBER_ARRAY, SUBTYPE_TNA_28_BYTE, length, SIZE)
-            20 -> {
-                val i = writeSimpleHeader(view, 0, TYPE_TUPLE_NUMBER_ARRAY, SUBTYPE_TNA_20_BYTE, length, SIZE)
-                dataview_set_int64(view, i, storageNumber!!)
-                i + 8
-            }
-            16 -> {
-                val i = writeSimpleHeader(view, 0, TYPE_TUPLE_NUMBER_ARRAY, SUBTYPE_TNA_16_BYTE, length, SIZE)
-                dataview_set_int64(view, i, storageNumber!!)
-                dataview_set_int32(view, i + 8, mapNumber!!)
-                i + 12
-            }
-            else -> {
-                val i = writeSimpleHeader(view, 0, TYPE_TUPLE_NUMBER_ARRAY, SUBTYPE_TNA_12_BYTE, length, SIZE)
-                dataview_set_int64(view, i, storageNumber!!)
-                dataview_set_int32(view, i + 8, mapNumber!!)
-                dataview_set_int32(view, i + 12, collectionNumber!!)
-                i + 16
-            }
+        writeSimpleHeader(view, 0, TYPE_TUPLE_NUMBER_ARRAY, variant.subType, length, SIZE)
+        var i = 8
+        if (variant.sharedStorageNumber()) {
+            dataview_set_int64(view, i, storageNumber!!)
+            i + 8
         }
+        if (variant.sharedMapNumber()) {
+            dataview_set_int32(view, i, mapNumber!!)
+            i += 4
+        }
+        if (variant.sharedCollectionNumber()) {
+            dataview_set_int32(view, i, collectionNumber!!)
+            i += 4
+        }
+        if (variant.sharedFeatureNumber()) {
+            dataview_set_int64(view, i, featureNumber!!)
+            i + 8
+        }
+        check(i == variant.sharedBytes)
         for (tupleNumber in this) {
             if (tupleNumber == null) continue
-            if (entrySize >= 28) {
-                dataview_set_int64(view, end, tupleNumber.storageNumber)
-                end += 8
+            if (variant.encodeStorageNumber()) {
+                dataview_set_int64(view, i, tupleNumber.storageNumber)
+                i += 8
             }
-            if (entrySize >= 20) {
-                dataview_set_int32(view, end, tupleNumber.mapNumber)
-                end += 4
+            if (variant.encodeMapNumber()) {
+                dataview_set_int32(view, i, tupleNumber.mapNumber)
+                i += 4
             }
-            if (entrySize >= 16) {
-                dataview_set_int32(view, end, tupleNumber.collectionNumber)
-                end += 4
+            if (variant.encodeCollectionNumber()) {
+                dataview_set_int32(view, i, tupleNumber.collectionNumber)
+                i += 4
             }
-            dataview_set_int64(view, end, (tupleNumber.txn shl 8) or tupleNumber.partitionNumber.toInt64())
-            end += 8
-            dataview_set_int32(view, end, tupleNumber.uid)
-            end += 4
+            if (variant.encodeFeatureNumber()) {
+                dataview_set_int64(view, i, tupleNumber.featureNumber)
+                i += 8
+            }
+            dataview_set_int64(view, i, tupleNumber.txn)
+            i += 8
+            dataview_set_int32(view, i, tupleNumber.uid)
+            i += 4
         }
+        check(i == SIZE)
         return bytes
     }
 }

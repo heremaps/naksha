@@ -6,6 +6,8 @@ import naksha.base.*
 import naksha.model.Naksha
 import naksha.model.NakshaContext
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.featureNumber
+import naksha.model.Naksha.NakshaCompanion.hashId
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaCollection
@@ -51,7 +53,7 @@ open class Write : AnyObject() {
             if (b == null) return -1
             if (a == null) return 1
 
-            // Sorts by map-id, collection-id, partition-number, operation, feature-id
+            // Sorts by map-id, collection-id, feature-id, operation
             val a_mapId = a.mapId
             val b_mapId = b.mapId
             val map_diff = a_mapId.compareTo(b_mapId)
@@ -66,8 +68,8 @@ open class Write : AnyObject() {
                 }
                 val a_featureId = a.featureId ?: ""
                 val b_featureId = b.featureId ?: ""
-                val a_part = partitionNumber(a_featureId)
-                val b_part = partitionNumber(b_featureId)
+                val a_part = partitionNumber(featureNumber(hashId(a_featureId)))
+                val b_part = partitionNumber(featureNumber(hashId(b_featureId)))
                 val part_diff = a_part.compareTo(b_part)
                 if (part_diff == 0) {
                     val id_diff = a_featureId.compareTo(b_featureId)

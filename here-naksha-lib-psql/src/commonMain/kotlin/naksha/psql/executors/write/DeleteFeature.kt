@@ -23,7 +23,7 @@ class DeleteFeature(
         val collectionId = write.featureId ?: throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "No feature ID provided")
         val mapId = collection.map.id
         val map = session.storage.adminMap.getPgMapById(session.useConnection(), mapId) ?: throw NakshaException(MAP_NOT_FOUND, "Map $mapId not found")
-        val tupleNumber = session.newTupleNumber(map.nakshaMap, collection.nakshaCollection, collectionId)
+        val tupleNumber = SessionUtil.newTupleNumber(session, map.nakshaMap, collection.nakshaCollection, collectionId)
         val flags = resolveFlags(collection, session).withAction(Action.DELETED)
 
         val readFeatures = ReadFeatures()
@@ -59,7 +59,7 @@ class DeleteFeature(
             writeExecutor.removeFeatureFromHead(collection, collectionId)
             val feature = response.features.first()!! //already checked that feature list is not empty
             val metadata = response.tuples.first()?.tuple?.meta!!
-            val tuple = session.deleted(map.nakshaMap, collection.nakshaCollection, feature)
+            val tuple = SessionUtil.deleted(session, map.nakshaMap, collection.nakshaCollection, feature)
                 tuple(
                 session.storage,
                 tupleNumber,
@@ -84,7 +84,7 @@ class DeleteFeature(
             session.storage.number,
             collection.map.number,
             collection.number,
-            Naksha.partitionNumber(feature.id),
+            previousMetadata.featureNumber,
             session.useTransaction().version,
             session.uid.getAndAdd(1)
         )

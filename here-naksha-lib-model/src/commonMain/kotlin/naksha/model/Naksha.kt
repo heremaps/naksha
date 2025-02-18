@@ -245,49 +245,47 @@ class Naksha private constructor() {
         }
 
         /**
-         * A method to calculate a valid storage-number from a given storage-id.
-         *
-         * @param storageId the storage-id.
-         * @return the storage-number.
-         * @since 3.0
+         * Generates an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the given identifier, which is used to extract many values from it.
+         * @param id the identifier to hash.
+         * @return a [Binary] view above the [MD5](https://en.wikipedia.org/wiki/MD5) hash.
          */
         @JsStatic
         @JvmStatic
-        fun storageNumberByHash(storageId: String): Int64 {
-            val hash = Platform.md5(storageId)
-            val view = Binary(Platform.newDataView(hash))
-            return view.getInt64(8) and Int64(0x7fff_ffff_ffff_ffff)
+        fun hashId(id: String): Binary {
+            val hash = Platform.md5(id)
+            return Binary(Platform.newDataView(hash))
         }
 
         /**
-         * Calculates the partition number between 0 and 255 from the given feature-id.
+         * A method to calculate a valid storage-number from the [MD5](https://en.wikipedia.org/wiki/MD5) hash of a storage-id.
          *
-         * This is the unsigned value of the last byte of the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the given feature-id. When there are less than 256 partitions, the value must be divided by the number of partitions, and the rest addresses the partition, for example for 4 partitions do `partitionNumber(id) % 4`, what will be a value between 0 and 3.
-         *
-         * @param featureId the feature id.
-         * @return the partition number of the feature, a value between 0 and 255.
+         * @param md5 the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the storage-id, from which to extract the storage-number.
+         * @return the storage-number.
          * @since 3.0
+         * @see [hashId]
          */
+        @JsName("storageNumberByHash")
         @JsStatic
         @JvmStatic
-        fun partitionNumber(featureId: String?): Int = if (featureId == null) 0 else Platform.md5(featureId)[15].toInt() and 255
+        fun storageNumber(md5: Binary): Int64 = md5.getInt64(8) and INT64_CLEAR_SIGN_BIT
 
-        /**
-         * A method to calculate the feature-number (`fn`) from a given feature-id.
+       /**
+         * A method to calculate the feature-number (`fn`) from the [MD5](https://en.wikipedia.org/wiki/MD5) hash above a feature-id.
          *
-         * Actually, this method will calculate the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id and return the lower 64-bit as feature-number. Considering the [birthday paradox](https://betterexplained.com/articles/understanding-the-birthday-paradox/), we can assume that for the maximum of 2^40 features in a collection, there will be around 32,000 collisions, when using 2^32 features _(4 billion)_ we only get 1 collision, while for less than 1 billion features we will not encounter any collision _(or, it is unlikely)_.
+         * Actually, this method will use the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id and return the lower 64-bit as feature-number, with the highest bit (sign-bit) always being set, which reserves all positive numbers for manually managed feature-numbers, which is compatible to what `Map-Hub` originally did. Considering the [birthday paradox](https://betterexplained.com/articles/understanding-the-birthday-paradox/), we can assume that for the maximum of 2^40 features in a collection, there will be around 65,000 collisions, when using 2^32 features _(4 billion)_ we only get 2 collisions, while for less than 1 billion features we will not encounter any collision _(or, it is unlikely)_.
          *
          * ### Collision handling
-         * As collisions in feature numbers are not totally avoidable, the strategy in case of a collision should be to increment to the feature-number until an unused number is found, not modifying the top 8-bit. The generally programming way is
+         * As collisions in feature numbers are not totally avoidable, the strategy in case of a collision should be to increment to the feature-number until an unused number is found, not modifying the lower 16-bit, which we use as [partition-number][partitionNumber]. The generally programming way is
          * ```
-         * new_fn = ((fn + 1) & 0x00ff_ffff) |
-         *          (fn & 0xff00_0000)
+         * new_fn = ((fn + 65536) & 0xffff_ffff_ffff_0000)
+         *        | (fn & 0xffff) | 0x8000_0000_0000_0000
          * ```
          * Within SQL, this looks generally like:
          * ```
          * WITH t AS (SELECT -1::bigint as fn)
-         * SELECT ((t.fn + 1::bigint) & 72057594037927935::bigint)
-         *      | (t.fn & -72057594037927936::bigint)
+         * SELECT ((t.fn + 65536::bigint) & (-65536)::bigint)
+         *      | (t.fn & 65536::bigint)
+         *      | (-9223372036854775808)::bigint
          * AS new_fn, t.fn as old_fn FROM t;
          * ```
          * Naksha adds a SQL function to simplify the increase, named `naksha_fn_inc`, which returns the incremented feature-number. Eventually, to find the next not colliding number, the following query can be used:
@@ -299,33 +297,81 @@ class Naksha private constructor() {
          * ```
          *
          * ### Note
-         * Generally, the estimated number of collisions is calculated as `n^2 / 2N` with `n` being the number of features and `N` being the entropy, so the maximum amount of numbers available _(so here 2^64)_. The collision possibility can be estimated via `1 - e^( -(n^2 / 2N) )`, for example, for 1 billion features it will be `1 - e^( -(2^60 / 2^65) )`, which results in around 3.1 percent, for 4 billion features it grows to `1 - e^( -(2^64 / 2^65) )` to around 39.3 percent, reaching 100% for around 34 billion features _(there is expected to be at least one collision)_. Beware, just because a collision is unlikely, does not mean there will be none!
+         * Generally, the estimated number of collisions is calculated as `n^2 / 2N` with `n` being the number of features and `N` being the entropy, so the maximum amount of numbers available _(so here 2^63)_. The collision possibility can be estimated via `1 - e^( -(n^2 / 2N) )`, for example, for 1 billion features it will be `1 - e^( -(2^60 / 2^64) )`, which results in around 6 percent, for 4 billion features it grows to `1 - e^( -(2^64 / 2^64) )` to around 63.2 percent, reaching 99.99% for around 147 billion features _(there is expected to be at least one collision)_. Beware, just because a collision is unlikely, does not mean there will be none!
          *
-         * @param featureId the feature-id.
+         * @param md5 the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id, from which to extract the feature-number.
          * @return the feature-number.
+         * @see [hashId]
+         * @see [featureNumberInc]
+         */
+        @JsName("featureNumberByHash")
+        @JsStatic
+        @JvmStatic
+        fun featureNumber(md5: Binary): Int64 = md5.getInt64(8) or INT64_SET_SIGN_BIT
+
+        /**
+         * `0x8000_0000_0000_0000`, should be `-9223372036854775808`, but this does not work in Kotlin, only `-9223372036854775807 -1`?
+         * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
+         */
+        @JvmStatic
+        internal val INT64_SET_SIGN_BIT = Int64(Long.MIN_VALUE)
+
+        /**
+         * `0x7fff_ffff_ffff_ffff`
+         * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
+         */
+        @JvmStatic
+        internal val INT64_CLEAR_SIGN_BIT = Int64(0x7fff_ffff_ffff_ffff)
+
+        /**
+         * `0x0000_0000_0000_ffff`
+         * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
+         */
+        @JvmStatic
+        internal val INT64_CLEAR_HIGH48 = Int64(0x0000_0000_0000_ffff)
+
+        /**
+         * `0xff00_0000_0000_0000` aka `-72057594037927936`
+         * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
+         */
+        @JvmStatic
+        internal val INT64_CLEAR_HIGH8 = Int64(-72057594037927936)
+
+        /**
+         * `0xffff_ffff_ffff_0000` aka `-65536`
+         * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
+         */
+        @JvmStatic
+        internal val INT64_CLEAR_LOW16 = Int64(-65536)
+
+        /**
+         * Returns the partition-number from the given feature-number.
+         *
+         * This is basically just an unsigned 16-bit integer, extracted from the lowest 16-bit of the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id. When there are less than 65536 partitions, the value must be divided by the number of real partitions, and the rest indexes the partition, for example for 4 partitions do `partitionNumber(featureNumber(id)) % 4`, what will be a value between 0 and 3.
+         * @param featureNumber the feature-number.
+         * @return the partition-number.
+         * @see [featureNumber]
          */
         @JsStatic
         @JvmStatic
-        fun featureNumberById(featureId: String): Int64 {
-            val hash = Platform.md5(featureId)
-            val view = Binary(Platform.newDataView(hash))
-            return view.getInt64(8)
-        }
-
-        private val FN_CLEAR_HIGH8 = Int64(72057594037927935L)
-        private val FN_CLEAR_LOW56 = Int64(-72057594037927936L)
+        fun partitionNumber(featureNumber: Int64): Int = featureNumber.toInt() and 0xffff
 
         /**
-         * Increment the feature-number programmatically in case of collision. This method implements the same behavior as the SQL function `naksha_fn_inc`.
+         * Increment the feature-number programmatically in case of collision, and return the _alternative_ feature-number, derived deterministically from the given previous feature-number. This method implements the same behavior as the SQL function `naksha_fn_inc`.
          *
-         * @param featureNumber the feature-number to increase.
-         * @return the next feature-number that has the same partition-number.
+         * ### Note
+         * This method can be applied recursively until a new valid number has been found.
+         *
+         * @param featureNumber the feature-number to calculate an alternative from.
+         * @return the alternative feature-number that has the same partition-number.
          * @since 3.0
+         * @see [featureNumber]
+         * @see [hashId]
          */
         @JsStatic
         @JvmStatic
         fun featureNumberInc(featureNumber: Int64): Int64
-            = ((featureNumber+1) and FN_CLEAR_HIGH8) or (featureNumber and FN_CLEAR_LOW56)
+            = ((featureNumber + 65536) and INT64_CLEAR_LOW16) or (featureNumber and INT64_CLEAR_HIGH48) or INT64_SET_SIGN_BIT
 
         /**
          * Tests if the given identifier is an internal one.
@@ -381,7 +427,7 @@ class Naksha private constructor() {
         @JvmOverloads
         fun encodeTuple(feature: NakshaFeature, dictionary: IDict? = null, flags: Flags? = null): Tuple {
             val xyz = feature.properties.xyz
-            val meta = Metadata.fromXyzNs(xyz) ?: Metadata.UNDEFINED
+            val meta = Metadata.fromXyzNs(feature.id, xyz) ?: Metadata.UNDEFINED
             val flagsOrDefault = flags ?: DEFAULT_FLAGS
             val featureBytes = encodeFeature(feature, flagsOrDefault, dictionary)
             val geoBytes = encodeGeometry(feature.geometry, flagsOrDefault)
@@ -403,7 +449,7 @@ class Naksha private constructor() {
         @JsName("encodeTupleForStorage")
         fun encodeTuple(feature: NakshaFeature, storage: IStorage): Tuple {
             val xyz = feature.properties.xyz
-            val meta = Metadata.fromXyzNs(xyz) ?: Metadata.UNDEFINED
+            val meta = Metadata.fromXyzNs(feature.id, xyz) ?: Metadata.UNDEFINED
             val dict = storage.getEncodingDictionary(feature)
             val flags = storage.getEncodingFlags(feature)
             val featureBytes = encodeFeature(feature, flags, dict)
