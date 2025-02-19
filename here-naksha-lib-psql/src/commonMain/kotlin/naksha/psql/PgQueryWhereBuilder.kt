@@ -51,20 +51,11 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
     }
 
     private fun whereGuids() {
-        val guids = request.guids.filterNotNull()
-        if (guids.isNotEmpty()) {
-            if (where.isNotEmpty()) {
-                where.append(" AND ")
-            }
-            guids.forEachIndexed { index, guid ->
-                if (index > 0) {
-                    where.append(" AND ")
-                }
-                val idPlaceholder = placeholderForArg(guid.featureId, PgType.STRING)
-                val txnPlaceholder = placeholderForArg(guid.tupleNumber.version.txn, PgType.INT64)
-                val uidPlaceholder = placeholderForArg(guid.tupleNumber.uid, PgType.INT)
-                where.append("(${PgColumn.id} = $idPlaceholder AND ${PgColumn.txn} = $txnPlaceholder AND ${PgColumn.uid} = $uidPlaceholder)")
-            }
+        val tupleNumbers = request.guids.mapNotNull { it?.tupleNumber?.toByteArray(TupleNumberVariant.B160) }
+        if (tupleNumbers.isNotEmpty()) {
+            if (where.isNotEmpty()) where.append(" AND ")
+            val placeholder = placeholderForArg(tupleNumbers, PgType.BYTE_ARRAY_ARRAY)
+            where.append("${PgColumn.tn} = ANY($placeholder)")
         }
     }
 
@@ -72,12 +63,12 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
         val txn = request.version
         if (txn != null) {
             if (where.isNotEmpty()) where.append(" AND ")
-            where.append("${PgColumn.txn} <= $txn")
+            where.append("naksha_tn_txn(${PgColumn.tn}) <= $txn")
         }
         val min_txn = request.minVersion
         if (min_txn != null) {
             if (where.isNotEmpty()) where.append(" AND ")
-            where.append("${PgColumn.txn} >= $min_txn")
+            where.append("naksha_tn_txn(${PgColumn.tn}) >= $min_txn")
         }
     }
 

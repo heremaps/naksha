@@ -14,7 +14,6 @@ import naksha.psql.PgColumn.PgColumnCompanion.app_id
 import naksha.psql.PgColumn.PgColumnCompanion.attachment
 import naksha.psql.PgColumn.PgColumnCompanion.author
 import naksha.psql.PgColumn.PgColumnCompanion.author_ts
-import naksha.psql.PgColumn.PgColumnCompanion.change_count
 import naksha.psql.PgColumn.PgColumnCompanion.created_at
 import naksha.psql.PgColumn.PgColumnCompanion.feature
 import naksha.psql.PgColumn.PgColumnCompanion.flags
@@ -26,10 +25,8 @@ import naksha.psql.PgColumn.PgColumnCompanion.origin
 import naksha.psql.PgColumn.PgColumnCompanion.ref_point
 import naksha.psql.PgColumn.PgColumnCompanion.tags
 import naksha.psql.PgColumn.PgColumnCompanion.tn
-import naksha.psql.PgColumn.PgColumnCompanion.txn
 import naksha.psql.PgColumn.PgColumnCompanion.txn_next
 import naksha.psql.PgColumn.PgColumnCompanion.ft
-import naksha.psql.PgColumn.PgColumnCompanion.uid
 import naksha.psql.PgColumn.PgColumnCompanion.updated_at
 import kotlin.js.JsName
 

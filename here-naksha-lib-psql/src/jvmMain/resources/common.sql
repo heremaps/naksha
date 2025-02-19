@@ -1,4 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS plv8;
 -- Idea based upon: https://rymc.io/blog/2016/a-deep-dive-into-plv8/
 -- Execute this SQL code, then all plv8 codes can use es-modules.
 --

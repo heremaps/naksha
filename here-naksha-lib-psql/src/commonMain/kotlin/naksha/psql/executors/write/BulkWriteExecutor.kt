@@ -176,7 +176,7 @@ class BulkWriteExecutor(
 
     private fun createCopyPlan(headTableName: String, dstTableName: String): PgPlan {
 
-        val columnsToOverride = mutableListOf(PgColumn.txn_next, PgColumn.txn, PgColumn.uid, PgColumn.flags)
+        val columnsToOverride = mutableListOf(PgColumn.txn_next, PgColumn.tn, PgColumn.flags)
         // TODO: Verify if allColumns is correct !!!
         val columnsToCopy = PgColumn.allColumns.minus(columnsToOverride.toSet())
         val columns = mutableListOf<PgColumn>()
@@ -190,8 +190,8 @@ class BulkWriteExecutor(
             sql = """
                 INSERT INTO $dstTableName($columnNames)
                 SELECT $1,
-                COALESCE($2, ${PgColumn.txn}),
-                COALESCE($3, ${PgColumn.uid}),
+                COALESCE($2, ${PgColumn.tn}),
+                COALESCE($3, ${PgColumn.tn}),
                 COALESCE($4, ${PgColumn.flags}),
                 $copyColumnNames FROM $headTableName
                 WHERE ${PgColumn.id.ident} = $5

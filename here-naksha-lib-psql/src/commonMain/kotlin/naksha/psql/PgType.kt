@@ -92,6 +92,10 @@ class PgType : JsEnum() {
         @JvmField
         @JsStatic
         val BYTE_ARRAY = defIgnoreCase(PgType::class, "bytea")
+
+        @JvmField
+        @JsStatic
+        val BYTE_ARRAY_ARRAY = defIgnoreCase(PgType::class, "bytea[]")
     }
 
     @Suppress("NON_EXPORTABLE_TYPE")

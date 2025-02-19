@@ -9,6 +9,7 @@ import naksha.model.request.FeatureTuple
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
+import kotlin.math.min
 
 /**
  * The tuple cache, which helps applications or libraries to implement own caches.
@@ -28,6 +29,10 @@ import kotlin.jvm.JvmOverloads
  */
 @JsExport
 class TupleCache internal constructor() {
+
+    companion object TupleCache_C {
+        private val INT64_0 = Int64(0)
+    }
 
     private val first = AtomicRef(CacheWrapper(TupleHeapCache.getInstance()))
 
@@ -65,17 +70,29 @@ class TupleCache internal constructor() {
      * @return the [Tuple], if it is in the cache.
      * @see [load]
      */
-    operator fun get(tupleNumber: TupleNumber): Tuple? = null
+    operator fun get(tupleNumber: TupleNumber): Tuple? {
+        var current = first.get()
+        while (current != null) {
+            val cache = current.cache
+            if (cache.latencyInMicros == INT64_0) {
+                val tuple = cache[tupleNumber]
+                if (tuple != null) return tuple
+            }
+            current = current.next.get()
+        }
+        return null
+    }
 
     @JvmOverloads
-    fun getAll(tupleNumbers: TupleNumberBinaryArray, from:Int=0, to:Int=tupleNumbers.size): List<Tuple> = listOf()
+    fun getAll(tupleNumbers: TupleNumberBinaryArray, from:Int = 0, to:Int = tupleNumbers.size): List<Tuple>
+        = load(tupleNumbers.toFeatureTupleList(from, to)).toTupleList()
 
     /**
      * Read multiple [tuples][Tuple] from the cache; if available.
      *
      * @param featureTuples the [feature-tuple][FeatureTuple] to fill from the cache.
-     * @param start the index of the first [FeatureTuple] to load from cache, defaults to `0`.
-     * @param end the index of the first [FeatureTuple] **not** to load from cache, defaults to `rs.size`.
+     * @param from the index of the first [FeatureTuple] to load from cache, defaults to `0`.
+     * @param to the index of the first [FeatureTuple] **not** to load from cache, defaults to `rs.size`.
      * @param maxMicros if given, the maximum latency in microseconds; `null` when no limit applies.
      * @return the given `featureTuples`, so that the methods can be used as wrapper.
      * @since 3.0.0
@@ -83,7 +100,10 @@ class TupleCache internal constructor() {
      * @see [get]
      */
     @JvmOverloads
-    fun <LIST : List<FeatureTuple?>> load(featureTuples: LIST, start:Int = 0, end:Int = featureTuples.size, maxMicros: Int64? = null): LIST {
+    fun <LIST : List<FeatureTuple?>> load(featureTuples: LIST, from:Int = 0, to:Int = featureTuples.size, maxMicros: Int64? = null): LIST {
+        val end = min(featureTuples.size, to)
+        if (from < 0 || from >= end) return featureTuples
+        // TODO: Ask all caches
         return featureTuples
     }
 

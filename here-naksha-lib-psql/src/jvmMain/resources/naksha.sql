@@ -24,8 +24,7 @@ SET SESSION search_path TO "naksha~admin", topology, hint_plan, public;
 
 DROP FUNCTION IF EXISTS buf2bytes(in int, in int, out text);
 CREATE FUNCTION buf2bytes(in buffers int, in decimals int default 2, out bytes text)
-LANGUAGE 'sql'
-IMMUTABLE PARALLEL SAFE
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
 SET search_path FROM CURRENT
 AS $$
   with settings as (
@@ -63,10 +62,9 @@ DROP AGGREGATE IF EXISTS bytea_agg(bytea);
 DROP FUNCTION IF EXISTS bytea_concat(bytea, bytea);
 
 CREATE FUNCTION bytea_concat(a bytea, b bytea) RETURNS bytea
-LANGUAGE 'plpgsql'
-IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN
-  RETURN a || b;
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
+AS $$
+  SELECT a || b
 END $$;
 
 CREATE AGGREGATE bytea_agg(bytea) (
@@ -75,59 +73,176 @@ CREATE AGGREGATE bytea_agg(bytea) (
     INITCOND = ''
 );
 
+DROP FUNCTION IF EXISTS int8recv(bytea, int);
+CREATE FUNCTION int8recv(data bytea, pos int) RETURNS int8
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT AS $$
+  SELECT (get_byte(data, pos + 7)::int8) |
+         ((get_byte(data, pos + 6)::int8) << 8) |
+         ((get_byte(data, pos + 5)::int8) << 16) |
+         ((get_byte(data, pos + 4)::int8) << 24) |
+         ((get_byte(data, pos + 3)::int8) << 32) |
+         ((get_byte(data, pos + 2)::int8) << 40) |
+         ((get_byte(data, pos + 1)::int8) << 48) |
+         ((get_byte(data, pos)::int8) << 56)
+$$;
+
+DROP FUNCTION IF EXISTS int4recv(bytea, int);
+CREATE FUNCTION int4recv(data bytea, pos int) RETURNS int4
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT AS $$
+  SELECT (get_byte(data, pos + 3)::int) |
+         ((get_byte(data, pos + 2)::int) << 8) |
+         ((get_byte(data, pos + 1)::int) << 16) |
+         ((get_byte(data, pos)::int) << 24);
+$$;
+
 DROP FUNCTION IF EXISTS naksha_version();
 -- Returns the packed Naksha extension version: 16 bit major, 16 bit minor, 16 bit revision, 8 bit pre-release tag, 8 bit pre-release version.
 CREATE FUNCTION naksha_version() RETURNS int8
-LANGUAGE 'plpgsql'
-IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN
-  RETURN ${version};
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
+AS $$
+  SELECT ${version}
 END $$;
 
 DROP FUNCTION IF EXISTS naksha_storage_id();
 -- Returns the storage-id of this storage, this is created when the Naksha extension is installed and never changes.
 CREATE FUNCTION naksha_storage_id() RETURNS text
-LANGUAGE 'plpgsql'
-IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN
-  RETURN ${storageIdLiteral};
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
+AS $$
+  SELECT ${storageIdLiteral}
 END $$;
 
 DROP FUNCTION IF EXISTS naksha_storage_number();
 -- Returns the storage-number of this storage, this is created when the Naksha extension is installed and never changes.
-CREATE FUNCTION naksha_storage_number() RETURNS bigint
-LANGUAGE 'plpgsql'
-IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN
-  RETURN ${storageNumber};
+CREATE FUNCTION naksha_storage_number() RETURNS int8
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
+AS $$
+  SELECT ${storageNumber}
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_tn_288(int8, int4, int4, int8, int8, int4);
+CREATE FUNCTION naksha_tn_288(storage_num int8, map_num int4, col_num int4, feature_num int8, txn int8, uid int4) RETURNS bytea
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT int8send(storage_num) || int4send(map_num) || int4send(col_num) || int8send(feature_num) || int8send(txn) || int4send(uid)
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_tn_224(int4, int4, int8, int8, int4);
+CREATE FUNCTION naksha_tn_224(map_num int4, col_num int4, feature_num int8, txn int8, uid int4) RETURNS bytea
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT int4send(map_num) || int4send(col_num) || int8send(feature_num) || int8send(txn) || int4send(uid)
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_tn_192(int4, int8, int8, int4);
+CREATE FUNCTION naksha_tn_192(col_num int4, feature_num int8, txn int8, uid int4) RETURNS bytea
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT int4send(col_num) || int8send(feature_num) || int8send(txn) || int4send(uid)
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_tn_160(int8, int8, int4);
+CREATE FUNCTION naksha_tn_160(feature_num int8, txn int8, uid int4) RETURNS bytea
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT int8send(feature_num) || int8send(txn) || int4send(uid)
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_tn_96(int8, int4);
+CREATE FUNCTION naksha_tn_160(txn int8, uid int4) RETURNS bytea
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT int8send(txn) || int4send(uid)
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_tn_storage_number(bytea);
+CREATE FUNCTION naksha_tn_storage_number(tn bytea) RETURNS int8
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT int8recv(tn, length(tn) - 36)
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_tn_map_number(bytea);
+CREATE FUNCTION naksha_tn_map_number(tn bytea) RETURNS int
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT int4recv(tn, length(tn) - 28)
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_tn_collection_number(bytea);
+CREATE FUNCTION naksha_tn_collection_number(tn bytea) RETURNS int
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+    SELECT int4recv(tn, length(tn) - 24)
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_tn_feature_number(bytea) CASCADE;
+CREATE FUNCTION naksha_tn_feature_number(tn bytea) RETURNS int8
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT int8recv(tn, length(tn) - 20)
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_tn_txn(bytea);
+CREATE FUNCTION naksha_tn_txn(tn bytea) RETURNS int8
+    LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT int8recv(tn, length(tn) - 12)
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_tn_uid(bytea);
+CREATE FUNCTION naksha_tn_uid(tn bytea) RETURNS int
+    LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT int4recv(tn, length(tn) - 4)
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_feature_number(text);
+CREATE FUNCTION naksha_feature_number(id text) RETURNS int8
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT int8recv(digest(id,'md5'), 8) | (-9223372036854775807::int8 - 1)::int8
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_partition_number(bytea);
+CREATE FUNCTION naksha_partition_number(tn bytea) RETURNS int
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT (naksha_tn_feature_number(tn) & 65535)::int
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_partition_number(int8);
+CREATE FUNCTION naksha_partition_number(feature_number int8) RETURNS int
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT (feature_number & 65535)::int
 END $$;
 
 DROP FUNCTION IF EXISTS naksha_partition_number(text);
 CREATE FUNCTION naksha_partition_number(id text) RETURNS integer
-LANGUAGE 'plpgsql'
-IMMUTABLE PARALLEL SAFE STRICT
-SET search_path FROM CURRENT
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-BEGIN
-  RETURN get_byte(digest(id,'md5'),0);
+    SELECT int4recv(digest(id,'md5'), 12) & 65535
 END $$;
 
-DROP FUNCTION IF EXISTS naksha_partition_number(bytea);
-CREATE FUNCTION naksha_partition_number(tuple_number bytea) RETURNS integer
-LANGUAGE 'plpgsql'
-IMMUTABLE PARALLEL SAFE STRICT
+DROP FUNCTION IF EXISTS naksha_partition_index(bytea, int);
+CREATE FUNCTION naksha_partition_index(tn bytea, parts int) RETURNS int
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-BEGIN
-  RETURN get_byte(tuple_number,7);
+  SELECT (naksha_tn_feature_number(tn) & 65535)::int % parts
 END $$;
 
-DROP FUNCTION IF EXISTS naksha_partition_number(bigint);
-CREATE FUNCTION naksha_partition_number(store_number bigint) RETURNS integer
-LANGUAGE 'plpgsql'
-IMMUTABLE PARALLEL SAFE STRICT
+DROP FUNCTION IF EXISTS naksha_partition_index(int8, int);
+CREATE FUNCTION naksha_partition_index(feature_number int8, parts int) RETURNS int
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-BEGIN
-  RETURN store_number & 255;
+  SELECT (feature_number & 65535)::int % parts
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_partition_index(int4, int);
+CREATE FUNCTION naksha_partition_index(partition_number int4, parts int) RETURNS int
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT partition_number % parts
 END $$;
 
 DROP FUNCTION IF EXISTS naksha_created_at(bigint, bigint);
@@ -144,26 +259,16 @@ END $$;
 
 DROP FUNCTION IF EXISTS naksha_author(text, text);
 CREATE FUNCTION naksha_author(author text, app_id text) RETURNS text
-LANGUAGE 'plpgsql'
-IMMUTABLE PARALLEL SAFE
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
 AS $$
-BEGIN
-  IF author IS NOT NULL THEN
-    RETURN author;
-  END IF;
-  RETURN app_id;
+  SELECT COALESCE(author, app_id)
 END $$;
 
 DROP FUNCTION IF EXISTS naksha_author_ts(bigint, bigint);
 CREATE FUNCTION naksha_author_ts(author_ts bigint, updated_at bigint) RETURNS bigint
-LANGUAGE 'plpgsql'
-IMMUTABLE PARALLEL SAFE
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
 AS $$
-BEGIN
-  IF author_ts IS NOT NULL THEN
-    RETURN author_ts;
-  END IF;
-  RETURN updated_at;
+  SELECT COALESCE(author_ts, updated_at)
 END $$;
 
 DROP FUNCTION IF EXISTS naksha_jbon_feature_to_json(bytea);
@@ -224,14 +329,17 @@ END $$;
 
 DROP FUNCTION IF EXISTS naksha_tags(bytea, int4);
 CREATE FUNCTION naksha_tags(tags bytea, flags int4) RETURNS jsonb
-LANGUAGE 'plpgsql'
-IMMUTABLE PARALLEL SAFE STRICT
+LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
 DECLARE
   encoding int4;
   gzip boolean;
 BEGIN
+  -- Because the function is strict, the null check is a duplicate, still
+  if (tags is null OR length(tags) = 0) then
+     return null;
+  end if;
   encoding = (flags >> 8) & 15;
   gzip = (encoding & 1) = 1;
   if (gzip) then
@@ -346,6 +454,7 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS naksha_action(int4);
 CREATE OR REPLACE FUNCTION naksha_action(flags int4) RETURNS int2
 LANGUAGE 'plpgsql'
 IMMUTABLE PARALLEL SAFE STRICT
@@ -355,6 +464,7 @@ BEGIN
   return (flags >> 12) & 3;
 END $$;
 
+DROP FUNCTION IF EXISTS naksha_geo_grid_trim_level(int4, int4);
 CREATE OR REPLACE FUNCTION naksha_geo_grid_trim_level(geo_grid int4, new_level int4) RETURNS int4
 LANGUAGE 'plpgsql'
 IMMUTABLE PARALLEL SAFE STRICT

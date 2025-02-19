@@ -158,7 +158,7 @@ data class TupleNumber(
     fun resolveFeatureNumberConflict(): TupleNumber {
         val fn = this.featureNumber
         if (fn >= 0) throw NakshaException(ILLEGAL_STATE, "The feature-number is not auto-generated, failed to calculate alternative")
-        val new_fn = Naksha.featureNumberInc(fn)
+        val new_fn = Naksha.alternativeInt64(fn)
         return TupleNumber(storageNumber, mapNumber, collectionNumber, new_fn, version, uid)
     }
 

@@ -40,31 +40,7 @@ interface ITupleCache {
      * @return the fetched [Tuple]; _null_ if either the method is not supported or the requested [Tuple] is not in the cache.
      * @since 3.0
      */
-    fun get(tupleNumber: TupleNumber): Tuple?
-
-    /**
-     * Ask the cache to load [tuples][Tuple], if available _(the storage will only load what it has)_.
-     *
-     * The most simple implementation is:
-     * ```kotlin
-     * fun load(tupleNumbers: TupleNumberBinaryArray,
-     *          start:Int, end:Int): List<Tuple>? {
-     *   val ftl = tupleNumbers.toFeatureTupleList(from, to)
-     *   loadFeatureTuple(ftl)
-     *   return ftl.toTupleList()
-     * }
-     * ```
-     * Note, that the disadvantage is that this may allocate a lot of memory, which might not be necessary if implemented more efficiently.
-     *
-     * ### Note
-     * This method is expected to not take much longer than [latencyInMicros].
-     * @param tupleNumbers the [tuple-number's][TupleNumber] to load.
-     * @param from the index of the first [Tuple] to load, defaults to `0`.
-     * @param to the index of the first [Tuple] **not** to load, defaults to `featureTuples.size`.
-     * @return a list with all loaded tuple; an empty list or _null_ if no tuple was loaded.
-     * @since 3.0
-     */
-    fun load(tupleNumbers: TupleNumberBinaryArray, from:Int = 0, to:Int = tupleNumbers.size): List<Tuple>?
+    operator fun get(tupleNumber: TupleNumber): Tuple?
 
     /**
      * Ask the cache to load [tuples][Tuple], if available _(the storage will only load what it has)_.
@@ -77,7 +53,7 @@ interface ITupleCache {
      * @return the number of tuples that have been loaded.
      * @since 3.0
      */
-    fun loadFeatureTuple(featureTuples: List<FeatureTuple?>, from:Int = 0, to:Int = featureTuples.size): Int
+    fun load(featureTuples: List<FeatureTuple?>, from:Int = 0, to:Int = featureTuples.size): Int
 
     /**
      * Store a single [Tuple] in this tuple-storage. The storage eventually can decide if it really likes to store the provided tuples.

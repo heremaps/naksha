@@ -33,7 +33,7 @@ internal const val PG_HST = "${PG_S}hst"
 internal const val PG_META = "${PG_S}meta"
 
 /**
- * `$i_`: The prefix used for indices, followed by the index identifier, e.g. `$i_id_txn_uid`
+ * `$i_`: The prefix used for indices, followed by the index identifier, e.g. `$i_id`
  */
 internal const val PG_IDX = "${PG_S}i_"
 

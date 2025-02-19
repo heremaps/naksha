@@ -20,11 +20,7 @@ actual class TupleHeapCache : ITupleCache {
         TODO("Not yet implemented")
     }
 
-    override fun load(tupleNumbers: TupleNumberBinaryArray, from: Int, to: Int): List<Tuple>? {
-        TODO("Not yet implemented")
-    }
-
-    override fun loadFeatureTuple(featureTuples: List<FeatureTuple?>, from: Int, to: Int): Int {
+    override fun load(featureTuples: List<FeatureTuple?>, from: Int, to: Int): Int {
         TODO("Not yet implemented")
     }
 

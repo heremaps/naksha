@@ -26,22 +26,10 @@ actual class TupleHeapCache : ITupleCache {
     override fun get(tupleNumber: TupleNumber): Tuple?
         = tuplesByStorage[tupleNumber.storageNumber]?.get(tupleNumber)?.deref()
 
-    override fun load(tupleNumbers: TupleNumberBinaryArray, from: Int, to: Int): List<Tuple>? {
-        val result = mutableListOf<Tuple>()
-        var i = from
-        while (i < to) {
-            val tupleNumber = tupleNumbers[i++] ?: continue
-            val cached = get(tupleNumber)?: continue
-            result.add(cached)
-        }
-        return result
-    }
-
-    override fun loadFeatureTuple(featureTuples: List<FeatureTuple?>, from: Int, to: Int): Int {
+    override fun load(featureTuples: List<FeatureTuple?>, from: Int, to: Int): Int {
         var loaded = 0
-        var i = from
-        while (i < to) {
-            val featureTuple = featureTuples[i++] ?: continue
+        for (i in from ..< to) {
+            val featureTuple = featureTuples[i] ?: continue
             val tupleNumber = featureTuple.tupleNumber
             val tuple = featureTuple.tuple
             if (tuple != null) continue
@@ -86,13 +74,13 @@ actual class TupleHeapCache : ITupleCache {
     }
 
     actual companion object TupleHeapCache_C {
+        private val theInstance = TupleHeapCache()
+
         /**
          * Returns the head-cache implementation.
          * @return the head-cache implementation.
          * @since 3.0
          */
-        actual fun getInstance(): TupleHeapCache {
-            TODO("Not yet implemented")
-        }
+        actual fun getInstance(): TupleHeapCache = theInstance
     }
 }

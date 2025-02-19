@@ -179,20 +179,20 @@ open class PgTable(
             }
             val pofValue = partitionOfValue
             when (parent.partitionByColumn) {
-                PgColumn.id, PgColumn.tn -> {
+                PgColumn.tn -> {
                     require(pofValue >= 0 && pofValue < parent.partitionCount) {
                         """The table '$name' is a partition of '${parent.name}', but does not declare a valid 'partitionOfValue' (0 to ${parent.partitionCount}): $pofValue"""
                     }
                 }
 
-                PgColumn.txn_next, PgColumn.txn -> {
-                    require(pofValue in 2000..3000) {
+                PgColumn.txn_next -> {
+                    require(pofValue in 2000..6000) {
                         """The table '$name' is a partition of '${parent.name}', but does not declare a valid 'partitionOfValue' (expect a year): $pofValue"""
                     }
                 }
 
                 else -> throw IllegalArgumentException(
-                    """The table '$name' is partitioned by invalid column: ${parent.partitionByColumn} (must be ${PgColumn.id.name}, ${PgColumn.txn.name} or ${PgColumn.txn_next.name})"""
+                    """The table '$name' is partitioned by invalid column: ${parent.partitionByColumn} (must be ${PgColumn.tn.name} or ${PgColumn.txn_next.name})"""
                 )
             }
         }
@@ -222,7 +222,7 @@ open class PgTable(
         // SELECT * FROM table WHERE rowid = ANY($1::bytea[]);
         // aka: SELECT * FROM table WHERE rowid = ANY(array[(int8send($txn)||int4send($uid)||int4send($flags)), ...]::bytea[]);
         // SELECT array_agg(rowid) AS rowid_arr FROM table WHERE ...;
-        val TABLE_BODY = "(${PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }}) "
+        val TABLE_BODY = PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }
         // See: https://www.ongres.com/blog/toast_and_its_influences_-on_parallelism_in_postgres/
         // parallel_workers: A storage parameter for tables, that allows change the behavior of number of workers to
         // execute a query activity in parallel, similar to max_parallel_workers_per_gather, but only for a specific table;
@@ -234,25 +234,21 @@ open class PgTable(
         val PARTITION_BY = when (partitionByColumn) {
             // Not partitioned by itself.
             null -> ""
-            // When we partition by ID, we do this using the first byte of the md5 hash of the feature id.
-            PgColumn.id -> {
-                require(partitionCount in 2..256) { "Invalid partition-count, expect 2 .. 256, found : $partitionCount" }
-                "PARTITION BY RANGE ((get_byte(digest(${PgColumn.id},'md5'),0) % $partitionCount))"
-            }
             // The tuple_number contains the partition-number in the top 8-bit (due to big-endian encoding).
             PgColumn.tn -> {
                 require(partitionCount in 2..256) { "Invalid partition-count, expect 2 .. 256, found : $partitionCount" }
-                "PARTITION BY RANGE ((get_byte(${PgColumn.tn}, 7) % $partitionCount))"
+                "PARTITION BY RANGE (naksha_partition_index(${PgColumn.tn}, $partitionCount))"
             }
             // This is used in transaction table and history table, partition by year.
-            PgColumn.txn, PgColumn.txn_next -> "PARTITION BY RANGE ((${partitionByColumn.name} >> 41))"
+            PgColumn.txn_next -> "PARTITION BY RANGE ((${partitionByColumn.name} >> 41))"
             else -> throw IllegalArgumentException("Unsupported partitionByColumn: '$partitionByColumn'")
         }
         if (partitionOfTable != null) {
             val PARTITION_OF = """ PARTITION OF ${partitionOfTable.quotedName} FOR VALUES FROM (${partitionOfValue}) TO (${partitionOfValue + 1}) """
             CREATE_SQL = """$CREATE_TABLE ${collection.map.quotedId}.$quotedName ${PARTITION_OF}${PARTITION_BY}${WITH}${TABLESPACE}"""
         } else {
-            CREATE_SQL = "$CREATE_TABLE ${collection.map.quotedId}.$quotedName ${TABLE_BODY}${PARTITION_BY}${WITH}${TABLESPACE}"
+            val PKEY = if (PARTITION_BY.isEmpty()) ",\nCONSTRAINT ${quoteIdent(name,"_pkey")} PRIMARY KEY (tn)" else ""
+            CREATE_SQL = "$CREATE_TABLE ${collection.map.quotedId}.$quotedName (${TABLE_BODY}$PKEY)\n${PARTITION_BY}\n${WITH}${TABLESPACE}"
         }
     }
 
@@ -266,13 +262,13 @@ open class PgTable(
      * If this table is partitioned by year.
      */
     @JvmField
-    val hasYearPartitions: Boolean = partitionByColumn == PgColumn.txn || partitionByColumn == PgColumn.txn_next
+    val hasYearPartitions: Boolean = partitionByColumn == PgColumn.txn_next
 
     /**
      * If this table is performance partitioned, so features are stored based upon their ID.
      */
     @JvmField
-    val hasIdPartitions: Boolean = ((partitionByColumn == PgColumn.id) || (partitionByColumn == PgColumn.tn)) && partitionCount >= 2
+    val hasTnPartitions: Boolean = (partitionByColumn == PgColumn.tn) && partitionCount >= 2
 
     /**
      * Create the table and its partitions.

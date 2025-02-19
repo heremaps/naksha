@@ -182,25 +182,6 @@ open class MetaColumn() : AnyObject() {
         fun hash(): MetaColumn = MetaColumn(HASH)
 
         /**
-         * The name of the virtual columns that stores the [change-count][naksha.model.Metadata.changeCount].
-         *
-         * This value is exposed through [naksha.model.XyzNs.changeCount].
-         *
-         * Supported [query operations][AnyOp] are:
-         * - [DoubleOp]
-         * - [AnyOp.IS_ANY_OF]
-         */
-        const val CHANGE_COUNT = "changeCount"
-
-        /**
-         * Returns a new meta-column for [CHANGE_COUNT].
-         * @return a new meta-column.
-         */
-        @JvmStatic
-        @JsStatic
-        fun changeCount(): MetaColumn = MetaColumn(CHANGE_COUNT)
-
-        /**
          * The name of the virtual columns that stores the [next version][naksha.model.Metadata.nextVersion].
          *
          * Supported [query operations][AnyOp] are:

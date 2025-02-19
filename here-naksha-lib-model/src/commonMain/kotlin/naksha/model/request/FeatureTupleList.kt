@@ -10,6 +10,7 @@ import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
+import kotlin.math.min
 
 /**
  * A list of [result tuples][FeatureTuple].
@@ -118,14 +119,16 @@ open class FeatureTupleList : ListProxy<FeatureTuple>(FeatureTuple::class) {
     }
 
     /**
-     * Convert this [feature-tuple list][FeatureTupleList] into a pure list of [Tuple].
+     * Convert this [feature-tuple list][FeatureTupleList] into a pure list of [Tuple], removing `null` values.
      * @param from the index of the first value to convert, defaults to `0`.
      * @param to the index of the fist value **not** to convert, defaults to [size].
      * @return the list of [Tuple].
      * @since 3.0
      */
     @JvmOverloads
-    fun toTupleList(from:Int=0, to:Int=size): List<Tuple> {
+    fun toTupleList(from:Int = 0, to:Int = size): List<Tuple> {
+        val end = min(size, to)
+        if (from < 0 || from >= end) return emptyList()
         val list = mutableListOf<Tuple>()
         for (i in from until to) {
             val ft = this[i]

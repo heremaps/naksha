@@ -121,21 +121,21 @@ class InstantWriteExecutor(
         val otherColumns = PgColumn.allColumns
             .asSequence()
             .filterNot { it == PgColumn.txn_next }
-            .filterNot { it == PgColumn.txn }
-            .filterNot { it == PgColumn.uid }
+            .filterNot { it == PgColumn.tn }
+            .filterNot { it == PgColumn.tn }
             .filterNot { it == PgColumn.flags }
             .joinToString(separator = ",")
         session.useConnection().execute(
             sql = """
                 INSERT INTO $dstTableName(
                 ${PgColumn.txn_next.name},
-                ${PgColumn.txn.name},
-                ${PgColumn.uid.name},
+                ${PgColumn.tn.name},
+                ${PgColumn.tn.name},
                 ${PgColumn.flags.name},
                 $otherColumns)
                 SELECT $1,
-                COALESCE($2, ${PgColumn.txn}),
-                COALESCE($3, ${PgColumn.uid}),
+                COALESCE($2, ${PgColumn.tn}),
+                COALESCE($3, ${PgColumn.tn}),
                 COALESCE($4, ${PgColumn.flags}),
                 $otherColumns FROM $headTableName
                 WHERE ${PgColumn.id.ident} = $5
