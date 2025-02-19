@@ -6,6 +6,7 @@ import naksha.base.NullableProperty
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
+import naksha.model.Naksha
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -73,17 +74,38 @@ open class NakshaMap() : NakshaFeature() {
         return this
     }
 
-    /**
-     * The map-number, _null_ if the map does not yet exist.
-     * @since 3.0.0
-     */
-    var number by INT_NULL
+    private var _cachedId: String? = null
+    private var _cachedNumber: Int? = null
 
     /**
-     * @see number
+     * The map-number, when internally _null_, then the number is generated as hash above the `id`.
+     *
+     * **{Create-Only}** - after map creation, modification of this parameter takes no effect.
+     * @since 3.0
      */
-    open fun withNumber(value: Int): NakshaMap {
-        number = value
+    var number: Int
+        get() {
+            val n = getRaw("number")
+            if (n is Int) return n
+            val id = this.id
+            val cachedId = _cachedId
+            val cachedNumber = _cachedNumber
+            if (id === cachedId && cachedNumber != null) return cachedNumber
+            val md5 = Naksha.hashId(id)
+            val number = Naksha.collectionNumber(md5)
+            _cachedId = id
+            _cachedNumber = number
+            return number
+        }
+        set(value) {
+            withNumber(value)
+        }
+
+    /**
+     * @see [number]
+     */
+    open fun withNumber(value: Int?): NakshaMap {
+        if (value == null) removeRaw("number") else setRaw("number", value)
         return this
     }
 }
