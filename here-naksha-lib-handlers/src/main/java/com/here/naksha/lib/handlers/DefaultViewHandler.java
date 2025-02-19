@@ -24,7 +24,7 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.handlers.DefaultViewHandlerProperties.ViewType;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
@@ -58,12 +58,12 @@ public class DefaultViewHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(DefaultViewHandler.class);
 
-  private final @NotNull EventHandler eventHandler;
+  private final @NotNull EventHandlerConfig eventHandler;
   private final @NotNull EventTarget<?> eventTarget;
   private final @NotNull DefaultViewHandlerProperties properties;
 
   public DefaultViewHandler(
-      final @NotNull EventHandler eventHandler,
+      final @NotNull EventHandlerConfig eventHandler,
       final @NotNull INaksha hub,
       final @NotNull EventTarget<?> eventTarget) {
     super(hub);

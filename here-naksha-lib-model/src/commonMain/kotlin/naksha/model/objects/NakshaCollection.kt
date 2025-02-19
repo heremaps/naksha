@@ -27,8 +27,8 @@ open class NakshaCollection() : NakshaFeature() {
      * @param id the collection-identifier.
      * @param mapId the map-identifier in which to create the collection; defaults to [NakshaContext.mapId]
      * @param partitions the partitions to create; defaults to `1`
-     * @param storage_class the [storage-class][storageClass] to create; defaults to `null`
-     * @param store_deleted if [deleted states should be stored][storeDeleted]
+     * @param storageClass the [storage-class][storageClass] to create; defaults to `null`
+     * @param storeDeleted if [deleted states should be stored][storeDeleted]
      */
     @JsName("of")
     @JvmOverloads
@@ -36,16 +36,16 @@ open class NakshaCollection() : NakshaFeature() {
         id: String,
         mapId: String = NakshaContext.mapId(),
         partitions: Int = 1,
-        storage_class: String? = null,
-        store_deleted: StoreMode = StoreMode.ON,
+        storageClass: String? = null,
+        storeDeleted: StoreMode = StoreMode.ON,
         storeHistory: StoreMode = StoreMode.ON,
         storeMeta: StoreMode = StoreMode.ON,
     ) : this() {
         this.id = id
         this.mapId = mapId
-        this.storageClass = storage_class
+        this.storageClass = storageClass
         this.partitions = partitions
-        this.storeDeleted = store_deleted
+        this.storeDeleted = storeDeleted
         this.storeHistory = storeHistory
         this.storeMeta = storeMeta
     }

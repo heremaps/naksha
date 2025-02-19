@@ -40,7 +40,7 @@ public abstract class EventTarget<SELF extends EventTarget<SELF>> extends Naksha
     return self();
   }
 
-  public @NotNull SELF addHandler(@NotNull EventHandler handler) {
+  public @NotNull SELF addHandler(@NotNull EventHandlerConfig handler) {
     getEventHandlerIds().add(handler.getId());
     return self();
   }

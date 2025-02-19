@@ -19,8 +19,8 @@
 package com.here.naksha.lib.handlers;
 
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
-import com.here.naksha.lib.core.models.naksha.Storage;
 import naksha.base.JvmBoxingUtil;
+import naksha.model.IStorage;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaProperties;
@@ -50,7 +50,7 @@ public class DefaultStorageHandlerProperties extends NakshaProperties {
   public static final String AUTO_DELETE_COLLECTION = "autoDeleteCollection";
 
   /**
-   * To associate EventHandler with specific {@link Storage} that it should operate against.
+   * To associate EventHandler with specific {@link IStorage} that it should operate against.
    */
   public @Nullable String getStorageId() {
     return (String) getRaw(STORAGE_ID);

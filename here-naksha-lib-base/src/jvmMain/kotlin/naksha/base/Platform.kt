@@ -389,7 +389,7 @@ actual class Platform {
         actual fun hashCodeOf(o: Any?): Int = throw UnsupportedOperationException()
 
         @JvmStatic
-        actual fun <T : Any> newInstanceOf(klass: KClass<out T>): T = klass.primaryConstructor?.call() ?: throw IllegalArgumentException()
+        actual fun <T : Any> newInstanceOf(klass: KClass<out T>): T = resolveConstructorFor(klass).call()
 
         @JvmStatic
         @Suppress("UNCHECKED_CAST")

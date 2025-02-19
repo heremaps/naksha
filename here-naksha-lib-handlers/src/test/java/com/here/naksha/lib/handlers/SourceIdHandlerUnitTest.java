@@ -2,7 +2,7 @@ package com.here.naksha.lib.handlers;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import naksha.base.Platform;
 import naksha.base.ToJsonOptions;
@@ -161,7 +161,7 @@ class SourceIdHandlerUnitTest {
         when(event.sendUpstream(any())).thenReturn(new SuccessResponse());
 
         // Given: Handler initialization
-        final EventHandler e = new EventHandler();
+        final EventHandlerConfig e = new EventHandlerConfig();
         e.setClassName(SourceIdHandler.class.getName());
         e.setId("some_id");
         final SourceIdHandler sourceIdHandler = new SourceIdHandler(naksha);

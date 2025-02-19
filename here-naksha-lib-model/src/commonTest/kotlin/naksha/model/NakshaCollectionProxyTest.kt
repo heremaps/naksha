@@ -14,7 +14,7 @@ class NakshaCollectionProxyTest {
         val collection = NakshaCollection(
             id = "ID",
             partitions = 3,
-            store_deleted = StoreMode.SUSPEND,
+            storeDeleted = StoreMode.SUSPEND,
             storeHistory = StoreMode.OFF
         )
         collection.maxAge = Int64(42)

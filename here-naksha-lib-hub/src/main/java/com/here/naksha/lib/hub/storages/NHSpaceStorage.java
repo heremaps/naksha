@@ -25,10 +25,10 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.handlers.AuthorizationEventHandler;
 import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.handlers.internal.IntHandlerForConfigs;
-import com.here.naksha.lib.handlers.internal.IntHandlerForEventHandlers;
+import com.here.naksha.lib.handlers.internal.IntHandlerForEventHandlerConfigs;
 import com.here.naksha.lib.handlers.internal.IntHandlerForExtensions;
 import com.here.naksha.lib.handlers.internal.IntHandlerForSpaces;
-import com.here.naksha.lib.handlers.internal.IntHandlerForStorages;
+import com.here.naksha.lib.handlers.internal.IntHandlerForStorageConfigs;
 import com.here.naksha.lib.handlers.internal.IntHandlerForSubscriptions;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.HashMap;
@@ -79,8 +79,8 @@ public class NHSpaceStorage implements IStorage {
             case NakshaAdminCollection.SUBSCRIPTIONS -> List.of(
                 authHandler, new IntHandlerForSubscriptions(hub));
             case NakshaAdminCollection.EVENT_HANDLERS -> List.of(
-                authHandler, new IntHandlerForEventHandlers(hub));
-            case NakshaAdminCollection.STORAGES -> List.of(authHandler, new IntHandlerForStorages(hub));
+                authHandler, new IntHandlerForEventHandlerConfigs(hub));
+            case NakshaAdminCollection.STORAGES -> List.of(authHandler, new IntHandlerForStorageConfigs(hub));
             case NakshaAdminCollection.EXTENSIONS -> List.of(authHandler, new IntHandlerForExtensions(hub));
             default -> throw unchecked(new Exception("Unsupported virtual space " + spaceId));
           });

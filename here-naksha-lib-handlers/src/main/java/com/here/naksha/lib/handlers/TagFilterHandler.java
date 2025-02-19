@@ -25,7 +25,7 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import java.util.List;
 import java.util.Objects;
@@ -47,7 +47,7 @@ public class TagFilterHandler extends AbstractEventHandler {
 
   private final @NotNull TagFilterHandlerProperties properties;
 
-  public TagFilterHandler(final @NotNull EventHandler eventHandler, final @NotNull INaksha hub) {
+  public TagFilterHandler(final @NotNull EventHandlerConfig eventHandler, final @NotNull INaksha hub) {
     super(hub);
     this.properties = Objects.requireNonNull(
         JvmBoxingUtil.box(eventHandler.getProperties(), TagFilterHandlerProperties.class));

@@ -16,7 +16,7 @@ import static org.mockito.Mockito.when;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerTest.CollectionPriorityTestCase.ValidCollectionSource;
@@ -397,7 +397,7 @@ class DefaultStorageHandlerTest {
   }
 
   private DefaultStorageHandler storageHandler(DefaultStorageHandlerProperties properties, Space space) {
-    EventHandler config = new EventHandler();
+    EventHandlerConfig config = new EventHandlerConfig();
     config.setClassName(DefaultStorageHandler.class.getName());
     config.setId("test_handler");
     config.setProperties(properties);

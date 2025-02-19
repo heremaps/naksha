@@ -3,13 +3,13 @@ package com.here.naksha.lib.handlers.internal;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaAdminCollection;
-import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.storage.http.HttpStorage;
 import com.here.naksha.storage.http.HttpStorageProperties;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
+import naksha.model.StorageConfig;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,12 +36,12 @@ class IntHandlerForStoragesTest {
   @Mock
   INaksha naksha;
 
-  IntHandlerForStorages handler;
+  IntHandlerForStorageConfigs handler;
 
   @BeforeEach
   void setup() {
     MockitoAnnotations.openMocks(this);
-    handler = new IntHandlerForStorages(naksha);
+    handler = new IntHandlerForStorageConfigs(naksha);
   }
 
   @Test
@@ -53,10 +53,10 @@ class IntHandlerForStoragesTest {
     NakshaProperties notHttpStorageProperties = new NakshaProperties();
 
     // And:
-    Storage httpStorage = httpStorage(notHttpStorageProperties);
+    StorageConfig httpStorageConfig = httpStorageConfig(notHttpStorageProperties);
 
     // And:
-    WriteRequest writeStorageRequest = createFeatureRequest(NakshaAdminCollection.STORAGES, httpStorage);
+    WriteRequest writeStorageRequest = createFeatureRequest(NakshaAdminCollection.STORAGES, httpStorageConfig);
 
     // When:
     Response result = handler.process(eventWith(writeStorageRequest));
@@ -73,10 +73,10 @@ class IntHandlerForStoragesTest {
     adminStorageAlwaysSucceeds();
 
     // And:
-    Storage httpStorage = httpStorage(httpStorageProperties);
+    StorageConfig httpStorageConfig = httpStorageConfig(httpStorageProperties);
 
     // And:
-    WriteRequest writeStorageRequest = createFeatureRequest(NakshaAdminCollection.STORAGES, httpStorage);
+    WriteRequest writeStorageRequest = createFeatureRequest(NakshaAdminCollection.STORAGES, httpStorageConfig);
 
     // When:
     Response result = handler.process(eventWith(writeStorageRequest));
@@ -112,14 +112,14 @@ class IntHandlerForStoragesTest {
     );
   }
 
-  private Storage httpStorage(NakshaProperties xyzProperties) {
-    Storage httpStorage = new Storage();
-    httpStorage.setClassName(HttpStorage.class.getName());
-    httpStorage.setId("test-http-storage");
-    httpStorage.setTitle("some title");
-    httpStorage.setDescription("some desc");
-    httpStorage.setProperties(xyzProperties);
-    return httpStorage;
+  private StorageConfig httpStorageConfig(NakshaProperties properties) {
+    StorageConfig httpStorageConfig = new StorageConfig();
+    httpStorageConfig.setClassName(HttpStorage.class.getName());
+    httpStorageConfig.setId("test-http-storage");
+    httpStorageConfig.setTitle("some title");
+    httpStorageConfig.setDescription("some desc");
+    httpStorageConfig.setProperties(properties);
+    return httpStorageConfig;
   }
 
   private IEvent eventWith(Request request) {

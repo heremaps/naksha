@@ -21,7 +21,7 @@ package com.here.naksha.app.service.http.auth;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.auth.ActionMatrix;
 import com.here.naksha.lib.core.models.auth.AttributeMap;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.util.List;
 import naksha.base.JvmBoxingUtil;
@@ -173,7 +173,7 @@ public class XyzHubActionMatrix extends ActionMatrix {
    *
    * @param eventHandler the connector being the target of the action.
    */
-  public void readConnector(@NotNull EventHandler eventHandler) {
+  public void readConnector(@NotNull EventHandlerConfig eventHandler) {
     addAction(MANAGE_CONNECTORS, XyzHubAttributeMap.ofConnector(eventHandler));
   }
 
@@ -182,7 +182,7 @@ public class XyzHubActionMatrix extends ActionMatrix {
    *
    * @param eventHandler the connector being the target of the action.
    */
-  public void createConnector(@NotNull EventHandler eventHandler) {
+  public void createConnector(@NotNull EventHandlerConfig eventHandler) {
     addAction(MANAGE_CONNECTORS, XyzHubAttributeMap.ofConnector(eventHandler));
 
     // MANAGE_PACKAGES right is needed to add the connector to a packages.
@@ -198,7 +198,7 @@ public class XyzHubActionMatrix extends ActionMatrix {
    * @param _old the previous connector state.
    * @param _new the connector being the target of the action.
    */
-  public void updateConnector(@NotNull EventHandler _old, @NotNull EventHandler _new) {
+  public void updateConnector(@NotNull EventHandlerConfig _old, @NotNull EventHandlerConfig _new) {
     addAction(MANAGE_CONNECTORS, XyzHubAttributeMap.ofConnector(_old));
     addAction(MANAGE_CONNECTORS, XyzHubAttributeMap.ofConnector(_new));
 
@@ -218,7 +218,7 @@ public class XyzHubActionMatrix extends ActionMatrix {
    *
    * @param eventHandler the connector being the target of the action.
    */
-  public void deleteConnector(@NotNull EventHandler eventHandler) {
+  public void deleteConnector(@NotNull EventHandlerConfig eventHandler) {
     addAction(MANAGE_CONNECTORS, XyzHubAttributeMap.ofConnector(eventHandler));
   }
 

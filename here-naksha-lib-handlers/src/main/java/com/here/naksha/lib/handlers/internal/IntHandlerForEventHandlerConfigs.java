@@ -24,12 +24,13 @@ import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_I
 import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.ADD_VALUES;
 import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.CONTAINS_VALUES;
 import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.REMOVE_W_PREFIXES;
+import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
+import static com.here.naksha.lib.handlers.internal.IntValidationUtil.basicValidationFor;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
 import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import com.here.naksha.lib.handlers.DefaultViewHandler;
@@ -42,6 +43,7 @@ import java.util.Optional;
 import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
+import naksha.model.StorageConfig;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
@@ -57,46 +59,63 @@ import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHandler> {
+public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<EventHandlerConfig> {
 
-  public IntHandlerForEventHandlers(final @NotNull INaksha hub) {
-    super(hub, EventHandler.class);
+  public IntHandlerForEventHandlerConfigs(final @NotNull INaksha hub) {
+    super(hub, EventHandlerConfig.class);
   }
 
   @Override
-  protected @NotNull Response validateWrite(Write codec) {
-    final EWriteOp operation = EWriteOp.get(codec.getOp());
-    if (operation.equals(EWriteOp.DELETE)) {
-      // For DELETE, only the feature ID is needed, other JSON properties are irrelevant
-      return noActiveSpaceValidation(codec);
-    }
-    // For non-DELETE write request
-    Response basicValidationResult = super.validateWrite(codec);
+  protected @NotNull Response validateDeleteInstruction(Write write) {
+    // For DELETE, only the feature ID is needed, other JSON properties are irrelevant
+    return noActiveSpaceValidation(write);
+  }
+
+  @Override
+  protected @NotNull Response validateNonDeleteInstruction(Write write) {
+    Response basicValidationResult = basicValidationFor(write);
     if (basicValidationResult instanceof ErrorResponse) {
       return basicValidationResult;
     }
-    final EventHandler eventHandler = (EventHandler) codec.getFeature();
-    Response pluginValidationResult = PluginPropertiesValidator.pluginValidation(eventHandler);
-    if (pluginValidationResult instanceof ErrorResponse) {
-      return pluginValidationResult;
+    final EventHandlerConfig eventHandler = JvmBoxingUtil.box(write.getFeature(), EventHandlerConfig.class);
+    if (eventHandler == null) {
+      return new ErrorResponse(
+          NakshaError.ILLEGAL_ARGUMENT,
+          "Event Handler can't be null"
+      );
     }
-    return defaultHandlerValidation(eventHandler);
+    final String className = eventHandler.getClassName();
+    final Response classNameValidation = validateClassName(className);
+    if (classNameValidation instanceof ErrorResponse) {
+      return classNameValidation;
+    }
+    return specificHandlerValidation(eventHandler);
   }
 
-  private Response defaultHandlerValidation(EventHandler eventHandler) {
-    if (handlerClassMatches(DefaultStorageHandler.class, eventHandler)) {
+  private Response validateClassName(String className) {
+    if (className == null || className.isEmpty()) {
+      return new ErrorResponse(
+          NakshaError.ILLEGAL_ARGUMENT,
+          "Storage Config is missing mandatory parameter: '" + StorageConfig.CLASSNAME_FIELD + "'"
+      );
+    }
+    return SUCCESSFUL_VALIDATION;
+  }
+
+  private Response specificHandlerValidation(EventHandlerConfig eventHandler) {
+    final String className = eventHandler.getClassName();
+    if (DefaultStorageHandler.class.getName().equals(className)) {
       return storageValidation(eventHandler, DefaultStorageHandlerProperties.STORAGE_ID);
-    }
-    if (handlerClassMatches(DefaultViewHandler.class, eventHandler)) {
+    } else if (DefaultViewHandler.class.getName().equals(className)) {
       return viewHandlerPropertiesValidation(eventHandler);
-    }
-    if (handlerClassMatches(TagFilterHandler.class, eventHandler)) {
+    } else if (TagFilterHandler.class.getName().equals(className)) {
       return tagFilterHandlerPropertiesValidation(eventHandler);
+    } else {
+      return SUCCESSFUL_VALIDATION;
     }
-    return new SuccessResponse();
   }
 
-  private @NotNull Response viewHandlerPropertiesValidation(EventHandler eventHandler) {
+  private @NotNull Response viewHandlerPropertiesValidation(EventHandlerConfig eventHandler) {
     Response storageValidation = storageValidation(eventHandler, DefaultViewHandlerProperties.STORAGE_ID);
 
     if (!(storageValidation instanceof SuccessResponse)) {
@@ -125,7 +144,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     return spaceExistenceValidation(spaceIds);
   }
 
-  private @NotNull Response tagFilterHandlerPropertiesValidation(EventHandler eventHandler) {
+  private @NotNull Response tagFilterHandlerPropertiesValidation(EventHandlerConfig eventHandler) {
 
     TagFilterHandlerProperties properties =
         JvmBoxingUtil.box(eventHandler.getProperties(), TagFilterHandlerProperties.class);
@@ -181,7 +200,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
               "Mandatory parameter %s contains space which is not created!"
                   .formatted(DefaultViewHandlerProperties.SPACE_IDS));
         }
-        return new SuccessResponse();
+        return SUCCESSFUL_VALIDATION;
       } else {
         return new ErrorResponse(
             NakshaError.EXCEPTION,
@@ -191,12 +210,8 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
     });
   }
 
-  private boolean handlerClassMatches(@NotNull Class<?> requestedClass, @NotNull EventHandler eventHandler) {
-    return requestedClass.getName().equals(eventHandler.getClassName());
-  }
-
   private @NotNull Response storageValidation(
-      @NotNull EventHandler eventHandler, @NotNull String storagePropertyName) {
+      @NotNull EventHandlerConfig eventHandler, @NotNull String storagePropertyName) {
     Object storageIdProp = eventHandler.getProperties().get(storagePropertyName);
     if (storageIdProp == null) {
       return new ErrorResponse(
@@ -224,7 +239,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
       Response result = readSession.execute(findStorageById);
       List<String> fetchedIds = ResultHelper.readIdsFromResult(result);
       if (fetchedIds.size() == 1 && storageId.equals(fetchedIds.get(0))) {
-        return new SuccessResponse();
+        return SUCCESSFUL_VALIDATION;
       } else {
         return new ErrorResponse(NakshaError.NOT_FOUND, "Could not find storage with id: " + storageId);
       }
@@ -255,7 +270,7 @@ public class IntHandlerForEventHandlers extends AdminFeatureEventHandler<EventHa
         spaces = ResultHelper.extractResponseItems((SuccessResponse) readResult, Space.class);
       } catch (NoSuchElementException emptyException) {
         // No active space using the handler, proceed with deleting the handler
-        return new SuccessResponse();
+        return SUCCESSFUL_VALIDATION;
       }
       final List<String> spaceIds =
           spaces.stream().map(NakshaFeature::getId).toList();

@@ -19,16 +19,13 @@
 package com.here.naksha.lib.hub.mock;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.models.PluginCache.getStorageConstructor;
 import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaAdminCollection;
-import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.ExtensionConfig;
-import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import java.util.Map;
 import java.util.TreeMap;
@@ -136,16 +133,6 @@ public class NakshaHubMock implements INaksha {
         throw unchecked(new Exception("Unknown response: " + response));
       }
     });
-  }
-
-  private IStorage psqlStorage(@NotNull Storage storage) {
-    Fe1<IStorage, Storage> constructor =
-        getStorageConstructor("com.here.naksha.lib.psql.PsqlStorage", Storage.class);
-    try {
-      return constructor.call(storage);
-    } catch (Exception e) {
-      throw unchecked(e);
-    }
   }
 
   /**

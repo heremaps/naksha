@@ -28,7 +28,7 @@ import static naksha.model.util.ResultHelper.extractResponseItems;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import java.util.*;
@@ -58,7 +58,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
 
   // TODO: remove unused 'eventTarget' property as part of MCPODS-7103
   public ActivityLogHandler(
-      @NotNull EventHandler handlerConfig, @NotNull INaksha hub) {
+      @NotNull EventHandlerConfig handlerConfig, @NotNull INaksha hub) {
     super(hub);
     this.properties = Objects.requireNonNull(
         JvmBoxingUtil.box(handlerConfig.getProperties(), ActivityLogHandlerProperties.class));

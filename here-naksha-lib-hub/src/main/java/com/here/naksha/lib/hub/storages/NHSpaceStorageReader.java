@@ -26,7 +26,7 @@ import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaAdminCollection;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.handlers.AuthorizationEventHandler;
 import com.here.naksha.lib.hub.EventPipelineFactory;
@@ -179,7 +179,7 @@ public class NHSpaceStorageReader implements IReadSession {
   protected @NotNull Response setupEventPipelineForSpaceId(
       final @NotNull String spaceId, final @NotNull EventPipeline pipeline) {
     Space space = null;
-    List<EventHandler> eventHandlers = null;
+    List<EventHandlerConfig> eventHandlers = null;
 
     try (final IReadSession reader = nakshaHub.getAdminStorage().newReadSession(sessionOptions)) {
       // Get Space details using Admin Storage
@@ -208,7 +208,7 @@ public class NHSpaceStorageReader implements IReadSession {
         return er;
       } else if (response instanceof SuccessResponse successResponse) {
         try {
-          eventHandlers = ResultHelper.extractResponseItems(successResponse, EventHandler.class);
+          eventHandlers = ResultHelper.extractResponseItems(successResponse, EventHandlerConfig.class);
           if (eventHandlers.size() != space.getEventHandlerIds().size()) {
             return new ErrorResponse(
                 NakshaError.EXCEPTION, "Not all EventHandlers found for space : " + spaceId);
@@ -230,7 +230,7 @@ public class NHSpaceStorageReader implements IReadSession {
 
     // Instantiate IEventHandler (from EventHandler object), using NakshaHub and Space details
     final List<IEventHandler> handlerImpls = new ArrayList<>();
-    for (final EventHandler eventHandler : eventHandlers) {
+    for (final EventHandlerConfig eventHandler : eventHandlers) {
       if (!eventHandler.isActive()) {
         logger.warn("Skipping inactive event handler {}", eventHandler.getId());
         continue;

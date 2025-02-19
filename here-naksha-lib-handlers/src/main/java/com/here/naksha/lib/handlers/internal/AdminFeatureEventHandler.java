@@ -20,7 +20,7 @@ package com.here.naksha.lib.handlers.internal;
 
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.internal.NakshaFeaturePropertiesValidator.nakshaFeatureValidation;
+import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
 import static naksha.model.IStorage.ADMIN_STORAGE_ID;
 
 import com.here.naksha.lib.core.IEvent;
@@ -36,6 +36,7 @@ import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
+import naksha.model.request.WriteOp;
 import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -73,7 +74,7 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
     // process request using Naksha Admin Storage instance
     addStorageIdToStreamInfo(ADMIN_STORAGE_ID, ctx);
     if (request instanceof ReadRequest rr) {
-      return nakshaHub().getAdminStorage().useReadSession(SessionOptions.from(ctx), (reader) -> reader.execute(rr));
+      return nakshaHub().getAdminStorage().useReadSession(SessionOptions.from(ctx), reader -> reader.execute(rr));
     } else if ((request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteFeatures(request))) {
       // validate the request before persisting
       Response valResult = validateWriteRequest(wr);
@@ -81,7 +82,7 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
         return er;
       }
       // persist in storage
-      return nakshaHub().getAdminStorage().useWriteSession(SessionOptions.from(ctx, null, true), writer -> {
+      return nakshaHub().getAdminStorage().useWriteSession(SessionOptions.from(ctx, true), writer -> {
         final Response result = writer.execute(wr);
         if (result instanceof SuccessResponse) {
           writer.commit();
@@ -96,17 +97,6 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
     }
   }
 
-  /**
-   * Direct validation of NakshaFeature to be written.
-   *
-   * @param writeOperation containing the feature to be validated before being written
-   * @return validation result
-   */
-  protected @NotNull Response validateWrite(Write writeOperation) {
-    final FEATURE feature = featureClass.cast(writeOperation.getFeature());
-    return nakshaFeatureValidation(feature);
-  }
-
   private @NotNull Response validateWriteRequest(final @NotNull WriteRequest wr) {
     for (final Write writeOperation : wr.getWrites()) {
       Response featureValidation = validateWrite(writeOperation);
@@ -114,6 +104,18 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
         return featureValidation;
       }
     }
-    return new SuccessResponse();
+    return SUCCESSFUL_VALIDATION;
   }
+
+  private @NotNull Response validateWrite(@NotNull Write write) {
+    if (WriteOp.DELETE.equals(write.getOp())) {
+      return validateDeleteInstruction(write);
+    } else {
+      return validateNonDeleteInstruction(write);
+    }
+  }
+
+  protected abstract @NotNull Response validateDeleteInstruction(Write write);
+
+  protected abstract @NotNull Response validateNonDeleteInstruction(Write write);
 }

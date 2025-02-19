@@ -32,7 +32,7 @@ class Plv8PerfTest : PgTestBase(
         id = "insert_perf_test_c",
         partitions = NUM_OF_PARTITIONS,
         storeHistory = StoreMode.ON,
-        store_deleted = StoreMode.ON
+        storeDeleted = StoreMode.ON
     )
 ) {
     companion object {

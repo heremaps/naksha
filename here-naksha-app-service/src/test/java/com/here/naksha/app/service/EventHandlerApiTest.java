@@ -27,8 +27,8 @@ import static org.junit.jupiter.api.Named.named;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.CommonApiTestSetup;
 import com.here.naksha.app.common.NakshaTestWebClient;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import naksha.model.XyzFeatureCollection;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
@@ -372,7 +372,7 @@ class EventHandlerApiTest extends ApiTest {
     List<NakshaFeature> returnedXyzFeatures =
         parseJson(response.body(), XyzFeatureCollection.class).getFeatures();
     boolean allReturnedFeaturesAreEventHandlers = returnedXyzFeatures.stream()
-        .allMatch(feature -> EventHandler.class.isAssignableFrom(feature.getClass()));
+        .allMatch(feature -> EventHandlerConfig.class.isAssignableFrom(feature.getClass()));
     Assertions.assertTrue(allReturnedFeaturesAreEventHandlers);
     List<String> eventHandlerIds =
         returnedXyzFeatures.stream().map(NakshaFeature::getId).toList();

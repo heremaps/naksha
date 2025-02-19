@@ -18,14 +18,17 @@ import com.here.naksha.lib.core.models.naksha.Space;
 import java.util.List;
 import java.util.stream.Stream;
 import naksha.base.JvmInt64;
+import naksha.base.fn.Fn1;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Metadata;
+import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.Tuple;
 import naksha.model.TupleNumber;
 import naksha.model.Version;
+import naksha.model.objects.NakshaCollection;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.FeatureTuple;
 import naksha.model.request.ReadFeatures;
@@ -54,12 +57,13 @@ class IntHandlerForSpacesTest {
   void setup() {
     MockitoAnnotations.openMocks(this);
     handler = new IntHandlerForSpaces(naksha);
+    NakshaContext.currentContext().setAppId("testAppId");
   }
 
   @Test
   void shouldAlwaysAllowDeletion() {
     // Given:
-    final Request writeRequest = new WriteRequest().add(new Write().deleteFeatureById(SPACES, "to_delete", null));
+    final Request writeRequest = new WriteRequest().add(new Write().deleteFeatureById(new NakshaCollection(SPACES), "to_delete"));
     IEvent event = eventWith(writeRequest);
 
     // And:
@@ -167,6 +171,7 @@ class IntHandlerForSpacesTest {
     when(naksha.getAdminStorage()).thenReturn(admin);
     IWriteSession writeSession = mock(IWriteSession.class);
     when(writeSession.execute(any(WriteRequest.class))).thenReturn(new SuccessResponse());
+    when(admin.useWriteSession(any(SessionOptions.class), any(Fn1.class))).thenCallRealMethod();
     when(admin.newWriteSession(any(SessionOptions.class))).thenReturn(writeSession);
   }
 
@@ -177,6 +182,7 @@ class IntHandlerForSpacesTest {
     SuccessResponse successResponse = new TestSuccessResponse(spaceStorage, eventHandlerIds);
     when(readSession.execute(argThat(anyReadHandlersRequest()))).thenReturn(successResponse);
     when(spaceStorage.newReadSession(any(SessionOptions.class))).thenReturn(readSession);
+    when(spaceStorage.useReadSession(any(SessionOptions.class), any(Fn1.class))).thenCallRealMethod();
   }
 
   private ArgumentMatcher<ReadFeatures> anyReadHandlersRequest() {
@@ -199,7 +205,7 @@ class IntHandlerForSpacesTest {
     }
 
     private static TupleNumber testTupleNumber() {
-      return new TupleNumber(new JvmInt64(0L), 0, 0, 0, new Version(0L), 0);
+      return new TupleNumber(new JvmInt64(0L), 0, 0, new JvmInt64(0), new Version(0L), 0);
     }
 
     private static Tuple testTuple(TupleNumber tupleNumber, String id) {

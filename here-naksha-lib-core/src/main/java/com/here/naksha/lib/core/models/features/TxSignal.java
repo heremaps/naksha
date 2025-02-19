@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
-import com.here.naksha.lib.core.models.naksha.Storage;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
@@ -32,16 +31,16 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A transaction persists out of multiple signals. Each signal represents something that has happened in a {@link Storage storage}.
+ * A transaction persists out of multiple signals. Each signal represents something that has happened in a storage.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @SuppressWarnings("unused")
 @AvailableSince(NakshaVersion.v2_0_0)
 @JsonTypeName(value = "TxSignal")
 @JsonSubTypes({
-  @JsonSubTypes.Type(value = TxMessage.class),
-  @JsonSubTypes.Type(value = TxModifyFeatures.class),
-  @JsonSubTypes.Type(value = TxModifyCollection.class)
+    @JsonSubTypes.Type(value = TxMessage.class),
+    @JsonSubTypes.Type(value = TxModifyFeatures.class),
+    @JsonSubTypes.Type(value = TxModifyCollection.class)
 })
 public class TxSignal extends NakshaFeature {
 
@@ -65,10 +64,10 @@ public class TxSignal extends NakshaFeature {
   /**
    * Create a new transaction signal.
    *
-   * @param id the local identifier of the event.
-   * @param storageId the storage identifier.
+   * @param id         the local identifier of the event.
+   * @param storageId  the storage identifier.
    * @param collection the collection impacted.
-   * @param txn the transaction number.
+   * @param txn        the transaction number.
    */
   @AvailableSince(NakshaVersion.v2_0_0)
   @JsonCreator
@@ -84,18 +83,22 @@ public class TxSignal extends NakshaFeature {
   }
 
   /**
-   * The unique transaction number, as stored within the XYZ namespace {@link XyzNamespace#getTxn()
-   * txn}. All items of a transaction have the same transaction number.
+   * The unique transaction number, as stored within the XYZ namespace {@link XyzNamespace#getTxn() txn}. All items of a transaction have
+   * the same transaction number.
    */
   @AvailableSince(NakshaVersion.v2_0_0)
   @JsonProperty(XyzNamespace.TXN)
   public @NotNull String txn;
 
-  /** The collection that this transaction item is related to. */
+  /**
+   * The collection that this transaction item is related to.
+   */
   @JsonProperty(COLLECTION)
   public @NotNull String collection;
 
-  /** The storage-id to which the transaction belongs. */
+  /**
+   * The storage-id to which the transaction belongs.
+   */
   @JsonProperty(STORAGE_ID)
   public @NotNull String storageId;
 
@@ -105,26 +108,28 @@ public class TxSignal extends NakshaFeature {
   @JsonProperty(TS)
   public long ts;
 
-  /** The application that caused the event. */
+  /**
+   * The application that caused the event.
+   */
   @JsonProperty(XyzNamespace.APP_ID)
   public @Nullable String appId;
 
-  /** The author that caused the event. */
+  /**
+   * The author that caused the event.
+   */
   @JsonProperty(XyzNamespace.AUTHOR)
   public @Nullable String author;
 
   /**
-   * The unique sequential publishing identifier of the transaction, set as soon as the transaction
-   * becomes visible. This is a sequential number without holes, with the lowest valid number being
-   * 1. It is set by the maintenance thread. All items of a transaction will have the same publish
-   * identifier.
+   * The unique sequential publishing identifier of the transaction, set as soon as the transaction becomes visible. This is a sequential
+   * number without holes, with the lowest valid number being 1. It is set by the maintenance thread. All items of a transaction will have
+   * the same publish identifier.
    */
   @JsonProperty(PUBLISH_ID)
   public @Nullable Long publishId;
 
   /**
-   * The epoch timestamp in milliseconds of when the transaction became publicly visible, set by the
-   * maintenance client.
+   * The epoch timestamp in milliseconds of when the transaction became publicly visible, set by the maintenance client.
    */
   @JsonProperty(PUBLISH_TS)
   public @Nullable Long publishTs;

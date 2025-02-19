@@ -28,7 +28,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.IEventHandler;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.payload.events.admin.ModifySubscriptionEvent;
 import com.here.naksha.lib.core.models.payload.events.feature.DeleteFeaturesByTagEvent;
@@ -176,7 +176,7 @@ public class Event extends Payload {
    *
    * @return the connector attached; if any.
    */
-  public @Nullable EventHandler getConnector() {
+  public @Nullable EventHandlerConfig getConnector() {
     return eventHandler;
   }
 
@@ -185,7 +185,7 @@ public class Event extends Payload {
    *
    * @param eventHandler the connector.
    */
-  public void setConnector(@Nullable EventHandler eventHandler) {
+  public void setConnector(@Nullable EventHandlerConfig eventHandler) {
     this.eventHandler = eventHandler;
   }
 
@@ -195,7 +195,7 @@ public class Event extends Payload {
    */
   @JsonView({ViewMember.Export.Internal.class, ViewMember.Import.Internal.class})
   @JsonProperty
-  private @Nullable EventHandler eventHandler;
+  private @Nullable EventHandlerConfig eventHandler;
 
   /**
    * The collection; if any.

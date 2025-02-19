@@ -23,7 +23,7 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteFeatures;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
@@ -42,12 +42,12 @@ import org.slf4j.LoggerFactory;
 public class EchoHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(EchoHandler.class);
-  protected @NotNull EventHandler eventHandler;
+  protected @NotNull EventHandlerConfig eventHandler;
   protected @NotNull EventTarget<?> eventTarget;
   protected @NotNull NakshaProperties properties;
 
   public EchoHandler(
-      final @NotNull EventHandler eventHandler,
+      final @NotNull EventHandlerConfig eventHandler,
       final @NotNull INaksha hub,
       final @NotNull EventTarget<?> eventTarget) {
     super(hub);

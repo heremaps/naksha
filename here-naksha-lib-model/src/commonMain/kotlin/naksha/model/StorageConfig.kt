@@ -25,8 +25,10 @@ import kotlin.jvm.JvmOverloads
 open class StorageConfig : NakshaFeature() {
 
     companion object StorageConfig_C {
+        const val CLASSNAME_FIELD = "classname";
+
         private val ID = NotNullProperty<StorageConfig, String>(String::class)
-        private val CLASSNAME = NotNullProperty<StorageConfig, String>(String::class) { self, _ -> self.defaultClassName() }
+        private val CLASSNAME = NotNullProperty<StorageConfig, String>(String::class, CLASSNAME_FIELD) { self, _ -> self.defaultClassName() }
         private val NUMBER = NotNullProperty<StorageConfig, Int64>(Int64::class) { self, _ -> storageNumber(hashId(self.id)) }
         private val HARDCAP = NotNullProperty<StorageConfig, Int>(Int::class) { _, _ -> 0 }
         private val CREATE = NotNullProperty<StorageConfig, Boolean>(Boolean::class) { _, _ -> false }

@@ -167,7 +167,7 @@ class CollectionTests : PgTestBase(null) {
         val collectionName = "check_no_del_table_test"
         val collection = NakshaCollection(
             id = collectionName,
-            store_deleted = StoreMode.OFF
+            storeDeleted = StoreMode.OFF
         )
         executeWrite(
             WriteRequest().add(

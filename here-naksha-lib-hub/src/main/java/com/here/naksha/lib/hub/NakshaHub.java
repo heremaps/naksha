@@ -126,7 +126,6 @@ public class NakshaHub implements INaksha {
     // TODO force create and update?
     storageConfig.setCreate(false);
     storageConfig.setUpgrade(false);
-    storageConfig.setNumber(Naksha.storageNumber(storageConfig));
     storageConfig.put("masterUri", storageUrl);
     // TODO CASL-657: support clustering
 

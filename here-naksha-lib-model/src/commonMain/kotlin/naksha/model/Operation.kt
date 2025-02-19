@@ -19,7 +19,7 @@ import kotlin.reflect.KClass
 @JsExport
 class Operation : JsEnum() {
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = Action::class
+    override fun namespace(): KClass<out JsEnum> = Operation::class
 
     override fun initClass() {}
 

@@ -19,16 +19,19 @@
 package com.here.naksha.lib.handlers.internal;
 
 import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
+import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
 import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.util.List;
-import naksha.model.IReadSession;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
-import naksha.model.request.*;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Response;
+import naksha.model.request.Write;
 import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
 
@@ -39,11 +42,14 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
   }
 
   @Override
-  protected @NotNull Response validateWrite(@NotNull Write write) {
-    if (WriteOp.DELETE.equals(write.getOp())) {
-      return new SuccessResponse();
-    }
-    Response basicValidation = super.validateWrite(write);
+  protected @NotNull Response validateDeleteInstruction(Write write) {
+    // DELETE does not require any validation
+    return SUCCESSFUL_VALIDATION;
+  }
+
+  @Override
+  protected @NotNull Response validateNonDeleteInstruction(Write write) {
+    Response basicValidation = IntValidationUtil.basicValidationFor(write);
     if (basicValidation instanceof ErrorResponse) {
       return basicValidation;
     }
@@ -54,7 +60,7 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
   private @NotNull Response handlerExistenceValidation(Space space) {
     List<String> missingHandlerIds = getMissingHandlersFor(space);
     if (missingHandlerIds.isEmpty()) {
-      return new SuccessResponse();
+      return SUCCESSFUL_VALIDATION;
     } else {
       return new ErrorResponse(
           NakshaError.NOT_FOUND,
@@ -66,11 +72,10 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
   private List<String> getMissingHandlersFor(Space space) {
     List<String> expectedHandlerIds = space.getEventHandlerIds();
     ReadFeatures getEventHandlersRequest = readFeaturesByIdsRequest(EVENT_HANDLERS, expectedHandlerIds);
-    try (IReadSession readSession =
-        nakshaHub().getSpaceStorage().newReadSession(SessionOptions.from(currentContext()))) {
+    return nakshaHub().getSpaceStorage().useReadSession(SessionOptions.from(currentContext()), readSession -> {
       Response result = readSession.execute(getEventHandlersRequest);
       return missingHandlersIds(result, expectedHandlerIds);
-    }
+    });
   }
 
   private List<String> missingHandlersIds(Response fetchedHandlers, List<String> expectedHandlersIds) {

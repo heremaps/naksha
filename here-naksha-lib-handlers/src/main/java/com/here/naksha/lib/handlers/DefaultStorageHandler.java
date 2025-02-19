@@ -31,7 +31,7 @@ import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.lambdas.F1;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
@@ -42,7 +42,6 @@ import java.util.function.Supplier;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.StringList;
 import naksha.model.IStorage;
-import naksha.model.IWriteSession;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
@@ -66,12 +65,12 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(DefaultStorageHandler.class);
 
-  protected @NotNull EventHandler eventHandler;
+  protected @NotNull EventHandlerConfig eventHandler;
   protected @NotNull EventTarget<?> eventTarget;
   protected @NotNull DefaultStorageHandlerProperties properties;
 
   public DefaultStorageHandler(
-      final @NotNull EventHandler eventHandler,
+      final @NotNull EventHandlerConfig eventHandler,
       final @NotNull INaksha hub,
       final @NotNull EventTarget<?> eventTarget) {
     super(hub);

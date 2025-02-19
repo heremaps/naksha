@@ -20,8 +20,8 @@ package com.here.naksha.lib.hub;
 
 import static com.here.naksha.lib.common.TestFileLoader.parseJsonFileOrFail;
 import static com.here.naksha.lib.common.TestNakshaContext.newTestNakshaContext;
-import static naksha.model.util.RequestHelper.createFeatureRequest;
 import static com.here.naksha.lib.hub.mock.MockResult.mockResultWithFeature;
+import static naksha.model.util.RequestHelper.createFeatureRequest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
@@ -36,13 +36,11 @@ import com.here.naksha.lib.core.EndPipelineHandler;
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.NakshaAdminCollection;
-import com.here.naksha.lib.core.models.PluginCache;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
-import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.handlers.AuthorizationEventHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandler;
-import com.here.naksha.lib.handlers.internal.IntHandlerForStorages;
+import com.here.naksha.lib.handlers.internal.IntHandlerForStorageConfigs;
 import com.here.naksha.lib.hub.storages.NHAdminStorage;
 import com.here.naksha.lib.hub.storages.NHAdminStorageReader;
 import com.here.naksha.lib.hub.storages.NHAdminStorageWriter;
@@ -50,14 +48,14 @@ import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
+import naksha.model.Naksha;
 import naksha.model.SessionOptions;
+import naksha.model.StorageConfig;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.ReadRequest;
-import naksha.model.request.Response;
 import naksha.model.request.WriteRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
@@ -102,8 +100,8 @@ class NakshaHubWiringTest {
   @Order(1)
   void testCreateStorageRequestWiring() {
     // Given: Create Storage request
-    final Storage storage = parseJsonFileOrFail("create_storage.json", Storage.class);
-    final WriteRequest request = createFeatureRequest(NakshaAdminCollection.STORAGES, storage);
+    final StorageConfig storageConfig = parseJsonFileOrFail("create_storage.json", StorageConfig.class);
+    final WriteRequest request = createFeatureRequest(NakshaAdminCollection.STORAGES, storageConfig);
 
     // And: spies and captors in place
     final EventPipeline spyPipeline = spy(spyPipelineFactory.eventPipeline());
@@ -112,10 +110,10 @@ class NakshaHubWiringTest {
     final ArgumentCaptor<IEventHandler> handlerCaptor = ArgumentCaptor.forClass(IEventHandler.class);
 
     // When: Request is submitted to Hub Space Storage
-    try (final IWriteSession admin = hub.getSpaceStorage().newWriteSession(SessionOptions.from(newTestNakshaContext(), true))) {
+    hub.getSpaceStorage().runInWriteSession(SessionOptions.from(newTestNakshaContext(), true), admin -> {
       admin.execute(request);
       admin.commit();
-    }
+    });
 
     // Then:
     // Verify: 2 event pipelines created (1 actual + 1 due to spy setup)
@@ -125,7 +123,7 @@ class NakshaHubWiringTest {
     final List<IEventHandler> handlers = handlerCaptor.getAllValues();
     assertTrue(
         handlers.get(0) instanceof AuthorizationEventHandler, "Expected instance of AuthorizationEventHandler");
-    assertTrue(handlers.get(1) instanceof IntHandlerForStorages, "Expected instance of IntHandlerForStorages");
+    assertTrue(handlers.get(1) instanceof IntHandlerForStorageConfigs, "Expected instance of IntHandlerForStorages");
     assertTrue(handlers.get(2) instanceof EndPipelineHandler, "Expected instance of EndPipelineHandler");
     // Verify: admin storage writer finally gets the write request
     verify(adminStorageWriter, times(1)).execute(reqCaptor.capture());
@@ -157,7 +155,7 @@ class NakshaHubWiringTest {
     final List<IEventHandler> handlers = handlerCaptor.getAllValues();
     assertTrue(
         handlers.get(0) instanceof AuthorizationEventHandler, "Expected instance of AuthorizationEventHandler");
-    assertTrue(handlers.get(1) instanceof IntHandlerForStorages, "Expected instance of IntHandlerForStorages");
+    assertTrue(handlers.get(1) instanceof IntHandlerForStorageConfigs, "Expected instance of IntHandlerForStorages");
     assertTrue(handlers.get(2) instanceof EndPipelineHandler, "Expected instance of EndPipelineHandler");
     // Verify: admin storage writer finally gets the write request
     verify(adminStorageReader, times(1)).execute(reqCaptor.capture());
@@ -168,13 +166,12 @@ class NakshaHubWiringTest {
   @Order(3)
   void testCreateFeatureRequestWiring() throws Exception {
     // Given: Storage, EventHandler and Space objects
-    final Storage storage = parseJsonFileOrFail("createFeature/create_storage.json", Storage.class);
-    final EventHandler eventHandler =
-        parseJsonFileOrFail("createFeature/create_event_handler.json", EventHandler.class);
+    final StorageConfig storageConfig = parseJsonFileOrFail("createFeature/create_storage.json", StorageConfig.class);
+    final EventHandlerConfig eventHandler =
+        parseJsonFileOrFail("createFeature/create_event_handler.json", EventHandlerConfig.class);
     final Space space = parseJsonFileOrFail("createFeature/create_space.json", Space.class);
     // TODO: CASL-764
-    final IStorage storageImpl = PluginCache.getStorageConstructor(storage.getClassName(), Storage.class)
-        .call(storage);
+    final IStorage storageImpl = Naksha.useStorage(storageConfig);
 
     // And: mock in place to return given Storage, EventHandler and Space objects, when requested from Admin Storage
     final IStorage spyStorageImpl = spy(storageImpl);
@@ -192,7 +189,7 @@ class NakshaHubWiringTest {
       return false;
     })))
         .thenReturn(mockResultWithFeature(eventHandler));
-    when(hub.getStorageById(argThat(argument -> argument.equals(storage.getId()))))
+    when(hub.getStorageById(argThat(argument -> argument.equals(storageConfig.getId()))))
         .thenReturn(spyStorageImpl);
     // And: setup spy on Custom Storage Writer to intercept execute() method calls
     final IWriteSession spyWriter = spy(spyStorageImpl.newWriteSession(SessionOptions.from(newTestNakshaContext(), true)));
@@ -209,10 +206,10 @@ class NakshaHubWiringTest {
     final ArgumentCaptor<IEventHandler> handlerCaptor = ArgumentCaptor.forClass(IEventHandler.class);
 
     // When: Request is submitted to Hub Space Storage
-    try (final IWriteSession writer = hub.getSpaceStorage().newWriteSession(SessionOptions.from(newTestNakshaContext(), true))) {
-      final Response response = writer.execute(request);
+    hub.getSpaceStorage().runInWriteSession(SessionOptions.from(newTestNakshaContext(), true), writer -> {
+      writer.execute(request);
       writer.commit();
-    }
+    });
 
     // Then:
     // Verify: 2 event pipelines created (1 actual + 1 due to spy setup)

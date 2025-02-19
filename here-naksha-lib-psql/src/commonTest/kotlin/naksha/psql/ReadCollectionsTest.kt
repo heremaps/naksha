@@ -11,7 +11,7 @@ import kotlin.test.assertEquals
 class ReadCollectionsTest : PgTestBase(NakshaCollection(
     id = "read_collections_c",
     partitions = 2,
-    store_deleted = ON,
+    storeDeleted = ON,
     storeHistory = ON,
     storeMeta = ON,
 )) {

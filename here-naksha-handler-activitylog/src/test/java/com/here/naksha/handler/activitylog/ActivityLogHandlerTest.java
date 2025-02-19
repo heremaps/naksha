@@ -23,10 +23,10 @@ import com.here.naksha.handler.activitylog.util.DatahubSamplesUtil;
 import com.here.naksha.handler.activitylog.util.DatahubSamplesUtil.DatahubSample;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.test.common.assertions.PropertyQueryAssertions;
 import naksha.base.JvmInt64;
 import naksha.model.*;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
 
 import java.util.List;
 import java.util.Map;
@@ -58,7 +58,7 @@ class ActivityLogHandlerTest {
   INaksha naksha;
 
   @Mock
-  EventHandler eventHandler;
+  EventHandlerConfig eventHandler;
 
   @Mock
   IStorage spaceStorage;

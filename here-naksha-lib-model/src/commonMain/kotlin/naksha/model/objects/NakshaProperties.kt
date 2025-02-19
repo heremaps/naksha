@@ -46,13 +46,13 @@ open class NakshaProperties() : AnyObject() {
          * The key of the Mom-Delta namespace property (`@ns:com:here:delta`).
          * @since 3.0.0
          */
-        const val DELTA_KEY = "@ns:com:here:delta"
+        const val DELTA_KEY = "@ns:com:here:mom:delta"
 
         /**
          * The key of the Mom-Meta namespace property (`@ns:com:here:meta`).
          * @since 3.0.0
          */
-        const val META_KEY = "@ns:com:here:meta"
+        const val META_KEY = "@ns:com:here:mom:meta"
 
         /**
          * Properties used by the deprecated Activity-Log service, just here to allow downward

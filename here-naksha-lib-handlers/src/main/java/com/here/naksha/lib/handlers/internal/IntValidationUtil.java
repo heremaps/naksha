@@ -23,14 +23,26 @@ import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
-class NakshaFeaturePropertiesValidator {
+class IntValidationUtil {
 
-  private NakshaFeaturePropertiesValidator() {}
+  static final SuccessResponse SUCCESSFUL_VALIDATION = new SuccessResponse();
 
-  static Response nakshaFeatureValidation(NakshaFeature feature) {
+  private IntValidationUtil() {
+  }
+
+  static Response basicValidationFor(Write write) {
+    NakshaFeature feature = write.getFeature();
+    if (feature == null) {
+      return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT, "Feature of write operation can't be null");
+    }
+    return basicValidationFor(feature);
+  }
+
+  static Response basicValidationFor(NakshaFeature feature) {
     Response titleValidation = requiredPropertyValidationError(feature.getTitle(), NakshaFeature.TITLE_KEY);
     if (titleValidation instanceof ErrorResponse) {
       return titleValidation;
@@ -40,14 +52,14 @@ class NakshaFeaturePropertiesValidator {
     if (descValidation instanceof ErrorResponse) {
       return descValidation;
     }
-    return new SuccessResponse();
+    return SUCCESSFUL_VALIDATION;
   }
 
   private static @NotNull Response requiredPropertyValidationError(String value, String propertyName) {
     if (StringUtils.isBlank(value)) {
       return missingParameterError(propertyName);
     }
-    return new SuccessResponse();
+    return SUCCESSFUL_VALIDATION;
   }
 
   private static ErrorResponse missingParameterError(String propertyName) {

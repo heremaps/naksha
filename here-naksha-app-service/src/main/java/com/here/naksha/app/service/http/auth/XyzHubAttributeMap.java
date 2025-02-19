@@ -20,7 +20,7 @@ package com.here.naksha.app.service.http.auth;
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.auth.AttributeMap;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.util.List;
 import naksha.model.objects.NakshaFeature;
@@ -110,7 +110,7 @@ public class XyzHubAttributeMap extends AttributeMap {
    * @param eventHandler The connector for which to return the attribute map.
    * @return The attribute map of the given connector.
    */
-  public static @NotNull AttributeMap ofConnector(@NotNull EventHandler eventHandler) {
+  public static @NotNull AttributeMap ofConnector(@NotNull EventHandlerConfig eventHandler) {
     final AttributeMap attributeMap = new AttributeMap();
     attributeMap.withValue(XyzHubAttributeMap.CONNECTOR, eventHandler.getId());
     attributeMap.withValue(

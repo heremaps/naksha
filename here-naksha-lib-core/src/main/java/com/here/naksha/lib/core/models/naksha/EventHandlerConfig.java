@@ -26,6 +26,7 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.lambdas.Fe3;
 import com.here.naksha.lib.core.models.PluginCache;
 import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -36,8 +37,23 @@ import org.slf4j.LoggerFactory;
  * A configured event handler.
  */
 @AvailableSince(NakshaVersion.v2_0_3)
-public class EventHandler extends Plugin<IEventHandler> {
-  private static final @NotNull Logger logger = LoggerFactory.getLogger(EventHandler.class);
+public class EventHandlerConfig extends NakshaFeature {
+
+  private static final @NotNull Logger logger = LoggerFactory.getLogger(EventHandlerConfig.class);
+
+  @AvailableSince(NakshaVersion.v2_0_7)
+  public static final String CLASS_NAME = "className";
+
+  @AvailableSince(NakshaVersion.v2_0_7)
+  public @NotNull String getClassName() {
+    return (String) getRaw(CLASS_NAME);
+  }
+
+  @AvailableSince(NakshaVersion.v2_0_7)
+  public void setClassName(@NotNull String className) {
+    setRaw(CLASS_NAME, className);
+  }
+
 
   @AvailableSince(NakshaVersion.v2_0_7)
   public static final String EXTENSION_ID = "extensionId";
@@ -78,7 +94,6 @@ public class EventHandler extends Plugin<IEventHandler> {
    */
   @Deprecated
   @AvailableSince(NakshaVersion.v2_0_7)
-  @Override
   // TODO (CASL-780): strongly consider removing this
   public @NotNull IEventHandler newInstance(@NotNull INaksha naksha) {
     return newInstance(naksha, null);
@@ -86,7 +101,8 @@ public class EventHandler extends Plugin<IEventHandler> {
 
   /**
    * Do not use anymore, please call {@link PluginCache#getEventHandlerConstructor(String, Class, Class)} and create the instance yourself.
-   * @param naksha the reference to the Naksha-Hub that wants to have the instance.
+   *
+   * @param naksha      the reference to the Naksha-Hub that wants to have the instance.
    * @param eventTarget Type of EventTarget object. If null then Space(Space.class) type will be used as default value
    */
   @Deprecated
@@ -94,18 +110,18 @@ public class EventHandler extends Plugin<IEventHandler> {
   // TODO (CASL-780): strongly consider removing this
   public @NotNull IEventHandler newInstance(@NotNull INaksha naksha, @Nullable EventTarget<?> eventTarget) {
     Class<?> eventTargetClass = eventTarget == null ? Space.class : eventTarget.getClass();
-    final Fe3<IEventHandler, INaksha, EventHandler, EventTarget<?>> constructor;
+    final Fe3<IEventHandler, INaksha, EventHandlerConfig, EventTarget<?>> constructor;
     final String extensionId = getExtensionId();
     try {
       if (extensionId == null || extensionId.isEmpty() || "null".equalsIgnoreCase(extensionId)) {
         //noinspection unchecked
-        constructor = (Fe3<IEventHandler, INaksha, EventHandler, EventTarget<?>>)
-            getEventHandlerConstructor(getClassName(), EventHandler.class, eventTargetClass);
+        constructor = (Fe3<IEventHandler, INaksha, EventHandlerConfig, EventTarget<?>>)
+            getEventHandlerConstructor(getClassName(), EventHandlerConfig.class, eventTargetClass);
       } else {
         ClassLoader extClassLoader = naksha.getClassLoader(extensionId);
         //noinspection unchecked
-        constructor = (Fe3<IEventHandler, INaksha, EventHandler, EventTarget<?>>) getEventHandlerConstructor(
-            getClassName(), EventHandler.class, eventTargetClass, extensionId, extClassLoader);
+        constructor = (Fe3<IEventHandler, INaksha, EventHandlerConfig, EventTarget<?>>) getEventHandlerConstructor(
+            getClassName(), EventHandlerConfig.class, eventTargetClass, extensionId, extClassLoader);
       }
       return constructor.call(naksha, this, eventTarget);
     } catch (Exception e) {
