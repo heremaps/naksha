@@ -50,8 +50,8 @@ open class PgMap internal constructor(
      * The OID of the collection-number sequence.
      * @since 3.0.0
      */
-    var colNumberSequenceOid: Int = colNumberSequenceOid
-        protected set
+    //var colNumberSequenceOid: Int = colNumberSequenceOid
+    //    protected set
 
     private var _collections: PgCollection? = null
 
@@ -85,14 +85,14 @@ open class PgMap internal constructor(
      * @return the current _(last used)_ collection-number.
      * @since 3.0.0
      */
-    fun getCollectionNumber(conn: PgConnection): Int {
-        val QUERY = "SELECT currval($1) as colnum"
-        val cursor = conn.execute(QUERY, arrayOf(colNumberSequenceOid)).fetch()
-        cursor.use {
-            val number: Int = cursor["colnum"]
-            return number
-        }
-    }
+//    fun getCollectionNumber(conn: PgConnection): Int {
+//        val QUERY = "SELECT currval($1) as colnum"
+//        val cursor = conn.execute(QUERY, arrayOf(colNumberSequenceOid)).fetch()
+//        cursor.use {
+//            val number: Int = cursor["colnum"]
+//            return number
+//        }
+//    }
 
     /**
      * Allocate a new collection-number.
@@ -100,14 +100,14 @@ open class PgMap internal constructor(
      * @return the allocated collection-number.
      * @since 3.0.0
      */
-    fun newCollectionNumber(conn: PgConnection): Int {
-        val QUERY = "SELECT nextval($1) as colnum"
-        val cursor = conn.execute(QUERY, arrayOf(colNumberSequenceOid)).fetch()
-        cursor.use {
-            val number: Int = cursor["colnum"]
-            return number
-        }
-    }
+//    fun newCollectionNumber(conn: PgConnection): Int {
+//        val QUERY = "SELECT nextval($1) as colnum"
+//        val cursor = conn.execute(QUERY, arrayOf(colNumberSequenceOid)).fetch()
+//        cursor.use {
+//            val number: Int = cursor["colnum"]
+//            return number
+//        }
+//    }
 
     // TODO: We should have alias methods to manage collections, that redirect to storage.adminMap.{name} !!!
 }

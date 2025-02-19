@@ -53,8 +53,8 @@ internal const val PG_YEAR = "${PG_S}y"
 internal const val PG_INTERNAL_PREFIX = Naksha.ADMIN_PREFIX
 
 internal const val NAKSHA_TXN_SEQ = "naksha_txn_seq"
-internal const val NAKSHA_MAP_SEQ = "naksha_map_seq"
-internal const val NAKSHA_COL_SEQ = "naksha_col_seq"
+//internal const val NAKSHA_MAP_SEQ = "naksha_map_seq"
+//internal const val NAKSHA_COL_SEQ = "naksha_col_seq"
 
 internal const val MAX_POSTGRES_TOAST_TUPLE_TARGET = 32736
 internal const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 2048

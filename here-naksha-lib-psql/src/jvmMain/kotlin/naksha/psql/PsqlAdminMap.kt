@@ -202,8 +202,8 @@ class PsqlAdminMap internal constructor(
         //       storage-numbers, because they have no entries in the naksha~collections table!
         logger.info("Create transaction-seq, map-sequence, and collection-sequence ...")
         conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64} START 1 CACHE 10;").close()
-        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_MAP_SEQ AS ${PgType.INT64} START 1 CACHE 1;").close()
-        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_COL_SEQ AS ${PgType.INT64} START 100 CACHE 1;").close()
+//        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_MAP_SEQ AS ${PgType.INT64} START 1 CACHE 1;").close()
+//        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_COL_SEQ AS ${PgType.INT64} START 100 CACHE 1;").close()
 
         logger.info("Create internal collections: transactions, collections, and dictionaries")
         createPgCollection(conn, collections)

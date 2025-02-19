@@ -116,7 +116,7 @@ class PgWriter(
      * @param map the map in which to create a new map.
      * @return the new collection-number of the new collection.
      */
-    fun newCollectionNumber(map: PgMap): Int = map.newCollectionNumber(conn)
+//    fun newCollectionNumber(map: PgMap): Int = map.newCollectionNumber(conn)
 
     /**
      * Creates a new tuple-number for a new collection (to be created).

@@ -128,7 +128,7 @@ abstract class PgAdminMap internal constructor(
      * The OID of the map-number sequence.
      * @since 3.0.0
      */
-    val mapNumberSequenceOid: Int
+    //val mapNumberSequenceOid: Int
 
     /**
      * The `OID` of the admin-map aka admin schema.
@@ -300,15 +300,15 @@ SELECT basics.*, procs.* FROM basics, procs;
             conn.execute(
                 """SELECT 
 (SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_TXN_SEQ') AS txn_oid,
-(SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_MAP_SEQ') AS map_oid,
-(SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_COL_SEQ') AS col_oid
 """
+// (SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_MAP_SEQ') AS map_oid,
+// (SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_COL_SEQ') AS col_oid
             ).fetch().use { cursor ->
                 txnSequenceOid = cursor["txn_oid"]
-                mapNumberSequenceOid = cursor["map_oid"]
-                colNumberSequenceOid = cursor["col_oid"]
+                //mapNumberSequenceOid = cursor["map_oid"]
+                //colNumberSequenceOid = cursor["col_oid"]
             }
-            logger.info("Storage ${config.id} / ${config.number} initialized, txn-seq-oid=$txnSequenceOid, map-seq-oid=$mapNumberSequenceOid")
+            logger.info("Storage ${config.id} / ${config.number} initialized, txn-seq-oid=$txnSequenceOid")
         }
     }
 
@@ -426,14 +426,14 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @return the current _(last used)_ map-number.
      * @since 3.0.0
      */
-    fun getMapNumber(conn: PgConnection): Int {
-        val QUERY = "SELECT currval($1) as mapnum"
-        val cursor = conn.execute(QUERY, arrayOf(mapNumberSequenceOid)).fetch()
-        cursor.use {
-            val number: Int = cursor["mapnum"]
-            return number
-        }
-    }
+//    fun getMapNumber(conn: PgConnection): Int {
+//        val QUERY = "SELECT currval($1) as mapnum"
+//        val cursor = conn.execute(QUERY, arrayOf(mapNumberSequenceOid)).fetch()
+//        cursor.use {
+//            val number: Int = cursor["mapnum"]
+//            return number
+//        }
+//    }
 
     /**
      * Allocate a new map-number.
@@ -441,14 +441,14 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @return the allocated map-number.
      * @since 3.0.0
      */
-    fun newMapNumber(conn: PgConnection): Int {
-        val QUERY = "SELECT nextval($1) as mapnum"
-        val cursor = conn.execute(QUERY, arrayOf(mapNumberSequenceOid)).fetch()
-        cursor.use {
-            val number: Int = cursor["mapnum"]
-            return number
-        }
-    }
+//    fun newMapNumber(conn: PgConnection): Int {
+//        val QUERY = "SELECT nextval($1) as mapnum"
+//        val cursor = conn.execute(QUERY, arrayOf(mapNumberSequenceOid)).fetch()
+//        cursor.use {
+//            val number: Int = cursor["mapnum"]
+//            return number
+//        }
+//    }
 
     // TODO: Implement the methods, then make them open, so we can override them for the JVM implementation
     //       We only want to cache in JVM, not within the database!

@@ -76,7 +76,7 @@ class CreateCollection(
      * @param map the map in which to create a new map.
      * @return the new collection-number of the new collection.
      */
-    fun newCollectionNumber(map: PgMap): Int = session.storage.adminMap.newCollectionNumber(session.useConnection())
+//    fun newCollectionNumber(map: PgMap): Int = session.storage.adminMap.newCollectionNumber(session.useConnection())
 
     /**
      * Returns a new `uid` for a new tuple.
