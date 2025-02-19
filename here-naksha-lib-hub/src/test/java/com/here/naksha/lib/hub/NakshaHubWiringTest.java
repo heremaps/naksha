@@ -136,7 +136,7 @@ class NakshaHubWiringTest {
   @Order(2)
   void testGetStoragesRequestWiring() throws Exception {
     // Given: Read Storage request
-    final ReadFeatures request = new ReadFeatures(NakshaAdminCollection.STORAGES);
+    final ReadFeatures request = new ReadFeatures().addCollectionId(NakshaAdminCollection.STORAGES);
 
     // And: spies and captors in place
     final EventPipeline spyPipeline = spy(spyPipelineFactory.eventPipeline());
@@ -145,9 +145,9 @@ class NakshaHubWiringTest {
     final ArgumentCaptor<IEventHandler> handlerCaptor = ArgumentCaptor.forClass(IEventHandler.class);
 
     // When: Request is submitted to Hub Space Storage
-    try (final IReadSession reader = hub.getSpaceStorage().newReadSession(SessionOptions.from(newTestNakshaContext(), true))) {
+    hub.getSpaceStorage().runInReadSession(SessionOptions.from(newTestNakshaContext(), true), reader -> {
       reader.execute(request);
-    }
+    });
 
     // Then:
     // Verify: 2 event pipelines created (1 actual + 1 due to spy setup)

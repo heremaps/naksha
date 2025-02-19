@@ -24,15 +24,16 @@ import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteFeat
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
+import naksha.base.AtomicInt;
+import naksha.model.Action;
+import naksha.model.ILock;
 import naksha.model.IWriteSession;
 import naksha.model.Metadata;
 import naksha.model.NakshaError;
@@ -43,11 +44,12 @@ import naksha.model.SessionOptions;
 import naksha.model.Tuple;
 import naksha.model.TupleNumber;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.Transaction;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaTransaction;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
-import naksha.model.request.ResultTuple;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteOp;
@@ -91,12 +93,12 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     return new ErrorResponse(
         NakshaError.UNSUPPORTED_OPERATION,
         "Supported type: " + WriteRequest.class.getName() + ", got "
-            + request.getClass().getName() + " instead");
+        + request.getClass().getName() + " instead");
   }
 
   private @NotNull Response executeSingleCollectionWrite(final @NotNull WriteRequest writeRequest) {
     List<Write> collectionWrites = writeRequest.getWrites();
-    if(collectionWrites.size() != 1){
+    if (collectionWrites.size() != 1) {
       throw new IllegalArgumentException(
           "Currently supporting WriteRequest for single collection only, got multiple: " + collectionWrites.size());
     }
@@ -177,13 +179,13 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   private boolean isUpdateSpaceRequest(@NotNull WriteRequest writeRequest, @NotNull String spaceId) {
     List<Write> writes = writeRequest.getWrites();
     return NakshaAdminCollection.SPACES.equals(spaceId)
-        && writes.size() == 1
-        && WriteOp.UPDATE.equals(writes.get(0).getOp());
+           && writes.size() == 1
+           && WriteOp.UPDATE.equals(writes.get(0).getOp());
   }
 
   private @NotNull Response executeUpdateSpace(@NotNull WriteRequest updateSpaceEntryReq) {
     final Space space = ((Space) updateSpaceEntryReq.getWrites().get(0).getFeature());
-    final SpaceProperties spaceProperties = (SpaceProperties) space.getProperties();
+    final SpaceProperties spaceProperties = space.getProperties();
     final NakshaCollection collection = spaceProperties.getCollection();
     Response updateSpaceRes = null;
     if (collection != null) {
@@ -282,35 +284,6 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
 
   @Override
   public @NotNull AtomicInt getUid() {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public @NotNull TupleNumber newTupleNumber(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull String featureId) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public @NotNull Metadata metadataFor(@NotNull NakshaFeature feature, @NotNull TupleNumber tupleNumber, @NotNull Operation operation,
-      @NotNull Action action) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public @NotNull Tuple created(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
-      @Nullable TupleNumber tupleNumber) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public @NotNull Tuple updated(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
-      @Nullable TupleNumber tupleNumber) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public @NotNull Tuple deleted(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
-      @Nullable TupleNumber tupleNumber) {
     throw NOT_SUPPORTED_ERROR;
   }
 }

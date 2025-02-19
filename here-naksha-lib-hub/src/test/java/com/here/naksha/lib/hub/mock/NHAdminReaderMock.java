@@ -288,11 +288,6 @@ public class NHAdminReaderMock implements IReadSession {
   }
 
   @Override
-  public void refreshMaps() {
-    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
-  }
-
-  @Override
   public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
@@ -304,11 +299,6 @@ public class NHAdminReaderMock implements IReadSession {
 
   @Override
   public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
-    throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
-  }
-
-  @Override
-  public void refreshCollections(@NotNull NakshaMap map) {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 

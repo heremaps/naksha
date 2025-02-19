@@ -121,11 +121,6 @@ public class NHAdminStorageReader implements IReadSession {
   }
 
   @Override
-  public void refreshMaps() {
-    session.refreshMaps();
-  }
-
-  @Override
   public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
     return session.getCollectionById(map, collectionId);
   }
@@ -138,11 +133,6 @@ public class NHAdminStorageReader implements IReadSession {
   @Override
   public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
     return session.getCollectionByNumber(map, collectionNumber);
-  }
-
-  @Override
-  public void refreshCollections(@NotNull NakshaMap map) {
-    session.refreshCollections(map);
   }
 
   @Override

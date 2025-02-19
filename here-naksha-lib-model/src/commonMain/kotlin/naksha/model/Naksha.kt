@@ -6,6 +6,7 @@ import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.fromJSON
 import naksha.base.Platform.PlatformCompanion.gzipDeflate
 import naksha.base.Platform.PlatformCompanion.gzipInflate
+import naksha.base.Platform.PlatformCompanion.md5
 import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.geo.GeoUtil.GeoUtil_C.fromEWKB
 import naksha.geo.GeoUtil.GeoUtil_C.fromTWKB
@@ -268,6 +269,19 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun storageNumber(md5: Binary): Int64 = md5.getInt64(8) and INT64_CLEAR_SIGN_BIT
+
+        /**
+         * A method to calculate a valid storage-number from the id of provided [StorageConfig]. It generates [md5] hash from the storage's id and calls [storageNumber] under the hood.
+         *
+         * @param md5 the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the storage-id, from which to extract the storage-number.
+         * @return the storage-number.
+         * @since 3.0
+         * @see [hashId]
+         */
+        @JsName("storageNumberByConfig")
+        @JsStatic
+        @JvmStatic
+        fun storageNumber(storageConfig: StorageConfig): Int64 = storageNumber(Binary(md5(storageConfig.id)))
 
        /**
          * A method to calculate the feature-number (`fn`) from the [MD5](https://en.wikipedia.org/wiki/MD5) hash above a feature-id.

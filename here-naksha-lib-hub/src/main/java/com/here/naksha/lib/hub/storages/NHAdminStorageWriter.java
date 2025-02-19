@@ -82,33 +82,4 @@ public class NHAdminStorageWriter extends NHAdminStorageReader implements IWrite
   public @NotNull AtomicInt getUid() {
     return session.getUid();
   }
-
-  @Override
-  public @NotNull TupleNumber newTupleNumber(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull String featureId) {
-    return session.newTupleNumber(map, collection, featureId);
-  }
-
-  @Override
-  public @NotNull Metadata metadataFor(@NotNull NakshaFeature feature, @NotNull TupleNumber tupleNumber, @NotNull Operation operation,
-      @NotNull Action action) {
-    return session.metadataFor(feature, tupleNumber, operation, action);
-  }
-
-  @Override
-  public @NotNull Tuple created(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
-      @Nullable TupleNumber tupleNumber) {
-    return session.created(map, collection, feature, tupleNumber);
-  }
-
-  @Override
-  public @NotNull Tuple updated(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
-      @Nullable TupleNumber tupleNumber) {
-    return session.updated(map, collection, feature, tupleNumber);
-  }
-
-  @Override
-  public @NotNull Tuple deleted(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
-      @Nullable TupleNumber tupleNumber) {
-    return session.deleted(map, collection, feature, tupleNumber);
-  }
 }

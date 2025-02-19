@@ -260,33 +260,4 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
   public @Nullable NakshaTransaction getTransaction() {
     return null;
   }
-
-  @Override
-  public @NotNull TupleNumber newTupleNumber(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull String featureId) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public @NotNull Metadata metadataFor(@NotNull NakshaFeature feature, @NotNull TupleNumber tupleNumber, @NotNull Operation operation,
-      @NotNull Action action) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public @NotNull Tuple created(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
-      @Nullable TupleNumber tupleNumber) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public @NotNull Tuple updated(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
-      @Nullable TupleNumber tupleNumber) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public @NotNull Tuple deleted(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
-      @Nullable TupleNumber tupleNumber) {
-    throw new NotImplementedException();
-  }
 }

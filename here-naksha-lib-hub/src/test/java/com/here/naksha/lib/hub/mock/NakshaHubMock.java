@@ -20,6 +20,7 @@ package com.here.naksha.lib.hub.mock;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.models.PluginCache.getStorageConstructor;
+import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
@@ -27,16 +28,15 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.ExtensionConfig;
-import com.here.naksha.lib.core.models.PluginCache;
 import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import java.util.Map;
 import java.util.TreeMap;
-import naksha.model.IReadSession;
 import naksha.model.IStorage;
-import naksha.model.NakshaContext;
+import naksha.model.Naksha;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
+import naksha.model.StorageConfig;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
@@ -119,19 +119,14 @@ public class NakshaHubMock implements INaksha {
    */
   @Override
   public @NotNull IStorage getStorageById(@NotNull String storageId) {
-    SessionOptions sessionOptions = SessionOptions.from(NakshaContext.currentContext(), false);
-    try (final IReadSession reader = getAdminStorage().newReadSession(sessionOptions)) {
+    return getAdminStorage().useReadSession(SessionOptions.from(currentContext(), false), reader -> {
       final Response response = reader.execute(readFeaturesByIdRequest(NakshaAdminCollection.STORAGES, storageId));
       if (response instanceof SuccessResponse successResponse) {
-        final Storage storage = readFeatureFromResponse(successResponse, Storage.class);
-        if (storage == null) {
-          throw unchecked(new Exception("No storage found with id " + storageId));
+        final StorageConfig storageConfig = readFeatureFromResponse(successResponse, StorageConfig.class);
+        if (storageConfig == null) {
+          throw unchecked(new Exception("No storage config found with id " + storageId));
         }
-        // stare flow:
-        // return storage.newInstance(this); <-- stare
-        //    return PluginCache.newInstance(className, IStorage.class, this, naksha); <-- className ze storage
-        return PluginCache.getStorageConstructor(storage.getClassName(), Storage.class)
-            .call(storage);
+        return Naksha.useStorage(storageConfig);
       } else {
         if (response instanceof ErrorResponse er) {
           NakshaError error = er.getError();
@@ -140,9 +135,7 @@ public class NakshaHubMock implements INaksha {
         }
         throw unchecked(new Exception("Unknown response: " + response));
       }
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    });
   }
 
   private IStorage psqlStorage(@NotNull Storage storage) {

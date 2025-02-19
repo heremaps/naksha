@@ -19,17 +19,9 @@
 package com.here.naksha.lib.view;
 
 import naksha.base.AtomicInt;
-import naksha.model.Action;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
-import naksha.model.Metadata;
-import naksha.model.Operation;
 import naksha.model.SessionOptions;
-import naksha.model.Tuple;
-import naksha.model.TupleNumber;
-import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaMap;
 import naksha.model.objects.NakshaTransaction;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
@@ -53,17 +45,21 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   }
 
   public ViewWriteSession withWriteLayer(ViewLayer viewLayer) {
-    if (this.session != null)
+    if (this.session != null) {
       throw new RuntimeException("Write session initiated with " + this.writeLayer.getCollectionId());
+    }
     this.writeLayer = viewLayer;
     return this;
   }
 
   public ViewWriteSession init() {
-    if (writeLayer == null) writeLayer = viewRef.getViewCollection().getTopPriorityLayer();
+    if (writeLayer == null) {
+      writeLayer = viewRef.getViewCollection().getTopPriorityLayer();
+    }
     this.session = writeLayer.getStorage().newWriteSession(options);
     return this;
   }
+
   /**
    * Executes write.
    *
@@ -99,7 +95,9 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   }
 
   private IWriteSession getSession() {
-    if (this.session == null) init();
+    if (this.session == null) {
+      init();
+    }
     return this.session;
   }
 
@@ -121,34 +119,5 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   @Override
   public @NotNull AtomicInt getUid() {
     return getSession().getUid();
-  }
-
-  @Override
-  public @NotNull TupleNumber newTupleNumber(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull String featureId) {
-    return getSession().newTupleNumber(map, collection, featureId);
-  }
-
-  @Override
-  public @NotNull Metadata metadataFor(@NotNull NakshaFeature feature, @NotNull TupleNumber tupleNumber, @NotNull Operation operation,
-      @NotNull Action action) {
-    return getSession().metadataFor(feature, tupleNumber, operation, action);
-  }
-
-  @Override
-  public @NotNull Tuple created(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
-      @Nullable TupleNumber tupleNumber) {
-    return getSession().created(map, collection, feature, tupleNumber);
-  }
-
-  @Override
-  public @NotNull Tuple updated(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
-      @Nullable TupleNumber tupleNumber) {
-    return getSession().updated(map, collection, feature, tupleNumber);
-  }
-
-  @Override
-  public @NotNull Tuple deleted(@NotNull NakshaMap map, @NotNull NakshaCollection collection, @NotNull NakshaFeature feature,
-      @Nullable TupleNumber tupleNumber) {
-    return getSession().deleted(map, collection, feature, tupleNumber);
   }
 }

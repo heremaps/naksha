@@ -4,6 +4,7 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.base.PlatformLock
+import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
 import naksha.base.fn.Fx1
 import naksha.jbon.IDictReader
@@ -95,6 +96,17 @@ interface IStorage : IDictReader {
     }
 
     /**
+     * Open a new write-session and execute the given void lambda, ensuring that the session is closed after the lambda returns.
+     * This is very similar to [useWriteSession] but it's not returning any value.
+     * @param options the session-options.
+     * @param lambda the void lambda to execute in a try block, ensuring that the session is closed.
+     */
+    fun runInWriteSession(options: SessionOptions? = null, lambda: Fx1<IWriteSession>) {
+        val session = newWriteSession(options)
+        session.use { lambda.call(session) }
+    }
+
+    /**
      * Open a new read-only session. The [SessionOptions] can be used to guarantee, that the session relates to the master-node, if replication lags are not acceptable.
      *
      * - Throws [NakshaError.UNINITIALIZED], if the storage failed to initialize.
@@ -113,6 +125,17 @@ interface IStorage : IDictReader {
     fun <T> useReadSession(options: SessionOptions? = null, lambda: Fn1<T, IReadSession>): T {
         val session = newReadSession(options)
         return session.use { lambda.call(session) }
+    }
+
+    /**
+     * Open a new read-session and execute the given lambda, ensuring that the session is closed after the lambda returns.
+     * This is very similar to [useReadSession] but it's not returning any value.
+     * @param options the session-options.
+     * @param lambda the void lambda to execute in a try block, ensuring that the session is closed.
+     */
+    fun runInReadSession(options: SessionOptions? = null, lambda: Fx1<IReadSession>) {
+        val session = newReadSession(options)
+        session.use { lambda.call(session) }
     }
 
     /**

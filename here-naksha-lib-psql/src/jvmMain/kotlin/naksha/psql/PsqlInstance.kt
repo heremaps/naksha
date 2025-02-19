@@ -33,6 +33,7 @@ class PsqlInstance(private val config: PgInstanceConfig) : PgInstance {
          * @param readOnly if the server is a read-replicate _(read-only instance)_.
          */
         @JvmStatic
+        @JvmOverloads
         fun get(host: String, port: Int = 5432, database: String, user: String, password: String, readOnly: Boolean = false): PsqlInstance
             = get(PgInstanceConfig()
                 .withHost(host).withPort(port)

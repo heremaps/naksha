@@ -25,10 +25,10 @@ import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.handlers.AuthorizationEventHandler;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -336,11 +336,6 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   @Override
-  public void refreshMaps() {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
   public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
     throw NOT_SUPPORTED_ERROR;
   }
@@ -352,11 +347,6 @@ public class NHSpaceStorageReader implements IReadSession {
 
   @Override
   public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public void refreshCollections(@NotNull NakshaMap map) {
     throw NOT_SUPPORTED_ERROR;
   }
 
