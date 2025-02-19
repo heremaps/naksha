@@ -442,7 +442,7 @@ class XyzNs : AnyObject() {
      * - **Naksha**: Always sets this field.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 1.0.0
+     * @since 1.0
      */
     val createdAt: Int64
         get() {
@@ -462,7 +462,7 @@ class XyzNs : AnyObject() {
      * - **Naksha**: Always sets this field.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 1.0.0
+     * @since 1.0
      */
     val updatedAt by _UPDATED_AT
 
@@ -477,7 +477,7 @@ class XyzNs : AnyObject() {
      * - **Naksha**: Does not support this field, it will always be _null_.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 1.0.0
+     * @since 1.0
      */
     @Deprecated("This field is not supported by Naksha, but part of MOM specification", level = WARNING)
     val space by _STRING_NULL
@@ -493,7 +493,7 @@ class XyzNs : AnyObject() {
      * specific encoding and are split for indexing, so they encode a key-value pair, and the value can be searched (e.g. `name=Foo` or
      * `age:=5`). The server guarantees that when two tags have the same key, they are collapsed, by the later version overriding the
      * previous one.
-     * @since 1.0.0
+     * @since 1.0
      */
     var tags by _TAGS
 
@@ -508,7 +508,7 @@ class XyzNs : AnyObject() {
      * - **Naksha**: This field stores the transaction-number (`txn`), and is a virtual property read from [uuid].
      *
      * **Note**: Currently MOM defines `version` as 32-bit integer, which is wrong, and not sufficient for Naksha, therefore this property is not set currently.
-     * @since 1.0.0
+     * @since 1.0
      */
     val version: Version?
         get() {
@@ -519,7 +519,15 @@ class XyzNs : AnyObject() {
         }
 
     /**
+     * The transaction-number of the feature, basically the same as [version], just as 64-bit integer.
+     * @since 2.0
+     */
+    val txn: Int64?
+        get() = guid?.tupleNumber?.txn
+
+    /**
      * The `uid` (unique transaction local identity) of the [Tuple] within the [transaction][naksha.model.objects.NakshaTransaction].
+     * @since 3.0
      */
     val uid: Int?
         get() = guid?.tupleNumber?.uid
@@ -529,7 +537,7 @@ class XyzNs : AnyObject() {
      *
      * - If this value is available, it is **guaranteed** that the current feature state is historic.
      * - If the value is not available (_null_), there is no guarantee if this is still the latest _HEAD_; it is only likely.
-     * @since 3.0.0
+     * @since 3.0
      */
     val nextVersion by _INT64_NULL
 

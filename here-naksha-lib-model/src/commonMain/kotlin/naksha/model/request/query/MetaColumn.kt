@@ -125,6 +125,25 @@ open class MetaColumn() : AnyObject() {
         fun flags(): MetaColumn = MetaColumn(FLAGS)
 
         /**
+         * The amount of changes that have been applied to a feature, a value between `1` and `2,147,483,647`.
+         *
+         * This value is exposed through [naksha.model.XyzNs.changeCount].
+         *
+         * Supported [query operations][AnyOp] are:
+         * - [DoubleOp]
+         * - [AnyOp.IS_ANY_OF]
+         */
+        const val CHANGE_COUNT = "changeCount"
+
+        /**
+         * Returns a new meta-column for [CHANGE_COUNT].
+         * @return a new meta-column.
+         */
+        @JvmStatic
+        @JsStatic
+        fun changeCount(): MetaColumn = MetaColumn(CHANGE_COUNT)
+
+        /**
          * The name of the virtual columns that stores the binary [operation][naksha.model.Operation], which actually is a subset of bits from the [flags][naksha.model.Metadata.flags].
          *
          * This value is exposed through [naksha.model.XyzNs.operation].

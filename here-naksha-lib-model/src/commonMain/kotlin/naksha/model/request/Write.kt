@@ -144,9 +144,17 @@ open class Write : AnyObject() {
      *
      * - If _null_, then the operation is not atomic.
      * - If not _null_, the operation is atomic, and expects that the existing HEAD [Tuple][naksha.model.Tuple] is in the given [version][naksha.model.Version].
-     * @since 3.0.0
+     * @since 3.0
      */
     var version by INT64_NULL
+
+    /**
+     * @see [version]
+     */
+    fun withVersion(value: Int64): Write {
+        version = value
+        return this
+    }
 
     /**
      * Tests if this write should be performed atomic.
@@ -208,6 +216,53 @@ open class Write : AnyObject() {
             if (f != null) return f.id
             return id
         }
+
+    private var _featureNumberId: String? = null
+    private var _featureNumber: Int64? = null
+
+    /**
+     * Explicitly set the **feature-number**, if `null`, then the feature-number is automatically calculated from the [feature-id][featureId].
+     *
+     * @since 3.0
+     */
+    var featureNumber: Int64?
+        get() {
+            val raw = getRaw("featureNumber")
+            if (raw is Int64) return raw
+            val id = featureId ?: return null
+            // Calculating the feature-number is expensive, we need a MD5 hash, so cache the result.
+            val cachedId = _featureNumberId
+            val cachedNumber = _featureNumber
+            if (id === cachedId) return cachedNumber
+            val number = featureNumber(hashId(id))
+            _featureNumberId = id
+            _featureNumber = number
+            return number
+        }
+        set(value) {
+            if (value == null) {
+                removeRaw("featureNumber")
+            } else {
+                setRaw("featureNumber", value)
+            }
+        }
+
+    /**
+     * @see [version]
+     */
+    fun withFeatureNumber(value: Int64?): Write {
+        featureNumber = value
+        return this
+    }
+
+    /**
+     * @see [version]
+     */
+    @JsName("withFeatureNumber32")
+    fun withFeatureNumber(value: Int?): Write {
+        featureNumber = if (value == null) null else value.toInt64() and Naksha.INT64_CLEAR_HIGH32
+        return this
+    }
 
     /**
      * Arbitrary attachment to be stored.

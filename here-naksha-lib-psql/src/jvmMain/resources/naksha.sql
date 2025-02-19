@@ -224,26 +224,41 @@ AS $$
     SELECT int4recv(digest(id,'md5'), 12) & 65535
 END $$;
 
-DROP FUNCTION IF EXISTS naksha_partition_index(bytea, int);
-CREATE FUNCTION naksha_partition_index(tn bytea, parts int) RETURNS int
+DROP FUNCTION IF EXISTS naksha_partition_index(bytea, int4);
+CREATE FUNCTION naksha_partition_index(tn bytea, parts int) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   SELECT (naksha_tn_feature_number(tn) & 65535)::int % parts
 END $$;
 
-DROP FUNCTION IF EXISTS naksha_partition_index(int8, int);
-CREATE FUNCTION naksha_partition_index(feature_number int8, parts int) RETURNS int
+DROP FUNCTION IF EXISTS naksha_partition_index(int8, int4);
+CREATE FUNCTION naksha_partition_index(feature_number int8, parts int4) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   SELECT (feature_number & 65535)::int % parts
 END $$;
 
-DROP FUNCTION IF EXISTS naksha_partition_index(int4, int);
-CREATE FUNCTION naksha_partition_index(partition_number int4, parts int) RETURNS int
+DROP FUNCTION IF EXISTS naksha_partition_index(int4, int4);
+CREATE FUNCTION naksha_partition_index(partition_number int4, parts int4) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   SELECT partition_number % parts
 END $$;
+
+DROP FUNCTION IF EXISTS naksha_alt32(int4);
+CREATE FUNCTION naksha_alt32(num int4) RETURNS int4
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT (num + 1) | -2147483648
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_alt64(int8);
+CREATE FUNCTION naksha_alt64(num int8) RETURNS int8
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT ((num + 65536::int8) & (-65536::bigint)) | (num & (65535::bigint)) | (((-9223372036854775807::int8) - 1::int8)::int8)
+END $$;
+
 
 DROP FUNCTION IF EXISTS naksha_created_at(bigint, bigint);
 CREATE FUNCTION naksha_created_at(created_at bigint, updated_at bigint) RETURNS bigint

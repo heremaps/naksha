@@ -280,22 +280,7 @@ class Naksha private constructor() {
         @JvmStatic
         fun storageNumber(md5: Binary): Int64 = md5.getInt64(8) and INT64_CLEAR_SIGN_BIT
 
-        /**
-<<<<<<< HEAD
-         * A method to calculate a valid storage-number from the id of provided [StorageConfig]. It generates [md5] hash from the storage's id and calls [storageNumber] under the hood.
-         *
-         * @param md5 the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the storage-id, from which to extract the storage-number.
-         * @return the storage-number.
-         * @since 3.0
-         * @see [hashId]
-         */
-        @JsName("storageNumberByConfig")
-        @JsStatic
-        @JvmStatic
-        fun storageNumber(storageConfig: StorageConfig): Int64 = storageNumber(Binary(md5(storageConfig.id)))
-
        /**
-=======
          * A method to calculate a valid map-number from the [MD5](https://en.wikipedia.org/wiki/MD5) hash of a map-id.
          *
          * @param md5 the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the map-id, from which to extract the map-number.
@@ -320,7 +305,6 @@ class Naksha private constructor() {
         fun collectionNumber(md5: Binary): Int = md5.getInt32(12) or -2147483648
 
         /**
->>>>>>> 0e1c901cd (Fix naksha schema creation, and indices.)
          * A method to calculate the feature-number (`fn`) from the [MD5](https://en.wikipedia.org/wiki/MD5) hash above a feature-id.
          *
          * Actually, this method will use the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id and return the lower 64-bit as feature-number, with the highest bit (sign-bit) always being set, which reserves all positive numbers for manually managed feature-numbers, which is compatible to what `Map-Hub` originally did. Considering the [birthday paradox](https://betterexplained.com/articles/understanding-the-birthday-paradox/), we can assume that for the maximum of 2^40 features in a collection, there will be around 65,000 collisions, when using 2^32 features _(4 billion)_ we only get 2 collisions, while for less than 1 billion features we will not encounter any collision _(or, it is unlikely)_.
@@ -360,6 +344,26 @@ class Naksha private constructor() {
         fun featureNumber(md5: Binary): Int64 = md5.getInt64(8) or INT64_SIGN_BIT
 
         /**
+         * Test if the given 32-bit represents a number, generated from an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the identifier.
+         * @param number the number to test.
+         * @return `true` if the given map- or collection-number was generated as hash above the identifier; `false` otherwise.
+         */
+        @JsName("isAutoNumber32")
+        @JsStatic
+        @JvmStatic
+        fun isAutoNumber(number: Int): Boolean = (number and -2147483648) == -2147483648
+
+        /**
+         * Test if the given 64-bit represents a number, generated from an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the identifier.
+         * @param number the number to test.
+         * @return `true` if the given storage- or feature-number was generated as hash above the identifier; `false` otherwise.
+         */
+        @JsName("isAutoNumber64")
+        @JsStatic
+        @JvmStatic
+        fun isAutoNumber(number: Int64): Boolean = (number and INT64_SIGN_BIT) == INT64_SIGN_BIT
+
+        /**
          * `0x8000_0000_0000_0000`, should be `-9223372036854775808`, but this does not work in Kotlin, only `-9223372036854775807 -1`?
          * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
          */
@@ -379,6 +383,13 @@ class Naksha private constructor() {
          */
         @JvmStatic
         internal val INT64_CLEAR_HIGH48 = Int64(0x0000_0000_0000_ffff)
+
+        /**
+         * `0x0000_0000_ffff_ffff` aka `4294967295`
+         * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
+         */
+        @JvmStatic
+        internal val INT64_CLEAR_HIGH32 = Int64(4294967295)
 
         /**
          * `0xff00_0000_0000_0000` aka `-72057594037927936`
