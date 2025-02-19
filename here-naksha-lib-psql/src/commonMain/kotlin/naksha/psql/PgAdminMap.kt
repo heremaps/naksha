@@ -297,14 +297,9 @@ SELECT basics.*, procs.* FROM basics, procs;
                 schemaOid = admin_schema_oid
             }
             logger.info("Load OID of sequence counters from admin schema (schema-oid=$schemaOid)")
-            conn.execute(
-                """SELECT 
-(SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_TXN_SEQ') AS txn_oid,
-"""
-// (SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_MAP_SEQ') AS map_oid,
-// (SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_COL_SEQ') AS col_oid
-            ).fetch().use { cursor ->
-                txnSequenceOid = cursor["txn_oid"]
+            val SQL = "SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_TXN_SEQ'"
+            conn.execute(SQL).fetch().use { cursor ->
+                txnSequenceOid = cursor["oid"]
                 //mapNumberSequenceOid = cursor["map_oid"]
                 //colNumberSequenceOid = cursor["col_oid"]
             }
