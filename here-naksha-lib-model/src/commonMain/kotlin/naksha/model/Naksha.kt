@@ -131,15 +131,66 @@ class Naksha private constructor() {
         var DEFAULT_FLAGS = Flags(TWKB, JBON_GZIP, TagsEncoding.JSON_GZIP, ACTION_CREATE)
 
         /**
+         * Quotes a string literal, this means to replace all single quotes (`'`) with two single quotes (`''`). This encloses the string with quotation characters, when needed.
+         * @param parts the literal parts to merge and quote.
+         * @return The quoted literal.
+         */
+        @JsStatic
+        @JvmStatic
+        fun quoteLiteral(vararg parts: String): String {
+            val sb = StringBuilder()
+            sb.append("E'")
+            for (part in parts) {
+                for (c in part) {
+                    when (c) {
+                        '\'' -> sb.append('\'').append('\'')
+                        '\\' -> sb.append('\\').append('\\')
+                        else -> sb.append(c)
+                    }
+                }
+            }
+            sb.append('\'')
+            return sb.toString()
+        }
+
+        /**
+         * Quotes an identifier, this means to replace all double quotes (`"`) with two double quotes (`""`), but only if necessary, so if not being `a-zA-Z0-9_`. This encloses the string with quotation characters, when needed.
+         * @param parts the identifier parts to merge and quote.
+         * @return the quoted identifier.
+         */
+        @JsStatic
+        @JvmStatic
+        fun quoteIdent(vararg parts: String): String {
+            if (parts.isEmpty()) throw NakshaException(ILLEGAL_ARGUMENT, "The given parts must not be empty")
+            var quoted = false
+            val sb = StringBuilder()
+            sb.append('"')
+            for (part in parts) {
+                for (c in part) {
+                    when (c) {
+                        in 'a'..'z', in 'A'..'Z', in '0'..'9', '_' -> sb.append(c)
+                        '"' -> { quoted = true; sb.append('"').append('"') }
+                        '\\' -> { quoted = true; sb.append('\\').append('\\') }
+                        else -> { quoted = true; sb.append(c) }
+                    }
+                }
+            }
+            if (!quoted) return if (parts.size == 1) return parts[0] else sb.substring(1)
+            sb.append('"')
+            return sb.toString()
+        }
+
+        /**
          * Tests if the given **id** is a valid identifier, so matches:
          *
-         * `[a-z][a-z0-9_:-]{31}`
+         * `[a-z][a-z0-9_:-]{42}`
          *
          * **Beware**: Identifiers must not contain upper-case letters, because many storages does not make a difference between upper- and lower-cased letters.
          * @param id the identifier.
          * @return _true_ if the identifier is valid; _false_ otherwise.
          * @since 3.0.0
          * @see [verifyId]
+         * @see [MAX_ID_LENGTH]
          */
         @JsStatic
         @JvmStatic
@@ -196,54 +247,14 @@ class Naksha private constructor() {
         }
 
         /**
-         * Quotes a string literal, this means to replace all single quotes (`'`) with two single quotes (`''`). This encloses the string with quotation characters, when needed.
-         * @param parts the literal parts to merge and quote.
-         * @return The quoted literal.
+         * Tests if the given identifier is an internal one.
+         * @param id the identifier to test.
+         * @return _true_ if this is an internal identifier; _false_ otherwise.
+         * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
-        fun quoteLiteral(vararg parts: String): String {
-            val sb = StringBuilder()
-            sb.append("E'")
-            for (part in parts) {
-                for (c in part) {
-                    when (c) {
-                        '\'' -> sb.append('\'').append('\'')
-                        '\\' -> sb.append('\\').append('\\')
-                        else -> sb.append(c)
-                    }
-                }
-            }
-            sb.append('\'')
-            return sb.toString()
-        }
-
-        /**
-         * Quotes an identifier, this means to replace all double quotes (`"`) with two double quotes (`""`), but only if necessary, so if not being `a-zA-Z0-9_`. This encloses the string with quotation characters, when needed.
-         * @param parts the identifier parts to merge and quote.
-         * @return the quoted identifier.
-         */
-        @JsStatic
-        @JvmStatic
-        fun quoteIdent(vararg parts: String): String {
-            if (parts.isEmpty()) throw NakshaException(ILLEGAL_ARGUMENT, "The given parts must not be empty")
-            var quoted = false
-            val sb = StringBuilder()
-            sb.append('"')
-            for (part in parts) {
-                for (c in part) {
-                    when (c) {
-                        in 'a'..'z', in 'A'..'Z', in '0'..'9', '_' -> sb.append(c)
-                        '"' -> { quoted = true; sb.append('"').append('"') }
-                        '\\' -> { quoted = true; sb.append('\\').append('\\') }
-                        else -> { quoted = true; sb.append(c) }
-                    }
-                }
-            }
-            if (!quoted) return if (parts.size == 1) return parts[0] else sb.substring(1)
-            sb.append('"')
-            return sb.toString()
-        }
+        fun isInternalId(id: String?): Boolean = id != null && id.startsWith(ADMIN_PREFIX)
 
         /**
          * Generates an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the given identifier, which is used to extract many values from it.
@@ -265,12 +276,12 @@ class Naksha private constructor() {
          * @since 3.0
          * @see [hashId]
          */
-        @JsName("storageNumberByHash")
         @JsStatic
         @JvmStatic
         fun storageNumber(md5: Binary): Int64 = md5.getInt64(8) and INT64_CLEAR_SIGN_BIT
 
         /**
+<<<<<<< HEAD
          * A method to calculate a valid storage-number from the id of provided [StorageConfig]. It generates [md5] hash from the storage's id and calls [storageNumber] under the hood.
          *
          * @param md5 the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the storage-id, from which to extract the storage-number.
@@ -284,6 +295,32 @@ class Naksha private constructor() {
         fun storageNumber(storageConfig: StorageConfig): Int64 = storageNumber(Binary(md5(storageConfig.id)))
 
        /**
+=======
+         * A method to calculate a valid map-number from the [MD5](https://en.wikipedia.org/wiki/MD5) hash of a map-id.
+         *
+         * @param md5 the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the map-id, from which to extract the map-number.
+         * @return the map-number.
+         * @since 3.0
+         * @see [hashId]
+         */
+        @JsStatic
+        @JvmStatic
+        fun mapNumber(md5: Binary): Int = md5.getInt32(12) or -2147483648
+
+        /**
+         * A method to calculate a valid collection-number from the [MD5](https://en.wikipedia.org/wiki/MD5) hash of a collection-id.
+         *
+         * @param md5 the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the collection-id, from which to extract the collection-number.
+         * @return the collection-number.
+         * @since 3.0
+         * @see [hashId]
+         */
+        @JsStatic
+        @JvmStatic
+        fun collectionNumber(md5: Binary): Int = md5.getInt32(12) or -2147483648
+
+        /**
+>>>>>>> 0e1c901cd (Fix naksha schema creation, and indices.)
          * A method to calculate the feature-number (`fn`) from the [MD5](https://en.wikipedia.org/wiki/MD5) hash above a feature-id.
          *
          * Actually, this method will use the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id and return the lower 64-bit as feature-number, with the highest bit (sign-bit) always being set, which reserves all positive numbers for manually managed feature-numbers, which is compatible to what `Map-Hub` originally did. Considering the [birthday paradox](https://betterexplained.com/articles/understanding-the-birthday-paradox/), we can assume that for the maximum of 2^40 features in a collection, there will be around 65,000 collisions, when using 2^32 features _(4 billion)_ we only get 2 collisions, while for less than 1 billion features we will not encounter any collision _(or, it is unlikely)_.
@@ -302,11 +339,11 @@ class Naksha private constructor() {
          *      | (-9223372036854775808)::bigint
          * AS new_fn, t.fn as old_fn FROM t;
          * ```
-         * Naksha adds a SQL function to simplify the increase, named `naksha_fn_inc`, which returns the incremented feature-number. Eventually, to find the next not colliding number, the following query can be used:
+         * Naksha adds a SQL function to simplify the increase, named `naksha_alt64`, which returns the incremented feature-number. Eventually, to find the next not colliding number, the following query can be used:
          *
          * ```sql
-         * SELECT naksha_fn_inc(t1.fn) AS fn FROM "table" t1
-         * LEFT JOIN "table" t2 ON naksha_fn_inc(t1.fn) = t2.fn
+         * SELECT naksha_alt64(t1.fn) AS fn FROM "table" t1
+         * LEFT JOIN "table" t2 ON naksha_alt64(t1.fn) = t2.fn
          *   WHERE t2.fn IS NULL ORDER BY t1.fn LIMIT 1;
          * ```
          *
@@ -316,19 +353,18 @@ class Naksha private constructor() {
          * @param md5 the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id, from which to extract the feature-number.
          * @return the feature-number.
          * @see [hashId]
-         * @see [featureNumberInc]
+         * @see [alternativeInt64]
          */
-        @JsName("featureNumberByHash")
         @JsStatic
         @JvmStatic
-        fun featureNumber(md5: Binary): Int64 = md5.getInt64(8) or INT64_SET_SIGN_BIT
+        fun featureNumber(md5: Binary): Int64 = md5.getInt64(8) or INT64_SIGN_BIT
 
         /**
          * `0x8000_0000_0000_0000`, should be `-9223372036854775808`, but this does not work in Kotlin, only `-9223372036854775807 -1`?
          * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
          */
         @JvmStatic
-        internal val INT64_SET_SIGN_BIT = Int64(Long.MIN_VALUE)
+        internal val INT64_SIGN_BIT = Int64(Long.MIN_VALUE)
 
         /**
          * `0x7fff_ffff_ffff_ffff`
@@ -371,31 +407,37 @@ class Naksha private constructor() {
         fun partitionNumber(featureNumber: Int64): Int = featureNumber.toInt() and 0xffff
 
         /**
-         * Increment the feature-number programmatically in case of collision, and return the _alternative_ feature-number, derived deterministically from the given previous feature-number. This method implements the same behavior as the SQL function `naksha_fn_inc`.
+         * Increment a 64-bit number _(storage- or feature-number)_ programmatically in case of collision, and return the _alternative_ number, derived deterministically from the given number. This method implements the same behavior as the SQL function `naksha_alt64`.
          *
          * ### Note
          * This method can be applied recursively until a new valid number has been found.
          *
-         * @param featureNumber the feature-number to calculate an alternative from.
-         * @return the alternative feature-number that has the same partition-number.
+         * @param number the number to calculate an alternative from.
+         * @return the alternative number.
          * @since 3.0
-         * @see [featureNumber]
+         * @see [number]
          * @see [hashId]
          */
         @JsStatic
         @JvmStatic
-        fun featureNumberInc(featureNumber: Int64): Int64
-            = ((featureNumber + 65536) and INT64_CLEAR_LOW16) or (featureNumber and INT64_CLEAR_HIGH48) or INT64_SET_SIGN_BIT
+        fun alternativeInt64(number: Int64): Int64
+            = ((number + 65536) and INT64_CLEAR_LOW16) or (number and INT64_CLEAR_HIGH48) or INT64_SIGN_BIT
 
         /**
-         * Tests if the given identifier is an internal one.
-         * @param id the identifier to test.
-         * @return _true_ if this is an internal identifier; _false_ otherwise.
-         * @since 3.0.0
+         * Increment a 32-bit number _(map- or collection-number)_ programmatically in case of collision, and return the _alternative_ number, derived deterministically from the given number. This method implements the same behavior as the SQL function `naksha_alt32`.
+         *
+         * ### Note
+         * This method can be applied recursively until a new valid number has been found.
+         *
+         * @param number the number to calculate an alternative from.
+         * @return the alternative number.
+         * @since 3.0
+         * @see [number]
+         * @see [hashId]
          */
         @JsStatic
         @JvmStatic
-        fun isInternal(id: String?): Boolean = id != null && id.startsWith(ADMIN_PREFIX)
+        fun alternativeInt32(number: Int): Int = (number + 1) or -2147483648
 
         /**
          * Decode the [Naksha feature][NakshaFeature] from the given [tuple][Tuple].
