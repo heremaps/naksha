@@ -1,15 +1,12 @@
 package naksha.psql.executors.write
 
 import naksha.base.PlatformUtil
-import naksha.base.toInt64
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.featureNumber
-import naksha.model.Naksha.NakshaCompanion.hashId
-import naksha.model.Naksha.NakshaCompanion.quoteIdent
 import naksha.model.SessionUtil.SessionUtil_C.newTupleNumber
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.psql.*
+import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.WriteFeatureUtils.allColumnValues
 

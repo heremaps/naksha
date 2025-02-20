@@ -1,12 +1,12 @@
 package naksha.psql.executors.write
 
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.quoteIdent
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
 import naksha.psql.PgColumn
 import naksha.psql.PgPlan
 import naksha.psql.PgSession
+import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.executors.write.WriteFeatureUtils.allColumnValues
 
 class BulkWriteExecutor(
