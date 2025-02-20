@@ -42,35 +42,44 @@ actual class TupleHeapCache : ITupleCache {
     }
 
     override fun put(tuple: Tuple) {
-        TODO("Not yet implemented")
+        if (tuple.isComplete()) {
+            val tupleNumber = tuple.tupleNumber
+            val storageNumber = tupleNumber.storageNumber
+            var storageTuples = tuplesByStorage[storageNumber]
+            if (storageTuples == null) {
+                storageTuples = AtomicMap()
+                val existing = tuplesByStorage.putIfAbsent(storageNumber, storageTuples)
+                if (existing != null) storageTuples = existing
+            }
+            storageTuples[tupleNumber] = tuple.weakRef
+        }
     }
 
     override fun store(tuples: List<Tuple>) {
-        TODO("Not yet implemented")
+        for (tuple in tuples) put(tuple)
     }
 
     override fun onStorageAdd(storage: IStorage) {
-        TODO("Not yet implemented")
     }
 
     override fun onStorageRemove(storage: IStorage) {
-        TODO("Not yet implemented")
     }
 
     override fun getDictReader(storageNumber: Int64): IDictReader? {
-        TODO("Not yet implemented")
+        // TODO: Implement me!
+        return null
     }
 
     override fun clear() {
-        TODO("Not yet implemented")
+        tuplesByStorage.clear()
     }
 
     override fun clear(storage: IStorage) {
-        TODO("Not yet implemented")
+        tuplesByStorage.remove(storage.number)
     }
 
     override fun gc() {
-        TODO("Not yet implemented")
+        // TODO: Implement me!
     }
 
     actual companion object TupleHeapCache_C {

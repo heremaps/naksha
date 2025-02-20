@@ -3,6 +3,7 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.base.WeakRef
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -68,6 +69,22 @@ data class Tuple(
     }
 
     override fun hashCode(): Int = super.hashCode()
+
+    private var _weakRef: WeakRef<Tuple>? = null
+
+    /**
+     * A lazy created weak-reference to this tuple _(created on read)_.
+     * @since 3.0
+     */
+    val weakRef: WeakRef<Tuple>
+        get() {
+            var ref = _weakRef
+            if (ref == null) {
+                ref = WeakRef(this)
+                _weakRef = ref
+            }
+            return ref
+        }
 
     /**
      * The [identifier][Metadata.id] of the feature, basically `meta.id`.
