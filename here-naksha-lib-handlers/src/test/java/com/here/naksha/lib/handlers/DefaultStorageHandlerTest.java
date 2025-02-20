@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Named.named;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -25,10 +26,14 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Stream;
 import naksha.base.JvmBoxingUtil;
+import naksha.base.fn.Fn1;
+import naksha.base.fn.Fx0;
+import naksha.base.fn.Fx1;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
+import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
@@ -51,6 +56,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.internal.stubbing.answers.DoesNothing;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,10 +77,14 @@ class DefaultStorageHandlerTest {
   @Mock
   IReadSession storageReadSession;
 
+  NakshaContext nakshaContext;
+
   @BeforeEach
   void setup() {
     MockitoAnnotations.openMocks(this);
     configureStorageMocks();
+    nakshaContext = NakshaContext.newInstance("default_storage_handler_test_context");
+    nakshaContext.attachToCurrentThread();
   }
 
   @Test
@@ -407,7 +418,11 @@ class DefaultStorageHandlerTest {
   private void configureStorageMocks() {
     when(naksha.getStorageById(any())).thenReturn(storage);
     when(storage.newWriteSession(any(SessionOptions.class))).thenReturn(storageWriteSession);
+    when(storage.useWriteSession(any(SessionOptions.class), any(Fn1.class))).thenCallRealMethod();
+    doNothing().when(storage).runInWriteSession(any(SessionOptions.class), any(Fx1.class));
     when(storage.newReadSession(any(SessionOptions.class))).thenReturn(storageReadSession);
+    when(storage.useReadSession(any(SessionOptions.class), any(Fn1.class))).thenCallRealMethod();
+    doNothing().when(storage).runInReadSession(any(SessionOptions.class), any(Fx1.class));
   }
 
   private void ignoreExceptionsFrom(Callable<?> callable, String reason) {
