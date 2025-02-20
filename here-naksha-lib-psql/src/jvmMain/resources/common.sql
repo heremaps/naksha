@@ -1,3 +1,6 @@
+-- noinspection SqlNoDataSourceInspectionForFile
+
+--
 -- Idea based upon: https://rymc.io/blog/2016/a-deep-dive-into-plv8/
 -- Execute this SQL code, then all plv8 codes can use es-modules.
 --
@@ -7,19 +10,17 @@
 --
 -- Extension can be installed like:
 -- insert into es_modules (name, paths, autoload, source) values ('name', array[]::text[], false, '(() => { modules.exports["id"]=... })()')
+--
+CREATE EXTENSION IF NOT EXISTS plv8;
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+CREATE EXTENSION IF NOT EXISTS btree_gin;
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS postgis_topology;
 
-CREATE SCHEMA IF NOT EXISTS public;
-CREATE SCHEMA IF NOT EXISTS topology;
 CREATE SCHEMA IF NOT EXISTS "naksha~admin";
-
 -- Set search path and install extension.
 SET SESSION search_path TO "naksha~admin", public, topology;
-CREATE EXTENSION IF NOT EXISTS plv8 SCHEMA public;
-CREATE EXTENSION IF NOT EXISTS btree_gist SCHEMA public;
-CREATE EXTENSION IF NOT EXISTS btree_gin SCHEMA public;
-CREATE EXTENSION IF NOT EXISTS postgis SCHEMA public;
-CREATE EXTENSION IF NOT EXISTS pgcrypto SCHEMA public;
-CREATE EXTENSION IF NOT EXISTS postgis_topology SCHEMA topology;
 do $$ begin
   if exists (select from pg_available_extensions where name='gzip' and installed_version is null) then
   	CREATE EXTENSION gzip SCHEMA public;
