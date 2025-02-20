@@ -179,6 +179,9 @@ actual class Platform {
         actual fun <R: Any> newAtomicRef(startValue: R?): AtomicRef<R> = JsAtomicRef(startValue)
 
         @JsStatic
+        actual fun newAtomicBool(startValue: Boolean): AtomicBool = JsAtomicBool(startValue)
+
+        @JsStatic
         actual fun newAtomicInt(startValue: Int): AtomicInt = JsAtomicInt(startValue)
 
         @JsStatic

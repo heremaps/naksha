@@ -216,6 +216,13 @@ expect class Platform {
         fun <R: Any> newAtomicRef(startValue: R?): AtomicRef<R>
 
         /**
+         * Create a new atomic boolean.
+         * @param startValue the initial value.
+         * @return the atomic boolean.
+         */
+        fun newAtomicBool(startValue: Boolean): AtomicBool
+
+        /**
          * Create a new atomic integer.
          * @param startValue the initial value.
          * @return the atomic integer.
