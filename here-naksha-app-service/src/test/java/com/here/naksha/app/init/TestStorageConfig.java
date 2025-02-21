@@ -16,6 +16,7 @@ public class TestStorageConfig {
   public TestStorageConfig(String mapId, PgConfig pgConfig) {
     this.mapId = mapId;
     this.pgConfig = pgConfig;
+    pgConfig.setCreate(true);
   }
 
   public String getMapId() {

@@ -7,8 +7,10 @@ import com.here.naksha.app.init.TestStorageConfigs;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
-import naksha.psql.PgSession;
-import naksha.psql.PsqlStorage;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
+import naksha.model.request.WriteRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,22 +22,28 @@ public class LocalTestContext extends TestContext {
   private static final TestStorageConfig STORAGE_CONFIG = TestStorageConfigs.dataDbConfig;
   private static final String MASTER_URL = STORAGE_CONFIG.getPgConfig().getMasterUri();
 
+  private final NakshaContext nakshaContext;
+
   public LocalTestContext() {
     super(() -> newInstance(CONFIG_ID, MASTER_URL));
+    nakshaContext = NakshaContext.newInstance("local-test")
+        .withSu(true)
+        .attachToCurrentThread();
   }
 
   @Override
   void setupStorage() {
     super.setupStorage();
     if (!MASTER_URL.isBlank()) {
-      log.info("Dropping schema {} for url: {}", STORAGE_CONFIG.getMapId(), MASTER_URL);
-      SessionOptions sessionOptions = SessionOptions.from(NakshaContext.currentContext(), true);
-      PsqlStorage storage = (PsqlStorage) Naksha.useStorage(STORAGE_CONFIG.getPgConfig());
-      try (PgSession session = storage.newSession(sessionOptions, false)) {
-        session.useConnection().execute("DROP SCHEMA IF EXISTS " + STORAGE_CONFIG.getMapId() + " CASCADE;", null);
-        session.commit();
+      log.info("Removing map (schema) {} for db with url: {}", STORAGE_CONFIG.getMapId(), MASTER_URL);
+      SessionOptions sessionOptions = SessionOptions.from(nakshaContext, true);
+      Response response = Naksha.useStorage(STORAGE_CONFIG.getPgConfig()).useWriteSession(sessionOptions,
+          writer -> writer.execute(new WriteRequest().add(new Write().deleteMapById(STORAGE_CONFIG.getMapId()))));
+      if(response instanceof SuccessResponse){
+        log.info("Removed map (which should drop schema of the same name): {}", STORAGE_CONFIG.getMapId());
+      } else {
+        log.warn("Could not remove map: {}, unexpected response: {}", STORAGE_CONFIG.getMapId(), response);
       }
-      log.info("Dropped schema: {}", STORAGE_CONFIG.getMapId());
     }
   }
 }
