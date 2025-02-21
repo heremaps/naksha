@@ -19,11 +19,11 @@ class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c")) 
             id = "feature_1"
         }
         val writeInitialFeature = WriteRequest().add(
-            Write().upsertFeature(collection, initialFeature, true)
+            Write().upsertFeature(collection, initialFeature)
         )
 
         val upsertFeaturesReq = WriteRequest().add(
-            Write().upsertFeature(collection, initialFeature, true)
+            Write().upsertFeature(collection, initialFeature)
         )
 
         // When: Writing initial version of feature

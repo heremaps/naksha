@@ -124,7 +124,7 @@ public class RequestHelper {
       final @NotNull String collection, final @NotNull List<FEATURE> features) {
     final WriteRequest request = new WriteRequest();
     for (FEATURE feature : features) {
-      request.add(new Write().upsertFeature(collection, feature, true));
+      request.add(new Write().upsertFeature(collection, feature));
     }
     return request;
   }

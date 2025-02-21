@@ -2,11 +2,16 @@
 
 package naksha.model.objects
 
+import naksha.base.Int64
+import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
+import naksha.model.Flags
 import naksha.model.Naksha
+import naksha.model.NakshaError
+import naksha.model.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -45,12 +50,13 @@ open class NakshaMap() : NakshaFeature() {
          */
         const val FEATURE_TYPE = "naksha.Map"
 
-        private val INT_NULL = NullableProperty<NakshaMap, Int>(Int::class)
-        private val STRING_NULL = NullableProperty<NakshaMap, String>(String::class)
+        private val STORAGE_ID = NotNullProperty<NakshaMap, String>(String::class) { _, _ -> throw NakshaException(NakshaError.ILLEGAL_STATE, "Missing storage-id for NakshaMap") }
+        private val DEFAULT_FLAGS = NullableProperty<NakshaMap, Flags>(Flags::class)
     }
 
     override fun defaultFeatureType(): String = NakshaCollection.FEATURE_TYPE
     override fun withId(value: String): NakshaMap = super.withId(value) as NakshaMap
+    override fun withFeatureNumber(featureNumber: Int64?): NakshaMap = super.withFeatureNumber(featureNumber) as NakshaMap
     override fun withType(value: String): NakshaMap = super.withType(value) as NakshaMap
     override fun withFeatureType(value: String): NakshaMap = super.withFeatureType(value) as NakshaMap
     override fun withBbox(value: SpBoundingBox?): NakshaMap = super.withBbox(value) as NakshaMap
@@ -61,10 +67,11 @@ open class NakshaMap() : NakshaFeature() {
     override fun withMomType(value: String): NakshaMap = super.withMomType(value) as NakshaMap
 
     /**
-     * The storage-id of the storage in which the map is located; _null_ if the map does not yet exist.
-     * @since 3.0.0
+     * The storage-id of the storage in which the map is located.
+     * - Throws [NakshaError.ILLEGAL_STATE] if read before set.
+     * @since 3.0
      */
-    var storageId by STRING_NULL
+    var storageId by STORAGE_ID
 
     /**
      * @see storageId
@@ -73,6 +80,14 @@ open class NakshaMap() : NakshaFeature() {
         storageId = value
         return this
     }
+
+    /**
+     * The encoding flags to be used for new rows of all collections of this map, that do not have an own [defaultFlags][NakshaCollection.defaultFlags].
+     *
+     * - If _null_, the storage will use whatever is best for the storage.
+     * @since 3.0.0
+     */
+    var defaultFlags by DEFAULT_FLAGS
 
     private var _cachedId: String? = null
     private var _cachedNumber: Int? = null
@@ -85,9 +100,10 @@ open class NakshaMap() : NakshaFeature() {
      */
     var number: Int
         get() {
+            val id = this.id
+            if (id == Naksha.ADMIN_MAP) return Naksha.ADMIN_MAP_NUMBER
             val n = getRaw("number")
             if (n is Int) return n
-            val id = this.id
             val cachedId = _cachedId
             val cachedNumber = _cachedNumber
             if (id === cachedId && cachedNumber != null) return cachedNumber

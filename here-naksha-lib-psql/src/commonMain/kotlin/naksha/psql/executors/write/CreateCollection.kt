@@ -38,7 +38,7 @@ class CreateCollection(
         executeInsert(quoteIdent(collectionId), tuple, collection)
 
         // Create the tables
-        session.storage.adminMap.createCollection(session.useConnection(), map, collection)
+        //session.storage.adminMap.createCollection(session.useConnection(), map, collection)
         return tuple
     }
 

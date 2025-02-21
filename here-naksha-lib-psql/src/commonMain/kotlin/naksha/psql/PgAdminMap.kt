@@ -55,8 +55,7 @@ abstract class PgAdminMap internal constructor(
 ) : PgMap(storage, NakshaMap()
     .withStorageId(storage.id)
     .withId(Naksha.ADMIN_MAP)
-    .withNumber(Naksha.ADMIN_MAP_NUMBER),
-    0), IDictReader {
+    .withNumber(Naksha.ADMIN_MAP_NUMBER)), IDictReader {
 
     /**
      * The page-size of the database (`current_setting('block_size')`).
@@ -451,7 +450,8 @@ SELECT basics.*, procs.* FROM basics, procs;
     /**
      * Create a new [map][PgMap] using the given connection, and return it.
      *
-     * **Note**: Does not commit the given connection, therefore the map is not yet persisted, but can be used through the given connection. The method neither creates the corresponding entry in the collection's collection of the admin-map, it only creates the schema and collection-number sequence counter!
+     * ### Note
+     * Does not commit the given connection, therefore the map is not yet persisted, but can be used through the given connection. The method neither creates the corresponding entry in the collection's collection of the admin-map, it only creates the schema and collection-number sequence counter!
      *
      * - Throws [NakshaError.MAP_EXISTS] if such a map exists already.
      * @param conn the connection to use to access the database.
@@ -459,12 +459,13 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @return the created map.
      * @since 3.0.0
      */
-    abstract fun createPgMap(conn: PgConnection, map: NakshaMap): PgMap
+    abstract fun createPgMap(conn: PgConnection, map: PgMap)
 
     /**
      * Delete a map.
      *
-     * **Note**: Does not commit the given connection, therefore the map is not yet physically deleted. The method neither deletes the corresponding entry from the collection's collection of the admin-map, it only drops the schema!
+     * ### Note
+     * Does not commit the given connection, therefore the map is not yet physically deleted. The method neither deletes the corresponding entry from the collection's collection of the admin-map, it only drops the schema!
      * @param conn the connection to use to access the database.
      * @param map the map to delete.
      * @since 3.0.0
@@ -500,33 +501,16 @@ SELECT basics.*, procs.* FROM basics, procs;
     /**
      * Create a new [collection][PgCollection] using the given connection, and return it.
      *
-     * **Note**: Does not commit the given connection, therefore the collection is not yet persisted, but can be used through the given connection.
-     *
-     * - Throws [NakshaError.MAP_NOT_FOUND] if the given map does not exist _(anymore)_.
-     * - Throws [NakshaError.COLLECTION_EXISTS] if such a collection exists already in the given map.
-     * @param conn the connection to use to access the database.
-     * @param map the map in which to create the collection.
-     * @param collection the collection to create.
-     * @return the created map.
-     * @since 3.0.0
-     */
-    fun createCollection(conn: PgConnection, map: PgMap, collection: NakshaCollection): PgCollection {
-        val c = PgCollection(map, collection)
-        createPgCollection(conn, c)
-        return c
-    }
-
-    /**
-     * Create a new [collection][PgCollection] using the given connection, and return it.
-     *
-     * **Note**: Does not commit the given connection, therefore the collection is not yet persisted, but can be used through the given connection.
+     * ### Note
+     * - This method does not commit the given connection, therefore the collection is not yet persisted, but can be used through the given connection.
+     * - The method does not insert the corresponding entry into the collection's collection, this must be done upfront by the caller.
      *
      * - Throws [NakshaError.MAP_NOT_FOUND] if the given map does not exist _(anymore)_.
      * - Throws [NakshaError.COLLECTION_EXISTS] if such a collection exists already in the given map.
      * @param conn the connection to use to access the database.
      * @param collection the collection to create.
      * @return the created map.
-     * @since 3.0.0
+     * @since 3.0
      */
     open fun createPgCollection(conn: PgConnection, collection: PgCollection) {
         val indices: List<PgIndex>

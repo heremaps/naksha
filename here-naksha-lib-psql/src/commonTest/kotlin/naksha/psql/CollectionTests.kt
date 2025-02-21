@@ -260,7 +260,7 @@ class CollectionTests : PgTestBase(null) {
         // create collection using upsert
         val response = executeWrite(
             WriteRequest().add(
-                Write().upsertCollection(collection, true)
+                Write().upsertCollection(collection)
             )
         )
         val createdCollection = response.features[0]!!.proxy(NakshaCollection::class)
@@ -269,7 +269,7 @@ class CollectionTests : PgTestBase(null) {
         // update collection using upsert
         val updateResponse = executeWrite(
             WriteRequest().add(
-                Write().upsertCollection(collection, true)
+                Write().upsertCollection(collection)
             )
         )
         val updatedCollection = updateResponse.features[0]!!.proxy(NakshaCollection::class)

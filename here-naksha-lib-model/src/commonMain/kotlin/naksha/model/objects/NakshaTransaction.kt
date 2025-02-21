@@ -45,6 +45,7 @@ open class NakshaTransaction() : NakshaFeature() {
 
     override fun defaultFeatureType(): String = "naksha.Tx"
     override fun withId(value: String): NakshaTransaction = super.withId(value) as NakshaTransaction
+    override fun withFeatureNumber(featureNumber: Int64?): NakshaTransaction = super.withFeatureNumber(featureNumber) as NakshaTransaction
     override fun withType(value: String): NakshaTransaction = super.withType(value) as NakshaTransaction
     override fun withFeatureType(value: String): NakshaTransaction = super.withFeatureType(value) as NakshaTransaction
     override fun withBbox(value: SpBoundingBox?): NakshaTransaction = super.withBbox(value) as NakshaTransaction

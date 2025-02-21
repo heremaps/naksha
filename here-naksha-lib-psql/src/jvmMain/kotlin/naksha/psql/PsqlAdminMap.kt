@@ -4,6 +4,8 @@ import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.jbon.JbDictionary
 import naksha.model.*
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
 import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
 
@@ -22,16 +24,14 @@ class PsqlAdminMap internal constructor(
     override val storage: PsqlStorage
         get() = super.storage as PsqlStorage
 
-    override fun createPgMap(conn: PgConnection, map: NakshaMap): PgMap {
-        TODO("Not yet implemented")
-        // TODO: We must not modify the cache, rather we send a notification about the change, so
-        //       that when the transaction is committed, we get that information back and update the cache!
+    override fun createPgMap(conn: PgConnection, map: PgMap) {
+        if (Naksha.isInternalId(map.id)) throw NakshaException(ILLEGAL_ARGUMENT, "Can't create internal maps: ${map.id}")
+        conn.execute("CREATE SCHEMA IF NOT EXIST ${map.quotedId}").close()
     }
 
     override fun deletePgMap(conn: PgConnection, map: PgMap) {
-        TODO("Not yet implemented")
-        // TODO: We must not modify the cache, rather we send a notification about the change, so
-        //       that when the transaction is committed, we get that information back and update the cache!
+        if (Naksha.isInternalId(map.id)) throw NakshaException(ILLEGAL_ARGUMENT, "Can't delete internal maps: ${map.id}")
+        conn.execute("DROP SCHEMA ${map.quotedId} CASCADE").close()
     }
 
     override fun getPgMapById(conn: PgConnection, id: String): PgMap? = mapCache[id]?.head?.get()
@@ -64,7 +64,30 @@ class PsqlAdminMap internal constructor(
         return list
     }
 
-    override fun getEncodingFlags(feature: Any?, context: Any?): Flags = Naksha.DEFAULT_FLAGS
+    override fun getEncodingFlags(feature: Any?, context: Any?): Flags {
+        var ctx = context
+        if (context is PgCollection) ctx = context.nakshaCollection
+        if (context is PgMap) ctx = context.nakshaMap
+
+        if (ctx is NakshaCollection) {
+            val collectionFlags = ctx.defaultFlags
+            if (collectionFlags != null) return collectionFlags
+            val mapId = ctx.mapId
+            val cacheEntry = mapCache[mapId]
+            if (cacheEntry != null) {
+                val map = cacheEntry.head.get()
+                if (map != null) {
+                    val mapFlags = map.nakshaMap.defaultFlags
+                    if (mapFlags != null) return mapFlags
+                }
+            }
+        }
+        if (ctx is NakshaMap) {
+            val mapFlags = ctx.defaultFlags
+            if (mapFlags != null) return mapFlags
+        }
+        return Naksha.DEFAULT_FLAGS
+    }
 
     override fun getDictionary(id: String): JbDictionary? {
         // TODO: Implement me!
@@ -96,8 +119,10 @@ class PsqlAdminMap internal constructor(
         schemaOid: Int?,
         installedVersion: NakshaVersion?
     ): Int {
-        var adminMapOid = schemaOid ?: 0
-        if (schemaOid == null) {
+        val adminMapOid: Int
+        if (schemaOid != null) {
+            adminMapOid = schemaOid
+        } else {
             logger.info("Create admin schema")
             conn.execute("CREATE SCHEMA IF NOT EXISTS \"naksha~admin\";").close()
             conn.execute("SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'naksha~admin'").fetch().use { cursor ->
@@ -109,7 +134,7 @@ class PsqlAdminMap internal constructor(
 
         if (installedVersion == psqlVersion) {
             logger.info("Naksha admin map is up to date at version {}, do nothing", installedVersion)
-            return adminMapOid // Kotlin should know, that the variable is not null!
+            return adminMapOid
         } else if (installedVersion != null) {
             logger.info("Naksha admin map is outdated, current installed version is {}, updating it to {}", installedVersion, psqlVersion)
         } else {
@@ -206,10 +231,10 @@ class PsqlAdminMap internal constructor(
 //        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_COL_SEQ AS ${PgType.INT64} START 100 CACHE 1;").close()
 
         logger.info("Create internal collections: transactions, collections, and dictionaries")
-        createPgCollection(conn, collections)
-        createPgCollection(conn, transactions)
-        createPgCollection(conn, maps)
-        createPgCollection(conn, dictionaries)
+        createPgCollection(conn, collections) // 0
+        createPgCollection(conn, transactions) // 1
+        createPgCollection(conn, maps) // 2
+        createPgCollection(conn, dictionaries) //3
         logger.info("Done creating transactions, collections, and dictionaries")
         return adminMapOid
     }

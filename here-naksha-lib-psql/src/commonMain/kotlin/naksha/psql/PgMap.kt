@@ -30,34 +30,23 @@ open class PgMap internal constructor(
     val nakshaMap: NakshaMap,
 
     /**
-     * The OID of the collection-number sequence.
-     * @since 3.0.0
-     */
-    colNumberSequenceOid: Int,
-
-    /**
      * The map-id.
+     * @since 3.0
      */
     val id: String = nakshaMap.id,
 
     /**
      * The map-number.
+     * @since 3.0
      */
-    val number: Int = nakshaMap.number ?: throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "map number missing"),
+    val number: Int = nakshaMap.number
 ) {
-
-    /**
-     * The OID of the collection-number sequence.
-     * @since 3.0.0
-     */
-    //var colNumberSequenceOid: Int = colNumberSequenceOid
-    //    protected set
 
     private var _collections: PgCollection? = null
 
     /**
-     * The collections' collection of the map.
-     * @since 3.0.0
+     * The collection's collection of the map.
+     * @since 3.0
      */
     val collections: PgCollection
         get() {
@@ -74,40 +63,8 @@ open class PgMap internal constructor(
 
     /**
      * The map-identifier quoted optionally in double quotes.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JvmField
     val quotedId = quoteIdent(id)
-
-    /**
-     * Returns the current collection-number, so the last used one.
-     * @param conn the connection to use to access the database.
-     * @return the current _(last used)_ collection-number.
-     * @since 3.0.0
-     */
-//    fun getCollectionNumber(conn: PgConnection): Int {
-//        val QUERY = "SELECT currval($1) as colnum"
-//        val cursor = conn.execute(QUERY, arrayOf(colNumberSequenceOid)).fetch()
-//        cursor.use {
-//            val number: Int = cursor["colnum"]
-//            return number
-//        }
-//    }
-
-    /**
-     * Allocate a new collection-number.
-     * @param conn the connection to use to access the database.
-     * @return the allocated collection-number.
-     * @since 3.0.0
-     */
-//    fun newCollectionNumber(conn: PgConnection): Int {
-//        val QUERY = "SELECT nextval($1) as colnum"
-//        val cursor = conn.execute(QUERY, arrayOf(colNumberSequenceOid)).fetch()
-//        cursor.use {
-//            val number: Int = cursor["colnum"]
-//            return number
-//        }
-//    }
-
-    // TODO: We should have alias methods to manage collections, that redirect to storage.adminMap.{name} !!!
 }

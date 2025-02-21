@@ -31,6 +31,8 @@ open class NakshaDictionary() : NakshaFeature() {
         this.id = id
     }
 
+    // TODO: Override `with` methods, see NakshaCollection, -Map, and -Transaction !
+
     companion object NakshaDictionary_C {
         /**
          * Convert the given JBON bytes into an in-memory dictionary.

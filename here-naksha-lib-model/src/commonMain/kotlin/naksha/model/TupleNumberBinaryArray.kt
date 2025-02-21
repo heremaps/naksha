@@ -34,6 +34,24 @@ data class TupleNumberBinaryArray(
     @JvmField val view: PlatformDataView
 ) {
     /**
+     * Create from mapping the given byte-array into a view.
+     * @param bytes the byte-array to map.
+     * @since 3.0
+     */
+    @JsName("ofByteArray")
+    constructor(bytes: ByteArray) : this(Platform.newDataView(bytes))
+
+    /**
+     * Create from mapping the given byte-array into a view.
+     * @param bytes the byte-array to map.
+     * @param from the index of the first byte to map.
+     * @param to the index of the first byte **not** to map _(end, exclusive)_.
+     * @since 3.0
+     */
+    @JsName("fromByteArray")
+    constructor(bytes: ByteArray, from:Int = 0, to:Int = bytes.size) : this(Platform.newDataView(bytes, from, to - from))
+
+    /**
      * The underlying byte-array.
      * @since 3.0
      */

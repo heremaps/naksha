@@ -52,6 +52,7 @@ open class NakshaCollection() : NakshaFeature() {
 
     override fun defaultFeatureType(): String = FEATURE_TYPE
     override fun withId(value: String): NakshaCollection = super.withId(value) as NakshaCollection
+    override fun withFeatureNumber(featureNumber: Int64?): NakshaCollection = super.withFeatureNumber(featureNumber) as NakshaCollection
     override fun withType(value: String): NakshaCollection = super.withType(value) as NakshaCollection
     override fun withFeatureType(value: String): NakshaCollection = super.withFeatureType(value) as NakshaCollection
     override fun withBbox(value: SpBoundingBox?): NakshaCollection = super.withBbox(value) as NakshaCollection
@@ -99,9 +100,11 @@ open class NakshaCollection() : NakshaFeature() {
      */
     var number: Int
         get() {
+            val id = this.id
+            val predefined = Naksha.internalCollectionIdToNumber[id]
+            if (predefined != null) return predefined
             val n = getRaw("number")
             if (n is Int) return n
-            val id = this.id
             val cachedId = _cachedId
             val cachedNumber = _cachedNumber
             if (id === cachedId && cachedNumber != null) return cachedNumber
@@ -209,7 +212,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * The encoding flags to be used for new rows.
      *
-     * - If _null_, the storage will use whatever is best for the storage.
+     * - If _null_, the [defaultFlags][NakshaMap.defaultFlags] of the [map][NakshaMap] will be used.
      * @since 3.0.0
      */
     var defaultFlags by DEFAULT_FLAGS

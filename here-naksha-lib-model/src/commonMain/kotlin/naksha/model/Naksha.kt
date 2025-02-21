@@ -57,72 +57,85 @@ class Naksha private constructor() {
         const val ADMIN_PREFIX = "naksha~"
 
         /**
-         * The identifier of the administration map.
+         * The identifier of the administration map _(`naksha~admin`)_.
          * @since 3.0.0
          */
         const val ADMIN_MAP = "naksha~admin"
 
         /**
-         * The number of the administration map.
+         * The number of the administration map _(`0`)_.
          * @since 3.0.0
          */
         const val ADMIN_MAP_NUMBER = 0
 
         /**
-         * The identifier of the collection in which transactions are stored, located in the [admin-map][ADMIN_MAP].
-         * @since 3.0.0
+         * The identifier of the virtual collection in which the collections of a map are managed, located within each map _(`naksha~collections`)_.
+         * @since 3.0
+         */
+        const val COLLECTIONS_COL = "naksha~collections"
+
+        /**
+         * The collection-number of the virtual collection in which the collections of a map are managed, located within each map _(`0`)_ .
+         * @since 3.0
+         */
+        const val COLLECTIONS_COL_NUMBER = 0
+
+        /**
+         * The identifier of the collection in which transactions are stored, located in the [admin-map][ADMIN_MAP] _(`naksha~transactions`)_.
+         * @since 3.0
          * @see [naksha.model.objects.NakshaTransaction]
          */
         const val TRANSACTIONS_COL = "naksha~transactions"
 
         /**
-         * The collection-number of the collection in which transactions are stored, located in the [admin-map][ADMIN_MAP].
-         * @since 3.0.0
+         * The collection-number of the collection in which transactions are stored, located in the [admin-map][ADMIN_MAP] _(`1`)_.
+         * @since 3.0
          */
         const val TRANSACTIONS_COL_NUMBER = 1
 
         /**
-         * The identifier of the collection in which maps are stored, located only within the [admin-map][ADMIN_MAP].
+         * The identifier of the collection in which maps are stored, located only within the [admin-map][ADMIN_MAP] _(`naksha~maps`)_.
          * @see [naksha.model.objects.NakshaMap]
-         * @since 3.0.0
+         * @since 3.0
          */
         const val MAPS_COL = "naksha~maps"
 
         /**
-         * The collection-number of the collection in which maps are stored, located in the [admin-map][ADMIN_MAP].
-         * @since 3.0.0
+         * The collection-number of the collection in which maps are stored, located in the [admin-map][ADMIN_MAP] _(`2`)_.
+         * @since 3.0
          */
         const val MAPS_COL_NUMBER = 2
 
         /**
-         * The identifier of the collection in which dictionaries are stored, located in the [admin-map][ADMIN_MAP].
-         * @since 3.0.0
+         * The identifier of the collection in which dictionaries are stored, located in the [admin-map][ADMIN_MAP] _(`naksha~dictionaries`)_.
+         * @since 3.0
          */
         const val DICTIONARIES_COL = "naksha~dictionaries"
 
         /**
-         * The collection-number of the collection in which dictionaries are stored, located in the [admin-map][ADMIN_MAP].
-         * @since 3.0.0
+         * The collection-number of the collection in which dictionaries are stored, located in the [admin-map][ADMIN_MAP] _(`3`)_.
+         * @since 3.0
          */
         const val DICTIONARIES_COL_NUMBER = 3
 
         /**
-         * The identifier of the virtual collection in which the collections of a map are managed, located within each map.
-         * @since 3.0.0
-         */
-        const val COLLECTIONS_COL = "naksha~collections"
-
-        /**
-         * The collection-number of the virtual collection in which the collections of a map are managed, located within each map.
-         * @since 3.0.0
-         */
-        const val COLLECTIONS_COL_NUMBER = 0
-
-        /**
-         * The maximum length of identifiers.
-         * @since 3.0.0
+         * The maximum length of identifiers _(`42`)_ .
+         * @since 3.0
          */
         const val MAX_ID_LENGTH = 42 // The answer to everything ;-)
+
+        /**
+         * An immutable map between the identifier of an internal collection to the number of that collection.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        val internalCollectionIdToNumber = mapOf(
+            Pair(COLLECTIONS_COL, COLLECTIONS_COL_NUMBER),
+            Pair(TRANSACTIONS_COL, TRANSACTIONS_COL_NUMBER),
+            Pair(MAPS_COL, MAPS_COL_NUMBER),
+            Pair(DICTIONARIES_COL, DICTIONARIES_COL_NUMBER),
+        )
 
         /**
          *

@@ -79,12 +79,6 @@ class PgWriter(
         get() = session.useTransaction().version
 
     /**
-     * Returns the [flags][Flags] to use, when encoding new rows.
-     */
-    fun flags(collection: NakshaCollection): Flags =
-        collection.defaultFlags ?: session.storage.defaultFlags
-
-    /**
      * Returns the encoding to store for the [feature-type][Metadata.type].
      * @param collection the collection in which to store the feature.
      * @param feature the feature.

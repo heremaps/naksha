@@ -118,12 +118,25 @@ class PgColumn : JsEnum() {
         fun of(columnName: String): PgColumn = get(columnName, PgColumn::class)
 
         /**
+         * If this is the latest [tuple][naksha.model.Tuple] (state) of the [feature][naksha.model.objects.NakshaFeature], the value is _null_; otherwise it stores the next [version][naksha.model.Version] (aka transaction) of the next [tuple][naksha.model.Tuple].
+         *
+         * ### Note
+         * In the [transactions][PgTransactions] table, this property is filled with the transaction-number _(aka `txn`)_, because partitioning is done above it. However, the value will always be extracted from the [tuple-number][naksha.model.TupleNumber] of the transaction.
+         */
+        @JvmField
+        @JsStatic
+        val txn_next = def(PgColumn::class, "txn_next") { self ->
+            self._i = 0
+            self._type = PgType.INT64
+        }
+
+        /**
          * The epoch timestamp in millisecond when the [tuple][naksha.model.Tuple] was produced, which is the last time the feature was modified.
          */
         @JvmField
         @JsStatic
         val updated_at = def(PgColumn::class, "updated_at") { self ->
-            self._i = 0
+            self._i = 1
             self._type = PgType.INT64
             self._extra = "NOT NULL"
         }
@@ -134,7 +147,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val created_at = def(PgColumn::class, "created_at") { self ->
-            self._i = 1
+            self._i = 2
             self._type = PgType.INT64
         }
 
@@ -144,19 +157,6 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val author_ts = def(PgColumn::class, "author_ts") { self ->
-            self._i = 2
-            self._type = PgType.INT64
-        }
-
-        /**
-         * If this is the latest [tuple][naksha.model.Tuple] (state) of the [feature][naksha.model.objects.NakshaFeature], the value is _null_; otherwise it stores the next [version][naksha.model.Version] (aka transaction) of the next [tuple][naksha.model.Tuple].
-         *
-         * ### Note
-         * In the [transactions][PgTransactions] table, this property is filled with the transaction-number _(aka `txn`)_, because partitioning is done above it. However, the value will always be extracted from the [tuple-number][naksha.model.TupleNumber] of the transaction.
-         */
-        @JvmField
-        @JsStatic
-        val txn_next = def(PgColumn::class, "txn_next") { self ->
             self._i = 3
             self._type = PgType.INT64
         }
@@ -502,14 +502,53 @@ class PgColumn : JsEnum() {
 
         /**
          * All columns being used with Naksha.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
         val allColumns = listOf(
-            updated_at, created_at, author_ts, txn_next,
+            txn_next, updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, flags, cc,
             tn, prev_tn, base_tn,
+            id, app_id, author, origin, target, ft,
+            cs0, cs1, cs2, cs3,
+            tags, ref_point, geo, feature, attachment
+        )
+
+        /**
+         * All columns that are needed when we copy a feature from _HEAD_ into _HISTORY_, so all except for:
+         * - `txn_next`
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val copyColumns = listOf(
+            updated_at, created_at, author_ts, // removed: txn_next
+            cv0, cv1, cv2, cv3,
+            hash, here_tile, flags, cc,
+            tn, prev_tn, base_tn,
+            id, app_id, author, origin, target, ft,
+            cs0, cs1, cs2, cs3,
+            tags, ref_point, geo, feature, attachment
+        )
+
+        /**
+         * All columns that are needed when we delete a feature. In that case we copy from _HEAD_ into _DELETED_ and/or _HISTORY_, but we need to update some meta-data, therefore this excludes the columns that need updates:
+         * - `txn_next` - will become the current `txn`, so that `tn.txn == txn_next` _(dead-end)_
+         * - `flags` - we need to set operation to [DELETED][naksha.model.Operation.DELETED], action to [DELETED][naksha.model.Action.DELETED], ensure that he flag for `prev_tn` is set, and the one for `base_tn` is cleared
+         * - `tn` - must be updated to match current `txn` with a new `seq` and `uid`
+         * - `prev_tn` - is copied from `tn` of old record
+         * - `base_tn` - needs to be set to `null`
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val deleteColumns = listOf(
+            updated_at, created_at, author_ts, // removed: txn_next
+            cv0, cv1, cv2, cv3,
+            hash, here_tile, cc, // removed: flags
+            // removed: tn, prev_tn, base_tn,
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature, attachment

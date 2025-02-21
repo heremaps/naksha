@@ -88,7 +88,7 @@ class Plv8PerfTest : PgTestBase(
 
             val writeFeaturesReq = WriteRequest().apply {
                 featuresInBatch.forEach { featureToCreate ->
-                    add(Write().upsertFeature(collection, featureToCreate, true))
+                    add(Write().upsertFeature(collection, featureToCreate))
                 }
             }
             batchRequests.add(writeFeaturesReq)
@@ -146,7 +146,7 @@ class Plv8PerfTest : PgTestBase(
         for (requestFeatures in groupedFeatures.values) {
             val writeFeaturesReq = WriteRequest().apply {
                 requestFeatures.forEach { featureToCreate ->
-                    add(Write().upsertFeature(collection, featureToCreate, true))
+                    add(Write().upsertFeature(collection, featureToCreate))
                 }
             }
             batchRequests.add(writeFeaturesReq)

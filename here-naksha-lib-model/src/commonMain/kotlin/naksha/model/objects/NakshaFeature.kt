@@ -6,8 +6,11 @@ import naksha.geo.SpFeature
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.model.Metadata
+import naksha.model.Naksha
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
+import naksha.model.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -96,6 +99,72 @@ open class NakshaFeature() : AnyObject() {
         id = value
         return this
     }
+
+    /**
+     * Returns the [tuple-number][TupleNumber] of this feature, may be [TupleNumber.HEAD], if the feature is not yet persisted.
+     * @since 3.0
+     */
+    val tupleNumber: TupleNumber
+        get() = this.properties.xyz.guid?.tupleNumber ?: TupleNumber.HEAD
+
+    private var cachedId: String? = null
+    private var cachedFeatureNumber: Int64? = null
+
+    /**
+     * Returns the feature-number of the feature.
+     *
+     * If the feature is in [HEAD][TupleNumber.HEAD] state, so not yet persisted, and no custom feature number was set, then the method will calculate the feature-number from the [id].
+     * @since 3.0
+     */
+    var featureNumber: Int64
+        get() {
+            val tupleNumber = this.tupleNumber
+            if (tupleNumber != TupleNumber.HEAD) return tupleNumber.featureNumber
+            val raw = getRaw("featureNumber")
+            if (raw is Int64) return raw
+            val id = this.id
+            var cached_id = cachedId
+            var cached_featureNumber = cachedFeatureNumber
+            if (id === cached_id && cached_featureNumber != null) return cached_featureNumber
+            val md5 = Naksha.hashId(id)
+            cached_featureNumber = Naksha.featureNumber(md5)
+            cachedId = id
+            cachedFeatureNumber = cached_featureNumber
+            return cached_featureNumber
+        }
+        set(value) {
+            withFeatureNumber(value)
+        }
+
+    /**
+     * Sets a custom feature-number.
+     *
+     * If `null` is given, then a previously set custom feature-number is removed, if any was set.
+     *
+     * - Throws [ILLEGAL_STATE] if the feature does have already a feature-number (these numbers are immutable).
+     * @see [featureNumber]
+     */
+    open fun withFeatureNumber(featureNumber: Int64?): NakshaFeature {
+        if (featureNumber == null) {
+            removeRaw("featureNumber")
+        } else if (tupleNumber != TupleNumber.HEAD && featureNumber != tupleNumber.featureNumber) {
+            throw NakshaException(
+                ILLEGAL_STATE,
+                "The feature does have a fixed feature-number (${tupleNumber.featureNumber}), deny overriding with $featureNumber"
+            )
+        } else {
+            setRaw("featureNumber", featureNumber)
+        }
+        return this
+    }
+
+    /**
+     * Tests if this feature does have an existing immutable feature-number, in that case no custom feature-number can be set.
+     *
+     * @return `true` if this feature does have an immutable feature-number; `false` otherwise.
+     * @since 3.0
+     */
+    fun hasFeatureNumber(): Boolean = tupleNumber != TupleNumber.HEAD
 
     /**
      * The type of the feature, must be one of: `FeatureCollection`, `Feature`, `Point`, `LineString`, `MultiPoint`, `Polygon`, `MultiLineString`, `MultiPolygon`, and `GeometryCollection`. Beware, no other values are allowed in the [GeoJSON specification section 7](https://datatracker.ietf.org/doc/html/rfc7946#section-7), therefore we introduce a [customer feature-type][featureType], that is stored in [properties].
