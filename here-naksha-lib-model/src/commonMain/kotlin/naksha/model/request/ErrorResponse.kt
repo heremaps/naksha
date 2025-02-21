@@ -55,6 +55,7 @@ open class ErrorResponse() : Response() {
 
     /**
      * The error reason.
+     * @since 3.0
      */
     var error by ERROR
 

@@ -828,8 +828,11 @@ open class Write : AnyObject() {
     fun validate(): Write {
         if (mapId == ADMIN_MAP || collectionId == COLLECTIONS_COL) {
             if (isInternalId(featureId)) {
-                throw NakshaException(ILLEGAL_STATE, "Modification of internal features forbidden: $featureId")
+                throw NakshaException(ILLEGAL_STATE, "Modification of internal features forbidden: '$featureId'")
             }
+        }
+        if (!Naksha.isValidId(featureId)) {
+            throw NakshaException(ILLEGAL_STATE, "Invalid feature-id: '$featureId'")
         }
         return this
     }
