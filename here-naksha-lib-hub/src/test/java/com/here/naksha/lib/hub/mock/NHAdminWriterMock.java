@@ -59,10 +59,14 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
   public @NotNull Response execute(@NotNull Request request) {
     if (request instanceof WriteRequest wr) {
       for (Write write : wr.getWrites()) {
+        Response singularResponse;
         if (Naksha.COLLECTIONS_COL.equals(write.getCollectionId())) {
-          executeWriteCollection(write);
+          singularResponse = executeWriteCollection(write);
         } else {
-          executeWriteFeature(write);
+          singularResponse = executeWriteFeature(write);
+        }
+        if (singularResponse instanceof ErrorResponse){
+          return singularResponse;
         }
       }
       return new SuccessResponse();
@@ -73,22 +77,24 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
     }
   }
 
-  private void executeWriteCollection(Write write) {
+  private Response executeWriteCollection(Write write) {
     String collectionId = write.getFeatureId();
     WriteOp op = write.getOp();
     if (op.equals(WriteOp.CREATE)) {
       mockCollection.putIfAbsent(collectionId, new TreeMap<>());
+      return new SuccessResponse();
     } else if (op.equals(WriteOp.DELETE)) {
       mockCollection.remove(collectionId);
+      return new SuccessResponse();
     } else {
-      throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Mock can only CREATE and DELETE collection"));
+      return new ErrorResponse(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Mock can only CREATE and DELETE collection"));
     }
   }
 
-  private void executeWriteFeature(Write write) {
+  private Response executeWriteFeature(Write write) {
     String collectionId = write.getCollectionId();
     if (!mockCollection.containsKey(collectionId)) {
-      throw new NakshaException(new NakshaError(
+      return new ErrorResponse(new NakshaError(
           NakshaError.COLLECTION_NOT_FOUND,
           "Collection " + write.getCollectionId() + " doesn't exist."
       ));
@@ -97,39 +103,40 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
     WriteOp op = write.getOp();
     NakshaFeature feature = write.getFeature();
     if (op.equals(WriteOp.CREATE)) {
-      insertFeature(collectionId, feature);
+      return insertFeature(collectionId, feature);
     } else if (op.equals(WriteOp.UPDATE)) {
-      updateFeature(collectionId, feature);
+      return updateFeature(collectionId, feature);
     } else if (op.equals(WriteOp.UPSERT)) {
-      upsertFeature(collectionId, feature);
+      return upsertFeature(collectionId, feature);
     } else if (op.equals(WriteOp.DELETE)) {
-      deleteFeature(collectionId, feature.getId());
+      return deleteFeature(collectionId, feature.getId());
     } else if (op.equals(WriteOp.PURGE)) {
-      throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "PurgeFeature not mocked yet"));
+      return new ErrorResponse(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "PurgeFeature not mocked yet"));
     } else {
-      throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, op.getValue() + " not mocked yet"));
+      return new ErrorResponse(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, op.getValue() + " not mocked yet"));
     }
   }
 
-  private void insertFeature(
+  private Response insertFeature(
       final @NotNull String collectionId,
       final @NotNull NakshaFeature feature
   ) {
     if (mockCollection.get(collectionId).putIfAbsent(feature.getId(), setUuidFor(feature)) != null) {
-      throw new NakshaException(new NakshaError(NakshaError.CONFLICT, "Feature already exists: " + feature.getId()));
+      return new ErrorResponse(new NakshaError(NakshaError.CONFLICT, "Feature already exists: " + feature.getId()));
     }
+    return new SuccessResponse();
   }
 
-  private void updateFeature(
+  private Response updateFeature(
       final @NotNull String collectionId,
       final @NotNull NakshaFeature feature
   ) {
-    final AtomicReference<NakshaException> exception = new AtomicReference<>();
+    final AtomicReference<NakshaError> error = new AtomicReference<>();
 
     mockCollection.get(collectionId).compute(feature.getId(), (fId, oldF) -> {
       // no existing feature to update
       if (oldF == null) {
-        exception.set(new NakshaException(new NakshaError(NakshaError.NOT_FOUND, "No feature found for id " + fId)));
+        error.set(new NakshaError(NakshaError.NOT_FOUND, "No feature found for id " + fId));
         return oldF;
       }
       // update if UUID matches (or overwrite if new uuid is missing)
@@ -137,21 +144,22 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
         return setUuidFor(feature);
       } else {
         // throw error if UUID mismatches
-        exception.set(new NakshaException(new NakshaError(NakshaError.ILLEGAL_STATE, "Uuid " + uuidOf(oldF) + " mismatch for id " + fId)));
+        error.set(new NakshaError(NakshaError.ILLEGAL_STATE, "Uuid " + uuidOf(oldF) + " mismatch for id " + fId));
         return oldF;
       }
     });
-    if (exception.get() != null) {
-      throw exception.get();
+    if (error.get() != null) {
+      return new ErrorResponse(error.get());
     }
+    return new SuccessResponse();
   }
 
-  private void upsertFeature(
+  private Response upsertFeature(
       final @NotNull String collectionId,
       final @NotNull NakshaFeature feature
   ) {
     final AtomicReference<NakshaFeature> result = new AtomicReference<>();
-    final AtomicReference<NakshaException> exception = new AtomicReference<>();
+    final AtomicReference<NakshaError> error = new AtomicReference<>();
 
     mockCollection.get(collectionId).compute(feature.getId(), (fId, oldF) -> {
       // insert if missing
@@ -168,22 +176,22 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
         return setUuidFor(feature);
       } else {
         // throw error if UUID mismatches
-        exception.set(
-            new NakshaException(new NakshaError(NakshaError.CONFLICT, "Uuid " + uuidOf(oldF) + " mismatch for id " + feature.getId())));
+        error.set(new NakshaError(NakshaError.CONFLICT, "Uuid " + uuidOf(oldF) + " mismatch for id " + feature.getId()));
         return oldF;
       }
     });
-    if (exception.get() != null) {
-      throw exception.get();
+    if (error.get() != null) {
+      return new ErrorResponse(error.get());
     }
+    return new SuccessResponse();
   }
 
-  private void deleteFeature(
+  private Response deleteFeature(
       final @NotNull String collectionId,
       final @NotNull String id,
       final @Nullable String uuid
   ) {
-    final AtomicReference<NakshaException> exception = new AtomicReference<>();
+    final AtomicReference<NakshaError> error = new AtomicReference<>();
 
     mockCollection.get(collectionId).compute(id, (fId, oldF) -> {
       // nothing to delete if it is already absent
@@ -197,24 +205,26 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
         return null;
       } else {
         // throw error if UUID mismatches
-        exception.set(new NakshaException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT,
-            "Uuid " + uuidOf(oldF) + " mismatch for id " + id)));
+        error.set(new NakshaError(NakshaError.ILLEGAL_ARGUMENT,
+            "Uuid " + uuidOf(oldF) + " mismatch for id " + id));
         return oldF;
       }
     });
-    if (exception.get() != null) {
-      throw exception.get();
+    if (error.get() != null) {
+      throw new NakshaException(error.get());
     }
+    return new SuccessResponse();
   }
 
-  private void deleteFeature(
+  private Response deleteFeature(
       final @NotNull String collectionId,
       final @Nullable String featureId
   ) {
     if (featureId == null) {
-      throw new NakshaException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Can't delete feature without id"));
+      return new ErrorResponse(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Can't delete feature without id"));
     }
     mockCollection.get(collectionId).remove(collectionId);
+    return new SuccessResponse();
   }
 
   private @Nullable String uuidOf(final @NotNull NakshaFeature feature) {

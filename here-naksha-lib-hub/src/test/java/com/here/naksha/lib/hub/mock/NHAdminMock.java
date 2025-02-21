@@ -23,14 +23,18 @@ import static naksha.model.util.RequestHelper.createFeatureRequest;
 
 import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.hub.NakshaHubConfig;
+import com.here.naksha.lib.hub.mock.NHAdminMock.Config;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import kotlin.reflect.KClass;
 import naksha.base.Int64;
+import naksha.base.Platform;
 import naksha.base.PlatformLock;
 import naksha.base.fn.Fn1;
 import naksha.base.fn.Fx1;
 import naksha.jbon.JbDictionary;
+import naksha.model.AbstractStorage;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
@@ -47,13 +51,35 @@ import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class NHAdminMock implements IStorage {
+public class NHAdminMock extends AbstractStorage<Config> {
 
   protected static @NotNull Map<String, TreeMap<String, NakshaFeature>> mockCollection;
   protected static @NotNull NakshaHubConfig nakshaHubConfig;
 
-  public NHAdminMock(final @NotNull StorageConfig storageConfig) {
-    // this constructor is only to support IStorage instantiation
+  @Override
+  public @NotNull KClass<Config> getConfigKlass() {
+    return Platform.klassFor(Config.class);
+  }
+
+  @Override
+  protected void initStorage(@NotNull NHAdminMock.Config config, @Nullable Boolean create, @Nullable Boolean upgrade) {
+    // empty on purpose
+  }
+
+  @Override
+  protected void afterInit() {
+    // empty on purpose
+  }
+
+  @Override
+  protected void shutdownStorage(boolean dropCache) {
+    // empty on purpose
+  }
+
+  public static class Config extends StorageConfig {}
+
+  public NHAdminMock() {
+    // this constructor is only to support Platform-based instantiation
     if (this.mockCollection == null) {
       this.mockCollection = new ConcurrentHashMap<>();
       setupCollections();
@@ -134,12 +160,7 @@ public class NHAdminMock implements IStorage {
 
   @Override
   public @NotNull PlatformLock getLock() {
-    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
-  }
-
-  @Override
-  public @NotNull StorageConfig getConfig() {
-    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+    return Platform.newLock();
   }
 
   @Override
@@ -158,27 +179,7 @@ public class NHAdminMock implements IStorage {
   }
 
   @Override
-  public <T> T useWriteSession(@Nullable SessionOptions options, @NotNull Fn1<T, IWriteSession> lambda) {
-    return IStorage.super.useWriteSession(options, lambda);
-  }
-
-  @Override
-  public void runInWriteSession(@Nullable SessionOptions options, @NotNull Fx1<IWriteSession> lambda) {
-    IStorage.super.runInWriteSession(options, lambda);
-  }
-
-  @Override
-  public <T> T useReadSession(@Nullable SessionOptions options, @NotNull Fn1<T, IReadSession> lambda) {
-    return IStorage.super.useReadSession(options, lambda);
-  }
-
-  @Override
   public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
     throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
-  }
-
-  @Override
-  public void runInReadSession(@Nullable SessionOptions options, @NotNull Fx1<IReadSession> lambda) {
-    IStorage.super.runInReadSession(options, lambda);
   }
 }

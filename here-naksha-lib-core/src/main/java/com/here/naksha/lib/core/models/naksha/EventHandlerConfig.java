@@ -25,6 +25,9 @@ import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.lambdas.Fe3;
 import com.here.naksha.lib.core.models.PluginCache;
+import naksha.base.AnyObject;
+import naksha.base.JvmAnyObjectUtil;
+import naksha.base.fn.Fn2;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
@@ -46,7 +49,7 @@ public class EventHandlerConfig extends NakshaFeature {
 
   @AvailableSince(NakshaVersion.v2_0_7)
   public @NotNull String getClassName() {
-    return (String) getRaw(CLASS_NAME);
+    return JvmAnyObjectUtil.getProperty(this, CLASS_NAME, String.class);
   }
 
   @AvailableSince(NakshaVersion.v2_0_7)
@@ -66,7 +69,7 @@ public class EventHandlerConfig extends NakshaFeature {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   public @Nullable String getExtensionId() {
-    return (String) getRaw(EXTENSION_ID);
+    return JvmAnyObjectUtil.getProperty(this, EXTENSION_ID, String.class);
   }
 
   @AvailableSince(NakshaVersion.v2_0_7)
@@ -81,7 +84,7 @@ public class EventHandlerConfig extends NakshaFeature {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   public boolean isActive() {
-    return (Boolean) getRaw(ACTIVE);
+    return JvmAnyObjectUtil.getOrSetProperty(this, ACTIVE, true);
   }
 
   @AvailableSince(NakshaVersion.v2_0_7)

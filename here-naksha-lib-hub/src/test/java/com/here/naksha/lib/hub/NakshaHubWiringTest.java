@@ -26,6 +26,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.argThat;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -65,6 +68,8 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class NakshaHubWiringTest {
@@ -83,7 +88,7 @@ class NakshaHubWiringTest {
 
   static NakshaEventPipelineFactory spyPipelineFactory;
 
-  static NHSpaceStorage spaceStorage = null;
+  static NHSpaceStorage spaceStorage;
 
   @BeforeEach
   void beforeEachTest() {
@@ -94,6 +99,10 @@ class NakshaHubWiringTest {
     when(hub.getAdminStorage()).thenReturn(adminStorage);
     when(adminStorage.newReadSession(any())).thenReturn(adminStorageReader);
     when(adminStorage.newWriteSession(any())).thenReturn(adminStorageWriter);
+    when(adminStorage.useReadSession(any(), any())).thenCallRealMethod();
+    when(adminStorage.useWriteSession(any(), any())).thenCallRealMethod();
+    doCallRealMethod().when(adminStorage).runInReadSession(any(), any());
+    doCallRealMethod().when(adminStorage).runInWriteSession(any(), any());
   }
 
   @Test
@@ -125,6 +134,7 @@ class NakshaHubWiringTest {
         handlers.get(0) instanceof AuthorizationEventHandler, "Expected instance of AuthorizationEventHandler");
     assertTrue(handlers.get(1) instanceof IntHandlerForStorageConfigs, "Expected instance of IntHandlerForStorages");
     assertTrue(handlers.get(2) instanceof EndPipelineHandler, "Expected instance of EndPipelineHandler");
+
     // Verify: admin storage writer finally gets the write request
     verify(adminStorageWriter, times(1)).execute(reqCaptor.capture());
     assertTrue(reqCaptor.getValue() instanceof WriteRequest);
@@ -170,7 +180,6 @@ class NakshaHubWiringTest {
     final EventHandlerConfig eventHandler =
         parseJsonFileOrFail("createFeature/create_event_handler.json", EventHandlerConfig.class);
     final Space space = parseJsonFileOrFail("createFeature/create_space.json", Space.class);
-    // TODO: CASL-764
     final IStorage storageImpl = Naksha.useStorage(storageConfig);
 
     // And: mock in place to return given Storage, EventHandler and Space objects, when requested from Admin Storage

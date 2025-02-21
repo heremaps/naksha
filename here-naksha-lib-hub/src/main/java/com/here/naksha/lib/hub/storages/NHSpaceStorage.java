@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 import naksha.base.Int64;
 import naksha.base.PlatformLock;
+import naksha.base.fn.Fn1;
+import naksha.base.fn.Fx1;
 import naksha.jbon.JbDictionary;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
@@ -141,5 +143,25 @@ public class NHSpaceStorage implements IStorage {
   @Override
   public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
     throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
+  }
+
+  @Override
+  public <T> T useWriteSession(@Nullable SessionOptions options, @NotNull Fn1<T, IWriteSession> lambda) {
+    return IStorage.super.useWriteSession(options, lambda);
+  }
+
+  @Override
+  public void runInWriteSession(@Nullable SessionOptions options, @NotNull Fx1<IWriteSession> lambda) {
+    IStorage.super.runInWriteSession(options, lambda);
+  }
+
+  @Override
+  public <T> T useReadSession(@Nullable SessionOptions options, @NotNull Fn1<T, IReadSession> lambda) {
+    return IStorage.super.useReadSession(options, lambda);
+  }
+
+  @Override
+  public void runInReadSession(@Nullable SessionOptions options, @NotNull Fx1<IReadSession> lambda) {
+    IStorage.super.runInReadSession(options, lambda);
   }
 }

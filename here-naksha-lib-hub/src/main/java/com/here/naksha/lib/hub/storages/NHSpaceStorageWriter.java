@@ -20,6 +20,7 @@ package com.here.naksha.lib.hub.storages;
 
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteFeatures;
+import static naksha.model.NakshaContext.mapId;
 
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
@@ -36,6 +37,7 @@ import naksha.model.Action;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
 import naksha.model.Metadata;
+import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
@@ -167,7 +169,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   private @NotNull Response executeDeleteSpace(@NotNull WriteRequest deleteSpaceEntryReq) {
     Write originalWrite = deleteSpaceEntryReq.getWrites().get(0);
     String spaceId = originalWrite.getFeatureId();
-    WriteRequest purgeCollectionReq = new WriteRequest().add(new Write().deleteCollectionById(null, spaceId));
+    WriteRequest purgeCollectionReq = new WriteRequest().add(new Write().deleteCollectionById(mapId(), spaceId));
     Response purgeCollectionRes = executeSingleCollectionWrite(purgeCollectionReq, spaceId);
     if (purgeCollectionRes instanceof SuccessResponse) {
       return executeWriteToAdminSpaces(deleteSpaceEntryReq, originalWrite.getCollectionId());

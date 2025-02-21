@@ -175,52 +175,53 @@ public class NHSpaceStorageReader implements IReadSession {
     return eventPipeline.sendEvent(rf);
   }
 
+  record SpaceAndHandlerConfigs(Space space, List<EventHandlerConfig> eventHandlerConfigs) {
+
+  }
+
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   protected @NotNull Response setupEventPipelineForSpaceId(
       final @NotNull String spaceId, final @NotNull EventPipeline pipeline) {
     Space space = null;
+    Response spaceResponse = nakshaHub.getAdminStorage()
+        .useReadSession(sessionOptions, reader -> reader.execute(readFeaturesByIdRequest(NakshaAdminCollection.SPACES, spaceId)));
+    if (spaceResponse instanceof ErrorResponse er) {
+      return er;
+    } else if (spaceResponse instanceof SuccessResponse successResponse) {
+      space = readFeatureFromResponse(successResponse, Space.class);
+    } else {
+      return new ErrorResponse(
+          NakshaError.ILLEGAL_STATE,
+          "Unexpected response type: " + spaceResponse.getClass().getName());
+    }
+    if (space == null) {
+      return new ErrorResponse(NakshaError.NOT_FOUND, "Space not found : " + spaceId);
+    }
+    List<String> eventHandlerIds = space.getEventHandlerIds();
+    if (eventHandlerIds == null || eventHandlerIds.isEmpty()) {
+      return new ErrorResponse(NakshaError.NOT_FOUND, "No associated handler");
+    }
+    logger.info("Handler IDs identified {}", eventHandlerIds);
+
     List<EventHandlerConfig> eventHandlers = null;
-
-    try (final IReadSession reader = nakshaHub.getAdminStorage().newReadSession(sessionOptions)) {
-      // Get Space details using Admin Storage
-      Response response = reader.execute(readFeaturesByIdRequest(NakshaAdminCollection.SPACES, spaceId));
-      if (response instanceof ErrorResponse er) {
-        return er;
-      } else if (response instanceof SuccessResponse successResponse) {
-        space = readFeatureFromResponse(successResponse, Space.class);
-      } else {
-        return new ErrorResponse(
-            NakshaError.ILLEGAL_STATE,
-            "Unexpected response type: " + response.getClass().getName());
-      }
-      if (space == null) {
-        return new ErrorResponse(NakshaError.NOT_FOUND, "Space not found : " + spaceId);
-      }
-      if (space.getEventHandlerIds() == null || space.getEventHandlerIds().isEmpty()) {
-        return new ErrorResponse(NakshaError.NOT_FOUND, "No associated handler");
-      }
-
-      logger.info("Handler IDs identified {}", space.getEventHandlerIds());
-      // Get EventHandler Details using Admin Storage
-      response = reader.execute(
-          readFeaturesByIdsRequest(NakshaAdminCollection.EVENT_HANDLERS, space.getEventHandlerIds()));
-      if (response instanceof ErrorResponse er) {
-        return er;
-      } else if (response instanceof SuccessResponse successResponse) {
-        try {
-          eventHandlers = ResultHelper.extractResponseItems(successResponse, EventHandlerConfig.class);
-          if (eventHandlers.size() != space.getEventHandlerIds().size()) {
-            return new ErrorResponse(
-                NakshaError.EXCEPTION, "Not all EventHandlers found for space : " + spaceId);
-          }
-        } catch (NoSuchElementException e) {
-          return new ErrorResponse(NakshaError.EXCEPTION, "No handlers associated with space : " + spaceId);
+    Response handlersResponse = nakshaHub.getAdminStorage()
+        .useReadSession(sessionOptions, reader -> reader.execute(readFeaturesByIdsRequest(NakshaAdminCollection.EVENT_HANDLERS, eventHandlerIds)));
+    if (handlersResponse instanceof ErrorResponse er) {
+      return er;
+    } else if (handlersResponse instanceof SuccessResponse successResponse) {
+      try {
+        eventHandlers = ResultHelper.extractResponseItems(successResponse, EventHandlerConfig.class);
+        if (eventHandlers.size() != space.getEventHandlerIds().size()) {
+          return new ErrorResponse(
+              NakshaError.EXCEPTION, "Not all EventHandlers found for space : " + spaceId);
         }
-      } else {
-        return new ErrorResponse(
-            NakshaError.ILLEGAL_STATE,
-            "Unexpected response type: " + response.getClass().getName());
+      } catch (NoSuchElementException e) {
+        return new ErrorResponse(NakshaError.EXCEPTION, "No handlers associated with space : " + spaceId);
       }
+    } else {
+      return new ErrorResponse(
+          NakshaError.ILLEGAL_STATE,
+          "Unexpected response type: " + handlersResponse.getClass().getName());
     }
 
     // Ensure the order of the event handlers is preserved
@@ -256,6 +257,7 @@ public class NHSpaceStorageReader implements IReadSession {
     logger.info("Handler types identified [{}]", handlerTypes);
     return new SuccessResponse();
   }
+
 
   /**
    * Closes the session, returns the underlying connection back to the connection pool. Any method of the session will from now on throw an
