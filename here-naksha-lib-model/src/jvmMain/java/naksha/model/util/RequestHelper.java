@@ -19,7 +19,6 @@
 package naksha.model.util;
 
 import java.util.List;
-
 import naksha.model.NakshaContext;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
@@ -70,9 +69,9 @@ public class RequestHelper {
    * Helper method to create WriteFeatures request with given feature. Function internally sets flags IfExists.FAIL and IfConflict.FAIL,
    * which will ensure that feature doesn't get overwritten in storage, if already exists.
    *
-   * @param collection     the storage collection
-   * @param feature        feature object to be created
-   * @param <FEATURE>      any object extending XyzFeature
+   * @param collection the storage collection
+   * @param feature    feature object to be created
+   * @param <FEATURE>  any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v3_0_0)
@@ -84,9 +83,9 @@ public class RequestHelper {
   /**
    * Helper method to create WriteFeatures request for updating given feature.
    *
-   * @param collection     the storage collection
-   * @param feature        feature object to be updated
-   * @param <FEATURE>      any object extending XyzFeature
+   * @param collection the storage collection
+   * @param feature    feature object to be updated
+   * @param <FEATURE>  any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static <FEATURE extends NakshaFeature> @NotNull WriteRequest updateFeatureRequest(
@@ -96,11 +95,26 @@ public class RequestHelper {
   }
 
   /**
+   * Helper method to create WriteFeatures request for updating given feature. The update will utilize map retrieved from
+   * {@link NakshaContext#mapId()} and will not be atomic.
+   *
+   * @param collectionId the storage collection
+   * @param feature      feature object to be updated
+   * @param <FEATURE>    any object extending XyzFeature
+   * @return WriteFeatures request that can be used against IStorage methods
+   */
+  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest updateFeatureRequest(
+      final @NotNull String collectionId, final @NotNull FEATURE feature) {
+    final Write write = new Write().updateFeature(NakshaContext.mapId(), collectionId, feature, false);
+    return new WriteRequest().add(write);
+  }
+
+  /**
    * Helper method to create WriteFeatures request for updating multiple features.
    *
-   * @param collection     the storage collection
-   * @param features       feature object array to be updated
-   * @param <FEATURE>      any object extending XyzFeature
+   * @param collection the storage collection
+   * @param features   feature object array to be updated
+   * @param <FEATURE>  any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull <FEATURE extends NakshaFeature> WriteRequest updateFeaturesRequest(
@@ -116,8 +130,8 @@ public class RequestHelper {
    * Helper method to create WriteFeatures request for upserting multiple features.
    *
    * @param collection name of the storage collection
-   * @param features       feature object array to be updated
-   * @param <FEATURE>      any object extending XyzFeature
+   * @param features   feature object array to be updated
+   * @param <FEATURE>  any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull <FEATURE extends NakshaFeature> WriteRequest upsertFeaturesRequest(
@@ -132,8 +146,20 @@ public class RequestHelper {
   /**
    * Helper method to create WriteFeatures request for deleting multiple features.
    *
-   * @param collection     the storage collection
-   * @param ids            feature object array to be deleted
+   * @param collectionId the id of storage collection
+   * @param ids          feature object array to be deleted
+   * @return WriteFeatures request that can be used against IStorage methods
+   */
+  public static @NotNull WriteRequest deleteFeaturesByIdsRequest(
+      final @NotNull String collectionId, final @NotNull List<String> ids) {
+    return deleteFeaturesByIdsRequest(new NakshaCollection(collectionId), ids);
+  }
+
+  /**
+   * Helper method to create WriteFeatures request for deleting multiple features.
+   *
+   * @param collection the storage collection
+   * @param ids        feature object array to be deleted
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull WriteRequest deleteFeaturesByIdsRequest(
@@ -148,7 +174,7 @@ public class RequestHelper {
   /**
    * Helper method to create WriteFeatures request for deleting given feature.
    *
-   * @param collectionName     the storage collection
+   * @param collectionName the storage collection
    * @param id             feature object to be deleted
    * @return WriteFeatures request that can be used against IStorage methods
    */
@@ -162,8 +188,8 @@ public class RequestHelper {
   /**
    * Helper method to create WriteFeatures request with given list of features.
    *
-   * @param collection     the storage collection
-   * @param featureList    list of feature objects to be created
+   * @param collection  the storage collection
+   * @param featureList list of feature objects to be created
    * @return WriteFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v3_0_0)

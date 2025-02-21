@@ -27,7 +27,6 @@ import com.here.naksha.app.service.http.auth.NakshaAuthProvider;
 import com.here.naksha.app.service.metrics.OTelMetrics;
 import com.here.naksha.app.service.util.UrlUtil;
 import com.here.naksha.lib.core.INaksha;
-import naksha.model.Naksha;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.hub.NakshaHubFactory;
 import com.here.naksha.lib.hub.util.ConfigUtil;
@@ -67,10 +66,10 @@ public final class NakshaApp extends Thread {
   private static final Logger log = LoggerFactory.getLogger(NakshaApp.class);
   private static final String DEFAULT_CONFIG_ID = "default-config";
 
-  private static final String DEFAULT_SCHEMA = "naksha";
+  private static final String DEFAULT_MAP_ID = "naksha";
 
   private static final String DEFAULT_URL = "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd"
-                                            + "&schema=" + DEFAULT_SCHEMA
+                                            + "&schema=" + DEFAULT_MAP_ID
                                             + "&app=" + NakshaHubConfig.defaultAppName()
                                             + "&id=" + PgStorage.ADMIN_STORAGE_ID;
   private final AtomicReference<Boolean> stopInstance = new AtomicReference<>(false);
@@ -441,7 +440,7 @@ public final class NakshaApp extends Thread {
    */
   private static String urlWithEnsuredSchema(String url) {
     Map<String, List<String>> queryParams = UrlUtil.queryParams(url);
-    queryParams.putIfAbsent("schema", List.of(DEFAULT_SCHEMA));
+    queryParams.putIfAbsent("schema", List.of(DEFAULT_MAP_ID));
     return UrlUtil.urlWithOverriddenParams(url, queryParams);
   }
 }

@@ -183,7 +183,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
         .map(missingUuid ->
             new PQuery(new Property(NakshaProperties.XYZ_KEY, "uuid"), StringOp.EQUALS, missingUuid))
         .toArray(PQuery[]::new);
-    final ReadFeatures readFeatures = new ReadFeatures(properties.getSpaceId());
+    final ReadFeatures readFeatures = new ReadFeatures().addCollectionId(properties.getSpaceId());
     readFeatures.setQueryHistory(true);
     readFeatures.setVersions(Integer.MAX_VALUE);
     readFeatures.getQuery().setProperties(new POr(matchUuids));

@@ -47,7 +47,7 @@ public class PropertySelectionUtil {
   private static final String PROP_ID = "id";
   private static final String PROP_FEATURE_TYPE = "type";
   private static final String SHORT_GEOM_PREFIX = "g.";
-  private static final String FULL_GEOM_PREFIX = NakshaFeature.GEOMETRY_KEY + ".";
+  private static final String FULL_GEOM_PREFIX = NakshaFeature.GEOMETRY + ".";
 
   private PropertySelectionUtil() {
   }
@@ -118,12 +118,12 @@ public class PropertySelectionUtil {
           // add standard properties
           gPropPathSet.add(PROP_ID);
           gPropPathSet.add(PROP_FEATURE_TYPE);
-          gPropPathSet.add(NakshaFeature.GEOMETRY_KEY);
+          gPropPathSet.add(NakshaFeature.GEOMETRY);
         }
         final String expandedPath = expandPropSelectionPath(path);
         // remove entire "geometry" object, if it is already (partially) requested
         if (expandedPath.startsWith(FULL_GEOM_PREFIX)) {
-          gPropPathSet.remove(NakshaFeature.GEOMETRY_KEY);
+          gPropPathSet.remove(NakshaFeature.GEOMETRY);
         }
         gPropPathSet.add(expandedPath);
       }

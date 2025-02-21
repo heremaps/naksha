@@ -130,7 +130,7 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return a map grouping the lists of features extracted from ReadResult
    */
-  public static <R extends NakshaFeature> Map<Action, List<R>> readFeaturesGroupedByOp(
+  public static <R extends NakshaFeature> Map<Action, List<R>> readFeaturesGroupedByAction(
       SuccessResponse result, Class<R> featureType, long limit) {
     final Iterator<FeatureTuple> iterator = result.getTuples().iterator();
     if (!iterator.hasNext()) {
@@ -167,8 +167,8 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return a map grouping the lists of features extracted from ReadResult
    */
-  public static <R extends NakshaFeature> Map<Action, List<R>> readFeaturesGroupedByOp(
+  public static <R extends NakshaFeature> Map<Action, List<R>> readFeaturesGroupedByAction(
       SuccessResponse result, Class<R> featureType) throws NoSuchElementException {
-    return readFeaturesGroupedByOp(result, featureType, Long.MAX_VALUE);
+    return readFeaturesGroupedByAction(result, featureType, Long.MAX_VALUE);
   }
 }

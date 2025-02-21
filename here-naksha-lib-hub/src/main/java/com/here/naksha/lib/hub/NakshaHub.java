@@ -230,7 +230,7 @@ public class NakshaHub implements INaksha {
         NakshaCollection collection = admin.getCollectionById(map, NakshaAdminCollection.CONFIGS);
         assert collection != null;
         WriteRequest writeCustomCfg = new WriteRequest()
-            .add(new Write().upsertFeature(collection, customCfg, true));
+            .add(new Write().upsertFeature(collection, customCfg));
         Response writeCustomCfgResponse = admin.execute(writeCustomCfg);
         if (writeCustomCfgResponse instanceof SuccessResponse) {
           admin.commit();

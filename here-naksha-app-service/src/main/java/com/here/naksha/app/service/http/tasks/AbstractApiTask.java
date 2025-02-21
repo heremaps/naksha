@@ -24,7 +24,7 @@ import static java.util.Objects.requireNonNull;
 import static naksha.base.JvmBoxingUtil.box;
 import static naksha.model.util.ResultHelper.extractResponseItems;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
-import static naksha.model.util.ResultHelper.readFeaturesGroupedByOp;
+import static naksha.model.util.ResultHelper.readFeaturesGroupedByAction;
 
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
@@ -45,6 +45,7 @@ import naksha.base.FromJsonOptions;
 import naksha.base.Platform;
 import naksha.geo.ProxyGeoUtil;
 import naksha.geo.SpGeometry;
+import naksha.model.Action;
 import naksha.model.IReadSession;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
@@ -53,11 +54,11 @@ import naksha.model.SessionOptions;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
-import naksha.model.request.ExecutedOp;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.WriteRequest;
+import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.geom.Geometry;
@@ -220,10 +221,10 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     if (validatedErrorResponse != null) {
       return validatedErrorResponse;
     } else if (response instanceof SuccessResponse successResponse) {
-      final Map<ExecutedOp, List<F>> featureMap = readFeaturesGroupedByOp(successResponse, type);
-      final List<F> insertedFeatures = featureMap.get(ExecutedOp.CREATED);
-      final List<F> updatedFeatures = featureMap.get(ExecutedOp.UPDATED);
-      final List<F> deletedFeatures = featureMap.get(ExecutedOp.DELETED);
+      final Map<Action, List<F>> featureMap = readFeaturesGroupedByAction(successResponse, type);
+      final List<F> insertedFeatures = featureMap.get(Action.CREATED);
+      final List<F> updatedFeatures = featureMap.get(Action.UPDATED);
+      final List<F> deletedFeatures = featureMap.get(Action.DELETED);
       // extract violations if available
       List<NakshaFeature> violations = null;
       if (successResponse instanceof ContextXyzFeatureResponse cr) {

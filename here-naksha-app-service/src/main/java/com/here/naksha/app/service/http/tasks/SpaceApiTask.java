@@ -22,8 +22,8 @@ import static com.here.naksha.app.service.http.apis.ApiParams.extractMandatoryPa
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.SPACE_ID;
 import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
+import static naksha.model.NakshaContext.mapId;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
@@ -46,7 +46,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResponse> {
+public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
 
   private static final Logger logger = LoggerFactory.getLogger(SpaceApiTask.class);
   private final @NotNull SpaceApiReqType reqType;
@@ -94,7 +94,7 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
       };
     } catch (NakshaException nakshaException) {
       logger.warn("Known exception while processing request. ", nakshaException);
-      return verticle.sendErrorResponse(routingContext, nakshaException.error);
+      return verticle.sendErrorResponse(routingContext, nakshaException.getError());
     } catch (Exception ex) {
       logger.error("Unexpected error while processing request. ", ex);
       return verticle.sendErrorResponse(
@@ -104,20 +104,20 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
 
   private XyzResponse executeDeleteSpace() {
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
-    final WriteRequest wr = new WriteRequest().add(new Write().deleteFeatureById(null, spaceId, SPACES));
+    final WriteRequest wr = new WriteRequest().add(new Write().deleteFeatureById(mapId(), spaceId, SPACES));
 
     Response response = executeWriteRequestFromSpaceStorage(wr);
     return transformResponseToXyzFeatureResponse(response, NakshaFeature.class, NOT_FOUND_ON_NO_ELEMENTS);
   }
 
-  private @NotNull XyzResponse executeCreateSpace() throws JsonProcessingException {
+  private @NotNull XyzResponse executeCreateSpace() {
     final Space newSpace = spaceFromRequestBody();
     final WriteRequest wrRequest = RequestHelper.createFeatureRequest(SPACES, newSpace);
     Response response = executeWriteRequestFromSpaceStorage(wrRequest);
     return transformResponseToXyzFeatureResponse(response, Space.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
   }
 
-  private @NotNull XyzResponse executeUpdateSpace() throws JsonProcessingException {
+  private @NotNull XyzResponse executeUpdateSpace() {
     final String spaceIdFromPath = extractMandatoryPathParam(routingContext, SPACE_ID);
     final Space spaceFromBody = spaceFromRequestBody();
     if (!spaceFromBody.getId().equals(spaceIdFromPath)) {
@@ -131,20 +131,20 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
   }
 
   private @NotNull XyzResponse executeGetSpaces() {
-    final ReadFeatures request = new ReadFeatures(SPACES);
+    final ReadFeatures request = new ReadFeatures().addCollectionId(SPACES);
     Response response = executeReadRequestFromSpaceStorage(request);
     return transformResponseToXyzCollectionResponse(response, Space.class);
   }
 
   private @NotNull XyzResponse executeGetSpaceById() {
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
-    final ReadFeatures request = new ReadFeatures(SPACES);
+    final ReadFeatures request = new ReadFeatures().addCollectionId(SPACES);
     request.setFeatureIds(StringList.of(spaceId));
     Response response = executeReadRequestFromSpaceStorage(request);
     return transformResponseToXyzFeatureResponse(response, Space.class, NOT_FOUND_ON_NO_ELEMENTS);
   }
 
-  private Space spaceFromRequestBody() throws JsonProcessingException {
+  private Space spaceFromRequestBody() {
     final String bodyJson = routingContext.body().asString();
     return JvmBoxingUtil.box(Platform.fromJSON(bodyJson, FromJsonOptions.DEFAULT), Space.class);
   }
