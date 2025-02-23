@@ -1,5 +1,6 @@
 package naksha.psql.executors.write
 
+import naksha.base.Int64
 import naksha.model.*
 import naksha.model.Metadata.Metadata_C.calculateHereTile
 import naksha.model.Metadata.Metadata_C.calculateHash
@@ -23,7 +24,7 @@ class DeleteFeature(
         val collectionId = write.featureId ?: throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "No feature ID provided")
         val mapId = collection.map.id
         val map = session.storage.adminMap.getPgMapById(session.useConnection(), mapId) ?: throw NakshaException(MAP_NOT_FOUND, "Map $mapId not found")
-        val tupleNumber = SessionUtil.newTupleNumber(session, map.nakshaMap, collection.nakshaCollection, collectionId)
+        val tupleNumber = TupleNumber(map.storage.number, map.number, collection.number, write.feature!!.featureNumber, session.useTx().version, session.useTx().uid.addAndGet(1))
         val flags = resolveFlags(collection, session).withAction(Action.DELETED)
 
         val readFeatures = ReadFeatures()
@@ -59,15 +60,7 @@ class DeleteFeature(
             writeExecutor.removeFeatureFromHead(collection, collectionId)
             val feature = response.features.first()!! //already checked that feature list is not empty
             val metadata = response.tuples.first()?.tuple?.meta!!
-            val tuple = SessionUtil.deleted(session, map.nakshaMap, collection.nakshaCollection, feature)
-                tuple(
-                session.storage,
-                tupleNumber,
-                feature = feature,
-                metadata = metaForDeleted(metadata, feature, flags, collection),
-                write.attachment,
-                flags
-            )
+            val tuple = session.useTx().created(map.nakshaMap, collection.nakshaCollection, feature)
             return PgWriter.cachedTupleNumber(write, tuple, tupleList)
         }
         return tupleNumber

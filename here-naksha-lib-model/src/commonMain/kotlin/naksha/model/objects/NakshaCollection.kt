@@ -17,7 +17,7 @@ import kotlin.jvm.JvmStatic
 
 /**
  * A Naksha collection.
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 open class NakshaCollection() : NakshaFeature() {
@@ -28,7 +28,9 @@ open class NakshaCollection() : NakshaFeature() {
      * @param mapId the map-identifier in which to create the collection; defaults to [NakshaContext.mapId]
      * @param partitions the partitions to create; defaults to `1`
      * @param storageClass the [storage-class][storageClass] to create; defaults to `null`
-     * @param storeDeleted if [deleted states should be stored][storeDeleted]
+     * @param storeDeleted if [deleted states should be stored][storeDeleted], defaults to [StoreMode.ON]
+     * @param storeHistory if [historic states should be stored][storeHistory], defaults to [StoreMode.ON]
+     * @param storeMeta if [statistics should be stored][storeMeta], defaults to [StoreMode.ON]
      */
     @JsName("of")
     @JvmOverloads
@@ -60,13 +62,13 @@ open class NakshaCollection() : NakshaFeature() {
     override fun withReferencePoint(value: SpPoint?): NakshaCollection = super.withReferencePoint(value) as NakshaCollection
     override fun withProperties(value: NakshaProperties): NakshaCollection = super.withProperties(value) as NakshaCollection
     override fun withAttachment(value: ByteArray?): NakshaCollection = super.withAttachment(value) as NakshaCollection
-    override fun withMomType(value: String): NakshaCollection = super.withMomType(value) as NakshaCollection
+    override fun withMomType(value: String?): NakshaCollection = super.withMomType(value) as NakshaCollection
 
     /**
      * The map-id of the map in which the collection is located, defaults to [NakshaContext.mapId].
      *
      * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
-     * @since 3.0.0
+     * @since 3.0
      */
     var mapId by MAP_ID
 
@@ -82,7 +84,7 @@ open class NakshaCollection() : NakshaFeature() {
      * Sets the [mapId] to the one of the given map.
      * @param map the map in which the collection is/should be located.
      * @return this
-     * @since 3.0.0
+     * @since 3.0
      */
     open fun inMap(map: NakshaMap): NakshaCollection {
         this.mapId = map.id
@@ -134,7 +136,7 @@ open class NakshaCollection() : NakshaFeature() {
      * Beware that in AWS ever point-to-point connection is generally limited to 5 Gbps. To reach the full throughput when reading features from a database with a 200 Gbps bandwidth, at least 40 partitions are needed, so 40 * 5 Gbps = 200 Gbps throughput.
      *
      * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
-     * @since 3.0.0
+     * @since 3.0
      */
     var partitions: Int by PARTITIONS
 
@@ -183,7 +185,7 @@ open class NakshaCollection() : NakshaFeature() {
      * - `NONE`: Removes all protecting triggers and allow any kind of manual change, but this can easily break the history and/or transaction logs, as well allows the creation of invalid table entries that can break `lib-psql`.
      *
      * If _null_, the storage will use whatever is best for the storage.
-     * @since 3.0.0
+     * @since 3.0
      */
     var protectionClass by PROTECTION_CLASS
 
@@ -196,16 +198,19 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * If the feature-type in the [metadata][naksha.model.Metadata] should be set automatically, therefore indexing the feature type. When explicitly enabled, the storage will read the [feature-type][NakshaFeature.featureType], and copy it into the [metadata feature-type][naksha.model.Metadata.ft].
-     * @since 3.0.0
+     * If the feature-type in the [metadata][naksha.model.Metadata.ft] should be set automatically, therefore indexing the feature type. When explicitly enabled, the storage will read the [feature-type][NakshaFeature.featureType], and copy it into the [metadata feature-type][naksha.model.Metadata.ft].
+     *
+     * ### Note
+     * The index on the [feature-type][naksha.model.Metadata.ft] is disabled, when the feature-type is `null`, therefore enabling this option, which is by default turned off, will automatically enable indexing of the feature-type and auto population of the metadata [feature-type][naksha.model.Metadata.ft] field.
+     * @since 3.0
      */
-    var autoFeatureTypeIndex by BOOLEAN_FALSE
+    var indexFeatureType by BOOLEAN_FALSE
 
     /**
-     * @see [autoFeatureTypeIndex]
+     * @see [indexFeatureType]
      */
-    open fun withAutoFeatureTypeIndex(value: Boolean): NakshaCollection {
-        this.autoFeatureTypeIndex = value
+    open fun withIndexFeatureType(value: Boolean): NakshaCollection {
+        this.indexFeatureType = value
         return this
     }
 
@@ -213,7 +218,7 @@ open class NakshaCollection() : NakshaFeature() {
      * The encoding flags to be used for new rows.
      *
      * - If _null_, the [defaultFlags][NakshaMap.defaultFlags] of the [map][NakshaMap] will be used.
-     * @since 3.0.0
+     * @since 3.0
      */
     var defaultFlags by DEFAULT_FLAGS
 
@@ -229,7 +234,7 @@ open class NakshaCollection() : NakshaFeature() {
      * The identifier of the global dictionary to use, when encoding new rows.
      *
      * - If _null_, the storage will use whatever is best for the storage.
-     * @since 3.0.0
+     * @since 3.0
      */
     var encodeDict by STRING_NULL
 
@@ -298,7 +303,7 @@ open class NakshaCollection() : NakshaFeature() {
      * To use less or other indices, create an own list of indices out of the above given values, `lib-psql` will add all these indices by default, using `2d` variants for the geometry index by default. Beware, that many of the indices exclude _null_ values, and therefore do not costing anything, unless the values are used.
      *
      * It is not recommended, to add multiple geometry indices, this can become extreme costly.
-     * @since 3.0.0
+     * @since 3.0
      */
     var indices by INDICES
 
@@ -335,7 +340,7 @@ open class NakshaCollection() : NakshaFeature() {
      * The maxAge decides about the maximum age of features in the history in days.
      *
      * Note that there is no guarantee that features are deleted exactly after having reached their max-age. However, they are eligible to be deleted at as soon as possible.
-     * @since 3.0.0
+     * @since 3.0
      */
     var maxAge by MAX_AGE
 
@@ -349,7 +354,7 @@ open class NakshaCollection() : NakshaFeature() {
 
     /**
      * The quad-partition-size decides _(for the optimal partitioning algorithm)_ how many features should be placed into each "optimal" tile.
-     * @since 3.0.0
+     * @since 3.0
      */
     var quadPartitionSize: Int by QUAD_PARTITION_SIZE
 
@@ -363,20 +368,20 @@ open class NakshaCollection() : NakshaFeature() {
 
     /**
      * The estimated amount of features stored within a collection, read-only property only set by the storage.
-     * @since 3.0.0
+     * @since 3.0
      */
     val estimatedFeatureCount: Int64 by _ESTIMATED_FEATURE_COUNT
 
     /**
      * The estimated amount of deleted features within a collection, read-only property only set by the storage.
-     * @since 3.0.0
+     * @since 3.0
      */
     val estimatedDeletedFeatures: Int64 by _ESTIMATED_DELETED_FEATURES
 
     companion object NakshaCollection_C {
         /**
          * The feature-type of this feature itself.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val FEATURE_TYPE = "naksha.Collection"
 
@@ -384,37 +389,37 @@ open class NakshaCollection() : NakshaFeature() {
          * partition count = 0 -> no partitions only head
          * partition count = 2 -> 2 partitions
          * partition count = n -> n partitions
-         * @since 3.0.0
+         * @since 3.0
          */
         const val NO_PARTITIONS = 0
 
         /**
          * To create a collection without a geometry index.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val GEO_INDEX_NONE = "none"
 
         /**
          * To create a collection with a GIST geometry-index.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val GEO_INDEX_GIST = "gist"
 
         /**
          * To create a collection with an SP-GIST geometry-index.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val GEO_INDEX_SP_GIST = "sp-gist"
 
         /**
          * Default geo_index - may change over time.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val DEFAULT_GEO_INDEX = GEO_INDEX_GIST
 
         /**
          * The value returned as [estimatedFeatureCount] and [estimatedDeletedFeatures], before the estimation was actually done, so when the number is totally unknown _(-1)_.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
@@ -422,13 +427,13 @@ open class NakshaCollection() : NakshaFeature() {
 
         /**
          * The name of the [estimatedFeatureCount] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val ESTIMATED_FEATURE_COUNT = "estimatedFeatureCount"
 
         /**
          * The name of the [estimatedDeletedFeatures] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val ESTIMATED_DELETED_FEATURES = "estimatedDeletedFeatures"
 

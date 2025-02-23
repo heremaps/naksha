@@ -107,14 +107,14 @@ data class SessionOptions @JvmOverloads constructor(
      * @since 3.0
      */
     @JvmField
-    var streamInfo: StreamInfo = NakshaContext.currentContext().streamInfo,
+    val streamInfo: StreamInfo = NakshaContext.currentContext().streamInfo,
 
     /**
      * An authentication token for this session, if needed by the implementation.
      * @since 3.0
      */
     @JvmField
-    var authToken: String? = null,
+    val authToken: String? = null,
 ) {
     /**
      * The stream-identifier for this session.

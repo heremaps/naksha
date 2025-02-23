@@ -19,9 +19,9 @@ class PgTransactions(c: PgNakshaTransactions) : PgHead(c, "${c.id}${PG_HEAD}", P
      */
     @JvmField
     val years: MutableMap<Int, PgTransactionsYear> = mutableMapOf()
-    @JsName("getYear") operator fun get(txn: Version): PgTransactionsYear? = years[txn.year()]
+    @JsName("getYear") operator fun get(txn: Version): PgTransactionsYear? = years[txn.year]
     @JsName("setYear") operator fun set(txn: Version, partition: PgTransactionsYear) {
-        years[txn.year()] = partition
+        years[txn.year] = partition
     }
 
     override fun create(conn: PgConnection) {

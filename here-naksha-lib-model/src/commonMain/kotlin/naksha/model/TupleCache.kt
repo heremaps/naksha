@@ -184,7 +184,7 @@ class TupleCache internal constructor() {
      * @since 3.0
      */
     fun store(tuple: Tuple) {
-        forEachCache { it.put(tuple) }
+        forEachCache { if (it.latencyInMicros eq 0 && tuple.complete) it.put(tuple) }
     }
 
     /**
@@ -193,36 +193,56 @@ class TupleCache internal constructor() {
      * @param tuples the [Tuple] to store in the cache.
      * @since 3.0
      */
-    fun storeAll(vararg tuples: Tuple) {
-        storeTuples(tuples.asList())
+    @JsName("storeAll")
+    fun store(vararg tuples: Tuple) {
+        forEachCache {
+            if (it.latencyInMicros eq 0) {
+                for (tuple in tuples) {
+                    if (tuple.complete) it.put(tuple)
+                }
+            }
+        }
+        // TODO: For all slower caches, collect tuples and invoke `store` in a background job!
+    }
+
+    /**
+     * Store all given [Tuple] in the caches. The caches eventually can decide if they really likes to store all or some of the provided tuples.
+     *
+     * The method will ensure that the dictionaries of the tuples are as well stored in the cache.
+     *
+     * @param tuples the [tuple's][Tuple] to store in the cache.
+     * @since 3.0
+     */
+    @JsName("storeList")
+    fun store(tuples: List<Tuple?>) {
+        forEachCache {
+            if (it.latencyInMicros eq 0) {
+                for (tuple in tuples) {
+                    if (tuple != null && tuple.complete) {
+                        it.put(tuple)
+                    }
+                }
+            }
+        }
+        // TODO: For all slower caches, collect tuples and invoke `store` in a background job!
     }
 
     /**
      * Store all given [Tuple] in this tuple-storage. The storage eventually can decide if it really likes to store all or some of the provided tuples. The method should ensure that the dictionaries of the tuples it stores are as well stored in the cache dictionary for the storage.
      *
-     * @param tuples the [tuple's][Tuple] to store in the cache.
+     * @param featureTuples the [tuple's][Tuple] to store in the cache.
      * @since 3.0
      */
-    fun storeTuples(tuples: List<Tuple?>) {
-        val filtered = tuples.mapNotNull {
-            val tuple = it ?: return@mapNotNull null
-            if (tuple.isComplete()) tuple else null
+    fun storeFeatureTuples(featureTuples: List<FeatureTuple?>) {
+        forEachCache {
+            if (it.latencyInMicros eq 0) {
+                for (f in featureTuples) {
+                    val tuple = f?.tuple ?: continue
+                    if (tuple.complete) it.put(tuple)
+                }
+            }
         }
-        forEachCache { it.store(filtered) }
-    }
-
-    /**
-     * Store all given [Tuple] in this tuple-storage. The storage eventually can decide if it really likes to store all or some of the provided tuples. The method should ensure that the dictionaries of the tuples it stores are as well stored in the cache dictionary for the storage.
-     *
-     * @param tuples the [tuple's][Tuple] to store in the cache.
-     * @since 3.0
-     */
-    fun storeFeatureTuples(tuples: List<FeatureTuple?>) {
-        val filtered = tuples.mapNotNull {
-            val tuple = it?.tuple ?: return@mapNotNull null
-            if (tuple.isComplete()) tuple else null
-        }
-        forEachCache { it.store(filtered) }
+        // TODO: For all slower caches, collect tuples and invoke `store` in a background job!
     }
 
     /**

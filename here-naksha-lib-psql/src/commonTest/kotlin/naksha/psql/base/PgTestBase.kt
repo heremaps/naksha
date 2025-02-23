@@ -1,6 +1,8 @@
 package naksha.psql.base
 
+import naksha.base.AtomicBool
 import naksha.base.AtomicMap
+import naksha.base.Platform
 import naksha.model.SessionOptions
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -19,23 +21,39 @@ import kotlin.test.assertIs
  * - safe collection initialization (if [collection] is not null, it will be created once for test class)
  * - helper function for writing and reading to reduce boilerplate
  */
-abstract class PgTestBase(internal var collectionField: NakshaCollection? = null) {
+abstract class PgTestBase(private var testCollection: NakshaCollection? = null) {
 
     val env by lazy {
        TestEnv(deleteMap = true, enableInfoLogs = true)
     }
 
     val collection: NakshaCollection
-        get() = collectionField ?: throw IllegalStateException("collection not initialized")
+        get() = testCollection ?: throw IllegalStateException("collection not initialized")
 
     val storage: PgStorage
         get() = env.storage
 
-    protected fun insertFeature(feature: NakshaFeature, sessionOptions: SessionOptions? = null) =
-        insertFeatures(listOf(feature), sessionOptions)
+    @BeforeTest
+    fun ensureCollectionInitialized() {
+        val collection = testCollection
+        if (collection != null && initializedCollections.putIfAbsent(this::class, true) == null) {
+            val request = WriteRequest()
+            val testMap = NakshaMap(env.storage.id, env.mapId)
+            request.writes += Write().createMap(testMap)
+            request.writes += Write().createCollection(collection)
+            storage.newWriteSession().use { session ->
+                val response = session.execute(request)
+                assertIs<SuccessResponse>(response)
+                session.commit()
+            }
+        }
+    }
 
-    protected fun insertFeatures(vararg features: NakshaFeature) =
-        insertFeatures(listOf(*features))
+    protected fun insertFeature(feature: NakshaFeature, sessionOptions: SessionOptions? = null)
+        = insertFeatures(listOf(feature), sessionOptions)
+
+    protected fun insertFeatures(vararg features: NakshaFeature)
+        = insertFeatures(listOf(*features))
 
     protected fun insertFeatures(
         features: List<NakshaFeature>,
@@ -92,23 +110,9 @@ abstract class PgTestBase(internal var collectionField: NakshaCollection? = null
         }
     }
 
-    @BeforeTest
-    fun ensureCollectionInitialized() {
-        val collection = collectionField
-        if (collection != null && initializedCollections.putIfAbsent(this::class, true) == null) {
-            val request = WriteRequest()
-            val testMap = NakshaMap(env.storage.id, env.mapId)
-            request.writes += Write().createMap(testMap)
-            request.writes += Write().createCollection(collection)
-            storage.newWriteSession().use { session ->
-                val response = session.execute(request)
-                assertIs<SuccessResponse>(response)
-                session.commit()
-            }
-        }
-    }
-
     companion object {
+        private val lock = Platform.newLock()
+        private val initializedMap = AtomicBool(false)
         private val initializedCollections = AtomicMap<KClass<out PgTestBase>, Boolean>()
     }
 }

@@ -185,7 +185,7 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
         "point", "line", "lseg", "box", "path", "polygon", "circle", "int4range", "int8range", "numrange",
         "tsrange", "tstzrange", "daterange" -> valueOrNull(rs, rs.getString(index))
         "smallint", "int2" -> valueOrNull(rs, rs.getShort(index).toInt())
-        "integer", "int4", "xid4", "oid" -> valueOrNull(rs, rs.getInt(index))
+        "integer", "int", "int4", "xid4", "oid" -> valueOrNull(rs, rs.getInt(index))
         "bigint", "int8", "xid8" -> valueOrNull(rs, longToInt64(rs.getLong(index)))
         "real" -> valueOrNull(rs, rs.getFloat(index).toDouble())
         "double precision" -> valueOrNull(rs, rs.getDouble(index))

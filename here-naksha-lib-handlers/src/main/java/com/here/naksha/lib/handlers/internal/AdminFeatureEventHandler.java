@@ -21,7 +21,6 @@ package com.here.naksha.lib.handlers.internal;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
-import static naksha.model.IStorage.ADMIN_STORAGE_ID;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
@@ -72,7 +71,12 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
     final NakshaContext ctx = NakshaContext.currentContext();
     final Request request = event.getRequest();
     // process request using Naksha Admin Storage instance
-    addStorageIdToStreamInfo(ADMIN_STORAGE_ID, ctx);
+    // TODO: ADMIN_STORAGE_ID was originally within IStorage interface defined as string "naksha~admin", but
+    //       this made totally no sense, there is no such thing like an admin-storage outside of Naksha-Hub,
+    //       and even if, its for sure not "naksha~admin"!
+    //       However, I have no idea why this is done here, and what could potentially be the correct value,
+    //       therefore we need to find out later!
+    // addStorageIdToStreamInfo(ADMIN_STORAGE_ID, ctx);
     if (request instanceof ReadRequest rr) {
       return nakshaHub().getAdminStorage().useReadSession(SessionOptions.from(ctx), reader -> reader.execute(rr));
     } else if ((request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteFeatures(request))) {

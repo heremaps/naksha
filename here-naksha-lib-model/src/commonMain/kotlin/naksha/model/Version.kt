@@ -3,6 +3,7 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.base.Timestamp
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -35,7 +36,7 @@ import kotlin.jvm.JvmStatic
  * The human-readable representation as a string ([toString]) is: `{year}:{month}:{day}:{seq}`
  *
  * @property txn the transaction number as 64-bit integer.
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 open class Version(@JvmField val txn: Int64) : Comparable<Version> {
@@ -43,7 +44,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
     /**
      * Convert a transaction number, given as long, into a version.
      * @param txn the transaction number.
-     * @since 3.0.0
+     * @since 3.0
      */
     @Suppress("NON_EXPORTABLE_TYPE")
     @JsName("fromLong")
@@ -54,7 +55,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
          * Create the version number from a double (in JavaScript, number).
          * @param v the version number encoded in a double.
          * @return the version wrapper.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
@@ -65,7 +66,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
          * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given string is of an invalid format.
          * @param s the string representation.
          * @return the version.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
@@ -89,7 +90,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
          * @param month the month to encode, between 1 and 12 (4-bit).
          * @param day the day to encode, between 1 and 31 (5-bit).
          * @param seq the sequence number with in the day, between 0 and 4294967295 (32-bit).
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
@@ -97,10 +98,26 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
             Version((Int64(year) shl 41) or (Int64(month) shl 37) or (Int64(day) shl 32) + seq)
 
         /**
+         * Create a version from its parts.
+         * @param seq the sequence number with in the day, between 0 and 4294967295 (32-bit).
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun now(seq: Int64): Version {
+            val now = Timestamp.now()
+            val txn = (Int64(now.year) shl 41) or
+                      (Int64(now.month) shl 37) or 
+                      (Int64(now.day) shl 32) or
+                      seq
+            return Version(txn)
+        }
+
+        /**
          * The _HEAD_ version, being used when new [Tuple]'s are created.
          *
          * If a [Tuple] is current _HEAD_, its [Metadata.nextVersion] will be this.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -108,15 +125,15 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
 
         /**
          * The minimal version, all versions below this one are invalid.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         @JsStatic
-        val MIN = Version.of(0, 1, 1, Int64(0))
+        val MIN = of(0, 1, 1, Int64(0))
 
         /**
          * The minimum value of the sequence, so just zero.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -124,7 +141,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
 
         /**
          * The maximum value for the sequence, can be used as well as bitmask.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -132,11 +149,11 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
 
         /**
          * The value to be added to calculate the end of a day.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         @JsStatic
-        val SEQ_NEXT = Int64(0x0000_0001_0000_0000)
+        val SEQ_END = Int64(0x0000_0001_0000_0000)
      }
 
     private var _year = -1
@@ -144,42 +161,50 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
     /**
      * The year when the version started, a value between 0 and 8388608 (23-bit).
      */
-    fun year(): Int {
-        if (_year < 0) _year = (txn ushr 41).toInt()
-        return _year
-    }
+    val year: Int
+        get() {
+            if (_year < 0) _year = (txn ushr 41).toInt()
+            return _year
+        }
 
     private var _month = -1
 
     /**
      * The month when the version started, a value between 1 and 12 (4-bit).
-     * @since 3.0.0
+     * @since 3.0
      */
-    fun month(): Int {
-        if (_month < 0) _month = (txn ushr 37).toInt() and 15
-        return _month
-    }
+    val month: Int
+        get() {
+            if (_month < 0) _month = (txn ushr 37).toInt() and 15
+            return _month
+        }
 
     private var _day = -1
 
     /**
      * The day when the version started, a value between 1 and 12 (4-bit).
-     * @since 3.0.0
+     * @since 3.0
      */
-    fun day(): Int {
-        if (_day < 0) _day = (txn ushr 32).toInt() and 31
-        return _day
-    }
+    val day
+        get(): Int {
+            if (_day < 0) _day = (txn ushr 32).toInt() and 31
+            return _day
+        }
 
     private var _seq: Int64? = null
 
     /**
      * The sequence number within the day, a value between 0 and 4294967295 (32-bit).
-     * @since 3.0.0
+     * @since 3.0
      */
-    fun seq(): Int64 {
-        if (_seq == null) _seq = txn and SEQ_MAX
-        return _seq!!
+    val seq: Int64
+        get() {
+        var seq = _seq
+        if (seq == null) {
+           seq = txn and SEQ_MAX
+           _seq = seq
+        }
+        return seq
     }
 
     private lateinit var _string: String
@@ -200,10 +225,10 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
     /**
      * Returns version number as string.
      * @return `{year}:{month}:{day}:{seq}`
-     * @since 3.0.0
+     * @since 3.0
      */
     override fun toString(): String {
-        if (!this::_string.isInitialized) _string = "${year()}:${month()}:${day()}:${seq()}"
+        if (!this::_string.isInitialized) _string = "$year:$month}:$day}:$seq}"
         return _string
     }
 }

@@ -41,7 +41,7 @@ class UpdateFeature(
         val map = session.storage.adminMap.getPgMapById(session.useConnection(), collection.map.id) ?: throw NakshaException(MAP_NOT_FOUND, "Map with id '${collection.map.id}' does not exist")
         val featureNumber = featureNumber(hashId(feature.id))
         val tupleNumber = newFeatureTupleNumber(collection, featureNumber, session)
-        val tuple = SessionUtil.updated(session, map.nakshaMap, collection.nakshaCollection, feature, tupleNumber)
+        val tuple = session.useTx().updated(map.nakshaMap, collection.nakshaCollection, feature)
 
         writeExecutor.removeFeatureFromDel(collection, feature.id)
         collection.history?.let { hstTable ->

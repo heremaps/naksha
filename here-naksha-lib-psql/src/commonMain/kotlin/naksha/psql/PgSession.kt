@@ -23,36 +23,36 @@ import kotlin.jvm.JvmField
 /**
  * A session linked to a PostgresQL database.
  *
- * This object is created when [IStorage.newReadSession] or [IStorage.newWriteSession] are called, creating a session is cheap, without database access.
- * @since 3.0.0
+ * This object is created when [IStorage.newReadSession] or [IStorage.newWriteSession] are called, creating a session is cheap to create, without pre-allocation of any database connection, it will be connected on demand.
+ * @since 3.0
  */
 @JsExport
 open class PgSession(
     /**
      * The storage to which the session is bound.
-     * @since 3.0.0
+     * @since 3.0
      */
-    @JvmField val pgStorage: PgStorage,
+    pgStorage: PgStorage,
 
     /**
      * The session options to use, if any specific.
-     * @since 3.0.0
+     * @since 3.0
      */
     options: SessionOptions?,
 
     /**
      * If this session is read-only.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JvmField val readOnly: Boolean
 ) : IWriteSession, IReadSession, ISession {
 
-    override val storage
-        get() = pgStorage
+    override val storage = pgStorage
 
     /**
      * Assert that this session mutable and not closed.
      * - Throws [NakshaError.ILLEGAL_STATE] if this session is [readOnly] or [closed][isClosed].
+     * @since 3.0
      */
     fun assertMutable() {
         if (readOnly) throw NakshaException(ILLEGAL_STATE, "Failed to acquire mutable connection from read-only session")
@@ -62,6 +62,7 @@ open class PgSession(
     /**
      * Assert that this session mutable.
      * - Throws [NakshaError.ILLEGAL_STATE] if this session is [closed][isClosed].
+     * @since 3.0
      */
     fun assertOpen() {
         if (_closed) throw NakshaException(ILLEGAL_STATE, "Connection closed")
@@ -69,9 +70,6 @@ open class PgSession(
 
     private var optionsValue: SessionOptions = options ?: SessionOptions()
 
-    /**
-     * The options when opening new connections. The options are mostly immutable, except for the timeout values, for which there are dedicated setter.
-     */
     override val options: SessionOptions
         get() = optionsValue
 
@@ -95,6 +93,7 @@ open class PgSession(
 
     /**
      * The PostgresQL database connection currently being used; if any.
+     * @since 3.0
      */
     var pgConnection: PgConnection? = null
         private set
@@ -102,6 +101,7 @@ open class PgSession(
     /**
      * Tests if reading in parallel is applicable for this session.
      * @return _true_ if multiple read-connections can be used in parallel for this session; _false_ otherwise.
+     * @since 3.0
      */
     val mayReadParallel: Boolean
         get() = pgConnection == null && options.parallel
@@ -112,6 +112,7 @@ open class PgSession(
      * Currently, the main target platform for this method are JVM based languages.
      * - Throws [NakshaError.ILLEGAL_STATE] if the session is [closed][isClosed] or the session [may not be read in parallel][mayReadParallel].
      * @return a new read-only connection for this session, which must be closed when done reading.
+     * @since 3.0
      */
     fun newReadConnection(): PgSessionReadConn {
         assertOpen()
@@ -136,6 +137,7 @@ open class PgSession(
      *
      * - Throws [NakshaError.ILLEGAL_STATE] if the session is [closed][isClosed].
      * @return a single shared read-connection.
+     * @since 3.0
      */
     fun readConnection(): PgSessionReadConn = PgSessionReadConn(useConnection(), closeUnderlying = false)
 
@@ -144,6 +146,7 @@ open class PgSession(
      *
      * If none is yet acquired, acquires on from the pools and returns it. This connection is shared and must not be closed, it will automatically be closed when either [rollback] or [commit] are invoked.
      * @return the shared PostgresQL connection.
+     * @since 3.0
      */
     fun useConnection(): PgConnection {
         assertOpen()
@@ -159,6 +162,7 @@ open class PgSession(
      * Internally invoked by [useConnection] to initialize the connection.
      * @param conn the connection to initialize.
      * @param query the query to executed, can be modified, when overriding this method.
+     * @since 3.0
      */
     protected open fun initConnection(conn: PgConnection, query: String) {
         // This is the same as the default implementation, when init is null, see PgStorage::newConnection
@@ -169,13 +173,36 @@ open class PgSession(
 
     /**
      * The last [PostgreSQL Error Code](https://www.postgresql.org/docs/current/errcodes-appendix.html) or _null_, if no error has happened.
+     * @since 3.0
      */
     var error: PgError? = null
         private set
 
-    private var transactionValue: NakshaTransaction? = null
+    /**
+     * The current transaction wrapper; if any.
+     * @since 3.0
+     */
+    internal var tx: NakshaTx? = null
+        private set
 
-    override fun getTransaction(): NakshaTransaction? = transactionValue
+    /**
+     * Return the current transaction, if no transaction started yet, starts a new one.
+     * @return the current transaction.
+     * @since 3.0
+     */
+    internal fun useTx(): NakshaTx {
+        assertMutable()
+        assertOpen()
+        var tx = this.tx
+        if (tx == null) {
+            val txn = storage.adminMap.newTxn(useConnection())
+            tx = NakshaTx(Version(txn.number), options.appId, options.author, storage.adminMap)
+            this.tx = tx
+        }
+        return tx
+    }
+
+    override fun getTransaction(): NakshaTransaction? = tx?.transaction
 
     /**
      * Return the current transaction, if no transaction started yet, starts a new one.
@@ -183,17 +210,7 @@ open class PgSession(
      * - Throws [NakshaError.ILLEGAL_STATE] if this is session is [readOnly] or [closed][isClosed].
      * @return the current transaction.
      */
-    override fun useTransaction(): NakshaTransaction {
-        assertMutable()
-        assertOpen()
-        var tx = transactionValue
-        if (tx == null) {
-            val txn = pgStorage.adminMap.newTxn(useConnection())
-            tx = NakshaTransaction(txn.number, txn.epoch)
-            transactionValue = tx
-        }
-        return tx
-    }
+    override fun useTransaction(): NakshaTransaction = useTx().transaction
 
     override fun execute(request: Request): Response {
         // TODO: Verify that we always return an Response, no exceptions!
@@ -210,7 +227,7 @@ open class PgSession(
 
             is ReadRequest -> {
                 val response = PgReader(this, request).execute()
-                if (transactionValue == null) {
+                if (tx == null) {
                     // If this read was performed on a blank session, without a pending transaction, then we can release the connection.
                     pgConnection?.close()
                     pgConnection = null
@@ -228,7 +245,7 @@ open class PgSession(
     private fun clear() {
         uid.set(0)
         error = null
-        transactionValue = null
+        tx = null
         try {
             pgConnection?.close()
         } catch (ignore: Throwable) {
@@ -242,7 +259,7 @@ open class PgSession(
         assertOpen()
         assertMutable()
         if (conn != null) {
-            val tx = transactionValue
+            val tx = tx
             if (tx != null) {
                 try {
                     val writeTxReq = WriteRequest()
@@ -398,7 +415,7 @@ open class PgSession(
     override fun getMapById(mapId: String): NakshaMap? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            pgStorage.adminMap.getPgMapById(it.conn, mapId)?.nakshaMap
+            storage.adminMap.getPgMapById(it.conn, mapId)?.nakshaMap
         }
     }
 
@@ -410,14 +427,14 @@ open class PgSession(
     fun getPgMapById(mapId: String): PgMap? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            pgStorage.adminMap.getPgMapById(it.conn, mapId)
+            storage.adminMap.getPgMapById(it.conn, mapId)
         }
     }
 
     override fun getMapByNumber(mapNumber: Int): NakshaMap? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            pgStorage.adminMap.getPgMapByNumber(it.conn, mapNumber)?.nakshaMap
+            storage.adminMap.getPgMapByNumber(it.conn, mapNumber)?.nakshaMap
         }
     }
 
@@ -429,15 +446,15 @@ open class PgSession(
     fun getPgMapByNumber(mapNumber: Int): PgMap? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            pgStorage.adminMap.getPgMapByNumber(it.conn, mapNumber)
+            storage.adminMap.getPgMapByNumber(it.conn, mapNumber)
         }
     }
 
     override fun getCollectionById(map: NakshaMap, collectionId: String): NakshaCollection? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            val pgMap = pgStorage.adminMap.getPgMapById(it.conn, map.id) ?: return null
-            pgStorage.adminMap.getPgCollectionById(it.conn, pgMap, collectionId)?.nakshaCollection
+            val pgMap = storage.adminMap.getPgMapById(it.conn, map.id) ?: return null
+            storage.adminMap.getPgCollectionById(it.conn, pgMap, collectionId)?.nakshaCollection
         }
     }
 
@@ -450,15 +467,15 @@ open class PgSession(
     fun getPgCollectionById(pgMap: PgMap, collectionId: String): PgCollection? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            pgStorage.adminMap.getPgCollectionById(it.conn, pgMap, collectionId)
+            storage.adminMap.getPgCollectionById(it.conn, pgMap, collectionId)
         }
     }
 
     override fun getCollectionByNumber(map: NakshaMap, collectionNumber: Int): NakshaCollection? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            val pgMap = pgStorage.adminMap.getPgMapById(it.conn, map.id) ?: return null
-            pgStorage.adminMap.getPgCollectionByNumber(it.conn, pgMap, collectionNumber)?.nakshaCollection
+            val pgMap = storage.adminMap.getPgMapById(it.conn, map.id) ?: return null
+            storage.adminMap.getPgCollectionByNumber(it.conn, pgMap, collectionNumber)?.nakshaCollection
         }
     }
 
@@ -471,15 +488,15 @@ open class PgSession(
     fun getPgCollectionByNumber(pgMap: PgMap, collectionNumber: Int): PgCollection? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            pgStorage.adminMap.getPgCollectionByNumber(it.conn, pgMap, collectionNumber)
+            storage.adminMap.getPgCollectionByNumber(it.conn, pgMap, collectionNumber)
         }
     }
 
     override fun executeParallel(request: Request): Response = execute(request)
 
-    override fun getEncodingFlags(feature: Any?, context: Any?): Flags = pgStorage.adminMap.getEncodingFlags(feature, context)
+    override fun getEncodingFlags(feature: Any?, context: Any?): Flags = storage.adminMap.getEncodingFlags(feature, context)
 
-    override fun getDictionary(id: String): JbDictionary? = pgStorage.adminMap.getDictionary(id)
+    override fun getDictionary(id: String): JbDictionary? = storage.adminMap.getDictionary(id)
 
-    override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? = pgStorage.adminMap.getEncodingDictionary(feature, context)
+    override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? = storage.adminMap.getEncodingDictionary(feature, context)
 }

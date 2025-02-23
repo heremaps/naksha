@@ -2,6 +2,13 @@
 
 package naksha.model
 
+import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_EXISTS
+import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.model.NakshaError.NakshaErrorCompanion.MAP_EXISTS
+import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
+
 /**
  * A Naksha exception.
  * @property error the error that happened.
@@ -36,3 +43,52 @@ expect class NakshaException : RuntimeException {
      */
     constructor(code: String, msg: String, cause: Throwable? = null)
 }
+
+/**
+ * Create [ILLEGAL_ARGUMENT] exception.
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun illegalArg(msg: String): NakshaException = NakshaException(ILLEGAL_ARGUMENT, msg)
+
+/**
+ * Create [ILLEGAL_STATE] exception.
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun illegalState(msg: String): NakshaException = NakshaException(ILLEGAL_STATE, msg)
+
+/**
+ * Create [MAP_NOT_FOUND] exception.
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun mapNotFound(msg: String): NakshaException = NakshaException(MAP_NOT_FOUND, msg)
+
+/**
+ * Create [MAP_EXISTS] exception.
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun mapExists(msg: String): NakshaException = NakshaException(MAP_EXISTS, msg)
+
+/**
+ * Create [COLLECTION_NOT_FOUND] exception.
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun collectionNotFound(msg: String): NakshaException = NakshaException(COLLECTION_NOT_FOUND, msg)
+
+/**
+ * Create [COLLECTION_EXISTS] exception
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun collectionExists(msg: String): NakshaException = NakshaException(COLLECTION_EXISTS, msg)
+

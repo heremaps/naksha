@@ -56,7 +56,7 @@ internal class PgLock internal constructor(
     }
 
     override val storage: IStorage
-        get() = session.pgStorage
+        get() = session.storage
 
     private val closed = AtomicInt(1)
 

@@ -381,7 +381,7 @@ SELECT basics.*, procs.* FROM basics, procs;
             var version = Version(txn)
             val txInstant = Instant.fromEpochMilliseconds(txts.toLong())
             val txDate = txInstant.toLocalDateTime(TimeZone.UTC)
-            if (version.year() != txDate.year || version.month() != txDate.monthNumber || version.day() != txDate.dayOfMonth) {
+            if (version.year != txDate.year || version.month != txDate.monthNumber || version.day != txDate.dayOfMonth) {
                 logger.info("Transaction counter is in wrong day")
                 logger.info("Acquire advisory lock")
                 conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
@@ -391,7 +391,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                         txn = c2["txn"]
                         version = Version(txn)
                     }
-                    if (version.year() != txDate.year || version.month() != txDate.monthNumber || version.day() != txDate.dayOfMonth) {
+                    if (version.year != txDate.year || version.month != txDate.monthNumber || version.day != txDate.dayOfMonth) {
                         logger.info("Transaction counter is still at wrong day, rollover to next day")
                         // Rollover, we update sequence of the day.
                         version = Version.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(1))

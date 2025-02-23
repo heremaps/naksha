@@ -70,8 +70,9 @@ public final class NakshaApp extends Thread {
 
   private static final String DEFAULT_URL = "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd"
                                             + "&schema=" + DEFAULT_MAP_ID
-                                            + "&app=" + NakshaHubConfig.defaultAppName()
-                                            + "&id=" + PgStorage.ADMIN_STORAGE_ID;
+                                            + "&app=" + NakshaHubConfig.defaultAppName();
+                                            //+ "&id=" + PgStorage.ADMIN_STORAGE_ID;
+                                            // Note: the `id` must be part of the storage-config now!
   private final AtomicReference<Boolean> stopInstance = new AtomicReference<>(false);
 
   /**

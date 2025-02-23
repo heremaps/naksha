@@ -26,7 +26,7 @@ open class NakshaFeature() : AnyObject() {
     /**
      * Create a new feature with the given ID.
      * @param id the identifier to set.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JsName("of")
     constructor(id: String?) : this() {
@@ -38,12 +38,12 @@ open class NakshaFeature() : AnyObject() {
     companion object NakshaFeature_C {
         /**
          * The feature-type of this feature itself.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val TYPE = "Feature"
         /**
          * The key of geometry (`geometry`).
-         * @since 3.0.0
+         * @since 3.0
          */
         const val GEOMETRY = "geometry"
 
@@ -76,19 +76,19 @@ open class NakshaFeature() : AnyObject() {
 
     /**
      * The default type.
-     * @since 3.0.0
+     * @since 3.0
      */
     protected open fun defaultType(): String = TYPE
 
     /**
      * The default feature-type; if any.
-     * @since 3.0.0
+     * @since 3.0
      */
     protected open fun defaultFeatureType(): String? = null
 
     /**
      * The unique identifier of the feature.
-     * @since 3.0.0
+     * @since 3.0
      */
     open var id by ID_RANDOM
 
@@ -167,8 +167,22 @@ open class NakshaFeature() : AnyObject() {
     fun hasFeatureNumber(): Boolean = tupleNumber != TupleNumber.HEAD
 
     /**
-     * The type of the feature, must be one of: `FeatureCollection`, `Feature`, `Point`, `LineString`, `MultiPoint`, `Polygon`, `MultiLineString`, `MultiPolygon`, and `GeometryCollection`. Beware, no other values are allowed in the [GeoJSON specification section 7](https://datatracker.ietf.org/doc/html/rfc7946#section-7), therefore we introduce a [customer feature-type][featureType], that is stored in [properties].
-     * @since 3.0.0
+     * The type of the feature, to be [GeoJSON](https://datatracker.ietf.org/doc/html/rfc7946) compatible, one of the following is expected:
+     * - `FeatureCollection`
+     * - `Feature`
+     * - `Point`
+     * - `LineString`
+     * - `MultiPoint`
+     * - `Polygon`
+     * - `MultiLineString`
+     * - `MultiPolygon`
+     * - `GeometryCollection`
+     *
+     * Beware, no other values are allowed in the [GeoJSON specification, section 7](https://datatracker.ietf.org/doc/html/rfc7946#section-7), therefore we introduce a [customer feature-type][featureType], that is stored in [properties]. Later the [MOM](https://www.here.com/learn/blog/unimap-map-object-model) specification relocated the property into the object root, and renamed it to `momType`. For downward compatibility, this implementation will prefer `properties.featureType` and keep it in sync with `momType`.
+     * @since 3.0
+     * @see [featureType]
+     * @see [NakshaProperties.featureType]
+     * @see [momType]
      */
     var type by TYPE_DEFAULT
 
@@ -181,19 +195,22 @@ open class NakshaFeature() : AnyObject() {
     }
 
     /**
-     * The custom feature-type; reads [properties.featureType][NakshaProperties.featureType], then [momType], and eventually [type]. Modifications will change [properties.featureType][NakshaProperties.featureType].
+     * A virtual property that reads [properties.featureType][NakshaProperties.featureType], then [momType], and eventually [type]. Modifications will change only `momType` and `properties.featureType`.
      *
-     * If [MOM](https://www.here.com/learn/blog/unimap-map-object-model) should be used, please rather access [momType].
-     * @since 3.0.0
+     * @since 3.0
+     * @see [momType]
+     * @see [NakshaProperties.featureType]
+     * @see [type]
      */
     var featureType: String
-        get() = properties.featureType ?: momType
+        get() = properties.featureType ?: momType ?: type
         set(value) {
-            properties.featureType = value
+            setRaw("momType", value)
+            properties.setRaw("featureType", value)
         }
 
     /**
-     * @see featureType
+     * @see [featureType]
      */
     open fun withFeatureType(value: String): NakshaFeature {
         featureType = value
@@ -202,7 +219,7 @@ open class NakshaFeature() : AnyObject() {
 
     /**
      * The bounding box; if the feature has any.
-     * @since 3.0.0
+     * @since 3.0
      */
     var bbox by BBOX_NULL
 
@@ -216,7 +233,7 @@ open class NakshaFeature() : AnyObject() {
 
     /**
      * The geometry of the feature, if it has any.
-     * @since 3.0.0
+     * @since 3.0
      */
     var geometry by GEOMETRY_NULL
 
@@ -230,7 +247,7 @@ open class NakshaFeature() : AnyObject() {
 
     /**
      * Reference point of the feature. Used for grid calculation.
-     * @since 3.0.0
+     * @since 3.0
      */
     var referencePoint by REFERENCE_POINT_NULL
 
@@ -244,7 +261,7 @@ open class NakshaFeature() : AnyObject() {
 
     /**
      * The properties of the feature.
-     * @since 3.0.0
+     * @since 3.0
      */
     open var properties by PROPERTIES
 
@@ -258,7 +275,7 @@ open class NakshaFeature() : AnyObject() {
 
     /**
      * The attachment of the feature.
-     * @since 3.0.0
+     * @since 3.0
      */
     open var attachment by ATTACHMENT_NULL
 
@@ -271,26 +288,34 @@ open class NakshaFeature() : AnyObject() {
     }
 
     /**
-     * The mom-type; if _null_ or _undefined_, reads [properties.featureType][NakshaProperties.featureType], then [type]. If modified, writes as well [properties.featureType][NakshaProperties.featureType].
+     * The mom-type; if _null_ or _undefined_, reads [properties.featureType][NakshaProperties.featureType]. If modified, writes as well [properties.featureType][NakshaProperties.featureType].
      * - [UniMap: How the Map-Object-Model enables a frictionless future](https://www.here.com/learn/blog/unimap-map-object-model)
      * - [What is The Map-Object-Model (MOM) ?](https://www.linkedin.com/pulse/what-map-object-model-mom-kiran-kumar-mj1yf)
-     * @since 3.0.0
+     * @since 3.0
+     * @see [featureType]
+     * @see [NakshaProperties.featureType]
+     * @see [type]
      */
-    var momType: String
+    var momType: String?
         get() {
             val raw = getRaw("momType")
             if (raw is String) return raw
-            return properties.featureType ?: type
+            return properties.featureType
         }
         set(value) {
-            properties.featureType = value
-            setRaw("momType", value)
+            if (value == null) {
+                removeRaw("momType")
+                properties.removeRaw("featureType")
+            } else {
+                setRaw("momType", value)
+                properties.setRaw("featureType", value)
+            }
         }
 
     /**
      * @see momType
      */
-    open fun withMomType(value: String): NakshaFeature {
+    open fun withMomType(value: String?): NakshaFeature {
         momType = value
         return this
     }

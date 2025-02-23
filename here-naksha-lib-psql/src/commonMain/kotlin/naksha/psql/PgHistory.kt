@@ -21,10 +21,10 @@ class PgHistory(val head: PgHead) : PgTable(
     @JvmField
     val years: MutableMap<Int, PgHistoryYear> = mutableMapOf()
     @JsName("getYear")
-    operator fun get(txn_next: Version): PgHistoryYear? = years[txn_next.year()]
+    operator fun get(txn_next: Version): PgHistoryYear? = years[txn_next.year]
     @JsName("setYear")
     operator fun set(txn_next: Version, partition: PgHistoryYear) {
-        years[txn_next.year()] = partition
+        years[txn_next.year] = partition
     }
 
     override fun create(conn: PgConnection) {

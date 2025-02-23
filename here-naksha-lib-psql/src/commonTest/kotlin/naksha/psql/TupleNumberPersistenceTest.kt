@@ -43,9 +43,9 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
 
         // And: version stores date information
         val version = persistedTuple.tupleNumber.version
-        assertEquals(now.year, version.year())
-        assertEquals(now.monthNumber, version.month())
-        assertEquals(now.dayOfMonth, version.day())
+        assertEquals(now.year, version.year)
+        assertEquals(now.monthNumber, version.month)
+        assertEquals(now.dayOfMonth, version.day)
     }
 
     @Test
