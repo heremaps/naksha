@@ -20,31 +20,33 @@ import kotlin.js.JsExport
 interface ISession : IDictReader, AutoCloseable {
     /**
      * The storage to which the session is bound.
-     * @since 3.0.0
+     * @since 3.0
      */
     val storage: IStorage
 
     /**
      * The socket timeout in milliseconds.
-     * @since 3.0.0
+     * @since 3.0
      */
     var socketTimeout: Int
 
     /**
      * The statement timeout in milliseconds.
-     * @since 3.0.0
+     * @since 3.0
      */
     var stmtTimeout: Int
 
     /**
      * The lock timeout in milliseconds.
-     * @since 3.0.0
+     * @since 3.0
      */
     var lockTimeout: Int
 
     /**
-     * The session options used for this session.
-     * @since 3.0.0
+     * The options when opening new connections.
+     *
+     * The options are mostly immutable, except for the timeout values, for which there are dedicated setter.
+     * @since 3.0
      */
     val options: SessionOptions
 
@@ -79,14 +81,14 @@ interface ISession : IDictReader, AutoCloseable {
      * In `lib-psql`, even after all requests have been executed successfully, committing may fail partially, for example when only one connection aborts or the server crashes in the middle of the operation, while having committed already some connections, with others not yet to being done.
      *
      * Parallel executions on partitioned tables can be up to 256 times faster than sequential ones, depending on how many partitions there are, and on the available network bandwidth. This is, because all partitions are queried in parallel. The biggest PostgresQL database server available currently (at the time of writing, mid 2024) can be installed on an EC2 [r6idn.metal](https://aws.amazon.com/ec2/instance-types/r6i/) instance, providing 200 Gbps of networking, which would allow theoretically to satisfy 40 parallel connections or 20, when being in the same [placement group](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-strategies.html#placement-groups-cluster), see [AWS ec2-instance-network-bandwidth](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-network-bandwidth.html). So, with two `r6idn.metal` machines, one being the database, and the other being the client, in the same `placement group`, theoretically 20 concurrent connections will reach the limit of 200 Gbps. However, because the CPU load has a factor too, and the kernel configuration for TCP as well, it is recommended to use 64 partitions, so that each partition receives 3.125 Gbps of traffic only. The reason is, that this uses all CPU perfectly fine and works as well, when the clients are distributed on 64 EMR nodes. For all of this to be working eventually, especially when reading later, it is recommended to think always about the CPU limit, because reading requires nearly always to query all partitions in parallel to be efficient, this requires a lot of CPU resources on the server. Therefore, the best often is to find a middle ground between extreme write throughput, and query performance. In the above example, 8 to 16 partitions (and therefore 8 to 16 concurrent connections) would still be able to each between 40/80 and 80/160 Gbps of throughput, but make reading much more efficient. As the EBS volume is anyway limited to 100 Gbps, and for updates or deleted multiple writes are needed (move to history), and WAL logs are as well sharing this bandwidth, it is anyway unlikely to satisfy even 100 Gbps of the bandwidth for writing. This is not true for the temporary tablespace located on the ephemeral storage, where 200 Gbps can be fully satisfied. **In a nutshell, planning is essential!**
-     * @since 3.0.0
+     * @since 3.0
      */
     fun executeParallel(request: Request): Response
 
     /**
      * Tests if the session is closed.
      * @return _true_ if the session is closed.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun isClosed(): Boolean
 
@@ -103,7 +105,7 @@ interface ISession : IDictReader, AutoCloseable {
      * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return maps that were created in the current session, but beware that these maps may eventually fail to commit.
      * @param mapId the map-id for which to return the latest HEAD state.
      * @return the map; _null_ if no such map exists.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun getMapById(mapId: String): NakshaMap?
 
@@ -113,7 +115,7 @@ interface ISession : IDictReader, AutoCloseable {
      * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return maps that were created in the current session, but beware that these maps may eventually fail to commit.
      * @param mapNumber the map-number for which to return the latest HEAD state.
      * @return the map; _null_ if no such map exists.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun getMapByNumber(mapNumber: Int): NakshaMap?
 
@@ -124,7 +126,7 @@ interface ISession : IDictReader, AutoCloseable {
      * @param map the map to query.
      * @param collectionId the collection-id for which to return the latest HEAD state.
      * @return the collection; _null_ if no such collection exists.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun getCollectionById(map: NakshaMap, collectionId: String): NakshaCollection?
 
@@ -135,7 +137,7 @@ interface ISession : IDictReader, AutoCloseable {
      * @param map the map to query.
      * @param collectionNumber the collection-number for which to return the latest HEAD state.
      * @return the collection; _null_ if no such collection exists.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun getCollectionByNumber(map: NakshaMap, collectionNumber: Int): NakshaCollection?
 
@@ -149,7 +151,7 @@ interface ISession : IDictReader, AutoCloseable {
      * @param to the index of the first result-tuples to ignore; default is `featureTuples.size`.
      * @param fetchFromHistory if the history should be queried; default is `false`.
      * @param mode the fetch mode; default is [FETCH_ALL].
-     * @since 3.0.0
+     * @since 3.0
      */
     fun loadTuples(
         featureTuples: List<FeatureTuple?>,
@@ -165,7 +167,7 @@ interface ISession : IDictReader, AutoCloseable {
      * @param feature the feature to encode; _null_ if no specific one is available.
      * @param context the context in which the encoding happens (for example the [map][IMap] or [collection][ICollection]); _null_ if none is available.
      * @return best flags to use for encoding.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun getEncodingFlags(feature: Any?, context: Any? = null): Flags = storage.getEncodingFlags(feature, context)
 

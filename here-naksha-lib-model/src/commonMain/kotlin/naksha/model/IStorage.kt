@@ -4,13 +4,10 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.base.PlatformLock
-import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
 import naksha.base.fn.Fx1
 import naksha.jbon.IDictReader
 import kotlin.js.JsExport
-import kotlin.js.JsName
-import kotlin.jvm.JvmOverloads
 
 /**
  * Any entity implementing the [IStorage] interface represents some data-sink, and comes with an implementation that grants access to the data. The storage normally is a singleton that opens many sessions in parallel.
@@ -35,7 +32,7 @@ interface IStorage : IDictReader {
      *   // use storage
      * }
      * ```
-     * @since 3.0.0
+     * @since 3.0
      */
     val lock: PlatformLock
 
@@ -44,7 +41,7 @@ interface IStorage : IDictReader {
      *
      * **Warning**: Modification of the returned configuration object will not have any impact on the storage, but it can provide wrong information to other callers of the function, so this should be avoided, apart from that the configuration object is not thread safe!
      * - Throws [NakshaError.UNINITIALIZED], if not initialized.
-     * @since 3.0.0
+     * @since 3.0
      */
     val config: StorageConfig
 
@@ -60,7 +57,7 @@ interface IStorage : IDictReader {
      * The storage-number, managed by environment, optionally stored in the storage, must always be the same for the same physical storage.
      *
      * - Throws [NakshaError.UNINITIALIZED], if the storage failed to initialize.
-     * @since 3.0.0
+     * @since 3.0
      */
     val number: Int64
 
@@ -70,7 +67,7 @@ interface IStorage : IDictReader {
      * Setting the value is optionally support, storages may throw an [NakshaError.UNSUPPORTED_OPERATION] exception, when trying to modify the hard-cap, or they may only allow certain values and throw an [NakshaError.ILLEGAL_ARGUMENT] exception, if the value too big. Zero and negative values are changed into the maximum of whatever the storage supports, [Int.MAX_VALUE] means no hard-cap (if supported by the storage).
      *
      * Note that technically, due to binary encoding, there is normally a hard-cap at `16777216`.
-     * @since 3.0.0
+     * @since 3.0
      */
     val hardCap: Int
 
@@ -145,15 +142,7 @@ interface IStorage : IDictReader {
      * @param feature the feature to encode; _null_ if no specific one is available.
      * @param context the context in which the encoding happens (for example the [map][naksha.model.objects.NakshaMap] or [collection][naksha.model.objects.NakshaCollection]); _null_ if none is available.
      * @return best flags to use for encoding.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun getEncodingFlags(feature: Any?, context: Any? = null): Flags
-
-    companion object {
-
-        /**
-         * The storage-id of the Naksha-Hub admin storage.
-         */
-        const val ADMIN_STORAGE_ID: String = "naksha-admin"
-    }
 }

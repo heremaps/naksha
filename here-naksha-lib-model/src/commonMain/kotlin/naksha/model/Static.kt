@@ -5,6 +5,8 @@ package naksha.model
 import naksha.base.Int64
 import naksha.base.PlatformUtil.PlatformUtilCompanion.MILLISECOND
 import naksha.base.PlatformUtil.PlatformUtilCompanion.MILLIS_TO_MICROS
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -161,5 +163,4 @@ const val NO_CACHE_CLEAR: FetchMode = NO_CACHE_BIT.inv()
  * @since 3.0.0
  */
 const val FETCH_MASK: FetchMode = 31
-
 

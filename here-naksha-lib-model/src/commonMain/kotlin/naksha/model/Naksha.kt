@@ -44,7 +44,7 @@ import kotlin.jvm.JvmStatic
 
 /**
  * Utility singleton of the Naksha `lib-models`.
- * @since 3.0.0
+ * @since 3.0
  * @see IStorage
  */
 @JsExport
@@ -52,19 +52,19 @@ class Naksha private constructor() {
     companion object NakshaCompanion {
         /**
          * The prefix for administrative collections.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val ADMIN_PREFIX = "naksha~"
 
         /**
          * The identifier of the administration map _(`naksha~admin`)_.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val ADMIN_MAP = "naksha~admin"
 
         /**
          * The number of the administration map _(`0`)_.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val ADMIN_MAP_NUMBER = 0
 
@@ -138,10 +138,13 @@ class Naksha private constructor() {
         )
 
         /**
-         *
+         * Default flags recommended for storing data, being:
+         * - Encode [geometry][NakshaFeature.geometry] in `TWKB`, _[Tine-Well-Known-Binary](https://github.com/TWKB/Specification/blob/master/twkb.md)_
+         * - Encode the [tags][XyzNs.tags] as [JSON](https://en.wikipedia.org/wiki/Json), and compress them using [GZIP](https://en.wikipedia.org/wiki/Gzip).
+         * - Encode the feature into `JBON` _(Java Binary Object Notation)_, and compress it using [GZIP](https://en.wikipedia.org/wiki/Gzip).
          */
         @JvmField
-        var DEFAULT_FLAGS = Flags(TWKB, JBON_GZIP, TagsEncoding.JSON_GZIP, ACTION_CREATE)
+        var DEFAULT_FLAGS = Flags(TWKB, JBON_GZIP, TagsEncoding.JSON_GZIP)
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:
@@ -151,7 +154,7 @@ class Naksha private constructor() {
          * **Beware**: Identifiers must not contain upper-case letters, because many storages does not make a difference between upper- and lower-cased letters.
          * @param id the identifier.
          * @return _true_ if the identifier is valid; _false_ otherwise.
-         * @since 3.0.0
+         * @since 3.0
          * @see [verifyId]
          * @see [MAX_ID_LENGTH]
          */
@@ -183,7 +186,7 @@ class Naksha private constructor() {
          * If the given identifier is invalid, the methods throws [NakshaError.ILLEGAL_ID].
          * @param id the identifier to test.
          * @return the given identifier, tested.
-         * @since 3.0.0
+         * @since 3.0
          * @see [isValidId]
          */
         @JsStatic
@@ -213,7 +216,7 @@ class Naksha private constructor() {
          * Tests if the given identifier is an internal one.
          * @param id the identifier to test.
          * @return _true_ if this is an internal identifier; _false_ otherwise.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
@@ -421,7 +424,7 @@ class Naksha private constructor() {
          * @param tuple the tuple to decode.
          * @param dictionaryReader the dictionary reader to use, if _null_, then the storage or cache are used.
          * @return the Naksha feature, _null_ if decoding failed or _null_ was given.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
@@ -450,7 +453,8 @@ class Naksha private constructor() {
          * @param dictionary the [dictionary][IDict] to use to encode the feature; _null_ if encoding should be done storage agnostic.
          * @param flags the encoding flags or _null_, if [DEFAULT_FLAGS] should be used.
          * @return the encoded [Tuple].
-         * @since 3.0.0
+         * @since 3.0
+         * @see [IStorage.getEncodingDictionary]
          */
         @JsStatic
         @JvmStatic
@@ -472,7 +476,7 @@ class Naksha private constructor() {
          * @param feature the feature to encode.
          * @param storage the [storage][IStorage] for which to encode the feature.
          * @return the encoded [Tuple].
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
@@ -495,7 +499,7 @@ class Naksha private constructor() {
          * @param flags the codec flags.
          * @param dict the dictionary to use for encoding; if any.
          * @return the encoded feature.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
@@ -526,7 +530,7 @@ class Naksha private constructor() {
          * @param flags the codec flags.
          * @param dictReader the dictionary manager to use for decoding; if any.
          * @return the Naksha feature.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
@@ -553,7 +557,7 @@ class Naksha private constructor() {
          * @param flags the codec flags.
          * @param dictReader the dictionary manager to use for decoding; if any.
          * @return the Naksha tags.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
@@ -580,7 +584,7 @@ class Naksha private constructor() {
          * @param flags the codec flags.
          * @param dict the dictionary to use for encoding; if any.
          * @return the encoded tags.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
@@ -605,7 +609,7 @@ class Naksha private constructor() {
          * @param bytes the bytes to decode.
          * @param flags the codec flags.
          * @return the geometry.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
@@ -628,7 +632,7 @@ class Naksha private constructor() {
          * @param geometry the geometry to encode.
          * @param flags the codec flags.
          * @return the encoded GeoJSON geometry.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
@@ -647,28 +651,28 @@ class Naksha private constructor() {
 
         /**
          * A lock that is used to modify static values atomically.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         internal val lock = Platform.newLock()
 
         /**
          * All registered storages by [storage-number][IStorage.number].
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         internal val storagesByNumber = AtomicMap<Int64, AbstractStorage<*>>()
 
         /**
          * All registered storages by [storage-id][IStorage.id].
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         internal val storagesById = AtomicMap<String, AbstractStorage<*>>()
 
         /**
          * Returns a list of all currently registered storages.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
@@ -813,7 +817,7 @@ class Naksha private constructor() {
          * - Throws [NakshaError.ILLEGAL_STATE] if the given **storage-number** and **storage-id** are currently allocated to two different storages.
          * @param config the storage configuration to remove.
          * @return the removed storage, if any.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
@@ -847,7 +851,7 @@ class Naksha private constructor() {
          * final ResultTupleList result = Naksha.cache.load(rs, 0, rs.size())
          * ```
          * - Throws [ILLEGAL_STATE], if no cache is available ([cacheRef] is _null_). This only happens, when an application explicitly removes all caches.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
@@ -864,7 +868,7 @@ class Naksha private constructor() {
          *
          * If not explicitly set, the first time the options are needed, they are creating from the current [NakshaContext].
          *
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic

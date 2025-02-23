@@ -122,6 +122,7 @@ class PgColumn : JsEnum() {
          *
          * ### Note
          * In the [transactions][PgTransactions] table, this property is filled with the transaction-number _(aka `txn`)_, because partitioning is done above it. However, the value will always be extracted from the [tuple-number][naksha.model.TupleNumber] of the transaction.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -132,6 +133,7 @@ class PgColumn : JsEnum() {
 
         /**
          * The epoch timestamp in millisecond when the [tuple][naksha.model.Tuple] was produced, which is the last time the feature was modified.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -143,6 +145,7 @@ class PgColumn : JsEnum() {
 
         /**
          * The epoch timestamp in millisecond when the [feature][naksha.model.objects.NakshaFeature] was originally created. If the value is _null_, this means this [tuple][naksha.model.Tuple] is the initial state of the [feature][naksha.model.objects.NakshaFeature], so the value is the same as [updated_at].
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -153,6 +156,7 @@ class PgColumn : JsEnum() {
 
         /**
          * The epoch timestamp in millisecond when the [feature][naksha.model.objects.NakshaFeature] was modified last by the author. If the value is _null_, this means this [tuple][naksha.model.Tuple] was changed by the author, so the value is the same as [updated_at].
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -163,6 +167,7 @@ class PgColumn : JsEnum() {
 
         /**
          * If this has a custom value, otherwise _null_.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -173,6 +178,7 @@ class PgColumn : JsEnum() {
 
         /**
          * If this has a custom value, otherwise _null_.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -183,6 +189,7 @@ class PgColumn : JsEnum() {
 
         /**
          * If this has a custom value, otherwise _null_.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -193,6 +200,7 @@ class PgColumn : JsEnum() {
 
         /**
          * If this has a custom value, otherwise _null_.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -206,6 +214,7 @@ class PgColumn : JsEnum() {
 
         /**
          * The unique hash of this [tuple][naksha.model.Tuple] (state), calculated by the storage using the static [Metadata.hash][naksha.model.Metadata.calculateHash] method.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -217,6 +226,7 @@ class PgColumn : JsEnum() {
 
         /**
          * The binary [HERE tile-key][naksha.geo.HereTile.intKey] of the [reference-point][naksha.model.Tuple.referencePoint] of the [tuple][naksha.model.Tuple] (state). This is calculated using the static [Metadata.geoGrid][naksha.model.Metadata.calculateHereTile] method.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -228,6 +238,7 @@ class PgColumn : JsEnum() {
 
         /**
          * [Flags][naksha.model.Flags].
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -277,6 +288,7 @@ class PgColumn : JsEnum() {
          * The encoding stores, in order, Big-Endian encoded:
          * - version: 64
          * - uid: 32
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -300,6 +312,7 @@ class PgColumn : JsEnum() {
          * The encoding stores, in order, Big-Endian encoded:
          * - version: 64
          * - uid: 32
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -311,6 +324,7 @@ class PgColumn : JsEnum() {
 
         /**
          * The feature-id.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -322,6 +336,7 @@ class PgColumn : JsEnum() {
 
         /**
          * The application-id of the application that produced a [tuple][naksha.model.Tuple].
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -333,6 +348,7 @@ class PgColumn : JsEnum() {
 
         /**
          * The author that takes ownership for the [tuple][naksha.model.Tuple].
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -358,6 +374,7 @@ class PgColumn : JsEnum() {
          * This was a simplified description, but should allow to understand the basic concepts and meaning of this property.
          *
          * The `origin` is sticky, the value is kept until updated, the feature is forked again, or the ID is changed.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -372,6 +389,7 @@ class PgColumn : JsEnum() {
          *
          * This value is set in the following situations:
          * - **Join**: If multiple features are deleted, and then replaced with a single feature, then the features that are deleted will have `action` set to `DELETED` and the `target` will refer to the feature into which they are joined. The target feature will have the `action` set to `JOINED` to indicate, that there are deleted features, which target this one.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -383,6 +401,7 @@ class PgColumn : JsEnum() {
 
         /**
          * A customer feature-type, [type][naksha.model.objects.NakshaFeature.type] of the [feature][naksha.model.objects.NakshaFeature], _null_ if it matches the [default-type of the collection][naksha.model.objects.NakshaCollection.defaultType].
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -394,6 +413,7 @@ class PgColumn : JsEnum() {
 
         /**
          * A custom string, _null_ if not used.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -405,6 +425,7 @@ class PgColumn : JsEnum() {
 
         /**
          * A custom string, _null_ if not used.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -416,6 +437,7 @@ class PgColumn : JsEnum() {
 
         /**
          * A custom string, _null_ if not used.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -427,6 +449,7 @@ class PgColumn : JsEnum() {
 
         /**
          * A custom string, _null_ if not used.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -447,6 +470,7 @@ class PgColumn : JsEnum() {
 
         /**
          * The [tags][naksha.model.TagMap] of the [tuple][naksha.model.Tuple], stored as map.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -458,6 +482,7 @@ class PgColumn : JsEnum() {
 
         /**
          * The reference-point of the [feature][naksha.model.objects.NakshaFeature].
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -469,6 +494,7 @@ class PgColumn : JsEnum() {
 
         /**
          * The geometry of the [feature][naksha.model.objects.NakshaFeature].
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -480,6 +506,7 @@ class PgColumn : JsEnum() {
 
         /**
          * The serialized [feature][naksha.model.objects.NakshaFeature].
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -491,6 +518,7 @@ class PgColumn : JsEnum() {
 
         /**
          * An arbitrary binary attachment.
+         * @since 3.0
          */
         @JvmField
         @JsStatic
@@ -565,24 +593,26 @@ class PgColumn : JsEnum() {
          * Returns the [PgColumn] that matches to the official [MetaColumn].
          * @param metaColumn the [MetaColumn] to resolve.
          * @return the [PgColumn] that matches this [MetaColumn]; if any.
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
         fun ofRowColumn(metaColumn: MetaColumn): PgColumn? = when (metaColumn.name) {
+            MetaColumn.NEXT_VERSION -> txn_next
             MetaColumn.UPDATED_AT -> updated_at
             MetaColumn.CREATED_AT -> created_at
             MetaColumn.AUTHOR_TS -> author_ts
-            MetaColumn.NEXT_VERSION -> txn_next
             MetaColumn.CV0 -> cv0
             MetaColumn.CV1 -> cv1
             MetaColumn.CV2 -> cv2
             MetaColumn.CV3 -> cv3
-            MetaColumn.PREV_TUPLE_NUMBER -> prev_tn
-            MetaColumn.BASE_TUPLE_NUMBER -> base_tn
             MetaColumn.HASH -> hash
             MetaColumn.HERE_TILE -> here_tile
             MetaColumn.FLAGS -> flags
             MetaColumn.CHANGE_COUNT -> cc
+            MetaColumn.TUPLE_NUMBER -> tn
+            MetaColumn.PREV_TUPLE_NUMBER -> prev_tn
+            MetaColumn.BASE_TUPLE_NUMBER -> base_tn
             MetaColumn.ID -> id
             MetaColumn.APP_ID -> app_id
             MetaColumn.AUTHOR -> author

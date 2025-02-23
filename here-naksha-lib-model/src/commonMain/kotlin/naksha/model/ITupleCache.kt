@@ -66,7 +66,7 @@ interface ITupleCache {
     fun put(tuple: Tuple)
 
     /**
-     * Store all given [Tuple] in this tuple-storage. The storage eventually can decide if it really likes to store all or some of the provided tuples. The method should ensure that the dictionaries of the tuples it stores are as well stored in the cache dictionary for the storage.
+     * Store all given [Tuple] in this tuple-storage. The storage eventually can decide if it really likes to store all or some of the provided tuples. The method should ensure that the dictionaries of the tuples it stores are as well stored in the cache.
      *
      * ### Note
      * This method can block the callee for a longer time, it only called as part of a background job.

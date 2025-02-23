@@ -11,7 +11,7 @@ import kotlin.math.floor
  * Creates a new JBON builder using the given view and global dictionary.
  * @property global The global dictionary to use when encoding; if any.
  */
-@Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate", "OPT_IN_USAGE", "NON_EXPORTABLE_TYPE")
+@Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate", "OPT_IN_USAGE")
 @JsExport
 open class JbEncoder(var global: IDict? = null) : Binary() {
 

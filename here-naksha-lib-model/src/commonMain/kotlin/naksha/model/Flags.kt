@@ -63,12 +63,11 @@ inline fun Flags(flags: Int = 0): Flags = flags
  * @param geoEncoding the geometry encoding.
  * @param featureEncoding the feature encoding.
  * @param tagsEncoding the tags encoding.
- * @param action the action.
  * @return the flags binary.
  * @since 3.0.0
  */
-inline fun Flags(geoEncoding: Int, featureEncoding: Int, tagsEncoding: Int, action: Int): Flags =
-    geoEncoding or featureEncoding or tagsEncoding or action
+inline fun Flags(geoEncoding: Int, featureEncoding: Int, tagsEncoding: Int): Flags =
+    geoEncoding or featureEncoding or tagsEncoding
 
 /**
  * Decodes the geometry encoding from flags.
