@@ -45,7 +45,7 @@ open class PgMap internal constructor(
     private var _collections: PgCollection? = null
 
     /**
-     * The collection's collection of the map.
+     * The collection's collection of the map _(`naksha~collections` aka `0`)_.
      * @since 3.0
      */
     val collections: PgCollection

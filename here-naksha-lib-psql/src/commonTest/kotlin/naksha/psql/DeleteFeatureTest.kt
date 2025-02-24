@@ -48,8 +48,8 @@ class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c")) 
             queryHistory = true
         })
         assertEquals(2, historyResponse.features.size)
-        assertSame(Action.CREATED, historyResponse.tuples[0]?.tuple?.meta?.flags?.actionEnum())
-        assertSame(Action.DELETED, historyResponse.tuples[1]?.tuple?.meta?.flags?.actionEnum())
+        assertSame(Action.CREATED, historyResponse.tupleList?.get(0)?.meta?.flags?.actionEnum())
+        assertSame(Action.DELETED, historyResponse.tupleList?.get(1)?.meta?.flags?.actionEnum())
 
         // verify if delete table contains element
         val deleteTableResponse = executeRead(ReadFeatures().apply {

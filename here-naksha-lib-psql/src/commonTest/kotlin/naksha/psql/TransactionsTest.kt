@@ -5,10 +5,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.psql.base.PgTestBase
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class TransactionsTest : PgTestBase(NakshaCollection("transaction_test")) {
 
@@ -18,23 +15,33 @@ class TransactionsTest : PgTestBase(NakshaCollection("transaction_test")) {
         val feature = NakshaFeature("f1")
         val writeOp = Write().createFeature(collection, feature)
         val writeRequest = WriteRequest().add(writeOp)
+        val writeResponse = executeWrite(writeRequest)
 
-        val savedTuples = executeWrite(writeRequest).tuples
         // clear tuple cache
         Naksha.cache.clear(storage)
 
-        val readSession = storage.newReadSession()
-        readSession.loadTuples(savedTuples.asList())
-        val savedFeatureVersion = savedTuples[0]?.tuple?.meta?.version
+        // This should load the feature tuple from the storage, as we cleared the cache.
+        val writtenFeatures = writeResponse.useFeaturesOnly()
+        assertNotNull(writeResponse.features)
+        assertEquals(1, writtenFeatures.size)
+        val writtenFeature = writtenFeatures.first()
+        assertNotNull(writtenFeature)
+        val writtenVersion = writtenFeature.properties.xyz.version
+        assertNotNull(writtenVersion)
+        assertEquals("f1", writtenFeature.id)
 
         // when - read all transactions
         val readRequest = ReadTransactions()
-        readRequest.featureIds.add(savedFeatureVersion?.txn.toString())
+        readRequest.readVersion(writtenVersion)
         val readResponse = storage.newReadSession().execute(readRequest) as SuccessResponse
-        readSession.loadTuples(readResponse.tuples)
+        val readFeatures = readResponse.features
+        assertNotNull(readFeatures)
+        assertEquals(1, readFeatures.size)
+        val readFeature = readFeatures.first()
+        assertNotNull(readFeature)
 
         // then
-        assertEquals(savedFeatureVersion, readResponse.tuples[0]?.tuple?.meta?.version)
+        assertEquals(writtenVersion, readFeature.properties.xyz.version)
     }
 
     @Test

@@ -4,10 +4,21 @@ import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.jbon.JbDictionary
 import naksha.model.*
+import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
+import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP_NUMBER
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_NUMBER
+import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL
+import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL_NUMBER
+import naksha.model.Naksha.NakshaCompanion.MAPS_COL
+import naksha.model.Naksha.NakshaCompanion.MAPS_COL_NUMBER
+import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_NUMBER
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
 import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
+import kotlin.math.log
 
 /**
  * The admin-map of the [PsqlStorage].
@@ -26,7 +37,7 @@ class PsqlAdminMap internal constructor(
 
     override fun createPgMap(conn: PgConnection, map: PgMap) {
         if (Naksha.isInternalId(map.id)) throw NakshaException(ILLEGAL_ARGUMENT, "Can't create internal maps: ${map.id}")
-        conn.execute("CREATE SCHEMA IF NOT EXIST ${map.quotedId}").close()
+        conn.execute("CREATE SCHEMA IF NOT EXISTS ${map.quotedId}").close()
     }
 
     override fun deletePgMap(conn: PgConnection, map: PgMap) {
@@ -34,20 +45,44 @@ class PsqlAdminMap internal constructor(
         conn.execute("DROP SCHEMA ${map.quotedId} CASCADE").close()
     }
 
-    override fun getPgMapById(conn: PgConnection, id: String): PgMap? = mapCache[id]?.head?.get()
+    override fun getPgMapById(conn: PgConnection, id: String): PgMap? {
+        if (ADMIN_MAP == id) return this
+        return mapCache[id]?.head?.get()
+    }
 
-    override fun getPgMapByNumber(conn: PgConnection, number: Int): PgMap? = mapCache[number]?.head?.get()
+    override fun getPgMapByNumber(conn: PgConnection, number: Int): PgMap? {
+        if (ADMIN_MAP_NUMBER == number) return this
+        return mapCache[number]?.head?.get()
+    }
 
     override fun listPgMaps(conn: PgConnection): PgMapList = PgMapList().withAll(
         mapCache.getAll().map { it.head.get() }.filterNotNull()
     )
 
     override fun getPgCollectionById(conn: PgConnection, map: PgMap, id: String): PgCollection? {
+        if (map === this) {
+            return when (id) {
+                COLLECTIONS_COL -> collections
+                TRANSACTIONS_COL -> transactions
+                MAPS_COL -> maps
+                DICTIONARIES_COL -> dictionaries
+                else -> null
+            }
+        }
         val psqlMap = mapCache[map.number] ?: return null
         return psqlMap[id]?.head?.get()
     }
 
     override fun getPgCollectionByNumber(conn: PgConnection, map: PgMap, number: Int): PgCollection? {
+        if (map === this) {
+            return when (number) {
+                COLLECTIONS_COL_NUMBER -> collections
+                TRANSACTIONS_COL_NUMBER -> transactions
+                MAPS_COL_NUMBER -> maps
+                DICTIONARIES_COL_NUMBER -> dictionaries
+                else -> null
+            }
+        }
         val psqlMap = mapCache[map.number] ?: return null
         return psqlMap[number]?.head?.get()
     }
@@ -235,6 +270,7 @@ class PsqlAdminMap internal constructor(
         createPgCollection(conn, transactions) // 1
         createPgCollection(conn, maps) // 2
         createPgCollection(conn, dictionaries) //3
+
         logger.info("Done creating transactions, collections, and dictionaries")
         return adminMapOid
     }

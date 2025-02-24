@@ -29,7 +29,7 @@ class ReadCollectionsTest : PgTestBase(NakshaCollection(
         })
 
         // Then
-        assertEquals(1, retrievedCollectionMeta.tuples.size)
+        assertEquals(1, retrievedCollectionMeta.tupleList?.size)
         val collectionFeature = retrievedCollectionMeta.features[0]!!.proxy(NakshaCollection::class)
         assertEquals(collection.id, collectionFeature.id)
         assertEquals(collection.partitions, collectionFeature.partitions)

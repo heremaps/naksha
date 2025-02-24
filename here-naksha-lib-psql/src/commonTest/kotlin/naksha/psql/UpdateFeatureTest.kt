@@ -101,15 +101,15 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true
-        }).tuples
+        }).tupleList
 
-        val retrievedUpdatedTupleResult = retrievedTuples.first { it?.tuple?.meta?.action() == Action.UPDATED }!!
-        val retrievedHstCreatedTupleResult = retrievedTuples.first { it?.tuple?.meta?.action() == Action.CREATED }!!
+        val retrievedUpdatedTupleResult = retrievedTuples?.first { it?.meta?.action() == Action.UPDATED }!!
+        val retrievedHstCreatedTupleResult = retrievedTuples?.first { it?.meta?.action() == Action.CREATED }!!
 
         // Then
         assertNotEquals(retrievedUpdatedTupleResult.tupleNumber.version, retrievedHstCreatedTupleResult.tupleNumber.version)
-        val updatedTuple = retrievedUpdatedTupleResult.tuple
-        val previousTuple = retrievedHstCreatedTupleResult.tuple
+        val updatedTuple = retrievedUpdatedTupleResult
+        val previousTuple = retrievedHstCreatedTupleResult
         assertNotNull(updatedTuple)
         assertNotNull(previousTuple)
         assertEquals(updatedTuple.meta.prevTupleNumber, retrievedHstCreatedTupleResult.tupleNumber)

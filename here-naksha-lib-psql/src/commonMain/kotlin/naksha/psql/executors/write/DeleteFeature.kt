@@ -1,6 +1,5 @@
 package naksha.psql.executors.write
 
-import naksha.base.Int64
 import naksha.model.*
 import naksha.model.Metadata.Metadata_C.calculateHereTile
 import naksha.model.Metadata.Metadata_C.calculateHash
@@ -14,7 +13,6 @@ import naksha.psql.executors.PgReader
 import naksha.psql.executors.PgWriter
 import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.WriteFeatureUtils.resolveFlags
-import naksha.psql.executors.write.WriteFeatureUtils.tuple
 
 class DeleteFeature(
     private val session: PgSession,
@@ -33,7 +31,7 @@ class DeleteFeature(
         val response = PgReader(session, readFeatures).execute().proxy(SuccessResponse::class)
 
         // Only modify head, hst and del tables if feature exists
-        if (response.features.isNotEmpty()) {
+        if (response.features!!.isNotEmpty()) {
             // If hst table enabled
             collection.history?.let { hstTable ->
                 // copy head state into hst with txn_next === txn
@@ -58,8 +56,8 @@ class DeleteFeature(
             }
 
             writeExecutor.removeFeatureFromHead(collection, collectionId)
-            val feature = response.features.first()!! //already checked that feature list is not empty
-            val metadata = response.tuples.first()?.tuple?.meta!!
+            val feature = response.features!!.first()!! //already checked that feature list is not empty
+            // val metadata = response.tupleList!!.first()?.tuple?.meta!!
             val tuple = session.useTx().created(map.nakshaMap, collection.nakshaCollection, feature)
             return PgWriter.cachedTupleNumber(write, tuple, tupleList)
         }

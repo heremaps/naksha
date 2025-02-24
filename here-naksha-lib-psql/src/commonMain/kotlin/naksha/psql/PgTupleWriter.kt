@@ -5,9 +5,9 @@ package naksha.psql
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
-import naksha.model.request.Write
-import naksha.model.request.WriteOp
+import naksha.model.request.*
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * A helper to write tuples into collections. The class can be extended and the
@@ -37,8 +37,19 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
     /**
      * Performs the given writes.
      * @param writes the writes to perform.
+     * @return the response.
+     */
+    fun execute(writes: WriteList) : Response {
+        val tupleNumberList = execute(writes.mapNotNull { it }.toMutableList())
+        return SuccessResponse().withTupleNumberList(tupleNumberList)
+    }
+
+    /**
+     * Performs the given writes.
+     * @param writes the writes to perform.
      * @return the tuple-numbers of the
      */
+    @JsName("executeWrites")
     fun execute(writes: MutableList<Write>) : TupleNumberList {
         // Add the input-index.
         val targetWrites = ArrayList<PgTupleWrite>(writes.size)

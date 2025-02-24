@@ -34,6 +34,6 @@ class ReadLimitTest : PgTestBase(NakshaCollection("read_limit_test")) {
         })
 
         // then
-        assertEquals(2, readWithLimit.tuples.size)
+        assertEquals(2, readWithLimit.tupleList?.size)
     }
 }

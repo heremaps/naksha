@@ -1,8 +1,9 @@
 package naksha.psql.base
 
-import naksha.base.AtomicBool
 import naksha.base.AtomicMap
+import naksha.base.AtomicRef
 import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.logger
 import naksha.model.SessionOptions
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -27,6 +28,9 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
        TestEnv(deleteMap = true, enableInfoLogs = true)
     }
 
+    val map: NakshaMap
+        get() = testMap.get() ?: throw IllegalStateException("map not initialized")
+
     val collection: NakshaCollection
         get() = testCollection ?: throw IllegalStateException("collection not initialized")
 
@@ -35,16 +39,42 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
 
     @BeforeTest
     fun ensureCollectionInitialized() {
+        if (testMap.get() == null) {
+            lock.acquire().use {
+                if (testMap.get() == null) {
+                    val request = WriteRequest()
+                    val map = NakshaMap(env.storage.id, env.mapId)
+                    request.writes += Write().createMap(map)
+                    storage.newWriteSession().use { session ->
+                        val response = session.execute(request)
+                        require(response is SuccessResponse) {
+                            if (response is ErrorResponse) response.error.print() else "Unknown error"
+                        }
+                        session.commit()
+                    }
+                    testMap.set(map)
+                    logger.info("Created test map ${map.id}")
+                }
+            }
+        }
+
         val collection = testCollection
-        if (collection != null && initializedCollections.putIfAbsent(this::class, true) == null) {
-            val request = WriteRequest()
-            val testMap = NakshaMap(env.storage.id, env.mapId)
-            request.writes += Write().createMap(testMap)
-            request.writes += Write().createCollection(collection)
-            storage.newWriteSession().use { session ->
-                val response = session.execute(request)
-                assertIs<SuccessResponse>(response)
-                session.commit()
+        val thisClass = this::class
+        if (collection != null && initializedCollections[thisClass] == null) {
+            lock.acquire().use {
+                if (initializedCollections[thisClass] == null) {
+                    val request = WriteRequest()
+                    request.writes += Write().createCollection(collection)
+                    storage.newWriteSession().use { session ->
+                        val response = session.execute(request)
+                        require(response is SuccessResponse) {
+                            if (response is ErrorResponse) response.error.toString() else "Unknown error"
+                        }
+                        session.commit()
+                    }
+                    initializedCollections[thisClass] = collection
+                    logger.info("Created test map ${collection.id}")
+                }
             }
         }
     }
@@ -100,7 +130,8 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
     }
 
     protected fun dropCollection() {
-        if (initializedCollections.remove(this::class) == true) {
+        val collection = initializedCollections.remove(this::class)
+        if (collection != null) {
             val deleteCollectionRequest = WriteRequest().add(Write().deleteCollectionById(env.mapId, collection.id))
             storage.newWriteSession().use { session ->
                 val response = session.execute(deleteCollectionRequest)
@@ -111,8 +142,11 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
     }
 
     companion object {
+        /**
+         * To be held, while initializing a map, to ensure that threads will wait for a collection to be created, before using it.
+         */
         private val lock = Platform.newLock()
-        private val initializedMap = AtomicBool(false)
-        private val initializedCollections = AtomicMap<KClass<out PgTestBase>, Boolean>()
+        private val testMap = AtomicRef<NakshaMap>(null)
+        private val initializedCollections = AtomicMap<KClass<out PgTestBase>, NakshaCollection>()
     }
 }

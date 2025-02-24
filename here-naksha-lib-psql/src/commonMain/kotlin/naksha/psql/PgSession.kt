@@ -213,16 +213,15 @@ open class PgSession(
     override fun useTransaction(): NakshaTransaction = useTx().transaction
 
     override fun execute(request: Request): Response {
-        // TODO: Verify that we always return an Response, no exceptions!
         when (request) {
             is WriteRequest -> {
                 try {
                     useTransaction()
+                    val writer = PgTupleWriter(this)
+                    return writer.execute(request.writes)
                 } catch (nakshaException: NakshaException) {
                     return ErrorResponse(nakshaException)
                 }
-                val response = PgWriter(this, request, BulkWriteExecutor(this)).execute()
-                return response
             }
 
             is ReadRequest -> {
@@ -317,12 +316,12 @@ open class PgSession(
         return PgLock(this, useConnection(), lockId, false)
     }
 
-    override fun loadTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int, fetchFromHistory: Boolean, mode: FetchMode) {
+    override fun loadTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int, mode: FetchMode) {
         // TODO: Caching is only done by
         val cachedTuples = Naksha.cache.load(featureTuples, from, to).toSet()
         val missingTuples = featureTuples.subList(from, to).filter { it !in cachedTuples }
         if (missingTuples.isNotEmpty()) {
-            val fetchedResults = fetchFromDatabase(missingTuples, fetchFromHistory, mode) ?: return
+            val fetchedResults = fetchFromDatabase(missingTuples, true, mode) ?: return
             val fetchedMap = fetchedResults.filterNotNull().associateBy { it }
             featureTuples.subList(from, to).filterNotNull().forEach { tup ->
                 fetchedMap[tup]?.let { fetchedItem ->

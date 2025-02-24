@@ -287,19 +287,19 @@ class PgWriter(
         // If everything was done perfectly, fine.
         val tupleNumberByteArray = TupleNumberBinaryArray.fromByteArray(tupleNumbers.toByteArray())
         session.useTransaction().featuresModified += tupleNumbers.size
-        return SuccessResponse(
-            PgResultSet(
-                storage,
-                session,
-                tupleNumberByteArray,
-                incomplete = false,
-                validTill = tupleNumberByteArray.size,
-                offset = 0,
-                limit = tupleNumberByteArray.size,
-                orderBy = null,
-                filters = request.resultFilters
-            )
-        )
+        return SuccessResponse()
+//            PgResultSet(
+//                storage,
+//                session,
+//                tupleNumberByteArray,
+//                incomplete = false,
+//                validTill = tupleNumberByteArray.size,
+//                offset = 0,
+//                limit = tupleNumberByteArray.size,
+//                orderBy = null,
+//                filters = request.resultFilters
+//            )
+//        )
     }
 
     private fun updateFeature(collection: PgCollection, previousMetadataProvider: ExistingMetadataProvider, write: WriteExt): TupleNumber {

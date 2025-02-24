@@ -14,7 +14,7 @@ internal class PgTupleWriterInsert(session: PgSession, collection: PgCollection,
         val SQL = """
 WITH new_row AS (
   SELECT * FROM UNNEST(
-    \$${cols.joinToString(",") { (it.i + 1).toString() }}
+    ${cols.joinToString(",") { "\$${(it.i + 1)}" }}
   ) AS t(
     $names
   )
@@ -22,11 +22,13 @@ WITH new_row AS (
 INSERT INTO ${collection.head.quotedName} ($names)
 SELECT * FROM new_row
 """
-        return conn.prepare(SQL, cols.map { it.type.text + "[]" }.toTypedArray())
+        val argTypes = cols.map { it.type.text + "[]" }.toTypedArray()
+        return conn.prepare(SQL, argTypes)
     }
 
     fun execute(conn: PgConnection) {
         val plan = plan(conn, collection)
-        plan.execute(toDataArray()).close()
+        val array = toDataArray()
+        plan.execute(array).close()
     }
 }

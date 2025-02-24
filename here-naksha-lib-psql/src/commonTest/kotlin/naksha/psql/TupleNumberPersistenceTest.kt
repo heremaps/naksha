@@ -3,7 +3,6 @@ package naksha.psql
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.Naksha.NakshaCompanion.hashId
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
@@ -34,11 +33,11 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
 
         // When
         val writeOp = Write().createFeature(collection, feature)
-        val persistedTuples = executeWrite(WriteRequest().add(writeOp)).tuples
+        val persistedTuples = executeWrite(WriteRequest().add(writeOp)).tupleList
 
         // Then:
-        assertEquals(1, persistedTuples.size)
-        val persistedTuple = persistedTuples[0]!!
+        assertEquals(1, persistedTuples?.size)
+        val persistedTuple = persistedTuples?.get(0)!!
         assertEquals(feature.id, persistedTuple.id)
 
         // And: version stores date information
@@ -55,11 +54,11 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
 
         // When
         val writeOp = Write().createFeature(collection, feature)
-        val persistedTuples = executeWrite(WriteRequest().add(writeOp)).tuples
+        val persistedTuples = executeWrite(WriteRequest().add(writeOp)).tupleList
 
         // Then: we persisted single tuple correctly
-        assertEquals(1, persistedTuples.size)
-        val persistedTuple = persistedTuples[0]!!
+        assertEquals(1, persistedTuples?.size)
+        val persistedTuple = persistedTuples?.get(0)!!
         assertEquals(feature.id, persistedTuple.id)
 
         // And: `storeNumber` checks out
@@ -89,12 +88,12 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
                 Write().createFeature(collection, feature)
             )
         }
-        val persistedTuples = executeWrite(writeRequest).tuples
+        val persistedTuples = executeWrite(writeRequest).tupleList
 
         // Then: tuples have been correctly persisted
-        assertEquals(20, persistedTuples.size)
+        assertEquals(20, persistedTuples?.size)
         (0..19).forEach { index ->
-            val tuple = persistedTuples[index]!!
+            val tuple = persistedTuples?.get(index)!!
             assertEquals(index, tuple.tupleNumber.uid)
             assertEquals(features[index].id, tuple.id)
         }

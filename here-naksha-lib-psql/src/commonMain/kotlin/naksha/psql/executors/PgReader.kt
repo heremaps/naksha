@@ -59,19 +59,19 @@ class PgReader(
                 )
             )
             val tupleNumberBytes = TupleNumberBinaryArray.fromGzip(allBytes)
-            return SuccessResponse(
-                PgResultSet(
-                    storage,
-                    session,
-                    tupleNumberBytes,
-                    incomplete = false,
-                    validTill = tupleNumberBytes.size,
-                    offset = 0,
-                    limit = tupleNumberBytes.size,
-                    orderBy = null,
-                    filters = request.resultFilters
-                )
-            )
+            return SuccessResponse()
+//                PgResultSet(
+//                    storage,
+//                    session,
+//                    tupleNumberBytes,
+//                    incomplete = false,
+//                    validTill = tupleNumberBytes.size,
+//                    offset = 0,
+//                    limit = tupleNumberBytes.size,
+//                    orderBy = null,
+//                    filters = request.resultFilters
+//                )
+//            )
         }
     }
 }

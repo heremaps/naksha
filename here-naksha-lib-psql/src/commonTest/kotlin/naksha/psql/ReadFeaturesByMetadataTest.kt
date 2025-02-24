@@ -388,7 +388,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         return executeRead(ReadFeatures().apply {
             collectionIds += collection.id
             featureIds += feature.id
-        }).tuples[0]!!.tuple!!.meta
+        }).tupleList?.get(0)?.meta!!
     }
 
     private fun executeMetaQuery(metaQuery: IMetaQuery): SuccessResponse {

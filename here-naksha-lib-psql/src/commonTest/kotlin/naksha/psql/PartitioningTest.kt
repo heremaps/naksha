@@ -82,7 +82,7 @@ class PartitioningTest : PgTestBase() {
             // then
             // feature should be successfully stored
             assertTrue { result is SuccessResponse }
-            assertEquals(1, (result as SuccessResponse).tuples.size)
+            assertEquals(1, (result as SuccessResponse).tupleList?.size)
         }
 
         // also - should be able to read

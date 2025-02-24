@@ -289,7 +289,7 @@ class CollectionTests : PgTestBase(null) {
         )
 
         // then
-        assertNull(response.resultSet?.result?.get(0))
+        assertNull(response.tupleNumberBinary?.get(0))
     }
 
     @Test

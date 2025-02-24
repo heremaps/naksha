@@ -136,22 +136,22 @@ abstract class PgAdminMap internal constructor(
     val schemaOid: Int
 
     /**
-     * The transactions' collection.
+     * The transactions' collection _(`naksha~transactions` aka `1`)_.
      * @since 3.0.0
      */
     val transactions: PgNakshaTransactions
 
     /**
-     * The dictionaries' collection.
-     * @since 3.0.0
-     */
-    val dictionaries: PgNakshaDictionaries
-
-    /**
-     * The maps' collection.
+     * The maps' collection _(`naksha~maps` aka `2`)_.
      * @since 3.0.0
      */
     val maps: PgNakshaMaps
+
+    /**
+     * The dictionaries' collection _(`naksha~dictionaries` aka `3`)_.
+     * @since 3.0.0
+     */
+    val dictionaries: PgNakshaDictionaries
 
     // Called from invokeInitStorage->initStorage, so within a lock!
     init {
