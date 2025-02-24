@@ -2,9 +2,7 @@
 
 package naksha.model
 
-import naksha.base.AnyObject
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
+import naksha.base.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
@@ -255,4 +253,14 @@ open class NakshaError() : AnyObject() {
     }
 
     override fun toString(): String = "NakshaError(code=$code, msg=$msg)"
+
+    /**
+     * Send this error to the logger.
+     * @param logger the logger to which to send if `null`, the [Platform.logger] is used.
+     */
+    @JvmOverloads
+    open fun print(logger: PlatformLogger = Platform.logger) {
+        val c = cause
+        if (c != null) logger.info("{} {}, cause: {}", code, msg, c) else logger.info("{} {}", code, msg)
+    }
 }
