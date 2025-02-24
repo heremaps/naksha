@@ -121,21 +121,21 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
     }
 
     /**
-     * Helper to return the value of the key, if the key does not exist or is not of the expected type, the
-     * provided alternative is returned.
+     * Helper to return the value of the key in the desired type. If the key does not exist, or is not of the expected type, `null` is returned.
      * @param <T> The expected type.
      * @param key The key to query.
-     * @return The value.
+     * @return The value as expected type or `null`, if no such key exists, or the value can't be proxied as the desired type.
+     * @see [getOrNull]
      */
     fun <T : Any> getAs(key: K, klass: KClass<out T>): T? = box(map_get(platformObject(), key), klass)
 
     /**
-     * Helper to return the value of the key, if the key does not exist or is not of the expected type, _null_ is returned.
+     * Helper to return the value of the key in the desired type. If the key does not exist, or is not of the expected type, `null` is returned.
      * @param <T> The expected type.
      * @param key The key to query.
-     * @return The value or _null_.
+     * @return The value as expected type or `null`, if no such key exists, or the value can't be proxied as the desired type.
+     * @see [getAs]
      */
-    @Deprecated("Does the same as getAs()", ReplaceWith("getAs(key, klass)"))
     fun <T : Any> getOrNull(key: K, klass: KClass<out T>): T? = box(map_get(platformObject(), key), klass)
 
     /**

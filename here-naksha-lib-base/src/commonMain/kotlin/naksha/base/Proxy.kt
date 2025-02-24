@@ -8,6 +8,7 @@ import naksha.base.fn.Fn1
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
+import kotlin.jvm.JvmSuppressWildcards
 import kotlin.reflect.KClass
 
 /**
@@ -185,6 +186,9 @@ abstract class Proxy : PlatformObject {
     /**
      * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
      * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
+     *
+     * ### Note
+     * In Java, you may want to rather use a JVM only implementation `Platform.javaProxy(object, Foo.class)`.
      * @param klass The proxy class.
      * @return The proxy instance.
      */

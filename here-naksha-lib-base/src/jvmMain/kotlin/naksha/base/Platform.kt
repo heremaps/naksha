@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.kotlinModule
+import naksha.base.Platform.PlatformCompanion.proxy
 import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
 import java.lang.invoke.MethodHandles
@@ -248,9 +249,24 @@ actual class Platform {
          * Returns the Kotlin class of the given Java class.
          * @param javaClass The Java class.
          * @return The Kotlin class.
+         * @see [proxy]
+         * @see [Proxy.proxy]
          */
         @JvmStatic
         fun <T : Any> klassFor(javaClass: Class<T>): KClass<T> = javaClass.kotlin
+
+        /**
+         * Java specific helper, that accepts a Java class to proxy.
+         * @param javaClass The Java class.
+         * @return the proxy.
+         * @see [proxy]
+         * @see [Proxy.proxy]
+         */
+        @JvmStatic
+        fun <T : Proxy> javaProxy(any: PlatformObject?, javaClass: Class<T>): T? {
+            if (any == null) return null
+            return any.proxy(javaClass::class as KClass<T>)
+        }
 
         /**
          * Returns the Java class of the given Kotlin class.
