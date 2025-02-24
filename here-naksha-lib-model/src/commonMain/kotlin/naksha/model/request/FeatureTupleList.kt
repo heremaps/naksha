@@ -20,17 +20,17 @@ import kotlin.math.min
 open class FeatureTupleList : ListProxy<FeatureTuple>(FeatureTuple::class) {
     companion object FeatureTupleList_C {
         /**
-         * Convert the given tuple-number-binary-array into a result-tuple list.
+         * Convert the given [tuple-number-binary-array][TupleNumberBinaryArray] into a [feature-tuple list][FeatureTupleList].
          *
          * This does not actually load the [Tuple] from storage or cache, should they be loaded from cache, it can simply be wrapped like:
          * ```kotlin
-         * val rs = Naksha.cache.load( ResultTupleList.fromByteArray(array) )
+         * val rs = Naksha.cache.load( FeatureTupleList.fromByteArray(array) )
          * ```
          *
-         * @param array the tuple-number binary.
+         * @param array the tuple-number-binary-array.
          * @param from the index of the first entry to convert.
          * @param to the index of the first entry **not** to convert.
-         * @return the given binary converted into a list of result-tuples.
+         * @return the given binary converted into a list of feature-tuple.
          * @since 3.0.0
          */
         @JvmStatic

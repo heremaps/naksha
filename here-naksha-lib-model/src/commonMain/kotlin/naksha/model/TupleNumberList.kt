@@ -9,12 +9,18 @@ import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
 import naksha.model.BinaryUtil.BinaryUtil_C.TYPE_TUPLE_NUMBER_ARRAY
 import naksha.model.BinaryUtil.BinaryUtil_C.writeSimpleHeader
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B192
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B224
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B288
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B96
+import naksha.model.request.FeatureTuple
+import naksha.model.request.FeatureTupleList
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmOverloads
+import kotlin.jvm.JvmStatic
 
 /**
  * A list of [tuple-numbers][TupleNumber].
@@ -22,6 +28,29 @@ import kotlin.js.JsExport
  */
 @JsExport
 class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
+
+    /**
+     * Convert this list of [TupleNumber] into a list of [FeatureTuple].
+     * @param from the index of the first entry to convert.
+     * @param to the index of the first entry **not** to convert.
+     * @return the [FeatureTupleList].
+     * @since 3.0
+     */
+    @JvmOverloads
+    fun toFeatureTupleList(from: Int = 0, to: Int = size): FeatureTupleList {
+        val rs = FeatureTupleList()
+        val length = to - from
+        rs.setCapacity(length)
+        var i = from
+        while (i < to) {
+            val tupleNumber = this[i] ?: continue
+            val featureTuple = FeatureTuple(tupleNumber)
+            rs.add(featureTuple)
+            i++
+        }
+        return rs
+    }
+
     /**
      * Encode this list into a byte-array.
      *
@@ -146,5 +175,32 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
         }
         check(i == SIZE)
         return bytes
+    }
+
+    companion object TupleNumberList_C {
+        /**
+         * Convert the given [tuple-number-binary-array][TupleNumberBinaryArray] into a [tuple-number list][TupleNumberList].
+         *
+         * @param array the tuple-number-binary-array.
+         * @param from the index of the first entry to convert.
+         * @param to the index of the first entry **not** to convert.
+         * @return the given binary converted into a list of tuple-number.
+         * @since 3.0.0
+         */
+        @JvmStatic
+        @JsStatic
+        @JvmOverloads
+        fun fromByteArray(array: TupleNumberBinaryArray, from: Int = 0, to: Int = array.size): TupleNumberList {
+            val rs = TupleNumberList()
+            val length = to - from
+            rs.setCapacity(length)
+            var i = from
+            while (i < to) {
+                val tupleNumber = array[i] ?: throw illegalState("Invalid tuple-number at index $i")
+                rs.add(tupleNumber)
+                i++
+            }
+            return rs
+        }
     }
 }
