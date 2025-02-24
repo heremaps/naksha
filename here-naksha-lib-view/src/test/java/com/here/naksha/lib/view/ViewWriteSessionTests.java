@@ -52,7 +52,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     request.add(new Write().createCollection(COLLECTION_0_FEATURE));
     request.add(new Write().createCollection(COLLECTION_1_FEATURE));
     SuccessResponse response = (SuccessResponse) session.execute(request);
-    assertNotNull(response.getTuples());
+    assertNotNull(response.getTupleList());
     session.commit();
   }
 
@@ -108,12 +108,12 @@ public class ViewWriteSessionTests extends PsqlTests {
       writeRequest.add(new Write().updateFeature(COLLECTION_0_FEATURE, feature, false));
     });
     SuccessResponse response1 = (SuccessResponse) writeSession.execute(writeRequest);
-    assertNotNull(response1.getTuples().get(0));
+    assertNotNull(response1.getTupleList().get(0));
     NakshaFeature feature = response1.getFeatures().get(0);
     assertEquals(1d, ((PointCoord) feature.getGeometry().getCoordinates()).getLongitude());
     assertTrue(feature.getProperties().containsKey("testProperty"));
     assertEquals("test", feature.getProperties().get("testProperty").toString());
-    assertSame(Action.UPDATED, response1.getTuples().get(0).tuple.meta.action());
+    assertSame(Action.UPDATED, response1.getTupleList().get(0).tuple.meta.action());
 
     writeSession.commit();
 
@@ -172,8 +172,8 @@ public class ViewWriteSessionTests extends PsqlTests {
     writeRequest.add(new Write().createFeature(COLLECTION_1_FEATURE, feature));
 
     SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
-    assertNotNull(response.getTuples().get(0));
-    assertSame(Action.CREATED, response.getTuples().get(0).tuple.meta.action());
+    assertNotNull(response.getTupleList().get(0));
+    assertSame(Action.CREATED, response.getTupleList().get(0).tuple.meta.action());
     writeSession.commit();
 
     //check if the newly added feature found on layer
@@ -205,8 +205,8 @@ public class ViewWriteSessionTests extends PsqlTests {
 
     SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
 
-    assertNotNull(response.getTuples().get(0));
-    assertSame(Action.DELETED, Objects.requireNonNull(response.getTuples().get(0).tuple).meta.action());
+    assertNotNull(response.getTupleList().get(0));
+    assertSame(Action.DELETED, Objects.requireNonNull(response.getTupleList().get(0).tuple).meta.action());
     assertEquals(FEATURE_ID, response.getFeatures().get(0).getId());
 
     writeSession.commit();

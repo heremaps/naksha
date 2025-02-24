@@ -113,7 +113,7 @@ public class ViewTest {
     assertInstanceOf(SuccessResponse.class, result);
 
     // then
-    List<FeatureTuple> allFeatures = ((SuccessResponse) result).getTuples();
+    List<FeatureTuple> allFeatures = ((SuccessResponse) result).getTupleList();
     assertEquals(3, allFeatures.size());
     assertTrue(allFeatures.containsAll(results));
   }
@@ -146,7 +146,7 @@ public class ViewTest {
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
     assertEquals(feature.getId(), successResponse.getFeatures().get(0).getId());
-    assertEquals(Action.CREATED, successResponse.getTuples().get(0).tuple.meta.action());
+    assertEquals(Action.CREATED, successResponse.getTupleList().get(0).tuple.meta.action());
     writeSession.commit();
   }
 
@@ -171,8 +171,8 @@ public class ViewTest {
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
-    assertEquals(feature.getId(), successResponse.getTuples().get(0).id());
-    assertEquals(Action.DELETED, successResponse.getTuples().get(0).tuple.meta.action());
+    assertEquals(feature.getId(), successResponse.getTupleList().get(0).id());
+    assertEquals(Action.DELETED, successResponse.getTupleList().get(0).tuple.meta.action());
     writeSession.commit();
   }
 

@@ -345,7 +345,7 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, boolean fetchFromHistory, int mode) {
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
     throw NOT_SUPPORTED_ERROR;
   }
 

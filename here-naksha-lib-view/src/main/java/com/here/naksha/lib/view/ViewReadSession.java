@@ -237,7 +237,7 @@ public class ViewReadSession implements IReadSession {
 
   @Override
   public void loadTuples(
-      @NotNull List<? extends FeatureTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {}
+      @NotNull List<? extends FeatureTuple> resultTuples, int from, int to, int mode) {}
 
   @Override
   public @NotNull IStorage getStorage() {

@@ -115,7 +115,7 @@ public class ParallelQueryExecutor {
 
     SuccessResponse cursor = (SuccessResponse) session.execute(clonedRequest);
 
-    List<FeatureTuple> featureList = cursor.getTuples();
+    List<FeatureTuple> featureList = cursor.getFeatureTupleList();
     log.info(
         "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",
         NakshaContext.currentContext().getStreamId(),

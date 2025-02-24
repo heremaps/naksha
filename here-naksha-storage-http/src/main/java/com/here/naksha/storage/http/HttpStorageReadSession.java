@@ -126,7 +126,7 @@ public final class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, boolean fetchFromHistory, int mode) {
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
     throw new NotImplementedException("Not supported by HTTP storage");
   }
 
