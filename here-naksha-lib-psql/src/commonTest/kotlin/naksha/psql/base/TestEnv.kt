@@ -37,10 +37,10 @@ class TestEnv(
     /**
      * The unique map identifier to use.
      */
-    val mapId: String = mapId ?: this::class.simpleName ?: throw IllegalArgumentException("mapId is null, and no class name for test!")
+    val mapId: String = mapId ?: PgTest.TEST_MAP_ID
     init {
         PlatformUtil.ENABLE_INFO = enableInfoLogs
-        NakshaContext.defaultMapId.set(PgTest.TEST_APP_ID)
+        NakshaContext.defaultMapId.set(PgTest.TEST_MAP_ID)
         NakshaContext.defaultAppName.set(PgTest.TEST_APP_NAME)
         NakshaContext.defaultAppId.set(PgTest.TEST_APP_ID)
     }

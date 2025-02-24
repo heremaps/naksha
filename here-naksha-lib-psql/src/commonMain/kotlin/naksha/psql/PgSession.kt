@@ -219,8 +219,8 @@ open class PgSession(
                     useTransaction()
                     val writer = PgTupleWriter(this)
                     return writer.execute(request.writes)
-                } catch (nakshaException: NakshaException) {
-                    return ErrorResponse(nakshaException)
+                } catch (t: Throwable) {
+                    return ErrorResponse(PgExceptionMapper.map(t))
                 }
             }
 

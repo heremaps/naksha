@@ -3,9 +3,12 @@
 package naksha.model
 
 import naksha.base.*
+import naksha.base.fn.Fx2
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmOverloads
+import kotlin.jvm.JvmStatic
 
 /**
  * An error class.
@@ -225,8 +228,18 @@ open class NakshaError() : AnyObject() {
 
         private val CODE = NotNullProperty<NakshaError, String>(String::class) { _, _ -> EXCEPTION }
         private val MSG = NotNullProperty<NakshaError, String>(String::class) { self, _ -> self.code }
-        private val ID = NullableProperty<NakshaError, String>(String::class)
         private val THROWABLE = NullableProperty<NakshaError, Throwable>(Throwable::class)
+
+        /**
+         * The method that is invoked, when [print] is invoked. If `null`, then calling [print] does nothing.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        val printer = AtomicRef<Fx2<NakshaError, PlatformLogger>>(Fx2 { err, logger ->
+            val c = err.cause
+            if (c != null) logger.info("{} {}, cause: {}", err.code, err.msg, c) else logger.info("{} {}", err.code, err.msg)
+        })
     }
 
     /**
@@ -260,7 +273,6 @@ open class NakshaError() : AnyObject() {
      */
     @JvmOverloads
     open fun print(logger: PlatformLogger = Platform.logger) {
-        val c = cause
-        if (c != null) logger.info("{} {}, cause: {}", code, msg, c) else logger.info("{} {}", code, msg)
+        printer.get()?.call(this, logger)
     }
 }

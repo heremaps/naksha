@@ -21,8 +21,8 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
             if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
             stmt.execute()
             return PsqlCursor(stmt, false)
-        } catch (exception: Exception) {
-            throw NakshaExceptionMapper.nakshaExceptionFrom(exception, null)
+        } catch (throwable: Throwable) {
+            throw PgExceptionMapper.map(throwable)
         }
     }
 
@@ -49,8 +49,8 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
             val closed = this.closed
             this.closed = true
             if (!closed) stmt.close()
-        } catch (exception: Exception) {
-            throw NakshaExceptionMapper.nakshaExceptionFrom(exception, null)
+        } catch (throwable: Throwable) {
+            PgExceptionMapper.map(throwable).error.print()
         }
     }
 }

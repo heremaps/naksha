@@ -65,8 +65,8 @@ class PsqlConnection internal constructor(
                 stmt
             }
             return PsqlCursor(stmt, true)
-        } catch (exception: Exception) {
-            throw NakshaExceptionMapper.nakshaExceptionFrom(exception, sql)
+        } catch (throwable: Throwable) {
+            throw PgExceptionMapper.map(throwable, sql)
         }
     }
 
@@ -79,8 +79,8 @@ class PsqlConnection internal constructor(
     override fun prepare(sql: String, typeNames: Array<String>?): PgPlan {
         try {
             return PsqlPlan(PsqlQuery(sql, typeNames), jdbc)
-        } catch (e: Exception) {
-            throw NakshaExceptionMapper.nakshaExceptionFrom(e, sql)
+        } catch (throwable: Throwable) {
+            throw PgExceptionMapper.map(throwable, sql)
         }
     }
 
@@ -88,15 +88,15 @@ class PsqlConnection internal constructor(
         get() {
             return try {
                 jdbc.autoCommit
-            } catch (exception: Exception) {
-                throw NakshaExceptionMapper.nakshaExceptionFrom(exception, null)
+            } catch (throwable: Throwable) {
+                throw PgExceptionMapper.map(throwable)
             }
         }
         set(value) {
             try {
                 jdbc.autoCommit = value
-            } catch (exception: Exception) {
-                throw NakshaExceptionMapper.nakshaExceptionFrom(exception, null)
+            } catch (throwable: Throwable) {
+                throw PgExceptionMapper.map(throwable)
             }
         }
 
@@ -106,8 +106,8 @@ class PsqlConnection internal constructor(
     override fun commit() {
         try {
             jdbc.commit()
-        } catch (exception: Exception) {
-            throw NakshaExceptionMapper.nakshaExceptionFrom(exception, "commit")
+        } catch (throwable: Throwable) {
+            throw PgExceptionMapper.map(throwable)
         }
     }
 
@@ -117,8 +117,8 @@ class PsqlConnection internal constructor(
     override fun rollback() {
         try {
             jdbc.rollback()
-        } catch (exception: Exception) {
-            throw NakshaExceptionMapper.nakshaExceptionFrom(exception ,"rollback")
+        } catch (throwable: Throwable) {
+            throw PgExceptionMapper.map(throwable)
         }
     }
 
@@ -147,8 +147,8 @@ class PsqlConnection internal constructor(
                     pgConnection.autoCommit = false
                 }
                 instance.connectionPool[id]?.connection?.compareAndSet(weakRef, null)
-            } catch (exception: Exception) {
-                throw NakshaExceptionMapper.nakshaExceptionFrom(exception, null)
+            } catch (throwable: Throwable) {
+                throw PgExceptionMapper.map(throwable)
             }
         }
     }
@@ -163,8 +163,8 @@ class PsqlConnection internal constructor(
                 // Remove the connection from the pool and close it
                 instance.connectionPool.remove(id)
                 pgConnection.close()
-            } catch (exception: Exception) {
-                throw NakshaExceptionMapper.nakshaExceptionFrom(exception, null)
+            } catch (throwable: Throwable) {
+                throw PgExceptionMapper.map(throwable)
             }
         }
     }

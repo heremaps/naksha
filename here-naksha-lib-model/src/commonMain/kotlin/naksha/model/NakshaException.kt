@@ -4,6 +4,7 @@ package naksha.model
 
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_EXISTS
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
+import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_EXISTS
@@ -59,6 +60,14 @@ fun illegalArg(msg: String): NakshaException = NakshaException(ILLEGAL_ARGUMENT,
  * @since 3.0
  */
 fun illegalState(msg: String): NakshaException = NakshaException(ILLEGAL_STATE, msg)
+
+/**
+ * Create [EXCEPTION] exception.
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun generalException(msg: String): NakshaException = NakshaException(EXCEPTION, msg)
 
 /**
  * Create [MAP_NOT_FOUND] exception.
