@@ -34,11 +34,6 @@ public final class HubInternalIdentifiers {
   public static final String HUB_INTERNAL_MAP_ID = "hub_internal_map";
 
   /**
-   * The id of storage to be used by Naksha Hub Admin
-   */
-  public static final String HUB_INTERNAL_STORAGE_ID = "hub_internal_storage";
-
-  /**
    * The Naksha-Hub configurations.
    */
   public static final String CONFIGS = "hub_internal:configs";

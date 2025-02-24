@@ -55,8 +55,7 @@ public class PostgresContainer {
   public String getJdbcUrl() {
     return "jdbc:postgresql://localhost:" + LOCALHOST_PORT + "/postgres?user=postgres&password=password"
            + "&schema=" + TestStorageConfigs.dataDbConfig.mapId()
-           + "&app=" + "Naksha/v" + NakshaVersion.latest
-           + "&id=" + HubInternalIdentifiers.HUB_INTERNAL_STORAGE_ID;
+           + "&app=" + "Naksha/v" + NakshaVersion.latest;
   }
 
   public static PostgresContainer startedPostgresContainer() {
