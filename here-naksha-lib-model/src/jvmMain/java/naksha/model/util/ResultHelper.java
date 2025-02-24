@@ -19,6 +19,8 @@
 package naksha.model.util;
 
 import static java.util.Collections.emptyList;
+import static naksha.base.Platform.javaProxy;
+import static naksha.base.Platform.klassFor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,11 +28,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+
+import kotlin.jvm.JvmClassMappingKt;
+import kotlin.jvm.JvmSuppressWildcards;
+import kotlin.reflect.KClass;
 import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
 import naksha.model.Action;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.FeatureTuple;
-import naksha.model.request.FeatureTupleList;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
@@ -108,14 +114,11 @@ public class ResultHelper {
     if (!(result instanceof SuccessResponse)) {
       return emptyList();
     }
-    final FeatureTupleList resultTuples = ((SuccessResponse) result).getTuples();
-    if (resultTuples.isEmpty()) {
-      return emptyList();
-    }
-    final Iterator<FeatureTuple> iterator = resultTuples.iterator();
-    final List<String> ids = new ArrayList<>();
-    while (iterator.hasNext()) {
-       ids.add(iterator.next().getId());
+    final var response = (SuccessResponse) result;
+    final ArrayList<String> ids = new ArrayList<>(response.resultSize());
+    final NakshaFeatureList features = response.useFeatures();
+    for (final NakshaFeature feature : features) {
+       ids.add(feature.getId());
     }
     return ids;
   }
@@ -127,35 +130,36 @@ public class ResultHelper {
    * @param result      the Result which is to be read
    * @param featureType the type of feature to be extracted from result
    * @param limit       the max number of features to be extracted
-   * @param <R>         type of feature
+   * @param <T>         type of feature
    * @return a map grouping the lists of features extracted from ReadResult
    */
-  public static <R extends NakshaFeature> Map<Action, List<R>> readFeaturesGroupedByAction(
-      SuccessResponse result, Class<R> featureType, long limit) {
-    final Iterator<FeatureTuple> iterator = result.getTuples().iterator();
-    if (!iterator.hasNext()) {
+  public static <T extends NakshaFeature> Map<Action, List<T>> readFeaturesGroupedByAction(
+          SuccessResponse result, Class<T> featureType, long limit) {
+    final NakshaFeatureList features = result.useFeatures();
+    if (features.isEmpty()) {
       throw new NoSuchElementException("Empty SuccessResponse");
     }
-    final List<R> insertedFeatures = new ArrayList<>();
-    final List<R> updatedFeatures = new ArrayList<>();
-    final List<R> deletedFeatures = new ArrayList<>();
+    final List<T> insertedFeatures = new ArrayList<>();
+    final List<T> updatedFeatures = new ArrayList<>();
+    final List<T> deletedFeatures = new ArrayList<>();
     int cnt = 0;
+    final Iterator<NakshaFeature> iterator = features.iterator();
     while (iterator.hasNext() && cnt++ < limit) {
-      final FeatureTuple next = iterator.next();
-      final Action action = next.tuple.meta.action();
+      final NakshaFeature feature = iterator.next();
+      final Action action = feature.getProperties().getXyz().getAction();
       if (action == Action.CREATED) {
-        insertedFeatures.add(featureType.cast(next.getFeature()));
+        insertedFeatures.add(javaProxy(feature, featureType));
       } else if (action == Action.UPDATED) {
-        updatedFeatures.add(featureType.cast(next.getFeature()));
+        updatedFeatures.add(javaProxy(feature, featureType));
       } else if (action == Action.DELETED) {
-        deletedFeatures.add(featureType.cast(next.getFeature()));
+        deletedFeatures.add(javaProxy(feature, featureType));
       }
     }
-    final Map<Action, List<R>> features = new HashMap<>();
-    features.put(Action.CREATED, insertedFeatures);
-    features.put(Action.UPDATED, updatedFeatures);
-    features.put(Action.DELETED, deletedFeatures);
-    return features;
+    final Map<Action, List<T>> featuresByAction = new HashMap<>();
+    featuresByAction.put(Action.CREATED, insertedFeatures);
+    featuresByAction.put(Action.UPDATED, updatedFeatures);
+    featuresByAction.put(Action.DELETED, deletedFeatures);
+    return featuresByAction;
   }
 
   /**
