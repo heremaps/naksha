@@ -149,7 +149,6 @@ interface ISession : IDictReader, AutoCloseable {
      * @param featureTuples a list of result-tuples to fetch.
      * @param from the index of the first result-tuples to fetch; default is `0`.
      * @param to the index of the first result-tuples to ignore; default is `featureTuples.size`.
-     * @param fetchFromHistory if the history should be queried; default is `false`.
      * @param mode the fetch mode; default is [FETCH_ALL].
      * @since 3.0
      */
@@ -157,7 +156,6 @@ interface ISession : IDictReader, AutoCloseable {
         featureTuples: List<FeatureTuple?>,
         from: Int = 0,
         to: Int = featureTuples.size,
-        fetchFromHistory: Boolean = false,
         mode: FetchMode = FETCH_ALL
     )
 
