@@ -58,7 +58,7 @@ class PsqlConnection internal constructor(
                 stmt.execute(sql)
                 stmt
             } else {
-                val query = PsqlQuery(sql)
+                val query = PsqlQuery(sql ,null)
                 val stmt = query.prepare(conn)
                 if (args.isNotEmpty()) query.bindArguments(stmt, args)
                 stmt.execute()
@@ -78,7 +78,7 @@ class PsqlConnection internal constructor(
      */
     override fun prepare(sql: String, typeNames: Array<String>?): PgPlan {
         try {
-            return PsqlPlan(PsqlQuery(sql), jdbc)
+            return PsqlPlan(PsqlQuery(sql, typeNames), jdbc)
         } catch (e: Exception) {
             throw NakshaExceptionMapper.nakshaExceptionFrom(e, sql)
         }

@@ -4,6 +4,7 @@ import naksha.base.JsEnum
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
@@ -32,54 +33,54 @@ class PgType : JsEnum() {
 
         @JvmField
         @JsStatic
-        val SHORT = defIgnoreCase(PgType::class, "smallint") {
+        val SHORT = defIgnoreCase(PgType::class, "int2") {
             it.byteSize = 2
-        }.alias<PgType>("int2")
+        }.alias<PgType>("smallint")
 
         @JvmField
         @JsStatic
-        val SHORT_ARRAY = defIgnoreCase(PgType::class, "smallint[]").alias<PgType>("int2[]")
+        val SHORT_ARRAY = defIgnoreCase(PgType::class, "int2[]").alias<PgType>("smallint[]")
 
         @JvmField
         @JsStatic
-        val INT = defIgnoreCase(PgType::class, "integer") {
+        val INT = defIgnoreCase(PgType::class, "int4") {
             it.byteSize = 4
-        }.alias<PgType>("int4").alias<PgType>("int")
+        }.alias<PgType>("int").alias<PgType>("integer")
 
         @JvmField
         @JsStatic
-        val INT_ARRAY = defIgnoreCase(PgType::class, "integer[]")
-            .alias<PgType>("int4[]").alias<PgType>("int[]")
+        val INT_ARRAY = defIgnoreCase(PgType::class, "int4[]")
+            .alias<PgType>("int[]").alias<PgType>("integer[]")
 
         @JvmField
         @JsStatic
-        val INT64 = defIgnoreCase(PgType::class, "bigint") {
+        val INT64 = defIgnoreCase(PgType::class, "int8") {
             it.byteSize = 8
-        }.alias<PgType>("int8")
+        }.alias<PgType>("bigint")
 
         @JvmField
         @JsStatic
-        val INT64_ARRAY = defIgnoreCase(PgType::class, "bigint[]").alias<PgType>("int8[]")
+        val INT64_ARRAY = defIgnoreCase(PgType::class, "int8[]").alias<PgType>("bigint[]")
 
         @JvmField
         @JsStatic
-        val FLOAT = defIgnoreCase(PgType::class, "real") {
+        val FLOAT = defIgnoreCase(PgType::class, "float4") {
             it.byteSize = 4
-        }.alias<PgType>("float4")
+        }.alias<PgType>("real")
 
         @JvmField
         @JsStatic
-        val FLOAT_ARRAY = defIgnoreCase(PgType::class, "real[]").alias<PgType>("float4[]")
+        val FLOAT_ARRAY = defIgnoreCase(PgType::class, "float4[]").alias<PgType>("real[]")
 
         @JvmField
         @JsStatic
-        val DOUBLE = defIgnoreCase(PgType::class, "double precision") {
+        val DOUBLE = defIgnoreCase(PgType::class, "float8") {
             it.byteSize = 8
-        }.alias<PgType>("float8")
+        }.alias<PgType>("double precision")
 
         @JvmField
         @JsStatic
-        val DOUBLE_ARRAY = defIgnoreCase(PgType::class, "double precision[]").alias<PgType>("float8[]")
+        val DOUBLE_ARRAY = defIgnoreCase(PgType::class, "float8[]").alias<PgType>("double precision[]")
 
         @JvmField
         @JsStatic
@@ -96,6 +97,15 @@ class PgType : JsEnum() {
         @JvmField
         @JsStatic
         val BYTE_ARRAY_ARRAY = defIgnoreCase(PgType::class, "bytea[]")
+
+        /**
+         * Returns the [PgType] from the given string.
+         * @param name the name, for example `"int"`.
+         * @return the matching [PgType] or `null`, if none matches.
+         */
+        @JsStatic
+        @JvmStatic
+        fun of(name: String?): PgType? = getDefined(name, PgType::class)
     }
 
     @Suppress("NON_EXPORTABLE_TYPE")
