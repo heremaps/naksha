@@ -10,7 +10,6 @@ import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.request.FeatureTupleList
-import naksha.model.request.FeatureTupleList.FeatureTupleList_C.fromByteArray
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -32,7 +31,7 @@ data class TupleNumberBinaryArray(
      * @since 3.0
      */
     @JvmField val view: PlatformDataView
-) {
+) : List<TupleNumber?> {
     /**
      * Create from mapping the given byte-array into a view.
      * @param bytes the byte-array to map.
@@ -185,8 +184,18 @@ data class TupleNumberBinaryArray(
      * The amount of [tuple-numbers][TupleNumber] in the array.
      * @since 3.0
      */
-    val size: Int
+    override val size: Int
         get() = length
+
+    @Suppress("NON_EXPORTABLE_TYPE")
+    override fun containsAll(elements: Collection<TupleNumber?>): Boolean {
+        for (element in elements) {
+            if (!contains(element)) return false
+        }
+        return true
+    }
+
+    override fun contains(element: TupleNumber?): Boolean = indexOf(element) >= 0
 
     @Suppress("NOTHING_TO_INLINE")
     private inline fun offset(index: Int): Int = dataOffset + index * entrySize
@@ -197,7 +206,7 @@ data class TupleNumberBinaryArray(
      * @return the tuple-number or _null_, if out of bounds.
      * @since 3.0
      */
-    operator fun get(index: Int): TupleNumber? {
+    override operator fun get(index: Int): TupleNumber? {
         if (index < tupleNumberCache.size) {
             val cached = tupleNumberCache[index]
             if (cached != null) return cached
@@ -324,6 +333,17 @@ data class TupleNumberBinaryArray(
     fun md5(): ByteArray = Platform.md5(bytes)
 
     /**
+     * Helper method to convert this binary into a [TupleNumberList].
+     *
+     * @param from the index of the first entry to convert.
+     * @param to the index of the first entry **not** to convert.
+     * @return the [TupleNumberList].
+     * @since 3.0
+     */
+    @JvmOverloads
+    fun toTupleNumberList(from:Int=0, to:Int=size): TupleNumberList = TupleNumberList.fromByteArray(this, from, to)
+
+    /**
      * Helper method to convert this binary into a [FeatureTupleList].
      *
      * @param from the index of the first entry to convert.
@@ -332,7 +352,7 @@ data class TupleNumberBinaryArray(
      * @since 3.0
      */
     @JvmOverloads
-    fun toFeatureTupleList(from:Int=0, to:Int=size): FeatureTupleList = fromByteArray(this, from, to)
+    fun toFeatureTupleList(from:Int=0, to:Int=size): FeatureTupleList = FeatureTupleList.fromByteArray(this, from, to)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -341,6 +361,51 @@ data class TupleNumberBinaryArray(
         return bytes.contentEquals(other.bytes)
     }
     override fun hashCode(): Int = bytes.contentHashCode()
+
+    override fun isEmpty(): Boolean = size == 0
+
+    override fun iterator(): Iterator<TupleNumber?> {
+        TODO("Not yet implemented")
+    }
+
+    override fun listIterator(): ListIterator<TupleNumber?> {
+        TODO("Not yet implemented")
+    }
+
+    override fun listIterator(index: Int): ListIterator<TupleNumber?> {
+        TODO("Not yet implemented")
+    }
+
+    override fun subList(fromIndex: Int, toIndex: Int): List<TupleNumber?> {
+        TODO("Not yet implemented")
+    }
+
+    override fun lastIndexOf(element: TupleNumber?): Int {
+        if (element == null) return -1
+        for (i in size - 1 downTo 0) {
+            if (element.storageNumber == getStorageNumber(i)
+                && element.mapNumber == getMapNumber(i)
+                && element.collectionNumber == getCollectionNumber(i)
+                && element.featureNumber == getFeatureNumber(i)
+                && element.version.txn == getTxn(i)
+                && element.uid == getUid(i)) return i
+        }
+        return -1
+    }
+
+    override fun indexOf(element: TupleNumber?): Int {
+        if (element == null) return -1
+        for (i in 0 until size) {
+            if (element.storageNumber == getStorageNumber(i)
+                && element.mapNumber == getMapNumber(i)
+                && element.collectionNumber == getCollectionNumber(i)
+                && element.featureNumber == getFeatureNumber(i)
+                && element.version.txn == getTxn(i)
+                && element.uid == getUid(i)) return i
+        }
+        return -1
+    }
+
     override fun toString(): String = bytes.contentToString()
 
     companion object TupleNumberByteArray_C {
