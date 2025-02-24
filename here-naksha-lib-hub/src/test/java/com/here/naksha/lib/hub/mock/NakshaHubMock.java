@@ -18,13 +18,14 @@
  */
 package com.here.naksha.lib.hub.mock;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
+import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.models.ExtensionConfig;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import java.util.Map;
@@ -117,7 +118,7 @@ public class NakshaHubMock implements INaksha {
   @Override
   public @NotNull IStorage getStorageById(@NotNull String storageId) {
     return getAdminStorage().useReadSession(SessionOptions.from(currentContext(), false), reader -> {
-      final Response response = reader.execute(readFeaturesByIdRequest(NakshaAdminCollection.STORAGES, storageId));
+      final Response response = reader.execute(readFeaturesByIdRequest(STORAGES, storageId));
       if (response instanceof SuccessResponse successResponse) {
         final StorageConfig storageConfig = readFeatureFromResponse(successResponse, StorageConfig.class);
         if (storageConfig == null) {

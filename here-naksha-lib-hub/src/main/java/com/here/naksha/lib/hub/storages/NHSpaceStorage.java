@@ -18,12 +18,13 @@
  */
 package com.here.naksha.lib.hub.storages;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.ALL_HUB_INTERNAL_COLLECTIONS;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
+import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.handlers.AuthorizationEventHandler;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.handlers.internal.IntHandlerForConfigs;
 import com.here.naksha.lib.handlers.internal.IntHandlerForEventHandlerConfigs;
 import com.here.naksha.lib.handlers.internal.IntHandlerForExtensions;
@@ -72,18 +73,18 @@ public class NHSpaceStorage implements IStorage {
     // common auth handler
     final IEventHandler authHandler = new AuthorizationEventHandler(hub);
     // add event handlers for each admin space
-    for (final String spaceId : NakshaAdminCollection.ALL) {
+    for (final String spaceId : ALL_HUB_INTERNAL_COLLECTIONS) {
       adminSpaces.put(
           spaceId,
           switch (spaceId) {
-            case NakshaAdminCollection.CONFIGS -> List.of(authHandler, new IntHandlerForConfigs(hub));
-            case NakshaAdminCollection.SPACES -> List.of(authHandler, new IntHandlerForSpaces(hub));
-            case NakshaAdminCollection.SUBSCRIPTIONS -> List.of(
+            case HubInternalIdentifiers.CONFIGS -> List.of(authHandler, new IntHandlerForConfigs(hub));
+            case HubInternalIdentifiers.SPACES -> List.of(authHandler, new IntHandlerForSpaces(hub));
+            case HubInternalIdentifiers.SUBSCRIPTIONS -> List.of(
                 authHandler, new IntHandlerForSubscriptions(hub));
-            case NakshaAdminCollection.EVENT_HANDLERS -> List.of(
+            case HubInternalIdentifiers.EVENT_HANDLERS -> List.of(
                 authHandler, new IntHandlerForEventHandlerConfigs(hub));
-            case NakshaAdminCollection.STORAGES -> List.of(authHandler, new IntHandlerForStorageConfigs(hub));
-            case NakshaAdminCollection.EXTENSIONS -> List.of(authHandler, new IntHandlerForExtensions(hub));
+            case HubInternalIdentifiers.STORAGES -> List.of(authHandler, new IntHandlerForStorageConfigs(hub));
+            case HubInternalIdentifiers.EXTENSIONS -> List.of(authHandler, new IntHandlerForExtensions(hub));
             default -> throw unchecked(new Exception("Unsupported virtual space " + spaceId));
           });
     }

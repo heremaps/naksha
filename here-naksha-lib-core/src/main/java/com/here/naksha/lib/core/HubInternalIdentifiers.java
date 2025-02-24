@@ -26,46 +26,51 @@ import org.jetbrains.annotations.NotNull;
  * All well-known collections of the Naksha-Hub itself. Still, not all Naksha-Hubs may support them, for example the Naksha extension
  * library currently does not support any collection out of the box!
  */
-public final class NakshaAdminCollection {
+public final class HubInternalIdentifiers {
 
   /**
-   * The admin schema.
+   * The map id (schema name) used by Naksha Hub Admin
    */
-  public static final String SCHEMA = "naksha";
+  public static final String HUB_INTERNAL_MAP_ID = "hub_internal_map";
+
+  /**
+   * The id of storage to be used by Naksha Hub Admin
+   */
+  public static final String HUB_INTERNAL_STORAGE_ID = "hub_internal_storage";
 
   /**
    * The Naksha-Hub configurations.
    */
-  public static final String CONFIGS = "naksha:configs";
+  public static final String CONFIGS = "hub_internal:configs";
 
   /**
    * The collections for all spaces.
    */
-  public static final String SPACES = "naksha:spaces";
+  public static final String SPACES = "hub_internal:spaces";
 
   /**
    * The collections for all subscriptions.
    */
-  public static final String SUBSCRIPTIONS = "naksha:subscriptions";
+  public static final String SUBSCRIPTIONS = "hub_internal:subscriptions";
 
   /**
    * The collections for all connectors.
    */
-  public static final String EVENT_HANDLERS = "naksha:event_handlers";
+  public static final String EVENT_HANDLERS = "hub_internal:event_handlers";
 
   /**
    * The collections for all storages.
    */
-  public static final String STORAGES = "naksha:storages";
+  public static final String STORAGES = "hub_internal:storages";
 
   /**
    * The collections for all extensions.
    */
-  public static final String EXTENSIONS = "naksha:extensions";
+  public static final String EXTENSIONS = "hub_internal:extensions";
 
   /**
    * List of all admin-db collections.
    */
-  public static final List<@NotNull String> ALL =
+  public static final List<@NotNull String> ALL_HUB_INTERNAL_COLLECTIONS =
       List.of(CONFIGS, SPACES, SUBSCRIPTIONS, EVENT_HANDLERS, STORAGES, EXTENSIONS);
 }

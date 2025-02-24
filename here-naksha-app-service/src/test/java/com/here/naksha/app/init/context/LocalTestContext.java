@@ -20,7 +20,7 @@ public class LocalTestContext extends TestContext {
 
   private static final String CONFIG_ID = "test-config";
   private static final TestStorageConfig STORAGE_CONFIG = TestStorageConfigs.dataDbConfig;
-  private static final String MASTER_URL = STORAGE_CONFIG.getPgConfig().getMasterUri();
+  private static final String MASTER_URL = STORAGE_CONFIG.pgConfig().getMasterUri();
 
   private final NakshaContext nakshaContext;
 
@@ -35,14 +35,14 @@ public class LocalTestContext extends TestContext {
   void setupStorage() {
     super.setupStorage();
     if (!MASTER_URL.isBlank()) {
-      log.info("Removing map (schema) {} for db with url: {}", STORAGE_CONFIG.getMapId(), MASTER_URL);
+      log.info("Removing map (schema) {} for db with url: {}", STORAGE_CONFIG.mapId(), MASTER_URL);
       SessionOptions sessionOptions = SessionOptions.from(nakshaContext, true);
-      Response response = Naksha.useStorage(STORAGE_CONFIG.getPgConfig()).useWriteSession(sessionOptions,
-          writer -> writer.execute(new WriteRequest().add(new Write().deleteMapById(STORAGE_CONFIG.getMapId()))));
+      Response response = Naksha.useStorage(STORAGE_CONFIG.pgConfig()).useWriteSession(sessionOptions,
+          writer -> writer.execute(new WriteRequest().add(new Write().deleteMapById(STORAGE_CONFIG.mapId()))));
       if(response instanceof SuccessResponse){
-        log.info("Removed map (which should drop schema of the same name): {}", STORAGE_CONFIG.getMapId());
+        log.info("Removed map (which should drop schema of the same name): {}", STORAGE_CONFIG.mapId());
       } else {
-        log.warn("Could not remove map: {}, unexpected response: {}", STORAGE_CONFIG.getMapId(), response);
+        log.warn("Could not remove map: {}, unexpected response: {}", STORAGE_CONFIG.mapId(), response);
       }
     }
   }

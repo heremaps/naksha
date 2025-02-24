@@ -1,8 +1,8 @@
 package com.here.naksha.lib.handlers.internal;
 
+import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.storage.http.HttpStorage;
 import com.here.naksha.storage.http.HttpStorageProperties;
 import naksha.model.IStorage;
@@ -22,6 +22,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.util.stream.Stream;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
 import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -56,7 +57,7 @@ class IntHandlerForStoragesTest {
     StorageConfig httpStorageConfig = httpStorageConfig(notHttpStorageProperties);
 
     // And:
-    WriteRequest writeStorageRequest = createFeatureRequest(NakshaAdminCollection.STORAGES, httpStorageConfig);
+    WriteRequest writeStorageRequest = createFeatureRequest(STORAGES, httpStorageConfig);
 
     // When:
     Response result = handler.process(eventWith(writeStorageRequest));
@@ -76,7 +77,7 @@ class IntHandlerForStoragesTest {
     StorageConfig httpStorageConfig = httpStorageConfig(httpStorageProperties);
 
     // And:
-    WriteRequest writeStorageRequest = createFeatureRequest(NakshaAdminCollection.STORAGES, httpStorageConfig);
+    WriteRequest writeStorageRequest = createFeatureRequest(STORAGES, httpStorageConfig);
 
     // When:
     Response result = handler.process(eventWith(writeStorageRequest));

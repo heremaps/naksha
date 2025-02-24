@@ -1,7 +1,7 @@
 package com.here.naksha.lib.handlers.internal;
 
-import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
-import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
 import static java.util.Collections.emptyList;
 import static naksha.model.NakshaError.NOT_FOUND;
 import static org.junit.jupiter.api.Assertions.assertEquals;

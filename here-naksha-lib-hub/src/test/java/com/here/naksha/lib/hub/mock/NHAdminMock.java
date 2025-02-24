@@ -18,10 +18,12 @@
  */
 package com.here.naksha.lib.hub.mock;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.ALL_HUB_INTERNAL_COLLECTIONS;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.CONFIGS;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
 
-import com.here.naksha.lib.core.NakshaAdminCollection;
+import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.hub.mock.NHAdminMock.Config;
 import java.util.Map;
@@ -31,12 +33,9 @@ import kotlin.reflect.KClass;
 import naksha.base.Int64;
 import naksha.base.Platform;
 import naksha.base.PlatformLock;
-import naksha.base.fn.Fn1;
-import naksha.base.fn.Fx1;
 import naksha.jbon.JbDictionary;
 import naksha.model.AbstractStorage;
 import naksha.model.IReadSession;
-import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
@@ -102,7 +101,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
     final NakshaContext ctx = NakshaContext.newInstance("naksha_mock");
     ctx.attachToCurrentThread();
     runInWriteSession(SessionOptions.from(ctx, true), admin -> {
-      final Response response = admin.execute(createFeatureRequest(NakshaAdminCollection.CONFIGS, nakshaHubConfig));
+      final Response response = admin.execute(createFeatureRequest(CONFIGS, nakshaHubConfig));
       if (response instanceof ErrorResponse errorResponse) {
         admin.rollback();
         throw unchecked(
@@ -131,7 +130,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
     // Create all admin collections
     runInWriteSession(SessionOptions.from(ctx, true), admin -> {
       WriteRequest writeAdminCollections = new WriteRequest();
-      for (final String name : NakshaAdminCollection.ALL) {
+      for (final String name : ALL_HUB_INTERNAL_COLLECTIONS) {
         Write write = new Write().createCollection(new NakshaCollection(name));
         writeAdminCollections.add(write);
       }

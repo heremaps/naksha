@@ -20,15 +20,16 @@ package com.here.naksha.lib.hub;
 
 import static com.here.naksha.lib.common.TestFileLoader.parseJsonFileOrFail;
 import static com.here.naksha.lib.common.TestNakshaContext.newTestNakshaContext;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 import static com.here.naksha.lib.hub.mock.MockResult.mockResultWithFeature;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.argThat;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -37,8 +38,8 @@ import static org.mockito.Mockito.when;
 
 import com.here.naksha.lib.core.EndPipelineHandler;
 import com.here.naksha.lib.core.EventPipeline;
+import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.IEventHandler;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.handlers.AuthorizationEventHandler;
@@ -68,8 +69,6 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class NakshaHubWiringTest {
@@ -110,7 +109,7 @@ class NakshaHubWiringTest {
   void testCreateStorageRequestWiring() {
     // Given: Create Storage request
     final StorageConfig storageConfig = parseJsonFileOrFail("create_storage.json", StorageConfig.class);
-    final WriteRequest request = createFeatureRequest(NakshaAdminCollection.STORAGES, storageConfig);
+    final WriteRequest request = createFeatureRequest(STORAGES, storageConfig);
 
     // And: spies and captors in place
     final EventPipeline spyPipeline = spy(spyPipelineFactory.eventPipeline());
@@ -144,7 +143,7 @@ class NakshaHubWiringTest {
   @Order(2)
   void testGetStoragesRequestWiring() throws Exception {
     // Given: Read Storage request
-    final ReadFeatures request = new ReadFeatures().addCollectionId(NakshaAdminCollection.STORAGES);
+    final ReadFeatures request = new ReadFeatures().addCollectionId(STORAGES);
 
     // And: spies and captors in place
     final EventPipeline spyPipeline = spy(spyPipelineFactory.eventPipeline());
@@ -186,14 +185,14 @@ class NakshaHubWiringTest {
     final IStorage spyStorageImpl = spy(storageImpl);
     when(adminStorageReader.execute(argThat(readRequest -> {
       if (readRequest instanceof ReadFeatures rr) {
-        return Objects.equals(rr.getCollectionIds().get(0), NakshaAdminCollection.SPACES);
+        return Objects.equals(rr.getCollectionIds().get(0), SPACES);
       }
       return false;
     })))
         .thenReturn(mockResultWithFeature(space));
     when(adminStorageReader.execute(argThat(readRequest -> {
       if (readRequest instanceof ReadFeatures rr) {
-        return Objects.equals(rr.getCollectionIds().get(0), NakshaAdminCollection.EVENT_HANDLERS);
+        return Objects.equals(rr.getCollectionIds().get(0), EVENT_HANDLERS);
       }
       return false;
     })))

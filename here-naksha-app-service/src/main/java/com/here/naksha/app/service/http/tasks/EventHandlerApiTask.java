@@ -20,7 +20,7 @@ package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.HANDLER_ID;
-import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;

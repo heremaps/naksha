@@ -18,14 +18,16 @@
  */
 package com.here.naksha.lib.hub.storages;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
 import com.here.naksha.lib.core.EventPipeline;
+import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.handlers.AuthorizationEventHandler;
@@ -184,7 +186,7 @@ public class NHSpaceStorageReader implements IReadSession {
       final @NotNull String spaceId, final @NotNull EventPipeline pipeline) {
     Space space = null;
     Response spaceResponse = nakshaHub.getAdminStorage()
-        .useReadSession(sessionOptions, reader -> reader.execute(readFeaturesByIdRequest(NakshaAdminCollection.SPACES, spaceId)));
+        .useReadSession(sessionOptions, reader -> reader.execute(readFeaturesByIdRequest(SPACES, spaceId)));
     if (spaceResponse instanceof ErrorResponse er) {
       return er;
     } else if (spaceResponse instanceof SuccessResponse successResponse) {
@@ -205,7 +207,7 @@ public class NHSpaceStorageReader implements IReadSession {
 
     List<EventHandlerConfig> eventHandlers = null;
     Response handlersResponse = nakshaHub.getAdminStorage()
-        .useReadSession(sessionOptions, reader -> reader.execute(readFeaturesByIdsRequest(NakshaAdminCollection.EVENT_HANDLERS, eventHandlerIds)));
+        .useReadSession(sessionOptions, reader -> reader.execute(readFeaturesByIdsRequest(EVENT_HANDLERS, eventHandlerIds)));
     if (handlersResponse instanceof ErrorResponse er) {
       return er;
     } else if (handlersResponse instanceof SuccessResponse successResponse) {

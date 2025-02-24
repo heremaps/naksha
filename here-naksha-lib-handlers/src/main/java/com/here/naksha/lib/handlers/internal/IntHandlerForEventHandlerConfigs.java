@@ -18,8 +18,8 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import static com.here.naksha.lib.core.NakshaAdminCollection.SPACES;
-import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
 import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.ADD_VALUES;
 import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.CONTAINS_VALUES;

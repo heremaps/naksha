@@ -18,6 +18,9 @@
  */
 package com.here.naksha.lib.hub;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.ALL_HUB_INTERNAL_COLLECTIONS;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.CONFIGS;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static naksha.model.Action.CREATED;
 import static naksha.model.NakshaContext.currentContext;
@@ -28,9 +31,9 @@ import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
 import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.DefaultRequestLimitManager;
+import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.IRequestLimitManager;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.exceptions.StorageNotFoundException;
 import com.here.naksha.lib.core.models.ExtensionConfig;
 import com.here.naksha.lib.core.models.features.Extension;
@@ -179,7 +182,7 @@ public class NakshaHub implements INaksha {
 
   private void createAdminCollections(NakshaContext nakshaContext) {
     getAdminStorage().runInWriteSession(SessionOptions.from(nakshaContext, true), admin -> {
-      logger.info("WriteCollections Request for {}, against Admin storage.", NakshaAdminCollection.ALL);
+      logger.info("WriteCollections Request for {}, against Admin storage.", ALL_HUB_INTERNAL_COLLECTIONS);
       final Response createAdminCollectionsResponse = admin.execute(createAdminCollectionsRequest());
       if (createAdminCollectionsResponse instanceof SuccessResponse successResponse) {
         NakshaFeatureList createdCollections = successResponse.getFeatures();
@@ -205,7 +208,7 @@ public class NakshaHub implements INaksha {
 
   private static WriteRequest createAdminCollectionsRequest() {
     final WriteRequest writeRequest = new WriteRequest();
-    for (String adminCollectionId : NakshaAdminCollection.ALL) {
+    for (String adminCollectionId : ALL_HUB_INTERNAL_COLLECTIONS) {
       writeRequest.add(new Write().createCollection(new NakshaCollection(adminCollectionId)));
     }
     return writeRequest;
@@ -227,7 +230,7 @@ public class NakshaHub implements INaksha {
       if (customCfg != null) {
         NakshaMap map = admin.getMapById(NakshaContext.mapId()); // TODO CASL-657 confirm
         assert map != null;
-        NakshaCollection collection = admin.getCollectionById(map, NakshaAdminCollection.CONFIGS);
+        NakshaCollection collection = admin.getCollectionById(map, CONFIGS);
         assert collection != null;
         WriteRequest writeCustomCfg = new WriteRequest()
             .add(new Write().upsertFeature(collection, customCfg));
@@ -274,7 +277,7 @@ public class NakshaHub implements INaksha {
    * @param config config to be stored
    */
   private void writeConfig(IWriteSession admin, NakshaHubConfig config) {
-    final Request writeDefCfg = createFeatureRequest(NakshaAdminCollection.CONFIGS, config);
+    final Request writeDefCfg = createFeatureRequest(CONFIGS, config);
     final Response writeConfigResp = admin.execute(writeDefCfg);
     if (writeConfigResp instanceof SuccessResponse) {
       admin.commit();
@@ -304,7 +307,7 @@ public class NakshaHub implements INaksha {
 
   private NakshaHubConfig fetchHubConfigFromDb(String configId, IWriteSession admin) {
     final List<String> cfgIdList = (configId != null) ? List.of(configId, DEF_CFG_ID) : List.of(DEF_CFG_ID);
-    final Request readAdminConfigs = readFeaturesByIdsRequest(NakshaAdminCollection.CONFIGS, cfgIdList);
+    final Request readAdminConfigs = readFeaturesByIdsRequest(CONFIGS, cfgIdList);
     final Response readAdminConfigsResp = admin.execute(readAdminConfigs);
     if (readAdminConfigsResp instanceof SuccessResponse successResponse) {
       List<NakshaHubConfig> nakshaHubConfigs =
@@ -416,7 +419,7 @@ public class NakshaHub implements INaksha {
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public @NotNull IStorage getStorageById(final @NotNull String storageId) {
     return getAdminStorage().useReadSession(SessionOptions.from(currentContext()), admin -> {
-      Request readStorageById = readFeaturesByIdRequest(NakshaAdminCollection.STORAGES, storageId);
+      Request readStorageById = readFeaturesByIdRequest(STORAGES, storageId);
       Response readStorageByIdResp = admin.execute(readStorageById);
       if (readStorageByIdResp instanceof SuccessResponse successResponse) {
         StorageConfig storageConfig = readFeatureFromResponse(successResponse, StorageConfig.class);

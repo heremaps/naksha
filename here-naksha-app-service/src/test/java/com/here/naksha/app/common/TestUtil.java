@@ -59,23 +59,23 @@ public class TestUtil {
     try {
       String json = new String(Files.readAllBytes(Paths.get(rootPath + fileName)));
       final TestStorageConfig dataDbConfig = TestStorageConfigs.dataDbConfig;
-      final PgConfig dataPgConfig = dataDbConfig.getPgConfig();
+      final PgConfig dataPgConfig = dataDbConfig.pgConfig();
       final PgInstanceConfig dataMasterConfig = dataPgConfig.getMaster();
       json = json.replace("${dataDb.host}", dataMasterConfig.getHost());
       json = json.replace("${dataDb.port}", Integer.toString(dataMasterConfig.getPort()));
       json = json.replace("${dataDb.db}", dataMasterConfig.getDb());
       json = json.replace("${dataDb.storageId}", dataPgConfig.getId());
-      json = json.replace("${dataDb.schema}", dataDbConfig.getMapId());
+      json = json.replace("${dataDb.schema}", dataDbConfig.mapId());
       json = json.replace("${dataDb.user}", dataMasterConfig.getUser());
       json = json.replace("${dataDb.password}", dataMasterConfig.getPassword());
       final TestStorageConfig adminDbConfig = TestStorageConfigs.adminDbConfig;
-      final PgConfig adminPgConfig = adminDbConfig.getPgConfig();
+      final PgConfig adminPgConfig = adminDbConfig.pgConfig();
       final PgInstanceConfig adminMasterConfig = adminPgConfig.getMaster();
       json = json.replace("${adminDb.host}", adminMasterConfig.getHost());
       json = json.replace("${adminDb.port}", Integer.toString(adminMasterConfig.getPort()));
       json = json.replace("${adminDb.db}", adminMasterConfig.getDb());
       json = json.replace("${adminDb.storageId}", adminPgConfig.getId());
-      json = json.replace("${adminDb.schema}", adminDbConfig.getMapId());
+      json = json.replace("${adminDb.schema}", adminDbConfig.mapId());
       json = json.replace("${adminDb.user}", adminMasterConfig.getUser());
       json = json.replace("${adminDb.password}", adminMasterConfig.getPassword());
       return json;

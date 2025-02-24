@@ -18,14 +18,15 @@
  */
 package com.here.naksha.lib.hub.storages;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteFeatures;
 import static naksha.model.NakshaContext.mapId;
 
 import com.here.naksha.lib.core.EventPipeline;
+import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.hub.EventPipelineFactory;
@@ -33,21 +34,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import naksha.base.AtomicInt;
-import naksha.model.Action;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
-import naksha.model.Metadata;
-import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
-import naksha.model.Operation;
 import naksha.model.SessionOptions;
-import naksha.model.Tuple;
-import naksha.model.TupleNumber;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaMap;
 import naksha.model.objects.NakshaTransaction;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
@@ -156,7 +149,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   }
 
   private boolean isDeleteSpaceRequest(@NotNull WriteRequest writeRequest, @NotNull String spaceId) {
-    if (NakshaAdminCollection.SPACES.equals(spaceId)) {
+    if (SPACES.equals(spaceId)) {
       List<Write> writes = writeRequest.getWrites();
       if (writes.size() == 1) {
         Write write = writes.get(0);
@@ -180,7 +173,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
 
   private boolean isUpdateSpaceRequest(@NotNull WriteRequest writeRequest, @NotNull String spaceId) {
     List<Write> writes = writeRequest.getWrites();
-    return NakshaAdminCollection.SPACES.equals(spaceId)
+    return SPACES.equals(spaceId)
            && writes.size() == 1
            && WriteOp.UPDATE.equals(writes.get(0).getOp());
   }
@@ -197,7 +190,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     }
     if (collection == null || updateSpaceRes instanceof SuccessResponse) {
       // submit Update Space request to Admin Space based pipeline
-      return executeWriteToAdminSpaces(updateSpaceEntryReq, NakshaAdminCollection.SPACES);
+      return executeWriteToAdminSpaces(updateSpaceEntryReq, SPACES);
     } else {
       return updateSpaceRes;
     }

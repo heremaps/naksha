@@ -1,17 +1,15 @@
 package com.here.naksha.app.init;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.HUB_INTERNAL_STORAGE_ID;
+
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.IoHelp.LoadedBytes;
 import java.nio.charset.StandardCharsets;
 import naksha.model.NakshaVersion;
 import naksha.psql.PgConfig;
-import naksha.psql.PgStorage;
 import org.jetbrains.annotations.NotNull;
 
-public class TestStorageConfig {
-
-  private final String mapId;
-  private final PgConfig pgConfig;
+public record TestStorageConfig(String mapId, PgConfig pgConfig) {
 
   public TestStorageConfig(String mapId, PgConfig pgConfig) {
     this.mapId = mapId;
@@ -19,21 +17,13 @@ public class TestStorageConfig {
     pgConfig.setCreate(true);
   }
 
-  public String getMapId() {
-    return mapId;
-  }
-
-  public PgConfig getPgConfig() {
-    return pgConfig;
-  }
-
   /**
    * Reads the configuration from a configuration file from user home directory ({@code ~/.config/naksha/filename}) or from the environment
    * variable, if none is possible, a default localhost configuration is used.
    *
-   * @param filename     The filename to search for in {@code ~/.config/naksha/}.
-   * @param envName      The environment variable to check.
-   * @param mapId        The id of map to use
+   * @param filename The filename to search for in {@code ~/.config/naksha/}.
+   * @param envName  The environment variable to check.
+   * @param mapId    The id of map to use
    * @return the PSQL storage configuration.
    */
   @SuppressWarnings("SameParameterValue")
@@ -44,19 +34,19 @@ public class TestStorageConfig {
       final byte[] bytes = loadedBytes.getBytes();
       String url = new String(bytes, StandardCharsets.UTF_8);
       if (url.startsWith("jdbc:postgresql://")) {
-        PgConfig pgConfig = new PgConfig(PgStorage.ADMIN_STORAGE_ID).withMasterUri(url);
+        PgConfig pgConfig = new PgConfig(HUB_INTERNAL_STORAGE_ID).withMasterUri(url);
         return new TestStorageConfig(mapId, pgConfig);
       }
     } catch (Exception ignore) {
     }
     String url = System.getenv(envName);
     if (url != null && url.startsWith("jdbc:postgresql://")) {
-      PgConfig pgConfig = new PgConfig(PgStorage.ADMIN_STORAGE_ID).withMasterUri(url);
+      PgConfig pgConfig = new PgConfig(HUB_INTERNAL_STORAGE_ID).withMasterUri(url);
       return new TestStorageConfig(mapId, pgConfig);
     }
     url = System.getenv("TEST_NAKSHA_PSQL_URL");
     if (url != null && url.startsWith("jdbc:postgresql://")) {
-      PgConfig pgConfig = new PgConfig(PgStorage.ADMIN_STORAGE_ID).withMasterUri(url);
+      PgConfig pgConfig = new PgConfig(HUB_INTERNAL_STORAGE_ID).withMasterUri(url);
       return new TestStorageConfig(mapId, pgConfig);
     }
 
@@ -67,8 +57,8 @@ public class TestStorageConfig {
     url = "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=" + password
           + "&schema=" + mapId
           + "&app=" + "Naksha/v" + NakshaVersion.latest
-          + "&id=" + PgStorage.ADMIN_STORAGE_ID;
-    PgConfig pgConfig = new PgConfig(PgStorage.ADMIN_STORAGE_ID).withMasterUri(url);
+          + "&id=" + HUB_INTERNAL_STORAGE_ID;
+    PgConfig pgConfig = new PgConfig(HUB_INTERNAL_STORAGE_ID).withMasterUri(url);
     return new TestStorageConfig(mapId, pgConfig);
   }
 
