@@ -29,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
 public class NakshaHubFactory {
 
   /**
-   * Instantiate NakshaHub (INaksha compliant) instance by loading given {@link NakshaHubConfig#hubClassName hubClassName}. If config or
+   * Instantiate NakshaHub (INaksha compliant) instance by loading given {@link NakshaHubConfig#getHubClassName()}. If config or
    * hubClassName is not provided (i.e. null), then default NakshaHub implementation will be used.
    *
    * @param appName    the name of the app
@@ -43,7 +43,7 @@ public class NakshaHubFactory {
       final @Nullable String storageUrl,
       final @Nullable NakshaHubConfig config,
       final @Nullable String configId) {
-    final String hubClassName = (config != null) ? config.hubClassName : NakshaHubConfig.defaultHubClassName();
+    final String hubClassName = (config != null) ? config.getHubClassName() : NakshaHubConfig.defaultHubClassName();
     INaksha hub = null;
     try {
       final Class<?> theClass = Class.forName(hubClassName);

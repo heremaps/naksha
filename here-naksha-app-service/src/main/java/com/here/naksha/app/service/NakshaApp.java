@@ -205,14 +205,14 @@ public final class NakshaApp extends Thread {
     config = hub.getConfig(); // use the config finally set by NakshaHub instance
     log.info("Using server config : {}", config);
 
-    log.info("Naksha host/endpoint: {}", config.endpoint);
+    log.info("Naksha host/endpoint: {}", config.getEndpoint());
 
     // vertxMetricsOptions = new MetricsOptions().setEnabled(true).setFactory(new NakshaHubMetricsFactory());
     this.vertxOptions = new VertxOptions();
     // See: https://vertx.io/docs/vertx-core/java
     // vertxOptions.setMetricsOptions(vertxMetricsOptions);
     this.vertxOptions.setPreferNativeTransport(true);
-    if (config.debug) {
+    if (config.isDebug()) {
       // If running in debug mode, we need to increase the warning time, because we might enter a break-point
       // for
       // some time!
@@ -227,11 +227,11 @@ public final class NakshaApp extends Thread {
     final String jwtKey;
     final String jwtPub;
     {
-      final String path = "auth/" + config.jwtName + ".key";
+      final String path = "auth/" + config.getJwtName() + ".key";
       jwtKey = readAuthKeyFile(path, NakshaHubConfig.NAKSHA_APP_NAME);
     }
     {
-      final String path = "auth/" + config.jwtName + ".pub";
+      final String path = "auth/" + config.getJwtName() + ".pub";
       jwtPub = readAuthKeyFile(path, NakshaHubConfig.NAKSHA_APP_NAME);
     }
     this.authOptions = new JWTAuthOptions()
@@ -241,7 +241,7 @@ public final class NakshaApp extends Thread {
     this.authProvider = new NakshaAuthProvider(this.vertx, this.authOptions);
 
     final WebClientOptions webClientOptions = new WebClientOptions();
-    webClientOptions.setUserAgent(config.userAgent);
+    webClientOptions.setUserAgent(config.getUserAgent());
     webClientOptions.setTcpKeepAlive(true).setTcpQuickAck(true).setTcpFastOpen(true);
     webClientOptions.setIdleTimeoutUnit(TimeUnit.MINUTES).setIdleTimeout(2);
     this.webClient = WebClient.create(this.vertx, webClientOptions);

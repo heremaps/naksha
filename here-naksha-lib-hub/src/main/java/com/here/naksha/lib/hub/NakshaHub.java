@@ -31,7 +31,6 @@ import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
 import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.DefaultRequestLimitManager;
-import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.IRequestLimitManager;
 import com.here.naksha.lib.core.exceptions.StorageNotFoundException;
@@ -144,16 +143,16 @@ public class NakshaHub implements INaksha {
       throw new RuntimeException("Server configuration not found! Neither in Admin storage nor a default file.");
     }
     this.nakshaHubConfig = finalCfg;
-    if (this.nakshaHubConfig.extensionConfigParams != null) {
+    if (this.nakshaHubConfig.getExtensionConfigParams() != null) {
       this.extensionManager = ExtensionManager.getInstance(this);
     } else {
       logger.warn("ExtensionManager is not initialised due to extensionConfigParams not found.");
     }
     // Setting Concurrency Thresholds
-    logger.info("Value of maxParallelRequestsPerCPU is {}", nakshaHubConfig.maxParallelRequestsPerCPU);
-    logger.info("Value of maxPctParallelRequestsPerActor is {}", nakshaHubConfig.maxPctParallelRequestsPerActor);
+    logger.info("Value of maxParallelRequestsPerCPU is {}", nakshaHubConfig.getMaxParallelRequestsPerCPU());
+    logger.info("Value of maxPctParallelRequestsPerActor is {}", nakshaHubConfig.getMaxPctParallelRequestsPerActor());
     IRequestLimitManager requestLimitManager = new DefaultRequestLimitManager(
-        nakshaHubConfig.maxParallelRequestsPerCPU, nakshaHubConfig.maxPctParallelRequestsPerActor);
+        nakshaHubConfig.getMaxParallelRequestsPerCPU(), nakshaHubConfig.getMaxPctParallelRequestsPerActor());
     logger.info("Instance level limit is {}", requestLimitManager.getInstanceLevelLimit());
     AbstractTask.setConcurrencyLimitManager(requestLimitManager);
 
@@ -365,7 +364,7 @@ public class NakshaHub implements INaksha {
     List<Extension> extList = new ArrayList<>();
     list.stream().forEach(extensionPath -> {
       String filePath =
-          "s3://" + bucketName + "/" + extensionPath + "latest-" + nakshaHubConfig.env.toLowerCase() + ".txt";
+          "s3://" + bucketName + "/" + extensionPath + "latest-" + nakshaHubConfig.getEnv().toLowerCase() + ".txt";
       String version;
       try {
         version = s3Helper.getFileContent(filePath);
@@ -378,7 +377,7 @@ public class NakshaHub implements INaksha {
       String extensionId = bits[bits.length - 1];
 
       filePath = "s3://" + bucketName + "/" + extensionPath + extensionId + "-" + version + "."
-                 + nakshaHubConfig.env.toLowerCase().toLowerCase() + ".json";
+                 + nakshaHubConfig.getEnv().toLowerCase().toLowerCase() + ".json";
       String exJson;
       try {
         exJson = s3Helper.getFileContent(filePath);

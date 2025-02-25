@@ -218,8 +218,8 @@ public final class NakshaHubConfig extends NakshaFeature implements JsonSerializ
   /**
    * The public endpoint, for example "https://naksha.foo.com/".
    */
-  public @NotNull URL getEndpoint() throws MalformedURLException {
-    return new URL(getProperty(this, ENDPOINT, String.class));
+  public @NotNull String getEndpoint() {
+    return getProperty(this, ENDPOINT, String.class);
   }
 
   private void setEndpoint(@NotNull String endpoint) {
