@@ -18,54 +18,40 @@
  */
 package com.here.naksha.lib.hub;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
-import java.util.List;
-import org.jetbrains.annotations.Nullable;
+import static naksha.base.JvmAnyObjectUtil.getOrSetProperty;
+import static naksha.base.JvmAnyObjectUtil.getProperty;
 
-@JsonTypeName
-public class ExtensionConfigParams implements JsonSerializable {
+import java.util.List;
+import naksha.base.AnyObject;
+import naksha.base.StringList;
+
+public class ExtensionConfigParams extends AnyObject {
+
   public static final String WHITELIST_CLASSES = "whitelistClasses";
   public static final String INTERVAL_MS = "intervalms";
   public static final String EXTENSION_ROOT_PATH = "extensionsRootPath";
 
-  @JsonProperty(WHITELIST_CLASSES)
-  List<String> whiteListClasses;
+  private static final StringList DEFAULT_WHITELIST_CLASSES = StringList.of("java.*", "javax.*", "com.here.naksha.*");
+  private static final Integer DEFAULT_INTERVAL_MS = 300_000;
 
-  @JsonProperty(INTERVAL_MS)
-  long intervalMs;
-
-  @JsonProperty(EXTENSION_ROOT_PATH)
-  String extensionRootPath;
   /**
-   * Create an extension.
-   *
-   * @param whiteListClasses  List of whitelist urls used in classloader
-   * @param intervalMs config expiry in millisecond
-   * @param extensionRootPath extensions root directory
+   * @return List of whitelist urls used in classloader
    */
-  @JsonCreator
-  public ExtensionConfigParams(
-      @JsonProperty(WHITELIST_CLASSES) @Nullable List<String> whiteListClasses,
-      @JsonProperty(INTERVAL_MS) @Nullable Long intervalMs,
-      @JsonProperty(EXTENSION_ROOT_PATH) @Nullable String extensionRootPath) {
-    this.whiteListClasses =
-        whiteListClasses == null ? List.of("java.*", "javax.*", "com.here.naksha.*") : whiteListClasses;
-    this.intervalMs = (intervalMs == null ? 300000 : intervalMs);
-    this.extensionRootPath = extensionRootPath;
-  }
-
   public List<String> getWhiteListClasses() {
-    return whiteListClasses;
+    return getOrSetProperty(this, WHITELIST_CLASSES, DEFAULT_WHITELIST_CLASSES);
   }
 
+  /**
+   * @return config expiry in millisecond
+   */
   public long getIntervalMs() {
-    return intervalMs;
+    return getOrSetProperty(this, INTERVAL_MS, DEFAULT_INTERVAL_MS);
   }
 
+  /**
+   * @return extensions root directory
+   */
   public String getExtensionRootPath() {
-    return extensionRootPath;
+    return getProperty(this, EXTENSION_ROOT_PATH, String.class);
   }
 }

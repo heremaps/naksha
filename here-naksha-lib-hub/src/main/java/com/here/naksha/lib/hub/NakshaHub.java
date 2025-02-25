@@ -343,8 +343,8 @@ public class NakshaHub implements INaksha {
 
   @Override
   public @NotNull ExtensionConfig getExtensionConfig() {
-    final ExtensionConfigParams extensionConfigParams = nakshaHubConfig.extensionConfigParams;
-    if (!extensionConfigParams.extensionRootPath.startsWith("s3://")) {
+    final ExtensionConfigParams extensionConfigParams = nakshaHubConfig.getExtensionConfigParams();
+    if (!extensionConfigParams.getExtensionRootPath().startsWith("s3://")) {
       throw new UnsupportedOperationException(
           "ExtensionRootPath must be a valid s3 bucket url which should be prefixed with s3://");
     }
@@ -354,7 +354,7 @@ public class NakshaHub implements INaksha {
         System.currentTimeMillis() + extensionConfigParams.getIntervalMs(),
         extList,
         extensionConfigParams.getWhiteListClasses(),
-        this.nakshaHubConfig.env.toLowerCase());
+        this.nakshaHubConfig.getEnv().toLowerCase());
   }
 
   private List<Extension> loadExtensionConfigFromS3(String extensionRootPath) {

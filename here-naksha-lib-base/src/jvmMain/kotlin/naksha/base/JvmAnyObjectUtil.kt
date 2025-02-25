@@ -19,10 +19,16 @@ object JvmAnyObjectUtil {
     ): T = owner.getOrCreate(key, klassFor(type), init)
 
     @JvmStatic
-    @JvmOverloads
     fun <T : Any> getOrSetProperty(
         owner: AnyObject,
         key: String,
         value: T,
     ): T = owner.getOrSet(key, value)
+
+    @JvmStatic
+    fun <T: Any> getPropertyOrReturnDefault(
+        owner: AnyObject,
+        key: String,
+        default: T,
+    ): T = owner.getOr(key, default)
 }

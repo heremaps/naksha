@@ -50,7 +50,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import naksha.model.NakshaVersion;
-import naksha.psql.PgStorage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -229,11 +228,11 @@ public final class NakshaApp extends Thread {
     final String jwtPub;
     {
       final String path = "auth/" + config.jwtName + ".key";
-      jwtKey = readAuthKeyFile(path, NakshaHubConfig.APP_NAME);
+      jwtKey = readAuthKeyFile(path, NakshaHubConfig.NAKSHA_APP_NAME);
     }
     {
       final String path = "auth/" + config.jwtName + ".pub";
-      jwtPub = readAuthKeyFile(path, NakshaHubConfig.APP_NAME);
+      jwtPub = readAuthKeyFile(path, NakshaHubConfig.NAKSHA_APP_NAME);
     }
     this.authOptions = new JWTAuthOptions()
         .setJWTOptions(new JWTOptions().setAlgorithm("RS256"))
