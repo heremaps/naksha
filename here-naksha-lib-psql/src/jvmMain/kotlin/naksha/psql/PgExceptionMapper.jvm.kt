@@ -3,6 +3,7 @@
 package naksha.psql
 
 import naksha.model.NakshaError
+import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaException
 import org.postgresql.util.PSQLException
 import java.sql.BatchUpdateException
@@ -55,8 +56,9 @@ actual class PgExceptionMapper {
                 is java.util.concurrent.TimeoutException -> timeout(throwable, topLevelCause, sql)
                 else -> NakshaException(
                     NakshaError(
-                        code = NakshaError.EXCEPTION,
-                        msg = if (sql != null) "Exception while executing SQL query '$sql'" else throwable.message ?: "Exception without message",
+                        code = EXCEPTION,
+                        msg = if (sql != null) "Exception while executing SQL query '$sql'" else
+                              throwable.message ?: "Exception without message",
                         cause = throwable
                     )
                 )
@@ -121,15 +123,15 @@ actual class PgExceptionMapper {
                 return timeout(sqlException, topLevelCause)
             }
             val errorCode = when (sqlException.sqlState) {
-                ERR_UNINITIALIZED -> NakshaError.EXCEPTION
+                ERR_UNINITIALIZED -> EXCEPTION
                 ERR_COLLECTION_EXISTS -> NakshaError.CONFLICT
                 ERR_COLLECTION_NOT_EXISTS, UNDEFINED_TABLE -> NakshaError.COLLECTION_NOT_FOUND
                 ERR_CONFLICT -> NakshaError.CONFLICT
-                ERR_CHECK_VIOLATION -> NakshaError.EXCEPTION
+                ERR_CHECK_VIOLATION -> EXCEPTION
                 ERR_INVALID_PARAMETER_VALUE -> NakshaError.ILLEGAL_ARGUMENT
                 ERR_UNIQUE_VIOLATION -> NakshaError.CONFLICT
                 ERR_NO_DATA -> NakshaError.NOT_FOUND
-                else -> NakshaError.EXCEPTION
+                else -> EXCEPTION
             }
             var msg = if (sql != null) "Failed to execute query '$sql', reason: " else "Failed to execute unknown query, reason: "
             msg += sqlException.message ?: "${sqlException.sqlState}: No message"

@@ -1,12 +1,14 @@
 package naksha.psql
 
-import naksha.model.NakshaTx
 import naksha.model.Tuple
+import naksha.model.TupleNumber
+import naksha.model.Version
 import naksha.model.illegalState
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaMap
 import naksha.model.request.Write
+import naksha.model.request.WriteOp
 
 /**
  * Pure data class to enrich a write operation with additional information, used by [PgTupleWriter].
@@ -14,6 +16,7 @@ import naksha.model.request.Write
  * @see [PgTupleWriter]
  */
 internal data class PgTupleWrite(val original: Write, val i: Int) {
+
     /**
      * The map into which to write.
      *
@@ -33,10 +36,33 @@ internal data class PgTupleWrite(val original: Write, val i: Int) {
     lateinit var collection: PgCollection
 
     /**
-     * The [Tuple] representation of the modified feature.
+     * The write operation to perform.
      * @since 3.0
      */
-    lateinit var tuple: Tuple
+    val op: WriteOp
+        get() = original.op
+
+    /**
+     * The identifier of the feature to modify.
+     * @since 3.0
+     */
+    val id: String
+        get() = original.id
+
+    /**
+     * If the operation is atomic, the version in which the _HEAD_ is expected to be; otherwise `null`.
+     * @since 3.0
+     */
+    val version: Version?
+        get() = if (original.atomic && op != WriteOp.CREATE && op != WriteOp.UPSERT) original.version else null
+
+    /**
+     * The [Tuple] representation of the modified feature.
+     *
+     * For [DELETE][naksha.model.request.WriteOp.DELETE] and [PURGE][naksha.model.request.WriteOp.PURGE] we do not have a [tuple][Tuple], or a [feature].
+     * @since 3.0
+     */
+    var tuple: Tuple? = null
 
     /**
      * If the feature is a map, the [PgMap] representation.
@@ -63,11 +89,19 @@ internal data class PgTupleWrite(val original: Write, val i: Int) {
     var nakshaCollection: NakshaCollection? = null
 
     /**
-     * Returns the target feature as correct type, so either [nakshaMap], [nakshaCollection] or [`original.feature`][Write.feature].
+     * Returns the target feature as correct type, so either [nakshaMap], [nakshaCollection], [`original.feature`][Write.feature] or `null`, if no feature is available, for [DELETE][WriteOp.DELETE] and [PURGE][WriteOp.PURGE].
      *
      * @return the target feature.
      * @since 3.0
      */
-    val feature: NakshaFeature
-        get() = nakshaMap ?: nakshaCollection ?: original.feature ?: throw illegalState("Invalid write #$i, missing feature (null)")
+    val feature: NakshaFeature?
+        get() = nakshaMap ?: nakshaCollection ?: original.feature
+
+    /**
+     * If the operation was performed, this will be the [TupleNumber] of the new state.
+     *
+     * For [DELETE][WriteOp.DELETE] and [PURGE][WriteOp.PURGE] this will be `null`, if the feature did not exist, and no atomic delete was request, otherwise it will be the [TupleNumber] of the tombstone state; deleting a feature does actually produce a new tombstone state.
+     * @since 3.0
+     */
+    var tupleNumber: TupleNumber? = null
 }

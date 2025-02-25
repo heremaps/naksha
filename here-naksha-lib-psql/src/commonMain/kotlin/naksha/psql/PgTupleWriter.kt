@@ -70,8 +70,9 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
         tupleNumbers.setCapacity(writes.size)
         val tupleList = ArrayList<Tuple>(writes.size)
         for (write in targetWrites) {
-            tupleNumbers[write.i] = write.tuple.tupleNumber
-            tupleList.add(write.tuple)
+            tupleNumbers[write.i] = write.tupleNumber
+            val tuple = write.tuple
+            if (tuple != null) tupleList.add(tuple)
         }
         // We do not put tuples into cache, before we are sure everything was successful!
         // Adding all together into the cache reduces the effort to iterate above all caches multiple times.
@@ -84,7 +85,7 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
     // After this has run, only the `tuple` is missing!
     private fun prepareWrite(writes: ArrayList<PgTupleWrite>) {
         for (write in writes) {
-            val featureId = write.original.featureId
+            val featureId = write.original.id
             val mapId = write.original.mapId
             val map = storage.adminMap.getPgMapById(conn, mapId) ?:
                 throw mapNotFound("The write #${write.i} refers to not existing map '$mapId'")
@@ -163,25 +164,26 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
         for (write in writes) {
             when (val op = write.original.op) {
                 WriteOp.CREATE -> {
-                    write.tuple = tx.created(write.map.nakshaMap, write.collection.nakshaCollection, write.feature)
+                    val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
+                    write.tuple = tx.created(write.map.nakshaMap, write.collection.nakshaCollection, f)
                     inserts.getOrCreate(write.collection).add(write)
                 }
                 WriteOp.UPSERT -> {
                     // Note: We first try an INSERT, then, when that fails, we do an on-conflict UPDATE!
-                    write.tuple = tx.created(write.map.nakshaMap, write.collection.nakshaCollection, write.feature)
+                    val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
+                    write.tuple = tx.created(write.map.nakshaMap, write.collection.nakshaCollection, f)
                     upserts.getOrCreate(write.collection).add(write)
                 }
                 WriteOp.UPDATE -> {
-                    write.tuple = tx.updated(write.map.nakshaMap, write.collection.nakshaCollection, write.feature)
+                    val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
+                    write.tuple = tx.updated(write.map.nakshaMap, write.collection.nakshaCollection, f)
                     updates.getOrCreate(write.collection).add(write)
                 }
                 WriteOp.DELETE -> {
-                    write.tuple = tx.deleted(write.map.nakshaMap, write.collection.nakshaCollection, write.feature)
                     deletes.getOrCreate(write.collection).add(write)
                 }
                 WriteOp.PURGE -> {
                     // Note: purge and delete are the same operation, except that a purge is not copied into deleted table!
-                    write.tuple = tx.deleted(write.map.nakshaMap, write.collection.nakshaCollection, write.feature)
                     purges.getOrCreate(write.collection).add(write)
                 }
                 else -> {
@@ -190,6 +192,17 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
             }
         }
 
+        // DELETE
+        for (mapEntry in deletes) {
+            val collection = mapEntry.key
+            val tgWrites = mapEntry.value
+            val tupleWriter = PgTupleWriterDelete(session, collection, tgWrites)
+            tupleWriter.execute(conn)
+        }
+
+        // PURGE
+
+        // UPSERT
         // INSERT
         for (mapEntry in inserts) {
             val collection = mapEntry.key
@@ -198,10 +211,8 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
             tupleWriter.execute(conn)
         }
 
-        // UPSERT
         // UPDATE
-        // DELETE
-        // PURGE
+
     }
 
     /**
@@ -245,9 +256,9 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
 
 
 SELECT * FROM UNNEST(
-    ARRAY[1, 2, 3] AS col1,
-    ARRAY['a', 'b', 'c'] AS col2,
-    ARRAY[10.1, 20.2, 30.3] AS col3
+    ARRAY[1, 2, 3],
+    ARRAY['a', 'b', 'c'],
+    ARRAY[10.1, 20.2, 30.3]
 ) AS t(col1, col2, col3);
 
 

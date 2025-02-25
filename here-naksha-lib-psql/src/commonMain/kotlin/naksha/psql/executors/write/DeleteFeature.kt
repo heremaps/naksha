@@ -19,7 +19,7 @@ class DeleteFeature(
     private val writeExecutor: WriteExecutor
 ) {
     fun execute(collection: PgCollection, write: WriteExt, tupleList: TupleList): TupleNumber {
-        val collectionId = write.featureId ?: throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "No feature ID provided")
+        val collectionId = write.id ?: throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "No feature ID provided")
         val mapId = collection.map.id
         val map = session.storage.adminMap.getPgMapById(session.useConnection(), mapId) ?: throw NakshaException(MAP_NOT_FOUND, "Map $mapId not found")
         val tupleNumber = TupleNumber(map.storage.number, map.number, collection.number, write.feature!!.featureNumber, session.useTx().version, session.useTx().uid.addAndGet(1))

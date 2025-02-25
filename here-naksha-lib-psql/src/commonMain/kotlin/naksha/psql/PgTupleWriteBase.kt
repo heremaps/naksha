@@ -2,6 +2,9 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.model.*
+import naksha.model.request.WriteOp
+import naksha.psql.PgColumn.PgColumnCompanion.allColumns
+import kotlin.jvm.JvmField
 
 /**
  * Base class for all operations, so for:
@@ -9,7 +12,7 @@ import naksha.model.*
  * - [PgTupleWriterUpdate]
  * - [PgTupleWriterUpsert]
  * - [PgTupleWriterDelete]
- * - [PgTupleWriterPurge]
+ * - [PgTupleWriterDelete]
  * @since 3.0
  * @see [PgTupleWriter]
  */
@@ -32,6 +35,29 @@ internal open class PgTupleWriteBase protected constructor(
      */
     val writes: List<PgTupleWrite>
 ) {
+    companion object PgTupleWriteBase_C {
+        /**
+         * The names of all database columns, as comma separated list.
+         * @since 3.0
+         */
+        @JvmField
+        val allColumnNames = allColumns.joinToString(",") { it.name }
+
+        /**
+         * The placeholders when inserting all columns, like &#36;1, &#36;2, ...
+         * @since 3.0
+         */
+        @JvmField
+        val allColumnPlaceholders = allColumns.joinToString(",") { "\$${(it.i + 1)}" }
+
+        /**
+         * The array type names for the values of all columns, for example `int8[]` for a column being [Int64].
+         * @since 3.0
+         */
+        @JvmField
+        val allColumnTypeNames = Array(allColumns.size) { allColumns[it].type.text+"[]" }
+    }
+
     /**
      * The transaction to operate upon.
      * @since 3.0
@@ -219,60 +245,60 @@ internal open class PgTupleWriteBase protected constructor(
     val attachment = arrayOfNulls<ByteArray>(writes.size)
 
     /**
+     * The version in which to modify the feature, only used for atomic operations.
+     * @since 3.0
+     */
+    val version = arrayOfNulls<Int64>(writes.size)
+
+    /**
      * Set values at the given index.
      * @param i the index to set.
      * @param write the write operation from which to generate the columns.
      */
     protected fun set(i: Int, write: PgTupleWrite) {
         val tuple = write.tuple
-        val meta = tuple.meta
-        txn_next[i] = meta.txnNext
-        updated_at[i] = meta.updatedAt
-        created_at[i] = meta.createdAt
-        author_ts[i] = meta.authorTs
-        cv0[i] = meta.cv0
-        cv1[i] = meta.cv1
-        cv2[i] = meta.cv2
-        cv3[i] = meta.cv3
-        hash[i] = meta.hash
-        here_tile[i] = meta.hereTile
-        flags[i] = meta.flags
-        cc[i] = meta.changeCount
-        tn[i] = meta.tupleNumber.toByteArray(TupleNumberVariant.B160)
-        prev_tn[i] = meta.prevTupleNumber?.toByteArray(TupleNumberVariant.B96)
-        base_tn[i] = meta.baseTupleNumber?.toByteArray(TupleNumberVariant.B96)
-        id[i] = meta.id
-        app_id[i] = meta.appId
-        author[i] = meta.author
-        origin[i] = meta.origin
-        target[i] = meta.target
-        ft[i] = meta.ft
-        cs0[i] = meta.cs0
-        cs1[i] = meta.cs1
-        cs2[i] = meta.cs2
-        cs3[i] = meta.cs3
-        tags[i] = tuple.tags
-        ref_point[i] = tuple.referencePoint
-        feature[i] = tuple.feature
-        geo[i] = tuple.geo
-        attachment[i] = tuple.attachment
+        val meta = tuple?.meta
+        txn_next[i] = null
+        if (meta != null) {
+            updated_at[i] = meta.updatedAt
+            created_at[i] = meta.createdAt
+            author_ts[i] = meta.authorTs
+            cv0[i] = meta.cv0
+            cv1[i] = meta.cv1
+            cv2[i] = meta.cv2
+            cv3[i] = meta.cv3
+            hash[i] = meta.hash
+            here_tile[i] = meta.hereTile
+            flags[i] = meta.flags
+            cc[i] = meta.changeCount
+            tn[i] = meta.tupleNumber.toByteArray(TupleNumberVariant.B160)
+            prev_tn[i] = meta.prevTupleNumber?.toByteArray(TupleNumberVariant.B96)
+            base_tn[i] = meta.baseTupleNumber?.toByteArray(TupleNumberVariant.B96)
+            id[i] = meta.id
+            app_id[i] = meta.appId
+            author[i] = meta.author
+            origin[i] = meta.origin
+            target[i] = meta.target
+            ft[i] = meta.ft
+            cs0[i] = meta.cs0
+            cs1[i] = meta.cs1
+            cs2[i] = meta.cs2
+            cs3[i] = meta.cs3
+            tags[i] = tuple.tags
+            ref_point[i] = tuple.referencePoint
+            feature[i] = tuple.feature
+            geo[i] = tuple.geo
+            attachment[i] = tuple.attachment
+        } else {
+            check(write.op == WriteOp.DELETE || write.op == WriteOp.PURGE)
+            id[i] = write.original.id
+            app_id[i] = session.options.appId
+            author[i] = session.options.author
+        }
+        version[i] = write.version?.txn
     }
 
     init {
         for (i in writes.indices) set(i, writes[i])
     }
-
-    /**
-     * Create a single array that contains all values stored in the [Tuple] that should be modified.
-     * @since 3.0
-     */
-    fun toDataArray() : Array<Any?> = arrayOf(
-        txn_next, updated_at, created_at, author_ts,
-        cv0, cv1, cv2, cv3,
-        hash, here_tile, flags, cc,
-        tn, prev_tn, base_tn,
-        id, app_id, author, origin, target, ft,
-        cs0, cs1, cs2, cs3,
-        tags, ref_point, geo, feature, attachment
-    )
 }

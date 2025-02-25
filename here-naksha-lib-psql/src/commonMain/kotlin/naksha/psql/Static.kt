@@ -50,7 +50,7 @@ internal const val PG_YEAR = "${PG_S}y"
 /**
  * The prefix used for all internal tables.
  */
-internal const val PG_INTERNAL_PREFIX = Naksha.ADMIN_PREFIX
+internal const val PG_INTERNAL_PREFIX = Naksha.INTERNAL_PREFIX
 
 internal const val NAKSHA_TXN_SEQ = "naksha_txn_seq"
 //internal const val NAKSHA_MAP_SEQ = "naksha_map_seq"

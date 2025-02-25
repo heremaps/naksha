@@ -220,7 +220,9 @@ open class PgSession(
                     val writer = PgTupleWriter(this)
                     return writer.execute(request.writes)
                 } catch (t: Throwable) {
-                    return ErrorResponse(PgExceptionMapper.map(t))
+                    val nakshaException = PgExceptionMapper.map(t)
+                    nakshaException.error.print()
+                    return ErrorResponse(nakshaException.error)
                 }
             }
 

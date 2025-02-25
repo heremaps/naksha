@@ -19,7 +19,7 @@ class UpdateCollection(
             NakshaError.ILLEGAL_ARGUMENT,
             "UPDATE without collection as feature"
         )
-        val collectionId = write.featureId ?: throw NakshaException(ILLEGAL_ARGUMENT, "Collection has no id")
+        val collectionId = write.id ?: throw NakshaException(ILLEGAL_ARGUMENT, "Collection has no id")
         val collection = session.storage.adminMap.getPgCollectionById(session.useConnection(), map, collectionId) ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection $collectionId not found")
         val tuple = session.useTx().updated(map.nakshaMap, collection.nakshaCollection, feature)
 

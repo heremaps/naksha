@@ -16,7 +16,7 @@ class DropCollection(private val session: PgSession) {
                 "Expected $COLLECTIONS_COL collectionId when dropping collections"
             )
         }
-        val collectionId = write.featureId ?: throw NakshaException(
+        val collectionId = write.id ?: throw NakshaException(
             NakshaError.ILLEGAL_ARGUMENT,
             "DROP without collectionId (expected in write's 'featureId')"
         )

@@ -56,7 +56,7 @@ class PsqlAdminMap internal constructor(
     }
 
     override fun listPgMaps(conn: PgConnection): PgMapList = PgMapList().withAll(
-        mapCache.getAll().map { it.head.get() }.filterNotNull()
+        mapCache.getAll().mapNotNull { it.head.get() }
     )
 
     override fun getPgCollectionById(conn: PgConnection, map: PgMap, id: String): PgCollection? {

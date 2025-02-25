@@ -221,7 +221,7 @@ class PgWriter(
                                 ?: //TODO rollback?
                                 return ErrorResponse(
                                     COLLECTION_NOT_FOUND,
-                                    write.featureId ?: "Unknown null collection requested to be updated"
+                                    write.id
                                 )
                             updatePrevTupleCache(updatedTuple)
                             cachedTupleNumber(write, updatedTuple, tuples)

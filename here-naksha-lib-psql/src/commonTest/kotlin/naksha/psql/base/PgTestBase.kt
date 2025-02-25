@@ -12,19 +12,17 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaMap
 import naksha.model.request.*
-import naksha.psql.PgExceptionMapper
 import naksha.psql.PgStorage
 import kotlin.reflect.KClass
 import kotlin.test.BeforeTest
 import kotlin.test.assertIs
 
 /**
- * Base class for all tests using postgres as storage
- * It provides:
+ * Base class for all tests using postgres as storage. It provides:
  * - safe DB initialization (DB will be spawned once for all tests, not for each!)
- * - safe map initialization (the default map is not null, it will be created once for test class)
- * - safe collection initialization (if [collection] is not null, it will be created once for test class)
- * - helper function for writing and reading to reduce boilerplate
+ * - safe map initialization (drop, then create map before any test run, only ones)
+ * - safe collection initialization (if [collection] is not null, it will be dropped, then created once for the test class)
+ * - helper functions for writing and reading to reduce boilerplate
  */
 abstract class PgTestBase(private var testCollection: NakshaCollection? = null) {
 
@@ -48,6 +46,7 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
                 if (testMap.get() == null) {
                     val request = WriteRequest()
                     val map = NakshaMap(env.mapId, env.storage.id)
+                    request.writes += Write().deleteMap(map, false)
                     request.writes += Write().createMap(map)
                     storage.newWriteSession().use { session ->
                         val response = session.execute(request)

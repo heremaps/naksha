@@ -22,8 +22,8 @@ class InsertFeature(
             NakshaError.ILLEGAL_ARGUMENT,
             "CREATE without feature"
         )
-        require(feature.id == write.featureId) {
-            "Feature id in payload (${feature.id}) and write request (${write.featureId}) are different"
+        require(feature.id == write.id) {
+            "Feature id in payload (${feature.id}) and write request (${write.id}) are different"
         }
         val featureNumber = featureNumber(hashId(feature.id))
         val tupleNumber = newFeatureTupleNumber(collection, featureNumber, session)

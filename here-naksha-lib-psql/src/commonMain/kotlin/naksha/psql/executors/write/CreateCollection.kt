@@ -20,7 +20,7 @@ class CreateCollection(
             NakshaError.ILLEGAL_ARGUMENT,
             "CREATE without feature"
         )
-        val collectionId = write.featureId ?: PlatformUtil.randomString()
+        val collectionId = write.id ?: PlatformUtil.randomString()
         val tupleNumber = TupleNumber(map.storage.number, map.number, collection.number, write.feature!!.featureNumber, session.useTx().version, session.useTx().uid.addAndGet(1))
         val metadata = Metadata.forOperation(session, collection, tupleNumber, Operation.CREATED)
         val dictionary = session.storage.getEncodingDictionary(collection, null)

@@ -28,7 +28,7 @@ class UpdateFeature(
             NakshaError.ILLEGAL_ARGUMENT,
             "UPDATE without feature"
         )
-        if (feature.id != write.featureId) throw NakshaException(NakshaError.ILLEGAL_ARGUMENT,"Feature id in payload (${feature.id}) and write request (${write.featureId}) are different")
+        if (feature.id != write.id) throw NakshaException(NakshaError.ILLEGAL_ARGUMENT,"Feature id in payload (${feature.id}) and write request (${write.id}) are different")
         val previousMetadata = existingMetadataProvider.get(collection.head.name, write.id!!)
             ?: throw NakshaException(NakshaError.FEATURE_NOT_FOUND, "Trying update feature that not exists in head: ${write.id}")
         if (feature.id != previousMetadata.id) {

@@ -225,7 +225,7 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * The binary [HERE tile-key][naksha.geo.HereTile.intKey] of the [reference-point][naksha.model.Tuple.referencePoint] of the [tuple][naksha.model.Tuple] (state). This is calculated using the static [Metadata.geoGrid][naksha.model.Metadata.calculateHereTile] method.
+         * The binary [HERE tile-key][naksha.geo.HereTile.intKey] of the [reference-point][naksha.model.Tuple.referencePoint] of the [tuple][naksha.model.Tuple] (state). This is calculated using the static [Metadata.calculateHereTile][naksha.model.Metadata.calculateHereTile] method.
          * @since 3.0
          */
         @JvmField
