@@ -48,8 +48,9 @@ inline operator fun Double.compareTo(other: Int64): Int {
     return if (diff == 0.0) 0 else if (diff <= 0.0) -1 else 1
 }
 
-inline fun Double.toInt64RawBits(value: Double): Int64 = Platform.toInt64RawBits(value)
-inline fun Double.toLongRawBits(value: Double): Long = Platform.toInt64RawBits(value).toLong()
+inline fun Double.toInt64RawBits(): Int64 = Platform.toInt64RawBits(this)
+inline fun Double.toLongRawBits(): Long = Platform.toInt64RawBits(this).toLong()
+inline fun Double.toInt64(): Int64 = Platform.toInt64(this)
 inline fun Long.toInt64(): Int64 = Platform.longToInt64(this)
 inline fun Int.toInt64(): Int64 = Platform.toInt64(this)
 

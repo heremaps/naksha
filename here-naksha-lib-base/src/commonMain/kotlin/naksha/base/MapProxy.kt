@@ -42,7 +42,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
         val data = platformObject()
         val raw = map_get(data, key)
         val value = box(raw, Platform.klassOf(alternative))
-        return if (value == null) alternative else value
+        return value ?: alternative
     }
 
     /**
