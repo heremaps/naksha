@@ -51,10 +51,10 @@ import kotlin.jvm.JvmStatic
 class Naksha private constructor() {
     companion object NakshaCompanion {
         /**
-         * The prefix for administrative collections.
+         * The prefix for internal identifiers.
          * @since 3.0
          */
-        const val ADMIN_PREFIX = "naksha~"
+        const val INTERNAL_PREFIX = "naksha~"
 
         /**
          * The identifier of the administration map _(`naksha~admin`)_.
@@ -220,7 +220,7 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun isInternalId(id: String?): Boolean = id != null && id.startsWith(ADMIN_PREFIX)
+        fun isInternalId(id: String?): Boolean = id != null && id.startsWith(INTERNAL_PREFIX)
 
         /**
          * Generates an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the given identifier, which is used to extract many values from it.
@@ -230,7 +230,7 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun hashId(id: String): Binary {
-            val hash = Platform.md5(id)
+            val hash = md5(id)
             return Binary(Platform.newDataView(hash))
         }
 

@@ -26,7 +26,7 @@ data class Guid(
      * @since 3.0.0
      */
     @JvmField
-    val featureId: String,
+    val id: String,
 
     /**
      * The tuple-number.
@@ -51,8 +51,8 @@ data class Guid(
      */
     override fun toString(): String {
         if (!this::_string.isInitialized) {
-             _string = if (tupleNumber != TupleNumber.HEAD) "urn:here:naksha:guid:$featureId:$tupleNumber"
-                                                            else "urn:here:naksha:guid:$featureId"
+             _string = if (tupleNumber != TupleNumber.HEAD) "urn:here:naksha:guid:$id:$tupleNumber"
+                                                            else "urn:here:naksha:guid:$id"
         }
         return _string
     }

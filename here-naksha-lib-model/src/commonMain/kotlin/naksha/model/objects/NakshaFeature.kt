@@ -71,7 +71,6 @@ open class NakshaFeature() : AnyObject() {
         private val TITLE_NULL = NullableProperty<NakshaFeature, String>(String::class)
         private val DESCRIPTION_NULL = NullableProperty<NakshaFeature, String>(String::class)
         private val ATTACHMENT_NULL = NullableProperty<NakshaFeature, ByteArray>(ByteArray::class)
-        private val STRING_NULL = NullableProperty<NakshaFeature, String>(String::class)
     }
 
     /**

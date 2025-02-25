@@ -1,11 +1,10 @@
-@file:Suppress("OPT_IN_USAGE")
+@file:Suppress("OPT_IN_USAGE", "unused")
 
 package naksha.model.request
 
 import naksha.base.*
-import naksha.model.Naksha
+import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
-import naksha.model.NakshaContext
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.Naksha.NakshaCompanion.MAPS_COL
 import naksha.model.Naksha.NakshaCompanion.featureNumber
@@ -13,7 +12,6 @@ import naksha.model.Naksha.NakshaCompanion.hashId
 import naksha.model.Naksha.NakshaCompanion.isInternalId
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaException
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaDictionary
@@ -26,6 +24,8 @@ import kotlin.jvm.JvmStatic
 
 /**
  * A write instruction for the storage.
+ *
+ * Modifications of features require to know the identifier of the feature, the collection-id of the collection in which the feature is stored, and the map-id of the map in which the collection is located.
  * @since 3.0
  */
 @JsExport
@@ -88,7 +88,7 @@ open class Write : AnyObject() {
                     val b_partition = partitionNumber(b.featureNumber)
                     val part_diff = a_partition.compareTo(b_partition)
                     if (part_diff == 0) {
-                        val id_diff = a.featureId.compareTo(b.featureId)
+                        val id_diff = a.id.compareTo(b.id)
                         return if (id_diff == 0) a.op.compareTo(b.op) else id_diff
                     } else part_diff
                 } else col_diff
@@ -99,8 +99,6 @@ open class Write : AnyObject() {
         private val MAP_ID = NotNullProperty<Write, String>(String::class) { _, _ -> NakshaContext.mapId() }
         private val COLLECTION_ID = NotNullProperty<Write, String>(String::class)
         private val FEATURE_NULL = NullableProperty<Write, NakshaFeature>(NakshaFeature::class)
-        private val INT64_NULL = NullableProperty<Write, Int64>(Int64::class)
-        private val BYTE_ARRAY_NULL = NullableProperty<Write, ByteArray>(ByteArray::class)
         private val BOOLEAN_FALSE = NotNullProperty<Write, Boolean>(Boolean::class) { _, _ -> false }
     }
 
@@ -155,56 +153,97 @@ open class Write : AnyObject() {
         return this
     }
 
+    private var versionRaw: Int64? = null
+    private var versionValue: Version? = null
+
     /**
-     * The expected version that should be updated.
+     * The expected version that should be modified.
      *
-     * - If _null_, then the operation is not atomic.
-     * - If not _null_, the operation is atomic, and expects that the existing HEAD [Tuple][naksha.model.Tuple] is in the given [version][naksha.model.Version].
+     * If not `null` and [atomic] is `true`, then the operation is atomic and expects that the existing _HEAD_ state is in the given [version][naksha.model.Version].
+     *
+     * If not explicitly set, defaults to `feature.properties.xyz.guid.tupleNumber.version`.
      * @since 3.0
+     * @see [atomic]
      */
-    var version by INT64_NULL
+    var version: Version?
+        get() {
+            var raw = getRaw("version")
+            if (raw is Double) {
+                raw = raw.toInt64()
+                setRaw("version", raw)
+            }
+            if (raw is Int64) {
+                if (raw === versionRaw) return versionValue
+                versionRaw = raw
+                versionValue = Version(raw)
+                return versionValue
+            }
+            return feature?.properties?.xyz?.guid?.tupleNumber?.version
+        }
+        set(value) {
+            if (value == null) removeRaw("version") else {
+                versionValue = value
+                versionRaw = value.txn
+                setRaw("version", versionRaw)
+            }
+        }
 
     /**
      * @see [version]
      */
-    fun withVersion(value: Int64): Write {
+    fun withVersion(value: Version): Write {
         version = value
         return this
     }
 
     /**
-     * Tests if this write should be performed atomic.
-     * @return _true_ if this write should be performed atomic.
+     * If this write should be performed atomic.
+     * @return `true` if this write should be performed atomic; `false` otherwise _(default)_.
      * @since 3.0
+     * @see [validate]
+     * @see [version]
      */
-    fun isAtomic(): Boolean = version != null
+    var atomic: Boolean
+        get() {
+            val raw = getRaw("atomic")
+            return if (raw is Boolean) raw else false
+        }
+        set(value) {
+            if (value) setRaw("atomic", true) else removeRaw("atomic")
+        }
+
+    /**
+     * @see [atomic]
+     */
+    fun withAtomic(value: Boolean): Write {
+        this.atomic = value
+        return this
+    }
 
     /**
      * The identifier of the feature to modify.
+     *
+     * If not explicitly set, defaults to `feature.id`. If no feature identifier is available, throws an [ILLEGAL_STATE] exception.
+     *
+     * If the `id` differs from `feature.properties.xyz.guid.id`, then the feature is [forked][Operation.FORKED], this requires that the storage sets the [origin][Metadata.origin]. This is only valid for [CREATE][WriteOp.CREATE].
      * @since 3.0
      */
-    var id: String?
+    @Suppress("SENSELESS_COMPARISON")
+    var id: String
         get() {
-            val feature = this.feature
-            if (feature != null) return feature.id
             val raw = getRaw("id")
-            return if (raw is String) raw else null
+            if (raw is String) return raw
+            return feature?.id ?: throw illegalState("Missing feature identifier")
         }
         set(value) {
-            val feature = this.feature
-            if (feature == null || feature.id != value) {
-                setRaw("id", value)
-                removeRaw("feature")
-            } else {
-                removeRaw("id")
-            }
+            if (value == null) removeRaw("id") else setRaw("id", value)
         }
 
     /**
      * @see [id]
      */
     fun withId(value: String?): Write {
-        id = value
+        if (value == null) removeRaw("id") else setRaw("id", value)
         return this
     }
 
@@ -222,43 +261,37 @@ open class Write : AnyObject() {
         return this
     }
 
-    /**
-     * Returns `feature.id` or `id` in that order.
-     * - Throws [ILLEGAL_STATE], if neither `feature.id` nor `id` are set.
-     * @since 3.0
-     */
-    val featureId: String
-        get() {
-            val f = feature
-            if (f != null) return f.id
-            return id ?: throw NakshaException(ILLEGAL_STATE, "Neither feature.id nor id are set in Write")
-        }
-
-    private var _featureNumberId: String? = null
-    private var _featureNumber: Int64? = null
+    private var featureNumberId: String? = null
+    private var featureNumberValue: Int64? = null
 
     /**
-     * Explicitly set the **feature-number**, if `null`, then the feature-number is automatically calculated from the [feature-id][featureId].
+     * The **feature-number** to operate upon.
      *
+     * If not explicitly set, reads `feature.properties.xyz.guid.tupleNumber.featureNumber`, if that is `null`, then it calculates the feature-number from the `id`. If all of these fail, it will throw an [ILLEGAL_STATE] exception.
+     *
+     * The feature-number is informal only, when processing the write-operation it is totally ignored.
      * @since 3.0
      */
+    @Suppress("SENSELESS_COMPARISON")
     var featureNumber: Int64
         get() {
             val raw = getRaw("featureNumber")
             if (raw is Int64) return raw
-            val id = featureId
+            val fn = feature?.properties?.xyz?.guid?.tupleNumber?.featureNumber
+            if (fn != null) return fn
+            val id = this.id
             // Calculating the feature-number is expensive, we need a MD5 hash, so cache the result.
-            val cachedId = _featureNumberId
-            val cachedNumber = _featureNumber
+            val cachedId = featureNumberId
+            val cachedNumber = featureNumberValue
             if (id === cachedId && cachedNumber != null) return cachedNumber
             val number = featureNumber(hashId(id))
-            _featureNumberId = id
-            _featureNumber = number
+            featureNumberId = id
+            featureNumberValue = number
             return number
         }
         set(value) {
             // Note: Technically, from Java/JavaScript we can have a setter being called with `null`.
-            withFeatureNumber(value)
+            if (value == null) removeRaw("featureNumber") else setRaw("featureNumber", value)
         }
 
     /**
@@ -287,9 +320,24 @@ open class Write : AnyObject() {
 
     /**
      * Arbitrary attachment to be stored.
+     *
+     * If not explicitly set _(so being undefined)_, returns `feature.attachment`.
+     *
+     * Setting the value explicitly to any value, even `null`, will force the attachment to be updated to that value. To keep the attachment in whatever state it is, the value should be `undefined`, which can be realized by calling [keepAttachment].
+     *
+     * The default state is `undefined`, so the attachment that exists in the storage is kept as it is _(unmodified)_.
      * @since 3.0
      */
-    var attachment by BYTE_ARRAY_NULL
+    var attachment: ByteArray?
+        get() {
+            if (containsKey("attachment")) {
+                val raw = getRaw("attachment")
+                return if(raw is ByteArray) raw else null
+            } else return feature?.attachment
+        }
+        set(value) {
+            setRaw("attachment", value)
+        }
 
     /**
      * @see [attachment]
@@ -298,6 +346,22 @@ open class Write : AnyObject() {
         attachment = value
         return this
     }
+
+    /**
+     * Ask the storage to keep the attachment in the state in which it currently is. This is the default behavior.
+     * @return this.
+     * @since 3.0
+     */
+    fun keepAttachment(): Write {
+        removeRaw("attachment")
+        return this
+    }
+
+    /**
+     * Tests if the attachment should stay in its current state.
+     * @return `true` if the attachment is unchanged; `false` if the attachment should be modified.
+     */
+    fun shouldKeepAttachment(): Boolean = !containsKey("attachment")
 
     /**
      * If enabled, a missing map is automatically created, when creating or modifying collections; defaults to `false`.
@@ -332,8 +396,6 @@ open class Write : AnyObject() {
         this.mapId = ADMIN_MAP
         this.collectionId = Naksha.DICTIONARIES_COL
         this.op = WriteOp.CREATE
-        this.id = dict.id
-        this.version = null
         this.feature = dict
         return this
     }
@@ -349,9 +411,8 @@ open class Write : AnyObject() {
         this.mapId = ADMIN_MAP
         this.collectionId = Naksha.DICTIONARIES_COL
         this.op = WriteOp.UPDATE
-        this.id = dict.id
-        this.version = if (atomic) dict.properties.xyz.version?.txn else null
         this.feature = dict
+        this.atomic = atomic
         return this
     }
 
@@ -365,8 +426,6 @@ open class Write : AnyObject() {
         this.mapId = ADMIN_MAP
         this.collectionId = Naksha.DICTIONARIES_COL
         this.op = WriteOp.UPSERT
-        this.id = dict.id
-        this.version = null
         this.feature = dict
         return this
     }
@@ -382,9 +441,8 @@ open class Write : AnyObject() {
         this.mapId = ADMIN_MAP
         this.collectionId = Naksha.DICTIONARIES_COL
         this.op = WriteOp.DELETE
-        this.id = dict.id
-        this.version = if (atomic) dict.properties.xyz.version?.txn else null
         this.feature = dict
+        this.atomic = atomic
         return this
     }
 
@@ -396,13 +454,13 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     @JvmOverloads
-    fun deleteDictionaryById(dictId: String, version: Int64? = null): Write {
+    fun deleteDictionaryById(dictId: String, version: Version? = null): Write {
         this.mapId = ADMIN_MAP
         this.collectionId = Naksha.DICTIONARIES_COL
         this.op = WriteOp.DELETE
         this.id = dictId
         this.version = version
-        this.feature = null
+        this.atomic = version != null
         return this
     }
 
@@ -416,8 +474,6 @@ open class Write : AnyObject() {
         this.mapId = ADMIN_MAP
         this.collectionId = MAPS_COL
         this.op = WriteOp.CREATE
-        this.id = map.id
-        this.version = null
         this.feature = map
         return this
     }
@@ -433,9 +489,8 @@ open class Write : AnyObject() {
         this.mapId = ADMIN_MAP
         this.collectionId = MAPS_COL
         this.op = WriteOp.UPDATE
-        this.id = map.id
-        this.version = if (atomic) map.properties.xyz.version?.txn else null
         this.feature = map
+        this.atomic = atomic
         return this
     }
 
@@ -450,9 +505,8 @@ open class Write : AnyObject() {
         this.mapId = ADMIN_MAP
         this.collectionId = MAPS_COL
         this.op = WriteOp.UPSERT
-        this.id = map.id
-        this.version = if (atomic) map.properties.xyz.version?.txn else null
         this.feature = map
+        this.atomic = atomic
         return this
     }
 
@@ -467,9 +521,8 @@ open class Write : AnyObject() {
         this.mapId = ADMIN_MAP
         this.collectionId = MAPS_COL
         this.op = WriteOp.DELETE
-        this.id = map.id
-        this.version = if (atomic) map.properties.xyz.version?.txn else null
         this.feature = map
+        this.atomic = atomic
         return this
     }
 
@@ -481,13 +534,13 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     @JvmOverloads
-    fun deleteMapById(mapId: String, version: Int64? = null): Write {
+    fun deleteMapById(mapId: String, version: Version? = null): Write {
         this.mapId = ADMIN_MAP
         this.collectionId = MAPS_COL
         this.op = WriteOp.DELETE
         this.id = mapId
         this.version = version
-        this.feature = null
+        this.atomic = version != null
         return this
     }
 
@@ -500,8 +553,6 @@ open class Write : AnyObject() {
         this.mapId = collection.mapId
         this.collectionId = COLLECTIONS_COL
         this.op = WriteOp.CREATE
-        this.id = collection.id
-        this.version = null
         this.feature = collection
         return this
     }
@@ -516,9 +567,8 @@ open class Write : AnyObject() {
         this.mapId = collection.mapId
         this.collectionId = COLLECTIONS_COL
         this.op = WriteOp.UPDATE
-        this.id = collection.id
-        this.version = if (atomic) collection.properties.xyz.version?.txn else null
         this.feature = collection
+        this.atomic = atomic
         return this
     }
 
@@ -531,8 +581,6 @@ open class Write : AnyObject() {
         this.mapId = collection.mapId
         this.collectionId = COLLECTIONS_COL
         this.op = WriteOp.UPSERT
-        this.id = collection.id
-        this.version = null
         this.feature = collection
         return this
     }
@@ -547,9 +595,8 @@ open class Write : AnyObject() {
         this.mapId = collection.mapId
         this.collectionId = COLLECTIONS_COL
         this.op = WriteOp.DELETE
-        this.id = collection.id
-        this.version = if (atomic) collection.properties.xyz.version?.txn else null
         this.feature = collection
+        this.atomic = atomic
         return this
     }
 
@@ -561,13 +608,13 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     @JvmOverloads
-    fun deleteCollectionById(mapId: String = NakshaContext.mapId(), collectionId: String, version: Int64? = null): Write {
+    fun deleteCollectionById(mapId: String = NakshaContext.mapId(), collectionId: String, version: Version? = null): Write {
         this.mapId = mapId
         this.collectionId = COLLECTIONS_COL
         this.op = WriteOp.DELETE
         this.id = collectionId
         this.version = version
-        this.feature = null
+        this.atomic = version != null
         return this
     }
 
@@ -582,8 +629,6 @@ open class Write : AnyObject() {
         this.mapId = collection.mapId
         this.collectionId = collection.id
         this.op = WriteOp.CREATE
-        this.id = feature.id
-        this.version = null
         this.feature = feature
         return this
     }
@@ -602,8 +647,6 @@ open class Write : AnyObject() {
         this.mapId = mapId
         this.collectionId = collectionId
         this.op = WriteOp.CREATE
-        this.id = feature.id
-        this.version = null
         this.feature = feature
         return this
     }
@@ -619,9 +662,8 @@ open class Write : AnyObject() {
         this.mapId = collection.mapId
         this.collectionId = collection.id
         this.op = WriteOp.UPDATE
-        this.id = feature.id
-        this.version = if (atomic) feature.properties.xyz.version?.txn else null
         this.feature = feature
+        this.atomic = atomic
         return this
     }
 
@@ -639,9 +681,8 @@ open class Write : AnyObject() {
         this.mapId = mapId
         this.collectionId = collectionId
         this.op = WriteOp.UPDATE
-        this.id = feature.id
-        this.version = if (atomic) feature.properties.xyz.version?.txn else null
         this.feature = feature
+        this.atomic = atomic
         return this
     }
 
@@ -655,8 +696,6 @@ open class Write : AnyObject() {
         this.mapId = collection.mapId
         this.collectionId = collection.id
         this.op = WriteOp.UPSERT
-        this.id = feature.id
-        this.version = null
         this.feature = feature
         return this
     }
@@ -674,8 +713,6 @@ open class Write : AnyObject() {
         this.mapId = mapId
         this.collectionId = collectionId
         this.op = WriteOp.UPSERT
-        this.id = feature.id
-        this.version = null
         this.feature = feature
         return this
     }
@@ -691,9 +728,8 @@ open class Write : AnyObject() {
         this.mapId = collection.mapId
         this.collectionId = collection.id
         this.op = WriteOp.DELETE
-        this.id = feature.id
-        this.version = if (atomic) feature.properties.xyz.version?.txn else null
         this.feature = feature
+        this.atomic = atomic
         return this
     }
 
@@ -706,13 +742,13 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     @JvmOverloads
-    fun deleteFeatureById(collection: NakshaCollection, id: String, version: Int64? = null): Write {
+    fun deleteFeatureById(collection: NakshaCollection, id: String, version: Version? = null): Write {
         this.mapId = collection.mapId
         this.collectionId = collection.id
         this.op = WriteOp.DELETE
         this.id = id
         this.version = version
-        this.feature = null
+        this.atomic = version != null
         return this
     }
 
@@ -727,13 +763,13 @@ open class Write : AnyObject() {
      */
     @JsName("deleteFeatureByIds")
     @JvmOverloads
-    fun deleteFeatureById(mapId: String = NakshaContext.mapId(), collectionId: String, id: String, version: Int64? = null): Write {
+    fun deleteFeatureById(mapId: String = NakshaContext.mapId(), collectionId: String, id: String, version: Version? = null): Write {
         this.mapId = mapId
         this.collectionId = collectionId
         this.op = WriteOp.DELETE
         this.id = id
         this.version = version
-        this.feature = null
+        this.atomic = version != null
         return this
     }
 
@@ -748,9 +784,8 @@ open class Write : AnyObject() {
         this.mapId = collection.mapId
         this.collectionId = collection.id
         this.op = WriteOp.PURGE
-        this.id = feature.id
-        this.version = if (atomic) feature.properties.xyz.version?.txn else null
         this.feature = feature
+        this.atomic = atomic
         return this
     }
 
@@ -764,13 +799,13 @@ open class Write : AnyObject() {
      */
     @JsName("purgeFeatureById")
     @JvmOverloads
-    fun purgeFeatureById(collection: NakshaCollection, id: String, version: Int64? = null): Write {
+    fun purgeFeatureById(collection: NakshaCollection, id: String, version: Version? = null): Write {
         this.mapId = collection.mapId
         this.collectionId = collection.id
         this.op = WriteOp.PURGE
         this.id = id
         this.version = version
-        this.feature = null
+        this.atomic = version != null
         return this
     }
 
@@ -785,13 +820,13 @@ open class Write : AnyObject() {
      */
     @JsName("purgeFeatureByIds")
     @JvmOverloads
-    fun purgeFeatureById(mapId: String = NakshaContext.mapId(), collectionId: String, id: String, version: Int64? = null): Write {
+    fun purgeFeatureById(mapId: String = NakshaContext.mapId(), collectionId: String, id: String, version: Version? = null): Write {
         this.mapId = mapId
         this.collectionId = collectionId
         this.op = WriteOp.PURGE
         this.id = id
         this.version = version
-        this.feature = null
+        this.atomic = version != null
         return this
     }
 
@@ -822,17 +857,23 @@ open class Write : AnyObject() {
     /**
      * Validate that this write is valid, invoked by [session's][naksha.model.ISession] before executing the writes.
      *
+     * If [atomic] is _true_, and [version] is not _null_, then the _HEAD_ state of the modified feature must be in this version. This is invalid for [CREATE][WriteOp.CREATE].
+     *
+     * If the [op] is [UPSERT][WriteOp.UPSERT], the values of [atomic] and [version] are ignored.
+     *
      * - Throws [ILLEGAL_STATE], if the write is invalid.
      * @since 3.0
+     * @see [atomic]
+     * @see [WriteOp]
      */
     fun validate(): Write {
         if (mapId == ADMIN_MAP || collectionId == COLLECTIONS_COL) {
-            if (isInternalId(featureId)) {
-                throw NakshaException(ILLEGAL_STATE, "Modification of internal features forbidden: '$featureId'")
+            if (isInternalId(id)) {
+                throw NakshaException(ILLEGAL_STATE, "Modification of internal features forbidden: '$id'")
             }
         }
-        if (!Naksha.isValidId(featureId)) {
-            throw NakshaException(ILLEGAL_STATE, "Invalid feature-id: '$featureId'")
+        if (!Naksha.isValidId(id)) {
+            throw NakshaException(ILLEGAL_STATE, "Invalid feature-id: '$id'")
         }
         return this
     }
