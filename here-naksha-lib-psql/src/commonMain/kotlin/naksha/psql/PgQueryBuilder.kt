@@ -125,7 +125,7 @@ SELECT gzip( -- compress the binary
  int4send(24 + sum(1)::int*12)|| -- byte-size
  int8send(${pgStorage.number})|| -- shared storage-number
  int4send(${pgMap.number})|| -- shared map-number
- int4send(${thePgCollection.number})|| -- shared map-number
+ int4send(${thePgCollection.number})|| -- shared collection-number
  bytea_agg(tn) -- aggregate all tuple-number
 ) AS rs FROM result;"""
         return PgQuery(
