@@ -108,50 +108,50 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
 
             // If this operation modifies a map.
             if (write.isMapModification) {
-                val op = write.original.op
-                val feature = write.original.feature ?: throw illegalArg("The feature #${write.i} is null")
+                val op = write.op
+                val feature = write.feature ?: throw illegalArg("The feature #${write.i} is null")
                 val nakshaMap = if (feature is NakshaMap) feature else feature.proxy(NakshaMap::class)
                 nakshaMap.storageId = storage.id
 
-                var targetMap = storage.adminMap.getPgMapById(conn, featureId)
+                var pgMap = storage.adminMap.getPgMapById(conn, featureId)
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT) {
-                    if (targetMap == null) {
-                        targetMap = PgMap(storage, nakshaMap)
-                        createPgMap(targetMap)
+                    if (pgMap == null) {
+                        pgMap = PgMap(storage, nakshaMap)
+                        createPgMap(pgMap)
                     } else if (op == WriteOp.CREATE) {
                         throw mapExists("The write #${write.i} failed, because the map '$featureId' does exist already")
                     }
                 } else if (op == WriteOp.DELETE || op == WriteOp.PURGE) {
-                    if (targetMap != null) {
-                        deletePgMap(targetMap)
+                    if (pgMap != null) {
+                        deletePgMap(pgMap)
                     }
                 } else {
                     throw illegalState("The write #${write.i} refers to an unsupported operation: '$op'")
                 }
-                write.pgMap = targetMap
+                write.pgMap = pgMap
                 write.nakshaMap = nakshaMap
             }
 
             // If this operation modifies a collection.
-            if (write.original.isCollectionModification()) {
-                val op = write.original.op
-                val feature = write.original.feature ?: throw illegalArg("The feature #${write.i} is null")
+            if (write.isCollectionModification) {
+                val op = write.op
+                val feature = write.feature ?: throw illegalArg("The feature #${write.i} is null")
                 val nakshaCollection = if (feature is NakshaCollection) feature else feature.proxy(NakshaCollection::class)
 
-                var targetCollection = map.getPgCollectionById(conn, featureId)
+                var pgCollection = map.getPgCollectionById(conn, featureId)
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT) {
-                    if (targetCollection == null) {
-                        targetCollection = PgCollection(map, nakshaCollection)
-                        createPgCollection(targetCollection)
+                    if (pgCollection == null) {
+                        pgCollection = PgCollection(map, nakshaCollection)
+                        createPgCollection(pgCollection)
                     } else if (op == WriteOp.CREATE) {
                         throw mapExists("The write #${write.i} failed, because the collection '$featureId' does exist already in map $mapId")
                     }
                 } else if (op == WriteOp.DELETE || op == WriteOp.PURGE) {
-                    if (targetCollection != null) deletePgCollection(targetCollection)
+                    if (pgCollection != null) deletePgCollection(pgCollection)
                 } else {
                     throw illegalState("The write #${write.i} refers to an unsupported operation: '$op'")
                 }
-                write.pgCollection = targetCollection
+                write.pgCollection = pgCollection
                 write.nakshaCollection = nakshaCollection
             }
         }
@@ -213,7 +213,6 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
         }
 
         // PURGE
-
         // UPSERT
         // INSERT
         for (mapEntry in inserts) {
@@ -251,7 +250,7 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
      * @since 3.0
      */
     protected open fun createPgCollection(collection: PgCollection) {
-        storage.adminMap.createPgCollection(conn, collection)
+        collection.map.createPgCollection(conn, collection)
     }
 
     /**
@@ -260,7 +259,7 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
      * @since 3.0
      */
     protected open fun deletePgCollection(collection: PgCollection) {
-        storage.adminMap.deletePgCollection(conn, collection)
+        collection.map.deletePgCollection(conn, collection)
     }
 }
 

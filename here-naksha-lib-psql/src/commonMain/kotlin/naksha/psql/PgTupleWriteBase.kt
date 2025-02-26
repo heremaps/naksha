@@ -60,7 +60,9 @@ internal abstract class PgTupleWriteBase protected constructor(
      * @since 3.0
      */
     val rows = PgColumnRows()
-        .withStorageNumber(session.storage.number)
+        .withStorageNumber(storageNumber)
+        .withMapNumber(mapNumber)
+        .withCollectionNumber(collectionNumber)
         .withMinSize(writes.size)
 
     fun execute(conn: PgConnection) {

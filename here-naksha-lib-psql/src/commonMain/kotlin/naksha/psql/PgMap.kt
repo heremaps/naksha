@@ -120,11 +120,12 @@ open class PgMap internal constructor(
      * @since 3.0
      */
     fun setSearchPath(conn: PgConnection) {
-        if (this is PgAdminMap) {
-            conn.execute("SET search_path = \"naksha~admin\", topology, hint_plan, public").close()
+        val SQL = if (this is PgAdminMap) {
+            "SET search_path = \"naksha~admin\", topology, hint_plan, public"
         } else {
-            conn.execute("SET search_path = ${quotedId}, \"naksha~admin\", topology, hint_plan, public").close()
+            "SET search_path = ${quotedId}, \"naksha~admin\", topology, hint_plan, public"
         }
+        conn.execute(SQL).close()
     }
 
     /**

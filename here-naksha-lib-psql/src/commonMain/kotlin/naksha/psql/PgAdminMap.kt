@@ -481,7 +481,7 @@ SELECT basics.*, procs.* FROM basics, procs;
     fun createPgMap(conn: PgConnection, map: PgMap) {
         if (Naksha.isInternalId(map.id)) throw NakshaException(ILLEGAL_ARGUMENT, "Can't create internal maps: ${map.id}")
         conn.execute("CREATE SCHEMA IF NOT EXISTS ${map.quotedId}").close()
-        createPgCollection(conn, map.collections) // 0
+        map.createPgCollection(conn, map.collections) // 0
         invalidateMap(map)
     }
 

@@ -29,7 +29,6 @@ SELECT * FROM new_row"""
     }
 
     override fun doExecute(conn: PgConnection) {
-        collection.map.setSearchPath(conn)
         val plan = plan(conn, collection)
         val array = rows.values()
         plan.execute(array).close()
