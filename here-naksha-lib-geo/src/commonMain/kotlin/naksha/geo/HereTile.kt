@@ -16,7 +16,7 @@ import kotlin.math.min
  *
  * @property intKey The 4-byte integer encoding the HERE Tile ID. The left most *set* bit encodes the level. The rest of the bits (to the right) encode the quad key. The most significant bit is always 0.
  * @constructor Create a HERE Tile from its integer form.
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 data class HereTile(val intKey: Int) {
@@ -29,7 +29,7 @@ data class HereTile(val intKey: Int) {
      * Create a HERE Tile from a quad key.
      *
      * @param quadKey The quad key.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JsName("fromQuadKey")
     constructor(quadKey: String) : this(convertQuadKeyToIntKey(quadKey))
@@ -40,7 +40,7 @@ data class HereTile(val intKey: Int) {
      * @param latitude the latitude.
      * @param longitude the longitude.
      * @param level the quad level, must be between 0 and 15.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JsName("fromLatLng")
     @JvmOverloads
@@ -139,7 +139,7 @@ data class HereTile(val intKey: Int) {
      * Get the quad level of this HERE Tile.
      *
      * @return The quad level.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun level(): Int {
         return (31 - intKey.countLeadingZeroBits()) / 2
@@ -149,7 +149,7 @@ data class HereTile(val intKey: Int) {
      * Get the quad key for this tile.
      *
      * @return The quad key.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun quadKey(): String {
         val level = level()
@@ -167,7 +167,7 @@ data class HereTile(val intKey: Int) {
      * For example, take the HERE Tile with [intKey]=91 ([quadKey]="123"). Its level 15 lower bound is [intKey]=1526726656 ([quadKey]="123000000000000"), and 1526726656 is ≤ the [intKey] of all of its level 15 descendants.
      *
      * @return The [HereTile] that is the lower bound.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun maxLevelLowerBound(): HereTile {
         val level = level()
@@ -180,7 +180,7 @@ data class HereTile(val intKey: Int) {
      * For example, take the HERE Tile with [intKey]=91 ([quadKey]="123"). Its level 15 lower bound is [intKey]=1543503871 ([quadKey]="123333333333333"), and 1543503871 is ≥ the [intKey] of all of its level 15 descendants.
      *
      * @return The [HereTile] that is the upper bound.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun maxLevelUpperBound(): HereTile {
         val level = level()
@@ -194,7 +194,7 @@ data class HereTile(val intKey: Int) {
      *
      * @param level The quad level, must be between 0 and 15.
      * @return The truncated [HereTile].
-     * @since 3.0.0
+     * @since 3.0
      */
     fun truncateTo(level: Int): HereTile {
         assertLevel(level)
