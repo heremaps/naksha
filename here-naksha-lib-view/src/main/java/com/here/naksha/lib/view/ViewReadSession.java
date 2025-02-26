@@ -30,7 +30,6 @@ import naksha.jbon.JbDictionary;
 import naksha.model.*;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaMap;
-import naksha.model.objects.NakshaTransaction;
 import naksha.model.request.*;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.IPropertyQuery;

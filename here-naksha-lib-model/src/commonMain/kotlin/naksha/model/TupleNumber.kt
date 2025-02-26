@@ -2,15 +2,24 @@
 
 package naksha.model
 
+import naksha.base.Binary
 import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B96
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B192
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B224
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B288
+import kotlin.contracts.InvocationKind
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -66,7 +75,36 @@ data class TupleNumber(
      */
     @JvmField val uid: Int,
 ) : Comparable<TupleNumber> {
-
+    /**
+     * Helper to create a new tuple-number based upon some values from an existing.
+     *
+     * @param tn the tuple-number from which to copy.
+     * @param uid if not `null`, overrides `tn.uid`
+     * @param version if not `null`, overrides `tn.version`
+     * @param featureNumber if not `null`, overrides `tn.featureNumber`
+     * @param collectionNumber if not `null`, overrides `tn.collectionNumber`
+     * @param mapNumber if not `null`, overrides `tn.mapNumber`
+     * @param storageNumber if not `null`, overrides `tn.storageNumber`
+     *
+     */
+    @JsName("of")
+    @JvmOverloads
+    constructor(
+        tn: TupleNumber,
+        uid: Int? = null,
+        version: Version? = null,
+        featureNumber: Int64? = null,
+        collectionNumber: Int? = null,
+        mapNumber: Int? = null,
+        storageNumber: Int64? = null,
+    ) : this(
+        storageNumber ?: tn.storageNumber,
+        mapNumber ?: tn.mapNumber,
+        collectionNumber ?: tn.collectionNumber,
+        featureNumber ?: tn.featureNumber,
+        version ?: tn.version,
+        uid ?: tn.uid
+    )
     /**
      * The transaction-number.
      * @since 3.0
@@ -179,7 +217,9 @@ data class TupleNumber(
     }
 
     /**
-     * Encode this [tuple-number][TupleNumber] into its binary representation.
+     * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront.
+     *
+     * This method is internally used to save space.
      *
      * @param variant the [TupleNumberVariant] to use for the encoding.
      * @return the binary encoded [tuple-number][TupleNumber].
@@ -236,9 +276,93 @@ data class TupleNumber(
          *
          * This happens for various reasons, for example when a [Tuple] is created in the client at runtime, and not yet persisted in any storage, therefore does not yet have a valid tuple-number.
          * @since 3.0
-         * @see [IWriteSession.newTupleNumber]
          */
         val HEAD = TupleNumber(Int64(0), 0, 0, Int64(0), Version.HEAD, 0)
+
+        /**
+         * Restore a [TupleNumber] from a binary encoding.
+         * @param bytes the binary to read.
+         * @param offset the index of the first byte to read.
+         * @param variant the variant to read.
+         * @param tn the [TupleNumber] from which to copy missing values.
+         */
+        @JsName("ofByteArray")
+        @JsStatic
+        @JvmStatic
+        fun fromByteArray(
+            bytes: ByteArray,
+            offset: Int,
+            variant: TupleNumberVariant,
+            tn: TupleNumber
+        ): TupleNumber = fromBinary(Binary(bytes, offset), variant, tn.storageNumber, tn.mapNumber, tn.collectionNumber, tn.featureNumber)
+
+        fun fromB288(bytes: ByteArray)
+                = fromByteArray(bytes, 0, B288)
+        fun fromB224(bytes: ByteArray, storageNumber: Int64)
+                = fromByteArray(bytes, 0, B224, storageNumber)
+        fun fromB192(bytes: ByteArray, storageNumber: Int64, mapNumber: Int)
+                = fromByteArray(bytes, 0, B192, storageNumber, mapNumber)
+        fun fromB160(bytes: ByteArray, storageNumber: Int64, mapNumber: Int, collectionNumber: Int)
+                = fromByteArray(bytes, 0, B160, storageNumber, mapNumber, collectionNumber)
+        fun fromB96(bytes: ByteArray, storageNumber: Int64, mapNumber: Int, collectionNumber: Int, featureNumber: Int64)
+                = fromByteArray(bytes, 0, B96, storageNumber, mapNumber, collectionNumber, featureNumber)
+
+        /**
+         * Restore a [TupleNumber] from a binary encoding.
+         * @param bytes the binary to read.
+         * @param offset the index of the first byte to read.
+         * @param variant the variant to read.
+         * @param storageNumber if the binary does not encode the storage-number _(anything other than [B288])_, so variant is [B96], [B160], [B192], or [B224].
+         * @param mapNumber if the binary does not encode the map-number, so variant is [B96], [B160], or [B192].
+         * @param collectionNumber if the binary does not encode the collection-number, so variant is [B96] or [B160].
+         * @param featureNumber if the binary does not encode the feature-number, so variant is [B96].
+         */
+        @JsStatic
+        @JvmStatic
+        @JvmOverloads
+        fun fromByteArray(
+            bytes: ByteArray,
+            offset: Int,
+            variant: TupleNumberVariant,
+            storageNumber: Int64? = null,
+            mapNumber: Int? = null,
+            collectionNumber: Int? = null,
+            featureNumber: Int64? = null
+        ): TupleNumber = fromBinary(Binary(bytes, offset), variant, storageNumber, mapNumber, collectionNumber, featureNumber)
+
+        /**
+         * Restore a [TupleNumber] from a binary encoding.
+         *
+         * @param binary the binary to read.
+         * @param variant the variant to read.
+         * @param storageNumber if the binary does not encode the storage-number _(anything other than [B288])_, so variant is [B96], [B160], [B192], or [B224].
+         * @param mapNumber if the binary does not encode the map-number, so variant is [B96], [B160], or [B192].
+         * @param collectionNumber if the binary does not encode the collection-number, so variant is [B96] or [B160].
+         * @param featureNumber if the binary does not encode the feature-number, so variant is [B96].
+         */
+        @JsStatic
+        @JvmStatic
+        @JvmOverloads
+        fun fromBinary(
+            binary: Binary,
+            variant: TupleNumberVariant,
+            storageNumber: Int64? = null,
+            mapNumber: Int? = null,
+            collectionNumber: Int? = null,
+            featureNumber: Int64? = null
+        ): TupleNumber {
+            val storage_num = if (variant.encodeStorageNumber()) binary.readInt64() else storageNumber
+                ?: throw illegalArg("Missing storage-number for given tuple-number variant $variant")
+            val map_num = if (variant.encodeMapNumber()) binary.readInt32() else mapNumber
+                ?: throw illegalArg("Missing map-number for given tuple-number variant $variant")
+            val col_num = if (variant.encodeCollectionNumber()) binary.readInt32() else collectionNumber
+                ?: throw illegalArg("Missing collection-number for given tuple-number variant $variant")
+            val f_num = if (variant.encodeFeatureNumber()) binary.readInt64() else featureNumber
+                ?: throw illegalArg("Missing collection-number for given tuple-number variant $variant")
+            val txn = binary.readInt64()
+            val uid = binary.readInt32()
+            return TupleNumber(storage_num, map_num, col_num, f_num, Version(txn), uid)
+        }
 
         /**
          * Restore a [TupleNumber] from the stringified version.

@@ -23,8 +23,8 @@ class PgNakshaTransactions internal constructor(adminMap: PgAdminMap) : PgCollec
 ), PgInternalCollection {
 
     /**
-     * The transactions table, which actually is just [head].
+     * The transactions table, which actually is just [headTable].
      */
     val transactions: PgTransactions
-        get() = head as PgTransactions
+        get() = headTable as PgTransactions
 }

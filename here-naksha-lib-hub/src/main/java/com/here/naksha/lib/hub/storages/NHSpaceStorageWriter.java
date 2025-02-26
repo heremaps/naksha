@@ -24,7 +24,6 @@ import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteFeat
 import static naksha.model.NakshaContext.mapId;
 
 import com.here.naksha.lib.core.EventPipeline;
-import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
@@ -41,7 +40,7 @@ import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaTransaction;
+import naksha.model.objects.NakshaTx;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
@@ -268,12 +267,12 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   }
 
   @Override
-  public @NotNull NakshaTransaction useTransaction() {
+  public @NotNull NakshaTx useTransaction() {
     throw NOT_SUPPORTED_ERROR;
   }
 
   @Override
-  public @Nullable NakshaTransaction getTransaction() {
+  public @Nullable NakshaTx getTransaction() {
     throw NOT_SUPPORTED_ERROR;
   }
 

@@ -3,12 +3,11 @@
 package naksha.model.request
 
 import naksha.model.Naksha
-import naksha.model.NakshaVersion
 import naksha.model.Version
 import kotlin.js.JsExport
 
 /**
- * Perform a read from the transaction log to query for [transaction features][naksha.model.objects.NakshaTransaction].
+ * Perform a read from the transaction log to query for [transaction features][naksha.model.objects.NakshaTx].
  * @since 3.0
  */
 @JsExport

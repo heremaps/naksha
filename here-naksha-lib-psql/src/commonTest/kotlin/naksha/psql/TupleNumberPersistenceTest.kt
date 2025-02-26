@@ -65,7 +65,7 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
         storage.adminConnection().use { conn ->
             val pgMap = storage.adminMap.getPgMapById(conn, collection.mapId)
             require(pgMap != null) { "Missing map ${collection.mapId}" }
-            val pgCollection = storage.adminMap.getPgCollectionById(conn, pgMap, collection.id)
+            val pgCollection = pgMap.getPgCollectionById(conn, collection.id)
             require(pgCollection != null) { "Missing collection ${collection.id}" }
             assertEquals(storage.number, persistedTuple.tupleNumber.storageNumber)
             assertEquals(pgMap.number, persistedTuple.tupleNumber.mapNumber)

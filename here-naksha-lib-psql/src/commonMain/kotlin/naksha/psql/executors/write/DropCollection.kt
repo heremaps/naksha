@@ -21,7 +21,7 @@ class DropCollection(private val session: PgSession) {
             "DROP without collectionId (expected in write's 'featureId')"
         )
         // If no such collection exists, we're done.
-        val pgCollection = map.storage.adminMap.getPgCollectionById(session.useConnection(), map, collectionId) ?: return null
+        val pgCollection = map.getPgCollectionById(session.useConnection(), collectionId) ?: return null
         val conn = session.useConnection()
         try {
             /**

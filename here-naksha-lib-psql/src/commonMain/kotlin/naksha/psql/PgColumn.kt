@@ -2,6 +2,7 @@
 
 package naksha.psql
 
+import naksha.base.Int64
 import naksha.base.JsEnum
 import naksha.model.request.query.MetaColumn
 import kotlin.js.JsExport
@@ -9,6 +10,8 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B96
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
 
 /**
  * A column descriptor for database columns, especially helpful when reading columns using `SELECT * FROM table`.
@@ -264,7 +267,7 @@ class PgColumn : JsEnum() {
         //max: 80 byte ; 64 + 4 * 4
 
         /**
-         * The [tuple-number][naksha.model.TupleNumber] of this row in [160-bit][naksha.model.TupleNumberVariant.B160] encoding _(20 byte)_.
+         * The [tuple-number][naksha.model.TupleNumber] of this row in [160-bit][B160] encoding _(20 byte)_.
          *
          * This column is created as `PRIMARY KEY`, which is very important for some functions of PostgresQL, e.g. in joins it relies upon this, we rely upon this to load unique versions _(aka [Tuple][naksha.model.Tuple])_, even from history.
          *
@@ -273,6 +276,7 @@ class PgColumn : JsEnum() {
          * - version: 64
          * - uid: 32
          * @since 3.0
+         * @see [B160]
          */
         @JvmField
         @JsStatic
@@ -283,12 +287,13 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * The [previous tuple-number][naksha.model.TupleNumber], using the 96-bit encoding.
+         * The [previous tuple-number][naksha.model.TupleNumber], using the [96-bit encoding][B96].
          *
          * The encoding stores, in order, Big-Endian encoded:
          * - version: 64
          * - uid: 32
          * @since 3.0
+         * @see [B96]
          */
         @JvmField
         @JsStatic
@@ -299,7 +304,7 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * The [tuple-number][naksha.model.TupleNumber] of the _BASE_ state upon which a [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge) was done, using the 96-bit encoding.
+         * The [tuple-number][naksha.model.TupleNumber] of the _BASE_ state upon which a [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge) was done, using the [96-bit encoding][B96].
          *
          * This value is set, when a client reads the _HEAD_ state of a feature, then modifies it into some _NEW_ state, and tries to save its changes, but meanwhile other clients did the same, and a conflict arises. The changes the client did are based upon an older _HEAD_, which we will name _BASE_, and do not reflect the changes the other clients did meanwhile.
          *
@@ -313,6 +318,7 @@ class PgColumn : JsEnum() {
          * - version: 64
          * - uid: 32
          * @since 3.0
+         * @see [B96]
          */
         @JvmField
         @JsStatic
@@ -543,6 +549,49 @@ class PgColumn : JsEnum() {
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature, attachment
         )
+
+        /**
+         * The names of all database columns, as comma separated list.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmField
+        val allColumnNames = allColumns.joinToString(",") { it.name }
+
+        /**
+         * The placeholders when inserting all columns, like &#36;1, &#36;2, ...
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmField
+        val allColumnPlaceholders = allColumns.joinToString(",") { "\$${(it.i + 1)}" }
+
+        /**
+         * The type names for the values of all columns, for example `int8` for a column being [Int64].
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmField
+        val allColumnTypeNames = Array(allColumns.size) { allColumns[it].type.text }
+
+        /**
+         * The array type names for the values of all columns, for example `int8[]` for a column being [Int64].
+         *
+         * To be used when multiple rows need to be transferred into the database, for example, creating a plan for all columns:
+         * ```kotlin
+         * val SQL = """WITH input AS (
+         *   SELECT * FROM
+         *   UNNEST(${allColumnPlaceholders}) AS t($allColumnNames)
+         * ), ..."""
+         * val plan = conn.prepare(SQL, allColumnArrayTypeNames)
+         * val values = Array<Any?>(n) { ... } // an array of arrays
+         * val cursor = plan.execute(values)
+         * ```
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmField
+        val allColumnArrayTypeNames = Array(allColumns.size) { allColumns[it].type.text+"[]" }
 
         /**
          * All columns that are needed when we copy a feature from _HEAD_ into _HISTORY_, so all except for:

@@ -70,18 +70,18 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val selects = StringBuilder()
         for (entry in pgCollections.withIndex()) {
             val pgCollection = entry.value
-            val head = pgCollection.head
+            val head = pgCollection.headTable
             // We only need to select the column number, if we select from multiple collections!
             val col_num = if (thePgCollection == null) "${pgCollection.number} as col_num," else ""
             val where = if (whereQuery.isEmpty()) "" else "WHERE $whereQuery"
             selects.append("\t(SELECT $col_num $id, $tn FROM ${head.quotedName} $where) ;\n")
 
-            val deleted = pgCollection.deleted
+            val deleted = pgCollection.deletedTable
             if (req.queryDeleted && deleted != null) {
                 selects.append("\t(SELECT $col_num $id, $tn FROM ${deleted.quotedName} $where ;\n")
             }
 
-            val history = pgCollection.history
+            val history = pgCollection.historyTable
             if (req.queryHistory && history != null && (txn != null || txn_min != null || versions != 1)) {
                 // If only one version is requested, we can improve the query to only return this version!
                 val better_where = if (txn != null && versions == 1)

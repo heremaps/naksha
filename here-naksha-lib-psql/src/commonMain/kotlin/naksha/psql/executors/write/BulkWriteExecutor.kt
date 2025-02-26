@@ -21,7 +21,7 @@ class BulkWriteExecutor(
     private val copyHeadToDel: MutableMap<PgCollection, PgPlan> = mutableMapOf()
 
     override fun removeFeatureFromDel(collection: PgCollection, featureId: String) {
-        collection.deleted ?: return
+        collection.deletedTable ?: return
         var idsToDel = deleteFromDel[collection]
         if (idsToDel == null) {
             idsToDel = mutableSetOf()
@@ -78,11 +78,11 @@ class BulkWriteExecutor(
         flags: Flags?,
         featureId: String
     ) {
-        collection.history ?: return
+        collection.historyTable ?: return
 
         var plan = copyHeadToHst[collection]
         if (plan == null) {
-            plan = createCopyPlan(collection.head.quotedName, collection.history!!.quotedName)
+            plan = createCopyPlan(collection.headTable.quotedName, collection.historyTable!!.quotedName)
             copyHeadToHst[collection] = plan
         }
         plan.addBatch(
@@ -97,11 +97,11 @@ class BulkWriteExecutor(
     }
 
     override fun copyHeadToDel(collection: PgCollection, tupleNumber: TupleNumber?, flags: Flags?, featureId: String) {
-        collection.deleted ?: return
+        collection.deletedTable ?: return
 
         var plan = copyHeadToDel[collection]
         if (plan == null) {
-            plan = createCopyPlan(collection.head.quotedName, collection.deleted!!.quotedName)
+            plan = createCopyPlan(collection.headTable.quotedName, collection.deletedTable!!.quotedName)
             copyHeadToDel[collection] = plan
         }
         plan.addBatch(
@@ -128,7 +128,7 @@ class BulkWriteExecutor(
             val columnEqualsVariable = PgColumn.allColumns.mapIndexed { index, pgColumn ->
                 "${pgColumn.name}=\$${index + 1}"
             }.joinToString(separator = ",")
-            val quotedHeadTable = collection.head.quotedName
+            val quotedHeadTable = collection.headTable.quotedName
 
             val conn = session.useConnection()
             // TODO: Verify if allColumns is correct !!!
@@ -155,7 +155,7 @@ class BulkWriteExecutor(
 
     override fun finish() {
         deleteFromDel.forEach { (collection, idsToDelete) ->
-            executeDelete(collection.deleted!!.quotedName, idsToDelete)
+            executeDelete(collection.deletedTable!!.quotedName, idsToDelete)
         }
         copyHeadToDel.forEach { (_, copyPlan) ->
             copyPlan.use { stmt -> stmt.executeBatch() }
@@ -167,7 +167,7 @@ class BulkWriteExecutor(
             updatePlan.use { stmt -> stmt.executeBatch() }
         }
         deleteFromHead.forEach { (collection, idsToDelete) ->
-            executeDelete(collection.head.quotedName, idsToDelete)
+            executeDelete(collection.headTable.quotedName, idsToDelete)
         }
         insertToHead.forEach { (_, insertPlan) ->
             insertPlan.use { stmt -> stmt.executeBatch() }

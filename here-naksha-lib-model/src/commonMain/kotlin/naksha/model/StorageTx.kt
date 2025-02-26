@@ -21,7 +21,7 @@ import kotlin.js.JsExport
  * @see [Naksha.decodeTuple]
  */
 @JsExport
-open class NakshaTx(
+open class StorageTx(
     /**
      * The unique version of the transaction, potentially read from a daily sequence of the database. This value **should be** unique to this transaction!
      * @since 3.0
@@ -55,7 +55,7 @@ open class NakshaTx(
      * The statistical transaction information, updated while this class is being used, should eventually be writted into the transaction-log of the storage.
      * @since 3.0
      */
-    open val transaction = NakshaTransaction().setVersion(version)
+    open val transaction = NakshaTx().setVersion(version)
 
     /**
      * The `updated_at` value being used for all [Tuple] created, basically just reads `transaction.time`.
@@ -80,7 +80,7 @@ open class NakshaTx(
     /**
      * @see [defaultFlags]
      */
-    open fun withDefaultFlags(flags: Int): NakshaTx {
+    open fun withDefaultFlags(flags: Int): StorageTx {
         defaultFlags = flags
         return this
     }
@@ -104,7 +104,7 @@ open class NakshaTx(
      * @param action the [action][Action] being performed, if not given, it is expected that the given [operation][Operation] has a [fixed action][Operation.action].
      * @return the new metadata that is correct for the new state, based upon the given data.
      * @since 3.0.0
-     * @see [NakshaTx]
+     * @see [StorageTx]
      */
     protected open fun metadataOf(
         map: NakshaMap,

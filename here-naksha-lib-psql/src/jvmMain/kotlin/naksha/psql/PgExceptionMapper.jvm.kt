@@ -124,7 +124,7 @@ actual class PgExceptionMapper {
             }
             val errorCode = when (sqlException.sqlState) {
                 ERR_UNINITIALIZED -> EXCEPTION
-                ERR_COLLECTION_EXISTS -> NakshaError.CONFLICT
+                ERR_COLLECTION_EXISTS -> NakshaError.COLLECTION_EXISTS
                 ERR_COLLECTION_NOT_EXISTS, UNDEFINED_TABLE -> NakshaError.COLLECTION_NOT_FOUND
                 ERR_CONFLICT -> NakshaError.CONFLICT
                 ERR_CHECK_VIOLATION -> EXCEPTION

@@ -116,15 +116,34 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                         }
                     }
                     when (type) {
-                        BOOLEAN, BOOLEAN_ARRAY -> stmt.setArray(index, stmt.connection.createArrayOf("bool", arg))
-                        SHORT, SHORT_ARRAY -> stmt.setArray(index, stmt.connection.createArrayOf("int2", arg))
-                        INT, INT_ARRAY -> stmt.setArray(index, stmt.connection.createArrayOf("int4", arg))
-                        INT64, INT64_ARRAY -> stmt.setArray(index, stmt.connection.createArrayOf("int8", arg))
-                        FLOAT, FLOAT_ARRAY -> stmt.setArray(index, stmt.connection.createArrayOf("float4", arg))
-                        DOUBLE, DOUBLE_ARRAY -> stmt.setArray(index, stmt.connection.createArrayOf("float8", arg))
-                        STRING, STRING_ARRAY -> stmt.setArray(index, stmt.connection.createArrayOf("text", arg))
-                        BYTE_ARRAY, BYTE_ARRAY_ARRAY -> stmt.setArray(index, stmt.connection.createArrayOf("bytea", arg))
-                        else -> throw illegalArg("Failed to detect array type, and no valid type-name was provided: $typeName")
+                        BOOLEAN_ARRAY,
+                        SHORT_ARRAY,
+                        INT_ARRAY,
+                        INT64_ARRAY,
+                        FLOAT_ARRAY,
+                        DOUBLE_ARRAY,
+                        STRING_ARRAY -> {
+                            stmt.setArray(index, stmt.connection.createArrayOf(type.childType!!.text, arg))
+                        }
+                        BYTE_ARRAY_ARRAY -> {
+                            // This is a hack, because we need a `Byte[][]`, JDBC does not support an `Object[][]`,
+                            // even while the content may be the same, and it knows the type, still
+                            // Note: I guess the driver supports Object[][] for other types, because it can invoke
+                            //   helpers like `toString`, `toInt`, `toLong`, ... on them, but there is no such thing
+                            //   for byte-arrays (byte[]), and instead of writing an own toByteArray, they fail!
+                            val arr = Array(arg.size) { arg[it] as ByteArray? }
+                            stmt.setArray(index, stmt.connection.createArrayOf(type.childType!!.text, arr))
+                        }
+                        BOOLEAN,
+                        SHORT,
+                        INT,
+                        INT64,
+                        FLOAT,
+                        DOUBLE,
+                        STRING,
+                        BYTE_ARRAY -> throw illegalArg("The argument is $type, but an array was provided as value")
+                        null -> throw illegalArg("Failed to detect array type, no type-name was provided (null)")
+                        else -> throw illegalArg("Failed to detect array type, and invalid type-name was provided: $typeName")
                     }
                 }
                 null -> stmt.setNull(index, 0)

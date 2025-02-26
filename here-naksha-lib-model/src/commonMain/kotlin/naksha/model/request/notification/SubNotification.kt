@@ -3,7 +3,7 @@ package naksha.model.request.notification
 import naksha.base.NotNullProperty
 import naksha.model.IStorage
 import naksha.model.objects.NakshaSubscriptionState
-import naksha.model.objects.NakshaTransactionList
+import naksha.model.objects.NakshaTxList
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -24,7 +24,7 @@ open class SubNotification(): Notification() {
     companion object SubNotification_C {
         private val STRING = NotNullProperty<SubNotification, String>(String::class) { _,_ -> "" }
         private val STATE = NotNullProperty<SubNotification, NakshaSubscriptionState>(NakshaSubscriptionState::class)
-        private val TX_LIST = NotNullProperty<SubNotification, NakshaTransactionList>(NakshaTransactionList::class)
+        private val TX_LIST = NotNullProperty<SubNotification, NakshaTxList>(NakshaTxList::class)
     }
 
     /**

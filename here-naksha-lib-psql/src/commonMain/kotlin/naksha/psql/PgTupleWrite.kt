@@ -1,9 +1,9 @@
 package naksha.psql
 
+import naksha.model.Action
 import naksha.model.Tuple
 import naksha.model.TupleNumber
 import naksha.model.Version
-import naksha.model.illegalState
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaMap
@@ -43,6 +43,12 @@ internal data class PgTupleWrite(val original: Write, val i: Int) {
         get() = original.op
 
     /**
+     * The action that was eventually executed.
+     * @since 3.0
+     */
+    //var action: Action = Action.UNDEFINED
+
+    /**
      * The identifier of the feature to modify.
      * @since 3.0
      */
@@ -63,6 +69,10 @@ internal data class PgTupleWrite(val original: Write, val i: Int) {
      * @since 3.0
      */
     var tuple: Tuple? = null
+
+    val isMapModification: Boolean = original.isMapModification()
+    val isCollectionModification: Boolean = original.isCollectionModification()
+    val isFeatureModification: Boolean = original.isFeatureModification()
 
     /**
      * If the feature is a map, the [PgMap] representation.

@@ -12,10 +12,9 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
-import naksha.model.objects.NakshaTransaction
+import naksha.model.objects.NakshaTx
 import naksha.psql.executors.PgReader
 import naksha.psql.executors.PgWriter
-import naksha.psql.executors.write.BulkWriteExecutor
 import naksha.psql.executors.write.InstantWriteExecutor
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -182,7 +181,7 @@ open class PgSession(
      * The current transaction wrapper; if any.
      * @since 3.0
      */
-    internal var tx: NakshaTx? = null
+    internal var tx: StorageTx? = null
         private set
 
     /**
@@ -190,19 +189,19 @@ open class PgSession(
      * @return the current transaction.
      * @since 3.0
      */
-    internal fun useTx(): NakshaTx {
+    internal fun useTx(): StorageTx {
         assertMutable()
         assertOpen()
         var tx = this.tx
         if (tx == null) {
             val txn = storage.adminMap.newTxn(useConnection())
-            tx = NakshaTx(Version(txn.number), options.appId, options.author, storage.adminMap)
+            tx = StorageTx(Version(txn.number), options.appId, options.author, storage.adminMap)
             this.tx = tx
         }
         return tx
     }
 
-    override fun getTransaction(): NakshaTransaction? = tx?.transaction
+    override fun getTransaction(): NakshaTx? = tx?.transaction
 
     /**
      * Return the current transaction, if no transaction started yet, starts a new one.
@@ -210,7 +209,7 @@ open class PgSession(
      * - Throws [NakshaError.ILLEGAL_STATE] if this is session is [readOnly] or [closed][isClosed].
      * @return the current transaction.
      */
-    override fun useTransaction(): NakshaTransaction = useTx().transaction
+    override fun useTransaction(): NakshaTx = useTx().transaction
 
     override fun execute(request: Request): Response {
         when (request) {
@@ -338,7 +337,7 @@ open class PgSession(
     private fun fetchFromDatabase( missingTuples: List<FeatureTuple?>, fetchFromHistory: Boolean, mode: FetchMode): List<FeatureTuple?>? {
         if (missingTuples.isEmpty()) return null
         val tupNumbers = missingTuples.mapNotNull{ it?.tuple?.tupleNumber }
-        //TODO: Update the query below
+        // TODO: Update the query below
         val sqlQuery = """
         WITH source AS (
           (SELECT :col_number as col_num, * FROM :col_name WHERE tn = ANY(:tupNumbers))
@@ -416,7 +415,7 @@ open class PgSession(
     override fun getMapById(mapId: String): NakshaMap? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            storage.adminMap.getPgMapById(it.conn, mapId)?.nakshaMap
+            storage.adminMap.getPgMapById(it.conn, mapId)?.head
         }
     }
 
@@ -435,7 +434,7 @@ open class PgSession(
     override fun getMapByNumber(mapNumber: Int): NakshaMap? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            storage.adminMap.getPgMapByNumber(it.conn, mapNumber)?.nakshaMap
+            storage.adminMap.getPgMapByNumber(it.conn, mapNumber)?.head
         }
     }
 
@@ -455,7 +454,7 @@ open class PgSession(
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
             val pgMap = storage.adminMap.getPgMapById(it.conn, map.id) ?: return null
-            storage.adminMap.getPgCollectionById(it.conn, pgMap, collectionId)?.nakshaCollection
+            pgMap.getPgCollectionById(it.conn, collectionId)?.head
         }
     }
 
@@ -468,7 +467,7 @@ open class PgSession(
     fun getPgCollectionById(pgMap: PgMap, collectionId: String): PgCollection? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            storage.adminMap.getPgCollectionById(it.conn, pgMap, collectionId)
+            pgMap.getPgCollectionById(it.conn, collectionId)
         }
     }
 
@@ -476,7 +475,7 @@ open class PgSession(
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
             val pgMap = storage.adminMap.getPgMapById(it.conn, map.id) ?: return null
-            storage.adminMap.getPgCollectionByNumber(it.conn, pgMap, collectionNumber)?.nakshaCollection
+            pgMap.getPgCollectionByNumber(it.conn, collectionNumber)?.head
         }
     }
 
@@ -489,7 +488,7 @@ open class PgSession(
     fun getPgCollectionByNumber(pgMap: PgMap, collectionNumber: Int): PgCollection? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            storage.adminMap.getPgCollectionByNumber(it.conn, pgMap, collectionNumber)
+            pgMap.getPgCollectionByNumber(it.conn, collectionNumber)
         }
     }
 

@@ -3,7 +3,7 @@
 package naksha.model
 
 import naksha.base.AtomicInt
-import naksha.model.objects.NakshaTransaction
+import naksha.model.objects.NakshaTx
 import kotlin.js.JsExport
 
 /**
@@ -55,12 +55,12 @@ interface IWriteSession: IReadSession {
      * @return the transaction.
      * @since 3.0.0
      */
-    fun useTransaction(): NakshaTransaction
+    fun useTransaction(): NakshaTx
 
     /**
      * Returns the current transaction, if any is available.
      * @return the current transaction, if any is available; _null_ otherwise.
      * @since 3.0.0
      */
-    fun getTransaction(): NakshaTransaction?
+    fun getTransaction(): NakshaTx?
 }

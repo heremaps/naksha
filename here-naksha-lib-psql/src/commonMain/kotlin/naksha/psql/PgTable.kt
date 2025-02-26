@@ -245,10 +245,10 @@ open class PgTable(
         }
         if (partitionOfTable != null) {
             val PARTITION_OF = """ PARTITION OF ${partitionOfTable.quotedName} FOR VALUES FROM (${partitionOfValue}) TO (${partitionOfValue + 1}) """
-            CREATE_SQL = """$CREATE_TABLE ${collection.map.quotedId}.$quotedName ${PARTITION_OF}${PARTITION_BY}${WITH}${TABLESPACE}"""
+            CREATE_SQL = """$CREATE_TABLE $quotedName ${PARTITION_OF}${PARTITION_BY}${WITH}${TABLESPACE}"""
         } else {
             val PKEY = if (PARTITION_BY.isEmpty()) ",\nCONSTRAINT ${quoteIdent(name,"_pkey")} PRIMARY KEY (tn)" else ""
-            CREATE_SQL = "$CREATE_TABLE ${collection.map.quotedId}.$quotedName (${TABLE_BODY}$PKEY)\n${PARTITION_BY}\n${WITH}${TABLESPACE}"
+            CREATE_SQL = "$CREATE_TABLE $quotedName (${TABLE_BODY}$PKEY)\n${PARTITION_BY}\n${WITH}${TABLESPACE}"
         }
     }
 

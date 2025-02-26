@@ -24,20 +24,13 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import naksha.base.AtomicInt;
-import naksha.model.Action;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
-import naksha.model.Metadata;
 import naksha.model.Naksha;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
-import naksha.model.Operation;
-import naksha.model.Tuple;
-import naksha.model.TupleNumber;
-import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaMap;
-import naksha.model.objects.NakshaTransaction;
+import naksha.model.objects.NakshaTx;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
@@ -45,7 +38,6 @@ import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteOp;
 import naksha.model.request.WriteRequest;
-import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -262,12 +254,12 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
   }
 
   @Override
-  public @NotNull NakshaTransaction useTransaction() {
+  public @NotNull NakshaTx useTransaction() {
     return null;
   }
 
   @Override
-  public @Nullable NakshaTransaction getTransaction() {
+  public @Nullable NakshaTx getTransaction() {
     return null;
   }
 }

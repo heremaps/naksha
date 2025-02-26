@@ -97,10 +97,15 @@ open class NakshaError() : AnyObject() {
         const val UNSUPPORTED_OPERATION = "UnsupportedOperation"
 
         /**
-         * A conflict occurred when updating a feature.
-         *
-         * This will result in an 409 Conflict response.
+         * A not further specified conflict occurred when performing an operation, for example when the database reports a unique index violation, and the storage is not able to give a more specific reason.
          * @since 3.0.0
+         * @see [isConflict]
+         * @see [MAP_EXISTS]
+         * @see [MAP_NOT_FOUND]
+         * @see [COLLECTION_EXISTS]
+         * @see [COLLECTION_NOT_FOUND]
+         * @see [FEATURE_EXISTS]
+         * @see [FEATURE_NOT_FOUND]
          */
         const val CONFLICT = "Conflict"
 
@@ -226,9 +231,9 @@ open class NakshaError() : AnyObject() {
          */
         const val STORAGE_NOT_FOUND = "StorageNotFound"
 
-        private val CODE = NotNullProperty<NakshaError, String>(String::class) { _, _ -> EXCEPTION }
-        private val MSG = NotNullProperty<NakshaError, String>(String::class) { self, _ -> self.code }
-        private val THROWABLE = NullableProperty<NakshaError, Throwable>(Throwable::class)
+        private val CODE_FIELD = NotNullProperty<NakshaError, String>(String::class) { _, _ -> EXCEPTION }
+        private val MSG_FIELD = NotNullProperty<NakshaError, String>(String::class) { self, _ -> self.code }
+        private val THROWABLE_FIELD = NullableProperty<NakshaError, Throwable>(Throwable::class)
 
         /**
          * The method that is invoked, when [print] is invoked. If `null`, then calling [print] does nothing.
@@ -237,25 +242,46 @@ open class NakshaError() : AnyObject() {
         @JsStatic
         @JvmStatic
         val printer = AtomicRef<Fx2<NakshaError, PlatformLogger>>(Fx2 { err, logger ->
-            val c = err.cause
-            if (c != null) logger.info("{} {}, cause: {}", err.code, err.msg, c) else logger.info("{} {}", err.code, err.msg)
+            var cause = err.cause
+            while (cause?.cause != null) cause = cause.cause
+            if (cause != null) {
+                logger.info("{} {}, cause: {}", err.code, err.msg, cause)
+            } else {
+                logger.info("{} {}", err.code, err.msg)
+            }
         })
     }
 
     /**
      * The error code.
      */
-    var code by CODE
+    var code by CODE_FIELD
 
     /**
      * A human-readable message.
      */
-    var msg by MSG
+    var msg by MSG_FIELD
 
     /**
      * The origin exception that caused this error; if any.
      */
-    var cause by THROWABLE
+    var cause by THROWABLE_FIELD
+
+    /**
+     * Tests if this error represents some kind of conflict and should lead to an 409 Conflict response.
+     * @return `true` if this error represents a conflict; `false` otherwise.
+     * @since 3.0
+     */
+    fun isConflict(): Boolean = when(code) {
+        MAP_EXISTS,
+        MAP_NOT_FOUND,
+        COLLECTION_EXISTS,
+        COLLECTION_NOT_FOUND,
+        FEATURE_EXISTS,
+        FEATURE_NOT_FOUND,
+        CONFLICT -> true
+        else -> false
+    }
 
     override fun hashCode(): Int = code.hashCode()
     override fun equals(other: Any?): Boolean {

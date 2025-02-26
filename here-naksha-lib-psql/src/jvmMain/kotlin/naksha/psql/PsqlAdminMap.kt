@@ -18,7 +18,6 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
 import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
-import kotlin.math.log
 
 /**
  * The admin-map of the [PsqlStorage].
@@ -35,91 +34,24 @@ class PsqlAdminMap internal constructor(
     override val storage: PsqlStorage
         get() = super.storage as PsqlStorage
 
-    override fun createPgMap(conn: PgConnection, map: PgMap) {
-        if (Naksha.isInternalId(map.id)) throw NakshaException(ILLEGAL_ARGUMENT, "Can't create internal maps: ${map.id}")
-        conn.execute("CREATE SCHEMA IF NOT EXISTS ${map.quotedId}").close()
-    }
-
-    override fun deletePgMap(conn: PgConnection, map: PgMap) {
-        if (Naksha.isInternalId(map.id)) throw NakshaException(ILLEGAL_ARGUMENT, "Can't delete internal maps: ${map.id}")
-        conn.execute("DROP SCHEMA ${map.quotedId} CASCADE").close()
-    }
-
-    override fun getPgMapById(conn: PgConnection, id: String): PgMap? {
-        if (ADMIN_MAP == id) return this
-        return mapCache[id]?.head?.get()
-    }
-
-    override fun getPgMapByNumber(conn: PgConnection, number: Int): PgMap? {
-        if (ADMIN_MAP_NUMBER == number) return this
-        return mapCache[number]?.head?.get()
-    }
-
-    override fun listPgMaps(conn: PgConnection): PgMapList = PgMapList().withAll(
-        mapCache.getAll().mapNotNull { it.head.get() }
-    )
-
-    override fun getPgCollectionById(conn: PgConnection, map: PgMap, id: String): PgCollection? {
-        if (map === this) {
-            return when (id) {
-                COLLECTIONS_COL -> collections
-                TRANSACTIONS_COL -> transactions
-                MAPS_COL -> maps
-                DICTIONARIES_COL -> dictionaries
-                else -> null
-            }
-        }
-        val psqlMap = mapCache[map.number] ?: return null
-        return psqlMap[id]?.head?.get()
-    }
-
-    override fun getPgCollectionByNumber(conn: PgConnection, map: PgMap, number: Int): PgCollection? {
-        if (map === this) {
-            return when (number) {
-                COLLECTIONS_COL_NUMBER -> collections
-                TRANSACTIONS_COL_NUMBER -> transactions
-                MAPS_COL_NUMBER -> maps
-                DICTIONARIES_COL_NUMBER -> dictionaries
-                else -> null
-            }
-        }
-        val psqlMap = mapCache[map.number] ?: return null
-        return psqlMap[number]?.head?.get()
-    }
-
-    override fun listPgCollections(conn: PgConnection, map: PgMap): PgCollectionList {
-        val list = PgCollectionList()
-        val collections = mapCache[map.number]?.getAll()
-        if (collections != null) {
-            for (collection in collections) {
-                val pgCollection = collection.head.get() ?: continue
-                list.add(pgCollection)
-            }
-        }
-        return list
-    }
-
     override fun getEncodingFlags(feature: Any?, context: Any?): Flags {
-        var ctx = context
-        if (context is PgCollection) ctx = context.nakshaCollection
-        if (context is PgMap) ctx = context.nakshaMap
-
-        if (ctx is NakshaCollection) {
-            val collectionFlags = ctx.defaultFlags
-            if (collectionFlags != null) return collectionFlags
-            val mapId = ctx.mapId
-            val cacheEntry = mapCache[mapId]
-            if (cacheEntry != null) {
-                val map = cacheEntry.head.get()
-                if (map != null) {
-                    val mapFlags = map.nakshaMap.defaultFlags
-                    if (mapFlags != null) return mapFlags
-                }
-            }
+        if (context is PgCollection) {
+            var flags = context.head.defaultFlags
+            if (flags == null) flags = context.map.head.defaultFlags
+            return flags ?: Naksha.DEFAULT_FLAGS
         }
-        if (ctx is NakshaMap) {
-            val mapFlags = ctx.defaultFlags
-            if (mapFlags != null) return mapFlags
+        if (context is PgMap) {
+            return context.head.defaultFlags ?: Naksha.DEFAULT_FLAGS
+        }
+        if (context is NakshaCollection) {
+            val collectionFlags = context.defaultFlags
+            if (collectionFlags != null) return collectionFlags
+            val mapId = context.mapId
+            val pgMap = getPgMapById(null, mapId)
+            return pgMap?.head?.defaultFlags ?: Naksha.DEFAULT_FLAGS
+        }
+        if (context is NakshaMap) {
+            return context.defaultFlags ?: Naksha.DEFAULT_FLAGS
         }
         return Naksha.DEFAULT_FLAGS
     }
@@ -349,16 +281,9 @@ class PsqlAdminMap internal constructor(
     }
 
     /**
-     * The cache loader.
-     * @since 3.0
-     */
-    internal val mapCache = PsqlMapCache(this)
-
-    /**
      * Bootstrap the admin-map, which means reading the cache initially, then start the background job to keep track of changes.
      * @since 3.0
      */
     internal fun start() {
-        // TODO: We need to add listeners to update the caches!
     }
 }

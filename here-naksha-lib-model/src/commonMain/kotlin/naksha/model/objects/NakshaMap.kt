@@ -5,6 +5,7 @@ package naksha.model.objects
 import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
+import naksha.base.toUnsignedInt64
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
@@ -126,6 +127,8 @@ open class NakshaMap() : NakshaFeature() {
      */
     var defaultFlags by DEFAULT_FLAGS
 
+    override fun calculateFeatureNumber(): Int64 = number.toUnsignedInt64()
+
     private var number_cachedId: String? = null
     private var number_cachedNumber: Int? = null
 
@@ -145,7 +148,7 @@ open class NakshaMap() : NakshaFeature() {
             val cachedNumber = number_cachedNumber
             if (id === cachedId && cachedNumber != null) return cachedNumber
             val md5 = hashId(id)
-            val number = Naksha.collectionNumber(md5)
+            val number = Naksha.mapNumber(md5)
             number_cachedId = id
             number_cachedNumber = number
             return number

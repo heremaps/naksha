@@ -76,7 +76,7 @@ internal object WriteFeatureUtils {
      * Resolves default flags based on [PgCollection] and [PgSession] properties
      */
     internal fun resolveFlags(collection: PgCollection, session: PgSession): Flags =
-        collection.nakshaCollection.defaultFlags ?: session.storage.defaultFlags
+        collection.head.defaultFlags ?: session.storage.defaultFlags
 
     internal fun tuple(
         storage: PgStorage,

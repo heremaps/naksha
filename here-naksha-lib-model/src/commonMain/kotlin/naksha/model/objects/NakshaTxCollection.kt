@@ -4,6 +4,7 @@ package naksha.model.objects
 
 import naksha.base.NotNullProperty
 import naksha.base.AnyObject
+import naksha.model.Action
 import naksha.model.NakshaError
 import naksha.model.NakshaException
 import kotlin.js.JsExport
@@ -11,25 +12,32 @@ import kotlin.js.JsName
 
 /**
  * An object storing detailed information what changed in a specific collection within a transaction.
+ * @since 3.0
  */
 @JsExport
-class NakshaTxCollectionInfo() : AnyObject() {
+class NakshaTxCollection() : AnyObject() {
 
     /**
      * Create a new collection info.
-     * @param collectionId the collection identifier.
+     * @param id the collection identifier.
      */
     @JsName("of")
-    constructor(collectionId: String) : this() {
-        this.collectionId = collectionId
+    constructor(id: String, number: Int, action: Action) : this() {
+        this.id = id
+        this.number = number
+        this.action = action
     }
 
     companion object {
-        private val STRING = NotNullProperty<NakshaTxCollectionInfo, String>(String::class) { _, _ -> "" }
-        private val COUNT = NotNullProperty<NakshaTxCollectionInfo, Int>(Int::class) { _, _ -> 0 }
+        private val ID = NotNullProperty<NakshaTxCollection, String>(String::class) { _, _ -> "" }
+        private val NUMBER = NotNullProperty<NakshaTxCollection, Int>(Int::class) { _, _ -> 0 }
+        private val ACTION = NotNullProperty<NakshaTxCollection, Action>(Action::class) { _, _ -> Action.UNDEFINED }
+        private val COUNT = NotNullProperty<NakshaTxCollection, Int>(Int::class) { _, _ -> 0 }
     }
 
-    var collectionId by STRING
+    var id by ID
+    var number by NUMBER
+    var action by ACTION
     var inserted: Int by COUNT
     var updated: Int by COUNT
     var deleted: Int by COUNT
@@ -39,10 +47,10 @@ class NakshaTxCollectionInfo() : AnyObject() {
     var deletedBytes: Int by COUNT
     var purgedBytes: Int by COUNT
 
-    fun addValues(counts: NakshaTxCollectionInfo) {
-        if (collectionId != counts.collectionId) {
+    fun addValues(counts: NakshaTxCollection) {
+        if (id != counts.id) {
             throw NakshaException(NakshaError.ILLEGAL_ARGUMENT,
-                "The given 'counts' is for another collection: ${counts.collectionId}")
+                "The given 'counts' is for another collection: ${counts.id}")
         }
         this.inserted += counts.inserted
         this.updated += counts.updated

@@ -154,7 +154,7 @@ data class Metadata(
          * @param action the [action][Action] being performed, if not given, it is expected that the given [operation][Operation] has a [fixed action][Operation.action].
          * @return the new metadata that is correct for the new state, based upon the given data.
          * @since 3.0.0
-         * @see [NakshaTx]
+         * @see [StorageTx]
          */
         @JvmStatic
         @JsStatic

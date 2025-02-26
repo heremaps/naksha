@@ -91,6 +91,8 @@ open class NakshaCollection() : NakshaFeature() {
         return this
     }
 
+    override fun calculateFeatureNumber(): Int64 = number.toUnsignedInt64()
+
     private var _cachedId: String? = null
     private var _cachedNumber: Int? = null
 

@@ -110,6 +110,15 @@ open class NakshaFeature() : AnyObject() {
     private var cachedFeatureNumber: Int64? = null
 
     /**
+     * Calculate the default feature-number, should be based upon [id].
+     * @return the default feature-number.
+     */
+    protected open fun calculateFeatureNumber(): Int64 {
+        val md5 = Naksha.hashId(id)
+        return Naksha.featureNumber(md5)
+    }
+
+    /**
      * Returns the feature-number of the feature.
      *
      * If the feature is in [HEAD][TupleNumber.HEAD] state, so not yet persisted, and no custom feature number was set, then the method will calculate the feature-number from the [id].
@@ -121,12 +130,10 @@ open class NakshaFeature() : AnyObject() {
             if (tupleNumber != TupleNumber.HEAD) return tupleNumber.featureNumber
             val raw = getRaw("featureNumber")
             if (raw is Int64) return raw
-            val id = this.id
-            var cached_id = cachedId
+            val cached_id = cachedId
             var cached_featureNumber = cachedFeatureNumber
             if (id === cached_id && cached_featureNumber != null) return cached_featureNumber
-            val md5 = Naksha.hashId(id)
-            cached_featureNumber = Naksha.featureNumber(md5)
+            cached_featureNumber = calculateFeatureNumber()
             cachedId = id
             cachedFeatureNumber = cached_featureNumber
             return cached_featureNumber

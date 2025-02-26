@@ -6,9 +6,7 @@ import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.Naksha.NakshaCompanion.cache
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.Naksha.NakshaCompanion.hashId
-import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
-import naksha.model.NakshaError.NakshaErrorCompanion.CONFLICT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
@@ -209,7 +207,7 @@ class PgWriter(
                             } else {
                                 val updatedTuple = UpdateCollection(session).execute(mapOf(write), write)
                                     ?: return ErrorResponse(
-                                        CONFLICT,
+                                        COLLECTION_NOT_FOUND,
                                         "Collection does not exist but was processed for update during upserting: ${write.id}"
                                     )
                                 updatePrevTupleCache(updatedTuple)
@@ -248,7 +246,7 @@ class PgWriter(
 
                         WriteOp.UPSERT -> {
                             val id = write.id
-                            if (id == null || previousMetadataProvider.get(collection.head.name, id) == null)
+                            if (id == null || previousMetadataProvider.get(collection.headTable.name, id) == null)
                             {
                                 cachedTupleNumber(
                                     write,
@@ -332,7 +330,7 @@ class PgWriter(
     private fun collectionOf(write: WriteExt): PgCollection {
         val collectionId = write.collectionId ?: throw NakshaException(ILLEGAL_ARGUMENT, "Missing collection id")
         val map = mapOf(write)
-        val collection = storage.adminMap.getPgCollectionById(session.useConnection(), map, collectionId)
+        val collection = map.getPgCollectionById(session.useConnection(), collectionId)
         return collection ?: throw NakshaException(COLLECTION_NOT_FOUND, "No such collection: $collectionId")
     }
 }

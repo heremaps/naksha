@@ -16,25 +16,25 @@ import kotlin.jvm.JvmOverloads
  * @since 3.0
  */
 @JsExport
-open class NakshaTransaction : NakshaFeature() {
+open class NakshaTx : NakshaFeature() {
 
     override fun defaultFeatureType(): String = "naksha.Tx"
-    override fun withId(value: String): NakshaTransaction = super.withId(value) as NakshaTransaction
-    override fun withFeatureNumber(featureNumber: Int64?): NakshaTransaction = super.withFeatureNumber(featureNumber) as NakshaTransaction
-    override fun withType(value: String): NakshaTransaction = super.withType(value) as NakshaTransaction
-    override fun withFeatureType(value: String): NakshaTransaction = super.withFeatureType(value) as NakshaTransaction
-    override fun withBbox(value: SpBoundingBox?): NakshaTransaction = super.withBbox(value) as NakshaTransaction
-    override fun withGeometry(value: SpGeometry?): NakshaTransaction = super.withGeometry(value) as NakshaTransaction
-    override fun withReferencePoint(value: SpPoint?): NakshaTransaction = super.withReferencePoint(value) as NakshaTransaction
-    override fun withProperties(value: NakshaProperties): NakshaTransaction = super.withProperties(value) as NakshaTransaction
-    override fun withAttachment(value: ByteArray?): NakshaTransaction = super.withAttachment(value) as NakshaTransaction
-    override fun withMomType(value: String?): NakshaTransaction = super.withMomType(value) as NakshaTransaction
+    override fun withId(value: String): NakshaTx = super.withId(value) as NakshaTx
+    override fun withFeatureNumber(featureNumber: Int64?): NakshaTx = super.withFeatureNumber(featureNumber) as NakshaTx
+    override fun withType(value: String): NakshaTx = super.withType(value) as NakshaTx
+    override fun withFeatureType(value: String): NakshaTx = super.withFeatureType(value) as NakshaTx
+    override fun withBbox(value: SpBoundingBox?): NakshaTx = super.withBbox(value) as NakshaTx
+    override fun withGeometry(value: SpGeometry?): NakshaTx = super.withGeometry(value) as NakshaTx
+    override fun withReferencePoint(value: SpPoint?): NakshaTx = super.withReferencePoint(value) as NakshaTx
+    override fun withProperties(value: NakshaProperties): NakshaTx = super.withProperties(value) as NakshaTx
+    override fun withAttachment(value: ByteArray?): NakshaTx = super.withAttachment(value) as NakshaTx
+    override fun withMomType(value: String?): NakshaTx = super.withMomType(value) as NakshaTx
 
     companion object NakshaTransaction_C {
-        private val INT_0 = NotNullProperty<NakshaTransaction, Int>(Int::class, init = { _, _ -> 0 })
-        private val COLLECTIONS = NotNullProperty<NakshaTransaction, NakshaTxCollectionInfoMap>(NakshaTxCollectionInfoMap::class)
-        private val INT64_NULL = NotNullProperty<NakshaTransaction, Int64>(Int64::class)
-        private val TIME = NotNullProperty<NakshaTransaction, Int64>(Int64::class) { _, _ -> Platform.currentMillis() }
+        private val INT_0 = NotNullProperty<NakshaTx, Int>(Int::class, init = { _, _ -> 0 })
+        private val MAPS = NotNullProperty<NakshaTx, NakshaTxMapById>(NakshaTxMapById::class)
+        private val INT64_NULL = NotNullProperty<NakshaTx, Int64>(Int64::class)
+        private val TIME = NotNullProperty<NakshaTx, Int64>(Int64::class) { _, _ -> Platform.currentMillis() }
     }
 
     /**
@@ -106,7 +106,7 @@ open class NakshaTransaction : NakshaFeature() {
      * @since 3.0
      */
     @JvmOverloads
-    fun setEpoch(epoch: Timestamp, seq: Int64 = Int64(0)): NakshaTransaction {
+    fun setEpoch(epoch: Timestamp, seq: Int64 = Int64(0)): NakshaTx {
         val version = Version.of(epoch.year, epoch.month, epoch.day, seq)
         _id = version.toString()
         _time = epoch.ts
@@ -127,7 +127,7 @@ open class NakshaTransaction : NakshaFeature() {
      * @return this.
      * @since 3.0
      */
-    fun setVersion(version: Version): NakshaTransaction {
+    fun setVersion(version: Version): NakshaTx {
         val now = Timestamp.now()
         val epoch = Timestamp.fromDate(
             version.year,
@@ -145,11 +145,11 @@ open class NakshaTransaction : NakshaFeature() {
     /**
      * Creates a new transaction from the [current time](https://en.wikipedia.org/wiki/Unix_time).
      * @param seq the sequence with which to initialize the sequence, defaults to `0`.
-     * @return the [NakshaTransaction].
+     * @return the [NakshaTx].
      * @since 3.0
      */
     @JvmOverloads
-    fun setNow(seq: Int64? = null): NakshaTransaction {
+    fun setNow(seq: Int64? = null): NakshaTx {
         setEpoch(Timestamp.now(), seq ?: Int64(0))
         return this
     }
@@ -243,32 +243,27 @@ open class NakshaTransaction : NakshaFeature() {
     var seqTs by INT64_NULL
 
     /**
-     * A map of the collections that have been modified as part of this transaction.
+     * The maps that were modified as part of this transaction.
      * @since 3.0
      */
-    var collections by COLLECTIONS
+    val maps by MAPS
 
     /**
-     * Returns the collection-info of the given collection, if it does not yet exist, creates a new empty one.
-     * @param collectionId the collection identifier.
-     * @return the transaction collection information.
+     * Returns the [map information][NakshaTxMap], if none exists yet, create them and return them.
+     * @param id the map-id.
+     * @param number the map-number.
+     * @param action the action done to the map.
+     * @return the transaction map information.
      * @since 3.0
      */
-    fun useTxCollectionInfo(collectionId: String): NakshaTxCollectionInfo {
-        var info = collections[collectionId]
-        if (info == null) {
-            info = NakshaTxCollectionInfo()
-            collections[collectionId] = info
+    fun useMap(id: String, number: Int, action: Action): NakshaTxMap {
+        val existing = maps[id]
+        if (existing != null) {
+            existing.action = action
+            return existing
         }
-        return info
-    }
-
-    /**
-     * Add the given collection info, if it exists already, otherwise a new entry is created, and the given values are added.
-     * @param info the collection info to add.
-     * @since 3.0
-     */
-    fun addTxCollectionInfo(info: NakshaTxCollectionInfo) {
-        useTxCollectionInfo(info.collectionId).addValues(info)
+        val mapInfo = NakshaTxMap(id, number, action)
+        maps[id] = mapInfo
+        return mapInfo
     }
 }

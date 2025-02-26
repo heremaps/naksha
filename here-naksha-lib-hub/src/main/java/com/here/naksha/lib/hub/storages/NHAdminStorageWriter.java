@@ -19,18 +19,10 @@
 package com.here.naksha.lib.hub.storages;
 
 import naksha.base.AtomicInt;
-import naksha.model.Action;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
-import naksha.model.Metadata;
 import naksha.model.NakshaVersion;
-import naksha.model.Operation;
-import naksha.model.Tuple;
-import naksha.model.TupleNumber;
-import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaMap;
-import naksha.model.objects.NakshaTransaction;
+import naksha.model.objects.NakshaTx;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -69,12 +61,12 @@ public class NHAdminStorageWriter extends NHAdminStorageReader implements IWrite
   }
 
   @Override
-  public @NotNull NakshaTransaction useTransaction() {
+  public @NotNull NakshaTx useTransaction() {
     return session.useTransaction();
   }
 
   @Override
-  public @Nullable NakshaTransaction getTransaction() {
+  public @Nullable NakshaTx getTransaction() {
     return session.getTransaction();
   }
 

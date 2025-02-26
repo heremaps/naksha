@@ -22,7 +22,7 @@ import naksha.base.AtomicInt;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
 import naksha.model.SessionOptions;
-import naksha.model.objects.NakshaTransaction;
+import naksha.model.objects.NakshaTx;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.Write;
@@ -77,7 +77,7 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   }
 
   @Override
-  public @NotNull NakshaTransaction useTransaction() {
+  public @NotNull NakshaTx useTransaction() {
     return this.session.useTransaction();
   }
 
@@ -112,7 +112,7 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   }
 
   @Override
-  public @Nullable NakshaTransaction getTransaction() {
+  public @Nullable NakshaTx getTransaction() {
     return getSession().getTransaction();
   }
 

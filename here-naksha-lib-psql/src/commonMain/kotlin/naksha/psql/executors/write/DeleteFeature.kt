@@ -33,7 +33,7 @@ class DeleteFeature(
         // Only modify head, hst and del tables if feature exists
         if (response.features!!.isNotEmpty()) {
             // If hst table enabled
-            collection.history?.let { hstTable ->
+            collection.historyTable?.let { hstTable ->
                 // copy head state into hst with txn_next === txn
                 writeExecutor.copyHeadToHst(collection = collection, featureId = collectionId)
                 // also copy head state into hst with txn_next === txn and action DELETED as a tombstone state
@@ -46,7 +46,7 @@ class DeleteFeature(
             }
 
             // If del table enabled, copy head state into del, with action DELETED and txn_next === txn as a tombstone state
-            collection.deleted?.let { delTable ->
+            collection.deletedTable?.let { delTable ->
                 writeExecutor.copyHeadToDel(
                     collection = collection,
                     tupleNumber = tupleNumber,
@@ -58,7 +58,7 @@ class DeleteFeature(
             writeExecutor.removeFeatureFromHead(collection, collectionId)
             val feature = response.features!!.first()!! //already checked that feature list is not empty
             // val metadata = response.tupleList!!.first()?.tuple?.meta!!
-            val tuple = session.useTx().created(map.nakshaMap, collection.nakshaCollection, feature)
+            val tuple = session.useTx().created(map.head, collection.head, feature)
             return PgWriter.cachedTupleNumber(write, tuple, tupleList)
         }
         return tupleNumber

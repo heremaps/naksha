@@ -5,12 +5,15 @@ package naksha.psql
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
+import naksha.model.objects.NakshaTx
 import naksha.model.request.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * A helper to write tuples into collections. The class can be extended and the
+ * A helper to write tuples into collections.
+ *
+ * This class is stateful and should be sticky until `commit` or `rollback`. It will remember which maps and collections have been created within the current transaction. After `commit`, the corresponding new objects should be visible, and the cache should automatically fetch them, but until this point, they are only visible within the current transaction!
  * @since 3.0
  * @see [PgTupleWrite]
  */
@@ -35,6 +38,13 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
     val tx = session.useTx()
 
     /**
+     * The Naksha transaction.
+     * @since 3.0
+     */
+    val transaction: NakshaTx
+        get() = tx.transaction
+
+    /**
      * Performs the given writes.
      * @param writes the writes to perform.
      * @return the response.
@@ -50,7 +60,7 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
      * @return the tuple-numbers of the
      */
     @JsName("executeWrites")
-    fun execute(writes: MutableList<Write>) : TupleNumberList {
+    private fun execute(writes: MutableList<Write>) : TupleNumberList {
         // Add the input-index.
         val targetWrites = ArrayList<PgTupleWrite>(writes.size)
         for (i in 0 ..< writes.size) targetWrites.add(PgTupleWrite(writes[i], i))
@@ -92,12 +102,12 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
             write.map = map
 
             val colId = write.original.collectionId
-            val collection = storage.adminMap.getPgCollectionById(conn, map, colId) ?:
+            val collection = map.getPgCollectionById(conn, colId) ?:
                 throw collectionNotFound("The write #${write.i} refers to not existing collection '$colId'")
             write.collection = collection
 
             // If this operation modifies a map.
-            if (write.original.isMapModification()) {
+            if (write.isMapModification) {
                 val op = write.original.op
                 val feature = write.original.feature ?: throw illegalArg("The feature #${write.i} is null")
                 val nakshaMap = if (feature is NakshaMap) feature else feature.proxy(NakshaMap::class)
@@ -112,7 +122,9 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
                         throw mapExists("The write #${write.i} failed, because the map '$featureId' does exist already")
                     }
                 } else if (op == WriteOp.DELETE || op == WriteOp.PURGE) {
-                    if (targetMap != null) deletePgMap(targetMap)
+                    if (targetMap != null) {
+                        deletePgMap(targetMap)
+                    }
                 } else {
                     throw illegalState("The write #${write.i} refers to an unsupported operation: '$op'")
                 }
@@ -126,7 +138,7 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
                 val feature = write.original.feature ?: throw illegalArg("The feature #${write.i} is null")
                 val nakshaCollection = if (feature is NakshaCollection) feature else feature.proxy(NakshaCollection::class)
 
-                var targetCollection = storage.adminMap.getPgCollectionById(conn, map, featureId)
+                var targetCollection = map.getPgCollectionById(conn, featureId)
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT) {
                     if (targetCollection == null) {
                         targetCollection = PgCollection(map, nakshaCollection)
@@ -165,18 +177,18 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
             when (val op = write.original.op) {
                 WriteOp.CREATE -> {
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                    write.tuple = tx.created(write.map.nakshaMap, write.collection.nakshaCollection, f)
+                    write.tuple = tx.created(write.map.head, write.collection.head, f)
                     inserts.getOrCreate(write.collection).add(write)
                 }
                 WriteOp.UPSERT -> {
                     // Note: We first try an INSERT, then, when that fails, we do an on-conflict UPDATE!
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                    write.tuple = tx.created(write.map.nakshaMap, write.collection.nakshaCollection, f)
+                    write.tuple = tx.created(write.map.head, write.collection.head, f)
                     upserts.getOrCreate(write.collection).add(write)
                 }
                 WriteOp.UPDATE -> {
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                    write.tuple = tx.updated(write.map.nakshaMap, write.collection.nakshaCollection, f)
+                    write.tuple = tx.updated(write.map.head, write.collection.head, f)
                     updates.getOrCreate(write.collection).add(write)
                 }
                 WriteOp.DELETE -> {
@@ -196,7 +208,7 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
         for (mapEntry in deletes) {
             val collection = mapEntry.key
             val tgWrites = mapEntry.value
-            val tupleWriter = PgTupleWriterDelete(session, collection, tgWrites)
+            val tupleWriter = PgTupleWriteDelete(session, collection, tgWrites)
             tupleWriter.execute(conn)
         }
 
@@ -207,7 +219,7 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
         for (mapEntry in inserts) {
             val collection = mapEntry.key
             val tgWrites = mapEntry.value
-            val tupleWriter = PgTupleWriterInsert(session, collection, tgWrites)
+            val tupleWriter = PgTupleWriteInsert(session, collection, tgWrites)
             tupleWriter.execute(conn)
         }
 

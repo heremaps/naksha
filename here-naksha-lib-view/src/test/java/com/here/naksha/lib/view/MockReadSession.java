@@ -24,11 +24,8 @@ import java.util.List;
 
 import naksha.model.IStorage;
 import naksha.model.SessionOptions;
-import naksha.model.Tuple;
-import naksha.model.TupleNumber;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaMap;
-import naksha.model.objects.NakshaTransaction;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.FeatureTuple;

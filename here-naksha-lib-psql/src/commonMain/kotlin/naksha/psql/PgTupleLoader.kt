@@ -55,23 +55,14 @@ import kotlin.js.JsName
 /**
  * An internal helper class to load tuples from the database.
  *
- * We can optimize the loading to only what the client needs, which is a combination of:
- * - [meta][Tuple.meta] - which will always be loaded, when not already cached.
- * - [feature][Tuple.feature] and [tags][Tuple.tags].
- * - [geometry][GEOMETRY_BIT] and [reference-point][Tuple.referencePoint].
- * - [attachment][ATTACHMENT_BIT].
- *
- * This means there are actually 16 possible combinations (if we include the possibility that nothing need to be loaded). The thing is, we may have already some part of the information in the cache, and only want to load what is missing. This is the job of this loader. It checks the cache what we have already, and then calculate what is missing (if any), creating the needed queries for the missing data only, and then execute the queries, updating the cache.
- *
- * The loader may, if no connection to be used was given explicitly, use multiple connections to load the data in parallel.
- *
  * @constructor A tuple loader.
- * @property storage the storage from which to load.
- * @property loadHistory if tuples should be fetched from history.
- * @property connection the connection to use when loading data from database; if _null_, then the _admin-connection_ is used.
+ * @property connection the connection to use when loading data from database.
  * @since 3.0.0
  */
-internal class PgTupleLoader(val storage: PgStorage, var loadHistory: Boolean, var connection: PgConnection? = null) {
+internal class PgTupleLoader(var connection: PgConnection) {
+
+    //
+
 //    companion object PgTupleLoader_C {
 //        // when selecting tuple-numbers, do: int8send(naksha_storage_number())||bytea_agg($tuple_number||int8send($flags))
 //        /**

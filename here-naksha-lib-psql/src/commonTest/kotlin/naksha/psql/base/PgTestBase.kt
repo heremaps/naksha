@@ -4,10 +4,7 @@ import naksha.base.AtomicMap
 import naksha.base.AtomicRef
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.model.NakshaError
-import naksha.model.NakshaException
-import naksha.model.SessionOptions
-import naksha.model.generalException
+import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaMap
@@ -44,25 +41,18 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
         if (testMap.get() == null) {
             lock.acquire().use {
                 if (testMap.get() == null) {
-                    val request = WriteRequest()
-                    val map = NakshaMap(env.mapId, env.storage.id)
+                    // Delete the map, should it be still there from previous test runs.
+                    var request = WriteRequest()
+                    var map = NakshaMap(env.mapId, env.storage.id)
                     request.writes += Write().deleteMap(map, false)
+                    executeWrite(request)
+
+                    // Create the map.
+                    request = WriteRequest()
+                    map = NakshaMap(env.mapId, env.storage.id)
                     request.writes += Write().createMap(map)
-                    storage.newWriteSession().use { session ->
-                        val response = session.execute(request)
-                        if (response is ErrorResponse) {
-                            if (response.error.code == NakshaError.CONFLICT) {
-                                logger.info("Test map ${map.id} exists already")
-                            } else {
-                                response.error.print()
-                                throw NakshaException(response.error)
-                            }
-                        } else {
-                            assertIs<SuccessResponse>(response, "Unknown response type")
-                            session.commit()
-                            logger.info("Created test map ${map.id}")
-                        }
-                    }
+                    executeWrite(request)
+
                     testMap.set(map)
                 }
             }
@@ -110,10 +100,10 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
     ): SuccessResponse {
         return env.storage.newWriteSession(sessionOptions).use { session ->
             val response = session.execute(request)
-            if (response !is SuccessResponse) {
-                if (response is ErrorResponse) throw NakshaException(response.error)
-                throw generalException("Unknown response type: ${response::class.qualifiedName}")
+            if (response is ErrorResponse) {
+                response.error.print()
             }
+            assertIs<SuccessResponse>(response)
             session.commit()
             response
         }
@@ -137,6 +127,9 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
     ): SuccessResponse {
         return env.storage.newReadSession(sessionOptions).use { session ->
             val response = session.execute(request)
+            if (response is ErrorResponse) {
+                response.error.print()
+            }
             assertIs<SuccessResponse>(response)
             response
         }

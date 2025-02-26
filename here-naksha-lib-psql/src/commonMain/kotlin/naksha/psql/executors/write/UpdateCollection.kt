@@ -4,10 +4,8 @@ import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaCollection
-import naksha.model.objects.NakshaFeature
 import naksha.psql.*
 import naksha.psql.executors.WriteExt
-import naksha.psql.executors.write.WriteFeatureUtils.allColumnValues
 
 class UpdateCollection(
     private val session: PgSession
@@ -20,8 +18,8 @@ class UpdateCollection(
             "UPDATE without collection as feature"
         )
         val collectionId = write.id ?: throw NakshaException(ILLEGAL_ARGUMENT, "Collection has no id")
-        val collection = session.storage.adminMap.getPgCollectionById(session.useConnection(), map, collectionId) ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection $collectionId not found")
-        val tuple = session.useTx().updated(map.nakshaMap, collection.nakshaCollection, feature)
+        val collection = map.getPgCollectionById(session.useConnection(), collectionId) ?: throw NakshaException(COLLECTION_NOT_FOUND, "Collection $collectionId not found")
+        val tuple = session.useTx().updated(map.head, collection.head, feature)
 
         // update the entry in naksha~collections
         //return updateVirtualCollection(tuple, feature)

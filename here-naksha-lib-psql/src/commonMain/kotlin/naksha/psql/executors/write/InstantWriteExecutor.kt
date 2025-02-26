@@ -12,7 +12,7 @@ class InstantWriteExecutor(
 ) : WriteExecutor {
 
     override fun removeFeatureFromDel(collection: PgCollection, featureId: String) {
-        collection.deleted?.let { delTable ->
+        collection.deletedTable?.let { delTable ->
             val quotedDelTable = quoteIdent(delTable.name)
             val quotedIdColumn = quoteIdent(PgColumn.id.name)
             session.useConnection()
@@ -41,11 +41,11 @@ class InstantWriteExecutor(
     }
 
     override fun copyHeadToDel(collection: PgCollection, tupleNumber: TupleNumber?, flags: Flags?, featureId: String) {
-        copyHeadTo(collection.deleted!!, collection.head, tupleNumber, flags, featureId)
+        copyHeadTo(collection.deletedTable!!, collection.headTable, tupleNumber, flags, featureId)
     }
 
     override fun copyHeadToHst(collection: PgCollection, tupleNumber: TupleNumber?, flags: Flags?, featureId: String) {
-        copyHeadTo(collection.history!!, collection.head, tupleNumber, flags, featureId)
+        copyHeadTo(collection.historyTable!!, collection.headTable, tupleNumber, flags, featureId)
     }
 
     override fun updateFeatureInHead(
@@ -57,7 +57,7 @@ class InstantWriteExecutor(
     ) {
         val conn = session.useConnection()
         conn.execute(
-            sql = updateStatement(collection.head.name),
+            sql = updateStatement(collection.headTable.name),
             args = allColumnValues(
                 tuple = tuple,
                 feature = feature,
@@ -82,7 +82,7 @@ class InstantWriteExecutor(
     }
 
     override fun removeFeatureFromHead(collection: PgCollection, featureId: String) {
-        collection.head.let { headTable ->
+        collection.headTable.let { headTable ->
             val quotedHeadTable = PgUtilCompanion.quoteIdent(headTable.name)
             session.useConnection()
                 .execute(

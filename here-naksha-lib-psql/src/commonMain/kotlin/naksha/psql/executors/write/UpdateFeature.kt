@@ -1,8 +1,6 @@
 package naksha.psql.executors.write
 
 import naksha.model.*
-import naksha.model.Metadata.Metadata_C.calculateHereTile
-import naksha.model.Metadata.Metadata_C.calculateHash
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.Naksha.NakshaCompanion.hashId
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
@@ -11,8 +9,6 @@ import naksha.psql.PgCollection
 import naksha.psql.PgSession
 import naksha.psql.executors.WriteExt
 import naksha.psql.executors.write.WriteFeatureUtils.newFeatureTupleNumber
-import naksha.psql.executors.write.WriteFeatureUtils.resolveFlags
-import naksha.psql.executors.write.WriteFeatureUtils.tuple
 
 class UpdateFeature(
     private val session: PgSession,
@@ -29,7 +25,7 @@ class UpdateFeature(
             "UPDATE without feature"
         )
         if (feature.id != write.id) throw NakshaException(NakshaError.ILLEGAL_ARGUMENT,"Feature id in payload (${feature.id}) and write request (${write.id}) are different")
-        val previousMetadata = existingMetadataProvider.get(collection.head.name, write.id!!)
+        val previousMetadata = existingMetadataProvider.get(collection.headTable.name, write.id!!)
             ?: throw NakshaException(NakshaError.FEATURE_NOT_FOUND, "Trying update feature that not exists in head: ${write.id}")
         if (feature.id != previousMetadata.id) {
             throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Feature id (${feature.id}) differs from previous metadata (${previousMetadata.id})")
@@ -41,10 +37,10 @@ class UpdateFeature(
         val map = session.storage.adminMap.getPgMapById(session.useConnection(), collection.map.id) ?: throw NakshaException(MAP_NOT_FOUND, "Map with id '${collection.map.id}' does not exist")
         val featureNumber = featureNumber(hashId(feature.id))
         val tupleNumber = newFeatureTupleNumber(collection, featureNumber, session)
-        val tuple = session.useTx().updated(map.nakshaMap, collection.nakshaCollection, feature)
+        val tuple = session.useTx().updated(map.head, collection.head, feature)
 
         writeExecutor.removeFeatureFromDel(collection, feature.id)
-        collection.history?.let { hstTable ->
+        collection.historyTable?.let { hstTable ->
             writeExecutor.copyHeadToHst(
                 collection = collection,
                 featureId = feature.id

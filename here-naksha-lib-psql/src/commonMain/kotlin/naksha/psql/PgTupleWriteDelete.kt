@@ -1,5 +1,7 @@
 package naksha.psql
 
+import naksha.model.Action
+import naksha.model.TupleNumber
 import naksha.model.objects.StoreMode
 
 /**
@@ -7,15 +9,25 @@ import naksha.model.objects.StoreMode
  * @since 3.0
  * @see [PgTupleWriter]
  */
-internal class PgTupleWriterDelete(session: PgSession, collection: PgCollection, writes: List<PgTupleWrite>)
+internal class PgTupleWriteDelete(session: PgSession, collection: PgCollection, writes: List<PgTupleWrite>)
     : PgTupleWriteBase(session, collection, writes)
 {
+    init {
+        rows.addColumn("id", PgType.STRING)
+        rows.addColumn("version", PgType.INT64)
+        for (e in writes.withIndex()) {
+            val row = e.index
+            val write = e.value
+            rows.set(row, "id", write.id)
+            rows.set(row, "version", write.version?.txn)
+        }
+    }
 
     private fun plan(conn: PgConnection, collection: PgCollection): PgPlan {
-        val shadow = collection.deleted
-        val history = collection.history
-        val insert_into_shadow = if (shadow != null && collection.nakshaCollection.storeDeleted != StoreMode.ON) shadow else null
-        val insert_into_history = if (history != null && collection.nakshaCollection.storeHistory != StoreMode.ON) history else null
+        val shadow = collection.deletedTable
+        val history = collection.historyTable
+        val insert_into_shadow = if (shadow != null && collection.head.storeDeleted != StoreMode.ON) shadow else null
+        val insert_into_history = if (history != null && collection.head.storeHistory != StoreMode.ON) history else null
 
         val DELETE_FROM_SHADOW = if (shadow != null) """, deleted_shadow AS (
   DELETE FROM ${shadow.quotedName} AS shadow
@@ -47,11 +59,11 @@ internal class PgTupleWriterDelete(session: PgSession, collection: PgCollection,
 WITH query AS (
   SELECT * FROM UNNEST($1, $2) AS t(id, version)
 ), head_row AS (
-  SELECT head.id AS id, head.tn AS tn FROM ${collection.head.quotedName} AS head, query
+  SELECT head.id AS id, head.tn AS tn FROM ${collection.headTable.quotedName} AS head, query
   WHERE head.id = query.id
   FOR UPDATE NOWAIT
 ), head_deleted AS (
-  DELETE FROM ${collection.head.quotedName} AS head
+  DELETE FROM ${collection.headTable.quotedName} AS head
   USING head_row, query
   WHERE head.tn = head_row.tn AND (query.version IS NULL OR query.version = naksha_tn_version(head.tn))
   RETURNING head.id, head.tn
@@ -63,15 +75,41 @@ FROM query
 LEFT JOIN head_row ON head_row.id = query.id
 LEFT JOIN head_deleted ON head_deleted.id = query.id;
 """
-        return conn.prepare(SQL, arrayOf(PgType.STRING_ARRAY.text, PgType.INT64_ARRAY.text))
+        return conn.prepare(SQL, rows.typeNames())
     }
 
-    fun deleteColumnValues() : Array<Any?> = arrayOf(id, version)
-
-    fun execute(conn: PgConnection) {
+    override fun doExecute(conn: PgConnection) {
+        val outRows = PgColumnRows()
+            .withStorageNumber(storageNumber)
+            .withMapNumber(mapNumber)
+            .withCollectionNumber(collectionNumber)
+            .addColumn("q_id", PgType.STRING)
+            .addColumn("q_version", PgType.INT64)
+            .addColumn("h_id", PgType.STRING)
+            .addColumn("h_tn", PgType.BYTE_ARRAY)
+            .addColumn("h_version", PgType.INT64)
+            .addColumn("d_id", PgType.STRING)
+            .addColumn("d_tn", PgType.BYTE_ARRAY)
+            .addColumn("d_version", PgType.INT64)
         val plan = plan(conn, collection)
-        val array = deleteColumnValues()
-        plan.execute(array).close()
+        val array = rows.values()
+        plan.execute(array).fetch().use { cursor ->
+            outRows.addAll(cursor)
+            for (row in 0 until outRows.size) {
+                val write = writes[row]
+                if (write.isMapModification) {
+                    val deletedId = outRows.getString(row, "d_id")
+                    if (deletedId != null) {
+                        check(write.id == deletedId)
+                        val tn_bytes = outRows.getByteArray(row, "d_tn")
+                        if (tn_bytes != null) {
+                            val tn = TupleNumber.fromB160(tn_bytes, storageNumber, mapNumber, collectionNumber)
+                            transaction.useMap(write.id, tn.featureNumber.toInt(), Action.DELETED)
+                        }
+                    }
+                }
+            }
+        }
         // TODO: Verify the result
         //       We receive one row for each given write with q_id, q_version
         //       Then we get back if there is a HEAD state: h_id, h_tn, h_version

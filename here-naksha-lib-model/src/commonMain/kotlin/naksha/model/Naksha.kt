@@ -83,7 +83,7 @@ class Naksha private constructor() {
         /**
          * The identifier of the collection in which transactions are stored, located in the [admin-map][ADMIN_MAP] _(`naksha~transactions`)_.
          * @since 3.0
-         * @see [naksha.model.objects.NakshaTransaction]
+         * @see [naksha.model.objects.NakshaTx]
          */
         const val TRANSACTIONS_COL = "naksha~transactions"
 

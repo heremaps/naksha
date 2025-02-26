@@ -176,23 +176,22 @@ class CollectionTests : PgTestBase(null) {
         )
         val delTableName = "$collectionName\$del"
         storage.adminConnection().use { conn ->
-            conn.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1",
-                args = arrayOf(delTableName)
-            ).use { cursor ->
+            val SQL = "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)"
+            conn.execute(SQL, arrayOf(delTableName)).use { cursor ->
                 // Check that del table was not created
                 assertFalse(cursor.fetch()["exists"])
             }
         }
         // Check that creating, updating and deleting features still work
         val feature = NakshaFeature()
-        val readFeature = ReadFeatures()
-        readFeature.collectionIds.add(collectionName)
-        readFeature.featureIds.add(feature.id)
         executeWrite(
             WriteRequest().add(
                 Write().createFeature(collection, feature)
             )
         )
+        val readFeature = ReadFeatures()
+        readFeature.collectionIds.add(collectionName)
+        readFeature.featureIds.add(feature.id)
         val insertedFeatureResponse = executeRead(readFeature)
         assertEquals(1, insertedFeatureResponse.features.size)
         feature.properties["foo"] = "bar"
@@ -313,6 +312,6 @@ class CollectionTests : PgTestBase(null) {
 
         // Then
         assertIs<ErrorResponse>(response)
-        assertEquals(NakshaError.CONFLICT, response.error.code)
+        assertTrue(response.error.isConflict())
     }
 }
