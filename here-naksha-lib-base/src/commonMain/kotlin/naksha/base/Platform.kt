@@ -216,6 +216,13 @@ expect class Platform {
         fun <R: Any> newAtomicRef(startValue: R?): AtomicRef<R>
 
         /**
+         * Create a new atomic reference that is never `null`.
+         * @param startValue the initial value must not `null`.
+         * @return the atomic reference.
+         */
+        fun <R: Any> newAtomicNonNullRef(startValue: R): AtomicNonNullRef<R>
+
+        /**
          * Create a new atomic boolean.
          * @param startValue the initial value.
          * @return the atomic boolean.

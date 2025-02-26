@@ -48,11 +48,18 @@ inline operator fun Double.compareTo(other: Int64): Int {
     return if (diff == 0.0) 0 else if (diff <= 0.0) -1 else 1
 }
 
+val INT_TO_UNSIGNED_INT64_MASK = Int64(0xffff_ffff)
+
 inline fun Double.toInt64RawBits(): Int64 = Platform.toInt64RawBits(this)
 inline fun Double.toLongRawBits(): Long = Platform.toInt64RawBits(this).toLong()
 inline fun Double.toInt64(): Int64 = Platform.toInt64(this)
 inline fun Long.toInt64(): Int64 = Platform.longToInt64(this)
 inline fun Int.toInt64(): Int64 = Platform.toInt64(this)
+
+/**
+ * Convert the integer into an unsigned 64-bit integer, so `-1` becomes `4294967295` _(aka `0xffffffff`)_.
+ */
+inline fun Int.toUnsignedInt64(): Int64 = Platform.toInt64(this) and INT_TO_UNSIGNED_INT64_MASK
 
 inline fun <K : Any, V : Any> AtomicMap(): AtomicMap<K, V> = Platform.newAtomicMap()
 inline fun AtomicBool(initialValue: Boolean = false): AtomicBool = Platform.newAtomicBool(initialValue)
@@ -60,6 +67,7 @@ inline fun AtomicInt(initialValue: Int = 0): AtomicInt = Platform.newAtomicInt(i
 inline fun AtomicInt64(initialValue: Int64): AtomicInt64 = Platform.newAtomicInt64(initialValue)
 inline fun AtomicInt64(initialValue: Long = 0): AtomicInt64 = Platform.newAtomicInt64(initialValue.toInt64())
 inline fun <T : Any> AtomicRef(referee: T?): AtomicRef<T> = Platform.newAtomicRef(referee)
+inline fun <T : Any> AtomicNonNullRef(referee: T): AtomicNonNullRef<T> = Platform.newAtomicNonNullRef(referee)
 inline fun <T : Any> WeakRef(referee: T): WeakRef<T> = Platform.newWeakRef(referee)
 
 /**
