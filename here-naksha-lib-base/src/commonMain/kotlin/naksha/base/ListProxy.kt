@@ -17,7 +17,6 @@ import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set_length
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_splice
 import naksha.base.fn.Fn2
 import kotlin.js.JsExport
-import kotlin.jvm.JvmStatic
 import kotlin.math.max
 import kotlin.reflect.KClass
 
@@ -122,6 +121,12 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
         return value
     }
 
+    /**
+     * The size of the list.
+     *
+     * Can be modified to change the size, additional values will become `null`. Reducing the size will simply remove elements from the end of the list.
+     * @since 3.0
+     */
     override var size: Int
         get() = array_get_length(platformObject())
         set(newLength) = array_set_length(platformObject(), newLength)
@@ -250,6 +255,34 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
      * @return this cast to List<E>.
      */
     fun asList(): List<E?> = this
+
+    /**
+     * Turn this list into an array and return it _(for Java, this is an `Object[]`)_.
+     * @return this list as array.
+     * @see [toArrayNotNull]
+     */
+    fun toArray(): Array<Any?> {
+        val array = arrayOfNulls<Any?>(this.size)
+        for (i in array.indices) array[i] = this[i]
+        return array
+    }
+
+    /**
+     * Turn this list into an array, removing `null` values, and return it _(for Java, this is an `Object[]`)_.
+     * @return this list as array with `null` values being eliminated.
+     * @see [toArray]
+     */
+    fun toArrayNotNull(): Array<Any> {
+        val array = arrayOfNulls<Any>(this.size)
+        var a = 0
+        for (i in 0 until this.size) {
+            val v = this[i]
+            if (v != null) array[a++] = v
+        }
+        // Note: At this point we know that array does not contain nulls up until (excluding) `a`!
+        @Suppress("UNCHECKED_CAST")
+        return (if (a == array.size) array else array.copyOf(a)) as Array<Any>
+    }
 
     class ListProxyIterator<T: Any>(
         private val basicIterator: MutableListIterator<T?>,
