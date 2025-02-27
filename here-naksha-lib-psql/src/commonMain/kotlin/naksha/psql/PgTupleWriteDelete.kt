@@ -65,12 +65,12 @@ WITH query AS (
 ), head_deleted AS (
   DELETE FROM ${collection.headTable.quotedName} AS head
   USING head_row, query
-  WHERE head.tn = head_row.tn AND (query.version IS NULL OR query.version = naksha_tn_version(head.tn))
+  WHERE head.tn = head_row.tn AND (query.version IS NULL OR query.version = naksha_tn_txn(head.tn))
   RETURNING head.id, head.tn
 )$DELETE_FROM_SHADOW
 SELECT query.id AS q_id, query.version AS q_version,
-       head_row.id AS h_id, head_row.tn AS h_tn, naksha_tn_version(head_row.tn) AS h_version,
-       head_deleted.id AS d_id, head_deleted.tn AS d_tn, naksha_tn_version(head_deleted.tn) AS d_version
+       head_row.id AS h_id, head_row.tn AS h_tn, naksha_tn_txn(head_row.tn) AS h_version,
+       head_deleted.id AS d_id, head_deleted.tn AS d_tn, naksha_tn_txn(head_deleted.tn) AS d_version
 FROM query
 LEFT JOIN head_row ON head_row.id = query.id
 LEFT JOIN head_deleted ON head_deleted.id = query.id;
