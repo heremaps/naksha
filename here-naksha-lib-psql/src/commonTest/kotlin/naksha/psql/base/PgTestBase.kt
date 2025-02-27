@@ -12,7 +12,9 @@ import naksha.model.request.*
 import naksha.psql.PgStorage
 import kotlin.reflect.KClass
 import kotlin.test.BeforeTest
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 
 /**
  * Base class for all tests using postgres as storage. It provides:
@@ -43,16 +45,20 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
                 if (testMap.get() == null) {
                     // Delete the map, should it be still there from previous test runs.
                     var request = WriteRequest()
-                    var map = NakshaMap(env.mapId, env.storage.id)
-                    request.writes += Write().deleteMap(map, false)
+                    request.writes += Write().deleteMapById(env.mapId)
                     executeWrite(request)
 
                     // Create the map.
+                    val newMap = NakshaMap(env.mapId, env.storage.id)
                     request = WriteRequest()
-                    map = NakshaMap(env.mapId, env.storage.id)
-                    request.writes += Write().createMap(map)
-                    executeWrite(request)
-
+                    request.writes += Write().createMap(newMap)
+                    val response = executeWrite(request)
+                    assertIs<SuccessResponse>(response)
+                    val features = response.features
+                    assertEquals(1, features.size)
+                    val feature = features.first()
+                    assertNotNull(feature)
+                    val map = feature.proxy(NakshaMap::class)
                     testMap.set(map)
                 }
             }
