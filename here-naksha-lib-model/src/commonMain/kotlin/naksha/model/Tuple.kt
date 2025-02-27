@@ -10,19 +10,19 @@ import kotlin.jvm.JvmField
 
 /**
  * A tuple represents a specific immutable state of a feature on the heap. The default constructor creates a metadata-only entry.
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 data class Tuple(
     /**
      * The metadata, this is going into the [XYZ namespace][XyzNs], when decoding the [Tuple] into a [NakshaFeature].
-     * @since 3.0.0
+     * @since 3.0
      */
     @JvmField val meta: Metadata,
 
     /**
      * Feature encoded with [FeatureEncoding] algorithm described by [Metadata.flags].
-     * @since 3.0.0
+     * @since 3.0
      */
     @JvmField val feature: ByteArray? = null,
 
@@ -30,7 +30,7 @@ data class Tuple(
      * Geometry encoded with [GeoEncoding] algorithm described by [Metadata.flags].
      *
      * Might be _null_, when the feature does not have a geometry.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JvmField val geo: ByteArray? = null,
 
@@ -38,7 +38,7 @@ data class Tuple(
      * Geometry-Reference-Point, always a single [point][naksha.geo.SpPoint], [TWKB](https://github.com/TWKB/Specification) encoded (no compression, we never get any advantage of compression).
      *
      * Might be _null_, when the feature does not have a reference point, in that the [geo-grid HERE tile-id][Metadata.calculateHereTile] is calculated from the gravitational center of the [geometry][geo], or, if the feature does not have a geometry either, then it is calculated from the [id][Metadata.id] of the feature.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JvmField val referencePoint: ByteArray? = null,
 
@@ -46,19 +46,19 @@ data class Tuple(
      * Tags encoded with [TagsEncoding] algorithm described by [Metadata.flags].
      *
      * Might be _null_, when the feature does not have any tags.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JvmField val tags: ByteArray? = null,
 
     /**
      * An arbitrary binary attachment.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JvmField val attachment: ByteArray? = null,
 
     /**
      * If the [Tuple] is complete, otherwise this is a partial tuple, which can't be cached.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JvmField val complete: Boolean = false,
 ) : ITuple {
@@ -88,56 +88,63 @@ data class Tuple(
 
     /**
      * The [identifier][Metadata.id] of the feature, basically `meta.id`.
-     * @since 3.0.0
+     * @since 3.0
      */
     val id: String
         get() = meta.id
 
     /**
      * The [tuple-number][TupleNumber] of the [Tuple].
-     * @since 3.0.0
+     * @since 3.0
      */
     val tupleNumber: TupleNumber
         get() = meta.tupleNumber
 
     /**
      * The number of the storage in which the tuple is stored.
-     * @since 3.0.0
+     * @since 3.0
      */
     val storageNumber: Int64
         get() = meta.storageNumber
 
     /**
      * The number of the map in which the tuple is stored.
-     * @since 3.0.0
+     * @since 3.0
      */
     val mapNumber: Int
         get() = meta.mapNumber
 
     /**
      * The number of the collection in which the tuple is stored.
-     * @since 3.0.0
+     * @since 3.0
      */
     val collectionNumber: Int
         get() = meta.collectionNumber
 
     /**
+     * The number of the feature.
+     * @since 3.0
+     */
+    val featureNumber: Int64
+        get() = meta.featureNumber
+
+    /**
      * The partition-number in the tuple is stored.
-     * @since 3.0.0
+     * @since 3.0
      */
     val partitionNumber: Int
         get() = meta.partitionNumber
 
     /**
      * The version of the [Tuple].
-     * @since 3.0.0
+     * @since 3.0
      */
     val version: Version
         get() = meta.version
 
     /**
      * The version local unique identifier of the [Tuple].
-     * @since 3.0.0
+     * @since 3.0
      */
     val uid: Int
         get() = meta.uid
