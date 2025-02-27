@@ -288,10 +288,6 @@ abstract class JsEnum : CharSequence {
                     // Allocating an instance, should cause the companion object to be initialized.
                     val instance = Platform.allocateInstance(enumKlass)
                     ns = instance.namespace()
-                    val existing = klassToNamespace.putIfAbsent(enumKlass, ns)
-                    check(existing === null || existing === ns) {
-                        "There is already another class (${existing!!.simpleName}) registered for namespace ${ns.simpleName}"
-                    }
                     instance.register(ns)
                     instance.initClass()
                 }
@@ -383,11 +379,11 @@ abstract class JsEnum : CharSequence {
     protected fun <CHILD : JsEnum> register(enumKlass: KClass<out CHILD>) {
         val namespace = namespace()
         val existing = klassToNamespace.putIfAbsent(enumKlass, namespace)
-        check(existing === null || existing === namespace) {
+        check(existing == null || existing == namespace) {
             "Failed to register '${enumKlass.simpleName}' to namespace '${namespace.simpleName}'" +
                     ", '${enumKlass.simpleName}' is already registered to '${existing!!.simpleName}'"
         }
-        Platform.initializeKlass(enumKlass)
+        if (existing == null) Platform.initializeKlass(enumKlass)
     }
 
 
