@@ -138,7 +138,9 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
     protected fun dropCollection() {
         val collection = initializedCollections.remove(this::class)
         if (collection != null) {
-            val deleteCollectionRequest = WriteRequest().add(Write().deleteCollectionById(env.mapId, collection.id))
+            val deleteCollectionRequest = WriteRequest().add(
+                Write().deleteCollectionById(env.mapId, collection.id)
+            )
             storage.newWriteSession().use { session ->
                 val response = session.execute(deleteCollectionRequest)
                 assertIs<SuccessResponse>(response)

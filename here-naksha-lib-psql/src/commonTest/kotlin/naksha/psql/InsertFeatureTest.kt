@@ -22,7 +22,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
 
     @AfterTest
     fun cleanUp() {
-//        dropCollection()
+        dropCollection()
     }
 
     @Test

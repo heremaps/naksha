@@ -109,6 +109,8 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
             // If this operation modifies a map.
             if (write.isMapModification) {
                 val op = write.op
+                // TODO: Fix me, when a map is deleted with id or number only!
+                //       In that case, feature is null and this is correct!
                 val feature = write.feature ?: throw illegalArg("The feature #${write.i} is null")
                 val nakshaMap = if (feature is NakshaMap) feature else feature.proxy(NakshaMap::class)
                 nakshaMap.storageId = storage.id
@@ -135,11 +137,12 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
             // If this operation modifies a collection.
             if (write.isCollectionModification) {
                 val op = write.op
-                val feature = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                val nakshaCollection = if (feature is NakshaCollection) feature else feature.proxy(NakshaCollection::class)
+                var pgCollection = map.getPgCollectionById(conn, write.id)
 
-                var pgCollection = map.getPgCollectionById(conn, featureId)
+                val nakshaCollection: NakshaCollection?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT) {
+                    val feature = write.feature ?: throw collectionNotFound("The write #${write.i} is $op, but the feature is null")
+                    nakshaCollection = if (feature is NakshaCollection) feature else feature.proxy(NakshaCollection::class)
                     if (pgCollection == null) {
                         pgCollection = PgCollection(map, nakshaCollection)
                         createPgCollection(pgCollection)
@@ -147,7 +150,10 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
                         throw mapExists("The write #${write.i} failed, because the collection '$featureId' does exist already in map $mapId")
                     }
                 } else if (op == WriteOp.DELETE || op == WriteOp.PURGE) {
-                    if (pgCollection != null) deletePgCollection(pgCollection)
+                    if (pgCollection != null) {
+                        deletePgCollection(pgCollection)
+                    }
+                    nakshaCollection = null
                 } else {
                     throw illegalState("The write #${write.i} refers to an unsupported operation: '$op'")
                 }
