@@ -572,7 +572,7 @@ class Naksha private constructor() {
                 return decoder.toAnyObject().proxy(TagMap::class)
             }
             if (encoding == TagsEncoding.JSON || encoding == TagsEncoding.JSON_GZIP) {
-                val text = bytes.decodeToString()
+                val text = raw.decodeToString()
                 val decoded = fromJSON(text)
                 if (decoded is PlatformMap) return decoded.proxy(TagMap::class)
             }

@@ -22,7 +22,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
 
     @AfterTest
     fun cleanUp() {
-        dropCollection()
+//        dropCollection()
     }
 
     @Test
@@ -63,7 +63,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
                             .hasProperty("author", PgTest.TEST_APP_AUTHOR!!)
-                            .hasProperty("action", Action.CREATED)
+                            .hasProperty("action", Action.CREATED.text)
                     }
                     .hasTags(TagList("wicked"))
             }
