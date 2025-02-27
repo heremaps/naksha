@@ -14,7 +14,7 @@ import kotlin.reflect.KClass
  * @since 3.0
  */
 @JsExport
-class TupleNumberVariant : JsEnum() {
+class TupleNumberVariant internal constructor() : JsEnum() {
     @Suppress("NON_EXPORTABLE_TYPE")
     override fun namespace(): KClass<out JsEnum> = TupleNumberVariant::class
 

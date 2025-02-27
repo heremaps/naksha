@@ -217,6 +217,56 @@ data class TupleNumber(
     }
 
     /**
+     * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront, encodes:
+     * - `txn` _(aka [Version])_
+     * - `uid`
+     * @since 3.0
+     */
+    fun toB96(): ByteArray = toByteArray(B96)
+
+    /**
+     * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront, encodes:
+     * - `feature-number`
+     * - `txn` _(aka [Version])_
+     * - `uid`
+     * @since 3.0
+     */
+    fun toB160(): ByteArray = toByteArray(B160)
+
+    /**
+     * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront, encodes:
+     * - `collection-number`
+     * - `feature-number`
+     * - `txn` _(aka [Version])_
+     * - `uid`
+     * @since 3.0
+     */
+    fun toB192(): ByteArray = toByteArray(B192)
+
+    /**
+     * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront, encodes:
+     * - `map-number`
+     * - `collection-number`
+     * - `feature-number`
+     * - `txn` _(aka [Version])_
+     * - `uid`
+     * @since 3.0
+     */
+    fun toB224(): ByteArray = toByteArray(B224)
+
+    /**
+     * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront, encodes:
+     * - `storage-number`
+     * - `map-number`
+     * - `collection-number`
+     * - `feature-number`
+     * - `txn` _(aka [Version])_
+     * - `uid`
+     * @since 3.0
+     */
+    fun toB288(): ByteArray = toByteArray(B288)
+
+    /**
      * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront.
      *
      * This method is internally used to save space.

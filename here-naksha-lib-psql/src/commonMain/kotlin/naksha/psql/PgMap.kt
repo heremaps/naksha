@@ -113,19 +113,23 @@ open class PgMap internal constructor(
     }
 
     /**
-     * Sets the `search_path` so that this map is on the top, followed by `naksha~admin`, `topology`, `hint_plan`, `public`.
-     *
-     * **The search path is only set for the current transaction, so until `commit` or `rollback`!**
+     * Returns the `search_path` so that this map is on the top, followed by `naksha~admin`, `topology`, `hint_plan`, `public`.
+     * @return the `search_path` so that this map is on the top, followed by `naksha~admin`, `topology`, `hint_plan`, `public`.
+     */
+    fun getSearchPath(): String = if (this is PgAdminMap) {
+        "SET search_path = \"naksha~admin\", topology, hint_plan, public"
+    } else {
+        "SET search_path = ${quotedId}, \"naksha~admin\", topology, hint_plan, public"
+    }
+
+    /**
+     * Sets the `search_path` for the current transaction, so until `commit` or `rollback`.
      * @param conn the connection where to set the search path.
      * @since 3.0
+     * @see [getSearchPath]
      */
     fun setSearchPath(conn: PgConnection) {
-        val SQL = if (this is PgAdminMap) {
-            "SET search_path = \"naksha~admin\", topology, hint_plan, public"
-        } else {
-            "SET search_path = ${quotedId}, \"naksha~admin\", topology, hint_plan, public"
-        }
-        conn.execute(SQL).close()
+        conn.execute(getSearchPath()).close()
     }
 
     /**

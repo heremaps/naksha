@@ -318,98 +318,66 @@ open class PgSession(
     }
 
     override fun loadTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int, mode: FetchMode) {
-        // TODO: Caching is only done by
-        val cachedTuples = Naksha.cache.load(featureTuples, from, to).toSet()
-        val missingTuples = featureTuples.subList(from, to).filter { it !in cachedTuples }
-        if (missingTuples.isNotEmpty()) {
-            val fetchedResults = fetchFromDatabase(missingTuples, true, mode) ?: return
-            val fetchedMap = fetchedResults.filterNotNull().associateBy { it }
-            featureTuples.subList(from, to).filterNotNull().forEach { tup ->
-                fetchedMap[tup]?.let { fetchedItem ->
-                    // fetchedItem.tuple?.let(Naksha.cache::store)
-                    tup.tuple = fetchedItem.tuple
-                    tup.source = fetchedItem.source
+        // We are the storage, do not load from us ;-)
+        Naksha.cache.load(featureTuples, from, to, loadFromStorage = false)
+        val missing = featureTuples.subList(from, to).mapNotNull { if (it != null && it.tuple == null) it else null }
+        if (missing.isNotEmpty()) {
+            (if (mayReadParallel) newReadConnection() else readConnection()).use { readConn ->
+                val conn = readConn.conn
+                val byCollection = missing.groupBy {
+                    val pgMap = storage.adminMap.getPgMapByNumber(conn, it.tupleNumber.mapNumber) ?: return@groupBy "NULL"
+                    pgMap.getPgCollectionByNumber(conn, it.tupleNumber.collectionNumber) ?: return@groupBy "NULL"
+                }
+                for (entry in byCollection) {
+                    val key = entry.key
+                    val pgCollection = if (key is PgCollection) key else continue
+                    val tupleFeatures = entry.value
+                    loadTuplesFromCollection(conn, pgCollection, tupleFeatures, mode)
                 }
             }
         }
     }
 
-    private fun fetchFromDatabase( missingTuples: List<FeatureTuple?>, fetchFromHistory: Boolean, mode: FetchMode): List<FeatureTuple?>? {
-        if (missingTuples.isEmpty()) return null
-        val tupNumbers = missingTuples.mapNotNull{ it?.tuple?.tupleNumber }
-        // TODO: Update the query below
-        val sqlQuery = """
-        WITH source AS (
-          (SELECT :col_number as col_num, * FROM :col_name WHERE tn = ANY(:tupNumbers))
-          UNION ALL
-          ...
-        ), meta_with_rest AS (
-          SELECT bytea_agg(
-            int8send(:storage_number)
-            ||int4send(:map_number)
-            ||int4send(col_num)
-            ||tn
-            ||int4send(flags)
-            ||coalesce(int8send(txn_next),int8send(0::int8))
-            ||coalesce(int8send(cv0),''::bytea)
-            ||coalesce(int8send(cv1),''::bytea)
-            ||coalesce(int8send(cv2),''::bytea)
-            ||coalesce(int8send(cv3),''::bytea)
-            ||coalesce(prev_tn,''::bytea)
-            ||coalesce(base_tn,''::bytea)
-            ||coalesce(substring(int8send(created_at),3),''::bytea)
-            ||coalesce(substring(int8send(author_ts),3),''::bytea)
-            ||substring(int8send(updated_at), 3)
-            ||int4send(coalesce(change_count, 1))
-            ||int4send(coalesce(hash, 0))
-            ||int4send(coalesce(here_tile,0))
-            ||id::bytea||'\x00'::bytea
-            ||coalesce(app_id,'')::bytea||'\x00'::bytea
-            ||coalesce(author,'')::bytea||'\x00'::bytea
-            ||coalesce(origin,'')::bytea||'\x00'::bytea
-            ||coalesce(target,'')::bytea||'\x00'::bytea
-            ||coalesce(ft,'')::bytea||'\x00'::bytea
-            ||coalesce(cs0,'')::bytea||'\x00'::bytea
-            ||coalesce(cs1,'')::bytea||'\x00'::bytea
-            ||coalesce(cs2,'')::bytea||'\x00'::bytea
-            ||coalesce(cs3,'')::bytea||'\x00'::bytea
-          ) as meta, ref_point, geo, tags, feature, attachment
-          FROM source
-        ), tuple_objects_without_header AS (
-          SELECT bytea_agg(
-             int4send((octet_length(meta) << 16)|octet_length(coalesce(ref_point,''::bytea)))
-             ||int4send(octet_length(coalesce(geo,''::bytea)))
-             ||int4send(octet_length(coalesce(tags,''::bytea)))
-             ||int4send(octet_length(coalesce(feature,''::bytea)))
-             ||int4send(octet_length(coalesce(attachment,''::bytea)))
-             ||meta
-             ||coalesce(ref_point,''::bytea)
-             ||coalesce(geo,''::bytea)
-             ||coalesce(tags,''::bytea)
-             ||coalesce(feature,''::bytea)
-             ||coalesce(attachment,''::bytea)
-            ) as obj
-        ), result AS (
-          SELECT sum(1)::int as len, bytea_agg(
-            int4send((3 << 28)|1)
-            ||int4send(8 + octet_length(obj))
-            ||obj
-          ) as all_obj
-          FROM tuple_objects_without_header
-          LIMIT 16777215
-        )
-        SELECT gzip(bytea_agg(
-            int4send((4 << 28)|len)
-            ||int4send(8 + octet_length(all_obj))
-            ||all_obj
-        )) FROM result
-    """.trimIndent()
-        val conn = pgConnection
-        if (conn != null) {
-            val resultSet = conn.execute(sqlQuery,arrayOf(tupNumbers)).close()
+    /**
+     * Load [Tuple] from a specific collection, can be executed in parallel, when multiple collections are needed. We should make parallel reading optional, we experienced that when used for example in EMR, too many connections can harm. However, the cache could keep objects in Redis or alike, and then read perfectly fine in parallel!
+     *
+     * @param conn the connection to use for this read.
+     * @param pgCollection the collection to read from.
+     * @param tupleFeatures the features to load from this collection (pre-filtered).
+     * @param mode the load-mode
+     */
+    private fun loadTuplesFromCollection(conn: PgConnection, pgCollection: PgCollection, tupleFeatures: List<FeatureTuple>, mode: FetchMode) {
+        // TODO: We can improve this to load the results as GZIP compressed binary!
+        //       Read BINARY.md for more information.
+        //       For the sake of delivery, we take the shortcut, and only us ARRAY_AGG
+        //       Maybe this is already fast enough?
+        val rows = PgColumnRows()
+            .withStorageNumber(pgCollection.storage.number)
+            .withMapNumber(pgCollection.map.number)
+            .withCollectionNumber(pgCollection.number)
+            .addColumns(PgColumn.allColumns)
+        pgCollection.map.setSearchPath(conn)
+        val historyTable = pgCollection.historyTable
+        var SQL = "SELECT ${rows.namesAggregate()} FROM ${pgCollection.headTable.quotedName} WHERE tn = ANY($1)"
+        if (historyTable != null)
+            SQL += "UNION ALL SELECT ${rows.names()} FROM ${historyTable.quotedName} WHERE tn = ANY($1)"
+        val tupleNumbers: Array<Any?> = tupleFeatures.map { it.tupleNumber.toB160() }.toTypedArray()
+        conn.prepare(SQL, arrayOf(PgType.BYTE_ARRAY_ARRAY.text)).use { plan ->
+            plan.execute(tupleNumbers).fetch().use { cursor ->
+                rows.addAll(cursor)
+            }
         }
-        //TODO: Convert resultSet to FeatureTuple list
-        return null
+        for (i in 0 until rows.size) {
+            val tuple = rows[i] ?: continue
+            Naksha.cache.store(tuple)
+            val tupleNumber = tuple.tupleNumber
+            for (tupleFeature in tupleFeatures) {
+                if (tupleFeature.tupleNumber == tupleNumber) {
+                    tupleFeature.tuple = tuple
+                    break
+                }
+            }
+        }
     }
 
     override fun getMapById(mapId: String): NakshaMap? {

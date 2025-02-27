@@ -29,10 +29,10 @@ class TupleCache internal constructor() {
     }
 
     /**
-     * The maximum amount of microseconds allowed to query [get][ITupleCache.get] on a cache, defaults to `0`.
+     * The maximum amount of microseconds allowed for [get][ITupleCache.get], defaults to `0`.
      *
      * ### Note
-     * If set to a negative value, no cache will be queries when [get] is invoked!
+     * If set to a negative value, no cache will be queried when [get] is invoked!
      * @since 3.0
      */
     val maxGetMicros = AtomicInt64(0)
@@ -41,7 +41,7 @@ class TupleCache internal constructor() {
      * The default maximum amount of microseconds allowed for [load] or [getAll], defaults to `9223372036854775807`.
      *
      * ### Note
-     * If set to a negative value, no cache will be queries when [load] or [getAll] are invoked!
+     * If set to a negative value, no cache will be queried when [load] or [getAll] are invoked!
      * @since 3.0
      */
     val maxLoadMicros = AtomicInt64(9223372036854775807)
