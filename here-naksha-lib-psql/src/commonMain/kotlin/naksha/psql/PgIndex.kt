@@ -639,12 +639,12 @@ ${if (where==null) "" else "WHERE $where"};"""
             here_tile,
             app_id,
             author,
-            tags,
+            //tags,
             feature_type,
             cv0, cv1, cv2, cv3,
             cs0, cs1, cs2, cs3,
-            ref_point,
-            gist_geo_2d,
+            //ref_point,
+            //gist_geo_2d,
         )
     }
 
