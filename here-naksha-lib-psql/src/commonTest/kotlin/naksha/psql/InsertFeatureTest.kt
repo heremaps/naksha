@@ -11,13 +11,14 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.model.request.query.SpIntersects
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import naksha.psql.base.PgTestBase
 import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
 import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeatures
 import kotlin.test.*
 
-class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) {
+class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", TEST_MAP_ID)) {
 
     @AfterTest
     fun cleanUp() {
