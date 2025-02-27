@@ -9,6 +9,7 @@ import naksha.base.Int64
 import naksha.base.fn.Fn1
 import naksha.jbon.IDictReader
 import naksha.model.request.FeatureTuple
+import naksha.model.request.ReadFeatures
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
@@ -50,7 +51,7 @@ class TupleCache internal constructor() {
      * If for cache misses in [load] or [getAll] the storage should be queried to load the [Tuple] into the cache, defaults to `false`.
      * @since 3.0
      */
-    var autoLoad = AtomicBool(false)
+    var autoLoad = AtomicBool(true)
 
     /**
      * Adds the given cache.
@@ -173,7 +174,17 @@ class TupleCache internal constructor() {
         if (from < 0 || from >= end) return featureTuples
         forEachCache { if (it.latencyInMicros <= MAX) it.load(featureTuples) else null }
         val AUTO_LOAD = loadFromStorage ?: autoLoad.get()
-        if (AUTO_LOAD) TupleLoader.loadParallel(featureTuples)
+        if (AUTO_LOAD) {
+            val byStorage = featureTuples.filter { it != null && it.tuple == null }.filterNotNull().groupBy { it.tupleNumber.storageNumber }
+            for (entry in byStorage) {
+                val storageNumber = entry.key
+                val toLoad = entry.value
+                val storage = Naksha.getStorageByNumber(storageNumber) ?: continue
+                storage.newReadSession().use { session ->
+                    session.loadTuples(toLoad)
+                }
+            }
+        }
         return featureTuples
     }
 

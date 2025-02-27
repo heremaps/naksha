@@ -316,8 +316,6 @@ open class PgSession(
     }
 
     override fun loadTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int, mode: FetchMode) {
-        // We are the storage, do not load from us ;-)
-        Naksha.cache.load(featureTuples, from, to, loadFromStorage = false)
         val missing = featureTuples.subList(from, to).mapNotNull { if (it != null && it.tuple == null) it else null }
         if (missing.isNotEmpty()) {
             (if (mayReadParallel) newReadConnection() else readConnection()).use { readConn ->
