@@ -68,6 +68,7 @@ import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import naksha.model.util.ResultHelper;
+import naksha.psql.PgConfig;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -115,30 +116,27 @@ public class NakshaHub implements INaksha {
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public NakshaHub(
-      final @NotNull String appName,
-      final @NotNull String storageUrl,
+      final @NotNull String adminMapId,
+      final @NotNull String adminStorageId,
+      final @NotNull String adminPgMasterUrl,
       final @Nullable NakshaHubConfig customCfg,
       final @Nullable String configId) {
     // create storage instance upfront
     logger.info("NakshaHub initialization started.");
-
-    final StorageConfig storageConfig = new StorageConfig();
-    storageConfig.setId("Naksha");
-    storageConfig.setClassName("naksha.psql.PsqlStorage");
-    // TODO force create and update?
-    storageConfig.setCreate(false);
-    storageConfig.setUpgrade(false);
-    storageConfig.put("masterUri", storageUrl);
-    // TODO CASL-657: support clustering
+//    // TODO force create and update?
+//    // TODO CASL-657: support clustering
+    final StorageConfig storageConfig = new PgConfig(adminStorageId)
+        .withMasterUri(adminPgMasterUrl)
+        .withCreate(true)
+        .withUpgrade(true);
 
     //    this.psqlStorage = new PsqlStorage(PsqlStorage.ADMIN_STORAGE_ID, appName, storageUrl);
-    String schema = "naksha_data_schema"; // TODO CASL-657: this used to come in `storageUrl`
     logger.info("Initializing Admin storage (if not already).");
     this.psqlStorage = Naksha.useStorage(storageConfig);
     this.adminStorageInstance = new NHAdminStorage(this.psqlStorage);
     this.spaceStorageInstance = new NHSpaceStorage(this, new NakshaEventPipelineFactory(this));
     // setup backend storage DB and Hub config
-    final NakshaHubConfig finalCfg = this.storageSetup(customCfg, configId, schema);
+    final NakshaHubConfig finalCfg = this.storageSetup(customCfg, configId, adminMapId);
     if (finalCfg == null) {
       throw new RuntimeException("Server configuration not found! Neither in Admin storage nor a default file.");
     }
@@ -162,7 +160,7 @@ public class NakshaHub implements INaksha {
   private @Nullable NakshaHubConfig storageSetup(
       final @Nullable NakshaHubConfig customCfg,
       final @Nullable String configId,
-      final String mapId
+      final @NotNull String mapId
   ) {
     /**
      * 1. Create all Admin collections
@@ -227,6 +225,7 @@ public class NakshaHub implements INaksha {
     logger.info("Running config setup for Nakshs Hub against Admin storage.");
     return getAdminStorage().useWriteSession(SessionOptions.from(nakshaContext, true), admin -> {
       if (customCfg != null) {
+        // failing:
         NakshaMap map = admin.getMapById(NakshaContext.mapId()); // TODO CASL-657 confirm
         assert map != null;
         NakshaCollection collection = admin.getCollectionById(map, CONFIGS);
@@ -234,6 +233,12 @@ public class NakshaHub implements INaksha {
         WriteRequest writeCustomCfg = new WriteRequest()
             .add(new Write().upsertFeature(collection, customCfg));
         Response writeCustomCfgResponse = admin.execute(writeCustomCfg);
+
+//        // fix attempts:
+//        WriteRequest writeCustomCfg = new WriteRequest()
+//            .add(new Write().upsertFeature(NakshaContext.mapId(), CONFIGS, customCfg));
+//        Response writeCustomCfgResponse = admin.execute(writeCustomCfg);
+
         if (writeCustomCfgResponse instanceof SuccessResponse) {
           admin.commit();
           return customCfg;

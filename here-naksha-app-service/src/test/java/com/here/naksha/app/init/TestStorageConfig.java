@@ -1,5 +1,6 @@
 package com.here.naksha.app.init;
 
+import com.here.naksha.app.service.NakshaApp;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.IoHelp.LoadedBytes;
 import java.nio.charset.StandardCharsets;
@@ -8,8 +9,6 @@ import naksha.psql.PgConfig;
 import org.jetbrains.annotations.NotNull;
 
 public record TestStorageConfig(String mapId, PgConfig pgConfig) {
-
-  public static final String TEST_HUB_ADMIN_STORAGE_ID = "test_hub_admin_storage";
 
   public TestStorageConfig(String mapId, PgConfig pgConfig) {
     this.mapId = mapId;
@@ -34,19 +33,19 @@ public record TestStorageConfig(String mapId, PgConfig pgConfig) {
       final byte[] bytes = loadedBytes.getBytes();
       String url = new String(bytes, StandardCharsets.UTF_8);
       if (url.startsWith("jdbc:postgresql://")) {
-        PgConfig pgConfig = new PgConfig(TEST_HUB_ADMIN_STORAGE_ID).withMasterUri(url);
+        PgConfig pgConfig = new PgConfig(NakshaApp.HUB_ADMIN_STORAGE_ID).withMasterUri(url);
         return new TestStorageConfig(mapId, pgConfig);
       }
     } catch (Exception ignore) {
     }
     String url = System.getenv(envName);
     if (url != null && url.startsWith("jdbc:postgresql://")) {
-      PgConfig pgConfig = new PgConfig(TEST_HUB_ADMIN_STORAGE_ID).withMasterUri(url);
+      PgConfig pgConfig = new PgConfig(NakshaApp.HUB_ADMIN_STORAGE_ID).withMasterUri(url);
       return new TestStorageConfig(mapId, pgConfig);
     }
     url = System.getenv("TEST_NAKSHA_PSQL_URL");
     if (url != null && url.startsWith("jdbc:postgresql://")) {
-      PgConfig pgConfig = new PgConfig(TEST_HUB_ADMIN_STORAGE_ID).withMasterUri(url);
+      PgConfig pgConfig = new PgConfig(NakshaApp.HUB_ADMIN_STORAGE_ID).withMasterUri(url);
       return new TestStorageConfig(mapId, pgConfig);
     }
 
@@ -56,9 +55,8 @@ public record TestStorageConfig(String mapId, PgConfig pgConfig) {
     }
     url = "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=" + password
           + "&schema=" + mapId
-          + "&app=" + "Naksha/v" + NakshaVersion.latest
-          + "&id=" + TEST_HUB_ADMIN_STORAGE_ID;
-    PgConfig pgConfig = new PgConfig(TEST_HUB_ADMIN_STORAGE_ID).withMasterUri(url);
+          + "&app=" + "Naksha/v" + NakshaVersion.latest;
+    PgConfig pgConfig = new PgConfig(NakshaApp.HUB_ADMIN_STORAGE_ID).withMasterUri(url);
     return new TestStorageConfig(mapId, pgConfig);
   }
 

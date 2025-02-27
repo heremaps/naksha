@@ -39,6 +39,8 @@ import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -50,6 +52,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import naksha.model.NakshaVersion;
+import naksha.psql.PgConfig;
+import naksha.psql.PgStorage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -116,6 +120,9 @@ public final class NakshaApp extends Thread {
     err.println(" ");
     err.flush();
   }
+
+  public static String HUB_ADMIN_STORAGE_ID = "naksha-admin-storage";
+  public static String HUB_ADMIN_MAP_ID = "naksha-admin-map";
 
   /**
    * Create a new Naksha-App instance by parsing the given console arguments.
@@ -194,25 +201,26 @@ public final class NakshaApp extends Thread {
     this.instanceId = instanceId;
 
     // Read the custom configuration from file (if available)
-    NakshaHubConfig config = null;
+    NakshaHubConfig nakshaHubConfig = null;
     try {
-      config = ConfigUtil.readConfigFile(configId, appName);
+      nakshaHubConfig = ConfigUtil.readConfigFile(configId, appName);
     } catch (Exception ex) {
       log.warn("No external config available, will attempt using default. Error was [{}]", ex.getMessage());
     }
     // Instantiate NakshaHub instance
-    this.hub = NakshaHubFactory.getInstance(appName, storageUrl, config, configId);
-    config = hub.getConfig(); // use the config finally set by NakshaHub instance
-    log.info("Using server config : {}", config);
+    // TODO: what about appName?
+    this.hub = NakshaHubFactory.getInstance(HUB_ADMIN_MAP_ID, HUB_ADMIN_STORAGE_ID, storageUrl, nakshaHubConfig, configId);
+    nakshaHubConfig = hub.getConfig(); // use the config finally set by NakshaHub instance
+    log.info("Using server config : {}", nakshaHubConfig);
 
-    log.info("Naksha host/endpoint: {}", config.getEndpoint());
+    log.info("Naksha host/endpoint: {}", nakshaHubConfig.getEndpoint());
 
     // vertxMetricsOptions = new MetricsOptions().setEnabled(true).setFactory(new NakshaHubMetricsFactory());
     this.vertxOptions = new VertxOptions();
     // See: https://vertx.io/docs/vertx-core/java
     // vertxOptions.setMetricsOptions(vertxMetricsOptions);
     this.vertxOptions.setPreferNativeTransport(true);
-    if (config.isDebug()) {
+    if (nakshaHubConfig.isDebug()) {
       // If running in debug mode, we need to increase the warning time, because we might enter a break-point
       // for
       // some time!
@@ -227,11 +235,11 @@ public final class NakshaApp extends Thread {
     final String jwtKey;
     final String jwtPub;
     {
-      final String path = "auth/" + config.getJwtName() + ".key";
+      final String path = "auth/" + nakshaHubConfig.getJwtName() + ".key";
       jwtKey = readAuthKeyFile(path, NakshaHubConfig.NAKSHA_APP_NAME);
     }
     {
-      final String path = "auth/" + config.getJwtName() + ".pub";
+      final String path = "auth/" + nakshaHubConfig.getJwtName() + ".pub";
       jwtPub = readAuthKeyFile(path, NakshaHubConfig.NAKSHA_APP_NAME);
     }
     this.authOptions = new JWTAuthOptions()
@@ -241,7 +249,7 @@ public final class NakshaApp extends Thread {
     this.authProvider = new NakshaAuthProvider(this.vertx, this.authOptions);
 
     final WebClientOptions webClientOptions = new WebClientOptions();
-    webClientOptions.setUserAgent(config.getUserAgent());
+    webClientOptions.setUserAgent(nakshaHubConfig.getUserAgent());
     webClientOptions.setTcpKeepAlive(true).setTcpQuickAck(true).setTcpFastOpen(true);
     webClientOptions.setIdleTimeoutUnit(TimeUnit.MINUTES).setIdleTimeout(2);
     this.webClient = WebClient.create(this.vertx, webClientOptions);
