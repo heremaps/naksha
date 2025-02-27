@@ -136,7 +136,7 @@ class BinaryUtil private constructor() {
         fun getSize(view: PlatformDataView, offset: Int = 0): Int = dataview_get_int32(view, offset + 4)
 
         /**
-         * Calculates the content-offset, skipping over the extension segment.
+         * Calculates the content-offset, skipping over the head and extension segment.
          *
          * @param view the view into the binary.
          * @param offset the byte-offset in the view where the binary starts.

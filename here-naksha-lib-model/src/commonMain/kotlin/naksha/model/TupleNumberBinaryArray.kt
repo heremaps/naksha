@@ -73,7 +73,7 @@ data class TupleNumberBinaryArray(
     private val uidOffset: Int
     init {
         when (val subtype = BinaryUtil.getSubType(view)) {
-            0 -> {
+            0 -> { // 288-bit (storage-number, map-number, collection-number, feature-number, version, uid)
                 contentOffset = BinaryUtil.getContentOffset(view)
                 storageNumberOffset = 0
                 mapNumberOffset = 8
@@ -88,8 +88,8 @@ data class TupleNumberBinaryArray(
                 sharedFeatureNumber = null
                 dataOffset = contentOffset
             }
-            1 -> {
-                contentOffset = BinaryUtil.getContentOffset(view) + 8
+            1 -> { // 224-bit (map-number, collection-number, feature-number, version, uid)
+                contentOffset = BinaryUtil.getContentOffset(view)
                 storageNumberOffset = -1
                 mapNumberOffset = 0
                 collectionNumberOffset = 4
@@ -103,8 +103,8 @@ data class TupleNumberBinaryArray(
                 sharedFeatureNumber = null
                 dataOffset = contentOffset + 8
             }
-            2 -> {
-                contentOffset = BinaryUtil.getContentOffset(view) + 12
+            2 -> { // 192-bit (collection-number, feature-number, version, uid)
+                contentOffset = BinaryUtil.getContentOffset(view)
                 storageNumberOffset = -1
                 mapNumberOffset = -1
                 collectionNumberOffset = 0
@@ -118,8 +118,8 @@ data class TupleNumberBinaryArray(
                 sharedFeatureNumber = null
                 dataOffset = contentOffset + 12
             }
-            3 -> {
-                contentOffset = BinaryUtil.getContentOffset(view) + 12
+            3 -> { // 160-bit (feature-number, version, uid)
+                contentOffset = BinaryUtil.getContentOffset(view)
                 storageNumberOffset = -1
                 mapNumberOffset = -1
                 collectionNumberOffset = -1
@@ -133,8 +133,8 @@ data class TupleNumberBinaryArray(
                 sharedFeatureNumber = null
                 dataOffset = contentOffset + 16
             }
-            4 -> {
-                contentOffset = BinaryUtil.getContentOffset(view) + 12
+            4 -> { // 96-bit (version, uid)
+                contentOffset = BinaryUtil.getContentOffset(view)
                 storageNumberOffset = -1
                 mapNumberOffset = -1
                 collectionNumberOffset = -1
@@ -222,8 +222,8 @@ data class TupleNumberBinaryArray(
         val tupleNumber = TupleNumber(storageNumber, mapNumber, collectionNumber, featureNumber, Version(txn), uid)
         if (!disableCache) {
             var cache = tupleNumberCache
-            if (index < cache.size) {
-                cache = arrayOfNulls(length)
+            if (index <= cache.size) { // Note: This only happens, when being EMPTY
+                cache = cache.copyOf(length)
                 tupleNumberCache = cache
             }
             cache[index] = tupleNumber
@@ -364,22 +364,41 @@ data class TupleNumberBinaryArray(
 
     override fun isEmpty(): Boolean = size == 0
 
-    override fun iterator(): Iterator<TupleNumber?> {
-        TODO("Not yet implemented")
+    internal class TupleNumberBinaryArrayIterator internal constructor(
+        private val binary: TupleNumberBinaryArray,
+        private val from: Int = 0,
+        private val to: Int = binary.size,
+        private var i: Int = from,
+    ) : ListIterator<TupleNumber?> {
+
+        override fun hasNext(): Boolean = i in from until to
+
+        override fun hasPrevious(): Boolean = (i-1) in from until to
+
+        override fun next(): TupleNumber? = binary[i++]
+
+        override fun nextIndex(): Int = i + 1
+
+        override fun previous(): TupleNumber? = binary[--i]
+
+        override fun previousIndex(): Int = i - 1
+
     }
 
-    override fun listIterator(): ListIterator<TupleNumber?> {
-        TODO("Not yet implemented")
-    }
+    @Suppress("NON_EXPORTABLE_TYPE")
+    override fun iterator(): Iterator<TupleNumber?> = TupleNumberBinaryArrayIterator(this)
 
-    override fun listIterator(index: Int): ListIterator<TupleNumber?> {
-        TODO("Not yet implemented")
-    }
+    @Suppress("NON_EXPORTABLE_TYPE")
+    override fun listIterator(): ListIterator<TupleNumber?> = TupleNumberBinaryArrayIterator(this)
+
+    @Suppress("NON_EXPORTABLE_TYPE")
+    override fun listIterator(index: Int): ListIterator<TupleNumber?> = TupleNumberBinaryArrayIterator(this, from=index)
 
     override fun subList(fromIndex: Int, toIndex: Int): List<TupleNumber?> {
-        TODO("Not yet implemented")
+        val list = ArrayList<TupleNumber?>(toIndex - fromIndex)
+        for (i in fromIndex until toIndex) list.add(this[i])
+        return list
     }
-
     override fun lastIndexOf(element: TupleNumber?): Int {
         if (element == null) return -1
         for (i in size - 1 downTo 0) {

@@ -4,6 +4,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaException
 import naksha.model.TupleNumberBinaryArray
 import naksha.model.Version
+import naksha.model.generalException
 import naksha.model.request.*
 import naksha.psql.*
 import naksha.psql.PgQueryBuilder
@@ -39,9 +40,10 @@ class PgReader(
 
     fun execute(): Response {
         val query = PgQueryBuilder(session, request).build()
-        val connection = session.useConnection()
+        val conn = session.useConnection()
+        session.storage.adminMap.setSearchPath(conn)
         // TODO: Use prepare, add arguments!
-        val plan = connection.prepare(query.sql, query.argTypes)
+        val plan = conn.prepare(query.sql, query.argTypes)
         plan.use {
             val allBytes: ByteArray?
             val cursor = try {
@@ -52,26 +54,9 @@ class PgReader(
             cursor.use {
                 allBytes = if (cursor.next()) cursor.column("rs") as ByteArray else null
             }
-            if (allBytes == null) return ErrorResponse(
-                NakshaException(
-                    EXCEPTION,
-                    "Failed to execute query for unknown reason"
-                )
-            )
-            val tupleNumberBytes = TupleNumberBinaryArray.fromGzip(allBytes)
-            return SuccessResponse()
-//                PgResultSet(
-//                    storage,
-//                    session,
-//                    tupleNumberBytes,
-//                    incomplete = false,
-//                    validTill = tupleNumberBytes.size,
-//                    offset = 0,
-//                    limit = tupleNumberBytes.size,
-//                    orderBy = null,
-//                    filters = request.resultFilters
-//                )
-//            )
+            if (allBytes == null) return ErrorResponse(generalException("Failed to execute query for unknown reason"))
+            val tupleNumberBinary = TupleNumberBinaryArray.fromGzip(allBytes)
+            return SuccessResponse().withTupleNumberBinary(tupleNumberBinary)
         }
     }
 }

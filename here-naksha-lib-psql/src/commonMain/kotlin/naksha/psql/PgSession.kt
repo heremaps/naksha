@@ -282,8 +282,6 @@ open class PgSession(
 
     override fun rollback() {
         val conn = pgConnection
-        assertOpen()
-        assertMutable()
         if (conn != null) {
             try {
                 conn.rollback()

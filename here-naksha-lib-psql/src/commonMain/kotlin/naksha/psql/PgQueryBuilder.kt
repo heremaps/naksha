@@ -70,15 +70,16 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val selects = StringBuilder()
         for (entry in pgCollections.withIndex()) {
             val pgCollection = entry.value
+            val map = pgCollection.map
             val head = pgCollection.headTable
             // We only need to select the column number, if we select from multiple collections!
-            val col_num = if (thePgCollection == null) "${pgCollection.number} as col_num," else ""
+            val col_num = if (thePgCollection == null) "${pgCollection.number} AS col_num, " else ""
             val where = if (whereQuery.isEmpty()) "" else "WHERE $whereQuery"
-            selects.append("\t(SELECT $col_num $id, $tn FROM ${head.quotedName} $where) ;\n")
+            selects.append("\t(SELECT $col_num$tn FROM ${map.quotedId}.${head.quotedName} $where)\n")
 
             val deleted = pgCollection.deletedTable
             if (req.queryDeleted && deleted != null) {
-                selects.append("\t(SELECT $col_num $id, $tn FROM ${deleted.quotedName} $where ;\n")
+                selects.append("\t(SELECT $col_num$tn FROM ${map.quotedId}.${deleted.quotedName} $where)\n")
             }
 
             val history = pgCollection.historyTable
@@ -88,7 +89,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
                     (if (where.isEmpty()) "WHERE " else "$where AND ") + "$txn_next > $txn"
                 else
                     where
-                selects.append("\t(SELECT $col_num $id, $tn FROM ${history.quotedName} $better_where")
+                selects.append("\t(SELECT $col_num$tn FROM ${map.quotedId}.${history.quotedName} $better_where")
             }
 
             if (entry.index < pgCollections.lastIndex) selects.append(" UNION ALL\n")
@@ -96,11 +97,12 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val SQL = if (thePgCollection == null)
 // If we select from multiple collections, we have to encode the collection-number in the tuple-number.
 // This results in 128-bit per row, aka 16-byte per row, but 4 byte less in the header.
-"""WITH query AS ($selects),
+"""WITH query AS (
+$selects),
 result AS (
   SELECT DISTINCT col_num, tn
   FROM query
-  ORDER BY col_num, id, tn
+  ORDER BY col_num, tn
   LIMIT $REQ_LIMIT
 )
 SELECT gzip( -- compress the binary
@@ -113,11 +115,12 @@ SELECT gzip( -- compress the binary
 // If we select only from exactly one table, we can embed the collection-number into the binary header.
 // This reduces the encoding of each tuple-number to 96-bit (12-byte), but adds 4-byte into the header
 // for the shared collection-number.
-"""WITH query AS ($selects),
+"""WITH query AS (
+$selects),
 result AS (
   SELECT DISTINCT tn
   FROM query
-  ORDER BY id, tn
+  ORDER BY tn
   LIMIT $REQ_LIMIT
 )
 SELECT gzip( -- compress the binary

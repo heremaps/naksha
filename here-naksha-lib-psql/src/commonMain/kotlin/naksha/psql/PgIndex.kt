@@ -249,7 +249,7 @@ ${if (where==null) "" else "WHERE $where"};"""
                 conn.execute(
                     self.sql(
                         """gin (naksha_tags($c_tags, $c_flags), $c_tn, $c_txn_next)""",
-                        table, unique = false, addFillFactor = false, where = "naksha_tags($c_tags, $c_flags) IS NOT NULL"
+                        table, unique = false, addFillFactor = false, where = null // , where = "naksha_tags($c_tags, $c_flags) IS NOT NULL"
                     )
                 ).close()
             }
