@@ -51,8 +51,8 @@ data class Guid(
      */
     override fun toString(): String {
         if (!this::_string.isInitialized) {
-             _string = if (tupleNumber != TupleNumber.HEAD) "urn:here:naksha:guid:$id:$tupleNumber"
-                                                            else "urn:here:naksha:guid:$id"
+             _string = if (tupleNumber != TupleNumber.HEAD) "urn:naksha:guid:$id:$tupleNumber"
+                                                            else "urn:naksha:guid:$id"
         }
         return _string
     }

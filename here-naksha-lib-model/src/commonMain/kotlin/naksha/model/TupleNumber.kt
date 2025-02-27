@@ -476,12 +476,12 @@ data class TupleNumber(
             val mapNumber = parts[offset + MAP_NUMBER].toInt(10)
             val colNumber = parts[offset + COLLECTION_NUMBER].toInt(10)
             val featureNumber = Int64(parts[offset + FEATURE_NUMBER].toLong(10))
-            val year = parts[YEAR].toInt(10)
-            val month = parts[MONTH].toInt(10)
-            val day = parts[DAY].toInt(10)
-            val seq = Int64(parts[SEQ].toLong())
+            val year = parts[offset + YEAR].toInt(10)
+            val month = parts[offset + MONTH].toInt(10)
+            val day = parts[offset + DAY].toInt(10)
+            val seq = Int64(parts[offset + SEQ].toLong())
+            val uid = parts[offset + UID].toInt()
             val version = Version.of(year, month, day, seq)
-            val uid = parts[UID].toInt()
             return TupleNumber(storageNumber, mapNumber, colNumber, featureNumber, version, uid)
         }
     }

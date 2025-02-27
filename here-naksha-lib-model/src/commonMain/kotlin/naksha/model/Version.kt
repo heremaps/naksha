@@ -228,7 +228,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
      * @since 3.0
      */
     override fun toString(): String {
-        if (!this::_string.isInitialized) _string = "$year:$month:$day:$seq}"
+        if (!this::_string.isInitialized) _string = "$year:$month:$day:$seq"
         return _string
     }
 }
