@@ -85,16 +85,16 @@ actual class Platform {
             jsonFactory.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false)
             jsonFactory.configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, false)
             JsonMapper.builder(jsonFactory)
-                .enable(MapperFeature.DEFAULT_VIEW_INCLUSION)
+                //.enable(MapperFeature.DEFAULT_VIEW_INCLUSION)
                 .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
                 .enable(MapperFeature.SORT_CREATOR_PROPERTIES_FIRST)
-                .serializationInclusion(JsonInclude.Include.NON_NULL)
-                .visibility(PropertyAccessor.SETTER, JsonAutoDetect.Visibility.ANY)
-                .visibility(PropertyAccessor.GETTER, JsonAutoDetect.Visibility.PUBLIC_ONLY)
+                //.serializationInclusion(JsonInclude.Include.NON_NULL)
+                .visibility(PropertyAccessor.SETTER, JsonAutoDetect.Visibility.NONE)
+                .visibility(PropertyAccessor.GETTER, JsonAutoDetect.Visibility.NONE)
                 .visibility(PropertyAccessor.IS_GETTER, JsonAutoDetect.Visibility.NONE)
-                .visibility(PropertyAccessor.CREATOR, JsonAutoDetect.Visibility.ANY)
+                .visibility(PropertyAccessor.CREATOR, JsonAutoDetect.Visibility.NONE)
                 .configure(SerializationFeature.CLOSE_CLOSEABLE, false)
-                .addModule(kotlinModule())
+                //.addModule(kotlinModule())
                 .addModule(module)
                 .build()
         }
@@ -474,7 +474,7 @@ actual class Platform {
         @JvmStatic
         actual fun toJSON(obj: Any?, options: ToJsonOptions): String {
             toJsonOptions.set(options)
-            return objectMapper.get().writeValueAsString(obj)
+            return objectMapper.get().writeValueAsString(unbox(obj))
         }
 
         @JvmField

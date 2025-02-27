@@ -249,7 +249,7 @@ ${if (where==null) "" else "WHERE $where"};"""
                 conn.execute(
                     self.sql(
                         """gin (naksha_tags($c_tags, $c_flags), $c_tn, $c_txn_next)""",
-                        table, unique = false, addFillFactor = false ,where = "naksha_tags($c_tags, $c_flags) IS NOT NULL"
+                        table, unique = false, addFillFactor = false, where = "naksha_tags($c_tags, $c_flags) IS NOT NULL"
                     )
                 ).close()
             }
@@ -639,7 +639,7 @@ ${if (where==null) "" else "WHERE $where"};"""
             here_tile,
             app_id,
             author,
-            //tags,
+            tags,
             feature_type,
             cv0, cv1, cv2, cv3,
             cs0, cs1, cs2, cs3,

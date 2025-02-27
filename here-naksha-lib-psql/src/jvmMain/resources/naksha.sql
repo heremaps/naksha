@@ -365,7 +365,7 @@ BEGIN
   if (encoding = 0) then -- JBON
     return naksha_jbon_map_to_jsonb(tags);
   elsif (encoding = 2) then -- JSON
-    return tags::text::jsonb;
+    return convert_from(tags, 'utf-8')::jsonb;
   end if;
   -- Unknown encoding
   return null;
