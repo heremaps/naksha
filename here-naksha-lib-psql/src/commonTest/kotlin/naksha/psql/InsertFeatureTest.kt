@@ -40,10 +40,11 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
         executeWrite(writeFeaturesReq)
 
         // And: reading all features from collection
-        val retrievedFeatures = executeRead(ReadFeatures().apply {
+        val readResponse = executeRead(ReadFeatures().apply {
             collectionIds += collection.id
             featureIds += featureToCreate.id
-        }).features
+        })
+        val retrievedFeatures = readResponse.features
 
         // Then: we got 1 feature
         assertEquals(1, retrievedFeatures.size)
@@ -83,9 +84,10 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
         executeWrite(writeFeaturesReq)
 
         // And: reading all features from collection
-        val retrievedFeatures = executeRead(ReadFeatures().apply {
+        val readResponse = executeRead(ReadFeatures().apply {
             collectionIds += collection.id
-        }).features
+        })
+        val retrievedFeatures = readResponse.features
 
         // Then: we got 10 features
         assertEquals(10, retrievedFeatures.size)
@@ -106,7 +108,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
                             retrievedXyz
                                 .hasProperty("appId", PgTest.TEST_APP_ID)
                                 .hasProperty("author", PgTest.TEST_APP_AUTHOR!!)
-                                .hasProperty("action", Action.CREATED)
+                                .hasProperty("action", Action.CREATED.text)
                         }
                 }
         }

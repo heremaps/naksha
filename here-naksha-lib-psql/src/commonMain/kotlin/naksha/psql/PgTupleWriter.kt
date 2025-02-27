@@ -109,14 +109,13 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
             // If this operation modifies a map.
             if (write.isMapModification) {
                 val op = write.op
-                // TODO: Fix me, when a map is deleted with id or number only!
-                //       In that case, feature is null and this is correct!
-                val feature = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                val nakshaMap = if (feature is NakshaMap) feature else feature.proxy(NakshaMap::class)
-                nakshaMap.storageId = storage.id
+                var pgMap = storage.adminMap.getPgMapById(conn, write.id)
 
-                var pgMap = storage.adminMap.getPgMapById(conn, featureId)
+                val nakshaMap: NakshaMap?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT) {
+                    val feature = write.feature ?: throw illegalArg("The write #${write.i} is $op, but the feature is null")
+                    nakshaMap = if (feature is NakshaMap) feature else feature.proxy(NakshaMap::class)
+                    nakshaMap.storageId = storage.id
                     if (pgMap == null) {
                         pgMap = PgMap(storage, nakshaMap)
                         createPgMap(pgMap)
@@ -127,6 +126,7 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
                     if (pgMap != null) {
                         deletePgMap(pgMap)
                     }
+                    nakshaMap = null
                 } else {
                     throw illegalState("The write #${write.i} refers to an unsupported operation: '$op'")
                 }
@@ -141,7 +141,7 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
 
                 val nakshaCollection: NakshaCollection?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT) {
-                    val feature = write.feature ?: throw collectionNotFound("The write #${write.i} is $op, but the feature is null")
+                    val feature = write.feature ?: throw illegalArg("The write #${write.i} is $op, but the feature is null")
                     nakshaCollection = if (feature is NakshaCollection) feature else feature.proxy(NakshaCollection::class)
                     if (pgCollection == null) {
                         pgCollection = PgCollection(map, nakshaCollection)
@@ -183,18 +183,24 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
             when (val op = write.original.op) {
                 WriteOp.CREATE -> {
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                    write.tuple = tx.created(write.map.head, write.collection.head, f)
+                    val tuple = tx.created(write.map.head, write.collection.head, f)
+                    write.tuple = tuple
+                    write.tupleNumber = tuple.tupleNumber
                     inserts.getOrCreate(write.collection).add(write)
                 }
                 WriteOp.UPSERT -> {
                     // Note: We first try an INSERT, then, when that fails, we do an on-conflict UPDATE!
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                    write.tuple = tx.created(write.map.head, write.collection.head, f)
+                    val tuple = tx.created(write.map.head, write.collection.head, f)
+                    write.tuple = tuple
+                    write.tupleNumber = tuple.tupleNumber
                     upserts.getOrCreate(write.collection).add(write)
                 }
                 WriteOp.UPDATE -> {
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                    write.tuple = tx.updated(write.map.head, write.collection.head, f)
+                    val tuple = tx.updated(write.map.head, write.collection.head, f)
+                    write.tuple = tuple
+                    write.tupleNumber = tuple.tupleNumber
                     updates.getOrCreate(write.collection).add(write)
                 }
                 WriteOp.DELETE -> {
