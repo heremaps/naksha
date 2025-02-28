@@ -368,7 +368,7 @@ SELECT ${rows.namesAggregate()} FROM result"""
         val tupleNumbers: Array<Any?> = tupleFeatures.map { it.tupleNumber.toB160() }.toTypedArray()
         conn.prepare(SQL, arrayOf(PgType.BYTE_ARRAY_ARRAY.text)).use { plan ->
             plan.execute(arrayOf(tupleNumbers)).fetch().use { cursor ->
-                rows.addAll(cursor)
+                rows.addAggregated(cursor)
             }
         }
         for (i in 0 until rows.size) {

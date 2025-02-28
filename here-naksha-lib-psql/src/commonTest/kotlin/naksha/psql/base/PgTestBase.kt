@@ -73,7 +73,6 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
                     val request = WriteRequest()
                     request.writes += Write().createCollection(testCollection)
                     storage.newWriteSession().use { session ->
-                        val map = session.getMapById(testCollection.mapId!!)
                         val response = assertSuccess(session.execute(request))
                         session.commit()
                         val features = response.features

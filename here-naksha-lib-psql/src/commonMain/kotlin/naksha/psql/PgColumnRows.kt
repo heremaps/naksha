@@ -308,6 +308,27 @@ internal class PgColumnRows {
     }
 
     /**
+     * Read all rows from cursor, expects the cursor to be at first result and that for each column, there is an array of values, so an aggregate generated via `ARRAY_AGG`.
+     * @since 3.0
+     */
+    fun addAggregated(cursor: PgCursor): PgColumnRows {
+        if (cursor.isRow()) {
+            for (column in columns) {
+                if (cursor.contains(column.name)) {
+                    val values = cursor.column(column.name)
+                    if (values is Array<*>) {
+                        withMinSize(values.size)
+                        for (i in 0 until values.size) {
+                            set(i, column.name, values[i])
+                        }
+                    }
+                }
+            }
+        }
+        return this
+    }
+
+    /**
      * Returns the names of all columns as comma separated string.
      * @return the names of all columns as comma separated string.
      * @since 3.0
@@ -338,7 +359,7 @@ internal class PgColumnRows {
     fun namesAggregate(): String {
         val cached = this.namesAggregate
         if (cached != null) return cached
-        val names = columns.joinToString(", ") { "ARRAY_AGG(${it.name})" }
+        val names = columns.joinToString(", ") { "ARRAY_AGG(${it.name}) AS ${it.name}" }
         this.namesAggregate = names
         return names
     }
