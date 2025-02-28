@@ -322,7 +322,8 @@ open class PgSession(
                 val conn = readConn.conn
                 val byCollection = missing.groupBy {
                     val pgMap = storage.adminMap.getPgMapByNumber(conn, it.tupleNumber.mapNumber) ?: return@groupBy "NULL"
-                    pgMap.getPgCollectionByNumber(conn, it.tupleNumber.collectionNumber) ?: return@groupBy "NULL"
+                    val pgCollection = pgMap.getPgCollectionByNumber(conn, it.tupleNumber.collectionNumber) ?: return@groupBy "NULL"
+                    pgCollection
                 }
                 for (entry in byCollection) {
                     val key = entry.key
@@ -354,9 +355,16 @@ open class PgSession(
             .addColumns(PgColumn.allColumns)
         pgCollection.map.setSearchPath(conn)
         val historyTable = pgCollection.historyTable
-        var SQL = "SELECT ${rows.namesAggregate()} FROM ${pgCollection.headTable.quotedName} WHERE tn = ANY($1)"
-        if (historyTable != null)
-            SQL += "UNION ALL SELECT ${rows.names()} FROM ${historyTable.quotedName} WHERE tn = ANY($1)"
+        val SQL = if (historyTable != null) {
+            """WITH all AS(
+  SELECT ${rows.names()} FROM ${pgCollection.headTable.quotedName} WHERE tn = ANY($1)
+  UNION ALL
+  SELECT ${rows.names()} FROM ${historyTable.quotedName} WHERE tn = ANY($1)"
+)
+SELECT ${rows.namesAggregate()} FROM all"""
+        } else {
+            "SELECT ${rows.namesAggregate()} FROM ${pgCollection.headTable.quotedName} WHERE tn = ANY($1)"
+        }
         val tupleNumbers: Array<Any?> = tupleFeatures.map { it.tupleNumber.toB160() }.toTypedArray()
         conn.prepare(SQL, arrayOf(PgType.BYTE_ARRAY_ARRAY.text)).use { plan ->
             plan.execute(tupleNumbers).fetch().use { cursor ->
