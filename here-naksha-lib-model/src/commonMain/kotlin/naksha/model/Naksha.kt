@@ -278,7 +278,7 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun mapNumber(id: String): Int {
-           if (id != ADMIN_MAP) return ADMIN_MAP_NUMBER
+           if (id == ADMIN_MAP) return ADMIN_MAP_NUMBER
            if (is31BitUnsigned.matches(id)) {
                try {
                    return id.toUInt(10).toInt()
