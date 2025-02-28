@@ -47,7 +47,7 @@ open class NakshaMap() : NakshaFeature() {
         private val DEFAULT_FLAGS = NullableProperty<NakshaMap, Flags>(Flags::class)
     }
 
-    override fun defaultFeatureType(): String = NakshaCollection.FEATURE_TYPE
+    override fun defaultFeatureType(): String = FEATURE_TYPE
     override fun withId(value: String): NakshaMap = super.withId(value) as NakshaMap
     override fun withFeatureNumber(value: Int64): NakshaMap = super.withFeatureNumber(value) as NakshaMap
     override fun withType(value: String): NakshaMap = super.withType(value) as NakshaMap

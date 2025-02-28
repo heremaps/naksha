@@ -54,7 +54,6 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
                     request = WriteRequest()
                     request.writes += Write().createMap(newMap)
                     val response = executeWrite(request)
-                    assertIs<SuccessResponse>(response)
                     val features = response.features
                     assertEquals(1, features.size)
                     val feature = features.first()
@@ -74,10 +73,8 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
                     val request = WriteRequest()
                     request.writes += Write().createCollection(testCollection)
                     storage.newWriteSession().use { session ->
-                        val response = session.execute(request)
-                        require(response is SuccessResponse) {
-                            if (response is ErrorResponse) response.error.toString() else "Unknown error"
-                        }
+                        val map = session.getMapById(testCollection.mapId!!)
+                        val response = assertSuccess(session.execute(request))
                         session.commit()
                         val features = response.features
                         assertEquals(1, features.size)
@@ -106,20 +103,20 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
         executeWrite(writeReq, sessionOptions)
     }
 
-    protected fun executeWrite(
-        request: WriteRequest,
-        sessionOptions: SessionOptions? = null
-    ): SuccessResponse {
-        return env.storage.newWriteSession(sessionOptions).use { session ->
-            val response = session.execute(request)
-            if (response is ErrorResponse) {
-                response.error.print()
-            }
-            assertIs<SuccessResponse>(response)
+    protected fun assertSuccess(response: Response): SuccessResponse {
+        if (response is ErrorResponse) {
+            response.error.print()
+        }
+        assertIs<SuccessResponse>(response)
+        return response
+    }
+
+    protected fun executeWrite(request: WriteRequest, sessionOptions: SessionOptions? = null): SuccessResponse
+        = env.storage.newWriteSession(sessionOptions).use { session ->
+            val response = assertSuccess(session.execute(request))
             session.commit()
             response
         }
-    }
 
     protected fun executeWriteErrorResponse(
         request: WriteRequest,

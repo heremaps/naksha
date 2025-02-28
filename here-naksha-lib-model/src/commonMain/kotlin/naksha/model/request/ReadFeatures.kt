@@ -4,6 +4,7 @@ package naksha.model.request
 
 import naksha.base.*
 import naksha.model.GuidList
+import naksha.model.Version
 import kotlin.js.JsExport
 
 /**
@@ -21,7 +22,7 @@ open class ReadFeatures : ReadRequest() {
         private val BOOLEAN_OR_FALSE = NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
         private val BOOLEAN_OR_TRUE = NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> true }
         private val INT_OR_1 = NotNullProperty<ReadRequest, Int>(Int::class) { _, _ -> 1 }
-        private val INT64_OR_NULL = NullableProperty<ReadRequest, Int64>(Int64::class)
+        private val VERSION_OR_NULL = NullableProperty<ReadRequest, Version>(Version::class)
         private val STRING_LIST = NotNullProperty<ReadRequest, StringList>(StringList::class)
         private val ORDER_BY_OR_NULL = NullableProperty<ReadRequest, OrderBy>(OrderBy::class)
         private val GUID_LIST = NotNullProperty<ReadRequest, GuidList>(GuidList::class)
@@ -106,7 +107,7 @@ open class ReadFeatures : ReadRequest() {
      * Limit the read to all rows with the given minimal version, _null_ if no limit.
      * @since 3.0.0
      */
-    var minVersion by INT64_OR_NULL
+    var minVersion by VERSION_OR_NULL
 
     /**
      * Limit the read to all features with a specific maximum version, _null_ if no limit _(latest/HEAD version)_.
@@ -114,7 +115,7 @@ open class ReadFeatures : ReadRequest() {
      * **Note**: This effectively is a request for a specific version, if no [minVersion] is set, and [versions] is default or explicitly 1.
      * @since 3.0.0
      */
-    var version by INT64_OR_NULL
+    var version by VERSION_OR_NULL
 
     /**
      * Order the result-set like given; this is an expensive operation and should be avoided.

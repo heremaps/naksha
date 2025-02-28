@@ -356,18 +356,18 @@ open class PgSession(
         pgCollection.map.setSearchPath(conn)
         val historyTable = pgCollection.historyTable
         val SQL = if (historyTable != null) {
-            """WITH all AS(
+            """WITH result AS(
   SELECT ${rows.names()} FROM ${pgCollection.headTable.quotedName} WHERE tn = ANY($1)
   UNION ALL
-  SELECT ${rows.names()} FROM ${historyTable.quotedName} WHERE tn = ANY($1)"
+  SELECT ${rows.names()} FROM ${historyTable.quotedName} WHERE tn = ANY($1)
 )
-SELECT ${rows.namesAggregate()} FROM all"""
+SELECT ${rows.namesAggregate()} FROM result"""
         } else {
             "SELECT ${rows.namesAggregate()} FROM ${pgCollection.headTable.quotedName} WHERE tn = ANY($1)"
         }
         val tupleNumbers: Array<Any?> = tupleFeatures.map { it.tupleNumber.toB160() }.toTypedArray()
         conn.prepare(SQL, arrayOf(PgType.BYTE_ARRAY_ARRAY.text)).use { plan ->
-            plan.execute(tupleNumbers).fetch().use { cursor ->
+            plan.execute(arrayOf(tupleNumbers)).fetch().use { cursor ->
                 rows.addAll(cursor)
             }
         }

@@ -541,7 +541,6 @@ WHERE id = $1"""
      */
     fun getPgMapByNumber(conn: PgConnection?, number: Int): PgMap? {
         if (ADMIN_MAP_NUMBER == number) return this
-        if (ADMIN_MAP == id) return this
         val existing = mapCache[number]
         if (existing != null) return existing
         if (conn == null) return null
