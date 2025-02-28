@@ -24,57 +24,91 @@ internal class PgTupleWriteDelete(session: PgSession, collection: PgCollection, 
     }
 
     private fun plan(conn: PgConnection, collection: PgCollection): PgPlan {
-        val shadow = collection.deletedTable
-        val history = collection.historyTable
-        val insert_into_shadow = if (shadow != null && collection.head.storeDeleted != StoreMode.ON) shadow else null
-        val insert_into_history = if (history != null && collection.head.storeHistory != StoreMode.ON) history else null
+        val headTable = collection.headTable
+        val shadowTable = collection.deletedTable
+        val historyTable = collection.historyTable
+        val insert_into_shadow = if (shadowTable != null && collection.head.storeDeleted == StoreMode.ON) shadowTable else null
+        val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
+        val do_any_insert = insert_into_shadow != null || insert_into_history != null
 
-        val DELETE_FROM_SHADOW = if (shadow != null) """, deleted_shadow AS (
-  DELETE FROM ${shadow.quotedName} AS shadow
-  USING query 
-  WHERE shadow.id = query.id
-  RETURNING shadow.tn
-)""" else ""
+        // All input provided by client, basically just `id` and optionally `txn` (aka version)
+        val query = """WITH query AS (
+  SELECT * FROM UNNEST($1, $2) AS t(id, txn)
+)"""
 
-        // We only need to create a deleted state, when we need to write either history or shadow!
-//        val DELETED_STATE = if (insert_into_shadow != null || insert_into_history != null) """
-//, delete_row AS (
-//    INSERT INTO ${shadow?.quotedName} ($allColumnNames)
-//    SELECT next_txn=${tx.version.txn}, columnNamesWithoutTxnNext
-//    FROM head_row h
-//    RETURNING tn
-//)\n
-//""" else ""
-//        val INSERT_INTO_SHADOW = if (shadow == null || collection.nakshaCollection.storeDeleted != StoreMode.ON) "" else """
-//, shadowed AS (
-//    INSERT INTO ${shadow.quotedName} ($allColumnNames)
-//    SELECT next_txn=${tx.version.txn}, columnNamesWithoutTxnNext
-//    FROM head_row h
-//    RETURNING tn
-//)\n
-//"""
-
-        // TODO: delete from shadow, insert into shadow and history, if needed
-        val SQL = """
-WITH query AS (
-  SELECT * FROM UNNEST($1, $2) AS t(id, version)
-), head_row AS (
-  SELECT head.id AS id, head.tn AS tn FROM ${collection.headTable.quotedName} AS head, query
+        // select `id` and `tn` of all rows that match query.id
+        val head_select = """, head_select AS (
+  SELECT head.id AS id, head.tn AS tn
+  FROM ${headTable.quotedName} AS head, query
   WHERE head.id = query.id
   FOR UPDATE NOWAIT
-), head_deleted AS (
-  DELETE FROM ${collection.headTable.quotedName} AS head
-  USING head_row, query
-  WHERE head.tn = head_row.tn AND (query.version IS NULL OR query.version = naksha_tn_txn(head.tn))
+)"""
+
+        // If the client has provided `tn` we only delete the head row, when the version matches.
+        // We only need all columns, when we should insert into history and/or shadow.
+        val head_row = if (!do_any_insert) """, head_row AS (
+  SELECT head.id AS id, head.tn AS tn
+  FROM ${headTable.quotedName} AS head, query
+  WHERE head.id = query.id AND (query.txn IS NULL OR query.txn = naksha_tn_txn(head.tn))
+)""" else """, head_row AS (
+  SELECT ${PgColumn.allColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
+  FROM ${headTable.quotedName} AS head, query
+  WHERE head.id = query.id AND (query.txn IS NULL OR query.txn = naksha_tn_txn(head.tn))
+)"""
+
+        // If the shadow table exists, delete old states
+        val clear_shadow = if (shadowTable != null) """, clear_shadow AS (
+  DELETE FROM ${shadowTable.quotedName}
+  WHERE id IN (SELECT id FROM head_row)
+  RETURNING id, tn
+)""" else ""
+
+        // Insert the current HEAD into history
+        val head_to_history = if (insert_into_history != null) """, head_to_history AS (
+  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.allColumnNames})
+  SELECT ${tx.version.txn} AS ${PgColumn.txn_next}, ${PgColumn.copyIntoHistoryColumnNames} FROM head_row
+  RETURNING id, tn
+)""" else ""
+
+        // Delete from HEAD.
+        val head_deleted = """, head_deleted AS (
+  DELETE FROM ${headTable.quotedName} AS head
+  WHERE head.tn IN (SELECT tn FROM head_row)
   RETURNING head.id, head.tn
-)$DELETE_FROM_SHADOW
-SELECT query.id AS q_id, query.version AS q_version,
-       head_row.id AS h_id, head_row.tn AS h_tn, naksha_tn_txn(head_row.tn) AS h_version,
+)"""
+
+        // Create a tombstone row
+        // TODO: change `txn_next` to `tn_next`, what allows to navigate in history
+        //       copy `tn` into `txn_next`
+        //
+        val tombstone = if (do_any_insert) "" else ""
+//        val tombstone = if (insert_into_history != null) """, tombstone AS (
+//  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.allColumnNames})
+//  SELECT ${tx.version.txn} AS ${PgColumn.txn_next}, ${PgColumn.copyIntoHistoryColumnNames}
+//  FROM head_row
+//  RETURNING head.tn
+//)""" else ""
+
+        // Copy the tombstone into history
+        val history_tombstone = if (insert_into_history != null) "" else ""
+
+        // Copy the tombstone into shadow
+        val shadow_tombstone = if (insert_into_shadow != null) "" else ""
+//        val shadow_row = if (insert_into_shadow != null) """, shadow_row AS (
+//  INSERT INTO ${insert_into_shadow.quotedName} (${PgColumn.allColumnNames})
+//  SELECT ${tx.version.txn} AS ${PgColumn.txn_next}, ${PgColumn.copyIntoHistoryColumnNames}
+//  FROM head_row
+//  RETURNING head.tn
+//)""" else ""
+
+        // Create the final SQL query
+        val SQL = """$query$head_select$head_row$head_deleted$clear_shadow$head_to_history$tombstone$history_tombstone$shadow_tombstone
+SELECT query.id AS q_id, query.txn AS q_version,
+       head_select.id AS h_id, head_select.tn AS h_tn, naksha_tn_txn(head_select.tn) AS h_version,
        head_deleted.id AS d_id, head_deleted.tn AS d_tn, naksha_tn_txn(head_deleted.tn) AS d_version
 FROM query
-LEFT JOIN head_row ON head_row.id = query.id
-LEFT JOIN head_deleted ON head_deleted.id = query.id;
-"""
+LEFT JOIN head_select ON head_select.id = query.id
+LEFT JOIN head_deleted ON head_deleted.id = query.id;"""
         return conn.prepare(SQL, rows.typeNames())
     }
 

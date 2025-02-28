@@ -600,7 +600,7 @@ class PgColumn : JsEnum() {
          */
         @JvmField
         @JsStatic
-        val copyColumns = listOf(
+        val copyIntoHistoryColumns = listOf(
             updated_at, created_at, author_ts, // removed: txn_next
             cv0, cv1, cv2, cv3,
             hash, here_tile, flags, cc,
@@ -609,6 +609,14 @@ class PgColumn : JsEnum() {
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature, attachment
         )
+
+        /**
+         * The names of all database columns, as comma separated list.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmField
+        val copyIntoHistoryColumnNames = copyIntoHistoryColumns.joinToString(",") { it.name }
 
         /**
          * All columns that are needed when we delete a feature. In that case we copy from _HEAD_ into _DELETED_ and/or _HISTORY_, but we need to update some meta-data, therefore this excludes the columns that need updates:

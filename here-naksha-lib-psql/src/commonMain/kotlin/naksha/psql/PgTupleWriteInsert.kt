@@ -20,9 +20,9 @@ internal class PgTupleWriteInsert(session: PgSession, collection: PgCollection, 
     }
 
     private fun plan(conn: PgConnection, collection: PgCollection): PgPlan {
-        val SQL = """WITH new_row AS (SELECT * FROM
-UNNEST(${rows.placeholders()})
-AS t(${rows.names()}))
+        val SQL = """WITH new_row AS (
+  SELECT * FROM UNNEST(${rows.placeholders()}) AS t(${rows.names()})
+)
 INSERT INTO ${collection.headTable.quotedName} (${rows.names()})
 SELECT * FROM new_row"""
         return conn.prepare(SQL, rows.typeNames())
