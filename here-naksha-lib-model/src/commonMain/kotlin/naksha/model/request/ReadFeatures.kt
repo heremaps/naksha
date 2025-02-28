@@ -81,15 +81,18 @@ open class ReadFeatures : ReadRequest() {
      * Extend the request to search through lately deleted features _(defaults to `false`)_.
      *
      * Actually, unless explicitly disabled, deleted features are stored in a shadow table, this information is used in views, so that a feature being deleted in a higher level layer are removed from the view, rather than to show their deleted counterpart read from a lower level layer. In other words, `lib-view` will always enable this, and won't work correctly, unless the deleted features are available.
+     *
+     * ### Note
+     * This option is totally distinct form [queryHistory], and ignored ones [queryHistory] is `true`. The reason the two switches behave differently is, that entries in the _shadow_ table can be deleted, while the history is really immutable. This is important to rollback a delete (restore the original shadowed state), what is exactly what the [PURGE][WriteOp.PURGE] write operation is good for.
      */
     var queryDeleted by BOOLEAN_OR_FALSE
 
     /**
-     * Extend the request to search through historic states of features _(defaults to `true`)_.
+     * Extend the request to search through historic states of features _(defaults to `false`)_.
      *
-     * If enabled, history will be searched if either [version], or [minVersion] are given, or [versions] is greater than `1`. In other words, as long as [version], and [minVersion] are `null`, and [versions] is `1`, this property is ignored, no history search is done anyway. If this property is explicitly set to `false`, then no history search will be applied, even when any of the above properties are modified. This can be used by applications to search in _HEAD_ for features that are within a specific version range within _HEAD_ (current live data).
+     * Setting this to `true` will cause the last state to be returned, which basically includes as well deleted states.
      */
-    var queryHistory by BOOLEAN_OR_TRUE
+    var queryHistory by BOOLEAN_OR_FALSE
 
     /**
      * Defines how many rows (versions) of each matching feature should be returned.
