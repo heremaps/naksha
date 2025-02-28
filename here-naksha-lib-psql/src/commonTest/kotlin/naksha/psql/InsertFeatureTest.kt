@@ -83,6 +83,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
                 add(Write().createFeature(collection.mapId, collection.id, featureToCreate))
             }
         }
+        val firstFeatureToCreate = featuresToCreate[0]
 
         // When: executing feature write request
         val start = Platform.currentNanos()
@@ -126,13 +127,15 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
         assertEquals(env.storage.number, firstFeature.storageNumber)
         assertEquals(map.number, firstFeature.mapNumber)
         assertEquals(collection.number, firstFeature.collectionNumber)
+        Platform.logger.info("Storage reported guid '${firstFeature.guid}' for first feature")
+        assertEquals(firstFeatureToCreate.id, firstFeature.id)
 
         // Read only one feature by ID, bypassing the cache.
+        Platform.logger.info("Clear cache and reload feature from database")
         Naksha.cache.clear(env.storage)
-        val expectFeature = featuresToCreate[0]
         val featuresByIdResponse = executeRead(ReadFeatures().apply {
             collectionIds += collection.id
-            featureIds.add(expectFeature.id)
+            featureIds.add(firstFeatureToCreate.id)
         })
 
         // Expect it to have the same tuple-number as the first feature originally returned!
@@ -142,19 +145,20 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
         assertEquals(1, binary.size)
         val tupleNumber = binary.first()
         assertNotNull(tupleNumber)
-        assertEquals(firstFeature.tupleNumber, tupleNumber) // Note: featureNumbers differ, why?
+        Platform.logger.info("Expect that the originally returned tuple-number is the same as the one from search")
+        assertEquals(firstFeature.tupleNumber, tupleNumber)
 
         val features = featuresByIdResponse.features
-        assertEquals(expectFeature.id, features[0]!!.id)
+        assertEquals(firstFeatureToCreate.id, features[0]!!.id)
 
         // Read only one feature by bounding box.
         val featuresByBBox = executeRead(ReadFeatures().apply {
             collectionIds += collection.id
             query.spatial =
-                SpIntersects(SpBoundingBox(expectFeature.geometry).addMargin(0.0000001).toPolygon())
+                SpIntersects(SpBoundingBox(firstFeatureToCreate.geometry).addMargin(0.0000001).toPolygon())
         })
         assertEquals(1, featuresByBBox.features.size)
-        assertEquals(expectFeature.id, featuresByBBox.features[0]!!.id)
+        assertEquals(firstFeatureToCreate.id, featuresByBBox.features[0]!!.id)
     }
 
     @Test
