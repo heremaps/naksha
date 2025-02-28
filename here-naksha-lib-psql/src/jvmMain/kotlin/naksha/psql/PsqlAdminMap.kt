@@ -46,7 +46,7 @@ class PsqlAdminMap internal constructor(
         if (context is NakshaCollection) {
             val collectionFlags = context.defaultFlags
             if (collectionFlags != null) return collectionFlags
-            val mapId = context.mapId
+            val mapId = context.mapId ?: return Naksha.DEFAULT_FLAGS
             val pgMap = getPgMapById(null, mapId)
             return pgMap?.head?.defaultFlags ?: Naksha.DEFAULT_FLAGS
         }

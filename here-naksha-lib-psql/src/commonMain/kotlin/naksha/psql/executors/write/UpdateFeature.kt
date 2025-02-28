@@ -2,7 +2,6 @@ package naksha.psql.executors.write
 
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.featureNumber
-import naksha.model.Naksha.NakshaCompanion.hashId
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgCollection
@@ -35,7 +34,7 @@ class UpdateFeature(
         }
 
         val map = session.storage.adminMap.getPgMapById(session.useConnection(), collection.map.id) ?: throw NakshaException(MAP_NOT_FOUND, "Map with id '${collection.map.id}' does not exist")
-        val featureNumber = featureNumber(hashId(feature.id))
+        val featureNumber = featureNumber(feature.id)
         val tupleNumber = newFeatureTupleNumber(collection, featureNumber, session)
         val tuple = session.useTx().updated(map.head, collection.head, feature)
 

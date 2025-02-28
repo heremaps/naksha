@@ -5,7 +5,6 @@ import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.Naksha.NakshaCompanion.cache
 import naksha.model.Naksha.NakshaCompanion.featureNumber
-import naksha.model.Naksha.NakshaCompanion.hashId
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
@@ -138,7 +137,7 @@ class PgWriter(
             session.storage.number,
             collection.map.number,
             collection.number,
-            featureNumber(hashId(featureId)),
+            featureNumber(featureId),
             version,
             newUid()
         )
@@ -324,7 +323,7 @@ class PgWriter(
         }
     }
 
-    private fun mapOf(write: WriteExt): PgMap = storage.adminMap.getPgMapById(session.useConnection(), write.mapId) ?:
+    private fun mapOf(write: WriteExt): PgMap = storage.adminMap.getPgMapById(session.useConnection(), write.mapId ?: "") ?:
         throw NakshaException(MAP_NOT_FOUND, "No such map: '${write.mapId}'")
 
     private fun collectionOf(write: WriteExt): PgCollection {

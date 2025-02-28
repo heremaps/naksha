@@ -96,12 +96,12 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
     private fun prepareWrite(writes: ArrayList<PgTupleWrite>) {
         for (write in writes) {
             val featureId = write.original.id
-            val mapId = write.original.mapId
+            val mapId = write.original.mapId ?: throw illegalArg("The given write does not have a map-id")
             val map = storage.adminMap.getPgMapById(conn, mapId) ?:
                 throw mapNotFound("The write #${write.i} refers to not existing map '$mapId'")
             write.map = map
 
-            val colId = write.original.collectionId
+            val colId = write.original.collectionId ?: throw illegalArg("The given write does not have a collection-id")
             val collection = map.getPgCollectionById(conn, colId) ?:
                 throw collectionNotFound("The write #${write.i} refers to not existing collection '$colId'")
             write.collection = collection

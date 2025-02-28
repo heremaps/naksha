@@ -5,6 +5,7 @@ import naksha.base.Int64
 import naksha.base.Platform
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
+import naksha.model.objects.NakshaStorage
 import kotlin.reflect.KClass
 
 /**
@@ -13,7 +14,7 @@ import kotlin.reflect.KClass
  * It is mandatory to extend this class when creating a storage, otherwise the caching sub-system won't work. Technically, the caching will only create an instance of a storage, when there is not yet one with the same configuration.
  * @since 3.0.0
  */
-abstract class AbstractStorage<CONFIG : StorageConfig> : IStorage {
+abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
 
     /**
      * A lock for the storage to synchronize access to some properties and to prevent, that multiple threads in parallel initialize the storage, can be used by applications too, but should be avoided.
@@ -59,22 +60,22 @@ abstract class AbstractStorage<CONFIG : StorageConfig> : IStorage {
      * - Throws [NakshaError.FORBIDDEN], if not called as super-user, but super-user rights are necessary.
      * - Throws [NakshaError.INITIALIZATION_FAILED], if the initialization failed.
      * - Throws [NakshaError.STORAGE_ID_MISMATCH], if the existing _storage-id_ and/or _storage-number_ of the data does not match the given ones in the configuration.
-     * - Throws [NakshaError.ILLEGAL_ARGUMENT], if any configuration entry is invalid, for example [StorageConfig.hardCap] too large.
+     * - Throws [NakshaError.ILLEGAL_ARGUMENT], if any configuration entry is invalid, for example [NakshaStorage.hardCap] too large.
      * @param config the configuration as required.
-     * @param create if not _null_, overrides [StorageConfig.create].
-     * @param upgrade if not _null_, overrides [StorageConfig.upgrade].
+     * @param create if not _null_, overrides [NakshaStorage.create].
+     * @param upgrade if not _null_, overrides [NakshaStorage.upgrade].
      * @since 3.0.0
      */
     protected abstract fun initStorage(config: CONFIG, create: Boolean?, upgrade: Boolean?)
 
     // Called by caching sub-system, which is the only one actually invoking initStorage!
-    internal fun invokeInitStorage(config: StorageConfig, create: Boolean?, upgrade: Boolean?) {
+    internal fun invokeInitStorage(storage: NakshaStorage, create: Boolean?, upgrade: Boolean?) {
         lock.acquire().use {
             if (configRef.get() == null || create==true || upgrade==true) {
-                val _config = config.proxy(configKlass)
-                this._id = config.id
-                this._number = config.number
-                this.hardCap = config.hardCap
+                val _config = storage.proxy(configKlass)
+                this._id = storage.id
+                this._number = storage.number
+                this.hardCap = storage.hardCap
                 initStorage(_config, create, upgrade)
                 this.configRef.set(_config)
                 afterInit()

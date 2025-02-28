@@ -24,7 +24,6 @@ import naksha.model.objects.NakshaMap
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
-import kotlin.js.JsName
 
 /**
  * The admin-map of the storage, requires a platform specific implementation.
@@ -57,10 +56,7 @@ abstract class PgAdminMap internal constructor(
      * @since 3.0.0
      */
     upgrade: Boolean?
-) : PgMap(storage, NakshaMap()
-    .withStorageId(storage.id)
-    .withId(ADMIN_MAP)
-    .withNumber(ADMIN_MAP_NUMBER)), IDictReader {
+) : PgMap(storage, NakshaMap().withStorageId(storage.id).withId(ADMIN_MAP)), IDictReader {
 
     /**
      * The page-size of the database (`current_setting('block_size')`).

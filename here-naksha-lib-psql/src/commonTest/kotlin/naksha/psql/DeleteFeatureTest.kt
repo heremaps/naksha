@@ -21,10 +21,10 @@ class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c")) 
             id = featureId
         }
         val writeInitialFeature = WriteRequest().add(
-            Write().createFeature(collection.mapId, collection.id, initialFeature)
+            Write().createFeature(collection.mapId!!, collection.id, initialFeature)
         )
         val deleteFeaturesReq = WriteRequest().add(
-            Write().deleteFeatureById(collection.mapId, collection.id, featureId)
+            Write().deleteFeatureById(collection.mapId!!, collection.id, featureId)
         )
 
         // When: Writing initial version of feature

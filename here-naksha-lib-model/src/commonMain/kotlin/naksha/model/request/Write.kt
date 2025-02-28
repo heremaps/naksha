@@ -8,7 +8,6 @@ import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.Naksha.NakshaCompanion.MAPS_COL
 import naksha.model.Naksha.NakshaCompanion.featureNumber
-import naksha.model.Naksha.NakshaCompanion.hashId
 import naksha.model.Naksha.NakshaCompanion.isInternalId
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
@@ -80,9 +79,13 @@ open class Write : AnyObject() {
 
             // Sorts by map-id, collection-id, feature-id.
             // Sorts admin-map, map's collection, and collection's collection first.
-            val map_diff = compareMapIds(a.mapId, b.mapId)
+            val a_mapId = a.mapId ?: throw illegalState("Write for feature '${a.id}' does not have 'mapId'")
+            val b_mapId = b.mapId ?: throw illegalState("Write for feature '${b.id}' does not have 'mapId'")
+            val a_colId = a.collectionId ?: throw illegalState("Write for feature '${a.id}' does not have 'collectionId'")
+            val b_colId = b.collectionId ?: throw illegalState("Write for feature '${b.id}' does not have 'collectionId'")
+            val map_diff = compareMapIds(a_mapId, b_mapId)
             return if (map_diff == 0) {
-                val col_diff = compareCollectionIds(a.collectionId, b.collectionId)
+                val col_diff = compareCollectionIds(a_colId, b_colId)
                 if (col_diff == 0) {
                     val a_partition = partitionNumber(a.featureNumber)
                     val b_partition = partitionNumber(b.featureNumber)
@@ -96,8 +99,8 @@ open class Write : AnyObject() {
         }
 
         private val OP = NotNullEnum<Write, WriteOp>(WriteOp::class) { _, _ -> WriteOp.NULL }
-        private val MAP_ID = NotNullProperty<Write, String>(String::class) { _, _ -> NakshaContext.mapId() }
-        private val COLLECTION_ID = NotNullProperty<Write, String>(String::class)
+        private val MAP_ID = NullableProperty<Write, String>(String::class)
+        private val COLLECTION_ID = NullableProperty<Write, String>(String::class)
         private val FEATURE_NULL = NullableProperty<Write, NakshaFeature>(NakshaFeature::class)
         private val BOOLEAN_FALSE = NotNullProperty<Write, Boolean>(Boolean::class) { _, _ -> false }
     }
@@ -117,10 +120,9 @@ open class Write : AnyObject() {
     }
 
     /**
-     * The identifier of the map to access, defaults to the [map of the current-context][NakshaContext.mapId].
+     * The identifier of the map to access; if `null` then the map-id is read from the [NakshaContext].
      *
-     * - If a [map][NakshaMap] should be modified, then use [Naksha.ADMIN_MAP].
-     * - If a [dictionary][NakshaDictionary] should be modified, then use [Naksha.ADMIN_MAP].
+     * If a [map][NakshaMap] or [dictionary][NakshaDictionary] should be modified, then use [Naksha.ADMIN_MAP].
      * @since 3.0
      */
     var mapId by MAP_ID
@@ -128,13 +130,13 @@ open class Write : AnyObject() {
     /**
      * @see [mapId]
      */
-    fun withMapId(value: String): Write {
+    fun withMapId(value: String?): Write {
         mapId = value
         return this
     }
 
     /**
-     * The identifier of the collection to modify.
+     * The identifier of the collection to modify; must not be `null` then the map-id is read from the [NakshaContext].
      *
      * - If a [map][NakshaMap] should be modified, then [Naksha.MAPS_COL] should be used, within [Naksha.ADMIN_MAP].
      * - If a [dictionary][NakshaDictionary] should be modified, the [Naksha.DICTIONARIES_COL] should be used, within [Naksha.ADMIN_MAP].
@@ -148,7 +150,7 @@ open class Write : AnyObject() {
     /**
      * @see [collectionId]
      */
-    fun withCollectionId(value: String): Write {
+    fun withCollectionId(value: String?): Write {
         collectionId = value
         return this
     }
@@ -191,13 +193,55 @@ open class Write : AnyObject() {
     /**
      * @see [version]
      */
-    fun withVersion(value: Version): Write {
+    fun withVersion(value: Version?): Write {
         version = value
+        return this
+    }
+
+    private var tupleNumberRaw: String? = null
+    private var tupleNumberValue: TupleNumber? = null
+
+    /**
+     * The expected version that should be modified.
+     *
+     * If not `null` and [atomic] is `true`, then the operation is atomic and expects that the existing _HEAD_ state is in the given [version][naksha.model.Version].
+     *
+     * If not explicitly set, defaults to `feature.properties.xyz.guid.tupleNumber`.
+     * @since 3.0
+     * @see [atomic]
+     */
+    var tupleNumber: TupleNumber?
+        get() {
+            val raw = getRaw("tupleNumber")
+            if (raw is String) {
+                if (raw === tupleNumberRaw) return tupleNumberValue
+                tupleNumberValue = TupleNumber.fromUrn(raw)
+                tupleNumberRaw = raw
+                return tupleNumberValue
+            }
+            return feature?.properties?.xyz?.guid?.tupleNumber
+        }
+        set(value) {
+            if (value == null) removeRaw("tupleNumber") else {
+                tupleNumberValue = value
+                tupleNumberRaw = value.toUrn()
+                setRaw("tupleNumber", tupleNumberRaw)
+            }
+        }
+
+    /**
+     * @see [version]
+     */
+    fun withTupleNumber(value: TupleNumber?): Write {
+        tupleNumber = value
         return this
     }
 
     /**
      * If this write should be performed atomic.
+     *
+     * Atomic actions, except for [CREATE][WriteOp.CREATE], do require either a [version] or a [tupleNumber].
+     *
      * @return `true` if this write should be performed atomic; `false` otherwise _(default)_.
      * @since 3.0
      * @see [validate]
@@ -277,14 +321,15 @@ open class Write : AnyObject() {
         get() {
             val raw = getRaw("featureNumber")
             if (raw is Int64) return raw
-            val fn = feature?.properties?.xyz?.guid?.tupleNumber?.featureNumber
+
+            val fn = feature?.featureNumber
             if (fn != null) return fn
+
             val id = this.id
-            // Calculating the feature-number is expensive, we need a MD5 hash, so cache the result.
             val cachedId = featureNumberId
             val cachedNumber = featureNumberValue
             if (id === cachedId && cachedNumber != null) return cachedNumber
-            val number = featureNumber(hashId(id))
+            val number = featureNumber(id)
             featureNumberId = id
             featureNumberValue = number
             return number
@@ -297,7 +342,7 @@ open class Write : AnyObject() {
     /**
      * Set the [featureNumber] and return `this`.
      *
-     * This method allows to reset the [featureNumber] to `null`, which basically means auto-generated, and is not supported by the default setter.
+     * This method allows to reset the [featureNumber] to `null`, which means "go back to default behavior".
      * @see [featureNumber]
      */
     fun withFeatureNumber(value: Int64?): Write {
@@ -528,17 +573,17 @@ open class Write : AnyObject() {
 
     /**
      * Delete a map.
-     * @param mapId the map to delete.
+     * @param id the identifier of the map to delete.
      * @param version the version to delete, if the deletion should be done atomic.
      * @return this.
      * @since 3.0
      */
     @JvmOverloads
-    fun deleteMapById(mapId: String, version: Version? = null): Write {
+    fun deleteMapById(id: String, version: Version? = null): Write {
         this.mapId = ADMIN_MAP
         this.collectionId = MAPS_COL
         this.op = WriteOp.DELETE
-        this.id = mapId
+        this.id = id
         this.version = version
         this.atomic = version != null
         return this
@@ -550,7 +595,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun createCollection(collection: NakshaCollection): Write {
-        this.mapId = collection.mapId
+        this.mapId = collection.mapId ?: NakshaContext.mapId()
         this.collectionId = COLLECTIONS_COL
         this.op = WriteOp.CREATE
         this.feature = collection
@@ -564,7 +609,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun updateCollection(collection: NakshaCollection, atomic: Boolean): Write {
-        this.mapId = collection.mapId
+        this.mapId = collection.mapId ?: NakshaContext.mapId()
         this.collectionId = COLLECTIONS_COL
         this.op = WriteOp.UPDATE
         this.feature = collection
@@ -578,7 +623,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun upsertCollection(collection: NakshaCollection): Write {
-        this.mapId = collection.mapId
+        this.mapId = collection.mapId ?: NakshaContext.mapId()
         this.collectionId = COLLECTIONS_COL
         this.op = WriteOp.UPSERT
         this.feature = collection
@@ -592,7 +637,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun deleteCollection(collection: NakshaCollection, atomic: Boolean): Write {
-        this.mapId = collection.mapId
+        this.mapId = collection.mapId ?: NakshaContext.mapId()
         this.collectionId = COLLECTIONS_COL
         this.op = WriteOp.DELETE
         this.feature = collection
@@ -608,8 +653,8 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     @JvmOverloads
-    fun deleteCollectionById(mapId: String = NakshaContext.mapId(), collectionId: String, version: Version? = null): Write {
-        this.mapId = mapId
+    fun deleteCollectionById(mapId: String? = null, collectionId: String, version: Version? = null): Write {
+        this.mapId = mapId ?: NakshaContext.mapId()
         this.collectionId = COLLECTIONS_COL
         this.op = WriteOp.DELETE
         this.id = collectionId
@@ -626,7 +671,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun createFeature(collection: NakshaCollection, feature: NakshaFeature): Write {
-        this.mapId = collection.mapId
+        this.mapId = collection.mapId ?: NakshaContext.mapId()
         this.collectionId = collection.id
         this.op = WriteOp.CREATE
         this.feature = feature
@@ -643,8 +688,8 @@ open class Write : AnyObject() {
      */
     @JsName("createFeatureUsingIds")
     @JvmOverloads
-    fun createFeature(mapId: String = NakshaContext.mapId(), collectionId: String, feature: NakshaFeature): Write {
-        this.mapId = mapId
+    fun createFeature(mapId: String? = null, collectionId: String, feature: NakshaFeature): Write {
+        this.mapId = mapId ?: NakshaContext.mapId()
         this.collectionId = collectionId
         this.op = WriteOp.CREATE
         this.feature = feature
@@ -659,7 +704,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun updateFeature(collection: NakshaCollection, feature: NakshaFeature, atomic: Boolean): Write {
-        this.mapId = collection.mapId
+        this.mapId = collection.mapId ?: NakshaContext.mapId()
         this.collectionId = collection.id
         this.op = WriteOp.UPDATE
         this.feature = feature
@@ -677,8 +722,8 @@ open class Write : AnyObject() {
      */
     @JsName("updateFeatureUsingIds")
     @JvmOverloads
-    fun updateFeature(mapId: String = NakshaContext.mapId(), collectionId: String, feature: NakshaFeature, atomic: Boolean): Write {
-        this.mapId = mapId
+    fun updateFeature(mapId: String? = null, collectionId: String, feature: NakshaFeature, atomic: Boolean): Write {
+        this.mapId = mapId ?: NakshaContext.mapId()
         this.collectionId = collectionId
         this.op = WriteOp.UPDATE
         this.feature = feature
@@ -693,7 +738,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun upsertFeature(collection: NakshaCollection, feature: NakshaFeature): Write {
-        this.mapId = collection.mapId
+        this.mapId = collection.mapId ?: NakshaContext.mapId()
         this.collectionId = collection.id
         this.op = WriteOp.UPSERT
         this.feature = feature
@@ -709,8 +754,8 @@ open class Write : AnyObject() {
      */
     @JsName("upsertFeatureUsingIds")
     @JvmOverloads
-    fun upsertFeature(mapId: String = NakshaContext.mapId(), collectionId: String, feature: NakshaFeature): Write {
-        this.mapId = mapId
+    fun upsertFeature(mapId: String? = null, collectionId: String, feature: NakshaFeature): Write {
+        this.mapId = mapId ?: NakshaContext.mapId()
         this.collectionId = collectionId
         this.op = WriteOp.UPSERT
         this.feature = feature
@@ -725,7 +770,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun deleteFeature(collection: NakshaCollection, feature: NakshaFeature, atomic: Boolean): Write {
-        this.mapId = collection.mapId
+        this.mapId = collection.mapId ?: NakshaContext.mapId()
         this.collectionId = collection.id
         this.op = WriteOp.DELETE
         this.feature = feature
@@ -743,7 +788,7 @@ open class Write : AnyObject() {
      */
     @JvmOverloads
     fun deleteFeatureById(collection: NakshaCollection, id: String, version: Version? = null): Write {
-        this.mapId = collection.mapId
+        this.mapId = collection.mapId ?: NakshaContext.mapId()
         this.collectionId = collection.id
         this.op = WriteOp.DELETE
         this.id = id
@@ -763,8 +808,8 @@ open class Write : AnyObject() {
      */
     @JsName("deleteFeatureByIds")
     @JvmOverloads
-    fun deleteFeatureById(mapId: String = NakshaContext.mapId(), collectionId: String, id: String, version: Version? = null): Write {
-        this.mapId = mapId
+    fun deleteFeatureById(mapId: String? = null, collectionId: String, id: String, version: Version? = null): Write {
+        this.mapId = mapId ?: NakshaContext.mapId()
         this.collectionId = collectionId
         this.op = WriteOp.DELETE
         this.id = id
@@ -781,7 +826,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun purgeFeature(collection: NakshaCollection, feature: NakshaFeature, atomic: Boolean): Write {
-        this.mapId = collection.mapId
+        this.mapId = collection.mapId ?: NakshaContext.mapId()
         this.collectionId = collection.id
         this.op = WriteOp.PURGE
         this.feature = feature
@@ -800,7 +845,7 @@ open class Write : AnyObject() {
     @JsName("purgeFeatureById")
     @JvmOverloads
     fun purgeFeatureById(collection: NakshaCollection, id: String, version: Version? = null): Write {
-        this.mapId = collection.mapId
+        this.mapId = collection.mapId ?: NakshaContext.mapId()
         this.collectionId = collection.id
         this.op = WriteOp.PURGE
         this.id = id
@@ -820,8 +865,8 @@ open class Write : AnyObject() {
      */
     @JsName("purgeFeatureByIds")
     @JvmOverloads
-    fun purgeFeatureById(mapId: String = NakshaContext.mapId(), collectionId: String, id: String, version: Version? = null): Write {
-        this.mapId = mapId
+    fun purgeFeatureById(mapId: String? = null, collectionId: String, id: String, version: Version? = null): Write {
+        this.mapId = mapId ?: NakshaContext.mapId()
         this.collectionId = collectionId
         this.op = WriteOp.PURGE
         this.id = id

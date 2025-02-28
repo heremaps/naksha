@@ -1,6 +1,5 @@
 package com.here.naksha.lib.handlers.internal;
 
-import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.storage.http.HttpStorage;
@@ -9,7 +8,7 @@ import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
-import naksha.model.StorageConfig;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,7 +53,7 @@ class IntHandlerForStoragesTest {
     NakshaProperties notHttpStorageProperties = new NakshaProperties();
 
     // And:
-    StorageConfig httpStorageConfig = httpStorageConfig(notHttpStorageProperties);
+    NakshaStorage httpStorageConfig = httpStorageConfig(notHttpStorageProperties);
 
     // And:
     WriteRequest writeStorageRequest = createFeatureRequest(STORAGES, httpStorageConfig);
@@ -74,7 +73,7 @@ class IntHandlerForStoragesTest {
     adminStorageAlwaysSucceeds();
 
     // And:
-    StorageConfig httpStorageConfig = httpStorageConfig(httpStorageProperties);
+    NakshaStorage httpStorageConfig = httpStorageConfig(httpStorageProperties);
 
     // And:
     WriteRequest writeStorageRequest = createFeatureRequest(STORAGES, httpStorageConfig);
@@ -113,8 +112,8 @@ class IntHandlerForStoragesTest {
     );
   }
 
-  private StorageConfig httpStorageConfig(NakshaProperties properties) {
-    StorageConfig httpStorageConfig = new StorageConfig();
+  private NakshaStorage httpStorageConfig(NakshaProperties properties) {
+    NakshaStorage httpStorageConfig = new NakshaStorage();
     httpStorageConfig.setClassName(HttpStorage.class.getName());
     httpStorageConfig.setId("test-http-storage");
     httpStorageConfig.setTitle("some title");

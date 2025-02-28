@@ -45,7 +45,7 @@ import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
-import naksha.model.StorageConfig;
+import naksha.model.objects.NakshaStorage;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -122,7 +122,7 @@ public class NHSpaceStorage implements IStorage {
   }
 
   @Override
-  public @NotNull StorageConfig getConfig() {
+  public @NotNull NakshaStorage getConfig() {
     throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
   }
 

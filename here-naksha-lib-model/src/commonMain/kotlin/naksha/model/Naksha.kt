@@ -35,6 +35,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
 import naksha.model.NakshaVersion.Companion.LATEST
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaProperties
+import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -130,7 +131,8 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        val internalCollectionIdToNumber = mapOf(
+        val internalIdToNumber = mapOf(
+            Pair(ADMIN_MAP, ADMIN_MAP_NUMBER),
             Pair(COLLECTIONS_COL, COLLECTIONS_COL_NUMBER),
             Pair(TRANSACTIONS_COL, TRANSACTIONS_COL_NUMBER),
             Pair(MAPS_COL, MAPS_COL_NUMBER),
@@ -226,54 +228,94 @@ class Naksha private constructor() {
          * Generates an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the given identifier, which is used to extract many values from it.
          * @param id the identifier to hash.
          * @return a [Binary] view above the [MD5](https://en.wikipedia.org/wiki/MD5) hash.
+         * @since 3.0
          */
-        @JsStatic
-        @JvmStatic
-        fun hashId(id: String): Binary {
+        private fun hashId(id: String): Binary {
             val hash = md5(id)
             return Binary(Platform.newDataView(hash))
         }
 
         /**
-         * A method to calculate a valid storage-number from the [MD5](https://en.wikipedia.org/wiki/MD5) hash of a storage-id.
+         * A regular expression to test if a string contains potentially a 63-bit unsigned integer (`0 .. 9,223,372,036,854,775,807`).
+         * @since 3.0
+         */
+        private val is63BitUnsigned = Regex("\\d{1,19}")
+
+        /**
+         * A regular expression to test if a string contains potentially a 31-bit unsigned integer (`0 .. 2,147,483,647`).
+         * @since 3.0
+         */
+        private val is31BitUnsigned = Regex("\\d{1,10}")
+
+        /**
+         * A method to calculate a valid storage-number from the storage-id.
          *
-         * @param md5 the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the storage-id, from which to extract the storage-number.
+         * @param id the id, from which to extract the storage-number.
          * @return the storage-number.
          * @since 3.0
          * @see [hashId]
          */
         @JsStatic
         @JvmStatic
-        fun storageNumber(md5: Binary): Int64 = md5.getInt64(8) and INT64_CLEAR_SIGN_BIT
+        fun storageNumber(id: String): Int64 {
+            if (is63BitUnsigned.matches(id)) {
+                try {
+                    return id.toLong(10).toInt64()
+                } catch (_: Exception) {}
+            }
+            val md5 = hashId(id)
+            return md5.getInt64(8) or INT64_SIGN_BIT
+        }
 
        /**
-         * A method to calculate a valid map-number from the [MD5](https://en.wikipedia.org/wiki/MD5) hash of a map-id.
+         * A method to calculate a valid map-number from the map-id.
          *
-         * @param md5 the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the map-id, from which to extract the map-number.
+         * @param id the map-id, from which to extract the map-number.
          * @return the map-number.
          * @since 3.0
          * @see [hashId]
          */
         @JsStatic
         @JvmStatic
-        fun mapNumber(md5: Binary): Int = md5.getInt32(12) or -2147483648
+        fun mapNumber(id: String): Int {
+           if (id != ADMIN_MAP) return ADMIN_MAP_NUMBER
+           if (is31BitUnsigned.matches(id)) {
+               try {
+                   return id.toUInt(10).toInt()
+               } catch (_: Exception) {}
+           }
+           val md5 = hashId(id)
+           return md5.getInt32(12) or -2147483648
+       }
 
         /**
-         * A method to calculate a valid collection-number from the [MD5](https://en.wikipedia.org/wiki/MD5) hash of a collection-id.
+         * A method to calculate a valid collection-number from the collection-id.
          *
-         * @param md5 the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the collection-id, from which to extract the collection-number.
+         * @param id the collection-id, from which to extract the collection-number.
          * @return the collection-number.
          * @since 3.0
          * @see [hashId]
          */
         @JsStatic
         @JvmStatic
-        fun collectionNumber(md5: Binary): Int = md5.getInt32(12) or -2147483648
+        fun collectionNumber(id: String): Int {
+            val internalNumber = internalIdToNumber[id]
+            if (id != ADMIN_MAP && internalNumber != null) return internalNumber
+            if (is31BitUnsigned.matches(id)) {
+                try {
+                    return id.toUInt(10).toInt()
+                } catch (_: Exception) {}
+            }
+            val md5 = hashId(id)
+            return md5.getInt32(12) or -2147483648
+        }
 
         /**
-         * A method to calculate the feature-number (`fn`) from the [MD5](https://en.wikipedia.org/wiki/MD5) hash above a feature-id.
+         * A method to calculate the feature-number (`fn`) from the feature-id.
          *
-         * Actually, this method will use the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id and return the lower 64-bit as feature-number, with the highest bit (sign-bit) always being set, which reserves all positive numbers for manually managed feature-numbers, which is compatible to what `Map-Hub` originally did. Considering the [birthday paradox](https://betterexplained.com/articles/understanding-the-birthday-paradox/), we can assume that for the maximum of 2^40 features in a collection, there will be around 65,000 collisions, when using 2^32 features _(4 billion)_ we only get 2 collisions, while for less than 1 billion features we will not encounter any collision _(or, it is unlikely)_.
+         * Actually, this method will try to detect if the feature-id is a 63-bit unsigned integer, if that is the case, it will convert this string into the corresponding positive 64-bit integer, and return it.
+         *
+         * Otherwise, it uses the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id and return the lower 64-bit as feature-number, with the highest bit (sign-bit) always being cleared, which reserves all positive numbers for manually managed feature-numbers, which is compatible to what `Map-Hub` originally did. Considering the [birthday paradox](https://betterexplained.com/articles/understanding-the-birthday-paradox/), we can assume that for the maximum of 2^40 features in a collection, there will be around 65,000 collisions, when using 2^32 features _(4 billion)_ we only get 2 collisions, while for less than 1 billion features we will not encounter any collision _(or, it is unlikely)_.
          *
          * ### Collision handling
          * As collisions in feature numbers are not totally avoidable, the strategy in case of a collision should be to increment to the feature-number until an unused number is found, not modifying the lower 16-bit, which we use as [partition-number][partitionNumber]. The generally programming way is
@@ -307,7 +349,17 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun featureNumber(md5: Binary): Int64 = md5.getInt64(8) or INT64_SIGN_BIT
+        fun featureNumber(id: String): Int64 {
+            val internalNumber = internalIdToNumber[id]
+            if (internalNumber != null) return internalNumber.toInt64()
+            if (is63BitUnsigned.matches(id)) {
+                try {
+                    return id.toLong(10).toInt64()
+                } catch (_: Exception) {}
+            }
+            val md5 = hashId(id)
+            return md5.getInt64(8) or INT64_SIGN_BIT
+        }
 
         /**
          * Test if the given 32-bit represents a number, generated from an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the identifier.
@@ -374,7 +426,7 @@ class Naksha private constructor() {
         /**
          * Returns the partition-number from the given feature-number.
          *
-         * This is basically just an unsigned 16-bit integer, extracted from the lowest 16-bit of the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id. When there are less than 65536 partitions, the value must be divided by the number of real partitions, and the rest indexes the partition, for example for 4 partitions do `partitionNumber(featureNumber(id)) % 4`, what will be a value between 0 and 3.
+         * This is basically just an unsigned 16-bit integer, extracted from the lowest 16-bit of the feature-number. When there are less than 65536 partitions, the value must be divided by the number of real partitions, and the rest indexes the partition, for example for 4 partitions do `partitionNumber(featureNumber) % 4`, what will be a value between 0 and 3.
          * @param featureNumber the feature-number.
          * @return the partition-number.
          * @see [featureNumber]
@@ -681,15 +733,15 @@ class Naksha private constructor() {
 
          /**
          * Returns the storage with the given configuration.
-         * @param config the configuration.
+         * @param storage the storage configuration.
          * @return the storage, if available.
          */
         @JvmStatic
         @JsStatic
-        fun getStorage(config: StorageConfig): IStorage? {
-            val s = storagesByNumber[config.number] ?: return null
-            val s2 = storagesById[config.id] ?: return null
-            return if (s!==s2 || s.config != config) null else s
+        fun getStorage(storage: NakshaStorage): IStorage? {
+            val s = storagesByNumber[storage.number] ?: return null
+            val s2 = storagesById[storage.id] ?: return null
+            return if (s!==s2 || s.config != storage) null else s
          }
 
         /**
@@ -734,7 +786,7 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun setupStorage(config: StorageConfig): IStorage = _useStorage(config, true)
+        fun setupStorage(config: NakshaStorage): IStorage = _useStorage(config, true)
 
         /**
          * Returns the storage with the given configuration.
@@ -751,9 +803,9 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun useStorage(config: StorageConfig): IStorage = _useStorage(config, false)
+        fun useStorage(config: NakshaStorage): IStorage = _useStorage(config, false)
 
-        private fun _useStorage(config: StorageConfig, forceCreateOrUpgrade: Boolean): IStorage {
+        private fun _useStorage(config: NakshaStorage, forceCreateOrUpgrade: Boolean): IStorage {
             val createOrUpdate = if (forceCreateOrUpgrade) true else null
             val s = storagesByNumber[config.number]
             val s2 = storagesById[config.id]
@@ -822,7 +874,7 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun removeStorage(config: StorageConfig): IStorage? {
+        fun removeStorage(config: NakshaStorage): IStorage? {
             val s = storagesByNumber[config.number]
             if (s == null || s.config != config) return null
             lock.acquire().use {

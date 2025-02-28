@@ -17,7 +17,7 @@ class PgUtilTest {
         val beforeEncoding = NakshaFeature().apply {
             id = "feature_1"
             properties = NakshaProperties().apply {
-                featureType = "some_feature_type"
+                setRaw("featureType", "some_feature_type")
                 xyz = make<XyzNs>(
                     "appId" to "someAppId",
                     "author" to "someAuthor"

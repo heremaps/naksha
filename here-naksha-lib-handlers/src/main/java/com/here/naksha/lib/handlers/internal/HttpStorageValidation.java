@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Set;
 import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaError;
-import naksha.model.StorageConfig;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
@@ -26,7 +26,7 @@ public class HttpStorageValidation {
 
   private static final Set<String> ALLOWED_PROTOCOLS = Set.of("http", "https");
 
-  static Response validateConfigForHttpStorage(StorageConfig httpStorageConfig) {
+  static Response validateConfigForHttpStorage(NakshaStorage httpStorageConfig) {
     HttpStorageProperties httpStorageProperties;
     try {
       httpStorageProperties = JvmBoxingUtil.box(httpStorageConfig.getProperties(), HttpStorageProperties.class);

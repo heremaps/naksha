@@ -17,17 +17,7 @@ import kotlin.js.JsName
  * @since 1.0
  */
 @JsExport
-open class NakshaProperties() : AnyObject() {
-
-    /**
-     * Create new properties with the given type set.
-     * @param featureType the [featureType] to set.
-     * @since 3.0
-     */
-    @JsName("ofType")
-    constructor(featureType: String): this() {
-        this.featureType = featureType
-    }
+open class NakshaProperties : AnyObject() {
 
     companion object {
         /**
@@ -100,12 +90,12 @@ open class NakshaProperties() : AnyObject() {
     /**
      * The feature-type; if any is set.
      *
-     * **This property should not be read directly, please use [NakshaFeature.featureType] or [NakshaFeature.momType] instead!**
+     * **This property should be read and changed via [NakshaFeature.featureType] or [NakshaFeature.momType] instead!**
      * @since 1.0
      * @see [NakshaFeature.featureType]
      * @see [NakshaFeature.momType]
      */
-    var featureType by _STRING_NULL
+    val featureType by _STRING_NULL
 
     fun useDeltaNamespace(): MomDeltaNs {
         var deltaProxy = this.delta

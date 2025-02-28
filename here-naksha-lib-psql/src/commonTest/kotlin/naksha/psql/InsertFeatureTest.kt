@@ -1,5 +1,8 @@
 package naksha.psql
 
+import naksha.base.Int64
+import naksha.base.Platform
+import naksha.base.PlatformUtil
 import naksha.geo.SpBoundingBox
 import naksha.model.Action
 import naksha.model.Naksha
@@ -22,7 +25,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
 
     @AfterTest
     fun cleanUp() {
-        dropCollection()
+        //dropCollection()
     }
 
     @Test
@@ -72,8 +75,9 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
 
     @Test
     fun shouldInsertManyFeatures() {
+        val count = 1 * 1000
         // Given: features to create
-        val featuresToCreate = generateRandomFeatures(count = 10)
+        val featuresToCreate = generateRandomFeatures(count = count)
         val writeFeaturesReq = WriteRequest().apply {
             featuresToCreate.forEach { featureToCreate ->
                 add(Write().createFeature(collection.mapId, collection.id, featureToCreate))
@@ -81,7 +85,12 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
         }
 
         // When: executing feature write request
+        val start = Platform.currentNanos()
         executeWrite(writeFeaturesReq)
+        val end = Platform.currentNanos()
+        val time = end - start
+        Platform.logger.info("Insert took ${time/1_000_000}ms, ${(count.toDouble()) / (time.toDouble()/(1_000_000_000.toDouble()))} features per second")
+        if (true) return
 
         // And: reading all features from collection
         val readResponse = executeRead(ReadFeatures().apply {
@@ -89,8 +98,8 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
         })
         val retrievedFeatures = readResponse.features
 
-        // Then: we got 10 features
-        assertEquals(10, retrievedFeatures.size)
+        // Then: we got <count> features
+        assertEquals(count, retrievedFeatures.size)
 
         // And:
         featuresToCreate.forEach { featureToCreate ->

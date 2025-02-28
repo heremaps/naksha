@@ -195,7 +195,7 @@ open class PgSession(
         var tx = this.tx
         if (tx == null) {
             val txn = storage.adminMap.newTxn(useConnection())
-            tx = StorageTx(Version(txn.number), options.appId, options.author, storage.adminMap)
+            tx = StorageTx(storage.number, Version(txn.number), options.appId, options.author, storage.adminMap)
             this.tx = tx
         }
         return tx

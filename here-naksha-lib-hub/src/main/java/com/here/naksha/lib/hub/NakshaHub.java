@@ -56,7 +56,7 @@ import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
-import naksha.model.StorageConfig;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
@@ -125,7 +125,7 @@ public class NakshaHub implements INaksha {
     logger.info("NakshaHub initialization started.");
 //    // TODO force create and update?
 //    // TODO CASL-657: support clustering
-    final StorageConfig storageConfig = new PgConfig(adminStorageId)
+    final NakshaStorage storageConfig = new PgConfig(adminStorageId)
         .withMasterUri(adminPgMasterUrl)
         .withCreate(true)
         .withUpgrade(true);
@@ -426,7 +426,7 @@ public class NakshaHub implements INaksha {
       Request readStorageById = readFeaturesByIdRequest(STORAGES, storageId);
       Response readStorageByIdResp = admin.execute(readStorageById);
       if (readStorageByIdResp instanceof SuccessResponse successResponse) {
-        StorageConfig storageConfig = readFeatureFromResponse(successResponse, StorageConfig.class);
+        NakshaStorage storageConfig = readFeatureFromResponse(successResponse, NakshaStorage.class);
         if (storageConfig == null) {
           throw unchecked(new StorageNotFoundException(storageId));
         }

@@ -32,7 +32,7 @@ import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
-import naksha.model.StorageConfig;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
@@ -45,10 +45,10 @@ import naksha.model.request.query.StringOp;
 import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
 
-public class IntHandlerForStorageConfigs extends AdminFeatureEventHandler<StorageConfig> {
+public class IntHandlerForStorageConfigs extends AdminFeatureEventHandler<NakshaStorage> {
 
   public IntHandlerForStorageConfigs(final @NotNull INaksha hub) {
-    super(hub, StorageConfig.class);
+    super(hub, NakshaStorage.class);
   }
 
   @Override
@@ -63,7 +63,7 @@ public class IntHandlerForStorageConfigs extends AdminFeatureEventHandler<Storag
     if (basicValidation instanceof ErrorResponse) {
       return basicValidation;
     }
-    final StorageConfig storageConfig = JvmBoxingUtil.box(write.getFeature(), StorageConfig.class);
+    final NakshaStorage storageConfig = JvmBoxingUtil.box(write.getFeature(), NakshaStorage.class);
     if (storageConfig == null) {
       return new ErrorResponse(
           NakshaError.ILLEGAL_ARGUMENT,
@@ -86,7 +86,7 @@ public class IntHandlerForStorageConfigs extends AdminFeatureEventHandler<Storag
     if (className == null || className.isEmpty()) {
       return new ErrorResponse(
           NakshaError.ILLEGAL_ARGUMENT,
-          "Storage Config is missing mandatory parameter: '" + StorageConfig.CLASSNAME_FIELD + "'"
+          "Storage Config is missing mandatory parameter: '" + NakshaStorage.CLASSNAME_FIELD + "'"
       );
     }
     return SUCCESSFUL_VALIDATION;

@@ -24,7 +24,6 @@ import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
-import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.ExtensionConfig;
 import com.here.naksha.lib.hub.NakshaHubConfig;
@@ -34,7 +33,7 @@ import naksha.model.IStorage;
 import naksha.model.Naksha;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
-import naksha.model.StorageConfig;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
@@ -120,7 +119,7 @@ public class NakshaHubMock implements INaksha {
     return getAdminStorage().useReadSession(SessionOptions.from(currentContext(), false), reader -> {
       final Response response = reader.execute(readFeaturesByIdRequest(STORAGES, storageId));
       if (response instanceof SuccessResponse successResponse) {
-        final StorageConfig storageConfig = readFeatureFromResponse(successResponse, StorageConfig.class);
+        final NakshaStorage storageConfig = readFeatureFromResponse(successResponse, NakshaStorage.class);
         if (storageConfig == null) {
           throw unchecked(new Exception("No storage config found with id " + storageId));
         }

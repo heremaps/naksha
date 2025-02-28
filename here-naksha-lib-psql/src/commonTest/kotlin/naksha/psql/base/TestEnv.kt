@@ -6,7 +6,7 @@ import naksha.base.PlatformUtil
 import naksha.model.Naksha
 import naksha.model.NakshaContext
 import naksha.model.SessionOptions
-import naksha.model.StorageConfig
+import naksha.model.objects.NakshaStorage
 import naksha.model.request.SuccessResponse
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -61,7 +61,8 @@ class TestEnv(
      * **Note**: You can override the docker-config via environment variable `NAKSHA_TEST_PSQL_DB_URL`, for example
      */
     @JvmField
-    val storage = Naksha.useStorage(StorageConfig.fromJSON("""{
+    val storage = Naksha.useStorage(
+        NakshaStorage.fromJSON("""{
   "id": "local_psql_test_storage",
   "className": "naksha.psql.PsqlTestStorage"
 }""")) as PgStorage

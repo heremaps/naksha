@@ -38,7 +38,6 @@ import static org.mockito.Mockito.when;
 
 import com.here.naksha.lib.core.EndPipelineHandler;
 import com.here.naksha.lib.core.EventPipeline;
-import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
@@ -56,7 +55,7 @@ import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
 import naksha.model.SessionOptions;
-import naksha.model.StorageConfig;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.ReadRequest;
@@ -108,7 +107,7 @@ class NakshaHubWiringTest {
   @Order(1)
   void testCreateStorageRequestWiring() {
     // Given: Create Storage request
-    final StorageConfig storageConfig = parseJsonFileOrFail("create_storage.json", StorageConfig.class);
+    final NakshaStorage storageConfig = parseJsonFileOrFail("create_storage.json", NakshaStorage.class);
     final WriteRequest request = createFeatureRequest(STORAGES, storageConfig);
 
     // And: spies and captors in place
@@ -175,7 +174,7 @@ class NakshaHubWiringTest {
   @Order(3)
   void testCreateFeatureRequestWiring() throws Exception {
     // Given: Storage, EventHandler and Space objects
-    final StorageConfig storageConfig = parseJsonFileOrFail("createFeature/create_storage.json", StorageConfig.class);
+    final NakshaStorage storageConfig = parseJsonFileOrFail("createFeature/create_storage.json", NakshaStorage.class);
     final EventHandlerConfig eventHandler =
         parseJsonFileOrFail("createFeature/create_event_handler.json", EventHandlerConfig.class);
     final Space space = parseJsonFileOrFail("createFeature/create_space.json", Space.class);

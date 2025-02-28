@@ -23,7 +23,6 @@ import static com.here.naksha.lib.core.HubInternalIdentifiers.CONFIGS;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
 
-import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.hub.mock.NHAdminMock.Config;
 import java.util.Map;
@@ -40,7 +39,7 @@ import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
-import naksha.model.StorageConfig;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
@@ -75,7 +74,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
     // empty on purpose
   }
 
-  public static class Config extends StorageConfig {}
+  public static class Config extends NakshaStorage {}
 
   public NHAdminMock() {
     // this constructor is only to support Platform-based instantiation

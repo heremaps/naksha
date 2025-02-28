@@ -23,15 +23,13 @@ import com.here.naksha.storage.http.cache.RequestSenderCache;
 import naksha.base.Int64;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.PlatformLock;
-import naksha.base.fn.Fn1;
 import naksha.jbon.JbDictionary;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
-import naksha.model.StorageConfig;
-import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaStorage;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -40,9 +38,9 @@ public class HttpStorage implements IStorage {
 
   private final KeyProperties defaultKeyProperties;
 
-  private final StorageConfig storageConfig;
+  private final NakshaStorage storageConfig;
 
-  public HttpStorage(@NotNull StorageConfig storageConfig) {
+  public HttpStorage(@NotNull NakshaStorage storageConfig) {
     this.storageConfig = storageConfig;
     HttpStorageProperties properties = HttpStorage.getProperties(storageConfig);
     if (properties == null) {
@@ -56,7 +54,7 @@ public class HttpStorage implements IStorage {
         properties.getSocketTimeout());
   }
 
-  private static @Nullable HttpStorageProperties getProperties(@NotNull StorageConfig storage) {
+  private static @Nullable HttpStorageProperties getProperties(@NotNull NakshaStorage storage) {
     return JvmBoxingUtil.box(storage.getProperties(), HttpStorageProperties.class);
   }
 
@@ -96,7 +94,7 @@ public class HttpStorage implements IStorage {
   }
 
   @Override
-  public @NotNull StorageConfig getConfig() {
+  public @NotNull NakshaStorage getConfig() {
     return storageConfig;
   }
 

@@ -7,6 +7,7 @@ import naksha.base.PlatformLock
 import naksha.base.fn.Fn1
 import naksha.base.fn.Fx1
 import naksha.jbon.IDictReader
+import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
 
 /**
@@ -43,7 +44,7 @@ interface IStorage : IDictReader {
      * - Throws [NakshaError.UNINITIALIZED], if not initialized.
      * @since 3.0
      */
-    val config: StorageConfig
+    val config: NakshaStorage
 
     /**
      * The storage-id, optionally stored in the storage, must always be the same for the same physical storage.

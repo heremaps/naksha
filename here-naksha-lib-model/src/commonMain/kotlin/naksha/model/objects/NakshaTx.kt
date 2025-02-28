@@ -20,7 +20,7 @@ open class NakshaTx : NakshaFeature() {
 
     override fun defaultFeatureType(): String = "naksha.Tx"
     override fun withId(value: String): NakshaTx = super.withId(value) as NakshaTx
-    override fun withFeatureNumber(featureNumber: Int64?): NakshaTx = super.withFeatureNumber(featureNumber) as NakshaTx
+    override fun withFeatureNumber(value: Int64): NakshaTx = super.withFeatureNumber(value) as NakshaTx
     override fun withType(value: String): NakshaTx = super.withType(value) as NakshaTx
     override fun withFeatureType(value: String): NakshaTx = super.withFeatureType(value) as NakshaTx
     override fun withBbox(value: SpBoundingBox?): NakshaTx = super.withBbox(value) as NakshaTx
@@ -34,7 +34,6 @@ open class NakshaTx : NakshaFeature() {
         private val INT_0 = NotNullProperty<NakshaTx, Int>(Int::class, init = { _, _ -> 0 })
         private val MAPS = NotNullProperty<NakshaTx, NakshaTxMapById>(NakshaTxMapById::class)
         private val INT64_NULL = NotNullProperty<NakshaTx, Int64>(Int64::class)
-        private val TIME = NotNullProperty<NakshaTx, Int64>(Int64::class) { _, _ -> Platform.currentMillis() }
     }
 
     /**
@@ -42,6 +41,7 @@ open class NakshaTx : NakshaFeature() {
      * @since 3.0
      */
     protected var _id: String? = null
+
     /**
      * Cached and verified `time`.
      * @since 3.0
@@ -84,7 +84,7 @@ open class NakshaTx : NakshaFeature() {
         try {
             val id = raw_id as String
             val txn = raw_txn as Int64
-            val time = raw_txn as Int64
+            val time = raw_time as Int64
             check(id.toLong(10) == raw_txn)
             val epoch = Timestamp.fromMillis(time)
             val version = Version(txn)

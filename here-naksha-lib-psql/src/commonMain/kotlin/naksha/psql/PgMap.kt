@@ -89,10 +89,7 @@ open class PgMap internal constructor(
         get() {
             var c = _collections
             if (c == null) {
-                c = PgCollection(this, NakshaCollection()
-                    .withMapId(id)
-                    .withId(COLLECTIONS_COL)
-                    .withNumber(COLLECTIONS_COL_NUMBER))
+                c = PgCollection(this, NakshaCollection().withMapId(id).withId(COLLECTIONS_COL))
                 _collections = c
             }
             return c

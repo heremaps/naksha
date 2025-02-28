@@ -2,18 +2,14 @@
 
 package naksha.model.objects
 
-import naksha.base.Int64
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
-import naksha.base.toUnsignedInt64
+import naksha.base.*
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.hashId
-import naksha.model.Naksha.NakshaCompanion.storageNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 
 /**
  * A map within a storage; maps are used to group collections.
@@ -23,16 +19,14 @@ import kotlin.js.JsName
 open class NakshaMap() : NakshaFeature() {
 
     /**
-     * Create a new map feature with the given ID.
+     * Create a new map feature with the given identifier.
      * @param id the identifier to set.
-     * @param storageId the storage-id in which the map is stored.
      * @since 3.0
      */
     @Suppress("LeakingThis")
     @JsName("of")
-    constructor(id: String, storageId: String): this() {
+    constructor(id: String): this() {
         this.id = id
-        this.storageId = storageId
         this.type = defaultType()
         this.featureType = defaultFeatureType()
     }
@@ -50,14 +44,13 @@ open class NakshaMap() : NakshaFeature() {
          */
         const val FEATURE_TYPE = "naksha.Map"
 
-        private val STORAGE_ID = NotNullProperty<NakshaMap, String>(String::class) { _, _ ->
-            throw illegalState("Missing storage-id for NakshaMap") }
+        private val STORAGE_ID = NullableProperty<NakshaMap, String>(String::class)
         private val DEFAULT_FLAGS = NullableProperty<NakshaMap, Flags>(Flags::class)
     }
 
     override fun defaultFeatureType(): String = NakshaCollection.FEATURE_TYPE
     override fun withId(value: String): NakshaMap = super.withId(value) as NakshaMap
-    override fun withFeatureNumber(featureNumber: Int64?): NakshaMap = super.withFeatureNumber(featureNumber) as NakshaMap
+    override fun withFeatureNumber(value: Int64): NakshaMap = super.withFeatureNumber(value) as NakshaMap
     override fun withType(value: String): NakshaMap = super.withType(value) as NakshaMap
     override fun withFeatureType(value: String): NakshaMap = super.withFeatureType(value) as NakshaMap
     override fun withBbox(value: SpBoundingBox?): NakshaMap = super.withBbox(value) as NakshaMap
@@ -68,58 +61,6 @@ open class NakshaMap() : NakshaFeature() {
     override fun withMomType(value: String?): NakshaMap = super.withMomType(value) as NakshaMap
 
     /**
-     * The storage-id of the storage in which the map is located.
-     * - Throws [NakshaError.ILLEGAL_STATE] if read before set.
-     * @since 3.0
-     */
-    var storageId by STORAGE_ID
-
-    /**
-     * @see storageId
-     */
-    open fun withStorageId(value: String): NakshaMap {
-        storageId = value
-        return this
-    }
-
-    private var sn_cachedId: String? = null
-    private var sn_cachedNumber: Int64? = null
-
-    /**
-     * The storage-number of the storage in which the map is located.
-     * @since 3.0
-     */
-    var storageNumber: Int64
-        get() {
-            val raw = getRaw("storageNumber")
-            if (raw is Int64) return raw
-
-            val id = this.storageId
-            val cachedId = sn_cachedId
-            var cachedNumber = sn_cachedNumber
-            if (id === cachedId && cachedNumber != null) return cachedNumber
-            sn_cachedId = id
-            cachedNumber = storageNumber(hashId(id))
-            sn_cachedNumber = cachedNumber
-            return cachedNumber
-        }
-        set(value) {
-            setRaw("storageNumber", value)
-        }
-
-    /**
-     * @see storageNumber
-     */
-    open fun withStorageNumber(value: Int64?): NakshaMap {
-        if (value == null) {
-            removeRaw("storageNumber")
-        } else {
-            setRaw("storageNumber", value)
-        }
-        return this
-    }
-
-    /**
      * The encoding flags to be used for new rows of all collections of this map, that do not have an own [defaultFlags][NakshaCollection.defaultFlags].
      *
      * - If _null_, the storage will use whatever is best for the storage.
@@ -127,41 +68,45 @@ open class NakshaMap() : NakshaFeature() {
      */
     var defaultFlags by DEFAULT_FLAGS
 
-    override fun calculateFeatureNumber(): Int64 = number.toUnsignedInt64()
-
-    private var number_cachedId: String? = null
-    private var number_cachedNumber: Int? = null
+    override fun featureNumberOfId(id: String): Int64 = Naksha.mapNumber(id).toInt64()
 
     /**
-     * The map-number, when internally _null_, then the number is generated as hash above the `id`.
-     *
-     * **{Create-Only}** - after map creation, modification of this parameter takes no effect.
+     * The number of the map, which is basically [featureNumber].
      * @since 3.0
      */
-    var number: Int
-        get() {
-            val id = this.id
-            if (id == Naksha.ADMIN_MAP) return Naksha.ADMIN_MAP_NUMBER
-            val n = getRaw("number")
-            if (n is Int) return n
-            val cachedId = number_cachedId
-            val cachedNumber = number_cachedNumber
-            if (id === cachedId && cachedNumber != null) return cachedNumber
-            val md5 = hashId(id)
-            val number = Naksha.mapNumber(md5)
-            number_cachedId = id
-            number_cachedNumber = number
-            return number
-        }
-        set(value) {
-            withNumber(value)
-        }
+    val number: Int
+        get() = featureNumber.toInt()
 
     /**
-     * @see [number]
+     * Always return `2`, because all collections are always stored in `naksha~maps` collection.
+     * @since 3.0
+     * @see [Naksha.MAPS_COL]
+     * @see [Naksha.MAPS_COL_NUMBER]
      */
-    open fun withNumber(value: Int?): NakshaMap {
-        if (value == null) removeRaw("number") else setRaw("number", value)
+    override val collectionNumber: Int
+        get() = Naksha.MAPS_COL_NUMBER
+
+    /**
+     * Always return `0`, because all maps are always stored in `naksha~admin` map.
+     * @since 3.0
+     * @see [Naksha.ADMIN_MAP]
+     * @see [Naksha.ADMIN_MAP_NUMBER]
+     */
+    override val mapNumber: Int
+        get() = Naksha.ADMIN_MAP_NUMBER
+
+    /**
+     * The storage-id of the storage in which the map is located; `null` if not yet known.
+     * @since 3.0
+     */
+    var storageId by STORAGE_ID
+
+    /**
+     * @see [storageId]
+     */
+    fun withStorageId(value: String?): NakshaMap {
+        storageId = value
         return this
     }
+
 }

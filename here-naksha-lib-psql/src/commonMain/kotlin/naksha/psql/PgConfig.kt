@@ -8,7 +8,7 @@ import naksha.base.NullableProperty
 import naksha.base.StringList
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
-import naksha.model.StorageConfig
+import naksha.model.objects.NakshaStorage
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -19,7 +19,7 @@ import kotlin.js.JsName
  */
 @Suppress("unused")
 @JsExport
-class PgConfig() : StorageConfig() {
+class PgConfig() : NakshaStorage() {
 
     override fun defaultClassName(): String = "naksha.psql.PsqlStorage"
 

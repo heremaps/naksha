@@ -43,7 +43,7 @@ import java.util.Optional;
 import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
-import naksha.model.StorageConfig;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
@@ -96,7 +96,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
     if (className == null || className.isEmpty()) {
       return new ErrorResponse(
           NakshaError.ILLEGAL_ARGUMENT,
-          "Storage Config is missing mandatory parameter: '" + StorageConfig.CLASSNAME_FIELD + "'"
+          "Storage Config is missing mandatory parameter: '" + NakshaStorage.CLASSNAME_FIELD + "'"
       );
     }
     return SUCCESSFUL_VALIDATION;

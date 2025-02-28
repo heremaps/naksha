@@ -23,6 +23,13 @@ import kotlin.js.JsExport
 @JsExport
 open class StorageTx(
     /**
+     * The storage-number of the storage for which this transaction is done.
+     * @since 3.0
+     * @see [NakshaStorage.number]
+     */
+    val storageNumber: Int64,
+
+    /**
      * The unique version of the transaction, potentially read from a daily sequence of the database. This value **should be** unique to this transaction!
      * @since 3.0
      * @see [Version.of]
@@ -120,7 +127,7 @@ open class StorageTx(
             .withOperation(operation)
             .withAction(action)
         val xyz = feature.properties.xyz
-        val tn = TupleNumber(map.storageNumber, map.number, collection.number, feature.featureNumber, version, uid.getAndAdd(1))
+        val tn = TupleNumber(storageNumber, map.number, collection.number, feature.featureNumber, version, uid.getAndAdd(1))
         // TODO: Handle other operations like rebase!
         val base_tn: TupleNumber? = null
         val prev_tn: TupleNumber? = if (operation == Operation.CREATED) null else {

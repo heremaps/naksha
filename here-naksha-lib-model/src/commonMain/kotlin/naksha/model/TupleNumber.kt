@@ -14,7 +14,6 @@ import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B192
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B224
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B288
-import kotlin.contracts.InvocationKind
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -75,36 +74,6 @@ data class TupleNumber(
      */
     @JvmField val uid: Int,
 ) : Comparable<TupleNumber> {
-    /**
-     * Helper to create a new tuple-number based upon some values from an existing.
-     *
-     * @param tn the tuple-number from which to copy.
-     * @param uid if not `null`, overrides `tn.uid`
-     * @param version if not `null`, overrides `tn.version`
-     * @param featureNumber if not `null`, overrides `tn.featureNumber`
-     * @param collectionNumber if not `null`, overrides `tn.collectionNumber`
-     * @param mapNumber if not `null`, overrides `tn.mapNumber`
-     * @param storageNumber if not `null`, overrides `tn.storageNumber`
-     *
-     */
-    @JsName("of")
-    @JvmOverloads
-    constructor(
-        tn: TupleNumber,
-        uid: Int? = null,
-        version: Version? = null,
-        featureNumber: Int64? = null,
-        collectionNumber: Int? = null,
-        mapNumber: Int? = null,
-        storageNumber: Int64? = null,
-    ) : this(
-        storageNumber ?: tn.storageNumber,
-        mapNumber ?: tn.mapNumber,
-        collectionNumber ?: tn.collectionNumber,
-        featureNumber ?: tn.featureNumber,
-        version ?: tn.version,
-        uid ?: tn.uid
-    )
     /**
      * The transaction-number.
      * @since 3.0
@@ -201,6 +170,13 @@ data class TupleNumber(
     }
 
     private var _urn: String? = null
+
+    /**
+     * Tests if this [TupleNumber] is [HEAD].
+     * @return `true` if this is [HEAD]; `false` otherwise.
+     * @since 3.0
+     */
+    fun isHead(): Boolean = this == HEAD
 
     /**
      * Convert this [TupleNumber] into a [URN](https://datatracker.ietf.org/doc/html/rfc8141).
@@ -320,6 +296,38 @@ data class TupleNumber(
         internal const val TN = 2
         internal const val URN_STORAGE_NUMBER_OFFSET = 3
         internal const val URN_PARTS = ALL_PARTS + 3
+
+        /**
+         * Helper to create a new tuple-number based upon some values from an existing.
+         *
+         * @param tn the tuple-number from which to copy.
+         * @param uid if not `null`, overrides `tn.uid`
+         * @param version if not `null`, overrides `tn.version`
+         * @param featureNumber if not `null`, overrides `tn.featureNumber`
+         * @param collectionNumber if not `null`, overrides `tn.collectionNumber`
+         * @param mapNumber if not `null`, overrides `tn.mapNumber`
+         * @param storageNumber if not `null`, overrides `tn.storageNumber`
+         *
+         */
+        @JsStatic
+        @JvmStatic
+        @JvmOverloads
+        fun copy(
+            tn: TupleNumber,
+            uid: Int? = null,
+            version: Version? = null,
+            featureNumber: Int64? = null,
+            collectionNumber: Int? = null,
+            mapNumber: Int? = null,
+            storageNumber: Int64? = null,
+        ) = TupleNumber(
+            storageNumber ?: tn.storageNumber,
+            mapNumber ?: tn.mapNumber,
+            collectionNumber ?: tn.collectionNumber,
+            featureNumber ?: tn.featureNumber,
+            version ?: tn.version,
+            uid ?: tn.uid
+        )
 
         /**
          * The _HEAD_ [TupleNumber], to be used when a [tuple-number][TupleNumber] is not yet available.

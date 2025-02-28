@@ -4,7 +4,6 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import naksha.model.Naksha.NakshaCompanion.featureNumber
-import naksha.model.Naksha.NakshaCompanion.hashId
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.Write
@@ -63,16 +62,15 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
 
         // And: `storeNumber` checks out
         storage.adminConnection().use { conn ->
-            val pgMap = storage.adminMap.getPgMapById(conn, collection.mapId)
+            val pgMap = storage.adminMap.getPgMapById(conn, collection.mapId!!)
             require(pgMap != null) { "Missing map ${collection.mapId}" }
             val pgCollection = pgMap.getPgCollectionById(conn, collection.id)
             require(pgCollection != null) { "Missing collection ${collection.id}" }
             assertEquals(storage.number, persistedTuple.tupleNumber.storageNumber)
             assertEquals(pgMap.number, persistedTuple.tupleNumber.mapNumber)
             assertEquals(pgCollection.number, persistedTuple.tupleNumber.collectionNumber)
-            val md5 = hashId(feature.id)
-            assertEquals(featureNumber(md5), persistedTuple.tupleNumber.featureNumber)
-            assertEquals(partitionNumber(featureNumber(md5)), persistedTuple.tupleNumber.partitionNumber)
+            assertEquals(featureNumber(feature.id), persistedTuple.tupleNumber.featureNumber)
+            assertEquals(partitionNumber(featureNumber(feature.id)), persistedTuple.tupleNumber.partitionNumber)
         }
     }
 

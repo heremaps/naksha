@@ -25,7 +25,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * Create a Naksha collection with settings.
      * @param id the collection-identifier.
-     * @param mapId the map-identifier in which to create the collection; defaults to [NakshaContext.mapId]
+     * @param mapId the map-identifier of the map in which the collection should be created; if `null`, then [NakshaContext.mapId] is used.
      * @param partitions the partitions to create; defaults to `1`
      * @param storageClass the [storage-class][storageClass] to create; defaults to `null`
      * @param storeDeleted if [deleted states should be stored][storeDeleted], defaults to [StoreMode.ON]
@@ -36,7 +36,7 @@ open class NakshaCollection() : NakshaFeature() {
     @JvmOverloads
     constructor(
         id: String,
-        mapId: String = NakshaContext.mapId(),
+        mapId: String? = null,
         partitions: Int = 1,
         storageClass: String? = null,
         storeDeleted: StoreMode = StoreMode.ON,
@@ -44,7 +44,7 @@ open class NakshaCollection() : NakshaFeature() {
         storeMeta: StoreMode = StoreMode.ON,
     ) : this() {
         this.id = id
-        this.mapId = mapId
+        this.mapId = mapId ?: NakshaContext.mapId()
         this.storageClass = storageClass
         this.partitions = partitions
         this.storeDeleted = storeDeleted
@@ -54,7 +54,7 @@ open class NakshaCollection() : NakshaFeature() {
 
     override fun defaultFeatureType(): String = FEATURE_TYPE
     override fun withId(value: String): NakshaCollection = super.withId(value) as NakshaCollection
-    override fun withFeatureNumber(featureNumber: Int64?): NakshaCollection = super.withFeatureNumber(featureNumber) as NakshaCollection
+    override fun withFeatureNumber(value: Int64): NakshaCollection = super.withFeatureNumber(value) as NakshaCollection
     override fun withType(value: String): NakshaCollection = super.withType(value) as NakshaCollection
     override fun withFeatureType(value: String): NakshaCollection = super.withFeatureType(value) as NakshaCollection
     override fun withBbox(value: SpBoundingBox?): NakshaCollection = super.withBbox(value) as NakshaCollection
@@ -64,10 +64,26 @@ open class NakshaCollection() : NakshaFeature() {
     override fun withAttachment(value: ByteArray?): NakshaCollection = super.withAttachment(value) as NakshaCollection
     override fun withMomType(value: String?): NakshaCollection = super.withMomType(value) as NakshaCollection
 
+    override fun featureNumberOfId(id: String): Int64 = Naksha.collectionNumber(id).toInt64()
+
     /**
-     * The map-id of the map in which the collection is located, defaults to [NakshaContext.mapId].
-     *
-     * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
+     * The number of the collection, which is basically [featureNumber].
+     * @since 3.0
+     */
+    val number: Int
+        get() = featureNumber.toInt()
+
+    /**
+     * Always return `0`, because all collections are always stored in `naksha~collections` collection.
+     * @since 3.0
+     * @see [Naksha.COLLECTIONS_COL]
+     * @see [Naksha.COLLECTIONS_COL_NUMBER]
+     */
+    override val collectionNumber: Int
+        get() = Naksha.COLLECTIONS_COL_NUMBER
+
+    /**
+     * The map-id of the map in which the collection is located; `null` if not yet known.
      * @since 3.0
      */
     var mapId by MAP_ID
@@ -75,58 +91,8 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [mapId]
      */
-    open fun withMapId(value: String): NakshaCollection {
-        this.mapId = value
-        return this
-    }
-
-    /**
-     * Sets the [mapId] to the one of the given map.
-     * @param map the map in which the collection is/should be located.
-     * @return this
-     * @since 3.0
-     */
-    open fun inMap(map: NakshaMap): NakshaCollection {
-        this.mapId = map.id
-        return this
-    }
-
-    override fun calculateFeatureNumber(): Int64 = number.toUnsignedInt64()
-
-    private var _cachedId: String? = null
-    private var _cachedNumber: Int? = null
-
-    /**
-     * The collection-number, when internally _null_, then the number is generated as hash above the `id`.
-     *
-     * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
-     * @since 3.0
-     */
-    var number: Int
-        get() {
-            val id = this.id
-            val predefined = Naksha.internalCollectionIdToNumber[id]
-            if (predefined != null) return predefined
-            val n = getRaw("number")
-            if (n is Int) return n
-            val cachedId = _cachedId
-            val cachedNumber = _cachedNumber
-            if (id === cachedId && cachedNumber != null) return cachedNumber
-            val md5 = Naksha.hashId(id)
-            val number = Naksha.collectionNumber(md5)
-            _cachedId = id
-            _cachedNumber = number
-            return number
-        }
-        set(value) {
-            withNumber(value)
-        }
-
-    /**
-     * @see [number]
-     */
-    open fun withNumber(value: Int?): NakshaCollection {
-        if (value == null) removeRaw("number") else setRaw("number", value)
+    fun withMapId(value: String?): NakshaCollection {
+        mapId = value
         return this
     }
 
@@ -446,7 +412,7 @@ open class NakshaCollection() : NakshaFeature() {
         private val BOOLEAN_FALSE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val DEFAULT_FLAGS = NullableProperty<NakshaCollection, Flags>(Flags::class)
         private val INT_NULL = NullableProperty<NakshaCollection, Int>(Int::class)
-        private val MAP_ID = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> NakshaContext.mapId() }
+        private val MAP_ID = NullableProperty<NakshaCollection, String>(String::class)
         private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)
         private val INDICES = NullableProperty<NakshaCollection, StringList>(StringList::class)
         private val MAX_AGE = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> Int64(-1) }

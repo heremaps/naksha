@@ -20,7 +20,7 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
         val initialFeature = NakshaFeature().apply {
             id = "feature_1"
             properties = NakshaProperties().apply {
-                featureType = "some_feature_type"
+                setRaw("featureType", "some_feature_type")
             }
         }
         val writeInitialFeature = WriteRequest().add(
@@ -31,7 +31,7 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
         val featureToUpdate = NakshaFeature().apply {
             id = initialFeature.id
             properties = NakshaProperties().apply {
-                featureType = "new_feature_type"
+                setRaw("featureType", "new_feature_type")
             }
         }
         val updateFeaturesReq = WriteRequest().add(

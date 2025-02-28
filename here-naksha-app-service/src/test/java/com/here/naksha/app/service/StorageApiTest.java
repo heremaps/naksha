@@ -33,7 +33,7 @@ import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import naksha.model.StorageConfig;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Assertions;
@@ -175,7 +175,7 @@ class StorageApiTest extends ApiTest {
     List<NakshaFeature> returnedXyzFeatures =
         parseJson(response.body(), XyzFeatureCollection.class).getFeatures();
     boolean allReturnedFeaturesAreStorages =
-        returnedXyzFeatures.stream().allMatch(feature -> StorageConfig.class.isAssignableFrom(feature.getClass()));
+        returnedXyzFeatures.stream().allMatch(feature -> NakshaStorage.class.isAssignableFrom(feature.getClass()));
     Assertions.assertTrue(allReturnedFeaturesAreStorages);
     List<String> storageIds =
         returnedXyzFeatures.stream().map(NakshaFeature::getId).toList();

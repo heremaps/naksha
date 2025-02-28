@@ -49,7 +49,7 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
                     executeWrite(request)
 
                     // Create the map.
-                    val newMap = NakshaMap(env.mapId, env.storage.id)
+                    val newMap = NakshaMap(env.mapId)
                     request = WriteRequest()
                     request.writes += Write().createMap(newMap)
                     val response = executeWrite(request)
