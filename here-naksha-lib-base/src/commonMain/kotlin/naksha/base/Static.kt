@@ -78,7 +78,6 @@ inline fun <T : Any> WeakRef(referee: T): WeakRef<T> = Platform.newWeakRef(refer
  */
 inline fun <T : Proxy> PlatformObject?.proxy(klass: KClass<T>): T {
     require(this != null)
-    require(this is PlatformMap || this is PlatformList || this is PlatformDataView)
     return Platform.proxy(this, klass)
 }
 

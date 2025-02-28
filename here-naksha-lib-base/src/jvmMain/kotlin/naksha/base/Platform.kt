@@ -591,16 +591,17 @@ actual class Platform {
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
         actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
-            require(pobject is JvmObject)
+            val obj = unbox(pobject)
+            require(obj is JvmObject)
             val symbol = Symbols.of(klass)
-            var proxy = pobject.getSymbol(symbol)
+            var proxy = obj.getSymbol(symbol)
             if (proxy != null) {
                 if (klass.isInstance(proxy)) return proxy as T
                 if (doNotOverride) throw IllegalStateException("The symbol $symbol is already bound to incompatible type")
             }
 
             proxy = resolveConstructorFor(klass).call()
-            proxy.bind(pobject, symbol)
+            proxy.bind(obj, symbol)
             return proxy
         }
 
