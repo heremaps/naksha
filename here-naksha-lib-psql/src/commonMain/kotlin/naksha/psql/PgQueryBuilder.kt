@@ -4,7 +4,6 @@ import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.model.request.*
-import naksha.psql.PgColumn.PgColumnCompanion.id
 import naksha.psql.PgColumn.PgColumnCompanion.tn
 import naksha.psql.PgColumn.PgColumnCompanion.txn_next
 import kotlin.math.max
@@ -63,8 +62,8 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val whereQuery = whereClause?.where ?: ""
         val thePgCollection = if (pgCollections.size == 1) pgCollections[0] else null
         val versions = req.versions
-        val txn = req.version
-        val txn_min = req.minVersion
+        val version = req.version
+        val minVersion = req.minVersion
 
         // Generate query.
         val selects = StringBuilder()
@@ -75,24 +74,26 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
             // We only need to select the column number, if we select from multiple collections!
             val col_num = if (thePgCollection == null) "${pgCollection.number} AS col_num, " else ""
             val where = if (whereQuery.isEmpty()) "" else "WHERE $whereQuery"
+            if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
             selects.append("\t(SELECT $col_num$tn FROM ${map.quotedId}.${head.quotedName} $where)\n")
 
             val deleted = pgCollection.deletedTable
             if (req.queryDeleted && deleted != null) {
+                if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
                 selects.append("\t(SELECT $col_num$tn FROM ${map.quotedId}.${deleted.quotedName} $where)\n")
             }
 
             val history = pgCollection.historyTable
-            if (req.queryHistory && history != null && (txn != null || txn_min != null || versions != 1)) {
+            if (req.queryHistory && history != null) {
+                // TODO: We need to improve, because we only want $versions variants!
                 // If only one version is requested, we can improve the query to only return this version!
-                val better_where = if (txn != null && versions == 1)
-                    (if (where.isEmpty()) "WHERE " else "$where AND ") + "$txn_next > $txn"
+                val better_where = if (version != null && versions == 1)
+                    (if (where.isEmpty()) "WHERE " else "$where AND ") + "$txn_next > $version"
                 else
                     where
-                selects.append("\t(SELECT $col_num$tn FROM ${map.quotedId}.${history.quotedName} $better_where")
+                if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
+                selects.append("\t(SELECT $col_num$tn FROM ${map.quotedId}.${history.quotedName} $better_where)\n")
             }
-
-            if (entry.index < pgCollections.lastIndex) selects.append(" UNION ALL\n")
         }
         val SQL = if (thePgCollection == null)
 // If we select from multiple collections, we have to encode the collection-number in the tuple-number.

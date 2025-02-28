@@ -47,6 +47,7 @@ class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c")) 
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true
+            versions = 10
         })
         assertEquals(2, historyResponse.features.size)
         assertSame(Action.CREATED, historyResponse.tupleList?.get(0)?.meta?.flags?.actionEnum())
