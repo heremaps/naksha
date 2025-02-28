@@ -9,6 +9,7 @@ import naksha.model.request.WriteRequest
 import naksha.psql.base.PgTestBase
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 
 class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c")) {

@@ -4,6 +4,7 @@ import naksha.base.AtomicMap
 import naksha.base.AtomicRef
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.proxy
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -33,16 +34,16 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
         get() = env.storage
 
     val map: NakshaMap
-        get() = testMap.get() ?: throw IllegalStateException("map not initialized")
+        get() = initializedMap.get() ?: throw IllegalStateException("map not initialized")
 
     val collection: NakshaCollection
-        get() = testCollection ?: throw IllegalStateException("collection not initialized")
+        get() = initializedCollections[this::class] ?: throw IllegalStateException("collection not initialized")
 
     @BeforeTest
     fun ensureCollectionInitialized() {
-        if (testMap.get() == null) {
+        if (initializedMap.get() == null) {
             lock.acquire().use {
-                if (testMap.get() == null) {
+                if (initializedMap.get() == null) {
                     // Delete the map, should it be still there from previous test runs.
                     var request = WriteRequest()
                     request.writes += Write().deleteMapById(env.mapId)
@@ -59,27 +60,32 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
                     val feature = features.first()
                     assertNotNull(feature)
                     val map = feature.proxy(NakshaMap::class)
-                    testMap.set(map)
+                    initializedMap.set(map)
+                    logger.info("Created test map: '${map.id}'")
                 }
             }
         }
 
-        val collection = testCollection
+        val testCollection = this.testCollection
         val thisClass = this::class
-        if (collection != null && initializedCollections[thisClass] == null) {
+        if (testCollection != null && initializedCollections[thisClass] == null) {
             lock.acquire().use {
                 if (initializedCollections[thisClass] == null) {
                     val request = WriteRequest()
-                    request.writes += Write().createCollection(collection)
+                    request.writes += Write().createCollection(testCollection)
                     storage.newWriteSession().use { session ->
                         val response = session.execute(request)
                         require(response is SuccessResponse) {
                             if (response is ErrorResponse) response.error.toString() else "Unknown error"
                         }
                         session.commit()
+                        val features = response.features
+                        assertEquals(1, features.size)
+                        val feature = features[0]
+                        val collection = feature.proxy(NakshaCollection::class)
+                        initializedCollections[thisClass] = collection
                     }
-                    initializedCollections[thisClass] = collection
-                    logger.info("Created test map ${collection.id}")
+                    logger.info("Created test collection: '${collection.id}'")
                 }
             }
         }
@@ -160,7 +166,7 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
          * To be held, while initializing a map, to ensure that threads will wait for a collection to be created, before using it.
          */
         private val lock = Platform.newLock()
-        private val testMap = AtomicRef<NakshaMap>(null)
+        private val initializedMap = AtomicRef<NakshaMap>(null)
         private val initializedCollections = AtomicMap<KClass<out PgTestBase>, NakshaCollection>()
     }
 }

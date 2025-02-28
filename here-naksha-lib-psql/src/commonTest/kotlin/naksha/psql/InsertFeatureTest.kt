@@ -90,7 +90,6 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
         val end = Platform.currentNanos()
         val time = end - start
         Platform.logger.info("Insert took ${time/1_000_000}ms, ${(count.toDouble()) / (time.toDouble()/(1_000_000_000.toDouble()))} features per second")
-        if (true) return
 
         // And: reading all features from collection
         val readResponse = executeRead(ReadFeatures().apply {
@@ -122,15 +121,29 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
                 }
         }
 
-        Naksha.cache.clear(env.storage)
+        val firstFeature = readResponse.features.first()
+        assertNotNull(firstFeature)
+        assertEquals(env.storage.number, firstFeature.storageNumber)
+        assertEquals(map.number, firstFeature.mapNumber)
+        assertEquals(collection.number, firstFeature.collectionNumber)
 
-        // Read only one feature by ID.
+        // Read only one feature by ID, bypassing the cache.
+        Naksha.cache.clear(env.storage)
         val expectFeature = featuresToCreate[0]
         val featuresByIdResponse = executeRead(ReadFeatures().apply {
             collectionIds += collection.id
             featureIds.add(expectFeature.id)
         })
+
+        // Expect it to have the same tuple-number as the first feature originally returned!
         assertEquals(1, featuresByIdResponse.size)
+        val binary = featuresByIdResponse.tupleNumberBinary
+        assertNotNull(binary)
+        assertEquals(1, binary.size)
+        val tupleNumber = binary.first()
+        assertNotNull(tupleNumber)
+        assertEquals(firstFeature.tupleNumber, tupleNumber) // Note: featureNumbers differ, why?
+
         val features = featuresByIdResponse.features
         assertEquals(expectFeature.id, features[0]!!.id)
 
