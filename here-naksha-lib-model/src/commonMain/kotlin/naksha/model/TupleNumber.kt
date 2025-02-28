@@ -101,7 +101,7 @@ data class TupleNumber(
     override fun hashCode(): Int = version.hashCode() xor uid
 
     override fun compareTo(other: TupleNumber): Int {
-        val i64_diff = storageNumber - other.storageNumber
+        var i64_diff = storageNumber - other.storageNumber
         if (i64_diff < 0) return -1
         if (i64_diff > 1) return 1
         var i32_diff = mapNumber - other.mapNumber
@@ -113,6 +113,9 @@ data class TupleNumber(
         i32_diff = partitionNumber - other.partitionNumber
         if (i32_diff < 0) return -1
         if (i32_diff > 1) return 1
+        i64_diff = featureNumber - other.featureNumber
+        if (i64_diff < 0) return -1
+        if (i64_diff > 1) return 1
         i32_diff = version.compareTo(other.version)
         if (i32_diff < 0) return -1
         if (i32_diff > 1) return 1
@@ -128,8 +131,8 @@ data class TupleNumber(
             && storageNumber == other.storageNumber
             && mapNumber == other.mapNumber
             && collectionNumber == other.collectionNumber
+            && featureNumber == other.featureNumber
             && version.txn == other.version.txn
-            && partitionNumber == other.partitionNumber
             && uid == other.uid
     }
 
