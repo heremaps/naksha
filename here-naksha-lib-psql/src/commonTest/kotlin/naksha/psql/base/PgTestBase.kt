@@ -11,6 +11,7 @@ import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaMap
 import naksha.model.request.*
 import naksha.psql.PgStorage
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.reflect.KClass
 import kotlin.test.BeforeTest
 import kotlin.test.assertEquals
@@ -70,6 +71,7 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
         if (testCollection != null && initializedCollections[thisClass] == null) {
             lock.acquire().use {
                 if (initializedCollections[thisClass] == null) {
+                    if (testCollection.mapId == "unimap") testCollection.mapId = TEST_MAP_ID
                     val request = WriteRequest()
                     request.writes += Write().createCollection(testCollection)
                     storage.newWriteSession().use { session ->
