@@ -1,6 +1,5 @@
 package naksha.psql.executors
 
-import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaException
 import naksha.model.TupleNumberBinaryArray
 import naksha.model.Version

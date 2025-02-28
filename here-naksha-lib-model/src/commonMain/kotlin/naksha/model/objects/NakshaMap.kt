@@ -9,7 +9,6 @@ import naksha.geo.SpPoint
 import naksha.model.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
-import kotlin.jvm.JvmOverloads
 
 /**
  * A map within a storage; maps are used to group collections.

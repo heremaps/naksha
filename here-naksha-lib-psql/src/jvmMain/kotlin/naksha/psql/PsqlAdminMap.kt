@@ -4,17 +4,6 @@ import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.jbon.JbDictionary
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
-import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP_NUMBER
-import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
-import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_NUMBER
-import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL
-import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL_NUMBER
-import naksha.model.Naksha.NakshaCompanion.MAPS_COL
-import naksha.model.Naksha.NakshaCompanion.MAPS_COL_NUMBER
-import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
-import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_NUMBER
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
 import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
