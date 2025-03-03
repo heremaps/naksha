@@ -75,7 +75,7 @@ class PgExceptionMapperTest {
         fun sqlCausesAndExpectedCodes(): Stream<Arguments> =
             Stream.of(
                 PgExceptionMapper.ERR_UNINITIALIZED to NakshaError.EXCEPTION,
-                PgExceptionMapper.ERR_COLLECTION_EXISTS to NakshaError.CONFLICT,
+                PgExceptionMapper.ERR_COLLECTION_EXISTS to NakshaError.COLLECTION_EXISTS,
                 PgExceptionMapper.ERR_COLLECTION_NOT_EXISTS to NakshaError.COLLECTION_NOT_FOUND,
                 PgExceptionMapper.ERR_CONFLICT to NakshaError.CONFLICT,
                 PgExceptionMapper.ERR_CHECK_VIOLATION to NakshaError.EXCEPTION,

@@ -38,11 +38,11 @@ class PgQueryWhereBuilderTest {
         // Then
         assertNotNull(query)
         assertLegalSqlSameAs("""
-        WHERE ( 
+        ( 
                 (
                  created_at > $1 
                  OR (app_id = $2 AND starts_with(author, $3)) 
-                 OR NOT (type = $4)
+                 OR NOT (ft = $4)
                 )
             )
         AND ( 

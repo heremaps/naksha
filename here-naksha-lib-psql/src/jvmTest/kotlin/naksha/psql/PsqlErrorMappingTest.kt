@@ -10,6 +10,7 @@ import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
 
@@ -44,7 +45,8 @@ class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
 
         // Then
         assertIs<ErrorResponse>(resp)
-        assertEquals(NakshaError.CONFLICT, resp.error.code)
+        assertTrue(resp.error.isConflict())
+        assertEquals(NakshaError.MAP_EXISTS, resp.error.code)
     }
 
     @Test
