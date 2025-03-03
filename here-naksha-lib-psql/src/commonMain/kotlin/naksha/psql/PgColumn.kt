@@ -624,6 +624,35 @@ class PgColumn : JsEnum() {
         val copyIntoHistoryColumnNames = copyIntoHistoryColumns.joinToString(",") { it.name }
 
         /**
+         * All columns that we copy from the user data, when we update a row.
+         *
+         * This excludes the columns that need updates:
+         * - [flags] - we need to set operation to [UPDATED][naksha.model.Operation.UPDATED], action to [UPDATED][naksha.model.Action.UPDATED]
+         * - [cc] - we need to increment change-count
+         * - [prev_tn] - is copied from [tn] of the current _HEAD_ record
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val updateColumns = listOf(
+            updated_at, created_at, author_ts,
+            cv0, cv1, cv2, cv3,
+            hash, here_tile, // removed: flags, cc
+            tn, next_tn, base_tn, // removed: prev_tn
+            id, app_id, author, origin, target, ft,
+            cs0, cs1, cs2, cs3,
+            tags, ref_point, geo, feature, attachment
+        )
+
+        /**
+         * The names of all database columns, as comma separated list.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmField
+        val updateColumnsNames = updateColumns.joinToString(",") { it.name }
+
+        /**
          * All columns that we copy, when we create a tombstone state (deleted).
          *
          * In that case we copy from _HEAD_ into a temporary CTE table, then further to _HISTORY_ and/or _SHADOW_, but we need to update some columns, therefore this excludes the columns that need updates:

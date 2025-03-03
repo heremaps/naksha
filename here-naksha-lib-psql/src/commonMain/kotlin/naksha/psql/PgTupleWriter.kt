@@ -235,7 +235,15 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
             val tupleWriter = PgTupleWriteInsert(session, collection, tgWrites)
             tupleWriter.execute(conn)
         }
+
         // UPSERT
+        for (mapEntry in upserts) {
+            val collection = mapEntry.key
+            val tgWrites = mapEntry.value
+            val tupleWriter = PgTupleWriteUpsert(session, collection, tgWrites)
+            tupleWriter.execute(conn)
+        }
+
         // UPDATE
     }
 
