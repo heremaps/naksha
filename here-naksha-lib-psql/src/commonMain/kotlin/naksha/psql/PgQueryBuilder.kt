@@ -17,7 +17,6 @@ import kotlin.math.min
  */
 class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
 
-    // TODO: Add support for reading multiple versions using (req.versions = 2+)!
     // TODO: Add support for orderBy!
 
     /**
@@ -48,7 +47,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val pgMap = session.getPgMapById(mapId) ?: throw NakshaException(ILLEGAL_ARGUMENT, "Map with id '$mapId' does not exist")
         // We select what the client wants, maximum is always 16777216
         // Finally, the storage can limit result-size further down below 16777216 (normally we do not expect this to happen).
-        val REQ_LIMIT = max(min(0, req.limit ?: 16777216), session.storage.hardCap)
+        val REQ_LIMIT = min(max(0, req.limit ?: 16777216), session.storage.hardCap)
         if (REQ_LIMIT == 0) throw NakshaException(ILLEGAL_ARGUMENT, "Invalid limit given: ${req.limit}, must be 0 to 16777216")
         val pgCollections: MutableList<PgCollection> = mutableListOf()
         for (collectionId in req.collectionIds) {

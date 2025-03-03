@@ -12,11 +12,6 @@ import kotlin.test.assertEquals
 
 class ReadLimitTest : PgTestBase(NakshaCollection("read_limit_test")) {
 
-    @AfterTest
-    fun cleanUp() {
-        dropCollection()
-    }
-
     @Test
     fun shouldUseLimitWhenReturningResults() {
         // Given
