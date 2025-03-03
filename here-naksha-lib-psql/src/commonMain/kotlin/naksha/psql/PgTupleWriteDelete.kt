@@ -33,8 +33,14 @@ internal class PgTupleWriteDelete(session: PgSession, collection: PgCollection, 
         val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
         val do_any_insert = insert_into_shadow != null || insert_into_history != null
 
+        // Acts as a barrier to force sequential execution
+        val barrier = """WITH RECURSIVE enforce_order(dummy) AS (
+  SELECT 1
+  UNION ALL
+  SELECT dummy + 1 FROM enforce_order WHERE dummy < 1
+)"""
         // All input provided by client, `id` and optionally `version`, and `uid`
-        val query = """WITH query AS (
+        val query = """$barrier, query AS (
   SELECT * FROM UNNEST($1, $2, $3) AS t(id, version, uid)
 )"""
 
@@ -44,7 +50,6 @@ internal class PgTupleWriteDelete(session: PgSession, collection: PgCollection, 
   SELECT head.id AS id, head.tn AS tn
   FROM ${headTable.quotedName} AS head, query
   WHERE head.id = query.id
-  FOR UPDATE NOWAIT
 )"""
 
         // If the client requested an atomic deleted, so it provided a `version`, then
@@ -54,10 +59,12 @@ internal class PgTupleWriteDelete(session: PgSession, collection: PgCollection, 
   SELECT head.id AS id, head.tn AS tn
   FROM ${headTable.quotedName} AS head, query
   WHERE head.id = query.id AND (query.version IS NULL OR query.version = naksha_tn_version(head.tn))
+  FOR UPDATE NOWAIT
 )""" else """, head_row AS (
   SELECT ${PgColumn.allColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
   FROM ${headTable.quotedName} AS head, query
   WHERE head.id = query.id AND (query.version IS NULL OR query.version = naksha_tn_version(head.tn))
+  FOR UPDATE NOWAIT
 )"""
 
         // Check if any atomic delete failed (we have fewer rows in `head_row` as in `head_select`
@@ -129,7 +136,7 @@ internal class PgTupleWriteDelete(session: PgSession, collection: PgCollection, 
 )""" else ""
 
         // Copy the tombstone into shadow
-        val shadow_tombstone = if (insert_into_shadow != null && false) """, shadow_tombstone AS (
+        val shadow_tombstone = if (insert_into_shadow != null) """, shadow_tombstone AS (
  INSERT INTO ${insert_into_shadow.quotedName} 
  (${PgColumn.flags}, ${PgColumn.tn}, ${PgColumn.next_tn}, ${PgColumn.prev_tn}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
  SELECT * FROM tombstone
@@ -149,7 +156,8 @@ SELECT query.id AS q_id, query.version AS q_version,
        head_deleted.id AS d_id, head_deleted.tn AS d_tn, naksha_tn_version(head_deleted.tn) AS d_version
 FROM query
 LEFT JOIN head_select ON head_select.id = query.id
-LEFT JOIN head_deleted ON head_deleted.id = query.id;"""
+LEFT JOIN head_deleted ON head_deleted.id = query.id
+;"""
         return conn.prepare(SQL, rows.typeNames())
     }
 
