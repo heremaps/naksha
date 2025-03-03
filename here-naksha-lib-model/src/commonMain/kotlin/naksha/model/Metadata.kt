@@ -170,21 +170,16 @@ data class Metadata(
             val xyz = feature.properties.xyz
             val prevTupleNumber = xyz.pguid?.tupleNumber
             val updatedAt: Int64 = Platform.currentMillis()
-            val createdAt: Int64? = if (prevTupleNumber != null) {
-                flags = flags.withCreateAt(true)
-                xyz.createdAt
-            } else null
+            val createdAt: Int64? = xyz.createdAt
             val author: String?
             val authorTs: Int64? = if (xyz.author == null || xyz.author != session.options.author) {
                 // authorTs is always the same as updatedAt, when the author is updated.
                 // If the previous author was null, we simply always assume a change.
                 author = session.options.author
-                flags = flags.withAuthorTs(false)
                 null
             } else {
                 // If the author stays the same as before, we need to remember the previous timestamp!
                 author = xyz.author
-                flags = flags.withAuthorTs(true)
                 xyz.authorTs
             }
             val baseTupleNumber = xyz.mguid?.tupleNumber

@@ -36,7 +36,7 @@ class Action : JsEnum() {
         internal const val DELETED_STRING = "DELETED"
         internal const val DELETED_SHORT = "d"
 
-        internal const val UNDEFINED_VALUE = 15 shl ACTION_SHIFT
+        internal const val UNDEFINED_VALUE = 3 shl ACTION_SHIFT
         internal const val UNDEFINED_STRING = "UNDEFINED"
         internal const val UNDEFINED_SHORT = "x"
 

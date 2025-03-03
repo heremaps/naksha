@@ -149,7 +149,7 @@ AS $$
 END $$;
 
 DROP FUNCTION IF EXISTS naksha_tn_96(int8, int4);
-CREATE FUNCTION naksha_tn_160(txn int8, uid int4) RETURNS bytea
+CREATE FUNCTION naksha_tn_96(txn int8, uid int4) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   SELECT int8send(txn) || int4send(uid)

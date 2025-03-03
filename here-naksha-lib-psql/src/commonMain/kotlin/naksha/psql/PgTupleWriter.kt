@@ -161,6 +161,7 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
                 write.nakshaCollection = nakshaCollection
             }
         }
+
     }
 
     private fun MutableMap<PgCollection, MutableList<PgTupleWrite>>.getOrCreate(collection: PgCollection): MutableList<PgTupleWrite> {
@@ -174,11 +175,11 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
 
     private fun executeWrite(writes: ArrayList<PgTupleWrite>) {
         // We group the features into collections into which we should write.
+        val deletes = mutableMapOf<PgCollection, MutableList<PgTupleWrite>>()
+        val purges = mutableMapOf<PgCollection, MutableList<PgTupleWrite>>()
         val inserts = mutableMapOf<PgCollection, MutableList<PgTupleWrite>>()
         val upserts = mutableMapOf<PgCollection, MutableList<PgTupleWrite>>()
         val updates = mutableMapOf<PgCollection, MutableList<PgTupleWrite>>()
-        val deletes = mutableMapOf<PgCollection, MutableList<PgTupleWrite>>()
-        val purges = mutableMapOf<PgCollection, MutableList<PgTupleWrite>>()
         for (write in writes) {
             when (val op = write.original.op) {
                 WriteOp.CREATE -> {
@@ -204,10 +205,12 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
                     updates.getOrCreate(write.collection).add(write)
                 }
                 WriteOp.DELETE -> {
+                    write.final_uid = tx.uid.getAndAdd(1)
                     deletes.getOrCreate(write.collection).add(write)
                 }
                 WriteOp.PURGE -> {
                     // Note: purge and delete are the same operation, except that a purge is not copied into deleted table!
+                    write.final_uid = tx.uid.getAndAdd(1)
                     purges.getOrCreate(write.collection).add(write)
                 }
                 else -> {
@@ -223,9 +226,8 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
             val tupleWriter = PgTupleWriteDelete(session, collection, tgWrites)
             tupleWriter.execute(conn)
         }
-
         // PURGE
-        // UPSERT
+
         // INSERT
         for (mapEntry in inserts) {
             val collection = mapEntry.key
@@ -233,9 +235,8 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
             val tupleWriter = PgTupleWriteInsert(session, collection, tgWrites)
             tupleWriter.execute(conn)
         }
-
+        // UPSERT
         // UPDATE
-
     }
 
     /**

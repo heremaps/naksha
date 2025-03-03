@@ -132,34 +132,12 @@ open class FlagsBits {
          */
         const val OP_CLEAR = OP_MASK.inv()
 
-        // --------------------------------------< CUSTOM VALUES >--------------------------------
-
-        /**
-         * The bits to shift the value in the [Flags].
-         */
-        const val CV_SHIFT = 16
-
-        /**
-         * The bits used to encode the value in [Flags].
-         */
-        const val CV_BITS = 4
-
-        /**
-         * The bitmask to AND combine with [Flags] to read the value from [Flags].
-         */
-        const val CV_MASK = ((1 shl CV_BITS) - 1) shl CV_SHIFT
-
-        /**
-         * The bitmask to AND combine with [Flags] to clear the value from the [Flags].
-         */
-        const val CV_CLEAR = CV_MASK.inv()
-
         // --------------------------------------< ACTION >---------------------------------------
 
         /**
          * The bits to shift the value in the [Flags].
          */
-        const val ACTION_SHIFT = 20
+        const val ACTION_SHIFT = 16
 
         /**
          * The bits used to encode the value in [Flags].
@@ -175,56 +153,5 @@ open class FlagsBits {
          * The bitmask to AND combine with [Flags] to clear the value from the [Flags].
          */
         const val ACTION_CLEAR = ACTION_MASK.inv()
-
-        // --------------------------------------< BITS >-----------------------------------------
-
-        /**
-         * The bit to set, when the [MetadataBinary] encodes a previous tuple-number.
-         * @since 3.0.0
-         */
-        const val HAS_PREV_TN_BIT = 4194304 // 2^22
-
-        /**
-         * The bitmask to clear the prev_tn bit from the [Flags].
-         * @since 3.0.0
-         */
-        const val HAS_PREV_TN_CLEAR = HAS_PREV_TN_BIT.inv()
-
-        /**
-         * The bit to set, when the [MetadataBinary] encodes a base tuple-number.
-         * @since 3.0.0
-         */
-        const val HAS_BASE_TN_BIT = 8388608 // 2^23
-
-        /**
-         * The bitmask to clear the base_tn bit from the [Flags].
-         * @since 3.0.0
-         */
-        const val HAS_BASE_TN_CLEAR = HAS_BASE_TN_BIT.inv()
-
-        /**
-         * The bit to set, when the [MetadataBinary] encodes the author-ts value.
-         * @since 3.0.0
-         */
-        const val HAS_AUTHOR_TS_BIT = 16777216 // 2^24
-
-        /**
-         * The bitmask to clear the author-ts bit from the [Flags].
-         * @since 3.0.0
-         */
-        const val HAS_AUTHOR_TS_CLEAR = HAS_AUTHOR_TS_BIT.inv()
-
-        /**
-         * The bit to set, when the [MetadataBinary] encodes a create-at value.
-         * @since 3.0.0
-         */
-        const val HAS_CREATED_AT_BIT = 33554432 // 2^25
-
-        /**
-         * The bitmask to clear the create-at bit from the [Flags].
-         * @since 3.0.0
-         */
-        const val HAS_CREATED_AT_CLEAR = HAS_CREATED_AT_BIT.inv()
-
     }
 }

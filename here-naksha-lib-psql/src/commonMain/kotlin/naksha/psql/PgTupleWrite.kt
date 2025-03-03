@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.model.Action
 import naksha.model.Tuple
 import naksha.model.TupleNumber
 import naksha.model.Version
@@ -36,17 +35,17 @@ internal data class PgTupleWrite(val original: Write, val i: Int) {
     lateinit var collection: PgCollection
 
     /**
+     * The `uid` (unique transaction local identifier) of the tombstone state, if this is a [DELETE][WriteOp.DELETE] or [PURGE][WriteOp.PURGE].
+     * @since 3.0
+     */
+    var final_uid: Int? = null
+
+    /**
      * The write operation to perform.
      * @since 3.0
      */
     val op: WriteOp
         get() = original.op
-
-    /**
-     * The action that was eventually executed.
-     * @since 3.0
-     */
-    //var action: Action = Action.UNDEFINED
 
     /**
      * The identifier of the feature to modify.

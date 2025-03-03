@@ -88,7 +88,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
                 // TODO: We need to improve, because we only want $versions variants!
                 // If only one version is requested, we can improve the query to only return this version!
                 val better_where = if (version != null && versions == 1)
-                    (if (where.isEmpty()) "WHERE " else "$where AND ") + "$next_tn > $version"
+                    (if (where.isEmpty()) "WHERE " else "$where AND ") + "naksha_tn_version($next_tn) > $version"
                 else
                     where
                 if (selects.isNotEmpty()) selects.append(" UNION ALL\n")

@@ -123,7 +123,7 @@ open class StorageTx(
         if (operation.action != action && operation.action != null) {
             throw illegalArg("The operation $operation is hard linked to the action ${operation.action}, therefore $action is an invalid action!")
         }
-        var flags = getEncodingFlags(feature)
+        val flags = getEncodingFlags(feature)
             .withOperation(operation)
             .withAction(action)
         val xyz = feature.properties.xyz
@@ -134,10 +134,7 @@ open class StorageTx(
             xyz.guid?.tupleNumber ?: throw illegalArg("$operation requires that the feature has a UUID!")
         }
         val updatedAt: Int64 = this.updatedAt
-        val createdAt: Int64? = if (prev_tn != null) {
-            flags = flags.withCreateAt(true)
-            xyz.createdAt
-        } else null
+        val createdAt: Int64? = if (prev_tn != null) xyz.createdAt else null
         val author: String?
         val authorTs: Int64?
         if (xyz.author == null || xyz.author != this.author) {
@@ -145,21 +142,15 @@ open class StorageTx(
             // If the previous author is null, then it differs from the current author, even when both are null!
             author = this.author
             authorTs = null // authorTs == updatedAt
-            flags = flags.withAuthorTs(false)
         } else {
             // If the author stays the same as before, we need to remember the author and timestamp!
             author = xyz.author
             authorTs = xyz.authorTs
-            flags = flags.withAuthorTs(true)
         }
         val cv0 = feature.properties.xyz.cv0
-        if (cv0 != null) flags = flags.withCustomValue(0, true)
         val cv1 = feature.properties.xyz.cv1
-        if (cv1 != null) flags = flags.withCustomValue(1, true)
         val cv2 = feature.properties.xyz.cv2
-        if (cv2 != null) flags = flags.withCustomValue(2, true)
         val cv3 = feature.properties.xyz.cv3
-        if (cv3 != null) flags = flags.withCustomValue(3, true)
         return Metadata(
             tupleNumber = tn,
             flags = flags,

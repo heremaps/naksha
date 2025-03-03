@@ -15,11 +15,13 @@ internal class PgTupleWriteDelete(session: PgSession, collection: PgCollection, 
     init {
         rows.addColumn("id", PgType.STRING)
         rows.addColumn("version", PgType.INT64)
+        rows.addColumn("uid", PgType.INT)
         for (e in writes.withIndex()) {
             val row = e.index
             val write = e.value
             rows.set(row, "id", write.id)
             rows.set(row, "version", write.version?.txn)
+            rows.set(row, "uid", write.final_uid)
         }
     }
 
@@ -31,10 +33,9 @@ internal class PgTupleWriteDelete(session: PgSession, collection: PgCollection, 
         val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
         val do_any_insert = insert_into_shadow != null || insert_into_history != null
 
-        // All input provided by client, basically just `id` and optionally `version`
-        // TODO: Add `final_tn` for the tombstone state
+        // All input provided by client, `id` and optionally `version`, and `uid`
         val query = """WITH query AS (
-  SELECT * FROM UNNEST($1, $2) AS t(id, txn)
+  SELECT * FROM UNNEST($1, $2, $3) AS t(id, version, uid)
 )"""
 
         // select `id` and `tn` of all rows that match query.id
@@ -52,11 +53,11 @@ internal class PgTupleWriteDelete(session: PgSession, collection: PgCollection, 
         val head_row = if (!do_any_insert) """, head_row AS (
   SELECT head.id AS id, head.tn AS tn
   FROM ${headTable.quotedName} AS head, query
-  WHERE head.id = query.id AND (query.txn IS NULL OR query.txn = naksha_tn_version(head.tn))
+  WHERE head.id = query.id AND (query.version IS NULL OR query.version = naksha_tn_version(head.tn))
 )""" else """, head_row AS (
   SELECT ${PgColumn.allColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
   FROM ${headTable.quotedName} AS head, query
-  WHERE head.id = query.id AND (query.txn IS NULL OR query.txn = naksha_tn_version(head.tn))
+  WHERE head.id = query.id AND (query.version IS NULL OR query.version = naksha_tn_version(head.tn))
 )"""
 
         // Check if any atomic delete failed (we have fewer rows in `head_row` as in `head_select`
@@ -85,7 +86,7 @@ internal class PgTupleWriteDelete(session: PgSession, collection: PgCollection, 
         // Insert the current `head_row` into history
         val head_to_history = if (insert_into_history != null) """, head_to_history AS (
   INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_tn}, ${PgColumn.copyIntoHistoryColumnNames})
-  SELECT head_row.tn AS ${PgColumn.next_tn}, ${PgColumn.copyIntoHistoryColumnNames} FROM head_row
+  SELECT substring(head_row.tn, 9) AS ${PgColumn.next_tn}, ${PgColumn.copyIntoHistoryColumnNames} FROM head_row
   RETURNING id, tn
 )""" else ""
 
@@ -98,31 +99,42 @@ internal class PgTupleWriteDelete(session: PgSession, collection: PgCollection, 
 
         // Create a tombstone row for each head_row
         // TODO:
-        //  - set `tn_prev` to `head_row.tn`
+        //  - mutate `flags`, set operation and action to DELETED
         //  - set `tn` to `query.final_tn`
         //  - set `tn_next` to `query.final_tn` (link close, tombstone)
+        //  - set `tn_prev` to `head_row.tn`
         //  - set `tn_base` to `null`
-        //  - mutate `flags`, set operation and action to DELETED
         //
-        val tombstone = if (do_any_insert) "" else ""
-//        val tombstone = if (insert_into_history != null) """, tombstone AS (
-//  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.allColumnNames})
-//  SELECT ${tx.version.txn} AS ${PgColumn.txn_next}, ${PgColumn.copyIntoHistoryColumnNames}
-//  FROM head_row
-//  RETURNING head.tn
-//)""" else ""
+        // Note: -258049 = fffc0fff (clear operation and action bits)
+        //       2 << 16 = action DELETED
+        //       2 << 12 = operation DELETED
+        val tombstone = if (do_any_insert) """, tombstone AS (
+  SELECT
+    ((head_row.flags & -196609) | (2 << 16) | (2 << 12)) AS ${PgColumn.flags},
+    naksha_tn_160(naksha_tn_feature_number(head_row.tn), ${tx.version.txn}::int8, query.uid) AS ${PgColumn.tn}, 
+    naksha_tn_96(${tx.version.txn}::int8, query.uid) AS ${PgColumn.next_tn}, 
+    substring(head_row.tn, 9) AS ${PgColumn.prev_tn}, 
+    null::bytea AS ${PgColumn.base_tn}, 
+    ${PgColumn.tombstoneColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
+  FROM head_row, query
+  WHERE head_row.id = query.id
+)""" else ""
 
         // Copy the tombstone into history
-        val history_tombstone = if (insert_into_history != null) "" else ""
+        val history_tombstone = if (insert_into_history != null) """, history_tombstone AS (
+ INSERT INTO ${insert_into_history.quotedName} 
+ (${PgColumn.flags}, ${PgColumn.tn}, ${PgColumn.next_tn}, ${PgColumn.prev_tn}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
+ SELECT * FROM tombstone
+ RETURNING id, tn
+)""" else ""
 
         // Copy the tombstone into shadow
-        val shadow_tombstone = if (insert_into_shadow != null) "" else ""
-//        val shadow_row = if (insert_into_shadow != null) """, shadow_row AS (
-//  INSERT INTO ${insert_into_shadow.quotedName} (${PgColumn.allColumnNames})
-//  SELECT ${tx.version.txn} AS ${PgColumn.txn_next}, ${PgColumn.copyIntoHistoryColumnNames}
-//  FROM head_row
-//  RETURNING head.tn
-//)""" else ""
+        val shadow_tombstone = if (insert_into_shadow != null && false) """, shadow_tombstone AS (
+ INSERT INTO ${insert_into_shadow.quotedName} 
+ (${PgColumn.flags}, ${PgColumn.tn}, ${PgColumn.next_tn}, ${PgColumn.prev_tn}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
+ SELECT * FROM tombstone
+ RETURNING id, tn
+)""" else ""
 
         // TODO: we know that the query aborts, when any atomic delete failed
         //   - therefore, we can just return the (`query.id`, `query.final_tn`), where `query.id` = `head_row.id`
@@ -132,7 +144,7 @@ internal class PgTupleWriteDelete(session: PgSession, collection: PgCollection, 
         //   - we need to make feature-id mutable in feature-tuple for this case
         //   - if the client has provided the full feature, we could fake the response, but what if the real version differs !?!?!?
         val SQL = """$query$head_select$head_row$head_deleted$clear_shadow$head_to_history$tombstone$history_tombstone$shadow_tombstone
-SELECT query.id AS q_id, query.txn AS q_version,
+SELECT query.id AS q_id, query.version AS q_version,
        head_select.id AS h_id, head_select.tn AS h_tn, naksha_tn_version(head_select.tn) AS h_version,
        head_deleted.id AS d_id, head_deleted.tn AS d_tn, naksha_tn_version(head_deleted.tn) AS d_version
 FROM query

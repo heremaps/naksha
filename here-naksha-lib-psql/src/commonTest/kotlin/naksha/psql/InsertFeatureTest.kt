@@ -70,7 +70,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
 
     @Test
     fun shouldInsertManyFeatures() {
-        val count = 1 * 1000
+        val count = 5 * 1000
         // Given: features to create
         val featuresToCreate = generateRandomFeatures(count = count)
         val writeFeaturesReq = WriteRequest().apply {
