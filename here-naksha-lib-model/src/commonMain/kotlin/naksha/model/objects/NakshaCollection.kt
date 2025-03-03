@@ -99,7 +99,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * If partitions is given, then collection is internally partitioned in the storage, and optimised for large quantities of features. The default is no partitions, for around every 10 to 20 million features expected to be stored in a collection, one more partition should be requested.
      *
-     * Valid values are between 1 and 256, the value _undefined_, _null_ and `0` are interpreted as one partition (`1`), all other values will be rejected.
+     * Valid values are between `1` and `65536` _(exclusive)_, the values `undefined`, `null` and `0` are interpreted as one partition (`1`), all other values will be rejected.
      *
      * Beware that in AWS ever point-to-point connection is generally limited to 5 Gbps. To reach the full throughput when reading features from a database with a 200 Gbps bandwidth, at least 40 partitions are needed, so 40 * 5 Gbps = 200 Gbps throughput.
      *

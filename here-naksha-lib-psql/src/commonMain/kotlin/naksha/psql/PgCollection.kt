@@ -128,9 +128,10 @@ open class PgCollection internal constructor(
         get() = id.startsWith("naksha~")
 
     init {
+        val partitions = if (nakshaCollection.partitions == 1) 0 else nakshaCollection.partitions
         storageClass = PgStorageClass.of(nakshaCollection.storageClass)
         @Suppress("LeakingThis")
-        headTable = if (this is PgNakshaTransactions) PgTransactions(this) else PgHead(this, storageClass, nakshaCollection.partitions)
+        headTable = if (this is PgNakshaTransactions) PgTransactions(this) else PgHead(this, storageClass, partitions)
         deletedTable = if (nakshaCollection.storeDeleted == StoreMode.OFF) null else PgDeleted(headTable)
         historyTable = if (nakshaCollection.storeHistory == StoreMode.OFF) null else PgHistory(headTable)
         metaTable = if (nakshaCollection.storeMeta == StoreMode.OFF) null else PgMeta(headTable)

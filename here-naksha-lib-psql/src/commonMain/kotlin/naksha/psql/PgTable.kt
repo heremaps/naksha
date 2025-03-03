@@ -17,7 +17,7 @@ import kotlin.jvm.JvmStatic
  * @property partitionOfTable the parent table, if this is a partition of it.
  * @property partitionOfValue if this is a partition of a yearly history table, the year; otherwise, if this is a performance partition, the index in the partitions array, so a value between 0 and n, with n being `partitionOf.partitionCount - 1`.
  * @property partitionByColumn the column by which to partition.
- * @property partitionCount the amount of partitions, must be 0 when [partitionByColumn] is _null_ or when the number of partitions is flexible; otherwise must be a value between 2 and 256 (for fixed partition count).
+ * @property partitionCount the amount of partitions, must be `0` when [partitionByColumn] is `null` or a value between `2` and 65536` _(exclusive)_, for fixed partition count.
  */
 @JsExport
 open class PgTable(
@@ -30,6 +30,7 @@ open class PgTable(
     @JvmField val partitionByColumn: PgColumn? = null,
     @JvmField val partitionCount: Int = 0
 ) {
+
     companion object PgTableCompanion {
         /**
          * Tests if this is any HEAD table.
@@ -168,8 +169,8 @@ open class PgTable(
             "No partitioning, but partitionCount ($partitionCount) given for table '$name'"
         } else {
             // Note: We allow partitionBy to be set, with partitionCount being 0 or 2..256
-            require(partitionCount == 0 || partitionCount in 2..256) {
-                "Invalid number of partitions for '$name', must bei 0 or 2 to 256, given $partitionCount"
+            require(partitionCount == 0 || partitionCount in 2..65535) {
+                "Invalid number of partitions for '$name', must bei 0 or 2 to 65535, given $partitionCount"
             }
         }
         if (partitionOfTable != null) {
