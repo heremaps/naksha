@@ -33,14 +33,8 @@ internal class PgTupleWriteDelete(session: PgSession, collection: PgCollection, 
         val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
         val do_any_insert = insert_into_shadow != null || insert_into_history != null
 
-        // Acts as a barrier to force sequential execution
-        val barrier = """WITH RECURSIVE enforce_order(dummy) AS (
-  SELECT 1
-  UNION ALL
-  SELECT dummy + 1 FROM enforce_order WHERE dummy < 1
-)"""
         // All input provided by client, `id` and optionally `version`, and `uid`
-        val query = """$barrier, query AS (
+        val query = """WITH query AS (
   SELECT * FROM UNNEST($1, $2, $3) AS t(id, version, uid)
 )"""
 
@@ -99,9 +93,9 @@ internal class PgTupleWriteDelete(session: PgSession, collection: PgCollection, 
 
         // Delete `head_row` from HEAD.
         val head_deleted = """, head_deleted AS (
-  DELETE FROM ${headTable.quotedName} AS head
-  WHERE head.tn IN (SELECT tn FROM head_row)
-  RETURNING head.id, head.tn
+  DELETE FROM ${headTable.quotedName}
+  WHERE tn IN (SELECT tn FROM head_row)
+  RETURNING id, tn
 )"""
 
         // Create a tombstone row for each head_row
@@ -151,12 +145,14 @@ internal class PgTupleWriteDelete(session: PgSession, collection: PgCollection, 
         //   - we need to make feature-id mutable in feature-tuple for this case
         //   - if the client has provided the full feature, we could fake the response, but what if the real version differs !?!?!?
         val SQL = """$query$head_select$head_row$head_deleted$clear_shadow$head_to_history$tombstone$history_tombstone$shadow_tombstone
-SELECT query.id AS q_id, query.version AS q_version,
-       head_select.id AS h_id, head_select.tn AS h_tn, naksha_tn_version(head_select.tn) AS h_version,
-       head_deleted.id AS d_id, head_deleted.tn AS d_tn, naksha_tn_version(head_deleted.tn) AS d_version
-FROM query
-LEFT JOIN head_select ON head_select.id = query.id
-LEFT JOIN head_deleted ON head_deleted.id = query.id
+SELECT 'query' as source, query.id AS q_id, null AS tn FROM query
+UNION ALL SELECT 'head_select' as source, id, tn FROM head_select
+UNION ALL SELECT 'head_row' as source, id, tn FROM head_row
+UNION ALL SELECT 'head_deleted' as source, id, tn FROM head_deleted
+${if (clear_shadow.isNotEmpty()) "UNION ALL SELECT 'clear_shadow' as source, id, tn FROM clear_shadow" else ""}
+${if (head_to_history.isNotEmpty()) "UNION ALL SELECT 'head_to_history' as source, id, tn FROM head_to_history" else ""}
+${if (history_tombstone.isNotEmpty()) "UNION ALL SELECT 'history_tombstone' as source, id, tn FROM history_tombstone" else ""}
+${if (shadow_tombstone.isNotEmpty()) "UNION ALL SELECT 'shadow_tombstone' as source, id, tn FROM shadow_tombstone" else ""}
 ;"""
         return conn.prepare(SQL, rows.typeNames())
     }
