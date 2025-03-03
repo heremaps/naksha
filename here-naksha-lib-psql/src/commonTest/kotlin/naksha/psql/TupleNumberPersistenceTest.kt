@@ -3,16 +3,17 @@ package naksha.psql
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import naksha.base.AtomicInt
+import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaFeature
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.base.PgTestBase
 import naksha.psql.util.ProxyFeatureGenerator
-import kotlin.test.AfterTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlin.test.*
 
 class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistence_test")) {
 
@@ -32,11 +33,14 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
 
         // When
         val writeOp = Write().createFeature(collection, feature)
-        val persistedTuples = executeWrite(WriteRequest().add(writeOp)).tupleList
+        val response = executeWrite(WriteRequest().add(writeOp))
+        val featureTuples = response.useFeatureTupleList()
+        Naksha.cache.load(featureTuples)
 
         // Then:
-        assertEquals(1, persistedTuples?.size)
-        val persistedTuple = persistedTuples?.get(0)!!
+        assertEquals(1, featureTuples.size)
+        val persistedTuple = featureTuples[0]
+        assertNotNull(persistedTuple)
         assertEquals(feature.id, persistedTuple.id)
 
         // And: version stores date information
@@ -53,12 +57,17 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
 
         // When
         val writeOp = Write().createFeature(collection, feature)
-        val persistedTuples = executeWrite(WriteRequest().add(writeOp)).tupleList
+        val response = executeWrite(WriteRequest().add(writeOp))
+        val featureTuples = response.useFeatureTupleList()
+        Naksha.cache.load(featureTuples)
 
         // Then: we persisted single tuple correctly
-        assertEquals(1, persistedTuples?.size)
-        val persistedTuple = persistedTuples?.get(0)!!
+        assertEquals(1, featureTuples.size)
+        val persistedTuple = featureTuples[0]
+        assertNotNull(persistedTuple)
         assertEquals(feature.id, persistedTuple.id)
+        val tuple = persistedTuple.tuple
+        assertNotNull(tuple)
 
         // And: `storeNumber` checks out
         storage.adminConnection().use { conn ->
@@ -81,19 +90,35 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
 
         // When
         val writeRequest = WriteRequest()
+        val featuresById = mutableMapOf<String, NakshaFeature>()
         features.forEach { feature ->
             writeRequest.add(
                 Write().createFeature(collection, feature)
             )
+            featuresById[feature.id] = feature
         }
-        val persistedTuples = executeWrite(writeRequest).tupleList
+        val response = executeWrite(writeRequest)
+        val featureTuples = response.useFeatureTupleList()
+        Naksha.cache.load(featureTuples)
 
-        // Then: tuples have been correctly persisted
-        assertEquals(20, persistedTuples?.size)
-        (0..19).forEach { index ->
-            val tuple = persistedTuples?.get(index)!!
-            assertEquals(index, tuple.tupleNumber.uid)
-            assertEquals(features[index].id, tuple.id)
+        // We know that we get UIDs between 0 and 19, but the order is not guaranteed
+        assertEquals(20, featureTuples.size)
+        val expectedUids = mutableMapOf<Int, Boolean>()
+        for (i in 0 until featureTuples.size) {
+            expectedUids[i] = true
         }
+        // Then: tuples have been correctly persisted, and have UIDs between 0 and 19
+        featureTuples.filterNotNull().sortedBy { it.tupleNumber.uid }.forEach { featureTuple ->
+            val tuple = featureTuple.tuple
+            assertNotNull(tuple)
+            val id = featureTuple.id
+            assertEquals(id, tuple.meta.id)
+            val requested = featuresById[id]
+            assertNotNull(requested)
+            val inserted = expectedUids.remove(tuple.tupleNumber.uid)
+            assertTrue(inserted == true)
+        }
+        // We expect that every UID is encountered exactly ones!
+        assertTrue(expectedUids.isEmpty())
     }
 }
