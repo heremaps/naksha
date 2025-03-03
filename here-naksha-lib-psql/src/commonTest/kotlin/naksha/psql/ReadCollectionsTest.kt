@@ -16,11 +16,6 @@ class ReadCollectionsTest : PgTestBase(NakshaCollection(
     storeMeta = ON,
 )) {
 
-    @AfterTest
-    fun cleanUp() {
-        dropCollection()
-    }
-
     @Test
     fun shouldReadCollectionMeta() {
         // When
@@ -29,7 +24,7 @@ class ReadCollectionsTest : PgTestBase(NakshaCollection(
         })
 
         // Then
-        assertEquals(1, retrievedCollectionMeta.tupleList?.size)
+        assertEquals(1, retrievedCollectionMeta.features.size)
         val collectionFeature = retrievedCollectionMeta.features[0]!!.proxy(NakshaCollection::class)
         assertEquals(collection.id, collectionFeature.id)
         assertEquals(collection.partitions, collectionFeature.partitions)

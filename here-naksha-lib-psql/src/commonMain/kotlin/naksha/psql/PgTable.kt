@@ -237,7 +237,7 @@ open class PgTable(
             // The tuple_number contains the partition-number in the top 8-bit (due to big-endian encoding).
             PgColumn.tn -> {
                 require(partitionCount in 2..256) { "Invalid partition-count, expect 2 .. 256, found : $partitionCount" }
-                "PARTITION BY RANGE (naksha_partition_index(${PgColumn.tn}, $partitionCount))"
+                "PARTITION BY RANGE (naksha_partition_index(naksha_tn_feature_number(${PgColumn.tn}), $partitionCount))"
             }
             // This is used in transaction table and history table, partition by year.
             PgColumn.next_tn -> "PARTITION BY RANGE (naksha_version_year(naksha_tn_version(${partitionByColumn.name})))"

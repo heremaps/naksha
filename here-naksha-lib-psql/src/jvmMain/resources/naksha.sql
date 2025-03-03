@@ -241,7 +241,7 @@ AS $$
 END $$;
 
 DROP FUNCTION IF EXISTS naksha_version_of(int4, int4, int4, int8);
-CREATE FUNCTION naksha_version_year(year int4, month int4, day int4, seq int8) RETURNS int8
+CREATE FUNCTION naksha_version_of(year int4, month int4, day int4, seq int8) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$

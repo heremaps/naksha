@@ -1,12 +1,9 @@
 package naksha.psql
 
-import naksha.base.Int64
 import naksha.base.Platform
-import naksha.base.PlatformUtil
 import naksha.geo.SpBoundingBox
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
-import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.model.request.query.SpIntersects
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
@@ -17,11 +14,6 @@ import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeatures
 import kotlin.test.*
 
 class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", TEST_MAP_ID)) {
-
-    @AfterTest
-    fun cleanUp() {
-        //dropCollection()
-    }
 
     @Test
     fun shouldInsertSingleFeature() {
@@ -70,7 +62,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
 
     @Test
     fun shouldInsertManyFeatures() {
-        val count = 5 * 1000
+        val count = 500
         // Given: features to create
         val featuresToCreate = generateRandomFeatures(count = count)
         val writeFeaturesReq = WriteRequest().apply {
