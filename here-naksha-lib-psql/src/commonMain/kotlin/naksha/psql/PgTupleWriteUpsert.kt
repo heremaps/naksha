@@ -87,7 +87,7 @@ internal class PgTupleWriteUpsert(session: PgSession, collection: PgCollection, 
         val SQL = """$new_row$head_row$clear_shadow$head_deleted$head_to_history$head_inserted$head_updated
 SELECT 'new_row' as source, id, tn, prev_tn, null::int4 as cc FROM new_row
 UNION ALL SELECT 'head_row' as source, id, tn, null::bytea AS prev_tn, null::int4 as cc FROM head_row
-UNION ALL SELECT 'head_to_history' as source, id, tn, null::bytea AS prev_tn, null::int4 as cc FROM head_to_history
+${if (head_to_history.isNotEmpty()) "UNION ALL SELECT 'head_to_history' as source, id, tn, null::bytea AS prev_tn, null::int4 as cc FROM head_to_history" else ""}
 UNION ALL SELECT 'head_deleted' as source, id, tn, null::bytea AS prev_tn, null::int4 as cc FROM head_deleted
 UNION ALL SELECT 'head_inserted' as source, id, tn, null::bytea AS prev_tn, null::int4 as cc FROM head_inserted
 UNION ALL SELECT 'head_updated' as source, id, tn, prev_tn, cc FROM head_updated
