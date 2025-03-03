@@ -2,34 +2,6 @@
 
 package naksha.psql
 
-import naksha.base.Int64
-import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
-import naksha.model.*
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.request.FeatureTuple
-import naksha.psql.PgColumn.PgColumnCompanion.app_id
-import naksha.psql.PgColumn.PgColumnCompanion.attachment
-import naksha.psql.PgColumn.PgColumnCompanion.author
-import naksha.psql.PgColumn.PgColumnCompanion.author_ts
-import naksha.psql.PgColumn.PgColumnCompanion.created_at
-import naksha.psql.PgColumn.PgColumnCompanion.feature
-import naksha.psql.PgColumn.PgColumnCompanion.flags
-import naksha.psql.PgColumn.PgColumnCompanion.geo
-import naksha.psql.PgColumn.PgColumnCompanion.here_tile
-import naksha.psql.PgColumn.PgColumnCompanion.hash
-import naksha.psql.PgColumn.PgColumnCompanion.id
-import naksha.psql.PgColumn.PgColumnCompanion.origin
-import naksha.psql.PgColumn.PgColumnCompanion.ref_point
-import naksha.psql.PgColumn.PgColumnCompanion.tags
-import naksha.psql.PgColumn.PgColumnCompanion.tn
-import naksha.psql.PgColumn.PgColumnCompanion.txn_next
-import naksha.psql.PgColumn.PgColumnCompanion.ft
-import naksha.psql.PgColumn.PgColumnCompanion.updated_at
-import kotlin.js.JsName
-
 /*
 
   PgTupleQuery

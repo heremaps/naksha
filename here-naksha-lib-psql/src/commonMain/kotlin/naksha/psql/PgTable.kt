@@ -185,14 +185,14 @@ open class PgTable(
                     }
                 }
 
-                PgColumn.txn_next -> {
+                PgColumn.next_tn -> {
                     require(pofValue in 2000..6000) {
                         """The table '$name' is a partition of '${parent.name}', but does not declare a valid 'partitionOfValue' (expect a year): $pofValue"""
                     }
                 }
 
                 else -> throw IllegalArgumentException(
-                    """The table '$name' is partitioned by invalid column: ${parent.partitionByColumn} (must be ${PgColumn.tn.name} or ${PgColumn.txn_next.name})"""
+                    """The table '$name' is partitioned by invalid column: ${parent.partitionByColumn} (must be ${PgColumn.tn.name} or ${PgColumn.next_tn.name})"""
                 )
             }
         }
@@ -240,7 +240,7 @@ open class PgTable(
                 "PARTITION BY RANGE (naksha_partition_index(${PgColumn.tn}, $partitionCount))"
             }
             // This is used in transaction table and history table, partition by year.
-            PgColumn.txn_next -> "PARTITION BY RANGE ((${partitionByColumn.name} >> 41))"
+            PgColumn.next_tn -> "PARTITION BY RANGE (naksha_version_year(naksha_tn_version(${partitionByColumn.name})))"
             else -> throw IllegalArgumentException("Unsupported partitionByColumn: '$partitionByColumn'")
         }
         if (partitionOfTable != null) {
@@ -262,7 +262,7 @@ open class PgTable(
      * If this table is partitioned by year.
      */
     @JvmField
-    val hasYearPartitions: Boolean = partitionByColumn == PgColumn.txn_next
+    val hasYearPartitions: Boolean = partitionByColumn == PgColumn.next_tn
 
     /**
      * If this table is performance partitioned, so features are stored based upon their ID.

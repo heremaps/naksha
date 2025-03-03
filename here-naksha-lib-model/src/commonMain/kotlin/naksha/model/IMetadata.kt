@@ -70,6 +70,17 @@ interface IMetadata {
     val tupleNumber: TupleNumber
 
     /**
+     * The [TupleNumber] of the next tuple, if a newer one is known.
+     *
+     * ### Warning
+     * If this property is `null`, there is no guarantee that there is no newer state, so this acts as an inverse bloom filter, if the value is set, you can be sure that this [Tuple] is a historic one, otherwise it is only likely that this [Tuple] is the latest one _(HEAD state)_.
+     *
+     * Not all storages will support this property, therefore use should be done with care. If the storage does not support it, finding the next state can be done by querying for the [Tuple] that has [prevTupleNumber] set to this [tupleNumber].
+     * @since 3.0
+     */
+    val nextTupleNumber: TupleNumber?
+
+    /**
      * The [TupleNumber] of the previous tuple, if any.
      * @since 3.0
      */
@@ -90,27 +101,6 @@ interface IMetadata {
      * @since 3.0
      */
     val flags: Flags
-
-    /**
-     * The transaction-number of the transaction that contains the next [Tuple] of the feature.
-     *
-     * This value is set, when a [Tuple] is copied into history.
-     * @since 3.0
-     */
-    val txnNext: Int64?
-
-    /**
-     * The next version, if a newer one is known.
-     *
-     * This is the [transaction-number][txnNext] of the transaction that contains the next [Tuple] of the feature.
-     *
-     * If not being _null_, then the next state can be found by searching for the [Tuple] with the [prevTupleNumber] matching this [tupleNumber].
-     *
-     * ### Warning
-     * If this property is _null_, there is no guarantee that the state has not changed meanwhile, so this acts as an inverse bloom filter, if the value is set, you can be sure that this [Tuple] is a historic one, otherwise it is only likely that this [Tuple] is the latest one _(HEAD state)_.
-     * @since 3.0
-     */
-    val nextVersion: Version?
 
     /**
      * The epoch milliseconds, when the feature was created, _null_, when this is the same as [updatedAt], which means, this is the first version of the feature.

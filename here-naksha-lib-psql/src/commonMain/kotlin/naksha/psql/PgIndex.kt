@@ -8,7 +8,7 @@ import naksha.model.request.query.SortOrder.SortOrderCompanion.DESCENDING
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.PgColumn.PgColumnCompanion.id as c_id
 import naksha.psql.PgColumn.PgColumnCompanion.tn as c_tn
-import naksha.psql.PgColumn.PgColumnCompanion.txn_next as c_txn_next
+import naksha.psql.PgColumn.PgColumnCompanion.next_tn as c_txn_next
 import naksha.psql.PgColumn.PgColumnCompanion.flags as c_flags
 import naksha.psql.PgColumn.PgColumnCompanion.app_id as c_app_id
 import naksha.psql.PgColumn.PgColumnCompanion.author as c_author
@@ -85,7 +85,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * A unique index above the [id][PgColumn.id], including [tuple-number][PgColumn.tn] and [txn_next][PgColumn.txn_next] column.
+         * A unique index above the [id][PgColumn.id], including [tuple-number][PgColumn.tn] and [txn_next][PgColumn.next_tn] column.
          *
          * - Automatically added to [HEAD][PgHead], [DELETED][PgDeleted], and [META][PgMeta].
          * - Must not be added to [HISTORY][PgHistory].
@@ -110,7 +110,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * A non-unique index above the [id][PgColumn.id] and [tuple-number][PgColumn.tn], including [txn_next][PgColumn.txn_next] column.
+         * A non-unique index above the [id][PgColumn.id] and [tuple-number][PgColumn.tn], including [txn_next][PgColumn.next_tn] column.
          *
          * - Automatically added to [HISTORY][PgHistory].
          * - Must not be added to [HEAD][PgHead], [DELETED][PgDeleted], and [META][PgMeta].
@@ -135,7 +135,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * A unique index above the transaction-number _(aka version)_, including [tuple-number][PgColumn.tn] and [txn_next][PgColumn.txn_next] column.
+         * A unique index above the transaction-number _(aka version)_, including [tuple-number][PgColumn.tn] and [next_tn][PgColumn.next_tn] column.
          *
          * - Automatically added to all [TRANSACTIONS][PgTransactions] tables.
          * - Must not be added to any other table.
@@ -152,7 +152,7 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree (naksha_tn_txn(tn) DESC) INCLUDE ($c_tn, $c_txn_next)""",
+                        """btree (naksha_tn_version(tn) DESC) INCLUDE ($c_tn, $c_txn_next)""",
                         table, unique = true, addFillFactor = true, where = null
                     )
                 ).close()
@@ -160,7 +160,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * Index above [here_tile][PgColumn.here_tile] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.txn_next].
+         * Index above [here_tile][PgColumn.here_tile] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
          *
          * Ordered by:
          * - `here_tile` DESC
@@ -185,7 +185,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * Index above [app_id][PgColumn.app_id], [updated_at][PgColumn.updated_at], and [tuple-number][PgColumn.tn], including [id][PgColumn.id], and [txn_next][PgColumn.txn_next].
+         * Index above [app_id][PgColumn.app_id], [updated_at][PgColumn.updated_at], and [tuple-number][PgColumn.tn], including [id][PgColumn.id], and [txn_next][PgColumn.next_tn].
          *
          * Ordered by
          * - `app_id` DESC
@@ -211,7 +211,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * Index above the `naksha_author(`[author][PgColumn.author], [app_id][PgColumn.app_id]`)`, `naksha_author_ts(`[author_ts][PgColumn.author_ts], [updated_at][PgColumn.updated_at]`)`, and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.txn_next].
+         * Index above the `naksha_author(`[author][PgColumn.author], [app_id][PgColumn.app_id]`)`, `naksha_author_ts(`[author_ts][PgColumn.author_ts], [updated_at][PgColumn.updated_at]`)`, and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
          *
          * Ordered by:
          * - `naksha_author(author, app_id)` DESC
@@ -237,7 +237,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * A [GIN](https://www.postgresql.org/docs/current/gin.html) index above `naksha_tags(`[tags][PgColumn.tags], [flags][PgColumn.flags]`)`, [tuple-number][PgColumn.tn], and [txn_next][PgColumn.txn_next].
+         * A [GIN](https://www.postgresql.org/docs/current/gin.html) index above `naksha_tags(`[tags][PgColumn.tags], [flags][PgColumn.flags]`)`, [tuple-number][PgColumn.tn], and [txn_next][PgColumn.next_tn].
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
@@ -389,7 +389,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * Index above [feature-type][PgColumn.ft] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.txn_next].
+         * Index above [feature-type][PgColumn.ft] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
@@ -410,7 +410,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * Index above [cv0][PgColumn.cv0] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.txn_next].
+         * Index above [cv0][PgColumn.cv0] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
@@ -431,7 +431,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * Index above [cv1][PgColumn.cv1] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.txn_next].
+         * Index above [cv1][PgColumn.cv1] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
@@ -452,7 +452,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * Index above [cv2][PgColumn.cv2] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.txn_next].
+         * Index above [cv2][PgColumn.cv2] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
@@ -473,7 +473,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * Index above [cv0][PgColumn.cv3] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.txn_next].
+         * Index above [cv0][PgColumn.cv3] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
@@ -494,7 +494,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * Index above [cs0][PgColumn.cs0] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.txn_next].
+         * Index above [cs0][PgColumn.cs0] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
@@ -515,7 +515,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * Index above [cs1][PgColumn.cs1] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.txn_next].
+         * Index above [cs1][PgColumn.cs1] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
@@ -536,7 +536,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * Index above [cs2][PgColumn.cs2] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.txn_next].
+         * Index above [cs2][PgColumn.cs2] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
@@ -557,7 +557,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * Index above [cs3][PgColumn.cs3] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.txn_next].
+         * Index above [cs3][PgColumn.cs3] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField

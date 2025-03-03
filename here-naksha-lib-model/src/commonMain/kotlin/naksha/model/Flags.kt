@@ -40,7 +40,7 @@ import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_MASK
  * - V3210: has-custom-value-1 - bit 19 _(1-bit, 524288)_
  * - V3210: has-custom-value-2 - bit 20 _(1-bit, 1048576)_
  * - V3210: has-custom-value-3 - bit 21 _(1-bit, 2097152)_
- * - N: has-next-version - bit 22 _(1-bit, 4194304)_
+ * - N: has-next-tuple-number - bit 22 _(1-bit, 4194304)_
  * - P: has-previous-tuple-number - bit 23 _(1-bit, 8388608)_
  * - B: has-base-tuple-number - bit 24 _(1-bit, 16777216)_
  * - A: has-author-ts - bit 25 _(1-bit, 33554432)_

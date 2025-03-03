@@ -29,8 +29,8 @@ class UpdateFeature(
         if (feature.id != previousMetadata.id) {
             throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Feature id (${feature.id}) differs from previous metadata (${previousMetadata.id})")
         }
-        if (previousMetadata.nextVersion != null) {
-            throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Previous metadata shouldn't have 'nextVersion' but it does (${previousMetadata.nextVersion})")
+        if (previousMetadata.nextTupleNumber != null) {
+            throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Previous metadata shouldn't have 'nextVersion' but it does (${previousMetadata.nextTupleNumber})")
         }
 
         val map = session.storage.adminMap.getPgMapById(session.useConnection(), collection.map.id) ?: throw NakshaException(MAP_NOT_FOUND, "Map with id '${collection.map.id}' does not exist")

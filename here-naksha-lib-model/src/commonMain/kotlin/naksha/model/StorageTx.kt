@@ -163,7 +163,7 @@ open class StorageTx(
         return Metadata(
             tupleNumber = tn,
             flags = flags,
-            nextVersion = null,
+            nextTupleNumber = null,
             updatedAt = updatedAt,
             createdAt = createdAt,
             authorTs = authorTs,

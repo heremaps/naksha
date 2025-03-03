@@ -187,8 +187,8 @@ AS $$
   SELECT int8recv(tn, length(tn) - 20)
 END $$;
 
-DROP FUNCTION IF EXISTS naksha_tn_txn(bytea);
-CREATE FUNCTION naksha_tn_txn(tn bytea) RETURNS int8
+DROP FUNCTION IF EXISTS naksha_tn_version(bytea);
+CREATE FUNCTION naksha_tn_version(tn bytea) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
@@ -211,14 +211,6 @@ AS $$
   SELECT int8recv(digest(id,'md5'), 8) | (-9223372036854775807::int8 - 1)::int8
 END $$;
 
-DROP FUNCTION IF EXISTS naksha_partition_number(bytea);
-CREATE FUNCTION naksha_partition_number(tn bytea) RETURNS int4
-LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
-SET search_path FROM CURRENT
-AS $$
-  SELECT (naksha_tn_feature_number(tn) & 65535)::int4
-END $$;
-
 DROP FUNCTION IF EXISTS naksha_partition_number(int8);
 CREATE FUNCTION naksha_partition_number(feature_number int8) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
@@ -234,14 +226,6 @@ AS $$
   SELECT int4recv(digest(id,'md5'), 12) & 65535
 END $$;
 
-DROP FUNCTION IF EXISTS naksha_partition_index(bytea, int4);
-CREATE FUNCTION naksha_partition_index(tn bytea, parts int4) RETURNS int4
-LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
-SET search_path FROM CURRENT
-AS $$
-  SELECT (naksha_tn_feature_number(tn) & 65535)::int4 % parts
-END $$;
-
 DROP FUNCTION IF EXISTS naksha_partition_index(int8, int4);
 CREATE FUNCTION naksha_partition_index(feature_number int8, parts int4) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
@@ -254,6 +238,49 @@ CREATE FUNCTION naksha_partition_index(partition_number int4, parts int4) RETURN
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   SELECT partition_number % parts
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_version_of(int4, int4, int4, int8);
+CREATE FUNCTION naksha_version_year(year int4, month int4, day int4, seq int8) RETURNS int8
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  SELECT ((year::int8 & 65535::int8) << 41) |
+         ((month::int8 & 15::int8) << 37) |
+         ((day::int8 & 31::int8) << 32) |
+         (seq & 4294967295::int8)
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_version_year(int8);
+CREATE FUNCTION naksha_version_year(version int8) RETURNS int4
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  SELECT (version >> 41)::int4
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_version_month(int8);
+CREATE FUNCTION naksha_version_month(version int8) RETURNS int4
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  SELECT (version >> 37)::int4 & 15
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_version_day(int8);
+CREATE FUNCTION naksha_version_day(version int8) RETURNS int4
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  SELECT (version >> 32)::int4 & 31
+END $$;
+
+DROP FUNCTION IF EXISTS naksha_version_seq(int8);
+CREATE FUNCTION naksha_version_seq(version int8) RETURNS int8
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  SELECT version & (4294967295::int8)
 END $$;
 
 DROP FUNCTION IF EXISTS naksha_alt32(int4);

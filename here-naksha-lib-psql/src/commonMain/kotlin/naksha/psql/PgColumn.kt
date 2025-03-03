@@ -121,27 +121,13 @@ class PgColumn : JsEnum() {
         fun of(columnName: String): PgColumn = get(columnName, PgColumn::class)
 
         /**
-         * If this is the latest [tuple][naksha.model.Tuple] (state) of the [feature][naksha.model.objects.NakshaFeature], the value is _null_; otherwise it stores the next [version][naksha.model.Version] (aka transaction) of the next [tuple][naksha.model.Tuple].
-         *
-         * ### Note
-         * In the [transactions][PgTransactions] table, this property is filled with the transaction-number _(aka `txn`)_, because partitioning is done above it. However, the value will always be extracted from the [tuple-number][naksha.model.TupleNumber] of the transaction.
-         * @since 3.0
-         */
-        @JvmField
-        @JsStatic
-        val txn_next = def(PgColumn::class, "txn_next") { self ->
-            self._i = 0
-            self._type = PgType.INT64
-        }
-
-        /**
          * The epoch timestamp in millisecond when the [tuple][naksha.model.Tuple] was produced, which is the last time the feature was modified.
          * @since 3.0
          */
         @JvmField
         @JsStatic
         val updated_at = def(PgColumn::class, "updated_at") { self ->
-            self._i = 1
+            self._i = 0
             self._type = PgType.INT64
             self._extra = "NOT NULL"
         }
@@ -153,7 +139,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val created_at = def(PgColumn::class, "created_at") { self ->
-            self._i = 2
+            self._i = 1
             self._type = PgType.INT64
         }
 
@@ -164,7 +150,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val author_ts = def(PgColumn::class, "author_ts") { self ->
-            self._i = 3
+            self._i = 2
             self._type = PgType.INT64
         }
 
@@ -175,7 +161,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val cv0 = def(PgColumn::class, "cv0") { self ->
-            self._i = 4
+            self._i = 3
             self._type = PgType.DOUBLE
         }
 
@@ -186,7 +172,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val cv1 = def(PgColumn::class, "cv1") { self ->
-            self._i = 5
+            self._i = 4
             self._type = PgType.DOUBLE
         }
 
@@ -197,7 +183,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val cv2 = def(PgColumn::class, "cv2") { self ->
-            self._i = 6
+            self._i = 5
             self._type = PgType.DOUBLE
         }
 
@@ -208,12 +194,12 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val cv3 = def(PgColumn::class, "cv3") { self ->
-            self._i = 7
+            self._i = 6
             self._type = PgType.DOUBLE
         }
 
         //min: 8 byte ; only updated_at is mandatory
-        //max: 64 byte ; 8 * 8
+        //max: 56 byte ; 7 * 8
 
         /**
          * The unique hash of this [tuple][naksha.model.Tuple] (state), calculated by the storage using the static [Metadata.hash][naksha.model.Metadata.calculateHash] method.
@@ -222,7 +208,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val hash = def(PgColumn::class, "hash") { self ->
-            self._i = 8
+            self._i = 7
             self._type = PgType.INT
             self._extra = "NOT NULL"
         }
@@ -234,7 +220,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val here_tile = def(PgColumn::class, "here_tile") { self ->
-            self._i = 9
+            self._i = 8
             self._type = PgType.INT
             self._extra = "NOT NULL"
         }
@@ -246,7 +232,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val flags = def(PgColumn::class, "flags") { self ->
-            self._i = 10
+            self._i = 9
             self._type = PgType.INT
             self._extra = "NOT NULL"
         }
@@ -258,13 +244,13 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val cc = def(PgColumn::class, "cc") { self ->
-            self._i = 11
+            self._i = 10
             self._type = PgType.INT
             self._extra = "NOT NULL"
         }
 
         //min: 24 byte ; 8 + 4 * 4
-        //max: 80 byte ; 64 + 4 * 4
+        //max: 72 byte ; 56 + 4 * 4
 
         /**
          * The [tuple-number][naksha.model.TupleNumber] of this row in [160-bit][B160] encoding _(20 byte)_.
@@ -281,9 +267,28 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val tn = def(PgColumn::class, "tn") { self ->
-            self._i = 12
+            self._i = 11
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE PLAIN NOT NULL" // prevents either compression or out-of-line storage
+        }
+
+        /**
+         * If this is the latest [tuple][naksha.model.Tuple] (state) of the [feature][naksha.model.objects.NakshaFeature], the value is `null`; otherwise it stores the [next tuple-number][naksha.model.TupleNumber], using the [96-bit encoding][B96].
+         *
+         * If this is a tombstone state, so actually the end of the feature lifetime, then this is the same as [tn].
+         *
+         * The encoding stores, in order, Big-Endian encoded:
+         * - version: 64
+         * - uid: 32
+         * @since 3.0
+         * @see [B96]
+         */
+        @JvmField
+        @JsStatic
+        val next_tn = def(PgColumn::class, "next_tn") { self ->
+            self._i = 12
+            self._type = PgType.BYTE_ARRAY
+            self._extra = "STORAGE PLAIN" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -541,10 +546,10 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val allColumns = listOf(
-            txn_next, updated_at, created_at, author_ts,
+            updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, flags, cc,
-            tn, prev_tn, base_tn,
+            tn, next_tn, prev_tn, base_tn,
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature, attachment
@@ -595,16 +600,16 @@ class PgColumn : JsEnum() {
 
         /**
          * All columns that are needed when we copy a feature from _HEAD_ into _HISTORY_, so all except for:
-         * - `txn_next`
+         * - [next_tn]
          * @since 3.0
          */
         @JvmField
         @JsStatic
         val copyIntoHistoryColumns = listOf(
-            updated_at, created_at, author_ts, // removed: txn_next
+            updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, flags, cc,
-            tn, prev_tn, base_tn,
+            tn, prev_tn, base_tn, // removed: next_tn
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature, attachment
@@ -619,21 +624,23 @@ class PgColumn : JsEnum() {
         val copyIntoHistoryColumnNames = copyIntoHistoryColumns.joinToString(",") { it.name }
 
         /**
-         * All columns that are needed when we delete a feature. In that case we copy from _HEAD_ into _DELETED_ and/or _HISTORY_, but we need to update some meta-data, therefore this excludes the columns that need updates:
-         * - `txn_next` - will become the current `txn`, so that `tn.txn == txn_next` _(dead-end)_
-         * - `flags` - we need to set operation to [DELETED][naksha.model.Operation.DELETED], action to [DELETED][naksha.model.Action.DELETED], ensure that he flag for `prev_tn` is set, and the one for `base_tn` is cleared
-         * - `tn` - must be updated to match current `txn` with a new `seq` and `uid`
-         * - `prev_tn` - is copied from `tn` of old record
-         * - `base_tn` - needs to be set to `null`
+         * All columns that we copy, when we create a tombstone state (deleted).
+         *
+         * In that case we copy from _HEAD_ into a temporary CTE table, then further to _HISTORY_ and/or _SHADOW_, but we need to update some columns, therefore this excludes the columns that need updates:
+         * - [next_tn] - will become the current [tn] to signal tombstone state _(dead-end)_
+         * - [flags] - we need to set operation to [DELETED][naksha.model.Operation.DELETED], action to [DELETED][naksha.model.Action.DELETED]
+         * - [tn] - must be updated to match current `version`, with a new `seq` and `uid` (this is the `final_tn`)
+         * - [prev_tn] - is copied from [tn] of the current _HEAD_ record
+         * - [base_tn] - needs to be set to `null`
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val deleteColumns = listOf(
-            updated_at, created_at, author_ts, // removed: txn_next
+        val tombstoneColumns = listOf(
+            updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, cc, // removed: flags
-            // removed: tn, prev_tn, base_tn,
+            // removed: tn, next_tn, prev_tn, and base_tn,
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature, attachment
@@ -655,7 +662,7 @@ class PgColumn : JsEnum() {
         @JvmStatic
         @JsStatic
         fun ofRowColumn(metaColumn: MetaColumn): PgColumn? = when (metaColumn.name) {
-            MetaColumn.NEXT_VERSION -> txn_next
+            MetaColumn.NEXT_TN -> next_tn
             MetaColumn.UPDATED_AT -> updated_at
             MetaColumn.CREATED_AT -> created_at
             MetaColumn.AUTHOR_TS -> author_ts

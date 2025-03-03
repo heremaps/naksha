@@ -116,7 +116,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
         /**
          * The _HEAD_ version, being used when new [Tuple]'s are created.
          *
-         * If a [Tuple] is current _HEAD_, its [Metadata.nextVersion] will be this.
+         * If a [Tuple] is current _HEAD_, its [Metadata.nextTupleNumber] will be this.
          * @since 3.0
          */
         @JvmField

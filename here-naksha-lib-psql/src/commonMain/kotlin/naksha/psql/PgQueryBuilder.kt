@@ -5,7 +5,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.model.request.*
 import naksha.psql.PgColumn.PgColumnCompanion.tn
-import naksha.psql.PgColumn.PgColumnCompanion.txn_next
+import naksha.psql.PgColumn.PgColumnCompanion.next_tn
 import kotlin.math.max
 import kotlin.math.min
 
@@ -88,7 +88,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
                 // TODO: We need to improve, because we only want $versions variants!
                 // If only one version is requested, we can improve the query to only return this version!
                 val better_where = if (version != null && versions == 1)
-                    (if (where.isEmpty()) "WHERE " else "$where AND ") + "$txn_next > $version"
+                    (if (where.isEmpty()) "WHERE " else "$where AND ") + "$next_tn > $version"
                 else
                     where
                 if (selects.isNotEmpty()) selects.append(" UNION ALL\n")

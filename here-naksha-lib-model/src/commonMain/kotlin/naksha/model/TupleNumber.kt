@@ -182,7 +182,10 @@ data class TupleNumber(
     fun isHead(): Boolean = this == HEAD
 
     /**
-     * Convert this [TupleNumber] into a [URN](https://datatracker.ietf.org/doc/html/rfc8141).
+     * Convert this [TupleNumber] into a [URN](https://datatracker.ietf.org/doc/html/rfc8141), the exact format will be:
+     * ```
+     * urn:naksha:tn:{storage-number}:{map-number}:{collection-number}:{feature-number}:{year}:{month}:{day}:{seq}:{uid}
+     * ```
      * @return the [URN](https://datatracker.ietf.org/doc/html/rfc8141) that describes this state world-wide uniquely.
      * @since 3.0
      */

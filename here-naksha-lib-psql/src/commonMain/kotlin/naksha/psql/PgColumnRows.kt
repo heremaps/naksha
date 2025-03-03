@@ -176,14 +176,15 @@ internal class PgColumnRows {
         val prevTupleNumber = if (prev_tn != null) TupleNumber.fromByteArray(prev_tn, 0, B96, tupleNumber) else null
         val base_tn = getByteArray(row, PgColumn.base_tn)
         val baseTupleNumber = if (base_tn != null) TupleNumber.fromByteArray(base_tn, 0, B96, tupleNumber) else null
-        val txn_next = getInt64(row, PgColumn.txn_next)
+        val next_tn = getByteArray(row, PgColumn.next_tn)
+        val nextTupleNumber = if (next_tn != null) TupleNumber.fromByteArray(next_tn, 0, B96, tupleNumber) else null
         val meta = Metadata(
             tupleNumber = tupleNumber,
             flags = getInt(row, PgColumn.flags) ?: return null,
-            nextVersion = if (txn_next == null) null else Version(txn_next),
             updatedAt = getInt64(row, PgColumn.updated_at) ?: return null,
             createdAt = getInt64(row, PgColumn.created_at),
             authorTs = getInt64(row, PgColumn.author_ts),
+            nextTupleNumber = nextTupleNumber,
             prevTupleNumber = prevTupleNumber,
             baseTupleNumber = baseTupleNumber,
             hash = getInt(row, PgColumn.hash) ?: -1,
@@ -233,7 +234,6 @@ internal class PgColumnRows {
     operator fun set(row: Int, tuple: Tuple) {
         withMinSize(row)
         val meta = tuple.meta
-        set(row, PgColumn.txn_next, meta.txnNext)
         set(row, PgColumn.updated_at, meta.updatedAt)
         set(row, PgColumn.created_at, meta.createdAt)
         set(row, PgColumn.author_ts, meta.authorTs)
@@ -245,9 +245,10 @@ internal class PgColumnRows {
         set(row, PgColumn.here_tile, meta.hereTile)
         set(row, PgColumn.flags, meta.flags)
         set(row, PgColumn.cc, meta.changeCount)
-        set(row, PgColumn.tn, meta.tupleNumber.toByteArray(B160))
-        set(row, PgColumn.prev_tn, meta.prevTupleNumber?.toByteArray(B96))
-        set(row, PgColumn.base_tn, meta.baseTupleNumber?.toByteArray(B96))
+        set(row, PgColumn.tn, meta.tupleNumber.toB160())
+        set(row, PgColumn.next_tn, meta.nextTupleNumber?.toB96())
+        set(row, PgColumn.prev_tn, meta.prevTupleNumber?.toB96())
+        set(row, PgColumn.base_tn, meta.baseTupleNumber?.toB96())
         set(row, PgColumn.id, meta.id)
         set(row, PgColumn.app_id, meta.appId)
         set(row, PgColumn.author, meta.author)

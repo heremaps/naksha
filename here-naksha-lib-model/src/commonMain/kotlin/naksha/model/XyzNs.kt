@@ -216,7 +216,7 @@ class XyzNs : AnyObject() {
         fun fromMetadata(meta: Metadata): XyzNs {
             val tn = meta.tupleNumber
             val guid = Guid(meta.id, tn)
-            val nextVersion = meta.nextVersion
+            val nextVersion = meta.nextTupleNumber
             val prev_tn = meta.prevTupleNumber
             val base_tn = meta.baseTupleNumber
             return AnyObject().apply {
@@ -297,7 +297,7 @@ class XyzNs : AnyObject() {
             var uuid = _uuid
             if (uuid === this.uuid) return guid
             uuid = this.uuid
-            guid = try { if (uuid == null) null else Guid.fromString(uuid) } catch (e: Exception) { null }
+            guid = try { if (uuid == null) null else Guid.fromString(uuid) } catch (_: Exception) { null }
             this._uuid = uuid
             this._guid = guid
             return guid
@@ -330,7 +330,7 @@ class XyzNs : AnyObject() {
             var puuid = _puuid
             if (puuid === this.puuid) return pguid
             puuid = this.puuid
-            pguid = try { if (puuid == null) null else Guid.fromString(puuid) } catch (e: Exception) { null }
+            pguid = try { if (puuid == null) null else Guid.fromString(puuid) } catch (_: Exception) { null }
             this._puuid = puuid
             this._pguid = pguid
             return pguid
@@ -369,6 +369,34 @@ class XyzNs : AnyObject() {
             this._muuid = muuid
             this._mguid = mguid
             return mguid
+        }
+
+    /**
+     * The [Guid] of the next state, if known.
+     *
+     * - If this value is available, it is **guaranteed** that the current feature state is historic.
+     * - If the value is not available (`null`), there is no guarantee if this is still the latest _HEAD_; it is only likely.
+     * @since 3.0
+     */
+    val nuuid by _STRING_NULL
+    private var _nuuid: String? = null
+    private var _nguid: Guid? = null
+
+    /**
+     * Returns the [nuuid] as [Guid].
+     * @return the [nuuid] as [Guid].
+     * @since 3.0.0
+     */
+    val nguid: Guid?
+        get() {
+            var nguid = _nguid
+            var nuuid = _nuuid
+            if (nuuid === this.nuuid) return nguid
+            nuuid = this.nuuid
+            nguid = try { if (nuuid == null) null else Guid.fromString(nuuid) } catch (e: Exception) { null }
+            this._nuuid = nuuid
+            this._nguid = nguid
+            return nguid
         }
 
     /**
@@ -531,15 +559,6 @@ class XyzNs : AnyObject() {
      */
     val uid: Int?
         get() = guid?.tupleNumber?.uid
-
-    /**
-     * The version of the next [Tuple], if known.
-     *
-     * - If this value is available, it is **guaranteed** that the current feature state is historic.
-     * - If the value is not available (_null_), there is no guarantee if this is still the latest _HEAD_; it is only likely.
-     * @since 3.0
-     */
-    val nextVersion by _INT64_NULL
 
     /**
      * The change-count, so how often the feature has been changed since it was created. The value starts with 1.

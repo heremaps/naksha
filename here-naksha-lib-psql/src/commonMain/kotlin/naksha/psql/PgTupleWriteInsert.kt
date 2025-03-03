@@ -20,6 +20,7 @@ internal class PgTupleWriteInsert(session: PgSession, collection: PgCollection, 
     }
 
     private fun plan(conn: PgConnection, collection: PgCollection): PgPlan {
+        // TODO: we need to delete shadow states, if shadow is available
         val SQL = """WITH new_row AS (
   SELECT * FROM UNNEST(${rows.placeholders()}) AS t(${rows.names()})
 )

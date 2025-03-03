@@ -24,10 +24,10 @@ import kotlin.jvm.JvmStatic
 data class Metadata(
     override val tupleNumber: TupleNumber = TupleNumber.HEAD,
     override val flags: Flags = Flags().withAction(Action.CREATED),
-    override val nextVersion: Version? = null,
     override val updatedAt: Int64 = Platform.currentMillis(),
     override val createdAt: Int64? = null,
     override val authorTs: Int64? = null,
+    override val nextTupleNumber: TupleNumber? = null,
     override val prevTupleNumber: TupleNumber? = null,
     override val baseTupleNumber: TupleNumber? = null,
     override val changeCount: Int = 1,
@@ -64,8 +64,6 @@ data class Metadata(
         get() = tupleNumber.uid
     override val txn: Int64
         get() = version.txn
-    override val txnNext: Int64?
-        get() = nextVersion?.txn
 
     /**
      * Tests if this describes a new state.
@@ -193,7 +191,7 @@ data class Metadata(
             return Metadata(
                 tupleNumber = tupleNumber,
                 flags = flags,
-                nextVersion = null,
+                nextTupleNumber = null,
                 updatedAt = updatedAt,
                 createdAt = createdAt,
                 authorTs = authorTs,
@@ -222,10 +220,10 @@ data class Metadata(
             return Metadata(
                 other.tupleNumber,
                 other.flags,
-                other.nextVersion,
                 other.updatedAt,
                 other.createdAt,
                 other.authorTs,
+                other.nextTupleNumber,
                 other.prevTupleNumber,
                 other.baseTupleNumber,
                 other.changeCount,
@@ -256,16 +254,15 @@ data class Metadata(
         @JsStatic
         fun fromXyzNs(featureId: String, xyz: XyzNs): Metadata? {
             val guid = xyz.guid ?: return null
-            val next = xyz.nextVersion
             return Metadata(
                 tupleNumber = guid.tupleNumber,
+                nextTupleNumber = xyz.nguid?.tupleNumber,
                 prevTupleNumber = xyz.pguid?.tupleNumber,
                 baseTupleNumber = xyz.mguid?.tupleNumber,
                 flags = xyz.flags ?: Flags(xyz.action.intValue),
                 updatedAt = xyz.updatedAt,
                 createdAt = if (xyz.updatedAt == xyz.createdAt) null else xyz.createdAt,
                 authorTs = if (xyz.updatedAt == xyz.authorTs) null else xyz.authorTs,
-                nextVersion = if (next != null) Version(next) else null,
                 hash = xyz.hash ?: 0,
                 changeCount = xyz.changeCount,
                 hereTile = xyz.hereTile ?: 0, // TODO: Fix me, update!

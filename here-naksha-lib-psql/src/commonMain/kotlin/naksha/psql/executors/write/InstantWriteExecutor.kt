@@ -120,7 +120,7 @@ class InstantWriteExecutor(
         // TODO: Verify if allColumns is correct here !!!
         val otherColumns = PgColumn.allColumns
             .asSequence()
-            .filterNot { it == PgColumn.txn_next }
+            .filterNot { it == PgColumn.next_tn }
             .filterNot { it == PgColumn.tn }
             .filterNot { it == PgColumn.tn }
             .filterNot { it == PgColumn.flags }
@@ -128,7 +128,7 @@ class InstantWriteExecutor(
         session.useConnection().execute(
             sql = """
                 INSERT INTO $dstTableName(
-                ${PgColumn.txn_next.name},
+                ${PgColumn.next_tn.name},
                 ${PgColumn.tn.name},
                 ${PgColumn.tn.name},
                 ${PgColumn.flags.name},

@@ -176,7 +176,7 @@ class BulkWriteExecutor(
 
     private fun createCopyPlan(headTableName: String, dstTableName: String): PgPlan {
 
-        val columnsToOverride = mutableListOf(PgColumn.txn_next, PgColumn.tn, PgColumn.flags)
+        val columnsToOverride = mutableListOf(PgColumn.next_tn, PgColumn.tn, PgColumn.flags)
         // TODO: Verify if allColumns is correct !!!
         val columnsToCopy = PgColumn.allColumns.minus(columnsToOverride.toSet())
         val columns = mutableListOf<PgColumn>()
