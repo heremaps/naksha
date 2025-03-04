@@ -28,6 +28,7 @@ import naksha.psql.PgColumn.PgColumnCompanion.cs1 as c_cs1
 import naksha.psql.PgColumn.PgColumnCompanion.cs2 as c_cs2
 import naksha.psql.PgColumn.PgColumnCompanion.cs3 as c_cs3
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
@@ -674,6 +675,17 @@ ${if (where==null) "" else "WHERE $where"};"""
      */
     fun id(table: PgTable): String {
         val id = "${table.name}${PG_IDX}${text}"
+        return if (id.length > 63) id.substring(0, 63) else id
+    }
+
+    /**
+     * Returns the unique identifier of this index in the table with the given name.
+     * @param tableName the name of the table for which to generate the unique index name.
+     * @return the unique identifier of this index in the given table.
+     */
+    @JsName("idByTableName")
+    fun id(tableName: String): String {
+        val id = "${tableName}${PG_IDX}${text}"
         return if (id.length > 63) id.substring(0, 63) else id
     }
 
