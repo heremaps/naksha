@@ -3,7 +3,6 @@
 package naksha.psql
 
 import naksha.base.*
-import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
@@ -13,7 +12,6 @@ import naksha.model.objects.NakshaMap
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
 import naksha.model.objects.NakshaTx
-import naksha.psql.executors.PgReader
 import naksha.psql.executors.PgWriter
 import naksha.psql.executors.write.InstantWriteExecutor
 import kotlin.js.JsExport
@@ -216,7 +214,7 @@ open class PgSession(
             is WriteRequest -> {
                 try {
                     useTransaction()
-                    val writer = PgTupleWriter(this)
+                    val writer = PgWriter(this)
                     return writer.execute(request.writes)
                 } catch (t: Throwable) {
                     val nakshaException = PgExceptionMapper.map(t)
@@ -465,10 +463,4 @@ SELECT ${rows.namesAggregate()} FROM result"""
     }
 
     override fun executeParallel(request: Request): Response = execute(request)
-
-    override fun getEncodingFlags(feature: Any?, context: Any?): Flags = storage.adminMap.getEncodingFlags(feature, context)
-
-    override fun getDictionary(id: String): JbDictionary? = storage.adminMap.getDictionary(id)
-
-    override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? = storage.adminMap.getEncodingDictionary(feature, context)
 }
