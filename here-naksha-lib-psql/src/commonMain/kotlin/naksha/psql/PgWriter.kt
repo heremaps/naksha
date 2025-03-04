@@ -167,7 +167,7 @@ open class PgWriter internal constructor(val session: PgSession) {
                         pgCollection = PgCollection(map, nakshaCollection)
                         createPgCollection(pgCollection)
                     } else if (op == WriteOp.CREATE) {
-                        throw collectionNotFound(
+                        throw collectionExists(
                             "The write #${write.i} failed, because the collection '$featureId' does exist already in map '$mapId'"
                         )
                     }
