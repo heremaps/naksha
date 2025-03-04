@@ -184,6 +184,7 @@ class SridTest : PgTestBase() {
 
         // When: selected it for SRID
         val srid = selectSrid(
+            mapId = testConfig.mapId,
             collectionName = testConfig.collectionId,
             flags = testConfig.flags,
             featureId = feature.id
@@ -193,11 +194,11 @@ class SridTest : PgTestBase() {
         assertEquals(EXPECTED_SRID, srid, "Invalid SRID for encoding: ${testConfig.encodingName}")
     }
 
-    private fun selectSrid(collectionName: String, flags: Int, featureId: String): Int {
+    private fun selectSrid(mapId: String, collectionName: String, flags: Int, featureId: String): Int {
         return try {
             val sql = """
                 SELECT ST_SRID(naksha_geometry(${PgColumn.geo}, $flags)) as srid
-                FROM $collectionName
+                FROM $mapId.$collectionName
                 WHERE ${PgColumn.id} = '$featureId'
             """.trimIndent()
             storage.adminConnection().use { conn ->

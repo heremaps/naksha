@@ -9,6 +9,7 @@ import naksha.model.Metadata.Metadata_C.calculateHash
 import naksha.model.Metadata.Metadata_C.calculateHereTile
 import naksha.model.objects.*
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * A wrapper for an ongoing Naksha transaction, used by [write session's][IWriteSession].
@@ -21,7 +22,14 @@ import kotlin.js.JsExport
  * @see [Naksha.decodeTuple]
  */
 @JsExport
-open class StorageTx(
+open class StorageTx private constructor(
+    /**
+     * The storage instance for which this transaction is done. Does not have to be supplied.
+     * @since 3.0
+     * @see [IStorage]
+     */
+    val storage: IStorage? = null,
+
     /**
      * The storage-number of the storage for which this transaction is done.
      * @since 3.0
@@ -41,7 +49,7 @@ open class StorageTx(
      * The application-id of the application performing the modifications.
      * @since 3.0
      */
-    val app_id: String,
+    val appId: String,
 
     /**
      * The author _(user)_ that performs the modifications; if any.
@@ -57,6 +65,24 @@ open class StorageTx(
      */
     val dictReader: IDictReader?,
 ) {
+
+    @JsName("storageTxWithStorageNumber")
+    constructor(
+        storageNumber: Int64,
+        version: Version,
+        appId: String,
+        author: String?,
+        dictReader: IDictReader?,
+    ): this(null, storageNumber, version, appId, author, dictReader)
+
+    @JsName("storageTxWithStorage")
+    constructor(
+        storage: IStorage,
+        version: Version,
+        appId: String,
+        author: String?,
+        dictReader: IDictReader?,
+    ): this(storage, storage.number, version, appId, author, dictReader)
 
     /**
      * The statistical transaction information, updated while this class is being used, should eventually be writted into the transaction-log of the storage.
@@ -77,28 +103,7 @@ open class StorageTx(
      */
     open val uid: AtomicInt = AtomicInt(0)
 
-    /**
-     * The default flags to use, if no better are available.
-     *
-     * @see [Naksha.DEFAULT_FLAGS]
-     */
-    open var defaultFlags = Naksha.DEFAULT_FLAGS
-
-    /**
-     * @see [defaultFlags]
-     */
-    open fun withDefaultFlags(flags: Int): StorageTx {
-        defaultFlags = flags
-        return this
-    }
-
-    /**
-     * Can be overridden by a storage implementation, to implement storage specific logic. If not overridden, just returns [defaultFlags].
-     * @param feature the feature that should be encoded.
-     * @return the [flags][Flags] to use.
-     * @since 3.0
-     */
-    open fun getEncodingFlags(feature: NakshaFeature): Flags = defaultFlags
+    // TODO: nullable storage ref
 
     /**
      * Method to create the new metadata, when performing the given operation, with the given feature as outcome of the operation, in the given session.
@@ -123,7 +128,7 @@ open class StorageTx(
         if (operation.action != action && operation.action != null) {
             throw illegalArg("The operation $operation is hard linked to the action ${operation.action}, therefore $action is an invalid action!")
         }
-        val flags = getEncodingFlags(feature)
+        val flags = getEncodingFlags(feature, collection)
             .withOperation(operation)
             .withAction(action)
         val xyz = feature.properties.xyz
@@ -164,7 +169,7 @@ open class StorageTx(
             hash = calculateHash(feature),
             hereTile = calculateHereTile(feature),
             id = feature.id,
-            appId = app_id,
+            appId = appId,
             author = author,
             origin = null, // TODO: Fix this, we need to detect foreign features!
             target = null, // TODO: Fix this, we need to detect join operations!
@@ -209,6 +214,7 @@ open class StorageTx(
     ): Tuple {
         val metadata = metadataOf(map, collection, feature, Operation.CREATED, Action.CREATED)
         val dictionary = dictReader?.getEncodingDictionary(feature)
+
         return Tuple(
             meta = metadata,
             feature = Naksha.encodeFeature(feature, metadata.flags, dictionary),
@@ -272,4 +278,7 @@ open class StorageTx(
             complete = true
         )
     }
+
+    private fun getEncodingFlags(feature: NakshaFeature, collection: NakshaCollection): Flags =
+        storage?.getEncodingFlags(feature, collection) ?: Naksha.DEFAULT_FLAGS
 }

@@ -192,10 +192,10 @@ open class PgSession(
     internal fun useTx(): StorageTx {
         assertMutable()
         assertOpen()
-        var tx = this.tx
+        var tx: StorageTx? = this.tx
         if (tx == null) {
             val txn = storage.adminMap.newTxn(useConnection())
-            tx = StorageTx(storage.number, Version(txn.number), options.appId, options.author, storage.adminMap)
+            tx = StorageTx(storage, Version(txn.number), options.appId, options.author, storage.adminMap)
             this.tx = tx
         }
         return tx
