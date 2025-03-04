@@ -137,32 +137,50 @@ class CollectionTests : PgTestBase(null) {
                 assertFalse(cursor.fetch()["exists"])
             }
         }
+
         // Check that creating, updating and deleting features still work
-        val feature = NakshaFeature()
-        val readFeature = ReadFeatures()
-        readFeature.collectionIds.add(collectionName)
-        readFeature.featureIds.add(feature.id)
-        executeWrite(
+        var feature = NakshaFeature()
+        val createFeaturesResponse = executeWrite(
             WriteRequest().add(
                 Write().createFeature(collection, feature)
             )
         )
-        val insertedFeatureResponse = executeRead(readFeature)
-        assertEquals(1, insertedFeatureResponse.features.size)
+        assertEquals(1, createFeaturesResponse.features.size)
+        feature = assertNotNull(createFeaturesResponse.features[0])
+
+
+        val readFeatureRequest = ReadFeatures()
+        readFeatureRequest.collectionIds.add(collectionName)
+        readFeatureRequest.featureIds.add(feature.id)
+        val readFeaturesResponse = executeRead(readFeatureRequest)
+        assertEquals(1, readFeaturesResponse.features.size)
+        feature = assertNotNull(readFeaturesResponse.features[0])
         feature.properties["foo"] = "bar"
-        executeWrite(
+
+
+        val updateResponse = executeWrite(
             WriteRequest().add(
                 Write().updateFeature(collection, feature, true)
             )
         )
-        val updatedFeatureResponse = executeRead(readFeature)
-        assertEquals("bar", updatedFeatureResponse.features[0]?.properties!!["foo"])
+        assertEquals(1, updateResponse.features.size)
+        feature = assertNotNull(updateResponse.features[0])
+
+        // Ensure that the updated feature has the "foo" property
+        val readUpdatedFeatureResponse = executeRead(readFeatureRequest)
+        assertEquals(1, readUpdatedFeatureResponse.features.size)
+        val readFeature = assertNotNull(readUpdatedFeatureResponse.features[0])
+        assertEquals("bar", readFeature.properties["foo"])
+
+        // Delete the feature.
         executeWrite(
             WriteRequest().add(
                 Write().deleteFeatureById(collection, feature.id)
             )
         )
-        val deletedFeatureResponse = executeRead(readFeature)
+
+        // Ensure that it is deleted.
+        val deletedFeatureResponse = executeRead(readFeatureRequest)
         assertEquals(0, deletedFeatureResponse.features.size)
     }
 
@@ -232,26 +250,30 @@ class CollectionTests : PgTestBase(null) {
     @Test
     fun updateCollection() {
         val collectionName = "update_collection_test"
-        val collection = NakshaCollection(id = collectionName)
-        executeWrite(
+        var collection = NakshaCollection(id = collectionName)
+        val createResponse = executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
             )
         )
+        assertEquals(1, createResponse.features.size)
+        collection = assertNotNull(createResponse.features[0]).proxy(NakshaCollection::class)
+
         // update collection
         collection.storeDeleted = StoreMode.SUSPEND
-        val response = executeWrite(
+        val updateResponse = executeWrite(
             WriteRequest().add(
                 Write().updateCollection(collection ,true)
             )
         )
-        val responseCollection = response.features[0]!!.proxy(NakshaCollection::class)
+        assertEquals(1, updateResponse.features.size)
+        val responseCollection = assertNotNull(updateResponse.features[0]).proxy(NakshaCollection::class)
         assertEquals(StoreMode.SUSPEND, responseCollection.storeDeleted)
         val selectCollectionFromVirt = ReadFeatures().apply {
             collectionIds += Naksha.COLLECTIONS_COL
             featureIds += collection.id
         }
-        val colRead = executeRead(selectCollectionFromVirt).features[0]!!.proxy(NakshaCollection::class)
+        val colRead = assertNotNull(executeRead(selectCollectionFromVirt).features[0]).proxy(NakshaCollection::class)
         assertEquals(StoreMode.SUSPEND, colRead.storeDeleted)
     }
 

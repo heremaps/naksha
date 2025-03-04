@@ -124,11 +124,14 @@ open class PgWriter internal constructor(val session: PgSession) {
                 var pgMap = storage.adminMap.getPgMapById(conn, write.id)
 
                 val nakshaMap: NakshaMap?
-                if (op == WriteOp.CREATE || op == WriteOp.UPSERT) {
+                if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
                     val feature = write.feature ?: throw illegalArg("The write #${write.i} is $op, but the feature is null")
                     nakshaMap = if (feature is NakshaMap) feature else feature.proxy(NakshaMap::class)
                     nakshaMap.storageId = storage.id
                     if (pgMap == null) {
+                        if (op == WriteOp.UPDATE) {
+                            throw mapNotFound("The UPDATE (write #${write.i}) failed, because the map '$featureId' does not exist")
+                        }
                         pgMap = PgMap(storage, nakshaMap)
                         createPgMap(pgMap)
                     } else if (op == WriteOp.CREATE) {
@@ -152,14 +155,21 @@ open class PgWriter internal constructor(val session: PgSession) {
                 var pgCollection = map.getPgCollectionById(conn, write.id)
 
                 val nakshaCollection: NakshaCollection?
-                if (op == WriteOp.CREATE || op == WriteOp.UPSERT) {
+                if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
                     val feature = write.feature ?: throw illegalArg("The write #${write.i} is $op, but the feature is null")
                     nakshaCollection = if (feature is NakshaCollection) feature else feature.proxy(NakshaCollection::class)
                     if (pgCollection == null) {
+                        if (op == WriteOp.UPDATE) {
+                            throw collectionNotFound(
+                                "The UPDATE (write #${write.i}) failed, because the collection '$featureId' does not exist in map '$mapId'"
+                            )
+                        }
                         pgCollection = PgCollection(map, nakshaCollection)
                         createPgCollection(pgCollection)
                     } else if (op == WriteOp.CREATE) {
-                        throw mapExists("The write #${write.i} failed, because the collection '$featureId' does exist already in map $mapId")
+                        throw collectionNotFound(
+                            "The write #${write.i} failed, because the collection '$featureId' does exist already in map '$mapId'"
+                        )
                     }
                 } else if (op == WriteOp.DELETE || op == WriteOp.PURGE) {
                     if (pgCollection != null) {
