@@ -208,12 +208,8 @@ open class PgMap internal constructor(
             history.createYear(conn, NOW.year)
             history.createYear(conn, NOW.year + 1)
             history.createIndex(conn, PgIndex.tn_pkey)
-            //history.createIndex(conn, PgIndex.id_txn_uid_unique)
             for (index in indices) {
-                if (index != PgIndex.tn_pkey
-                    //&& index != PgIndex.id_txn_uid_unique
-                    // We do not need this index, because it would only duplicate the stronger unique one!
-                    && index != PgIndex.id) history.createIndex(conn, index)
+                if (index != PgIndex.tn_pkey) history.createIndex(conn, index)
             }
         }
         invalidateCollection(collection)

@@ -103,10 +103,14 @@ class CollectionTests : PgTestBase(null) {
                 sql = "SELECT indexname FROM pg_indexes WHERE tablename = $1;",
                 args = arrayOf(tableName)
             ).use { cursor ->
-                val indices = mutableListOf<String>()
-                while (cursor.next()) indices.add(cursor["indexname"])
-                assertTrue(PgIndex.DEFAULT_INDICES.size <= indices.size)
-                assertTrue(PgIndex.DEFAULT_INDICES.all { index -> indices.any { addedIndex -> addedIndex.contains(index) } })
+                val addedIndices = mutableListOf<String>()
+                while (cursor.next()) addedIndices.add(cursor["indexname"])
+                check(PgIndex.DEFAULT_INDICES.size <= addedIndices.size) { "Too few indices" }
+                PgIndex.DEFAULT_INDICES.forEach { defaultIndex ->
+                    check(addedIndices.contains(defaultIndex.id(tableName))) {
+                        "Missing index ${defaultIndex.name}"
+                    }
+                }
             }
         }
     }
