@@ -164,44 +164,58 @@ class CollectionTests : PgTestBase(null) {
 
     @Test
     fun collectionShouldHasNoDeleteDBTable() {
-        val collectionName = "check_no_del_table_test"
-        val collection = NakshaCollection(
-            id = collectionName,
+        val collectionId = "check_no_del_table_test"
+        var collection = NakshaCollection(
+            id = collectionId,
             storeDeleted = StoreMode.OFF
         )
-        executeWrite(
+
+        // Create the collection and read the response, we need the XYZ namespace!
+        val createCollectionResponse = executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
             )
         )
-        val delTableName = "$collectionName\$del"
+        assertEquals(1, createCollectionResponse.features.size)
+        collection = createCollectionResponse.features[0]!!.proxy(NakshaCollection::class)
+
+        // Proof that del table was not created
+        val delTableName = "$collectionId\$del"
         storage.adminConnection().use { conn ->
             val SQL = "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)"
             conn.execute(SQL, arrayOf(delTableName)).use { cursor ->
-                // Check that del table was not created
                 assertFalse(cursor.fetch()["exists"])
             }
         }
+
         // Check that creating, updating and deleting features still work
-        val feature = NakshaFeature()
-        executeWrite(
+        var feature = NakshaFeature()
+        val featureCreateResponse = executeWrite(
             WriteRequest().add(
                 Write().createFeature(collection, feature)
             )
         )
+        assertEquals(1, featureCreateResponse.features.size)
+        feature = featureCreateResponse.features[0]!!
+
         val readFeature = ReadFeatures()
-        readFeature.collectionIds.add(collectionName)
+        readFeature.collectionIds.add(collectionId)
         readFeature.featureIds.add(feature.id)
-        val insertedFeatureResponse = executeRead(readFeature)
-        assertEquals(1, insertedFeatureResponse.features.size)
+        val readFeatureResponse = executeRead(readFeature)
+        assertEquals(1, readFeatureResponse.features.size)
+        // TODO: Deep compare the features, they should be identical!
+        feature = featureCreateResponse.features[0]!!
+
         feature.properties["foo"] = "bar"
-        executeWrite(
+        val writeResponse = executeWrite(
             WriteRequest().add(
                 Write().updateFeature(collection, feature, true)
             )
         )
+        assertEquals(1, writeResponse.features.size)
+        Naksha.cache.clear()
         val updatedFeatureResponse = executeRead(readFeature)
-        assertEquals("bar", updatedFeatureResponse.features[0]?.properties!!["foo"])
+        assertEquals("bar", updatedFeatureResponse.features[0]?.properties?.get("foo"))
         executeWrite(
             WriteRequest().add(
                 Write().deleteFeatureById(collection, feature.id)

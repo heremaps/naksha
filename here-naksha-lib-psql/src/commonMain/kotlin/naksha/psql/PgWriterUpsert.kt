@@ -5,14 +5,14 @@ import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 
 /**
- * Execute UPSERT into a collection.
+ * Execute [UPSERT][naksha.model.request.WriteOp.UPSERT] into a collection.
  * @since 3.0
- * @see [PgTupleWriter]
+ * @see [PgWriter]
  */
-internal class PgTupleWriteUpsert(session: PgSession, collection: PgCollection, writes: List<PgTupleWrite>)
-    : PgTupleWriteBase(session, collection, writes)
+internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, writes: List<PgWrite>)
+    : PgWriterBase(writer, collection, writes)
 {
-    private val writeByTn = mutableMapOf<TupleNumber, PgTupleWrite>()
+    private val writeByTn = mutableMapOf<TupleNumber, PgWrite>()
 
     init {
         rows.addColumns(allColumns)
@@ -85,12 +85,12 @@ internal class PgTupleWriteUpsert(session: PgSession, collection: PgCollection, 
 )"""
 
         val SQL = """$new_row$head_row$clear_shadow$head_deleted$head_to_history$head_inserted$head_updated
-SELECT 'new_row' as source, id, tn, prev_tn, null::int4 as cc FROM new_row
-UNION ALL SELECT 'head_row' as source, id, tn, null::bytea AS prev_tn, null::int4 as cc FROM head_row
-${if (head_to_history.isNotEmpty()) "UNION ALL SELECT 'head_to_history' as source, id, tn, null::bytea AS prev_tn, null::int4 as cc FROM head_to_history" else ""}
-UNION ALL SELECT 'head_deleted' as source, id, tn, null::bytea AS prev_tn, null::int4 as cc FROM head_deleted
-UNION ALL SELECT 'head_inserted' as source, id, tn, null::bytea AS prev_tn, null::int4 as cc FROM head_inserted
-UNION ALL SELECT 'head_updated' as source, id, tn, prev_tn, cc FROM head_updated
+SELECT 'new_row' as source, tn, prev_tn, null::int4 as cc FROM new_row
+UNION ALL SELECT 'head_row' as source, tn, null::bytea AS prev_tn, null::int4 as cc FROM head_row
+${if (head_to_history.isNotEmpty()) "UNION ALL SELECT 'head_to_history' as source, tn, null::bytea AS prev_tn, null::int4 as cc FROM head_to_history" else ""}
+UNION ALL SELECT 'head_deleted' as source, tn, null::bytea AS prev_tn, null::int4 as cc FROM head_deleted
+UNION ALL SELECT 'head_inserted' as source, tn, null::bytea AS prev_tn, null::int4 as cc FROM head_inserted
+UNION ALL SELECT 'head_updated' as source, tn, prev_tn, cc FROM head_updated
 ;"""
         return conn.prepare(SQL, rows.typeNames())
     }
@@ -100,6 +100,8 @@ UNION ALL SELECT 'head_updated' as source, id, tn, prev_tn, cc FROM head_updated
         val array = rows.values()
         plan.execute(array).fetch().use { cursor ->
             while (cursor.next()) {
+                // We need to patch the tuple of all inserts, that were replaced with updates!
+                // The content is the same, but the action, operation, change-count, and prev_tn change!
                 val source: String = cursor["source"]
                 if (source == "head_updated") {
                     val changeCount: Int = cursor["cc"]

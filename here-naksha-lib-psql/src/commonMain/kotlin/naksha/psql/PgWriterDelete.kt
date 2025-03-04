@@ -1,25 +1,28 @@
 package naksha.psql
 
 import naksha.model.Action
+import naksha.model.NakshaError
 import naksha.model.TupleNumber
 import naksha.model.objects.StoreMode
-import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 
 /**
  * Execute a [DELETE][naksha.model.request.WriteOp.DELETE].
  * @since 3.0
- * @see [PgTupleWriter]
+ * @see [PgWriter]
  */
-internal class PgTupleWriteUpdate(session: PgSession, collection: PgCollection, writes: List<PgTupleWrite>)
-    : PgTupleWriteBase(session, collection, writes)
+internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes: List<PgWrite>)
+    : PgWriterBase(writer, collection, writes)
 {
     init {
-        rows.addColumns(allColumns)
+        rows.addColumn("id", PgType.STRING)
         rows.addColumn("version", PgType.INT64)
-        var i = 0
-        for (write in writes) {
-            val tuple = write.tuple
-            if (tuple != null) rows[i++] = tuple
+        rows.addColumn("uid", PgType.INT)
+        for (e in writes.withIndex()) {
+            val row = e.index
+            val write = e.value
+            rows.set(row, "id", write.id)
+            rows.set(row, "version", write.version?.txn)
+            rows.set(row, "uid", write.final_uid)
         }
     }
 
@@ -31,9 +34,9 @@ internal class PgTupleWriteUpdate(session: PgSession, collection: PgCollection, 
         val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
         val do_any_insert = insert_into_shadow != null || insert_into_history != null
 
-        // All input provided by client (the updates)
-        val query = """WITH new_row AS (
-  SELECT * FROM UNNEST(${rows.placeholders()}) AS t(${rows.names()},)
+        // All input provided by client, `id` and optionally `version`, and `uid`
+        val query = """WITH query AS (
+  SELECT * FROM UNNEST($1, $2, $3) AS t(id, version, uid)
 )"""
 
         // select `id` and `tn` of all rows that match query.id

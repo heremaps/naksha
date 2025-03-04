@@ -3,12 +3,12 @@ package naksha.psql
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 
 /**
- * Execute INSERTS into a collection.
+ * Execute an **INSERT** _(aka [CREATE][naksha.model.request.WriteOp.CREATE])_ into a collection.
  * @since 3.0
- * @see [PgTupleWriter]
+ * @see [PgWriter]
  */
-internal class PgTupleWriteInsert(session: PgSession, collection: PgCollection, writes: List<PgTupleWrite>)
-    : PgTupleWriteBase(session, collection, writes)
+internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, writes: List<PgWrite>)
+    : PgWriterBase(writer, collection, writes)
 {
     init {
         rows.addColumns(allColumns)

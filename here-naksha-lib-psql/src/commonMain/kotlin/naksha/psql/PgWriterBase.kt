@@ -6,20 +6,19 @@ import naksha.model.objects.NakshaTx
 
 /**
  * Base class for all operations, so for:
- * - [PgTupleWriteInsert]
- * - [PgTupleWriterUpdate]
- * - [PgTupleWriterUpsert]
- * - [PgTupleWriteDelete]
- * - [PgTupleWriteDelete]
+ * - [PgWriterInsert]
+ * - [PgWriterUpsert]
+ * - [PgWriterUpdate]
+ * - [PgWriterDelete]
  * @since 3.0
- * @see [PgTupleWriter]
+ * @see [PgWriter]
  */
-internal abstract class PgTupleWriteBase protected constructor(
+internal abstract class PgWriterBase protected constructor(
     /**
-     * The session to which this writer is bound.
+     * The [writer][PgWriter] to which this write is bound.
      * @since 3.0
      */
-    val session: PgSession,
+    val writer: PgWriter,
 
     /**
      * The collection to operate upon.
@@ -31,8 +30,11 @@ internal abstract class PgTupleWriteBase protected constructor(
      * The list of writes to perform.
      * @since 3.0
      */
-    val writes: List<PgTupleWrite>
+    val writes: List<PgWrite>
 ) {
+    val session: PgSession
+        get() = writer.session
+
     val storageNumber: Int64
         get() = collection.storage.number
 
@@ -65,10 +67,18 @@ internal abstract class PgTupleWriteBase protected constructor(
         .withCollectionNumber(collectionNumber)
         .withMinSize(writes.size)
 
+    /**
+     * Execute the operation.
+     * @param conn the connection to be used.
+     */
     fun execute(conn: PgConnection) {
         collection.map.setSearchPath(conn)
-        doExecute(conn)
+        return doExecute(conn)
     }
 
+    /**
+     * Execute the operation.
+     * @param conn the connection to be used.
+     */
     protected abstract fun doExecute(conn: PgConnection)
 }

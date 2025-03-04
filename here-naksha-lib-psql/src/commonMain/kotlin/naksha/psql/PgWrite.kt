@@ -10,11 +10,12 @@ import naksha.model.request.Write
 import naksha.model.request.WriteOp
 
 /**
- * Pure data class to enrich a write operation with additional information, used by [PgTupleWriter].
+ * Pure data class to enrich a write operation with additional information, used by [PgWriter].
  * @since 3.0
- * @see [PgTupleWriter]
+ * @see [Write]
+ * @see [PgWriter]
  */
-internal data class PgTupleWrite(val original: Write, val i: Int) {
+internal data class PgWrite(val original: Write, val i: Int) {
 
     /**
      * The map into which to write.

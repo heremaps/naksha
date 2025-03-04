@@ -1,12 +1,9 @@
-package naksha.psql.executors
+package naksha.psql
 
 import naksha.model.NakshaException
 import naksha.model.TupleNumberBinaryArray
 import naksha.model.Version
-import naksha.model.generalException
 import naksha.model.request.*
-import naksha.psql.*
-import naksha.psql.PgQueryBuilder
 import kotlin.jvm.JvmField
 
 class PgReader(

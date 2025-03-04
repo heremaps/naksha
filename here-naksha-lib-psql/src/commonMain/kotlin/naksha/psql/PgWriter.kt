@@ -2,23 +2,24 @@
 
 package naksha.psql
 
+import naksha.base.Platform
+import naksha.base.PlatformUtil
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
 import naksha.model.objects.NakshaTx
 import naksha.model.request.*
 import kotlin.js.JsExport
-import kotlin.js.JsName
 
 /**
  * A helper to write tuples into collections.
  *
  * This class is stateful and should be sticky until `commit` or `rollback`. It will remember which maps and collections have been created within the current transaction. After `commit`, the corresponding new objects should be visible, and the cache should automatically fetch them, but until this point, they are only visible within the current transaction!
  * @since 3.0
- * @see [PgTupleWrite]
+ * @see [PgWrite]
  */
 @JsExport
-open class PgTupleWriter internal constructor(val session: PgSession) {
+open class PgWriter internal constructor(val session: PgSession) {
     /**
      * The storage to operate on.
      * @since 3.0
@@ -50,7 +51,7 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
      * @return the response.
      */
     fun execute(writes: WriteList) : Response {
-        val tupleNumberList = execute(writes.mapNotNull { it }.toMutableList())
+        val tupleNumberList = executeWrites(writes.mapNotNull { it }.toMutableList())
         return SuccessResponse().withTupleNumberList(tupleNumberList)
     }
 
@@ -59,11 +60,10 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
      * @param writes the writes to perform.
      * @return the tuple-numbers of the
      */
-    @JsName("executeWrites")
-    private fun execute(writes: MutableList<Write>) : TupleNumberList {
+    private fun executeWrites(writes: MutableList<Write>) : TupleNumberList {
         // Add the input-index.
-        val targetWrites = ArrayList<PgTupleWrite>(writes.size)
-        for (i in 0 ..< writes.size) targetWrites.add(PgTupleWrite(writes[i], i))
+        val targetWrites = ArrayList<PgWrite>(writes.size)
+        for (i in 0 ..< writes.size) targetWrites.add(PgWrite(writes[i], i))
 
         // We sort the writes so that admin-map, map's collection, collection's collection are first.
         // The rest is ordered by map-id, collection-id, feature-id, operation (INSERT, UPSERT, UPDATE, DELETE, PURGE).
@@ -71,9 +71,21 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
         // The ordering is important to prevent deadlocks between different clients.
         targetWrites.sortWith { a, b -> Write.sortCompare(a.original, b.original) }
 
-        // Perform the writes in sorted order.
-        prepareWrite(targetWrites)
-        executeWrite(targetWrites)
+        // Perform the writes, if any error happens, we will roll back the session to where it was before we started.
+        // Note: We must not close the connection, therefore no `session.useConnection().use {}`!
+        val savepointId = PlatformUtil.randomString()
+        val conn = session.useConnection()
+        conn.execute("SAVEPOINT $savepointId").close()
+        try {
+            prepareWrite(targetWrites)
+            executeWrite(targetWrites)
+            // If everything worked out as expected, we can drop the savepoint.
+            conn.execute("RELEASE SAVEPOINT $savepointId").close()
+        } catch (e: Exception) {
+            conn.execute("ROLLBACK TO SAVEPOINT $savepointId").close()
+            // TODO: We need a better way to report errors, we need to create ErrorResponse!
+            throw e
+        }
 
         // Reorder results to match input.
         val tupleNumbers = TupleNumberList()
@@ -93,7 +105,7 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
     // Ensure that the needed physical schema and tables are created.
     // Ensure that the PgTupleWrite data class is ready for action.
     // After this has run, only the `tuple` is missing!
-    private fun prepareWrite(writes: ArrayList<PgTupleWrite>) {
+    private fun prepareWrite(writes: ArrayList<PgWrite>) {
         for (write in writes) {
             val featureId = write.original.id
             val mapId = write.original.mapId ?: throw illegalArg("The given write does not have a map-id")
@@ -164,7 +176,7 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
 
     }
 
-    private fun MutableMap<PgCollection, MutableList<PgTupleWrite>>.getOrCreate(collection: PgCollection): MutableList<PgTupleWrite> {
+    private fun MutableMap<PgCollection, MutableList<PgWrite>>.getOrCreate(collection: PgCollection): MutableList<PgWrite> {
         var list = this[collection]
         if (list == null) {
             list = ArrayList()
@@ -173,13 +185,15 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
         return list
     }
 
-    private fun executeWrite(writes: ArrayList<PgTupleWrite>) {
+
+
+    private fun executeWrite(writes: ArrayList<PgWrite>) {
         // We group the features into collections into which we should write.
-        val deletes = mutableMapOf<PgCollection, MutableList<PgTupleWrite>>()
-        val purges = mutableMapOf<PgCollection, MutableList<PgTupleWrite>>()
-        val inserts = mutableMapOf<PgCollection, MutableList<PgTupleWrite>>()
-        val upserts = mutableMapOf<PgCollection, MutableList<PgTupleWrite>>()
-        val updates = mutableMapOf<PgCollection, MutableList<PgTupleWrite>>()
+        val deletes = mutableMapOf<PgCollection, MutableList<PgWrite>>()
+        val purges = mutableMapOf<PgCollection, MutableList<PgWrite>>()
+        val inserts = mutableMapOf<PgCollection, MutableList<PgWrite>>()
+        val upserts = mutableMapOf<PgCollection, MutableList<PgWrite>>()
+        val updates = mutableMapOf<PgCollection, MutableList<PgWrite>>()
         for (write in writes) {
             when (val op = write.original.op) {
                 WriteOp.CREATE -> {
@@ -223,7 +237,7 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
         for (mapEntry in deletes) {
             val collection = mapEntry.key
             val tgWrites = mapEntry.value
-            val tupleWriter = PgTupleWriteDelete(session, collection, tgWrites)
+            val tupleWriter = PgWriterDelete(this, collection, tgWrites)
             tupleWriter.execute(conn)
         }
         // PURGE
@@ -232,7 +246,7 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
         for (mapEntry in inserts) {
             val collection = mapEntry.key
             val tgWrites = mapEntry.value
-            val tupleWriter = PgTupleWriteInsert(session, collection, tgWrites)
+            val tupleWriter = PgWriterInsert(this, collection, tgWrites)
             tupleWriter.execute(conn)
         }
 
@@ -240,11 +254,17 @@ open class PgTupleWriter internal constructor(val session: PgSession) {
         for (mapEntry in upserts) {
             val collection = mapEntry.key
             val tgWrites = mapEntry.value
-            val tupleWriter = PgTupleWriteUpsert(session, collection, tgWrites)
+            val tupleWriter = PgWriterUpsert(this, collection, tgWrites)
             tupleWriter.execute(conn)
         }
 
         // UPDATE
+        for (mapEntry in updates) {
+            val collection = mapEntry.key
+            val tgWrites = mapEntry.value
+            val tupleWriter = PgWriterUpdate(this, collection, tgWrites)
+            tupleWriter.execute(conn)
+        }
     }
 
     /**

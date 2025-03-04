@@ -89,6 +89,15 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
         }
     }
 
+    /**
+     * The SQL query to be focus on the current map:
+     * ```
+     * SET search_path="$TEST_MAP_ID","naksha~admin",topology,hint_plan,public;
+     * ```
+     */
+    val SET_SEARTH_PATH_SQL
+        get() = """SET search_path="$TEST_MAP_ID","naksha~admin",topology,hint_plan,public;"""
+
     protected fun insertFeature(feature: NakshaFeature, sessionOptions: SessionOptions? = null)
         = insertFeatures(listOf(feature), sessionOptions)
 
