@@ -134,19 +134,4 @@ public class NHAdminStorageReader implements IReadSession {
   public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
     return session.getCollectionByNumber(map, collectionNumber);
   }
-
-  @Override
-  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
-    return session.getEncodingFlags(feature, context);
-  }
-
-  @Override
-  public @Nullable JbDictionary getDictionary(@NotNull String id) {
-    return session.getDictionary(id);
-  }
-
-  @Override
-  public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
-    return session.getEncodingDictionary(feature, context);
-  }
 }

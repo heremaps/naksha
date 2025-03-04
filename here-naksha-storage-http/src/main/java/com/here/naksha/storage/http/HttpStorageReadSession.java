@@ -136,21 +136,6 @@ public final class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
-    throw new NotImplementedException("Not supported by HTTP storage");
-  }
-
-  @Override
-  public @Nullable JbDictionary getDictionary(@NotNull String id) {
-    throw new NotImplementedException("Not supported by HTTP storage");
-  }
-
-  @Override
-  public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
-    throw new NotImplementedException("Not supported by HTTP storage");
-  }
-
-  @Override
   public @NotNull SessionOptions getOptions() {
     throw new NotImplementedException("Not supported by HTTP storage");
   }

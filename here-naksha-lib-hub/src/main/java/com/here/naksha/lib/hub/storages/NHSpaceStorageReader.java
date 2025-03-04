@@ -354,18 +354,4 @@ public class NHSpaceStorageReader implements IReadSession {
     throw NOT_SUPPORTED_ERROR;
   }
 
-  @Override
-  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public @Nullable JbDictionary getDictionary(@NotNull String id) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
-    throw NOT_SUPPORTED_ERROR;
-  }
 }
