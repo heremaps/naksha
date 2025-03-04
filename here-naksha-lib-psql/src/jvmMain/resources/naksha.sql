@@ -333,7 +333,7 @@ AS $$
   const { JbFeatureDecoder } = require("naksha_jbon");
   let decoder = new JbFeatureDecoder();
   decoder.mapBytes(jbon);
-  return Platform.toJSON(decoder.toAnyObject());
+  return Platform.toJson(decoder.toAnyObject());
 $$;
 
 DROP FUNCTION IF EXISTS naksha_jbon_feature_to_jsonb(bytea);
@@ -359,7 +359,7 @@ AS $$
   const { JbFeatureDecoder } = require("naksha_jbon");
   let decoder = new JbFeatureDecoder();
   decoder.mapBytes(jbon);
-  return Platform.toJSON(decoder.toMap());
+  return Platform.toJson(decoder.toMap());
 $$;
 
 DROP FUNCTION IF EXISTS naksha_jbon_map_to_jsonb(bytea);
