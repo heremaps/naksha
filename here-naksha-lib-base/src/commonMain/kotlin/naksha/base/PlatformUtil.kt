@@ -135,9 +135,14 @@ class PlatformUtil {
             val end = if (length >= 1) length else 12
             val chars = randomCharacters
             val sb = StringBuilder()
-            var i = 0
-            while (i++ < end) {
-                sb.append(chars[(random() * 64.0).toInt() and 63])
+            var pos = 0
+            var i = (random() * 64.0).toInt()
+            // The first character should not be 0 to 9!
+            if (i < 10) i += 10
+            sb.append(chars[i and 63])
+            while (++pos < end) {
+                i = (random() * 64.0).toInt()
+                sb.append(chars[i and 63])
             }
             return sb.toString()
         }
