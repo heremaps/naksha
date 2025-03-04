@@ -2,7 +2,6 @@
 
 package naksha.psql
 
-import naksha.base.Platform
 import naksha.base.PlatformUtil
 import naksha.model.*
 import naksha.model.objects.NakshaCollection

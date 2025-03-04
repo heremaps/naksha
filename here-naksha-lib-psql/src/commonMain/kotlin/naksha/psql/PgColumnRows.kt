@@ -181,6 +181,7 @@ internal class PgColumnRows {
         val meta = Metadata(
             tupleNumber = tupleNumber,
             flags = getInt(row, PgColumn.flags) ?: return null,
+            changeCount = getInt(row, PgColumn.cc) ?: 1,
             updatedAt = getInt64(row, PgColumn.updated_at) ?: return null,
             createdAt = getInt64(row, PgColumn.created_at),
             authorTs = getInt64(row, PgColumn.author_ts),

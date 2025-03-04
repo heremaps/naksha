@@ -89,8 +89,17 @@ open class SuccessResponse() : Response() {
      * Therefore, when a client modifies the [features], this changes the result-size, even while the underlying, lower-level, results may still be larger.
      * @since 3.0
      */
-    override fun resultSize(): Int
-        = features?.size ?: featureTupleList?.size ?: tupleList?.size ?: tupleNumberList?.size ?:tupleNumberBinary?.size ?: 0
+    override fun resultSize(): Int {
+        val raw = getAs(FEATURES, NakshaFeatureList::class)
+        if (raw is NakshaFeatureList) return raw.size
+        val featureTupleList = this.featureTupleList
+        if (featureTupleList is NakshaFeatureList) return featureTupleList.size
+        val tupleList = this.tupleList
+        if (tupleList != null) return tupleList.size
+        val tupleNumberList = this.tupleNumberList
+        if (tupleNumberList != null) return tupleNumberList.size
+        return tupleNumberBinary?.size ?: 0
+    }
 
     /**
      * The binary [tuple-number][naksha.model.TupleNumber] representation, which basically is a [TupleNumberBinaryArray], as returned by the storage. The raw value can be as well an [ByteArray], in which case it will automatically be wrapper into an [TupleNumberBinaryArray].

@@ -4,7 +4,10 @@ package naksha.model
 
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_EXISTS
 import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
+import naksha.model.NakshaError.NakshaErrorCompanion.CONFLICT
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
+import naksha.model.NakshaError.NakshaErrorCompanion.FEATURE_EXISTS
+import naksha.model.NakshaError.NakshaErrorCompanion.FEATURE_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_EXISTS
@@ -100,4 +103,28 @@ fun collectionNotFound(msg: String): NakshaException = NakshaException(COLLECTIO
  * @since 3.0
  */
 fun collectionExists(msg: String): NakshaException = NakshaException(COLLECTION_EXISTS, msg)
+
+/**
+ * Create [FEATURE_NOT_FOUND] exception.
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun featureNotFound(msg: String): NakshaException = NakshaException(FEATURE_NOT_FOUND, msg)
+
+/**
+ * Create [FEATURE_EXISTS] exception.
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun featureExists(msg: String): NakshaException = NakshaException(FEATURE_EXISTS, msg)
+
+/**
+ * Create [CONFLICT] exception
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun conflict(msg: String): NakshaException = NakshaException(CONFLICT, msg)
 

@@ -60,7 +60,10 @@ internal data class PgWrite(val original: Write, val i: Int) {
      * @since 3.0
      */
     val version: Version?
-        get() = if (original.atomic && op != WriteOp.CREATE && op != WriteOp.UPSERT) original.version else null
+        get() = if (original.atomic && op != WriteOp.CREATE && op != WriteOp.UPSERT)
+            original.version ?: original.tupleNumber?.version
+        else
+            null
 
     /**
      * The [Tuple] representation of the modified feature.
