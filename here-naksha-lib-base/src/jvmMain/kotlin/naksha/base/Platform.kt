@@ -17,6 +17,9 @@ import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
 import java.lang.invoke.MethodHandles
 import java.lang.reflect.Method
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.text.Normalizer
 import java.util.concurrent.ConcurrentHashMap
@@ -755,6 +758,14 @@ actual class Platform {
 
         @JvmStatic
         actual fun isPlv8(): Boolean = false
+
+        @JvmStatic
+        actual fun encodeURIComponent(uriComponent: String): String
+            = URLEncoder.encode(uriComponent, StandardCharsets.UTF_8).replace("+", "%20")
+
+        @JvmStatic
+        actual fun decodeURIComponent(encodedURI: String): String
+            = URLDecoder.decode(encodedURI, StandardCharsets.UTF_8);
 
         @JvmStatic
         private val md5Digest = ThreadLocal.withInitial { MessageDigest.getInstance("MD5") }

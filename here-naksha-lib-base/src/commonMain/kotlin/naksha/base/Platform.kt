@@ -551,6 +551,22 @@ expect class Platform {
         fun isPlv8(): Boolean
 
         /**
+         * The `encodeURIComponent()` function encodes a URI by replacing each instance of certain characters by one, two, three, or four escape sequences representing the UTF-8 encoding of the character (will only be four escape sequences for characters composed of two surrogate characters).
+         * @param uriComponent a string to be encoded as a URI component (a path, query string, fragment, etc.).
+         * @return a new string representing the provided uriComponent encoded as a URI component.
+         * @since 3.0
+         */
+        fun encodeURIComponent(uriComponent: String): String
+
+        /**
+         * The `decodeURIComponent()` function decodes a Uniform Resource Identifier (URI) component previously created by [encodeURIComponent] or by a similar routine.
+         * @param encodedURI an encoded component of a Uniform Resource Identifier.
+         * @return a new string representing the decoded version of the given encoded Uniform Resource Identifier (URI) component.
+         * @since 3.0
+         */
+        fun decodeURIComponent(encodedURI: String): String
+
+        /**
          * Calculates the MD5 hash about the given text.
          *
          * @param text the text to hash.

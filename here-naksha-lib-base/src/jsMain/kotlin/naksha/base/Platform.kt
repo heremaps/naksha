@@ -737,6 +737,12 @@ return obj;
         @JsStatic
         actual fun isPlv8(): Boolean = js("typeof plv8==='object'").unsafeCast<Boolean>()
 
+        @JsStatic
+        actual fun encodeURIComponent(uriComponent: String): String = js("encodeURIComponent(uriComponent)") as String
+
+        @JsStatic
+        actual fun decodeURIComponent(encodedURI: String): String = js("decodeURIComponent(encodedURI)") as String
+
         /**
          * Calculates the MD5 hash about the given text.
          *
