@@ -4,9 +4,11 @@ package naksha.model.objects
 
 import naksha.base.AnyObject
 import naksha.base.NotNullProperty
+import naksha.base.NullableProperty
 import naksha.model.Action
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 
 /**
  * An information about what changes in this map.
@@ -15,17 +17,18 @@ import kotlin.js.JsName
 @JsExport
 class NakshaTxMap() : AnyObject() {
 
+    @JvmOverloads
     @JsName("of")
-    constructor(id: String, number: Int, action: Action) : this() {
+    constructor(id: String, number: Int, action: Action? = null) : this() {
         this.id = id
         this.number = number
         this.action = action
     }
 
     companion object NakshaTxMap_C {
-        private val MAP_ID = NotNullProperty<NakshaTxMap, String>(String::class) { _, _ -> "" }
-        private val MAP_NUMBER = NotNullProperty<NakshaTxMap, Int>(Int::class) { _, _ -> 0 }
-        private val ACTION = NotNullProperty<NakshaTxMap, Action>(Action::class) { _, _ -> Action.UNDEFINED }
+        private val ID = NotNullProperty<NakshaTxMap, String>(String::class)
+        private val NUMBER = NotNullProperty<NakshaTxMap, Int>(Int::class)
+        private val ACTION_OR_NULL = NullableProperty<NakshaTxMap, Action>(Action::class)
         private val COLLECTIONS = NotNullProperty<NakshaTxMap, NakshaTxCollectionById>(NakshaTxCollectionById::class)
     }
 
@@ -33,19 +36,19 @@ class NakshaTxMap() : AnyObject() {
      * The map-id of this map.
      * @since 3.0
      */
-    var id by MAP_ID
+    var id by ID
 
     /**
      * The map-number of this map.
      * @since 3.0
      */
-    var number by MAP_NUMBER
+    var number by NUMBER
 
     /**
-     * The action done to this map.
+     * The action done to this map, `null` if just children of the map where modified.
      * @since 3.0
      */
-    var action by ACTION
+    var action by ACTION_OR_NULL
 
     /**
      * The collections of this map that have been modified as part of this transaction.
@@ -57,16 +60,19 @@ class NakshaTxMap() : AnyObject() {
      * Returns the collection-info of the given collection, if it does not yet exist, creates a new empty one.
      * @param id the collection-id.
      * @param number the collection-number to use.
-     * @param action the action being done to the collection.
+     * @param action the action being done to the collection, `null` if only children were modified.
      * @return the transaction collection information.
      * @since 3.0
      */
-    fun useTxCollection(id: String, number: Int, action: Action): NakshaTxCollection {
+    @JvmOverloads
+    fun useCollection(id: String, number: Int, action: Action? = null): NakshaTxCollection {
         var info = collections[id]
-        if (info == null) {
-            info = NakshaTxCollection(id, number, action)
-            collections[id] = info
+        if (info != null) {
+            if (action != null) info.action = action
+            return info
         }
+        info = NakshaTxCollection(id, number, action)
+        collections[id] = info
         return info
     }
 
@@ -75,7 +81,7 @@ class NakshaTxMap() : AnyObject() {
      * @param info the collection info to add.
      * @since 3.0
      */
-    fun addTxCollectionInfo(info: NakshaTxCollection) {
+    fun addCollection(info: NakshaTxCollection) {
         val existing = collections[info.id]
         if (existing != null) existing.addValues(info) else collections[info.id] = info
     }

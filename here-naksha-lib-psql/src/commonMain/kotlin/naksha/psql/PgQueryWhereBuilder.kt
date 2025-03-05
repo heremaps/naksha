@@ -264,10 +264,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
                 val resolvedQuery = when (val op = metaQuery.op) {
                     is StringOp -> resolveStringOp(op, leftOperand, placeholder)
                     is DoubleOp -> resolveDoubleOp(op, leftOperand, placeholder)
-                    else -> throw NakshaException(
-                        NakshaError.ILLEGAL_ARGUMENT,
-                        "Unknown op type: ${op::class.simpleName}"
-                    )
+                    else -> throw illegalArg("Unknown op type: ${op::class.simpleName}")
                 }
                 where.append(resolvedQuery)
             }

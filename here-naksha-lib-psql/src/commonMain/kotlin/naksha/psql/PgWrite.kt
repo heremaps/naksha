@@ -1,9 +1,6 @@
 package naksha.psql
 
-import naksha.model.Naksha
-import naksha.model.Tuple
-import naksha.model.TupleNumber
-import naksha.model.Version
+import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaMap
@@ -48,6 +45,17 @@ internal data class PgWrite(val original: Write, val i: Int) {
      */
     val op: WriteOp
         get() = original.op
+
+    /**
+     * After the feature has been persisted, this shows the final [Action] that has been performed, initially the value is guessed.
+     * @since 3.0
+     */
+    var action: Action = when (original.op) {
+        WriteOp.CREATE, WriteOp.UPSERT -> Action.CREATED
+        WriteOp.UPDATE -> Action.UPDATED
+        WriteOp.DELETE, WriteOp.PURGE -> Action.DELETED
+        else -> Action.UNDEFINED
+    }
 
     /**
      * The identifier of the feature to modify.

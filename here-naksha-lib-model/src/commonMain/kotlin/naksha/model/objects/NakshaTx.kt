@@ -169,7 +169,7 @@ open class NakshaTx : NakshaFeature() {
     /**
      * Total number of bytes of all rows being in the transaction.
      *
-     * Note, the value is updated by the sequencer, and up until this was done, the number is just an estimation.
+     * This number will provide an impression about how much data has to be loaded, when the full features being part of this transaction have to be read from the storage. It is calculated about the binary encoded [Tuple].
      * @since 3.0
      */
     var featuresBytes: Int by INT_0
@@ -196,14 +196,15 @@ open class NakshaTx : NakshaFeature() {
      * Returns the [map information][NakshaTxMap], if none exists yet, create them and return them.
      * @param id the map-id.
      * @param number the map-number.
-     * @param action the action done to the map.
+     * @param action the action done to the map, `null` if only children were modified.
      * @return the transaction map information.
      * @since 3.0
      */
-    fun useMap(id: String, number: Int, action: Action): NakshaTxMap {
+    @JvmOverloads
+    fun useMap(id: String, number: Int, action: Action? = null): NakshaTxMap {
         val existing = maps[id]
         if (existing != null) {
-            existing.action = action
+            if (action != null) existing.action = action
             return existing
         }
         val mapInfo = NakshaTxMap(id, number, action)

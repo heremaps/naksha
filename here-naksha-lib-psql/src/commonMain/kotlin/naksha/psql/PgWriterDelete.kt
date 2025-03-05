@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.model.Action
-import naksha.model.NakshaError
 import naksha.model.TupleNumber
 import naksha.model.objects.StoreMode
 
@@ -60,22 +59,6 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes
   FROM ${headTable.quotedName} AS head, query
   WHERE head.id = query.id AND (query.version IS NULL OR query.version = naksha_tn_version(head.tn))
   FOR UPDATE NOWAIT
-)"""
-
-        // Check if any atomic delete failed (we have fewer rows in `head_row` as in `head_select`
-        val check_match = """, check_match AS (
-  SELECT id, tn FROM head_select
-  EXCEPT
-  SELECT id, tn FROM head_row
-)"""
-        // If any atomic delete will fail, abort the query, and return an error with the ids (max 10)
-        val abort_if_mismatch = """, abort_if_mismatch AS (
-  SELECT CASE 
-    WHEN EXISTS (SELECT 1 FROM check_match) 
-    THEN RAISE EXCEPTION 'Conflict, ids: %', 
-      (SELECT STRING_AGG(id::TEXT, ', ') FROM (SELECT id FROM check_match LIMIT 10) AS subquery) 
-    ELSE NULL 
-  END
 )"""
 
         // If the shadow table exists, delete old states

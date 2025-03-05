@@ -4,8 +4,6 @@ package naksha.psql
 
 import naksha.base.*
 import naksha.model.*
-import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
@@ -258,7 +256,8 @@ open class PgSession(
             val tx = tx
             if (tx != null) {
                 try {
-                    val writeTx = Write().createFeature(Naksha.ADMIN_MAP, TRANSACTIONS_COL, tx.transaction)
+                    val transaction = tx.transaction
+                    val writeTx = Write().createFeature(Naksha.ADMIN_MAP, TRANSACTIONS_COL, transaction)
                     val writeRequest = WriteRequest().add(writeTx)
                     val writer = PgWriter(this)
                     writer.execute(writeRequest.writes)

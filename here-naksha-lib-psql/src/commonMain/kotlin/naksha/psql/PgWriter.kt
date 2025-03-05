@@ -74,25 +74,38 @@ open class PgWriter internal constructor(val session: PgSession) {
         // Note: We must not close the connection, therefore no `session.useConnection().use {}`!
         val savepointId = PlatformUtil.randomString()
         val conn = session.useConnection()
-        conn.execute("SAVEPOINT $savepointId").close()
+        conn.execute("SAVEPOINT \"$savepointId\"").close()
         try {
             prepareWrite(targetWrites)
             executeWrite(targetWrites)
             // If everything worked out as expected, we can drop the savepoint.
-            conn.execute("RELEASE SAVEPOINT $savepointId").close()
-        } catch (e: Exception) {
-            conn.execute("ROLLBACK TO SAVEPOINT $savepointId").close()
-            // TODO: We need a better way to report errors, we need to create ErrorResponse!
-            throw e
+            conn.execute("RELEASE SAVEPOINT \"$savepointId\"").close()
+        } catch (t: Throwable) {
+            conn.execute("ROLLBACK TO SAVEPOINT \"$savepointId\"").close()
+            throw PgExceptionMapper.map(t)
         }
 
         // Reorder results to match input.
         val tupleNumbers = TupleNumberList()
         tupleNumbers.setCapacity(writes.size)
         val tupleList = ArrayList<Tuple>(writes.size)
+        val transaction = tx.transaction
         for (write in targetWrites) {
             tupleNumbers[write.i] = write.tupleNumber
             val tuple = write.tuple
+            if (write.isFeatureModification) {
+                val map = write.map
+                val col = write.collection
+                transaction.useMap(map.id, map.number).useCollection(col.id, col.number).add(write.action)
+                transaction.featuresModified += 1
+            } else if (write.isMapModification) {
+                val map = write.pgMap
+                if (map != null) transaction.useMap(map.id, map.number, write.action)
+            } else if (write.isCollectionModification) {
+                val map = write.map
+                val col = write.pgCollection
+                if (col != null) transaction.useMap(map.id, map.number).useCollection(col.id, col.number, write.action)
+            }
             if (tuple != null) tupleList.add(tuple)
         }
         // We do not put tuples into cache, before we are sure everything was successful!

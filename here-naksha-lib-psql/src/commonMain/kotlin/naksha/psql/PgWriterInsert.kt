@@ -1,8 +1,6 @@
 package naksha.psql
 
-import naksha.model.mapExists
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
-import naksha.psql.PgColumn.PgColumnCompanion.next_tn
 
 /**
  * Execute an **INSERT** _(aka [CREATE][naksha.model.request.WriteOp.CREATE])_ into a collection.
@@ -24,12 +22,33 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, writes
     }
 
     private fun plan(conn: PgConnection, collection: PgCollection): PgPlan {
-        // TODO: we need to delete shadow states, if shadow is available
-        val SQL = """WITH new_row AS (
+        val headTable = collection.headTable
+        val shadowTable = collection.deletedTable
+
+        val new_row = """WITH new_row AS (
   SELECT * FROM UNNEST(${rows.placeholders()}) AS t(${rows.names()})
-)
-INSERT INTO ${collection.headTable.quotedName} (${rows.names()})
-SELECT * FROM new_row"""
+)"""
+
+        // If the shadow table exists, delete old states
+        val clear_shadow = if (shadowTable != null) """, clear_shadow AS (
+  DELETE FROM ${shadowTable.quotedName}
+  WHERE id IN (SELECT id FROM new_row)
+  RETURNING id, tn
+)""" else ""
+
+        // Insert the features
+        val inserted = """, inserted AS (
+INSERT INTO ${headTable.quotedName} (${rows.names()})
+SELECT * FROM new_row
+RETURNING id, tn
+)"""
+
+        // Actually perform the insert.
+        val SQL = """$new_row$clear_shadow$inserted
+SELECT inserted.id AS id, inserted.tn AS tn${if (clear_shadow.isNotEmpty()) ", clear_shadow.tn AS clear_tn" else ""}
+FROM inserted
+${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = inserted.id" else ""} 
+"""
         return conn.prepare(SQL, rows.typeNames())
     }
 
@@ -37,5 +56,6 @@ SELECT * FROM new_row"""
         val plan = plan(conn, collection)
         val array = rows.values()
         plan.execute(array).close()
+        // We ignore the result, we know that if it didn't fail, it's okay.
     }
 }

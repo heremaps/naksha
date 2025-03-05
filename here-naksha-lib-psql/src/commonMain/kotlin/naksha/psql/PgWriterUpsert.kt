@@ -121,6 +121,7 @@ UNION ALL SELECT 'head_updated' as source, tn, prev_tn, cc FROM head_updated
                             prevTupleNumber = prev_tn,
                         )
                     )
+                    write.action = Action.UPDATED
                 }
             }
         }
