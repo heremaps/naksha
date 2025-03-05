@@ -283,6 +283,17 @@ AS $$
   SELECT version & (4294967295::int8)
 END $$;
 
+DROP FUNCTION IF EXISTS naksha_version_text(int8);
+CREATE FUNCTION naksha_version_text(version int8) RETURNS text
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  SELECT naksha_version_year(version) || ':'
+      || naksha_version_month(version) || ':'
+      || naksha_version_day(version) || ':'
+      || naksha_version_seq(version)
+END $$;
+
 DROP FUNCTION IF EXISTS naksha_alt32(int4);
 CREATE FUNCTION naksha_alt32(num int4) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
