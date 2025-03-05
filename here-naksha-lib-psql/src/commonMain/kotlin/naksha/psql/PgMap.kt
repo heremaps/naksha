@@ -11,7 +11,11 @@ import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_NUMBER
 import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL
+import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL_NUMBER
 import naksha.model.Naksha.NakshaCompanion.MAPS_COL
+import naksha.model.Naksha.NakshaCompanion.MAPS_COL_NUMBER
+import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_NUMBER
 import naksha.model.NakshaError
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
@@ -166,8 +170,15 @@ open class PgMap internal constructor(
             txn.createYear(conn, NOW.year)
             txn.createYear(conn, NOW.year + 1)
             txn.createIndex(conn, PgIndex.tn_pkey)
+            txn.createIndex(conn, PgIndex.id_unique)
             txn.createIndex(conn, PgIndex.txn_unique)
-            for (index in indices) if (index != PgIndex.tn_pkey && index != PgIndex.txn_unique) txn.createIndex(conn, index)
+            for (index in indices) {
+                if (index != PgIndex.tn_pkey
+                    && index != PgIndex.txn_unique
+                    && index != PgIndex.id_unique) {
+                    txn.createIndex(conn, index)
+                }
+            }
 
             // We can have a meta table for transactions, but no history or deleted!
             if (collection.metaTable != null) {
@@ -175,7 +186,12 @@ open class PgMap internal constructor(
                 meta.create(conn)
                 meta.createIndex(conn, PgIndex.tn_pkey)
                 meta.createIndex(conn, PgIndex.id_unique)
-                for (index in indices) if (index != PgIndex.tn_pkey && index != PgIndex.id_unique) meta.createIndex(conn, index)
+                for (index in indices) {
+                    if (index != PgIndex.tn_pkey
+                        && index != PgIndex.id_unique) {
+                        meta.createIndex(conn, index)
+                    }
+                }
             }
             return
         }
@@ -243,7 +259,7 @@ open class PgMap internal constructor(
             val metaIndices: MutableList<PgIndex> = mutableListOf()
             while (cursor.next()) {
                 val rel = PgRelation(cursor)
-                if (id == Naksha.TRANSACTIONS_COL) {
+                if (id == TRANSACTIONS_COL) {
                     // We know that the transaction table does only have a HEAD.
                     // We further know, that head is split yearly!
                     if (rel.isAnyHeadRelation()) {
@@ -376,7 +392,7 @@ open class PgMap internal constructor(
         if (this is PgAdminMap) {
             return when (id) {
                 COLLECTIONS_COL -> collections
-                Naksha.TRANSACTIONS_COL -> transactions
+                TRANSACTIONS_COL -> transactions
                 MAPS_COL -> maps
                 DICTIONARIES_COL -> dictionaries
                 else -> null
@@ -419,11 +435,11 @@ WHERE id = $1"""
      */
     fun getPgCollectionByNumber(conn: PgConnection, number: Int): PgCollection? {
         if (this is PgAdminMap) {
-            return when (id) {
-                COLLECTIONS_COL -> collections
-                Naksha.TRANSACTIONS_COL -> transactions
-                MAPS_COL -> maps
-                DICTIONARIES_COL -> dictionaries
+            return when (number) {
+                COLLECTIONS_COL_NUMBER -> collections
+                TRANSACTIONS_COL_NUMBER -> transactions
+                MAPS_COL_NUMBER -> maps
+                DICTIONARIES_COL_NUMBER -> dictionaries
                 else -> null
             }
         }
