@@ -9,12 +9,14 @@ import naksha.base.Platform
 import naksha.base.PlatformUtil
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
+import naksha.model.NakshaContext
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
 import naksha.model.request.SuccessResponse
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.Plv8PerfTest.FeatureSource.*
 import naksha.psql.base.PgTestBase
 import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeatures
@@ -29,13 +31,18 @@ import kotlin.test.assertIs
 class Plv8PerfTest : PgTestBase(
     NakshaCollection(
         id = "insert_perf_test_c",
+        mapId = TEST_MAP_ID,
         partitions = NUM_OF_PARTITIONS,
         storeHistory = StoreMode.ON,
         storeDeleted = StoreMode.ON
     )
 ) {
     companion object {
-        const val NUM_OF_PARTITIONS = 8
+        const val NUM_OF_PARTITIONS = 4
+        const val numberOfFeaturesInBatch = 1_000
+        const val numberOfBatches = 8
+        const val concurrency = 2
+        val featureSource = JSON_TOPOLOGY_SMALL
 
         val jsonPath = Companion::class.java.getResource("/topology.json")
         val json = Files.readString(Paths.get(jsonPath.toURI()))
@@ -48,12 +55,6 @@ class Plv8PerfTest : PgTestBase(
 
     @Test
     fun shouldInsertManyFeatures() {
-        // Conf
-        val numberOfFeaturesInBatch = 1000
-        val numberOfBatches = 4
-        val concurrency = 2
-        val featureSource = JSON_TOPOLOGY_SMALL
-
         // Prepare
         val batchRequests = mutableListOf<WriteRequest>()
         for (i in 1..numberOfBatches) {
@@ -74,12 +75,6 @@ class Plv8PerfTest : PgTestBase(
 
     @Test
     fun shouldUpsertManyFeatures() {
-        // Conf
-        val numberOfFeaturesInBatch = 1000
-        val numberOfBatches = 4
-        val concurrency = 2
-        val featureSource = JSON_TOPOLOGY_SMALL
-
         // Prepare
         val batchRequests = mutableListOf<WriteRequest>()
         for (i in 1..numberOfBatches) {
@@ -100,11 +95,6 @@ class Plv8PerfTest : PgTestBase(
 
     @Test
     fun shouldInsertGroupedByPartition() {
-        // Conf
-        val numberOfFeaturesInBatch = 100
-        val numberOfBatches = 10
-        val concurrency = 4
-        val featureSource = JSON_TOPOLOGY_SMALL
         val numberOfBatchesPerPartition = numberOfBatches / NUM_OF_PARTITIONS
 
         // Prepare
@@ -129,11 +119,6 @@ class Plv8PerfTest : PgTestBase(
 
     @Test
     fun shouldUpsertGroupedByPartition() {
-        // Conf
-        val numberOfFeaturesInBatch = 100
-        val numberOfBatches = 10
-        val concurrency = 4
-        val featureSource = JSON_TOPOLOGY_SMALL
         val numberOfBatchesPerPartition = numberOfBatches / NUM_OF_PARTITIONS
 
         // Prepare
@@ -167,9 +152,11 @@ class Plv8PerfTest : PgTestBase(
     private fun executeParallel(concurrency: Int, batchRequests: List<WriteRequest>) = runBlocking {
         val stats = Collections.synchronizedList(mutableListOf<Stats>())
         val threadPool = Executors.newFixedThreadPool(concurrency).asCoroutineDispatcher()
+        val context = NakshaContext.currentContext()
         val tasks = batchRequests.map { batchRequest ->
             async(threadPool) {
                 val start = System.currentTimeMillis()
+                context.attachToCurrentThread()
                 val response = executeWrite(batchRequest)
                 assertIs<SuccessResponse>(response)
                 val end = System.currentTimeMillis()
