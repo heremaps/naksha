@@ -228,6 +228,7 @@ actual class Platform {
         actual fun unbox(value: Any?): Any? {
             if (value == null) return value
             if (value is Proxy) return value.platformObject()
+            if (value is JsEnum) return value.value
             return if (isScalar(value)) value.asDynamic().valueOf() else value
         }
 

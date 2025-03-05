@@ -322,6 +322,7 @@ actual class Platform {
         actual fun unbox(value: Any?): Any? {
             if (value is Proxy) return value.platformObject() as? JvmObject
             if (value is Array<*>) return JvmList(*value)
+            if (value is JsEnum) return value.value
             return value
         }
 

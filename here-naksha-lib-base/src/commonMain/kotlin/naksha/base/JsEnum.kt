@@ -522,8 +522,6 @@ abstract class JsEnum : CharSequence {
     val text: String
         get() = toString()
 
-    fun toJSON(): String = toString()
-
     /**
      * Tests if this object is like the given value.
      * @param other the other value to compare against.
