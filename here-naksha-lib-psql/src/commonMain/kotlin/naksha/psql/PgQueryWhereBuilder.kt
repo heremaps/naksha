@@ -256,9 +256,14 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
                     "Couldn't find PgColumn for TupleColumn: ${metaQuery.column.name}"
                 )
                 val placeholder = placeholderForArg(metaQuery.value, pgColumn.type)
+                val leftOperand = if(pgColumn == PgColumn.created_at || pgColumn == PgColumn.author_ts){
+                    "COALESCE(${pgColumn.name}, ${PgColumn.updated_at.name})"
+                } else {
+                    pgColumn.name
+                }
                 val resolvedQuery = when (val op = metaQuery.op) {
-                    is StringOp -> resolveStringOp(op, pgColumn.name, placeholder)
-                    is DoubleOp -> resolveDoubleOp(op, pgColumn.name, placeholder)
+                    is StringOp -> resolveStringOp(op, leftOperand, placeholder)
+                    is DoubleOp -> resolveDoubleOp(op, leftOperand, placeholder)
                     else -> throw NakshaException(
                         NakshaError.ILLEGAL_ARGUMENT,
                         "Unknown op type: ${op::class.simpleName}"

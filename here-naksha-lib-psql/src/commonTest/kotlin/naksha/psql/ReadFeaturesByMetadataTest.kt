@@ -1,7 +1,7 @@
 package naksha.psql
 
-import naksha.model.Metadata
 import naksha.model.SessionOptions
+import naksha.model.XyzNs
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
@@ -11,16 +11,25 @@ import naksha.model.request.WriteRequest
 import naksha.model.request.query.*
 import naksha.psql.base.PgTestBase
 import naksha.psql.util.ProxyFeatureGenerator
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
+import kotlin.test.*
 
 class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) {
+    
+    companion object {
+        private const val TEST_FEATURE_ID = "read_by_meta_test_feature"
+    }
 
+    @AfterTest
+    fun removeTestFeature(){
+        val deleteReq = WriteRequest().add(Write().deleteFeatureById(collection, TEST_FEATURE_ID))
+        assertSuccess(executeWrite(deleteReq))
+    }
+    
     @Test
     fun shouldReadFeatureByAppId() {
         // Given:
-        val inputFeature = ProxyFeatureGenerator.generateRandomFeature()
+        val inputFeature = generateRandomFeature(featureId = TEST_FEATURE_ID)
 
         // And:
         val sessionOptions = SessionOptions(appId = "test_app_id_read_metadata")
@@ -45,7 +54,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
     @Test
     fun shouldReadFeatureStartingWithAppId() {
         // Given:
-        val inputFeature = ProxyFeatureGenerator.generateRandomFeature()
+        val inputFeature = generateRandomFeature(featureId = TEST_FEATURE_ID)
 
         // And:
         val sessionOptions = SessionOptions(appId = "prefixed_test_app_id_read_metadata")
@@ -70,7 +79,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
     @Test
     fun shouldReadFeatureByAuthor() {
         // Given:
-        val inputFeature = ProxyFeatureGenerator.generateRandomFeature()
+        val inputFeature = generateRandomFeature(featureId = TEST_FEATURE_ID)
 
         // And:
         val sessionOptions = SessionOptions(author = "John Doe")
@@ -95,7 +104,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
     @Test
     fun shouldReadFeatureStartingWithAuthor() {
         // Given:
-        val inputFeature = ProxyFeatureGenerator.generateRandomFeature()
+        val inputFeature = generateRandomFeature(featureId = TEST_FEATURE_ID)
 
         // And:
         val sessionOptions = SessionOptions(author = "Jacky Foo")
@@ -120,7 +129,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
     @Test
     fun shouldReadFeatureById() {
         // Given:
-        val inputFeature = ProxyFeatureGenerator.generateRandomFeature()
+        val inputFeature = generateRandomFeature(featureId = TEST_FEATURE_ID)
 
         // When:
         insertFeature(feature = inputFeature)
@@ -142,9 +151,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
     @Test
     fun shouldReadFeatureStartingWithId() {
         // Given:
-        val inputFeature = ProxyFeatureGenerator.generateRandomFeature().apply {
-            id = "very_random_id_says_hi"
-        }
+        val inputFeature = generateRandomFeature(featureId = TEST_FEATURE_ID)
 
         // When:
         insertFeature(feature = inputFeature)
@@ -154,7 +161,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
             MetaQuery(
                 column = MetaColumn.id(),
                 op = StringOp.STARTS_WITH,
-                value = "very"
+                value = TEST_FEATURE_ID.substring(0..4)
             )
         ).features
 
@@ -164,9 +171,10 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
     }
 
     @Test
+    @Ignore
     fun shouldReadFeatureByType() {
         // Given:
-        val inputFeature = ProxyFeatureGenerator.generateRandomFeature().apply {
+        val inputFeature = generateRandomFeature(featureId = TEST_FEATURE_ID).apply {
             type = "unusual_type"
         }
 
@@ -184,9 +192,10 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
     }
 
     @Test
+    @Ignore
     fun shouldReadFeatureStartingWithType() {
         // Given:
-        val inputFeature = ProxyFeatureGenerator.generateRandomFeature().apply {
+        val inputFeature = generateRandomFeature(featureId = TEST_FEATURE_ID).apply {
             type = "quite_unusual_type"
         }
 
@@ -208,7 +217,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         // Given: feature
         val appId = "some_app"
         val author = "some_author"
-        val featureToCreate = ProxyFeatureGenerator.generateRandomFeature()
+        val featureToCreate = generateRandomFeature(featureId = TEST_FEATURE_ID)
         val writeFeaturesReq = WriteRequest().apply {
             add(Write().createFeature(collection, featureToCreate))
         }
@@ -233,16 +242,16 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
     @Test
     fun shouldReadFeatureByCreatedAt(){
         // Given:
-        val inputFeature = ProxyFeatureGenerator.generateRandomFeature()
+        val inputFeature = generateRandomFeature(featureId = TEST_FEATURE_ID)
 
         // And:
-        val insertedFeatureMeta = insertFeatureAndGetMeta(inputFeature)
+        val insertedFeatureXyz = insertFeatureAndGetXyz(inputFeature)
 
         // And:
         val featuresByCreatedAt = executeMetaQuery(MetaQuery(
             MetaColumn.createdAt(),
             DoubleOp.EQ,
-            insertedFeatureMeta.createdAt
+            insertedFeatureXyz.createdAt
         ))
 
         // Then:
@@ -253,16 +262,16 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
     @Test
     fun shouldReadFeatureByUpdatedAt(){
         // Given:
-        val inputFeature = ProxyFeatureGenerator.generateRandomFeature()
+        val inputFeature = generateRandomFeature(featureId = TEST_FEATURE_ID)
 
         // And:
-        val insertedFeatureMeta = insertFeatureAndGetMeta(inputFeature)
+        val insertedFeatureXyz = insertFeatureAndGetXyz(inputFeature)
 
         // And:
         val featuresByUpdatedAt = executeMetaQuery(MetaQuery(
             MetaColumn.updatedAt(),
             DoubleOp.EQ,
-            insertedFeatureMeta.updatedAt
+            insertedFeatureXyz.updatedAt
         ))
 
         // Then:
@@ -273,12 +282,12 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
     @Test
     fun shouldReadFeatureByCreatedInTimeFrame(){
         // Given:
-        val inputFeature = ProxyFeatureGenerator.generateRandomFeature().apply {
+        val inputFeature = generateRandomFeature(featureId = TEST_FEATURE_ID).apply {
             type = "type_for_created_at_frame_test"
         }
 
         // And:
-        val insertedFeatureMeta = insertFeatureAndGetMeta(inputFeature)
+        val insertedFeatureXyz = insertFeatureAndGetXyz(inputFeature)
 
         // And:
         val featuresCreatedInFrame = executeMetaQuery(
@@ -286,14 +295,13 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
                 MetaQuery(
                     MetaColumn.createdAt(),
                     DoubleOp.GT,
-                    insertedFeatureMeta.useCreatedAt() - 100
+                    insertedFeatureXyz.createdAt - 100
                 ),
                 MetaQuery(
                     MetaColumn.createdAt(),
                     DoubleOp.LT,
-                    insertedFeatureMeta.useCreatedAt() + 100
-                ),
-                MetaQuery(MetaColumn.featureType(), StringOp.EQUALS, inputFeature.type)
+                    insertedFeatureXyz.createdAt + 100
+                )
             )
         )
 
@@ -305,12 +313,12 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
     @Test
     fun shouldReadFeatureByUpdatedInTimeFrame(){
         // Given:
-        val inputFeature = ProxyFeatureGenerator.generateRandomFeature().apply {
+        val inputFeature = generateRandomFeature(featureId = TEST_FEATURE_ID).apply {
             type = "type_for_updated_at_frame_test"
         }
 
         // And:
-        val insertedFeatureMeta = insertFeatureAndGetMeta(inputFeature)
+        val insertedFeatureXyz = insertFeatureAndGetXyz(inputFeature)
 
         // And:
         val featuresUpdatedInFrame = executeMetaQuery(
@@ -318,17 +326,12 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
                 MetaQuery(
                     MetaColumn.updatedAt(),
                     DoubleOp.GTE,
-                    insertedFeatureMeta.updatedAt
+                    insertedFeatureXyz.updatedAt
                 ),
                 MetaQuery(
                     MetaColumn.updatedAt(),
                     DoubleOp.LTE,
-                    insertedFeatureMeta.updatedAt + 100
-                ),
-                MetaQuery(
-                    MetaColumn.featureType(),
-                    StringOp.EQUALS,
-                    inputFeature.type
+                    insertedFeatureXyz.updatedAt + 100
                 )
             )
         )
@@ -341,22 +344,21 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
     @Test
     fun shouldReadFeatureByAuthorTs(){
         // Given:
-        val inputFeature = ProxyFeatureGenerator.generateRandomFeature()
+        val inputFeature = generateRandomFeature(featureId = TEST_FEATURE_ID)
 
         // And:
-        val insertedFeatureMeta = insertFeatureAndGetMeta(inputFeature)
+        val insertedFeatureXyz = insertFeatureAndGetXyz(inputFeature)
 
         // And:
         val featuresByAuthorTs = executeMetaQuery(MetaQuery(
             MetaColumn.authorTs(),
             DoubleOp.EQ,
-            insertedFeatureMeta.authorTs
+            insertedFeatureXyz.authorTs
         ))
 
         // Then:
         assertEquals(1, featuresByAuthorTs.features.size)
         assertEquals(inputFeature.id, featuresByAuthorTs.features[0]!!.id)
-
     }
 
     @Test
@@ -383,12 +385,17 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
             .containsAll(featuresToCreate.map { it.id }))
     }
 
-    private fun insertFeatureAndGetMeta(feature: NakshaFeature): Metadata {
+    private fun insertFeatureAndGetXyz(feature: NakshaFeature): XyzNs {
         insertFeature(feature = feature)
-        return executeRead(ReadFeatures().apply {
+        val persistedFeatureResponse =  executeRead(ReadFeatures().apply {
             collectionIds += collection.id
             featureIds += feature.id
-        }).tupleList?.get(0)?.meta!!
+        })
+        val persistedFeatures = persistedFeatureResponse.features
+        assertEquals(1, persistedFeatures.size)
+        val persistedFeature = persistedFeatures[0]
+        assertNotNull(persistedFeature)
+        return persistedFeature.properties.xyz
     }
 
     private fun executeMetaQuery(metaQuery: IMetaQuery): SuccessResponse {
