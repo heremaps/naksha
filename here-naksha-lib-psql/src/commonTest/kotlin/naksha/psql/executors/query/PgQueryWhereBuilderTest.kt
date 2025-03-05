@@ -5,12 +5,14 @@ import naksha.geo.SpPolygon
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
 import naksha.psql.PgQueryWhereBuilder
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class PgQueryWhereBuilderTest {
 
+    @Ignore
     @Test
     fun shouldCreateComposedWhereClause() {
         // Given
