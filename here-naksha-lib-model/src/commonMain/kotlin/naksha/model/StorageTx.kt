@@ -103,8 +103,6 @@ open class StorageTx private constructor(
      */
     open val uid: AtomicInt = AtomicInt(0)
 
-    // TODO: nullable storage ref
-
     /**
      * Method to create the new metadata, when performing the given operation, with the given feature as outcome of the operation, in the given session.
      *
@@ -138,6 +136,8 @@ open class StorageTx private constructor(
         val prev_tn: TupleNumber? = if (operation == Operation.CREATED) null else {
             xyz.guid?.tupleNumber ?: throw illegalArg("$operation requires that the feature has a UUID!")
         }
+        // Transactions are special, they are partitioned over `next_tn` in the HEAD, before being partitioned over `tn` in the year!
+        val next_tn: TupleNumber? = if (map.id == Naksha.ADMIN_MAP && collection.id == Naksha.TRANSACTIONS_COL) tn else null
         val updatedAt: Int64 = this.updatedAt
         val createdAt: Int64? = if (prev_tn != null) xyz.createdAt else null
         val author: String?
@@ -159,10 +159,10 @@ open class StorageTx private constructor(
         return Metadata(
             tupleNumber = tn,
             flags = flags,
-            nextTupleNumber = null,
             updatedAt = updatedAt,
             createdAt = createdAt,
             authorTs = authorTs,
+            nextTupleNumber = next_tn,
             prevTupleNumber = prev_tn,
             baseTupleNumber = base_tn,
             changeCount = xyz.changeCount + 1,
@@ -214,7 +214,6 @@ open class StorageTx private constructor(
     ): Tuple {
         val metadata = metadataOf(map, collection, feature, Operation.CREATED, Action.CREATED)
         val dictionary = dictReader?.getEncodingDictionary(feature)
-
         return Tuple(
             meta = metadata,
             feature = Naksha.encodeFeature(feature, metadata.flags, dictionary),
