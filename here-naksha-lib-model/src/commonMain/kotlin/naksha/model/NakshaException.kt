@@ -8,6 +8,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.CONFLICT
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.FEATURE_EXISTS
 import naksha.model.NakshaError.NakshaErrorCompanion.FEATURE_NOT_FOUND
+import naksha.model.NakshaError.NakshaErrorCompanion.FORBIDDEN
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_EXISTS
@@ -65,12 +66,21 @@ fun illegalArg(msg: String): NakshaException = NakshaException(ILLEGAL_ARGUMENT,
 fun illegalState(msg: String): NakshaException = NakshaException(ILLEGAL_STATE, msg)
 
 /**
- * Create [EXCEPTION] exception.
+ * Create [FORBIDDEN] exception.
  * @param msg the message.
  * @return the [NakshaException].
  * @since 3.0
  */
-fun generalException(msg: String): NakshaException = NakshaException(EXCEPTION, msg)
+fun forbidden(msg: String): NakshaException = NakshaException(FORBIDDEN, msg)
+
+/**
+ * Create [EXCEPTION] exception.
+ * @param msg the message.
+ * @param cause the cause, if any.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun generalException(msg: String, cause: Throwable?): NakshaException = NakshaException(EXCEPTION, msg, cause)
 
 /**
  * Create [MAP_NOT_FOUND] exception.
