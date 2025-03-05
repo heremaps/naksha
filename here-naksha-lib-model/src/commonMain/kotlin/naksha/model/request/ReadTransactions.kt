@@ -24,7 +24,7 @@ open class ReadTransactions : ReadFeatures() {
      * @since 3.0
      */
     fun readVersion(version: Version): ReadTransactions {
-        val versionString = version.txn.toString()
+        val versionString = version.toString()
         if (versionString !in featureIds) featureIds.add(versionString)
         return this
     }
@@ -37,7 +37,7 @@ open class ReadTransactions : ReadFeatures() {
      */
     fun readVersions(vararg versions: Version): ReadTransactions {
         for (version in versions) {
-            val versionString = version.txn.toString()
+            val versionString = version.toString()
             if (versionString !in featureIds) featureIds.add(versionString)
         }
         return this

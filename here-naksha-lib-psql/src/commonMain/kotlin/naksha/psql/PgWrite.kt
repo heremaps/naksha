@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.model.Naksha
 import naksha.model.Tuple
 import naksha.model.TupleNumber
 import naksha.model.Version
@@ -73,9 +74,14 @@ internal data class PgWrite(val original: Write, val i: Int) {
      */
     var tuple: Tuple? = null
 
-    val isMapModification: Boolean = original.isMapModification()
-    val isCollectionModification: Boolean = original.isCollectionModification()
-    val isFeatureModification: Boolean = original.isFeatureModification()
+    val isMapModification: Boolean
+        get() = original.isMapModification()
+    val isCollectionModification: Boolean
+        get() = original.isCollectionModification()
+    val isFeatureModification: Boolean
+        get() = original.isFeatureModification()
+    val isTransactionModification: Boolean
+        get() = Naksha.ADMIN_MAP == map.id && Naksha.TRANSACTIONS_COL == collection.id
 
     /**
      * If the feature is a map, the [PgMap] representation.

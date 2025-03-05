@@ -3,6 +3,7 @@ package naksha.psql
 import naksha.model.Naksha
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaTx
 import naksha.model.request.*
 import naksha.psql.base.PgTestBase
 import kotlin.test.*
@@ -14,34 +15,28 @@ class TransactionsTest : PgTestBase(NakshaCollection("transaction_test")) {
         // given - saved feature in one transaction
         val feature = NakshaFeature("f1")
         val writeOp = Write().createFeature(collection, feature)
-        val writeRequest = WriteRequest().add(writeOp)
-        val writeResponse = executeWrite(writeRequest)
+        val writeFeatureRequest = WriteRequest().add(writeOp)
+        val writeFeatureResponse = executeWrite(writeFeatureRequest)
 
         // clear tuple cache
         Naksha.cache.clear(storage)
 
-        // This should load the feature tuple from the storage, as we cleared the cache.
-        val writtenFeatures = writeResponse.useFeaturesOnly()
-        assertNotNull(writeResponse.features)
+        // This should load the tuple from the storage, as we cleared the cache.
+        val writtenFeatures = writeFeatureResponse.features
+        assertNotNull(writeFeatureResponse.features)
         assertEquals(1, writtenFeatures.size)
-        val writtenFeature = writtenFeatures.first()
-        assertNotNull(writtenFeature)
-        val writtenVersion = writtenFeature.properties.xyz.version
-        assertNotNull(writtenVersion)
+        val writtenFeature = assertNotNull(writtenFeatures.first())
+        val writtenVersion = assertNotNull(writtenFeature.properties.xyz.version)
         assertEquals("f1", writtenFeature.id)
 
-        // when - read all transactions
-        val readRequest = ReadTransactions()
-        readRequest.readVersion(writtenVersion)
-        val readResponse = storage.newReadSession().execute(readRequest) as SuccessResponse
-        val readFeatures = readResponse.features
-        assertNotNull(readFeatures)
-        assertEquals(1, readFeatures.size)
-        val readFeature = readFeatures.first()
-        assertNotNull(readFeature)
-
-        // then
-        assertEquals(writtenVersion, readFeature.properties.xyz.version)
+        // Read the transaction.
+        val readTxRequest = ReadTransactions().readVersion(writtenVersion)
+        val readTxResponse = executeRead(readTxRequest)
+        val transactions = assertNotNull(readTxResponse.features)
+        assertEquals(1, transactions.size)
+        val transaction = assertNotNull(transactions.first()).proxy(NakshaTx::class)
+        assertEquals(writtenVersion.toString(), transaction.id)
+        assertEquals(writtenVersion, transaction.properties.xyz.version)
     }
 
     @Test

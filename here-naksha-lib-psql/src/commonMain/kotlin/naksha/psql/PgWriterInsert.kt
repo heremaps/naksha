@@ -1,6 +1,8 @@
 package naksha.psql
 
+import naksha.model.mapExists
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
+import naksha.psql.PgColumn.PgColumnCompanion.next_tn
 
 /**
  * Execute an **INSERT** _(aka [CREATE][naksha.model.request.WriteOp.CREATE])_ into a collection.
@@ -15,7 +17,9 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, writes
         var i = 0
         for (write in writes) {
             val tuple = write.tuple
-            if (tuple != null) rows[i++] = tuple
+            if (tuple != null) {
+                rows[i++] = tuple
+            }
         }
     }
 

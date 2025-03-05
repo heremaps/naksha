@@ -12,8 +12,6 @@ import naksha.model.objects.NakshaMap
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
 import naksha.model.objects.NakshaTx
-import naksha.psql.executors.PgWriter
-import naksha.psql.executors.write.InstantWriteExecutor
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
@@ -193,7 +191,7 @@ open class PgSession(
         var tx: StorageTx? = this.tx
         if (tx == null) {
             val txn = storage.adminMap.newTxn(useConnection())
-            tx = StorageTx(storage, Version(txn.number), options.appId, options.author, storage.adminMap)
+            tx = StorageTx(storage, txn.version, options.appId, options.author, storage.adminMap)
             this.tx = tx
         }
         return tx
@@ -210,30 +208,30 @@ open class PgSession(
     override fun useTransaction(): NakshaTx = useTx().transaction
 
     override fun execute(request: Request): Response {
-        when (request) {
-            is WriteRequest -> {
-                try {
-                    useTransaction()
+        try {
+            when (request) {
+                is WriteRequest -> {
                     val writer = PgWriter(this)
                     return writer.execute(request.writes)
-                } catch (t: Throwable) {
-                    val nakshaException = PgExceptionMapper.map(t)
-                    nakshaException.error.print()
-                    return ErrorResponse(nakshaException.error)
                 }
-            }
 
-            is ReadRequest -> {
-                val response = PgReader(this, request).execute()
-                if (tx == null) {
-                    // If this read was performed on a blank session, without a pending transaction, then we can release the connection.
-                    pgConnection?.close()
-                    pgConnection = null
+                is ReadRequest -> {
+                    val reader = PgReader(this, request)
+                    val response = reader.execute()
+                    if (tx == null) {
+                        // If this read was performed on a blank session, without a pending transaction, then we can release the connection.
+                        pgConnection?.close()
+                        pgConnection = null
+                    }
+                    return response
                 }
-                return response
-            }
 
-            else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown request")
+                else -> throw illegalArg("Unknown request: ${request::class.simpleName}")
+            }
+        } catch (t: Throwable) {
+            val nakshaException = PgExceptionMapper.map(t)
+            nakshaException.error.print()
+            return ErrorResponse(nakshaException.error)
         }
     }
 
@@ -260,19 +258,20 @@ open class PgSession(
             val tx = tx
             if (tx != null) {
                 try {
-                    val writeTxReq = WriteRequest()
-                    val writeTx = Write()
-                    writeTxReq.add(writeTx)
-                    //writeTx.createFeature(null, TRANSACTIONS_COL, useTransaction())
-                    PgWriter(this, writeTxReq, InstantWriteExecutor(this)).execute()
-                } catch (e: Throwable) {
-                    throw NakshaException(EXCEPTION, "Failed to save transaction", cause = e)
+                    val writeTx = Write().createFeature(Naksha.ADMIN_MAP, TRANSACTIONS_COL, tx.transaction)
+                    val writeRequest = WriteRequest().add(writeTx)
+                    val writer = PgWriter(this)
+                    writer.execute(writeRequest.writes)
+                } catch (t: Throwable) {
+                    throw generalException("Failed to save transaction", cause = t)
+                } finally {
+                    this.tx = null
                 }
             }
             try {
                 conn.commit()
-            } catch (e: Throwable) {
-                throw NakshaException(EXCEPTION, "Failed to commit", cause = e)
+            } catch (t: Throwable) {
+                throw generalException("Failed to commit transaction", cause = t)
             }
             clear()
         }

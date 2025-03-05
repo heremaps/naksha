@@ -12,7 +12,8 @@ import kotlin.jvm.JvmField
  * @param c the collection for which to create the HEAD table.
  */
 @JsExport
-class PgTransactions(c: PgNakshaTransactions) : PgHead(c, "${c.id}${PG_HEAD}", PgStorageClass.Consistent, false, partitionBy = PgColumn.next_tn) {
+class PgTransactions(c: PgNakshaTransactions)
+    : PgHead(c, "${c.id}${PG_HEAD}", PgStorageClass.Consistent, false, partitionBy = PgColumn.next_tn) {
 
     /**
      * All partitions, with key being the year (`txn >> 41`).
