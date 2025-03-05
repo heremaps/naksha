@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Platform
 import naksha.model.Action
 import naksha.model.TupleNumber
 import naksha.model.objects.StoreMode
@@ -142,6 +143,7 @@ ${if (shadow_tombstone.isNotEmpty()) "UNION ALL SELECT 'shadow_tombstone' as sou
     }
 
     override fun doExecute(conn: PgConnection) {
+        if (writes.isEmpty()) return
         val outRows = PgColumnRows()
             .withStorageNumber(storageNumber)
             .withMapNumber(mapNumber)
@@ -156,7 +158,14 @@ ${if (shadow_tombstone.isNotEmpty()) "UNION ALL SELECT 'shadow_tombstone' as sou
             .addColumn("d_version", PgType.INT64)
         val plan = plan(conn, collection, false)
         val array = rows.values()
-        plan.execute(array).fetch().use { cursor ->
+        val start = Platform.currentNanos()
+        val cursor = plan.execute(array)
+        val end = Platform.currentNanos()
+        val seconds = (end.toDouble() - start.toDouble()) / 1e9
+        if (writes.size != 1 || writes[0].isFeatureModification) {
+            Platform.logger.info("DELETE of ${rows.size} rows took ${seconds * 1000}ms, therefore ${rows.size / seconds} features/s")
+        }
+        cursor.fetch().use { cursor ->
             outRows.addAll(cursor)
             for (row in 0 until outRows.size) {
                 val write = writes[row]

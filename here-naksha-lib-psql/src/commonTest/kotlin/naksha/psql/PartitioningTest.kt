@@ -87,7 +87,7 @@ class PartitioningTest : PgTestBase() {
         val readRequest = ReadFeatures()
         readRequest.collectionIds.add(partitionedCollection.id)
         readRequest.featureIds.add("f1")
-        val readResponse = storage.newWriteSession().execute(readRequest) as SuccessResponse
+        val readResponse = executeRead(readRequest)
         assertEquals(1, readResponse.features.size)
     }
 
@@ -147,17 +147,19 @@ class PartitioningTest : PgTestBase() {
     }
 
     private fun queryForTablePartitions(table: String): List<String> {
-        val pgConnection = storage.newConnection(SessionOptions.from(null), true)
-        val cursor = pgConnection.execute("""
+        storage.newConnection(SessionOptions.from(null), true).use { pgConnection ->
+            pgConnection.execute("""
 SET search_path TO "${env.mapId}", "naksha~admin", topology, hint_plan, public;
 SELECT inhrelid::regclass AS partitioned_table FROM pg_inherits WHERE inhparent = $1::regclass ORDER BY partitioned_table;
 """,
-            arrayOf(table)
-        )
-        val result = mutableListOf<String>()
-        while (cursor.next()) {
-            result.add(cursor.column("partitioned_table").toString())
+                arrayOf(table)
+            ).use { cursor ->
+                val result = mutableListOf<String>()
+                while (cursor.next()) {
+                    result.add(cursor.column("partitioned_table").toString())
+                }
+                return result
+            }
         }
-        return result
     }
 }

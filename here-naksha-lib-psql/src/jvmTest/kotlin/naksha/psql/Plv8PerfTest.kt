@@ -1,8 +1,5 @@
 package naksha.psql
 
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import naksha.base.JvmMap
 import naksha.base.Platform
@@ -38,11 +35,12 @@ class Plv8PerfTest : PgTestBase(
     )
 ) {
     companion object {
-        const val NUM_OF_PARTITIONS = 4
-        const val numberOfFeaturesInBatch = 1_000
-        const val numberOfBatches = 8
-        const val concurrency = 2
         val featureSource = JSON_TOPOLOGY_SMALL
+        val NUM_OF_CPU = Runtime.getRuntime().availableProcessors() / 2
+        val NUM_OF_PARTITIONS = NUM_OF_CPU * 2
+        val numberOfBatches = NUM_OF_PARTITIONS * 4
+        val numberOfFeaturesInBatch = if (featureSource == JSON_TOPOLOGY) 100 else 250
+        val concurrency = NUM_OF_CPU
 
         val jsonPath = Companion::class.java.getResource("/topology.json")
         val json = Files.readString(Paths.get(jsonPath.toURI()))
@@ -59,7 +57,6 @@ class Plv8PerfTest : PgTestBase(
         val batchRequests = mutableListOf<WriteRequest>()
         for (i in 1..numberOfBatches) {
             val featuresInBatch = generateFeatures(featureSource, numberOfFeaturesInBatch)
-
             val writeFeaturesReq = WriteRequest().apply {
                 featuresInBatch.forEach { featureToCreate ->
                     add(Write().createFeature(collection, featureToCreate))
@@ -151,21 +148,20 @@ class Plv8PerfTest : PgTestBase(
 
     private fun executeParallel(concurrency: Int, batchRequests: List<WriteRequest>) = runBlocking {
         val stats = Collections.synchronizedList(mutableListOf<Stats>())
-        val threadPool = Executors.newFixedThreadPool(concurrency).asCoroutineDispatcher()
+        val threadPool = Executors.newFixedThreadPool(concurrency)
         val context = NakshaContext.currentContext()
         val tasks = batchRequests.map { batchRequest ->
-            async(threadPool) {
-                val start = System.currentTimeMillis()
+            threadPool.submit {
                 context.attachToCurrentThread()
+                val start = System.currentTimeMillis()
                 val response = executeWrite(batchRequest)
                 assertIs<SuccessResponse>(response)
                 val end = System.currentTimeMillis()
                 stats.add(Stats(Thread.currentThread().name, end - start, batchRequest.writes.size))
             }
         }
-
-        tasks.awaitAll()
-        threadPool.close()
+        tasks.forEach { it.get() }
+        threadPool.shutdown()
         val totalMs = stats.sumOf { it.timeMs }
         val numberOfBatches = batchRequests.count()
         val totalFeatures = stats.sumOf { it.featuresCount }

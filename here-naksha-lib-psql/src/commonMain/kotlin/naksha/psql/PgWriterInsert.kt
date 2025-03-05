@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Platform
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 
 /**
@@ -53,9 +54,16 @@ ${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = in
     }
 
     override fun doExecute(conn: PgConnection) {
+        if (writes.isEmpty()) return
         val plan = plan(conn, collection)
         val array = rows.values()
-        plan.execute(array).close()
+        val start = Platform.currentNanos()
         // We ignore the result, we know that if it didn't fail, it's okay.
+        plan.execute(array).close()
+        val end = Platform.currentNanos()
+        val seconds = (end.toDouble() - start.toDouble()) / 1e9
+        if (writes.size != 1 || writes[0].isFeatureModification) {
+            Platform.logger.info("INSERT of ${rows.size} rows took ${seconds * 1000}ms, therefore ${rows.size / seconds} features/s")
+        }
     }
 }

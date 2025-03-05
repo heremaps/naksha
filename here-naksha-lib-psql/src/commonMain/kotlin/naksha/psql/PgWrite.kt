@@ -86,10 +86,10 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = original.isMapModification()
     val isCollectionModification: Boolean
         get() = original.isCollectionModification()
-    val isFeatureModification: Boolean
-        get() = original.isFeatureModification()
     val isTransactionModification: Boolean
         get() = Naksha.ADMIN_MAP == map.id && Naksha.TRANSACTIONS_COL == collection.id
+    val isFeatureModification: Boolean
+        get() = !isTransactionModification && !isMapModification && !isCollectionModification
 
     /**
      * If the feature is a map, the [PgMap] representation.

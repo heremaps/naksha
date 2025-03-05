@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Platform
 import naksha.model.*
 import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
@@ -99,9 +100,17 @@ UNION ALL SELECT 'head_updated' as source, tn, prev_tn, cc FROM head_updated
     }
 
     override fun doExecute(conn: PgConnection) {
+        if (writes.isEmpty()) return
         val plan = plan(conn, collection)
         val array = rows.values()
-        plan.execute(array).fetch().use { cursor ->
+        val start = Platform.currentNanos()
+        val cursor = plan.execute(array);
+        val end = Platform.currentNanos()
+        val seconds = (end.toDouble() - start.toDouble()) / 1e9
+        if (writes.size != 1 || writes[0].isFeatureModification) {
+            Platform.logger.info("UPSERT of ${rows.size} rows took ${seconds * 1000}ms, therefore ${rows.size / seconds} features/s")
+        }
+        cursor.fetch().use {
             while (cursor.next()) {
                 // We need to patch the tuple of all inserts, that were replaced with updates!
                 // The content is the same, but the action, operation, change-count, and prev_tn change!

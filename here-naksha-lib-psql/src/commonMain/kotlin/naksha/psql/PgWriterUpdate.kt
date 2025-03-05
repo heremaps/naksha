@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Platform
 import naksha.model.*
 import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumnCompanion.allColumnNames
@@ -113,6 +114,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
     }
 
     override fun doExecute(conn: PgConnection) {
+        if (writes.isEmpty()) return
         val rows = PgColumnRows()
             .withStorageNumber(storageNumber)
             .withMapNumber(mapNumber)
@@ -123,7 +125,14 @@ LEFT JOIN inserted ON inserted.id = new_row.id
             .addColumn("head_id", PgType.STRING)
         val plan = plan(conn, collection)
         val array = this.rows.values()
-        plan.execute(array).fetch().use { cursor ->
+        val start = Platform.currentNanos()
+        val cursor = plan.execute(array)
+        val end = Platform.currentNanos()
+        val seconds = (end.toDouble() - start.toDouble()) / 1e9
+        if (writes.size != 1 || writes[0].isFeatureModification) {
+            Platform.logger.info("UPDATE of ${rows.size} rows took ${seconds * 1000}ms, therefore ${rows.size / seconds} features/s")
+        }
+        cursor.fetch().use {
             rows.addAll(cursor)
             for (rowNum in 0 until rows.size) {
                 // The original `id` of the feature to update.
