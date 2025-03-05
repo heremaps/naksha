@@ -2,6 +2,9 @@
 
 package naksha.model
 
+import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.decodeURIComponent
+import naksha.base.Platform.PlatformCompanion.encodeURIComponent
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -51,8 +54,8 @@ data class Guid(
      */
     override fun toString(): String {
         if (!this::_string.isInitialized) {
-             _string = if (tupleNumber != TupleNumber.HEAD) "urn:naksha:guid:$id:$tupleNumber"
-                                                            else "urn:naksha:guid:$id"
+             _string = if (tupleNumber != TupleNumber.HEAD) "urn:naksha:guid:${encodeURIComponent(id)}:$tupleNumber"
+                                                            else "urn:naksha:guid:${encodeURIComponent(id)}"
         }
         return _string
     }
@@ -107,7 +110,7 @@ data class Guid(
                 || v[NAKSHA] != "naksha"
                 || v[GUID] != "guid"
             ) throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Invalid GUID: $urn")
-            val featureId = v[FEATURE_ID]
+            val featureId = decodeURIComponent(v[FEATURE_ID])
             val tupleNumber: TupleNumber = if (v.size == ID_ONLY_PARTS) {
                 TupleNumber.HEAD
             } else { // v.size == ALL_PARTS
