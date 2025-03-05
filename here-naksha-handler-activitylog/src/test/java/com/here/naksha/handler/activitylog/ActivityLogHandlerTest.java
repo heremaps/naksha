@@ -128,7 +128,7 @@ class ActivityLogHandlerTest {
     // Given: Original read request
     String featureUuid = "featureUuid";
     String featureId = "featureId";
-    ReadFeatures originalReadFeatures = new ReadFeatures("not_the_space_id");
+    ReadFeatures originalReadFeatures = new ReadFeatures();
     originalReadFeatures.setVersions(1);
     originalReadFeatures.getQuery().setProperties(
             new POr(
@@ -445,7 +445,7 @@ class ActivityLogHandlerTest {
   private static Stream<Request> unhandledRequests() {
     return Stream.of(
         new WriteRequest().add(new Write().createFeature(null,"some_collection",new NakshaFeature("some_feature"))),
-        new ReadCollections("some_collection")
+        new ReadCollections()
     );
   }
 }

@@ -46,8 +46,6 @@ import naksha.base.Platform;
 import naksha.geo.ProxyGeoUtil;
 import naksha.geo.SpGeometry;
 import naksha.model.Action;
-import naksha.model.IReadSession;
-import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
@@ -58,7 +56,6 @@ import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.WriteRequest;
-import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.locationtech.jts.geom.Geometry;
@@ -257,15 +254,11 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   protected Response executeReadRequestFromSpaceStorage(ReadFeatures readFeatures) {
-    try (final IReadSession reader = naksha().getSpaceStorage().newReadSession(SessionOptions.from(context(), false))) {
-      return reader.execute(readFeatures);
-    }
+    return naksha().getSpaceStorage().useReadSession(SessionOptions.from(context(), false), reader -> reader.execute(readFeatures));
   }
 
   protected Response executeWriteRequestFromSpaceStorage(WriteRequest writeRequest) {
-    try (final IWriteSession writer = naksha().getSpaceStorage().newWriteSession(SessionOptions.from(context(), true))) {
-      return writer.execute(writeRequest);
-    }
+    return naksha().getSpaceStorage().useWriteSession(SessionOptions.from(context(), true), writer -> writer.execute(writeRequest));
   }
 
   XyzFeatureCollection emptyFeatureCollection() {

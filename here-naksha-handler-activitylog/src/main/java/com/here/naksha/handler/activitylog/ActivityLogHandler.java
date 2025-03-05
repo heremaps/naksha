@@ -112,16 +112,19 @@ public class ActivityLogHandler extends AbstractEventHandler {
   }
 
   private List<NakshaFeature> fetchHistoryFeatures(ReadFeatures readFeatures, NakshaContext context) {
-    try (IReadSession readSession =
-        nakshaHub().getSpaceStorage().newReadSession(SessionOptions.from(context, true))) {
-      Response result = readSession.execute(readFeatures);
-      if (!(result instanceof SuccessResponse)) {
-        return Collections.emptyList();
-      }
-      return extractResponseItems((SuccessResponse) result, NakshaFeature.class);
-    } catch (NoSuchElementException e) {
-      return Collections.emptyList();
-    }
+    return nakshaHub().getSpaceStorage().useReadSession(SessionOptions.from(context, true),
+            reader -> {
+              Response response = reader.execute(readFeatures);
+              if (!(response instanceof SuccessResponse)) {
+                return Collections.emptyList();
+              }
+              try {
+                return extractResponseItems((SuccessResponse) response, NakshaFeature.class);
+              } catch (NoSuchElementException e) {
+                return Collections.emptyList();
+              }
+
+            });
   }
 
   private List<NakshaFeature> featuresEnhancedWithActivity(
