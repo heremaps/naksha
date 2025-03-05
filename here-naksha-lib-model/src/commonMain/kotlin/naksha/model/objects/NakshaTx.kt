@@ -13,6 +13,8 @@ import kotlin.jvm.JvmOverloads
 /**
  * A transaction feature as stored in Naksha storages.
  *
+ * This is a bit special, it requires that [id] is the stringified [version].
+ *
  * @since 3.0
  */
 @JsExport
@@ -34,73 +36,11 @@ open class NakshaTx : NakshaFeature() {
         private val INT_0 = NotNullProperty<NakshaTx, Int>(Int::class, init = { _, _ -> 0 })
         private val MAPS = NotNullProperty<NakshaTx, NakshaTxMapById>(NakshaTxMapById::class)
         private val INT64_NULL = NotNullProperty<NakshaTx, Int64>(Int64::class)
+        private val TIME = NotNullProperty<NakshaTx, Int64>(Int64::class) { _, _ -> Platform.currentMillis() }
     }
 
     /**
-     * Cached and verified `id`.
-     * @since 3.0
-     */
-    protected var _id: String? = null
-
-    /**
-     * Cached and verified `time`.
-     * @since 3.0
-     */
-    protected var _time: Int64? = null
-    /**
-     * Cached and verified `txn`.
-     * @since 3.0
-     */
-    protected var _txn: Int64? = null
-    /**
-     * Cached and verified [Timestamp] of `time`.
-     * @since 3.0
-     */
-    protected var _epoch: Timestamp? = null
-    /**
-     * Cached and verified [Version] of `txn`.
-     * @since 3.0
-     * @see [readAll]
-     * @see [setEpoch]
-     * @see [setNow]
-     * @see [setVersion]
-     */
-    protected var _version: Version? = null
-
-    /**
-     * Read all values into cache, guarantee that the following protected properties are not `null`:
-     * - [_id]
-     * - [_txn]
-     * - [_time]
-     * - [_epoch]
-     * - [_version]
-     * @since 3.0
-     */
-    protected fun readAll() {
-        val raw_id = getRaw("id")
-        val raw_txn = getRaw("txn")
-        val raw_time = getRaw("time")
-        if (raw_id === _id && raw_txn === _txn && raw_time === _time) return
-        try {
-            val id = raw_id as String
-            val txn = raw_txn as Int64
-            val time = raw_time as Int64
-            check(id.toLong(10) == raw_txn)
-            val epoch = Timestamp.fromMillis(time)
-            val version = Version(txn)
-            check(epoch.year == version.year && epoch.month == version.month && epoch.day == version.day)
-            _id = id
-            _time = time
-            _txn = txn
-            _epoch = epoch
-            _version = version
-        } catch (_: Exception) {
-            setNow()
-        }
-    }
-
-    /**
-     * Sets `id`, `version`, `txn`, and `time` in a synchronized manner.
+     * Sets [id], [version], [txn], and [time] in a synchronized manner.
      * @param epoch the timestamp of the transaction.
      * @param seq the sequence within the day.
      * @since 3.0
@@ -108,19 +48,13 @@ open class NakshaTx : NakshaFeature() {
     @JvmOverloads
     fun setEpoch(epoch: Timestamp, seq: Int64 = Int64(0)): NakshaTx {
         val version = Version.of(epoch.year, epoch.month, epoch.day, seq)
-        _id = version.toString()
-        _time = epoch.ts
-        _txn = version.txn
-        _epoch = epoch
-        _version = version
-        setRaw("id", _id)
-        setRaw("txn", _txn)
-        setRaw("time", _time)
+        setRaw("id", version.toString())
+        setRaw("time", epoch.ts)
         return this
     }
 
     /**
-     * Sets `id`, `version`, `txn`, and `time` in a synchronized manner to match the given `version`.
+     * Sets [id], [version], [txn], and [time] in a synchronized manner to match the given [version].
      *
      * Set `hour`, `minute`, `second`, and `millis` of the transaction [time] to the current local values, adjusted to [UTC](https://en.wikipedia.org/wiki/Coordinated_Universal_Time).
      * @param version the version, as for example read from a storage atomic.
@@ -158,26 +92,13 @@ open class NakshaTx : NakshaFeature() {
      * The feature-id of the transaction.
      *
      * ### Warning
-     * The feature-id of a transaction **must be** the serialized [transaction-number][txn], as decimal integer. Setting the `id` is treated the same way as if the [txn] is set, so the given value is parsed as decimal integer and expected to create a valid version.
+     * The feature-id of a transaction **must be** the stringified [version].
      */
     override var id: String
-        get() {
-            readAll()
-            return _id!!
-        }
+        get() = getAs("id", String::class) ?: throw illegalState("The property 'id' must be a valid string")
         set(value) {
             val txn = Int64(value.toLong())
             setVersion(Version(txn))
-        }
-
-    /**
-     * The transaction number.
-     * @since 3.0
-     */
-    val txn: Int64
-        get() {
-            readAll()
-            return _txn!!
         }
 
     /**
@@ -187,11 +108,10 @@ open class NakshaTx : NakshaFeature() {
      * @see [Metadata.createdAt]
      * @see [Metadata.authorTs]
      */
-    val time: Int64
-        get() {
-            readAll()
-            return _time!!
-        }
+    val time by TIME
+
+    private var _epoch: Timestamp? = null
+    private var _epochTime: Int64? = null
 
     /**
      * The [time] as [Timestamp].
@@ -199,20 +119,44 @@ open class NakshaTx : NakshaFeature() {
      */
     val epoch: Timestamp
         get() {
-            readAll()
-            return _epoch!!
+            val time = this.time
+            var _epoch = this._epoch
+            val _epochTime = this._epochTime
+            if (_epoch != null && _epochTime === time) return _epoch
+            _epoch = Timestamp.fromMillis(time)
+            this._epochTime = time
+            this._epoch = _epoch
+            return _epoch
         }
 
+    private var _versionId: String? = null
+    private var _version: Version? = null
+
     /**
-     * Returns the transaction number as [Version].
+     * Returns the transaction number as [Version] by parsing the [id].
+     *
+     * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given string is of an invalid format.
      * @return the transaction number as [Version].
      * @since 3.0
      */
     val version: Version
         get() {
-            readAll()
-            return _version!!
+            val id = this.id
+            val _versionId = this._versionId
+            var _version = this._version
+            if (_version != null && _versionId === id) return _version
+            _version = Version.fromString(id)
+            this._versionId = id
+            this._version = _version
+            return _version
         }
+
+    /**
+     * The transaction number, basically just `version.txn`.
+     * @since 3.0
+     */
+    val txn: Int64
+        get() = version.txn
 
     /**
      * Number of features modified in the transaction - total number of features from all touched collections.
