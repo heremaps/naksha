@@ -8,8 +8,6 @@ import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaFeatureList
 import kotlin.js.JsExport
 import kotlin.js.JsName
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmStatic
 
 // TODO: Link an external (GitHub) Markdown file (? LIFECYCLE.md ?), that in details explains:
 //       What is a feature? (a map object)
@@ -234,11 +232,11 @@ open class SuccessResponse() : Response() {
     fun useFeatureTupleList(): FeatureTupleList {
         var featureTupleList: FeatureTupleList? = null
 
-        if (this.featureTupleList != null) {
-            val list = this.featureTupleList
+        val list = this.featureTupleList
+        if (list != null) {
             if (list is FeatureTupleList) {
                 featureTupleList = list
-            } else if (list != null) {
+            } else {
                 featureTupleList = FeatureTupleList()
                 featureTupleList.setCapacity(list.size)
                 for (featureTuple in list) {
@@ -290,6 +288,16 @@ open class SuccessResponse() : Response() {
 
         if (featureTupleList == null) {
             featureTupleList = FeatureTupleList()
+            val features = getAs(FEATURES, NakshaFeatureList::class)
+            if (features is NakshaFeatureList) {
+                for (feature in features) {
+                    if (feature == null) continue
+                    val tn = feature.properties.xyz.guid?.tupleNumber ?: continue
+                    val featureTuple = FeatureTuple(tn)
+                    featureTuple.feature = feature
+                    featureTupleList.add(featureTuple)
+                }
+            }
         }
         this.featureTupleList = featureTupleList
         return featureTupleList
@@ -315,6 +323,11 @@ open class SuccessResponse() : Response() {
 
     /**
      * The result converted into a list of [NakshaFeature][naksha.model.objects.NakshaFeature].
+     *
+     * ## Warning
+     * If you do not need the results, but only the [TupleNumber] or the amount of operations that were performed, do **NOT** read `features.size` _(in Java `getFeatures()`)_, rather query [resultSize] and/or [useFeatureTupleList], because these methods are not going to read from storage, they are instant with zero network IO.
+     *
+     * Reading [features] can cause network IO, because when the local cache does not hold the [Tuple], it need to load them from the storage, or any remote cache!
      * @since 3.0
      */
     open var features: NakshaFeatureList
