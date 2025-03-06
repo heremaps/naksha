@@ -124,7 +124,11 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
     protected fun executeWrite(request: WriteRequest, sessionOptions: SessionOptions? = null): SuccessResponse
         = env.storage.newWriteSession(sessionOptions).use { session ->
             val response = assertSuccess(session.execute(request))
+            val start = Platform.currentNanos()
             session.commit()
+            val end = Platform.currentNanos()
+            val millis = (end.toDouble() - start.toDouble()) / 1e6
+            logger.info("Commit took $millis millis")
             response
         }
 

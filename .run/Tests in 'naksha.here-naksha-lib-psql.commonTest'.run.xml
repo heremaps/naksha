@@ -19,7 +19,7 @@
           <option value=":here-naksha-lib-psql:jvmTest" />
         </list>
       </option>
-      <option name="vmOptions" />
+      <option name="vmOptions" value="-Xmx8192m" />
     </ExternalSystemSettings>
     <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
     <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>

@@ -36,10 +36,10 @@ class Plv8PerfTest : PgTestBase(
 ) {
     companion object {
         val featureSource = JSON_TOPOLOGY_SMALL
-        val NUM_OF_CPU = Runtime.getRuntime().availableProcessors() / 2
-        val NUM_OF_PARTITIONS = NUM_OF_CPU * 2
-        val numberOfBatches = NUM_OF_PARTITIONS * 4
-        val numberOfFeaturesInBatch = if (featureSource == JSON_TOPOLOGY) 100 else 250
+        val NUM_OF_CPU = Runtime.getRuntime().availableProcessors()
+        val NUM_OF_PARTITIONS = NUM_OF_CPU
+        val numberOfBatches = NUM_OF_PARTITIONS * 2
+        val numberOfFeaturesInBatch = 150
         val concurrency = NUM_OF_CPU
 
         val jsonPath = Companion::class.java.getResource("/topology.json")
@@ -70,6 +70,7 @@ class Plv8PerfTest : PgTestBase(
         executeParallel(concurrency, batchRequests)
     }
 
+    //@Ignore
     @Test
     fun shouldUpsertManyFeatures() {
         // Prepare
@@ -90,6 +91,7 @@ class Plv8PerfTest : PgTestBase(
         executeParallel(concurrency, batchRequests)
     }
 
+    //@Ignore
     @Test
     fun shouldInsertGroupedByPartition() {
         val numberOfBatchesPerPartition = numberOfBatches / NUM_OF_PARTITIONS
@@ -114,6 +116,7 @@ class Plv8PerfTest : PgTestBase(
         executeParallel(concurrency, batchRequests)
     }
 
+    //@Ignore
     @Test
     fun shouldUpsertGroupedByPartition() {
         val numberOfBatchesPerPartition = numberOfBatches / NUM_OF_PARTITIONS
@@ -150,6 +153,7 @@ class Plv8PerfTest : PgTestBase(
         val stats = Collections.synchronizedList(mutableListOf<Stats>())
         val threadPool = Executors.newFixedThreadPool(concurrency)
         val context = NakshaContext.currentContext()
+        val start = System.nanoTime()
         val tasks = batchRequests.map { batchRequest ->
             threadPool.submit {
                 context.attachToCurrentThread()
@@ -161,12 +165,15 @@ class Plv8PerfTest : PgTestBase(
             }
         }
         tasks.forEach { it.get() }
+        val end = System.nanoTime()
         threadPool.shutdown()
         val totalMs = stats.sumOf { it.timeMs }
+        val totalSeconds = (end.toDouble() - start.toDouble()) / 1e9
         val numberOfBatches = batchRequests.count()
         val totalFeatures = stats.sumOf { it.featuresCount }
-        println("Average batch execution (ms): ${totalMs.toDouble() / numberOfBatches} ")
-        println("Features/s : ${totalFeatures / (totalMs / 1000.0)} ")
+        println("Total features: $totalFeatures, total runtime in seconds: $totalSeconds")
+        println("Average batch execution (ms): ${totalMs / numberOfBatches} ")
+        println("Features/s : ${totalFeatures / totalSeconds} ")
     }
 
     private fun featureCopy(feature: NakshaFeature): NakshaFeature {
