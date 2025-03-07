@@ -80,7 +80,7 @@ fun forbidden(msg: String): NakshaException = NakshaException(FORBIDDEN, msg)
  * @return the [NakshaException].
  * @since 3.0
  */
-fun generalException(msg: String, cause: Throwable?): NakshaException = NakshaException(EXCEPTION, msg, cause)
+fun generalException(msg: String, cause: Throwable? = null): NakshaException = NakshaException(EXCEPTION, msg, cause)
 
 /**
  * Create [MAP_NOT_FOUND] exception.
