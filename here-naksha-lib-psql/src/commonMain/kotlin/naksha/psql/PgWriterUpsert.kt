@@ -16,12 +16,12 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, writes
     private val writeByTn = mutableMapOf<TupleNumber, PgWrite>()
 
     init {
-        rows.addColumns(allColumns)
+        inRows.addColumns(allColumns)
         var i = 0
         for (write in writes) {
             val tuple = write.tuple
             if (tuple != null) {
-                rows[i++] = tuple
+                inRows[i++] = tuple
                 writeByTn[tuple.tupleNumber] = write
             }
         }
@@ -35,7 +35,7 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, writes
 
         // This is what we should INSERT or UPDATE
         val new_row = """WITH new_row AS (
-  SELECT * FROM UNNEST(${rows.placeholders()}) AS t(${rows.names()})
+  SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.names()})
 )"""
 
         // Select existing
@@ -71,7 +71,7 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, writes
 
         // Insert
         val head_inserted = """, head_inserted AS (
-  INSERT INTO ${collection.headTable.quotedName} (${rows.names()})
+  INSERT INTO ${collection.headTable.quotedName} (${inRows.names()})
   SELECT new_row.* FROM new_row WHERE new_row.id NOT IN (SELECT id FROM head_deleted) 
   RETURNING id, tn
 )"""
@@ -96,19 +96,19 @@ UNION ALL SELECT 'head_deleted' as source, tn, null::bytea AS prev_tn, null::int
 UNION ALL SELECT 'head_inserted' as source, tn, null::bytea AS prev_tn, null::int4 as cc FROM head_inserted
 UNION ALL SELECT 'head_updated' as source, tn, prev_tn, cc FROM head_updated
 ;"""
-        return conn.prepare(SQL, rows.typeNames())
+        return conn.prepare(SQL, inRows.typeNames())
     }
 
     override fun doExecute(conn: PgConnection) {
         if (writes.isEmpty()) return
         val plan = plan(conn, collection)
-        val array = rows.values()
+        val array = inRows.values()
         val start = Platform.currentNanos()
         val cursor = plan.execute(array);
         val end = Platform.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
         if (writes.size != 1 || writes[0].isFeatureModification) {
-            Platform.logger.info("UPSERT of ${rows.size} rows took ${seconds * 1000}ms, therefore ${rows.size / seconds} features/s")
+            Platform.logger.info("UPSERT of ${inRows.size} rows took ${seconds * 1000}ms, therefore ${inRows.size / seconds} features/s")
         }
         cursor.fetch().use {
             while (cursor.next()) {

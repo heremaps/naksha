@@ -1,9 +1,9 @@
 package naksha.psql
 
 import naksha.base.Platform
-import naksha.model.Action
-import naksha.model.TupleNumber
+import naksha.model.*
 import naksha.model.objects.StoreMode
+import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 
 /**
  * Execute a [DELETE][naksha.model.request.WriteOp.DELETE].
@@ -14,15 +14,15 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes
     : PgWriterBase(writer, collection, writes)
 {
     init {
-        rows.addColumn("id", PgType.STRING)
-        rows.addColumn("version", PgType.INT64)
-        rows.addColumn("uid", PgType.INT)
+        inRows.addColumn("id", PgType.STRING)
+        inRows.addColumn("version", PgType.INT64)
+        inRows.addColumn("uid", PgType.INT)
         for (e in writes.withIndex()) {
             val row = e.index
             val write = e.value
-            rows.set(row, "id", write.id)
-            rows.set(row, "version", write.version?.txn)
-            rows.set(row, "uid", write.final_uid)
+            inRows.set(row, "id", write.id)
+            inRows.set(row, "version", write.version?.txn)
+            inRows.set(row, "uid", write.final_uid)
         }
     }
 
@@ -30,9 +30,17 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes
         val headTable = collection.headTable
         val shadowTable = collection.deletedTable
         val historyTable = collection.historyTable
+        // We do not insert into shadow, if the table does not exist, is disabled, or we are asked to PURGE
         val insert_into_shadow = if (!purge && shadowTable != null && collection.head.storeDeleted == StoreMode.ON) shadowTable else null
+        // We do not insert into history, if the table does not exist, or is disabled
         val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
         val do_any_insert = insert_into_shadow != null || insert_into_history != null
+        // If there is no history and no shadow, or there is no history when purging, we need to
+        //   return the tombstone tuple, so the deletion tuple, because it will not be available
+        //   within the database, and we do not yet know if the client will request it from the
+        //   success-result returned to it!
+        // Eventually this means, we need to create the tombstone all the time, we always need it!
+        val return_tuple = !do_any_insert || (purge && insert_into_history == null)
 
         // All input provided by client, `id` and optionally `version`, and `uid`
         val query = """WITH query AS (
@@ -49,14 +57,8 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes
 
         // If the client requested an atomic deleted, so it provided a `version`, then
         // we only delete the head row, when the version matches.
-        // If we need to create a tombstone, select all columns, otherwise only `id` and `tn`
-        val head_row = if (!do_any_insert) """, head_row AS (
-  SELECT head.id AS id, head.tn AS tn
-  FROM ${headTable.quotedName} AS head, query
-  WHERE head.id = query.id AND (query.version IS NULL OR query.version = naksha_tn_version(head.tn))
-  FOR UPDATE NOWAIT
-)""" else """, head_row AS (
-  SELECT ${PgColumn.allColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
+        val head_row = """, head_row AS (
+  SELECT ${allColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
   FROM ${headTable.quotedName} AS head, query
   WHERE head.id = query.id AND (query.version IS NULL OR query.version = naksha_tn_version(head.tn))
   FOR UPDATE NOWAIT
@@ -83,18 +85,9 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes
   RETURNING id, tn
 )"""
 
-        // Create a tombstone row for each head_row
-        // TODO:
-        //  - mutate `flags`, set operation and action to DELETED
-        //  - set `tn` to `query.final_tn`
-        //  - set `tn_next` to `query.final_tn` (link close, tombstone)
-        //  - set `tn_prev` to `head_row.tn`
-        //  - set `tn_base` to `null`
-        //
-        // Note: -258049 = fffc0fff (clear operation and action bits)
-        //       2 << 16 = action DELETED
-        //       2 << 12 = operation DELETED
-        val tombstone = if (do_any_insert) """, tombstone AS (
+        // Create a tombstone row for each head_row (row actually to be deleted)
+        // We either return this, or we insert it into history and/or shadow!
+        val tombstone = """, tombstone AS (
   SELECT
     ((head_row.flags & -196609) | (2 << 16) | (2 << 12)) AS ${PgColumn.flags},
     naksha_tn_160(naksha_tn_feature_number(head_row.tn), ${tx.version.txn}::int8, query.uid) AS ${PgColumn.tn}, 
@@ -104,7 +97,7 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes
     ${PgColumn.tombstoneColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row, query
   WHERE head_row.id = query.id
-)""" else ""
+)"""
 
         // Copy the tombstone into history
         val history_tombstone = if (insert_into_history != null) """, history_tombstone AS (
@@ -122,24 +115,42 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes
  RETURNING id, tn
 )""" else ""
 
-        // TODO: we know that the query aborts, when any atomic delete failed
-        //   - therefore, we can just return the (`query.id`, `query.final_tn`), where `query.id` = `head_row.id`
-        //   - beware that the tuple of the `final_tn` can only be loaded from storage, when history is enabled
-        //   - with disabled history, only delete confirmation is returned
-        //   - so we return a feature-tuple with id and feature-number
-        //   - we need to make feature-id mutable in feature-tuple for this case
-        //   - if the client has provided the full feature, we could fake the response, but what if the real version differs !?!?!?
+        // `head_select`: The `id` and `tn` of all rows from HEAD matching the `query.id`, no matter if `query.version` matches
+        // `head_row`: All rows that are currently in HEAD, matching `query.id` and optionally `query.version`, will be copied to history
+        // `head_deleted`: The `id` and `tn` of the rows actually deleted from HEAD, should be all `head_row`
+        // `clear_shadow`: The `id` and `tn` of all rows that were deleted from shadow
+        //                 This information is available as soon as the shadow table exists, no matter of other options
+        // `head_to_history`: The `id` and `tn` of the HEAD tuple copied into history, if history should be written
+        // `tombstone`: The row to be inserted into history and/or shadow and/or to be returned to client
+        // `history_tombstone`: The `id` and `tn` of the tombstone, if written into history
+        // `shadow_tombstone`: The `id` and `tn` of the tombstone, if written into shadow
+        // Beware:
+        // Postgres is very good at optimizing, even while it makes the result wrong.
+        // It will, sadly, not execute CTE queries that are not needed to generate the result.
+        // Therefore, we need to read `tn` of all parts, if available, otherwise Postgres will not execute them!
         val SQL = """$query$head_select$head_row$head_deleted$clear_shadow$head_to_history$tombstone$history_tombstone$shadow_tombstone
-SELECT 'query' as source, query.id AS q_id, null AS tn FROM query
-UNION ALL SELECT 'head_select' as source, id, tn FROM head_select
-UNION ALL SELECT 'head_row' as source, id, tn FROM head_row
-UNION ALL SELECT 'head_deleted' as source, id, tn FROM head_deleted
-${if (clear_shadow.isNotEmpty()) "UNION ALL SELECT 'clear_shadow' as source, id, tn FROM clear_shadow" else ""}
-${if (head_to_history.isNotEmpty()) "UNION ALL SELECT 'head_to_history' as source, id, tn FROM head_to_history" else ""}
-${if (history_tombstone.isNotEmpty()) "UNION ALL SELECT 'history_tombstone' as source, id, tn FROM history_tombstone" else ""}
-${if (shadow_tombstone.isNotEmpty()) "UNION ALL SELECT 'shadow_tombstone' as source, id, tn FROM shadow_tombstone" else ""}
+SELECT
+    ${ if (return_tuple) allColumns.joinToString(", ") { "tombstone.${it.name} AS ${it.name}" } else "tombstone.tn AS tn" },
+    ${if (clear_shadow.isNotEmpty()) "clear_shadow.tn AS shadow_tn," else ""}
+    ${if (head_to_history.isNotEmpty()) "head_to_history.tn AS head_history_tn," else ""}
+    ${if (history_tombstone.isNotEmpty()) "history_tombstone.tn AS history_tn," else ""}
+    ${if (shadow_tombstone.isNotEmpty()) "shadow_tombstone.tn AS shadow_tn," else ""}
+    head_select.tn AS select_tn,
+    head_row.tn AS head_tn,
+    head_deleted.tn AS deleted_tn,
+    query.id AS query_id,
+    query.version AS query_version
+FROM query
+LEFT JOIN tombstone ON tombstone.id = query.id
+${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = query.id" else ""}
+${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.id = query.id" else ""}
+${if (history_tombstone.isNotEmpty()) "LEFT JOIN history_tombstone ON history_tombstone.id = query.id" else ""}
+${if (shadow_tombstone.isNotEmpty()) "LEFT JOIN shadow_tombstone ON shadow_tombstone.id = query.id" else ""}
+LEFT JOIN head_select ON head_select.id = query.id
+LEFT JOIN head_row ON head_row.id = query.id
+LEFT JOIN head_deleted ON head_deleted.id = query.id
 ;"""
-        return conn.prepare(SQL, rows.typeNames())
+        return conn.prepare(SQL, inRows.typeNames())
     }
 
     override fun doExecute(conn: PgConnection) {
@@ -148,46 +159,63 @@ ${if (shadow_tombstone.isNotEmpty()) "UNION ALL SELECT 'shadow_tombstone' as sou
             .withStorageNumber(storageNumber)
             .withMapNumber(mapNumber)
             .withCollectionNumber(collectionNumber)
-            .addColumn("q_id", PgType.STRING)
-            .addColumn("q_version", PgType.INT64)
-            .addColumn("h_id", PgType.STRING)
-            .addColumn("h_tn", PgType.BYTE_ARRAY)
-            .addColumn("h_version", PgType.INT64)
-            .addColumn("d_id", PgType.STRING)
-            .addColumn("d_tn", PgType.BYTE_ARRAY)
-            .addColumn("d_version", PgType.INT64)
+            // We return all columns from tombstone, except we store tombstone, then we return only `tn`!
+            .addColumns(allColumns)
+            .addColumn("shadow_tn", PgType.BYTE_ARRAY)
+            .addColumn("head_history_tn", PgType.BYTE_ARRAY)
+            .addColumn("history_tn", PgType.BYTE_ARRAY)
+            .addColumn("select_tn", PgType.BYTE_ARRAY)
+            .addColumn("head_tn", PgType.BYTE_ARRAY)
+            .addColumn("deleted_tn", PgType.BYTE_ARRAY)
+            .addColumn("query_id", PgType.STRING)
+            .addColumn("query_version", PgType.INT64)
         val plan = plan(conn, collection, false)
-        val array = rows.values()
+        val array = inRows.values()
         val start = Platform.currentNanos()
         val cursor = plan.execute(array)
         val end = Platform.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
         if (writes.size != 1 || writes[0].isFeatureModification) {
-            Platform.logger.info("DELETE of ${rows.size} rows took ${seconds * 1000}ms, therefore ${rows.size / seconds} features/s")
+            Platform.logger.info(
+                "DELETE for ${writes.size} rows resulted in ${inRows.size} rows deleted, ${seconds * 1000}ms, ${inRows.size / seconds} features/s"
+            )
         }
         cursor.fetch().use { cursor ->
             outRows.addAll(cursor)
             for (row in 0 until outRows.size) {
                 val write = writes[row]
-                if (write.isMapModification) {
-                    val deletedId = outRows.getString(row, "d_id")
-                    if (deletedId != null) {
-                        check(write.id == deletedId)
-                        val tn_bytes = outRows.getByteArray(row, "d_tn")
-                        if (tn_bytes != null) {
-                            val tn = TupleNumber.fromB160(tn_bytes, storageNumber, mapNumber, collectionNumber)
-                            transaction.useMap(write.id, tn.featureNumber.toInt(), Action.DELETED)
-                        }
+                // The `id` that should be deleted (same as write.id).
+                val id = outRows.getString(row, "query_id") ?: throw generalException("Missing 'query_id' in result")
+
+                // We only have a tuple if history and shadow are disabled, or, we `PURGE` with history disabled!
+                val tuple = outRows[row]
+                if (tuple != null) write.tuple = tuple
+
+                // The tombstone tuple-number, which is the final deleted state, but only exists, if a feature was deleted.
+                val tn = outRows.getB160(row, PgColumn.tn)
+                write.tupleNumber = tn
+
+                // The tuple-number of the HEAD state, before deletion.
+                val select_tn = outRows.getB160(row, "select_tn")
+                if (select_tn == null) {
+                    // If there was no HEAD state (the feature does not exist), we do not fail.
+                    // Except: The client requested an atomic delete.
+                    if (write.version != null) {
+                        throw featureNotFound(
+                            "Expected feature '$id' in version '${write.version}', but no such feature exists"
+                        )
                     }
+                    continue
+                }
+                // If the HEAD tuple does not match the requested version, then `head_tn` will be `null`,
+                // while there will an existing HEAD tuple, so `selected_tn` is the current, not matching state.
+                // Otherwise, we expect that `select_tn` == `head_tn`
+                if (select_tn != outRows.getB160(row, "head_tn")) {
+                    throw conflict(
+                        "The feature '$id' was expected in version '${write.version}', but found in '${select_tn.version}'"
+                    )
                 }
             }
         }
-        // TODO: Verify the result
-        //       We receive one row for each given write with q_id, q_version
-        //       Then we get back if there is a HEAD state: h_id, h_tn, h_version
-        //       And we get back, if a delete was done: d_id, d_tn, d_version
-        // If no HEAD exists, we should treat it as okay (we do not fail)
-        // If a HEAD exists and no deleted done, we need to fail, because of atomic request!
-        // Eventually, if HEAD and DELETED are the same, everything is as expected
     }
 }

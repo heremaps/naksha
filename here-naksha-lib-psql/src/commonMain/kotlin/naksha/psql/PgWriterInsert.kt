@@ -12,12 +12,12 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, writes
     : PgWriterBase(writer, collection, writes)
 {
     init {
-        rows.addColumns(allColumns)
+        inRows.addColumns(allColumns)
         var i = 0
         for (write in writes) {
             val tuple = write.tuple
             if (tuple != null) {
-                rows[i++] = tuple
+                inRows[i++] = tuple
             }
         }
     }
@@ -27,7 +27,7 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, writes
         val shadowTable = collection.deletedTable
 
         val new_row = """WITH new_row AS (
-  SELECT * FROM UNNEST(${rows.placeholders()}) AS t(${rows.names()})
+  SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.names()})
 )"""
 
         // If the shadow table exists, delete old states
@@ -39,7 +39,7 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, writes
 
         // Insert the features
         val inserted = """, inserted AS (
-INSERT INTO ${headTable.quotedName} (${rows.names()})
+INSERT INTO ${headTable.quotedName} (${inRows.names()})
 SELECT * FROM new_row
 RETURNING id, tn
 )"""
@@ -50,20 +50,20 @@ SELECT inserted.id AS id, inserted.tn AS tn${if (clear_shadow.isNotEmpty()) ", c
 FROM inserted
 ${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = inserted.id" else ""} 
 """
-        return conn.prepare(SQL, rows.typeNames())
+        return conn.prepare(SQL, inRows.typeNames())
     }
 
     override fun doExecute(conn: PgConnection) {
         if (writes.isEmpty()) return
         val plan = plan(conn, collection)
-        val array = rows.values()
+        val array = inRows.values()
         val start = Platform.currentNanos()
         // We ignore the result, we know that if it didn't fail, it's okay.
         plan.execute(array).close()
         val end = Platform.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
         if (writes.size != 1 || writes[0].isFeatureModification) {
-            Platform.logger.info("INSERT of ${rows.size} rows took ${seconds * 1000}ms, therefore ${rows.size / seconds} features/s")
+            Platform.logger.info("INSERT of ${inRows.size} rows took ${seconds * 1000}ms, therefore ${inRows.size / seconds} features/s")
         }
     }
 }

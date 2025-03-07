@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.Int64
-import naksha.model.*
 import naksha.model.objects.NakshaTx
 
 /**
@@ -61,7 +60,7 @@ internal abstract class PgWriterBase protected constructor(
      * The rows to write.
      * @since 3.0
      */
-    val rows = PgColumnRows()
+    val inRows = PgColumnRows()
         .withStorageNumber(storageNumber)
         .withMapNumber(mapNumber)
         .withCollectionNumber(collectionNumber)

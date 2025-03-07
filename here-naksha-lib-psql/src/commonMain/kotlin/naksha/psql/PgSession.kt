@@ -350,16 +350,25 @@ open class PgSession(
             .withCollectionNumber(pgCollection.number)
             .addColumns(PgColumn.allColumns)
         pgCollection.map.setSearchPath(conn)
+        val headTable = pgCollection.headTable
         val historyTable = pgCollection.historyTable
+        val deletedTable = pgCollection.deletedTable
         val SQL = if (historyTable != null) {
             """WITH result AS(
-  SELECT ${rows.names()} FROM ${pgCollection.headTable.quotedName} WHERE tn = ANY($1)
+  SELECT ${rows.names()} FROM ${headTable.quotedName} WHERE tn = ANY($1)
   UNION ALL
   SELECT ${rows.names()} FROM ${historyTable.quotedName} WHERE tn = ANY($1)
 )
 SELECT ${rows.namesAggregate()} FROM result"""
+        } else if (deletedTable != null) {
+            """WITH result AS(
+  SELECT ${rows.names()} FROM ${headTable.quotedName} WHERE tn = ANY($1)
+  UNION ALL
+  SELECT ${rows.names()} FROM ${deletedTable.quotedName} WHERE tn = ANY($1)
+)
+SELECT ${rows.namesAggregate()} FROM result"""
         } else {
-            "SELECT ${rows.namesAggregate()} FROM ${pgCollection.headTable.quotedName} WHERE tn = ANY($1)"
+            "SELECT ${rows.namesAggregate()} FROM ${headTable.quotedName} WHERE tn = ANY($1)"
         }
         val tupleNumbers: Array<Any?> = tupleFeatures.map { it.tupleNumber.toB160() }.toTypedArray()
         conn.prepare(SQL, arrayOf(PgType.BYTE_ARRAY_ARRAY.text)).use { plan ->

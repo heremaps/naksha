@@ -17,15 +17,15 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, writes
     private val writeById = mutableMapOf<String, PgWrite>()
 
     init {
-        rows.addColumns(allColumns)
-        rows.addColumn("version", PgType.INT64) // needed to do atomic updates
+        inRows.addColumns(allColumns)
+        inRows.addColumn("version", PgType.INT64) // needed to do atomic updates
         var i = 0
         for (write in writes) {
             val tuple = write.tuple
             if (tuple != null) {
                 writeById[write.id] = write
-                rows[i] = tuple
-                rows.set(i, "version", write.version?.txn)
+                inRows[i] = tuple
+                inRows.set(i, "version", write.version?.txn)
                 i++
             }
         }
@@ -39,7 +39,7 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, writes
 
         // All input provided by client (the updates)
         val query = """WITH new_row AS (
-  SELECT * FROM UNNEST(${rows.placeholders()}) AS t(${rows.names()})
+  SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.names()})
 )"""
 
         // select `id` and `tn` of all rows that match new_row.id
@@ -110,7 +110,7 @@ ${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = ne
 LEFT JOIN head_deleted ON head_deleted.id = new_row.id
 LEFT JOIN inserted ON inserted.id = new_row.id
 ;"""
-        return conn.prepare(SQL, rows.typeNames())
+        return conn.prepare(SQL, inRows.typeNames())
     }
 
     override fun doExecute(conn: PgConnection) {
@@ -124,7 +124,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
             .addColumn("existing_tn", PgType.BYTE_ARRAY)
             .addColumn("head_id", PgType.STRING)
         val plan = plan(conn, collection)
-        val array = this.rows.values()
+        val array = this.inRows.values()
         val start = Platform.currentNanos()
         val cursor = plan.execute(array)
         val end = Platform.currentNanos()
