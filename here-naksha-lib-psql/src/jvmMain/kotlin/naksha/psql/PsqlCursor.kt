@@ -205,7 +205,8 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
      */
     private fun columnValue(index: Int, type: String, rs: ResultSet): Any? {
         if (type=="array" || type.startsWith('_')) { // e.g. "_int8"
-            return readArray(rs, rs.getArray(index))
+            val sqlArray = rs.getArray(index) ?: return null
+            return readArray(rs, sqlArray)
         }
         return when (type) {
             // TODO: We need to check which values can simply read using getObject, so we can avoid the null-casting.
