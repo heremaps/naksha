@@ -828,6 +828,7 @@ open class JbEncoder(var global: IDict? = null) : Binary() {
      * Expects a GeoJSON feature as input and convert it into JBON.
      *
      * - This method will copy `id` into the JBON feature id.
+     * - This method will ignore `attachment`
      * - This method will ignore `geometry`
      * - This method will ignore `properties.@ns:com:here:xyz`.
      *
@@ -842,7 +843,7 @@ open class JbEncoder(var global: IDict? = null) : Binary() {
         for (entry in map) {
             val key = entry.key
             val value = entry.value
-            if ("id" == key || "geometry" == key) continue
+            if ("id" == key || "geometry" == key || "attachment" == key) continue
             writeKey(entry.key)
             if ("properties" == key && value is MapProxy<*, *>) {
                 @Suppress("UNCHECKED_CAST")
