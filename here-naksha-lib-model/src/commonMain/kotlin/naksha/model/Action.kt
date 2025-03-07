@@ -25,15 +25,15 @@ class Action : JsEnum() {
     @Suppress("MemberVisibilityCanBePrivate")
     companion object Action_C {
         internal const val CREATED_VALUE = 0 shl ACTION_SHIFT
-        internal const val CREATED_STRING = "CREATED"
+        internal const val CREATED_STRING = "CREATE"
         internal const val CREATED_SHORT = "c"
 
         internal const val UPDATED_VALUE = 1 shl ACTION_SHIFT
-        internal const val UPDATED_STRING = "UPDATED"
+        internal const val UPDATED_STRING = "UPDATE"
         internal const val UPDATED_SHORT = "u"
 
         internal const val DELETED_VALUE = 2 shl ACTION_SHIFT
-        internal const val DELETED_STRING = "DELETED"
+        internal const val DELETED_STRING = "DELETE"
         internal const val DELETED_SHORT = "d"
 
         internal const val UNDEFINED_VALUE = 3 shl ACTION_SHIFT
