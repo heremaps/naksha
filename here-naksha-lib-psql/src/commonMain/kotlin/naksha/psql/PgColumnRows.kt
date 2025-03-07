@@ -168,6 +168,30 @@ internal class PgColumnRows {
         return if (value is ByteArray) value else null
     }
     fun getByteArray(row: Int, column: PgColumn): ByteArray? = getByteArray(row, column.name)
+    fun getB96(row: Int, column: PgColumn, featureNumber: Int64): TupleNumber? = getB96(row, column.name, featureNumber)
+    fun getB96(row: Int, columnName: String, featureNumber: Int64): TupleNumber? {
+        val raw = getByteArray(row, columnName) ?: return null
+        val storageNumber = this.storageNumber ?: return null
+        val mapNumber = this.mapNumber ?: return null
+        val collectionNumber = this.collectionNumber ?: return null
+        return try {
+            TupleNumber.fromB96(raw, storageNumber, mapNumber, collectionNumber, featureNumber)
+        } catch (_: Exception) {
+            null
+        }
+    }
+    fun getB160(row: Int, column: PgColumn): TupleNumber? = getB160(row, column.name)
+    fun getB160(row: Int, columnName: String): TupleNumber? {
+        val raw = getByteArray(row, columnName) ?: return null
+        val storageNumber = this.storageNumber ?: return null
+        val mapNumber = this.mapNumber ?: return null
+        val collectionNumber = this.collectionNumber ?: return null
+        return try {
+            TupleNumber.fromB160(raw, storageNumber, mapNumber, collectionNumber)
+        } catch (_: Exception) {
+            null
+        }
+    }
     fun getTuple(row: Int, storageNumber: Int64, mapNumber: Int, collectionNumber: Int): Tuple? {
         if (row < 0 || row >= size) return null
         val tn_raw = getByteArray(row, PgColumn.tn) ?: return null
