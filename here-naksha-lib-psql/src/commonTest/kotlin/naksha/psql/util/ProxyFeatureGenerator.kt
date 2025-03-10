@@ -13,6 +13,16 @@ import kotlin.math.roundToInt
  */
 object ProxyFeatureGenerator {
 
+    const val FIRST_NAME = "firstName"
+    const val FIRST_NAME_TAG_PREFIX = "@:firstName:"
+    const val MIDDLE_NAME = "middleName"
+    const val MIDDLE_NAME_TAG_PREFIX = "@:middleName:"
+    const val LAST_NAME = "lastName"
+    const val LAST_NAME_TAG_PREFIX = "@:lastName:"
+    const val NAME = "name"
+    const val AGE = "age"
+    const val AGE_TAG_PREFIX = "@:age:"
+
     fun generateRandomFeatures(count: Int): List<NakshaFeature> {
         require(count > 0)
         return (1..count).map { generateRandomFeature() }
@@ -42,12 +52,12 @@ object ProxyFeatureGenerator {
             middleName = null
             name = "$firstName $lastName"
         }
-        feature.properties.put("firstName", firstName)
+        feature.properties[FIRST_NAME] = firstName
         if (middleName != null) {
-            feature.properties.put("middleName", middleName)
+            feature.properties[MIDDLE_NAME] = middleName
         }
-        feature.properties.put("lastName", lastName)
-        feature.properties.put("name", name)
+        feature.properties[LAST_NAME] = lastName
+        feature.properties[NAME] = name
 
         // We want a pyramid like distribution between 5/10 and 95/100.
         var maxAge = 5
@@ -56,7 +66,7 @@ object ProxyFeatureGenerator {
             maxAge += 5
             age = (Platform.random() * 95 + 5).toInt() // first around max-age is 10, next 15 aso.
         } while (age > maxAge)
-        feature.properties.put("age", age)
+        feature.properties[AGE] = age
 
         // 33% to get tags
         if (Platform.random() <= 0.33) {
@@ -82,12 +92,12 @@ object ProxyFeatureGenerator {
                     break
                 }
             }
-            tags.add("@:firstName:$firstName")
+            tags.add("$FIRST_NAME_TAG_PREFIX$firstName")
             if (middleName != null) {
-                tags.add("@:middleName:$middleName")
+                tags.add("$MIDDLE_NAME_TAG_PREFIX$middleName")
             }
-            tags.add("@:lastName:$lastName")
-            tags.add("@:age:$age")
+            tags.add("$LAST_NAME_TAG_PREFIX$lastName")
+            tags.add("$AGE_TAG_PREFIX$age")
             xyz.tags = tags
         }
         return feature
