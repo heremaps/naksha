@@ -102,7 +102,7 @@ $selects),
 result AS (
   SELECT DISTINCT col_num, tn
   FROM query
-  ORDER BY col_num, tn
+  ORDER BY col_num DESC, tn DESC
   LIMIT $REQ_LIMIT
 )
 SELECT gzip( -- compress the binary
@@ -120,7 +120,7 @@ $selects),
 result AS (
   SELECT DISTINCT tn
   FROM query
-  ORDER BY tn
+  ORDER BY tn DESC
   LIMIT $REQ_LIMIT
 )
 SELECT gzip( -- compress the binary
