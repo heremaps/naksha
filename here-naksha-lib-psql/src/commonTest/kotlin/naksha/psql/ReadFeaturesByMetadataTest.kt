@@ -431,8 +431,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         val feature = generateRandomFeature(featureId = TEST_FEATURE_ID)
 
         // When: feature is created
-        val creationResp = insertFeatures(feature)
-        val createdFeature = creationResp.features[0] ?: fail("Expected non-empty creation response")
+        insertFeatures(feature)
 
         // And: feature is deleted
         val deleteFeature = WriteRequest().add(Write().deleteFeatureById(collection, feature.id))
