@@ -74,7 +74,7 @@ open class NakshaStorage() : NakshaFeature() {
         }
     }
 
-    override fun defaultFeatureType(): String = FEATURE_TYPE
+    override fun featureTypeDefaultValue(): String = FEATURE_TYPE
     override fun withId(value: String): NakshaStorage = super.withId(value) as NakshaStorage
     override fun withFeatureNumber(value: Int64): NakshaStorage = super.withFeatureNumber(value) as NakshaStorage
     override fun withType(value: String): NakshaStorage = super.withType(value) as NakshaStorage

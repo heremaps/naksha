@@ -411,7 +411,7 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * A customer feature-type, [type][naksha.model.objects.NakshaFeature.type] of the [feature][naksha.model.objects.NakshaFeature], _null_ if it matches the [default-type of the collection][naksha.model.objects.NakshaCollection.defaultType].
+         * A customer feature-type, [type][naksha.model.objects.NakshaFeature.type] of the [feature][naksha.model.objects.NakshaFeature], _null_ if it matches the [default-type of the collection][naksha.model.objects.NakshaCollection.typeDefaultValue].
          * @since 3.0
          */
         @JvmField

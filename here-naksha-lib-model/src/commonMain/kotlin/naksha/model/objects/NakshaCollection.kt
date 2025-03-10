@@ -52,7 +52,7 @@ open class NakshaCollection() : NakshaFeature() {
         this.storeMeta = storeMeta
     }
 
-    override fun defaultFeatureType(): String = FEATURE_TYPE
+    override fun featureTypeDefaultValue(): String = FEATURE_TYPE
     override fun withId(value: String): NakshaCollection = super.withId(value) as NakshaCollection
     override fun withFeatureNumber(value: Int64): NakshaCollection = super.withFeatureNumber(value) as NakshaCollection
     override fun withType(value: String): NakshaCollection = super.withType(value) as NakshaCollection

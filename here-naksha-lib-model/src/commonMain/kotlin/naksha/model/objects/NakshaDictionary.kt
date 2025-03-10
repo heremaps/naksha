@@ -35,7 +35,7 @@ open class NakshaDictionary() : NakshaFeature() {
         this.id = id
     }
 
-    override fun defaultFeatureType(): String = FEATURE_TYPE
+    override fun featureTypeDefaultValue(): String = FEATURE_TYPE
     override fun withId(value: String): NakshaDictionary = super.withId(value) as NakshaDictionary
     override fun withFeatureNumber(value: Int64): NakshaDictionary = super.withFeatureNumber(value) as NakshaDictionary
     override fun withType(value: String): NakshaDictionary = super.withType(value) as NakshaDictionary

@@ -27,7 +27,7 @@ open class NakshaFeature() : AnyObject() {
     @JsName("of")
     constructor(id: String) : this() {
         setRaw("id", id)
-        setRaw("type", defaultType())
+        setRaw("type", typeDefaultValue())
     }
 
     companion object NakshaFeature_C {
@@ -62,7 +62,7 @@ open class NakshaFeature() : AnyObject() {
         }
 
         private val ID_RANDOM = NotNullProperty<NakshaFeature, String>(String::class) { _, _ -> PlatformUtil.randomString(12) }
-        private val TYPE_DEFAULT = NotNullProperty<NakshaFeature, String>(String::class) { self, _ -> self.defaultType() }
+        private val TYPE_DEFAULT = NotNullProperty<NakshaFeature, String>(String::class) { self, _ -> self.typeDefaultValue() }
         private val BBOX_NULL = NullableProperty<NakshaFeature, SpBoundingBox>(SpBoundingBox::class)
         private val GEOMETRY_NULL = NullableProperty<NakshaFeature, SpGeometry>(SpGeometry::class)
         private val REFERENCE_POINT_NULL = NullableProperty<NakshaFeature, SpPoint>(SpPoint::class)
@@ -76,13 +76,13 @@ open class NakshaFeature() : AnyObject() {
      * The default type.
      * @since 3.0
      */
-    protected open fun defaultType(): String = TYPE
+    protected open fun typeDefaultValue(): String = TYPE
 
     /**
      * The default feature-type; if any.
      * @since 3.0
      */
-    protected open fun defaultFeatureType(): String? = null
+    protected open fun featureTypeDefaultValue(): String? = null
 
     /**
      * The unique identifier of the feature.
