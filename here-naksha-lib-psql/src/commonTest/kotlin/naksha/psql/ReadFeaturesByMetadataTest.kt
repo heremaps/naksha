@@ -171,11 +171,10 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
     }
 
     @Test
-    @Ignore
     fun shouldReadFeatureByType() {
         // Given:
         val inputFeature = generateRandomFeature(featureId = TEST_FEATURE_ID).apply {
-            type = "unusual_type"
+            featureType = "unusual_type"
         }
 
         // When:
@@ -183,7 +182,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
 
         // And:
         val featuresByType = executeMetaQuery(
-            MetaQuery(MetaColumn.featureType(), StringOp.EQUALS, inputFeature.type)
+            MetaQuery(MetaColumn.featureType(), StringOp.EQUALS, inputFeature.featureType)
         ).features
 
         // Then:
@@ -192,7 +191,6 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
     }
 
     @Test
-    @Ignore
     fun shouldReadFeatureStartingWithType() {
         // Given:
         val inputFeature = generateRandomFeature(featureId = TEST_FEATURE_ID).apply {

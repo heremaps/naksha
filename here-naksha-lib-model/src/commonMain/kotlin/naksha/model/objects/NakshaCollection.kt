@@ -165,19 +165,19 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * If the feature-type in the [metadata][naksha.model.Metadata.ft] should be set automatically, therefore indexing the feature type. When explicitly enabled, the storage will read the [feature-type][NakshaFeature.featureType], and copy it into the [metadata feature-type][naksha.model.Metadata.ft].
+     * If the `featureType`as returned by [NakshaFeature.featureType] equals to this value, then the [metadata feature-type][naksha.model.Metadata.ft] will be `null`, otherwise [metadata feature-type][naksha.model.Metadata.ft] is set to the [NakshaFeature.featureType].
      *
      * ### Note
-     * The index on the [feature-type][naksha.model.Metadata.ft] is disabled, when the feature-type is `null`, therefore enabling this option, which is by default turned off, will automatically enable indexing of the feature-type and auto population of the metadata [feature-type][naksha.model.Metadata.ft] field.
+     * The index on the [feature-type][naksha.model.Metadata.ft] is partial, features are only indexed when `ft` is not `null`, what is always the case, when it matches the [defaultFeatureType]. This is based upon the assumption, that in most cases all features within a collection do have the same feature-type. If this assumption holds true, and index would be a big waste, even when only a few features differ from the [defaultFeatureType], adding all values into the index would be a waste. So, this property is for the query planner to take advantage of this fact, when searching for feature-type. If the feature-type is the [defaultFeatureType], this means most of the time a full collection scan, so usage of the feature-type index is not helpful.
      * @since 3.0
      */
-    var indexFeatureType by BOOLEAN_FALSE
+    var defaultFeatureType by DEFAULT_FEATURE_TYPE
 
     /**
-     * @see [indexFeatureType]
+     * @see [defaultFeatureType]
      */
-    open fun withIndexFeatureType(value: Boolean): NakshaCollection {
-        this.indexFeatureType = value
+    open fun withDefaultFeatureType(value: String?): NakshaCollection {
+        removeRaw("defaultFeatureType")
         return this
     }
 
@@ -263,7 +263,7 @@ open class NakshaCollection() : NakshaFeature() {
      * - `tags`: Index above tags, does not allow index-only scans or pre-ordering.
      * - `ref_point`: Index above geometry, does not allow index-only scans or pre-ordering.
      * - `gist_geo_(2d|3d|4d)` or `spgist_geo_(2d|3d|4d)`: Index above geometry, does not allow index-only scans or pre-ordering.
-     * - `feature_type`: ft text_pattern_ops DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE $c_tn
+     * - `ft`: ft text_pattern_ops DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE $c_tn
      * - `cv0`, `cv1`, `cv2`, and `cv3`: cvX text_pattern_ops DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE $c_tn
      * - `cs0`, `cs1`, `cs2`, and `cs3`: csX text_pattern_ops DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE $c_tn
      *
@@ -275,9 +275,12 @@ open class NakshaCollection() : NakshaFeature() {
     var indices by INDICES
 
     /**
+     * Adds the given `index` into the list of [indices], when not being in already.
+     * @param value the index to add to [indices].
+     * @return this.
      * @see [indices]
      */
-    open fun withIndex(value: String): NakshaCollection {
+    open fun addIndex(value: String): NakshaCollection {
         var indices = this.indices
         if (indices == null) {
             indices = StringList()
@@ -288,9 +291,12 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
+     * Adds the given `indices` into the list of [indices], when not being in already.
+     * @param values the indices to add to [indices].
+     * @return this.
      * @see [indices]
      */
-    open fun withIndices(vararg values: String): NakshaCollection {
+    open fun addIndices(vararg values: String): NakshaCollection {
         @Suppress("SENSELESS_COMPARISON")
         if (values != null && values.isNotEmpty()) {
             var indices = this.indices
@@ -405,20 +411,21 @@ open class NakshaCollection() : NakshaFeature() {
         const val ESTIMATED_DELETED_FEATURES = "estimatedDeletedFeatures"
 
         private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 1 }
-        private val GEO_INDEX = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> DEFAULT_GEO_INDEX }
+        //private val GEO_INDEX = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> DEFAULT_GEO_INDEX }
         private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String::class)
-        private val BOOLEAN_FALSE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
+        //private val BOOLEAN_FALSE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val DEFAULT_FLAGS = NullableProperty<NakshaCollection, Flags>(Flags::class)
-        private val INT_NULL = NullableProperty<NakshaCollection, Int>(Int::class)
+        //private val INT_NULL = NullableProperty<NakshaCollection, Int>(Int::class)
         private val MAP_ID = NullableProperty<NakshaCollection, String>(String::class)
         private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)
+        private val DEFAULT_FEATURE_TYPE = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> TYPE }
         private val INDICES = NullableProperty<NakshaCollection, StringList>(StringList::class)
         private val MAX_AGE = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> Int64(-1) }
         private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 10_485_760 }
         private val _ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }
         private val _ESTIMATED_DELETED_FEATURES =  NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }
-        private val AUTO_PURGE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
+        //private val AUTO_PURGE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val STORE_HISTORY = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { self, _ ->
             // For downward compatibility with Naksha version 2
             val old = self.getRaw("disableHistory")

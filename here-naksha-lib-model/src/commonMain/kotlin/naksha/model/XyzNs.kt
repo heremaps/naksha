@@ -139,12 +139,6 @@ class XyzNs : AnyObject() {
         const val HERE_TILE = "hereTile"
 
         /**
-         * The key of the [featureType] property.
-         * @since 3.0
-         */
-        const val FEATURE_TYPE = "featureType"
-
-        /**
          * The key of the [cv0] property.
          * @since 3.0
          */
@@ -236,7 +230,6 @@ class XyzNs : AnyObject() {
                 setRaw(HERE_TILE, meta.hereTile)
                 if (meta.origin != null) setRaw(ORIGIN, meta.origin)
                 if (meta.target != null) setRaw(TARGET, meta.target)
-                if (meta.ft != null) setRaw(FEATURE_TYPE, meta.ft)
                 if (meta.cv0 != null) setRaw(CV0, meta.cv0)
                 if (meta.cv1 != null) setRaw(CV1, meta.cv1)
                 if (meta.cv2 != null) setRaw(CV2, meta.cv2)

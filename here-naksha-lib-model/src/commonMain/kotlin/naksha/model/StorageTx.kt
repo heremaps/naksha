@@ -156,6 +156,7 @@ open class StorageTx private constructor(
         val cv1 = feature.properties.xyz.cv1
         val cv2 = feature.properties.xyz.cv2
         val cv3 = feature.properties.xyz.cv3
+        val featureType = if (collection.defaultFeatureType == feature.featureType) null else feature.featureType
         return Metadata(
             tupleNumber = tn,
             flags = flags,
@@ -173,7 +174,7 @@ open class StorageTx private constructor(
             author = author,
             origin = null, // TODO: Fix this, we need to detect foreign features!
             target = null, // TODO: Fix this, we need to detect join operations!
-            ft = if (collection.indexFeatureType) feature.featureType else null,
+            ft = featureType,
             cv0 = cv0,
             cv1 = cv1,
             cv2 = cv2,

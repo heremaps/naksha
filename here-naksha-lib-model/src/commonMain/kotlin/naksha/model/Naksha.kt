@@ -30,13 +30,11 @@ import naksha.model.GeoEncoding.GeoEncoding_C.WKB
 import naksha.model.GeoEncoding.GeoEncoding_C.WKB_GZIP
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
 import naksha.model.NakshaVersion.Companion.LATEST
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaProperties
 import naksha.model.objects.NakshaStorage
-import naksha.model.request.Write
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -343,7 +341,7 @@ class Naksha private constructor() {
          * ### Note
          * Generally, the estimated number of collisions is calculated as `n^2 / 2N` with `n` being the number of features and `N` being the entropy, so the maximum amount of numbers available _(so here 2^63)_. The collision possibility can be estimated via `1 - e^( -(n^2 / 2N) )`, for example, for 1 billion features it will be `1 - e^( -(2^60 / 2^64) )`, which results in around 6 percent, for 4 billion features it grows to `1 - e^( -(2^64 / 2^64) )` to around 63.2 percent, reaching 99.99% for around 147 billion features _(there is expected to be at least one collision)_. Beware, just because a collision is unlikely, does not mean there will be none!
          *
-         * @param md5 the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id, from which to extract the feature-number.
+         * @param id the feature-id, from which to extract the feature-number.
          * @return the feature-number.
          * @see [hashId]
          * @see [alternativeInt64]
@@ -516,7 +514,7 @@ class Naksha private constructor() {
             flags: Flags? = null
         ): Tuple {
             val xyz = feature.properties.xyz
-            val meta = Metadata.fromXyzNs(feature.id, xyz) ?: Metadata.UNDEFINED
+            val meta = Metadata.fromXyzNs(feature.id, feature.featureType, xyz) ?: Metadata.UNDEFINED
             val flagsOrDefault = flags ?: DEFAULT_FLAGS
             val featureBytes = encodeFeature(feature, flagsOrDefault, dictionary)
             val geoBytes = encodeGeometry(feature.geometry, flagsOrDefault)
@@ -543,7 +541,7 @@ class Naksha private constructor() {
             storage: IStorage
         ): Tuple {
             val xyz = feature.properties.xyz
-            val meta = Metadata.fromXyzNs(feature.id, xyz) ?: Metadata.UNDEFINED
+            val meta = Metadata.fromXyzNs(feature.id, feature.featureType, xyz) ?: Metadata.UNDEFINED
             val dict = storage.getEncodingDictionary(feature)
             val flags = storage.getEncodingFlags(feature)
             val featureBytes = encodeFeature(feature, flags, dict)
@@ -911,7 +909,6 @@ class Naksha private constructor() {
          * // rs = ResultTupleList
          * final ResultTupleList result = Naksha.cache.load(rs, 0, rs.size())
          * ```
-         * - Throws [ILLEGAL_STATE], if no cache is available ([cacheRef] is _null_). This only happens, when an application explicitly removes all caches.
          * @since 3.0
          */
         @JvmStatic

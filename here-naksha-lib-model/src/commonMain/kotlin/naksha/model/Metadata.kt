@@ -240,6 +240,7 @@ data class Metadata(
          *
          * If the given [XYZ namespace][XyzNs] is not from an existing, really stored feature, then the method returns _null_, what means, that the feature to which this [XYZ namespace][XyzNs] is attached is a client modified version.
          * @param featureId the **feature-id**.
+         * @param featureType the **feature-type**.
          * @param xyz the [XYZ namespace][XyzNs].
          * @return the [Metadata] created from it.
          * @since 3.0.0
@@ -247,7 +248,7 @@ data class Metadata(
          */
         @JvmStatic
         @JsStatic
-        fun fromXyzNs(featureId: String, xyz: XyzNs): Metadata? {
+        fun fromXyzNs(featureId: String, featureType: String, xyz: XyzNs): Metadata? {
             val guid = xyz.guid ?: return null
             return Metadata(
                 tupleNumber = guid.tupleNumber,
@@ -266,7 +267,7 @@ data class Metadata(
                 id = featureId,
                 origin = xyz.origin,
                 target = xyz.target,
-                ft = xyz.featureType,
+                ft = featureType,
                 cv0 = xyz.cv0, cv1 = xyz.cv1, cv2 = xyz.cv2, cv3 = xyz.cv3,
                 cs0 = xyz.cs0, cs1 = xyz.cs1, cs2 = xyz.cs2, cs3 = xyz.cs3,
             )

@@ -395,7 +395,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val feature_type = def(PgIndex::class, "ft") { self ->
+        val ft = def(PgIndex::class, "ft") { self ->
             self.name = "feature_type"
             self.columns = listOf(c_ft, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
@@ -408,7 +408,7 @@ ${if (where==null) "" else "WHERE $where"};"""
                     )
                 ).close()
             }
-        }
+        }.alias<PgIndex>("feature_type").alias<PgIndex>("featureType")
 
         /**
          * Index above [cv0][PgColumn.cv0] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
@@ -641,7 +641,7 @@ ${if (where==null) "" else "WHERE $where"};"""
             app_id,
             author,
             tags,
-            feature_type,
+            ft,
             cv0, cv1, cv2, cv3,
             cs0, cs1, cs2, cs3,
             //ref_point,
