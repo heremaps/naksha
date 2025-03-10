@@ -51,7 +51,8 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
     }
 
     private fun whereGuids() {
-        val tupleNumbers = request.guids.mapNotNull { it?.tupleNumber?.toByteArray(TupleNumberVariant.B160) }
+        val tupleNumbers =
+            request.guids.mapNotNull { it?.tupleNumber?.toByteArray(TupleNumberVariant.B160) }
         if (tupleNumbers.isNotEmpty()) {
             if (where.isNotEmpty()) where.append(" AND ")
             val placeholder = placeholderForArg(tupleNumbers, PgType.BYTE_ARRAY_ARRAY)
@@ -129,8 +130,11 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
         return "naksha_geometry($geoBytesPlaceholder, $flags)"
     }
 
-    private fun resolveTransformation(transformation: SpTransformation, basicGeometry: String): String {
-        return when(transformation){
+    private fun resolveTransformation(
+        transformation: SpTransformation,
+        basicGeometry: String
+    ): String {
+        return when (transformation) {
             is SpBuffer -> resolveBuffer(transformation, basicGeometry)
             else -> throw NakshaException(
                 NakshaError.UNSUPPORTED_OPERATION,
@@ -156,31 +160,31 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
 
     private fun bufferStyleParams(buffer: SpBuffer): String? {
         val bufferStyleParams = StringBuilder()
-        if(buffer.quadSegments != null){
+        if (buffer.quadSegments != null) {
             val quadSegPlaceholder = placeholderForArg(buffer.quadSegments, PgType.INT)
             bufferStyleParams.append("quad_segs=$quadSegPlaceholder")
         }
-        if(buffer.joinStyle != null){
+        if (buffer.joinStyle != null) {
             val joinStylePlaceholder = placeholderForArg(buffer.joinStyle!!.value, PgType.STRING)
-            if(bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            if (bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
             bufferStyleParams.append("join=$joinStylePlaceholder")
         }
-        if(buffer.joinLimit != null){
+        if (buffer.joinLimit != null) {
             val joinLimitPlaceholder = placeholderForArg(buffer.joinLimit, PgType.DOUBLE)
-            if(bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            if (bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
             bufferStyleParams.append("mitre_limit=$joinLimitPlaceholder")
         }
-        if(buffer.endCap != null){
+        if (buffer.endCap != null) {
             val endCapPlaceholder = placeholderForArg(buffer.endCap!!.value, PgType.STRING)
-            if(bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            if (bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
             bufferStyleParams.append("endcap=$endCapPlaceholder")
         }
-        if(buffer.side != null){
+        if (buffer.side != null) {
             val sidePlaceholder = placeholderForArg(buffer.side!!.value, PgType.STRING)
-            if(bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            if (bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
             bufferStyleParams.append("side=$sidePlaceholder")
         }
-        return if(bufferStyleParams.isNotEmpty()){
+        return if (bufferStyleParams.isNotEmpty()) {
             bufferStyleParams.toString()
         } else {
             null
@@ -203,8 +207,8 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
     }
 
     private fun refPointInAnyOfTiles(hereTiles: List<HereTile>): String {
-        return hereTiles.joinToString(separator = " OR ") {
-            hereTile -> refPointInTile(hereTile)
+        return hereTiles.joinToString(separator = " OR ") { hereTile ->
+            refPointInTile(hereTile)
         }
     }
 
@@ -251,12 +255,21 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
             )
 
             is MetaQuery -> {
-                val pgColumn = PgColumn.ofRowColumn(metaQuery.column) ?: throw NakshaException(
-                    NakshaError.ILLEGAL_STATE,
-                    "Couldn't find PgColumn for TupleColumn: ${metaQuery.column.name}"
-                )
+                val pgColumn =
+                    if (metaQuery.column == MetaColumn.operation() || metaQuery.column == MetaColumn.action()) {
+                        PgColumn.flags
+                    } else {
+                        PgColumn.ofRowColumn(metaQuery.column) ?: throw NakshaException(
+                            NakshaError.ILLEGAL_STATE,
+                            "Couldn't find PgColumn for TupleColumn: ${metaQuery.column.name}"
+                        )
+                    }
                 val placeholder = placeholderForArg(metaQuery.value, pgColumn.type)
-                val leftOperand = if(pgColumn == PgColumn.created_at || pgColumn == PgColumn.author_ts){
+                val leftOperand = if (metaQuery.column == MetaColumn.operation()) {
+                    "${PgColumn.flags.name} & ${FlagsBits.OP_MASK}"
+                } else if (metaQuery.column == MetaColumn.action()) {
+                    "${PgColumn.flags.name} & ${FlagsBits.ACTION_MASK}"
+                } else if (pgColumn == PgColumn.created_at || pgColumn == PgColumn.author_ts) {
                     "COALESCE(${pgColumn.name}, ${PgColumn.updated_at.name})"
                 } else {
                     pgColumn.name
@@ -397,6 +410,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
     ): String {
         return when (stringOp) {
             StringOp.EQUALS -> "$leftOperand = $rightOperand"
+            StringOp.NOT_EQUALS -> "$leftOperand != $rightOperand"
             StringOp.STARTS_WITH -> "starts_with($leftOperand, $rightOperand)"
             else -> throw NakshaException(
                 NakshaError.ILLEGAL_ARGUMENT,
@@ -412,6 +426,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
     ): String {
         return when (doubleOp) {
             DoubleOp.EQ -> "$leftOperand = $rightOperand"
+            DoubleOp.NE -> "$leftOperand != $rightOperand"
             DoubleOp.GT -> "$leftOperand > $rightOperand"
             DoubleOp.GTE -> "$leftOperand >= $rightOperand"
             DoubleOp.LT -> "$leftOperand < $rightOperand"

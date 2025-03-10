@@ -5,7 +5,7 @@ import naksha.base.AtomicRef
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.proxy
-import naksha.model.*
+import naksha.model.SessionOptions
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaMap
@@ -28,7 +28,7 @@ import kotlin.test.assertNotNull
 abstract class PgTestBase(private var testCollection: NakshaCollection? = null) {
 
     val env by lazy {
-       TestEnv(deleteMap = true, enableInfoLogs = true)
+        TestEnv(deleteMap = true, enableInfoLogs = true)
     }
 
     val storage: PgStorage
@@ -38,7 +38,8 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
         get() = initializedMap.get() ?: throw IllegalStateException("map not initialized")
 
     val collection: NakshaCollection
-        get() = initializedCollections[this::class] ?: throw IllegalStateException("collection not initialized")
+        get() = initializedCollections[this::class]
+            ?: throw IllegalStateException("collection not initialized")
 
     @BeforeTest
     fun ensureCollectionInitialized() {
@@ -98,39 +99,43 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
     val SET_SEARTH_PATH_SQL
         get() = """SET search_path="$TEST_MAP_ID","naksha~admin",topology,hint_plan,public;"""
 
-    protected fun insertFeature(feature: NakshaFeature, sessionOptions: SessionOptions? = null)
-        = insertFeatures(listOf(feature), sessionOptions)
+    protected fun insertFeature(
+        feature: NakshaFeature,
+        sessionOptions: SessionOptions? = null
+    ): SuccessResponse = insertFeatures(listOf(feature), sessionOptions)
 
-    protected fun insertFeatures(vararg features: NakshaFeature)
-        = insertFeatures(listOf(*features))
+    protected fun insertFeatures(vararg features: NakshaFeature): SuccessResponse =
+        insertFeatures(listOf(*features))
 
     protected fun insertFeatures(
         features: List<NakshaFeature>,
         sessionOptions: SessionOptions? = null
-    ) {
+    ): SuccessResponse {
         val writeReq = WriteRequest()
         features.forEach { feature -> writeReq.add(Write().createFeature(collection, feature)) }
-        executeWrite(writeReq, sessionOptions)
+        return executeWrite(writeReq, sessionOptions)
     }
 
     protected fun assertSuccess(response: Response): SuccessResponse {
         if (response is ErrorResponse) {
-            response.error.print()
+            response.error.print(logger)
         }
         assertIs<SuccessResponse>(response)
         return response
     }
 
-    protected fun executeWrite(request: WriteRequest, sessionOptions: SessionOptions? = null): SuccessResponse
-        = env.storage.newWriteSession(sessionOptions).use { session ->
-            val response = assertSuccess(session.execute(request))
-            val start = Platform.currentNanos()
-            session.commit()
-            val end = Platform.currentNanos()
-            val millis = (end.toDouble() - start.toDouble()) / 1e6
-            logger.info("Commit took $millis millis")
-            response
-        }
+    protected fun executeWrite(
+        request: WriteRequest,
+        sessionOptions: SessionOptions? = null
+    ): SuccessResponse = env.storage.newWriteSession(sessionOptions).use { session ->
+        val response = assertSuccess(session.execute(request))
+        val start = Platform.currentNanos()
+        session.commit()
+        val end = Platform.currentNanos()
+        val millis = (end.toDouble() - start.toDouble()) / 1e6
+        logger.info("Commit took $millis millis")
+        response
+    }
 
     protected fun executeWriteErrorResponse(
         request: WriteRequest,
@@ -151,7 +156,7 @@ abstract class PgTestBase(private var testCollection: NakshaCollection? = null) 
         return env.storage.newReadSession(sessionOptions).use { session ->
             val response = session.execute(request)
             if (response is ErrorResponse) {
-                response.error.print()
+                response.error.print(logger)
             }
             assertIs<SuccessResponse>(response)
             response

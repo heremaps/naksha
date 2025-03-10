@@ -27,7 +27,7 @@ import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_MASK
  * - TE: tags encoding - bits: 8-11 (4-bit)
  * - OP: operation - bits: 12-15 (4-bit)
  * - AC: action - bits: 16-17 (2-bit)
- * - RESERVED: reserved - bit: 18-31 (5-bit)
+ * - RESERVED: reserved - bit: 18-31 (14-bit)
  * @since 3.0.0
  */
 typealias Flags = Int

@@ -1,13 +1,12 @@
 package naksha.psql
 
+import naksha.model.Action
+import naksha.model.Operation
 import naksha.model.SessionOptions
 import naksha.model.XyzNs
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
-import naksha.model.request.ReadFeatures
-import naksha.model.request.SuccessResponse
-import naksha.model.request.Write
-import naksha.model.request.WriteRequest
+import naksha.model.request.*
 import naksha.model.request.query.*
 import naksha.psql.base.PgTestBase
 import naksha.psql.util.ProxyFeatureGenerator
@@ -381,6 +380,80 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) 
         assertEquals(10, featuresByAppIdAndAuthor.size)
         assertTrue(featuresByAppIdAndAuthor.map { it!!.id }
             .containsAll(featuresToCreate.map { it.id }))
+    }
+
+    @Test
+    fun shouldReadFeaturesByOperation(){
+        // Given
+        val feature = generateRandomFeature(featureId = TEST_FEATURE_ID).apply {
+            title = "Title no 1"
+        }
+
+        // When: feature is created
+        val creationResp = insertFeatures(feature)
+        val createdFeature = creationResp.features[0] ?: fail("Expected non-empty creation response")
+
+        // And: feature is modified
+        val modifiedTitle = "Title no 2"
+        val modifyFeature = WriteRequest().add(Write().updateFeature(
+            collection,
+            createdFeature.apply { title = modifiedTitle },
+            true
+        ))
+        executeWrite(modifyFeature)
+
+        // And: feature is deleted
+        val deleteFeature = WriteRequest().add(Write().deleteFeatureById(collection, feature.id))
+        executeWrite(deleteFeature)
+
+        // And: Collection (with history & deleted tables) is queried for UPDATE
+        val getHistoryWithoutUpdates = ReadFeatures().apply {
+            collectionIds += collection.id
+            queryHistory = true
+            queryDeleted = true
+            query = RequestQuery().apply {
+                metadata = MetaQuery(MetaColumn.operation(), DoubleOp.EQ, Operation.UPDATED.intValue)
+            }
+        }
+        val response = executeRead(getHistoryWithoutUpdates)
+        val retrievedFeatures = response.features
+
+        // Then: We only got UPDATED state - the one matching updated feature
+        assertEquals(1, retrievedFeatures.size)
+        val singleRetrievedHistoryFeature = retrievedFeatures[0]!!
+        assertEquals(modifiedTitle, singleRetrievedHistoryFeature.title)
+        assertEquals(Operation.UPDATED, singleRetrievedHistoryFeature.properties.xyz.operation)
+    }
+
+    @Test
+    fun shouldReadFeaturesByAction(){
+        // Given
+        val feature = generateRandomFeature(featureId = TEST_FEATURE_ID)
+
+        // When: feature is created
+        val creationResp = insertFeatures(feature)
+        val createdFeature = creationResp.features[0] ?: fail("Expected non-empty creation response")
+
+        // And: feature is deleted
+        val deleteFeature = WriteRequest().add(Write().deleteFeatureById(collection, feature.id))
+        executeWrite(deleteFeature)
+
+        // And: History table is queried for everything besides CREATED
+        val getHistoryWithoutUpdates = ReadFeatures().apply {
+            collectionIds += collection.id
+            queryHistory = true
+            queryDeleted = true
+            query = RequestQuery().apply {
+                metadata = MetaQuery(MetaColumn.action(), DoubleOp.NE, Action.CREATED.intValue)
+            }
+        }
+        val response = executeRead(getHistoryWithoutUpdates)
+        val retrievedFeatures = response.features
+
+        // Then: We only got DELETED state
+        assertEquals(1, retrievedFeatures.size)
+        val singleRetrievedHistoryFeature = retrievedFeatures[0]!!
+        assertEquals(Action.DELETED, singleRetrievedHistoryFeature.properties.xyz.action)
     }
 
     private fun insertFeatureAndGetXyz(feature: NakshaFeature): XyzNs {
