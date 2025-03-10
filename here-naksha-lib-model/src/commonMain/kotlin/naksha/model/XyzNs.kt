@@ -21,7 +21,7 @@ import kotlin.jvm.JvmStatic
  * - **Fork**: If the client reads a feature, and then writes it into another storage, map, or collection, or when the client modifies the ID of the feature, and then sends the feature to a service, without modifying the XYZ namespace, the storage will be able to detect that this is a **fork**. Forking means, that a feature is moved between storages, maps, or collections, or is re-identified. The storage will turn the action into [CREATED][Action.CREATED], and copy the [uuid] (which refers to the modified foreign state) into the [origin]. When the feature, that was forked, is modified later, it is possible to find all forks in all storages, maps, and collections, and to update them doing a [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge). This process is called rebase.
  * - **Split**: If the client need to split a feature into parts, for example a Topology into two, it is required that it clones the original feature, and then modifies the copies, while deleting the original feature that was split. This will allow the _storage_ to identify the [operation] as [SPLIT][Operation.SPLIT], because all features being part of the split will have the same [uuid], and this [uuid] does not match their previous state, therefore it will copy the [uuid] into the [origin]. Additionally, it will automatically ensure that the split (_deleted_) feature has [action] set to [DELETED][Action.DELETED], and the new parts have [action] set to [CREATED][Action.CREATED], while all participating features have [operation] set to [SPLIT][Operation.SPLIT]. This allows to perform automatic rebasing later, should the [origin] be modified, including automatic [three-way-merging](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge), when rebasing. The features of a split can be found, by searching for all features that have [operation] set to `SPLIT`, and that have the same [origin].
  * - **Join**: If the client need to join multiple features into a single one, it is required to create a new (_merged_) feature, and to delete all features joined into this new one. It is important that the client set the [target] of all features being part of the join to the [_HEAD_ Guid][Guid.headOf] of the _created_ (_new_) feature. The [_HEAD_ Guid][Guid.headOf] is simply the [Guid] without the [tuple-number][TupleNumber], so basically `urn:here:naksha:guid:{feature-id}`. This will allow the _storage_ to identify the modifications as join, and it will automatically replace the [_HEAD_ Guid][Guid.headOf] with the final [Guid] of the new joined _HEAD_ [Tuple]. It as well will ensure that the new feature has [action] set to [CREATED][Action.CREATED], and all deleted features have [action] set to [CREATED][Action.CREATED], while [operation] of all participating features is set to [SPLIT][Operation.SPLIT]. This allows automatic rebasing later. The _storage_ will copy the [uuid] of the deleted features into the [origin], if they come from another storage, map, or collection. It will raise an error, when the _ID_ was changed. The features of a join can be found, by searching for all features that have [operation] set to `JOIN`, and that have the same [target].
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 class XyzNs : AnyObject() {
@@ -30,30 +30,36 @@ class XyzNs : AnyObject() {
         const val TAGS_KEY = "tags"
         /**
          * The key of the [uuid] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val UUID = "uuid"
 
         /**
          * The key of the [puuid] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val PUUID = "puuid"
 
         /**
          * The key of the [muuid] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val MUUID = "muuid"
 
         /**
+         * The key of the [nuuid] property.
+         * @since 3.0
+         */
+        const val NUUID = "nuuid"
+
+        /**
          * The key of the [createdAt] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val CREATED_AT = "createdAt"
         /**
          * The key of the [updatedAt] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val UPDATED_AT = "updatedAt"
 
@@ -62,133 +68,127 @@ class XyzNs : AnyObject() {
 
         /**
          * The key of the [tags] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val TAGS = "tags"
 
-        /**
-         * The key of the [nextVersion] property.
-         * @since 3.0.0
-         */
-        const val NEXT = "next"
-
-        /**
+         /**
          * The key of the [changeCount] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val CHANGE_COUNT = "changeCount"
 
         /**
          * The key of the [operation] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val OPERATION = "operation"
 
         /**
          * The key of the [action] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val ACTION = "action"
 
         /**
          * The key of the [appId] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val APP_ID = "appId"
 
         /**
          * The key of the [author] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val AUTHOR = "author"
 
         /**
          * The key of the [authorTs] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val AUTHOR_TS = "authorTs"
 
         /**
          * The key of the [flags] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val FLAGS = "flags"
 
         /**
          * The key of the [hash] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val HASH = "hash"
 
         /**
          * The key of the [origin] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val ORIGIN = "origin"
 
         /**
          * The key of the [target] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val TARGET = "target"
 
         /**
          * The key of the [hereTile] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val HERE_TILE = "hereTile"
 
         /**
          * The key of the [featureType] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val FEATURE_TYPE = "featureType"
 
         /**
          * The key of the [cv0] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val CV0 = "cv0"
 
         /**
          * The key of the [cv1] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val CV1 = "cv1"
 
         /**
          * The key of the [cv2] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val CV2 = "cv2"
 
         /**
          * The key of the [cv3] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val CV3 = "cv3"
 
         /**
          * The key of the [cs0] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val CS0 = "c0"
 
         /**
          * The key of the [cs1] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val CS1 = "c1"
 
         /**
          * The key of the [cs2] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val CS2 = "c2"
 
         /**
          * The key of the [cs3] property.
-         * @since 3.0.0
+         * @since 3.0
          */
         const val CS3 = "c3"
 
@@ -199,7 +199,6 @@ class XyzNs : AnyObject() {
         private val _INT_0 = NotNullProperty<XyzNs, Int>(Int::class) { _, _ -> 0 }
         private val _INT_NULL = NullableProperty<XyzNs, Int>(Int::class, autoRemove = true)
         private val _UPDATED_AT = NotNullProperty<XyzNs, Int64>(Int64::class) { _, _ -> Platform.currentMillis() }
-        private val _INT64_NULL = NullableProperty<XyzNs, Int64>(Int64::class, autoRemove = true)
         private val _DOUBLE_NULL = NullableProperty<XyzNs, Double>(Double::class, autoRemove = true)
         private val _TAGS = NotNullProperty<XyzNs, TagList>(TagList::class) { _, _ -> TagList() }
         private var AS_IS: CharArray = CharArray(128 - 32) { (it + 32).toChar() }
@@ -216,12 +215,12 @@ class XyzNs : AnyObject() {
         fun fromMetadata(meta: Metadata): XyzNs {
             val tn = meta.tupleNumber
             val guid = Guid(meta.id, tn)
-            val nextVersion = meta.nextTupleNumber
+            val next_tn = meta.nextTupleNumber
             val prev_tn = meta.prevTupleNumber
             val base_tn = meta.baseTupleNumber
             return AnyObject().apply {
                 setRaw(UUID, guid.toString())
-                if (nextVersion != null) setRaw(NEXT, nextVersion.txn)
+                if (next_tn != null) setRaw(NUUID, Guid(meta.id, next_tn).toString())
                 if (prev_tn != null) setRaw(PUUID, Guid(meta.id, prev_tn).toString())
                 if (base_tn != null) setRaw(MUUID, Guid(meta.id, base_tn).toString())
                 if (meta.createdAt != meta.updatedAt) setRaw(CREATED_AT, meta.createdAt)
@@ -289,7 +288,7 @@ class XyzNs : AnyObject() {
     /**
      * Returns the [uuid] parsed as [Guid].
      * @return the [uuid] parsed as [Guid].
-     * @since 3.0.0
+     * @since 3.0
      */
     val guid: Guid?
         get() {
@@ -322,7 +321,7 @@ class XyzNs : AnyObject() {
     /**
      * Returns the [puuid] as [Guid].
      * @return the [puuid] as [Guid].
-     * @since 3.0.0
+     * @since 3.0
      */
     val pguid: Guid?
         get() {
@@ -357,7 +356,7 @@ class XyzNs : AnyObject() {
     /**
      * Returns the [muuid] as [Guid].
      * @return the [muuid] as [Guid].
-     * @since 3.0.0
+     * @since 3.0
      */
     val mguid: Guid?
         get() {
@@ -385,7 +384,7 @@ class XyzNs : AnyObject() {
     /**
      * Returns the [nuuid] as [Guid].
      * @return the [nuuid] as [Guid].
-     * @since 3.0.0
+     * @since 3.0
      */
     val nguid: Guid?
         get() {
@@ -416,7 +415,7 @@ class XyzNs : AnyObject() {
     /**
      * Returns the [origin] as [Guid].
      * @return the [origin] as [Guid].
-     * @since 3.0.0
+     * @since 3.0
      */
     val originGuid: Guid?
         get() {
@@ -436,7 +435,7 @@ class XyzNs : AnyObject() {
      * The value is a [Guid] as defined by **Naksha**, and refers to the outcome of a [join][Operation.JOINED].
      *
      * This field **must** be set by clients, when the join features into a new one, all features involved into the join require the [target] to be set to the [Guid] of the new feature, **including** the new feature itself! As the client may not know the real [Guid] of the new feature, it is okay, when it just inserts the _HEAD_ [Guid], so `urn:here:naksha:guid:{feature-id}`.
-     * @since 3.0.0
+     * @since 3.0
      */
     val target by _STRING_NULL
     private var _target: String? = null
@@ -445,7 +444,7 @@ class XyzNs : AnyObject() {
     /**
      * Returns the [target] as [Guid].
      * @return the [target] as [Guid].
-     * @since 3.0.0
+     * @since 3.0
      */
     val targetGuid: Guid?
         get() {
@@ -566,7 +565,7 @@ class XyzNs : AnyObject() {
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      *
      * If the value is `0`, this is a new feature not yet stored anywhere.
-     * @since 3.0.0
+     * @since 3.0
      */
     val changeCount by _INT_0
 
@@ -601,7 +600,7 @@ class XyzNs : AnyObject() {
      * to change.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 3.0.0
+     * @since 3.0
      */
     val author by _STRING_NULL
 
@@ -611,7 +610,7 @@ class XyzNs : AnyObject() {
      * The value is a valid Unix timestamp which is the number of milliseconds since January 1st, 1970, leap seconds are ignored.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 3.0.0
+     * @since 3.0
      */
     val authorTs: Int64
         get() {
@@ -624,7 +623,7 @@ class XyzNs : AnyObject() {
      * The flags, calculated server side, a bitmask with encoding information about the [Tuple]. It encodes the [action], and the [operation] in binary form, but as well if the payload is GZIP compressed, which encoding is used for the geometry, and information like this.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 3.0.0
+     * @since 3.0
      */
     val flags by _INT_NULL
 
@@ -632,7 +631,7 @@ class XyzNs : AnyObject() {
      * The hash above the feature, calculated server side.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 3.0.0
+     * @since 3.0
      */
     val hash by _INT_NULL
 
@@ -640,7 +639,7 @@ class XyzNs : AnyObject() {
      * The binary [HERE tile][naksha.geo.HereTile] in which the reference-point of the feature is located at level 15.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 3.0.0
+     * @since 3.0
      */
     val hereTile by _INT_NULL
 
@@ -648,55 +647,55 @@ class XyzNs : AnyObject() {
      * A custom feature-type.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 3.0.0
+     * @since 3.0
      */
     val featureType by _STRING_NULL
 
     /**
      * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
-     * @since 3.0.0
+     * @since 3.0
      */
     val cv0 by _DOUBLE_NULL
 
     /**
      * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
-     * @since 3.0.0
+     * @since 3.0
      */
     val cv1 by _DOUBLE_NULL
 
     /**
      * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
-     * @since 3.0.0
+     * @since 3.0
      */
     val cv2 by _DOUBLE_NULL
 
     /**
      * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
-     * @since 3.0.0
+     * @since 3.0
      */
     val cv3 by _DOUBLE_NULL
 
     /**
      * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
-     * @since 3.0.0
+     * @since 3.0
      */
     val cs0 by _STRING_NULL
 
     /**
      * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
-     * @since 3.0.0
+     * @since 3.0
      */
     val cs1 by _STRING_NULL
 
     /**
      * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
-     * @since 3.0.0
+     * @since 3.0
      */
     val cs2 by _STRING_NULL
 
     /**
      * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
-     * @since 3.0.0
+     * @since 3.0
      */
     val cs3 by _STRING_NULL
 
