@@ -71,20 +71,6 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes
   RETURNING id, tn
 )""" else ""
 
-        // Insert the current `head_row` into history
-        val head_to_history = if (insert_into_history != null) """, head_to_history AS (
-  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_tn}, ${PgColumn.copyIntoHistoryColumnNames})
-  SELECT substring(head_row.tn, 9) AS ${PgColumn.next_tn}, ${PgColumn.copyIntoHistoryColumnNames} FROM head_row
-  RETURNING id, tn
-)""" else ""
-
-        // Delete `head_row` from HEAD.
-        val head_deleted = """, head_deleted AS (
-  DELETE FROM ${headTable.quotedName}
-  WHERE tn IN (SELECT tn FROM head_row)
-  RETURNING id, tn
-)"""
-
         // Create a tombstone row for each head_row (row actually to be deleted)
         // We either return this, or we insert it into history and/or shadow!
         val tombstone = """, tombstone AS (
@@ -97,6 +83,23 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes
     ${PgColumn.tombstoneColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row, query
   WHERE head_row.id = query.id
+)"""
+
+        // Insert the current `head_row` into history
+        val head_to_history = if (insert_into_history != null) """, head_to_history AS (
+  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_tn}, ${PgColumn.copyIntoHistoryColumnNames})
+  SELECT substring(tombstone.tn, 9) AS ${PgColumn.next_tn},
+         ${PgColumn.copyIntoHistoryColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
+  FROM head_row
+  LEFT JOIN tombstone ON tombstone.id = head_row.id
+  RETURNING id, tn
+)""" else ""
+
+        // Delete `head_row` from HEAD.
+        val head_deleted = """, head_deleted AS (
+  DELETE FROM ${headTable.quotedName}
+  WHERE tn IN (SELECT tn FROM head_row)
+  RETURNING id, tn
 )"""
 
         // Copy the tombstone into history
@@ -128,7 +131,7 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes
         // Postgres is very good at optimizing, even while it makes the result wrong.
         // It will, sadly, not execute CTE queries that are not needed to generate the result.
         // Therefore, we need to read `tn` of all parts, if available, otherwise Postgres will not execute them!
-        val SQL = """$query$head_select$head_row$head_deleted$clear_shadow$head_to_history$tombstone$history_tombstone$shadow_tombstone
+        val SQL = """$query$head_select$head_row$head_deleted$clear_shadow$tombstone$head_to_history$history_tombstone$shadow_tombstone
 SELECT
     ${ if (return_tuple) allColumns.joinToString(", ") { "tombstone.${it.name} AS ${it.name}" } else "tombstone.tn AS tn" },
     ${if (clear_shadow.isNotEmpty()) "clear_shadow.tn AS shadow_tn," else ""}
