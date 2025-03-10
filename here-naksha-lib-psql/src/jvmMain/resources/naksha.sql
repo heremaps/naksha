@@ -498,12 +498,12 @@ AS $$
 END;
 $$;
 
-DROP FUNCTION IF EXISTS naksha_action(int4);
-CREATE OR REPLACE FUNCTION naksha_action(flags int4) RETURNS int2
+DROP FUNCTION IF EXISTS naksha_flags_action(int4);
+CREATE OR REPLACE FUNCTION naksha_flags_action(flags int4) RETURNS int2
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   -- 0=CREATED; 1=UPDATED; 2=DELETED; 3=UNKNOWN
-  SELECT (flags >> 12) & 3
+  SELECT (flags >> 16) & 3
 END $$;
 
 DROP FUNCTION IF EXISTS naksha_geo_grid_trim_level(int4, int4);
