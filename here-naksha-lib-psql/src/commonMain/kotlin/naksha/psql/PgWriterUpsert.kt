@@ -156,7 +156,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
         }
         cursor.fetch().use {
             outRows.addAll(cursor)
-            for (row in 0 until inRows.size) {
+            for (row in 0 until outRows.size) {
                 val id = outRows.getString(row, "id") ?: throw generalException("Missing 'id' in SQL result")
                 val tn = outRows.getB160(row, "tn") ?: throw generalException("Missing 'tn' in SQL result")
 
