@@ -1,5 +1,6 @@
 package naksha.geo
 
+import naksha.base.AnyObject
 import naksha.base.JsEnum
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -55,5 +56,17 @@ class SpType : JsEnum() {
         @JvmField
         @JsStatic
         val GeometryCollection = def(SpType::class, "GeometryCollection")
+    }
+
+    /**
+     * Tests if the given object is a geometry of this type, to be done before casting via [asPoint][SpGeometry.asPoint], `...`.
+     * @param any the object to test.
+     * @return `true` if the given object is a geometry; `false` otherwise.
+     */
+    fun isType(any: Any?): Boolean {
+        if (!isDefined) return false
+        val typeName = this.toString()
+        if (any !is AnyObject) return false
+        return any.getRaw("type") == typeName
     }
 }

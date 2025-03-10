@@ -13,4 +13,13 @@ class PolygonCoord(): ListProxy<LineStringCoord>(LineStringCoord::class), ICoord
         addAll(lineStrings)
     }
 
+    override fun hasZ(): Boolean {
+        for (p in this) if (p != null && p.hasZ()) return true
+        return false
+    }
+
+    override fun hasM(): Boolean {
+        for (p in this) if (p != null && p.hasM()) return true
+        return false
+    }
 }

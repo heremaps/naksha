@@ -11,11 +11,15 @@ import kotlin.js.JsName
 @JsExport
 class PointCoord() : ListProxy<Double>(Double::class), ICoordinates {
 
+    @Suppress("SENSELESS_COMPARISON")
     @JsName("of")
-    constructor(longitude: Double, latitude: Double, vararg altitude: Double) : this() {
+    constructor(longitude: Double, latitude: Double, vararg additional: Double) : this() {
         add(longitude)
         add(latitude)
-        if (altitude.isNotEmpty()) add(altitude[0])
+        if (additional != null && additional.isNotEmpty()) {
+            add(additional[0])
+            if (additional.size >= 2) add(additional[1])
+        }
     }
 
     private fun has(value: Double?): Boolean = value != null && !value.isNaN()
@@ -23,18 +27,24 @@ class PointCoord() : ListProxy<Double>(Double::class), ICoordinates {
     fun getLongitude(): Double = get(0) ?: 0.0
     fun setLongitude(longitude: Double): Double = set(0, longitude) ?: 0.0
     fun hasLongitude(): Boolean = has(get(0))
-    fun getMin(): Double = getLongitude()
-    fun setMin(longitude: Double): Double = setLongitude(longitude)
 
     fun getLatitude(): Double = get(1) ?: 0.0
     fun setLatitude(latitude: Double): Double = set(1, latitude) ?: 0.0
     fun hasLatitude(): Boolean = has(get(1))
-    fun getMax(): Double = getLatitude()
-    fun setMax(latitude: Double): Double = setLatitude(latitude)
 
-    fun getAltitude(): Double = get(2) ?: 0.0
-    fun setAltitude(value: Double?): Double = set(2, value) ?: 0.0
-    fun hasAltitude(): Boolean = has(get(2))
-    fun getAlt(): Double = getAltitude()
-    fun setAlt(value: Double?): Double = setAltitude(value)
+    fun getZ(): Double? = get(2)
+    fun setZ(value: Double?): Double? = set(2, value)
+    override fun hasZ(): Boolean = has(get(2))
+    fun removeZ(): Double? = removeAt(2)
+
+    fun getM(): Double = get(3) ?: 0.0
+    fun setM(value: Double?): Double? = set(3, value)
+    override fun hasM(): Boolean = has(get(3))
+    fun removeM(): Double? = removeAt(3)
+
+    fun getAltitude(): Double? = getZ()
+    fun setAltitude(value: Double?): Double? = setZ(value)
+    fun hasAltitude(): Boolean = hasZ()
+    fun getAlt(): Double? = getZ()
+    fun setAlt(value: Double?): Double? = setZ(value)
 }

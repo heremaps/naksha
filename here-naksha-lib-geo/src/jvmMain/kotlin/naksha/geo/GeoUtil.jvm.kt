@@ -200,15 +200,15 @@ actual class GeoUtil private actual constructor() {
         /**
          * Converts [PointCoord] to JTS [Coordinate] with or without altitude.
          *
-         * @param coords [PointCoord] to convert
+         * @param point [PointCoord] to convert
          * @return [Coordinate]
          */
         @JvmStatic
-        fun toJtsCoordinate(coords: PointCoord): Coordinate =
-            if (coords.hasAltitude())
-                Coordinate(coords.getLongitude(), coords.getLatitude())
+        fun toJtsCoordinate(point: PointCoord): Coordinate =
+            if (point.hasZ())
+                Coordinate(point.getLongitude(), point.getLatitude(), point.getZ() ?: 0.0)
             else
-                Coordinate(coords.getLongitude(), coords.getLatitude(), coords.getAltitude())
+                CoordinateXY(point.getLongitude(), point.getLatitude())
 
         /**
          * Converts proxy model to JTS [Geometry] using [factory] with default SRID: 4326
@@ -261,7 +261,10 @@ actual class GeoUtil private actual constructor() {
          * @return [Point]
          */
         @JvmStatic
-        fun toJtsPoint(coords: PointCoord): Point = factory.createPoint(toJtsCoordinate(coords))
+        fun toJtsPoint(coords: PointCoord): Point {
+            val jtsCoord = toJtsCoordinate(coords)
+            return factory.createPoint(jtsCoord)
+        }
 
         /**
          * Converts [SpMultiPoint] to JTS [MultiPoint]
@@ -463,10 +466,21 @@ actual class GeoUtil private actual constructor() {
             if (geometry == null) return null
             val writer = TWKBWriter()
             writer.setXYPrecision(7)
-            writer.setEncodeZ(true)
-            writer.setZPrecision(7)
-            writer.setEncodeM(false)
-            return writer.write(toJtsGeometry(geometry))
+            val coordinates = geometry.getCoordinates()
+            if (coordinates.hasZ()) {
+                writer.setEncodeZ(true)
+                writer.setZPrecision(2)
+            } else {
+                writer.setEncodeZ(false)
+            }
+            if (coordinates.hasZ()) {
+                writer.setEncodeM(true)
+                writer.setMPrecision(2)
+            } else {
+                writer.setEncodeM(false)
+            }
+            val jtsGeometry = toJtsGeometry(geometry)
+            return writer.write(jtsGeometry)
         }
 
         /**

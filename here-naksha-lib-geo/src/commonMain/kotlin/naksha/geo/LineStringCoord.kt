@@ -12,4 +12,14 @@ class LineStringCoord() : ListProxy<PointCoord>(PointCoord::class), ICoordinates
     constructor(vararg points: PointCoord) : this() {
         addAll(points)
     }
+
+    override fun hasZ(): Boolean {
+        for (p in this) if (p != null && p.hasZ()) return true
+        return false
+    }
+
+    override fun hasM(): Boolean {
+        for (p in this) if (p != null && p.hasM()) return true
+        return false
+    }
 }

@@ -13,7 +13,7 @@ class PointProxyTest {
         // expect
         assertEquals(1.0, point.getLongitude())
         assertEquals(2.0, point.getLatitude())
-        assertEquals(3.0, point.getAltitude())
+        assertEquals(3.0, point.getZ())
     }
 
 }

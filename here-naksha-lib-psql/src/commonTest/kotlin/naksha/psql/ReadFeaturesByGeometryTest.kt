@@ -11,10 +11,7 @@ import naksha.model.request.query.*
 import naksha.psql.assertions.AnyObjectFluidAssertions.Companion.assertThatAnyObject
 import naksha.psql.base.PgTestBase
 import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
-import kotlin.test.AfterTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry_test")) {
 
@@ -50,6 +47,37 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
         assertEquals(1, retrievedFeatures.size)
         assertThatAnyObject(retrievedFeatures[0]!!.geometry!!)
             .isIdenticalTo(feature.geometry!!)
+    }
+
+    @Test
+    fun shouldReturnGeometryWithoutElevation() {
+        // Given: feature with geometry
+        val featureGeometry = SpPoint(PointCoord(1.0, 2.0))
+        val feature = NakshaFeature().apply {
+            id = "test_feature"
+            geometry = featureGeometry
+        }
+
+        // When: executing feature write request
+        executeWrite(
+            WriteRequest().add(
+                Write().createFeature(collection, feature)
+            )
+        )
+
+        // And: reading feature
+        val retrievedFeatures = executeRead(
+            ReadFeatures().apply {
+                collectionIds += collection.id
+                featureIds += feature.id
+            }
+        ).features
+
+        // Then: geometry is there and it is what we inserted
+        assertEquals(1, retrievedFeatures.size)
+        val retrievedFeature = assertNotNull(retrievedFeatures[0])
+        val geometry = assertNotNull(retrievedFeature.geometry)
+        assertThatAnyObject(geometry).isIdenticalTo(featureGeometry)
     }
 
     @Test
