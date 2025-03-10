@@ -25,7 +25,7 @@ object ProxyFeatureGenerator {
      *
      * @return A new random feature.
      */
-    fun generateRandomFeature(featureId: String = PlatformUtil.randomString(20)): NakshaFeature {
+    fun generateRandomFeature(featureId: String = PlatformUtil.randomString()): NakshaFeature {
         val feature = NakshaFeature(featureId)
         val longitude = (Platform.random() * 360 - 180).roundToDecimal(3) // -180.0 to 180.0
         val latitude = (Platform.random() * 180 - 90).roundToDecimal(3) // -90 to 90.0

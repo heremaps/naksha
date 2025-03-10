@@ -7,6 +7,7 @@ import naksha.base.WeakRef
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 
 /**
  * A tuple represents a specific immutable state of a feature on the heap. The default constructor creates a metadata-only entry.
@@ -152,7 +153,7 @@ data class Tuple(
     /**
      * Convert the tuple into a [Naksha feature][NakshaFeature], using the [Naksha.cache] to query for the [dictionary-manager][naksha.jbon.IDictManager].
      *
-     * There is no caching involved, every call of this method will perform another convertion.
+     * There is no caching involved, every call of this method will perform another conversion.
      * @return this tuple as Naksha feature.
      * @see [Naksha.decodeTuple]
      */
@@ -181,13 +182,5 @@ data class Tuple(
     fun isComplete(): Boolean = complete
 
     override fun toTuple(): Tuple = this
-
-    // TODO: toByteArray - if isComplete, this method should create a single binary out of the tuple, so that it can be stored in a cache!
-    // TODO: fromByteArray - restore from the binary form
-
-    /**
-     * @return previous tuple number if available
-     */
-    fun getPrevTupleNumber(): TupleNumber? = meta.prevTupleNumber
 }
 
