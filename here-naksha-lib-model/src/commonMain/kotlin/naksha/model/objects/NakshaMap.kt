@@ -38,7 +38,7 @@ open class NakshaMap() : NakshaFeature() {
         const val DEFAULT = "unimap"
 
         /**
-         * The feature-type of this feature itself.
+         * The feature-type of this feature itself _(`naksha.Map`)_.
          * @since 3.0
          */
         const val FEATURE_TYPE = "naksha.Map"
@@ -56,7 +56,6 @@ open class NakshaMap() : NakshaFeature() {
     override fun withGeometry(value: SpGeometry?): NakshaMap = super.withGeometry(value) as NakshaMap
     override fun withReferencePoint(value: SpPoint?): NakshaMap = super.withReferencePoint(value) as NakshaMap
     override fun withProperties(value: NakshaProperties): NakshaMap = super.withProperties(value) as NakshaMap
-    override fun withAttachment(value: ByteArray?): NakshaMap = super.withAttachment(value) as NakshaMap
     override fun withMomType(value: String?): NakshaMap = super.withMomType(value) as NakshaMap
 
     /**

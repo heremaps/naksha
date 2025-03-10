@@ -61,7 +61,6 @@ open class NakshaCollection() : NakshaFeature() {
     override fun withGeometry(value: SpGeometry?): NakshaCollection = super.withGeometry(value) as NakshaCollection
     override fun withReferencePoint(value: SpPoint?): NakshaCollection = super.withReferencePoint(value) as NakshaCollection
     override fun withProperties(value: NakshaProperties): NakshaCollection = super.withProperties(value) as NakshaCollection
-    override fun withAttachment(value: ByteArray?): NakshaCollection = super.withAttachment(value) as NakshaCollection
     override fun withMomType(value: String?): NakshaCollection = super.withMomType(value) as NakshaCollection
 
     override fun featureNumberOfId(id: String): Int64 = Naksha.collectionNumber(id).toInt64()
@@ -348,7 +347,7 @@ open class NakshaCollection() : NakshaFeature() {
 
     companion object NakshaCollection_C {
         /**
-         * The feature-type of this feature itself.
+         * The feature-type of this feature itself _(`naksha.Collection`)_.
          * @since 3.0
          */
         const val FEATURE_TYPE = "naksha.Collection"

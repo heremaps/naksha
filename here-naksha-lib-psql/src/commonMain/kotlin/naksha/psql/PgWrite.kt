@@ -65,6 +65,13 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = original.id
 
     /**
+     * The attachment as specified in the [Write] instruction, can be [Write.UNDEFINED].
+     * @since 3.0
+     */
+    val attachment: ByteArray?
+        get() = original.attachment
+
+    /**
      * If the operation is atomic, the version in which the _HEAD_ is expected to be; otherwise `null`.
      * @since 3.0
      */
@@ -88,6 +95,7 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = original.isCollectionModification()
     val isTransactionModification: Boolean
         get() = Naksha.ADMIN_MAP == map.id && Naksha.TRANSACTIONS_COL == collection.id
+    // This variant differs from write.isFeatureModification, because it includes dictionaries, which are just features for us!
     val isFeatureModification: Boolean
         get() = !isTransactionModification && !isMapModification && !isCollectionModification
 

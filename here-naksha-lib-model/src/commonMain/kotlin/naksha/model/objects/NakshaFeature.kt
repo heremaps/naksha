@@ -32,10 +32,14 @@ open class NakshaFeature() : AnyObject() {
 
     companion object NakshaFeature_C {
         /**
-         * The feature-type of this feature itself.
+         * The type of this feature _(`Feature`)_.
+         *
+         * ### Warning
+         * This is not the [featureType]!
          * @since 3.0
          */
         const val TYPE = "Feature"
+
         /**
          * The key of geometry (`geometry`).
          * @since 3.0
@@ -200,7 +204,7 @@ open class NakshaFeature() : AnyObject() {
      * - `MultiPolygon`
      * - `GeometryCollection`
      *
-     * Beware, no other values are allowed in the [GeoJSON specification, section 7](https://datatracker.ietf.org/doc/html/rfc7946#section-7), therefore we introduce a [customer feature-type][featureType], that is stored in [properties]. Later the [MOM](https://www.here.com/learn/blog/unimap-map-object-model) specification relocated the property into the object root, and renamed it to `momType`. For downward compatibility, this implementation will prefer `properties.featureType` and keep it in sync with `momType`.
+     * Beware, no other values are allowed in the [GeoJSON specification, section 7](https://datatracker.ietf.org/doc/html/rfc7946#section-7), therefore we introduce a [customer feature-type][featureType], that is stored in `properties.featureType`. Later the [MOM](https://www.here.com/learn/blog/unimap-map-object-model) specification relocated this property into the object root, and renamed it to [momType]. For downward compatibility, this implementation will prefer `properties.featureType` and keep it in sync with `momType`.
      * @since 3.0
      * @see [featureType]
      * @see [NakshaProperties.featureType]
@@ -292,20 +296,6 @@ open class NakshaFeature() : AnyObject() {
      */
     open fun withProperties(value: NakshaProperties): NakshaFeature {
         properties = value
-        return this
-    }
-
-    /**
-     * The attachment of the feature.
-     * @since 3.0
-     */
-    open var attachment by ATTACHMENT_NULL
-
-    /**
-     * @see attachment
-     */
-    open fun withAttachment(value: ByteArray?): NakshaFeature {
-        attachment = value
         return this
     }
 

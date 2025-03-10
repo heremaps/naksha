@@ -36,6 +36,7 @@ import naksha.model.NakshaVersion.Companion.LATEST
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaProperties
 import naksha.model.objects.NakshaStorage
+import naksha.model.request.Write
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -492,16 +493,13 @@ class Naksha private constructor() {
             if (tags != null) xyz.tags = decodeTags(tuple.tags, meta.flags, dictReader)?.toTagList() ?: TagList()
             val geo = tuple.geo
             if (geo != null) feature.geometry = decodeGeometry(geo, meta.flags)
-            val attachment = tuple.attachment
-            if (attachment != null) feature.attachment = attachment
             return feature
         }
 
         /**
          * Encode the given [NakshaFeature] into a [Tuple].
-         *
-         * The best way to use the [collection][ICollection] into which the tuple should be inserted as [dictionary-manager][IDictManager], the next best thing is use the [map][IMap] into which it should be stored, eventually using the [storage][IStorage] is better than nothing, aka _null_ (no [dictionary-manager][IDictManager]).
          * @param feature the feature to encode.
+         * @param attachment the attachment to encode; if any.
          * @param dictionary the [dictionary][IDict] to use to encode the feature; _null_ if encoding should be done storage agnostic.
          * @param flags the encoding flags or _null_, if [DEFAULT_FLAGS] should be used.
          * @return the encoded [Tuple].
@@ -511,7 +509,12 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         @JvmOverloads
-        fun encodeTuple(feature: NakshaFeature, dictionary: IDict? = null, flags: Flags? = null): Tuple {
+        fun encodeTuple(
+            feature: NakshaFeature,
+            attachment: ByteArray? = null,
+            dictionary: IDict? = null,
+            flags: Flags? = null
+        ): Tuple {
             val xyz = feature.properties.xyz
             val meta = Metadata.fromXyzNs(feature.id, xyz) ?: Metadata.UNDEFINED
             val flagsOrDefault = flags ?: DEFAULT_FLAGS
@@ -519,13 +522,14 @@ class Naksha private constructor() {
             val geoBytes = encodeGeometry(feature.geometry, flagsOrDefault)
             val refPoint = encodeGeometry(feature.referencePoint, TWKB)
             val tagsBytes = encodeTags(xyz.tags.toTagMap(), flagsOrDefault, dictionary)
-            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, feature.attachment, true)
+            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, attachment, true)
         }
 
         /**
          * Encode the given [NakshaFeature] into a [Tuple] for the given [storage][IStorage].
          *
          * @param feature the feature to encode.
+         * @param attachment the attachment to encode; if any.
          * @param storage the [storage][IStorage] for which to encode the feature.
          * @return the encoded [Tuple].
          * @since 3.0
@@ -533,7 +537,11 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         @JsName("encodeTupleForStorage")
-        fun encodeTuple(feature: NakshaFeature, storage: IStorage): Tuple {
+        fun encodeTuple(
+            feature: NakshaFeature,
+            attachment: ByteArray?,
+            storage: IStorage
+        ): Tuple {
             val xyz = feature.properties.xyz
             val meta = Metadata.fromXyzNs(feature.id, xyz) ?: Metadata.UNDEFINED
             val dict = storage.getEncodingDictionary(feature)
@@ -542,7 +550,7 @@ class Naksha private constructor() {
             val geoBytes = encodeGeometry(feature.geometry, flags)
             val refPoint = encodeGeometry(feature.referencePoint, TWKB)
             val tagsBytes = encodeTags(xyz.tags.toTagMap(), flags, dict)
-            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, feature.attachment, true)
+            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, attachment, true)
         }
 
         /**

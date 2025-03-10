@@ -220,7 +220,9 @@ open class PgWriter internal constructor(val session: PgSession) {
             when (val op = write.original.op) {
                 WriteOp.CREATE -> {
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                    val tuple = tx.created(write.map.head, write.collection.head, f)
+                    // In a CREATE case, UNDEFINED means the same as `null`
+                    val attachment = if (write.attachment === Write.UNDEFINED) null else write.attachment
+                    val tuple = tx.created(write.map.head, write.collection.head, f, attachment)
                     write.tuple = tuple
                     write.tupleNumber = tuple.tupleNumber
                     inserts.getOrCreate(write.collection).add(write)
@@ -228,14 +230,14 @@ open class PgWriter internal constructor(val session: PgSession) {
                 WriteOp.UPSERT -> {
                     // Note: We first try an INSERT, then, when that fails, we do an on-conflict UPDATE!
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                    val tuple = tx.created(write.map.head, write.collection.head, f)
+                    val tuple = tx.created(write.map.head, write.collection.head, f, write.attachment)
                     write.tuple = tuple
                     write.tupleNumber = tuple.tupleNumber
                     upserts.getOrCreate(write.collection).add(write)
                 }
                 WriteOp.UPDATE -> {
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                    val tuple = tx.updated(write.map.head, write.collection.head, f)
+                    val tuple = tx.updated(write.map.head, write.collection.head, f, write.attachment)
                     write.tuple = tuple
                     write.tupleNumber = tuple.tupleNumber
                     updates.getOrCreate(write.collection).add(write)

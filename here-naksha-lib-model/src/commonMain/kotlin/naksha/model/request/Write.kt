@@ -6,6 +6,7 @@ import naksha.base.*
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL
 import naksha.model.Naksha.NakshaCompanion.MAPS_COL
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.Naksha.NakshaCompanion.isInternalId
@@ -24,6 +25,26 @@ import kotlin.jvm.JvmStatic
 /**
  * A write instruction for the storage.
  *
+ * Its recommended strongly to stick to the helper methods:
+ * - [createDictionary]
+ * - [upsertDictionary]
+ * - [deleteDictionary]
+ * - [deleteDictionaryById]
+ * - [createMap]
+ * - [upsertMap]
+ * - [deleteMap]
+ * - [deleteMapById]
+ * - [createCollection]
+ * - [upsertCollection]
+ * - [deleteCollection]
+ * - [deleteCollectionById]
+ * - [createFeature]
+ * - [upsertFeature]
+ * - [deleteFeature]
+ * - [deleteFeatureById]
+ * - [deleteFeature]
+ * - [deleteFeatureById]
+ *
  * Modifications of features require to know the identifier of the feature, the collection-id of the collection in which the feature is stored, and the map-id of the map in which the collection is located.
  * @since 3.0
  */
@@ -31,6 +52,12 @@ import kotlin.jvm.JvmStatic
 open class Write : AnyObject() {
 
     companion object Write_C {
+        /**
+         * A special byte-array instance that represents `undefined`.
+         * @since 3.0
+         */
+        val UNDEFINED = "undefined".encodeToByteArray()
+
         private fun compareMapIds(a: String, b: String): Int {
             if (a == b) return 0
             // We order all modifications done in admin-map first.
@@ -364,25 +391,15 @@ open class Write : AnyObject() {
     }
 
     /**
-     * Arbitrary attachment to be stored.
+     * Arbitrary attachment to be stored, if this is [CREATE][WriteOp.CREATE], [UPSERT][WriteOp.UPSERT], or [UPDATE][WriteOp.UPDATE].
      *
-     * If not explicitly set _(so being undefined)_, returns `feature.attachment`.
+     * If being [UNDEFINED], then the attachment, in whatever state it is, is left unmodified, _(this is the default value)_. If the value is explicitly set to `null`, an existing attachments is removed, if set to a specific byte-array, then the attachment is updated.
      *
-     * Setting the value explicitly to any value, even `null`, will force the attachment to be updated to that value. To keep the attachment in whatever state it is, the value should be `undefined`, which can be realized by calling [keepAttachment].
-     *
-     * The default state is `undefined`, so the attachment that exists in the storage is kept as it is _(unmodified)_.
+     * If this is a [CREATE][WriteOp.CREATE] operation, the value [UNDEFINED] has the same meaning as explicitly setting the value to `null`.
      * @since 3.0
+     * @see [UNDEFINED]
      */
-    var attachment: ByteArray?
-        get() {
-            if (containsKey("attachment")) {
-                val raw = getRaw("attachment")
-                return if(raw is ByteArray) raw else null
-            } else return feature?.attachment
-        }
-        set(value) {
-            setRaw("attachment", value)
-        }
+    var attachment: ByteArray? = UNDEFINED
 
     /**
      * @see [attachment]
@@ -398,15 +415,15 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun keepAttachment(): Write {
-        removeRaw("attachment")
+        attachment = UNDEFINED
         return this
     }
 
     /**
-     * Tests if the attachment should stay in its current state.
-     * @return `true` if the attachment is unchanged; `false` if the attachment should be modified.
+     * Tests if the attachment should be modified.
+     * @return `true` if the attachment should be modified; `false` if the attachment should stay unchanged _(default behavior)_.
      */
-    fun shouldKeepAttachment(): Boolean = !containsKey("attachment")
+    fun attachmentModified(): Boolean = attachment !== UNDEFINED
 
     /**
      * If enabled, a missing map is automatically created, when creating or modifying collections; defaults to `false`.
@@ -439,7 +456,7 @@ open class Write : AnyObject() {
      */
     fun createDictionary(dict: NakshaDictionary): Write {
         this.mapId = ADMIN_MAP
-        this.collectionId = Naksha.DICTIONARIES_COL
+        this.collectionId = DICTIONARIES_COL
         this.op = WriteOp.CREATE
         this.feature = dict
         return this
@@ -454,7 +471,7 @@ open class Write : AnyObject() {
      */
     fun updateDictionary(dict: NakshaDictionary, atomic: Boolean): Write {
         this.mapId = ADMIN_MAP
-        this.collectionId = Naksha.DICTIONARIES_COL
+        this.collectionId = DICTIONARIES_COL
         this.op = WriteOp.UPDATE
         this.feature = dict
         this.atomic = atomic
@@ -469,7 +486,7 @@ open class Write : AnyObject() {
      */
     fun upsertDictionary(dict: NakshaDictionary): Write {
         this.mapId = ADMIN_MAP
-        this.collectionId = Naksha.DICTIONARIES_COL
+        this.collectionId = DICTIONARIES_COL
         this.op = WriteOp.UPSERT
         this.feature = dict
         return this
@@ -484,7 +501,7 @@ open class Write : AnyObject() {
      */
     fun deleteDictionary(dict: NakshaDictionary, atomic: Boolean): Write {
         this.mapId = ADMIN_MAP
-        this.collectionId = Naksha.DICTIONARIES_COL
+        this.collectionId = DICTIONARIES_COL
         this.op = WriteOp.DELETE
         this.feature = dict
         this.atomic = atomic
@@ -501,7 +518,7 @@ open class Write : AnyObject() {
     @JvmOverloads
     fun deleteDictionaryById(dictId: String, version: Version? = null): Write {
         this.mapId = ADMIN_MAP
-        this.collectionId = Naksha.DICTIONARIES_COL
+        this.collectionId = DICTIONARIES_COL
         this.op = WriteOp.DELETE
         this.id = dictId
         this.version = version
@@ -876,6 +893,14 @@ open class Write : AnyObject() {
     }
 
     /**
+     * Tests if this write modifies a dictionary.
+     *
+     * @return `true` if this write modifies a dictionary; `false` otherwise.
+     * @since 3.0
+     */
+    fun isDictionaryModification(): Boolean = mapId == ADMIN_MAP && collectionId == DICTIONARIES_COL
+
+    /**
      * Tests if this write modifies a map.
      *
      * @return `true` if this write modifies a map; `false` otherwise.
@@ -897,7 +922,7 @@ open class Write : AnyObject() {
      * @return `true` if this write modifies a feature within a collection; `false` otherwise.
      * @since 3.0
      */
-    fun isFeatureModification(): Boolean = !isMapModification() && !isCollectionModification()
+    fun isFeatureModification(): Boolean = !isMapModification() && !isCollectionModification() && !isDictionaryModification()
 
     /**
      * Validate that this write is valid, invoked by [session's][naksha.model.ISession] before executing the writes.

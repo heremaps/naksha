@@ -42,7 +42,7 @@ open class NakshaStorage() : NakshaFeature() {
 
     companion object StorageConfig_C {
         /**
-         * The feature-type of this feature itself.
+         * The feature-type of this feature itself _(`naksha.Storage`)_.
          * @since 3.0
          */
         const val FEATURE_TYPE = "naksha.Storage"
@@ -74,7 +74,7 @@ open class NakshaStorage() : NakshaFeature() {
         }
     }
 
-    override fun defaultFeatureType(): String = NakshaCollection.FEATURE_TYPE
+    override fun defaultFeatureType(): String = FEATURE_TYPE
     override fun withId(value: String): NakshaStorage = super.withId(value) as NakshaStorage
     override fun withFeatureNumber(value: Int64): NakshaStorage = super.withFeatureNumber(value) as NakshaStorage
     override fun withType(value: String): NakshaStorage = super.withType(value) as NakshaStorage
@@ -83,7 +83,6 @@ open class NakshaStorage() : NakshaFeature() {
     override fun withGeometry(value: SpGeometry?): NakshaStorage = super.withGeometry(value) as NakshaStorage
     override fun withReferencePoint(value: SpPoint?): NakshaStorage = super.withReferencePoint(value) as NakshaStorage
     override fun withProperties(value: NakshaProperties): NakshaStorage = super.withProperties(value) as NakshaStorage
-    override fun withAttachment(value: ByteArray?): NakshaStorage = super.withAttachment(value) as NakshaStorage
     override fun withMomType(value: String?): NakshaStorage = super.withMomType(value) as NakshaStorage
 
     /**

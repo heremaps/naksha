@@ -3,7 +3,11 @@
 package naksha.model.objects
 
 import naksha.base.AnyList
+import naksha.base.Int64
 import naksha.base.NotNullProperty
+import naksha.geo.SpBoundingBox
+import naksha.geo.SpGeometry
+import naksha.geo.SpPoint
 import naksha.jbon.JbDictionary
 import naksha.jbon.JbEncoder
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
@@ -31,9 +35,24 @@ open class NakshaDictionary() : NakshaFeature() {
         this.id = id
     }
 
-    // TODO: Override `with` methods, see NakshaCollection, -Map, and -Transaction !
+    override fun defaultFeatureType(): String = FEATURE_TYPE
+    override fun withId(value: String): NakshaDictionary = super.withId(value) as NakshaDictionary
+    override fun withFeatureNumber(value: Int64): NakshaDictionary = super.withFeatureNumber(value) as NakshaDictionary
+    override fun withType(value: String): NakshaDictionary = super.withType(value) as NakshaDictionary
+    override fun withFeatureType(value: String): NakshaDictionary = super.withFeatureType(value) as NakshaDictionary
+    override fun withBbox(value: SpBoundingBox?): NakshaDictionary = super.withBbox(value) as NakshaDictionary
+    override fun withGeometry(value: SpGeometry?): NakshaDictionary = super.withGeometry(value) as NakshaDictionary
+    override fun withReferencePoint(value: SpPoint?): NakshaDictionary = super.withReferencePoint(value) as NakshaDictionary
+    override fun withProperties(value: NakshaProperties): NakshaDictionary = super.withProperties(value) as NakshaDictionary
+    override fun withMomType(value: String?): NakshaDictionary = super.withMomType(value) as NakshaDictionary
 
     companion object NakshaDictionary_C {
+        /**
+         * The feature-type of this feature itself.
+         * @since 3.0
+         */
+        const val FEATURE_TYPE = "naksha.Dictionary"
+
         /**
          * Convert the given JBON bytes into an in-memory dictionary.
          * @param bytes the byte-array with the content.

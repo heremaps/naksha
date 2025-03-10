@@ -29,7 +29,6 @@ open class NakshaTx : NakshaFeature() {
     override fun withGeometry(value: SpGeometry?): NakshaTx = super.withGeometry(value) as NakshaTx
     override fun withReferencePoint(value: SpPoint?): NakshaTx = super.withReferencePoint(value) as NakshaTx
     override fun withProperties(value: NakshaProperties): NakshaTx = super.withProperties(value) as NakshaTx
-    override fun withAttachment(value: ByteArray?): NakshaTx = super.withAttachment(value) as NakshaTx
     override fun withMomType(value: String?): NakshaTx = super.withMomType(value) as NakshaTx
 
     companion object NakshaTransaction_C {

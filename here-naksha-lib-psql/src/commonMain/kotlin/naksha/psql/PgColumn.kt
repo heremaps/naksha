@@ -641,7 +641,7 @@ class PgColumn : JsEnum() {
             tn, next_tn, base_tn, // removed: prev_tn
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
-            tags, ref_point, geo, feature, attachment
+            tags, ref_point, geo, feature // removed: attachment (needs special handling)
         )
 
         /**

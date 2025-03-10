@@ -55,7 +55,7 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, writes
         val head_row = """, head_row AS (
   SELECT ${if (insert_into_history != null)
          allColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }
-    else "head.id AS id, head.tn AS tn"}
+    else "head.id AS id, head.tn AS tn, head.attachment AS attachment"}
   FROM ${headTable.quotedName} AS head, new_row
   WHERE head.id = new_row.id AND (new_row.version IS NULL OR new_row.version = naksha_tn_version(head.tn))
   FOR UPDATE NOWAIT
@@ -87,8 +87,14 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, writes
 
         val inserted = """, inserted AS (
 INSERT INTO ${collection.headTable.quotedName} ($allColumnNames)
-SELECT $allColumnNames FROM new_row
-RETURNING id, tn
+SELECT ${allColumns.joinToString(", ") {
+    if (it === PgColumn.attachment)
+    "CASE WHEN new_row.attachment = convert_to('undefined', 'UTF8') THEN head_row.attachment ELSE new_row.attachment END AS attachment"
+    else "new_row.${it.name} AS ${it.name}"
+        }}
+FROM new_row
+LEFT JOIN head_row ON head_row.id = new_row.id
+RETURNING id, tn, attachment
 )"""
 
         val SQL = """$query$head_select$head_row$head_to_history$clear_shadow$head_deleted$inserted
@@ -101,7 +107,8 @@ SELECT
     ${if (head_to_history.isNotEmpty()) "head_to_history.id AS history_id," else ""}
     ${if (clear_shadow.isNotEmpty()) "clear_shadow.id AS clear_shadow_id," else ""}
     head_deleted.id AS head_deleted_id,
-    inserted.id AS inserted_id
+    inserted.id AS inserted_id,
+    inserted.attachment AS attachment
 FROM new_row
 LEFT JOIN head_select ON head_select.id = new_row.id
 LEFT JOIN head_row ON head_row.id = new_row.id
@@ -123,6 +130,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
             .addColumn("existing_id", PgType.STRING)
             .addColumn("existing_tn", PgType.BYTE_ARRAY)
             .addColumn("head_id", PgType.STRING)
+            .addColumn("attachment", PgType.BYTE_ARRAY)
         val plan = plan(conn, collection)
         val array = this.inRows.values()
         val start = Platform.currentNanos()
@@ -143,13 +151,22 @@ LEFT JOIN inserted ON inserted.id = new_row.id
                     throw featureNotFound("Failed to update feature '$id', no such feature exists")
                 }
                 val existing_tn = rows.getByteArray(rowNum, "existing_tn") ?: throw illegalState("Missing tuple-number in HEAD select for feature '$id'")
+                // Fetch the original write and tuple for this row.
+                val write = writeById[id] ?: throw illegalState("Missing write state for feature '$id'")
+                val tuple = write.tuple ?: throw generalException("Missing tuple for feature '$id'")
                 // The `id` from the eventually read head-row, this is only available, if the existing_id is the expected version!
                 val head_id = rows.getString(rowNum, "head_id")
                 if (head_id != id) { // Conflict!
-                    val write = writeById[id] ?: throw illegalState("Missing write state for feature '$id'")
                     val expectedVersion = write.version ?: throw illegalState("Missing expected version for feature '$id'")
                     val tn = TupleNumber.fromB160(existing_tn, storageNumber, mapNumber, collectionNumber)
                     throw conflict("The feature '$id' was expected in version $expectedVersion, but actually found in ${tn.version}")
+                }
+                // Update the attachment, if we should keep it.
+                val attachment = rows.getByteArray(rowNum, "attachment")
+                if (!tuple.attachment.contentEquals(attachment)) {
+                    write.tuple = tuple.copy(
+                        attachment = attachment,
+                    )
                 }
             }
         }

@@ -205,12 +205,14 @@ open class StorageTx private constructor(
      * @param map the map in which the feature is going to be created.
      * @param collection the collection in which the feature is going to be created.
      * @param feature the feature that was created.
+     * @param attachment the attachment.
      * @return the binary encoding of the [NakshaFeature] as [Tuple].
      */
     open fun created(
         map: NakshaMap,
         collection: NakshaCollection,
-        feature: NakshaFeature
+        feature: NakshaFeature,
+        attachment: ByteArray?
     ): Tuple {
         val metadata = metadataOf(map, collection, feature, Operation.CREATED, Action.CREATED)
         val dictionary = dictReader?.getEncodingDictionary(feature)
@@ -220,7 +222,7 @@ open class StorageTx private constructor(
             tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), metadata.flags, dictionary),
             referencePoint = Naksha.encodeGeometry(feature.referencePoint, metadata.flags),
             geo = Naksha.encodeGeometry(feature.geometry, metadata.flags),
-            attachment = feature.attachment,
+            attachment = attachment,
             complete = true
         )
     }
@@ -230,12 +232,14 @@ open class StorageTx private constructor(
      * @param map the map in which the feature is going to be created.
      * @param collection the collection in which the feature is going to be created.
      * @param feature the feature that was created.
+     * @param attachment the attachment.
      * @return the binary encoding of the [NakshaFeature] as [Tuple].
      */
     open fun updated(
         map: NakshaMap,
         collection: NakshaCollection,
-        feature: NakshaFeature
+        feature: NakshaFeature,
+        attachment: ByteArray?
     ): Tuple {
         val metadata = metadataOf(map, collection, feature, Operation.UPDATED, Action.UPDATED)
         val dictionary = dictReader?.getEncodingDictionary(feature)
@@ -245,7 +249,7 @@ open class StorageTx private constructor(
             tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), metadata.flags, dictionary),
             referencePoint = Naksha.encodeGeometry(feature.referencePoint, metadata.flags),
             geo = Naksha.encodeGeometry(feature.geometry, metadata.flags),
-            attachment = feature.attachment,
+            attachment = attachment,
             complete = true
         )
     }
@@ -258,12 +262,14 @@ open class StorageTx private constructor(
      * @param map the map in which the feature is going to be created.
      * @param collection the collection in which the feature is going to be created.
      * @param feature the feature that was created.
+     * @param attachment the attachment.
      * @return the binary encoding of the [NakshaFeature] as [Tuple].
      */
     open fun deleted(
         map: NakshaMap,
         collection: NakshaCollection,
-        feature: NakshaFeature
+        feature: NakshaFeature,
+        attachment: ByteArray?
     ): Tuple {
         val metadata = metadataOf(map, collection, feature, Operation.DELETED, Action.DELETED)
         val dictionary = dictReader?.getEncodingDictionary(feature)
@@ -273,7 +279,7 @@ open class StorageTx private constructor(
             tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), metadata.flags, dictionary),
             referencePoint = Naksha.encodeGeometry(feature.referencePoint, metadata.flags),
             geo = Naksha.encodeGeometry(feature.geometry, metadata.flags),
-            attachment = feature.attachment,
+            attachment = attachment,
             complete = true
         )
     }

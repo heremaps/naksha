@@ -11,7 +11,11 @@ import naksha.psql.PgColumn.PgColumnCompanion.allColumns
  * @since 3.0
  */
 internal class PgColumnRows {
-    private val columns = mutableListOf<PgColumnEntry>()
+    /**
+     * All columns being added already.
+     * @since 3.0
+     */
+    val columns = mutableListOf<PgColumnEntry>()
     private val columnByName = mutableMapOf<String, PgColumnEntry>()
     private var isComplete: Boolean? = null
     private var names: String? = null
@@ -239,6 +243,7 @@ internal class PgColumnRows {
             complete = complete
         )
     }
+
     operator fun get(row: Int): Tuple? {
         val storage_num = storageNumber ?: return null
         val map_num = mapNumber ?: return null
