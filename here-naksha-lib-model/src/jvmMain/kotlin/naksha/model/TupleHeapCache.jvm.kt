@@ -9,7 +9,7 @@ import naksha.jbon.IDictReader
 import naksha.model.request.FeatureTuple
 
 actual class TupleHeapCache : ITupleCache {
-    override val latencyInMicros: Int64
+    actual override val latencyInMicros: Int64
         get() = LATENCY_MEMORY
 
     // TODO: Review Caffeine, we should use it!
@@ -23,10 +23,10 @@ actual class TupleHeapCache : ITupleCache {
     //       The partial tuples should use only weak-references, they are very unhandy anyway and should be avoided.
     private var tuplesByStorage = AtomicMap<Int64, AtomicMap<TupleNumber, WeakRef<Tuple>>>()
 
-    override fun get(tupleNumber: TupleNumber): Tuple?
+    actual override fun get(tupleNumber: TupleNumber): Tuple?
         = tuplesByStorage[tupleNumber.storageNumber]?.get(tupleNumber)?.deref()
 
-    override fun load(featureTuples: List<FeatureTuple?>, from: Int, to: Int): Int {
+    actual override fun load(featureTuples: List<FeatureTuple?>, from: Int, to: Int): Int {
         var loaded = 0
         for (i in from ..< to) {
             val featureTuple = featureTuples[i] ?: continue
@@ -41,7 +41,7 @@ actual class TupleHeapCache : ITupleCache {
         return loaded
     }
 
-    override fun put(tuple: Tuple) {
+    actual override fun put(tuple: Tuple) {
         if (tuple.isComplete()) {
             val tupleNumber = tuple.tupleNumber
             val storageNumber = tupleNumber.storageNumber
@@ -55,30 +55,30 @@ actual class TupleHeapCache : ITupleCache {
         }
     }
 
-    override fun store(tuples: List<Tuple>) {
+    actual override fun store(tuples: List<Tuple>) {
         for (tuple in tuples) put(tuple)
     }
 
-    override fun onStorageAdd(storage: IStorage) {
+    actual override fun onStorageAdd(storage: IStorage) {
     }
 
-    override fun onStorageRemove(storage: IStorage) {
+    actual override fun onStorageRemove(storage: IStorage) {
     }
 
-    override fun getDictReader(storageNumber: Int64): IDictReader? {
+    actual override fun getDictReader(storageNumber: Int64): IDictReader? {
         // TODO: Implement me!
         return null
     }
 
-    override fun clear() {
+    actual override fun clear() {
         tuplesByStorage.clear()
     }
 
-    override fun clear(storage: IStorage) {
+    actual override fun clear(storage: IStorage) {
         tuplesByStorage.remove(storage.number)
     }
 
-    override fun gc() {
+    actual override fun gc() {
         // TODO: Implement me!
     }
 

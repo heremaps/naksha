@@ -13,46 +13,46 @@ import naksha.model.request.FeatureTuple
  * @since 3.0
  */
 actual class TupleHeapCache : ITupleCache {
-    override val latencyInMicros: Int64
+    actual override val latencyInMicros: Int64
         get() = LATENCY_MEMORY
 
-    override fun get(tupleNumber: TupleNumber): Tuple? {
+    actual override fun get(tupleNumber: TupleNumber): Tuple? {
         TODO("Not yet implemented")
     }
 
-    override fun load(featureTuples: List<FeatureTuple?>, from: Int, to: Int): Int {
+    actual override fun load(featureTuples: List<FeatureTuple?>, from: Int, to: Int): Int {
         TODO("Not yet implemented")
     }
 
-    override fun put(tuple: Tuple) {
+    actual override fun put(tuple: Tuple) {
         TODO("Not yet implemented")
     }
 
-    override fun store(tuples: List<Tuple>) {
+    actual override fun store(tuples: List<Tuple>) {
         TODO("Not yet implemented")
     }
 
-    override fun onStorageAdd(storage: IStorage) {
+    actual override fun onStorageAdd(storage: IStorage) {
         TODO("Not yet implemented")
     }
 
-    override fun onStorageRemove(storage: IStorage) {
+    actual override fun onStorageRemove(storage: IStorage) {
         TODO("Not yet implemented")
     }
 
-    override fun getDictReader(storageNumber: Int64): IDictReader? {
+    actual override fun getDictReader(storageNumber: Int64): IDictReader? {
         TODO("Not yet implemented")
     }
 
-    override fun clear() {
+    actual override fun clear() {
         TODO("Not yet implemented")
     }
 
-    override fun clear(storage: IStorage) {
+    actual override fun clear(storage: IStorage) {
         TODO("Not yet implemented")
     }
 
-    override fun gc() {
+    actual override fun gc() {
         TODO("Not yet implemented")
     }
 
