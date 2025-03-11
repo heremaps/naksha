@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.jbon.JbDictionary;
 import naksha.model.IReadSession;
 import java.util.List;
 
@@ -26,18 +25,15 @@ import naksha.model.IStorage;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaMap;
-import naksha.model.request.Request;
-import naksha.model.request.Response;
-import naksha.model.request.FeatureTuple;
-import naksha.model.request.SuccessResponse;
+import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class MockReadSession implements IReadSession {
 
-  List<FeatureTuple> results;
+  FeatureTupleList results;
 
-  public MockReadSession(List<FeatureTuple> results) {
+  public MockReadSession(FeatureTupleList results) {
     this.results = results;
   }
 
@@ -100,11 +96,6 @@ public class MockReadSession implements IReadSession {
   private String map = "";
 
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
-
-  }
-
-  @Override
   public @NotNull IStorage getStorage() {
     return null;
   }
@@ -120,11 +111,6 @@ public class MockReadSession implements IReadSession {
   }
 
   @Override
-  public void refreshMaps() {
-
-  }
-
-  @Override
   public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
     return null;
   }
@@ -135,27 +121,12 @@ public class MockReadSession implements IReadSession {
   }
 
   @Override
-  public void refreshCollections(@NotNull NakshaMap map) {
-
-  }
-
-  @Override
-  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
-    return 0;
-  }
-
-  @Override
-  public @Nullable JbDictionary getDictionary(@NotNull String id) {
-    return null;
-  }
-
-  @Override
-  public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
-    return null;
-  }
-
-  @Override
   public @NotNull SessionOptions getOptions() {
     return null;
+  }
+
+  @Override
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
+
   }
 }

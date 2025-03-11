@@ -94,7 +94,7 @@ public class ViewTest {
     ViewLayer topologiesCS = new ViewLayer(storage, "topologies");
 
     // each layer is going to return 3 same records
-    List<FeatureTuple> results = sampleXyzResponse(3, storage);
+    var results = sampleXyzResponse(3, storage);
     when(storage.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS, buildingsDS, topologiesCS);
@@ -113,7 +113,7 @@ public class ViewTest {
     assertInstanceOf(SuccessResponse.class, result);
 
     // then
-    List<FeatureTuple> allFeatures = ((SuccessResponse) result).getTupleList();
+    List<FeatureTuple> allFeatures = ((SuccessResponse) result).getFeatureTupleList();
     assertEquals(3, allFeatures.size());
     assertTrue(allFeatures.containsAll(results));
   }
@@ -146,7 +146,7 @@ public class ViewTest {
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
     assertEquals(feature.getId(), successResponse.getFeatures().get(0).getId());
-    assertEquals(Action.CREATED, successResponse.getTupleList().get(0).tuple.meta.action());
+    assertEquals(Action.CREATED, successResponse.getFeatureTupleList().get(0).tuple.meta.action());
     writeSession.commit();
   }
 
@@ -171,8 +171,8 @@ public class ViewTest {
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
-    assertEquals(feature.getId(), successResponse.getTupleList().get(0).id());
-    assertEquals(Action.DELETED, successResponse.getTupleList().get(0).tuple.meta.action());
+    assertEquals(feature.getId(), successResponse.getFeatureTupleList().get(0).getId());
+    assertEquals(Action.DELETED, successResponse.getFeatureTupleList().get(0).tuple.meta.action());
     writeSession.commit();
   }
 
@@ -187,7 +187,7 @@ public class ViewTest {
     ViewLayer topologiesDS = new ViewLayer(topologiesStorage, "topologies");
     ViewLayer buildingsDS = new ViewLayer(buildingsStorage, "buildings");
 
-    List<FeatureTuple> results = sampleXyzResponse(3, topologiesStorage);
+    var results = sampleXyzResponse(3, topologiesStorage);
     when(topologiesStorage.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
     when(buildingsStorage.newReadSession(sessionOptions)).thenReturn(readSession);
 
@@ -209,7 +209,7 @@ public class ViewTest {
     ViewLayer topologiesDS_1 = new ViewLayer(topologiesStorage_1, TOPO);
     ViewLayer topologiesDS_2 = new ViewLayer(topologiesStorage_2, TOPO);
 
-    List<FeatureTuple> results = sampleXyzResponse(3, topologiesStorage_2);
+    var results = sampleXyzResponse(3, topologiesStorage_2);
     when(topologiesStorage_1.newReadSession(sessionOptions)).thenReturn(readSession);
     when(topologiesStorage_2.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
 

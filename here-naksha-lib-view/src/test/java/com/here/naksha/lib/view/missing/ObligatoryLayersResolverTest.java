@@ -34,7 +34,7 @@ public class ObligatoryLayersResolverTest {
         storageNumber,
         0,
         0,
-        Naksha.partitionNumber(id),
+        Naksha.featureNumber(id),
         Version.of(2024,1,1, intToInt64(0)),
         0
     );

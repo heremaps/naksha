@@ -59,13 +59,13 @@ class PsqlViewTests extends PsqlTests {
   }
 
   static final String COLLECTION_0 = "test_view0";
-  public static final NakshaCollection COLLECTION_0_FEATURE = new NakshaCollection(COLLECTION_0, 1, null, StoreMode.ON, StoreMode.ON,
+  public static final NakshaCollection COLLECTION_0_FEATURE = new NakshaCollection(COLLECTION_0, null, 1, null, StoreMode.ON, StoreMode.ON,
       StoreMode.ON);
   static final String COLLECTION_1 = "test_view1";
-  public static final NakshaCollection COLLECTION_1_FEATURE = new NakshaCollection(COLLECTION_1, 1, null, StoreMode.ON, StoreMode.ON,
+  public static final NakshaCollection COLLECTION_1_FEATURE = new NakshaCollection(COLLECTION_1, null, 1, null, StoreMode.ON, StoreMode.ON,
       StoreMode.ON);
   static final String COLLECTION_2 = "test_view2";
-  public static final NakshaCollection COLLECTION_2_FEATURE = new NakshaCollection(COLLECTION_2, 1, null, StoreMode.ON, StoreMode.ON,
+  public static final NakshaCollection COLLECTION_2_FEATURE = new NakshaCollection(COLLECTION_2, null, 1, null, StoreMode.ON, StoreMode.ON,
       StoreMode.ON);
 
   @Test

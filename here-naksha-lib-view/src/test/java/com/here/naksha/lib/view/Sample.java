@@ -29,10 +29,13 @@ import naksha.model.TupleNumber;
 import naksha.model.Version;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.FeatureTuple;
+import naksha.model.request.FeatureTupleList;
+
+import static naksha.base.StaticKt.Int64;
 
 public class Sample {
 
-  static final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), 0, 0, 0, Version.fromDouble(3.0), 1);
+  static final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), 0, 0, Int64(0), Version.fromDouble(3.0), 1);
   static final Metadata metadata = new Metadata(
       tupleNum,
       0,
@@ -61,8 +64,8 @@ public class Sample {
       null
   );
 
-  public static List<FeatureTuple> sampleXyzResponse(int size, IStorage storage) {
-    List<FeatureTuple> returnList = new ArrayList<>();
+  public static FeatureTupleList sampleXyzResponse(int size, IStorage storage) {
+    FeatureTupleList returnList = new FeatureTupleList();
     for (int i = 0; i < size; i++) {
       byte[] bytesFeature = Naksha.encodeFeature(new NakshaFeature(), 0, null);
       Tuple tuple = new Tuple(metadata, bytesFeature, null, null, null, null, false);
@@ -71,8 +74,8 @@ public class Sample {
     return returnList;
   }
 
-  public static List<FeatureTuple> sampleXyzWriteResponse(int size) {
-    List<FeatureTuple> returnList = new ArrayList<>();
+  public static FeatureTupleList sampleXyzWriteResponse(int size) {
+    final FeatureTupleList returnList = new FeatureTupleList();
     for (int i = 0; i < size; i++) {
       byte[] bytesFeature = Naksha.encodeFeature(new NakshaFeature(), 0, null);
       Tuple tuple = new Tuple(metadata, bytesFeature, null, null, null, null, false);
