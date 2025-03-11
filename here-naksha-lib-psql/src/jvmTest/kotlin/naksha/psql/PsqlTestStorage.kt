@@ -26,8 +26,10 @@ class PsqlTestStorage : PsqlStorage() {
         }
 
         // If prefer and allowed to pull from HCR then "hcr.data.here.com/naksha/postgres:${architecture()}-latest"
-        // TODO: use image under company docker hub account "docker.io/heremaps/naksha-postgres:latest"
-        internal val POSTGRES_IMAGE_REPO = "hcr.data.here.com/naksha/postgres:${architecture()}-latest"
+        // TODO: company docker hub image:
+        //internal const val POSTGRES_IMAGE_URI = "docker.io/heremaps/naksha-postgres:latest"
+        //internal val POSTGRES_IMAGE_URI = "hcr.data.here.com/naksha/postgres:${architecture()}-latest"
+        internal const val POSTGRES_IMAGE_URI = "phmai/naksha-postgres:latest"
         internal val dockerContainerInfo = AtomicReference<PsqlTestDockerContainerInfo?>()
 
         /**
@@ -42,7 +44,7 @@ class PsqlTestStorage : PsqlStorage() {
             val db = PgInstanceConfig.DEFAULT_DB
             val user = PgInstanceConfig.DEFAULT_USER
             val password = PgInstanceConfig.DEFAULT_PASSWORD
-            val container = GenericContainer(POSTGRES_IMAGE_REPO)
+            val container = GenericContainer(POSTGRES_IMAGE_URI)
             container.portBindings = listOf("15432:5432") // host : container
             container.addEnv("PGPASSWORD", password)
             container.setWaitStrategy(
