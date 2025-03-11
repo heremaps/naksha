@@ -48,7 +48,10 @@ open class SuccessResponse() : Response() {
      */
     @JsName("ofFeatures")
     constructor(vararg features: NakshaFeature?) : this() {
-        setRaw(FEATURES, mutableListOf(*features))
+        val list = NakshaFeatureList()
+        list.setCapacity(features.size)
+        list.addAll(features)
+        setRaw(FEATURES, list)
     }
 
     /**
@@ -57,11 +60,24 @@ open class SuccessResponse() : Response() {
      * @since 3.0
      */
     @JsName("ofFeatureList")
-    constructor(features: List<NakshaFeature?>? = null) : this() {
-        if (features is MutableList<*>) {
+    constructor(features: List<NakshaFeature?>?) : this() {
+        if (features != null) {
+            val list = NakshaFeatureList()
+            list.setCapacity(features.size)
+            list.addAll(features)
+            setRaw(FEATURES, list)
+        }
+    }
+
+    /**
+     * Create a response for the given features.
+     * @param features the features that form the success response.
+     * @since 3.0
+     */
+    @JsName("ofNakshaFeatureList")
+    constructor(features: NakshaFeatureList?) : this() {
+        if (features != null) {
             setRaw(FEATURES, features)
-        } else {
-            setRaw(FEATURES, features?.toMutableList())
         }
     }
 
