@@ -81,6 +81,18 @@ open class SuccessResponse() : Response() {
         }
     }
 
+    /**
+     * Create a response for the given [FeatureTupleList].
+     * @param featureTuples the [FeatureTupleList] that form the success response.
+     * @since 3.0
+     */
+    @JsName("ofFeatureTupleList")
+    constructor(featureTuples: FeatureTupleList?) : this() {
+        if (featureTuples != null) {
+            setRaw(FEATURE_TUPLE_LIST, featureTuples)
+        }
+    }
+
     companion object SuccessResponse_C {
         private const val TUPLE_NUMBER_BINARY = "tupleNumberBinary"
         private const val TUPLE_NUMBER_LIST = "tupleNumberList"
