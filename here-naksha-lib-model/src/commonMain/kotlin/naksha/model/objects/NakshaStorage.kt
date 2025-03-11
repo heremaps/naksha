@@ -13,7 +13,9 @@ import naksha.model.NakshaException
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmOverloads
+import kotlin.jvm.JvmStatic
 
 /**
  * A Naksha storage configuration.
@@ -63,6 +65,8 @@ open class NakshaStorage() : NakshaFeature() {
          * @return the parsed JSON configuration.
          * @since 3.0
          */
+        @JsStatic
+        @JvmStatic
         @JvmOverloads
         fun fromJSON(json: String, fromJsonOptions: FromJsonOptions? = null): NakshaStorage {
             try {
