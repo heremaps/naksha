@@ -5,6 +5,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
 import naksha.model.request.ReadFeatures
+import naksha.model.request.SuccessResponse
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
@@ -18,53 +19,64 @@ class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c")) 
 
     @Test
     fun shouldPerformDelete() {
-        // Given: Initial state of feature
         val featureId = "feature_to_delete"
-        val initialFeature = NakshaFeature().apply {
-            id = featureId
+        val initialFeature = executeWrite(
+            WriteRequest().add(
+                Write().createFeature(collection.mapId, collection.id, NakshaFeature(featureId))
+            )
+        ).let { // this = SuccessResponse
+            val features = assertNotNull(it.features)
+            assertEquals(1, features.size)
+            assertNotNull(features.first())
         }
-        val writeInitialFeature = WriteRequest().add(
-            Write().createFeature(collection.mapId!!, collection.id, initialFeature)
-        )
-        val deleteFeaturesReq = WriteRequest().add(
-            Write().deleteFeatureById(collection.mapId!!, collection.id, featureId)
-        )
+        assertEquals(featureId, initialFeature.id)
+        assertEquals(1 ,initialFeature.properties.xyz.changeCount)
 
-        // When: Writing initial version of feature
-        executeWrite(writeInitialFeature)
+        val deletedFeatures = executeWrite(
+            WriteRequest().add(
+                Write().deleteFeatureById(collection.mapId, collection.id, featureId)
+            )
+        ).let { // this = SuccessResponse
+            val features = assertNotNull(it.features)
+            assertEquals(1, features.size)
+            assertNotNull(features.first())
+        }
+        assertEquals(featureId, deletedFeatures.id)
+        assertEquals(2 ,deletedFeatures.properties.xyz.changeCount)
 
-        // And: Deleting feature
-        executeWrite(deleteFeaturesReq)
-
-        // And: Retrieving feature by id
-        val response = executeRead(ReadFeatures().apply {
+        // Verify that the feature does not exist
+        Naksha.cache.clear()
+        executeRead(ReadFeatures().apply {
             collectionIds += collection.id
             featureIds += initialFeature.id
-        })
-        val responseFeatures = response.features
-        assertEquals(0, responseFeatures.size)
+        }).let { // this = SuccessResponse
+            val features = assertNotNull(it.features)
+            assertEquals(0, features.size)
+        }
 
         // verify if history contains 2 versions
-        val historyResponse = executeRead(ReadFeatures().apply {
+        executeRead(ReadFeatures().apply {
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true
             versions = 10
-        })
-        assertEquals(2, historyResponse.features.size)
-        assertSame(Action.DELETED, historyResponse.featureTupleList?.get(0)?.tuple?.meta?.flags?.actionEnum())
-        assertSame(Action.CREATED, historyResponse.featureTupleList?.get(1)?.tuple?.meta?.flags?.actionEnum())
+        }).apply { // this = SuccessResponse
+            assertEquals(2, features.size)
+            assertSame(Action.DELETED, featureTupleList?.get(0)?.tuple?.meta?.flags?.actionEnum())
+            assertSame(Action.CREATED, featureTupleList?.get(1)?.tuple?.meta?.flags?.actionEnum())
+        }
 
         // verify if delete table contains element
-        val deleteTableResponse = executeRead(ReadFeatures().apply {
+        executeRead(ReadFeatures().apply {
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryDeleted = true
-        })
-        assertEquals(1, deleteTableResponse.features.size)
-        val deletedFeature = assertNotNull(deleteTableResponse.features[0])
-        assertEquals(initialFeature.id, deletedFeature.id)
-        assertEquals(Action.DELETED, deletedFeature.properties.xyz.action)
+        }).apply { // this = SuccessResponse
+            assertEquals(1, features.size)
+            val deletedFeature = assertNotNull(features[0])
+            assertEquals(initialFeature.id, deletedFeature.id)
+            assertEquals(Action.DELETED, deletedFeature.properties.xyz.action)
+        }
     }
 
     @Test

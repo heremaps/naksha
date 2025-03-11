@@ -668,7 +668,7 @@ class PgColumn : JsEnum() {
         val tombstoneColumns = listOf(
             updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
-            hash, here_tile, cc, // removed: flags
+            hash, here_tile, // removed: flags, cc
             // removed: tn, next_tn, prev_tn, and base_tn,
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
