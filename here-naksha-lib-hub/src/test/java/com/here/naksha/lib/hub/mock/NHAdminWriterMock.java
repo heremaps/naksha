@@ -70,7 +70,7 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
   }
 
   private Response executeWriteCollection(Write write) {
-    String collectionId = write.getFeatureId();
+    String collectionId = write.getId();
     WriteOp op = write.getOp();
     if (op.equals(WriteOp.CREATE)) {
       mockCollection.putIfAbsent(collectionId, new TreeMap<>());

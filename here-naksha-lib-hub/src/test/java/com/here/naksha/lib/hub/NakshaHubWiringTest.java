@@ -251,7 +251,7 @@ class NakshaHubWiringTest {
         requests.get(1)
             .getWrites()
             .get(0)
-            .getFeatureId(),
+            .getId(),
         "CollectionId mismatch for Write Collection request");
     // Verify: WriteFeature into collectionId got called again
     assertTrue(

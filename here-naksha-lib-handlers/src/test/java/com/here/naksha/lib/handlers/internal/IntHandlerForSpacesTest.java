@@ -17,20 +17,16 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.util.List;
 import java.util.stream.Stream;
-import naksha.base.JvmInt64;
 import naksha.base.fn.Fn1;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
-import naksha.model.Metadata;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
-import naksha.model.Tuple;
-import naksha.model.TupleNumber;
-import naksha.model.Version;
 import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.ErrorResponse;
-import naksha.model.request.FeatureTuple;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
@@ -116,20 +112,20 @@ class IntHandlerForSpacesTest {
     assertInstanceOf(ErrorResponse.class, result);
     ErrorResponse errorResult = (ErrorResponse) result;
     assertEquals(NOT_FOUND, errorResult.getError().getCode());
-    assertEquals(errorResult.getError().getMsg(), "Following handlers defined for Space %s don't exist: %s".formatted(
+    assertEquals("Following handlers defined for Space %s don't exist: %s".formatted(
         space.getId(),
         String.join(",", missingHandlerIds)
-    ));
+    ), errorResult.getError().getMsg());
   }
 
   private static Stream<Named<WriteRequest>> persistingWritesWithInvalidSpace() {
     Space spaceWithoutTitle = space("no_title", null, "some_desc");
     Space spaceWithoutDescription = space("no_desc", "some_title", null);
     return Stream.of(
-        named("PUT Space without title", new WriteRequest().add(new Write().upsertFeature(SPACES, spaceWithoutTitle, true))),
-        named("UPDATE Space without title", new WriteRequest().add(new Write().updateFeature(SPACES, spaceWithoutTitle, false))),
-        named("CREATE Space without title", new WriteRequest().add(new Write().createFeature(SPACES, spaceWithoutTitle))),
-        named("PUT Space without description", new WriteRequest().add(new Write().upsertFeature(SPACES, spaceWithoutDescription, true))),
+        named("PUT Space without title", new WriteRequest().add(new Write().upsertFeature(null, SPACES, spaceWithoutTitle))),
+        named("UPDATE Space without title", new WriteRequest().add(new Write().updateFeature(null, SPACES, spaceWithoutTitle, true))),
+        named("CREATE Space without title", new WriteRequest().add(new Write().createFeature(null, SPACES, spaceWithoutTitle))),
+        named("PUT Space without description", new WriteRequest().add(new Write().upsertFeature(null, SPACES, spaceWithoutDescription))),
         named("UPDATE Space without description",
             new WriteRequest().add(new Write().updateFeature(SPACES, spaceWithoutDescription, false))),
         named("CREATE Space without description", new WriteRequest().add(new Write().createFeature(SPACES, spaceWithoutDescription)))
@@ -139,7 +135,7 @@ class IntHandlerForSpacesTest {
   private static Stream<Named<WriteRequest>> persistingSpaceWithoutValidHandlers() {
     Space space = space("space_id", "no_desc", "some_title", List.of("handler_1", "handler_2", "handler_3"));
     return Stream.of(
-        named("PUT Space without valid handlers", new WriteRequest().add(new Write().upsertFeature(SPACES, space, true))),
+        named("PUT Space without valid handlers", new WriteRequest().add(new Write().upsertFeature(null, SPACES, space))),
         named("UPDATE Space without valid handlers", new WriteRequest().add(new Write().updateFeature(SPACES, space, false))),
         named("CREATE Space without valid handlers", new WriteRequest().add(new Write().createFeature(SPACES, space)))
     );
@@ -179,7 +175,7 @@ class IntHandlerForSpacesTest {
     IStorage spaceStorage = mock(IStorage.class);
     when(naksha.getSpaceStorage()).thenReturn(spaceStorage);
     IReadSession readSession = mock(IReadSession.class);
-    SuccessResponse successResponse = new TestSuccessResponse(spaceStorage, eventHandlerIds);
+    SuccessResponse successResponse = successfulResponseWithIds(eventHandlerIds);
     when(readSession.execute(argThat(anyReadHandlersRequest()))).thenReturn(successResponse);
     when(spaceStorage.newReadSession(any(SessionOptions.class))).thenReturn(readSession);
     when(spaceStorage.useReadSession(any(SessionOptions.class), any(Fn1.class))).thenCallRealMethod();
@@ -189,57 +185,12 @@ class IntHandlerForSpacesTest {
     return argument -> argument.getCollectionIds().size() == 1 && EVENT_HANDLERS.equals(argument.getCollectionIds().get(0));
   }
 
-  static class TestSuccessResponse extends SuccessResponse {
-
-    TestSuccessResponse(IStorage storage, List<String> ids) {
-      super(resultTuples(storage, ids));
-    }
-
-    private static List<FeatureTuple> resultTuples(IStorage storage, List<String> ids) {
-      return ids.stream()
-          .map(id -> {
-            TupleNumber tupleNumber = testTupleNumber();
-            return new FeatureTuple(tupleNumber, testTuple(tupleNumber, id));
-          })
-          .toList();
-    }
-
-    private static TupleNumber testTupleNumber() {
-      return new TupleNumber(new JvmInt64(0L), 0, 0, new JvmInt64(0), new Version(0L), 0);
-    }
-
-    private static Tuple testTuple(TupleNumber tupleNumber, String id) {
-      return new Tuple(testMetadata(tupleNumber, id), null, null, null, null, null, false);
-    }
-
-    private static Metadata testMetadata(TupleNumber tupleNumber, String id) {
-      return new Metadata(
-          tupleNumber,
-          0,
-          null,
-          new JvmInt64(0),
-          null,
-          null,
-          null,
-          null,
-          1,
-          0,
-          0,
-          id,
-          "sampleAppId",
-          "sampleAuthor",
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
-      );
-    }
+  private static SuccessResponse successfulResponseWithIds(List<String> ids) {
+    SuccessResponse successResponse = new SuccessResponse();
+    List<NakshaFeature> features = ids.stream()
+        .map(NakshaFeature::new)
+        .toList();
+    successResponse.setFeatures(NakshaFeatureList.fromList(features));
+    return successResponse;
   }
 }

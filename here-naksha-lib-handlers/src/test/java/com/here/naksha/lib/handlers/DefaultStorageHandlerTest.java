@@ -27,7 +27,6 @@ import java.util.concurrent.Callable;
 import java.util.stream.Stream;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.fn.Fn1;
-import naksha.base.fn.Fx0;
 import naksha.base.fn.Fx1;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
@@ -56,8 +55,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.internal.stubbing.answers.DoesNothing;
-import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -168,7 +165,7 @@ class DefaultStorageHandlerTest {
     // And: passed Write Collection request was about creating single collection with correct id
     Write writeCollection = findSingleCreateCollectionWrite(capturedWrites);
     assertEquals(WriteOp.CREATE, writeCollection.getOp());
-    assertEquals(testCase.correctCollection().getId(), writeCollection.getFeatureId());
+    assertEquals(testCase.correctCollection().getId(), writeCollection.getId());
     assertEquals(Naksha.COLLECTIONS_COL, writeCollection.getCollectionId());
 
     // And: write features related to the same feature in correct collection
@@ -176,7 +173,7 @@ class DefaultStorageHandlerTest {
     assertEquals(2, featureWrites.size());
     for (Write writeFeature : featureWrites) {
       assertEquals(WriteOp.CREATE, writeFeature.getOp());
-      assertEquals(featureToCreate.getId(), writeFeature.getFeatureId());
+      assertEquals(featureToCreate.getId(), writeFeature.getId());
       assertEquals(testCase.correctCollection().getId(), writeFeature.getCollectionId());
     }
   }
@@ -213,7 +210,7 @@ class DefaultStorageHandlerTest {
 
     // And: passed Write Collection request was about creating collection defined in Handler properties
     assertEquals(WriteOp.CREATE, capturedCollectionWrite.getOp());
-    assertEquals(handler.properties.getCollection().getId(), capturedCollectionWrite.getFeatureId());
+    assertEquals(handler.properties.getCollection().getId(), capturedCollectionWrite.getId());
   }
 
   @Test
@@ -397,7 +394,7 @@ class DefaultStorageHandlerTest {
     return storageHandler(properties, testSpace());
   }
 
-  private Space testSpace(){
+  private Space testSpace() {
     Space space = new Space();
     space.setId("some_test_space");
     return space;
