@@ -18,6 +18,7 @@ dependencies {
     implementation(Lib.commons_lang3)
     testImplementation(Lib.mockito)
     testImplementation(project(":here-naksha-lib-model"))
+    testImplementation(project(":here-naksha-lib-psql"))
     testImplementation(Lib.jts_core)
 }
 setOverallCoverage(0.0) // only increasing allowed!
