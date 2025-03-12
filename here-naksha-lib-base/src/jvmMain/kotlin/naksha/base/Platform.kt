@@ -268,7 +268,7 @@ actual class Platform {
         @JvmStatic
         fun <T : Proxy> javaProxy(any: PlatformObject?, javaClass: Class<T>): T? {
             if (any == null) return null
-            return any.proxy(javaClass::class as KClass<T>)
+            return any.proxy(javaClass.kotlin)
         }
 
         /**
