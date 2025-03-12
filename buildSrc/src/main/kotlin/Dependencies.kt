@@ -75,8 +75,8 @@ object Lib {
     const val junit_jupiter_engine = "org.junit.jupiter:junit-jupiter-engine:$junit_version"
     const val junit_jupiter = "org.junit.jupiter:junit-jupiter:$junit_version"
     const val junit_params = "org.junit.jupiter:junit-jupiter-params:$junit_version"
-    const val mockito = "org.mockito:mockito-core:5.8.0"
-    const val mockito_kotlin = "org.mockito.kotlin:mockito-kotlin:5.3.1"
+    const val mockito = "org.mockito:mockito-core:5.16.0"
+    const val mockito_kotlin = "org.mockito.kotlin:mockito-kotlin:5.4.0"
     const val wiremock =  "org.wiremock:wiremock:3.3.1"
     const val kotlintest_runner_junit5 = "io.kotlintest:kotlintest-runner-junit5:3.3.2"
 
