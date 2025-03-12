@@ -201,18 +201,18 @@ actual class Platform {
             try {
                 // Note: Before Java 15, `MethodHandles.lookup().ensureInitialized(klass)` does not exist, we need to use Unsafe!
                 _ensureClassInitialized = unsafe.javaClass.getMethod("ensureClassInitialized", Class::class.java)
-                _ensureInitialized = null
                 _lookupInstance = null
+                _ensureInitialized = null
             } catch (ignore: NoSuchMethodException) {
-                // In Java 23+ this method does not exist!
+                // In Java 23+ `Unsafe.ensureClassInitialized` does not exist, use `MethodHandles.lookup().ensureInitialized(klass)`!
                 _ensureClassInitialized = null
                 val lookupMethod = MethodHandles::class.java.getMethod("lookup")
                 _lookupInstance = lookupMethod.invoke(null)
                 _ensureInitialized = _lookupInstance.javaClass.getMethod("ensureInitialized", Class::class.java)
             }
             ensureClassInitialized = _ensureClassInitialized
-            ensureInitialized = _ensureInitialized
             lookupInstance = _lookupInstance
+            ensureInitialized = _ensureInitialized
         }
 
         @JvmStatic
@@ -422,10 +422,10 @@ actual class Platform {
         actual fun initializeKlass(klass: KClass<*>) {
             // This code is required, because in Java 23 they removed unsafe.ensureClassInitialized, but
             // the replacement method does not exist before Java 15, this is such a nonsense!
-            val ensureInitialized = this.ensureInitialized
             val lookupInstance = this.lookupInstance
+            val ensureInitialized = this.ensureInitialized
             if (ensureInitialized != null && lookupInstance != null) {
-                ensureInitialized.invoke(lookupInstance, klass)
+                ensureInitialized.invoke(lookupInstance, klass.java)
                 // == MethodHandles.lookup().ensureInitialized(klass.java);
             } else {
                 val ensureClassInitialized = this.ensureClassInitialized
