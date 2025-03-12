@@ -80,7 +80,7 @@ open class ReadFeatures : ReadRequest() {
     /**
      * Extend the request to search through lately deleted features _(defaults to `false`)_.
      *
-     * Actually, unless explicitly disabled, deleted features are stored in a shadow table, this information is used in views, so that a feature being deleted in a higher level layer are removed from the view, rather than to show their deleted counterpart read from a lower level layer. In other words, `lib-view` will always enable this, and won't work correctly, unless the deleted features are available.
+     * Actually, unless explicitly disabled, deleted features are stored in a shadow table, this information is used in views, so that a feature being deleted in a higher level layer, can be removed from the view, rather than to show their deleted counterpart read from a lower level layer. In other words, `lib-view` will always enable this, and won't work correctly, unless the deleted features are available.
      *
      * ### Note
      * This option is totally distinct form [queryHistory], and ignored ones [queryHistory] is `true`. The reason the two switches behave differently is, that entries in the _shadow_ table can be deleted, while the history is really immutable. This is important to rollback a delete (restore the original shadowed state), what is exactly what the [PURGE][WriteOp.PURGE] write operation is good for.
@@ -90,7 +90,7 @@ open class ReadFeatures : ReadRequest() {
     /**
      * Extend the request to search through historic states of features _(defaults to `false`)_.
      *
-     * Setting this to `true` will cause the last state to be returned, which basically includes as well deleted states.
+     * Setting this to `true` will cause deleted states to be returned as well. When the history is queried without specifying any specific ordering, and [versions] is bigger than `1`, then the results shall be ordered automatically by the storage in reverse of their `version`, so the latest [Tuple][naksha.model.Tuple] should be the first one returned.
      */
     var queryHistory by BOOLEAN_OR_FALSE
 
@@ -99,7 +99,9 @@ open class ReadFeatures : ReadRequest() {
      *
      * The defaults to 1, which means only the latest version, being closest to the given maximal [version] should be returned, if no [version] given, the latest version is meant.
      *
-     * This parameter is ignored for queries to a _GUID_, because a _GUID_ already identifies an exact version. The query requires that [queryHistory] is _true_, if this value is not _1_ (the default) and [queryHistory] is _false_, the request will be rejected with [naksha.model.NakshaError.ILLEGAL_ARGUMENT].
+     * This parameter is ignored for queries to a [Guid][naksha.model.Guid], because a [Guid][naksha.model.Guid] already identifies an exact version. The query requires that [queryHistory] is `true`.
+     *
+     * If set to anything not being `1` _(the default)_ and [queryHistory] is `false`, the request will be rejected with [ILLEGAL_ARGUMENT][naksha.model.NakshaError.ILLEGAL_ARGUMENT].
      *
      * If multiple versions are requested, the execution may become drastically slower, therefore this feature should be used with care!
      * @since 3.0.0
@@ -107,15 +109,19 @@ open class ReadFeatures : ReadRequest() {
     var versions by INT_OR_1
 
     /**
-     * Limit the read to all rows with the given minimal version, _null_ if no limit.
+     * Limit the read to all rows with the given minimal version, `null` if no limit.
+     *
+     * If set to anything not being `null` _(the default)_ and [queryHistory] is `false`, the request will be rejected with [ILLEGAL_ARGUMENT][naksha.model.NakshaError.ILLEGAL_ARGUMENT].
      * @since 3.0.0
      */
     var minVersion by VERSION_OR_NULL
 
     /**
-     * Limit the read to all features with a specific maximum version, _null_ if no limit _(latest/HEAD version)_.
+     * Limit the read to all features with a specific maximum version, `null` if no limit _(latest/HEAD version)_.
      *
-     * **Note**: This effectively is a request for a specific version, if no [minVersion] is set, and [versions] is default or explicitly 1.
+     * This effectively is a request for a specific version, if no [minVersion] is set, and [versions] is default or explicitly `1`.
+     *
+     * If set to anything not being `null` _(the default)_ and [queryHistory] is `false`, the request will be rejected with [ILLEGAL_ARGUMENT][naksha.model.NakshaError.ILLEGAL_ARGUMENT].
      * @since 3.0.0
      */
     var version by VERSION_OR_NULL
@@ -124,8 +130,6 @@ open class ReadFeatures : ReadRequest() {
      * Order the result-set like given; this is an expensive operation and should be avoided.
      *
      * If an order is required, but no specific one, then it is strongly recommended to stick with the [deterministic order][OrderBy.deterministic], which is produced by creating a blank empty [OrderBy] object or through the static helper method [OrderBy.deterministic]. Ordering by anything else can have a drastic performance impact.
-     *
-     * Note that the [deterministic ordering][OrderBy.deterministic] will always be selected implicitly by the storage, when a [_handle_ is requested][returnHandle], and no explicit [orderBy] was provided. Creating a _handle_ always need an order, to be able to seek in the result-set.
      */
     var orderBy by ORDER_BY_OR_NULL
 

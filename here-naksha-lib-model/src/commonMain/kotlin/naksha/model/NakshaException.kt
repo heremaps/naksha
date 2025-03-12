@@ -13,6 +13,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_EXISTS
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
+import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 
 /**
  * A Naksha exception.
@@ -138,3 +139,10 @@ fun featureExists(msg: String): NakshaException = NakshaException(FEATURE_EXISTS
  */
 fun conflict(msg: String): NakshaException = NakshaException(CONFLICT, msg)
 
+/**
+ * Create [UNSUPPORTED_OPERATION] exception
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun unsupportedOp(msg: String): NakshaException = NakshaException(UNSUPPORTED_OPERATION, msg)

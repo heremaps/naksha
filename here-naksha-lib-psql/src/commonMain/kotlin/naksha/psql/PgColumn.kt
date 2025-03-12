@@ -111,7 +111,7 @@ class PgColumn : JsEnum() {
 
     companion object PgColumnCompanion {
         /**
-         * Returns the columns instance for the given name,
+         * Returns the columns instance for the given name.
          * @param columnName the column name.
          * @return the column enumeration value.
          * @since 3.0

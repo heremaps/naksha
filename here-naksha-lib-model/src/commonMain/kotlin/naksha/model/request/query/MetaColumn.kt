@@ -10,8 +10,30 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 /**
- * The meta columns reference for a [tuple][naksha.model.Tuple]; can be used in [queries][naksha.model.request.RequestQuery] via [MetaQuery][naksha.model.request.query.MetaQuery].
+ * The meta-columns are virtual columns that can be searched by.
+ *
+ * Beware, that not all storages may support all columns as search target, therefore it is not recommended to search directly against these columns. They represent the properties of a [Tuple][naksha.model.Tuple] and its [Metadata][naksha.model.Metadata], and can be used when searching for features via [ReadFeatures][naksha.model.request.ReadFeatures]. Within a [ReadFeatures][naksha.model.request.ReadFeatures] search, the property [request.query][naksha.model.request.ReadFeatures.query] refers to a [RequestQuery][naksha.model.request.RequestQuery], which allows searching for meta-columns via [request.query.metadata][naksha.model.request.RequestQuery.metadata], which should be set to a [MetaQuery][naksha.model.request.query.MetaQuery].
+ *
+ * For example:
+ * ```kotlin
+ * val request = ReadFeatures()
+ * request.query.metadata =
+ *   MetaQuery(MetaColumn.author(), StringOp.EQUALS, "foo")
+ * ```
+ * To query for `author` and `appId`, an [MetaAnd] can be used:
+ * ```kotlin
+ * val request = ReadFeatures()
+ * request.query.metadata = MetaAnd(
+ *   MetaQuery(MetaColumn.author(), StringOp.EQUALS, "foo"),
+ *   MetaQuery(MetaColumn.appId(), StringOp.EQUALS, "bar")
+ * )
+ * ```
+ *
  * @since 3.0
+ * @see [MetaQuery]
+ * @see [MetaAnd]
+ * @see [MetaOr]
+ * @see [MetaNot]
  */
 @JsExport
 open class MetaColumn() : AnyObject() {
