@@ -101,7 +101,7 @@ open class StorageTx private constructor(
      * The transaction local identifier to create unique operations within this transaction.
      * @since 3.0
      */
-    open val uid: AtomicInt = AtomicInt(0)
+    open val uid: UidManager = UidManager()
 
     /**
      * Method to create the new metadata, when performing the given operation, with the given feature as outcome of the operation, in the given session.
@@ -130,7 +130,7 @@ open class StorageTx private constructor(
             .withOperation(operation)
             .withAction(action)
         val xyz = feature.properties.xyz
-        val tn = TupleNumber(storageNumber, map.number, collection.number, feature.featureNumber, version, uid.getAndAdd(1))
+        val tn = TupleNumber(storageNumber, map.number, collection.number, feature.featureNumber, version, uid.next(action))
         // TODO: Handle other operations like rebase!
         val base_tn: TupleNumber? = null
         val prev_tn: TupleNumber? = if (operation == Operation.CREATED) null else {
