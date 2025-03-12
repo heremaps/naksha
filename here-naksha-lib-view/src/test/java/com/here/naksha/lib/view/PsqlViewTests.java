@@ -28,6 +28,7 @@ import naksha.geo.PointCoord;
 import naksha.geo.SpPoint;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.objects.StoreMode;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.RequestQuery;
@@ -37,6 +38,7 @@ import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import naksha.model.request.query.SpIntersects;
 import naksha.model.request.query.SpOr;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -59,28 +61,26 @@ class PsqlViewTests extends PsqlTests {
   }
 
   static final String COLLECTION_0 = "test_view0";
-  public static final NakshaCollection COLLECTION_0_FEATURE = new NakshaCollection(COLLECTION_0, null, 1, null, StoreMode.ON, StoreMode.ON,
-      StoreMode.ON);
+  public static final NakshaCollection COLLECTION_0_FEATURE = new NakshaCollection(
+          COLLECTION_0, TEST_MAP_ID, 1, null, StoreMode.ON, StoreMode.ON, StoreMode.ON);
   static final String COLLECTION_1 = "test_view1";
-  public static final NakshaCollection COLLECTION_1_FEATURE = new NakshaCollection(COLLECTION_1, null, 1, null, StoreMode.ON, StoreMode.ON,
-      StoreMode.ON);
+  public static final NakshaCollection COLLECTION_1_FEATURE = new NakshaCollection(
+          COLLECTION_1, TEST_MAP_ID, 1, null, StoreMode.ON, StoreMode.ON, StoreMode.ON);
   static final String COLLECTION_2 = "test_view2";
-  public static final NakshaCollection COLLECTION_2_FEATURE = new NakshaCollection(COLLECTION_2, null, 1, null, StoreMode.ON, StoreMode.ON,
-      StoreMode.ON);
+  public static final NakshaCollection COLLECTION_2_FEATURE = new NakshaCollection(
+          COLLECTION_2, TEST_MAP_ID, 1, null, StoreMode.ON, StoreMode.ON, StoreMode.ON);
 
   @Test
   @Order(30)
   @EnabledIf("runTest")
   void createCollection() {
     assertNotNull(storage);
-    assertNotNull(session);
     final WriteRequest request = new WriteRequest();
     request.add(new Write().createCollection(COLLECTION_0_FEATURE));
     request.add(new Write().createCollection(COLLECTION_1_FEATURE));
     request.add(new Write().createCollection(COLLECTION_2_FEATURE));
-    SuccessResponse response = (SuccessResponse) session.execute(request);
+    SuccessResponse response = executeWrite(request);
     assertNotNull(response.getFeatures());
-    session.commit();
   }
 
   @Test
@@ -88,7 +88,6 @@ class PsqlViewTests extends PsqlTests {
   @EnabledIf("runTest")
   void addFeatures() {
     assertNotNull(storage);
-    assertNotNull(session);
     ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
     final WriteRequest requestTest0 = new WriteRequest();
     final WriteRequest requestTest1 = new WriteRequest();
@@ -109,10 +108,9 @@ class PsqlViewTests extends PsqlTests {
       featureEdited2.setGeometry(point2);
       requestTest2.add(new Write().createFeature(COLLECTION_2_FEATURE, featureEdited2));
     }
-    session.execute(requestTest0);
-    session.execute(requestTest1);
-    session.execute(requestTest2);
-    session.commit();
+    executeWrite(requestTest0);
+    executeWrite(requestTest1);
+    executeWrite(requestTest2);
   }
 
 
@@ -121,11 +119,11 @@ class PsqlViewTests extends PsqlTests {
   @EnabledIf("runTest")
   void viewQueryTest_pickTopLayerResult() {
     assertNotNull(storage);
-    assertNotNull(session);
+    nakshaContext.attachToCurrentThread();
 
     // given
-    ViewLayer layer0 = new ViewLayer(storage, COLLECTION_0);
-    ViewLayer layer1 = new ViewLayer(storage, COLLECTION_1);
+    ViewLayer layer0 = new ViewLayer(storage, TEST_MAP_ID, COLLECTION_0);
+    ViewLayer layer1 = new ViewLayer(storage, TEST_MAP_ID, COLLECTION_1);
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("", layer0, layer1);
     View view = new View(viewLayerCollection);
@@ -148,7 +146,6 @@ class PsqlViewTests extends PsqlTests {
     assertEquals(10, features1.size());
     PointCoord coordinates1 = (PointCoord) features1.get(0).getGeometry().getCoordinates();
     assertEquals(1d, coordinates1.getLongitude());
-    session.commit();
   }
 
   @Test
@@ -156,11 +153,11 @@ class PsqlViewTests extends PsqlTests {
   @EnabledIf("runTest")
   void viewQueryTest_fetchMissing() {
     assertNotNull(storage);
-    assertNotNull(session);
+    nakshaContext.attachToCurrentThread();
 
     // given
-    ViewLayer layer0 = new ViewLayer(storage, COLLECTION_0);
-    ViewLayer layer1 = new ViewLayer(storage, COLLECTION_1);
+    ViewLayer layer0 = new ViewLayer(storage, TEST_MAP_ID, COLLECTION_0);
+    ViewLayer layer1 = new ViewLayer(storage, TEST_MAP_ID, COLLECTION_1);
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("", layer0, layer1);
     View view = new View(viewLayerCollection);
@@ -173,15 +170,13 @@ class PsqlViewTests extends PsqlTests {
     getByPoint.setQuery(requestQuery);
 
     // when
-    List<NakshaFeature> features = queryView(view, getByPoint);
+    NakshaFeatureList features = queryView(view, getByPoint);
 
     // then
     assertEquals(10, features.size());
     // feature fetched in second query from obligatory storage
     SpPoint geometry = (SpPoint) features.get(0).getGeometry();
     assertEquals(0d, geometry.getCoordinates().getLongitude());
-
-    session.commit();
   }
 
   @Test
@@ -189,12 +184,12 @@ class PsqlViewTests extends PsqlTests {
   @EnabledIf("runTest")
   void viewQueryTest_missingMiddleLayerInSpacialQuery() {
     assertNotNull(storage);
-    assertNotNull(session);
+    nakshaContext.attachToCurrentThread();
 
     // given
-    ViewLayer layer0 = new ViewLayer(storage, COLLECTION_0);
-    ViewLayer layer1 = new ViewLayer(storage, COLLECTION_1);
-    ViewLayer layer2 = new ViewLayer(storage, COLLECTION_2);
+    ViewLayer layer0 = new ViewLayer(storage, TEST_MAP_ID, COLLECTION_0);
+    ViewLayer layer1 = new ViewLayer(storage, TEST_MAP_ID, COLLECTION_1);
+    ViewLayer layer2 = new ViewLayer(storage, TEST_MAP_ID, COLLECTION_2);
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("", layer0, layer1, layer2);
     View view = new View(viewLayerCollection);
@@ -217,7 +212,6 @@ class PsqlViewTests extends PsqlTests {
     assertEquals(10, features.size());
     SpPoint geometry = (SpPoint) features.get(0).getGeometry();
     assertEquals(0d, geometry.getCoordinates().getLongitude());
-    session.commit();
   }
 
   @Test
@@ -225,8 +219,8 @@ class PsqlViewTests extends PsqlTests {
   @EnabledIf("runTest")
   void viewQueryTest_returnFromMiddleLayerIfFeatureIsMissingInTopLayer() {
     assertNotNull(storage);
-    assertNotNull(session);
-    ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
+    nakshaContext.attachToCurrentThread();
+    final ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
 
     // given feature in COLLECTION 1 and 2 (but not in 0)
     final WriteRequest requestTest1 = new WriteRequest();
@@ -234,18 +228,17 @@ class PsqlViewTests extends PsqlTests {
     final NakshaFeature feature = new NakshaFeature(String.valueOf(threadLocalRandom.nextInt()));
     feature.setGeometry(new SpPoint(new PointCoord(11d, 11d)));
     requestTest1.add(new Write().createFeature(COLLECTION_1_FEATURE, feature));
+    executeWrite(requestTest1);
 
     NakshaFeature featureEdited2 = feature.copy(true);
     featureEdited2.setGeometry(new SpPoint(new PointCoord(22d, 22d)));
     requestTest2.add(new Write().createFeature(COLLECTION_2_FEATURE, featureEdited2));
-    session.execute(requestTest1);
-    session.execute(requestTest2);
-    session.commit();
+    executeWrite(requestTest2);
 
     // given view
-    ViewLayer layer0 = new ViewLayer(storage, COLLECTION_0);
-    ViewLayer layer1 = new ViewLayer(storage, COLLECTION_1);
-    ViewLayer layer2 = new ViewLayer(storage, COLLECTION_2);
+    ViewLayer layer0 = new ViewLayer(storage, TEST_MAP_ID, COLLECTION_0);
+    ViewLayer layer1 = new ViewLayer(storage, TEST_MAP_ID, COLLECTION_1);
+    ViewLayer layer2 = new ViewLayer(storage, TEST_MAP_ID, COLLECTION_2);
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("", layer0, layer1, layer2);
     View view = new View(viewLayerCollection);
@@ -262,19 +255,19 @@ class PsqlViewTests extends PsqlTests {
     spOr.add(spIntersects2);
     requestQuery.setSpatial(spOr);
     getByPoint.setQuery(requestQuery);
-    List<NakshaFeature> features = queryView(view, getByPoint);
+    NakshaFeatureList features = queryView(view, getByPoint);
 
-    // then should get result from COLLECTION_1 as it's next in priority and feature doesn't exist in COLLECTION_0 which is top priority layer.
+    // then should get result from COLLECTION_1 as it's next in priority, and
+    // feature doesn't exist in COLLECTION_0 which is top priority layer.
     assertEquals(1, features.size());
     SpPoint geometry = (SpPoint) features.get(0).getGeometry();
     assertEquals(11d, geometry.getCoordinates().getLongitude());
-    session.commit();
   }
 
-  private List<NakshaFeature> queryView(View view, ReadFeatures request) {
-    Response response = view.newReadSession(null).execute(request);
-    assertInstanceOf(SuccessResponse.class, response);
-    SuccessResponse successResponse = (SuccessResponse) response;
-    return successResponse.getFeatures();
+  private @NotNull NakshaFeatureList queryView(View view, ReadFeatures request) {
+    try (var session = view.newReadSession(null)) {
+      final @NotNull Response response = session.execute(request);
+      return assertSuccess(response).getFeatures();
+    }
   }
 }

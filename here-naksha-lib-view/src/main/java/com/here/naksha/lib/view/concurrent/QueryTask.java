@@ -26,8 +26,8 @@ import naksha.model.NakshaContext;
 import org.jetbrains.annotations.NotNull;
 
 class QueryTask<RESULT> extends SimpleTask<RESULT> {
-  public QueryTask(INaksha naksha, NakshaContext context) {
-    super(naksha, context);
+  QueryTask(@NotNull NakshaContext context) {
+    super(null, context);
   }
 
   @Override

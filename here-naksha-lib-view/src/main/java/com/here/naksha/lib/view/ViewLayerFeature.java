@@ -20,35 +20,35 @@ package com.here.naksha.lib.view;
 
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.FeatureTuple;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class ViewLayerFeature {
 
-  private final FeatureTuple tuple;
-
+  private final @NotNull FeatureTuple featureTuple;
   // priority 0 - is highest
   private final int storagePriority;
+  private final @NotNull ViewLayer viewLayer;
 
-  private final ViewLayer viewLayerRef;
-
-  public ViewLayerFeature(FeatureTuple tuple, int storagePriority, ViewLayer viewLayerRef) {
-    this.tuple = tuple;
+  public ViewLayerFeature(@NotNull FeatureTuple featureTuple, int storagePriority, @NotNull ViewLayer viewLayer) {
+    this.featureTuple = featureTuple;
     this.storagePriority = storagePriority;
-    this.viewLayerRef = viewLayerRef;
+    this.viewLayer = viewLayer;
   }
 
   public int getStoragePriority() {
     return storagePriority;
   }
 
-  public ViewLayer getViewLayerRef() {
-    return viewLayerRef;
+  public @NotNull ViewLayer getViewLayer() {
+    return viewLayer;
   }
 
-  public NakshaFeature getFeature() {
-    return tuple.getFeature();
+  public @Nullable NakshaFeature getFeature() {
+    return featureTuple.getFeature();
   }
 
-  public FeatureTuple getTuple() {
-    return tuple;
+  public @NotNull FeatureTuple getFeatureTuple() {
+    return featureTuple;
   }
 }

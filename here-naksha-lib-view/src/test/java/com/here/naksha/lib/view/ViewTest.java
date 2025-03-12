@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.view;
 
+import static com.here.naksha.lib.view.PsqlTests.TEST_MAP_ID;
 import static com.here.naksha.lib.view.Sample.sampleXyzResponse;
 import static com.here.naksha.lib.view.Sample.sampleXyzWriteResponse;
 import static java.util.Collections.emptyList;
@@ -89,9 +90,9 @@ public class ViewTest {
 
     // given
     IStorage storage = mock(IStorage.class);
-    ViewLayer topologiesDS = new ViewLayer(storage, "topologies");
-    ViewLayer buildingsDS = new ViewLayer(storage, "buildings");
-    ViewLayer topologiesCS = new ViewLayer(storage, "topologies");
+    ViewLayer topologiesDS = new ViewLayer(storage, TEST_MAP_ID, "topologies");
+    ViewLayer buildingsDS = new ViewLayer(storage, TEST_MAP_ID, "buildings");
+    ViewLayer topologiesCS = new ViewLayer(storage, TEST_MAP_ID, "topologies");
 
     // each layer is going to return 3 same records
     var results = sampleXyzResponse(3, storage);
@@ -108,7 +109,7 @@ public class ViewTest {
     ViewReadSession readSession = view.newReadSession(sessionOptions);
     ReadFeatures readFeatures = new ReadFeatures();
     readFeatures.setQueryHistory(true);
-    Response result = readSession.execute(
+    Response result = readSession.executeReadFeatures(
         readFeatures, customMergeOperation, skipFetchingResolver);
     assertInstanceOf(SuccessResponse.class, result);
 
@@ -125,7 +126,7 @@ public class ViewTest {
     MapProxy map = mock(MapProxy.class);
     IWriteSession session = mock(IWriteSession.class);
 
-    ViewLayer topologiesDS = new ViewLayer(storage, "topologies");
+    ViewLayer topologiesDS = new ViewLayer(storage, TEST_MAP_ID, "topologies");
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection(VIEW_COLLECTION, topologiesDS);
     View view = new View(viewLayerCollection);
     when(storage.newWriteSession(sessionOptions)).thenReturn(session);
@@ -156,7 +157,7 @@ public class ViewTest {
     IStorage storage = mock(IStorage.class);
     IWriteSession session = mock(IWriteSession.class);
 
-    ViewLayer topologiesDS = new ViewLayer(storage, "topologies");
+    ViewLayer topologiesDS = new ViewLayer(storage, TEST_MAP_ID, "topologies");
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection(VIEW_COLLECTION, topologiesDS);
     View view = new View(viewLayerCollection);
     when(storage.newWriteSession(sessionOptions)).thenReturn(session);
@@ -184,8 +185,8 @@ public class ViewTest {
 
     IStorage topologiesStorage = mock(IStorage.class);
     IStorage buildingsStorage = mock(IStorage.class);
-    ViewLayer topologiesDS = new ViewLayer(topologiesStorage, "topologies");
-    ViewLayer buildingsDS = new ViewLayer(buildingsStorage, "buildings");
+    ViewLayer topologiesDS = new ViewLayer(topologiesStorage, TEST_MAP_ID, "topologies");
+    ViewLayer buildingsDS = new ViewLayer(buildingsStorage, TEST_MAP_ID, "buildings");
 
     var results = sampleXyzResponse(3, topologiesStorage);
     when(topologiesStorage.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
@@ -206,8 +207,8 @@ public class ViewTest {
     IReadSession readSession = mock(IReadSession.class);
     when(readSession.execute(any())).thenReturn(new SuccessResponse(emptyList()));
 
-    ViewLayer topologiesDS_1 = new ViewLayer(topologiesStorage_1, TOPO);
-    ViewLayer topologiesDS_2 = new ViewLayer(topologiesStorage_2, TOPO);
+    ViewLayer topologiesDS_1 = new ViewLayer(topologiesStorage_1, TEST_MAP_ID, TOPO);
+    ViewLayer topologiesDS_2 = new ViewLayer(topologiesStorage_2, TEST_MAP_ID, TOPO);
 
     var results = sampleXyzResponse(3, topologiesStorage_2);
     when(topologiesStorage_1.newReadSession(sessionOptions)).thenReturn(readSession);
@@ -240,8 +241,8 @@ public class ViewTest {
   void testTimeoutExceptionInOneOfTheThreads() {
     IStorage topologiesStorage = mock(IStorage.class);
     IStorage buildingsStorage = mock(IStorage.class);
-    ViewLayer topologiesDS = new ViewLayer(topologiesStorage, "topologies");
-    ViewLayer buildingsDS = new ViewLayer(buildingsStorage, "buildings");
+    ViewLayer topologiesDS = new ViewLayer(topologiesStorage, TEST_MAP_ID, "topologies");
+    ViewLayer buildingsDS = new ViewLayer(buildingsStorage, TEST_MAP_ID, "buildings");
 
     // given
     IReadSession topoReadSession = mock(IReadSession.class);
@@ -273,7 +274,7 @@ public class ViewTest {
     ViewLayer[] layerDS = new ViewLayer[(int) (limit + 10)];
     //Create ThreadFactory Limit + 10 layers
     for (int ind = 0; ind < layerDS.length; ind++) {
-      layerDS[ind] = new ViewLayer(mockStorage, "collection" + ind);
+      layerDS[ind] = new ViewLayer(mockStorage, TEST_MAP_ID, "collection" + ind);
     }
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", layerDS);
     View view = new View(viewLayerCollection);

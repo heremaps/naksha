@@ -19,23 +19,29 @@
 package com.here.naksha.lib.view;
 
 import naksha.model.IStorage;
+import org.jetbrains.annotations.NotNull;
 
 public class ViewLayer {
 
-  private final IStorage storage;
+  private final @NotNull IStorage storage;
+  private final @NotNull String mapId;
+  private final @NotNull String collectionId;
 
-  private final String collectionId;
-
-  public ViewLayer(IStorage storage, String collectionId) {
+  public ViewLayer(@NotNull IStorage storage, @NotNull String mapId, @NotNull String collectionId) {
     this.storage = storage;
+    this.mapId = mapId;
     this.collectionId = collectionId;
   }
 
-  public IStorage getStorage() {
+  public @NotNull IStorage getStorage() {
     return storage;
   }
 
-  public String getCollectionId() {
+  public @NotNull String getMapId() {
+    return mapId;
+  }
+
+  public @NotNull String getCollectionId() {
     return collectionId;
   }
 }

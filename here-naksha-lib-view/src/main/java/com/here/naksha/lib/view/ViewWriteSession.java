@@ -54,7 +54,7 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
 
   public ViewWriteSession init() {
     if (writeLayer == null) {
-      writeLayer = viewRef.getViewCollection().getTopPriorityLayer();
+      writeLayer = view.getViewCollection().getTopPriorityLayer();
     }
     this.session = writeLayer.getStorage().newWriteSession(options);
     return this;

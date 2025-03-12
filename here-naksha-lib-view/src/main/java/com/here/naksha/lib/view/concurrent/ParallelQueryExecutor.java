@@ -21,6 +21,7 @@ package com.here.naksha.lib.view.concurrent;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
+import static naksha.base.Platform.longToInt64;
 
 import com.here.naksha.lib.view.View;
 import com.here.naksha.lib.view.ViewLayer;
@@ -35,32 +36,33 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
+
+import naksha.base.Platform;
 import naksha.base.StringList;
-import naksha.model.IReadSession;
-import naksha.model.NakshaContext;
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.FeatureTuple;
-import naksha.model.request.SuccessResponse;
+import naksha.model.*;
+import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ParallelQueryExecutor {
   private static final Logger log = LoggerFactory.getLogger(ParallelQueryExecutor.class);
   private final long defaultTimeoutMillis = 1000 * 60 * 10L; // 10 minutes
-  private final View viewRef;
+  private final @NotNull View view;
 
-  public ParallelQueryExecutor(@NotNull View viewRef) {
-    this.viewRef = viewRef;
+  public ParallelQueryExecutor(@NotNull View view) {
+    this.view = view;
   }
 
-  public Map<String, List<ViewLayerFeature>> queryInParallel(@NotNull List<LayerReadRequest> requests) {
-    List<Future<List<ViewLayerFeature>>> futures = new ArrayList<>();
+  public @NotNull Map<String, @NotNull List<@NotNull ViewLayerFeature>> queryInParallel(
+          @NotNull List<@NotNull LayerReadRequest> requests
+  ) {
+    @NotNull List<@NotNull Future<@NotNull List<@NotNull ViewLayerFeature>>> futures = new ArrayList<>();
 
     for (LayerReadRequest layerReadRequest : requests) {
-      QueryTask<List<ViewLayerFeature>> singleTask = new QueryTask<>(null, NakshaContext.currentContext());
-
-      Future<List<ViewLayerFeature>> futureResult = singleTask.start(() -> executeSingle(
+      final QueryTask<@NotNull List<@NotNull ViewLayerFeature>> singleTask = new QueryTask<>(NakshaContext.currentContext());
+      final Future<@NotNull List<@NotNull ViewLayerFeature>> futureResult = singleTask.start(() -> executeSingle(
               layerReadRequest.getViewLayer(),
               layerReadRequest.getSession(),
               layerReadRequest.getRequest())
@@ -69,13 +71,14 @@ public class ParallelQueryExecutor {
     }
 
     // wait for all
-    Long timeout = getTimeout(requests);
+    final Long timeout = getTimeout(requests);
     return getCollectedResults(futures, timeout);
   }
 
-  @NotNull
-  private Map<String, List<ViewLayerFeature>> getCollectedResults(
-      List<Future<List<ViewLayerFeature>>> tasks, Long timeoutMillis) {
+  private @NotNull Map<@NotNull String, @NotNull List<@NotNull ViewLayerFeature>> getCollectedResults(
+      @NotNull List<@NotNull Future<@NotNull List<@NotNull ViewLayerFeature>>> tasks,
+      @NotNull Long timeoutMillis
+  ) {
     return tasks.stream()
         .map(future -> {
           try {
@@ -85,7 +88,7 @@ public class ParallelQueryExecutor {
           }
         })
         .flatMap(Collection::stream)
-        .collect(groupingBy(viewRow -> viewRow.getTuple().getId()));
+        .collect(groupingBy(viewLayerFeature -> viewLayerFeature.getFeatureTuple().getId()));
   }
 
   private @NotNull Long getTimeout(@NotNull List<LayerReadRequest> requests) {
@@ -100,22 +103,20 @@ public class ParallelQueryExecutor {
   }
 
   private Stream<ViewLayerFeature> executeSingle(
-      @NotNull ViewLayer layer, @NotNull IReadSession session, @NotNull ReadFeatures request) {
+      @NotNull ViewLayer layer,
+      @NotNull IReadSession session,
+      @NotNull ReadFeatures request
+  ) {
     final long startTime = System.currentTimeMillis();
     String status = "OK";
     int featureCnt = 0;
-    int layerPriority = viewRef.getViewCollection().priorityOf(layer);
+    int layerPriority = view.getViewCollection().priorityOf(layer);
     final String collectionId = layer.getCollectionId();
 
-    // prepare request
-    ReadFeatures clonedRequest = request.copy(false);
-    final StringList idsList = new StringList();
-    idsList.add(collectionId);
-    clonedRequest.setCollectionIds(idsList);
-
-    SuccessResponse cursor = (SuccessResponse) session.execute(clonedRequest);
-
-    List<FeatureTuple> featureList = cursor.getFeatureTupleList();
+    final @NotNull Response response = session.execute(request);
+    FeatureTupleList featureList = getFeatureTuples(response);
+    var cache = Naksha.getCache();
+    cache.load(featureList, 0, featureList.size(), longToInt64(TimeUnit.SECONDS.toMicros(10)), true);
     log.info(
         "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",
         NakshaContext.currentContext().getStreamId(),
@@ -124,6 +125,21 @@ public class ParallelQueryExecutor {
         status,
         System.currentTimeMillis() - startTime,
         featureCnt);
-    return featureList.stream().map(row -> new ViewLayerFeature(row, layerPriority, layer));
+    return featureList.stream().map(featureTuple -> new ViewLayerFeature(featureTuple, layerPriority, layer));
+  }
+
+  private static @NotNull FeatureTupleList getFeatureTuples(@NotNull Response response) {
+    if (!(response instanceof SuccessResponse)) {
+      // TODO: Improve the error handling!
+      final @NotNull NakshaError error;
+      if (response instanceof ErrorResponse) {
+        error = ((ErrorResponse) response).getError();
+      } else {
+        error = new NakshaError(NakshaError.EXCEPTION, "Response is not successful, unknown reason");
+      }
+      throw new NakshaException(error);
+    }
+    final @NotNull SuccessResponse success = (SuccessResponse) response;
+    return success.useFeatureTupleList();
   }
 }

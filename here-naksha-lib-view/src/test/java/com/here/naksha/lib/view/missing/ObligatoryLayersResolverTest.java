@@ -17,8 +17,8 @@ import java.util.List;
 import java.util.Set;
 
 import static naksha.base.Platform.intToInt64;
-import static naksha.model.FetchModeKt.withFeature;
 import static naksha.model.FlagsKt.withAction;
+import static naksha.psql.PgTest.TEST_MAP_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -78,8 +78,8 @@ public class ObligatoryLayersResolverTest {
   void shouldPrepareLayerIdToFetchWhenMissing() {
     // given
     IStorage storage = mock(IStorage.class);
-    ViewLayer obligatoryLayer = new ViewLayer(storage, "collection1");
-    ViewLayer otherLayer = new ViewLayer(storage, "collection1");
+    ViewLayer obligatoryLayer = new ViewLayer(storage, TEST_MAP_ID, "collection1");
+    ViewLayer otherLayer = new ViewLayer(storage, TEST_MAP_ID, "collection1");
     final NakshaFeature feature = new NakshaFeature();
     final FeatureTuple featureTuple = mockFeatureTuple(feature);
 
@@ -101,7 +101,7 @@ public class ObligatoryLayersResolverTest {
   void shouldPrepareLayerIdToFetchWhenLayerIsNotObligatory() {
     // given
     IStorage storage = mock(IStorage.class);
-    ViewLayer obligatoryLayer = new ViewLayer(storage, "collection1");
+    ViewLayer obligatoryLayer = new ViewLayer(storage, TEST_MAP_ID, "collection1");
     final NakshaFeature feature = new NakshaFeature();
     final FeatureTuple featureTuple = mockFeatureTuple(feature);
 
@@ -122,7 +122,7 @@ public class ObligatoryLayersResolverTest {
   void testEmptyInput() {
     // given
     IStorage storage = mock(IStorage.class);
-    ViewLayer obligatoryLayer = new ViewLayer(storage, "collection1");
+    ViewLayer obligatoryLayer = new ViewLayer(storage, TEST_MAP_ID, "collection1");
     MissingIdResolver missingIdsResolver = new ObligatoryLayersResolver(Set.of(obligatoryLayer));
 
     // expect

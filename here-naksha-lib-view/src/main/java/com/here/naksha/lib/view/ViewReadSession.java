@@ -26,7 +26,8 @@ import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
 import java.util.*;
-import naksha.jbon.JbDictionary;
+import java.util.concurrent.ConcurrentHashMap;
+
 import naksha.model.*;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaMap;
@@ -57,21 +58,21 @@ import org.jetbrains.annotations.Nullable;
  * It might happen that feature has been moved (it's geometry changed). In such case after getting results for bbox
  * query we have to query again for all features (by id) that was missing in a least one storage  result.
  */
-public class ViewReadSession implements IReadSession {
+public class ViewReadSession implements IReadSession, AutoCloseable {
 
-  protected final View viewRef;
+  protected final View view;
+  protected final @NotNull ParallelQueryExecutor parallelQueryExecutor;
+  protected final SessionOptions options;
+  private final @NotNull ConcurrentHashMap<@NotNull ViewLayer, @NotNull IReadSession> subSessions;
 
-  protected ParallelQueryExecutor parallelQueryExecutor;
-
-  protected Map<ViewLayer, IReadSession> subSessions;
-
-  protected ViewReadSession(@NotNull View viewRef, @Nullable SessionOptions options) {
-    this.viewRef = viewRef;
-    this.subSessions = new LinkedHashMap<>();
-    for (ViewLayer layer : viewRef.getViewCollection().getLayers()) {
+  ViewReadSession(@NotNull View view, SessionOptions options) {
+    this.view = view;
+    this.options = options;
+    this.subSessions = new ConcurrentHashMap<>();
+    for (final @NotNull ViewLayer layer : view.getViewCollection().getLayers()) {
       subSessions.put(layer, layer.getStorage().newReadSession(options));
     }
-    this.parallelQueryExecutor = new ParallelQueryExecutor(viewRef);
+    this.parallelQueryExecutor = new ParallelQueryExecutor(view);
   }
 
   @Override
@@ -79,25 +80,17 @@ public class ViewReadSession implements IReadSession {
     if (!(readRequest instanceof ReadFeatures)) {
       throw new UnsupportedOperationException("Only ReadFeatures are supported.");
     }
-    return execute((ReadRequest) readRequest);
-  }
-
-  public @NotNull Response execute(@NotNull ReadRequest readRequest) {
-    return execute(
-        readRequest,
+    return executeReadFeatures(
+        (ReadFeatures) readRequest,
         new MergeByStoragePriority(),
-        new ObligatoryLayersResolver(Set.of(viewRef.getViewCollection().getTopPriorityLayer())));
+        new ObligatoryLayersResolver(Set.of(view.getViewCollection().getTopPriorityLayer()))
+    );
   }
 
-  public Response execute(
-      @NotNull ReadRequest request,
+  public Response executeReadFeatures(
+      @NotNull ReadFeatures request,
       @NotNull MergeOperation mergeOperation,
       @NotNull MissingIdResolver missingIdResolver) {
-
-    if (!(request instanceof ReadFeatures)) {
-      throw new UnsupportedOperationException("Only ReadFeatures are supported.");
-    }
-
     /*
     Call every layer/storage and get the first result.
     After that we should have multiLayerRows like that:
@@ -108,7 +101,7 @@ public class ViewReadSession implements IReadSession {
     ]
      */
     List<LayerReadRequest> layerReadRequests = subSessions.entrySet().stream()
-        .map(entry -> new LayerReadRequest((ReadFeatures) request, entry.getKey(), entry.getValue()))
+        .map(entry -> new LayerReadRequest(request, entry.getKey(), entry.getValue()))
         .collect(toList());
     Map<String, List<ViewLayerFeature>> multiLayerRows = parallelQueryExecutor.queryInParallel(layerReadRequests);
 
@@ -149,9 +142,10 @@ public class ViewReadSession implements IReadSession {
     return new ViewSuccessResult(mergedRows, null);
   }
 
-  private Map<String, List<ViewLayerFeature>> getMissingFeatures(
-      @NotNull Map<String, List<ViewLayerFeature>> multiLayerRows, @NotNull MissingIdResolver missingIdResolver) {
-
+  private @NotNull Map<@NotNull String, List<ViewLayerFeature>> getMissingFeatures(
+      @NotNull Map<@NotNull String, @NotNull List<@NotNull ViewLayerFeature>> multiLayerRows,
+      @NotNull MissingIdResolver missingIdResolver
+  ) {
     Map<String, List<ViewLayerFeature>> result = new HashMap<>();
     if (!missingIdResolver.skip()) {
       // Prepare map of <Layer_x, [FeatureId_x, ..., FeatureId_z]> features and layers you want to search by id.
@@ -177,7 +171,8 @@ public class ViewReadSession implements IReadSession {
 
   @Override
   public void close() {
-    subSessions.values().forEach(ISession::close);
+    subSessions.forEach((layer, session) -> session.close());
+    subSessions.clear();
   }
 
   private boolean isRequestOnlyById(ReadRequest request) {

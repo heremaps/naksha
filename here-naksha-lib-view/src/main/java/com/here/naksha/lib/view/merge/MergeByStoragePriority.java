@@ -31,7 +31,7 @@ public class MergeByStoragePriority implements MergeOperation {
   public FeatureTuple apply(@NotNull List<ViewLayerFeature> sameFeatureFromEachStorage) {
     return sameFeatureFromEachStorage.stream()
         .min(Comparator.comparing(ViewLayerFeature::getStoragePriority))
-        .map(ViewLayerFeature::getTuple)
+        .map(ViewLayerFeature::getFeatureTuple)
         .get();
   }
 }
