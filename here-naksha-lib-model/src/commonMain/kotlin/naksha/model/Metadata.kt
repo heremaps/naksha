@@ -255,7 +255,7 @@ data class Metadata(
                 nextTupleNumber = xyz.nguid?.tupleNumber,
                 prevTupleNumber = xyz.pguid?.tupleNumber,
                 baseTupleNumber = xyz.mguid?.tupleNumber,
-                flags = xyz.flags ?: Flags(xyz.action.intValue),
+                flags = xyz.flags ?: Flags().withAction(xyz.action).withOperation(xyz.operation),
                 updatedAt = xyz.updatedAt,
                 createdAt = if (xyz.updatedAt == xyz.createdAt) null else xyz.createdAt,
                 authorTs = if (xyz.updatedAt == xyz.authorTs) null else xyz.authorTs,
