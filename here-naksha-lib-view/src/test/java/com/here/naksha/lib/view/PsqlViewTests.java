@@ -79,7 +79,7 @@ class PsqlViewTests extends PsqlTests {
     request.add(new Write().createCollection(COLLECTION_1_FEATURE));
     request.add(new Write().createCollection(COLLECTION_2_FEATURE));
     SuccessResponse response = (SuccessResponse) session.execute(request);
-    assertNotNull(response.getTupleList());
+    assertNotNull(response.getFeatures());
     session.commit();
   }
 

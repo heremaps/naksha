@@ -32,7 +32,6 @@ import kotlin.js.JsName
  * Generally, a result-set can have different representations of the result-set. Some are very low-level, with others being very high-level ones (like basically GeoJSON's). The order in which they should be treated is:
  * - [features]
  * - [featureTupleList]
- * - [tupleList]
  * - [tupleNumberList]
  * - [tupleNumberBinary]
  *
@@ -46,7 +45,7 @@ open class SuccessResponse() : Response() {
      * @param features the features that form the success response.
      * @since 3.0
      */
-    @JsName("ofFeatures")
+    @JsName("ofNakshaFeature")
     constructor(vararg features: NakshaFeature?) : this() {
         val list = NakshaFeatureList()
         list.setCapacity(features.size)
@@ -59,7 +58,7 @@ open class SuccessResponse() : Response() {
      * @param features the features that form the success response.
      * @since 3.0
      */
-    @JsName("ofFeatureList")
+    @JsName("ofList")
     constructor(features: List<NakshaFeature?>?) : this() {
         if (features != null) {
             val list = NakshaFeatureList()
@@ -93,10 +92,51 @@ open class SuccessResponse() : Response() {
         }
     }
 
+    /**
+     * Create a response for the given [TupleNumberList].
+     * @param tupleNumberList the [TupleNumberList] that form the success response.
+     * @since 3.0
+     */
+    @JsName("ofTupleNumberList")
+    constructor(tupleNumberList: TupleNumberList?) : this() {
+        if (tupleNumberList != null) {
+            setRaw(TUPLE_NUMBER_LIST, tupleNumberList)
+        }
+    }
+
+    /**
+     * Create a response for the given [TupleNumberBinaryArray].
+     * @param tupleNumberBinaryArray the [TupleNumberBinaryArray] that form the success response.
+     * @since 3.0
+     */
+    @JsName("ofTupleNumberBinaryArray")
+    constructor(tupleNumberBinaryArray: TupleNumberBinaryArray?) : this() {
+        if (tupleNumberBinaryArray != null) {
+            setRaw(TUPLE_NUMBER_BINARY, tupleNumberBinaryArray)
+        }
+    }
+
+    /**
+     * Create a response for the given [TupleList], converting it into a [FeatureTupleList].
+     * @param tupleList the [TupleList] that form the success response.
+     * @since 3.0
+     */
+    @JsName("ofTupleList")
+    constructor(tupleList: TupleList?) : this() {
+        if (tupleList != null) {
+            val list = FeatureTupleList()
+            list.setCapacity(tupleList.size)
+            for (tuple in tupleList) {
+                if (tuple == null) continue
+                list.add(FeatureTuple(tuple.tupleNumber, tuple))
+            }
+            setRaw(FEATURE_TUPLE_LIST, list)
+        }
+    }
+
     companion object SuccessResponse_C {
         private const val TUPLE_NUMBER_BINARY = "tupleNumberBinary"
         private const val TUPLE_NUMBER_LIST = "tupleNumberList"
-        private const val TUPLE_LIST = "tupleList"
         private const val FEATURE_TUPLE_LIST = "featureTupleList"
         private const val FEATURES = "features"
     }
@@ -105,10 +145,9 @@ open class SuccessResponse() : Response() {
      * Returns the size of the result.
      *
      * ### Note
-     * As there are different representations this method tests the different representations in the following order:
-     * - [features]
+     * As there are different representations, this method tests the different representations in the following order:
+     * - [features] - does not cause feature creation, if not yet done already!
      * - [featureTupleList]
-     * - [tupleList]
      * - [tupleNumberList]
      * - [tupleNumberBinary]
      *
@@ -118,13 +157,7 @@ open class SuccessResponse() : Response() {
     override fun resultSize(): Int {
         val raw = getAs(FEATURES, NakshaFeatureList::class)
         if (raw is NakshaFeatureList) return raw.size
-        val featureTupleList = this.featureTupleList
-        if (featureTupleList is NakshaFeatureList) return featureTupleList.size
-        val tupleList = this.tupleList
-        if (tupleList != null) return tupleList.size
-        val tupleNumberList = this.tupleNumberList
-        if (tupleNumberList != null) return tupleNumberList.size
-        return tupleNumberBinary?.size ?: 0
+        return featureTupleList?.size ?: tupleNumberList?.size ?: tupleNumberBinary?.size ?: 0
     }
 
     /**
@@ -139,13 +172,13 @@ open class SuccessResponse() : Response() {
             if (raw is TupleNumberBinaryArray) return raw
             if (raw is ByteArray) {
                 val value = TupleNumberBinaryArray(raw)
-                setRaw(TUPLE_NUMBER_BINARY, value)
+                set(TUPLE_NUMBER_BINARY, value)
                 return value
             }
             return null
         }
         set(value) {
-            if (value == null) removeRaw(TUPLE_NUMBER_BINARY) else setRaw(TUPLE_NUMBER_BINARY, value)
+            if (value == null) removeRaw(TUPLE_NUMBER_BINARY) else set(TUPLE_NUMBER_BINARY, value)
         }
 
     /**
@@ -179,20 +212,16 @@ open class SuccessResponse() : Response() {
      * The [tuple-number][naksha.model.TupleNumber] representation; if any is available.
      * @since 3.0
      */
-    open var tupleNumberList: List<TupleNumber?>?
-        get() {
-            val raw = get(TUPLE_NUMBER_LIST)
-            @Suppress("UNCHECKED_CAST")
-            return if (raw is List<*>) raw as List<TupleNumber?> else null
-        }
+    open var tupleNumberList: TupleNumberList?
+        get() = getAs(TUPLE_NUMBER_LIST, TupleNumberList::class)
         set(value) {
-            if (value == null) removeRaw(TUPLE_NUMBER_LIST) else setRaw(TUPLE_NUMBER_LIST, value)
+            if (value == null) removeRaw(TUPLE_NUMBER_LIST) else set(TUPLE_NUMBER_LIST, value)
         }
 
     /**
      * @see [tupleNumberList]
      */
-    fun withTupleNumberList(value: List<TupleNumber?>?): SuccessResponse {
+    fun withTupleNumberList(value: TupleNumberList?): SuccessResponse {
         tupleNumberList = value
         return this
     }
@@ -208,87 +237,26 @@ open class SuccessResponse() : Response() {
     }
 
     /**
-     * The [feature-tuple][FeatureTuple] representation; if any is available.
-     * @since 3.0
-     */
-    open var tupleList: List<Tuple?>?
-        get() {
-            val raw = get(TUPLE_LIST)
-            @Suppress("UNCHECKED_CAST")
-            return if (raw is List<*>) raw as List<Tuple?> else null
-        }
-        set(value) {
-            if (value == null) removeRaw(TUPLE_LIST) else setRaw(TUPLE_LIST, value)
-        }
-
-    /**
-     * @see [tupleList]
-     */
-    fun withTupleList(value: List<Tuple?>?): SuccessResponse {
-        tupleList = value
-        return this
-    }
-
-    /**
-     * Returns this response without the [tupleList].
-     * @return this.
-     * @since 3.0
-     */
-    fun withoutTupleList(): SuccessResponse {
-        removeRaw(TUPLE_LIST)
-        return this
-    }
-
-    /**
      * The [feature tuples][FeatureTuple] being part of the response.
      */
-    @Suppress("UNCHECKED_CAST")
-    open var featureTupleList: List<FeatureTuple?>?
-        get() {
-            val raw = get(FEATURE_TUPLE_LIST)
-            return if (raw is List<*>) raw as List<FeatureTuple?> else null
-        }
+    open var featureTupleList: FeatureTupleList?
+        get() = getAs(FEATURE_TUPLE_LIST, FeatureTupleList::class)
         set(value) {
             if (value == null) removeRaw(FEATURE_TUPLE_LIST) else setRaw(FEATURE_TUPLE_LIST, value)
         }
 
     /**
-     * Returns the result as [FeatureTupleList], if none available, generate a [FeatureTupleList] from [tupleList], [tupleNumberList], or [tupleNumberBinary], in this order. The method will not test [features], because this would cause a cyclic call graph.
+     * Returns the result as [FeatureTupleList].
+     *
+     * If none available, generate a [FeatureTupleList] from [featureTupleList], [tupleNumberList], or [tupleNumberBinary], in this order.
      * @return the results as [FeatureTupleList].
      * @since 3.0
      */
     fun useFeatureTupleList(): FeatureTupleList {
-        var featureTupleList: FeatureTupleList? = null
-
-        val list = this.featureTupleList
-        if (list != null) {
-            if (list is FeatureTupleList) {
-                featureTupleList = list
-            } else {
-                featureTupleList = FeatureTupleList()
-                featureTupleList.setCapacity(list.size)
-                for (featureTuple in list) {
-                    if (featureTuple is FeatureTuple) {
-                        featureTupleList.add(featureTuple)
-                    }
-                }
-            }
-        }
-
-        if (featureTupleList == null) {
-            val list = this.tupleList
-            if (list != null) {
-                featureTupleList = FeatureTupleList()
-                featureTupleList.setCapacity(list.size)
-                for (tuple in list) {
-                    if (tuple is Tuple) {
-                        featureTupleList.add(FeatureTuple(tuple.tupleNumber, tuple))
-                    }
-                }
-            }
-        }
-
-        if (featureTupleList == null) {
+        var featureTupleList: FeatureTupleList? = this.featureTupleList
+        if (featureTupleList != null) {
+            return featureTupleList
+        } else {
             val list = this.tupleNumberList
             if (list != null) {
                 featureTupleList = FeatureTupleList()
@@ -334,7 +302,25 @@ open class SuccessResponse() : Response() {
     /**
      * @see [featureTupleList]
      */
+    @JsName("withListOfFeatureTuple")
     fun withFeatureTupleList(value: List<FeatureTuple?>?): SuccessResponse {
+        if (value is FeatureTupleList) {
+            featureTupleList = value
+        } else if (value != null) {
+            val list = FeatureTupleList()
+            list.setCapacity(value.size)
+            list.addAll(value)
+            featureTupleList = list
+        } else {
+            featureTupleList = null
+        }
+        return this
+    }
+
+    /**
+     * @see [featureTupleList]
+     */
+    fun withFeatureTupleList(value: FeatureTupleList?): SuccessResponse {
         featureTupleList = value
         return this
     }
@@ -411,7 +397,6 @@ open class SuccessResponse() : Response() {
      * So this method ensures that [features] are available, and removes:
      * - [tupleNumberBinary]
      * - [tupleNumberList]
-     * - [tupleList]
      * - [featureTupleList]
      *
      * @return this.
@@ -421,7 +406,6 @@ open class SuccessResponse() : Response() {
         useFeatures()
         removeRaw(TUPLE_NUMBER_BINARY)
         removeRaw(TUPLE_NUMBER_LIST)
-        removeRaw(TUPLE_LIST)
         removeRaw(FEATURE_TUPLE_LIST)
         return this
     }
@@ -448,7 +432,6 @@ open class SuccessResponse() : Response() {
         val features = useFeatures()
         removeRaw(TUPLE_NUMBER_BINARY)
         removeRaw(TUPLE_NUMBER_LIST)
-        removeRaw(TUPLE_LIST)
         removeRaw(FEATURE_TUPLE_LIST)
         return features
     }
