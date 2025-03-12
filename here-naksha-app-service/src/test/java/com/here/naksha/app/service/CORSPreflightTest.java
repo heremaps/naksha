@@ -3,28 +3,12 @@ package com.here.naksha.app.service;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.assertions.ResponseAssertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.UUID;
 import java.net.http.HttpResponse;
-
-import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
-import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 
 class CORSPreflightTest extends ApiTest{
     private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
     private static final String ORIGIN_HEADER = "https://testurl.com/";
-    private static final String SPACE_ID = "cors_preflight_test_space";
-
-    @BeforeAll
-    static void setup() throws URISyntaxException, IOException, InterruptedException {
-        setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByIds/setup");
-        String initialFeaturesJson = loadFileOrFail("ReadFeatures/ByIds/setup/create_features.json");
-        nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());
-    }
 
     @Test
     void testCorsPreflightRequestGet() throws Exception {
