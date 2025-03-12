@@ -203,6 +203,14 @@ AS $$
   SELECT int4recv(tn, length(tn) - 4)
 END $$;
 
+DROP FUNCTION IF EXISTS naksha_tn_action(bytea);
+CREATE FUNCTION naksha_tn_action(tn bytea) RETURNS int4
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+    SELECT int4recv(tn, length(tn) - 4) & 3
+END $$;
+
 DROP FUNCTION IF EXISTS naksha_feature_number(text);
 CREATE FUNCTION naksha_feature_number(id text) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
