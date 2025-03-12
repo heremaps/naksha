@@ -42,6 +42,7 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
     fun checkSingleFeatureHistory() {
         // Pick one feature
         val createdFeature = allFeatures.firstNotNullOf { it.value }
+        assertEquals(Action.CREATED, createdFeature.properties.xyz.guid?.tupleNumber?.action)
         val featureId = createdFeature.id
 
         // Update it.
@@ -53,6 +54,7 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
             assertEquals(1, features.size)
             updatedFeature1 = assertNotNull(features.first())
             assertEquals(featureId, updatedFeature1.id)
+            assertEquals(Action.UPDATED, updatedFeature1.properties.xyz.guid?.tupleNumber?.action)
         }
 
         // Update it a second time.
@@ -64,6 +66,7 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
             assertEquals(1, features.size)
             updatedFeature2 = assertNotNull(features.first())
             assertEquals(featureId, updatedFeature2.id)
+            assertEquals(Action.UPDATED, updatedFeature2.properties.xyz.guid?.tupleNumber?.action)
         }
 
         // Delete it.
@@ -74,6 +77,7 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
             assertEquals(1, features.size)
             deletedFeature = assertNotNull(features.first())
             assertEquals(featureId, deletedFeature.id)
+            assertEquals(Action.DELETED, deletedFeature.properties.xyz.guid?.tupleNumber?.action)
         }
 
         // Clear cache, and read the history of the feature.
@@ -94,23 +98,27 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
 
             assertEquals(featureId, delete.id)
             assertEquals(Action.DELETED, delete.properties.xyz.action)
+            assertEquals(Action.DELETED, delete.properties.xyz.guid?.tupleNumber?.action)
             assertEquals(delete.properties.xyz.pguid, update2.properties.xyz.guid)
             assertEquals(delete.properties.xyz.nguid, delete.properties.xyz.guid)
 
             assertEquals(featureId, update2.id)
             assertEquals(Action.UPDATED, update2.properties.xyz.action)
+            assertEquals(Action.UPDATED, update2.properties.xyz.guid?.tupleNumber?.action)
             assertEquals("second_update", update2.properties[ALIAS])
             assertEquals(update2.properties.xyz.pguid, update1.properties.xyz.guid)
             assertEquals(update2.properties.xyz.nguid, delete.properties.xyz.guid)
 
             assertEquals(featureId, update1.id)
             assertEquals(Action.UPDATED, update1.properties.xyz.action)
+            assertEquals(Action.UPDATED, update1.properties.xyz.guid?.tupleNumber?.action)
             assertEquals("first_update", update1.properties[ALIAS])
             assertEquals(update1.properties.xyz.pguid, create.properties.xyz.guid)
             assertEquals(update1.properties.xyz.nguid, update2.properties.xyz.guid)
 
             assertEquals(featureId, create.id)
             assertEquals(Action.CREATED, create.properties.xyz.action)
+            assertEquals(Action.CREATED, create.properties.xyz.guid?.tupleNumber?.action)
             assertNull(create.properties[ALIAS])
             assertNull(create.properties.xyz.pguid)
             assertEquals(create.properties.xyz.nguid, update1.properties.xyz.guid)

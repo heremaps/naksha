@@ -244,13 +244,13 @@ open class PgWriter internal constructor(val session: PgSession) {
                 }
                 WriteOp.DELETE -> {
                     if (write.isTransactionModification) throw forbidden("Transactions must not be deleted or purged")
-                    write.final_uid = tx.uid.getAndAdd(1)
+                    write.final_uid = tx.uid.next(Action.DELETED)
                     deletes.getOrCreate(write.collection).add(write)
                 }
                 WriteOp.PURGE -> {
                     if (write.isTransactionModification) throw forbidden("Transactions must not be deleted or purged")
                     // Note: purge and delete are the same operation, except that a purge is not copied into deleted table!
-                    write.final_uid = tx.uid.getAndAdd(1)
+                    write.final_uid = tx.uid.next(Action.DELETED)
                     purges.getOrCreate(write.collection).add(write)
                 }
                 else -> {

@@ -91,12 +91,14 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, writes
     ${PgColumn.cc},
     ${PgColumn.prev_tn},
     ${PgColumn.attachment},
+    ${PgColumn.tn},
     ${PgColumn.updateColumnsNames})
   SELECT
     ((new_row.flags & -196609) | (1 << 16) | (1 << 12)) AS ${PgColumn.flags},
     (head_row.cc + 1) AS ${PgColumn.cc},
     substring(head_row.tn, 9) AS ${PgColumn.prev_tn},
     CASE WHEN new_row.attachment = convert_to('undefined', 'UTF8') THEN head_row.attachment ELSE new_row.attachment END AS attachment,
+    naksha_tn_160(naksha_tn_feature_number(new_row.tn), naksha_tn_version(new_row.tn), ((naksha_tn_uid(new_row.tn) & -4) | 1)) AS ${PgColumn.tn},
     ${PgColumn.updateColumns.joinToString(", ") { "new_row.${it.name} AS ${it.name}" }}
   FROM new_row
   LEFT JOIN head_row ON head_row.id = new_row.id
@@ -171,8 +173,10 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                     val prev_tn = outRows.getB96(row, "prev_tn", tn.featureNumber)
                     val write = writeByTn[tn] ?: throw generalException("Missing write state for feature '$id'")
                     val tuple = write.tuple ?: throw generalException("Missing tuple for feature '$id'")
+                    write.tupleNumber = updated_tn
                     write.tuple = tuple.copy(
                         meta = tuple.meta.copy(
+                            tupleNumber = updated_tn,
                             flags = tuple.meta.flags.withAction(Action.UPDATED).withOperation(Operation.UPDATED),
                             changeCount = changeCount,
                             prevTupleNumber = prev_tn,

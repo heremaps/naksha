@@ -31,6 +31,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
+            assertEquals(Action.CREATED, feature.properties.xyz.guid?.tupleNumber?.action)
 
             val featureTupleList = useFeatureTupleList()
             assertEquals(1, featureTupleList.size)
@@ -50,6 +51,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
+            assertEquals(Action.CREATED, feature.properties.xyz.guid?.tupleNumber?.action)
 
             val featureTupleList = useFeatureTupleList()
             assertEquals(1, featureTupleList.size)
@@ -82,6 +84,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
             assertEquals("start", feature.properties["test"])
+            assertEquals(Action.CREATED, feature.properties.xyz.guid?.tupleNumber?.action)
 
             val featureTupleList = useFeatureTupleList()
             assertEquals(1, featureTupleList.size)
@@ -103,6 +106,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
             assertEquals("start", feature.properties["test"])
+            assertEquals(Action.CREATED, feature.properties.xyz.guid?.tupleNumber?.action)
 
             val featureTupleList = useFeatureTupleList()
             assertEquals(1, featureTupleList.size)
@@ -135,6 +139,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
             assertEquals("end", feature.properties["test"])
+            assertEquals(Action.UPDATED, feature.properties.xyz.guid?.tupleNumber?.action)
             val pguid = feature.properties.xyz.pguid
             assertNotNull(pguid)
             assertEquals(insertedFeatureGuid.tupleNumber, pguid.tupleNumber)
@@ -169,6 +174,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
+            assertEquals(Action.CREATED, feature.properties.xyz.guid?.tupleNumber?.action)
             assertEquals("start", feature.properties["test"])
 
             val featureTupleList = useFeatureTupleList()
@@ -190,6 +196,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
+            assertEquals(Action.CREATED, feature.properties.xyz.guid?.tupleNumber?.action)
             assertEquals("start", feature.properties["test"])
 
             val featureTupleList = useFeatureTupleList()
@@ -223,6 +230,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
             assertEquals("end", feature.properties["test"])
+            assertEquals(Action.UPDATED, feature.properties.xyz.guid?.tupleNumber?.action)
             val pguid = feature.properties.xyz.pguid
             assertNotNull(pguid)
             assertEquals(insertedFeatureGuid.tupleNumber, pguid.tupleNumber)

@@ -4,9 +4,11 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import naksha.base.AtomicInt
+import naksha.model.Action
 import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
+import naksha.model.UidManager
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.Write
@@ -101,11 +103,13 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
         val featureTuples = response.useFeatureTupleList()
         Naksha.cache.load(featureTuples)
 
-        // We know that we get UIDs between 0 and 19, but the order is not guaranteed
+        // Generate expected UIDs, but beware, the order is not guaranteed
+        val uidManager = UidManager()
         assertEquals(20, featureTuples.size)
         val expectedUids = mutableMapOf<Int, Boolean>()
         for (i in 0 until featureTuples.size) {
-            expectedUids[i] = true
+            val expectedUid = uidManager.next(Action.CREATED)
+            expectedUids[expectedUid] = true
         }
         // Then: tuples have been correctly persisted, and have UIDs between 0 and 19
         featureTuples.filterNotNull().sortedBy { it.tupleNumber.uid }.forEach { featureTuple ->
