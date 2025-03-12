@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import java.net.http.HttpResponse;
 
 class CORSPreflightTest extends ApiTest{
-    private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
     private static final String ORIGIN_HEADER = "https://testurl.com/";
 
     @Test
