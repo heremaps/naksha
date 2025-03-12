@@ -32,15 +32,12 @@ public class NakshaHubFactory {
    * Instantiate NakshaHub (INaksha compliant) instance by loading given {@link NakshaHubConfig#getHubClassName()}. If config or
    * hubClassName is not provided (i.e. null), then default NakshaHub implementation will be used.
    *
-   * @param appName    the name of the app
-   * @param storageUrl configuration to be used for instantiating NakshaHub storage instance
-   * @param config     The custom NakshaHub Config to be used
-   * @param configId   The configId to be used for loading config from Storage (if custom config not provided)
+   * @param adminPgMasterUrl Url with database used by Naksha Hub Admin
+   * @param config           The custom NakshaHub Config to be used
+   * @param configId         The configId to be used for loading config from Storage (if custom config not provided)
    * @return NakshaHub (INaksha compliant) instance
    */
   public static @NotNull INaksha getInstance(
-      final @NotNull String adminMapId,
-      final @NotNull String adminStorageId,
       final @Nullable String adminPgMasterUrl,
       final @Nullable NakshaHubConfig config,
       final @Nullable String configId) {
@@ -49,9 +46,8 @@ public class NakshaHubFactory {
     try {
       final Class<?> theClass = Class.forName(hubClassName);
       if (INaksha.class.isAssignableFrom(theClass)) {
-        final Constructor<?> constructor =
-            theClass.getConstructor(String.class, String.class, String.class, NakshaHubConfig.class, String.class);
-        hub = (INaksha) constructor.newInstance(adminMapId, adminStorageId, adminPgMasterUrl, config, configId);
+        final Constructor<?> constructor = theClass.getConstructor(String.class, NakshaHubConfig.class, String.class);
+        hub = (INaksha) constructor.newInstance(adminPgMasterUrl, config, configId);
       } else {
         throw unchecked(new Exception("Class '" + hubClassName + "' not INaksha compliant"));
       }

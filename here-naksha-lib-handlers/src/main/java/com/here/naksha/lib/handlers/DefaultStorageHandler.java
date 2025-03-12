@@ -61,6 +61,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// TODO: add map reactively if not there
 public class DefaultStorageHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(DefaultStorageHandler.class);
@@ -434,6 +435,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   // TODO: collectionId at handler level can be potentially removed in the future
   private @NotNull NakshaCollection chooseCollection(final Request request) {
+    // TODO: check if mapId is present
     final NakshaCollection collectionDefinedInHandler = properties.getCollection();
     if (collectionDefinedInHandler != null) {
       logger.info(

@@ -44,8 +44,12 @@ public class RequestHelper {
    */
   @AvailableSince(NakshaVersion.v3_0_0)
   public static @NotNull ReadFeatures readFeaturesByIdRequest(
-      final @NotNull String collectionName, final @NotNull String featureId) {
+      final @NotNull String mapId,
+      final @NotNull String collectionName,
+      final @NotNull String featureId
+  ) {
     final ReadFeatures readFeatures = new ReadFeatures().addCollectionId(collectionName);
+    readFeatures.setMapId(mapId);
     readFeatures.getFeatureIds().add(featureId);
     return readFeatures;
   }
@@ -59,8 +63,12 @@ public class RequestHelper {
    */
   @AvailableSince(NakshaVersion.v3_0_0)
   public static @NotNull ReadFeatures readFeaturesByIdsRequest(
-      final @NotNull String collectionName, final @NotNull List<@NotNull String> featureIds) {
+      final @NotNull String mapId,
+      final @NotNull String collectionName,
+      final @NotNull List<@NotNull String> featureIds
+  ) {
     final ReadFeatures readFeatures = new ReadFeatures().addCollectionId(collectionName);
+    readFeatures.setMapId(mapId);
     readFeatures.getFeatureIds().addAll(featureIds);
     return readFeatures;
   }
@@ -76,8 +84,11 @@ public class RequestHelper {
    */
   @AvailableSince(NakshaVersion.v3_0_0)
   public static <FEATURE extends NakshaFeature> @NotNull WriteRequest createFeatureRequest(
-      final @NotNull String collection, final @NotNull FEATURE feature) {
-    return createFeaturesRequest(collection, List.of(feature));
+      final @NotNull String mapId,
+      final @NotNull String collection,
+      final @NotNull FEATURE feature
+  ) {
+    return createFeaturesRequest(mapId, collection, List.of(feature));
   }
 
   /**
@@ -89,7 +100,9 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static <FEATURE extends NakshaFeature> @NotNull WriteRequest updateFeatureRequest(
-      final @NotNull NakshaCollection collection, final @NotNull FEATURE feature) {
+      final @NotNull NakshaCollection collection,
+      final @NotNull FEATURE feature
+  ) {
     final Write write = new Write().updateFeature(collection, feature, false);
     return new WriteRequest().add(write);
   }
@@ -98,14 +111,18 @@ public class RequestHelper {
    * Helper method to create WriteFeatures request for updating given feature. The update will utilize map retrieved from
    * {@link NakshaContext#mapId()} and will not be atomic.
    *
+   * @param mapId the map where collection is defined
    * @param collectionId the storage collection
    * @param feature      feature object to be updated
    * @param <FEATURE>    any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static <FEATURE extends NakshaFeature> @NotNull WriteRequest updateFeatureRequest(
-      final @NotNull String collectionId, final @NotNull FEATURE feature) {
-    final Write write = new Write().updateFeature(NakshaContext.mapId(), collectionId, feature, false);
+      final @NotNull String mapId,
+      final @NotNull String collectionId,
+      final @NotNull FEATURE feature
+  ) {
+    final Write write = new Write().updateFeature(mapId, collectionId, feature, false);
     return new WriteRequest().add(write);
   }
 
@@ -163,7 +180,9 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull WriteRequest deleteFeaturesByIdsRequest(
-      final @NotNull NakshaCollection collection, final @NotNull List<String> ids) {
+      final @NotNull NakshaCollection collection,
+      final @NotNull List<String> ids
+  ) {
     final WriteRequest request = new WriteRequest();
     for (String id : ids) {
       request.add(new Write().deleteFeatureById(collection, id));
@@ -174,31 +193,37 @@ public class RequestHelper {
   /**
    * Helper method to create WriteFeatures request for deleting given feature.
    *
-   * @param collectionName the storage collection
+   * @param collectionId the storage collection
    * @param id             feature object to be deleted
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  @Deprecated
+  @AvailableSince(NakshaVersion.v3_0_0)
   public static @NotNull WriteRequest deleteFeatureByIdRequest(
-      final @NotNull String collectionName, final @NotNull String id) {
-    final Write write = new Write().deleteFeatureById(NakshaContext.mapId(), collectionName, id);
+      final @NotNull String mapId,
+      final @NotNull String collectionId,
+      final @NotNull String id
+  ) {
+    final Write write = new Write().deleteFeatureById(mapId, collectionId, id);
     return new WriteRequest().add(write);
   }
 
   /**
    * Helper method to create WriteFeatures request with given list of features.
    *
-   * @param collection  the storage collection
+   * @param collectionId  the storage collection
    * @param featureList list of feature objects to be created
    * @return WriteFeatures request that can be used against IStorage methods
    */
   @AvailableSince(NakshaVersion.v3_0_0)
   public static @NotNull WriteRequest createFeaturesRequest(
-      final @NotNull String collection, final @NotNull List<? extends NakshaFeature> featureList) {
+      final @NotNull String mapId,
+      final @NotNull String collectionId,
+      final @NotNull List<? extends NakshaFeature> featureList
+  ) {
     final WriteRequest request = new WriteRequest();
     for (final NakshaFeature feature : featureList) {
       assert feature != null;
-      request.add(new Write().createFeature(collection, feature));
+      request.add(new Write().createFeature(mapId, collectionId, feature));
     }
     return request;
   }
@@ -207,8 +232,7 @@ public class RequestHelper {
     return createWriteCollectionsRequest(List.of(collection));
   }
 
-  public static @NotNull WriteRequest createWriteCollectionsRequest(
-      final @NotNull List<@NotNull NakshaCollection> collections) {
+  public static @NotNull WriteRequest createWriteCollectionsRequest(final @NotNull List<@NotNull NakshaCollection> collections) {
     final WriteRequest writeRequest = new WriteRequest();
     for (final NakshaCollection collection : collections) {
       writeRequest.add(new Write().createCollection(collection));

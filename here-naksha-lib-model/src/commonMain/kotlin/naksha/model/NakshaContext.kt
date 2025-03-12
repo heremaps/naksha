@@ -399,7 +399,7 @@ open class NakshaContext protected constructor() {
          * @since 3.0.0
          */
         @JvmField
-        val defaultMapId = AtomicRef(NakshaMap.DEFAULT)
+        val defaultMapId = AtomicRef<String>(null)
 
         /**
          * The default application name to use, defaults to `NakshaClient/{version}`.

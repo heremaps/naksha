@@ -101,7 +101,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
   private @NotNull XyzResponse executeCreateHandler() throws Exception {
     // Read request JSON
     final EventHandlerConfig newHandler = handlerFromRequestBody();
-    final WriteRequest writeRequest = RequestHelper.createFeatureRequest(EVENT_HANDLERS, newHandler);
+    final WriteRequest writeRequest = RequestHelper.createFeatureRequest(naksha().getAdminMapId(), EVENT_HANDLERS, newHandler);
     // persist new handler in Admin DB (if doesn't exist already)
     Response response = executeWriteRequestFromSpaceStorage(writeRequest);
     return transformResponseToXyzFeatureResponse(response, EventHandlerConfig.class, FAIL_ON_NO_ELEMENTS);
@@ -144,7 +144,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
 
   private @NotNull XyzResponse executeDeleteHandler() {
     final String handlerId = ApiParams.extractMandatoryPathParam(routingContext, HANDLER_ID);
-    final WriteRequest wrRequest = RequestHelper.deleteFeatureByIdRequest(EVENT_HANDLERS, handlerId);
+    final WriteRequest wrRequest = RequestHelper.deleteFeatureByIdRequest(naksha().getAdminMapId(), EVENT_HANDLERS, handlerId);
     Response response = executeWriteRequestFromSpaceStorage(wrRequest);
     return transformResponseToXyzFeatureResponse(response, EventHandlerConfig.class, NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS);
   }

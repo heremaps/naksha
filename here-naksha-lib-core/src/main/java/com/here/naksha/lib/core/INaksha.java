@@ -31,6 +31,9 @@ import org.jetbrains.annotations.NotNull;
 @SuppressWarnings("unused")
 public interface INaksha {
 
+  @NotNull
+  String getAdminMapId();
+
   /**
    * Returns a thin wrapper above the admin-database that adds authorization and internal event handling. Basically, this allows access to the admin collections.
    * @return the admin-storage.

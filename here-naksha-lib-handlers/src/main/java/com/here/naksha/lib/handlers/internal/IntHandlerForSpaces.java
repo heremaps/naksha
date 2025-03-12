@@ -54,6 +54,7 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
       return basicValidation;
     }
     Space space = (Space) write.getFeature();
+    // TODO: add collection with mapId validation
     return handlerExistenceValidation(space);
   }
 

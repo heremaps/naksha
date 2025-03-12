@@ -22,7 +22,6 @@ import static com.here.naksha.app.service.http.apis.ApiParams.extractMandatoryPa
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.SPACE_ID;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
-import static naksha.model.NakshaContext.mapId;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.lib.core.INaksha;
@@ -104,7 +103,7 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
 
   private XyzResponse executeDeleteSpace() {
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
-    final WriteRequest wr = new WriteRequest().add(new Write().deleteFeatureById(mapId(), spaceId, SPACES));
+    final WriteRequest wr = new WriteRequest().add(new Write().deleteFeatureById(naksha().getAdminMapId(), spaceId, SPACES));
 
     Response response = executeWriteRequestFromSpaceStorage(wr);
     return transformResponseToXyzFeatureResponse(response, NakshaFeature.class, NOT_FOUND_ON_NO_ELEMENTS);
@@ -112,7 +111,7 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
 
   private @NotNull XyzResponse executeCreateSpace() {
     final Space newSpace = spaceFromRequestBody();
-    final WriteRequest wrRequest = RequestHelper.createFeatureRequest(SPACES, newSpace);
+    final WriteRequest wrRequest = RequestHelper.createFeatureRequest(naksha().getAdminMapId(), SPACES, newSpace);
     Response response = executeWriteRequestFromSpaceStorage(wrRequest);
     return transformResponseToXyzFeatureResponse(response, Space.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
   }
@@ -124,7 +123,7 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
       return verticle.sendErrorResponse(
           routingContext, NakshaError.ILLEGAL_ARGUMENT, mismatchMsg(spaceIdFromPath, spaceFromBody));
     } else {
-      final WriteRequest updateSpaceReq = RequestHelper.updateFeatureRequest(SPACES, spaceFromBody);
+      final WriteRequest updateSpaceReq = RequestHelper.updateFeatureRequest(naksha().getAdminMapId(), SPACES, spaceFromBody);
       Response updateSpaceResponse = executeWriteRequestFromSpaceStorage(updateSpaceReq);
       return transformResponseToXyzFeatureResponse(updateSpaceResponse, Space.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
     }

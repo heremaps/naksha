@@ -117,9 +117,6 @@ public final class NakshaApp extends Thread {
     err.flush();
   }
 
-  public static String HUB_ADMIN_STORAGE_ID = "naksha-admin-storage";
-  public static String HUB_ADMIN_MAP_ID = "naksha-admin-map";
-
   /**
    * Create a new Naksha-App instance by parsing the given console arguments.
    *
@@ -205,12 +202,11 @@ public final class NakshaApp extends Thread {
     }
     // Instantiate NakshaHub instance
     // TODO: what about appName?
-    this.hub = NakshaHubFactory.getInstance(HUB_ADMIN_MAP_ID, HUB_ADMIN_STORAGE_ID, storageUrl, nakshaHubConfig, configId);
+    this.hub = NakshaHubFactory.getInstance(storageUrl, nakshaHubConfig, configId);
     nakshaHubConfig = hub.getConfig(); // use the config finally set by NakshaHub instance
     log.info("Using server config : {}", nakshaHubConfig);
 
     log.info("Naksha host/endpoint: {}", nakshaHubConfig.getEndpoint());
-
     // vertxMetricsOptions = new MetricsOptions().setEnabled(true).setFactory(new NakshaHubMetricsFactory());
     this.vertxOptions = new VertxOptions();
     // See: https://vertx.io/docs/vertx-core/java
