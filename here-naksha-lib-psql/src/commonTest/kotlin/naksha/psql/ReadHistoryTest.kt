@@ -84,7 +84,7 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
             queryHistory = true
             versions = 10
         }).apply {
-            // We expect to get 4 versions back, in decending order: deleted, updated2, updated1, created
+            // We expect to get 4 versions back, in descending order: deleted, updated2, updated1, created
             assertEquals(4, features.size)
 
             val delete = assertNotNull(features[0])
@@ -115,6 +115,28 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
             assertNull(create.properties.xyz.pguid)
             assertEquals(create.properties.xyz.nguid, update1.properties.xyz.guid)
         }
-    }
+
+        executeRead(ReadFeatures().apply {
+            collectionIds.add(collection.id)
+            featureIds.add(featureId)
+            queryHistory = true
+            versions = 2
+        }).apply {
+            // We expect to have 4 versions, but only want the latest 2 back
+            // As specified, we expect descending order: deleted, updated2[, updated1, created]
+            assertEquals(2, features.size)
+
+            val delete = assertNotNull(features[0])
+            val update2 = assertNotNull(features[1])
+
+            assertEquals(featureId, delete.id)
+            assertEquals(Action.DELETED, delete.properties.xyz.action)
+            assertEquals(delete.properties.xyz.pguid, update2.properties.xyz.guid)
+            assertEquals(delete.properties.xyz.nguid, delete.properties.xyz.guid)
+
+            assertEquals(Action.UPDATED, update2.properties.xyz.action)
+        }
+
+        }
 
 }

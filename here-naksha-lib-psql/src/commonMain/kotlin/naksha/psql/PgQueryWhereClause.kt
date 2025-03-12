@@ -15,16 +15,17 @@ internal data class PgQueryWhereClause(
      * The arguments to used with the WHERE in order.
      * @since 3.0
      */
-    val argValues: List<Any?>,
+    val argValues: MutableList<Any?>,
 
     /**
      * The types of the arguments.
      * @since 3.0
      */
-    val argTypes: List<PgType>,
+    val argTypes: MutableList<PgType>,
 ) {
     /**
-     * Returns the [argTypes] as string-array.
+     * Returns the [argTypes] as typed-array _(`Array<String>`)_.
+     * @since 3.0
      */
     val argTypeNames: Array<String>
         get() = argTypes.map(PgType::toString).toTypedArray()
