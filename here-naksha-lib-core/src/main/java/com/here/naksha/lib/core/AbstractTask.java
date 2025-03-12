@@ -287,6 +287,9 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
   private Thread.UncaughtExceptionHandler oldUncaughtExceptionHandler;
 
   @Nullable
+  private NakshaContext oldContext;
+
+  @Nullable
   private String oldName;
 
   /**
@@ -334,6 +337,8 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
     this.oldUncaughtExceptionHandler = threadUncaughtExceptionHandler;
     // thread.setName(context.getStreamId());
     thread.setUncaughtExceptionHandler(this);
+    this.oldContext = NakshaContext.currentContext();
+    context.attachToCurrentThread();
     MDC.put("streamId", context.getStreamId());
   }
 
@@ -356,6 +361,9 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
     this.thread = null;
     this.oldName = null;
     this.oldUncaughtExceptionHandler = null;
+    final NakshaContext oldContext = this.oldContext;
+    if (oldContext != null) oldContext.attachToCurrentThread();
+    this.oldContext = null;
     MDC.remove("streamId");
   }
 
