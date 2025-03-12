@@ -27,7 +27,7 @@ class CORSPreflightTest extends ApiTest{
     }
 
     @Test
-    void tc0350_testCorsPreflightRequestGet() throws Exception {
+    void testCorsPreflightRequestGet() throws Exception {
         // Test API : OPTIONS /hub/storages for GET method
         // Validate the CORS headers returned by the OPTIONS request for GET
         String requestMethod = "GET";
@@ -46,7 +46,7 @@ class CORSPreflightTest extends ApiTest{
     }
 
     @Test
-    void tc0351_testCorsPreflightRequestPost() throws Exception {
+    void testCorsPreflightRequestPost() throws Exception {
         // Test API : OPTIONS /hub/storages for POST method
         // Validate the CORS headers returned by the OPTIONS request for POST
         String requestMethod = "POST";
@@ -65,7 +65,7 @@ class CORSPreflightTest extends ApiTest{
     }
 
     @Test
-    void tc0352_testCorsPreflightRequestPut() throws Exception {
+    void testCorsPreflightRequestPut() throws Exception {
         // Test API : OPTIONS /hub/storages for PUT method
         // Validate the CORS headers returned by the OPTIONS request for PUT
         String requestMethod = "PUT";
@@ -84,7 +84,7 @@ class CORSPreflightTest extends ApiTest{
     }
 
     @Test
-    void tc0353_testCorsPreflightRequestPatch() throws Exception {
+    void testCorsPreflightRequestPatch() throws Exception {
         // Test API : OPTIONS /hub/storages for PATCH method
         // Validate the CORS headers returned by the OPTIONS request for PATCH
         String requestMethod = "PATCH";
@@ -103,7 +103,7 @@ class CORSPreflightTest extends ApiTest{
     }
 
     @Test
-    void tc0354_testCorsPreflightRequestDelete() throws Exception {
+    void testCorsPreflightRequestDelete() throws Exception {
         // Test API : OPTIONS /hub/storages for DELETE method
         // Validate the CORS headers returned by the OPTIONS request for DELETE
         String requestMethod = "DELETE";
