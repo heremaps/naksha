@@ -3,7 +3,7 @@ FROM public.ecr.aws/amazonlinux/amazonlinux:latest
 # Execute all commands at ones, so we only get one layer
 
 # Install PostgresQL (https://www.postgresql.org/ftp/source/)
-RUN dnf update -y  \
+RUN dnf update -y
 RUN dnf install -y bison-devel readline-devel zlib-devel openssl-devel wget vim
 RUN dnf install -y mlocate icu libicu-devel e2fsprogs e2fsprogs-devel lz4 lz4-devel uuid uuid-devel sudo
 RUN dnf install -y --allowerasing curl curl-devel
