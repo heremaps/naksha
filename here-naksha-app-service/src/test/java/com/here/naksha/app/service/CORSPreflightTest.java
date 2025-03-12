@@ -17,7 +17,7 @@ import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 class CORSPreflightTest extends ApiTest{
     private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
     private static final String ORIGIN_HEADER = "https://testurl.com/";
-    private static final String SPACE_ID = "read_features_by_ids_test_space";
+    private static final String SPACE_ID = "cors_preflight_test_space";
 
     @BeforeAll
     static void setup() throws URISyntaxException, IOException, InterruptedException {
