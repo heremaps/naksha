@@ -30,7 +30,7 @@ public class MergeByStoragePriority implements MergeOperation {
 
   @Override
   public @Nullable FeatureTuple apply(@NotNull List<@NotNull ViewLayerFeature> sameFeatureFromEachStorage) {
-    ViewLayerFeature layer = sameFeatureFromEachStorage.getFirst();
+    ViewLayerFeature layer = sameFeatureFromEachStorage.get(0);
     for (var i = 1; i < sameFeatureFromEachStorage.size(); i++) {
       var otherLayer = sameFeatureFromEachStorage.get(i);
       if (otherLayer.getStoragePriority() < layer.getStoragePriority()) {

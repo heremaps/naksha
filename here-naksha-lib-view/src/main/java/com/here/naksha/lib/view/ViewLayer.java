@@ -19,6 +19,7 @@
 package com.here.naksha.lib.view;
 
 import naksha.model.IStorage;
+import naksha.model.objects.NakshaCollection;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -42,6 +43,16 @@ public class ViewLayer {
     this.storage = storage;
     this.mapId = mapId;
     this.collectionId = collectionId;
+  }
+
+  /**
+   * Create a new view-layer.
+   * @param storage the storage to which to redirect requests.
+   * @param collection the collection to which to redirect requests.
+   * @since 2.0
+   */
+  public ViewLayer(@NotNull IStorage storage, @NotNull NakshaCollection collection) {
+    this(storage, collection.getId(), collection.getMapId());
   }
 
   /**
