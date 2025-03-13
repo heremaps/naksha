@@ -81,7 +81,7 @@ public class ObligatoryLayersResolverTest {
     ViewLayer obligatoryLayer = new ViewLayer(storage, TEST_MAP_ID, "collection1");
     ViewLayer otherLayer = new ViewLayer(storage, TEST_MAP_ID, "collection1");
     final NakshaFeature feature = new NakshaFeature();
-    final FeatureTuple featureTuple = mockFeatureTuple(feature);
+    final FeatureTuple featureTuple = new FeatureTuple(feature);
 
     List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
     singleRowFeatures.add(new ViewLayerFeature(featureTuple, 0, otherLayer));
@@ -103,7 +103,7 @@ public class ObligatoryLayersResolverTest {
     IStorage storage = mock(IStorage.class);
     ViewLayer obligatoryLayer = new ViewLayer(storage, TEST_MAP_ID, "collection1");
     final NakshaFeature feature = new NakshaFeature();
-    final FeatureTuple featureTuple = mockFeatureTuple(feature);
+    final FeatureTuple featureTuple = new FeatureTuple(feature);
 
     List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
     singleRowFeatures.add(new ViewLayerFeature(featureTuple, 0, obligatoryLayer));

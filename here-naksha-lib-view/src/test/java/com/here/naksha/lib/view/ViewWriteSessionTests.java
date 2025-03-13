@@ -12,15 +12,15 @@ import naksha.base.StringList;
 import naksha.geo.PointCoord;
 import naksha.geo.SpPoint;
 import naksha.model.Action;
+import naksha.model.Naksha;
 import naksha.model.SessionOptions;
+import naksha.model.Tuple;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.objects.StoreMode;
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
-import naksha.model.request.Write;
-import naksha.model.request.WriteRequest;
+import naksha.model.request.*;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -36,10 +36,10 @@ public class ViewWriteSessionTests extends PsqlTests {
 
   static final String COLLECTION_0 = "test_view_write_session_0";
   static final String COLLECTION_1 = "test_view_write_session_1";
-  static final NakshaCollection COLLECTION_0_FEATURE = new NakshaCollection(COLLECTION_0, null, 1, null, StoreMode.ON, StoreMode.ON,
-      StoreMode.ON);
-  static final NakshaCollection COLLECTION_1_FEATURE = new NakshaCollection(COLLECTION_1, null, 1, null, StoreMode.ON, StoreMode.ON,
-      StoreMode.ON);
+  static final NakshaCollection COLLECTION_0_FEATURE = new NakshaCollection(
+          COLLECTION_0, TEST_MAP_ID, 1, null, StoreMode.ON, StoreMode.ON, StoreMode.ON);
+  static final NakshaCollection COLLECTION_1_FEATURE = new NakshaCollection(
+          COLLECTION_1, TEST_MAP_ID, 1, null, StoreMode.ON, StoreMode.ON, StoreMode.ON);
 
 
   @Test
@@ -83,9 +83,7 @@ public class ViewWriteSessionTests extends PsqlTests {
 
     ViewWriteSession writeSession = view.newWriteSession(new SessionOptions()).init();
     ReadFeatures readRequest = new ReadFeatures();
-    StringList featureIds = new StringList();
-    featureIds.add("feature_id_view0");
-    readRequest.setFeatureIds(featureIds);
+    readRequest.getFeatureIds().add("feature_id_view0");
     Response response = writeSession.execute(readRequest);
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
@@ -183,7 +181,6 @@ public class ViewWriteSessionTests extends PsqlTests {
   @EnabledIf("runTest")
   void deleteFeatureFromTopLayer() {
     assertNotNull(storage);
-    final String FEATURE_ID = "feature_id_view1";
     ViewLayer layer0 = new ViewLayer(storage, TEST_MAP_ID, COLLECTION_0);
     ViewLayer layer1 = new ViewLayer(storage, TEST_MAP_ID, COLLECTION_1);
 
@@ -191,20 +188,33 @@ public class ViewWriteSessionTests extends PsqlTests {
     View view = new View(viewLayerCollection);
     ViewWriteSession writeSession = view.newWriteSession(new SessionOptions()).init();
     WriteRequest writeRequest = new WriteRequest();
-    writeRequest.add(new Write().deleteFeatureById(COLLECTION_0_FEATURE, FEATURE_ID, null));
+    writeRequest.add(new Write().deleteFeatureById(COLLECTION_0_FEATURE, "feature_id_view1"));
 
-    SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
+    @NotNull Response response = writeSession.execute(writeRequest);
+    @NotNull SuccessResponse ok = assertInstanceOf(SuccessResponse.class, response);
+    assertEquals(1, ok.getLength());
 
-    assertNotNull(response.getFeatureTupleList().get(0));
-    assertSame(Action.DELETED, Objects.requireNonNull(response.getFeatureTupleList().get(0).tuple).meta.action());
-    assertEquals(FEATURE_ID, response.getFeatures().get(0).getId());
-
+    @NotNull FeatureTupleList featureTupleList = ok.getFeatureTupleList();
+    assertEquals(1, featureTupleList.size());
+    // TODO: We need replace this code with: writeSession.loadTuples(featureTupleList);
     writeSession.commit();
+    Naksha.cache.load(featureTupleList);
+    // TODO: End of code to replace
+    FeatureTuple featureTuple = featureTupleList.get(0);
+    assertNotNull(featureTuple);
+    Tuple tuple = featureTuple.tuple;
+    assertNotNull(tuple);
+
+    assertSame(Action.DELETED, tuple.meta.action());
+    assertEquals("feature_id_view1", featureTuple.getId());
+
+    // TODO: Ones we have the loadTuples available, do:
+    // writeSession.commit();
 
     //check if the newly added feature found on layer
     ReadFeatures readRequest = new ReadFeatures();
     StringList list = new StringList();
-    list.add(FEATURE_ID);
+    list.add("feature_id_view1");
     readRequest.setFeatureIds(list);
     List<NakshaFeature> response1 = queryView(view, readRequest);
     assertEquals(0, response1.size());
