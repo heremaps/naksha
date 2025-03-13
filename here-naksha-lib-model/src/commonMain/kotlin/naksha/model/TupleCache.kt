@@ -144,6 +144,27 @@ class TupleCache internal constructor() {
     ): List<Tuple> = load(tupleNumbers.toFeatureTupleList(from, to), maxMicros = maxMicros, loadFromStorage = loadFromStorage).toTupleList()
 
     /**
+     * Read multiple [tuples][Tuple] from the cache or storage; if available.
+     *
+     * @param featureTuples the [feature-tuple][FeatureTuple] to fill from the cache.
+     * @param from the index of the first [FeatureTuple] to load from cache, defaults to `0`.
+     * @param to the index of the first [FeatureTuple] **not** to load from cache, defaults to `featureTuples.size`.
+     * @param acceptFeature if `true`, then the [Tuple] will only be loaded, when [FeatureTuple.feature] is as well `null`.
+     * @return the given `featureTuples`, so that the methods can be used as wrapper.
+     * @since 3.0
+     * @see [getAll]
+     * @see [maxLoadMicros]
+     */
+    @JvmOverloads
+    fun <LIST : List<FeatureTuple?>> loadFromCacheOrStorage(
+        featureTuples: LIST,
+        from:Int = 0,
+        to:Int = featureTuples.size,
+        acceptFeature: Boolean = false
+    ): LIST = load(featureTuples, from, to, loadFromStorage = true, acceptFeature = acceptFeature)
+
+
+    /**
      * Read multiple [tuples][Tuple] from the cache; if available.
      *
      * @param featureTuples the [feature-tuple][FeatureTuple] to fill from the cache.
