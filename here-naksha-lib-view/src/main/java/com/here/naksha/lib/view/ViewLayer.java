@@ -21,26 +21,52 @@ package com.here.naksha.lib.view;
 import naksha.model.IStorage;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * A view-layer is a virtual collection being part of a view. It redirects data requests to another storage, map, and collection.
+ * @since 2.0
+ */
 public class ViewLayer {
 
   private final @NotNull IStorage storage;
   private final @NotNull String mapId;
   private final @NotNull String collectionId;
 
+  /**
+   * Create a new view-layer.
+   * @param storage the storage to which to redirect requests.
+   * @param mapId the map-id of the map to which to redirect requests _(added in v3)_.
+   * @param collectionId the collection-id of the collection to which to redirect requests.
+   * @since 2.0
+   */
   public ViewLayer(@NotNull IStorage storage, @NotNull String mapId, @NotNull String collectionId) {
     this.storage = storage;
     this.mapId = mapId;
     this.collectionId = collectionId;
   }
 
+  /**
+   * Returns the storage to which this layer redirects.
+   * @return the storage to which this layer redirects.
+   * @since 2.0
+   */
   public @NotNull IStorage getStorage() {
     return storage;
   }
 
+  /**
+   * Returns the map-id to which this layer redirects.
+   * @return the map-id of the map to which to redirect requests.
+   * @since 2.0
+   */
   public @NotNull String getMapId() {
     return mapId;
   }
 
+  /**
+   * Returns the collection-id to which this layer redirects.
+   * @return the collection-id of the map to which to redirect requests.
+   * @since 2.0
+   */
   public @NotNull String getCollectionId() {
     return collectionId;
   }

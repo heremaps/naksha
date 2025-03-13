@@ -24,6 +24,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
+// TODO: This should implement IStorage
 public class View {
 
   private @NotNull ViewLayerCollection viewLayerCollection;
