@@ -24,14 +24,19 @@ import java.util.Comparator;
 import java.util.List;
 import naksha.model.request.FeatureTuple;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class MergeByStoragePriority implements MergeOperation {
 
   @Override
-  public FeatureTuple apply(@NotNull List<ViewLayerFeature> sameFeatureFromEachStorage) {
-    return sameFeatureFromEachStorage.stream()
-        .min(Comparator.comparing(ViewLayerFeature::getStoragePriority))
-        .map(ViewLayerFeature::getFeatureTuple)
-        .get();
+  public @Nullable FeatureTuple apply(@NotNull List<@NotNull ViewLayerFeature> sameFeatureFromEachStorage) {
+    ViewLayerFeature layer = sameFeatureFromEachStorage.getFirst();
+    for (var i = 1; i < sameFeatureFromEachStorage.size(); i++) {
+      var otherLayer = sameFeatureFromEachStorage.get(i);
+      if (otherLayer.getStoragePriority() < layer.getStoragePriority()) {
+        layer = otherLayer;
+      }
+    }
+    return layer.getFeatureTuple();
   }
 }
