@@ -54,7 +54,7 @@ open class FeatureTuple(
      * @since 3.0
      */
     val id: String?
-        get() = tuple?.meta?.id
+        get() = tuple?.meta?.id ?: feature?.id
 
     private var doNotAutoUpdate: Boolean = false
     private var cachedTuple: Tuple? = null
