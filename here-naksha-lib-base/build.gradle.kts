@@ -17,8 +17,8 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                api(kotlin("stdlib-common"))
-                api(kotlin("reflect"))
+                implementation(kotlin("stdlib-common"))
+                implementation(kotlin("reflect"))
                 // https://github.com/Kotlin/kotlinx-datetime
                 api("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
             }
