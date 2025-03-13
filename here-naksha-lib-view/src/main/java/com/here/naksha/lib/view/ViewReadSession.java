@@ -19,6 +19,7 @@
 package com.here.naksha.lib.view;
 
 import static java.util.stream.Collectors.*;
+import static naksha.model.StaticKt.FETCH_ALL;
 import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 
 import com.here.naksha.lib.view.concurrent.LayerReadRequest;
@@ -191,6 +192,7 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
     }
     return false;
   }
+
   // TODO CASL-739
   @Override
   public int getSocketTimeout() {
@@ -229,9 +231,21 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
     return execute(request);
   }
 
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
+    loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
+  }
+
   @Override
-  public void loadTuples(
-      @NotNull List<? extends FeatureTuple> resultTuples, int from, int to, int mode) {}
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
+    final @NotNull ViewLayerCollection viewCollection = view.getViewCollection();
+    // TODO: We need to group the tuples by layer using:
+    //       viewCollection.getByTupleNumber()
+    //       Then we can query for the tuples.
+    //       The reason for all the effort is that the view allows a postponed commit,
+    //       which means we can't load tuple modified features, because the changes are
+    //       not yet visible outside the session!
+    throw new UnsupportedOperationException("loadTuples");
+  }
 
   @Override
   public @NotNull IStorage getStorage() {

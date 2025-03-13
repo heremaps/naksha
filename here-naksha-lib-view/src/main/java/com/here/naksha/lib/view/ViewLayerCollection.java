@@ -18,6 +18,9 @@
  */
 package com.here.naksha.lib.view;
 
+import naksha.model.TupleNumber;
+import org.jetbrains.annotations.NotNull;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -50,5 +53,12 @@ public class ViewLayerCollection {
 
   public ViewLayer getTopPriorityLayer() {
     return layers.get(0);
+  }
+
+  public ViewLayer getByTupleNumber(@NotNull TupleNumber tupleNumber) {
+    // TODO: We need to implement this, but to be able to do this, we need to be able to find
+    //       the layer by map-number and collection-number, which is possible only, if we ask
+    //       the storage for the NakshaMap and NakshaCollection by id!
+    throw new UnsupportedOperationException("getByTupleNumber");
   }
 }
