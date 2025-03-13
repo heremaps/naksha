@@ -92,7 +92,7 @@ abstract class PsqlTests {
 
   @BeforeAll
   static void beforeTest() {
-    nakshaContext = NakshaContext.currentContext().withAppId(TEST_APP_ID).withAuthor(TEST_AUTHOR);
+    nakshaContext = NakshaContext.currentContext().withAppId(TEST_APP_ID).withAuthor(TEST_AUTHOR).withSu(true);
     storage = Naksha.useStorage(
       NakshaStorage.fromJSON(
         "{\"id\":\"local_psql_test_storage\",\"className\":\"naksha.psql.PsqlTestStorage\"}"
