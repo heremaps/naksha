@@ -3,7 +3,6 @@ package naksha.psql
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import naksha.base.AtomicInt
 import naksha.model.Action
 import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.featureNumber
@@ -36,7 +35,7 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
         // When
         val writeOp = Write().createFeature(collection, feature)
         val response = executeWrite(WriteRequest().add(writeOp))
-        val featureTuples = response.useFeatureTupleList()
+        val featureTuples = response.featureTupleList
         Naksha.cache.load(featureTuples)
 
         // Then:
@@ -60,7 +59,7 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
         // When
         val writeOp = Write().createFeature(collection, feature)
         val response = executeWrite(WriteRequest().add(writeOp))
-        val featureTuples = response.useFeatureTupleList()
+        val featureTuples = response.featureTupleList
         Naksha.cache.load(featureTuples)
 
         // Then: we persisted single tuple correctly
@@ -100,7 +99,7 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
             featuresById[feature.id] = feature
         }
         val response = executeWrite(writeRequest)
-        val featureTuples = response.useFeatureTupleList()
+        val featureTuples = response.featureTupleList
         Naksha.cache.load(featureTuples)
 
         // Generate expected UIDs, but beware, the order is not guaranteed

@@ -78,16 +78,12 @@ import org.mockito.stubbing.Answer;
 public class ViewTest {
 
   private NakshaContext nc = NakshaContext.currentContext().withAppId("VIEW_API_TEST").withAuthor("VIEW_API_AUTHOR");
-
   private SessionOptions sessionOptions = new SessionOptions();
-
   private final Write write = new Write();
-
   private final static String TOPO = "topologies";
 
   @Test
   void testReadApiNotation() {
-
     // given
     IStorage storage = mock(IStorage.class);
     ViewLayer topologiesDS = new ViewLayer(storage, TEST_MAP_ID, "topologies");
@@ -164,7 +160,7 @@ public class ViewTest {
 
     final WriteRequest request = new WriteRequest();
     final NakshaFeature feature = new NakshaFeature("sampleTuple0");
-    request.add(write.deleteFeature(null, feature, false));
+    request.add(write.deleteFeatureById(topologiesDS.getMapId(), topologiesDS.getCollectionId(), feature.getId()));
     SuccessResponse successResponse1 = new SuccessResponse(sampleXyzWriteResponse(1));
     when(session.execute(request)).thenReturn(successResponse1);
     ViewWriteSession writeSession = view.newWriteSession(sessionOptions).init();

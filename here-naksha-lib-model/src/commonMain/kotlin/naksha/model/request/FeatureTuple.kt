@@ -6,9 +6,8 @@ import naksha.base.Platform
 import naksha.model.*
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
-import kotlin.js.JsStatic
+import kotlin.js.JsName
 import kotlin.jvm.JvmField
-import kotlin.jvm.JvmStatic
 
 /**
  * A feature tuple is a wrapper for a [Tuple], and its in-memory representation, the [NakshaFeature]. It allows to lazy load the data of the [Tuple], to cache the [NakshaFeature], and is part of the cache subsystem. A feature tuple is not thread-safe, it is for thread local processing.
@@ -25,11 +24,24 @@ open class FeatureTuple(
     @JvmField val tupleNumber: TupleNumber,
 
     /**
-     * The [Tuple], _null_ when not yet fetched from a [storage][IStorage] or [cache][ITupleCache].
+     * The [Tuple], `null` when not yet fetched from a [storage][IStorage] or [cache][ITupleCache].
+     * @since 3.0
+     * @see [TupleCache.get]
+     */
+    @JvmField var tuple: Tuple? = Naksha.cache[tupleNumber]
+) {
+
+    /**
+     * Create a feature-tuple from a [NakshaFeature].
+     * @param feature the [NakshaFeature] from which to create this [FeatureTuple].
      * @since 3.0
      */
-    @JvmField var tuple: Tuple? = null
-) {
+    @JsName("fromNakshaFeature")
+    @Suppress("LeakingThis")
+    constructor(feature: NakshaFeature) : this(feature.tupleNumber) {
+        this.feature = feature
+    }
+
     /**
      * If the [tuple] is loaded, the source from which it was loaded, being either [IStorage] or [ITupleCache].
      * @since 3.0
@@ -44,7 +56,7 @@ open class FeatureTuple(
     val id: String?
         get() = tuple?.meta?.id
 
-    private var doNotUpdate: Boolean = false
+    private var doNotAutoUpdate: Boolean = false
     private var cachedTuple: Tuple? = null
     private var cachedFeature: NakshaFeature? = null
     private var cachedJson: String? = null
@@ -63,7 +75,7 @@ open class FeatureTuple(
         get() {
             var feature = cachedFeature
             val tuple = this.tuple
-            if (tuple != null && tuple !== cachedTuple && !doNotUpdate) {
+            if (tuple != null && tuple !== cachedTuple && !doNotAutoUpdate) {
                 feature = tuple.toNakshaFeature()
                 cachedFeature = feature
                 cachedJson = null
@@ -71,7 +83,7 @@ open class FeatureTuple(
             return feature
         }
         set(value) {
-            doNotUpdate = value != null
+            doNotAutoUpdate = value != null
             cachedFeature = value
             cachedTuple = this.tuple
             cachedJson = null

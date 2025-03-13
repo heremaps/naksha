@@ -30,7 +30,7 @@ expect class TupleHeapCache: ITupleCache {
     // ITupleCache implementation
     override val latencyInMicros: Int64
     override operator fun get(tupleNumber: TupleNumber): Tuple?
-    override fun load(featureTuples: List<FeatureTuple?>, from:Int, to:Int): Int
+    override fun load(featureTuples: List<FeatureTuple?>, from:Int, to:Int, acceptFeature: Boolean): Int
     override fun put(tuple: Tuple)
     override fun store(tuples: List<Tuple>)
     override fun onStorageAdd(storage: IStorage)

@@ -20,6 +20,8 @@ import kotlin.jvm.JvmStatic
 /**
  * A helper that allows reading a binary encoded array of [TupleNumber]'s.
  *
+ * This binary can be serialized technically, but just using the [Platform.toJSON][naksha.base.Platform.toJSON] method, because it requires a binary encoding, which means serialization and deserialization into a [Data URL](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data), which is normally not supported out of the box by standard JSON parsers/serializers, it is a proprietary extension to the JSON standard, the same way that 64-bit integers are handled as special [Data URL](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data) by [Platform.toJSON][naksha.base.Platform.toJSON].
+ *
  * @since 3.0
  */
 @JsExport

@@ -119,6 +119,27 @@ open class FeatureTupleList : ListProxy<FeatureTuple>(FeatureTuple::class) {
     }
 
     /**
+     * Tries to load all tuples.
+     * @param from the index of the first element to load; defaults to `0`.
+     * @param to the index of the first element **not to load**; defaults to [size].
+     * @param loadFromStorage if _true_, tries to load tuples not being in the cache from their storages; if being _false_, then only caches are asked, but the storage is not contacted; defaults to `true`.
+     * @param acceptFeature if _true_, then the [Tuple] will only be loaded, when [FeatureTuple.feature] is as well _null_; defaults to `false`.
+     * @return this.
+     */
+    fun loadAll(from: Int = 0, to: Int = size, loadFromStorage: Boolean = true, acceptFeature: Boolean = false): FeatureTupleList {
+        // We only actually contact the cache, if there is at least one missing tuple!
+        for (i in from until to) {
+            val featureTuple = get(i) ?: continue
+            if (featureTuple.tuple != null) continue
+            if (acceptFeature && featureTuple.feature != null) continue
+            // Found first feature that need to be loaded, load all and return.
+            Naksha.cache.load(this, from, to, loadFromStorage = loadFromStorage, acceptFeature = acceptFeature)
+            break
+        }
+        return this
+    }
+
+    /**
      * Convert this [feature-tuple list][FeatureTupleList] into a pure list of [Tuple], removing `null` values.
      * @param from the index of the first value to convert, defaults to `0`.
      * @param to the index of the fist value **not** to convert, defaults to [size].

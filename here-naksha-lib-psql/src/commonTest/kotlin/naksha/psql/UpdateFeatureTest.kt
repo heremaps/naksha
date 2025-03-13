@@ -48,7 +48,7 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
             collectionIds += collection.id
             featureIds += initialFeature.id
         })
-        assertEquals(1, readFeatureResp.size)
+        assertEquals(1, readFeatureResp.length)
         val readFeature = assertNotNull(readFeatureResp.features[0])
         assertEquals(initialFeature.id, readFeature.id)
         assertEquals(2, updatedFeature.properties.xyz.changeCount)
@@ -104,8 +104,8 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
             featureIds += initialFeature.id
             queryHistory = true
         })
-        assertEquals(2, readResp.resultSize())
-        val retrievedTuples = Naksha.cache.load(readResp.useFeatureTupleList()).toTupleList()
+        assertEquals(2, readResp.length)
+        val retrievedTuples = Naksha.cache.load(readResp.featureTupleList).toTupleList()
         assertNotNull(retrievedTuples)
         assertEquals(2, retrievedTuples.size)
 

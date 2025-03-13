@@ -9,16 +9,16 @@ import naksha.base.Int64
 import naksha.base.fn.Fn1
 import naksha.jbon.IDictReader
 import naksha.model.request.FeatureTuple
-import naksha.model.request.ReadFeatures
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
 import kotlin.math.min
 
 /**
- * The standard tuple cache.
+ * The standard tuple cache attached to [Naksha].
  *
  * @since 3.0
+ * @see [Naksha.cache]
  */
 @JsExport
 class TupleCache internal constructor() {
@@ -30,26 +30,21 @@ class TupleCache internal constructor() {
     }
 
     /**
-     * The maximum amount of microseconds allowed for [get][ITupleCache.get], defaults to `0`.
-     *
-     * ### Note
-     * If set to a negative value, no cache will be queried when [get] is invoked!
-     * @since 3.0
-     */
-    val maxGetMicros = AtomicInt64(0)
-
-    /**
      * The default maximum amount of microseconds allowed for [load] or [getAll], defaults to `9223372036854775807`.
      *
      * ### Note
      * If set to a negative value, no cache will be queried when [load] or [getAll] are invoked!
      * @since 3.0
+     * @see [load]
+     * @see [getAll]
      */
     val maxLoadMicros = AtomicInt64(9223372036854775807)
 
     /**
      * If for cache misses in [load] or [getAll] the storage should be queried to load the [Tuple] into the cache, defaults to `false`.
      * @since 3.0
+     * @see [load]
+     * @see [getAll]
      */
     var autoLoad = AtomicBool(true)
 
@@ -113,19 +108,17 @@ class TupleCache internal constructor() {
     }
 
     /**
-     * Read a single tuple from cache with lowe latency.
+     * Read a single tuple from cache with zero latency.
      *
-     * ### Note
-     * This method is not recommended, because higher level caches will ignore it, it does not make sense to send a request to a remote cache for a single [Tuple], the latency is too high relative to the gain, therefore it will only be answered by caches that have a latency less than [maxGetMicros]. It is recommended to load all needed tuples at ones via [getAll] or [load].
      * @param tupleNumber the [TupleNumber] of the [Tuple] to read.
-     * @return the [Tuple], if it is in the cache, `null` otherwise
+     * @return the [Tuple], if it is in the cache, `null` otherwise.
+     * @since 3.0
      * @see [getAll]
      * @see [load]
-     * @since 3.0
      */
     operator fun get(tupleNumber: TupleNumber): Tuple? {
-        val MAX = maxGetMicros.get()
-        return forEachCache { if (it.latencyInMicros <= MAX) it[tupleNumber] else null }
+        val ZERO = Int64(0)
+        return forEachCache { if (it.latencyInMicros == ZERO) it[tupleNumber] else null }
     }
 
     /**
@@ -139,6 +132,7 @@ class TupleCache internal constructor() {
      * @return the loaded [tuple's][Tuple]
      * @since 3.0
      * @see [load]
+     * @see [maxLoadMicros]
      */
     @JvmOverloads
     fun getAll(
@@ -147,7 +141,7 @@ class TupleCache internal constructor() {
         to:Int = tupleNumbers.size,
         maxMicros: Int64? = null,
         loadFromStorage: Boolean? = null
-    ): List<Tuple> = load(tupleNumbers.toFeatureTupleList(from, to), maxMicros = maxMicros).toTupleList()
+    ): List<Tuple> = load(tupleNumbers.toFeatureTupleList(from, to), maxMicros = maxMicros, loadFromStorage = loadFromStorage).toTupleList()
 
     /**
      * Read multiple [tuples][Tuple] from the cache; if available.
@@ -157,9 +151,11 @@ class TupleCache internal constructor() {
      * @param to the index of the first [FeatureTuple] **not** to load from cache, defaults to `featureTuples.size`.
      * @param maxMicros if given, the maximum latency in microseconds; defaults to [maxLoadMicros].
      * @param loadFromStorage if explicitly `true`, missing tuples are loaded from the corresponding storage, defaults to [autoLoad].
+     * @param acceptFeature if `true`, then the [Tuple] will only be loaded, when [FeatureTuple.feature] is as well `null`.
      * @return the given `featureTuples`, so that the methods can be used as wrapper.
      * @since 3.0
      * @see [getAll]
+     * @see [maxLoadMicros]
      */
     @JvmOverloads
     fun <LIST : List<FeatureTuple?>> load(
@@ -167,15 +163,21 @@ class TupleCache internal constructor() {
         from:Int = 0,
         to:Int = featureTuples.size,
         maxMicros: Int64? = null,
-        loadFromStorage: Boolean? = null
+        loadFromStorage: Boolean? = null,
+        acceptFeature: Boolean = false
     ): LIST {
         val MAX = maxMicros ?: maxLoadMicros.get()
         val end = min(featureTuples.size, to)
         if (from < 0 || from >= end) return featureTuples
-        forEachCache { if (it.latencyInMicros <= MAX) it.load(featureTuples) else null }
+        forEachCache { if (it.latencyInMicros <= MAX) it.load(featureTuples, from, end, acceptFeature) else null }
         val AUTO_LOAD = loadFromStorage ?: autoLoad.get()
         if (AUTO_LOAD) {
-            val byStorage = featureTuples.filter { it != null && it.tuple == null }.filterNotNull().groupBy { it.tupleNumber.storageNumber }
+            val byStorage = featureTuples.filter {
+                if (acceptFeature)
+                    it != null && it.tuple == null && it.feature == null
+                else
+                    it != null && it.tuple == null
+            }.filterNotNull().groupBy { it.tupleNumber.storageNumber }
             for (entry in byStorage) {
                 val storageNumber = entry.key
                 val toLoad = entry.value

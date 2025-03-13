@@ -328,7 +328,9 @@ class CollectionTests : PgTestBase(null) {
         )
 
         // then
-        assertNull(response.tupleNumberBinary?.get(0))
+        assertEquals(0, response.length)
+        assertEquals(0, response.featureTupleList.size)
+        assertEquals(0, response.features.size)
     }
 
     @Test

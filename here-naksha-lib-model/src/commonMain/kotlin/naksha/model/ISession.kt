@@ -142,13 +142,14 @@ interface ISession : AutoCloseable {
     /**
      * Load all tuples into the given [feature-tuples][FeatureTuple].
      *
-     * [Tuple] that can't be fetched will still be _null_ after the method returns. The method should query the [Naksha.cache] before actually loading the [Tuple] from the storage.
+     * [Tuple] that can't be fetched will still be `null` after the method returns. The method should query the [Naksha.cache] before actually loading the [Tuple] from the storage _(without asking the cache to load from storage, otherwise this would be a recursion)_ .
      *
      * @param featureTuples a list of result-tuples to fetch.
      * @param from the index of the first result-tuples to fetch; default is `0`.
      * @param to the index of the first result-tuples to ignore; default is `featureTuples.size`.
      * @param mode the fetch mode; default is [FETCH_ALL].
      * @since 3.0
+     * @see [Naksha.cache]
      */
     fun loadTuples(
         featureTuples: List<FeatureTuple?>,

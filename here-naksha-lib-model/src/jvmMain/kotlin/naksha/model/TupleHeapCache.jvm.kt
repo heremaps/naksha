@@ -26,13 +26,17 @@ actual class TupleHeapCache : ITupleCache {
     actual override fun get(tupleNumber: TupleNumber): Tuple?
         = tuplesByStorage[tupleNumber.storageNumber]?.get(tupleNumber)?.deref()
 
-    actual override fun load(featureTuples: List<FeatureTuple?>, from: Int, to: Int): Int {
+    actual override fun load(featureTuples: List<FeatureTuple?>, from: Int, to: Int, acceptFeature: Boolean): Int {
         var loaded = 0
         for (i in from ..< to) {
             val featureTuple = featureTuples[i] ?: continue
             val tupleNumber = featureTuple.tupleNumber
             val tuple = featureTuple.tuple
             if (tuple != null) continue
+            if (acceptFeature) {
+                val feature = featureTuple.feature
+                if (feature != null) continue
+            }
             val cached = get(tupleNumber) ?: continue
             loaded++
             featureTuple.tuple = cached

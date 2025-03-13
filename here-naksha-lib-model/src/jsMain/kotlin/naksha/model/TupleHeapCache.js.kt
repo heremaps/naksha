@@ -20,7 +20,7 @@ actual class TupleHeapCache : ITupleCache {
         TODO("Not yet implemented")
     }
 
-    actual override fun load(featureTuples: List<FeatureTuple?>, from: Int, to: Int): Int {
+    actual override fun load(featureTuples: List<FeatureTuple?>, from: Int, to: Int, acceptFeature: Boolean): Int {
         TODO("Not yet implemented")
     }
 

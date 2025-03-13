@@ -144,7 +144,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
             selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${head.quotedName} $where)\n")
 
             val deleted = pgCollection.deletedTable
-            if (req.queryDeleted && deleted != null) {
+            if (!req.queryHistory && req.queryDeleted && deleted != null) {
                 if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
                 selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${deleted.quotedName} $where)\n")
             }

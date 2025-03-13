@@ -116,7 +116,7 @@ public class ResultHelper {
     }
     final var response = (SuccessResponse) result;
     final ArrayList<String> ids = new ArrayList<>(response.resultSize());
-    final NakshaFeatureList features = response.useFeatures();
+    final NakshaFeatureList features = response.getFeatures();
     for (final NakshaFeature feature : features) {
        ids.add(feature.getId());
     }
@@ -135,7 +135,7 @@ public class ResultHelper {
    */
   public static <T extends NakshaFeature> Map<Action, List<T>> readFeaturesGroupedByAction(
           SuccessResponse result, Class<T> featureType, long limit) {
-    final NakshaFeatureList features = result.useFeatures();
+    final NakshaFeatureList features = result.getFeatures();
     if (features.isEmpty()) {
       throw new NoSuchElementException("Empty SuccessResponse");
     }

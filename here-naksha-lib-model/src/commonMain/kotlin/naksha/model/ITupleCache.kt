@@ -50,10 +50,11 @@ interface ITupleCache {
      * @param featureTuples the [feature-tuple][FeatureTuple] to fill.
      * @param from the index of the first [FeatureTuple] to load into, defaults to `0`.
      * @param to the index of the first [FeatureTuple] **not** to load into, defaults to `featureTuples.size`.
+     * @param acceptFeature if `true`, then the [Tuple] will only be loaded, when [FeatureTuple.feature] is as well `null`.
      * @return the number of tuples that have been loaded.
      * @since 3.0
      */
-    fun load(featureTuples: List<FeatureTuple?>, from:Int = 0, to:Int = featureTuples.size): Int
+    fun load(featureTuples: List<FeatureTuple?>, from:Int = 0, to:Int = featureTuples.size, acceptFeature: Boolean = false): Int
 
     /**
      * Store a single [Tuple] in this tuple-storage. The storage eventually can decide if it really likes to store the provided tuples.

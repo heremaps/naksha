@@ -14,7 +14,29 @@ import kotlin.js.JsExport
 open class Response : AnyObject() {
 
     /**
-     * The amount of [Tuple][naksha.model.Tuple] results being part of the response.
+     * The size of the underlying platform object, so the hash-map, **not the amount of results**!
+     *
+     * ## Warning
+     * This does not return the amount of results, please use [length] for this!
+     * @since 3.0
+     * @see [length]
      */
-    open fun resultSize(): Int = 0
+    @Deprecated(message = "You very likely mean length", replaceWith = ReplaceWith("length"), level = DeprecationLevel.WARNING)
+    override val size: Int = super.size
+
+    /**
+     * The amount of results being in the response.
+     *
+     * @since 3.0
+     */
+    open val length: Int
+        get() = 0
+
+    /**
+     * Returns the amount of the result being in the response.
+     * @since 3.0
+     * @see [length]
+     */
+    @Deprecated(message = "Please use length", replaceWith = ReplaceWith("length"), level = DeprecationLevel.ERROR)
+    open fun resultSize(): Int = length
 }

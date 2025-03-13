@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import static naksha.base.Platform.longToInt64;
 import static naksha.base.StaticKt.Int64;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -70,7 +71,7 @@ public class MergeByStoragePriorityTest {
     byte[] bytesF2 = Naksha.encodeFeature(f2, 0, null);
     byte[] bytesF3 = Naksha.encodeFeature(f3, 0, null);
 
-    final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), 0, 0, Int64(0), Version.fromDouble(3.0), 1);
+    final TupleNumber tupleNum = new TupleNumber(longToInt64(0), 0, 0, longToInt64(0), Version.fromDouble(3.0), 1);
     Metadata metadata = mock(Metadata.class);
 
     Tuple tu1 = new Tuple(metadata, bytesF1, null, null, null, null, false);

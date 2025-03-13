@@ -515,11 +515,13 @@ class Naksha private constructor() {
         ): Tuple {
             val xyz = feature.properties.xyz
             val meta = Metadata.fromXyzNs(feature.id, feature.featureType, xyz) ?: Metadata.UNDEFINED
-            val flagsOrDefault = flags ?: DEFAULT_FLAGS
-            val featureBytes = encodeFeature(feature, flagsOrDefault, dictionary)
+            val storage = getStorageByNumber(feature.tupleNumber.storageNumber)
+            val flagsOrDefault = flags ?: xyz.flags ?: storage?.getEncodingFlags(feature) ?: DEFAULT_FLAGS
+            val dict = dictionary ?: storage?.getDictionary(feature.id)
+            val featureBytes = encodeFeature(feature, flagsOrDefault, dict)
             val geoBytes = encodeGeometry(feature.geometry, flagsOrDefault)
             val refPoint = encodeGeometry(feature.referencePoint, TWKB)
-            val tagsBytes = encodeTags(xyz.tags.toTagMap(), flagsOrDefault, dictionary)
+            val tagsBytes = encodeTags(xyz.tags.toTagMap(), flagsOrDefault, dict)
             return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, attachment, true)
         }
 
@@ -911,7 +913,7 @@ class Naksha private constructor() {
          * ```
          * @since 3.0
          */
-        @JvmStatic
+        @JvmField
         @JsStatic
         val cache = TupleCache()
 

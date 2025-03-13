@@ -53,7 +53,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
                     .hasXyzThat { retrievedXyz ->
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
-                            .hasProperty("author", PgTest.TEST_APP_AUTHOR!!)
+                            .hasProperty("author", PgTest.TEST_APP_AUTHOR)
                             .hasProperty("action", Action.CREATED.text)
                     }
                     .hasTags(TagList("wicked"))
@@ -140,11 +140,10 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
         })
 
         // Expect it to have the same tuple-number as the first feature originally returned!
-        assertEquals(1, featuresByIdResponse.size)
-        val binary = featuresByIdResponse.tupleNumberBinary
-        assertNotNull(binary)
-        assertEquals(1, binary.size)
-        val tupleNumber = binary.first()
+        assertEquals(1, featuresByIdResponse.length)
+        val tuples = featuresByIdResponse.featureTupleList
+        assertEquals(1, tuples.size)
+        val tupleNumber = assertNotNull(tuples.first()).tupleNumber
         assertNotNull(tupleNumber)
         Platform.logger.info("Expect that the originally returned tuple-number is the same as the one from search")
         assertEquals(firstFeature.tupleNumber, tupleNumber)

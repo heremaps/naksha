@@ -115,8 +115,7 @@ public class ParallelQueryExecutor {
 
     final @NotNull Response response = session.execute(request);
     FeatureTupleList featureList = getFeatureTuples(response);
-    var cache = Naksha.getCache();
-    cache.load(featureList, 0, featureList.size(), longToInt64(TimeUnit.SECONDS.toMicros(10)), true);
+    Naksha.cache.load(featureList, 0, featureList.size(), longToInt64(TimeUnit.SECONDS.toMicros(10)), true);
     log.info(
         "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",
         NakshaContext.currentContext().getStreamId(),
