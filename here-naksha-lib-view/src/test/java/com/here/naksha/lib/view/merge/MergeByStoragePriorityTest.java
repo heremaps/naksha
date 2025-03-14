@@ -75,7 +75,7 @@ public class MergeByStoragePriorityTest {
     List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
 
     // expect
-    assertThrows(NoSuchElementException.class, () -> mergeStrategy.apply(singleRowFeatures));
+    assertThrows(IndexOutOfBoundsException.class, () -> mergeStrategy.apply(singleRowFeatures));
   }
 
   @Test
