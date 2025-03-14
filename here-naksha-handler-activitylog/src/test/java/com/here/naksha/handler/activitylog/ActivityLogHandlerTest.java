@@ -70,7 +70,7 @@ class ActivityLogHandlerTest {
     MockitoAnnotations.openMocks(this);
     when(naksha.getSpaceStorage()).thenReturn(spaceStorage);
     handler = handlerForSpaceId(SPACE_ID);
-
+    NakshaContext.currentContext().withAppId("test-app");
   }
 
   @ParameterizedTest

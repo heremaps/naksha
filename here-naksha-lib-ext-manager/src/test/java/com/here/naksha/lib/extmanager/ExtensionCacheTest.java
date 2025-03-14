@@ -16,7 +16,10 @@ import com.here.naksha.lib.extmanager.helpers.ClassLoaderHelper;
 import com.here.naksha.lib.extmanager.helpers.FileHelper;
 import java.io.File;
 import java.io.IOException;
+
+import naksha.model.NakshaContext;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -25,6 +28,12 @@ public class ExtensionCacheTest extends BaseSetup {
 
   @Mock
   INaksha naksha;
+
+  @BeforeEach
+  public void setContext() {
+    NakshaContext.currentContext().withAppId("test-app");
+  }
+
   @Test
   public void testBuildExtensionCache() throws IOException {
     ClassLoader classLoader=mock(ClassLoader.class);
