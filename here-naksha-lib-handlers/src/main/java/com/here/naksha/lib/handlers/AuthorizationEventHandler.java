@@ -22,7 +22,7 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.util.List;
 import naksha.model.request.Response;
@@ -32,14 +32,14 @@ import org.jetbrains.annotations.Nullable;
 public class AuthorizationEventHandler extends AbstractEventHandler {
 
   protected @Nullable Space space;
-  protected @Nullable List<EventHandler> eventHandlers;
+  protected @Nullable List<EventHandlerConfig> eventHandlers;
 
   public AuthorizationEventHandler(final @NotNull INaksha hub) {
     super(hub);
   }
 
   public AuthorizationEventHandler(
-      final @NotNull INaksha hub, final @NotNull Space space, final @NotNull List<EventHandler> eventHandlers) {
+      final @NotNull INaksha hub, final @NotNull Space space, final @NotNull List<EventHandlerConfig> eventHandlers) {
     super(hub);
     this.space = space;
     this.eventHandlers = eventHandlers;

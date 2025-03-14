@@ -10,7 +10,7 @@ import kotlin.js.JsExport
  * lock.acquire().use {
  *   // Do something with the lock.
  * }
- * if (lock.tryLock()) lock.use {
+ * if (lock.tryAcquire()) lock.use {
  *   // Do something with the lock.
  * }
  * ```
@@ -33,7 +33,7 @@ interface PlatformLock : AutoCloseable {
      * Tries to acquire the lock.
      * @param waitMillis the time to wait in milliseconds; if _null_, then not waiting at all, so either it is instantly available or
      * locking will fail.
-     * @return this, if the lock was acquired; _null_ if locking failed due to timeout.
+     * @return _true_, if the lock was acquired; _false_ if locking failed due to timeout.
      */
     fun tryAcquire(waitMillis: Int64? = null): Boolean
 

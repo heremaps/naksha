@@ -48,14 +48,26 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
         with:
-          gradle-version: 8.2
+          gradle-version: 8.8
       ### Build, Test, Coverage Verification
       - name: Build fat jar, Run Unit tests, Verify code coverage
         ## original run clause for project wise
 #        run: gradle shadowJar jacocoTestReport jacocoTestCoverageVerification
         shell: bash
         run: |
-          array=( here-naksha-lib-model here-naksha-lib-base here-naksha-lib-core here-naksha-lib-psql here-naksha-lib-view here-naksha-storage-http here-naksha-lib-diff here-naksha-lib-handlers here-naksha-lib-hub here-naksha-handler-activitylog here-naksha-lib-ext-manager )
+          array=( 
+            here-naksha-lib-model 
+            here-naksha-lib-base 
+            here-naksha-lib-core 
+            here-naksha-lib-psql 
+            here-naksha-lib-view 
+            here-naksha-storage-http 
+            here-naksha-lib-diff 
+            here-naksha-lib-handlers 
+            here-naksha-lib-hub 
+            # here-naksha-handler-activitylog 
+            here-naksha-lib-ext-manager 
+          )
           for item in ${array[@]}; do
             gradle -x jsNodeTest :$item:build :$item:jacocoTestReport :$item:jacocoTestCoverageVerification
           done

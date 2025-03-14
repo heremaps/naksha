@@ -18,19 +18,24 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.model.IWriteSession;
+import naksha.base.Platform;
+import naksha.model.IStorage;
+import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
-import naksha.psql.PgPlatform;
-import naksha.psql.PgStorage;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaStorage;
+import naksha.model.request.*;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
-import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static naksha.base.Platform.javaProxy;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Base class for all PostgresQL tests that require some test database.
@@ -57,48 +62,52 @@ abstract class PsqlTests {
     return enabled();
   }
 
-  static final String TEST_APP_ID = "test_app";
-  static final String TEST_AUTHOR = "test_author";
-  static PgStorage storage;
+  public static final String TEST_MAP_ID = "lib_view_test";
+  public static final String TEST_APP_ID = "test_app";
+  public static final String TEST_AUTHOR = "test_author";
+  static IStorage storage;
+  static NakshaMap map;
   static @Nullable NakshaContext nakshaContext;
-  static @Nullable IWriteSession session;
+
+  protected static @NotNull SuccessResponse assertSuccess(@NotNull Response response) {
+    if (response instanceof ErrorResponse) {
+      ((ErrorResponse)response).getError().print(Platform.getLogger());
+    }
+    return assertInstanceOf(SuccessResponse.class, response);
+  }
+
+  protected static @NotNull SuccessResponse executeWrite(@NotNull WriteRequest request) {
+    return executeWrite(request, null);
+  }
+  protected static @NotNull SuccessResponse executeWrite(
+        @NotNull WriteRequest request,
+        @Nullable SessionOptions sessionOptions
+  ) {
+    return storage.useWriteSession(sessionOptions, session -> {
+      final @NotNull SuccessResponse response = assertSuccess(session.execute(request));
+      session.commit();
+      return response;
+    });
+  }
 
   @BeforeAll
   static void beforeTest() {
-    NakshaContext.currentContext().setAuthor("PsqlStorageTest");
-    NakshaContext.currentContext().setAppId("naksha-lib-view-unit-tests");
-    nakshaContext = NakshaContext.currentContext().withAppId(TEST_APP_ID).withAuthor(TEST_AUTHOR);
-    storage = PgPlatform.newTestStorage();
-    storage.initStorage(null);
-    session = storage.newWriteSession(new SessionOptions());
+    nakshaContext = NakshaContext.currentContext().withAppId(TEST_APP_ID).withAuthor(TEST_AUTHOR).withSu(true);
+    storage = Naksha.useStorage(
+      NakshaStorage.fromJSON(
+        "{\"id\":\"local_psql_test_storage\",\"className\":\"naksha.psql.PsqlTestStorage\"}"
+      )
+    );
     assertNotNull(storage);
-    assertNotNull(session);
-  }
 
-  // Custom stuff between 50 and 9000
+    // Drop the map, if it exists
+    executeWrite(new WriteRequest().add(new Write().deleteMapById(TEST_MAP_ID)));
 
-  @AfterAll
-  static void afterTest() {
-    if (session != null) {
-      try {
-        session.close();
-      } catch (Exception e) {
-        log.atError()
-            .setMessage("Failed to close write-session")
-            .setCause(e)
-            .log();
-      } finally {
-        session = null;
-      }
-    }
-    if (storage != null) {
-      try {
-        storage.close();
-      } catch (Exception e) {
-        log.atError().setMessage("Failed to close storage").setCause(e).log();
-      } finally {
-        storage = null;
-      }
-    }
+    // Create the map.
+    SuccessResponse response = executeWrite(new WriteRequest().add(new Write().createMap(new NakshaMap(TEST_MAP_ID))));
+    assertEquals(1, response.getFeatures().size());
+    NakshaFeature raw = response.getFeatures().get(0);
+    assertNotNull(raw);
+    map = javaProxy(raw, NakshaMap.class);
   }
 }

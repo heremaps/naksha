@@ -1,27 +1,27 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.model
 
-import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
-// FIXME TODO move it to proper library
 /**
- * A lock that is kept alive as long as the application lives.
- * The lock is released when close() is called or when the JVM is shutdown or crashes.
+ * A lock that is kept alive as long as the application lives. The lock is released when [close] is called, or when the JVM is shutdown, or crashes, or when all references to the lock instance are garbage collected (which will trigger an emergency lock release, causing an error log entry).
  *
- * Additionally, the lock is stored in the internal lock table and therefore is visible for others.
- * It can be tagged and modified like a normal feature. The storage will ensure that the lock is kept alive as long as this object is not closed.
- *
- * All locks are by default (when first acquired) single locks, so only one owner allowed.
- * However, it is possible to increment the maxOwners property to create shared locks.
- * Beware that shared locks can cause conflicts, which are always resolved optimistically.
+ * This is an application level lock, not bound to a single thread, it works across instances.
  */
-@OptIn(ExperimentalJsExport::class, ExperimentalStdlibApi::class)
 @JsExport
+@v30_experimental
 interface ILock: AutoCloseable {
+    /**
+     * The storage that provided the lock.
+     * @since 3.0.0
+     */
+    val storage: IStorage
 
-    fun owner(): String
-
-    fun copyFeature(): NakshaLock
-
-    fun updateFeature(lock: NakshaLock)
+    /**
+     * Tests if the lock is closed.
+     * @return _true_ if the lock is closed (has been released).
+     * @since 3.0.0
+     */
+    fun isClosed(): Boolean
 }

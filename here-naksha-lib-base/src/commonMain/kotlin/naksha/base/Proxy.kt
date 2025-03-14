@@ -8,6 +8,7 @@ import naksha.base.fn.Fn1
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
+import kotlin.jvm.JvmSuppressWildcards
 import kotlin.reflect.KClass
 
 /**
@@ -41,6 +42,7 @@ abstract class Proxy : PlatformObject {
         fun <T : Any> box(raw: Any?, klass: KClass<out T>, alternative: T? = null, init: Fn0<out T?>? = null): T? {
             val data = unbox(raw)
             if (isNil(data)) return if (init != null) init.call() else alternative
+
             // The data value is a complex object
             if (!Platform.isScalar(data) && data is PlatformObject) {
                 // If a proxy is requested.
@@ -59,12 +61,19 @@ abstract class Proxy : PlatformObject {
                 val existing = Symbols.get(data, symbol)
                 if (klass.isInstance(existing)) return existing as T
             } else if (klass.isInstance(data)) return data as T
-            if (klass == Int64::class) when (raw) {
-                is Short -> Int64(raw.toInt())
-                is Int -> Int64(raw)
-                is Long -> Int64(raw)
-                is Float -> Int64(raw.toDouble())
-                is Double -> Int64(raw)
+            if (Platform.isAssignable(JsEnum::class, klass)) {
+                return JsEnum.get(raw, klass as KClass<out JsEnum>) as T
+            }
+            if (klass == Int64::class) {
+                val value = if (klass == Int64::class) when (raw) {
+                    is Short -> Int64(raw.toInt())
+                    is Int -> Int64(raw)
+                    is Long -> Int64(raw)
+                    is Float -> Int64(raw.toDouble())
+                    is Double -> Int64(raw)
+                    else -> raw
+                } else raw
+                if (value is Int64) return value as T
             }
             return if (init != null) init.call() else alternative
         }
@@ -185,6 +194,9 @@ abstract class Proxy : PlatformObject {
     /**
      * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
      * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
+     *
+     * ### Note
+     * In Java, you may want to rather use a JVM only implementation `Platform.javaProxy(object, Foo.class)`.
      * @param klass The proxy class.
      * @return The proxy instance.
      */

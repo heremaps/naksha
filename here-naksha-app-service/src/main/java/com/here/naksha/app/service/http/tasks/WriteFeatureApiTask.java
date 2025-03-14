@@ -28,7 +28,6 @@ import static com.here.naksha.common.http.apis.ApiParamsConst.REMOVE_TAGS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.SPACE_ID;
 import static com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper.proxyWrapperOf;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
@@ -45,7 +44,6 @@ import naksha.diff.Difference;
 import naksha.diff.DifferenceCalculator;
 import naksha.diff.DifferenceFilter;
 import naksha.diff.Patcher;
-import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
@@ -64,7 +62,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResponse> {
+public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
 
   private static final Logger logger = LoggerFactory.getLogger(WriteFeatureApiTask.class);
   private final @NotNull WriteFeatureApiReqType reqType;
@@ -116,7 +114,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
       };
     } catch (NakshaException ex) {
       logger.warn("Known exception while processing request. ", ex);
-      return verticle.sendErrorResponse(routingContext, ex.error);
+      return verticle.sendErrorResponse(routingContext, ex.getError());
     } catch (Exception ex) {
       logger.error("Unexpected error while processing request. ", ex);
       return verticle.sendErrorResponse(
@@ -141,7 +139,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     return attemptFeaturesPatching(spaceId, features, HttpResponseType.FEATURE_COLLECTION, addTags, removeTags, 0);
   }
 
-  private @NotNull XyzResponse executeUpsertFeatures() throws Exception {
+  private @NotNull XyzResponse executeUpsertFeatures() {
     // Deserialize input request
     final FeatureCollectionRequest collectionRequest = parseRequestBodyAs(FeatureCollectionRequest.class);
     final NakshaFeatureList features = collectionRequest.getFeatures();
@@ -168,7 +166,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     return transformWriteResultToXyzCollectionResponse(response, NakshaFeature.class, false);
   }
 
-  private @NotNull XyzResponse executeUpdateFeature() throws Exception {
+  private @NotNull XyzResponse executeUpdateFeature() {
     // Deserialize input request
     final NakshaFeature feature = parseRequestBodyAs(NakshaFeature.class);
 
@@ -228,7 +226,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
   private static final int MAX_RETRY_ATTEMPT = 5;
 
-  private @NotNull XyzResponse executePatchFeatureById() throws JsonProcessingException {
+  private @NotNull XyzResponse executePatchFeatureById() {
 
     final NakshaFeature featureFromRequest = parseRequestBodyAs(NakshaFeature.class);
 
@@ -296,7 +294,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
     final WriteRequest patchRequest = RequestHelper.upsertFeaturesRequest(spaceId, patchedFeatures);
     // Forward request to NH Space Storage writer instance
-    try (final IWriteSession writer = naksha().getSpaceStorage().newWriteSession(SessionOptions.from(context(), true))) {
+    return naksha().getSpaceStorage().useWriteSession(SessionOptions.from(context(), true), writer -> {
       final Response wrResponse = writer.execute(patchRequest);
       if (wrResponse == null) {
         // unexpected null response
@@ -326,7 +324,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         }
         return transformResponseToXyzCollectionResponse(wrResponse, NakshaFeature.class);
       }
-    }
+    });
   }
 
   /**

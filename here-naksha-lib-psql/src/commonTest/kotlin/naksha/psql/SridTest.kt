@@ -17,7 +17,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.base.PgTestBase
-import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -36,7 +36,7 @@ class SridTest : PgTestBase() {
     - Because collections and their properties are cached, so if we had shared collection for all test cases, the application wouldn't fetch collection from DB, rather it will use what it has in cache (with previous encoding) and we would end up with encoding not matching our expectation
     - To avoid the above, the collection cache would have to be cleared, and since it is not public (rightly so), the only way to do that is dropping the collection - this already makes the whole process more complicated and slowe than simply having N collections for N encodings
      */
-    private data class SridTestConfig(val encodingName: String, val flags: Flags, val collectionId: String)
+    private data class SridTestConfig(val encodingName: String, val flags: Flags, val mapId: String, val collectionId: String)
 
     private companion object {
         // test data
@@ -48,50 +48,62 @@ class SridTest : PgTestBase() {
         val initializedCollections = AtomicInt(NOT_INITIALIZED)
 
         // test case config
-        fun flagsFor(encoding: Int): Flags = Flags().geoEncoding(encoding)
-        val testConfigs: Map<Int, SridTestConfig> = mapOf(
+        fun flagsFor(encoding: Int): Flags = Flags().withGeoEncoding(encoding)
+    }
+
+    private val testConfigs: Map<Int, SridTestConfig> by lazy {
+        mapOf(
             TWKB to SridTestConfig(
                 encodingName = "TWKB",
                 flags = flagsFor(TWKB),
+                mapId = env.mapId,
                 collectionId = "srid_test_twkb"
             ),
             TWKB_GZIP to SridTestConfig(
                 encodingName = "TWKB_GZIP",
                 flags = flagsFor(TWKB_GZIP),
+                mapId = env.mapId,
                 collectionId = "srid_test_twkb_gzip"
             ),
             WKB to SridTestConfig(
                 encodingName = "WKB",
                 flags = flagsFor(WKB),
+                mapId = env.mapId,
                 collectionId = "srid_test_wkb"
             ),
             WKB_GZIP to SridTestConfig(
                 encodingName = "WKB_GZIP",
                 flags = flagsFor(WKB_GZIP),
+                mapId = env.mapId,
                 collectionId = "srid_test_wkb_gzip"
             ),
             EWKB to SridTestConfig(
                 encodingName = "EWKB",
                 flags = flagsFor(EWKB),
+                mapId = env.mapId,
                 collectionId = "srid_test_ewkb"
             ),
             EWKB_GZIP to SridTestConfig(
                 encodingName = "EWKB_GZIP",
                 flags = flagsFor(EWKB_GZIP),
+                mapId = env.mapId,
                 collectionId = "srid_test_ewkb_gzip"
             ),
             GEO_JSON to SridTestConfig(
                 encodingName = "GEO_JSON",
                 flags = flagsFor(GEO_JSON),
+                mapId = env.mapId,
                 collectionId = "srid_test_geojson"
             ),
             GEO_JSON_GZIP to SridTestConfig(
                 encodingName = "GEO_JSON_GZIP",
                 flags = flagsFor(GEO_JSON_GZIP),
+                mapId = env.mapId,
                 collectionId = "srid_test_geojson_gzip"
             )
         )
     }
+
 
     @BeforeTest
     fun setupCollections() {
@@ -153,7 +165,7 @@ class SridTest : PgTestBase() {
             ?: throw IllegalArgumentException("No config for encoding: $encoding")
 
         // And: inserted feature with geometry
-        val feature = generateRandomFeature().apply {
+        val feature = randomFeature().apply {
             geometry = SpLineString().withCoordinates(
                 LineStringCoord(
                     PointCoord(longitude = 25.0, latitude = 25.0),
@@ -163,7 +175,7 @@ class SridTest : PgTestBase() {
         }
         val writeFeatureReq = WriteRequest().add(
             Write().createFeature(
-                map = null,
+                mapId = testConfig.mapId,
                 collectionId = testConfig.collectionId,
                 feature = feature
             )
@@ -172,6 +184,7 @@ class SridTest : PgTestBase() {
 
         // When: selected it for SRID
         val srid = selectSrid(
+            mapId = testConfig.mapId,
             collectionName = testConfig.collectionId,
             flags = testConfig.flags,
             featureId = feature.id
@@ -181,19 +194,18 @@ class SridTest : PgTestBase() {
         assertEquals(EXPECTED_SRID, srid, "Invalid SRID for encoding: ${testConfig.encodingName}")
     }
 
-    private fun selectSrid(collectionName: String, flags: Int, featureId: String): Int {
+    private fun selectSrid(mapId: String, collectionName: String, flags: Int, featureId: String): Int {
         return try {
             val sql = """
                 SELECT ST_SRID(naksha_geometry(${PgColumn.geo}, $flags)) as srid
-                FROM $collectionName
+                FROM $mapId.$collectionName
                 WHERE ${PgColumn.id} = '$featureId'
             """.trimIndent()
-            val cursor = useConnection().execute(sql)
-            val res = cursor.use {
-                cursor.next()
-                cursor.column("srid")
+            storage.adminConnection().use { conn ->
+                conn.execute(sql).fetch().use { cursor ->
+                    cursor.column("srid") as Int
+                }
             }
-            res as Int
         } catch (e: Exception) {
             throw Exception("Failed selecting srid for flags: $flags", e)
         }
@@ -202,9 +214,6 @@ class SridTest : PgTestBase() {
     private fun writeSingleCollectionOp(collectionId: String, flags: Flags): Write {
         val collection = NakshaCollection(collectionId)
         collection.defaultFlags = flags
-        return Write().createCollection(
-            map = null,
-            collection = collection
-        )
+        return Write().createCollection(collection)
     }
 }

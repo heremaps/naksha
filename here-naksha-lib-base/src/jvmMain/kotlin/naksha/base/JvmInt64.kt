@@ -38,8 +38,7 @@ class JvmInt64 internal constructor(internal val value: Long) : Number(), Int64 
 
     override infix fun eq(other: Any?): Boolean = equals(other)
     override fun equals(other: Any?): Boolean {
-        require(other is Number)
-        return value == other.toLong()
+        return other is Number && value == other.toLong()
     }
     override fun hashCode(): Int = (value ushr 32).toInt() xor value.toInt()
     override fun toString(): String = value.toString()

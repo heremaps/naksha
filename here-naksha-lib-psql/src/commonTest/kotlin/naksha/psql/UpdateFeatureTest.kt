@@ -1,10 +1,8 @@
 package naksha.psql
 
-import naksha.model.Action
-import naksha.model.NakshaError
+import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.NakshaProperties
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -16,58 +14,59 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
 
     @Test
     fun shouldPerformSimpleUpdateAndUpsert() {
-        // Given: Initial state of feature
+        // CREATE FEATURE
         val initialFeature = NakshaFeature().apply {
             id = "feature_1"
-            properties = NakshaProperties().apply {
-                featureType = "some_feature_type"
-            }
+            featureType = "some_feature_type"
         }
-        val writeInitialFeature = WriteRequest().add(
-            Write().createFeature(null, collection!!.id, initialFeature)
+        val writeFeatureReq = WriteRequest().add(
+            Write().createFeature(collection, initialFeature)
         )
+        val writeFeatureResp = executeWrite(writeFeatureReq)
+        assertEquals(1, writeFeatureResp.features.size)
+        val feature = assertNotNull(writeFeatureResp.features[0])
+        assertEquals(initialFeature.id, feature.id)
+        assertEquals(initialFeature.type, feature.type)
+        assertEquals(1, feature.properties.xyz.changeCount)
 
-        // And: Updated state of feature
-        val featureToUpdate = NakshaFeature().apply {
-            id = initialFeature.id
-            properties = NakshaProperties().apply {
-                featureType = "new_feature_type"
-            }
-        }
+        // UPDATE featureType
+        feature.featureType = "new_feature_type"
+        assertEquals("new_feature_type", feature.featureType)
+        assertEquals("new_feature_type", feature.momType)
+        assertEquals("new_feature_type", feature.properties.featureType)
         val updateFeaturesReq = WriteRequest().add(
-            Write().updateFeature(null, collection.id, featureToUpdate)
+            Write().updateFeature(collection, feature, true)
         )
+        val updateFeatureResp = executeWrite(updateFeaturesReq)
+        assertEquals(1, updateFeatureResp.features.size)
+        val updatedFeature = assertNotNull(updateFeatureResp.features[0])
+        assertEquals(2, updatedFeature.properties.xyz.changeCount)
 
-        // When: Writing initial version of feature
-        executeWrite(writeInitialFeature)
-
-        // And: Updating feature
-        executeWrite(updateFeaturesReq)
-
-        // And: Retrieving feature by id
-        val retrievedFeature = executeRead(ReadFeatures().apply {
+        // Retrieving feature by id
+        Naksha.cache.clear()
+        val readFeatureResp = executeRead(ReadFeatures().apply {
             collectionIds += collection.id
             featureIds += initialFeature.id
-        }).let { response ->
-            val responseFeatures = response.features
-            assertEquals(1, responseFeatures.size)
-            responseFeatures[0]!!
-        }
+        })
+        assertEquals(1, readFeatureResp.length)
+        val readFeature = assertNotNull(readFeatureResp.features[0])
+        assertEquals(initialFeature.id, readFeature.id)
+        assertEquals(2, updatedFeature.properties.xyz.changeCount)
 
         // Then
-        assertThatFeature(retrievedFeature)
+        assertThatFeature(readFeature)
             .isIdenticalTo(
-                other = initialFeature,
+                other = updatedFeature,
                 ignoreProps = true // we ignore properties because we want to examine them later
             )
             .hasPropertiesThat { retrievedProperties ->
                 retrievedProperties
-                    .hasFeatureType(featureToUpdate.properties.featureType)
+                    .hasFeatureType(updatedFeature.properties.featureType)
                     .hasXyzThat { retrievedXyz ->
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
-                            .hasProperty("author", PgTest.TEST_APP_AUTHOR!!)
-                            .hasProperty("action", Action.UPDATED)
+                            .hasProperty("author", PgTest.TEST_APP_AUTHOR)
+                            .hasProperty("action", Action.UPDATED.text)
                             .hasProperty("changeCount", 2)
                     }
             }
@@ -75,78 +74,96 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) 
 
     @Test
     fun shouldHaveValidHistoryFeatureAfterUpdate() {
-        // Given: Initial state of feature
+        // CREATE FEATURE
         val initialFeature = NakshaFeature().apply { id = "feature_2" }
         val writeInitialFeature = WriteRequest().add(
-            Write().createFeature(null, collection!!.id, initialFeature)
+            Write().createFeature(collection, initialFeature)
         )
+        val writeResp = executeWrite(writeInitialFeature)
+        assertEquals(1, writeResp.features.size)
+        val writtenFeature = assertNotNull(writeResp.features[0])
+        assertEquals(initialFeature.id, writtenFeature.id)
 
-        // And: Updated state of feature
-        val featureToUpdate = NakshaFeature().apply {
-            id = initialFeature.id
-            properties = NakshaProperties().apply { put("new_attr", "some_value") }
+        // UPDATE FEATURE
+        val featureToUpdate = writtenFeature.copy<NakshaFeature>(true).apply {
+            properties["new_attr"] = "some_value"
         }
         val updateFeaturesReq = WriteRequest().add(
-            Write().updateFeature(null, collection.id, featureToUpdate)
+            Write().updateFeature(collection, featureToUpdate, true)
         )
+        val updateFeatureResp = executeWrite(updateFeaturesReq)
+        assertEquals(1, updateFeatureResp.features.size)
+        val updatedFeature = assertNotNull(updateFeatureResp.features[0])
+        assertEquals(initialFeature.id, updatedFeature.id)
+        assertEquals(2, updatedFeature.properties.xyz.changeCount)
 
-        // When: Writing initial version of feature
-        executeWrite(writeInitialFeature)
-
-        // And: Updating feature
-        executeWrite(updateFeaturesReq)
-
-        // And: Retrieving feature by id
-        val retrievedTuples = executeRead(ReadFeatures().apply {
+        // READ FEATURE HISTORY
+        Naksha.cache.clear()
+        val readResp = executeRead(ReadFeatures().apply {
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true
-        }).tuples
+        })
+        assertEquals(2, readResp.length)
+        val retrievedTuples = Naksha.cache.load(readResp.featureTupleList).toTupleList()
+        assertNotNull(retrievedTuples)
+        assertEquals(2, retrievedTuples.size)
 
-        val retrievedUpdatedTupleResult = retrievedTuples.first { it?.tuple?.meta?.action() == Action.UPDATED }!!
-        val retrievedHstCreatedTupleResult = retrievedTuples.first { it?.tuple?.meta?.action() == Action.CREATED }!!
+        val createdTuple = retrievedTuples.first { it.meta.action() == Action.CREATED }
+        val updatedTuple = retrievedTuples.first { it.meta.action() == Action.UPDATED }
 
         // Then
-        assertNotEquals(retrievedUpdatedTupleResult.tupleNumber.version, retrievedHstCreatedTupleResult.tupleNumber.version)
-        val updatedTuple = retrievedUpdatedTupleResult.tuple
-        val previousTuple = retrievedHstCreatedTupleResult.tuple
-        assertNotNull(updatedTuple)
-        assertNotNull(previousTuple)
-        assertEquals(updatedTuple.meta?.prevVersion, retrievedHstCreatedTupleResult.tupleNumber.version)
-        assertEquals(updatedTuple.meta?.version, retrievedUpdatedTupleResult.tupleNumber.version)
-        assertEquals(previousTuple.meta?.version, retrievedHstCreatedTupleResult.tupleNumber.version)
-        assertEquals(previousTuple.meta?.nextVersion, retrievedUpdatedTupleResult.tupleNumber.version)
-        assertNotEquals(previousTuple.meta?.flags, updatedTuple.meta?.flags)
-        assertEquals(1, previousTuple.meta?.changeCount)
-        assertEquals(2, updatedTuple.meta?.changeCount)
-        assertEquals(previousTuple.geo, updatedTuple.geo)
-        assertEquals(previousTuple.tags, updatedTuple.tags)
-        assertNotEquals(previousTuple.feature, updatedTuple.feature)
-        assertEquals(previousTuple.referencePoint, updatedTuple.referencePoint)
-        assertNull(previousTuple.toNakshaFeature().properties["new_attr"])
+        assertNotEquals(updatedTuple.tupleNumber.version, createdTuple.tupleNumber.version)
+        assertNull(createdTuple.meta.prevTupleNumber)
+        assertEquals(createdTuple.meta.nextTupleNumber, updatedTuple.tupleNumber)
+        assertEquals(updatedTuple.meta.prevTupleNumber, createdTuple.tupleNumber)
+        assertNull(updatedTuple.meta.nextTupleNumber)
+        assertNotEquals(createdTuple.meta.flags, updatedTuple.meta.flags)
+        assertEquals(1, createdTuple.meta.changeCount)
+        assertEquals(2, updatedTuple.meta.changeCount)
+        assertEquals(createdTuple.geo, updatedTuple.geo)
+        assertEquals(createdTuple.tags, updatedTuple.tags)
+        assertNotEquals(createdTuple.feature, updatedTuple.feature)
+        assertEquals(createdTuple.referencePoint, updatedTuple.referencePoint)
+        assertNull(createdTuple.toNakshaFeature().properties["new_attr"])
         assertEquals("some_value", updatedTuple.toNakshaFeature().properties["new_attr"])
-        assertEquals(previousTuple.meta?.createdAt, updatedTuple.meta?.createdAt)
-        assertNotEquals(updatedTuple.meta?.createdAt, updatedTuple.meta?.updatedAt)
-        assertEquals(previousTuple.meta?.updatedAt, previousTuple.meta?.createdAt)
-        assertNull(previousTuple.meta?.prevVersion)
-        assertEquals(previousTuple.meta?.geoGrid, updatedTuple.meta?.geoGrid)
-        assertEquals(0, updatedTuple.meta?.uid)
-        assertEquals(0, previousTuple.meta?.uid)
-        assertEquals(0, updatedTuple.tupleNumber.uid)
-        assertEquals(0, previousTuple.tupleNumber.uid)
-        assertNotEquals(previousTuple.meta?.authorTs, updatedTuple.meta?.authorTs)
+        assertEquals(createdTuple.meta.createdAt ?: createdTuple.meta.updatedAt, updatedTuple.meta.createdAt)
+        assertNotEquals(updatedTuple.meta.createdAt, updatedTuple.meta.updatedAt)
+        assertNull(createdTuple.meta.createdAt)
+        assertNotNull(createdTuple.meta.updatedAt)
+        assertEquals(createdTuple.meta.hereTile, updatedTuple.meta.hereTile)
+        assertEquals(1, updatedTuple.meta.uid)
+        assertEquals(0, createdTuple.meta.uid)
+        assertEquals(1, updatedTuple.tupleNumber.uid)
+        assertEquals(0, createdTuple.tupleNumber.uid)
+        assertNotEquals(createdTuple.meta.authorTs, updatedTuple.meta.authorTs)
     }
 
     @Test
-    fun updateNotExistingFeature() {
+    fun atomicUpdateOfNotExistingFeatureWithoutUuid() {
         val featureId = "feature_not_existing"
         val feature = NakshaFeature().apply { id = featureId }
-        val response = executeWriteErrorResponse(
+        val updateFeatureResponse = executeWriteErrorResponse(
             WriteRequest().add(
-                Write().updateFeature(null, collection!!.id, feature)
+                Write().updateFeature(collection, feature, true)
             )
         )
-        assertEquals(NakshaError.FEATURE_NOT_FOUND, response.error.code)
-        assertTrue(response.error.msg.contains(featureId))
+        assertEquals(NakshaError.ILLEGAL_ARGUMENT, updateFeatureResponse.error.code)
+    }
+
+    @Test
+    fun atomicUpdateOfNotExistingFeatureWithFakeUuid() {
+        val featureId = "feature_not_existing"
+        val feature = NakshaFeature().apply {
+            id = featureId
+            properties.xyz.setRaw("uuid", Guid(featureId, TupleNumber.HEAD).toString())
+        }
+        val updateFeatureResponse = executeWriteErrorResponse(
+            WriteRequest().add(
+                Write().updateFeature(collection, feature, true)
+            )
+        )
+        assertEquals(NakshaError.FEATURE_NOT_FOUND, updateFeatureResponse.error.code)
+        assertTrue(updateFeatureResponse.error.msg.contains(featureId))
     }
 }

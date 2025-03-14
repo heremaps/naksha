@@ -13,7 +13,7 @@ import kotlin.jvm.JvmField
 @JsExport
 class PgHistory(val head: PgHead) : PgTable(
     head.collection, "${head.collection.id}${PG_HST}", head.storageClass, false,
-    partitionByColumn = PgColumn.txn_next
+    partitionByColumn = PgColumn.next_tn
 ) {
     /**
      * All partitions, with key being the year (`txn >> 41`).
@@ -21,10 +21,10 @@ class PgHistory(val head: PgHead) : PgTable(
     @JvmField
     val years: MutableMap<Int, PgHistoryYear> = mutableMapOf()
     @JsName("getYear")
-    operator fun get(txn_next: Version): PgHistoryYear? = years[txn_next.year()]
+    operator fun get(txn_next: Version): PgHistoryYear? = years[txn_next.year]
     @JsName("setYear")
     operator fun set(txn_next: Version, partition: PgHistoryYear) {
-        years[txn_next.year()] = partition
+        years[txn_next.year] = partition
     }
 
     override fun create(conn: PgConnection) {

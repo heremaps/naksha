@@ -3,12 +3,43 @@
 package naksha.model.request
 
 import naksha.model.Naksha
+import naksha.model.Version
 import kotlin.js.JsExport
 
 /**
- * Perform a read from the transaction log.
- *
- * Note that the [featureIds] are the [versions][naksha.model.Version] converted to a string, which can be done by calling [transaction.toId()][naksha.model.Version.toId], which basically is just the [transaction number][naksha.model.Version.txn] as string.
+ * Perform a read from the transaction log to query for [transaction features][naksha.model.objects.NakshaTx].
+ * @since 3.0
  */
 @JsExport
-open class ReadTransactions : ReadFeatures(Naksha.VIRT_TRANSACTIONS)
+open class ReadTransactions : ReadFeatures() {
+    init {
+        mapId = Naksha.ADMIN_MAP
+        collectionIds.add(Naksha.TRANSACTIONS_COL)
+    }
+
+    /**
+     * Read the version.
+     * @param version the version to read.
+     * @return this.
+     * @since 3.0
+     */
+    fun readVersion(version: Version): ReadTransactions {
+        val versionString = version.toString()
+        if (versionString !in featureIds) featureIds.add(versionString)
+        return this
+    }
+
+    /**
+     * Read the versions.
+     * @param versions the versions to read.
+     * @return this.
+     * @since 3.0
+     */
+    fun readVersions(vararg versions: Version): ReadTransactions {
+        for (version in versions) {
+            val versionString = version.toString()
+            if (versionString !in featureIds) featureIds.add(versionString)
+        }
+        return this
+    }
+}

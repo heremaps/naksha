@@ -14,37 +14,11 @@ plugins {
 }
 
 kotlin {
-    jvm {
-        withJava()
-    }
-
-    js(IR) {
-        moduleName = "naksha_base"
-        useEsModules()
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            target.set("es2015")
-        }
-        nodejs {
-            compilerOptions {
-                moduleKind = JsModuleKind.MODULE_ES
-                moduleName = "naksha_base"
-                sourceMap = true
-                useEsClasses = true
-                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
-                sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
-            }
-            generateTypeScriptDefinitions()
-            binaries.library()
-            binaries.executable()
-        }
-    }
-
     sourceSets {
         commonMain {
             dependencies {
-                api(kotlin("stdlib-common"))
-                api(kotlin("reflect"))
+                implementation(kotlin("stdlib-common"))
+                implementation(kotlin("reflect"))
                 // https://github.com/Kotlin/kotlinx-datetime
                 api("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
             }
@@ -76,7 +50,70 @@ kotlin {
                 api(kotlin("reflect"))
             }
         }
+//        nativeMain {
+//
+//        }
+//        val desktopMain by creating {
+//            dependsOn(commonMain.get())
+//        }
+//        linuxX64Main.get().dependsOn(desktopMain)
+//        mingwX64Main.get().dependsOn(desktopMain)
+//        macosX64Main.get().dependsOn(desktopMain)
     }
+
+    jvm {
+        withJava()
+    }
+
+    js(IR) {
+        moduleName = "naksha_base"
+        useEsModules()
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        compilerOptions {
+            target.set("es2015")
+        }
+        nodejs {
+            compilerOptions {
+                moduleKind = JsModuleKind.MODULE_ES
+                moduleName = "naksha_base"
+                sourceMap = true
+                useEsClasses = true
+                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
+                sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
+            }
+            generateTypeScriptDefinitions()
+            binaries.library()
+            binaries.executable()
+        }
+    }
+
+//    linuxX64("native") {
+//        binaries.sharedLib {
+//            baseName = "native"
+//        }
+//    }
+//    linuxArm64("native") {
+//        binaries.sharedLib {
+//            baseName = "native"
+//        }
+//    }
+//    mingwX64("native") {
+//        binaries.sharedLib {
+//            baseName = "native"
+//        }
+//    }
+//    macosX64("native") {
+//        binaries.sharedLib {
+//            baseName = "native"
+//        }
+//    }
+//    macosArm64("native") {
+//        binaries {
+//            sharedLib {
+//                baseName = "native"
+//            }
+//        }
+//    }
 }
 
 configure<JavaPluginExtension> {

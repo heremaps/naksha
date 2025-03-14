@@ -179,7 +179,16 @@ actual class Platform {
         actual fun <R: Any> newAtomicRef(startValue: R?): AtomicRef<R> = JsAtomicRef(startValue)
 
         @JsStatic
+        actual fun <R: Any> newAtomicNonNullRef(startValue: R): AtomicNonNullRef<R> = JsAtomicNonNullRef(startValue)
+
+        @JsStatic
+        actual fun newAtomicBool(startValue: Boolean): AtomicBool = JsAtomicBool(startValue)
+
+        @JsStatic
         actual fun newAtomicInt(startValue: Int): AtomicInt = JsAtomicInt(startValue)
+
+        @JsStatic
+        actual fun newAtomicInt64(startValue: Int64): AtomicInt64 = JsAtomicInt64(startValue)
 
         @JsStatic
         actual fun newList(vararg entries: Any?): PlatformList {
@@ -219,6 +228,7 @@ actual class Platform {
         actual fun unbox(value: Any?): Any? {
             if (value == null) return value
             if (value is Proxy) return value.platformObject()
+            if (value is JsEnum) return value.value
             return if (isScalar(value)) value.asDynamic().valueOf() else value
         }
 
@@ -249,6 +259,9 @@ actual class Platform {
             is String -> value.toDouble()
             else -> throw IllegalArgumentException("Failed to convert object to double")
         }
+
+        @JsStatic
+        actual fun intToInt64(value: Int): Int64 = js("BigInt(value)").unsafeCast<Int64>()
 
         @JsStatic
         @Suppress("NON_EXPORTABLE_TYPE")
@@ -357,7 +370,19 @@ actual class Platform {
         fun <T : Any> klassFor(constructor: KFunction<T>): KClass<out T>
             = (js("Object.create(constructor.prototype)") as T)::class
 
-        @Suppress("UNCHECKED_CAST", "NON_EXPORTABLE_TYPE")
+        @Suppress("NON_EXPORTABLE_TYPE", "UNCHECKED_CAST")
+        @JsStatic
+        actual fun <T : Any> klassForName(name: String): KClass<T> {
+            @Suppress("CanBeVal") //
+            var instance: T? = null
+            js("""var i=0; var p=name.split("."); var k=globalThis;
+while (k && i<p.length) k=k[p[i++]];
+if (typeof k==='function') instance=Object.create(k.prototype);""")
+            if (instance == null) throw IllegalArgumentException("Class not found '$name'")
+            return instance::class as KClass<T>
+        }
+
+        @Suppress("NON_EXPORTABLE_TYPE", "UNCHECKED_CAST")
         @JsStatic
         actual fun <T : Any> klassOf(o: T): KClass<T> = o::class as KClass<T>
 
@@ -533,11 +558,11 @@ if (obj instanceof Object) {
 return obj;
 """).unsafeCast<T?>()
 
-        /**
-         * Serialize the given value to JSON.
-         * @param obj The object to serialize.
-         * @return The JSON.
-         */
+        @JsName("toJson")
+        @JsStatic
+        actual fun toJSON(obj: Any?): String = toJSON(obj, ToJsonOptions.DEFAULT)
+
+        @JsName("toJsonWithOptions")
         @JsStatic
         actual fun toJSON(obj: Any?, options: ToJsonOptions): String {
             val o = if (obj is Proxy) obj.platformObject() else obj
@@ -551,11 +576,11 @@ return obj;
             ).unsafeCast<String>()
         }
 
-        /**
-         * Deserialize the given JSON.
-         * @param json The JSON string to parse.
-         * @return The parsed JSON.
-         */
+        @JsName("fromJson")
+        @JsStatic
+        actual fun fromJSON(json: String): Any? = fromJSON(json, FromJsonOptions.DEFAULT)
+
+        @JsName("fromJsonWithOptions")
         @JsStatic
         actual fun fromJSON(json: String, options: FromJsonOptions): Any? = js(
             """JSON.parse(json, function(k, v) {
@@ -630,9 +655,7 @@ return obj;
          * @return The thread local.
          */
         @JsStatic
-        actual fun <T> newThreadLocal(initializer: (() -> T)?): PlatformThreadLocal<T> {
-            TODO("Not yet implemented newThreadLocal")
-        }
+        actual fun <T> newThreadLocal(initializer: (() -> T)?): PlatformThreadLocal<T> = JsThreadLocal(initializer)
 
         // TODO: Implement high resolution timer, when available (sadly, not in PLV8):
         //       https://developer.mozilla.org/en-US/docs/Web/API/Performance/now
@@ -715,6 +738,12 @@ return obj;
         @JsStatic
         actual fun isPlv8(): Boolean = js("typeof plv8==='object'").unsafeCast<Boolean>()
 
+        @JsStatic
+        actual fun encodeURIComponent(uriComponent: String): String = js("encodeURIComponent(uriComponent)") as String
+
+        @JsStatic
+        actual fun decodeURIComponent(encodedURI: String): String = js("decodeURIComponent(encodedURI)") as String
+
         /**
          * Calculates the MD5 hash about the given text.
          *
@@ -724,6 +753,20 @@ return obj;
         @JsStatic
         actual fun md5(text: String): ByteArray {
             if (isPlv8()) return js("plv8.execute(\"SELECT digest(\$1,'md5') as i\",[text])[0].i").unsafeCast<ByteArray>()
+            // TODO: Use SubtleCrypto-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto
+            throw UnsupportedOperationException("md5 is not implemented in the current environment")
+        }
+
+        /**
+         * Calculates the MD5 hash about the given text.
+         *
+         * @param text the text to hash.
+         * @return the MD5 hash, being a byte-array with size 16 (128-bit).
+         */
+        @JsName("md5Bytes")
+        @JsStatic
+        actual fun md5(bytes: ByteArray): ByteArray {
+            if (isPlv8()) return js("plv8.execute(\"SELECT digest(\$1,'md5') as i\",[bytes])[0].i").unsafeCast<ByteArray>()
             // TODO: Use SubtleCrypto-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto
             throw UnsupportedOperationException("md5 is not implemented in the current environment")
         }

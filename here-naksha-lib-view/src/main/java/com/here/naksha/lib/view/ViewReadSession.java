@@ -19,6 +19,7 @@
 package com.here.naksha.lib.view;
 
 import static java.util.stream.Collectors.*;
+import static naksha.model.StaticKt.FETCH_ALL;
 import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 
 import com.here.naksha.lib.view.concurrent.LayerReadRequest;
@@ -26,8 +27,11 @@ import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
 import naksha.model.*;
-import naksha.model.objects.Transaction;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaMap;
 import naksha.model.request.*;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.IPropertyQuery;
@@ -55,21 +59,21 @@ import org.jetbrains.annotations.Nullable;
  * It might happen that feature has been moved (it's geometry changed). In such case after getting results for bbox
  * query we have to query again for all features (by id) that was missing in a least one storage  result.
  */
-public class ViewReadSession implements IReadSession {
+public class ViewReadSession implements IReadSession, AutoCloseable {
 
-  protected final View viewRef;
+  protected final View view;
+  protected final @NotNull ParallelQueryExecutor parallelQueryExecutor;
+  protected final SessionOptions options;
+  private final @NotNull Map<@NotNull ViewLayer, @NotNull IReadSession> subSessions;
 
-  protected ParallelQueryExecutor parallelQueryExecutor;
-
-  protected Map<ViewLayer, IReadSession> subSessions;
-
-  protected ViewReadSession(@NotNull View viewRef, @Nullable SessionOptions options) {
-    this.viewRef = viewRef;
-    this.subSessions = new LinkedHashMap<>();
-    for (ViewLayer layer : viewRef.getViewCollection().getLayers()) {
+  ViewReadSession(@NotNull View view, SessionOptions options) {
+    this.view = view;
+    this.options = options;
+    this.subSessions = new HashMap<>();
+    for (final @NotNull ViewLayer layer : view.getViewCollection().getLayers()) {
       subSessions.put(layer, layer.getStorage().newReadSession(options));
     }
-    this.parallelQueryExecutor = new ParallelQueryExecutor(viewRef);
+    this.parallelQueryExecutor = new ParallelQueryExecutor(view);
   }
 
   @Override
@@ -77,25 +81,17 @@ public class ViewReadSession implements IReadSession {
     if (!(readRequest instanceof ReadFeatures)) {
       throw new UnsupportedOperationException("Only ReadFeatures are supported.");
     }
-    return execute((ReadRequest) readRequest);
-  }
-
-  public @NotNull Response execute(@NotNull ReadRequest readRequest) {
-    return execute(
-        readRequest,
+    return executeReadFeatures(
+        (ReadFeatures) readRequest,
         new MergeByStoragePriority(),
-        new ObligatoryLayersResolver(Set.of(viewRef.getViewCollection().getTopPriorityLayer())));
+        new ObligatoryLayersResolver(Set.of(view.getViewCollection().getTopPriorityLayer()))
+    );
   }
 
-  public Response execute(
-      @NotNull ReadRequest request,
+  public Response executeReadFeatures(
+      @NotNull ReadFeatures request,
       @NotNull MergeOperation mergeOperation,
       @NotNull MissingIdResolver missingIdResolver) {
-
-    if (!(request instanceof ReadFeatures)) {
-      throw new UnsupportedOperationException("Only ReadFeatures are supported.");
-    }
-
     /*
     Call every layer/storage and get the first result.
     After that we should have multiLayerRows like that:
@@ -106,7 +102,7 @@ public class ViewReadSession implements IReadSession {
     ]
      */
     List<LayerReadRequest> layerReadRequests = subSessions.entrySet().stream()
-        .map(entry -> new LayerReadRequest((ReadFeatures) request, entry.getKey(), entry.getValue()))
+        .map(entry -> new LayerReadRequest(request, entry.getKey(), entry.getValue()))
         .collect(toList());
     Map<String, List<ViewLayerFeature>> multiLayerRows = parallelQueryExecutor.queryInParallel(layerReadRequests);
 
@@ -141,15 +137,16 @@ public class ViewReadSession implements IReadSession {
     Merging: [ <featureId_1, [Layer0_Feature1, Layer1_Feature1, Layer2_Feature1]> ]
     into final result:  [ Feature1 ]
      */
-    List<ResultTuple> mergedRows =
+    List<FeatureTuple> mergedRows =
         multiLayerRows.values().stream().map(mergeOperation::apply).collect(toList());
 
     return new ViewSuccessResult(mergedRows, null);
   }
 
-  private Map<String, List<ViewLayerFeature>> getMissingFeatures(
-      @NotNull Map<String, List<ViewLayerFeature>> multiLayerRows, @NotNull MissingIdResolver missingIdResolver) {
-
+  private @NotNull Map<@NotNull String, List<ViewLayerFeature>> getMissingFeatures(
+      @NotNull Map<@NotNull String, @NotNull List<@NotNull ViewLayerFeature>> multiLayerRows,
+      @NotNull MissingIdResolver missingIdResolver
+  ) {
     Map<String, List<ViewLayerFeature>> result = new HashMap<>();
     if (!missingIdResolver.skip()) {
       // Prepare map of <Layer_x, [FeatureId_x, ..., FeatureId_z]> features and layers you want to search by id.
@@ -175,7 +172,8 @@ public class ViewReadSession implements IReadSession {
 
   @Override
   public void close() {
-    subSessions.values().forEach(ISession::close);
+    subSessions.forEach((layer, session) -> session.close());
+    subSessions.clear();
   }
 
   private boolean isRequestOnlyById(ReadRequest request) {
@@ -194,6 +192,7 @@ public class ViewReadSession implements IReadSession {
     }
     return false;
   }
+
   // TODO CASL-739
   @Override
   public int getSocketTimeout() {
@@ -228,37 +227,53 @@ public class ViewReadSession implements IReadSession {
 
   @NotNull
   @Override
-  public String getMap() {
-    return "";
-  }
-
-  @Override
-  public void setMap(@NotNull String s) {}
-
-  @Override
-  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
-    return false;
-  }
-
-  @NotNull
-  @Override
   public Response executeParallel(@NotNull Request request) {
     return execute(request);
   }
 
-  @NotNull
-  @Override
-  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
-    return List.of();
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
+    loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
   }
 
   @Override
-  public void fetchTuples(
-      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {}
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
+    final @NotNull ViewLayerCollection viewCollection = view.getViewCollection();
+    // TODO: We need to group the tuples by layer using:
+    //       viewCollection.getByTupleNumber()
+    //       Then we can query for the tuples.
+    //       The reason for all the effort is that the view allows a postponed commit,
+    //       which means we can't load tuple modified features, because the changes are
+    //       not yet visible outside the session!
+    throw new UnsupportedOperationException("loadTuples");
+  }
 
   @Override
-  public @NotNull Transaction transaction() {
-    throw new UnsupportedOperationException(
-        "Views have multiple individual transactions and doesn't support common parent transaction.");
+  public @NotNull IStorage getStorage() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public @Nullable NakshaMap getMapById(@NotNull String mapId) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public @Nullable NakshaMap getMapByNumber(int mapNumber) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public @NotNull SessionOptions getOptions() {
+    throw new UnsupportedOperationException();
   }
 }

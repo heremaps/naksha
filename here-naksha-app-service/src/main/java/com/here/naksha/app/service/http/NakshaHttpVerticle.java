@@ -147,8 +147,8 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
     exposeHeaders.stream().map(String::valueOf).forEach(corsHandler::exposedHeader);
 
     hubConfig = naksha.getConfig();
-    if (hubConfig.webRoot != null) {
-      staticHandler = StaticHandler.create(FileSystemAccess.ROOT, hubConfig.webRoot)
+    if (hubConfig.getWebRoot() != null) {
+      staticHandler = StaticHandler.create(FileSystemAccess.ROOT, hubConfig.getWebRoot())
           .setIndexPage("index.html")
           .setDirectoryListing(true)
           .setIncludeHidden(false);
@@ -199,7 +199,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
         if (staticHandler != null) {
           log.atInfo()
               .setMessage("Serving extra web-root folder in file-system with location: {}")
-              .addArgument(hubConfig.webRoot)
+              .addArgument(hubConfig.getWebRoot())
               .log();
           router.route("/hub/web/*").handler(staticHandler);
         }
@@ -211,11 +211,11 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
         router.route().failureHandler(this::failureHandler);
 
         // add handler to set max allowed request payload size
-        log.info("Setting Http request body limit to {} MB", hubConfig.requestBodyLimit);
+        log.info("Setting Http request body limit to {} MB", hubConfig.getRequestBodyLimit());
         router.route()
             .order(-1) // we add this before any other handler
             .handler(BodyHandler.create()
-                .setBodyLimit(hubConfig.requestBodyLimit * 1024 * 1024)
+                .setBodyLimit(hubConfig.getRequestBodyLimit() * 1024 * 1024)
                 .setHandleFileUploads(false)
                 .setPreallocateBodyBuffer(true));
 
@@ -231,11 +231,11 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
         vertx.createHttpServer(SERVER_OPTIONS)
             .requestHandler(router)
             .connectionHandler(loggingConnectionHandler())
-            .listen(hubConfig.httpPort, result -> {
+            .listen(hubConfig.getHttpPort(), result -> {
               if (result.succeeded()) {
                 log.atInfo()
                     .setMessage("HTTP Server started on port {}")
-                    .addArgument(hubConfig.httpPort)
+                    .addArgument(hubConfig.getHttpPort())
                     .log();
                 startPromise.complete();
               } else {

@@ -20,18 +20,17 @@ package com.here.naksha.app.common;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.here.naksha.app.init.TestPsqlConfig;
-import com.here.naksha.app.init.TestPsqlStorageConfigs;
+import com.here.naksha.app.init.TestStorageConfig;
+import com.here.naksha.app.init.TestStorageConfigs;
 import com.here.naksha.app.service.http.auth.NakshaAuthProvider;
-import naksha.base.FromJsonOptions;
-import naksha.base.JvmBoxingUtil;
-import naksha.base.Platform;
-import naksha.model.NakshaContext;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.IoHelp.LoadedBytes;
-import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.view.ViewDeserialize;
 import com.here.naksha.lib.hub.NakshaHubConfig;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.JWTOptions;
+import io.vertx.ext.auth.PubSecKeyOptions;
+import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.net.http.HttpResponse;
@@ -39,13 +38,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
-
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.JWTOptions;
-import io.vertx.ext.auth.PubSecKeyOptions;
-import io.vertx.ext.auth.jwt.JWTAuthOptions;
-import naksha.model.objects.NakshaFeature;
+import naksha.base.FromJsonOptions;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
+import naksha.model.NakshaContext;
+import naksha.psql.PgConfig;
+import naksha.psql.PgInstanceConfig;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 
@@ -54,29 +52,32 @@ public class TestUtil {
   private static final String TEST_DATA_FOLDER = "src/test/resources/unit_test_data/";
   public static final String HDR_STREAM_ID = "Stream-Id";
 
-  private TestUtil() {}
+  private TestUtil() {
+  }
 
   public static String loadFileOrFail(final @NotNull String rootPath, final @NotNull String fileName) {
     try {
       String json = new String(Files.readAllBytes(Paths.get(rootPath + fileName)));
-      final TestPsqlConfig dataDbConfig = TestPsqlStorageConfigs.dataDbConfig;
-      json = json.replace("${dataDb.host}", dataDbConfig.host());
-      json = json.replace("${dataDb.port}", Integer.toString(dataDbConfig.port()));
-      json = json.replace("${dataDb.db}", dataDbConfig.db());
-      json = json.replace("${dataDb.storageId}", dataDbConfig.storageId());
-      json = json.replace("${dataDb.schema}", dataDbConfig.schema());
-      json = json.replace("${dataDb.user}", dataDbConfig.user());
-      json = json.replace("${dataDb.password}", dataDbConfig.password());
-      json = json.replace("${dataDb.port}", Integer.toString(dataDbConfig.port()));
-      final TestPsqlConfig adminDbConfig = TestPsqlStorageConfigs.adminDbConfig;
-      json = json.replace("${adminDb.host}", adminDbConfig.host());
-      json = json.replace("${adminDb.port}", Integer.toString(adminDbConfig.port()));
-      json = json.replace("${adminDb.db}", adminDbConfig.db());
-      json = json.replace("${adminDb.storageId}", adminDbConfig.storageId());
-      json = json.replace("${adminDb.schema}", adminDbConfig.schema());
-      json = json.replace("${adminDb.user}", adminDbConfig.user());
-      json = json.replace("${adminDb.password}", adminDbConfig.password());
-      json = json.replace("${adminDb.port}", Integer.toString(dataDbConfig.port()));
+      final TestStorageConfig dataDbConfig = TestStorageConfigs.dataDbConfig;
+      final PgConfig dataPgConfig = dataDbConfig.pgConfig();
+      final PgInstanceConfig dataMasterConfig = dataPgConfig.getMaster();
+      json = json.replace("${dataDb.host}", dataMasterConfig.getHost());
+      json = json.replace("${dataDb.port}", Integer.toString(dataMasterConfig.getPort()));
+      json = json.replace("${dataDb.db}", dataMasterConfig.getDb());
+      json = json.replace("${dataDb.storageId}", dataPgConfig.getId());
+      json = json.replace("${dataDb.schema}", dataDbConfig.mapId());
+      json = json.replace("${dataDb.user}", dataMasterConfig.getUser());
+      json = json.replace("${dataDb.password}", dataMasterConfig.getPassword());
+      final TestStorageConfig adminDbConfig = TestStorageConfigs.adminDbConfig;
+      final PgConfig adminPgConfig = adminDbConfig.pgConfig();
+      final PgInstanceConfig adminMasterConfig = adminPgConfig.getMaster();
+      json = json.replace("${adminDb.host}", adminMasterConfig.getHost());
+      json = json.replace("${adminDb.port}", Integer.toString(adminMasterConfig.getPort()));
+      json = json.replace("${adminDb.db}", adminMasterConfig.getDb());
+      json = json.replace("${adminDb.storageId}", adminPgConfig.getId());
+      json = json.replace("${adminDb.schema}", adminDbConfig.mapId());
+      json = json.replace("${adminDb.user}", adminMasterConfig.getUser());
+      json = json.replace("${adminDb.password}", adminMasterConfig.getPassword());
       return json;
     } catch (IOException e) {
       Assertions.fail("Unable to read test file " + fileName, e);
@@ -128,13 +129,12 @@ public class TestUtil {
 
   public static String generateJWT(String payload, String privateKeyPath) {
     // Load private key
-    final LoadedBytes loaded = IoHelp.readBytesFromHomeOrResource(privateKeyPath, false, NakshaHubConfig.APP_NAME);
+    final LoadedBytes loaded = IoHelp.readBytesFromHomeOrResource(privateKeyPath, false, NakshaHubConfig.NAKSHA_APP_NAME);
     final String jwtKey = new String(loaded.getBytes(), StandardCharsets.UTF_8);
 
     final JWTAuthOptions authOptions = new JWTAuthOptions()
-            .setJWTOptions(new JWTOptions().setAlgorithm("RS256"))
-            .addPubSecKey(new PubSecKeyOptions().setAlgorithm("RS256").setBuffer(jwtKey))
-            ;
+        .setJWTOptions(new JWTOptions().setAlgorithm("RS256"))
+        .addPubSecKey(new PubSecKeyOptions().setAlgorithm("RS256").setBuffer(jwtKey));
     final NakshaAuthProvider nakshaAuthProvider = new NakshaAuthProvider(Vertx.vertx(), authOptions);
     // Sign the following JWT payload
     return nakshaAuthProvider.generateToken(new JsonObject(payload));

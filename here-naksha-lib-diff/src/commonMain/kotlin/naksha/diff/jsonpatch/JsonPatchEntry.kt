@@ -1,10 +1,17 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.diff.jsonpatch
 
-internal sealed class JsonPatchEntry(val op: String, val path: String){
+import naksha.base.AnyObject
+import kotlin.js.JsExport
+import kotlin.js.JsName
 
-    internal class Add(path: String, val value: Any?): JsonPatchEntry("add", path)
+@JsExport
+open class JsonPatchEntry(): AnyObject() {
 
-    internal class Remove(path: String): JsonPatchEntry("remove", path)
-
-    internal class Replace(path: String, val value: Any?): JsonPatchEntry("replace", path)
+    @JsName("of")
+    constructor(op: String, path: String): this() {
+        setRaw("op", op)
+        setRaw("path", path)
+    }
 }

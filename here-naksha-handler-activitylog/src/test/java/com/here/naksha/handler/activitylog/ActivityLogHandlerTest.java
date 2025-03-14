@@ -23,10 +23,10 @@ import com.here.naksha.handler.activitylog.util.DatahubSamplesUtil;
 import com.here.naksha.handler.activitylog.util.DatahubSamplesUtil.DatahubSample;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.test.common.assertions.PropertyQueryAssertions;
 import naksha.base.JvmInt64;
 import naksha.model.*;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
 
 import java.util.List;
 import java.util.Map;
@@ -58,7 +58,7 @@ class ActivityLogHandlerTest {
   INaksha naksha;
 
   @Mock
-  EventHandler eventHandler;
+  EventHandlerConfig eventHandler;
 
   @Mock
   IStorage spaceStorage;
@@ -70,7 +70,7 @@ class ActivityLogHandlerTest {
     MockitoAnnotations.openMocks(this);
     when(naksha.getSpaceStorage()).thenReturn(spaceStorage);
     handler = handlerForSpaceId(SPACE_ID);
-
+    NakshaContext.currentContext().withAppId("test-app");
   }
 
   @ParameterizedTest
@@ -128,7 +128,7 @@ class ActivityLogHandlerTest {
     // Given: Original read request
     String featureUuid = "featureUuid";
     String featureId = "featureId";
-    ReadFeatures originalReadFeatures = new ReadFeatures("not_the_space_id");
+    ReadFeatures originalReadFeatures = new ReadFeatures();
     originalReadFeatures.setVersions(1);
     originalReadFeatures.getQuery().setProperties(
             new POr(
@@ -445,7 +445,7 @@ class ActivityLogHandlerTest {
   private static Stream<Request> unhandledRequests() {
     return Stream.of(
         new WriteRequest().add(new Write().createFeature(null,"some_collection",new NakshaFeature("some_feature"))),
-        new ReadCollections("some_collection")
+        new ReadCollections()
     );
   }
 }

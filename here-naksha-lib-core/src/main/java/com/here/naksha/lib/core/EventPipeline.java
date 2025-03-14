@@ -21,7 +21,7 @@ package com.here.naksha.lib.core;
 import static naksha.model.NakshaError.EXCEPTION;
 import static naksha.model.NakshaError.NOT_IMPLEMENTED;
 
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -223,7 +223,7 @@ public class EventPipeline extends NakshaBound {
    * @param eventHandler The connector for which to add the event handler.
    * @return This.
    */
-  public @NotNull EventPipeline addEventHandler(@NotNull EventHandler eventHandler) {
+  public @NotNull EventPipeline addEventHandler(@NotNull EventHandlerConfig eventHandler) {
     lock();
     try {
       addEventHandler(eventHandler.newInstance(naksha()));

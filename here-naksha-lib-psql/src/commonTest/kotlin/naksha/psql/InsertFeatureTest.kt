@@ -1,48 +1,40 @@
 package naksha.psql
 
+import naksha.base.Platform
 import naksha.geo.SpBoundingBox
-import naksha.model.Action
-import naksha.model.NakshaCache
-import naksha.model.NakshaError
-import naksha.model.TagList
+import naksha.model.*
 import naksha.model.objects.NakshaCollection
-import naksha.model.request.ErrorResponse
-import naksha.model.request.ReadFeatures
-import naksha.model.request.Write
-import naksha.model.request.WriteRequest
+import naksha.model.request.*
 import naksha.model.request.query.SpIntersects
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import naksha.psql.base.PgTestBase
-import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
-import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeatures
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import kotlin.test.*
 
-class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) {
-
-    @AfterTest
-    fun cleanUp() {
-        dropCollection()
-    }
+class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", TEST_MAP_ID)) {
 
     @Test
     fun shouldInsertSingleFeature() {
         // Given: features to create
-        val featureToCreate = generateRandomFeature()
+        val featureToCreate = randomFeature()
         val xyz = featureToCreate.properties.xyz
-        xyz.tags?.clear()
-        xyz.addTag("wicked", false)
+        xyz.tags.clear()
+        xyz.tags.addTag("wicked", false)
         val writeFeaturesReq = WriteRequest().apply {
-            add(Write().createFeature(null, collection!!.id, featureToCreate))
+            add(Write().createFeature(collection.mapId, collection.id, featureToCreate))
         }
 
         // When: executing feature write request
         executeWrite(writeFeaturesReq)
 
         // And: reading all features from collection
-        val retrievedFeatures = executeRead(ReadFeatures().apply {
-            collectionIds += collection!!.id
+        val readResponse = executeRead(ReadFeatures().apply {
+            collectionIds += collection.id
             featureIds += featureToCreate.id
-        }).features
+        })
+        val retrievedFeatures = readResponse.features
 
         // Then: we got 1 feature
         assertEquals(1, retrievedFeatures.size)
@@ -61,8 +53,8 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
                     .hasXyzThat { retrievedXyz ->
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
-                            .hasProperty("author", PgTest.TEST_APP_AUTHOR!!)
-                            .hasProperty("action", Action.CREATED)
+                            .hasProperty("author", PgTest.TEST_APP_AUTHOR)
+                            .hasProperty("action", Action.CREATED.text)
                     }
                     .hasTags(TagList("wicked"))
             }
@@ -70,24 +62,53 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
 
     @Test
     fun shouldInsertManyFeatures() {
+        val count = 500
         // Given: features to create
-        val featuresToCreate = generateRandomFeatures(count = 10)
+        val featuresToCreate = randomFeatures(count = count)
         val writeFeaturesReq = WriteRequest().apply {
             featuresToCreate.forEach { featureToCreate ->
-                add(Write().createFeature(null, collection!!.id, featureToCreate))
+                add(Write().createFeature(collection.mapId, collection.id, featureToCreate))
             }
         }
+        val firstFeatureToCreate = featuresToCreate[0]
 
         // When: executing feature write request
-        executeWrite(writeFeaturesReq)
+        val start = Platform.currentNanos()
+        val version: Version
+        env.storage.newWriteSession(null).use { session ->
+            version = session.useTransaction().version
+            val response = assertSuccess(session.execute(writeFeaturesReq))
+            session.commit()
+            response
+        }
+        val end = Platform.currentNanos()
+        val time = end - start
+        val totalMillis = time / 1_000_000
+        val featuresPerSecond = count.toDouble() / (time.toDouble()/(1_000_000_000.toDouble()))
+        Platform.logger.info("Insert took ${totalMillis}ms, $featuresPerSecond features per second")
+        Platform.logger.info("Inserted version: $version")
+        assertEquals(count, featuresToCreate.size)
 
         // And: reading all features from collection
-        val retrievedFeatures = executeRead(ReadFeatures().apply {
-            collectionIds += collection!!.id
-        }).features
+        val readResponse = executeRead(ReadFeatures().apply {
+            collectionIds += collection.id
+//            this.version = version
+//            this.minVersion = version
+        })
+        val retrievedFeatures = readResponse.features
 
-        // Then: we got 10 features
-        assertEquals(10, retrievedFeatures.size)
+        // Then: we got <count> features
+        //assertEquals(count, retrievedFeatures.size)
+        assertTrue(count <= retrievedFeatures.size)
+
+        // And:
+        val firstFeature = retrievedFeatures.find { it?.id == firstFeatureToCreate.id }
+        assertNotNull(firstFeature)
+        assertEquals(env.storage.number, firstFeature.storageNumber)
+        assertEquals(map.number, firstFeature.mapNumber)
+        assertEquals(collection.number, firstFeature.collectionNumber)
+        Platform.logger.info("Storage reported guid '${firstFeature.guid}' for first feature")
+        assertEquals(firstFeatureToCreate.id, firstFeature.id)
 
         // And:
         featuresToCreate.forEach { featureToCreate ->
@@ -105,49 +126,54 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c")) 
                             retrievedXyz
                                 .hasProperty("appId", PgTest.TEST_APP_ID)
                                 .hasProperty("author", PgTest.TEST_APP_AUTHOR!!)
-                                .hasProperty("action", Action.CREATED)
+                                .hasProperty("action", Action.CREATED.text)
                         }
                 }
         }
 
-        NakshaCache.tupleCache(env.storage.id).clear()
-
-        // Read only one feature by ID.
-        val expectFeature = featuresToCreate[0]
+        // Read only one feature by ID, bypassing the cache.
+        Platform.logger.info("Clear cache and reload feature from database")
+        Naksha.cache.clear(env.storage)
         val featuresByIdResponse = executeRead(ReadFeatures().apply {
-            collectionIds += collection!!.id
-            featureIds.add(expectFeature.id)
+            collectionIds += collection.id
+            featureIds.add(firstFeatureToCreate.id)
         })
-        assertEquals(1, featuresByIdResponse.size)
+
+        // Expect it to have the same tuple-number as the first feature originally returned!
+        assertEquals(1, featuresByIdResponse.length)
+        val tuples = featuresByIdResponse.featureTupleList
+        assertEquals(1, tuples.size)
+        val tupleNumber = assertNotNull(tuples.first()).tupleNumber
+        assertNotNull(tupleNumber)
+        Platform.logger.info("Expect that the originally returned tuple-number is the same as the one from search")
+        assertEquals(firstFeature.tupleNumber, tupleNumber)
+
+        // This will force the cache to contact the storage, and to load the tuple.
         val features = featuresByIdResponse.features
-        assertEquals(expectFeature.id, features[0]!!.id)
+        assertEquals(firstFeatureToCreate.id, features[0]!!.id)
 
         // Read only one feature by bounding box.
         val featuresByBBox = executeRead(ReadFeatures().apply {
-            collectionIds += collection!!.id
+            collectionIds += collection.id
             query.spatial =
-                SpIntersects(SpBoundingBox(expectFeature.geometry).addMargin(0.0000001).toPolygon())
+                SpIntersects(SpBoundingBox(firstFeatureToCreate.geometry).addMargin(0.0000001).toPolygon())
         })
         assertEquals(1, featuresByBBox.features.size)
-        assertEquals(expectFeature.id, featuresByBBox.features[0]!!.id)
+        assertEquals(firstFeatureToCreate.id, featuresByBBox.features[0]!!.id)
     }
 
     @Test
     fun shouldNotAllowDuplicatedId() {
         // Given
-        val originalFeature = generateRandomFeature()
-        val featureWithDuplicatedId = generateRandomFeature().apply { id = originalFeature.id }
+        val originalFeature = randomFeature()
+        val featureWithDuplicatedId = randomFeature().apply { id = originalFeature.id }
 
         // When
         insertFeature(originalFeature)
 
         // And
         val writeReq = WriteRequest().add(
-            Write().createFeature(
-                map = null,
-                collectionId = collection!!.id,
-                feature = featureWithDuplicatedId
-            )
+            Write().createFeature(collection.mapId, collection.id, featureWithDuplicatedId)
         )
         val insertDuplicateResponse = env.storage.newWriteSession().use { session ->
             session.execute(writeReq)

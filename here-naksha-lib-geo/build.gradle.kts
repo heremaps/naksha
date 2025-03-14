@@ -62,6 +62,7 @@ kotlin {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(project(":here-naksha-lib-base"))
                 implementation(Lib.jts_core)
+                implementation(Lib.jts_io_common)
             }
             resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
         }

@@ -19,11 +19,11 @@ class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c")) 
             id = "feature_1"
         }
         val writeInitialFeature = WriteRequest().add(
-            Write().upsertFeature(null, collection!!.id, initialFeature)
+            Write().upsertFeature(collection, initialFeature)
         )
 
         val upsertFeaturesReq = WriteRequest().add(
-            Write().upsertFeature(null, collection.id, initialFeature)
+            Write().upsertFeature(collection, initialFeature)
         )
 
         // When: Writing initial version of feature
@@ -36,7 +36,7 @@ class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c")) 
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true
-        }).features.sortedBy { it!!.properties.xyz.txn.toLong() }
+        }).features.sortedBy { it!!.properties.xyz.version!!.txn.toLong() }
 
         // Then
         assertThatFeature(retrievedFeatures[0]!!)
@@ -49,7 +49,7 @@ class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c")) 
                     .hasFeatureType(initialFeature.properties.featureType)
                     .hasXyzThat { retrievedXyz ->
                         retrievedXyz
-                            .hasProperty("action", Action.CREATED)
+                            .hasProperty("action", Action.CREATED.text)
                             .hasProperty("changeCount", 1)
                     }
             }
@@ -64,7 +64,7 @@ class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c")) 
                     .hasFeatureType(initialFeature.properties.featureType)
                     .hasXyzThat { retrievedXyz ->
                         retrievedXyz
-                            .hasProperty("action", Action.UPDATED)
+                            .hasProperty("action", Action.UPDATED.text)
                             .hasProperty("changeCount", 2)
                     }
             }

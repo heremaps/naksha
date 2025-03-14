@@ -23,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+
+import naksha.model.NakshaContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
@@ -33,6 +35,7 @@ class SimpleTaskTest {
 
   @Test
   void testF1Call() throws ExecutionException, InterruptedException {
+    NakshaContext.currentContext().withAppId("test-app");
     final Future<String> future = new SimpleTask<String>().start(SimpleTaskTest::testFn, "hello");
     assertNotNull(future);
     final String result = future.get();

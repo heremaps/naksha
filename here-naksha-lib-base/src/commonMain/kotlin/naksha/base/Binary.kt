@@ -24,9 +24,9 @@ import kotlin.jvm.JvmField
 import kotlin.math.max
 
 /**
- * A class to read or modify binary data stored in a byte-array. The class operates either directly on a [PlatformDataView].
- * The [PlatformDataView] maps a [ByteArray] that should be read and/or modified. The [byteLength] is basically the capacity
- * available for reading and writing.
+ * A class to read or modify binary data stored in a byte-array.
+ *
+ * The class operates on a [PlatformDataView], which maps a [ByteArray] that should be read and/or modified. The [byteLength] is basically the capacity available for reading and writing.
  *
  * @constructor The default constructor creates an empty, mutable, resizable editor.
  */
@@ -79,6 +79,13 @@ open class Binary() : BinaryView {
 
     @Suppress("UNUSED_PARAMETER")
     companion object BinaryCompanion {
+        /**
+         * The byte-array that represents undefined.
+         */
+        @JvmField
+        @JsStatic
+        val UNDEFINED = ByteArray(0)
+
         /**
          * The default empty byte-array.
          */

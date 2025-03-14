@@ -8,6 +8,7 @@ import naksha.base.fn.Fn0
 import naksha.base.fn.Fn3
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaMap
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -16,32 +17,46 @@ import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
+// TODO: As multiple threads can share the same context, we need to make it thread safe, so use AtomicMap in the background!
+//       Basically, this needs to be done the same way that StreamInfo was made thread safe!
+//       We can derive both from the same base class, something like ThreadSafeObject or whatever.
+
 /**
- * The Naksha Context, a thread-local, that stores credentials, and other thread local information. The main purpose is to ensure that all
- * entities can perform authorization. It is normally created, when a new request is started, using the static [newInstance] factory method
- * and then attached to the current thread.
+ * The Naksha Context is a thread-local that stores credentials, and shared request information.
+ *
+ * The main purpose is to ensure that all entities can perform authorization, and share debugging information, like the stream-identifier for logging. It is recommended that each application creates its own stream-information class, with own special properties next to the shared general ones.
+ *
+ * It is normally created, when a new request is started, using the static [newInstance] factory method, and then attached to the current thread:
+ *
+ * ```kotlin
+ * ```
  * @since 2.0.5
  * @see newInstance
+ * @see attachToCurrentThread
  */
 @JsExport
 open class NakshaContext protected constructor() {
     /**
      * The time in milliseconds to wait for the TCP handshake.
+     * @since 3.0.0
      */
     open var connectTimeout: Int = defaultConnectTimeout.get()
 
     /**
      * The time in milliseconds to wait for the TCP socket when reading or writing from it.
+     * @since 3.0.0
      */
     open val socketTimeout: Int = defaultSocketTimeout.get()
 
     /**
      * The statement-timeout in milliseconds, this means how long to wait for each CREATE, UPDATE or DELETE to be executed.
+     * @since 3.0.0
      */
     open val stmtTimeout: Int = defaultStmtTimeout.get()
 
     /**
      * The lock-timeout in milliseconds, when the storage has to use locking.
+     * @since 3.0.0
      */
     open val lockTimeout: Int = defaultLockTimeout.get()
 
@@ -49,9 +64,10 @@ open class NakshaContext protected constructor() {
 
     /**
      * The application name, like the user-agent.
+     * @since 2.0.7
      */
     open var appName: String
-        get() = _appName ?: defaultAppName.get() ?: DEFAULT_APP_NAME
+        get() = _appName ?: defaultAppName.get() ?: throw NakshaException(ILLEGAL_STATE, "Missing appName")
         set(value) {
             _appName = value
         }
@@ -60,9 +76,10 @@ open class NakshaContext protected constructor() {
 
     /**
      * The application identifier of the client that acts. It is used at many places, for authorization, ownership of features and logging.
+     * @since 2.0.7
      */
     open var appId: String
-        get() = _appId ?: defaultAppId.get() ?: DEFAULT_APP_ID
+        get() = _appId ?: defaultAppId.get() ?: throw NakshaException(ILLEGAL_STATE, "Missing appId")
         set(value) {
             _appId = value
         }
@@ -71,12 +88,14 @@ open class NakshaContext protected constructor() {
      * Returns the appId or the given alternative.
      * @param alternative the alternative to return, when no appId is available.
      * @return the appId.
+     * @since 2.0.7
      */
     open fun getAppIdOr(alternative: String): String = _appId ?: alternative
 
     /**
-     * Returns the appId or throws a [NakshaError.ILLEGAL_STATE].
+     * Returns the appId or throws a [ILLEGAL_STATE].
      * @return the appId.
+     * @since 2.0.7
      */
     open fun getAppIdOrThrow(msgFn: Fn0<String>? = null): String =
         _appId ?: throw NakshaException(ILLEGAL_STATE, msgFn?.call() ?: "The current context has no appId")
@@ -85,46 +104,79 @@ open class NakshaContext protected constructor() {
      * Changes the application-identifier and returns the [NakshaContext].
      * @param appId the new app-id.
      * @return this.
+     * @since 2.0.7
      */
     open fun withAppId(appId: String): NakshaContext {
         this._appId = appId
         return this
     }
 
-    /**
-     * The internal field of the **streamId** setter and getter.
-     */
-    private var _streamId: String? = null
+    private var _streamInfo: StreamInfo? = null
 
     /**
-     * The stream-identifier being used in logging to group log entries that belong to the same request.
+     * The stream-information.
+     * @since 3.0.0
      */
-    open var streamId: String
+    open var streamInfo: StreamInfo
         get() {
-            var s = _streamId
+            var s = _streamInfo
             if (s == null) {
-                s = PlatformUtil.randomString()
-                _streamId = s
+                s = streamInfoConstructorRef.call()
+                _streamInfo = s
             }
             return s
         }
         set(value) {
-            _streamId = value
+            _streamInfo = value
+        }
+
+    /**
+     * @see [streamInfo]
+     */
+    open fun withStreamInfo(value: StreamInfo): NakshaContext {
+        streamInfo = value
+        return this
+    }
+
+    /**
+     * The stream-identifier being used in logging to group log entries that belong to the same request.
+     *
+     * ### Warning
+     * Changing the stream-identifier causes a new [StreamInfo] to be created, so [streamInfo] will change too!
+     * @since 2.0.7
+     */
+    open var streamId: String
+        get() {
+            var s = _streamInfo
+            if (s == null) {
+                s = streamInfoConstructorRef.call()
+                _streamInfo = s
+            }
+            return s.streamId
+        }
+        set(value) {
+            val s = _streamInfo
+            if (s != null && s.streamId == value) return
+            // Create a new stream-information with the desired stream-id.
+            val info = streamInfoConstructorRef.call()
+            info.streamId = value
+            _streamInfo = s
         }
 
     /**
      * Changes the stream-id and returns the [NakshaContext].
+     *
+     * ### Warning
+     * Changing the stream-identifier causes a new [StreamInfo] to be created, so [streamInfo] will change too!
      * @param streamId the new stream-id.
      * @return this.
+     * @since 2.0.7
      */
     open fun withStreamId(streamId: String): NakshaContext {
         this.streamId = streamId
         return this
     }
 
-    /**
-     * The internal field of the **author** getter and setter.
-     */
     private var _author: String? = null
 
     /**
@@ -142,29 +194,37 @@ open class NakshaContext protected constructor() {
      * Changes the author and returns the [NakshaContext].
      * @param author the new author.
      * @return this.
+     * @since 2.0.7
      */
     open fun withAuthor(author: String?): NakshaContext {
         this.author = author
         return this
     }
 
+    private var _mapId: String? = null
+
     /**
      * The map to use.
      *
-     * The map-id is read from the JWT `mapId` claim, but can be overridden by the client using the HTTP header `X-Map-Id` or by using specially crafted requests which explicitly specify the map-id. If neither is available, the default is [DEFAULT_MAP_ID].
+     * The map-id is read from the JWT `mapId` claim, but can be overridden by the client using the HTTP header `X-Map-Id` or by using specially crafted requests which explicitly specify the map-id. If neither is available, the default is [defaultMapId].
      *
      * Note: In `lib-psql` the default map is mapped to the default schema configured within the storage driver.
      * @since 3.0.0
      */
-    open var mapId: String = DEFAULT_MAP_ID
+    open var mapId: String
+        get() = _mapId ?: defaultMapId.get() ?: throw NakshaException(ILLEGAL_STATE, "Missing map-id")
+        set(value) {
+            _mapId = value
+        }
 
     /**
-     * Change the current map.
-     * @param map the map to select.
+     * Change the current map-id.
+     * @param mapId the map-id to select.
      * @return this.
+     * @since 3.0.0
      */
-    open fun withMap(map: String): NakshaContext {
-        this.mapId = map
+    open fun withMapId(mapId: String): NakshaContext {
+        this.mapId = mapId
         return this
     }
 
@@ -173,6 +233,17 @@ open class NakshaContext protected constructor() {
      * @since 2.0.7
      */
     open var su: Boolean = false
+
+    /**
+     * Set the super-user flag.
+     * @param su enable or disable super-user flag.
+     * @return this
+     * @since 3.0.0
+     */
+    open fun withSu(su: Boolean): NakshaContext {
+        this.su = su
+        return this
+    }
 
     /**
      * The User-Rights-Matrix for authentication.
@@ -321,44 +392,34 @@ open class NakshaContext protected constructor() {
         return this
     }
 
-    /**
-     * Stream information.
-     */
-    open var streamInfo: StreamInfo? = null
-
     @Suppress("OPT_IN_USAGE")
     companion object NakshaContextCompanion {
         /**
-         * The default map, being an empty string.
-         */
-        const val DEFAULT_MAP_ID = ""
-
-        /**
-         * The immutable default app-name to be used, if nothing else is available (defined at build time).
-         */
-        const val DEFAULT_APP_NAME = "NakshaClient/${NakshaVersion.LATEST}"
-
-        /**
-         * The immutable default app-id to be used, if nothing else is available (defined at build time).
-         */
-        const val DEFAULT_APP_ID = "anonymous"
-
-        /**
-         * The default application name to use.
+         * The default map-identifier to use, defaults to `unimap`.
+         * @since 3.0.0
          */
         @JvmField
-        val defaultAppName = AtomicRef(DEFAULT_APP_NAME)
+        val defaultMapId = AtomicRef(NakshaMap.DEFAULT)
 
         /**
-         * The default application identifier to use.
+         * The default application name to use, defaults to `NakshaClient/{version}`.
+         * @since 3.0.0
          */
         @JvmField
-        val defaultAppId = AtomicRef(DEFAULT_APP_ID)
+        val defaultAppName = AtomicRef("NakshaClient/${NakshaVersion.LATEST}")
+
+        /**
+         * The default application identifier to use, defaults to `null`.
+         * @since 3.0.0
+         */
+        @JvmField
+        val defaultAppId = AtomicRef<String>(null)
 
         /**
          * The default exclude path to use, when calculating hashes.
          *
          * This is an application wide setting, that when not being _null_, will cause all contexts that have no exclude path, to use this one!
+         * @since 3.0.0
          */
         @JvmField
         val defaultExcludePaths = AtomicRef<List<Array<String>>>(null)
@@ -367,37 +428,43 @@ open class NakshaContext protected constructor() {
          * The default exclude function to use, when calculating hashes.
          *
          * This is an application wide setting, that when not being _null_, will cause all contexts that have no exclude function, to use this one!
+         * @since 3.0.0
          */
         @JvmField
         val defaultExcludeFn = AtomicRef<Fn3<Boolean, NakshaFeature, List<String>, Any?>>(null)
 
         /**
          * The application wide default time in milliseconds to wait for the TCP handshake.
+         * @since 3.0.0
          */
         @JvmField
         val defaultConnectTimeout = AtomicInt(60_000)
 
         /**
          * The application wide default time in milliseconds to wait for the TCP socket when reading or writing from it.
+         * @since 3.0.0
          */
         @JvmField
         val defaultSocketTimeout = AtomicInt(60_000)
 
         /**
          * The application wide default statement-timeout in milliseconds, this means how long to wait for each CREATE, UPDATE or DELETE to be executed.
+         * @since 3.0.0
          */
         @JvmField
         val defaultStmtTimeout = AtomicInt(60_000)
 
         /**
          * The application wide default lock-timeout in milliseconds, when the storage has to use locking.
+         * @since 3.0.0
          */
         @JvmField
         val defaultLockTimeout = AtomicInt(10_000)
 
         /**
-         * Returns the current map.
-         * @return the current map.
+         * Returns the current map-id.
+         * @return the current map-id.
+         * @since 3.0.0
          */
         @JvmStatic
         @JsStatic
@@ -406,6 +473,7 @@ open class NakshaContext protected constructor() {
         /**
          * Returns the current application name.
          * @return the current application name.
+         * @since 3.0.0
          */
         @JvmStatic
         @JsStatic
@@ -414,6 +482,7 @@ open class NakshaContext protected constructor() {
         /**
          * Returns the current application identifier.
          * @return the current application identifier.
+         * @since 3.0.0
          */
         @JvmStatic
         @JsStatic
@@ -426,6 +495,22 @@ open class NakshaContext protected constructor() {
         @JvmStatic
         @JsStatic
         fun author(): String? = currentContext().author
+
+        /**
+         * Returns the current stream-information.
+         * @return the current stream-information.
+         */
+        @JvmStatic
+        @JsStatic
+        fun streamInfo(): StreamInfo = currentContext().streamInfo
+
+        /**
+         * Returns the current stream-identifier.
+         * @return the current stream-identifier.
+         */
+        @JvmStatic
+        @JsStatic
+        fun streamId(): String = currentContext().streamId
 
         /**
          * The thread local that stores the [NakshaContext].
@@ -441,6 +526,13 @@ open class NakshaContext protected constructor() {
         var constructorRef: Fn0<NakshaContext> = Fn0(::NakshaContext)
 
         /**
+         * The default constructor to call to create [StreamInfo] instances, can be overridden by application code in bootstrap to ensure that all stream-information are some custom application specific instances.
+         */
+        @JvmStatic
+        @JsStatic
+        val streamInfoConstructorRef: Fn0<StreamInfo> = Fn0(::StreamInfo)
+
+        /**
          * Can be overridden by application code to modify the thread local context gathering.
          */
         @JvmStatic
@@ -448,31 +540,33 @@ open class NakshaContext protected constructor() {
         var currentRef: Fn0<NakshaContext> = Fn0(threadLocal::get)
 
         /**
-         * Creates a new Naksha Context.
-         * @param appId The application-id for which to create the context.
-         * @param author The author.
+         * Creates and initializes a new [NakshaContext]. This method does not bind the new context to the current thread, if this is wanted, [attachToCurrentThread] should be called, like:
+         * ```
+         * val context = NakshaContext.newInstance("app","user").attachToCurrentThread()
+         * ```
+         * @param appId the application-id for which to create the context.
+         * @param author the author.
+         * @param streamId the stream-identifier to use, if _null_, a random identifier is generated.
          * @param su If the user is a permanent super-user.
          */
-        // TODO: Kotlin-Compiler-Bug: We need open, otherwise Java can't create another static method with the same name in extending class!
+        // TODO: Kotlin-Compiler-Bug:
+        //       We need open, otherwise Java can't create another static method with the same name in extending class!
         @Suppress("NON_FINAL_MEMBER_IN_OBJECT")
         @JvmStatic
-        @JvmOverloads
         @JsStatic
+        @JvmOverloads
         open fun newInstance(appId: String, author: String? = null, streamId: String? = null, su: Boolean = false): NakshaContext {
             val context = constructorRef.call()
             context.appId = appId
             context.author = author
-            if (streamId != null) {
-                context.streamId = streamId
-            }
+            if (streamId != null) context.streamId = streamId
             context.su = su
             return context
         }
 
         /**
-         * Returns the current context. If no context exists, creates a new context and binds it to the thread-local.
-         * Note that when a new context is created, any reading of the [appId] will raise a [IllegalStateException].
-         * @return The current context.
+         * Returns the current context from the current thread. If no context is yet attached, it creates a new context, and binds it to the current thread, returning it.
+         * @return The context of the current thread.
          */
         @Suppress("NON_FINAL_MEMBER_IN_OBJECT")
         @JvmStatic

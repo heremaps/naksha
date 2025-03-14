@@ -2,15 +2,15 @@ package com.here.naksha.app.init.context;
 
 import static com.here.naksha.app.service.NakshaApp.newInstance;
 
-import com.here.naksha.app.init.TestPsqlConfig;
-import com.here.naksha.app.init.TestPsqlStorageConfigs;
+import com.here.naksha.app.init.TestStorageConfig;
+import com.here.naksha.app.init.TestStorageConfigs;
+import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
-import naksha.psql.PgCursor;
-import naksha.psql.PsqlCluster;
-import naksha.psql.PsqlInstance;
-import naksha.psql.PsqlSession;
-import naksha.psql.PsqlStorage;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
+import naksha.model.request.WriteRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,31 +19,31 @@ public class LocalTestContext extends TestContext {
   private static final Logger log = LoggerFactory.getLogger(LocalTestContext.class);
 
   private static final String CONFIG_ID = "test-config";
-  private static final TestPsqlConfig STORAGE_CONFIG = TestPsqlStorageConfigs.dataDbConfig;
+  private static final TestStorageConfig STORAGE_CONFIG = TestStorageConfigs.dataDbConfig;
+  private static final String MASTER_URL = STORAGE_CONFIG.pgConfig().getMasterUri();
+
+  private final NakshaContext nakshaContext;
 
   public LocalTestContext() {
-    super(() -> newInstance(CONFIG_ID, STORAGE_CONFIG.url()));
+    super(() -> newInstance(CONFIG_ID, MASTER_URL));
+    nakshaContext = NakshaContext.newInstance("local-test")
+        .withSu(true)
+        .attachToCurrentThread();
   }
-
 
   @Override
-    // TODO CASL-834: switch to proper schema dropping
   void setupStorage() {
     super.setupStorage();
-    if (!STORAGE_CONFIG.url().isBlank()) {
-      log.info("Dropping schema {} for url: {}", STORAGE_CONFIG.schema(), STORAGE_CONFIG.url());
-      SessionOptions sessionOptions = SessionOptions.from(NakshaContext.currentContext(), true);
-      try (PsqlSession session = storage().newSession(sessionOptions, false)) {
-        session.usePgConnection().execute("DROP SCHEMA IF EXISTS " + STORAGE_CONFIG.schema() + " CASCADE;", null);
-        session.commit();
+    if (!MASTER_URL.isBlank()) {
+      log.info("Removing map (schema) {} for db with url: {}", STORAGE_CONFIG.mapId(), MASTER_URL);
+      SessionOptions sessionOptions = SessionOptions.from(nakshaContext, true);
+      Response response = Naksha.useStorage(STORAGE_CONFIG.pgConfig()).useWriteSession(sessionOptions,
+          writer -> writer.execute(new WriteRequest().add(new Write().deleteMapById(STORAGE_CONFIG.mapId()))));
+      if(response instanceof SuccessResponse){
+        log.info("Removed map (which should drop schema of the same name): {}", STORAGE_CONFIG.mapId());
+      } else {
+        log.warn("Could not remove map: {}, unexpected response: {}", STORAGE_CONFIG.mapId(), response);
       }
-      log.info("Dropped schema: {}", STORAGE_CONFIG.schema());
     }
-  }
-
-  private PsqlStorage storage() {
-    PsqlInstance instance = PsqlInstance.get(STORAGE_CONFIG.url());
-    PsqlCluster cluster = new PsqlCluster(instance);
-    return new PsqlStorage(cluster, STORAGE_CONFIG.schema());
   }
 }

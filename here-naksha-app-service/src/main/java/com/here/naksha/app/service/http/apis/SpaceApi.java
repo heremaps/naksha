@@ -75,7 +75,7 @@ public class SpaceApi extends Api {
   }
 
   private void startSpaceApiTask(SpaceApiReqType reqType, RoutingContext routingContext) {
-    new SpaceApiTask<>(reqType, verticle, naksha(), routingContext, verticle.createNakshaContext(routingContext))
+    new SpaceApiTask(reqType, verticle, naksha(), routingContext, verticle.createNakshaContext(routingContext))
         .start();
   }
 }

@@ -1,13 +1,14 @@
-@file:Suppress("OPT_IN_USAGE", "NON_EXPORTABLE_TYPE")
+@file:Suppress("OPT_IN_USAGE")
 
 package naksha.model
 
-import naksha.base.AnyObject
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
+import naksha.base.*
+import naksha.base.fn.Fx2
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmOverloads
+import kotlin.jvm.JvmStatic
 
 /**
  * An error class.
@@ -20,15 +21,13 @@ open class NakshaError() : AnyObject() {
      * Create a new error from the given arguments.
      * @param code the error code.
      * @param msg a human-readable message.
-     * @param id the identifier of the object that relates to the error; if any.
      * @param cause the origin exception that caused this error; if any.
      */
     @JsName("of")
     @JvmOverloads
-    constructor(code: String, msg: String, cause: Throwable? = null, id: String? = null) : this() {
+    constructor(code: String, msg: String, cause: Throwable? = null) : this() {
         this.code = code
         this.msg = msg
-        this.id = id
         this.cause = cause
     }
 
@@ -42,16 +41,22 @@ open class NakshaError() : AnyObject() {
         const val EXCEPTION = "Exception"
 
         /**
-         * Returned when an already initialized storage is initialized, providing a wrong identifier.
+         * Returned when an already initialized storage is initialized, providing a wrong _storage-id_ and/or _storage-number_.
          * @since 3.0.0
          */
         const val STORAGE_ID_MISMATCH = "StorageIdMismatch"
 
         /**
-         * Returned something requires initialisation before some method can be invoked.
+         * Returned when something requires initialisation before a certain method can be invoked.
          * @since 3.0.0
          */
         const val UNINITIALIZED = "Uninitialized"
+
+        /**
+         * Returned when initialisation failed.
+         * @since 3.0.0
+         */
+        const val INITIALIZATION_FAILED = "InitializationFailed"
 
         /**
          * A provided identifier is not allowed.
@@ -92,10 +97,15 @@ open class NakshaError() : AnyObject() {
         const val UNSUPPORTED_OPERATION = "UnsupportedOperation"
 
         /**
-         * A conflict occurred when updating a feature.
-         *
-         * This will result in an 409 Conflict response.
+         * A not further specified conflict occurred when performing an operation, for example when the database reports a unique index violation, and the storage is not able to give a more specific reason.
          * @since 3.0.0
+         * @see [isConflict]
+         * @see [MAP_EXISTS]
+         * @see [MAP_NOT_FOUND]
+         * @see [COLLECTION_EXISTS]
+         * @see [COLLECTION_NOT_FOUND]
+         * @see [FEATURE_EXISTS]
+         * @see [FEATURE_NOT_FOUND]
          */
         const val CONFLICT = "Conflict"
 
@@ -194,13 +204,6 @@ open class NakshaError() : AnyObject() {
         const val FEATURE_NOT_FOUND = "FeatureNotFound"
 
         /**
-         * Thrown if the storage does not support multiple maps (only default map may be used).
-         *
-         * @since 3.0.0
-         */
-        const val MAP_NOT_SUPPORTED = "MapNotSupported"
-
-        /**
          * A map does exist, but is expected to not exist.
          *
          * @since 3.0.0
@@ -214,40 +217,88 @@ open class NakshaError() : AnyObject() {
          */
         const val MAP_NOT_FOUND = "MapNotFound"
 
-        private val CODE = NotNullProperty<NakshaError, String>(String::class) { _, _ -> EXCEPTION }
-        private val MSG = NotNullProperty<NakshaError, String>(String::class) { self, _ -> self.code }
-        private val ID = NullableProperty<NakshaError, String>(String::class)
-        private val THROWABLE = NullableProperty<NakshaError, Throwable>(Throwable::class)
+        /**
+         * A [dictionary-manager][naksha.jbon.IDictManager] does not exist, but is expected to exist.
+         *
+         * @since 3.0.0
+         */
+        const val DICT_MANAGER_NOT_FOUND = "DictManagerNotFound"
+
+        /**
+         * A [IStorage] does not exist, but is expected to exist.
+         *
+         * @since 3.0.0
+         */
+        const val STORAGE_NOT_FOUND = "StorageNotFound"
+
+        private val CODE_FIELD = NotNullProperty<NakshaError, String>(String::class) { _, _ -> EXCEPTION }
+        private val MSG_FIELD = NotNullProperty<NakshaError, String>(String::class) { self, _ -> self.code }
+        private val THROWABLE_FIELD = NullableProperty<NakshaError, Throwable>(Throwable::class)
+
+        /**
+         * The method that is invoked, when [print] is invoked. If `null`, then calling [print] does nothing.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        val printer = AtomicRef<Fx2<NakshaError, PlatformLogger>>(Fx2 { err, logger ->
+            var cause = err.cause
+            while (cause?.cause != null) cause = cause.cause
+            if (cause != null) {
+                logger.info("{} {}, cause: {}", err.code, err.msg, cause)
+            } else {
+                logger.info("{} {}", err.code, err.msg)
+            }
+        })
     }
 
     /**
      * The error code.
      */
-    var code by CODE
+    var code by CODE_FIELD
 
     /**
      * A human-readable message.
      */
-    var msg by MSG
-
-    /**
-     * The identifier of the object that relates to the error; if any.
-     */
-    var id by ID
+    var msg by MSG_FIELD
 
     /**
      * The origin exception that caused this error; if any.
      */
-    var cause by THROWABLE
+    var cause by THROWABLE_FIELD
+
+    /**
+     * Tests if this error represents some kind of conflict and should lead to an 409 Conflict response.
+     * @return `true` if this error represents a conflict; `false` otherwise.
+     * @since 3.0
+     */
+    fun isConflict(): Boolean = when(code) {
+        MAP_EXISTS,
+        MAP_NOT_FOUND,
+        COLLECTION_EXISTS,
+        COLLECTION_NOT_FOUND,
+        FEATURE_EXISTS,
+        FEATURE_NOT_FOUND,
+        CONFLICT -> true
+        else -> false
+    }
 
     override fun hashCode(): Int = code.hashCode()
     override fun equals(other: Any?): Boolean {
         return other is NakshaError
                 && code == other.code
                 && msg == other.msg
-                && id == other.id
                 && cause == other.cause
     }
 
-    override fun toString(): String = "NakshaError(code=$code, msg=$msg, id=$id)"
+    override fun toString(): String = "NakshaError(code=$code, msg=$msg)"
+
+    /**
+     * Send this error to the logger.
+     * @param logger the logger to which to send if `null`, the [Platform.logger] is used.
+     */
+    @JvmOverloads
+    open fun print(logger: PlatformLogger = Platform.logger) {
+        printer.get()?.call(this, logger)
+    }
 }

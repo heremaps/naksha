@@ -5,7 +5,7 @@ package naksha.base
 import kotlin.js.JsExport
 
 /**
- * A atomic reference.
+ * An atomic reference.
  */
 @JsExport
 interface AtomicRef<R : Any> {

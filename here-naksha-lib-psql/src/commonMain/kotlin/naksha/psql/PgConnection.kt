@@ -11,9 +11,7 @@ import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
- * An abstract API that grants access to a single Postgres SQL connection. This interface is made in a way, so that it is naturally
- * compatible with [PLV8](https://plv8.github.io/). In Java there is a thin wrapper on top of a JDBC connection. In PLV8 this is a thin
- * wrapper around the native `plv8` SQL engine.
+ * An abstract API that grants access to a single Postgres SQL connection. This interface is made in a way, so that it is naturally compatible with [PLV8](https://plv8.github.io/). In Java there is a thin wrapper on top of a JDBC connection. In PLV8 this is a thin wrapper around the native `plv8` SQL engine.
  */
 @Suppress("DuplicatedCode")
 @JsExport
@@ -68,8 +66,7 @@ interface PgConnection : AutoCloseable {
     fun isClosed(): Boolean
 
     /**
-     * Rollback the underlying database connection, and return it to the connection pool. Any further invocation of any method of this
-     * object will raise a [IllegalStateException] from here on.
+     * Rollback the underlying database connection, and return it to the connection pool. Any further invocation of any method of this object will raise a [IllegalStateException] from here on.
      */
     override fun close()
 

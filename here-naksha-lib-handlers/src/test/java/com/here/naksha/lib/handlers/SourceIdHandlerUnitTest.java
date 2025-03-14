@@ -2,7 +2,7 @@ package com.here.naksha.lib.handlers;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import naksha.base.Platform;
 import naksha.base.ToJsonOptions;
@@ -161,7 +161,7 @@ class SourceIdHandlerUnitTest {
         when(event.sendUpstream(any())).thenReturn(new SuccessResponse());
 
         // Given: Handler initialization
-        final EventHandler e = new EventHandler();
+        final EventHandlerConfig e = new EventHandlerConfig();
         e.setClassName(SourceIdHandler.class.getName());
         e.setId("some_id");
         final SourceIdHandler sourceIdHandler = new SourceIdHandler(naksha);
@@ -203,14 +203,14 @@ class SourceIdHandlerUnitTest {
     private static WriteRequest createWriteXyzFeaturesFromFile(final String filePath) {
         final NakshaFeature feature = parseJsonFileOrFail(filePath, NakshaFeature.class);
         final WriteRequest writeRequest = new WriteRequest();
-        writeRequest.add(new Write().createFeature(null, "some_collection", feature));
+        writeRequest.add(new Write().createFeature("some_collection", feature));
         return writeRequest;
     }
 
     private static ContextWriteXyzFeatures createContextWriteXyzFeaturesFromFile(final String filePath) {
         final NakshaFeature feature = parseJsonFileOrFail(filePath, NakshaFeature.class);
         final ContextWriteXyzFeatures writeXyzFeatures = new ContextWriteXyzFeatures();
-        writeXyzFeatures.add(new Write().createFeature(null, "some_collection", feature));
+        writeXyzFeatures.add(new Write().createFeature("some_collection", feature));
         return writeXyzFeatures;
     }
 }

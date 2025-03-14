@@ -18,54 +18,80 @@
  */
 package com.here.naksha.lib.view;
 
-import com.here.naksha.lib.core.*;
+import static com.here.naksha.lib.view.PsqlTests.TEST_MAP_ID;
+import static com.here.naksha.lib.view.Sample.sampleXyzResponse;
+import static com.here.naksha.lib.view.Sample.sampleXyzWriteResponse;
+import static java.util.Collections.emptyList;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.here.naksha.lib.core.AbstractTask;
+import com.here.naksha.lib.core.DefaultRequestLimitManager;
+import com.here.naksha.lib.core.IRequestLimitManager;
+import com.here.naksha.lib.core.SimpleTask;
 import com.here.naksha.lib.core.exceptions.TooManyTasks;
 import com.here.naksha.lib.core.exceptions.UncheckedException;
-import naksha.model.*;
 import com.here.naksha.lib.view.concurrent.LayerReadRequest;
 import com.here.naksha.lib.view.concurrent.ParallelQueryExecutor;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeoutException;
+import naksha.base.MapProxy;
+import naksha.model.Action;
+import naksha.model.IReadSession;
+import naksha.model.IStorage;
+import naksha.model.IWriteSession;
+import naksha.model.NakshaContext;
+import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.*;
-import naksha.model.request.query.*;
+import naksha.model.request.FeatureTuple;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.RequestQuery;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
+import naksha.model.request.WriteRequest;
+import naksha.model.request.query.POr;
+import naksha.model.request.query.PQuery;
+import naksha.model.request.query.Property;
+import naksha.model.request.query.StringOp;
 import naksha.model.util.RequestHelper;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import java.util.*;
-import java.util.concurrent.TimeoutException;
-
-import static com.here.naksha.lib.view.Sample.sampleXyzResponse;
-import static com.here.naksha.lib.view.Sample.sampleXyzWriteResponse;
-import static java.util.Collections.emptyList;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
 public class ViewTest {
 
   private NakshaContext nc = NakshaContext.currentContext().withAppId("VIEW_API_TEST").withAuthor("VIEW_API_AUTHOR");
-
   private SessionOptions sessionOptions = new SessionOptions();
-
   private final Write write = new Write();
-
   private final static String TOPO = "topologies";
 
   @Test
   void testReadApiNotation() {
-
     // given
     IStorage storage = mock(IStorage.class);
-    ViewLayer topologiesDS = new ViewLayer(storage, "topologies");
-    ViewLayer buildingsDS = new ViewLayer(storage, "buildings");
-    ViewLayer topologiesCS = new ViewLayer(storage, "topologies");
+    ViewLayer topologiesDS = new ViewLayer(storage, TEST_MAP_ID, "topologies");
+    ViewLayer buildingsDS = new ViewLayer(storage, TEST_MAP_ID, "buildings");
+    ViewLayer topologiesCS = new ViewLayer(storage, TEST_MAP_ID, "topologies");
 
     // each layer is going to return 3 same records
-    List<ResultTuple> results = sampleXyzResponse(3, storage);
+    var results = sampleXyzResponse(3, storage);
     when(storage.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", topologiesDS, buildingsDS, topologiesCS);
@@ -79,12 +105,12 @@ public class ViewTest {
     ViewReadSession readSession = view.newReadSession(sessionOptions);
     ReadFeatures readFeatures = new ReadFeatures();
     readFeatures.setQueryHistory(true);
-    Response result = readSession.execute(
+    Response result = readSession.executeReadFeatures(
         readFeatures, customMergeOperation, skipFetchingResolver);
-    assertInstanceOf(SuccessResponse.class,result);
+    assertInstanceOf(SuccessResponse.class, result);
 
     // then
-    List<ResultTuple> allFeatures = ((SuccessResponse) result).getTuples();
+    List<FeatureTuple> allFeatures = ((SuccessResponse) result).getFeatureTupleList();
     assertEquals(3, allFeatures.size());
     assertTrue(allFeatures.containsAll(results));
   }
@@ -93,31 +119,31 @@ public class ViewTest {
   void testWriteApiNotation() {
     final String VIEW_COLLECTION = "myCollection";
     IStorage storage = mock(IStorage.class);
-    IMap map = mock(IMap.class);
+    MapProxy map = mock(MapProxy.class);
     IWriteSession session = mock(IWriteSession.class);
 
-    ViewLayer topologiesDS = new ViewLayer(storage, "topologies");
+    ViewLayer topologiesDS = new ViewLayer(storage, TEST_MAP_ID, "topologies");
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection(VIEW_COLLECTION, topologiesDS);
     View view = new View(viewLayerCollection);
     when(storage.newWriteSession(sessionOptions)).thenReturn(session);
-    when(storage.getMapId(any(Integer.class))).thenReturn(VIEW_COLLECTION);
+//    when(storage.getMapId(any(Integer.class))).thenReturn(VIEW_COLLECTION);
     when(storage.getId()).thenReturn("Mock Storage");
-    when(storage.get(any())).thenReturn(map);
-    when(map.getCollectionId(any())).thenReturn("Mock Collection");
+//    when(storage.get(any())).thenReturn(map);
+//    when(map.getCollectionId(any())).thenReturn("Mock Collection");
 
     final WriteRequest request = new WriteRequest();
-    final NakshaFeature feature = new NakshaFeature("id0");
-    request.add(write.createFeature(null,VIEW_COLLECTION,feature));
-    when(storage.tupleToFeature(any())).thenReturn(feature);
+    final NakshaFeature feature = new NakshaFeature("0");
+    request.add(write.createFeature("", feature));
+//    when(storage.tupleToFeature(any())).thenReturn(feature);
 
-    Response success = new SuccessResponse(sampleXyzWriteResponse(1, storage, ExecutedOp.CREATED));
+    Response success = new SuccessResponse(sampleXyzWriteResponse(1, Action.CREATED));
     when(session.execute(request)).thenReturn(success);
     ViewWriteSession writeSession = view.newWriteSession(sessionOptions).init();
     Response response = writeSession.execute(request);
-    assertInstanceOf(SuccessResponse.class,response);
+    assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
     assertEquals(feature.getId(), successResponse.getFeatures().get(0).getId());
-    assertEquals(ExecutedOp.CREATED, successResponse.getTuples().get(0).op);
+    assertEquals(Action.CREATED, successResponse.getFeatureTupleList().get(0).getFeature().getProperties().getXyz().getAction());
     writeSession.commit();
   }
 
@@ -127,23 +153,23 @@ public class ViewTest {
     IStorage storage = mock(IStorage.class);
     IWriteSession session = mock(IWriteSession.class);
 
-    ViewLayer topologiesDS = new ViewLayer(storage, "topologies");
+    ViewLayer topologiesDS = new ViewLayer(storage, TEST_MAP_ID, "topologies");
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection(VIEW_COLLECTION, topologiesDS);
     View view = new View(viewLayerCollection);
     when(storage.newWriteSession(sessionOptions)).thenReturn(session);
 
     final WriteRequest request = new WriteRequest();
-    final NakshaFeature feature = new NakshaFeature("sampleTuple0");
-    request.add(write.deleteFeature(null,VIEW_COLLECTION,feature,false));
-    SuccessResponse successResponse1 = new SuccessResponse(sampleXyzWriteResponse(1, storage, ExecutedOp.DELETED));
+    final NakshaFeature feature = new NakshaFeature("0");
+    request.add(write.deleteFeatureById(topologiesDS.getMapId(), topologiesDS.getCollectionId(), feature.getId()));
+    SuccessResponse successResponse1 = new SuccessResponse(sampleXyzWriteResponse(1, Action.DELETED));
     when(session.execute(request)).thenReturn(successResponse1);
     ViewWriteSession writeSession = view.newWriteSession(sessionOptions).init();
 
     Response response = writeSession.execute(request);
-    assertInstanceOf(SuccessResponse.class,response);
+    assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
-    assertEquals(feature.getId(), successResponse.getTuples().get(0).id());
-    assertEquals(ExecutedOp.DELETED, successResponse.getTuples().get(0).op);
+    assertEquals(feature.getId(), successResponse.getFeatureTupleList().get(0).getId());
+    assertEquals(Action.DELETED, successResponse.getFeatureTupleList().get(0).getFeature().getProperties().getXyz().getAction());
     writeSession.commit();
   }
 
@@ -155,10 +181,10 @@ public class ViewTest {
 
     IStorage topologiesStorage = mock(IStorage.class);
     IStorage buildingsStorage = mock(IStorage.class);
-    ViewLayer topologiesDS = new ViewLayer(topologiesStorage, "topologies");
-    ViewLayer buildingsDS = new ViewLayer(buildingsStorage, "buildings");
+    ViewLayer topologiesDS = new ViewLayer(topologiesStorage, TEST_MAP_ID, "topologies");
+    ViewLayer buildingsDS = new ViewLayer(buildingsStorage, TEST_MAP_ID, "buildings");
 
-    List<ResultTuple> results = sampleXyzResponse(3,topologiesStorage);
+    var results = sampleXyzResponse(3, topologiesStorage);
     when(topologiesStorage.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
     when(buildingsStorage.newReadSession(sessionOptions)).thenReturn(readSession);
 
@@ -177,10 +203,10 @@ public class ViewTest {
     IReadSession readSession = mock(IReadSession.class);
     when(readSession.execute(any())).thenReturn(new SuccessResponse(emptyList()));
 
-    ViewLayer topologiesDS_1 = new ViewLayer(topologiesStorage_1, TOPO);
-    ViewLayer topologiesDS_2 = new ViewLayer(topologiesStorage_2, TOPO);
+    ViewLayer topologiesDS_1 = new ViewLayer(topologiesStorage_1, TEST_MAP_ID, TOPO);
+    ViewLayer topologiesDS_2 = new ViewLayer(topologiesStorage_2, TEST_MAP_ID, TOPO);
 
-    List<ResultTuple> results = sampleXyzResponse(3, topologiesStorage_2);
+    var results = sampleXyzResponse(3, topologiesStorage_2);
     when(topologiesStorage_1.newReadSession(sessionOptions)).thenReturn(readSession);
     when(topologiesStorage_2.newReadSession(sessionOptions)).thenReturn(new MockReadSession(results));
 
@@ -197,7 +223,8 @@ public class ViewTest {
     // when not only by id
     clearInvocations(readSession);
     ReadFeatures request2 = new ReadFeatures();
-    POr propQuery = new POr(new PQuery(new Property(Property.ID), StringOp.EQUALS, "1"), new PQuery(new Property(Property.APP_ID), StringOp.EQUALS, "app"));
+    POr propQuery = new POr(new PQuery(new Property(Property.ID), StringOp.EQUALS, "1"),
+        new PQuery(new Property(Property.APP_ID), StringOp.EQUALS, "app"));
     RequestQuery requestQuery = new RequestQuery();
     requestQuery.setProperties(propQuery);
     request2.setQuery(requestQuery);
@@ -210,8 +237,8 @@ public class ViewTest {
   void testTimeoutExceptionInOneOfTheThreads() {
     IStorage topologiesStorage = mock(IStorage.class);
     IStorage buildingsStorage = mock(IStorage.class);
-    ViewLayer topologiesDS = new ViewLayer(topologiesStorage, "topologies");
-    ViewLayer buildingsDS = new ViewLayer(buildingsStorage, "buildings");
+    ViewLayer topologiesDS = new ViewLayer(topologiesStorage, TEST_MAP_ID, "topologies");
+    ViewLayer buildingsDS = new ViewLayer(buildingsStorage, TEST_MAP_ID, "buildings");
 
     // given
     IReadSession topoReadSession = mock(IReadSession.class);
@@ -237,13 +264,13 @@ public class ViewTest {
   @Test
   void shouldThrowTooManyTasksException() {
     IStorage mockStorage = mock(IStorage.class);
-    IRequestLimitManager requestLimitManager= new DefaultRequestLimitManager(30,100);
+    IRequestLimitManager requestLimitManager = new DefaultRequestLimitManager(30, 100);
     AbstractTask.setConcurrencyLimitManager(requestLimitManager);
     long limit = requestLimitManager.getInstanceLevelLimit();
     ViewLayer[] layerDS = new ViewLayer[(int) (limit + 10)];
     //Create ThreadFactory Limit + 10 layers
     for (int ind = 0; ind < layerDS.length; ind++) {
-      layerDS[ind] = new ViewLayer(mockStorage, "collection" + ind);
+      layerDS[ind] = new ViewLayer(mockStorage, TEST_MAP_ID, "collection" + ind);
     }
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("myCollection", layerDS);
     View view = new View(viewLayerCollection);
@@ -255,7 +282,7 @@ public class ViewTest {
         public Object answer(InvocationOnMock invocation) throws Throwable {
           List<LayerReadRequest> requests = invocation.getArgument(0);
           for (LayerReadRequest layerReadRequest : requests) {
-            SimpleTask singleTask = new SimpleTask<>(null,nc);
+            SimpleTask singleTask = new SimpleTask<>(null, nc);
             tasks.add(singleTask);
             singleTask.start(() -> {
               Thread.sleep(1000);

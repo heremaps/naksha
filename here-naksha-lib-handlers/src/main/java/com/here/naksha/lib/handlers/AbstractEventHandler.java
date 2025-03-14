@@ -71,7 +71,7 @@ public abstract class AbstractEventHandler implements IEventHandler {
   protected void addStorageIdToStreamInfo(final @Nullable String storageId, final @NotNull NakshaContext context) {
     final StreamInfo streamInfo = context.getStreamInfo();
     if (streamInfo != null) {
-      streamInfo.setStorageIdIfMissing(storageId);
+      streamInfo.withStorageIdIfMissing(storageId);
     }
   }
 

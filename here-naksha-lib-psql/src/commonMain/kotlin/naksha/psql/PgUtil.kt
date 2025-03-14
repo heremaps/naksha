@@ -6,10 +6,12 @@ import naksha.base.*
 import naksha.geo.SpGeometry
 import naksha.jbon.*
 import naksha.model.*
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON_GZIP
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON_GZIP
+import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL
+import naksha.model.Naksha.NakshaCompanion.MAPS_COL
+import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_ident
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_literal
@@ -25,15 +27,52 @@ import kotlin.jvm.JvmStatic
 class PgUtil private constructor() {
     companion object PgUtilCompanion {
         /**
-         * Array to query the partition name from the partition number (resolves 0 to "000", 1 to "001", ..., 255 to "256"), usage like:
-         *
-         * `partitionName[partitionNumber(conn, "id", 16)]`
-         *
-         * @see partitionPosix
+         * The quoted identifier of the administration map to be used in queries.
+         * @since 3.0.0
+         */
+        @JvmField
+        @JsStatic
+        val ADMIN_MAP_QUOTED = quoteIdent(ADMIN_MAP)
+
+        /**
+         * The quoted identifier of the collection in which transactions are stored.
+         * @since 3.0.0
+         */
+        @JvmField
+        @JsStatic
+        val ADMIN_TRANSACTIONS_COL_QUOTED = quoteIdent(TRANSACTIONS_COL)
+
+        /**
+         * The quoted identifier of the virtual maps collection to be used in queries.
+         * @since 3.0.0
+         */
+        @JvmField
+        @JsStatic
+        val ADMIN_MAPS_COL_QUOTED = quoteIdent(MAPS_COL)
+
+        /**
+         * The quoted identifier of the virtual collection in which the dictionaries are stored.
+         * @since 3.0.0
+         */
+        @JvmField
+        @JsStatic
+        val ADMIN_DICT_COL_QUOTED = quoteIdent(DICTIONARIES_COL)
+
+        /**
+         * The quoted identifier of the virtual collections collection to be used in queries.
+         * @since 3.0.0
+         */
+        @JvmField
+        @JsStatic
+        val COLLECTIONS_COL_QUOTED = quoteIdent(COLLECTIONS_COL)
+
+        /**
+         * Array to query the partition name from the partition number (resolves 0 to "000", 1 to "001", ..., 255 to "256").
+         * @see partitionSuffix
          */
         @JsStatic
         @JvmField
-        val POSIX = Array(256) { if (it < 10) "00$it" else if (it < 100) "0$it" else "$it" }
+        val SUFFIX = Array(256) { if (it < 10) "00$it" else if (it < 100) "0$it" else "$it" }
 
         /**
          * Array to create a pseudo GeoHash, which is BASE-32 encoded.
@@ -51,56 +90,62 @@ class PgUtil private constructor() {
         internal val TXN_LOCK_ID = lockId("naksha_txn_seq")
 
         /**
-         * Given as parameter for [PgStorage.initStorage], `override` can be set to _true_ to force the storage to reinstall, even when
-         * the existing installed version of Naksha code is up-to-date.
-         */
-        const val OVERRIDE = "override"
-
-        /**
-         * Given as parameter for [PgStorage.initStorage], `options` can be a [PgOptions] object to be used for the initialization
-         * connection (specific changed defaults to timeouts and locks).
-         */
-        const val OPTIONS = "options"
-
-        /**
-         * Given as parameter for [PgStorage.initStorage], `context` can be a [naksha.model.NakshaContext] to be used while doing the
-         * initialization; only if [superuser][naksha.model.NakshaContext.su] is _true_, then a not uninitialized storage is installed.
-         * This requires as well superuser rights in the PostgresQL database.
-         */
-        const val CONTEXT = "context"
-
-        /**
-         * Special parameter, only recognized by the JVM storage implementation (`PsqlStorage`) to install the needed database SQL code in this version. The value is expected to be an instance of [naksha.model.NakshaVersion], a string in the same format or the binary form (64-bit integer).
-         */
-        const val VERSION: String = "version"
-
-        /**
-         * Given as parameter for [PgStorage.initStorage], `id` used if the storage is uninitialized, initialize it with the given
-         * storage identifier. If the storage is already initialized, reads the existing identifier and compares it with the given one.
-         * If they do not match, throws an [IllegalStateException]. If not given a random new identifier is generated, when no identifier
-         * yet exists. It is strongly recommended to provide the identifier.
-         */
-        const val ID = "id"
-
-        /**
          * Quotes a string literal, so a custom string. For PostgresQL database this means to replace all single quotes
          * (`'`) with two single quotes (`''`). This encloses the string with quotation characters, when needed.
          * @param parts the literal parts to merge and quote.
          * @return The quoted literal.
+         * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
-        fun quoteLiteral(vararg parts: String): String = quote_literal(*parts) ?: Naksha.quoteLiteral(*parts)
+        fun quoteLiteral(vararg parts: String): String {
+            val quote = quote_literal(*parts)
+            if (quote != null) return quote
+            val sb = StringBuilder()
+            sb.append("E'")
+            for (part in parts) {
+                for (c in part) {
+                    when (c) {
+                        '\'' -> sb.append('\'').append('\'')
+                        '\\' -> sb.append('\\').append('\\')
+                        else -> sb.append(c)
+                    }
+                }
+            }
+            sb.append('\'')
+            return sb.toString()
+        }
 
         /**
          * Quotes an identifier, so a database internal name. For PostgresQL database this means to replace all double quotes
          * (`"`) with two double quotes (`""`). This encloses the string with quotation characters, when needed.
          * @param parts the identifier parts to merge and quote.
          * @return the quoted identifier.
+         * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
-        fun quoteIdent(vararg parts: String): String = quote_ident(*parts) ?: Naksha.quoteIdent(*parts)
+        fun quoteIdent(vararg parts: String): String {
+            if (parts.isEmpty()) throw NakshaException(ILLEGAL_ARGUMENT, "The given parts must not be empty")
+            val quote = quote_ident(*parts)
+            if (quote != null) return quote
+            var quoted = false
+            val sb = StringBuilder()
+            sb.append('"')
+            for (part in parts) {
+                for (c in part) {
+                    when (c) {
+                        in 'a'..'z', in 'A'..'Z', in '0'..'9', '_' -> sb.append(c)
+                        '"' -> { quoted = true; sb.append('"').append('"') }
+                        '\\' -> { quoted = true; sb.append('\\').append('\\') }
+                        else -> { quoted = true; sb.append(c) }
+                    }
+                }
+            }
+            if (!quoted) return if (parts.size == 1) return parts[0] else sb.substring(1)
+            sb.append('"')
+            return sb.toString()
+        }
 
         /**
          * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the
@@ -115,13 +160,13 @@ class PgUtil private constructor() {
         fun partitionNumber(featureId: String): Int = PgPlatform.partitionNumber(featureId)
 
         /**
-         * Returns the posix of the partition based upon the given partition number, so maps 0 to "000", 1 to "001", ..., and 255 to "255".
+         * Returns the suffix of the partition based upon the given partition number, so maps 0 to "000", 1 to "001", ..., and 255 to "255".
          * @param number the partition number.
-         * @return the partition posix.
+         * @return the partition suffix.
          */
         @JsStatic
         @JvmStatic
-        fun partitionPosix(number: Int): String = POSIX[number and 255]
+        fun partitionSuffix(number: Int): String = SUFFIX[number and 255]
 
         /**
          * Calculate a pseudo geo-reference-id from the given feature id.
@@ -171,22 +216,12 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun decodeFeature(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): NakshaFeature? {
-            if (bytes == null || bytes.isEmpty()) return null
-            var raw = bytes
-            if (flags.featureGzip()) raw = Platform.gzipInflate(bytes)
-            val encoding = flags.featureEncoding()
-            if (encoding == JBON || encoding == JBON_GZIP) {
-                val decoder = JbFeatureDecoder(dictManager)
-                decoder.mapBytes(raw)
-                return decoder.toAnyObject().proxy(NakshaFeature::class)
-            }
-            if (encoding == JSON || encoding == JSON_GZIP) {
-                val decoded = Platform.fromJSON(bytes.decodeToString())
-                if (decoded is PlatformMap) return decoded.proxy(NakshaFeature::class)
-            }
-            return null
-        }
+        @Deprecated(
+            message = "Please use Naksha class instead",
+            replaceWith = ReplaceWith("Naksha.decodeFeature(bytes, flags, dictManager)"),
+            level = DeprecationLevel.WARNING
+        )
+        fun decodeFeature(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): NakshaFeature? = Naksha.decodeFeature(bytes, flags, dictManager)
 
         /**
          * Encodes the given [NakshaFeature] into bytes.
@@ -198,20 +233,12 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun encodeFeature(feature: NakshaFeature?, flags: Flags, dict: JbDictionary? = null): ByteArray? {
-            if (feature == null) return null
-            val encoding = flags.featureEncoding()
-            var byteArray: ByteArray? = null
-            if (encoding == JSON || encoding == JSON_GZIP) {
-                val encoded = Platform.toJSON(feature)
-                byteArray = encoded.encodeToByteArray()
-            } else if (encoding == JBON || encoding == JBON_GZIP) {
-                val encoder = JbEncoder(dict)
-                byteArray = encoder.buildFeatureFromMap(feature)
-            }
-            if (flags.featureGzip() && byteArray != null) byteArray = Platform.gzipDeflate(byteArray)
-            return byteArray
-        }
+        @Deprecated(
+            message = "Please use Naksha class instead",
+            replaceWith = ReplaceWith("Naksha.encodeFeature(feature, flags, dict)"),
+            level = DeprecationLevel.WARNING
+        )
+        fun encodeFeature(feature: NakshaFeature?, flags: Flags, dict: JbDictionary? = null): ByteArray? = Naksha.encodeFeature(feature, flags, dict)
 
         /**
          * Decode the Naksha tags.
@@ -223,22 +250,12 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun decodeTags(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): TagMap? {
-            if (bytes == null || bytes.isEmpty()) return null
-            var raw = bytes
-            if (flags.tagsGzip()) raw = Platform.gzipInflate(bytes)
-            val encoding = flags.tagsEncoding()
-            if (encoding == TagsEncoding.JBON || encoding == TagsEncoding.JBON_GZIP) {
-                val decoder = JbFeatureDecoder(dictManager)
-                decoder.mapBytes(raw)
-                return decoder.toAnyObject().proxy(TagMap::class)
-            }
-            if (encoding == TagsEncoding.JSON || encoding == TagsEncoding.JSON_GZIP) {
-                val decoded = Platform.fromJSON(bytes.decodeToString())
-                if (decoded is PlatformMap) return decoded.proxy(TagMap::class)
-            }
-            return null
-        }
+        @Deprecated(
+            message = "Please use Naksha class instead",
+            replaceWith = ReplaceWith("Naksha.decodeTags(raw, bytes, flags, dictManager)"),
+            level = DeprecationLevel.WARNING
+        )
+        fun decodeTags(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): TagMap? = Naksha.decodeTags(bytes, flags, dictManager)
 
         /**
          * Encodes the given tags into bytes.
@@ -250,22 +267,12 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun encodeTags(tags: TagMap?, flags: Flags, dict: JbDictionary? = null): ByteArray? {
-            if (tags == null) return null
-            val encoding = flags.tagsEncoding()
-            var byteArray: ByteArray? = null
-            if (encoding == TagsEncoding.JSON || encoding == TagsEncoding.JSON_GZIP) {
-                val encoded = Platform.toJSON(tags)
-                byteArray = encoded.encodeToByteArray()
-            } else if (encoding == TagsEncoding.JBON || encoding == TagsEncoding.JBON_GZIP) {
-                val encoder = JbEncoder(dict)
-                encoder.encodeMap(tags)
-                byteArray = encoder.buildFeature(null, FEATURE_VARIANT_TAGS)
-            }
-            if (flags.tagsGzip() && byteArray != null) byteArray = Platform.gzipDeflate(byteArray)
-            return byteArray
-
-        }
+        @Deprecated(
+            message = "Please use Naksha class instead",
+            replaceWith = ReplaceWith("Naksha.encodeTags(tags, flags, dict)"),
+            level = DeprecationLevel.WARNING
+        )
+        fun encodeTags(tags: TagMap?, flags: Flags, dict: JbDictionary? = null): ByteArray? = Naksha.encodeTags(tags, flags, dict)
 
         /**
          * Decode a GeoJSON geometry from encoded bytes.
@@ -276,7 +283,12 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun decodeGeometry(bytes: ByteArray?, flags: Flags): SpGeometry? = PgPlatform.decodeGeometry(bytes, flags)
+        @Deprecated(
+            message = "Please use Naksha class instead",
+            replaceWith = ReplaceWith("Naksha.decodeGeometry(bytes, flags)"),
+            level = DeprecationLevel.WARNING
+        )
+        fun decodeGeometry(bytes: ByteArray?, flags: Flags): SpGeometry? = Naksha.decodeGeometry(bytes, flags)
 
         /**
          * Encodes the given GeoJSON geometry into bytes.
@@ -287,6 +299,11 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun encodeGeometry(geometry: SpGeometry?, flags: Flags): ByteArray? = PgPlatform.encodeGeometry(geometry, flags)
+        @Deprecated(
+            message = "Please use Naksha class instead",
+            replaceWith = ReplaceWith("Naksha.encodeGeometry(geometry, flags)"),
+            level = DeprecationLevel.WARNING
+        )
+        fun encodeGeometry(geometry: SpGeometry?, flags: Flags): ByteArray? = Naksha.encodeGeometry(geometry, flags)
     }
 }

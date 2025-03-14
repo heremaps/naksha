@@ -36,6 +36,7 @@ import kotlin.reflect.KProperty
  * @param klass the [KClass] of the property type.
  * @param autoCreate if the value should be auto-created, when it is _null_. If additionally an [init] is defined, then this invoked
  * before auto-generating a value.
+ * @param autoRemove if the value should be removed, when it is set to _null_.
  * @param name the name of the property in the map, if different from the property name, if _null_, the property name is used.
  * @param init the initializer to create a new value, when the property does not exist or the value is not of the desired type. If the
  * initializer returns _null_, the value is created by invoking the default constructor of the value type.
@@ -45,6 +46,7 @@ import kotlin.reflect.KProperty
 open class NullableMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE : Any, PROPERTY_TYPE : MAP_VALUE_TYPE>(
     val klass: KClass<out PROPERTY_TYPE>,
     val autoCreate: Boolean = false,
+    val autoRemove: Boolean = false,
     val name: String? = null,
     val init: ((self: MAP, name: String) -> PROPERTY_TYPE?)? = null
 ) {
@@ -66,6 +68,11 @@ open class NullableMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE
         return value
     }
 
+    @JsName("setValueByProperty")
+    open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE?) {
+        val key = this.name ?: property.name
+        if (autoRemove && value == null) self.removeRaw(key) else self.put(key, value)
+    }
     @JsName("getValueByProperty")
     open operator fun getValue(self: MAP, property: KProperty<*>): PROPERTY_TYPE? =
         getValue(self, property.name)
@@ -77,8 +84,4 @@ open class NullableMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE
             ?: throw IllegalArgumentException("Undefined property name"),
             value
         )
-
-    @JsName("setValueByProperty")
-    open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE?) =
-        self.put(this.name ?: property.name, value)
 }

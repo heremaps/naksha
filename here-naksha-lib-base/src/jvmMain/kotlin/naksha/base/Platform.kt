@@ -12,8 +12,14 @@ import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.kotlinModule
+import naksha.base.Platform.PlatformCompanion.proxy
 import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
+import java.lang.invoke.MethodHandles
+import java.lang.reflect.Method
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.text.Normalizer
 import java.util.concurrent.ConcurrentHashMap
@@ -24,6 +30,7 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.isSuperclassOf
 import kotlin.reflect.full.primaryConstructor
+
 
 /**
  * The JVM implementation of the static Naksha multi-platform singleton.
@@ -81,16 +88,16 @@ actual class Platform {
             jsonFactory.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false)
             jsonFactory.configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, false)
             JsonMapper.builder(jsonFactory)
-                .enable(MapperFeature.DEFAULT_VIEW_INCLUSION)
+                //.enable(MapperFeature.DEFAULT_VIEW_INCLUSION)
                 .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
                 .enable(MapperFeature.SORT_CREATOR_PROPERTIES_FIRST)
-                .serializationInclusion(JsonInclude.Include.NON_NULL)
-                .visibility(PropertyAccessor.SETTER, JsonAutoDetect.Visibility.ANY)
-                .visibility(PropertyAccessor.GETTER, JsonAutoDetect.Visibility.PUBLIC_ONLY)
+                //.serializationInclusion(JsonInclude.Include.NON_NULL)
+                .visibility(PropertyAccessor.SETTER, JsonAutoDetect.Visibility.NONE)
+                .visibility(PropertyAccessor.GETTER, JsonAutoDetect.Visibility.NONE)
                 .visibility(PropertyAccessor.IS_GETTER, JsonAutoDetect.Visibility.NONE)
-                .visibility(PropertyAccessor.CREATOR, JsonAutoDetect.Visibility.ANY)
+                .visibility(PropertyAccessor.CREATOR, JsonAutoDetect.Visibility.NONE)
                 .configure(SerializationFeature.CLOSE_CLOSEABLE, false)
-                .addModule(kotlinModule())
+                //.addModule(kotlinModule())
                 .addModule(module)
                 .build()
         }
@@ -176,6 +183,9 @@ actual class Platform {
         internal val initialized = AtomicBoolean(false)
 
         private val nonArgsConstuctorsCache: AtomicMap<KClass<out Any>, KFunction<Any>>
+        private val ensureClassInitialized: Method? // unsafe.ensureClassInitialized
+        private val lookupInstance: Any? // MethodHandles.lookup()
+        private val ensureInitialized: Method? // MethodHandles.lookup().ensureInitialized(klass);
 
         init {
             val unsafeConstructor = Unsafe::class.java.getDeclaredConstructor()
@@ -184,6 +194,25 @@ actual class Platform {
             val someByteArray = ByteArray(8)
             baseOffset = unsafe.arrayBaseOffset(someByteArray.javaClass)
             nonArgsConstuctorsCache = AtomicMap()
+
+            var _ensureClassInitialized: Method?
+            var _ensureInitialized: Method?
+            var _lookupInstance: Any?
+            try {
+                // Note: Before Java 15, `MethodHandles.lookup().ensureInitialized(klass)` does not exist, we need to use Unsafe!
+                _ensureClassInitialized = unsafe.javaClass.getMethod("ensureClassInitialized", Class::class.java)
+                _lookupInstance = null
+                _ensureInitialized = null
+            } catch (ignore: NoSuchMethodException) {
+                // In Java 23+ `Unsafe.ensureClassInitialized` does not exist, use `MethodHandles.lookup().ensureInitialized(klass)`!
+                _ensureClassInitialized = null
+                val lookupMethod = MethodHandles::class.java.getMethod("lookup")
+                _lookupInstance = lookupMethod.invoke(null)
+                _ensureInitialized = _lookupInstance.javaClass.getMethod("ensureInitialized", Class::class.java)
+            }
+            ensureClassInitialized = _ensureClassInitialized
+            lookupInstance = _lookupInstance
+            ensureInitialized = _ensureInitialized
         }
 
         @JvmStatic
@@ -205,6 +234,16 @@ actual class Platform {
         @JvmStatic
         actual fun isProxyKlass(klass: KClass<*>): Boolean = Proxy::class.isSuperclassOf(klass)
 
+        @JvmStatic
+        actual fun <T : Any> klassForName(name: String): KClass<T> {
+            try {
+                @Suppress("UNCHECKED_CAST")
+                return (Class.forName(name, true, this::class.java.classLoader).kotlin) as KClass<T>
+            } catch (e: Exception) {
+                throw IllegalArgumentException("Class '$name' not found", e)
+            }
+        }
+
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
         actual fun <T : Any> klassOf(o: T): KClass<T> = o::class as KClass<T>
@@ -213,9 +252,24 @@ actual class Platform {
          * Returns the Kotlin class of the given Java class.
          * @param javaClass The Java class.
          * @return The Kotlin class.
+         * @see [proxy]
+         * @see [Proxy.proxy]
          */
         @JvmStatic
         fun <T : Any> klassFor(javaClass: Class<T>): KClass<T> = javaClass.kotlin
+
+        /**
+         * Java specific helper, that accepts a Java class to proxy.
+         * @param javaClass The Java class.
+         * @return the proxy.
+         * @see [proxy]
+         * @see [Proxy.proxy]
+         */
+        @JvmStatic
+        fun <T : Proxy> javaProxy(any: PlatformObject?, javaClass: Class<T>): T? {
+            if (any == null) return null
+            return any.proxy(javaClass.kotlin)
+        }
 
         /**
          * Returns the Java class of the given Kotlin class.
@@ -235,7 +289,19 @@ actual class Platform {
         actual fun <R: Any> newAtomicRef(startValue: R?): AtomicRef<R> = JvmAtomicRef(startValue)
 
         @JvmStatic
+        actual fun <R: Any> newAtomicNonNullRef(startValue: R): AtomicNonNullRef<R> = JvmAtomicNonNullRef(startValue)
+
+        @JvmStatic
+        actual fun newAtomicBool(startValue: Boolean): AtomicBool = JvmAtomicBool(startValue)
+
+        @JvmStatic
         actual fun newAtomicInt(startValue: Int): AtomicInt = JvmAtomicInt(startValue)
+
+        @JvmStatic
+        actual fun newAtomicInt64(startValue: Int64): AtomicInt64 = JvmAtomicInt64(startValue)
+
+        @JvmStatic
+        fun newAtomicInt64(startValue: Long): AtomicInt64 = JvmAtomicInt64(startValue)
 
         @JvmStatic
         actual fun newList(vararg entries: Any?): PlatformList = JvmList(*entries)
@@ -256,6 +322,7 @@ actual class Platform {
         actual fun unbox(value: Any?): Any? {
             if (value is Proxy) return value.platformObject() as? JvmObject
             if (value is Array<*>) return JvmList(*value)
+            if (value is JsEnum) return value.value
             return value
         }
 
@@ -302,6 +369,12 @@ actual class Platform {
         actual fun toInt64RawBits(d: Double): Int64 = longToInt64(java.lang.Double.doubleToRawLongBits(d))
 
         @JvmStatic
+        actual fun intToInt64(value: Int): Int64 {
+            if (value >= -1024 && value < 1024) return int64Cache[(value shl 21) ushr 21]
+            return longToInt64(value.toLong())
+        }
+
+        @JvmStatic
         actual fun longToInt64(value: Long): Int64 {
             if (value >= -1024 && value < 1024) return int64Cache[(value.toInt() shl 21) ushr 21]
             if (value == INT64_MAX_VALUE.toLong()) return INT64_MAX_VALUE
@@ -339,8 +412,7 @@ actual class Platform {
         actual fun hashCodeOf(o: Any?): Int = throw UnsupportedOperationException()
 
         @JvmStatic
-        actual fun <T : Any> newInstanceOf(klass: KClass<out T>): T =
-            resolveConstructorFor(klass).call()
+        actual fun <T : Any> newInstanceOf(klass: KClass<out T>): T = resolveConstructorFor(klass).call()
 
         @JvmStatic
         @Suppress("UNCHECKED_CAST")
@@ -348,7 +420,19 @@ actual class Platform {
 
         @JvmStatic
         actual fun initializeKlass(klass: KClass<*>) {
-            unsafe.ensureClassInitialized(klass.java)
+            // This code is required, because in Java 23 they removed unsafe.ensureClassInitialized, but
+            // the replacement method does not exist before Java 15, this is such a nonsense!
+            val lookupInstance = this.lookupInstance
+            val ensureInitialized = this.ensureInitialized
+            if (ensureInitialized != null && lookupInstance != null) {
+                ensureInitialized.invoke(lookupInstance, klass.java)
+                // == MethodHandles.lookup().ensureInitialized(klass.java);
+            } else {
+                val ensureClassInitialized = this.ensureClassInitialized
+                require(ensureClassInitialized != null) { "Failed to use unsafe.ensureClassInitialized" }
+                ensureClassInitialized.invoke(unsafe, klass.java)
+                // == unsafe.ensureClassInitialized(klass.java)
+            }
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -389,14 +473,19 @@ actual class Platform {
         internal val toJsonOptions = ThreadLocal<ToJsonOptions>()
 
         @JvmStatic
-        @JvmOverloads
+        actual fun toJSON(obj: Any?): String = toJSON(obj, ToJsonOptions.DEFAULT)
+
+        @JvmStatic
         actual fun toJSON(obj: Any?, options: ToJsonOptions): String {
             toJsonOptions.set(options)
-            return objectMapper.get().writeValueAsString(obj)
+            return objectMapper.get().writeValueAsString(unbox(obj))
         }
 
         @JvmField
         internal val fromJsonOptions = ThreadLocal<FromJsonOptions>()
+
+        @JvmStatic
+        actual fun fromJSON(json: String): Any? = fromJSON(json, FromJsonOptions.DEFAULT)
 
         @JvmStatic
         actual fun fromJSON(json: String, options: FromJsonOptions): Any? {
@@ -506,16 +595,17 @@ actual class Platform {
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
         actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
-            require(pobject is JvmObject)
+            val obj = unbox(pobject)
+            require(obj is JvmObject)
             val symbol = Symbols.of(klass)
-            var proxy = pobject.getSymbol(symbol)
+            var proxy = obj.getSymbol(symbol)
             if (proxy != null) {
                 if (klass.isInstance(proxy)) return proxy as T
                 if (doNotOverride) throw IllegalStateException("The symbol $symbol is already bound to incompatible type")
             }
 
             proxy = resolveConstructorFor(klass).call()
-            proxy.bind(pobject, symbol)
+            proxy.bind(obj, symbol)
             return proxy
         }
 
@@ -671,6 +761,14 @@ actual class Platform {
         actual fun isPlv8(): Boolean = false
 
         @JvmStatic
+        actual fun encodeURIComponent(uriComponent: String): String
+            = URLEncoder.encode(uriComponent, StandardCharsets.UTF_8).replace("+", "%20")
+
+        @JvmStatic
+        actual fun decodeURIComponent(encodedURI: String): String
+            = URLDecoder.decode(encodedURI, StandardCharsets.UTF_8);
+
+        @JvmStatic
         private val md5Digest = ThreadLocal.withInitial { MessageDigest.getInstance("MD5") }
 
         @JvmStatic
@@ -678,6 +776,14 @@ actual class Platform {
             val digest = md5Digest.get()
             digest.reset()
             digest.update(text.toByteArray(Charsets.UTF_8))
+            return digest.digest()
+        }
+
+        @JvmStatic
+        actual fun md5(bytes: ByteArray): ByteArray {
+            val digest = md5Digest.get()
+            digest.reset()
+            digest.update(bytes)
             return digest.digest()
         }
 

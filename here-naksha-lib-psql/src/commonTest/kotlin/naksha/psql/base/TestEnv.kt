@@ -3,26 +3,47 @@
 package naksha.psql.base
 
 import naksha.base.PlatformUtil
+import naksha.model.Naksha
 import naksha.model.NakshaContext
 import naksha.model.SessionOptions
+import naksha.model.objects.NakshaStorage
+import naksha.model.request.SuccessResponse
+import naksha.model.request.Write
+import naksha.model.request.WriteRequest
 import naksha.psql.*
-import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
+import kotlin.jvm.JvmField
+import kotlin.test.assertTrue
 
 /**
- * Abstract class for all tests using connection to db.
+ * Abstract class for all tests using connection to db. Each test should use an own map.
  */
 @Suppress("MemberVisibilityCanBePrivate")
 @JsExport
-class TestEnv(dropSchema: Boolean, initStorage: Boolean, enableInfoLogs: Boolean = false) {
+class TestEnv(
+    /**
+     * The unique map identifier to use for test collections.
+     */
+    mapId: String? = null,
+    /**
+     * Delete the map before the test starts?
+     */
+    deleteMap: Boolean = true,
+    /**
+     * Enable info-logs before the test starts?
+     */
+    enableInfoLogs: Boolean = true,
+) {
+    /**
+     * The unique map identifier to use.
+     */
+    val mapId: String = mapId ?: PgTest.TEST_MAP_ID
     init {
         PlatformUtil.ENABLE_INFO = enableInfoLogs
+        NakshaContext.defaultMapId.set(PgTest.TEST_MAP_ID)
+        NakshaContext.defaultAppName.set(PgTest.TEST_APP_NAME)
+        NakshaContext.defaultAppId.set(PgTest.TEST_APP_ID)
     }
-
-    companion object TestBasicsCompanion {
-    }
-
-    val storage = PgPlatform.newTestStorage()
 
     /**
      * The default [NakshaContext] to be used when opening new PostgresQL sessions via [PgStorage.newWriteSession] or
@@ -32,50 +53,36 @@ class TestEnv(dropSchema: Boolean, initStorage: Boolean, enableInfoLogs: Boolean
         appId = PgTest.TEST_APP_ID,
         author = PgTest.TEST_APP_AUTHOR,
         su = true
-    )
-    val options = SessionOptions.from(context)
-    private var _pgSession: PgSession? = null
+    ).withMapId(this.mapId).attachToCurrentThread()
 
     /**
-     * The PostgresQL session to be used to testing, late initialized to capture errors.
+     * The test local storage.
+     *
+     * **Note**: You can override the docker-config via environment variable `NAKSHA_TEST_PSQL_DB_URL`, for example
      */
-    val pgSession: PgSession
-        get() {
-            var s = _pgSession
-            if (s == null) {
-                s = storage.newSession(options, false)
-                _pgSession = s
-            }
-            return s
-        }
+    @JvmField
+    val storage = Naksha.useStorage(
+        NakshaStorage.fromJSON("""{
+  "id": "local_psql_test_storage",
+  "className": "naksha.psql.PsqlTestStorage"
+}""")) as PgStorage
 
-    private var _pgConnection: PgConnection? = null
-    val pgConnection: PgConnection
-        get() {
-            var c = _pgConnection
-            if (c == null) {
-                c = pgSession.usePgConnection()
-                _pgConnection = c
-            }
-            return c
-        }
+    /**
+     * Session options patched for this test environment.
+     */
+    val options = SessionOptions.from(context)
 
-    fun dropSchema() {
-        val conn = storage.newConnection(options, false) { _, _ -> }
-        conn.use {
-            conn.execute("DROP SCHEMA IF EXISTS ${quoteIdent(storage.defaultSchemaName)} CASCADE")
-                .close()
-            conn.commit()
+    fun deleteMap() {
+        val request = WriteRequest()
+        request.add(Write().deleteMapById(mapId))
+        storage.useWriteSession(options) { session ->
+            val response = session.execute(request)
+            assertTrue { response is SuccessResponse }
         }
     }
 
-    fun initStorage() {
-        storage.initStorage(mapOf(PgUtil.ID to PgTest.TEST_STORAGE_ID, PgUtil.CONTEXT to context))
-    }
-
+    // TODO: Fix me!
     init {
-        if (dropSchema) dropSchema()
-        if (initStorage) initStorage()
-        context.attachToCurrentThread()
+        // if (deleteMap) deleteMap()
     }
 }

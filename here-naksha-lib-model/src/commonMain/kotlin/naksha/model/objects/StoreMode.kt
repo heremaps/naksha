@@ -8,19 +8,32 @@ import kotlin.reflect.KClass
 
 /**
  * How the data should be stored for certain components of [NakshaCollection].
- * [ON] data should be stored.
- * [SUSPEND] newer data should not be collected, older data still available.
- * [OFF] all data is wiped and no new data collected.
+ * - [ON] data should be stored.
+ * - [SUSPEND] temporarily disable storage, can be re-enabled later, keeps older data available.
+ * - [OFF] disable data storage permanently, wipe stored older data.
+ * @since 3.0.0
  */
 @JsExport
 class StoreMode: JsEnum() {
     companion object StoreMode_C {
+        /**
+         * The default storage-mode, data should be stored.
+         * @since 3.0.0
+         */
         @JvmField
         val ON = defIgnoreCase(StoreMode::class, "on")
 
+        /**
+         * Temporarily disable storage, can be re-enabled later, keeps older data available.
+         * @since 3.0.0
+         */
         @JvmField
         val SUSPEND = defIgnoreCase(StoreMode::class, "suspend")
 
+        /**
+         * Disable data storage permanently, wipe stored older data.
+         * @since 3.0.0
+         */
         @JvmField
         val OFF = defIgnoreCase(StoreMode::class, "off")
     }

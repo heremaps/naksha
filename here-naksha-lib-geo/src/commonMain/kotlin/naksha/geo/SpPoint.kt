@@ -29,22 +29,43 @@ class SpPoint() : SpGeometry() {
         return this
     }
 
+    /**
+     * The [WGS84](https://en.wikipedia.org/wiki/World_Geodetic_System#WGS_84) `latitude` (mathematical `Y`) in decimal degree, so a value between `-90` and `+90` with 7 decimal digits' precision.
+     * @since 3.0
+     */
     var latitude: Double
         get() = useCoordinates().getLatitude()
         set(value) {
             useCoordinates().setLatitude(value)
         }
 
+    /**
+     * The [WGS84](https://en.wikipedia.org/wiki/World_Geodetic_System#WGS_84) `longitude` (mathematical `X`) in decimal degree, so a value between `-180` and `+180` with 7 decimal digits' precision.
+     * @since 3.0
+     */
     var longitude: Double
         get() = useCoordinates().getLongitude()
         set(value) {
             useCoordinates().setLatitude(value)
         }
 
-    var altitude: Double?
-        get() = useCoordinates().getAltitude()
+    /**
+     * The `Z`-ordinate, a value with 2 decimal digits' precision.
+     * @since 3.0
+     */
+    var z: Double?
+        get() = useCoordinates().getZ()
         set(value) {
-            useCoordinates().setAltitude(value)
+            useCoordinates().setZ(value)
         }
 
+    /**
+     * The `M`-ordinate, a value with 2 decimal digits' precision.
+     * @since 3.0
+     */
+    var m: Double?
+        get() = useCoordinates().getM()
+        set(value) {
+            useCoordinates().setM(value)
+        }
 }

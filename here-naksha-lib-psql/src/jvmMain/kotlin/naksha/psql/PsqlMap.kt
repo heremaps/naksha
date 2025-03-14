@@ -1,311 +1,205 @@
 package naksha.psql
 
+import com.github.benmanes.caffeine.cache.*
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.logger
-import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
-import naksha.model.NakshaVersion
-import naksha.model.NakshaException
 import naksha.model.Naksha
-import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_SUPPORTED
-import naksha.psql.PgIndex.PgIndexCompanion.app_id_updatedAt_id_txn_uid
-import naksha.psql.PgIndex.PgIndexCompanion.author_ts_id_txn_uid
-import naksha.psql.PgIndex.PgIndexCompanion.gist_geo
-import naksha.psql.PgIndex.PgIndexCompanion.id_txn_uid
-import naksha.psql.PgIndex.PgIndexCompanion.tags_id_txn_uid
-import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
-import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
+import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP_NUMBER
+import naksha.model.Naksha.NakshaCompanion.MAPS_COL_NUMBER
+import naksha.model.illegalArg
+import naksha.model.objects.NakshaMap
+import naksha.psql.PgColumn.PgColumnCompanion.allColumns
+import java.util.concurrent.TimeUnit
 
 /**
- * Information about the database and connection, that need only to be queried ones per session.
- * @constructor Creates and initializes a new database information object.
- * @param storage the PostgresQL storage in which this schema is stored.
- * @param mapId the schema name.
+ * A cache for a specific map, which by itself will cache the collections.
+ *
+ * @property adminMap the admin-map to which this cache entry belongs.
+ * @property id the map-id.
+ * @property number the map-number.
+ * @since 3.0
  */
-@Suppress("MemberVisibilityCanBePrivate")
-class PsqlMap internal constructor(storage: PgStorage, mapId: String, schemaName: String) : PgMap(storage, mapId, schemaName) {
-    override fun init(connection: PgConnection?) {
-        Naksha.verifyId(id)
-        val conn = connection ?: storage.newConnection(storage.adminOptions, false) { _, _ -> }
-        try {
-            init_internal(storage.id, conn)
-            // auto-commit, if this is a temporary connection, and no exception
-            if (connection == null) conn.commit()
-        } finally {
-            if (connection == null) conn.close()
-        }
-    }
-
-    override fun init_internal(
-        storageId: String?,
-        conn: PgConnection,
-        version: NakshaVersion,
-        override: Boolean
-    ): String {
-        if (!isDefault()) throw NakshaException(MAP_NOT_SUPPORTED, "Only default map supported")
-        _number = 0
-        logger.info("Query database for identifier and version from {}, schema='{}'", conn, schemaName)
-        conn.execute(
-            """CREATE SCHEMA IF NOT EXISTS $nameQuoted;
-SET SESSION search_path TO $nameQuoted, public, topology;"""
-        ).close()
-        var cursor = conn.execute(
-            """
-SELECT oid, null AS pronamespace, 'schema' AS proname FROM pg_namespace WHERE nspname = $1
-UNION ALL
-SELECT oid, pronamespace, proname FROM pg_proc WHERE pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1)
-                                                 AND proname = ANY(ARRAY['naksha_version','naksha_storage_id']::text[]);
-""", arrayOf(schemaName)
-        )
-        var has_naksha_version_fn = false
-        var has_naksha_storage_id_fn = false
-        cursor.use {
-            while (cursor.next()) {
-                val proname = cursor.column("proname")
-                when (proname) {
-                    "schema" -> _oid = cursor["oid"]
-                    "naksha_version" -> has_naksha_version_fn = true
-                    "naksha_storage_id" -> has_naksha_storage_id_fn = true
-                }
-            }
-        }
-        // If the storage has an ID, we need to guarantee that this function is called with correct id.
-        var existingStorageId: String? = null
-        var existingVersion: Int64? = null
-        if (has_naksha_storage_id_fn) {
-            val query = "SELECT naksha_storage_id() as id" + (if (has_naksha_version_fn) ", naksha_version() as v" else "null as v")
-            cursor = conn.execute(query).fetch()
-            existingStorageId = cursor.column("id") as String?
-            existingVersion = cursor.column("v") as Int64?
-        }
-        val storage_id: String = if (existingStorageId != null) {
-            if (storageId != null && storageId != existingStorageId) {
-                throw NakshaException(STORAGE_ID_MISMATCH, "Expect $storageId, but found $existingStorageId")
-            }
-            existingStorageId
-        } else storageId ?: PlatformUtil.randomString()
-
-        if (existingStorageId == null && existingVersion == null) {
-            logger.info("Schema '{}' does not exist, installing new fresh Naksha ...", schemaName)
-        } else if (override) {
-            logger.info("Force storage installation into schema '{}' via override parameter, ignore current state ...", schemaName)
-        } else if ((existingStorageId != null) xor (existingVersion != null)) {
-            logger.info(
-                "Schema '{}' is in a broken state (id: {}, version: {}), updating it ...",
-                schemaName, existingStorageId, if (existingVersion != null) NakshaVersion(existingVersion) else null
-            )
-        } else if (existingVersion == Int64(0)) {
-            logger.info("Schema '{}' is installed with debug code (version=0), updating it ...")
-        } else if (existingVersion == version.toInt64()) {
-            logger.info("Schema '{}' is up to date (id: '{}', version: {}), do nothing", schemaName, storage_id, existingVersion)
-            return storage_id
-        } else {
-            logger.info("Schema '{}' is installed with older ({}), updating it to {} ...", schemaName, existingVersion, version)
-        }
-
-        logger.info("Install/update module system of storage '{}', schema '{}' to version {}", storage_id, schemaName, version)
-        val commonJs = getResourceAsText("/common.js")
-        check(commonJs != null) { "Failed to load common.js from resources" }
-        executeSqlFromResource(conn, "/common.sql", replacements = mapOf("common.js" to commonJs, "schema" to nameQuoted))
-
-        // Install default modules and SQL functions.
-        installModuleFromResource(conn, "beautify", "/beautify.min.js", autoload = true)
-        executeSqlFromResource(conn, "/beautify.sql")
-
-        installModuleFromResource(conn, "lz4_util", "/lz4_util.js")
-        installModuleFromResource(conn, "lz4_xxhash", "/lz4_xxhash.js")
-        installModuleFromResource(conn, "lz4", "/lz4.js", beautify = false, autoload = true)
-        executeSqlFromResource(conn, "/lz4.sql")
-
-        installModuleFromResource(conn, "pako", "/pako.js", beautify = false, autoload = true)
-        executeSqlFromResource(conn, "/pako.sql")
-
-        // If the client initializes the module system, automatically load all these modules.
-        // This is much faster eventually, because it will directly load all of them into the cache.
-        installModuleFromResource(
-            conn, "joda", "/js-joda.js",
-            paths = arrayOf("@js-joda/core"),
-            beautify = false,
-            autoload = true
-        )
-        installModuleFromResource(
-            conn, "kotlin",
-            "/kotlin-kotlin-stdlib.mjs",
-            paths = arrayOf("./kotlin-kotlin-stdlib.mjs"),
-            beautify = false,
-            autoload = true
-        )
-        installModuleFromResource(
-            conn,
-            "kotlinx_date_time",
-            "/Kotlin-DateTime-library-kotlinx-datetime.mjs",
-            paths = arrayOf("./Kotlin-DateTime-library-kotlinx-datetime.mjs"),
-            beautify = false,
-            autoload = true
-        )
-        installModuleFromResource(
-            conn, "naksha_base",
-            "/naksha_base.mjs",
-            paths = arrayOf("./naksha_base.mjs"),
-            beautify = false,
-            autoload = true
-        )
-        installModuleFromResource(
-            conn, "naksha_jbon",
-            "/naksha_jbon.mjs",
-            paths = arrayOf("./naksha_jbon.mjs"),
-            beautify = false,
-            autoload = true
-        )
-        installModuleFromResource(
-            conn, "naksha_geo",
-            "/naksha_geo.mjs",
-            paths = arrayOf("./naksha_geo.mjs"),
-            beautify = false,
-            autoload = true
-        )
-        installModuleFromResource(
-            conn, "naksha_model",
-            "/naksha_model.mjs",
-            paths = arrayOf("./naksha_model.mjs"),
-            beautify = false,
-            autoload = true
-        )
-        installModuleFromResource(
-            conn, "naksha_psql",
-            "/naksha_psql.mjs",
-            paths = arrayOf("./naksha_psql.mjs"),
-            beautify = false,
-            autoload = true
-        )
-        logger.info("Installation of modules done, install naksha.sql ...")
-        executeSqlFromResource(
-            conn, "/naksha.sql", replacements = mapOf(
-                "schemaIdent" to quoteIdent(schemaName),
-                "schemaLiteral" to quoteLiteral(schemaName),
-                "defaultSchemaLiteral" to quoteLiteral(storage.defaultSchemaName),
-                "version" to (version.toLong()).toString(),
-                "storageIdLiteral" to quoteLiteral(storage_id),
-            )
-        )
-        // Note: We reserve the first 1000 collection sequences for internal collections with hard-coded
-        //       storage-numbers, because they have no entries in the naksha~collections table!
-        logger.info("Create collection-id sequence ...")
-        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_COL_SEQ AS ${PgType.INT64} START 1000 CACHE 1;").close()
-
-        logger.info("Installation done ...")
-        if (isDefault()) {
-            logger.info("Creating the default schema, therefore create transaction sequences")
-            conn.execute("""
-CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64} START 1 CACHE 10;
-CREATE SEQUENCE IF NOT EXISTS $NAKSHA_MAP_SEQ AS ${PgType.INT64} START 1 CACHE 1;
-""").close()
-        }
-        logger.info("Create internal collections: transactions, collections, and dictionaries")
-        transactions().create_internal(
-            conn, 0, PgStorageClass.Consistent,
-            storeHistory = false,
-            storedDeleted = false,
-            storeMeta = true,
-            indices = listOf(
-                id_txn_uid,
-                gist_geo,
-                tags_id_txn_uid,
-                app_id_updatedAt_id_txn_uid,
-                author_ts_id_txn_uid
-            )
-        )
-        collections().create_internal(
-            conn, 0, PgStorageClass.Consistent,
-            storeHistory = true,
-            storedDeleted = true,
-            storeMeta = true,
-            indices = listOf(
-                id_txn_uid,
-                gist_geo,
-                tags_id_txn_uid,
-                app_id_updatedAt_id_txn_uid,
-                author_ts_id_txn_uid
-            )
-        )
-        dictionaries().create_internal(
-            conn, 0, PgStorageClass.Consistent,
-            storeHistory = true,
-            storedDeleted = true,
-            storeMeta = true,
-            indices = listOf(id_txn_uid, tags_id_txn_uid)
-        )
-        logger.info("Done creating transactions, collections, and dictionaries")
-        refresh(conn)
-        return storage_id
-    }
-
-    private fun getResourceAsText(path: String): String? =
-        this.javaClass.getResource(path)?.readText()
+data class PsqlMap(
+    val adminMap: PsqlAdminMap,
+    val pgMap: PgMap? = null,
+    val id: String = pgMap?.id ?: throw illegalArg("PsqlMap without valid id"),
+    val number: Int = pgMap?.number ?: throw illegalArg("PsqlMap without valid number")
+): Expiry<Int, PsqlCollection> {
 
     /**
-     * Replace all occurrences of `${key}` with `value`.
-     * @param text the text in which to replace.
-     * @param replacements a map where the key, expanded to `${key}`, should be replaced with the values.
-     * @return the given text, but with replacements done.
+     * Tests if the underlying [PgMap] still exist.
+     * @return `true` if the map exists; `false` if this is a tombstone cache entry.
      */
-    private fun applyReplacements(text: String, replacements: Map<String, String>?): String {
-        if (replacements != null) {
-            var t = text
-            val sb = StringBuilder()
-            for (entry in replacements) {
-                sb.setLength(0)
-                sb.append('$').append('{').append(entry.key).append('}')
-                val key = sb.toString()
-                while (t.indexOf(key) >= 0) {
-                    t = t.replace(key, entry.value, true)
-                }
-            }
-            return t
-        } else {
-            return text
+    fun exists(): Boolean = head.get() != null
+
+    /**
+     * The current HEAD state, _null_ if the map does not exist _(after being deleted)_.
+     */
+    val head = AtomicRef(pgMap)
+
+    // ----------------------------< Children management aka collection caching >------------------------------------------
+
+    /**
+     * Returns the [PsqlCollection] by collection-id, if not being in cache, loads it into the cache.
+     * @param id the collection-id.
+     * @return the [PsqlCollection].
+     */
+    operator fun get(id: String?): PsqlCollection? {
+        if (id == null) return null
+        val number = numberById[id] ?: return null
+        return cache.getIfPresent(number)
+    }
+
+    operator fun get(number: Int): PsqlCollection? = cache.getIfPresent(number)
+
+    /**
+     * All collections by their number (**primary**).
+     * @since 3.0
+     */
+    private val cache: Cache<Int, PsqlCollection?> = Caffeine.newBuilder()
+        // TODO: Optimize settings!
+        .removalListener(this::onEviction)
+        .expireAfter(this)
+        .build()
+
+    /**
+     * Translates the collection-id into a number for items being in cache.
+     * @since 3.0.0
+     */
+    private val numberById = AtomicMap<String, Int>()
+
+    /**
+     * Called by Caffeine, when a cached entry is removed.
+     * @param collectionNumber the collection-number of the collection being removed
+     * @param psqlCollection the value that is removed
+     * @param cause the reason for the removal
+     * @since 3.0
+     * @see [Caffeine.removalListener]
+     */
+    private fun onEviction(collectionNumber: Int?, psqlCollection: PsqlCollection?, cause: RemovalCause) {
+        if (psqlCollection != null) {
+            numberById.remove(psqlCollection.id, psqlCollection.number)
         }
+    }
+
+//    /**
+//     * Load a cache entry using the `id`.
+//     * @param id the collection-id.
+//     * @return the loaded [PsqlCollection]; null if the collection does not exist.
+//     */
+//    private fun loadById(id: String): PsqlCollection? {
+//        // TODO: Implement me
+//        // TODO: Add entry into numberById
+//        // TODO: Add into cache!
+//        return null
+//    }
+
+//    /**
+//     * Computes or retrieves the value corresponding to `key`.
+//     *
+//     * **Warning:** loading **must not** attempt to update any mappings of this cache directly.
+//     *
+//     * @param key the non-null key whose value should be loaded
+//     * @return the value associated with `key` or `null` if not found
+//     * @throws Exception or Error, in which case the mapping is unchanged
+//     * @throws InterruptedException if this method is interrupted. [InterruptedException] is treated like any other [Exception] in all respects except that, when it is caught, the thread's interrupt status is set
+//     */
+//    override fun load(key: Int): PsqlCollection? {
+//        // TODO: Implement me
+//        // TODO: Add entry into numberById
+//        return null
+//    }
+
+//    /**
+//     * Computes or retrieves the values corresponding to `keys`. This method is called by [LoadingCache.getAll].
+//     *
+//     * If the returned map doesn't contain all requested `keys`, then the entries it does contain will be cached, and `getAll` will return the partial results. If the returned map contains extra keys not present in `keys` then all returned entries will be cached, but only the entries for `keys`, will be returned from `getAll`.
+//     *
+//     * This method should be overridden when bulk retrieval is significantly more efficient than many individual lookups. Note that [LoadingCache.getAll] will defer to individual calls to [LoadingCache.get] if this method is not overridden.
+//     *
+//     * **Warning**: loading **must not** attempt to update any mappings of this cache directly.
+//     *
+//     * @param keys the unique, non-null keys whose values should be loaded
+//     * @return a map from each key in `keys` to the value associated with that key
+//     * @throws Exception or Error, in which case the mappings are unchanged
+//     * @throws InterruptedException if this method is interrupted. [InterruptedException] is treated like any other [Exception] in all respects except that, when it is caught, the thread's interrupt status is set
+//     */
+//    override fun loadAll(keys: Set<Int>): Map<Int, PsqlCollection> {
+//        // TODO: Implement me
+//        return mapOf()
+//    }
+
+    /**
+     * Returns all [collection's][PsqlCollection] that are currently available.
+     * @return all [collection's][PsqlCollection] that are currently available.
+     */
+    fun getAll(): List<PsqlCollection> {
+        TODO("Implement me")
+    }
+
+//    /**
+//     * Computes or retrieves a replacement value corresponding to an already-cached `key`. If the replacement value is not found, then the mapping will be removed if `null` is returned. This method is called when an existing cache entry is refreshed by [Caffeine,refreshAfterWrite], or through a call to [LoadingCache.refresh].
+//     *
+//     * **Warning:** loading **must not** attempt to update any mappings of this cache directly or block waiting for other cache operations to complete.
+//     *
+//     * **Note:** _all exceptions thrown by this method will be logged and then swallowed_.
+//     *
+//     * @param key the non-null key whose value should be loaded
+//     * @param oldValue the non-null old value corresponding to `key`
+//     * @return the new value associated with `key`, or `null` if the mapping is to be removed
+//     * @throws Exception or Error, in which case the mapping is unchanged
+//     * @throws InterruptedException if this method is interrupted. [InterruptedException] is treated like any other [Exception] in all respects except that, when it is caught, the thread's interrupt status is set
+//     */
+//    override fun reload(key: Int, oldValue: PsqlCollection): PsqlCollection? {
+//        if (!oldValue.exists()) return null
+//        return oldValue
+//    }
+
+    /**
+     * Specifies that the entry should be automatically removed from the cache once the duration has elapsed after the entry's creation. To indicate no expiration, an entry may be given an excessively long period, such as [Long.MAX_VALUE].
+     *
+     * **Note:** The `currentTime` is supplied by the configured [Ticker][org.testcontainers.shaded.com.google.common.base.Ticker] and by default does not relate to system or wall-clock time. When calculating the duration based on a timestamp, the current time should be obtained independently.
+     *
+     * @param key the key associated with this entry
+     * @param value the value associated with this entry
+     * @param currentTime the ticker's current time, in nanoseconds
+     * @return the length of time before the entry expires, in nanoseconds
+     */
+    override fun expireAfterCreate(key: Int, value: PsqlCollection, currentTime: Long): Long {
+        if (!value.exists()) return TimeUnit.SECONDS.toNanos(5)
+        return TimeUnit.MINUTES.toNanos(15)
     }
 
     /**
-     * Execute the SQL being in the file.
-     * @param conn The connection to use for the installation.
-     * @param path The file-path, for example `/lz4.sql`.
-     * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
+     * Specifies that the entry should be automatically removed from the cache once the duration has elapsed after the replacement of its value. To indicate no expiration, an entry may be given an excessively long period, such as [Long.MAX_VALUE]. The `currentDuration` may be
+     * returned to not modify the expiration time.
+     *
+     * **Note:** The `currentTime` is supplied by the configured [Ticker][org.testcontainers.shaded.com.google.common.base.Ticker] and by default does not relate to system or wall-clock time. When calculating the duration based on a timestamp, the current time should be obtained independently.
+     *
+     * @param key the key associated with this entry
+     * @param value the new value associated with this entry
+     * @param currentTime the ticker's current time, in nanoseconds
+     * @param currentDuration the entry's current duration, in nanoseconds
+     * @return the length of time before the entry expires, in nanoseconds
      */
-    private fun executeSqlFromResource(conn: PgConnection, path: String, replacements: Map<String, String>? = null) {
-        val resourceAsText = getResourceAsText(path)
-        check(resourceAsText != null)
-        conn.execute(applyReplacements(resourceAsText, replacements)).close()
+    override fun expireAfterUpdate(key: Int, value: PsqlCollection, currentTime: Long, currentDuration: Long): Long {
+        if (!value.exists()) return currentDuration
+        return TimeUnit.MINUTES.toNanos(15)
     }
 
     /**
-     * Install a JS module with the given name from the given resource file.
-     * @param conn the connection to use for the installation.
-     * @param name the module name, for example `lz4`.
-     * @param path the file-path, for example `/lz4.js`.
-     * @param paths an optional list of relative paths against with to allow to load the module as well.
-     * @param autoload If the module should be automatically loaded.
-     * @param beautify If the source should be beautified before insertion.
-     * @param extraCode Additional code to be executed, appended at the end of the module.
-     * @param replacements A map of replacements (`${name}`) that should be replaced with the given value in the source.
+     * Specifies that the entry should be automatically removed from the cache once the duration has elapsed after its last read. To indicate no expiration, an entry may be given an excessively long period, such as [Long.MAX_VALUE]. The `currentDuration` may be returned to not
+     * modify the expiration time.
+     *
+     * **Note:** The `currentTime` is supplied by the configured [Ticker][org.testcontainers.shaded.com.google.common.base.Ticker] and by default does not relate to system or wall-clock time. When calculating the duration based on a timestamp, the current time should be obtained independently.
+     *
+     * @param key the key associated with this entry
+     * @param value the value associated with this entry
+     * @param currentTime the ticker's current time, in nanoseconds
+     * @param currentDuration the entry's current duration, in nanoseconds
+     * @return the length of time before the entry expires, in nanoseconds
      */
-    private fun installModuleFromResource(
-        conn: PgConnection,
-        name: String,
-        path: String,
-        paths: Array<String>? = null,
-        autoload: Boolean = false,
-        beautify: Boolean = false,
-        extraCode: String? = null,
-        replacements: Map<String, String>? = null
-    ) {
-        val resourceAsText = getResourceAsText(path)
-        check(resourceAsText != null) { "Failed to load resource from $path" }
-        var code = applyReplacements(resourceAsText, replacements)
-        if (extraCode != null) code += "\n" + extraCode
-        val dollar4 = if (beautify) "js_beautify(\$4)" else "\$4"
-        val query = "INSERT INTO es_modules (name, paths, autoload, source) VALUES (\$1, \$2, \$3, $dollar4) " +
-                "ON CONFLICT (name) DO UPDATE SET paths=\$2, autoload=\$3, source=$dollar4"
-        conn.execute(query, arrayOf(name, paths, autoload, code)).close()
+    override fun expireAfterRead(key: Int, value: PsqlCollection, currentTime: Long, currentDuration: Long): Long {
+        if (!value.exists()) return currentDuration
+        return TimeUnit.MINUTES.toNanos(15)
     }
 }

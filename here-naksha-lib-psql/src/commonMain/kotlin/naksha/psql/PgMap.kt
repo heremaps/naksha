@@ -2,326 +2,484 @@
 
 package naksha.psql
 
-import naksha.base.*
+import naksha.base.AtomicMap
+import naksha.base.AtomicNonNullRef
+import naksha.base.Epoch
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.fn.Fn0
-import naksha.jbon.IDictManager
-import naksha.jbon.JbDictionary
-import naksha.model.IMap
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS
-import naksha.model.Naksha.NakshaCompanion.VIRT_COLLECTIONS_NUMBER
-import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES
-import naksha.model.Naksha.NakshaCompanion.VIRT_DICTIONARIES_NUMBER
-import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
-import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS_NUMBER
-import naksha.model.NakshaContext.NakshaContextCompanion.currentContext
-import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
-import naksha.model.NakshaError.NakshaErrorCompanion.NOT_IMPLEMENTED
-import naksha.model.NakshaError.NakshaErrorCompanion.UNAUTHORIZED
-import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
+import naksha.base.toUnsignedInt64
+import naksha.model.Naksha
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_NUMBER
+import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL
+import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL_NUMBER
+import naksha.model.Naksha.NakshaCompanion.MAPS_COL
+import naksha.model.Naksha.NakshaCompanion.MAPS_COL_NUMBER
+import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_NUMBER
+import naksha.model.NakshaError
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
-import naksha.model.NakshaVersion
-import naksha.model.SessionOptions
-import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaMap
+import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
-import kotlin.js.JsName
+import kotlin.jvm.JvmField
 
 /**
- * Information about the database and connection, that need only to be queried ones per session.
+ * A map stores collections.
  */
 @JsExport
-open class PgMap(
+open class PgMap internal constructor(
     /**
-     * The reference to the storage to which the schema belongs.
+     * The reference to the storage.
+     * @since 3.0.0
      */
-    override val storage: PgStorage,
+    open val storage: PgStorage,
+
+    /**
+     * The HEAD state of the map.
+     * @since 3.0.0
+     */
+    nakshaMap: NakshaMap,
 
     /**
      * The map-id.
+     * @since 3.0
      */
-    override val id: String,
+    val id: String = nakshaMap.id,
 
     /**
-     * The name of the schema.
+     * The map-number.
+     * @since 3.0
      */
-    val schemaName: String
-) : IMap {
+    val number: Int = nakshaMap.number
+) {
     /**
-     * Admin options for this schema aka map.
+     * The map-identifier quoted optionally in double quotes.
+     * @since 3.0
      */
-    fun adminOptions(): SessionOptions = storage.adminOptions.copy(mapId = id)
-
-    internal var _number: Int? = null
+    @JvmField
+    val quotedId = quoteIdent(id)
 
     /**
-     * The map-number of this map.
+     * The _HEAD_ state of the map.
+     *
+     * ### Note
+     * If the map is deleted, this value stays unmodified, because the [PgMap] will be removed from caching. However, if only the _HEAD_ state of the map is modified, so basically an `UPDATE` is done, the _HEAD_ reference is replaced on-the-fly.
+     * @since 3.0
      */
-    override val number: Int
+    val headRef = AtomicNonNullRef(nakshaMap)
+
+    /**
+     * Reads [headRef].
+     * @see [headRef]
+     * @since 3.0
+     */
+    val head: NakshaMap
+        get() = headRef.get()
+
+    private var _collections: PgCollection? = null
+
+    /**
+     * The collection's collection of the map _(`naksha~collections` aka `0`)_.
+     * @since 3.0
+     * @see [createPgCollection]
+     * @see [getPgCollectionById]
+     * @see [getPgCollectionByNumber]
+     * @see [deletePgCollection]
+     */
+    val collections: PgCollection
         get() {
-            if (!exists()) throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
-            return _number ?: throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
+            var c = _collections
+            if (c == null) {
+                c = PgCollection(this, NakshaCollection().withMapId(id).withId(COLLECTIONS_COL))
+                _collections = c
+            }
+            return c
         }
 
-    /**
-     * The lock internally used to synchronize access.
-     */
-    internal val lock = Platform.newLock()
+    protected val collectionCache = AtomicMap<Int, PgCollection>()
+    protected val collectionNumberById = AtomicMap<String, Int>()
 
-    /**
-     * The epoch time in milliseconds when the cache should be updated next, _null_ when no update where ever done.
-     */
-    private var _updateAt: Int64? = null
+    protected fun storeCollection(collection: PgCollection) {
+        collectionNumberById[collection.id] = collection.number
+        // TODO: Improve this, we should keep the PgCollection that has the higher version!
+        collectionCache[collection.number] = collection
+    }
 
-    internal var _oid: Int? = null
-
-    /**
-     * The [OID](https://www.postgresql.org/docs/current/datatype-oid.html) (Object Identifier) of the schema.
-     * @throws IllegalStateException if no such schema exists yet.
-     */
-    open val oid: Int
-        get() {
-            if (!exists()) throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
-            return _oid ?: throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
-        }
-
-    private var _collectionNumberSeqOid: Int? = null
-
-    /**
-     * The OID of the collection-number sequence.
-     */
-    open val collectionNumberSeqOid: Int
-        get() {
-            if (!exists()) throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
-            return _collectionNumberSeqOid ?: throw NakshaException(MAP_NOT_FOUND, "The map '$id' does not exist")
-        }
-
-    /**
-     * Uses the given connection to acquire a new collection-number.
-     * @param conn the connection to use to acquire the number.
-     * @return the new collection number.
-     */
-    fun newCollectionNumber(conn: PgConnection): Int64 {
-        val cursor = conn.execute("SELECT nextval($1) as col_number", arrayOf(collectionNumberSeqOid)).fetch()
-        return cursor["col_number"]
+    protected fun invalidateCollection(collection: PgCollection) {
+        collectionCache.remove(collection.number, collection)
+        //collectionNumberById.remove(collection.id, collection.number)
     }
 
     /**
-     * Test if this is the default schema.
+     * Returns the `search_path` so that this map is on the top, followed by `naksha~admin`, `topology`, `hint_plan`, `public`.
+     * @return the `search_path` so that this map is on the top, followed by `naksha~admin`, `topology`, `hint_plan`, `public`.
      */
-    fun isDefault(): Boolean = schemaName == storage.defaultSchemaName
-
-    /**
-     * The quoted schema, for example `"foo"`, if no quoting is necessary, the string may be unquoted.
-     */
-    open val nameQuoted = quoteIdent(schemaName)
-
-    /**
-     * A concurrent hash map with all cached collections by their `id`.
-     */
-    internal val collections: AtomicMap<String, WeakRef<PgCollection>> = Platform.newAtomicMap()
-
-    /**
-     * A concurrent hash map with all cached collection-identifiers by their `number`.
-     */
-    internal val collectionIdByNumber: AtomicMap<Int64, String> = Platform.newAtomicMap()
-
-    /**
-     * Returns the dictionaries' collection.
-     * @return the dictionaries' collection.
-     */
-    open fun dictionaries(): PgNakshaDictionaries = getCollection(VIRT_DICTIONARIES) { PgNakshaDictionaries(this) }
-
-    /**
-     * Returns the transactions' collection.
-     * @return the transactions' collection.
-     */
-    open fun transactions(): PgNakshaTransactions = getCollection(VIRT_TRANSACTIONS) { PgNakshaTransactions(this) }
-
-    /**
-     * Returns the collections' collection.
-     * @return the collections' collection.
-     */
-    open fun collections(): PgNakshaCollections = getCollection(VIRT_COLLECTIONS) { PgNakshaCollections(this) }
-
-    override operator fun get(collectionId: String): PgCollection = getCollection(collectionId) {
-        when (collectionId) {
-            VIRT_DICTIONARIES -> PgNakshaDictionaries(this)
-            VIRT_COLLECTIONS -> PgNakshaCollections(this)
-            VIRT_TRANSACTIONS -> PgNakshaTransactions(this)
-            else -> PgCollection(this, collectionId)
-        }
-    }
-
-    override fun get(collectionNumber: Int64): PgCollection? {
-        val id = getCollectionId(collectionNumber) ?: return null
-        return this[id]
-    }
-
-    override fun getCollectionId(collectionNumber: Int64): String? {
-        return collectionIdByNumber[collectionNumber] ?: when (collectionNumber) {
-            VIRT_TRANSACTIONS_NUMBER -> VIRT_TRANSACTIONS
-            VIRT_DICTIONARIES_NUMBER -> VIRT_DICTIONARIES
-            VIRT_COLLECTIONS_NUMBER -> VIRT_COLLECTIONS
-            else -> null
-        }
+    fun getSearchPath(): String = if (this is PgAdminMap) {
+        "SET search_path = \"naksha~admin\", topology, hint_plan, public"
+    } else {
+        "SET search_path = ${quotedId}, \"naksha~admin\", topology, hint_plan, public"
     }
 
     /**
-     * Returns a shared cached [PgCollection] wrapper. This method is internally called, when a storage or realm are initialized to create all internal collections.
-     * @param id the collection identifier.
-     * @param constructor the constructor to the collection, if it does not exist already.
-     * @return the shared and cached [PgCollection] wrapper.
+     * Sets the `search_path` for the current transaction, so until `commit` or `rollback`.
+     * @param conn the connection where to set the search path.
+     * @since 3.0
+     * @see [getSearchPath]
      */
-    @Suppress("UNCHECKED_CAST")
-    private fun <T : PgCollection> getCollection(id: String, constructor: Fn0<T>): T {
-        val collections = this.collections
-        while (true) {
-            var collection: PgCollection? = null
-            val existingRef = collections[id]
-            if (existingRef != null) collection = existingRef.deref()
-            if (collection != null) return collection as T
-            collection = constructor.call()
-            if (existingRef != null) {
-                if (collections.replace(id, existingRef, collection.weakRef)) return collection
-                // Conflict, another thread concurrently modified the cache.
-            } else {
-                collections.putIfAbsent(id, collection.weakRef) ?: return collection
-                // Conflict, there is an existing reference, another thread concurrently access the cache.
+    fun setSearchPath(conn: PgConnection) {
+        conn.execute(getSearchPath()).close()
+    }
+
+    /**
+     * Create a new [collection][PgCollection] using the given connection, and return it.
+     *
+     * ### Note
+     * - This method does not commit the given connection, therefore the collection is not yet persisted, but can be used through the given connection.
+     * - The method does not insert the corresponding entry into the collection's collection, this must be done upfront by the caller.
+     *
+     * - Throws [NakshaError.MAP_NOT_FOUND] if the given map does not exist _(anymore)_.
+     * - Throws [NakshaError.COLLECTION_EXISTS] if such a collection exists already in the given map.
+     * @param conn the connection to use to access the database.
+     * @param collection the collection to create.
+     * @return the created map.
+     * @since 3.0
+     */
+    open fun createPgCollection(conn: PgConnection, collection: PgCollection) {
+        // Ensure that all tables and indices are created in the correct map!
+        setSearchPath(conn)
+        val indices: List<PgIndex>
+        val indexNames = collection.head.indices
+        if (indexNames == null) {
+            indices = PgIndex.DEFAULT_INDICES
+        } else {
+            indices = mutableListOf()
+            for (indexName in indexNames) {
+                if (indexName == null) continue
+                val index = PgIndex.of(indexName)
+                if (index != null && !indices.contains(index)) indices.add(index)
             }
         }
-    }
+        val NOW = Epoch()
 
-    /**
-     * Returns either the given connection, or opens a new admin connection, when the given connection is _null_.
-     */
-    private fun connOf(connection: PgConnection?): PgConnection = connection ?: storage.adminConnection(adminOptions()) { _, _ -> }
+        if (collection is PgNakshaTransactions) {
+            val txn = PgTransactions(collection)
+            txn.create(conn)
+            txn.createYear(conn, NOW.year)
+            txn.createYear(conn, NOW.year + 1)
+            txn.createIndex(conn, PgIndex.tn_pkey)
+            txn.createIndex(conn, PgIndex.id_unique)
+            txn.createIndex(conn, PgIndex.txn_unique)
+            for (index in indices) {
+                if (index != PgIndex.tn_pkey
+                    && index != PgIndex.txn_unique
+                    && index != PgIndex.id_unique) {
+                    txn.createIndex(conn, index)
+                }
+            }
 
-    /**
-     * The counter-part of [connOf], if the connection is _null_, closes [conn], if [commitOnClose] is _true_, commit changes before closing. Does nothing, when the [connection] is not _null_ ([commitOnClose] is ignored in this case).
-     */
-    private fun closeOf(conn: PgConnection, connection: PgConnection?, commitOnClose: Boolean) {
-        if (conn !== connection) {
-            if (commitOnClose) conn.commit()
-            conn.close()
-        }
-    }
-
-    /**
-     * Refresh the schema information cache.
-     *
-     * This is automatically called when any value is queries for the first time.
-     *
-     * @param connection the connection to use to query information from the database; if _null_, a new connection is used temporary.
-     * @return this.
-     */
-    open fun refresh(connection: PgConnection? = null): PgMap {
-        if (_updateAt == null || Platform.currentMillis() > _updateAt) {
-            logger.info("Refresh map '$id' / schema: '$schemaName' ...")
-            val conn = connOf(connection)
-            try {
-                var cursor = conn.execute("SELECT oid FROM pg_namespace WHERE nspname = $1", arrayOf(schemaName)).fetch()
-                if (cursor.isRow()) {
-                    cursor.use {
-                        _oid = cursor["oid"]
-                        // TODO: Right now we only support the default map, we need to change this!
-                        _number = 0
-                    }
-                    cursor = conn.execute("""SELECT oid FROM pg_class WHERE relname='$NAKSHA_COL_SEQ' AND relnamespace=${_oid}""").fetch()
-                    cursor.use {
-                        _collectionNumberSeqOid = cursor["oid"]
+            // We can have a meta table for transactions, but no history or deleted!
+            if (collection.metaTable != null) {
+                val meta = PgMeta(txn)
+                meta.create(conn)
+                meta.createIndex(conn, PgIndex.tn_pkey)
+                meta.createIndex(conn, PgIndex.id_unique)
+                for (index in indices) {
+                    if (index != PgIndex.tn_pkey
+                        && index != PgIndex.id_unique) {
+                        meta.createIndex(conn, index)
                     }
                 }
-            } finally {
-                closeOf(conn, connection, false)
             }
-            updateUpdateAt()
-        }
-        return this
-    }
-
-    protected fun updateUpdateAt() {
-        // TODO: Currently we only support the default map, so there is no need to ever update the cache!
-        _updateAt = Platform.currentMillis() + 365 * PlatformUtil.DAY
-    }
-
-    /**
-     * Tests if the schema exists.
-     * @return _true_ if the schema exists.
-     */
-    override fun exists(): Boolean {
-        refresh()
-        return _oid != null
-    }
-
-    /**
-     * Tests if the schema exists.
-     * @param connection the connection to use.
-     * @return _true_ if the schema exists.
-     */
-    @JsName("existsUsing")
-    fun exists(connection: PgConnection?): Boolean {
-        refresh(connection)
-        return _oid != null
-    }
-
-    // TODO: Implement support for dictionaries using naksha~dictionaries !
-    override val dictManager: IDictManager = object : IDictManager {
-        override fun putDictionary(dict: JbDictionary) {
-            throw NakshaException(NOT_IMPLEMENTED, "putDictionary is not supported by lib-psql yet")
+            return
         }
 
-        override fun deleteDictionary(dict: JbDictionary): Boolean {
-            throw NakshaException(NOT_IMPLEMENTED, "putDictionary is not supported by lib-psql yet")
+        val head = collection.headTable
+        head.create(conn)
+        head.createIndex(conn, PgIndex.tn_pkey)
+        head.createIndex(conn, PgIndex.id_unique)
+        for (index in indices) if (index != PgIndex.tn_pkey && index != PgIndex.id_unique) head.createIndex(conn, index)
+
+        val deleted = collection.deletedTable
+        if (deleted != null) {
+            deleted.create(conn)
+            deleted.createIndex(conn, PgIndex.tn_pkey)
+            deleted.createIndex(conn, PgIndex.id_unique)
+            for (index in indices) if (index != PgIndex.tn_pkey && index != PgIndex.id_unique) deleted.createIndex(conn, index)
         }
 
-        override fun getDictionary(id: String): JbDictionary? = null
-    }
-
-    override fun encodingDict(collectionId: String, feature: NakshaFeature?): JbDictionary? = null
-
-    /**
-     * Initialize the schema, creating all necessary database tables, installing modules, ....
-     *
-     * The method does auto-commit, if no [connection] was given; otherwise committing must be done explicitly.
-     * @param connection the connection to use to query information from the database; if _null_, a new connection is used temporary.
-     */
-    open fun init(connection: PgConnection? = null) {
-        // Implemented in PsqlMap!
-        throw NakshaException(UNSUPPORTED_OPERATION, "This environment does not allow to initialize the schema")
-    }
-
-    /**
-     * Internally called to initialize the storage.
-     * @param storageId the storage-id to install, if _null_, a new storage identifier is generated.
-     * @param connection the connection to use, if _null_, a new connection is created.
-     * @param version the version of the PLV8 code and PSQL library, if the existing installed version is smaller, it will be updated.
-     * @param override if _true_, forcefully override currently installed stored functions and PLV8 modules, even if version matches.
-     * @return the storage-id given or the generated storage-id.
-     */
-    internal open fun init_internal(
-        storageId: String?,
-        connection: PgConnection,
-        version: NakshaVersion = NakshaVersion.latest,
-        override: Boolean = false
-    ): String {
-        // Implemented in PsqlMap!
-        throw NakshaException(UNSUPPORTED_OPERATION, "This environment does not allow to initialize the schema")
-    }
-
-    /**
-     * Drop the schema.
-     *
-     * The method does auto-commit, if no [connection] was given; otherwise committing must be done explicitly.
-     * @param connection the connection to use to query information from the database; if _null_, a new connection is used temporary.
-     */
-    open fun drop(connection: PgConnection? = null) {
-        check(currentContext().su) { throw NakshaException(UNAUTHORIZED, "Only superusers may drop schemata") }
-        val conn = connOf(connection)
-        try {
-            conn.execute("DROP SCHEMA ${quoteIdent(id)} CASCADE").close()
-        } finally {
-            closeOf(conn, connection, true)
+        val meta = collection.metaTable
+        if (meta != null) {
+            meta.create(conn)
+            meta.createIndex(conn, PgIndex.tn_pkey)
+            meta.createIndex(conn, PgIndex.id_unique)
+            for (index in indices) if (index != PgIndex.tn_pkey && index != PgIndex.id_unique) meta.createIndex(conn, index)
         }
+
+        val history = collection.historyTable
+        if (history != null) {
+            history.create(conn)
+            history.createYear(conn, NOW.year)
+            history.createYear(conn, NOW.year + 1)
+            history.createIndex(conn, PgIndex.tn_pkey)
+            for (index in indices) {
+                if (index != PgIndex.tn_pkey) history.createIndex(conn, index)
+            }
+        }
+        invalidateCollection(collection)
+    }
+
+    /**
+     * Refresh the cached information of this collection, mainly updates the history tables.
+     * - Throws [NakshaError.COLLECTION_NOT_FOUND], if the collection has been deleted.
+     * @param conn the connection to query the database; if _null_, a new data connection is acquired, used, and released.
+     * @since 3.0.0
+     */
+    private fun refreshPgCollection(conn: PgConnection, collection: PgCollection): PgCollection {
+        // TODO: Fix me!
+        val cursor = PgRelation.select(conn, collection.map.id, id)
+        cursor.use {
+            //
+            // NOTE: We ignore all unknown relations, that allows users to add some own indices and relations!
+            //
+            var headRelation: PgRelation? = null
+            val headIndices: MutableList<PgIndex> = mutableListOf()
+            val headPartitions: MutableMap<Int, PgRelation> = mutableMapOf()
+            val headYears: MutableMap<Int, PgRelation> = mutableMapOf()
+            var deletedRelation: PgRelation? = null
+            val deletedIndices: MutableList<PgIndex> = mutableListOf()
+            val deletedPartitions: MutableMap<Int, PgRelation> = mutableMapOf()
+            var historyRelation: PgRelation? = null
+            val historyIndices: MutableList<PgIndex> = mutableListOf()
+            val historyYears: MutableMap<Int, PgRelation> = mutableMapOf()
+            val historyPartitions: MutableMap<Int, PgRelation> = mutableMapOf()
+            var metaRelation: PgRelation? = null
+            val metaIndices: MutableList<PgIndex> = mutableListOf()
+            while (cursor.next()) {
+                val rel = PgRelation(cursor)
+                if (id == TRANSACTIONS_COL) {
+                    // We know that the transaction table does only have a HEAD.
+                    // We further know, that head is split yearly!
+                    if (rel.isAnyHeadRelation()) {
+                        if (rel.isHeadRootRelation()) {
+                            headRelation = rel
+                        } else if (rel.isTxnYearRelation()) {
+                            val year = rel.year()
+                            if (year > 0) headYears[year] = rel
+                        } else if (rel.isIndex()) {
+                            val index = PgIndex.of(rel.name)
+                            if (index != null && index !in headIndices) headIndices.add(index)
+                        }
+                    }
+                } else {
+                    if (rel.isAnyHeadRelation()) {
+                        if (rel.isHeadRootRelation()) {
+                            headRelation = rel
+                        } else if (rel.isTable()) {
+                            val i = rel.partitionNumber()
+                            if (i >= 0) headPartitions[i] = rel
+                        } else if (rel.isIndex()) {
+                            val index = PgIndex.of(rel.name)
+                            if (index != null && index !in headIndices) headIndices.add(index)
+                        }
+                    }
+                    if (rel.isAnyDeleteRelation()) {
+                        if (rel.isDeleteRootRelation()) {
+                            deletedRelation = rel
+                        } else if (rel.isTable()) {
+                            val i = rel.partitionNumber()
+                            if (i >= 0) deletedPartitions[i] = rel
+                        } else if (rel.isIndex()) {
+                            val index = PgIndex.of(rel.name)
+                            if (index != null && index !in deletedIndices) deletedIndices.add(index)
+                        }
+                    }
+                    if (rel.isAnyHistoryRelation()) {
+                        if (rel.isHistoryRootRelation()) {
+                            historyRelation = rel
+                        } else if (rel.isHistoryYearRelation()) {
+                            val year = rel.year()
+                            if (year > 0) historyYears[year] = rel
+                        } else if (rel.isHistoryPartition()) {
+                            val i = rel.partitionNumber()
+                            if (i >= 0) historyPartitions[i] = rel
+                        } else if (rel.isIndex()) {
+                            val index = PgIndex.of(rel.name)
+                            if (index != null && index !in historyIndices) historyIndices.add(index)
+                        }
+                    }
+                }
+                if (rel.isAnyMetaRelation()) {
+                    if (rel.isMetaRootRelation()) {
+                        metaRelation = rel
+                    } else if (rel.isIndex()) {
+                        val index = PgIndex.of(rel.name)
+                        if (index != null && index !in metaIndices) metaIndices.add(index)
+                    }
+                }
+            }
+
+            if (headRelation != null) {
+                if (headRelation.isPartition()) {
+                    val parts = headPartitions.size
+                    if (parts == 0 && headYears.isNotEmpty()) {
+                        val txn = PgTransactions(this as PgNakshaTransactions)
+                        for (entry in historyYears) txn.years[entry.key] = PgTransactionsYear(txn, entry.key)
+                        headTable = txn
+                    } else {
+                        if (parts < 2 || parts > 256) {
+                            throw NakshaException(
+                                ILLEGAL_STATE,
+                                "Invalid amount of HEAD partitions found, must be 2..256, but is ${headPartitions.size}"
+                            )
+                        }
+                        collection.headTable = PgHead(collection, headRelation.storageClass, parts)
+                    }
+                } else {
+                    collection.headTable = PgHead(collection, headRelation.storageClass, 0)
+                }
+                for (index in headIndices) collection.headTable.addIndex(index)
+            }
+            if (historyRelation != null) {
+                val history = PgHistory(collection.headTable)
+                collection.historyTable = history
+                for (entry in historyYears) history.years[entry.key] = PgHistoryYear(history, entry.key)
+            }
+            if (deletedRelation != null) {
+                val deleted = PgDeleted(collection.headTable)
+                collection.deletedTable = deleted
+                for (index in deletedIndices) deleted.addIndex(index)
+            }
+            if (metaRelation != null) {
+                val meta = PgMeta(collection.headTable)
+                collection.metaTable = meta
+                for (index in metaIndices) meta.addIndex(index)
+            }
+        }
+        return collection
+    }
+
+    /**
+     * Deletes a collection.
+     * @param conn the connection to use to access the database.
+     * @param collection the collection to delete.
+     * @since 3.0.0
+     */
+    open fun deletePgCollection(conn: PgConnection, collection: PgCollection) {
+        setSearchPath(conn)
+        var SQL = "DROP TABLE IF EXISTS ${collection.headTable.quotedName} CASCADE;"
+        val history = collection.historyTable
+        if (history != null) SQL += "DROP TABLE IF EXISTS ${history.quotedName} CASCADE;"
+        val deleted = collection.deletedTable
+        if (deleted != null) SQL += "DROP TABLE IF EXISTS ${deleted.quotedName} CASCADE;"
+        val meta = collections.metaTable
+        if (meta != null) SQL += "DROP TABLE IF EXISTS ${meta.quotedName} CASCADE;"
+        logger.info("Dropped collection {}@{}", collection.id, collection.number)
+        conn.execute(SQL).close()
+        invalidateCollection(collection)
+    }
+
+    /**
+     * Returns the existing collection with the given identifier; if any.
+     * @param conn the connection to use to access the database.
+     * @param id the collection-id to query.
+     * @return the collection, if it exists; _null_ otherwise.
+     * @since 3.0.0
+     */
+    fun getPgCollectionById(conn: PgConnection, id: String): PgCollection? {
+        if (this is PgAdminMap) {
+            return when (id) {
+                COLLECTIONS_COL -> collections
+                TRANSACTIONS_COL -> transactions
+                MAPS_COL -> maps
+                DICTIONARIES_COL -> dictionaries
+                else -> null
+            }
+        }
+        if (id == COLLECTIONS_COL) return collections
+        val number = collectionNumberById[id]
+        val existing = if (number != null) collectionCache[number] else null
+        if (existing != null) return existing
+
+        // Read from database
+        val outRows = PgColumnRows()
+            .withStorageNumber(storage.number)
+            .withMapNumber(this.number)
+            .withCollectionNumber(COLLECTIONS_COL_NUMBER)
+            .addColumns(allColumns)
+        setSearchPath(conn)
+        val SQL = """SELECT ${outRows.names()}
+FROM ${collections.headTable.quotedName}
+WHERE id = $1"""
+        val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
+        plan.execute(arrayOf(id)).fetch().use {
+            outRows.addAll(cursor = it)
+        }
+        if (outRows.size == 0) return null
+        val tuple = outRows[0] ?: return null
+        Naksha.cache.store(tuple)
+        val nakshaCollection = Naksha.decodeTuple(tuple).proxy(NakshaCollection::class)
+        val pgCollection = PgCollection(this, nakshaCollection)
+        storeCollection(pgCollection)
+        return pgCollection
+    }
+
+    /**
+     * Returns the existing collection with the given number; if any.
+     * @param conn the connection to use to access the database.
+     * @param number the collection-number to query.
+     * @return the collection, if it exists; _null_ otherwise.
+     * @since 3.0.0
+     */
+    fun getPgCollectionByNumber(conn: PgConnection, number: Int): PgCollection? {
+        if (this is PgAdminMap) {
+            return when (number) {
+                COLLECTIONS_COL_NUMBER -> collections
+                TRANSACTIONS_COL_NUMBER -> transactions
+                MAPS_COL_NUMBER -> maps
+                DICTIONARIES_COL_NUMBER -> dictionaries
+                else -> null
+            }
+        }
+        if (number == COLLECTIONS_COL_NUMBER) return collections
+        val existing = collectionCache[number]
+        if (existing != null) return existing
+
+        // Read from database
+        val outRows = PgColumnRows()
+            .withStorageNumber(storage.number)
+            .withMapNumber(this.number)
+            .withCollectionNumber(COLLECTIONS_COL_NUMBER)
+            .addColumns(allColumns)
+        setSearchPath(conn)
+        val SQL = """SELECT ${outRows.names()}
+FROM ${collections.headTable.quotedName}
+WHERE naksha_tn_featureNumber(id) = $1"""
+        val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
+        plan.execute(arrayOf(number.toUnsignedInt64())).fetch().use {
+            outRows.addAll(cursor = it)
+        }
+        if (outRows.size == 0) return null
+        val tuple = outRows[0] ?: return null
+        Naksha.cache.store(tuple)
+        val nakshaCollection = Naksha.decodeTuple(tuple).proxy(NakshaCollection::class)
+        val pgCollection = PgCollection(this, nakshaCollection)
+        storeCollection(pgCollection)
+        return pgCollection
+    }
+
+    /**
+     * Returns a list of all existing collections in the map, excluding the collections' collection.
+     * @param conn the connection to use to access the database.
+     * @param map the map in which to search for the collection.
+     * @return the list of existing collections, _(empty, when no collections exist)_.
+     * @since 3.0.0
+     */
+    fun listPgCollections(conn: PgConnection, map: PgMap): PgCollectionList {
+        val list = PgCollectionList()
+        // TODO: Implement me!
+        return list
     }
 }

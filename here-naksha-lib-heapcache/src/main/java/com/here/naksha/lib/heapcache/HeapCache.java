@@ -140,7 +140,7 @@ public class HeapCache implements IStorage {
 //  }
 
   @Override
-  public void close() {}
+  public void shutdownStorage() {}
 
   /**
    * Initializes the storage, create the transaction table, install needed scripts and extensions.

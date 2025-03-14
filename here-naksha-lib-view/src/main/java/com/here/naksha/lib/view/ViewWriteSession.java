@@ -18,13 +18,13 @@
  */
 package com.here.naksha.lib.view;
 
+import naksha.base.AtomicInt;
+import naksha.base.StringList;
+import naksha.model.ILock;
 import naksha.model.IWriteSession;
 import naksha.model.SessionOptions;
-import naksha.model.objects.Transaction;
-import naksha.model.request.Request;
-import naksha.model.request.Response;
-import naksha.model.request.Write;
-import naksha.model.request.WriteRequest;
+import naksha.model.objects.NakshaTx;
+import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -37,42 +37,48 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   ViewLayer writeLayer;
   SessionOptions options;
 
-  public ViewWriteSession(@NotNull View viewRef, @Nullable SessionOptions options) {
-    super(viewRef, options);
+  public ViewWriteSession(@NotNull View view, @Nullable SessionOptions options) {
+    super(view, options);
     this.options = options;
   }
 
   public ViewWriteSession withWriteLayer(ViewLayer viewLayer) {
-    if (this.session != null)
+    if (this.session != null) {
       throw new RuntimeException("Write session initiated with " + this.writeLayer.getCollectionId());
+    }
     this.writeLayer = viewLayer;
     return this;
   }
 
   public ViewWriteSession init() {
-    if (writeLayer == null) writeLayer = viewRef.getViewCollection().getTopPriorityLayer();
+    if (writeLayer == null) {
+      writeLayer = view.getViewCollection().getTopPriorityLayer();
+    }
     this.session = writeLayer.getStorage().newWriteSession(options);
     return this;
   }
-  /**
-   * Executes write.
-   *
-   * @param writeRequest
-   * @return
-   */
+
   @Override
-  public @NotNull Response execute(@NotNull Request writeRequest) {
-    if (writeRequest instanceof WriteRequest) {
-      for (Write write : ((WriteRequest) writeRequest).getWrites()) {
+  public @NotNull Response execute(@NotNull Request request) {
+    if (request instanceof WriteRequest) {
+      final WriteRequest writeRequest = (WriteRequest) request;
+      for (Write write : writeRequest.getWrites()) {
+        write.setMapId(writeLayer.getMapId());
         write.setCollectionId(writeLayer.getCollectionId());
       }
+    } else if (request instanceof ReadFeatures) {
+      final ReadFeatures readFeatures = (ReadFeatures) request;
+      readFeatures.setMapId(writeLayer.getMapId());
+      readFeatures.setCollectionIds(new StringList(writeLayer.getCollectionId()));
+    } else {
+      throw new IllegalArgumentException("Unsupported request type: " + request.getClass());
     }
-    return this.session.execute(writeRequest);
+    return this.session.execute(request);
   }
 
   @Override
-  public @NotNull Transaction transaction() {
-    return this.session.transaction();
+  public @NotNull NakshaTx useTransaction() {
+    return this.session.useTransaction();
   }
 
   public void commit() {
@@ -89,7 +95,29 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   }
 
   private IWriteSession getSession() {
-    if (this.session == null) init();
+    if (this.session == null) {
+      init();
+    }
     return this.session;
+  }
+
+  @Override
+  public @NotNull ILock acquireSessionLock(@NotNull String lockId) {
+    return getSession().acquireSessionLock(lockId);
+  }
+
+  @Override
+  public @NotNull ILock acquireTransactionLock(@NotNull String lockId) {
+    return getSession().acquireTransactionLock(lockId);
+  }
+
+  @Override
+  public @Nullable NakshaTx getTransaction() {
+    return getSession().getTransaction();
+  }
+
+  @Override
+  public @NotNull AtomicInt getUid() {
+    return getSession().getUid();
   }
 }

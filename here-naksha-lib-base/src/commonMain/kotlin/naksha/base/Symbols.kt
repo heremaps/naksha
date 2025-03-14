@@ -9,6 +9,12 @@ import kotlin.reflect.KClass
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect class Symbols {
     companion object SymbolsCompanion {
+        // TODO: Add some simple binding methods for symbols, like:
+        //       bind(klass: KClass<out T>, symbol: Symbol)
+        //       unbind(klass: KClass<out T>)
+        //       We just need an atomic concurrent hash-map, its easy to use, easy to implement, and fast!
+        //       This will become necessary, when customers or handlers start using own data models!
+
        /**
          * Creates a new symbol with the given description, does not add the symbol into the global registry.
          * @param description The optional description.

@@ -21,21 +21,19 @@ package com.here.naksha.lib.view;
 import naksha.model.IReadSession;
 import java.util.List;
 
-import naksha.model.Tuple;
-import naksha.model.TupleNumber;
-import naksha.model.objects.Transaction;
-import naksha.model.request.Request;
-import naksha.model.request.Response;
-import naksha.model.request.ResultTuple;
-import naksha.model.request.SuccessResponse;
+import naksha.model.IStorage;
+import naksha.model.SessionOptions;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaMap;
+import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class MockReadSession implements IReadSession {
 
-  List<ResultTuple> results;
+  FeatureTupleList results;
 
-  public MockReadSession(List<ResultTuple> results) {
+  public MockReadSession(FeatureTupleList results) {
     this.results = results;
   }
 
@@ -97,36 +95,38 @@ public class MockReadSession implements IReadSession {
 
   private String map = "";
 
-  @NotNull
   @Override
-  public String getMap() {
-    return map;
-  }
-
-  @Override
-  public void setMap(@NotNull String s) {
-    map = s;
-  }
-
-  @Override
-  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
-    return false;
-  }
-
-  @NotNull
-  @Override
-  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
-    return List.of();
-  }
-
-  @Override
-  public void fetchTuples(@NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
-
-  }
-
-  @NotNull
-  @Override
-  public Transaction transaction() {
+  public @NotNull IStorage getStorage() {
     return null;
+  }
+
+  @Override
+  public @Nullable NakshaMap getMapById(@NotNull String mapId) {
+    return null;
+  }
+
+  @Override
+  public @Nullable NakshaMap getMapByNumber(int mapNumber) {
+    return null;
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
+    return null;
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
+    return null;
+  }
+
+  @Override
+  public @NotNull SessionOptions getOptions() {
+    return null;
+  }
+
+  @Override
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
+
   }
 }

@@ -19,7 +19,7 @@
 package com.here.naksha.lib.core;
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.payload.Event;
 import com.here.naksha.lib.core.models.payload.events.admin.ModifySubscriptionEvent;
 import com.here.naksha.lib.core.models.payload.events.feature.DeleteFeaturesByTagEvent;
@@ -48,7 +48,7 @@ import org.jetbrains.annotations.NotNull;
  * post-processing.
  */
 @Deprecated
-public class ExtendedEventHandler<HANDLER extends EventHandler> implements IExtendedEventHandler {
+public class ExtendedEventHandler<HANDLER extends EventHandlerConfig> implements IExtendedEventHandler {
 
   @Deprecated
   public ExtendedEventHandler(@NotNull HANDLER eventHandler) throws XyzErrorException {
@@ -87,7 +87,7 @@ public class ExtendedEventHandler<HANDLER extends EventHandler> implements IExte
    */
   @Deprecated
   protected @NotNull Response errorResponse(@NotNull String error, @NotNull CharSequence message) {
-    return new ErrorResponse(new NakshaError(error, message.toString(), null, event.getStreamId()));
+    return new ErrorResponse(new NakshaError(error, message.toString()));
   }
 
   /**

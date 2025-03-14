@@ -1,50 +1,91 @@
 package naksha.psql
 
-import naksha.base.Int64
+import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.fn.Fx2
+import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
+import kotlin.reflect.KClass
 
 /**
- * The Java implementation of the [IStorage] interface.
- *
- * The `PsqlStorage` class is extended in `here-naksha-storage-psql`, which has a `PsqlStoragePlugin` class that implements the `Plugin` contract (internal contract in _Naksha-Hub_), and makes the storage available to the **Naksha-Hub** as a storage plugin. It parses the configuration from feature properties given to the plugin-constructor, and then creates the [PsqlCluster], eventually calling this constructor.
- *
- * The Java version runs a background job to get notifications of database changes.
- *
- * @constructor Creates a new PSQL storage.
- * @property cluster the PostgresQL cluster used by this storage.
- * @param defaultSchemaName the default schema name.
+ * The Java implementation of the [PgStorage], classname `naksha.psql.JvmPgStorage`.
  */
-open class PsqlStorage(override val cluster: PsqlCluster, defaultSchemaName: String) : PgStorage(cluster, defaultSchemaName), IStorage {
+open class PsqlStorage : PgStorage(), IStorage {
+
+    override val configKlass: KClass<PgConfig> = PgConfig::class
+
+    override val adminMap: PsqlAdminMap
+        get() = super.adminMap as PsqlAdminMap
+
+    private var _cluster: PgCluster? = null
+
+    /**
+     * The cluster, set by [initStorage].
+     * @since 3.0.0
+     */
+    val cluster: PgCluster
+        get() = _cluster ?: throwUninitialized()
 
     private var _channel: String? = null
 
     /**
      * The name of the notification channel used.
      *
-     * - Will throw [NakshaError.UNINITIALIZED] if read before [initStorage].
-     * - Will throw [NakshaError.ILLEGAL_STATE] if change after [initStorage]
+     * - Will throw [UNINITIALIZED] if read before [initStorage].
+     * - Will throw [ILLEGAL_STATE] if change after [initStorage]
      */
-    var channel: String
-        get() = _channel ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
-        set(value) {
-            if (!isInitialized()) throw NakshaException(ILLEGAL_STATE, "Storage already initialized")
-            _channel = value
+    val channel: String
+        get() = _channel ?: throwUninitialized()
+
+    override fun initStorage(config: PgConfig, create: Boolean?, upgrade: Boolean?) {
+        // Note: We need to initialize cluster first, so that newConnection and adminConnection calls work.
+        //       The PsqlAdminMap will use connections!
+        var c = _cluster
+        if (c == null) {
+            logger.info("Create cluster for storage '${id}'")
+            val master = PsqlInstance.get(config.masterUri)
+            val replicas = mutableListOf<PgInstance>()
+            for (replicaUri in config.replicaUris) {
+                if (replicaUri == null) continue
+                val replica = PsqlInstance.get(replicaUri)
+                if (!replicas.contains(replica)) replicas.add(replica)
+            }
+            c = PsqlCluster(master, replicas)
+            _cluster = c
         }
-    private lateinit var listener: PsqlStorageListener
-
-    override fun newMap(storage: PgStorage, mapId: String): PsqlMap = PsqlMap(storage, mapId, mapIdToSchema(mapId))
-
-    override fun initStorage(params: Map<String, *>?) {
-        super.initStorage(params)
-        if (_channel == null) _channel = "lib-psql-${id}"
-        if (!this::listener.isInitialized) listener = PsqlStorageListener(this)
+        setAdminMap(newAdminMap(config, create, upgrade))
+        adminMap.start()
     }
-    override fun newSession(options: SessionOptions, readOnly: Boolean): PsqlSession = PsqlSession(this, options, readOnly)
-    override val defaultMap: PsqlMap = super.defaultMap as PsqlMap
-    override operator fun get(mapId: String): PsqlMap = super.get(mapId) as PsqlMap
-    override fun enterLock(id: String, waitMillis: Int64): ILock {
-        throw NakshaException(NakshaError.NOT_IMPLEMENTED, "enterLock")
+
+    protected open fun newAdminMap(config: PgConfig, create: Boolean?, upgrade: Boolean?): PsqlAdminMap
+        = PsqlAdminMap(this, config, create, upgrade)
+
+    override fun newSession(options: SessionOptions, readOnly: Boolean): PgSession {
+        useInitialized()
+        return PgSession(this, options, readOnly)
+    }
+
+    override fun getEncodingFlags(feature: Any?, context: Any?): Flags = adminMap.getEncodingFlags(feature, context)
+
+    override fun getDictionary(id: String): JbDictionary? = adminMap.getDictionary(id)
+
+    override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? = adminMap.getEncodingDictionary(feature, context)
+
+    override fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection {
+        val conn = cluster.newConnection(options, readOnly)
+        val query = "SET SESSION search_path TO \"naksha~admin\", hint_plan, public, topology;\n"
+        if (init != null) init.call(conn, query) else conn.execute(query).close()
+        return conn
+    }
+
+    override fun adminConnection(): PgConnection = newConnection(Naksha.adminOptions, false)
+
+    override fun afterInit() {
+        // TODO: Do we need anything?
+    }
+
+    override fun shutdownStorage(dropCache: Boolean) {
+        // TODO: Do we need anything?
     }
 }

@@ -19,30 +19,36 @@
 package com.here.naksha.lib.view.concurrent;
 
 import com.here.naksha.lib.view.ViewLayer;
+import naksha.base.StringList;
 import naksha.model.IReadSession;
 import naksha.model.request.ReadFeatures;
+import org.jetbrains.annotations.NotNull;
 
 public class LayerReadRequest {
 
-  private final ReadFeatures request;
-  private final ViewLayer viewLayer;
-  private final IReadSession session;
+  private final @NotNull ReadFeatures request;
+  private final @NotNull ViewLayer viewLayer;
+  private final @NotNull IReadSession session;
 
-  public LayerReadRequest(ReadFeatures request, ViewLayer viewLayer, IReadSession session) {
-    this.request = request;
+  public LayerReadRequest(@NotNull ReadFeatures request, @NotNull ViewLayer viewLayer, @NotNull IReadSession session) {
+    // Note: We need to copy the request, because we need to ignore the map/collection client asked for,
+    //       because the view is always fixed to certain map/collection!
+    this.request = request.copy(false);
+    this.request.setMapId(viewLayer.getMapId());
+    this.request.setCollectionIds(new StringList(viewLayer.getCollectionId()));
     this.viewLayer = viewLayer;
     this.session = session;
   }
 
-  public ReadFeatures getRequest() {
+  public @NotNull ReadFeatures getRequest() {
     return request;
   }
 
-  public ViewLayer getViewLayer() {
+  public @NotNull ViewLayer getViewLayer() {
     return viewLayer;
   }
 
-  public IReadSession getSession() {
+  public @NotNull IReadSession getSession() {
     return session;
   }
 }

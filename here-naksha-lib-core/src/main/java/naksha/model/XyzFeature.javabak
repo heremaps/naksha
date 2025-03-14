@@ -34,7 +34,7 @@ import com.here.naksha.lib.core.models.features.Subscription;
 import com.here.naksha.lib.core.models.features.TxSignal;
 import com.here.naksha.lib.core.models.geojson.exceptions.InvalidGeometryException;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.NakshaFeature;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.Storage;

@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.here.naksha.lib.core.models.EventFeature;
-import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.view.ViewMember.Manager;
 import java.util.List;
 import java.util.Map;
@@ -36,8 +35,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The subscription configuration. Used to create and execute pipelines, when transaction events
- * happen to storages.
+ * The subscription configuration. Used to create and execute pipelines, when transaction events happen to storages.
  */
 @SuppressWarnings("unused")
 @JsonTypeName(value = "Subscription")
@@ -52,9 +50,9 @@ public final class Subscription extends EventFeature {
   /**
    * Create a new subscription.
    *
-   * @param id the identifier.
+   * @param id            the identifier.
    * @param eventHandlers the list of event handler identifiers to form the event-pipeline.
-   * @param storageId the identifier of the storage to observe.
+   * @param storageId     the identifier of the storage to observe.
    */
   @JsonCreator
   @AvailableSince(NakshaVersion.v2_0_0)
@@ -66,17 +64,23 @@ public final class Subscription extends EventFeature {
     this.storageId = storageId;
   }
 
-  /** The {@link Storage identifier of the storage} to observe. */
+  /**
+   * The identifier of the storage to observe.
+   */
   @AvailableSince(NakshaVersion.v2_0_0)
   @JsonProperty(STORAGE_ID)
   public @NotNull String storageId;
 
-  /** The destination of the subscribe notification. */
+  /**
+   * The destination of the subscribe notification.
+   */
   @AvailableSince(NakshaVersion.v2_0_0)
   @JsonProperty
   private @Nullable String destination;
 
-  /** The configuration of the subscription. */
+  /**
+   * The configuration of the subscription.
+   */
   @AvailableSince(NakshaVersion.v2_0_0)
   @JsonProperty
   private @Nullable Subscription.Config config;
@@ -128,7 +132,9 @@ public final class Subscription extends EventFeature {
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class Config {
 
-    /** The type of the subscription. */
+    /**
+     * The type of the subscription.
+     */
     @JsonProperty
     private SubscriptionType type;
 
@@ -172,7 +178,9 @@ public final class Subscription extends EventFeature {
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class Status {
 
-    /** The type of the subscription */
+    /**
+     * The type of the subscription
+     */
     @JsonProperty
     private State state;
 

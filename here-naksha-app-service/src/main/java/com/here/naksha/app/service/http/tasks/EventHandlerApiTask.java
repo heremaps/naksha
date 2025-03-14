@@ -20,25 +20,20 @@ package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.HANDLER_ID;
-import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
-import com.here.naksha.lib.core.models.naksha.Storage;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
-import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
-import naksha.base.FromJsonOptions;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.JvmJsonUtil;
-import naksha.base.Platform;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
+import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.RequestQuery;
@@ -94,7 +89,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
     } catch (Exception ex) {
       if (ex instanceof NakshaException nakshaException) {
         logger.warn("Known exception while processing request. ", ex);
-        return verticle.sendErrorResponse(routingContext, nakshaException.error);
+        return verticle.sendErrorResponse(routingContext, nakshaException.getError());
       } else {
         logger.error("Unexpected error while processing request. ", ex);
         return verticle.sendErrorResponse(
@@ -105,45 +100,45 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
 
   private @NotNull XyzResponse executeCreateHandler() throws Exception {
     // Read request JSON
-    final EventHandler newHandler = handlerFromRequestBody();
+    final EventHandlerConfig newHandler = handlerFromRequestBody();
     final WriteRequest writeRequest = RequestHelper.createFeatureRequest(EVENT_HANDLERS, newHandler);
     // persist new handler in Admin DB (if doesn't exist already)
     Response response = executeWriteRequestFromSpaceStorage(writeRequest);
-    return transformResponseToXyzFeatureResponse(response, EventHandler.class, FAIL_ON_NO_ELEMENTS);
+    return transformResponseToXyzFeatureResponse(response, EventHandlerConfig.class, FAIL_ON_NO_ELEMENTS);
   }
 
   private @NotNull XyzResponse executeGetHandlers() {
     // Create ReadFeatures Request to read all handlers from Admin DB
-    final ReadFeatures request = new ReadFeatures(EVENT_HANDLERS);
+    final ReadFeatures request = new ReadFeatures().addCollectionId(EVENT_HANDLERS);
     // Submit request to NH Space Storage
     Response response = executeReadRequestFromSpaceStorage(request);
     // transform Response to Http FeatureCollection response
-    return transformResponseToXyzCollectionResponse(response, EventHandler.class);
+    return transformResponseToXyzCollectionResponse(response, EventHandlerConfig.class);
   }
 
   private @NotNull XyzResponse executeGetHandlerById() {
     // Create ReadFeatures Request to read the handler with the specific ID from Admin DB
     final String handlerId = routingContext.pathParam(HANDLER_ID);
-    final ReadFeatures request = new ReadFeatures(EVENT_HANDLERS);
+    final ReadFeatures request = new ReadFeatures().addCollectionId(EVENT_HANDLERS);
     RequestQuery query = new RequestQuery();
     query.setProperties(new PQuery(new Property(NakshaFeature.ID_KEY), StringOp.EQUALS, handlerId));
     request.setQuery(query);
     // Submit request to NH Space Storage
     Response response = executeReadRequestFromSpaceStorage(request);
-    return transformResponseToXyzFeatureResponse(response, EventHandler.class, NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS);
+    return transformResponseToXyzFeatureResponse(response, EventHandlerConfig.class, NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS);
   }
 
   private @NotNull XyzResponse executeUpdateHandler() throws JsonProcessingException {
     String handlerIdFromPath = routingContext.pathParam(HANDLER_ID);
-    EventHandler handlerToUpdate = handlerFromRequestBody();
+    EventHandlerConfig handlerToUpdate = handlerFromRequestBody();
     if (!handlerIdFromPath.equals(handlerToUpdate.getId())) {
       return verticle.sendErrorResponse(
           routingContext, NakshaError.ILLEGAL_ARGUMENT, mismatchMsg(handlerIdFromPath, handlerToUpdate));
     } else {
       final WriteRequest updateHandlerReq =
-          RequestHelper.updateFeatureRequest(EVENT_HANDLERS, handlerToUpdate);
+          RequestHelper.updateFeatureRequest(new NakshaCollection(EVENT_HANDLERS), handlerToUpdate);
       Response updateHandlerResponse = executeWriteRequestFromSpaceStorage(updateHandlerReq);
-      return transformResponseToXyzFeatureResponse(updateHandlerResponse, EventHandler.class, FAIL_ON_NO_ELEMENTS);
+      return transformResponseToXyzFeatureResponse(updateHandlerResponse, EventHandlerConfig.class, FAIL_ON_NO_ELEMENTS);
     }
   }
 
@@ -151,15 +146,15 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
     final String handlerId = ApiParams.extractMandatoryPathParam(routingContext, HANDLER_ID);
     final WriteRequest wrRequest = RequestHelper.deleteFeatureByIdRequest(EVENT_HANDLERS, handlerId);
     Response response = executeWriteRequestFromSpaceStorage(wrRequest);
-    return transformResponseToXyzFeatureResponse(response, EventHandler.class, NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS);
+    return transformResponseToXyzFeatureResponse(response, EventHandlerConfig.class, NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS);
   }
 
-  private @NotNull EventHandler handlerFromRequestBody() throws JsonProcessingException {
+  private @NotNull EventHandlerConfig handlerFromRequestBody() {
     final String bodyJson = routingContext.body().asString();
-    return JvmJsonUtil.readJsonAs(bodyJson, EventHandler.class);
+    return JvmJsonUtil.readJsonAs(bodyJson, EventHandlerConfig.class);
   }
 
-  private static String mismatchMsg(String handlerIdFromPath, EventHandler handlerToUpdate) {
+  private static String mismatchMsg(String handlerIdFromPath, EventHandlerConfig handlerToUpdate) {
     return "Mismatch between event handler ids. Path event handler id: %s, body event handler id: %s"
         .formatted(handlerIdFromPath, handlerToUpdate.getId());
   }

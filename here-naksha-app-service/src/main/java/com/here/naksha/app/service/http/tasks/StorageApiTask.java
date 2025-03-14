@@ -22,13 +22,12 @@ import static com.here.naksha.app.service.http.ops.MaskingUtil.maskProperties;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.STORAGE_ID;
-import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import io.vertx.ext.web.RoutingContext;
 import java.util.Set;
@@ -37,6 +36,7 @@ import naksha.base.StringList;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
 import naksha.model.request.WriteRequest;
@@ -96,7 +96,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
       };
     } catch (NakshaException nakshaException) {
       logger.warn("Known exception while processing request. ", nakshaException);
-      return verticle.sendErrorResponse(routingContext, nakshaException.error);
+      return verticle.sendErrorResponse(routingContext, nakshaException.getError());
     } catch (Exception ex) {
       logger.error("Unexpected error while processing request. ", ex);
       return verticle.sendErrorResponse(
@@ -105,27 +105,27 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
   }
 
   private @NotNull XyzResponse executeGetStorages() {
-    final ReadFeatures request = new ReadFeatures(STORAGES);
+    final ReadFeatures request = new ReadFeatures().addCollectionId(STORAGES);
     Response response = executeReadRequestFromSpaceStorage(request);
-    return transformResponseToXyzCollectionResponse(response, Storage.class, this::storageWithMaskedSensitiveProperties);
+    return transformResponseToXyzCollectionResponse(response, NakshaStorage.class, this::maskSensitiveProperties);
   }
 
   private @NotNull XyzResponse executeGetStorageById() {
     final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
-    final ReadFeatures request = new ReadFeatures(STORAGES);
+    final ReadFeatures request = new ReadFeatures().addCollectionId(STORAGES);
     request.setFeatureIds(StringList.of(storageId));
     return transformedResponseTo(request);
   }
 
   private @NotNull XyzResponse executeCreateStorage() throws JsonProcessingException {
-    final Storage newStorage = storageFromRequestBody();
+    final NakshaStorage newStorage = storageConfigFromRequestBody();
     final WriteRequest wrRequest = RequestHelper.createFeatureRequest(STORAGES, newStorage);
     return transformedResponseTo(wrRequest);
   }
 
   private @NotNull XyzResponse executeUpdateStorage() throws JsonProcessingException {
     final String storageIdFromPath = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
-    final Storage storageFromBody = storageFromRequestBody();
+    final NakshaStorage storageFromBody = storageConfigFromRequestBody();
     if (!storageFromBody.getId().equals(storageIdFromPath)) {
       return verticle.sendErrorResponse(
           routingContext, NakshaError.ILLEGAL_ARGUMENT, mismatchMsg(storageIdFromPath, storageFromBody));
@@ -139,36 +139,36 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
     final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
     final WriteRequest wrRequest = RequestHelper.deleteFeatureByIdRequest(STORAGES, storageId);
     Response response = executeWriteRequestFromSpaceStorage(wrRequest);
-    return transformResponseToXyzFeatureResponse(response, Storage.class, NOT_FOUND_ON_NO_ELEMENTS,
-        this::storageWithMaskedSensitiveProperties);
+    return transformResponseToXyzFeatureResponse(response, NakshaStorage.class, NOT_FOUND_ON_NO_ELEMENTS,
+        this::maskSensitiveProperties);
   }
 
   @NotNull
   private XyzResponse transformedResponseTo(ReadFeatures request) {
     Response response = executeReadRequestFromSpaceStorage(request);
     return transformResponseToXyzFeatureResponse(
-        response, Storage.class, NOT_FOUND_ON_NO_ELEMENTS, this::storageWithMaskedSensitiveProperties);
+        response, NakshaStorage.class, NOT_FOUND_ON_NO_ELEMENTS, this::maskSensitiveProperties);
   }
 
   @NotNull
   private XyzResponse transformedResponseTo(WriteRequest updateStorageReq) {
     Response updateStorageResult = executeWriteRequestFromSpaceStorage(updateStorageReq);
-    return transformResponseToXyzFeatureResponse(updateStorageResult, Storage.class, FAIL_ON_NO_ELEMENTS,
-        this::storageWithMaskedSensitiveProperties);
+    return transformResponseToXyzFeatureResponse(updateStorageResult, NakshaStorage.class, FAIL_ON_NO_ELEMENTS,
+        this::maskSensitiveProperties);
   }
 
-  private Storage storageWithMaskedSensitiveProperties(Storage storage) {
-    maskProperties(storage, StorageApiTask.SENSITIVE_PROPERTIES_LOWERCASE);
-    return storage;
+  private NakshaStorage maskSensitiveProperties(NakshaStorage storageConfig) {
+    maskProperties(storageConfig, StorageApiTask.SENSITIVE_PROPERTIES_LOWERCASE);
+    return storageConfig;
   }
 
-  private @NotNull Storage storageFromRequestBody() {
+  private @NotNull NakshaStorage storageConfigFromRequestBody() {
     final String bodyJson = routingContext.body().asString();
-    return JvmJsonUtil.readJsonAs(bodyJson, Storage.class);
+    return JvmJsonUtil.readJsonAs(bodyJson, NakshaStorage.class);
   }
 
-  private static String mismatchMsg(String storageIdFromPath, Storage storageFromBody) {
+  private static String mismatchMsg(String storageIdFromPath, NakshaStorage storageConfigFromBody) {
     return "Mismatch between storage ids. Path storage id: %s, body storage id: %s"
-        .formatted(storageIdFromPath, storageFromBody.getId());
+        .formatted(storageIdFromPath, storageConfigFromBody.getId());
   }
 }

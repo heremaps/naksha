@@ -17,4 +17,18 @@ object JvmAnyObjectUtil {
         type: Class<T>,
         init: Fn2<out T?, in AnyObject, in String>? = null
     ): T = owner.getOrCreate(key, klassFor(type), init)
+
+    @JvmStatic
+    fun <T : Any> getOrSetProperty(
+        owner: AnyObject,
+        key: String,
+        value: T,
+    ): T = owner.getOrSet(key, value)
+
+    @JvmStatic
+    fun <T: Any> getPropertyOrReturnDefault(
+        owner: AnyObject,
+        key: String,
+        default: T,
+    ): T = owner.getOr(key, default)
 }

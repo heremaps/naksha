@@ -13,10 +13,11 @@ java {
 }
 dependencies {
     api(project(":here-naksha-lib-core"))
-    implementation(project(":here-naksha-lib-psql"))
+    implementation(project(":here-naksha-lib-model"))
 
     implementation(Lib.commons_lang3)
     testImplementation(Lib.mockito)
+    testImplementation(project(":here-naksha-lib-model"))
     testImplementation(project(":here-naksha-lib-psql"))
     testImplementation(Lib.jts_core)
 }

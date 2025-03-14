@@ -47,8 +47,7 @@ class PrepareResult {
 
     String error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
     if (error != null)
-      return new ErrorResponse(
-          new NakshaError(error, "Response http status code: " + httpResponse.statusCode(), null, null));
+      return new ErrorResponse(new NakshaError(error, "Response http status code: " + httpResponse.statusCode()));
 
     Object tuples = Platform.fromJSON(prepareBody(httpResponse), FromJsonOptions.DEFAULT);
     NakshaFeatureList features = JvmBoxingUtil.box(tuples, NakshaFeatureList.class);

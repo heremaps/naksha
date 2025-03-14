@@ -10,9 +10,13 @@ import kotlin.math.min
 /**
  * A PostgresQL cluster that persists out of one master instance and optional read-replicas.
  * @property master the master instance.
- * @property replicas a mutable list of read-replicas, can be changed at runtime.
  */
-class PsqlCluster @JvmOverloads constructor(override val master: PgInstance, override var replicas: MutableList<PgInstance> = mutableListOf()) : PgCluster {
+class PsqlCluster @JvmOverloads constructor(override val master: PgInstance, replicas: MutableList<PgInstance>? = null) : PgCluster {
+    /**
+     * The replicas a mutable list of read-replicas, can be changed at runtime.
+     * @see [addReader]
+     */
+    override var replicas: MutableList<PgInstance> = replicas ?: mutableListOf()
     override val connectionLimit: Int
         get() {
             var limit = master.connectionLimit
@@ -21,6 +25,16 @@ class PsqlCluster @JvmOverloads constructor(override val master: PgInstance, ove
             }
             return limit
         }
+
+    /**
+     * Add a reader to the [replicas] list.
+     * @param instance the instance to add.
+     * @return this.
+     */
+    fun addReader(instance: PgInstance) : PsqlCluster {
+        if (!replicas.contains(instance)) replicas.add(instance)
+        return this
+    }
 
     override fun newConnection(options: SessionOptions, readOnly: Boolean): PsqlConnection {
         if (!readOnly || options.useMaster || replicas.isEmpty()) {

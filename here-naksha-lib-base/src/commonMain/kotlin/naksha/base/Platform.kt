@@ -164,7 +164,18 @@ expect class Platform {
          * @throws IllegalArgumentException If the given object has no valid [KClass].
          */
         fun <T : Any> klassOf(o: T): KClass<T>
-        // fun <T: Any> klassOf(javaClass: Class<T>): KClass<T> // <-- Java-only
+
+        /**
+         * A reflective method to turn a full qualified classname into a klass instance.
+         *
+         * - In the JVM this method will use `Class.forName` to find the class, initialize it, and then return the Kotlin class of it.
+         * - In JavaScript this method will use `globalThis` to find the constructor, so `com.here.example.Foo` will resolve into `globalThis.com.here.example.Foo`, this is expected to be a constructor function, then using [klassFor] to resolve it into the Kotlin class.
+         * @param name the full qualified name of the Klass.
+         * @return the Klass.
+         * @since 3.0.0
+         * @throws IllegalArgumentException if no such Klass is found.
+         */
+        fun <T : Any> klassForName(name: String): KClass<T>
 
         /**
          * Intern the given string and perform a [NFC](https://unicode.org/reports/tr15/) (Canonical Decomposition,
@@ -205,11 +216,32 @@ expect class Platform {
         fun <R: Any> newAtomicRef(startValue: R?): AtomicRef<R>
 
         /**
+         * Create a new atomic reference that is never `null`.
+         * @param startValue the initial value must not `null`.
+         * @return the atomic reference.
+         */
+        fun <R: Any> newAtomicNonNullRef(startValue: R): AtomicNonNullRef<R>
+
+        /**
+         * Create a new atomic boolean.
+         * @param startValue the initial value.
+         * @return the atomic boolean.
+         */
+        fun newAtomicBool(startValue: Boolean): AtomicBool
+
+        /**
          * Create a new atomic integer.
          * @param startValue the initial value.
          * @return the atomic integer.
          */
         fun newAtomicInt(startValue: Int): AtomicInt
+
+        /**
+         * Create a new atomic 64-bytes based integer (long).
+         * @param startValue the initial value.
+         * @return the atomic integer.
+         */
+        fun newAtomicInt64(startValue: Int64): AtomicInt64
 
         /**
          * Creates a new byte-array of the given size.
@@ -254,7 +286,7 @@ expect class Platform {
          * @param pobject the object at which to query for the proxy ([PlatformMap], [PlatformList] or [PlatformDataView]).
          * @param klass the proxy class.
          * @param doNotOverride if _true_, do not override existing symbols bound to incompatible types, but throw an
-         * [IllegalStateException]
+         * [IllegalStateException].
          * @return the proxy instance.
          * @throws IllegalArgumentException if the given `object` is not [PlatformMap], [PlatformList] or [PlatformDataView].
          * @throws IllegalStateException if [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
@@ -309,6 +341,13 @@ expect class Platform {
          * @return The integer converted into a double.
          */
         fun toInt64RawBits(d: Double): Int64
+
+        /**
+         * Widen a 32-bit integer into a platform specific 64-bit integer.
+         * @param value the 32-bit integer.
+         * @return the platform specific 64-bit representation.
+         */
+        fun intToInt64(value: Int): Int64
 
         /**
          * Converts an internal 64-bit integer into a platform specific.
@@ -416,14 +455,32 @@ expect class Platform {
 
         /**
          * Serialize the given value to JSON.
-         * @param obj The object to serialize.
-         * @return The JSON.
+         * @param obj the object to serialize.
+         * @return the JSON string.
+         * @see [ToJsonOptions.DEFAULT]
+         */
+        fun toJSON(obj: Any?): String
+
+        /**
+         * Serialize the given value to JSON.
+         * @param obj the object to serialize.
+         * @param options the options to use; defaults to [ToJsonOptions.DEFAULT].
+         * @return the JSON string.
          */
         fun toJSON(obj: Any?, options: ToJsonOptions = ToJsonOptions.DEFAULT): String
 
         /**
          * Deserialize the given JSON.
          * @param json The JSON string to parse.
+         * @return The parsed JSON.
+         * @see [FromJsonOptions.DEFAULT]
+         */
+        fun fromJSON(json: String): Any?
+
+        /**
+         * Deserialize the given JSON.
+         * @param json the JSON string to parse.
+         * @param options the options to use; defaults to [FromJsonOptions.DEFAULT].
          * @return The parsed JSON.
          */
         fun fromJSON(json: String, options: FromJsonOptions = FromJsonOptions.DEFAULT): Any?
@@ -494,12 +551,36 @@ expect class Platform {
         fun isPlv8(): Boolean
 
         /**
+         * The `encodeURIComponent()` function encodes a URI by replacing each instance of certain characters by one, two, three, or four escape sequences representing the UTF-8 encoding of the character (will only be four escape sequences for characters composed of two surrogate characters).
+         * @param uriComponent a string to be encoded as a URI component (a path, query string, fragment, etc.).
+         * @return a new string representing the provided uriComponent encoded as a URI component.
+         * @since 3.0
+         */
+        fun encodeURIComponent(uriComponent: String): String
+
+        /**
+         * The `decodeURIComponent()` function decodes a Uniform Resource Identifier (URI) component previously created by [encodeURIComponent] or by a similar routine.
+         * @param encodedURI an encoded component of a Uniform Resource Identifier.
+         * @return a new string representing the decoded version of the given encoded Uniform Resource Identifier (URI) component.
+         * @since 3.0
+         */
+        fun decodeURIComponent(encodedURI: String): String
+
+        /**
          * Calculates the MD5 hash about the given text.
          *
          * @param text the text to hash.
          * @return the MD5 hash, being a byte-array with size 16 (128-bit).
          */
         fun md5(text: String): ByteArray
+
+        /**
+         * Calculates the MD5 hash about the given byte-array.
+         *
+         * @param bytes the byte-array to hash.
+         * @return the MD5 hash, being a byte-array with size 16 (128-bit).
+         */
+        fun md5(bytes: ByteArray): ByteArray
 
         /**
          * Compress bytes.

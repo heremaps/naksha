@@ -35,7 +35,7 @@ class CommonProxyAssertionsTest {
             id = "some"
             properties = NakshaProperties().apply {
                 xyz = XyzNs()
-                featureType = "test_type"
+                setRaw("featureType", "test_type")
             }
         }
 
@@ -44,7 +44,7 @@ class CommonProxyAssertionsTest {
             id = "some"
             properties = NakshaProperties().apply {
                 delta = MomDeltaNs()
-                featureType = "test_type"
+                setRaw("featureType", "test_type")
             }
         }
 

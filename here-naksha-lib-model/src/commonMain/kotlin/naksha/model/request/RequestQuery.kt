@@ -22,7 +22,7 @@ import kotlin.jvm.JvmField
  * - [naksha.model.request.query.POr] - logical OR for property conditions
  * - [naksha.model.request.query.MetaOr] - logical OR for metadata conditions
  *
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 open class RequestQuery : AnyObject() {
@@ -32,35 +32,39 @@ open class RequestQuery : AnyObject() {
         val TAGS_PROP_PATH = arrayOf(NakshaFeature.PROPERTIES_KEY, NakshaProperties.XYZ_KEY, XyzNs.TAGS_KEY)
 
         private val INT_LIST = NotNullProperty<RequestQuery, IntList>(IntList::class)
-        private val SPATIAL_QUERY_NULL = NullableProperty<RequestQuery, ISpatialQuery>(ISpatialQuery::class)
-        private val TAG_QUERY_NULL = NullableProperty<RequestQuery, ITagQuery>(ITagQuery::class)
-        private val PROPERTIES_QUERY_NULL = NullableProperty<RequestQuery, IPropertyQuery>(IPropertyQuery::class)
-        private val METADATA_QUERY_NULL = NullableProperty<RequestQuery, IMetaQuery>(IMetaQuery::class)
+        private val SPATIAL_QUERY_OR_NULL = NullableProperty<RequestQuery, ISpatialQuery>(ISpatialQuery::class)
+        private val TAG_QUERY_OR_NULL = NullableProperty<RequestQuery, ITagQuery>(ITagQuery::class)
+        private val PROPERTIES_QUERY_OR_NULL = NullableProperty<RequestQuery, IPropertyQuery>(IPropertyQuery::class)
+        private val METADATA_QUERY_OR_NULL = NullableProperty<RequestQuery, IMetaQuery>(IMetaQuery::class)
     }
 
     /**
      * Search for features matching the given spatial query.
      * @since 3.0.0
+     * @see ISpatialQuery
      */
-    var spatial by SPATIAL_QUERY_NULL
+    var spatial by SPATIAL_QUERY_OR_NULL
 
     /**
      * Search for features matching the given tag query.
      * @since 3.0.0
+     * @see ITagQuery
      */
-    var tags by TAG_QUERY_NULL
+    var tags by TAG_QUERY_OR_NULL
 
     /**
      * Search for features matching the given property query.
      * @since 3.0.0
+     * @see IPropertyQuery
      */
-    var properties by PROPERTIES_QUERY_NULL
+    var properties by PROPERTIES_QUERY_OR_NULL
 
     /**
      * Search for features matching the given metadata query.
      * @since 3.0.0
+     * @see IMetaQuery
      */
-    var metadata by METADATA_QUERY_NULL
+    var metadata by METADATA_QUERY_OR_NULL
 
     /**
      * Search for features that have a reference point in one of the given tiles.
@@ -93,13 +97,14 @@ open class RequestQuery : AnyObject() {
     }
 
     /**
-     * Checks whether this query is effectively empty (it has no actual conditions)
+     * Checks whether this query is effectively empty (it has no actual conditions).
+     * @return _true_ if there are no conditions to be used; _false_ if a `WHERE` must be generated.
      */
     fun hasNoConditions(): Boolean {
         return refTiles.isEmpty()
                 && spatial == null
                 && tags == null
                 && properties == null
-                && metadata == null;
+                && metadata == null
     }
 }

@@ -2,8 +2,6 @@
 
 package naksha.psql
 
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaException
 import naksha.model.Version
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -14,19 +12,17 @@ import kotlin.jvm.JvmField
  * @param c the collection for which to create the HEAD table.
  */
 @JsExport
-class PgTransactions(c: PgCollection) : PgHead(c, "${c.id}${PG_HEAD}", PgStorageClass.Consistent, false, partitionBy = PgColumn.txn) {
-    init {
-        check(c is PgNakshaTransactions) { throw NakshaException(ILLEGAL_ARGUMENT, "Expected NakshaTransactions") }
-    }
+class PgTransactions(c: PgNakshaTransactions)
+    : PgHead(c, "${c.id}${PG_HEAD}", PgStorageClass.Consistent, false, partitionBy = PgColumn.next_tn) {
 
     /**
      * All partitions, with key being the year (`txn >> 41`).
      */
     @JvmField
     val years: MutableMap<Int, PgTransactionsYear> = mutableMapOf()
-    @JsName("getYear") operator fun get(txn: Version): PgTransactionsYear? = years[txn.year()]
+    @JsName("getYear") operator fun get(txn: Version): PgTransactionsYear? = years[txn.year]
     @JsName("setYear") operator fun set(txn: Version, partition: PgTransactionsYear) {
-        years[txn.year()] = partition
+        years[txn.year] = partition
     }
 
     override fun create(conn: PgConnection) {

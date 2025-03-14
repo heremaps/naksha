@@ -73,7 +73,7 @@ public final class HandlerUtil {
       final NakshaFeature feature =
           checkInstanceOf(features.get(i), NakshaFeature.class, "Unsupported feature type");
       final Write write = new Write()
-          .updateFeature(null, collectionIds.get(Math.min(i, collectionIds.size())), feature, false);
+          .updateFeature(collectionIds.get(Math.min(i, collectionIds.size())), feature, false);
       cwf.add(write);
     }
     // add context to write request

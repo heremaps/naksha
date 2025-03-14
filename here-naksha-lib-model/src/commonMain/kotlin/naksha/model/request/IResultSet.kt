@@ -55,11 +55,11 @@ interface IResultSet {
     /**
      * Return the requested result, generated from all [tuples] that are part of the result-set.
      *
-     * **Note**: The storage will not fetch the tuples of the result-set. The client need to invoke [ISession.fetchTuples] to be sure that the [tuples][Tuple] are available. This is automatically done, when invoking [SuccessResponse.features].
+     * **Note**: The storage will not fetch the tuples of the result-set. The client need to invoke [ISession.loadTuples] to be sure that the [tuples][Tuple] are available. This is automatically done, when invoking [SuccessResponse.features].
      *
      * @return a sub-list from [offset] to [end] with all result-tuples, that should be part of the success response.
      */
-    val result: ResultTupleList
+    val result: FeatureTupleList
 
     /**
      * Returns the size of the result, actually this is simply `result().size`.
@@ -68,12 +68,12 @@ interface IResultSet {
     val resultSize: Int
 
     /**
-     * Returns all [tuples][Tuple] being part of the result-set, the tuples may not have been read from the storage yet, and may require to invoke [ISession.fetchTuples]. Only the tuples till [validationEnd] are validated (filtered), all others are in an unknown state, except [isComplete].
+     * Returns all [tuples][Tuple] being part of the result-set, the tuples may not have been read from the storage yet, and may require to invoke [ISession.loadTuples]. Only the tuples till [validationEnd] are validated (filtered), all others are in an unknown state, except [fetchAll].
      *
      * To generate the features for an [SuccessResponse], simply read all tuples from [offset] till [end] (or use the [result] method), and convert them into features. Beware that only the tuples till [validationEnd] are reliable. All tuples returned starting with the one at [validationEnd] are not yet validated, therefore some filters (like property query, lambdas) have not been applied yet.
      * @return the list of all tuples being part of the result-set.
      */
-    val tuples: ResultTupleList
+    val tuples: FeatureTupleList
 
     /**
      * The position in the result-set that was not yet validated.
@@ -86,7 +86,7 @@ interface IResultSet {
      * Force the storage to validate more tuples.
      *
      * If the result-set is [incomplete][isIncomplete], the method will throw an [NakshaError.ILLEGAL_STATE] error.
-     * @param end the offset of the first tuple **not** to validate, if `tuples().size` is given, the result-set will become [complete][isComplete].
+     * @param end the offset of the first tuple **not** to validate, if `tuples().size` is given, the result-set will become [complete][fetchAll].
      */
     fun validateTill(end: Int)
 
@@ -110,7 +110,7 @@ interface IResultSet {
     fun isIncomplete(): Boolean
 
     /**
-     * Creates a handle into the result-set, requires that the result-set is either [complete][isComplete] or [partially complete][isPartial], and that is valid until the given [end].
+     * Creates a handle into the result-set, requires that the result-set is either [complete][fetchAll] or [partially complete][isPartial], and that is valid until the given [end].
      *
      * - If the given [end] is larger than [IResultSet.validationEnd], the method will throw an [NakshaError.ILLEGAL_STATE] error.
      * - If the result-set is [incomplete][isIncomplete], the method will throw an [NakshaError.ILLEGAL_STATE] error.

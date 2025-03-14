@@ -23,14 +23,14 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.here.naksha.lib.core.models.naksha.Storage;
 import naksha.model.NakshaVersion;
 import naksha.model.StringHelper;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A collection is a virtual container for features, managed by a {@link Storage}. All collections optionally have a history and transaction
+ * TODO CASL-780 : remove?
+ * A collection is a virtual container for features, managed by a storage. All collections optionally have a history and transaction
  * log.
  */
 @Deprecated

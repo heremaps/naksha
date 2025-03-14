@@ -10,8 +10,10 @@ import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
- * A query operation.
+ * An arbitrary query operation.
  * @since 3.0.0
+ * @see [DoubleOp]
+ * @see [StringOp]
  */
 @JsExport
 open class AnyOp : JsEnum() {

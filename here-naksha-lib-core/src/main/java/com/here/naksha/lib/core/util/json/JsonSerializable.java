@@ -139,8 +139,7 @@ public interface JsonSerializable {
       return errorResponse;
     }
 
-    boolean timeout = errorMessage.contains("timed out");
-    return new ErrorResponse(new NakshaError(NakshaError.UNINITIALIZED, errorMessage, null, null));
+    return new ErrorResponse(new NakshaError(NakshaError.UNINITIALIZED, errorMessage));
   }
 
   /**

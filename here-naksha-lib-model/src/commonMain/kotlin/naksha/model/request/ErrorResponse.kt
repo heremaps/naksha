@@ -20,13 +20,12 @@ open class ErrorResponse() : Response() {
      * Create an error response from individual error parts.
      * @param code the error code.
      * @param msg a human-readable message.
-     * @param id the identifier of the object that relates to the error; if any.
      * @param cause the origin exception that caused this error; if any.
      */
     @JvmOverloads
     @JsName("of")
-    constructor(code: String, msg: String, cause: Throwable? = null, id: String? = null) : this() {
-        this.error = NakshaError(code, msg, cause, id)
+    constructor(code: String, msg: String, cause: Throwable? = null) : this() {
+        this.error = NakshaError(code, msg, cause)
     }
 
     /**
@@ -42,6 +41,7 @@ open class ErrorResponse() : Response() {
      * Create an error response from an [NakshaException].
      * @param e the exception from which to generate the error response.
      */
+    @Suppress("NON_EXPORTABLE_TYPE")
     @JsName("fromException")
     constructor(e: NakshaException) : this() {
         this.error = e.error
@@ -55,6 +55,7 @@ open class ErrorResponse() : Response() {
 
     /**
      * The error reason.
+     * @since 3.0
      */
     var error by ERROR
 

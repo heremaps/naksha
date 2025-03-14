@@ -18,34 +18,34 @@
  */
 package com.here.naksha.lib.hub.storages;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.ALL_HUB_INTERNAL_COLLECTIONS;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
+import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.handlers.AuthorizationEventHandler;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.handlers.internal.IntHandlerForConfigs;
-import com.here.naksha.lib.handlers.internal.IntHandlerForEventHandlers;
+import com.here.naksha.lib.handlers.internal.IntHandlerForEventHandlerConfigs;
 import com.here.naksha.lib.handlers.internal.IntHandlerForExtensions;
 import com.here.naksha.lib.handlers.internal.IntHandlerForSpaces;
-import com.here.naksha.lib.handlers.internal.IntHandlerForStorages;
+import com.here.naksha.lib.handlers.internal.IntHandlerForStorageConfigs;
 import com.here.naksha.lib.handlers.internal.IntHandlerForSubscriptions;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import naksha.base.Int64;
-import naksha.model.ILock;
-import naksha.model.IMap;
+import naksha.base.PlatformLock;
+import naksha.base.fn.Fn1;
+import naksha.base.fn.Fx1;
+import naksha.jbon.JbDictionary;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
-import naksha.model.Tuple;
-import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaStorage;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -73,31 +73,22 @@ public class NHSpaceStorage implements IStorage {
     // common auth handler
     final IEventHandler authHandler = new AuthorizationEventHandler(hub);
     // add event handlers for each admin space
-    for (final String spaceId : NakshaAdminCollection.ALL) {
+    for (final String spaceId : ALL_HUB_INTERNAL_COLLECTIONS) {
       adminSpaces.put(
           spaceId,
           switch (spaceId) {
-            case NakshaAdminCollection.CONFIGS -> List.of(authHandler, new IntHandlerForConfigs(hub));
-            case NakshaAdminCollection.SPACES -> List.of(authHandler, new IntHandlerForSpaces(hub));
-            case NakshaAdminCollection.SUBSCRIPTIONS -> List.of(
+            case HubInternalIdentifiers.CONFIGS -> List.of(authHandler, new IntHandlerForConfigs(hub));
+            case HubInternalIdentifiers.SPACES -> List.of(authHandler, new IntHandlerForSpaces(hub));
+            case HubInternalIdentifiers.SUBSCRIPTIONS -> List.of(
                 authHandler, new IntHandlerForSubscriptions(hub));
-            case NakshaAdminCollection.EVENT_HANDLERS -> List.of(
-                authHandler, new IntHandlerForEventHandlers(hub));
-            case NakshaAdminCollection.STORAGES -> List.of(authHandler, new IntHandlerForStorages(hub));
-            case NakshaAdminCollection.EXTENSIONS -> List.of(authHandler, new IntHandlerForExtensions(hub));
+            case HubInternalIdentifiers.EVENT_HANDLERS -> List.of(
+                authHandler, new IntHandlerForEventHandlerConfigs(hub));
+            case HubInternalIdentifiers.STORAGES -> List.of(authHandler, new IntHandlerForStorageConfigs(hub));
+            case HubInternalIdentifiers.EXTENSIONS -> List.of(authHandler, new IntHandlerForExtensions(hub));
             default -> throw unchecked(new Exception("Unsupported virtual space " + spaceId));
           });
     }
     return adminSpaces;
-  }
-
-  /**
-   * Initializes the storage, create the transaction table, install needed scripts and extensions.
-   */
-  @Override
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public void initStorage(@Nullable Map<String, ?> params) {
-    nakshaHub.getAdminStorage().initStorage(params);
   }
 
   @NotNull
@@ -106,67 +97,12 @@ public class NHSpaceStorage implements IStorage {
     return nakshaHub.getAdminStorage().getId();
   }
 
-  @NotNull
-  @Override
-  public SessionOptions getAdminOptions() {
-    return nakshaHub.getAdminStorage().getAdminOptions();
-  }
 
   @Override
   public int getHardCap() {
     return nakshaHub.getAdminStorage().getHardCap();
   }
 
-  @Override
-  public void setHardCap(int i) {
-    nakshaHub.getAdminStorage().setHardCap(i);
-  }
-
-  @Override
-  public boolean isInitialized() {
-    return nakshaHub.getAdminStorage().isInitialized();
-  }
-
-  @NotNull
-  @Override
-  public IMap getDefaultMap() {
-    return nakshaHub.getAdminStorage().getDefaultMap();
-  }
-
-  @NotNull
-  @Override
-  public IMap get(@NotNull String mapId) {
-    return nakshaHub.getAdminStorage().get(mapId);
-  }
-
-  @Nullable
-  @Override
-  public IMap get(int mapNumber) {
-    return nakshaHub.getAdminStorage().get(mapNumber);
-  }
-
-  @Override
-  public boolean contains(@NotNull String mapId) {
-    return nakshaHub.getAdminStorage().contains(mapId);
-  }
-
-  @Nullable
-  @Override
-  public String getMapId(int mapNumber) {
-    return nakshaHub.getAdminStorage().getMapId(mapNumber);
-  }
-
-  @NotNull
-  @Override
-  public NakshaFeature tupleToFeature(@NotNull Tuple tuple) {
-    return nakshaHub.getAdminStorage().tupleToFeature(tuple);
-  }
-
-  @NotNull
-  @Override
-  public Tuple featureToTuple(@NotNull NakshaFeature feature) {
-    return nakshaHub.getAdminStorage().featureToTuple(feature);
-  }
 
   @NotNull
   @Override
@@ -181,13 +117,52 @@ public class NHSpaceStorage implements IStorage {
   }
 
   @Override
-  public void close() {
-    nakshaHub.getAdminStorage().close();
+  public @NotNull PlatformLock getLock() {
+    throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
   }
 
-  @NotNull
   @Override
-  public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
-    throw new NakshaException(new NakshaError(NakshaError.NOT_IMPLEMENTED, "enterLock"));
+  public @NotNull NakshaStorage getConfig() {
+    throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
+  }
+
+  @Override
+  public @NotNull Int64 getNumber() {
+    throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
+  }
+
+  @Override
+  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
+    throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
+  }
+
+  @Override
+  public @Nullable JbDictionary getDictionary(@NotNull String id) {
+    throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
+  }
+
+  @Override
+  public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
+    throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
+  }
+
+  @Override
+  public <T> T useWriteSession(@Nullable SessionOptions options, @NotNull Fn1<T, IWriteSession> lambda) {
+    return IStorage.super.useWriteSession(options, lambda);
+  }
+
+  @Override
+  public void runInWriteSession(@Nullable SessionOptions options, @NotNull Fx1<IWriteSession> lambda) {
+    IStorage.super.runInWriteSession(options, lambda);
+  }
+
+  @Override
+  public <T> T useReadSession(@Nullable SessionOptions options, @NotNull Fn1<T, IReadSession> lambda) {
+    return IStorage.super.useReadSession(options, lambda);
+  }
+
+  @Override
+  public void runInReadSession(@Nullable SessionOptions options, @NotNull Fx1<IReadSession> lambda) {
+    IStorage.super.runInReadSession(options, lambda);
   }
 }

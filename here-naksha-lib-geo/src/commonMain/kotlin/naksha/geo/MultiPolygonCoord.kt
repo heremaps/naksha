@@ -12,4 +12,14 @@ class MultiPolygonCoord() : ListProxy<PolygonCoord>(PolygonCoord::class), ICoord
     constructor(vararg polygons: PolygonCoord) : this() {
         addAll(polygons)
     }
+
+    override fun hasZ(): Boolean {
+        for (p in this) if (p != null && p.hasZ()) return true
+        return false
+    }
+
+    override fun hasM(): Boolean {
+        for (p in this) if (p != null && p.hasM()) return true
+        return false
+    }
 }

@@ -54,7 +54,7 @@ public class NakshaJwtAuthHandler extends JWTAuthHandlerImpl {
 
   @Override
   public void authenticate(@NotNull RoutingContext context, @NotNull Handler<@NotNull AsyncResult<User>> handler) {
-    if (hubConfig.authMode == AuthorizationMode.DUMMY
+    if (hubConfig.getAuthMode() == AuthorizationMode.DUMMY
         && !context.request().headers().contains(HttpHeaders.AUTHORIZATION)) {
       // Use the master JWT for testing in DUMMY auth mode with no JWT provided in request
       context.request().headers().set(HttpHeaders.AUTHORIZATION, "Bearer " + MASTER_JWT);

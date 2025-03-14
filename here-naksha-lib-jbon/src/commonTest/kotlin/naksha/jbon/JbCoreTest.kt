@@ -487,10 +487,10 @@ class JbCoreTest {
 
         // Test the dictionary class.
         val dict = JbDictionary().mapBinary(dictView, 0)
-        assertEquals(-1, dict.length())
+        assertEquals(-1, dict.length)
         dict.loadAll()
-        assertEquals(2, dict.length())
-        assertEquals(dictId, dict.id())
+        assertEquals(2, dict.length)
+        assertEquals(dictId, dict.id)
         assertEquals("foo", dict.get(0))
         assertEquals("bar", dict.get(1))
         assertEquals(0, dict.indexOf("foo"))
@@ -586,11 +586,11 @@ class JbCoreTest {
 
         assertTrue(feature.reader.isString())
         // Currently nothing should be in the dictionary.
-        assertEquals(-1, feature.reader.localDict!!.length())
+        assertEquals(-1, feature.reader.localDict!!.length)
         // Decode the text.
         assertEquals("Hello World Hello Test", feature.reader.decodeString())
         // Now the dictionary should be filled.
-        assertEquals(3, feature.reader.localDict!!.length())
+        assertEquals(3, feature.reader.localDict!!.length)
 
         // TODO: Fix this
         // Create a second text mapper and map it to the reader of the feature.

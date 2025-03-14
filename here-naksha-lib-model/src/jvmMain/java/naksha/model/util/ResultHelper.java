@@ -19,6 +19,8 @@
 package naksha.model.util;
 
 import static java.util.Collections.emptyList;
+import static naksha.base.Platform.javaProxy;
+import static naksha.base.Platform.klassFor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,12 +28,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+
+import kotlin.jvm.JvmClassMappingKt;
+import kotlin.jvm.JvmSuppressWildcards;
+import kotlin.reflect.KClass;
 import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
+import naksha.model.Action;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.ExecutedOp;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.Response;
-import naksha.model.request.ResultTuple;
-import naksha.model.request.ResultTupleList;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -108,57 +114,56 @@ public class ResultHelper {
     if (!(result instanceof SuccessResponse)) {
       return emptyList();
     }
-    final ResultTupleList resultTuples = ((SuccessResponse) result).getTuples();
-    if (resultTuples.isEmpty()) {
-      return emptyList();
-    }
-    final Iterator<ResultTuple> iterator = resultTuples.iterator();
-    final List<String> ids = new ArrayList<>();
-    while (iterator.hasNext()) {
-      ids.add(iterator.next().id());
+    final var response = (SuccessResponse) result;
+    final ArrayList<String> ids = new ArrayList<>(response.resultSize());
+    final NakshaFeatureList features = response.getFeatures();
+    for (final NakshaFeature feature : features) {
+       ids.add(feature.getId());
     }
     return ids;
   }
 
   /**
-   * Helper method to fetch features from given Result and return a map of multiple lists grouped by {@link ExecutedOp} of features with
+   * Helper method to fetch features from given Result and return a map of multiple lists grouped by {@link Action} of features with
    * type T. Returned lists are limited with respect to supplied `limit` parameter.
    *
    * @param result      the Result which is to be read
    * @param featureType the type of feature to be extracted from result
    * @param limit       the max number of features to be extracted
-   * @param <R>         type of feature
+   * @param <T>         type of feature
    * @return a map grouping the lists of features extracted from ReadResult
    */
-  public static <R extends NakshaFeature> Map<ExecutedOp, List<R>> readFeaturesGroupedByOp(
-      SuccessResponse result, Class<R> featureType, long limit) {
-    final Iterator<ResultTuple> iterator = result.getTuples().iterator();
-    if (!iterator.hasNext()) {
+  public static <T extends NakshaFeature> Map<Action, List<T>> readFeaturesGroupedByAction(
+          SuccessResponse result, Class<T> featureType, long limit) {
+    final NakshaFeatureList features = result.getFeatures();
+    if (features.isEmpty()) {
       throw new NoSuchElementException("Empty SuccessResponse");
     }
-    final List<R> insertedFeatures = new ArrayList<>();
-    final List<R> updatedFeatures = new ArrayList<>();
-    final List<R> deletedFeatures = new ArrayList<>();
+    final List<T> insertedFeatures = new ArrayList<>();
+    final List<T> updatedFeatures = new ArrayList<>();
+    final List<T> deletedFeatures = new ArrayList<>();
     int cnt = 0;
+    final Iterator<NakshaFeature> iterator = features.iterator();
     while (iterator.hasNext() && cnt++ < limit) {
-      ResultTuple next = iterator.next();
-      if (next.op.like(ExecutedOp.CREATED)) {
-        insertedFeatures.add(featureType.cast(next.getFeature()));
-      } else if (next.op.like(ExecutedOp.UPDATED)) {
-        updatedFeatures.add(featureType.cast(next.getFeature()));
-      } else if (next.op.like(ExecutedOp.DELETED)) {
-        deletedFeatures.add(featureType.cast(next.getFeature()));
+      final NakshaFeature feature = iterator.next();
+      final Action action = feature.getProperties().getXyz().getAction();
+      if (action == Action.CREATED) {
+        insertedFeatures.add(javaProxy(feature, featureType));
+      } else if (action == Action.UPDATED) {
+        updatedFeatures.add(javaProxy(feature, featureType));
+      } else if (action == Action.DELETED) {
+        deletedFeatures.add(javaProxy(feature, featureType));
       }
     }
-    final Map<ExecutedOp, List<R>> features = new HashMap<>();
-    features.put(ExecutedOp.CREATED, insertedFeatures);
-    features.put(ExecutedOp.UPDATED, updatedFeatures);
-    features.put(ExecutedOp.DELETED, deletedFeatures);
-    return features;
+    final Map<Action, List<T>> featuresByAction = new HashMap<>();
+    featuresByAction.put(Action.CREATED, insertedFeatures);
+    featuresByAction.put(Action.UPDATED, updatedFeatures);
+    featuresByAction.put(Action.DELETED, deletedFeatures);
+    return featuresByAction;
   }
 
   /**
-   * Helper method to fetch features from given Result and return a map of multiple lists grouped by {@link ExecutedOp} of features with
+   * Helper method to fetch features from given Result and return a map of multiple lists of features with
    * type T. Returned list is not limited - to set the upper bound, use sibling method with limit argument.
    *
    * @param result      the Result which is to be read
@@ -166,8 +171,8 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return a map grouping the lists of features extracted from ReadResult
    */
-  public static <R extends NakshaFeature> Map<ExecutedOp, List<R>> readFeaturesGroupedByOp(
+  public static <R extends NakshaFeature> Map<Action, List<R>> readFeaturesGroupedByAction(
       SuccessResponse result, Class<R> featureType) throws NoSuchElementException {
-    return readFeaturesGroupedByOp(result, featureType, Long.MAX_VALUE);
+    return readFeaturesGroupedByAction(result, featureType, Long.MAX_VALUE);
   }
 }

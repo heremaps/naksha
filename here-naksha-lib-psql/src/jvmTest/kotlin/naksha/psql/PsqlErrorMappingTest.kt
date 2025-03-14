@@ -6,10 +6,11 @@ import naksha.model.request.ErrorResponse
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.base.PgTestBase
-import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
 
@@ -17,11 +18,7 @@ class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
     fun shouldReturnMissingCollectionError() {
         // Given
         val writeFeatureToMissingCollection = WriteRequest().add(
-            Write().createFeature(
-                null,
-                "missing_collection",
-                generateRandomFeature()
-            )
+            Write().createFeature(env.mapId, "missing_collection", randomFeature())
         )
 
         // When
@@ -38,10 +35,7 @@ class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
     fun shouldReturnConflictingCollectionError() {
         // Given
         val createAlreadyExistingCollection = WriteRequest().add(
-            Write().createCollection(
-                null,
-                NakshaCollection(collection!!.id)
-            )
+            Write().createCollection(NakshaCollection(collection.id))
         )
 
         // When
@@ -51,24 +45,19 @@ class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
 
         // Then
         assertIs<ErrorResponse>(resp)
-        assertEquals(NakshaError.CONFLICT, resp.error.code)
+        assertTrue(resp.error.isConflict())
+        assertEquals(NakshaError.COLLECTION_EXISTS, resp.error.code)
     }
 
     @Test
     fun shouldReturnConflictOnExistingFeature() {
         // Given
-        val feature = generateRandomFeature()
+        val feature = randomFeature()
         insertFeature(feature)
 
         // And
         val writeFeatureWithConflictingId = WriteRequest().add(
-            Write().createFeature(
-                null,
-                collection!!.id,
-                generateRandomFeature().apply {
-                    id = feature.id
-                }
-            )
+            Write().createFeature(collection, randomFeature(feature.id))
         )
 
         // When

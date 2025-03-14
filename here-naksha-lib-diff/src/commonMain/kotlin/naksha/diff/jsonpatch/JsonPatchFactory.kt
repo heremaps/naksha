@@ -43,9 +43,9 @@ class JsonPatchFactory private constructor() {
 
         private fun jsonPathEntry(difference: PrimitiveDiff, path: String): JsonPatchEntry {
             return when (difference) {
-                is InsertOp -> JsonPatchEntry.Add(path, difference.newValue)
-                is RemoveOp -> JsonPatchEntry.Remove(path)
-                is UpdateOp -> JsonPatchEntry.Replace(path, difference.newValue)
+                is InsertOp -> JsonPatchAdd(path, difference.newValue)
+                is RemoveOp -> JsonPatchRemove(path)
+                is UpdateOp -> JsonPatchReplace(path, difference.newValue)
                 else -> throw IllegalArgumentException("Unknown PrimitiveDiff type: ${difference::class.simpleName}")
             }
         }

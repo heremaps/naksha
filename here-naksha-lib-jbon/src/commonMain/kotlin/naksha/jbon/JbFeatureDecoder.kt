@@ -1,20 +1,18 @@
 package naksha.jbon
 
 import naksha.base.AnyObject
-import naksha.base.MapProxy
 import naksha.base.Platform
-import naksha.base.PlatformMap
 import kotlin.js.JsExport
 import kotlin.reflect.KClass
 
 /**
  * A feature is a record, where the root unit is a map.
  * @constructor Create a new feature reader for records with a map as body.
- * @param dictManager the dictionary manager to use.
+ * @param dictReader the dictionary reader to use.
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-open class JbFeatureDecoder(dictManager: IDictManager? = null) : JbRecordDecoder(dictManager) {
+open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(dictReader) {
     private lateinit var _map: JbMapDecoder
 
     override fun clear(): JbFeatureDecoder {
@@ -23,8 +21,8 @@ open class JbFeatureDecoder(dictManager: IDictManager? = null) : JbRecordDecoder
         return this
     }
 
-    override fun parseHeader() {
-        super.parseHeader()
+    override fun doParseHeader() {
+        super.doParseHeader()
         check(reader.isMap()) { "Failed to parse feature payload, expected map, but found ${JbDecoder.unitTypeName(reader.unitType())}" }
         if (!this::_map.isInitialized) _map = JbMapDecoder()
         _map.mapReader(reader)

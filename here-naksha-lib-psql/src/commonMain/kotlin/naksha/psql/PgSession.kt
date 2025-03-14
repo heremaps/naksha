@@ -2,87 +2,147 @@
 
 package naksha.psql
 
-import kotlinx.datetime.*
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.logger
-import naksha.jbon.JbMapDecoder
-import naksha.jbon.JbFeatureDecoder
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.VIRT_TRANSACTIONS
-import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaMap
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
-import naksha.model.objects.Transaction
-import naksha.psql.executors.PgReader
-import naksha.psql.executors.PgWriter
-import naksha.psql.executors.write.BulkWriteExecutor
-import naksha.psql.executors.write.InstantWriteExecutor
+import naksha.model.objects.NakshaTx
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 /**
  * A session linked to a PostgresQL database.
  *
- * This object is created when [IStorage.newReadSession] or [IStorage.newWriteSession] are called, create the session is cheap without database access.
- *
- * @constructor Create a new session.
- * @param storage the storage to which this session is bound.
- * @param readOnly if this is a read-only session.
- * @param options the options to use, when opening new database connections.
+ * This object is created when [IStorage.newReadSession] or [IStorage.newWriteSession] are called, creating a session is cheap to create, without pre-allocation of any database connection, it will be connected on demand.
+ * @since 3.0
  */
 @JsExport
 open class PgSession(
-    @JvmField val storage: PgStorage,
+    /**
+     * The storage to which the session is bound.
+     * @since 3.0
+     */
+    pgStorage: PgStorage,
+
+    /**
+     * The session options to use, if any specific.
+     * @since 3.0
+     */
     options: SessionOptions?,
+
+    /**
+     * If this session is read-only.
+     * @since 3.0
+     */
     @JvmField val readOnly: Boolean
 ) : IWriteSession, IReadSession, ISession {
 
+    override val storage = pgStorage
+
     /**
-     * The options when opening new connections. The options are mostly immutable, except for the timeout values, for which there are dedicated setter.
+     * Assert that this session mutable and not closed.
+     * - Throws [NakshaError.ILLEGAL_STATE] if this session is [readOnly] or [closed][isClosed].
+     * @since 3.0
      */
-    var options: SessionOptions = options ?: SessionOptions()
-        internal set
+    fun assertMutable() {
+        if (readOnly) throw NakshaException(ILLEGAL_STATE, "Failed to acquire mutable connection from read-only session")
+        assertOpen()
+    }
+
+    /**
+     * Assert that this session mutable.
+     * - Throws [NakshaError.ILLEGAL_STATE] if this session is [closed][isClosed].
+     * @since 3.0
+     */
+    fun assertOpen() {
+        if (_closed) throw NakshaException(ILLEGAL_STATE, "Connection closed")
+    }
+
+    private var optionsValue: SessionOptions = options ?: SessionOptions()
+
+    override val options: SessionOptions
+        get() = optionsValue
 
     override var socketTimeout: Int
         get() = options.socketTimeout
         set(value) {
-            options = options.copy(socketTimeout = value)
+            optionsValue = options.copy(socketTimeout = value)
         }
 
     override var stmtTimeout: Int
         get() = options.stmtTimeout
         set(value) {
-            options = options.copy(stmtTimeout = value)
+            optionsValue = options.copy(stmtTimeout = value)
         }
 
     override var lockTimeout: Int
         get() = options.lockTimeout
         set(value) {
-            options = options.copy(lockTimeout = value)
+            optionsValue = options.copy(lockTimeout = value)
         }
-
-    override var map: String
-        get() = storage.schemaToMapId(options.mapId)
-        set(value) {
-            options = options.copy(mapId = value)
-        }
-
-    override fun executeParallel(request: Request): Response = execute(request)
 
     /**
      * The PostgresQL database connection currently being used; if any.
+     * @since 3.0
      */
     var pgConnection: PgConnection? = null
         private set
 
     /**
-     * Returns the PostgresQL connection used internally. If none is yet acquired, acquires on from the pools and returns it.
-     * @return the PostgresQL connection.
+     * Tests if reading in parallel is applicable for this session.
+     * @return _true_ if multiple read-connections can be used in parallel for this session; _false_ otherwise.
+     * @since 3.0
      */
-    fun usePgConnection(): PgConnection {
-        check(!_closed) { "Connection closed" }
+    val mayReadParallel: Boolean
+        get() = pgConnection == null && options.parallel
+
+    /**
+     * Opens a new read connection for parallel reading the session.
+     *
+     * Currently, the main target platform for this method are JVM based languages.
+     * - Throws [NakshaError.ILLEGAL_STATE] if the session is [closed][isClosed] or the session [may not be read in parallel][mayReadParallel].
+     * @return a new read-only connection for this session, which must be closed when done reading.
+     * @since 3.0
+     */
+    fun newReadConnection(): PgSessionReadConn {
+        assertOpen()
+        if (!mayReadParallel) throw NakshaException(ILLEGAL_STATE, "Session can't be read in parallel right now")
+        return PgSessionReadConn(storage.newConnection(options, readOnly, this::initConnection), true)
+    }
+
+    /**
+     * Returns a single shared read-connection that must be closed after reading.
+     *
+     * This implementation returns a wrapped [pgConnection], the usage is like:
+     * ```kotlin
+     * (
+     *   if (session.mayReadParallel)
+     *     session.newReadConnection()
+     *   else
+     *     session.readConnection()
+     * ).use {
+     *   // use it.conn
+     * }
+     * ```
+     *
+     * - Throws [NakshaError.ILLEGAL_STATE] if the session is [closed][isClosed].
+     * @return a single shared read-connection.
+     * @since 3.0
+     */
+    fun readConnection(): PgSessionReadConn = PgSessionReadConn(useConnection(), closeUnderlying = false)
+
+    /**
+     * Returns a single shared PostgresQL session connection.
+     *
+     * If none is yet acquired, acquires on from the pools and returns it. This connection is shared and must not be closed, it will automatically be closed when either [rollback] or [commit] are invoked.
+     * @return the shared PostgresQL connection.
+     * @since 3.0
+     */
+    fun useConnection(): PgConnection {
+        assertOpen()
         var conn = pgConnection
         if (conn == null) {
             conn = storage.newConnection(options, readOnly, this::initConnection)
@@ -92,308 +152,137 @@ open class PgSession(
     }
 
     /**
-     * Internally invoked by [usePgConnection] to initialize the connection.
+     * Internally invoked by [useConnection] to initialize the connection.
      * @param conn the connection to initialize.
      * @param query the query to executed, can be modified, when overriding this method.
+     * @since 3.0
      */
-    open fun initConnection(conn: PgConnection, query: String) {
+    protected open fun initConnection(conn: PgConnection, query: String) {
         // This is the same as the default implementation, when init is null, see PgStorage::newConnection
         conn.execute(query).close()
     }
 
-    /**
-     * The `uid` counter (unique identifier within a transaction).
-     */
-    @JvmField
-    val uid: AtomicInt = AtomicInt(0)
+    override val uid: AtomicInt = AtomicInt(0)
 
     /**
-     * The current transaction number.
+     * The last [PostgreSQL Error Code](https://www.postgresql.org/docs/current/errcodes-appendix.html) or _null_, if no error has happened.
+     * @since 3.0
      */
-    private var _txn: Int64? = null
+    var error: PgError? = null
+        private set
 
     /**
-     * The epoch milliseconds of when the transaction started (`transaction_timestamp()`).
+     * The current transaction wrapper; if any.
+     * @since 3.0
      */
-    private var _txts: Int64? = null
-
-    /**
-     * The current version.
-     */
-    private var _version: Version? = null
-
-    /**
-     * Keeps transaction's counters.
-     */
-    private var transaction: Transaction? = null
-
-    /**
-     * The last error number as SQLState.
-     */
-    var errNo: String? = null
-
-    /**
-     * The last human-readable error message.
-     */
-    var errMsg: String? = null
-
-    fun reset() {
-        clear()
-    }
-
-    fun clear() {
-        _txn = null
-        _txts = null
-        uid.set(0)
-        errNo = null
-        errMsg = null
-        transaction = null
-    }
-
-    /**
-     * Returns the current version (transaction number), if no version is yet generated, acquires a new one from the database.
-     * @return The current version (transaction number).
-     */
-    fun version(): Version {
-        if (_version == null) {
-            // Start a new transaction.
-            val conn = usePgConnection()
-            val QUERY = "SELECT nextval($1) as txn, (extract(epoch from transaction_timestamp())*1000)::int8 as time"
-            val cursor = conn.execute(QUERY, arrayOf(storage.txnSequenceOid)).fetch()
-            cursor.use {
-                var txn: Int64 = cursor["txn"]
-                val txts: Int64 = cursor["time"]
-                var version = Version(txn)
-                val txInstant = Instant.fromEpochMilliseconds(txts.toLong())
-                val txDate = txInstant.toLocalDateTime(TimeZone.UTC)
-                if (version.year() != txDate.year || version.month() != txDate.monthNumber || version.day() != txDate.dayOfMonth) {
-                    logger.info("Transaction counter is in wrong day, acquire advisory lock")
-                    conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
-                    try {
-                        val c2 = conn.execute("SELECT nextval($1) as txn", arrayOf(storage.txnSequenceOid)).fetch()
-                        c2.use {
-                            txn = c2["txn"]
-                            version = Version(txn)
-                        }
-                        if (version.year() != txDate.year || version.month() != txDate.monthNumber || version.day() != txDate.dayOfMonth) {
-                            logger.info("Transaction counter is still at wrong day, rollover to next day")
-                            // Rollover, we update sequence of the day.
-                            version = Version.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(1))
-                            txn = version.txn
-                            conn.execute("SELECT setval($1, $2)", arrayOf(storage.txnSequenceOid, txn + 1)).close()
-                        }
-                        logger.info("Release advisory lock")
-                        conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
-                    } catch (e: Throwable) {
-                        logger.error("Fatal exception while holding an advisory lock, terminating connection: {}", e)
-                        // This must not happen, to release the advisory lock, we need to terminate the connection!
-                        conn.terminate()
-                        throw NakshaException(
-                            EXCEPTION,
-                            "Failed to increment 'txn', exception while holding advisory lock, terminating connection"
-                        )
-                    }
-                }
-                _txn = txn
-                _txts = txts
-                _version = version
-                uid.set(0)
-            }
-        }
-        return _version!!
-    }
-
-    /**
-     * The start time of the version (transaction) in epoch milliseconds.
-     * @return the start time of the version (transaction) in epoch milliseconds.
-     */
-    fun versionTime(): Int64 {
-        version()
-        return _txts!!
-    }
-
-    private var _featureReader: JbFeatureDecoder? = null
-    private fun featureReader(): JbFeatureDecoder {
-        var reader = _featureReader
-        if (reader == null) {
-            reader = JbFeatureDecoder()
-            _featureReader = reader
-        }
-        reader.dictManager = storage[storage.defaultSchemaName].dictionaries()
-        return reader
-    }
-
-    private var _propertiesReader: JbMapDecoder? = null
-    private fun propertiesReader(): JbMapDecoder {
-        var mapDecoder = _propertiesReader
-        if (mapDecoder == null) {
-            mapDecoder = JbMapDecoder()
-            _propertiesReader = mapDecoder
-        }
-        mapDecoder.reader.localDict = featureReader().reader.localDict
-        mapDecoder.reader.globalDict = featureReader().reader.globalDict
-        return mapDecoder
-    }
-
-    /**
-     * Returns collectionId without partition part.
-     * For `topology_p0` it will return `topology`.
-     */
-//    fun getBaseCollectionId(collectionId: String): String {
-//        // Note: "topology_p000" is a partition, but we need collection-id.
-//        //        0123456789012
-//        // So, in that case we will find an underscore at index 8, so i = length-5!
-//        val i = collectionId.lastIndexOf('$')
-//        return if (i >= 0 && i == (collectionId.length - 3) && collectionId[i + 1] == 'p') {
-//            collectionId.substring(0, i)
-//        } else {
-//            collectionId
-//        }
-//    }
-
-    /**
-     * Single threaded all-or-nothing bulk write operation.
-     * As result there is row with success or error returned.
-     */
-//    fun write(writeRequest: WriteRequest): Response {
-//        val executor = WriteRequestExecutor(this, true)
-//        val transactionAction = TransactionAction(transaction(), writeRequest)
-//        return try {
-//            transactionAction.write()
-//            val writeFeaturesResult = executor.write(writeRequest)
-//            transactionAction.write()
-//            writeFeaturesResult
-//        } catch (e: NakshaException) {
-//            logger.debug("Supress exception: {}", e)
-//            ErrorResponse(NakshaError(e.errNo, e.errMsg))
-//        } catch (e: Throwable) {
-//            logger.debug("Suppress exception: {}", e.cause ?: e)
-//            ErrorResponse(NakshaError(ERR_FATAL, e.cause?.message ?: "Fatal ${e.stackTraceToString()}"))
-//        }
-//    }
+    internal var tx: StorageTx? = null
+        private set
 
     /**
      * Return the current transaction, if no transaction started yet, starts a new one.
-     *
      * @return the current transaction.
+     * @since 3.0
      */
-    override fun transaction(): Transaction {
-        var tx = transaction
+    internal fun useTx(): StorageTx {
+        assertMutable()
+        assertOpen()
+        var tx: StorageTx? = this.tx
         if (tx == null) {
-            txBeforeStart()
-            tx = Transaction(version().txn)
-            transaction = tx
-            txAfterStart(tx)
+            val txn = storage.adminMap.newTxn(useConnection())
+            tx = StorageTx(storage, txn.version, options.appId, options.author, storage.adminMap)
+            this.tx = tx
         }
         return tx
     }
 
-    override fun execute(request: Request): Response { // SuccessResponse
-        when (request) {
-            is WriteRequest -> {
-                try {
-                    transaction()
-                } catch (nakshaException: NakshaException) {
-                    return ErrorResponse(nakshaException)
-                }
-                val response = PgWriter(this, request, BulkWriteExecutor(this)).execute()
-                return response
-            }
+    override fun getTransaction(): NakshaTx? = tx?.transaction
 
-            is ReadRequest -> {
-                val response = PgReader(this, request).execute()
-                if (transaction == null) {
-                    // If this read was performed on a blank session, without a pending transaction, then we can release the connection.
-                    pgConnection?.close()
-                    pgConnection = null
-                }
-                return response
-            }
+    /**
+     * Return the current transaction, if no transaction started yet, starts a new one.
+     *
+     * - Throws [NakshaError.ILLEGAL_STATE] if this is session is [readOnly] or [closed][isClosed].
+     * @return the current transaction.
+     */
+    override fun useTransaction(): NakshaTx = useTx().transaction
 
-            else -> return ErrorResponse(NakshaException(ILLEGAL_ARGUMENT, "Unknown request"))
+    override fun execute(request: Request): Response {
+        try {
+            when (request) {
+                is WriteRequest -> {
+                    val writer = PgWriter(this)
+                    return writer.execute(request.writes)
+                }
+
+                is ReadRequest -> {
+                    val reader = PgReader(this, request)
+                    val response = reader.execute()
+                    if (tx == null) {
+                        // If this read was performed on a blank session, without a pending transaction, then we can release the connection.
+                        pgConnection?.close()
+                        pgConnection = null
+                    }
+                    return response
+                }
+
+                else -> throw illegalArg("Unknown request: ${request::class.simpleName}")
+            }
+        } catch (t: Throwable) {
+            val nakshaException = PgExceptionMapper.map(t)
+            nakshaException.error.print()
+            return ErrorResponse(nakshaException.error)
         }
     }
 
-    private fun saveTransactionIntoDb() {
-        val writeTxReq = WriteRequest()
-        val writeTx = Write()
-        writeTxReq.add(writeTx)
-        writeTx.upsertFeature(null, collectionId = VIRT_TRANSACTIONS, feature = transaction())
-        PgWriter(this, writeTxReq, InstantWriteExecutor(this)).execute()
+    /**
+     * Reset the session into the initial state.
+     */
+    private fun clear() {
+        uid.set(0)
+        error = null
+        tx = null
+        try {
+            pgConnection?.close()
+        } catch (ignore: Throwable) {
+        } finally {
+            pgConnection = null
+        }
     }
-
-    /**
-     * Invoked before a new transaction starts. This is before even the transaction number has been acquired, called by [transaction].
-     */
-    open protected fun txBeforeStart() {}
-
-    /**
-     * Invoked after a new transaction has been started, so a connection and a transaction number are available, called by
-     * [transaction].
-     * @param tx the transaction that has been started.
-     */
-    open protected fun txAfterStart(tx: Transaction) {}
-
-    /**
-     * Invoked before a transaction is committed (called by [commit]).
-     * @param tx the transaction that has been finished.
-     */
-    open protected fun txOnCommit(tx: Transaction) {}
-
-    /**
-     * Invoked before a transaction is rolled-back (called by [rollback]).
-     * @param tx the transaction that has been rolled back.
-     */
-    open protected fun txOnRollback(tx: Transaction) {}
 
     override fun commit() {
         val conn = pgConnection
-        if (_closed) throw NakshaException(ILLEGAL_STATE, "Connection closed")
+        assertOpen()
+        assertMutable()
         if (conn != null) {
-            val tx = transaction
+            val tx = tx
             if (tx != null) {
                 try {
-                    saveTransactionIntoDb()
-                } catch (e: Throwable) {
-                    throw NakshaException(EXCEPTION, "Failed to save transaction", cause = e)
-                }
-                try {
-                    txOnCommit(tx)
-                } catch (e: Throwable) {
-                    throw NakshaException(EXCEPTION, "Commit handler failed", cause = e)
+                    val transaction = tx.transaction
+                    val writeTx = Write().createFeature(Naksha.ADMIN_MAP, TRANSACTIONS_COL, transaction)
+                    val writeRequest = WriteRequest().add(writeTx)
+                    val writer = PgWriter(this)
+                    writer.execute(writeRequest.writes)
+                } catch (t: Throwable) {
+                    throw generalException("Failed to save transaction", cause = t)
+                } finally {
+                    this.tx = null
                 }
             }
-            this.transaction = null
             try {
                 conn.commit()
-            } catch (e: Throwable) {
-                throw NakshaException(EXCEPTION, "Failed to commit", cause = e)
+            } catch (t: Throwable) {
+                throw generalException("Failed to commit transaction", cause = t)
             }
-            this.pgConnection = null
-            try {
-                conn.close()
-            } catch (ignore: Throwable) {
-            }
+            clear()
         }
     }
 
     override fun rollback() {
         val conn = pgConnection
-        if (_closed) throw NakshaException(ILLEGAL_STATE, "Connection closed")
         if (conn != null) {
-            val tx = transaction
-            if (tx != null) try {
-                txOnRollback(tx)
-            } catch (e: Throwable) {
-                logger.info("Unexpected exception in txOnRollback handler: {}", e)
-            } finally {
-                this.transaction = null
-            }
-            this.pgConnection = null
             try {
                 conn.rollback()
             } finally {
-                conn.close()
+                clear()
             }
         }
     }
@@ -406,39 +295,179 @@ open class PgSession(
         if (!_closed) {
             rollback()
             _closed = true
-            pgConnection?.close()
-            pgConnection = null
+            clear()
         }
     }
 
-    override fun validateHandle(handle: String, ttl: Int?): Boolean {
-        val connection = pgConnection
-        val conn = connection ?: storage.adminConnection(storage.adminOptions)
-        try {
-            return storage.validateHandle(conn, handle, ttl)
-        } finally {
-            if (connection == null) conn.close()
+    @v30_experimental
+    override fun acquireSessionLock(lockId: String): ILock {
+        assertOpen()
+        return PgLock(this, useConnection(), lockId, true)
+    }
+
+    @v30_experimental
+    override fun acquireTransactionLock(lockId: String): ILock {
+        assertOpen()
+        return PgLock(this, useConnection(), lockId, false)
+    }
+
+    override fun loadTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int, mode: FetchMode) {
+        val missing = featureTuples.subList(from, to).mapNotNull { if (it != null && it.tuple == null) it else null }
+        if (missing.isNotEmpty()) {
+            (if (mayReadParallel) newReadConnection() else readConnection()).use { readConn ->
+                val conn = readConn.conn
+                val byCollection = missing.groupBy {
+                    val pgMap = storage.adminMap.getPgMapByNumber(conn, it.tupleNumber.mapNumber) ?: return@groupBy "NULL"
+                    val pgCollection = pgMap.getPgCollectionByNumber(conn, it.tupleNumber.collectionNumber) ?: return@groupBy "NULL"
+                    pgCollection
+                }
+                for (entry in byCollection) {
+                    val key = entry.key
+                    val pgCollection = if (key is PgCollection) key else continue
+                    val tupleFeatures = entry.value
+                    loadTuplesFromCollection(conn, pgCollection, tupleFeatures, mode)
+                }
+            }
         }
     }
 
-    override fun getTuples(tupleNumbers: Array<TupleNumber>, fetchFromHistory: Boolean, mode: FetchBits): List<Tuple?> {
-        val connection = pgConnection
-        val conn = connection ?: storage.adminConnection(storage.adminOptions)
-        try {
-            return storage.getTuples(conn, tupleNumbers, fetchFromHistory, mode)
-        } finally {
-            if (connection == null) conn.close()
+    /**
+     * Load [Tuple] from a specific collection, can be executed in parallel, when multiple collections are needed. We should make parallel reading optional, we experienced that when used for example in EMR, too many connections can harm. However, the cache could keep objects in Redis or alike, and then read perfectly fine in parallel!
+     *
+     * @param conn the connection to use for this read.
+     * @param pgCollection the collection to read from.
+     * @param tupleFeatures the features to load from this collection (pre-filtered).
+     * @param mode the load-mode
+     */
+    private fun loadTuplesFromCollection(conn: PgConnection, pgCollection: PgCollection, tupleFeatures: List<FeatureTuple>, mode: FetchMode) {
+        // TODO: We can improve this to load the results as GZIP compressed binary!
+        //       Read BINARY.md for more information.
+        //       For the sake of delivery, we take the shortcut, and only us ARRAY_AGG
+        //       Maybe this is already fast enough?
+        val rows = PgColumnRows()
+            .withStorageNumber(pgCollection.storage.number)
+            .withMapNumber(pgCollection.map.number)
+            .withCollectionNumber(pgCollection.number)
+            .addColumns(PgColumn.allColumns)
+        pgCollection.map.setSearchPath(conn)
+        val headTable = pgCollection.headTable
+        val historyTable = pgCollection.historyTable
+        val deletedTable = pgCollection.deletedTable
+        val SQL = if (historyTable != null) {
+            """WITH result AS(
+  SELECT ${rows.names()} FROM ${headTable.quotedName} WHERE tn = ANY($1)
+  UNION ALL
+  SELECT ${rows.names()} FROM ${historyTable.quotedName} WHERE tn = ANY($1)
+)
+SELECT ${rows.namesAggregate()} FROM result"""
+        } else if (deletedTable != null) {
+            """WITH result AS(
+  SELECT ${rows.names()} FROM ${headTable.quotedName} WHERE tn = ANY($1)
+  UNION ALL
+  SELECT ${rows.names()} FROM ${deletedTable.quotedName} WHERE tn = ANY($1)
+)
+SELECT ${rows.namesAggregate()} FROM result"""
+        } else {
+            "SELECT ${rows.namesAggregate()} FROM ${headTable.quotedName} WHERE tn = ANY($1)"
+        }
+        val tupleNumbers: Array<Any?> = tupleFeatures.map { it.tupleNumber.toB160() }.toTypedArray()
+        conn.prepare(SQL, arrayOf(PgType.BYTE_ARRAY_ARRAY.text)).use { plan ->
+            plan.execute(arrayOf(tupleNumbers)).fetch().use { cursor ->
+                rows.addAggregated(cursor)
+            }
+        }
+        for (i in 0 until rows.size) {
+            val tuple = rows[i] ?: continue
+            Naksha.cache.store(tuple)
+            val tupleNumber = tuple.tupleNumber
+            for (tupleFeature in tupleFeatures) {
+                if (tupleFeature.tupleNumber == tupleNumber) {
+                    tupleFeature.tuple = tuple
+                    break
+                }
+            }
         }
     }
 
-
-    override fun fetchTuples(resultTuples: List<ResultTuple?>, from: Int, to: Int, fetchFromHistory: Boolean, mode: FetchBits) {
-        val connection = pgConnection
-        val conn = connection ?: storage.adminConnection(storage.adminOptions)
-        try {
-            return storage.fetchTuples(conn, resultTuples, from, to, fetchFromHistory, mode)
-        } finally {
-            if (connection == null) conn.close()
+    override fun getMapById(mapId: String): NakshaMap? {
+        assertOpen()
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            storage.adminMap.getPgMapById(it.conn, mapId)?.head
         }
     }
+
+    /**
+     * Returns the [PgMap] for the given id.
+     * @param mapId the map-id.
+     * @return the [PgMap]; _null_ if the map does not yet exist.
+     */
+    fun getPgMapById(mapId: String): PgMap? {
+        assertOpen()
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            storage.adminMap.getPgMapById(it.conn, mapId)
+        }
+    }
+
+    override fun getMapByNumber(mapNumber: Int): NakshaMap? {
+        assertOpen()
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            storage.adminMap.getPgMapByNumber(it.conn, mapNumber)?.head
+        }
+    }
+
+    /**
+     * Returns the [PgMap] for the given number.
+     * @param mapNumber the map-number.
+     * @return the [PgMap]; _null_ if the map does not yet exist.
+     */
+    fun getPgMapByNumber(mapNumber: Int): PgMap? {
+        assertOpen()
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            storage.adminMap.getPgMapByNumber(it.conn, mapNumber)
+        }
+    }
+
+    override fun getCollectionById(map: NakshaMap, collectionId: String): NakshaCollection? {
+        assertOpen()
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            val pgMap = storage.adminMap.getPgMapById(it.conn, map.id) ?: return null
+            pgMap.getPgCollectionById(it.conn, collectionId)?.head
+        }
+    }
+
+    /**
+     * Returns the [PgCollection] for the given id.
+     * @param pgMap the [PgMap] in which to search for the collection.
+     * @param collectionId the collection-id.
+     * @return the [PgCollection]; _null_ if the collection does not yet exist.
+     */
+    fun getPgCollectionById(pgMap: PgMap, collectionId: String): PgCollection? {
+        assertOpen()
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            pgMap.getPgCollectionById(it.conn, collectionId)
+        }
+    }
+
+    override fun getCollectionByNumber(map: NakshaMap, collectionNumber: Int): NakshaCollection? {
+        assertOpen()
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            val pgMap = storage.adminMap.getPgMapById(it.conn, map.id) ?: return null
+            pgMap.getPgCollectionByNumber(it.conn, collectionNumber)?.head
+        }
+    }
+
+    /**
+     * Returns the [PgCollection] for the given number.
+     * @param pgMap the [PgMap] in which to search for the collection.
+     * @param collectionNumber the collection-number.
+     * @return the [PgCollection]; _null_ if the collection does not yet exist.
+     */
+    fun getPgCollectionByNumber(pgMap: PgMap, collectionNumber: Int): PgCollection? {
+        assertOpen()
+        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
+            pgMap.getPgCollectionByNumber(it.conn, collectionNumber)
+        }
+    }
+
+    override fun executeParallel(request: Request): Response = execute(request)
 }

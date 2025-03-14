@@ -2,406 +2,245 @@ package naksha.geo
 
 import org.locationtech.jts.geom.*
 
-@Suppress("MemberVisibilityCanBePrivate")
+@Deprecated(message = "Replaced by GeoUtil", replaceWith = ReplaceWith("GeoUtil"), level = DeprecationLevel.ERROR)
 object ProxyGeoUtil {
 
-    private val factory: GeometryFactory = GeometryFactory(PrecisionModel(), 4326)
-
-    /**
-     * Converts JTS [Geometry] into [SpGeometry]
-     *
-     * @param jtsGeometry
-     * @return [SpGeometry]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toProxyGeometry(jtsGeometry)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toProxyGeometry(jtsGeometry: Geometry): SpGeometry {
-        return when (jtsGeometry) {
-            is Point -> toPoint(jtsGeometry)
-            is MultiPoint -> toMultiPoint(jtsGeometry)
-            is LineString -> toLineString(jtsGeometry)
-            is Polygon -> toPolygon(jtsGeometry)
-            is MultiPolygon -> toMultiPolygon(jtsGeometry)
-            is MultiLineString -> toMultiLineString(jtsGeometry)
-            is GeometryCollection -> toGeometryCollection(jtsGeometry)
-            else -> throw IllegalArgumentException("Unsupported geometry ${jtsGeometry.geometryType}")
-        }
-    }
+    fun toProxyGeometry(jtsGeometry: Geometry): SpGeometry = GeoUtil.toProxyGeometry(jtsGeometry)
 
-    /**
-     * Converts JTS [GeometryCollection] into [SpGeometryCollection]
-     *
-     * @param jtsGeometry - JTS [GeometryCollection]
-     * @return [SpGeometryCollection]
-     */
-    fun toGeometryCollection(jtsGeometry: GeometryCollection): SpGeometryCollection {
-        val geometries = SpGeometryList()
-        for (i in 0..<jtsGeometry.numGeometries) {
-            val proxyGeometry = toProxyGeometry(jtsGeometry.getGeometryN(i))
-            geometries.add(proxyGeometry)
-        }
-        return SpGeometryCollection(geometries)
-    }
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toGeometryCollection(jtsGeometry)"),
+        level = DeprecationLevel.ERROR
+    )
+    fun toGeometryCollection(jtsGeometry: GeometryCollection): SpGeometryCollection = GeoUtil.toGeometryCollection(jtsGeometry)
 
-    /**
-     * Converts JTS [Coordinate] into [PointCoord]
-     *
-     * @param coords - JTS [Coordinate]
-     * @return [PointCoord]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toPointCoord(coords)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toPointCoord(coords: Coordinate): PointCoord {
-        return if (!coords.m.isNaN()) {
-            PointCoord(coords.x, coords.y, coords.z, coords.m)
-        } else if (!coords.z.isNaN()) {
-            PointCoord(coords.x, coords.y, coords.z)
-        } else {
-            PointCoord(coords.x, coords.y)
-        }
-    }
+    fun toPointCoord(coords: Coordinate): PointCoord = GeoUtil.toPointCoord(coords)
 
-    /**
-     * Converts JTS [Point] into [SpPoint]
-     *
-     * @param jtsPoint - JTS [Point]
-     * @return [SpPoint]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toPoint(jtsPoint)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toPoint(jtsPoint: Point): SpPoint {
-        return SpPoint().withCoordinates(toPointCoord(jtsPoint.coordinate))
-    }
+    fun toPoint(jtsPoint: Point): SpPoint = GeoUtil.toPoint(jtsPoint)
 
-    /**
-     * Converts JTS [MultiPoint] into [SpMultiPoint]
-     *
-     * @param jtsMultiPoint - JTS [MultiPoint]
-     * @return [SpMultiPoint]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toMultiPoint(jtsMultiPoint)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toMultiPoint(jtsMultiPoint: MultiPoint): SpMultiPoint {
-        return SpMultiPoint().withCoordinates(toMultiPointCoord(jtsMultiPoint.coordinates))
-    }
+    fun toMultiPoint(jtsMultiPoint: MultiPoint): SpMultiPoint = GeoUtil.toMultiPoint(jtsMultiPoint)
 
-    /**
-     * Converts JTS [Array<Coordinate>] into [MultiPointCoord]
-     *
-     * @param jtsCoords - JTS [Array<Coordinate>]
-     * @return [MultiPointCoord]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toMultiPointCoord(jtsCoords)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toMultiPointCoord(jtsCoords: Array<Coordinate>): MultiPointCoord {
-        return MultiPointCoord(*jtsCoords.map(::toPointCoord).toTypedArray())
-    }
+    fun toMultiPointCoord(jtsCoords: Array<Coordinate>): MultiPointCoord = GeoUtil.toMultiPointCoord(jtsCoords)
 
-    /**
-     * Converts JTS [LineString] into [SpLineString]
-     *
-     * @param jtsLineString - JTS [LineString]
-     * @return [SpLineString]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toLineString(jtsLineString)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toLineString(jtsLineString: LineString): SpLineString {
-        return SpLineString().withCoordinates(toLineStringCoord(jtsLineString.coordinates))
-    }
+    fun toLineString(jtsLineString: LineString): SpLineString = GeoUtil.toLineString(jtsLineString)
 
-    /**
-     * Converts JTS [Array<Coordinate>] into [LineStringCoord]
-     *
-     * @param jtsCoords - JTS [Array<Coordinate>]
-     * @return [LineStringCoord]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toLineStringCoord(jtsCoords)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toLineStringCoord(jtsCoords: Array<Coordinate>): LineStringCoord {
-        return LineStringCoord(*jtsCoords.map(::toPointCoord).toTypedArray())
-    }
+    fun toLineStringCoord(jtsCoords: Array<Coordinate>): LineStringCoord = GeoUtil.toLineStringCoord(jtsCoords)
 
-    /**
-     * Converts JTS [Array<LinearRing>] into [LineStringCoord]
-     *
-     * @param linearRings - JTS [Array<LinearRing>]
-     * @return [LineStringCoord]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toLinearRingCoord(linearRings)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toLinearRingCoord(linearRings: Array<LinearRing>): Array<LineStringCoord> {
-        return linearRings.map { toLineStringCoord(it.coordinates) }.toTypedArray()
-    }
+    fun toLinearRingCoord(linearRings: Array<LinearRing>): Array<LineStringCoord> = GeoUtil.toLinearRingCoord(linearRings)
 
-    /**
-     * Converts JTS [Polygon] into [SpPolygon]
-     *
-     * @param jtsPolygon - JTS [Polygon]
-     * @return [SpPolygon]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toPolygon(jtsPolygon)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toPolygon(jtsPolygon: Polygon): SpPolygon {
-        val polygonRings = mutableListOf(jtsPolygon.exteriorRing)
-        for (i in 0..<jtsPolygon.numInteriorRing) {
-            polygonRings.add(jtsPolygon.getInteriorRingN(i))
-        }
-        return SpPolygon().withCoordinates(toPolygonCoord(polygonRings.toTypedArray()))
-    }
+    fun toPolygon(jtsPolygon: Polygon): SpPolygon = GeoUtil.toPolygon(jtsPolygon)
 
-    /**
-     * Converts JTS [Array<LinearRing>] into [PolygonCoord]
-     *
-     * @param jtsCoords - JTS [Array<Coordinate>]
-     * @return [PolygonCoord]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toPolygonCoord(jtsCoords)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toPolygonCoord(jtsCoords: Array<LinearRing>): PolygonCoord {
-        return PolygonCoord(*toLinearRingCoord(jtsCoords))
-    }
+    fun toPolygonCoord(jtsCoords: Array<LinearRing>): PolygonCoord = GeoUtil.toPolygonCoord(jtsCoords)
 
-    /**
-     * Converts JTS [MultiLineString] into [SpMultiLineString]
-     *
-     * @param jtsMultiLineString - JTS [MultiLineString]
-     * @return [SpMultiLineString]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toMultiLineString(jtsMultiLineString)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toMultiLineString(jtsMultiLineString: MultiLineString): SpMultiLineString {
-        val lineStrings = Array(jtsMultiLineString.numGeometries) {
-            toLineStringCoord(jtsMultiLineString.getGeometryN(it).coordinates)
-        }
-        return SpMultiLineString().withCoordinates(toMultiLineStringCoord(lineStrings))
-    }
+    fun toMultiLineString(jtsMultiLineString: MultiLineString): SpMultiLineString = GeoUtil.toMultiLineString(jtsMultiLineString)
 
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toMultiLineStringCoord(jtsCoords)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toMultiLineStringCoord(jtsCoords: Array<LineStringCoord>): MultiLineStringCoord {
-        return MultiLineStringCoord(*jtsCoords)
-    }
+    fun toMultiLineStringCoord(jtsCoords: Array<LineStringCoord>): MultiLineStringCoord = GeoUtil.toMultiLineStringCoord(jtsCoords)
 
-    /**
-     * Converts JTS [MultiPolygon] into [SpMultiPolygon]
-     *
-     * @param jtsMultiPolygon - JTS [MultiPolygon]
-     * @return [SpMultiPolygon]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toMultiPolygon(jtsMultiPolygon)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toMultiPolygon(jtsMultiPolygon: MultiPolygon): SpMultiPolygon {
-        val polygons = Array(jtsMultiPolygon.numGeometries) {
-            toPolygon(jtsMultiPolygon.getGeometryN(it) as Polygon)
-        }
-        return SpMultiPolygon().withCoordinates(toMultiPolygonCoord(polygons))
-    }
+    fun toMultiPolygon(jtsMultiPolygon: MultiPolygon): SpMultiPolygon = GeoUtil.toMultiPolygon(jtsMultiPolygon)
 
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toMultiPolygonCoord(polygons)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toMultiPolygonCoord(polygons: Array<SpPolygon>): MultiPolygonCoord {
-        return MultiPolygonCoord(*polygons.map { it.getCoordinates() }.toTypedArray())
-    }
+    fun toMultiPolygonCoord(polygons: Array<SpPolygon>): MultiPolygonCoord = GeoUtil.toMultiPolygonCoord(polygons)
 
-    /**
-     * Converts [PointCoord] to JTS [Coordinate] with or without altitude.
-     *
-     * @param coords [PointCoord] to convert
-     * @return [Coordinate]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toJtsCoordinate(coords)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toJtsCoordinate(coords: PointCoord): Coordinate =
-        if (coords.hasAltitude())
-            Coordinate(coords.getLongitude(), coords.getLatitude(), coords.getAltitude())
-        else
-            Coordinate(coords.getLongitude(), coords.getLatitude())
+    fun toJtsCoordinate(coords: PointCoord): Coordinate = GeoUtil.toJtsCoordinate(coords)
 
-    /**
-     * Converts proxy model to JTS [Geometry] using [factory] with default SRID: 4326
-     *
-     * @param geometry - proxy geometry to convert
-     * @return JTS Geometry
-     * @throws [IllegalArgumentException] when proxy type is not supported
-     * @throws [RuntimeException] when proxy has null coordinates
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toJtsGeometry(geometry)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toJtsGeometry(geometry: SpGeometry): Geometry {
-        return when (geometry.type) {
-            SpType.Point.toString() -> toJtsPoint(geometry.asPoint())
-            SpType.MultiPoint.toString() -> toJtsMultiPoint(geometry.asMultiPoint())
-            SpType.LineString.toString() -> toJtsLineString(geometry.asLineString())
-            SpType.MultiLineString.toString() -> toJtsMultiLineString(geometry.asMultiLineString())
-            SpType.Polygon.toString() -> toJtsPolygon(geometry.asPolygon())
-            SpType.MultiPolygon.toString() -> toJtsMultiPolygon(geometry.asMultiPolygon())
-            SpType.GeometryCollection.toString() -> toJtsGeometryCollection(geometry.asGeometryCollection())
-            else -> throw IllegalArgumentException("Unknown proxy type ${geometry::class.simpleName}")
-        }
-    }
+    fun toJtsGeometry(geometry: SpGeometry): Geometry = GeoUtil.toJtsGeometry(geometry)
 
-    /**
-     * Converts [SpGeometryCollection] to JTS [GeometryCollection]
-     *
-     * @param geometryCollection [SpGeometryCollection] to convert
-     * @return [GeometryCollection]
-     */
-    private fun toJtsGeometryCollection(geometryCollection: SpGeometryCollection): GeometryCollection =
-        geometryCollection.geometries
-            ?.map { toJtsGeometry(it!!) }
-            ?.let { GeometryCollection(it.toTypedArray(), factory) }
-            ?: GeometryCollection(emptyArray(), factory)
-
-    /**
-     * Converts [SpPoint] to JTS [Point]
-     *
-     * @param geometry [SpPoint] to convert
-     * @return [Point]
-     * @throws [RuntimeException] when proxy has null coordinates
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toJtsPoint(geometry)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toJtsPoint(geometry: SpPoint): Point = toJtsPoint(geometry.getCoordinates())
+    fun toJtsPoint(geometry: SpPoint): Point = GeoUtil.toJtsPoint(geometry)
 
-    /**
-     * Converts [PointCoord] to JTS [Point]
-     *
-     * @param coords [PointCoord] to convert
-     * @return [Point]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toJtsPoint(coords)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toJtsPoint(coords: PointCoord): Point = factory.createPoint(toJtsCoordinate(coords))
+    fun toJtsPoint(coords: PointCoord): Point = GeoUtil.toJtsPoint(coords)
 
-    /**
-     * Converts [SpMultiPoint] to JTS [MultiPoint]
-     *
-     * @param geometry [SpMultiPoint] to convert
-     * @return [MultiPoint]
-     * @throws [RuntimeException] when proxy has null coordinates
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toJtsMultiPoint(geometry)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toJtsMultiPoint(geometry: SpMultiPoint): MultiPoint = toJtsMultiPoint(geometry.getCoordinates())
+    fun toJtsMultiPoint(geometry: SpMultiPoint): MultiPoint = GeoUtil.toJtsMultiPoint(geometry)
 
-    /**
-     * Converts [MultiPointCoord] to JTS [MultiPoint]
-     *
-     * @param coords [MultiPointCoord] to convert
-     * @return [MultiPoint]
-     * @throws [RuntimeException] when proxy has null coordinates
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toJtsMultiPoint(coords)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toJtsMultiPoint(coords: MultiPointCoord): MultiPoint {
-        val points = coords.map { toJtsPoint(it!!) }.toTypedArray()
-        return factory.createMultiPoint(points)
-    }
+    fun toJtsMultiPoint(coords: MultiPointCoord): MultiPoint = GeoUtil.toJtsMultiPoint(coords)
 
-    /**
-     * Converts [SpLineString] to JTS [LineString]
-     *
-     * @param geometry [SpLineString] to convert
-     * @return [LineString]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toJtsLineString(geometry)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toJtsLineString(geometry: SpLineString): LineString = toJtsLineString(geometry.getCoordinates())
+    fun toJtsLineString(geometry: SpLineString): LineString = GeoUtil.toJtsLineString(geometry)
 
-    /**
-     * Converts [LineStringCoord] to JTS [LineString]
-     *
-     * @param coords [LineStringCoord] to convert
-     * @return [LineString]
-     * @throws [RuntimeException] when proxy has null coordinates
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toJtsLineString(geometry)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toJtsLineString(coords: LineStringCoord): LineString {
-        val points = coords.map { toJtsCoordinate(it!!) }.toTypedArray()
-        return factory.createLineString(points)
-    }
+    fun toJtsLineString(coords: LineStringCoord): LineString = GeoUtil.toJtsLineString(coords)
 
-    /**
-     * Converts [SpPolygon] to JTS [Polygon]
-     *
-     * @param geometry [SpPolygon] to convert
-     * @return [Polygon]
-     * @throws [RuntimeException] when proxy has null coordinates
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toJtsPolygon(geometry)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toJtsPolygon(geometry: SpPolygon): Polygon = toJtsPolygon(geometry.getCoordinates())
+    fun toJtsPolygon(geometry: SpPolygon): Polygon = GeoUtil.toJtsPolygon(geometry)
 
-    /**
-     * Converts [PolygonCoord] to JTS [Polygon]
-     *
-     * @param coords [PolygonCoord] to convert
-     * @return [Polygon]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toJtsPolygon(coords)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toJtsPolygon(coords: PolygonCoord): Polygon {
-        if (coords.size == 0) {
-            return factory.createPolygon()
-        }
+    fun toJtsPolygon(coords: PolygonCoord): Polygon = GeoUtil.toJtsPolygon(coords)
 
-        val outerRing = coords[0]!!
-        val jtsOuterRing = toJtsLinearRing(outerRing)
-
-        if (coords.size > 1) {
-            val jtsHoles = mutableListOf<LinearRing>()
-            for (i in 1 until coords.size) {
-                val jtsHole = toJtsLinearRing(coords[i]!!)
-                jtsHoles.add(jtsHole)
-            }
-            return factory.createPolygon(jtsOuterRing, jtsHoles.toTypedArray())
-        } else {
-            return factory.createPolygon(jtsOuterRing)
-        }
-    }
-
-    /**
-     * Converts [SpMultiLineString] to JTS [MultiLineString]
-     *
-     * @param geometry [SpMultiLineString] to convert
-     * @return [MultiLineString]
-     * @throws [RuntimeException] when proxy has null coordinates
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toJtsMultiLineString(geometry)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toJtsMultiLineString(geometry: SpMultiLineString): MultiLineString =
-        toJtsMultiLineString(geometry.getCoordinates())
+    fun toJtsMultiLineString(geometry: SpMultiLineString): MultiLineString = GeoUtil.toJtsMultiLineString(geometry)
 
-    /**
-     * Converts [MultiLineStringCoord] to JTS [MultiLineString]
-     *
-     * @param coords [MultiLineStringCoord] to convert
-     * @return [MultiLineString]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toJtsMultiLineString(coords)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toJtsMultiLineString(coords: MultiLineStringCoord): MultiLineString {
-        if (coords.size == 0) {
-            return factory.createMultiLineString()
-        }
+    fun toJtsMultiLineString(coords: MultiLineStringCoord): MultiLineString = GeoUtil.toJtsMultiLineString(coords)
 
-        val jtsLineStringArray = coords.map { toJtsLineString(it!!) }.toTypedArray()
-        return factory.createMultiLineString(jtsLineStringArray)
-    }
-
-    /**
-     * Converts [SpMultiPolygon] to JTS [MultiPolygon]
-     *
-     * @param geometry [SpMultiPolygon] to convert
-     * @return [MultiPolygon]
-     * @throws [RuntimeException] when proxy has null coordinates
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toJtsMultiPolygon(geometry)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toJtsMultiPolygon(geometry: SpMultiPolygon): MultiPolygon = toJtsMultiPolygon(geometry.getCoordinates())
+    fun toJtsMultiPolygon(geometry: SpMultiPolygon): MultiPolygon = GeoUtil.toJtsMultiPolygon(geometry)
 
-    /**
-     * Converts [MultiPolygonCoord] to JTS [MultiPolygon]
-     *
-     * @param coords [MultiPolygonCoord] to convert
-     * @return [MultiPolygon]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toJtsMultiPolygon(coords)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toJtsMultiPolygon(coords: MultiPolygonCoord): MultiPolygon {
-        if (coords.size == 0) {
-            return factory.createMultiPolygon()
-        }
+    fun toJtsMultiPolygon(coords: MultiPolygonCoord): MultiPolygon = GeoUtil.toJtsMultiPolygon(coords)
 
-        val jtsPolygonArray = coords.map { toJtsPolygon(it!!) }.toTypedArray()
-        return factory.createMultiPolygon(jtsPolygonArray)
-    }
-
-    /**
-     * Converts [LineStringCoord] to JTS [LinearRing]
-     *
-     * @param coords [LineStringCoord] to convert
-     * @return [LinearRing]
-     */
+    @Deprecated(
+        message = "Replaced by GeoUtil",
+        replaceWith = ReplaceWith("GeoUtil.toJtsLinearRing(coords)"),
+        level = DeprecationLevel.ERROR
+    )
     @JvmStatic
-    fun toJtsLinearRing(coords: LineStringCoord): LinearRing {
-        if (coords.isEmpty()) {
-            return factory.createLinearRing()
-        }
-        val jtsCoordinateArray = coords.map { toJtsCoordinate(it!!) }.toTypedArray()
-        return factory.createLinearRing(jtsCoordinateArray)
-    }
+    fun toJtsLinearRing(coords: LineStringCoord): LinearRing = GeoUtil.toJtsLinearRing(coords)
 }

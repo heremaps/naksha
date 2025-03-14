@@ -5,13 +5,13 @@ package naksha.model
 import kotlin.js.JsExport
 
 /**
- * Empty marker interface, to allow implementations to create internal alternatives for `ITuple`.
+ * Marker interface, to internally mix own tuple representations with official library ones.
  */
 @JsExport
 interface ITuple {
     /**
-     * Returns the [Tuple] for this marker.
-     * @return either the real [Tuple], `this`, when this is a [Tuple] or _null_, if no [Tuple] can be created.
+     * Convert this int a standard [Tuple].
+     * @return either `this`, when this is a [Tuple], a new created standard [Tuple] object, or _null_, if no [Tuple] can be created.
      */
     fun toTuple(): Tuple?
 }

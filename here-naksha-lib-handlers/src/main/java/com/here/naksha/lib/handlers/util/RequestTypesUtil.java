@@ -36,7 +36,7 @@ public final class RequestTypesUtil {
     for (Write write : ((WriteRequest) request).getWrites()) {
       // A Write operation onto the virtual "naksha~collections" means that it is a write request for
       // NakshaCollection
-      if (Naksha.VIRT_COLLECTIONS.equals(write.getCollectionId())) return false;
+      if (Naksha.COLLECTIONS_COL.equals(write.getCollectionId())) return false;
     }
     return true;
   }
@@ -49,7 +49,7 @@ public final class RequestTypesUtil {
     for (Write write : ((WriteRequest) request).getWrites()) {
       // A Write operation onto the virtual "naksha~collections" means that it is a write request for
       // NakshaCollection
-      if (!Naksha.VIRT_COLLECTIONS.equals(write.getCollectionId())) return false;
+      if (!Naksha.COLLECTIONS_COL.equals(write.getCollectionId())) return false;
     }
     return true;
   }

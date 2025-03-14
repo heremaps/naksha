@@ -10,6 +10,7 @@ import kotlin.js.JsName
 
 /**
  * A meta-data query within the Naksha feature.
+ * @since 3.0
  */
 @JsExport
 open class MetaQuery() : AnyObject(), IMetaQuery {
@@ -18,16 +19,17 @@ open class MetaQuery() : AnyObject(), IMetaQuery {
      * @param column the column of the metadata to query.
      * @param op the operation to execute.
      * @param value the parameter value of the operation.
+     * @since 3.0
      */
     @JsName("of")
-    constructor(column: TupleColumn, op: AnyOp, value: Any? = null) : this() {
+    constructor(column: MetaColumn, op: AnyOp, value: Any? = null) : this() {
         this.column = column
         this.op = op
         this.value = value
     }
 
     companion object PropertyQueryCompanion {
-        private val COLUMNS = NotNullProperty<MetaQuery, TupleColumn>(TupleColumn::class)
+        private val COLUMNS = NotNullProperty<MetaQuery, MetaColumn>(MetaColumn::class)
         private val QUERY_OP = NotNullProperty<MetaQuery, AnyOp>(AnyOp::class)
         private val ANY = NullableProperty<MetaQuery, Any>(Any::class)
     }

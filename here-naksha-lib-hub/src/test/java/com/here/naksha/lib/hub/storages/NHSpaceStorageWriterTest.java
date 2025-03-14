@@ -2,6 +2,8 @@ package com.here.naksha.lib.hub.storages;
 
 
 import static com.here.naksha.lib.common.assertions.WriteRequestAssertions.assertThatWriteRequest;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
+import static naksha.model.NakshaContext.currentContext;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -14,9 +16,9 @@ import static org.mockito.Mockito.when;
 
 import com.here.naksha.lib.common.TestNakshaContext;
 import com.here.naksha.lib.core.EventPipeline;
+import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +62,7 @@ class NHSpaceStorageWriterTest {
     writer = new NHSpaceStorageWriter(
         naksha,
         Map.of(
-            NakshaAdminCollection.SPACES, List.of(mock(IEventHandler.class)),
+            SPACES, List.of(mock(IEventHandler.class)),
             CUSTOM_SPACE, List.of(mock(IEventHandler.class))
         ),
         eventPipelineFactory,
@@ -78,7 +80,7 @@ class NHSpaceStorageWriterTest {
 
     // And: delete space request
     WriteRequest deleteSpaceRequest = new WriteRequest().add(
-        new Write().deleteFeatureById(null, NakshaAdminCollection.SPACES, CUSTOM_SPACE));
+        new Write().deleteFeatureById(currentContext().getMapId(), SPACES, CUSTOM_SPACE));
 
     // When: executing delete space request
     Response result = writer.execute(deleteSpaceRequest);
@@ -87,11 +89,11 @@ class NHSpaceStorageWriterTest {
     List<WriteRequest> requestsPassedToPipeline = requestsPassedToPipeline(eventPipeline);
     Assertions.assertEquals(2, requestsPassedToPipeline.size());
 
-    // And: the first request was about purging undelrying collection
+    // And: the first request was about deleting (purging) underlying collection
     assertThatWriteRequest(requestsPassedToPipeline.get(0))
         .hasSingleWriteThat(write -> write
-            .hasOp(WriteOp.PURGE)
-            .hasCollectionId(Naksha.VIRT_COLLECTIONS)
+            .hasOp(WriteOp.DELETE)
+            .hasCollectionId(Naksha.COLLECTIONS_COL)
             .hasId(CUSTOM_SPACE)
         );
 
@@ -99,7 +101,7 @@ class NHSpaceStorageWriterTest {
     assertThatWriteRequest(requestsPassedToPipeline.get(1))
         .hasSingleWriteThat(write -> write
             .hasOp(WriteOp.DELETE)
-            .hasCollectionId(NakshaAdminCollection.SPACES)
+            .hasCollectionId(SPACES)
             .hasId(CUSTOM_SPACE)
         );
 
@@ -114,7 +116,7 @@ class NHSpaceStorageWriterTest {
 
     // And: delete space request
     WriteRequest deleteSpaceRequest = new WriteRequest().add(
-        new Write().deleteFeatureById(null, NakshaAdminCollection.SPACES, CUSTOM_SPACE));
+        new Write().deleteFeatureById(currentContext().getMapId(), SPACES, CUSTOM_SPACE));
 
     // When: executing delete space request
     Response response = writer.execute(deleteSpaceRequest);
@@ -123,11 +125,11 @@ class NHSpaceStorageWriterTest {
     List<WriteRequest> requestsPassedToPipeline = requestsPassedToPipeline(eventPipeline);
     Assertions.assertEquals(1, requestsPassedToPipeline.size());
 
-    // And: that request was about purging collection
+    // And: that request was about deleting (purging) collection
     assertThatWriteRequest(requestsPassedToPipeline.get(0))
         .hasSingleWriteThat(write -> write
-            .hasOp(WriteOp.PURGE)
-            .hasCollectionId(Naksha.VIRT_COLLECTIONS)
+            .hasOp(WriteOp.DELETE)
+            .hasCollectionId(Naksha.COLLECTIONS_COL)
             .hasId(CUSTOM_SPACE)
         );
 
@@ -138,12 +140,12 @@ class NHSpaceStorageWriterTest {
   @Test
   void shouldFailWhenSpaceEntryDeletionFailed() {
     // Given: Configured event pipeline spy that fails on writes to SPACES (ie when deleting a space)
-    ArgumentMatcher<WriteRequest> anyWriteFeatureToAdminSpaces = writeFeaturesRequest(NakshaAdminCollection.SPACES);
+    ArgumentMatcher<WriteRequest> anyWriteFeatureToAdminSpaces = writeFeaturesRequest(SPACES);
     EventPipeline eventPipeline = eventPipelineFailingOn(anyWriteFeatureToAdminSpaces);
 
     // And: delete space request
     WriteRequest deleteSpaceRequest = new WriteRequest().add(
-        new Write().deleteFeatureById(null, NakshaAdminCollection.SPACES, CUSTOM_SPACE));
+        new Write().deleteFeatureById(currentContext().getMapId(), SPACES, CUSTOM_SPACE));
 
     // When: executing delete space request
     Response response = writer.execute(deleteSpaceRequest);
@@ -152,11 +154,11 @@ class NHSpaceStorageWriterTest {
     List<WriteRequest> requestsPassedToPipeline = requestsPassedToPipeline(eventPipeline);
     Assertions.assertEquals(2, requestsPassedToPipeline.size());
 
-    // And: the first request was about purging undelrying collection
+    // And: the first request was about deleting (purging) underlying collection
     assertThatWriteRequest(requestsPassedToPipeline.get(0))
         .hasSingleWriteThat(write -> write
-            .hasOp(WriteOp.PURGE)
-            .hasCollectionId(Naksha.VIRT_COLLECTIONS)
+            .hasOp(WriteOp.DELETE)
+            .hasCollectionId(Naksha.COLLECTIONS_COL)
             .hasId(CUSTOM_SPACE)
         );
 
@@ -164,7 +166,7 @@ class NHSpaceStorageWriterTest {
     assertThatWriteRequest(requestsPassedToPipeline.get(1))
         .hasSingleWriteThat(write -> write
             .hasOp(WriteOp.DELETE)
-            .hasCollectionId(NakshaAdminCollection.SPACES)
+            .hasCollectionId(SPACES)
             .hasId(CUSTOM_SPACE)
         );
 
@@ -197,7 +199,7 @@ class NHSpaceStorageWriterTest {
   private ArgumentMatcher<WriteRequest> writeCollectionRequest() {
     return writeRequest -> {
       List<Write> writes = writeRequest.getWrites();
-      return writes.size() == 1 && writes.get(0).getCollectionId().equals(Naksha.VIRT_COLLECTIONS);
+      return writes.size() == 1 && writes.get(0).getCollectionId().equals(Naksha.COLLECTIONS_COL);
     };
   }
 

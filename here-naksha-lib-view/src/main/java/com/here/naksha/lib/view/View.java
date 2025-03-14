@@ -22,15 +22,18 @@ import naksha.model.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
+
+// TODO: This should implement IStorage
 public class View {
 
-  private ViewLayerCollection viewLayerCollection;
+  private @NotNull ViewLayerCollection viewLayerCollection;
 
   public View(@NotNull ViewLayerCollection viewLayerCollection) {
     this.viewLayerCollection = viewLayerCollection;
   }
 
-  public ViewLayerCollection getViewCollection() {
+  public @NotNull ViewLayerCollection getViewCollection() {
     return viewLayerCollection;
   }
 
@@ -42,7 +45,7 @@ public class View {
     return new ViewWriteSession(this, options);
   }
 
-  public void setViewLayerCollection(ViewLayerCollection viewLayerCollection) {
+  public void setViewLayerCollection(@NotNull ViewLayerCollection viewLayerCollection) {
     this.viewLayerCollection = viewLayerCollection;
   }
 }

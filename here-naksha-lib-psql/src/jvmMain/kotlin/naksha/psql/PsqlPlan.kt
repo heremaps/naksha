@@ -21,8 +21,8 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
             if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
             stmt.execute()
             return PsqlCursor(stmt, false)
-        } catch (exception: Exception) {
-            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+        } catch (throwable: Throwable) {
+            throw PgExceptionMapper.map(throwable)
         }
     }
 
@@ -33,34 +33,24 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
      * @param args the arguments to be set at $n position, where $1 is the first array element.
      */
     override fun addBatch(args: Array<Any?>?) {
-        try {
-            check(!closed)
-            if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
-            stmt.addBatch()
-        } catch (exception: Exception) {
-            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
-        }
+        check(!closed)
+        if (!args.isNullOrEmpty()) query.bindArguments(stmt, args)
+        stmt.addBatch()
     }
 
     /**
      * Execute all queued (batched) executions.
      * @return an array with the amount of effected rows by each queued execution.
      */
-    override fun executeBatch(): IntArray {
-        return try {
-            stmt.executeBatch()
-        } catch (exception: Exception) {
-            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
-        }
-    }
+    override fun executeBatch(): IntArray = stmt.executeBatch()
 
     override fun close() {
         try {
             val closed = this.closed
             this.closed = true
             if (!closed) stmt.close()
-        } catch (exception: Exception) {
-            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+        } catch (throwable: Throwable) {
+            PgExceptionMapper.map(throwable).error.print()
         }
     }
 }

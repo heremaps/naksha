@@ -4,7 +4,7 @@ package naksha.model.request.notification
 
 import naksha.base.NotNullProperty
 import naksha.model.IStorage
-import naksha.model.objects.SubscriptionState
+import naksha.model.objects.NakshaSubscriptionState
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -14,7 +14,7 @@ import kotlin.js.JsName
 open class ExtSubNotification() : SubNotification() {
 
     @JsName("of")
-    constructor(storage: IStorage, subscriptionId: String, state: SubscriptionState): this() {
+    constructor(storage: IStorage, subscriptionId: String, state: NakshaSubscriptionState): this() {
         setRaw("storage", storage)
         setRaw("subscriptionId", subscriptionId)
         setRaw("subscriptionState", state)

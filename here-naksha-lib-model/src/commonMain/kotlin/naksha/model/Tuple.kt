@@ -3,185 +3,184 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
+import naksha.base.WeakRef
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 
 /**
- * A tuple represents a specific immutable state of a feature in a storage.
+ * A tuple represents a specific immutable state of a feature on the heap. The default constructor creates a metadata-only entry.
+ * @since 3.0
  */
 @JsExport
 data class Tuple(
     /**
-     * Reference to specific storage implementation that allows to decode tuple to feature.
-     */
-    @JvmField val storage: IStorage,
-
-    /**
-     * The tuple-number, a unique identifier for the tuple.
-     */
-    @JvmField val tupleNumber: TupleNumber,
-
-    /**
-     * The bits about which parts of the tuple have been fetched.
-     */
-    @JvmField val fetchBits: FetchBits,
-
-    /**
      * The metadata, this is going into the [XYZ namespace][XyzNs], when decoding the [Tuple] into a [NakshaFeature].
+     * @since 3.0
      */
-    @JvmField val meta: Metadata? = null,
-
-    /**
-     * The `id` of the feature.
-     */
-    @JvmField val id: String = meta?.id ?: throw NakshaException(ILLEGAL_ARGUMENT, "Either meta or id must be provided"),
-
-    /**
-     * The `flags` of the feature.
-     */
-    @JvmField val flags: Flags = meta?.flags ?: throw NakshaException(ILLEGAL_ARGUMENT, "Either meta or flags must be provided"),
+    @JvmField val meta: Metadata,
 
     /**
      * Feature encoded with [FeatureEncoding] algorithm described by [Metadata.flags].
+     * @since 3.0
      */
     @JvmField val feature: ByteArray? = null,
 
     /**
      * Geometry encoded with [GeoEncoding] algorithm described by [Metadata.flags].
+     *
      * Might be _null_, when the feature does not have a geometry.
+     * @since 3.0
      */
     @JvmField val geo: ByteArray? = null,
 
     /**
-     * Geometry-Reference-Point, encoded with the [GeoEncoding] algorithm described by [Metadata.flags].
-     * Might be _null_, when the feature does not have a reference point.
+     * Geometry-Reference-Point, always a single [point][naksha.geo.SpPoint], [TWKB](https://github.com/TWKB/Specification) encoded (no compression, we never get any advantage of compression).
+     *
+     * Might be _null_, when the feature does not have a reference point, in that the [geo-grid HERE tile-id][Metadata.calculateHereTile] is calculated from the gravitational center of the [geometry][geo], or, if the feature does not have a geometry either, then it is calculated from the [id][Metadata.id] of the feature.
+     * @since 3.0
      */
     @JvmField val referencePoint: ByteArray? = null,
 
     /**
      * Tags encoded with [TagsEncoding] algorithm described by [Metadata.flags].
+     *
      * Might be _null_, when the feature does not have any tags.
+     * @since 3.0
      */
     @JvmField val tags: ByteArray? = null,
 
     /**
      * An arbitrary binary attachment.
+     * @since 3.0
      */
-    @JvmField val attachment: ByteArray? = null
+    @JvmField val attachment: ByteArray? = null,
+
+    /**
+     * If the [Tuple] is complete, otherwise this is a partial tuple, which can't be cached.
+     * @since 3.0
+     */
+    @JvmField val complete: Boolean = false,
 ) : ITuple {
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        return other is Tuple && this.tupleNumber == other.tupleNumber
+        return other is Tuple && this.meta == other.meta
     }
 
     override fun hashCode(): Int = super.hashCode()
 
-    val mapNumber: Int
-        get() = tupleNumber.mapNumber()
-    val mapId: String?
-        get() = storage.getMapId(mapNumber)
-    val collectionNumber: Int64
-        get() = tupleNumber.collectionNumber()
-    val collectionId: String?
+    private var _weakRef: WeakRef<Tuple>? = null
+
+    /**
+     * A lazy created weak-reference to this tuple _(created on read)_.
+     * @since 3.0
+     */
+    val weakRef: WeakRef<Tuple>
         get() {
-            val mapId = this.mapId ?: return null
-            val map = storage[mapId]
-            if (!map.exists()) return null
-            return map.getCollectionId(collectionNumber)
+            var ref = _weakRef
+            if (ref == null) {
+                ref = WeakRef(this)
+                _weakRef = ref
+            }
+            return ref
         }
 
     /**
-     * Maps tuple into a Naksha feature.
-     * @return this tuple as Naksha feature.
+     * The [identifier][Metadata.id] of the feature, basically `meta.id`.
+     * @since 3.0
      */
-    fun toNakshaFeature(): NakshaFeature = storage.tupleToFeature(this)
+    val id: String
+        get() = meta.id
+
+    /**
+     * The [tuple-number][TupleNumber] of the [Tuple].
+     * @since 3.0
+     */
+    val tupleNumber: TupleNumber
+        get() = meta.tupleNumber
+
+    /**
+     * The number of the storage in which the tuple is stored.
+     * @since 3.0
+     */
+    val storageNumber: Int64
+        get() = meta.storageNumber
+
+    /**
+     * The number of the map in which the tuple is stored.
+     * @since 3.0
+     */
+    val mapNumber: Int
+        get() = meta.mapNumber
+
+    /**
+     * The number of the collection in which the tuple is stored.
+     * @since 3.0
+     */
+    val collectionNumber: Int
+        get() = meta.collectionNumber
+
+    /**
+     * The number of the feature.
+     * @since 3.0
+     */
+    val featureNumber: Int64
+        get() = meta.featureNumber
+
+    /**
+     * The partition-number in the tuple is stored.
+     * @since 3.0
+     */
+    val partitionNumber: Int
+        get() = meta.partitionNumber
+
+    /**
+     * The version of the [Tuple].
+     * @since 3.0
+     */
+    val version: Version
+        get() = meta.version
+
+    /**
+     * The version local unique identifier of the [Tuple].
+     * @since 3.0
+     */
+    val uid: Int
+        get() = meta.uid
+
+    /**
+     * Convert the tuple into a [Naksha feature][NakshaFeature], using the [Naksha.cache] to query for the [dictionary-manager][naksha.jbon.IDictManager].
+     *
+     * There is no caching involved, every call of this method will perform another conversion.
+     * @return this tuple as Naksha feature.
+     * @see [Naksha.decodeTuple]
+     */
+    fun toNakshaFeature(): NakshaFeature = Naksha.decodeTuple(this)
 
     private var guid: Guid? = null
 
     /**
-     * Return the [Guid] for this tuple, requires that [meta] is not _null_, otherwise throws a [NakshaError.ILLEGAL_STATE].
+     * Return the [Guid] for this tuple, requires [complete], otherwise throws a [NakshaError.ILLEGAL_STATE].
+     * - Throws [NakshaError.ILLEGAL_STATE], if the [Tuple] is not [complete].
      * @return the [Guid] of this tuple.
      */
     fun toGuid(): Guid {
         var g = guid
         if (g == null) {
-            val meta =
-                this.meta ?: throw NakshaException(ILLEGAL_STATE, "Without metadata it is not possible to generate the GUID from a tuple")
-            val mapNumber = meta.storeNumber.mapNumber()
-            val mapId = storage.getMapId(mapNumber) ?: throw NakshaException(MAP_NOT_FOUND, "Map #$mapNumber not found")
-            val map = storage[mapId]
-            val collectionNumber = meta.storeNumber.collectionNumber()
-            val collectionId = map.getCollectionId(collectionNumber) ?: throw NakshaException(
-                COLLECTION_NOT_FOUND,
-                "Collection #$collectionNumber not found"
-            )
-            g = Guid(storage.id, mapId, collectionId, meta.id, meta.version, meta.uid)
+            g = Guid(meta.id, meta.tupleNumber)
             guid = g
         }
         return g
     }
 
     /**
-     * Merge the same tuples into a new one, if this tuple is up-to-date, the method returns this tuple.
-     *
-     * This is basically done, when more details become available about a tuple in the cache.
-     *
-     * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given other tuple is not referring to the same tuple.
-     * @param other the tuple to merge this with (must be the same tuple, just with different information details).
-     * @return a new tuple, where nothing is _null_.
+     * Tests if this [Tuple] is loaded completely.
+     * @return _true_ if this [Tuple] is loaded completely; _false_ otherwise.
      */
-    fun merge(other: Tuple): Tuple {
-        if (storage != other.storage || tupleNumber != other.tupleNumber || id != other.id) {
-            throw NakshaException(ILLEGAL_ARGUMENT, "Can't merge two different tuples")
-        }
-        val meta = this.meta
-        val otherNextVersion = other.meta?.nextVersion
-        if (otherNextVersion != null && meta != null && meta.nextVersion == null) meta.nextVersion = otherNextVersion
-        if (fetchBits.isComplete() || fetchBits == other.fetchBits) {
-            return this
-        }
-        if (other.fetchBits.isComplete()) return other.merge(this)
-
-        // There must be a difference, we need to create a new merged tuple.
-        return Tuple(
-            storage,
-            tupleNumber,
-            fetchBits or other.fetchBits,
-            meta ?: other.meta,
-            id,
-            flags,
-            feature ?: other.feature,
-            geo ?: other.geo,
-            referencePoint ?: other.referencePoint,
-            tags ?: other.tags,
-            attachment ?: other.attachment
-        )
-    }
-
-    /**
-     * Tests if the tuple is fetched completely.
-     * @return _true_, when the tuple is fully fetched; _false_ if parts are missing.
-     */
-    fun isComplete(): Boolean = fetchBits.isComplete()
+    fun isComplete(): Boolean = complete
 
     override fun toTuple(): Tuple = this
-
-    /**
-     * @return previous tuple number if available
-     */
-    fun getPrevTupleNumber(): TupleNumber? {
-        val puid = meta?.puid
-        val prevVersion = meta?.prevVersion
-        return if (puid != null && prevVersion != null) {
-            TupleNumber(storeNumber = tupleNumber.storeNumber, version = prevVersion, uid = puid)
-        } else {
-            null
-        }
-    }
-
 }
+

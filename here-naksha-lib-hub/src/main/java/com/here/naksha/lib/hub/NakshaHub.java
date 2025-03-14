@@ -18,9 +18,10 @@
  */
 package com.here.naksha.lib.hub;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.ALL_HUB_INTERNAL_COLLECTIONS;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.CONFIGS;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.core.models.PluginCache.getStorageConstructor;
-import static java.util.Objects.requireNonNull;
 import static naksha.model.Action.CREATED;
 import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
@@ -32,14 +33,10 @@ import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.DefaultRequestLimitManager;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.IRequestLimitManager;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.core.exceptions.StorageNotFoundException;
-import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.ExtensionConfig;
 import com.here.naksha.lib.core.models.features.Extension;
-import com.here.naksha.lib.core.models.naksha.Storage;
 import com.here.naksha.lib.core.util.IoHelp;
-import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.extmanager.ExtensionManager;
 import com.here.naksha.lib.extmanager.IExtensionManager;
 import com.here.naksha.lib.extmanager.helpers.AmazonS3Helper;
@@ -48,25 +45,22 @@ import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import naksha.base.AnyObject;
 import naksha.base.FromJsonOptions;
-import naksha.base.JvmAnyObjectUtil;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.JvmJsonUtil;
 import naksha.base.Platform;
-import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
+import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
-import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
-import naksha.model.objects.NakshaProperties;
+import naksha.model.objects.NakshaMap;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
@@ -74,10 +68,7 @@ import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import naksha.model.util.ResultHelper;
-import naksha.psql.PgInstance;
-import naksha.psql.PsqlCluster;
-import naksha.psql.PsqlInstance;
-import naksha.psql.PsqlStorage;
+import naksha.psql.PgConfig;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -125,37 +116,41 @@ public class NakshaHub implements INaksha {
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public NakshaHub(
-      final @NotNull String appName,
-      final @NotNull String storageUrl,
+      final @NotNull String adminMapId,
+      final @NotNull String adminStorageId,
+      final @NotNull String adminPgMasterUrl,
       final @Nullable NakshaHubConfig customCfg,
       final @Nullable String configId) {
     // create storage instance upfront
     logger.info("NakshaHub initialization started.");
-
-    PgInstance master = PsqlInstance.get(storageUrl);
-    PsqlCluster pgCluster = new PsqlCluster(master); // TODO CASL-657: support clustering
+//    // TODO force create and update?
+//    // TODO CASL-657: support clustering
+    final NakshaStorage storageConfig = new PgConfig(adminStorageId)
+        .withMasterUri(adminPgMasterUrl)
+        .withCreate(true)
+        .withUpgrade(true);
 
     //    this.psqlStorage = new PsqlStorage(PsqlStorage.ADMIN_STORAGE_ID, appName, storageUrl);
-    String schema = "naksha_data_schema"; // TODO CASL-657: this used to come in `storageUrl`
-    this.psqlStorage = new PsqlStorage(pgCluster, schema);
+    logger.info("Initializing Admin storage (if not already).");
+    this.psqlStorage = Naksha.useStorage(storageConfig);
     this.adminStorageInstance = new NHAdminStorage(this.psqlStorage);
     this.spaceStorageInstance = new NHSpaceStorage(this, new NakshaEventPipelineFactory(this));
     // setup backend storage DB and Hub config
-    final NakshaHubConfig finalCfg = this.storageSetup(customCfg, configId);
+    final NakshaHubConfig finalCfg = this.storageSetup(customCfg, configId, adminMapId);
     if (finalCfg == null) {
       throw new RuntimeException("Server configuration not found! Neither in Admin storage nor a default file.");
     }
     this.nakshaHubConfig = finalCfg;
-    if (this.nakshaHubConfig.extensionConfigParams != null) {
+    if (this.nakshaHubConfig.getExtensionConfigParams() != null) {
       this.extensionManager = ExtensionManager.getInstance(this);
     } else {
       logger.warn("ExtensionManager is not initialised due to extensionConfigParams not found.");
     }
     // Setting Concurrency Thresholds
-    logger.info("Value of maxParallelRequestsPerCPU is {}", nakshaHubConfig.maxParallelRequestsPerCPU);
-    logger.info("Value of maxPctParallelRequestsPerActor is {}", nakshaHubConfig.maxPctParallelRequestsPerActor);
+    logger.info("Value of maxParallelRequestsPerCPU is {}", nakshaHubConfig.getMaxParallelRequestsPerCPU());
+    logger.info("Value of maxPctParallelRequestsPerActor is {}", nakshaHubConfig.getMaxPctParallelRequestsPerActor());
     IRequestLimitManager requestLimitManager = new DefaultRequestLimitManager(
-        nakshaHubConfig.maxParallelRequestsPerCPU, nakshaHubConfig.maxPctParallelRequestsPerActor);
+        nakshaHubConfig.getMaxParallelRequestsPerCPU(), nakshaHubConfig.getMaxPctParallelRequestsPerActor());
     logger.info("Instance level limit is {}", requestLimitManager.getInstanceLevelLimit());
     AbstractTask.setConcurrencyLimitManager(requestLimitManager);
 
@@ -163,45 +158,28 @@ public class NakshaHub implements INaksha {
   }
 
   private @Nullable NakshaHubConfig storageSetup(
-      final @Nullable NakshaHubConfig customCfg, final @Nullable String configId) {
+      final @Nullable NakshaHubConfig customCfg,
+      final @Nullable String configId,
+      final @NotNull String mapId
+  ) {
     /**
-     * 1. Init Admin Storage
-     * 2. Create all Admin collections
-     * 3. run maintenance during startup to ensure history partitions are available
-     * 4. fetch / add latest config (ordered preference DB,Custom,Default)
+     * 1. Create all Admin collections
+     * 2. fetch / add latest config (ordered preference DB,Custom,Default)
      */
 
-    // 1. Init Admin Storage
-    initAdminStorage(customCfg);
-
-    // 2. Create all Admin collections in Admin DB
+    // 1. Create all Admin collections in Admin DB
     final NakshaContext nakshaContext = NakshaContext.newInstance(NakshaHubConfig.defaultAppName());
+    nakshaContext.setMapId(mapId);
     nakshaContext.attachToCurrentThread();
     createAdminCollections(nakshaContext);
 
-    // TODO: CASL-657: verify it's not used in v3 anymore
-    //    // 3. run one-time maintenance on Admin DB to ensure history partitions are available
-    //    logger.info("Running one-time maintenance on Admin storage.");
-    //    getAdminStorage().maintainNow();
-
-    // 4. fetch / add latest config
+    // 2. fetch / add latest config
     return configSetup(nakshaContext, customCfg, configId);
   }
 
-  private void initAdminStorage(NakshaHubConfig customCfg) {
-    logger.info("Initializing Admin storage (if not already).");
-    if (customCfg != null && customCfg.storageParams != null) {
-      getAdminStorage().initStorage(customCfg.storageParams);
-    } else {
-      getAdminStorage().initStorage(null);
-    }
-    logger.info("Admin storage ready.");
-  }
-
   private void createAdminCollections(NakshaContext nakshaContext) {
-    SessionOptions sessionOptions = SessionOptions.from(nakshaContext, true);
-    try (final IWriteSession admin = getAdminStorage().newWriteSession(sessionOptions)) {
-      logger.info("WriteCollections Request for {}, against Admin storage.", NakshaAdminCollection.ALL);
+    getAdminStorage().runInWriteSession(SessionOptions.from(nakshaContext, true), admin -> {
+      logger.info("WriteCollections Request for {}, against Admin storage.", ALL_HUB_INTERNAL_COLLECTIONS);
       final Response createAdminCollectionsResponse = admin.execute(createAdminCollectionsRequest());
       if (createAdminCollectionsResponse instanceof SuccessResponse successResponse) {
         NakshaFeatureList createdCollections = successResponse.getFeatures();
@@ -222,14 +200,13 @@ public class NakshaHub implements INaksha {
         }
         admin.rollback();
       }
-    }
+    });
   }
 
   private static WriteRequest createAdminCollectionsRequest() {
     final WriteRequest writeRequest = new WriteRequest();
-    String map = null; // "naksha"; // TODO CASL-657: where to get map from?
-    for (String adminCollectionId : NakshaAdminCollection.ALL) {
-      writeRequest.add(new Write().createCollection(map, new NakshaCollection(adminCollectionId)));
+    for (String adminCollectionId : ALL_HUB_INTERNAL_COLLECTIONS) {
+      writeRequest.add(new Write().createCollection(new NakshaCollection(adminCollectionId)));
     }
     return writeRequest;
   }
@@ -246,13 +223,22 @@ public class NakshaHub implements INaksha {
      * 3. Default config - Fallback to default config from file - "default-config"
      */
     logger.info("Running config setup for Nakshs Hub against Admin storage.");
-    try (final IWriteSession admin = getAdminStorage().newWriteSession(SessionOptions.from(nakshaContext, true))) {
-
+    return getAdminStorage().useWriteSession(SessionOptions.from(nakshaContext, true), admin -> {
       if (customCfg != null) {
-        String map = null; // TODO: CASL-657 - confirm
+        // failing:
+        NakshaMap map = admin.getMapById(NakshaContext.mapId()); // TODO CASL-657 confirm
+        assert map != null;
+        NakshaCollection collection = admin.getCollectionById(map, CONFIGS);
+        assert collection != null;
         WriteRequest writeCustomCfg = new WriteRequest()
-            .add(new Write().upsertFeature(map, NakshaAdminCollection.CONFIGS, customCfg));
+            .add(new Write().upsertFeature(collection, customCfg));
         Response writeCustomCfgResponse = admin.execute(writeCustomCfg);
+
+//        // fix attempts:
+//        WriteRequest writeCustomCfg = new WriteRequest()
+//            .add(new Write().upsertFeature(NakshaContext.mapId(), CONFIGS, customCfg));
+//        Response writeCustomCfgResponse = admin.execute(writeCustomCfg);
+
         if (writeCustomCfgResponse instanceof SuccessResponse) {
           admin.commit();
           return customCfg;
@@ -284,7 +270,7 @@ public class NakshaHub implements INaksha {
       logger.info("Persisting default NakshaHub config from file...");
       writeConfig(admin, defCfgFromFile);
       return defCfgFromFile;
-    }
+    });
   }
 
   /**
@@ -295,7 +281,7 @@ public class NakshaHub implements INaksha {
    * @param config config to be stored
    */
   private void writeConfig(IWriteSession admin, NakshaHubConfig config) {
-    final Request writeDefCfg = createFeatureRequest(NakshaAdminCollection.CONFIGS, config);
+    final Request writeDefCfg = createFeatureRequest(CONFIGS, config);
     final Response writeConfigResp = admin.execute(writeDefCfg);
     if (writeConfigResp instanceof SuccessResponse) {
       admin.commit();
@@ -317,19 +303,15 @@ public class NakshaHub implements INaksha {
   }
 
   private NakshaHubConfig readHubDefaultConfigFromFile() {
-    try (final Json json = Json.get()) {
-      final String configJson = IoHelp.readResource("config/" + DEF_CFG_ID + ".json");
-      NakshaHubConfig defCfg = JvmJsonUtil.readJsonAs(configJson, NakshaHubConfig.class);
-      defCfg.setId(DEF_CFG_ID); // overwrite Id to desired value
-      return defCfg;
-    } catch (Exception e) {
-      throw unchecked(new Exception("Unable to read default Config file. " + e.getMessage(), e));
-    }
+    final String configJson = IoHelp.readResource("config/" + DEF_CFG_ID + ".json");
+    NakshaHubConfig defCfg = JvmJsonUtil.readJsonAs(configJson, NakshaHubConfig.class);
+    defCfg.setId(DEF_CFG_ID); // overwrite Id to desired value
+    return defCfg;
   }
 
   private NakshaHubConfig fetchHubConfigFromDb(String configId, IWriteSession admin) {
     final List<String> cfgIdList = (configId != null) ? List.of(configId, DEF_CFG_ID) : List.of(DEF_CFG_ID);
-    final Request readAdminConfigs = readFeaturesByIdsRequest(NakshaAdminCollection.CONFIGS, cfgIdList);
+    final Request readAdminConfigs = readFeaturesByIdsRequest(CONFIGS, cfgIdList);
     final Response readAdminConfigsResp = admin.execute(readAdminConfigs);
     if (readAdminConfigsResp instanceof SuccessResponse successResponse) {
       List<NakshaHubConfig> nakshaHubConfigs =
@@ -365,8 +347,8 @@ public class NakshaHub implements INaksha {
 
   @Override
   public @NotNull ExtensionConfig getExtensionConfig() {
-    final ExtensionConfigParams extensionConfigParams = nakshaHubConfig.extensionConfigParams;
-    if (!extensionConfigParams.extensionRootPath.startsWith("s3://")) {
+    final ExtensionConfigParams extensionConfigParams = nakshaHubConfig.getExtensionConfigParams();
+    if (!extensionConfigParams.getExtensionRootPath().startsWith("s3://")) {
       throw new UnsupportedOperationException(
           "ExtensionRootPath must be a valid s3 bucket url which should be prefixed with s3://");
     }
@@ -376,7 +358,7 @@ public class NakshaHub implements INaksha {
         System.currentTimeMillis() + extensionConfigParams.getIntervalMs(),
         extList,
         extensionConfigParams.getWhiteListClasses(),
-        this.nakshaHubConfig.env.toLowerCase());
+        this.nakshaHubConfig.getEnv().toLowerCase());
   }
 
   private List<Extension> loadExtensionConfigFromS3(String extensionRootPath) {
@@ -387,7 +369,7 @@ public class NakshaHub implements INaksha {
     List<Extension> extList = new ArrayList<>();
     list.stream().forEach(extensionPath -> {
       String filePath =
-          "s3://" + bucketName + "/" + extensionPath + "latest-" + nakshaHubConfig.env.toLowerCase() + ".txt";
+          "s3://" + bucketName + "/" + extensionPath + "latest-" + nakshaHubConfig.getEnv().toLowerCase() + ".txt";
       String version;
       try {
         version = s3Helper.getFileContent(filePath);
@@ -400,7 +382,7 @@ public class NakshaHub implements INaksha {
       String extensionId = bits[bits.length - 1];
 
       filePath = "s3://" + bucketName + "/" + extensionPath + extensionId + "-" + version + "."
-                 + nakshaHubConfig.env.toLowerCase().toLowerCase() + ".json";
+                 + nakshaHubConfig.getEnv().toLowerCase().toLowerCase() + ".json";
       String exJson;
       try {
         exJson = s3Helper.getFileContent(filePath);
@@ -440,57 +422,26 @@ public class NakshaHub implements INaksha {
   @Override
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public @NotNull IStorage getStorageById(final @NotNull String storageId) {
-    try (final IReadSession admin =
-        getAdminStorage().newReadSession(SessionOptions.from(currentContext(), false))) {
-      Request readStorageById = readFeaturesByIdRequest(NakshaAdminCollection.STORAGES, storageId);
+    return getAdminStorage().useReadSession(SessionOptions.from(currentContext()), admin -> {
+      Request readStorageById = readFeaturesByIdRequest(STORAGES, storageId);
       Response readStorageByIdResp = admin.execute(readStorageById);
       if (readStorageByIdResp instanceof SuccessResponse successResponse) {
-        Storage storage = readFeatureFromResponse(successResponse, Storage.class);
-        if (storage == null) {
+        NakshaStorage storageConfig = readFeatureFromResponse(successResponse, NakshaStorage.class);
+        if (storageConfig == null) {
           throw unchecked(new StorageNotFoundException(storageId));
         }
-        return storageInstance(storage);
+        return Naksha.useStorage(storageConfig);
       } else {
         if (readStorageByIdResp instanceof ErrorResponse errorResponse) {
           NakshaError error = errorResponse.getError();
           throw unchecked(new Exception(
-              "Exception fetching storage details for id '" + storageId + "' (error code: "
+              "Could not fetch storage config for id '" + storageId + "' (error code: "
               + error.getCode() + ")",
               error.getCause()));
         }
-        throw unchecked(new Exception("Exception fetching storage details for id '" + storageId
+        throw unchecked(new Exception("Exception fetching storage config for id '" + storageId
                                       + "' (unknown response: " + readStorageByIdResp + " )"));
       }
-    }
-  }
-
-
-  // TODO: CASL-681: switch to new storage instance mechanism once it is done
-  private ConcurrentHashMap<String, PsqlStorage> psqlStoragePseudoCacheToBeDefinitelyDeleted = new ConcurrentHashMap<>();
-
-  private IStorage storageInstance(@NotNull Storage storage) {
-    // TODO: CASL-681 remove the hacky hack
-    if ("naksha.psql.PsqlStorage".equals(storage.getClassName())) {
-      return psqlStoragePseudoCacheToBeDefinitelyDeleted.computeIfAbsent(storage.getId(), id -> {
-        NakshaProperties properties = storage.getProperties();
-        AnyObject instanceConfig = requireNonNull(JvmAnyObjectUtil.getProperty(properties, "master", AnyObject.class));
-        PsqlInstance psqlInstance = PsqlInstance.get(
-            requireNonNull(instanceConfig.get("host")).toString(),
-            Integer.parseInt(requireNonNull(instanceConfig.get("port")).toString()),
-            requireNonNull(instanceConfig.get("db")).toString(),
-            requireNonNull(instanceConfig.get("user")).toString(),
-            requireNonNull(instanceConfig.get("password")).toString()
-        );
-        PsqlCluster singleNodeCluster = new PsqlCluster(psqlInstance);
-        return new PsqlStorage(singleNodeCluster, requireNonNull(properties.get("schema")).toString());
-      });
-    } else {
-      Fe1<IStorage, Storage> constructor = getStorageConstructor(storage.getClassName(), Storage.class);
-      try {
-        return constructor.call(storage);
-      } catch (Exception e) {
-        throw unchecked(e);
-      }
-    }
+    });
   }
 }

@@ -1,26 +1,34 @@
 package naksha.psql
 
+import naksha.base.AtomicMap
 import naksha.base.JsEnum
 import naksha.base.fn.Fx2
 import naksha.model.request.query.SortOrder
-import naksha.model.request.query.SortOrder.SortOrderCompanion.ASCENDING
 import naksha.model.request.query.SortOrder.SortOrderCompanion.DESCENDING
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.PgColumn.PgColumnCompanion.id as c_id
-import naksha.psql.PgColumn.PgColumnCompanion.txn as c_txn
-import naksha.psql.PgColumn.PgColumnCompanion.txn_next as c_txn_next
-import naksha.psql.PgColumn.PgColumnCompanion.uid as c_uid
+import naksha.psql.PgColumn.PgColumnCompanion.tn as c_tn
+import naksha.psql.PgColumn.PgColumnCompanion.next_tn as c_txn_next
 import naksha.psql.PgColumn.PgColumnCompanion.flags as c_flags
-import naksha.psql.PgColumn.PgColumnCompanion.tuple_number as c_tuple_number
 import naksha.psql.PgColumn.PgColumnCompanion.app_id as c_app_id
 import naksha.psql.PgColumn.PgColumnCompanion.author as c_author
 import naksha.psql.PgColumn.PgColumnCompanion.author_ts as c_author_ts
 import naksha.psql.PgColumn.PgColumnCompanion.updated_at as c_updated_at
 import naksha.psql.PgColumn.PgColumnCompanion.geo as c_geo
-import naksha.psql.PgColumn.PgColumnCompanion.ref_point as c_ref_point
-import naksha.psql.PgColumn.PgColumnCompanion.geo_grid as c_geo_grid
+import naksha.psql.PgColumn.PgColumnCompanion.here_tile as c_here_tile
 import naksha.psql.PgColumn.PgColumnCompanion.tags as c_tags
+import naksha.psql.PgColumn.PgColumnCompanion.ref_point as c_ref_point
+import naksha.psql.PgColumn.PgColumnCompanion.ft as c_ft
+import naksha.psql.PgColumn.PgColumnCompanion.cv0 as c_cv0
+import naksha.psql.PgColumn.PgColumnCompanion.cv1 as c_cv1
+import naksha.psql.PgColumn.PgColumnCompanion.cv2 as c_cv2
+import naksha.psql.PgColumn.PgColumnCompanion.cv3 as c_cv3
+import naksha.psql.PgColumn.PgColumnCompanion.cs0 as c_cs0
+import naksha.psql.PgColumn.PgColumnCompanion.cs1 as c_cs1
+import naksha.psql.PgColumn.PgColumnCompanion.cs2 as c_cs2
+import naksha.psql.PgColumn.PgColumnCompanion.cs3 as c_cs3
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
@@ -29,277 +37,542 @@ import kotlin.reflect.KClass
 /**
  * The base class for indices. We have different kind of indices, but there is a general rule for all fuzzy indices.
  *
- * To query "fuzzy" indices (`GIST`, `SP-GIST` or `GIN` based), please select only the `id` from the fuzzy index, and then join the result with a more specific query. You can as well use multiple fuzzy indices in combination, for example to query a bounding box, where only certain tags are set:
- * ```
- * WITH geo AS (
- *   SELECT id
- *   FROM table
- *   WHERE st_intersects(naksha_geometry(geo,flags), ?)
- * )
- * WITH tags AS (
- *   SELECT id
- *   FROM geo g, table
- *   WHERE id=g.id
- *     AND naksha_tags(flags, tags) ? 'foo'
- *     AND naksha_tags(flags, tags)->'bar' = 13
- * )
- * SELECT c1, c2, ...
- * FROM tags t, table
- * WHERE t.id = id AND (...)
- * ORDER BY (...)
- * ```
- * This executes three query. The first one performs an index-only scan above the geometry index. The second one joins the geometry with the tags, using an index-only scan above tags. Eventually, joining the result with another query, that fetches everything else needed, optionally using another index that is already pre-sorted, because it is btree index. This allows to order without cost, even when query bounding boxes, history or tags.
+ * ## Warning
+ * Identifiers in Postgres are limited to 63 byte (and otherwise will be truncated)!
  *
- * Beware that this query can be used in parallel in partitioned tables, because we partition HEAD, DELETE and HISTORY all by feature-id, we can run these queries in parallel using multiple connections (as many as we have partitions) and do not have to read feature duplicates!
+ * The index-name will look like `{collection-name:42}{postfix:15}$i_{index-name}`, this means
+ * - The collection-names is up to 42 byte.
+ * - The `postfix` is in the worst case `$hst$y????$p???`, so 15 byte.
+ * - The index itself always starts with `$i_` which are 3 more byte.
+ * - This means, we are left with only `63 - 42 - 15 - 3 = 3` byte for the index identifier.
  *
- * Another important note is that the unique immutable state of every feature is addressed by the columns `id`, `txn` and `uid`. Therefore, most indices exactly holds these values, which allows the client to only fetch them, and then to query caches to see if the corresponding state is already available to the client, improving the overall performance greatly. We even can create shared caches, so that information between systems only need these values to uniquely identify the feature details.
+ * **This is why we use only three digit identifiers for the indices!**
+ *
  */
 @Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate")
 @JsExport
 open class PgIndex : JsEnum() {
-    protected fun sql(using: String, table: PgTable, unique: Boolean, addFillFactor: Boolean): String = """
+    protected fun sql(using: String, table: PgTable, unique: Boolean, addFillFactor: Boolean, where: String?): String = """
 CREATE ${if (unique) "UNIQUE " else ""}INDEX IF NOT EXISTS ${quoteIdent(id(table))} ON ${table.quotedName}
 USING $using
-${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)" else ""} ${table.TABLESPACE};"""
+${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)" else ""} ${table.TABLESPACE}
+${if (where==null) "" else "WHERE $where"};"""
 
-    companion object PgIndexCompanion {
-        // Warning:
-        // The index prefix can be (in worst case): {collection-name}$hst$y????$p???$i_
-        // Identifiers in Postgres are limited to 63 byte (and otherwise will be truncated).
-        // We limit customer to 32 byte, therefore we have 31 significant byte left.
-        // Due to the prefix, indices have only 13 significant characters left ($hst$y????$p???$i_ = 18 chars, we reserved 31 chars)
-        // In a nutshell: Keep the significant part of the index identifier shorter/equal to 14 characters!
-
+    companion object PgIndex_C {
         /**
-         * The primary key added.
+         * The primary key about the tuple-number.
          *
-         * This index includes the `id` so that the following queries do actually perform an index-only access:
-         * ```sql
-         * SELECT id, tuple_number
-         * FROM {table}
-         * WHERE tuple_number = (int8send(10)||int8send(0)||int4send(0));
+         * This entry is not used, its only formally here, because the column itself does have the attribute `PRIMARY KEY`, which is important for joins, replication, and such things. This column will always be named automatically by postgres as `table_pkey`.
          *
-         * SELECT id, tuple_number
-         * FROM {table}
-         * WHERE tuple_number = ANY(array[
-         *   (int8send(10)||int8send(0)||int4send(0)),
-         *   ...
-         * ]::bytea[]);
-         *
-         * -- This is how "fetch id only" works:
-         * SELECT gzip(string_agg(tuple_number||id::bytea,'\x00'::bytea))
-         * FROM {table}
-         * WHERE tuple_number = ANY($1::bytea[]);
-         * ```
-         * This will result in an `Index Only Scan using "{table}$i_tuple_number_pkey"`, followed by an `Aggregate`.
-         *
-         * However, when we have to load all data, the **index-only** scan turns into an **index-scan**.
-         *
-         * - Automatically to all collections in [PgCollection.create].
+         * - Always added to all tables as PRIMARY KEY!
+         * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
         @JsStatic
-        val tuple_number_pkey = def(PgIndex::class, "tuple_number_pkey") { self ->
-            self.columns = listOf(c_tuple_number)
+        val tn_pkey = def(PgIndex::class, "tnu") { self ->
+            self.name = "tn_unique"
+            self.internal = true
+            self.columns = listOf(c_tn)
             self.naturalOrder = listOf(DESCENDING)
-            self.includes = listOf(c_id, c_flags)
+            self.includes = emptyList()
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_tuple_number DESC) INCLUDE($c_id, $c_flags)""",
-                        table, unique = true, addFillFactor = true
+                        """btree ($c_tn DESC)""",
+                        table, unique = true, addFillFactor = true, where = null
                     )
                 ).close()
             }
         }
 
         /**
-         * A unique index above the [PgColumn.id] column.
+         * A unique index above the [id][PgColumn.id], including [tuple-number][PgColumn.tn] and [txn_next][PgColumn.next_tn] column.
          *
-         * - Automatically added to [HEAD][PgHead], [DELETED][PgDeleted], and [META][PgMeta] tables in [PgCollection.create].
+         * - Automatically added to [HEAD][PgHead], [DELETED][PgDeleted], and [META][PgMeta].
+         * - Must not be added to [HISTORY][PgHistory].
+         * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
         @JsStatic
-        val id_unique = def(PgIndex::class, "id_unique") { self ->
+        val id_unique = def(PgIndex::class, "idu") { self ->
+            self.name = "id_unique"
+            self.internal = true
             self.columns = listOf(c_id)
             self.naturalOrder = listOf(DESCENDING)
-            self.includes = listOf(c_tuple_number, c_flags)
+            self.includes = listOf(c_tn)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_id text_pattern_ops DESC) INCLUDE ($c_tuple_number, $c_flags)""",
-                        table, unique = true, addFillFactor = true
+                        """btree ($c_id text_pattern_ops DESC) INCLUDE ($c_tn, $c_txn_next)""",
+                        table, unique = true, addFillFactor = true, where = null
                     )
                 ).close()
             }
         }
 
         /**
-         * A unique index above the [PgColumn.txn] column.
+         * A non-unique index above the [id][PgColumn.id] and [tuple-number][PgColumn.tn], including [txn_next][PgColumn.next_tn] column.
          *
-         * - Automatically added to all [TRANSACTIONS][PgTransactions] tables in [PgCollection.create].
+         * - Automatically added to [HISTORY][PgHistory].
+         * - Must not be added to [HEAD][PgHead], [DELETED][PgDeleted], and [META][PgMeta].
+         * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
         @JsStatic
-        val txn_unique = def(PgIndex::class, "txn_unique") { self ->
-            self.columns = listOf(c_txn)
+        val id = def(PgIndex::class, "idi") { self ->
+            self.name = "id"
+            self.internal = true
+            self.columns = listOf(c_id, c_tn)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING)
+            self.includes = listOf(c_txn_next)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        """btree ($c_id text_pattern_ops DESC, $c_tn DESC) INCLUDE ($c_txn_next)""",
+                        table, unique = false, addFillFactor = true, where = null
+                    )
+                ).close()
+            }
+        }
+
+        /**
+         * A unique index above the transaction-number _(aka version)_, including [tuple-number][PgColumn.tn] and [next_tn][PgColumn.next_tn] column.
+         *
+         * - Automatically added to all [TRANSACTIONS][PgTransactions] tables.
+         * - Must not be added to any other table.
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val txn_unique = def(PgIndex::class, "txn") { self ->
+            self.name = "txn_unique"
+            self.internal = true
+            self.columns = listOf()
             self.naturalOrder = listOf(DESCENDING)
-            self.includes = listOf(c_id, c_tuple_number, c_flags)
+            self.includes = listOf(c_tn, c_txn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_txn DESC) INCLUDE ($c_id, $c_tuple_number, $c_flags)""",
-                        table, unique = true, addFillFactor = true
+                        """btree (naksha_tn_version(tn) DESC) INCLUDE ($c_tn, $c_txn_next)""",
+                        table, unique = true, addFillFactor = true, where = null
                     )
                 ).close()
             }
         }
 
         /**
-         * Unique index above the [PgColumn.id] `DESC`, [PgColumn.txn] `DESC`, and [PgColumn.uid] `ASC` columns.
+         * Index above [here_tile][PgColumn.here_tile] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
          *
-         * - Automatically added to all [HISTORY][PgHistory] tables in [PgCollection.create].
+         * Ordered by:
+         * - `here_tile` DESC
+         * - `tn` DESC
+         * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
         @JsStatic
-        val id_txn_uid_unique = def(PgIndex::class, "id_txn_uid_unique") { self ->
-            self.columns = listOf(c_id, c_txn, c_uid)
-            self.naturalOrder = listOf(DESCENDING, DESCENDING, ASCENDING)
-            self.includes = listOf(c_tuple_number, c_flags)
+        val here_tile = def(PgIndex::class, "hti") { self ->
+            self.name = "here_tile"
+            self.columns = listOf(c_here_tile, c_tn)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING)
+            self.includes = listOf(c_id, c_txn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number, $c_flags)""",
-                        table, unique = true, addFillFactor = true
+                        "btree ($c_here_tile DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        table, unique = false, addFillFactor = true, where = null
                     )
                 ).close()
             }
         }
 
         /**
-         * Index above the [PgColumn.id], [PgColumn.txn] and [PgColumn.uid] columns.
+         * Index above [app_id][PgColumn.app_id], [updated_at][PgColumn.updated_at], and [tuple-number][PgColumn.tn], including [id][PgColumn.id], and [txn_next][PgColumn.next_tn].
          *
-         * To query this index above transaction numbers only, use `WHERE id is not null AND txn = $1 AND uid = $2`. If ordering is required, order via `ORDER BY id DESC, txn DESC, uid ASC`.
+         * Ordered by
+         * - `app_id` DESC
+         * - `updated_at` DESC
+         * - `tn` DESC
+         * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
         @JsStatic
-        val id_txn_uid = def(PgIndex::class, "id_txn_uid") { self ->
-            self.columns = listOf(c_id, c_txn, c_uid)
-            self.naturalOrder = listOf(DESCENDING, DESCENDING, ASCENDING)
-            self.includes = listOf(c_tuple_number, c_flags)
+        val app_id = def(PgIndex::class, "aid") { self ->
+            self.name = "app_id"
+            self.columns = listOf(c_app_id, c_updated_at, c_tn)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING, DESCENDING)
+            self.includes = listOf(c_id, c_txn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number, $c_flags)""",
-                        table, unique = false, addFillFactor = true
+                        """btree ($c_app_id text_pattern_ops DESC, $c_updated_at DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)""",
+                        table, unique = false, addFillFactor = true, where = null
                     )
                 ).close()
             }
         }
 
         /**
-         * [GIST](https://www.postgresql.org/docs/current/gist.html) index above [PgColumn.geo], [PgColumn.id], [PgColumn.txn] and [PgColumn.uid], for every collection that is **not** point-only.
+         * Index above the `naksha_author(`[author][PgColumn.author], [app_id][PgColumn.app_id]`)`, `naksha_author_ts(`[author_ts][PgColumn.author_ts], [updated_at][PgColumn.updated_at]`)`, and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
+         *
+         * Ordered by:
+         * - `naksha_author(author, app_id)` DESC
+         * - `naksha_author_ts(author_ts, updated_at)` DESC
+         * - `tn` DESC
+         * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
         @JsStatic
-        val gist_geo = def(PgIndex::class, "gist_geo") { self ->
-            self.columns = listOf(c_geo, c_id, c_txn, c_uid, c_txn_next, c_tuple_number, c_flags)
+        val author = def(PgIndex::class, "ath") { self ->
+            self.name = "author"
+            self.columns = listOf(c_author, c_author_ts, c_tn)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING, DESCENDING)
+            self.includes = listOf(c_tn, c_txn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gist (naksha_geometry($c_geo, $c_flags), $c_id, $c_txn, $c_uid, $c_txn_next, $c_tuple_number, $c_flags)""",
-                        table, unique = false, addFillFactor = true
+                        """btree (naksha_author($c_author, $c_app_id) text_pattern_ops DESC, naksha_author_ts($c_author_ts, $c_updated_at) DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)""",
+                        table, unique = false, addFillFactor = true, where = null
                     )
                 ).close()
             }
         }
 
         /**
-         * [SP-GIST](https://www.postgresql.org/docs/current/spgist.html) index above [PgColumn.geo], [PgColumn.id], [PgColumn.txn] and [PgColumn.uid], better for point-only collections. For more details, please read in [gist_geo].
+         * A [GIN](https://www.postgresql.org/docs/current/gin.html) index above `naksha_tags(`[tags][PgColumn.tags], [flags][PgColumn.flags]`)`, [tuple-number][PgColumn.tn], and [txn_next][PgColumn.next_tn].
+         * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
         @JsStatic
-        val spgist_ref_point = def(PgIndex::class, "spgist_ref_point") { self ->
-            self.columns = listOf(c_ref_point, c_id, c_txn, c_uid, c_tuple_number, c_flags)
+        val tags = def(PgIndex::class, "tag") { self ->
+            self.name = "tags"
+            self.columns = listOf(c_tags, c_tn, c_txn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """sp-gist (naksha_ref_point($c_ref_point), $c_id, $c_txn, $c_uid, $c_tuple_number, $c_flags)""",
-                        table, unique = false, addFillFactor = true
+                        """gin (naksha_tags($c_tags, $c_flags), $c_tn, $c_txn_next)""",
+                        table, unique = false, addFillFactor = false, where = null // , where = "naksha_tags($c_tags, $c_flags) IS NOT NULL"
                     )
                 ).close()
             }
         }
 
         /**
-         * Create a [GIN](https://www.postgresql.org/docs/current/gin.html) index above [PgColumn.tags], [PgColumn.id], [PgColumn.txn] and [PgColumn.uid].
+         * A two-dimensional [SP-GIST](https://www.postgresql.org/docs/current/spgist.html) index above `naksha_ref_point(`[PgColumn.ref_point]`)`.
+         * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
         @JsStatic
-        val tags_id_txn_uid = def(PgIndex::class, "tags_id_txn_uid") { self ->
-            self.columns = listOf(c_tags, c_id, c_txn, c_uid, c_tuple_number, c_flags)
+        val ref_point = def(PgIndex::class, "ref") { self ->
+            self.name = "ref_point"
+            self.columns = listOf(c_ref_point)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gin (naksha_tags($c_tags,$c_flags), $c_id, $c_txn, $c_uid, $c_tuple_number, $c_flags)""",
-                        table, unique = false, addFillFactor = false
+                        """spgist (naksha_ref_point($c_ref_point))""",
+                        table, unique = false, addFillFactor = true, where = "naksha_ref_point($c_ref_point) IS NOT NULL"
                     )
                 ).close()
             }
         }
 
         /**
-         * Index above [PgColumn.geo_grid], [PgColumn.id], [PgColumn.txn] and [PgColumn.uid].
+         * A two-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_geometry(`[PgColumn.geo], [PgColumn.flags]`)`.
+         * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
         @JsStatic
-        val geo_grid_id_txn_uid = def(PgIndex::class, "geo_grid_id_txn_uid") { self ->
-            self.columns = listOf(c_geo_grid, c_id, c_txn, c_uid)
-            self.naturalOrder = listOf(DESCENDING, DESCENDING, DESCENDING, ASCENDING)
-            self.includes = listOf(c_tuple_number, c_flags)
+        val gist_geo_2d = def(PgIndex::class, "g2d") { self ->
+            self.name = "gist_geo_2d"
+            self.columns = listOf(c_geo, c_tn, c_txn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_geo_grid DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number, $c_flags)",
-                        table, unique = false, addFillFactor = true
+                        """gist (naksha_2d($c_geo, $c_flags), $c_tn, $c_txn_next)""",
+                        table, unique = false, addFillFactor = true, where = "naksha_2d($c_geo, $c_flags) IS NOT NULL"
                     )
                 ).close()
             }
         }
 
         /**
-         * Index above [PgColumn.app_id], [PgColumn.updated_at], [PgColumn.id], [PgColumn.txn] and [PgColumn.uid].
+         * A three-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_geometry(`[PgColumn.geo], [PgColumn.flags]`)`.
+         * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
         @JsStatic
-        val app_id_updatedAt_id_txn_uid = def(PgIndex::class, "app_id_updatedAt_id_txn_uid") { self ->
-            self.columns = listOf(c_app_id, c_updated_at, c_id, c_txn, c_uid)
-            self.naturalOrder = listOf(DESCENDING, DESCENDING, DESCENDING, DESCENDING, ASCENDING)
-            self.includes = listOf(c_tuple_number, c_flags)
+        val gist_geo_3d = def(PgIndex::class, "g3d") { self ->
+            self.name = "gist_geo_3d"
+            self.columns = listOf(c_geo, c_tn, c_txn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_app_id text_pattern_ops DESC, $c_updated_at DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number, $c_flags)""",
-                        table, unique = false, addFillFactor = true
+                        """gist (naksha_3d($c_geo, $c_flags), $c_tn, $c_txn_next)""",
+                        table, unique = false, addFillFactor = true, where = "naksha_3d($c_geo, $c_flags) IS NOT NULL"
                     )
                 ).close()
             }
         }
 
         /**
-         * Index above the [PgColumn.author], [PgColumn.author_ts], [PgColumn.id], [PgColumn.txn] and [PgColumn.uid].
+         * A four-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_geometry(`[PgColumn.geo], [PgColumn.flags]`)`.
+         * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
         @JsStatic
-        val author_ts_id_txn_uid = def(PgIndex::class, "author_ts_id_txn_uid") { self ->
-            self.columns = listOf(c_author, c_author_ts, c_id, c_txn, c_uid)
-            self.naturalOrder = listOf(DESCENDING, DESCENDING, DESCENDING, DESCENDING, ASCENDING)
-            self.includes = listOf(c_tuple_number, c_flags)
+        val gist_geo_4d = def(PgIndex::class, "g4d") { self ->
+            self.name = "gist_geo_4d"
+            self.columns = listOf(c_geo, c_tn, c_txn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_author text_pattern_ops DESC, $c_author_ts DESC, $c_id text_pattern_ops DESC, $c_txn DESC, $c_uid ASC) INCLUDE ($c_tuple_number, $c_flags)""",
-                        table, unique = false, addFillFactor = true
+                        """gist (naksha_4d($c_geo, $c_flags), $c_tn, $c_txn_next)""",
+                        table, unique = false, addFillFactor = true, where = "naksha_4d($c_geo, $c_flags) IS NOT NULL"
+                    )
+                ).close()
+            }
+        }
+
+        /**
+         * A two-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_geometry(`[PgColumn.geo], [PgColumn.flags]`)`.
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val spgist_geo_2d = def(PgIndex::class, "s2d") { self ->
+            self.name = "spgist_geo_2d"
+            self.columns = listOf(c_geo)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        """spgist (naksha_2d($c_geo, $c_flags))""",
+                        table, unique = false, addFillFactor = true, where = "naksha_2d($c_geo, $c_flags) IS NOT NULL"
+                    )
+                ).close()
+            }
+        }
+
+        /**
+         * A three-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_geometry(`[PgColumn.geo], [PgColumn.flags]`)`.
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val spgist_geo_3d = def(PgIndex::class, "s3d") { self ->
+            self.name = "spgist_geo_3d"
+            self.columns = listOf(c_geo)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        """spgist (naksha_3d($c_geo, $c_flags))""",
+                        table, unique = false, addFillFactor = true, where = "naksha_3d($c_geo, $c_flags) IS NOT NULL"
+                    )
+                ).close()
+            }
+        }
+
+        /**
+         * A four-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_geometry(`[PgColumn.geo], [PgColumn.flags]`)`.
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val spgist_geo_4d = def(PgIndex::class, "s4d") { self ->
+            self.name = "spgist_geo_4d"
+            self.columns = listOf(c_geo)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        """spgist (naksha_4d($c_geo, $c_flags))""",
+                        table, unique = false, addFillFactor = true, where = "naksha_4d($c_geo, $c_flags) IS NOT NULL"
+                    )
+                ).close()
+            }
+        }
+
+        /**
+         * Index above [feature-type][PgColumn.ft] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val ft = def(PgIndex::class, "ft") { self ->
+            self.name = "feature_type"
+            self.columns = listOf(c_ft, c_tn)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING)
+            self.includes = listOf(c_id, c_txn_next)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        "btree ($c_ft text_pattern_ops DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        table, unique = false, addFillFactor = true, where = "$c_ft IS NOT NULL"
+                    )
+                ).close()
+            }
+        }.alias<PgIndex>("feature_type").alias<PgIndex>("featureType")
+
+        /**
+         * Index above [cv0][PgColumn.cv0] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val cv0 = def(PgIndex::class, "cv0") { self ->
+            self.name = "cv0"
+            self.columns = listOf(c_cv0, c_tn)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING)
+            self.includes = listOf(c_id, c_tn)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        "btree ($c_cv0 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        table, unique = false, addFillFactor = true, where = "$c_cv0 IS NOT NULL"
+                    )
+                ).close()
+            }
+        }
+
+        /**
+         * Index above [cv1][PgColumn.cv1] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val cv1 = def(PgIndex::class, "cv1") { self ->
+            self.name = "cv1"
+            self.columns = listOf(c_cv1, c_tn)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING)
+            self.includes = listOf(c_id, c_txn_next)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        "btree ($c_cv1 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        table, unique = false, addFillFactor = true, where = "$c_cv1 IS NOT NULL"
+                    )
+                ).close()
+            }
+        }
+
+        /**
+         * Index above [cv2][PgColumn.cv2] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val cv2 = def(PgIndex::class, "cv2") { self ->
+            self.name = "cv2"
+            self.columns = listOf(c_cv2, c_tn)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING)
+            self.includes = listOf(c_id, c_txn_next)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        "btree ($c_cv2 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        table, unique = false, addFillFactor = true, where = "$c_cv2 IS NOT NULL"
+                    )
+                ).close()
+            }
+        }
+
+        /**
+         * Index above [cv0][PgColumn.cv3] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val cv3 = def(PgIndex::class, "cv3") { self ->
+            self.name = "cv3"
+            self.columns = listOf(c_cv3, c_tn)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING)
+            self.includes = listOf(c_id, c_txn_next)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        "btree ($c_cv3 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        table, unique = false, addFillFactor = true, where = "$c_cv3 IS NOT NULL"
+                    )
+                ).close()
+            }
+        }
+
+        /**
+         * Index above [cs0][PgColumn.cs0] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val cs0 = def(PgIndex::class, "cs0") { self ->
+            self.name = "cs0"
+            self.columns = listOf(c_cs0, c_tn)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING)
+            self.includes = listOf(c_id, c_txn_next)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        "btree ($c_cs0 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        table, unique = false, addFillFactor = true, where = "$c_cs0 IS NOT NULL"
+                    )
+                ).close()
+            }
+        }
+
+        /**
+         * Index above [cs1][PgColumn.cs1] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val cs1 = def(PgIndex::class, "cs1") { self ->
+            self.name = "cs1"
+            self.columns = listOf(c_cs1, c_tn)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING, DESCENDING)
+            self.includes = listOf(c_id, c_txn_next)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        "btree ($c_cs1 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        table, unique = false, addFillFactor = true, where = "$c_cs1 IS NOT NULL"
+                    )
+                ).close()
+            }
+        }
+
+        /**
+         * Index above [cs2][PgColumn.cs2] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val cs2 = def(PgIndex::class, "cs2") { self ->
+            self.name = "cs2"
+            self.columns = listOf(c_cs2, c_tn)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING)
+            self.includes = listOf(c_id, c_txn_next)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        "btree ($c_cs2 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        table, unique = false, addFillFactor = true, where = "$c_cs2 IS NOT NULL"
+                    )
+                ).close()
+            }
+        }
+
+        /**
+         * Index above [cs3][PgColumn.cs3] and [tuple-number][PgColumn.tn], including [id][PgColumn.id] and [txn_next][PgColumn.next_tn].
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val cs3 = def(PgIndex::class, "cs3") { self ->
+            self.name = "cs3"
+            self.columns = listOf(c_cs3, c_tn)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING)
+            self.includes = listOf(c_id, c_txn_next)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        "btree ($c_cs3 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        table, unique = false, addFillFactor = true, where = "$c_cs3 IS NOT NULL"
                     )
                 ).close()
             }
@@ -312,17 +585,17 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
          */
         @JvmStatic
         @JsStatic
-        fun truncate(id: String): String = if (id.length > 13) id.substring(0, 13) else id
+        fun truncate(id: String): String = if (id.length > 3) id.substring(0, 3) else id
 
         /**
-         * Find the index by name.
-         * @param name the relation name (`relname`), as returned by the database from the `pg_class` table (with `relkind` being `i`).
+         * Find the index by name or _relname_.
+         * @param name the official [name] or the relation name (`relname`), as returned by the database from the `pg_class` table (with `relkind` being `i`).
          * @return the index, if it exists.
          */
         @JvmStatic
         @JsStatic
         fun of(name: String): PgIndex? {
-            val existing = getDefined(name, PgIndex::class)
+            val existing = getDefined(name, PgIndex::class) ?: indexByName[name]
             if (existing != null) return existing
             val start = name.lastIndexOf(PG_IDX)
             if (start < 0) return null
@@ -335,32 +608,65 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
             return null
         }
 
+        /**
+         * Indices by official name.
+         * @since 3.0.0
+         */
+        private val indexByName = AtomicMap<String, PgIndex>()
         init {
             // Sanity check.
+            val byName = indexByName
             val map = HashMap<String, PgIndex>()
-            for (e in iterate(PgIndex::class)) {
-                val pg_truncated_id = truncate(e.text)
+            for (index in iterate(PgIndex::class)) {
+                val pg_truncated_id = truncate(index.text)
                 if (pg_truncated_id in map) {
                     val c = map[pg_truncated_id]!!
-                    throw Error("Conflict, the index ${e.text} has the same short name as ${c.text}: $pg_truncated_id")
+                    throw Error("Conflict, the index ${index.text} has the same short name as ${c.text}: $pg_truncated_id")
                 }
-                map[pg_truncated_id] = e
+                map[pg_truncated_id] = index
+
+                val e = byName.putIfAbsent(index.name, index)
+                if (e != null) throw Error("Conflict, the index ${index.text} has the same official name as ${e.text}: ${e.name}")
             }
         }
 
         /**
-         * The list of default indices that are added, when _null_ is provided as index list to create.
+         * The list of default index names to be are added, when _null_ is provided as index list to create.
          */
         @JvmField
         @JsStatic
         var DEFAULT_INDICES = listOf(
-            gist_geo,
-            geo_grid_id_txn_uid,
-            tags_id_txn_uid,
-            app_id_updatedAt_id_txn_uid,
-            author_ts_id_txn_uid
+            id,
+            here_tile,
+            app_id,
+            author,
+            tags,
+            ft,
+            cv0, cv1, cv2, cv3,
+            cs0, cs1, cs2, cs3,
+            //ref_point,
+            //gist_geo_2d,
         )
     }
+
+    /**
+     * If the index is internal, that means it is not intentionally manageable from clients.
+     * @since 3.0
+     */
+    var internal: Boolean = false
+        private set
+
+    private var _name: String? = null
+
+    /**
+     * The official index name to be used in [naksha.model.objects.NakshaCollection.indices].
+     * @since 3.0.0
+     */
+    var name: String
+        get() = _name ?: text
+        private set(value) {
+            _name = value
+        }
 
     /**
      * Returns the unique identifier of this index in the given table.
@@ -369,6 +675,17 @@ ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)"
      */
     fun id(table: PgTable): String {
         val id = "${table.name}${PG_IDX}${text}"
+        return if (id.length > 63) id.substring(0, 63) else id
+    }
+
+    /**
+     * Returns the unique identifier of this index in the table with the given name.
+     * @param tableName the name of the table for which to generate the unique index name.
+     * @return the unique identifier of this index in the given table.
+     */
+    @JsName("idByTableName")
+    fun id(tableName: String): String {
+        val id = "${tableName}${PG_IDX}${text}"
         return if (id.length > 63) id.substring(0, 63) else id
     }
 

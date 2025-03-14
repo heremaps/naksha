@@ -11,13 +11,14 @@ import kotlin.js.JsExport
  * Example:
  * ```kotlin
  * val req = WriteRequest()
- * req.add(Write().createFeature(null, collection.id, feature))
+ * val col = NakshaCollection("foo")
+ * req.add(Write().createFeature(col, feature))
  * ...
  * ```
  * ```java
- * final WriteRequest req = new WriteRequest();
- * req.add(new Write()
- *         .createFeature(null, collection.getId(), feature));
+ * final val req = new WriteRequest();
+ * final val col = new NakshaCollection("foo");
+ * req.add(new Write().createFeature(col, feature));
  * ...
  * ```
  */
@@ -37,6 +38,12 @@ open class WriteRequest : Request() {
      */
     var writes by WRITE_LIST
 
+    /**
+     * Adds the given write operation to the end of the [writes] list.
+     *
+     * @param op the write operation to append.
+     * @since 3.0.0
+     */
     fun add(op: Write): WriteRequest {
         writes.add(op)
         return this

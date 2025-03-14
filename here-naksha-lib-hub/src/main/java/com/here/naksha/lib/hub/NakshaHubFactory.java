@@ -29,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
 public class NakshaHubFactory {
 
   /**
-   * Instantiate NakshaHub (INaksha compliant) instance by loading given {@link NakshaHubConfig#hubClassName hubClassName}. If config or
+   * Instantiate NakshaHub (INaksha compliant) instance by loading given {@link NakshaHubConfig#getHubClassName()}. If config or
    * hubClassName is not provided (i.e. null), then default NakshaHub implementation will be used.
    *
    * @param appName    the name of the app
@@ -39,26 +39,27 @@ public class NakshaHubFactory {
    * @return NakshaHub (INaksha compliant) instance
    */
   public static @NotNull INaksha getInstance(
-      final @Nullable String appName,
-      final @Nullable String storageUrl,
+      final @NotNull String adminMapId,
+      final @NotNull String adminStorageId,
+      final @Nullable String adminPgMasterUrl,
       final @Nullable NakshaHubConfig config,
       final @Nullable String configId) {
-    final String hubClassName = (config != null) ? config.hubClassName : NakshaHubConfig.defaultHubClassName();
+    final String hubClassName = (config != null) ? config.getHubClassName() : NakshaHubConfig.defaultHubClassName();
     INaksha hub = null;
     try {
       final Class<?> theClass = Class.forName(hubClassName);
       if (INaksha.class.isAssignableFrom(theClass)) {
         final Constructor<?> constructor =
-            theClass.getConstructor(String.class, String.class, NakshaHubConfig.class, String.class);
-        hub = (INaksha) constructor.newInstance(appName, storageUrl, config, configId);
+            theClass.getConstructor(String.class, String.class, String.class, NakshaHubConfig.class, String.class);
+        hub = (INaksha) constructor.newInstance(adminMapId, adminStorageId, adminPgMasterUrl, config, configId);
       } else {
         throw unchecked(new Exception("Class '" + hubClassName + "' not INaksha compliant"));
       }
     } catch (ClassNotFoundException
-        | InvocationTargetException
-        | NoSuchMethodException
-        | InstantiationException
-        | IllegalAccessException ex) {
+             | InvocationTargetException
+             | NoSuchMethodException
+             | InstantiationException
+             | IllegalAccessException ex) {
       throw unchecked(
           new Exception("Unable to instantiate INaksha implementation class '" + hubClassName + "'. ", ex));
     }

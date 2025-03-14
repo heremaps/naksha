@@ -18,17 +18,17 @@
  */
 package com.here.naksha.lib.hub;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import static naksha.base.JvmAnyObjectUtil.getOrSetProperty;
+import static naksha.base.JvmAnyObjectUtil.getProperty;
+import static naksha.base.JvmAnyObjectUtil.getPropertyOrReturnDefault;
+
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.Map;
+import naksha.base.AnyObject;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
@@ -36,11 +36,6 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * // TODO: CASL-681: refactor this to Map-based proxy - it must be persisted
- * The Naksha-Hub service configuration.
- */
-@JsonTypeName(value = "Config")
 public final class NakshaHubConfig extends NakshaFeature implements JsonSerializable {
 
   private static final Logger logger = LoggerFactory.getLogger(NakshaHubConfig.class);
@@ -50,7 +45,7 @@ public final class NakshaHubConfig extends NakshaFeature implements JsonSerializ
    * using the <a href="https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html">XGD</a> standard, therefore from
    * directory ({@code ~/.config/<APP_NAME>/...}).
    */
-  public static final @NotNull String APP_NAME = "naksha";
+  public static final @NotNull String NAKSHA_APP_NAME = "naksha";
 
   private static final String NAKSHA_ENV = "NAKSHA_ENV";
 
@@ -70,7 +65,7 @@ public final class NakshaHubConfig extends NakshaFeature implements JsonSerializ
    * @return The default application name.
    */
   public static @NotNull String defaultAppName() {
-    return APP_NAME + "/v" + NakshaVersion.latest;
+    return NAKSHA_APP_NAME + "/v" + NakshaVersion.latest;
   }
 
   /**
@@ -82,275 +77,246 @@ public final class NakshaHubConfig extends NakshaFeature implements JsonSerializ
     return NakshaHub.class.getName();
   }
 
-  @JsonCreator
-  NakshaHubConfig(
-      @JsonProperty("id") @NotNull String id,
-      @JsonProperty("hubClassName") @Nullable String hubClassName,
-      @JsonProperty("userAgent") @Nullable String userAgent,
-      @JsonProperty("appId") @Nullable String appId,
-      @JsonProperty("author") @Nullable String author,
-      @JsonProperty("httpPort") @Nullable Integer httpPort,
-      @JsonProperty("hostname") @Nullable String hostname,
-      @JsonProperty("endpoint") @Nullable String endpoint,
-      @JsonProperty("env") @Nullable String env,
-      @JsonProperty("webRoot") @Nullable String webRoot,
-      @JsonProperty(NAKSHA_AUTH) @Nullable AuthorizationMode authMode,
-      @JsonProperty("jwtName") @Nullable String jwtName,
-      @JsonProperty("debug") @Nullable Boolean debug,
-      @JsonProperty("maintenanceIntervalInMins") @Nullable Integer maintenanceIntervalInMins,
-      @JsonProperty("maintenanceInitialDelayInMins") @Nullable Integer maintenanceInitialDelayInMins,
-      @JsonProperty("maintenancePoolCoreSize") @Nullable Integer maintenancePoolCoreSize,
-      @JsonProperty("maintenancePoolMaxSize") @Nullable Integer maintenancePoolMaxSize,
-      @JsonProperty("storageParams") @Nullable Map<String, Object> storageParams,
-      @JsonProperty("extensionConfigParams") @Nullable ExtensionConfigParams extensionConfigParams,
-      @JsonProperty("requestBodyLimit") @Nullable Integer requestBodyLimit,
-      @JsonProperty("maxParallelRequestsPerCPU") @Nullable Integer maxParallelRequestsPerCPU,
-      @JsonProperty("maxPctParallelRequestsPerActor") @Nullable Integer maxPctParallelRequestsPerActor) {
-    super(id);
-    if (httpPort != null && (httpPort < 0 || httpPort > 65535)) {
-      logger.atError()
-          .setMessage("Invalid port in Naksha configuration: {}")
-          .addArgument(httpPort)
-          .log();
-      httpPort = 8080;
-    } else if (httpPort == null || httpPort == 0) {
-      httpPort = 8080;
-    }
-    if (hostname == null || hostname.length() == 0) {
-      try {
-        hostname = InetAddress.getLocalHost().getHostAddress();
-      } catch (UnknownHostException e) {
-        logger.atError()
-            .setMessage("Unable to resolve the hostname using Java's API.")
-            .setCause(e)
-            .log();
-        hostname = "localhost";
-      }
-    }
-    URL __endpoint = null;
-    if (endpoint != null && endpoint.length() > 0) {
-      try {
-        __endpoint = new URL(endpoint);
-      } catch (MalformedURLException e) {
-        logger.atError()
-            .setMessage("Invalid configuration of endpoint: {}")
-            .addArgument(endpoint)
-            .setCause(e)
-            .log();
-      }
-    }
-    if (__endpoint == null) {
-      try {
-        //noinspection HttpUrlsUsage
-        __endpoint = new URL("http://" + hostname + ":" + httpPort);
-      } catch (MalformedURLException e) {
-        logger.atError()
-            .setMessage("Invalid hostname: {}")
-            .addArgument(hostname)
-            .setCause(e)
-            .log();
-        hostname = "localhost";
-        try {
-          __endpoint = new URL("http://localhost:" + httpPort);
-        } catch (MalformedURLException ignore) {
-        }
-      }
-      assert __endpoint != null;
-    }
-    env = getEnv(env);
 
-    this.hubClassName = (hubClassName != null && !hubClassName.isEmpty()) ? hubClassName : defaultHubClassName();
-    this.appId = appId != null && appId.length() > 0 ? appId : "naksha";
-    this.author = author;
-    this.httpPort = httpPort;
-    this.hostname = hostname;
-    this.endpoint = __endpoint;
-    this.env = env;
-    this.webRoot = webRoot;
-    this.authMode = (authMode == null) ? AuthorizationMode.JWT : authMode;
-    this.jwtName = jwtName != null && !jwtName.isEmpty() ? jwtName : "jwt";
-    this.userAgent = userAgent != null && !userAgent.isEmpty() ? userAgent : defaultAppName();
-    this.debug = Boolean.TRUE.equals(debug);
-    this.maintenanceIntervalInMins =
-        maintenanceIntervalInMins != null ? maintenanceIntervalInMins : defaultMaintenanceIntervalInMins();
-    this.maintenanceInitialDelayInMins = maintenanceInitialDelayInMins != null
-        ? maintenanceInitialDelayInMins
-        : defaultMaintenanceInitialDelayInMins();
-    this.maintenancePoolCoreSize =
-        maintenancePoolCoreSize != null ? maintenancePoolCoreSize : defaultMaintenancePoolCoreSize();
-    this.maintenancePoolMaxSize =
-        maintenancePoolMaxSize != null ? maintenancePoolMaxSize : defaultMaintenancePoolMaxSize();
-    this.storageParams = storageParams;
-    this.extensionConfigParams = extensionConfigParams;
-    if (requestBodyLimit == null) {
-      this.requestBodyLimit = DEF_REQ_BODY_LIMIT;
-    } else if (requestBodyLimit > MAX_REQ_BODY_LIMIT) {
+  // property names
+  public static final String HUB_CLASS_NAME = "hubClassName";
+  public static final String USER_AGENT = "userAgent";
+  public static final String APP_ID = "appId";
+  public static final String AUTHOR = "author";
+  public static final String HTTP_PORT = "httpPort";
+  public static final String HOSTNAME = "hostname";
+  public static final String ENDPOINT = "endpoint";
+  public static final String ENV = "env";
+  public static final String WEB_ROOT = "webRoot";
+  public static final String NAKSHA_AUTH = "authMode";
+  public static final String JWT_NAME = "jwtName";
+  public static final String DEBUG = "debug";
+  public static final String STORAGE_PARAMS = "storageParams";
+  public static final String EXTENSION_CONFIG_PARAMS = "extensionConfigParams";
+  public static final String REQUEST_BODY_LIMIT = "requestBodyLimit";
+  public static final String MAX_PARALLEL_REQUESTS_PER_CPU = "maxParallelRequestsPerCPU";
+  public static final String MAX_PCT_PARALLEL_REQUESTS_PER_ACTOR = "maxPctParallelRequestsPerActor";
+
+  @Override
+  public void onCreation() {
+    setEndpointDetailsIfInvalid();
+    resolveEnv();
+    Integer requestBodyLimit = getProperty(this, REQUEST_BODY_LIMIT, Integer.class);
+    if (requestBodyLimit != null && requestBodyLimit > MAX_REQ_BODY_LIMIT) {
       logger.warn(
           "Configured request body limit {} MB not supported. Falling back to default limit of {} MB",
           requestBodyLimit,
           DEF_REQ_BODY_LIMIT);
-      this.requestBodyLimit = DEF_REQ_BODY_LIMIT;
-    } else {
-      this.requestBodyLimit = requestBodyLimit;
+      setRequestBodyLimit(DEF_REQ_BODY_LIMIT);
     }
-    this.maxParallelRequestsPerCPU =
-        maxParallelRequestsPerCPU != null ? maxParallelRequestsPerCPU : defaultMaxParallelRequestsPerCPU();
-    this.maxPctParallelRequestsPerActor = maxPctParallelRequestsPerActor != null
-        ? maxPctParallelRequestsPerActor
-        : defaultMaxPctParallelRequestsPerActor();
   }
 
-  private String getEnv(String env) {
+  private void setEndpointDetailsIfInvalid() {
+    String endpoint = getProperty(this, ENDPOINT, String.class);
+    if (endpoint == null || endpoint.isEmpty()) {
+      resolveInvalidEndpoint();
+    } else {
+      try {
+        URL validEndpoint = new URL(endpoint);
+        populateEndpointDetails(validEndpoint);
+      } catch (MalformedURLException e) {
+        logger.error("Invalid endpoint URL {}, resolving endpoint via 'hostname', 'port' and defaults...", endpoint, e);
+        resolveInvalidEndpoint();
+      }
+    }
+  }
+
+  private void populateEndpointDetails(URL validEndpoint) {
+    setHostname(validEndpoint.getHost());
+    setHttpPort(validEndpoint.getPort());
+  }
+
+  private void resolveInvalidEndpoint() {
+    int httpPort = getOrSetProperty(this, HTTP_PORT, 8080);
+    if (httpPort < 0 || httpPort > 65535) {
+      logger.atError()
+          .setMessage("Invalid port in Naksha configuration: {}, changing to default 8080")
+          .addArgument(httpPort)
+          .log();
+      httpPort = 8080;
+      setHttpPort(8080);
+    }
+    String hostname = getOrSetProperty(this, HOSTNAME, "localhost");
+    if (hostname.isBlank()) {
+      try {
+        hostname = InetAddress.getLocalHost().getHostAddress();
+        logger.error("Naksha hostname is blank, changing to local host address: {}", hostname);
+        setHostname(hostname);
+      } catch (UnknownHostException e) {
+        logger.error("Unable to resolve the hostname using Java's API, changing to 'localhost'");
+        hostname = "localhost";
+        setHostname(hostname);
+      }
+    }
+    String rawEndpoint = null;
+    try {
+      rawEndpoint = "http://" + hostname + ":" + httpPort;
+      new URL(rawEndpoint);
+      setEndpoint(rawEndpoint);
+    } catch (MalformedURLException e) {
+      logger.error("Unable to parse ULR for endpoint {} because of invalid hostname {}. Will use 'localhost' instead", rawEndpoint,
+          hostname);
+      setHostname("localhost");
+      setEndpoint("http://localhost:" + httpPort);
+    }
+  }
+
+  private void resolveEnv() {
     // This is only to be backward compatible to support EC2 based deployment
     String envVal = System.getenv(NAKSHA_ENV);
-    if (envVal != null && !envVal.isEmpty() && !"null".equalsIgnoreCase(envVal)) return envVal;
-    if (env != null && !env.isEmpty() && !"null".equalsIgnoreCase(env)) return env;
-    return "local";
+    if (envVal != null && !envVal.isEmpty() && !"null".equalsIgnoreCase(envVal)) {
+      setRaw(ENV, envVal);
+    }
+    String propEnv = getProperty(this, ENV, String.class);
+    if (propEnv == null || propEnv.isEmpty() || "null".equalsIgnoreCase(propEnv)) {
+      setRaw(ENV, "local");
+    }
   }
-
-  public static final String HTTP_PORT = "httpPort";
 
   /**
    * The port at which to listen for HTTP requests.
    */
-  @JsonProperty(HTTP_PORT)
-  public final int httpPort;
+  public @NotNull Integer getHttpPort() {
+    return getOrSetProperty(this, HTTP_PORT, 8080);
+  }
 
-  public static final String HOSTNAME = "hostname";
+  private void setHttpPort(@NotNull Integer httpPort) {
+    setRaw(HTTP_PORT, httpPort);
+  }
 
   /**
    * The hostname to use to refer to this instance, if {@code null}, then auto-detected.
    */
-  @JsonProperty(HOSTNAME)
-  public final @NotNull String hostname;
+  public @NotNull String getHostname() {
+    return getProperty(this, HOSTNAME, String.class);
+  }
 
-  public static final String APP_ID = "appId";
+  private void setHostname(@NotNull String hostname) {
+    setRaw(HOSTNAME, hostname);
+  }
 
   /**
    * The application-id to be used when modifying the admin-database.
    */
-  @JsonProperty(APP_ID)
-  public final @NotNull String appId;
+  public @NotNull String getAppId() {
+    return getOrSetProperty(this, APP_ID, "naksha");
+  }
 
-  public static final String AUTHOR = "author";
 
   /**
    * The author to be used when modifying the admin-database.
    */
-  @JsonProperty(AUTHOR)
-  public final @Nullable String author;
-
-  public static final String ENDPOINT = "endpoint";
+  public @Nullable String getAuthor() {
+    return getOrSetProperty(this, AUTHOR, defaultAppName());
+  }
 
   /**
-   * The public endpoint, for example "https://naksha.foo.com/". If {@code null}, then the hostname and HTTP port used.
+   * The public endpoint, for example "https://naksha.foo.com/".
    */
-  @JsonProperty(ENDPOINT)
-  public @NotNull URL endpoint;
+  public @NotNull String getEndpoint() {
+    return getProperty(this, ENDPOINT, String.class);
+  }
 
-  public static final String ENV = "env";
+  private void setEndpoint(@NotNull String endpoint) {
+    setRaw(ENDPOINT, endpoint);
+  }
 
   /**
    * The environment, for example "local", "dev", "e2e" or "prd".
    */
-  @JsonProperty(ENV)
-  public final @NotNull String env;
-
-  public static final String WEB_ROOT = "webRoot";
+  public @NotNull String getEnv() {
+    return getProperty(this, ENV, String.class);
+  }
 
   /**
    * If set, then serving static files from this directory.
    */
-  @JsonProperty(WEB_ROOT)
-  public final @Nullable String webRoot;
-
-  public static final String JWT_NAME = "jwtName";
+  public @Nullable String getWebRoot() {
+    return getProperty(this, WEB_ROOT, String.class);
+  }
 
   /**
    * The JWT key files to be read from the disk ({@code "~/.config/naksha/auth/$<jwtName>.(key|pub)"}).
    */
-  @JsonProperty(JWT_NAME)
-  public final @NotNull String jwtName;
-
-  public static final String USER_AGENT = "userAgent";
+  public @NotNull String getJwtName() {
+    return getOrSetProperty(this, JWT_NAME, "jwt");
+  }
 
   /**
    * The user-agent to be used for external communication.
    */
-  @JsonProperty(USER_AGENT)
-  public final @NotNull String userAgent;
-
-  public static final String DEBUG = "debug";
+  public @NotNull String getUserAgent() {
+    return getOrSetProperty(this, USER_AGENT, defaultAppName());
+  }
 
   /**
    * If debugging mode is enabled.
    */
-  @JsonProperty(DEBUG)
-  @JsonInclude(Include.NON_DEFAULT)
-  public boolean debug;
+  public boolean isDebug() {
+    return getPropertyOrReturnDefault(this, DEBUG, false);
+  }
 
-  public static final String HUB_CLASS_NAME = "hubClassName";
+  public void setDebug(boolean debug) {
+    setRaw(DEBUG, debug);
+  }
 
   /**
    * The fully qualified class name to be used to initiate NakshaHub instance
    */
-  @JsonProperty(HUB_CLASS_NAME)
-  public final @NotNull String hubClassName;
-
-  /**
-   * The initial delay (in minutes) after the service start up, when the Storage Maintenance job should perform first execution
-   */
-  public final int maintenanceInitialDelayInMins;
-
-  /**
-   * Returns a default initial delay in mins, for starting Storage Maintenance job.
-   *
-   * @return The default interval
-   */
-  public static int defaultMaintenanceInitialDelayInMins() {
-    return 1 * 60; // 1 hour
+  public @NotNull String getHubClassName() {
+    return getOrSetProperty(this, HUB_CLASS_NAME, defaultHubClassName());
   }
 
   /**
-   * The interval in minutes, with which the Storage Maintenance job is to be scheduled
+   * Optional storage-specific parameters
    */
-  public final int maintenanceIntervalInMins;
-
-  /**
-   * Returns a default interval in mins, for scheduling Storage Maintenance job.
-   *
-   * @return The default interval
-   */
-  public static int defaultMaintenanceIntervalInMins() {
-    return 12 * 60; // 12 hours
+  public Map<String, Object> getStorageParams() {
+    return getProperty(this, STORAGE_PARAMS, AnyObject.class);
   }
 
   /**
-   * The initial size of thread pool for running Storage Maintenance jobs in parallel
+   * Optional extension-manager parameters
    */
-  public final int maintenancePoolCoreSize;
-
-  /**
-   * Returns a default initial size of thread pool for running Storage Maintenance jobs in parallel
-   *
-   * @return the default core size of maintenance thread pool
-   */
-  public static int defaultMaintenancePoolCoreSize() {
-    return 5;
+  public @Nullable ExtensionConfigParams getExtensionConfigParams() {
+    return getProperty(this, EXTENSION_CONFIG_PARAMS, ExtensionConfigParams.class);
   }
 
   /**
-   * The maximum size of thread pool for running Storage Maintenance jobs in parallel
+   * Optional Http request body limit in MB. Default is {@link #DEF_REQ_BODY_LIMIT}.
    */
-  public final int maintenancePoolMaxSize;
+  public Integer getRequestBodyLimit() {
+    return getOrSetProperty(this, REQUEST_BODY_LIMIT, DEF_REQ_BODY_LIMIT);
+  }
+
+  private void setRequestBodyLimit(@NotNull Integer bodyLimit) {
+    setRaw(REQUEST_BODY_LIMIT, bodyLimit);
+  }
 
   /**
-   * Returns a default maximum size of thread pool for running Storage Maintenance jobs in parallel
-   *
-   * @return the default max size of maintenance thread pool
+   * Optional Total Concurrency Limit
    */
-  public static int defaultMaintenancePoolMaxSize() {
-    return 5;
+  public Integer getMaxParallelRequestsPerCPU() {
+    return getProperty(this, MAX_PARALLEL_REQUESTS_PER_CPU, Integer.class);
+  }
+
+  /**
+   * Optional Total Author Concurrency Threshold
+   */
+  public Integer getMaxPctParallelRequestsPerActor() {
+    return getProperty(this, MAX_PCT_PARALLEL_REQUESTS_PER_ACTOR, Integer.class);
+  }
+
+  /**
+   * The authorization mode.
+   */
+  public @NotNull AuthorizationMode getAuthMode() {
+    String raw = getOr(NAKSHA_AUTH, AuthorizationMode.JWT.name()); // proxy model does not play well with JVM enums
+    return AuthorizationMode.fromString(raw);
   }
 
   /**
@@ -358,7 +324,7 @@ public final class NakshaHubConfig extends NakshaFeature implements JsonSerializ
    *
    * @return the default threshold per processor
    */
-  public static int defaultMaxParallelRequestsPerCPU() {
+  private static int defaultMaxParallelRequestsPerCPU() {
     return 30;
   }
 
@@ -367,43 +333,16 @@ public final class NakshaHubConfig extends NakshaFeature implements JsonSerializ
    *
    * @return the default percentage threshold per principal
    */
-  public static int defaultMaxPctParallelRequestsPerActor() {
+  private static int defaultMaxPctParallelRequestsPerActor() {
     return 25;
   }
-  /**
-   * Optional storage-specific parameters
-   */
-  public final Map<String, Object> storageParams;
-  /**
-   * Optional extension-manager parameters
-   */
-  public final ExtensionConfigParams extensionConfigParams;
-
-  /**
-   * Optional Http request body limit in MB. Default is {@link #DEF_REQ_BODY_LIMIT}.
-   */
-  public final Integer requestBodyLimit;
-
-  /**
-   * Optional Total Concurrency Limit
-   */
-  public final Integer maxParallelRequestsPerCPU;
-
-  /**
-   * Optional Total Author Concurrency Threshold
-   */
-  public final Integer maxPctParallelRequestsPerActor;
-
-  public static final String NAKSHA_AUTH = "authMode";
-
-  /**
-   * The authorization mode.
-   */
-  @JsonProperty(NAKSHA_AUTH)
-  public final @NotNull AuthorizationMode authMode;
 
   public enum AuthorizationMode {
     DUMMY,
-    JWT
+    JWT;
+
+    static AuthorizationMode fromString(String mode) {
+      return AuthorizationMode.valueOf(mode.toUpperCase());
+    }
   }
 }

@@ -28,7 +28,7 @@ import static naksha.model.util.ResultHelper.extractResponseItems;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import java.util.*;
@@ -58,7 +58,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
 
   // TODO: remove unused 'eventTarget' property as part of MCPODS-7103
   public ActivityLogHandler(
-      @NotNull EventHandler handlerConfig, @NotNull INaksha hub) {
+      @NotNull EventHandlerConfig handlerConfig, @NotNull INaksha hub) {
     super(hub);
     this.properties = Objects.requireNonNull(
         JvmBoxingUtil.box(handlerConfig.getProperties(), ActivityLogHandlerProperties.class));
@@ -112,16 +112,19 @@ public class ActivityLogHandler extends AbstractEventHandler {
   }
 
   private List<NakshaFeature> fetchHistoryFeatures(ReadFeatures readFeatures, NakshaContext context) {
-    try (IReadSession readSession =
-        nakshaHub().getSpaceStorage().newReadSession(SessionOptions.from(context, true))) {
-      Response result = readSession.execute(readFeatures);
-      if (!(result instanceof SuccessResponse)) {
-        return Collections.emptyList();
-      }
-      return extractResponseItems((SuccessResponse) result, NakshaFeature.class);
-    } catch (NoSuchElementException e) {
-      return Collections.emptyList();
-    }
+    return nakshaHub().getSpaceStorage().useReadSession(SessionOptions.from(context, true),
+            reader -> {
+              Response response = reader.execute(readFeatures);
+              if (!(response instanceof SuccessResponse)) {
+                return Collections.emptyList();
+              }
+              try {
+                return extractResponseItems((SuccessResponse) response, NakshaFeature.class);
+              } catch (NoSuchElementException e) {
+                return Collections.emptyList();
+              }
+
+            });
   }
 
   private List<NakshaFeature> featuresEnhancedWithActivity(
@@ -183,7 +186,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
         .map(missingUuid ->
             new PQuery(new Property(NakshaProperties.XYZ_KEY, "uuid"), StringOp.EQUALS, missingUuid))
         .toArray(PQuery[]::new);
-    final ReadFeatures readFeatures = new ReadFeatures(properties.getSpaceId());
+    final ReadFeatures readFeatures = new ReadFeatures().addCollectionId(properties.getSpaceId());
     readFeatures.setQueryHistory(true);
     readFeatures.setVersions(Integer.MAX_VALUE);
     readFeatures.getQuery().setProperties(new POr(matchUuids));

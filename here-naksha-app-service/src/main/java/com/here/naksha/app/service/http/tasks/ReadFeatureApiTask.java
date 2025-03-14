@@ -50,8 +50,8 @@ import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.app.service.http.ops.PropertyQueryUtil;
 import com.here.naksha.app.service.http.ops.PropertySelectionUtil;
-import com.here.naksha.app.service.http.ops.TileToBboxUtil;
 import com.here.naksha.app.service.http.ops.TagQueryUtil;
+import com.here.naksha.app.service.http.ops.TileToBboxUtil;
 import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.lambdas.F1;
@@ -84,7 +84,6 @@ import naksha.model.request.query.ISpatialQuery;
 import naksha.model.request.query.ITagQuery;
 import naksha.model.request.query.SpBuffer;
 import naksha.model.request.query.SpIntersects;
-import naksha.model.util.RequestHelper;
 import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -145,7 +144,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       };
     } catch (NakshaException nakshaException) {
       logger.warn("Known exception while processing request. ", nakshaException);
-      return verticle.sendErrorResponse(routingContext, nakshaException.error);
+      return verticle.sendErrorResponse(routingContext, nakshaException.getError());
     } catch (Exception unknownException) {
       logger.error("Unexpected error while processing request. ", unknownException);
       return verticle.sendErrorResponse(
@@ -191,7 +190,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     Response response = executeReadRequestFromSpaceStorage(rdRequest);
     final F1<NakshaFeature, NakshaFeature> preResponseProcessing = standardReadFeaturesPreResponseProcessing(propPaths, false, null);
     // transform Result to Http XyzFeature response
-    return transformResponseToXyzFeatureResponse(response, NakshaFeature.class, NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS, preResponseProcessing);
+    return transformResponseToXyzFeatureResponse(response, NakshaFeature.class, NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS,
+        preResponseProcessing);
   }
 
   private @NotNull XyzResponse executeFeaturesByBBox() {

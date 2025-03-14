@@ -45,8 +45,8 @@ class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbFeatureDecoder(di
         return this
     }
 
-    override fun parseHeader() {
-        super.parseHeader()
+    override fun doParseHeader() {
+        super.doParseHeader()
         val map = root()
         while (map.next() && map.ok()) {
             val key = map.key()
@@ -68,6 +68,6 @@ class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbFeatureDecoder(di
     fun disableHistory(): Boolean = _disableHistory
     fun autoPurge(): Boolean = _autoPurge
     fun maxAge(): Int64 = _maxAge ?: Platform.INT64_MAX_VALUE
-    fun estimatedFeatureCount(): Int64 = _estimatedFeatureCount ?: NakshaCollection.BEFORE_ESTIMATION
+    fun estimatedFeatureCount(): Int64 = _estimatedFeatureCount ?: NakshaCollection.UNKNOWN
     fun storageClass(): String = _storageClass ?: PgStorageClass.Consistent.toString()
 }

@@ -1,19 +1,12 @@
 package naksha.psql
 
 import naksha.model.Naksha
-import naksha.model.NakshaCache
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.Transaction
-import naksha.model.request.ReadFeatures
-import naksha.model.request.SuccessResponse
-import naksha.model.request.Write
-import naksha.model.request.WriteRequest
+import naksha.model.objects.NakshaTx
+import naksha.model.request.*
 import naksha.psql.base.PgTestBase
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class TransactionsTest : PgTestBase(NakshaCollection("transaction_test")) {
 
@@ -21,35 +14,39 @@ class TransactionsTest : PgTestBase(NakshaCollection("transaction_test")) {
     fun readTransactionInfo() {
         // given - saved feature in one transaction
         val feature = NakshaFeature("f1")
-        val writeOp = Write().createFeature(map = null, collection!!.id, feature)
-        val writeRequest = WriteRequest().add(writeOp)
+        val writeOp = Write().createFeature(collection, feature)
+        val writeFeatureRequest = WriteRequest().add(writeOp)
+        val writeFeatureResponse = executeWrite(writeFeatureRequest)
 
-        val savedTuples = executeWrite(writeRequest).tuples
         // clear tuple cache
-        NakshaCache.tupleCache(storage.id).clear()
+        Naksha.cache.clear(storage)
 
-        val readSession = storage.newReadSession()
-        readSession.fetchTuples(savedTuples.asList())
-        val savedFeatureVersion = savedTuples[0]?.tuple?.meta?.version
+        // This should load the tuple from the storage, as we cleared the cache.
+        val writtenFeatures = writeFeatureResponse.features
+        assertNotNull(writeFeatureResponse.features)
+        assertEquals(1, writtenFeatures.size)
+        val writtenFeature = assertNotNull(writtenFeatures.first())
+        val writtenVersion = assertNotNull(writtenFeature.properties.xyz.version)
+        assertEquals("f1", writtenFeature.id)
 
-        // when - read all transactions
-        val readRequest = ReadFeatures(Naksha.VIRT_TRANSACTIONS)
-        readRequest.featureIds.add(savedFeatureVersion?.txn.toString())
-        val readResponse = storage.newReadSession().execute(readRequest) as SuccessResponse
-        readSession.fetchTuples(readResponse.tuples)
-
-        // then
-        assertEquals(savedFeatureVersion, readResponse.tuples[0]?.tuple?.meta?.version)
+        // Read the transaction.
+        val readTxRequest = ReadTransactions().readVersion(writtenVersion)
+        val readTxResponse = executeRead(readTxRequest)
+        val transactions = assertNotNull(readTxResponse.features)
+        assertEquals(1, transactions.size)
+        val transaction = assertNotNull(transactions.first()).proxy(NakshaTx::class)
+        assertEquals(writtenVersion.toString(), transaction.id)
+        assertEquals(writtenVersion, transaction.properties.xyz.version)
     }
 
     @Test
     fun updateTrasactionInfoOnMultipleWrites() {
         // given
         val feature1 = NakshaFeature("f2")
-        val writeRequest1 = WriteRequest().apply { add(Write().createFeature(map = null, collection!!.id, feature1)) }
+        val writeRequest1 = WriteRequest().apply { add(Write().createFeature(collection, feature1)) }
 
         val feature2 = NakshaFeature("f3")
-        val writeRequest2 = WriteRequest().apply { add(Write().createFeature(map = null, collection!!.id, feature2)) }
+        val writeRequest2 = WriteRequest().apply { add(Write().createFeature(collection, feature2)) }
 
         val writeSession = env.storage.newWriteSession(null)
 
@@ -57,35 +54,35 @@ class TransactionsTest : PgTestBase(NakshaCollection("transaction_test")) {
         assertIs<SuccessResponse>(writeSession.execute(writeRequest1))
 
         // then
-        assertEquals(1, writeSession.transaction().featuresModified)
+        assertEquals(1, writeSession.useTransaction().featuresModified)
 
         // when
         val value = writeSession.execute(writeRequest2)
         assertIs<SuccessResponse>(value)
 
         // then
-        assertEquals(2, writeSession.transaction().featuresModified)
+        assertEquals(2, writeSession.useTransaction().featuresModified)
     }
 
     @Test
     fun shouldBeAbleToTagTransaction() {
         // given
         val feature = NakshaFeature("f40")
-        val writeRequest = WriteRequest().apply { add(Write().createFeature(map = null, collection!!.id, feature)) }
+        val writeRequest = WriteRequest().apply { add(Write().createFeature(collection, feature)) }
 
         val writeSession = env.storage.newWriteSession(null)
 
         // when
-        writeSession.transaction().properties.xyz.addTag("sth", false)
+        writeSession.useTransaction().properties.xyz.tags.addTag("sth", false)
         assertIs<SuccessResponse>(writeSession.execute(writeRequest))
-        val transactionId = writeSession.transaction().id
+        val transactionId = writeSession.useTransaction().id
         writeSession.commit()
 
         // then
-        val readRequest = ReadFeatures(Naksha.VIRT_TRANSACTIONS).apply {
+        val readRequest = ReadTransactions().apply {
             featureIds += transactionId
         }
         val readResponse = storage.newReadSession().execute(readRequest) as SuccessResponse
-        assertTrue(readResponse.features[0]!!.properties.xyz.tags!!.contains("sth"))
+        assertTrue(readResponse.features[0]!!.properties.xyz.tags.contains("sth"))
     }
 }

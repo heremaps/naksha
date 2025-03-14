@@ -4,10 +4,12 @@ import static com.here.naksha.app.init.context.TestContext.State.NOT_STARTED;
 import static com.here.naksha.app.init.context.TestContext.State.STARTED;
 import static com.here.naksha.app.init.context.TestContext.State.STOPPED;
 import static com.here.naksha.app.init.context.TestContext.State.STOPPING;
+import static naksha.model.NakshaContext.newInstance;
 
 import com.here.naksha.app.service.NakshaApp;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import naksha.model.NakshaContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,6 +17,7 @@ public abstract class TestContext {
 
   private static final Logger log = LoggerFactory.getLogger(TestContext.class);
 
+  private static final String NAKSHA_TEST_APP_ID = "naksha_test_app";
   private final AtomicReference<State> stateRef = new AtomicReference<>(NOT_STARTED);
   private final AtomicReference<NakshaApp> nakshaRef = new AtomicReference<>(null);
 
@@ -28,6 +31,7 @@ public abstract class TestContext {
     if (stateRef.compareAndSet(NOT_STARTED, STARTED)) {
       log.info("Starting test context...");
       setupStorage();
+      newInstance(NAKSHA_TEST_APP_ID).attachToCurrentThread(); // TODO: verify
       startNaksha();
     } else {
       log.info("Not starting test context, expected {} state but context is in {} state", NOT_STARTED, stateRef.get());

@@ -20,6 +20,8 @@ import kotlin.jvm.JvmStatic
  * @property minute The minute of the hour, between 0 and 59.
  * @property second The second of the minute, between 0 and 60.
  * @property millis The milliseconds of the second, between 0 and 999.
+ * @property micros The microseconds of the second, between 0 and 999,999.
+ * @property nanos The nanoseconds of the second, between 0 and 999,999,999.
  */
 @JsExport
 class Timestamp(
@@ -30,7 +32,9 @@ class Timestamp(
     val hour: Int,
     val minute: Int,
     val second: Int,
-    val millis: Int
+    val millis: Int,
+    val micros: Int,
+    val nanos: Int
 ) {
     companion object TimestampCompanion {
         /**
@@ -50,7 +54,9 @@ class Timestamp(
                 ldt.hour,
                 ldt.minute,
                 ldt.second,
-                ldt.nanosecond / 1000_0000
+                ldt.nanosecond / 1_000_0000,
+                ldt.nanosecond / 1_000,
+                ldt.nanosecond
             )
         }
 
@@ -64,7 +70,18 @@ class Timestamp(
         fun fromMillis(ts: Int64) : Timestamp {
             val instant = Instant.fromEpochMilliseconds(ts.toLong())
             val ldt = instant.toLocalDateTime(TimeZone.UTC)
-            return Timestamp(ts, ldt.year, ldt.monthNumber, ldt.dayOfMonth, ldt.hour, ldt.minute, ldt.second, ldt.nanosecond / 1_000_000)
+            return Timestamp(
+                ts,
+                ldt.year,
+                ldt.monthNumber,
+                ldt.dayOfMonth,
+                ldt.hour,
+                ldt.minute,
+                ldt.second,
+                ldt.nanosecond / 1_000_000,
+                ldt.nanosecond / 1_000,
+                ldt.nanosecond
+            )
         }
 
         /**
@@ -75,14 +92,25 @@ class Timestamp(
          * @param hour The hour of the day, between 0 and 23.
          * @param minute The minute of the hour, between 0 and 59.
          * @param second The second of the minute, between 0 and 60.
-         * @param millis The milliseconds of the second, between 0 and 999.
+         * @param nanos The nanoseconds of the second, between 0 and 999,999,999.
          */
         @JvmStatic
         @JsStatic
-        fun fromDate(year:Int, month:Int, day:Int, hour:Int, minute:Int, second:Int, millis:Int) : Timestamp {
-            val ldt = LocalDateTime(year, month, day, hour, minute, second, millis*1_000_000)
+        fun fromDate(year:Int, month:Int, day:Int, hour:Int, minute:Int, second:Int, nanos:Int) : Timestamp {
+            val ldt = LocalDateTime(year, month, day, hour, minute, second, nanos)
             val instant = ldt.toInstant(TimeZone.UTC)
-            return Timestamp(Int64(instant.toEpochMilliseconds()), year, month, day, hour, minute, second, millis)
+            return Timestamp(
+                Int64(instant.toEpochMilliseconds()),
+                year,
+                month,
+                day,
+                hour,
+                minute,
+                second,
+                nanos / 1_000_000,
+                nanos / 1_000,
+                nanos
+            )
         }
     }
 }

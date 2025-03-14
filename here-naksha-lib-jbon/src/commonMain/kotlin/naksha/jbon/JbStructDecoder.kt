@@ -10,7 +10,7 @@ import kotlin.js.JsExport
 /**
  * The base class for all structure readers (JBON structure types). A structure does always have the unit-header. Apart from this, the
  * structure may have values that should be parsed ones when mapped, and other values, that should only be read on demand. For this
- * purpose the [parseHeader] method can be overridden.
+ * purpose the [doParseHeader] method can be overridden.
  * @constructor Create a new structure reader.
  */
 @Suppress("UNCHECKED_CAST", "MemberVisibilityCanBePrivate")
@@ -60,11 +60,52 @@ abstract class JbStructDecoder<SELF : JbStructDecoder<SELF>> {
     fun variant(): Int? = variant
 
     /**
-     * Invoked after a view, reader or bytes were mapped to parse the internal structure header. When the method is called, the [reader]
-     * will be placed behind the unit header, so at the first payload byte of the structure. If the method does nothing, the payload
-     * will be fully mapped as body.
+     * If the header should automatically be parsed, when bytes or a readers are mapped.
+     *
+     * If explicitly set to `false`, the header parsing will be postponed to be done manually.
+     * @since 3.0
      */
-    protected abstract fun parseHeader()
+    var autoParseHeader: Boolean = true
+
+    /**
+     * Disables the automatic header parsing, so set [autoParseHeader] to `false`.
+     * @return this
+     * @since 3.0
+     */
+    fun disableAutoParseHeader(): SELF {
+        autoParseHeader = false
+        return this as SELF
+    }
+
+    /**
+     * If the header is parsed.
+     * @since 3.0
+     */
+    var headerParsed: Boolean = false
+        private set
+
+    /**
+     * Invoked after a view, reader or bytes were mapped, short before [doParseHeader] is invoked. When the method is called, the [reader] will be placed behind the unit header, so at the first payload byte of the structure.
+     * @since 3.0
+     */
+    protected abstract fun onMap()
+
+    /**
+     * Invoked to parse the internal structure header after [onMap] has been invoked. Unless [onMap] does something, the [reader] will be placed behind the unit header, so at the first payload byte of the structure. this If the method does nothing, the payload will be fully mapped as body.
+     */
+    protected abstract fun doParseHeader()
+
+    /**
+     * Can be called externally
+     */
+    fun parseHeader(): SELF {
+        if (!headerParsed) {
+            doParseHeader()
+            bodyStart = reader.pos
+            headerParsed = true
+        }
+        return this as SELF
+    }
 
     /**
      * Map a specific region of a binary as object.
@@ -86,8 +127,8 @@ abstract class JbStructDecoder<SELF : JbStructDecoder<SELF>> {
         end = leadInOffset + reader.unitSize()
         reader.end = end
         reader.enterStruct()
-        parseHeader()
-        bodyStart = reader.pos
+        onMap()
+        if (autoParseHeader) parseHeader()
         return this as SELF
     }
 

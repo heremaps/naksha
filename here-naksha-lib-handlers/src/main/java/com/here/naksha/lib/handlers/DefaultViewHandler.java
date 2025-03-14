@@ -18,15 +18,23 @@
  */
 package com.here.naksha.lib.handlers;
 
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.*;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.EventHandler;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
+import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.handlers.DefaultViewHandlerProperties.ViewType;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
-import com.here.naksha.lib.view.*;
+import com.here.naksha.lib.view.IView;
+import com.here.naksha.lib.view.MissingIdResolver;
+import com.here.naksha.lib.view.ViewLayer;
+import com.here.naksha.lib.view.ViewLayerCollection;
+import com.here.naksha.lib.view.ViewReadSession;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
 import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
@@ -35,8 +43,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import naksha.base.JvmBoxingUtil;
-import naksha.model.*;
-import naksha.model.request.*;
+import naksha.base.StringList;
+import naksha.model.IStorage;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.SessionOptions;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.WriteRequest;
+import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,12 +65,12 @@ public class DefaultViewHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(DefaultViewHandler.class);
 
-  private final @NotNull EventHandler eventHandler;
+  private final @NotNull EventHandlerConfig eventHandler;
   private final @NotNull EventTarget<?> eventTarget;
   private final @NotNull DefaultViewHandlerProperties properties;
 
   public DefaultViewHandler(
-      final @NotNull EventHandler eventHandler,
+      final @NotNull EventHandlerConfig eventHandler,
       final @NotNull INaksha hub,
       final @NotNull EventTarget<?> eventTarget) {
     super(hub);
@@ -72,7 +92,6 @@ public class DefaultViewHandler extends AbstractEventHandler {
 
   @Override
   public @NotNull Response process(@NotNull IEvent event) {
-
     final NakshaContext ctx = NakshaContext.currentContext();
     final Request request = event.getRequest();
     logger.info("Handler received request {}", request.getClass().getSimpleName());
@@ -90,14 +109,23 @@ public class DefaultViewHandler extends AbstractEventHandler {
     logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
 
     if (storageImpl instanceof IView view) {
-
       if (properties.getSpaceIds() == null || properties.getSpaceIds().isEmpty()) {
-        logger.error("No spaces configured, so can't process this request");
-        return new ErrorResponse(NakshaError.NOT_FOUND, "No spaces configured for handler.");
+        logger.error("No spaces present in view's properties - unable to process this request");
+        return new ErrorResponse(NakshaError.NOT_FOUND, "No spaces defined in properties of handler: '" + eventHandler.getId() + "'");
       } else {
-
-        view.setViewLayerCollection(
-            prepareViewLayerCollection(nakshaHub().getSpaceStorage(), properties.getSpaceIds()));
+        try {
+          List<Space> spaces = fetchSpaces(properties.getSpaceIds());
+          if (spaces.isEmpty()) {
+            logger.error(
+                "Unable to fetch spaces configured for this view (no spaces found) - unable to process this request. Handler: {}, missing spaces: {}",
+                eventHandler.getId(), properties.getSpaceIds());
+            return new ErrorResponse(NakshaError.NOT_FOUND, "No spaces configured for handler.");
+          }
+          view.setViewLayerCollection(
+              prepareViewLayerCollection(nakshaHub().getSpaceStorage(), collectionsFor(spaces)));
+        } catch (NakshaException ne) {
+          return new ErrorResponse(ne.getError());
+        }
         // TODO MCPODS-7046 Replace the way how view is created. Should be immutable without need to use set
         // method.
         return processRequest(ctx, view, request);
@@ -105,6 +133,35 @@ public class DefaultViewHandler extends AbstractEventHandler {
     } else {
       logger.error("Associated storage doesn't implement View, so can't process this request");
       return new ErrorResponse(NakshaError.EXCEPTION, "Associated storage doesn't implement View");
+    }
+  }
+
+  private List<NakshaCollection> collectionsFor(List<Space> spaces) {
+    ArrayList<NakshaCollection> collections = new ArrayList<>(spaces.size());
+    for (Space space : spaces) {
+      NakshaCollection collection = space.getProperties().getCollection();
+      if (collection != null) {
+        collections.add(collection);
+      } else {
+        throw new NakshaException(NakshaError.COLLECTION_NOT_FOUND, "No collection configured for space: '" + space.getId() + "'");
+      }
+    }
+    return collections;
+  }
+
+  private List<Space> fetchSpaces(List<String> spaceIds) {
+    ReadFeatures readSpacesByIds = new ReadFeatures().addCollectionId(SPACES);
+    readSpacesByIds.setFeatureIds(StringList.fromList(spaceIds));
+    Response spacesResp = nakshaHub().getAdminStorage()
+        .useReadSession(SessionOptions.from(NakshaContext.currentContext()), session -> session.execute(readSpacesByIds));
+    if (spacesResp instanceof SuccessResponse successResponse) {
+      return ResultHelper.extractResponseItems(successResponse, Space.class);
+    } else if (spacesResp instanceof ErrorResponse errorResponse) {
+      logger.error("Error while fetching spaces: {}", errorResponse.getError(), errorResponse.getError().getCause());
+      throw new NakshaException(errorResponse.getError());
+    } else {
+      logger.error("Unexpected response while fetching spaces: {}", spacesResp);
+      throw new NakshaException(NakshaError.EXCEPTION, "Unexpected response while fetching spaces: " + spacesResp);
     }
   }
 
@@ -119,8 +176,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
   }
 
   private Response forwardWriteFeatures(NakshaContext ctx, IView view, WriteRequest wr) {
-    final IWriteSession writeSession = view.newWriteSession(SessionOptions.from(ctx, true));
-    return writeSession.execute(wr);
+    return view.useWriteSession(SessionOptions.from(ctx, null, true), writeSession -> writeSession.execute(wr));
   }
 
   private Response forwardReadFeatures(NakshaContext ctx, IView view, ReadFeatures rf) {
@@ -132,16 +188,14 @@ public class DefaultViewHandler extends AbstractEventHandler {
       final Set<ViewLayer> obligatoryLayers = getObligatoryLayers(view.getViewCollection());
       resolver = new ObligatoryLayersResolver(obligatoryLayers);
     }
-    try (final ViewReadSession reader = (ViewReadSession) view.newReadSession(SessionOptions.from(ctx, false))) {
-      return reader.execute(rf, new MergeByStoragePriority(), resolver);
-    }
+    return view.useReadSession(SessionOptions.from(ctx),
+        readSession -> ((ViewReadSession) readSession).executeReadFeatures(rf, new MergeByStoragePriority(), resolver));
   }
 
-  private ViewLayerCollection prepareViewLayerCollection(IStorage nhStorage, List<String> spaceIds) {
-
+  private ViewLayerCollection prepareViewLayerCollection(IStorage nhStorage, List<NakshaCollection> collections) {
     final List<ViewLayer> viewLayerList = new ArrayList<>();
-    for (final String spaceId : spaceIds) {
-      viewLayerList.add(new ViewLayer(nhStorage, spaceId));
+    for (final NakshaCollection collection : collections) {
+      viewLayerList.add(new ViewLayer(nhStorage, collection));
     }
 
     return new ViewLayerCollection("", viewLayerList);

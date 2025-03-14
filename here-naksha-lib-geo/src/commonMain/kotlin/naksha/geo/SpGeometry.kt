@@ -17,7 +17,7 @@ open class SpGeometry() : AnyObject() {
     }
 
     companion object GeometryProxyCompanion {
-        private val TYPE = NotNullProperty<SpGeometry, String>(String::class) { self, name ->
+        private val TYPE = NotNullProperty<SpGeometry, String>(String::class) { self, _ ->
             when (self) {
                 is SpPoint -> SpType.Point
                 is SpMultiPoint -> SpType.MultiPoint
@@ -41,7 +41,7 @@ open class SpGeometry() : AnyObject() {
      * @return the coordinates of the geometry.
      */
     open fun getCoordinatesOrNull(): ICoordinates? {
-        val type = this.type ?: return null
+        val type = this.type
         val coordinates = getRaw("coordinates") ?: return null
         if (coordinates !is PlatformList) return null
         return when (type) {
@@ -100,11 +100,11 @@ open class SpGeometry() : AnyObject() {
     fun calculateCentroid(): SpPoint // TODO: Improve this implementation!
             = SpBoundingBox(getCoordinates()).center()
 
-    fun asPoint(): SpPoint = proxy(SpPoint::class)
-    fun asMultiPoint(): SpMultiPoint = proxy(SpMultiPoint::class)
-    fun asLineString(): SpLineString = proxy(SpLineString::class)
-    fun asMultiLineString(): SpMultiLineString = proxy(SpMultiLineString::class)
-    fun asPolygon(): SpPolygon = proxy(SpPolygon::class)
-    fun asMultiPolygon(): SpMultiPolygon = proxy(SpMultiPolygon::class)
-    fun asGeometryCollection(): SpGeometryCollection = proxy(SpGeometryCollection::class)
+    fun asPoint(): SpPoint = if (this is SpPoint) this else proxy(SpPoint::class)
+    fun asMultiPoint(): SpMultiPoint = if (this is SpMultiPoint) this else proxy(SpMultiPoint::class)
+    fun asLineString(): SpLineString = if (this is SpLineString) this else proxy(SpLineString::class)
+    fun asMultiLineString(): SpMultiLineString = if (this is SpMultiLineString) this else proxy(SpMultiLineString::class)
+    fun asPolygon(): SpPolygon = if (this is SpPolygon) this else proxy(SpPolygon::class)
+    fun asMultiPolygon(): SpMultiPolygon = if (this is SpMultiPolygon) this else proxy(SpMultiPolygon::class)
+    fun asGeometryCollection(): SpGeometryCollection = if (this is SpGeometryCollection) this else proxy(SpGeometryCollection::class)
 }

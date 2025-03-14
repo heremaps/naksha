@@ -3,123 +3,504 @@
 package naksha.model
 
 import naksha.base.*
-import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
 import kotlin.DeprecationLevel.WARNING
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmStatic
 
 /**
- * The XYZ namespace stored in [properties.@ns:com:here:xyz][NakshaProperties.XYZ] of the [NakshaFeature].
+ * The XYZ namespace stored in [properties.@ns:com:here:xyz][naksha.model.object.NakshaProperties.XYZ] of the [NakshaFeature][naksha.model.object.NakshaFeature].
+ *
+ * This represents the external Naksha view of the low-level [metadata][IMetadata]. When a [Tuple] is returned by a storage, and then converted for example by Naksha-Hub into a [NakshaFeature][naksha.model.objects.NakshaFeature], the [uuid] is set to the stringified [Guid] of the [Tuple], so to the [tuple-number][Metadata.tupleNumber] combined with the [feature id][Metadata.id].
+ *
+ * If a client wants to change a feature, the following concepts should be followed:
+ *
+ * - **Create**: Clients should create features without an XYZ namespace, except for the [tags].
+ * - **Delete**: The content of the feature is ignored for deletes.
+ * - **Update**: If the client wants to update a feature, it should read the feature, then modify it, and then send the modified feature back, without changing the XYZ namespace, except for the [tags]. When it does operate like this, the change is performed atomically safe, because the [uuid] will hint the server which version was modified by the client, and is expected to be current _HEAD_. If the feature was updated meanwhile by another client, the server can try to perform an auto-merge, otherwise it will respond with a conflict (which is what the low-level storage will do).
+ * - **Fork**: If the client reads a feature, and then writes it into another storage, map, or collection, or when the client modifies the ID of the feature, and then sends the feature to a service, without modifying the XYZ namespace, the storage will be able to detect that this is a **fork**. Forking means, that a feature is moved between storages, maps, or collections, or is re-identified. The storage will turn the action into [CREATED][Action.CREATED], and copy the [uuid] (which refers to the modified foreign state) into the [origin]. When the feature, that was forked, is modified later, it is possible to find all forks in all storages, maps, and collections, and to update them doing a [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge). This process is called rebase.
+ * - **Split**: If the client need to split a feature into parts, for example a Topology into two, it is required that it clones the original feature, and then modifies the copies, while deleting the original feature that was split. This will allow the _storage_ to identify the [operation] as [SPLIT][Operation.SPLIT], because all features being part of the split will have the same [uuid], and this [uuid] does not match their previous state, therefore it will copy the [uuid] into the [origin]. Additionally, it will automatically ensure that the split (_deleted_) feature has [action] set to [DELETED][Action.DELETED], and the new parts have [action] set to [CREATED][Action.CREATED], while all participating features have [operation] set to [SPLIT][Operation.SPLIT]. This allows to perform automatic rebasing later, should the [origin] be modified, including automatic [three-way-merging](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge), when rebasing. The features of a split can be found, by searching for all features that have [operation] set to `SPLIT`, and that have the same [origin].
+ * - **Join**: If the client need to join multiple features into a single one, it is required to create a new (_merged_) feature, and to delete all features joined into this new one. It is important that the client set the [target] of all features being part of the join to the [_HEAD_ Guid][Guid.headOf] of the _created_ (_new_) feature. The [_HEAD_ Guid][Guid.headOf] is simply the [Guid] without the [tuple-number][TupleNumber], so basically `urn:here:naksha:guid:{feature-id}`. This will allow the _storage_ to identify the modifications as join, and it will automatically replace the [_HEAD_ Guid][Guid.headOf] with the final [Guid] of the new joined _HEAD_ [Tuple]. It as well will ensure that the new feature has [action] set to [CREATED][Action.CREATED], and all deleted features have [action] set to [CREATED][Action.CREATED], while [operation] of all participating features is set to [SPLIT][Operation.SPLIT]. This allows automatic rebasing later. The _storage_ will copy the [uuid] of the deleted features into the [origin], if they come from another storage, map, or collection. It will raise an error, when the _ID_ was changed. The features of a join can be found, by searching for all features that have [operation] set to `JOIN`, and that have the same [target].
+ * @since 3.0
  */
 @JsExport
 class XyzNs : AnyObject() {
 
     companion object XyzNsCompanion {
         const val TAGS_KEY = "tags"
+        /**
+         * The key of the [uuid] property.
+         * @since 3.0
+         */
+        const val UUID = "uuid"
 
-        private val ACTION = NotNullEnum<XyzNs, Action>(Action::class) { _, _ -> Action.CREATED }
-        private val STRING = NotNullProperty<XyzNs, String>(String::class) { _, name ->
-            throw IllegalStateException("The field $name must have a value")
-        }
-        private val STRING_NULL = NullableProperty<XyzNs, String>(String::class)
-        private val INT = NotNullProperty<XyzNs, Int>(Int::class) { _, name ->
-            throw IllegalStateException("The field $name must have a value")
-        }
-        private val INT64 = NotNullProperty<XyzNs, Int64>(Int64::class) { _, name ->
-            throw IllegalStateException("The field $name must have a value")
-        }
-        private val INT64_NULL = NullableProperty<XyzNs, Int64>(Int64::class)
-        private val TAGS = NullableProperty<XyzNs, TagList>(TagList::class)
+        /**
+         * The key of the [puuid] property.
+         * @since 3.0
+         */
+        const val PUUID = "puuid"
 
+        /**
+         * The key of the [muuid] property.
+         * @since 3.0
+         */
+        const val MUUID = "muuid"
+
+        /**
+         * The key of the [nuuid] property.
+         * @since 3.0
+         */
+        const val NUUID = "nuuid"
+
+        /**
+         * The key of the [createdAt] property.
+         * @since 3.0
+         */
+        const val CREATED_AT = "createdAt"
+        /**
+         * The key of the [updatedAt] property.
+         * @since 3.0
+         */
+        const val UPDATED_AT = "updatedAt"
+
+        @Deprecated(message = "The space property is no longer supported", level = WARNING)
+        const val SPACE = "space"
+
+        /**
+         * The key of the [tags] property.
+         * @since 3.0
+         */
+        const val TAGS = "tags"
+
+         /**
+         * The key of the [changeCount] property.
+         * @since 3.0
+         */
+        const val CHANGE_COUNT = "changeCount"
+
+        /**
+         * The key of the [operation] property.
+         * @since 3.0
+         */
+        const val OPERATION = "operation"
+
+        /**
+         * The key of the [action] property.
+         * @since 3.0
+         */
+        const val ACTION = "action"
+
+        /**
+         * The key of the [appId] property.
+         * @since 3.0
+         */
+        const val APP_ID = "appId"
+
+        /**
+         * The key of the [author] property.
+         * @since 3.0
+         */
+        const val AUTHOR = "author"
+
+        /**
+         * The key of the [authorTs] property.
+         * @since 3.0
+         */
+        const val AUTHOR_TS = "authorTs"
+
+        /**
+         * The key of the [flags] property.
+         * @since 3.0
+         */
+        const val FLAGS = "flags"
+
+        /**
+         * The key of the [hash] property.
+         * @since 3.0
+         */
+        const val HASH = "hash"
+
+        /**
+         * The key of the [origin] property.
+         * @since 3.0
+         */
+        const val ORIGIN = "origin"
+
+        /**
+         * The key of the [target] property.
+         * @since 3.0
+         */
+        const val TARGET = "target"
+
+        /**
+         * The key of the [hereTile] property.
+         * @since 3.0
+         */
+        const val HERE_TILE = "hereTile"
+
+        /**
+         * The key of the [cv0] property.
+         * @since 3.0
+         */
+        const val CV0 = "cv0"
+
+        /**
+         * The key of the [cv1] property.
+         * @since 3.0
+         */
+        const val CV1 = "cv1"
+
+        /**
+         * The key of the [cv2] property.
+         * @since 3.0
+         */
+        const val CV2 = "cv2"
+
+        /**
+         * The key of the [cv3] property.
+         * @since 3.0
+         */
+        const val CV3 = "cv3"
+
+        /**
+         * The key of the [cs0] property.
+         * @since 3.0
+         */
+        const val CS0 = "c0"
+
+        /**
+         * The key of the [cs1] property.
+         * @since 3.0
+         */
+        const val CS1 = "c1"
+
+        /**
+         * The key of the [cs2] property.
+         * @since 3.0
+         */
+        const val CS2 = "c2"
+
+        /**
+         * The key of the [cs3] property.
+         * @since 3.0
+         */
+        const val CS3 = "c3"
+
+        private val _ACTION = NotNullEnum<XyzNs, Action>(Action::class) { _, _ -> Action.CREATED }
+        private val _OPERATION = NotNullEnum<XyzNs, Operation>(Operation::class) { _, _ -> Operation.CREATED }
+        private val _APP_ID = NotNullProperty<XyzNs, String>(String::class) { _, _ -> NakshaContext.appId() }
+        private val _STRING_NULL = NullableProperty<XyzNs, String>(String::class, autoRemove = true)
+        private val _INT_0 = NotNullProperty<XyzNs, Int>(Int::class) { _, _ -> 0 }
+        private val _INT_NULL = NullableProperty<XyzNs, Int>(Int::class, autoRemove = true)
+        private val _UPDATED_AT = NotNullProperty<XyzNs, Int64>(Int64::class) { _, _ -> Platform.currentMillis() }
+        private val _DOUBLE_NULL = NullableProperty<XyzNs, Double>(Double::class, autoRemove = true)
+        private val _TAGS = NotNullProperty<XyzNs, TagList>(TagList::class) { _, _ -> TagList() }
+        private var AS_IS: CharArray = CharArray(128 - 32) { (it + 32).toChar() }
+        private var TO_LOWER: CharArray = CharArray(128 - 32) { (it + 32).toChar().lowercaseChar() }
+
+        /**
+         * Create the XZY-namespace from the given [Metadata].
+         * @param meta the [Metadata]
+         * @return the [XYZ namespace][XyzNs].
+         * @see [Metadata.fromXyzNs]
+         */
+        @JvmStatic
+        @JsStatic
+        fun fromMetadata(meta: Metadata): XyzNs {
+            val tn = meta.tupleNumber
+            val guid = Guid(meta.id, tn)
+            val next_tn = meta.nextTupleNumber
+            val prev_tn = meta.prevTupleNumber
+            val base_tn = meta.baseTupleNumber
+            return AnyObject().apply {
+                setRaw(UUID, guid.toString())
+                if (next_tn != null) setRaw(NUUID, Guid(meta.id, next_tn).toString())
+                if (prev_tn != null) setRaw(PUUID, Guid(meta.id, prev_tn).toString())
+                if (base_tn != null) setRaw(MUUID, Guid(meta.id, base_tn).toString())
+                if (meta.createdAt != meta.updatedAt) setRaw(CREATED_AT, meta.createdAt)
+                if (meta.authorTs != meta.updatedAt) setRaw(AUTHOR_TS, meta.authorTs)
+                setRaw(UPDATED_AT, meta.updatedAt)
+                setRaw(CHANGE_COUNT, meta.changeCount)
+                setRaw(APP_ID, meta.appId)
+                if (meta.author != null) setRaw(AUTHOR, meta.author)
+                setRaw(FLAGS, meta.flags)
+                setRaw(OPERATION, meta.flags.operationEnum().toString())
+                setRaw(ACTION, meta.flags.actionEnum().toString())
+                setRaw(HASH, meta.hash)
+                setRaw(HERE_TILE, meta.hereTile)
+                if (meta.origin != null) setRaw(ORIGIN, meta.origin)
+                if (meta.target != null) setRaw(TARGET, meta.target)
+                if (meta.cv0 != null) setRaw(CV0, meta.cv0)
+                if (meta.cv1 != null) setRaw(CV1, meta.cv1)
+                if (meta.cv2 != null) setRaw(CV2, meta.cv2)
+                if (meta.cv3 != null) setRaw(CV3, meta.cv3)
+                if (meta.cs0 != null) setRaw(CS0, meta.cs0)
+                if (meta.cs1 != null) setRaw(CS1, meta.cs1)
+                if (meta.cs2 != null) setRaw(CS2, meta.cs2)
+                if (meta.cs3 != null) setRaw(CS3, meta.cs3)
+            }.proxy(XyzNs::class)
+        }
+
+        /**
+         * A method to normalize a list of tags.
+         *
+         * @param tags a list of tags.
+         * @return the same list, just that the content is normalized.
+         */
+        @JvmStatic
+        @JsStatic
+        fun normalizeTags(tags: TagList?): TagList? {
+            if (!tags.isNullOrEmpty()) {
+                for ((idx, tag) in tags.withIndex()) {
+                    if (tag != null) {
+                        tags[idx] = TagNormalizer.normalizeTag(tag)
+                    }
+                }
+            }
+            return tags
+        }
 
     }
 
     /**
      * The universal unique identifier of the state of a feature.
      *
-     * This field is populated by Interactive API, Data Hub, XYZ Hub and Naksha. Any values provided by the user are overwritten.
+     * This field is populated by Interactive API, Data Hub, XYZ Hub and Naksha.
      * - **Interactive API**: This field is set, when history is enabled for the layer.
      * - **Data Hub**: This field is set, when history or UUID is enabled for the space.
      * - **XYZ Hub**: This field is set when history or UUID is enabled for the space.
-     * - **Naksha**: This field is always set, but does not store a real UUID, but rather a [Guid] (global unique identifier).
+     * - **Naksha**: This field is always set, it does not store a real [UUID](https://en.wikipedia.org/wiki/Universally_unique_identifier), but a [Guid] (global unique identifier).
+     *
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 1.0
      */
-    val uuid: String by STRING
+    val uuid by _STRING_NULL
+    private var _uuid: String? = null
+    private var _guid: Guid? = null
 
     /**
-     * Returns the [uuid] as [Guid].
-     * @return the [uuid] as [Guid].
+     * Returns the [uuid] parsed as [Guid].
+     * @return the [uuid] parsed as [Guid].
+     * @since 3.0
      */
-    val guid: Guid by lazy { Guid.fromString(uuid) }
+    val guid: Guid?
+        get() {
+            var guid = _guid
+            var uuid = _uuid
+            if (uuid === this.uuid) return guid
+            uuid = this.uuid
+            guid = try { if (uuid == null) null else Guid.fromString(uuid) } catch (_: Exception) { null }
+            this._uuid = uuid
+            this._guid = guid
+            return guid
+        }
 
     /**
      * The universal unique identifier of the previous state of a feature.
      *
-     * This field is populated by Interactive API, Data Hub, XYZ Hub and Naksha. Any values provided by the user are overwritten.
+     * This field is populated by Interactive API, Data Hub, XYZ Hub and Naksha.
      * - **Interactive API**: This field is set, when history is enabled for the layer.
      * - **Data Hub**: This field is set, when history or UUID is enabled for the space.
      * - **XYZ Hub**: This field is set when history or UUID is enabled for the space.
-     * - **Naksha**: This field is always set, but does not store a real UUID, but rather a GUID (global unique identifier).
+     * - **Naksha**: This field is set for updated, deletion, and merge, but is a [Guid] (global unique identifier), not a [UUID](https://en.wikipedia.org/wiki/Universally_unique_identifier).
+     *
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 1.0
      */
-    val puuid: String? by STRING_NULL
+    val puuid by _STRING_NULL
+    private var _puuid: String? = null
+    private var _pguid: Guid? = null
 
     /**
      * Returns the [puuid] as [Guid].
      * @return the [puuid] as [Guid].
+     * @since 3.0
      */
     val pguid: Guid?
         get() {
-            val puuid = this.puuid
-            return if (puuid == null) null else Guid.fromString(puuid)
+            var pguid = _pguid
+            var puuid = _puuid
+            if (puuid === this.puuid) return pguid
+            puuid = this.puuid
+            pguid = try { if (puuid == null) null else Guid.fromString(puuid) } catch (_: Exception) { null }
+            this._puuid = puuid
+            this._pguid = pguid
+            return pguid
         }
 
     /**
      * The universal unique identifier of the state of the feature that was used to merge with the previous state to produce this state.
      *
-     * This happens when concurrent modifications are done, but an automatic merge was possible. This field is populated by Interactive
-     * API, Data Hub or XYZ Hub. Any values provided by the user are overwritten.
+     * This happens when concurrent modifications are done, but an automatic merge was possible. This field is populated by Interactive API, Data Hub or XYZ Hub.
      * - **Interactive API**: This field is set when history is enabled for the layer.
      * - **Data Hub**: This field is set when history or UUID is enabled for the space.
      * - **XYZ Hub**: This field is set when history or UUID is enabled for the space.
-     * - **Naksha**: Does not support this field, it will always be _null_.
+     * - **Naksha**: Set when an auto-merge is done, stores the [Guid] of the base-version, so which version the previous-version ([puuid]), and this version ([uuid]) share as base
+     *
+     * In **Naksha** the [muuid] can be used to calculate the changes the client originally did, which are not persisted anywhere in the case of an auto-merge. This is done by first creating a total difference, so what was changed between the current version ([uuid]), and the _base_ version ([muuid]). Then the changes that other clients did can be calculated as difference between the previous state ([puuid]), and the _base_ state ([muuid]). Now this difference need to be subtracted from the total difference. The resulting difference is what the client originally modified, when being applied as patch to the _base_ state ([muuid]), then the feature, that originally was created by the client, can be calculated, even while it was not persisted anywhere.
+     *
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 1.0
      */
-    @Deprecated("This field is not supported by Naksha, but part of MOM specification", level = WARNING)
-    val muuid: String? by STRING_NULL
+    val muuid by _STRING_NULL
+    private var _muuid: String? = null
+    private var _mguid: Guid? = null
+
+    /**
+     * Returns the [muuid] as [Guid].
+     * @return the [muuid] as [Guid].
+     * @since 3.0
+     */
+    val mguid: Guid?
+        get() {
+            var mguid = _mguid
+            var muuid = _muuid
+            if (muuid === this.muuid) return mguid
+            muuid = this.muuid
+            mguid = try { if (muuid == null) null else Guid.fromString(muuid) } catch (e: Exception) { null }
+            this._muuid = muuid
+            this._mguid = mguid
+            return mguid
+        }
+
+    /**
+     * The [Guid] of the next state, if known.
+     *
+     * - If this value is available, it is **guaranteed** that the current feature state is historic.
+     * - If the value is not available (`null`), there is no guarantee if this is still the latest _HEAD_; it is only likely.
+     * @since 3.0
+     */
+    val nuuid by _STRING_NULL
+    private var _nuuid: String? = null
+    private var _nguid: Guid? = null
+
+    /**
+     * Returns the [nuuid] as [Guid].
+     * @return the [nuuid] as [Guid].
+     * @since 3.0
+     */
+    val nguid: Guid?
+        get() {
+            var nguid = _nguid
+            var nuuid = _nuuid
+            if (nuuid === this.nuuid) return nguid
+            nuuid = this.nuuid
+            nguid = try { if (nuuid == null) null else Guid.fromString(nuuid) } catch (e: Exception) { null }
+            this._nuuid = nuuid
+            this._nguid = nguid
+            return nguid
+        }
+
+    /**
+     * The origin of the feature.
+     *
+     * The value is a [Guid] as defined by **Naksha**, and describes from where the feature originates.
+     *
+     * The field is automatically set, if the [uuid] refers to a different storage, map, collection, or the `id` of the feature changes. This happens in simple cases, for example when the feature was forked, and inserted using a new feature-id, or when a topology is split, the new children will all have the `origin` set to the [Guid] of the feature that was originally split. If the children are split again, their `origin` will again refer to the feature that was split, effectively creating a tree of changes.
+     *
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 1.0
+     */
+    val origin by _STRING_NULL
+    private var _origin: String? = null
+    private var _originGuid: Guid? = null
+
+    /**
+     * Returns the [origin] as [Guid].
+     * @return the [origin] as [Guid].
+     * @since 3.0
+     */
+    val originGuid: Guid?
+        get() {
+            var oguid = _originGuid
+            var origin = _origin
+            if (origin === this.origin) return oguid
+            origin = this.origin
+            oguid = try { if (origin == null) null else Guid.fromString(origin) } catch (e: Exception) { null }
+            this._origin = origin
+            this._originGuid = oguid
+            return oguid
+        }
+
+    /**
+     * The target of a [join][Operation.JOINED].
+     *
+     * The value is a [Guid] as defined by **Naksha**, and refers to the outcome of a [join][Operation.JOINED].
+     *
+     * This field **must** be set by clients, when the join features into a new one, all features involved into the join require the [target] to be set to the [Guid] of the new feature, **including** the new feature itself! As the client may not know the real [Guid] of the new feature, it is okay, when it just inserts the _HEAD_ [Guid], so `urn:here:naksha:guid:{feature-id}`.
+     * @since 3.0
+     */
+    val target by _STRING_NULL
+    private var _target: String? = null
+    private var _targetGuid: Guid? = null
+
+    /**
+     * Returns the [target] as [Guid].
+     * @return the [target] as [Guid].
+     * @since 3.0
+     */
+    val targetGuid: Guid?
+        get() {
+            var tguid = _targetGuid
+            var target = _target
+            if (target === this.target) return tguid
+            target = this.target
+            tguid = try { if (target == null) null else Guid.fromString(target) } catch (e: Exception) { null }
+            this._target = target
+            this._targetGuid = tguid
+            return tguid
+        }
 
     /**
      * The time when this feature was created.
      *
      * The value is a valid Unix timestamp which is the number of milliseconds since January 1st, 1970, leap seconds are ignored. This
-     * field is populated by Interactive API, Data Hub, XYZ Hub and Naksha. Any values provided by the user are overwritten.
+     * field is populated by Interactive API, Data Hub, XYZ Hub and Naksha.
      * - **Interactive API**: Always sets this field.
      * - **Data Hub**: Always sets this field.
      * - **XYZ Hub**: Always sets this field.
      * - **Naksha**: Always sets this field.
+     *
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 1.0
      */
-    val createdAt: Int64 by INT64
+    val createdAt: Int64
+        get() {
+            val raw = getRaw("createdAt")
+            if (raw is Int64) return raw
+            return updatedAt
+        }
 
     /**
      * The last time when this feature was modified.
      *
      * The value is a valid Unix timestamp which is the number of milliseconds since January 1st, 1970, leap seconds are ignored. This
-     * field is populated by Interactive API, Data Hub, XYZ Hub and Naksha. Any values provided by the user are overwritten.
+     * field is populated by Interactive API, Data Hub, XYZ Hub and Naksha.
      * - **Interactive API**: Always sets this field.
      * - **Data Hub**: Always sets this field.
      * - **XYZ Hub**: Always sets this field.
      * - **Naksha**: Always sets this field.
+     *
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 1.0
      */
-    val updatedAt: Int64 by INT64
+    val updatedAt by _UPDATED_AT
 
     /**
      * The space in which this feature is located.
      *
      * This field is populated by Interactive API, Data Hub and XYZ Hub. It always represents the current space where the feature resides
-     * and is automatically set when persisting a feature. Any values provided by the user are overwritten.
+     * and is automatically set when persisting a feature.
      * - **Interactive API**: Always sets this field.
      * - **Data Hub**: Always sets this field.
      * - **XYZ Hub**: Always sets this field.
      * - **Naksha**: Does not support this field, it will always be _null_.
+     *
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 1.0
      */
     @Deprecated("This field is not supported by Naksha, but part of MOM specification", level = WARNING)
-    val space: String? by STRING_NULL
+    val space by _STRING_NULL
 
     /**
      * Customer defined tags for this feature.
@@ -132,81 +513,184 @@ class XyzNs : AnyObject() {
      * specific encoding and are split for indexing, so they encode a key-value pair, and the value can be searched (e.g. `name=Foo` or
      * `age:=5`). The server guarantees that when two tags have the same key, they are collapsed, by the later version overriding the
      * previous one.
+     * @since 1.0
      */
-    var tags: TagList? by TAGS
+    var tags by _TAGS
 
     /**
-     * The version of the feature - temporarily we use `txn` as name, because version is expected to be Int, not Int64.
+     * The version of the feature.
      *
      * Multiple features could be part of a single version if they have been edited in one transaction. This field is populated by
      * Interactive API, Data Hub, XYZ Hub and Naksha. Any values provided by the user are overwritten.
      * - **Interactive API**: This field is set when history is enabled for the layer.
      * - **Data Hub**: This field is set when history or UUID is enabled for the space.
      * - **XYZ Hub**: This field is set when history or UUID is enabled for the space.
-     * - **Naksha**: This field stores the transaction-number (`txn`).
+     * - **Naksha**: This field stores the transaction-number (`txn`), and is a virtual property read from [uuid].
+     *
+     * **Note**: Currently MOM defines `version` as 32-bit integer, which is wrong, and not sufficient for Naksha, therefore this property is not set currently.
+     * @since 1.0
      */
-    val txn: Int64 by INT64
+    val version: Version?
+        get() {
+            // Downward compatibility hack.
+            val raw = getRaw("version")
+            if (raw is Int64 && raw >= Version.MIN) return Version(raw)
+            return guid?.tupleNumber?.version
+        }
+
+    /**
+     * The transaction-number of the feature, basically the same as [version], just as 64-bit integer.
+     * @since 2.0
+     */
+    val txn: Int64?
+        get() = guid?.tupleNumber?.txn
+
+    /**
+     * The `uid` (unique transaction local identity) of the [Tuple] within the [transaction][naksha.model.objects.NakshaTx].
+     * @since 3.0
+     */
+    val uid: Int?
+        get() = guid?.tupleNumber?.uid
 
     /**
      * The change-count, so how often the feature has been changed since it was created. The value starts with 1.
      *
-     * This field is populated only by **Naksha**. Any values provided by the user are overwritten.
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     *
+     * If the value is `0`, this is a new feature not yet stored anywhere.
+     * @since 3.0
      */
-    val changeCount: Int by INT
+    val changeCount by _INT_0
 
     /**
-     * The change that was applied to the feature.
+     * The action that was done.
      *
-     * This field is populated only by **Naksha**. Any values provided by the user are overwritten.
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 1.0
+     * @see [Action]
      */
-    val action: Action by ACTION
+    val action by _ACTION
+
+    /**
+     * The operation that was done.
+     *
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 1.0
+     * @see [Operation]
+     */
+    val operation by _OPERATION
 
     /**
      * The identifier of the application that modified the feature the last.
      *
-     * This field is populated only by **Naksha**. Any values provided by the user are overwritten.
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      */
-    val appId: String by STRING
+    val appId by _APP_ID
 
     /**
      * The author of the feature. Not every change of feature is done by intention, the author is only set, when the change of the
      * feature was done by intention and not as a side effect. For example, repair bots will not claim authorship, but cause the [appId]
      * to change.
      *
-     * This field is populated only by **Naksha**. Any values provided by the user are overwritten.
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 3.0
      */
-    val author: String? by STRING_NULL
+    val author by _STRING_NULL
 
     /**
      * The time when this author of the feature was modified.
      *
-     * The value is a valid Unix timestamp which is the number of milliseconds since January 1st, 1970, leap seconds are ignored. This
-     * field is populated only by **Naksha**. Any values provided by the user are overwritten.
+     * The value is a valid Unix timestamp which is the number of milliseconds since January 1st, 1970, leap seconds are ignored.
+     *
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 3.0
      */
-    val authorTs: Int64? by INT64_NULL
+    val authorTs: Int64
+        get() {
+            val raw = getRaw("authorTs")
+            if (raw is Int64) return raw
+            return updatedAt
+        }
+
+    /**
+     * The flags, calculated server side, a bitmask with encoding information about the [Tuple]. It encodes the [action], and the [operation] in binary form, but as well if the payload is GZIP compressed, which encoding is used for the geometry, and information like this.
+     *
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 3.0
+     */
+    val flags by _INT_NULL
 
     /**
      * The hash above the feature, calculated server side.
      *
-     * This field is populated only by **Naksha**. Any values provided by the user are overwritten.
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 3.0
      */
-    val hash: Int by INT
+    val hash by _INT_NULL
 
     /**
-     * The origin of the feature.
+     * The binary [HERE tile][naksha.geo.HereTile] in which the reference-point of the feature is located at level 15.
      *
-     * The value is a [Guid] as defined by **Naksha**, and describes from where the feature comes originally. The field is only set, when the feature was forked, for example, when a topology is split, the children will all have the `origin` set to the GUID of the feature that was originally split. If the children are split again, their `origin` will again refer to the feature that was split, effectively creating a tree of changes.
-     *
-     * This field is populated only by **Naksha**. Any values provided by the user are overwritten.
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 3.0
      */
-    val origin: String? by STRING_NULL
+    val hereTile by _INT_NULL
 
     /**
-     * The HERE tile-id in which the reference-point of the feature is located at level 15.
+     * A custom feature-type.
      *
-     * This field is populated only by **Naksha**. Any values provided by the user are overwritten.
+     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
+     * @since 3.0
      */
-    val geoGrid: Int by INT
+    val featureType by _STRING_NULL
+
+    /**
+     * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0
+     */
+    val cv0 by _DOUBLE_NULL
+
+    /**
+     * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0
+     */
+    val cv1 by _DOUBLE_NULL
+
+    /**
+     * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0
+     */
+    val cv2 by _DOUBLE_NULL
+
+    /**
+     * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0
+     */
+    val cv3 by _DOUBLE_NULL
+
+    /**
+     * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0
+     */
+    val cs0 by _STRING_NULL
+
+    /**
+     * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0
+     */
+    val cs1 by _STRING_NULL
+
+    /**
+     * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0
+     */
+    val cs2 by _STRING_NULL
+
+    /**
+     * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
+     * @since 3.0
+     */
+    val cs3 by _STRING_NULL
 
     /**
      * Returns 'true' if the tag was removed, 'false' if it was not present.
@@ -215,9 +699,9 @@ class XyzNs : AnyObject() {
      * @param normalize `true` if the tag should be normalized before trying to remove; `false` if the tag is normalized.
      * @return true if the tag was removed; false otherwise.
      */
+    @Deprecated(message = "Directly use tags property instead", replaceWith = ReplaceWith("tags.removeTag(tag, normalize)"))
     fun removeTag(tag: String, normalize: Boolean): Boolean {
-        val thisTags: TagList = tags ?: return false
-        return thisTags.removeTag(tag, normalize)
+        return this.tags.removeTag(tag, normalize)
     }
 
     /**
@@ -228,7 +712,7 @@ class XyzNs : AnyObject() {
      * @return this.
      */
     fun removeTags(tags: List<String>?, normalize: Boolean): XyzNs {
-        this.tags?.removeTags(tags, normalize)
+        this.tags.removeTags(tags, normalize)
         return this
     }
 
@@ -239,7 +723,7 @@ class XyzNs : AnyObject() {
      * @return this.
      */
     fun removeTagsWithPrefix(prefix: String?): XyzNs {
-        this.tags?.removeTagsWithPrefix(prefix)
+        this.tags.removeTagsWithPrefix(prefix)
         return this
     }
 
@@ -250,7 +734,7 @@ class XyzNs : AnyObject() {
      * @return this.
      */
     fun removeTagsWithPrefixes(prefixes: List<String?>?): XyzNs {
-        this.tags?.removeTagsWithPrefixes(prefixes)
+        this.tags.removeTagsWithPrefixes(prefixes)
         return this
     }
 
@@ -265,11 +749,11 @@ class XyzNs : AnyObject() {
             if (tags != null ) {
                 for ((i, tag) in tags.withIndex()) {
                     if (tag != null)
-                        tags[i] = normalizeTag(tag)
+                        tags[i] = TagNormalizer.normalizeTag(tag)
                 }
             }
         }
-        this.tags = tags
+        this.tags = tags ?: TagList()
         return this
     }
 
@@ -280,10 +764,8 @@ class XyzNs : AnyObject() {
      * @param normalize `true` if the tag should be normalized; `false` otherwise.
      * @return true if the tag added; false otherwise.
      */
-    fun addTag(tag: String, normalize: Boolean): Boolean {
-        val thisTags = this.tags?: TagList().also { this.tags = it }
-        return thisTags.addTag(tag, normalize)
-    }
+    @Deprecated(message = "Directly use tags property instead", replaceWith = ReplaceWith("tags.addTag(tag, normalize)"))
+    fun addTag(tag: String, normalize: Boolean): Boolean = this.tags.addTag(tag, normalize)
 
     /**
      * Add the given tags.
@@ -293,8 +775,7 @@ class XyzNs : AnyObject() {
      * @return this.
      */
     fun addTags(tags: List<String>?, normalize: Boolean): XyzNs {
-        val thisTags = this.tags?: TagList().also { this.tags = it }
-        thisTags.addTags(tags, normalize)
+        this.tags.addTags(tags, normalize)
         return this
     }
 
@@ -305,8 +786,7 @@ class XyzNs : AnyObject() {
      * @return this.
      */
     fun addAndNormalizeTags(vararg tags: String): XyzNs {
-        val thisTags = this.tags?: TagList().also { this.tags = it }
-        thisTags.addAndNormalizeTags(*tags)
+        this.tags.addAndNormalizeTags(*tags)
         return this
     }
 }

@@ -5,6 +5,8 @@ package naksha.model
 import kotlin.js.JsExport
 
 /**
- * A read-only session.
+ * A read session.
+ * @since 3.0.0
  */
-expect interface IReadSession: ISession
+@JsExport
+interface IReadSession: ISession

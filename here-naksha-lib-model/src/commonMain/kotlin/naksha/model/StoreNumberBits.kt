@@ -57,19 +57,19 @@ open class StoreNumberBits {
         /**
          * The bits to shift the value in the [StoreNumber].
          */
-        const val COL_NUM_SHIFT = 8
+        const val COL_NUM_SHIFT = PART_NUM_SHIFT + PART_NUM_BITS
 
         /**
          * The bits used to encode the value in [StoreNumber].
          */
-        const val COL_NUM_BITS = 40
+        const val COL_NUM_BITS = 28
 
         /**
          * The bitmask to AND combine the value.
          */
         @JvmField
         @JsStatic
-        val COL_NUM_VALUE_MASK = (Int64(1) shl COL_NUM_BITS) - Int64(1)
+        val COL_NUM_VALUE_MASK = (1 shl COL_NUM_BITS) - 1
 
         /**
          * The bitmask to AND combine with [StoreNumber] to read the value from [StoreNumber].
@@ -90,12 +90,12 @@ open class StoreNumberBits {
         /**
          * The bits to shift the value in the [StoreNumber].
          */
-        const val MAP_NUM_SHIFT = 48
+        const val MAP_NUM_SHIFT = COL_NUM_SHIFT + COL_NUM_BITS
 
         /**
          * The bits used to encode the value in [StoreNumber].
          */
-        const val MAP_NUM_BITS = 16
+        const val MAP_NUM_BITS = 28
 
         /**
          * The bitmask to AND combine the value.

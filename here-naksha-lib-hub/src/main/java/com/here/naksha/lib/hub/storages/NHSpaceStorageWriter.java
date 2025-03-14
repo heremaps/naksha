@@ -18,34 +18,32 @@
  */
 package com.here.naksha.lib.hub.storages;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteFeatures;
+import static naksha.model.NakshaContext.mapId;
 
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
-import com.here.naksha.lib.core.NakshaAdminCollection;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
+import naksha.base.AtomicInt;
+import naksha.model.ILock;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
-import naksha.model.Tuple;
-import naksha.model.TupleNumber;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.Transaction;
+import naksha.model.objects.NakshaTx;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
-import naksha.model.request.ResultTuple;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteOp;
@@ -89,12 +87,12 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     return new ErrorResponse(
         NakshaError.UNSUPPORTED_OPERATION,
         "Supported type: " + WriteRequest.class.getName() + ", got "
-            + request.getClass().getName() + " instead");
+        + request.getClass().getName() + " instead");
   }
 
   private @NotNull Response executeSingleCollectionWrite(final @NotNull WriteRequest writeRequest) {
     List<Write> collectionWrites = writeRequest.getWrites();
-    if(collectionWrites.size() != 1){
+    if (collectionWrites.size() != 1) {
       throw new IllegalArgumentException(
           "Currently supporting WriteRequest for single collection only, got multiple: " + collectionWrites.size());
     }
@@ -150,7 +148,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   }
 
   private boolean isDeleteSpaceRequest(@NotNull WriteRequest writeRequest, @NotNull String spaceId) {
-    if (NakshaAdminCollection.SPACES.equals(spaceId)) {
+    if (SPACES.equals(spaceId)) {
       List<Write> writes = writeRequest.getWrites();
       if (writes.size() == 1) {
         Write write = writes.get(0);
@@ -162,8 +160,8 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
 
   private @NotNull Response executeDeleteSpace(@NotNull WriteRequest deleteSpaceEntryReq) {
     Write originalWrite = deleteSpaceEntryReq.getWrites().get(0);
-    String spaceId = originalWrite.getFeatureId();
-    WriteRequest purgeCollectionReq = new WriteRequest().add(new Write().purgeCollectionById(null, spaceId));
+    String spaceId = originalWrite.getId();
+    WriteRequest purgeCollectionReq = new WriteRequest().add(new Write().deleteCollectionById(mapId(), spaceId));
     Response purgeCollectionRes = executeSingleCollectionWrite(purgeCollectionReq, spaceId);
     if (purgeCollectionRes instanceof SuccessResponse) {
       return executeWriteToAdminSpaces(deleteSpaceEntryReq, originalWrite.getCollectionId());
@@ -174,24 +172,24 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
 
   private boolean isUpdateSpaceRequest(@NotNull WriteRequest writeRequest, @NotNull String spaceId) {
     List<Write> writes = writeRequest.getWrites();
-    return NakshaAdminCollection.SPACES.equals(spaceId)
-        && writes.size() == 1
-        && WriteOp.UPDATE.equals(writes.get(0).getOp());
+    return SPACES.equals(spaceId)
+           && writes.size() == 1
+           && WriteOp.UPDATE.equals(writes.get(0).getOp());
   }
 
   private @NotNull Response executeUpdateSpace(@NotNull WriteRequest updateSpaceEntryReq) {
     final Space space = ((Space) updateSpaceEntryReq.getWrites().get(0).getFeature());
-    final SpaceProperties spaceProperties = (SpaceProperties) space.getProperties();
+    final SpaceProperties spaceProperties = space.getProperties();
     final NakshaCollection collection = spaceProperties.getCollection();
     Response updateSpaceRes = null;
     if (collection != null) {
       // submit Update Collection request to Custom Space based pipeline
-      WriteRequest updateCollectionReq = new WriteRequest().add(new Write().updateCollection(null, collection));
+      WriteRequest updateCollectionReq = new WriteRequest().add(new Write().updateCollection(collection, true));
       updateSpaceRes = executeSingleCollectionWrite(updateCollectionReq, space.getId());
     }
     if (collection == null || updateSpaceRes instanceof SuccessResponse) {
       // submit Update Space request to Admin Space based pipeline
-      return executeWriteToAdminSpaces(updateSpaceEntryReq, NakshaAdminCollection.SPACES);
+      return executeWriteToAdminSpaces(updateSpaceEntryReq, SPACES);
     } else {
       return updateSpaceRes;
     }
@@ -246,42 +244,8 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     throw NOT_SUPPORTED_ERROR;
   }
 
-  @NotNull
-  @Override
-  public String getMap() {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public void setMap(@NotNull String s) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
   @Override
   public boolean isClosed() {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public boolean validateHandle(@NotNull String handle, @Nullable Integer ttl) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @NotNull
-  @Override
-  public List<Tuple> getTuples(@NotNull TupleNumber[] tupleNumbers, boolean fetchFromHistory, int mode) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public void fetchTuples(
-      @NotNull List<? extends ResultTuple> resultTuples, int from, int to, boolean fetchFromHistory, int mode) {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @NotNull
-  @Override
-  public Transaction transaction() {
     throw NOT_SUPPORTED_ERROR;
   }
 
@@ -290,5 +254,30 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   public Response executeParallel(@NotNull Request request) {
     throw new NakshaException(
         new NakshaError(NakshaError.NOT_IMPLEMENTED, "parallel execution not supported for NHSpace"));
+  }
+
+  @Override
+  public @NotNull ILock acquireSessionLock(@NotNull String lockId) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @NotNull ILock acquireTransactionLock(@NotNull String lockId) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @NotNull NakshaTx useTransaction() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @Nullable NakshaTx getTransaction() {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @NotNull AtomicInt getUid() {
+    throw NOT_SUPPORTED_ERROR;
   }
 }

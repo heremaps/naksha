@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.Platform.PlatformCompanion.logger
+import naksha.model.Naksha
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import org.postgresql.PGNotification
 import java.lang.ref.WeakReference
@@ -11,7 +12,8 @@ internal class PsqlStorageListener(storage: PsqlStorage) : Thread("lib-psql-list
     private val channel = storage.channel
     private val storageRef: WeakReference<PsqlStorage> = WeakReference(storage)
     private val shutdown = AtomicBoolean(false)
-    private val adminOptions = storage.adminOptions
+    private val adminOptions = Naksha.adminOptions
+    private val adminMap = storage.adminMap as PsqlAdminMap
     private val cluster = storage.cluster
     private val e = Exception()
 
@@ -27,7 +29,7 @@ internal class PsqlStorageListener(storage: PsqlStorage) : Thread("lib-psql-list
             while (shutdown.get()) {
                 try {
                     if (conn == null) {
-                        conn = cluster.newConnection(adminOptions, false)
+                        conn = cluster.newConnection(adminOptions, false) as PsqlConnection
                         stmt = conn.jdbc.createStatement()
                         stmt.execute("LISTEN ${quoteIdent(channel)}")
                     }

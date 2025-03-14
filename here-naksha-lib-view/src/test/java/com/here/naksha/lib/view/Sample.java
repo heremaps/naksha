@@ -18,55 +18,30 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.base.JvmInt64;
-import naksha.model.*;
-import naksha.model.objects.NakshaFeature;
-import naksha.model.request.ExecutedOp;
-import naksha.model.request.ResultTuple;
-import naksha.psql.PgUtil;
+import naksha.model.Action;
+import naksha.model.IStorage;
+import naksha.model.request.FeatureTuple;
+import naksha.model.request.FeatureTupleList;
 
-import java.util.ArrayList;
-import java.util.List;
+import static naksha.model.RandomFeatures.randomFeature;
 
 public class Sample {
 
-  static final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), Version.fromDouble(3.0),0);
-  static final Metadata metadata = new Metadata(
-          tupleNum.storeNumber,
-          tupleNum.storeNumber,
-          tupleNum.storeNumber,
-          tupleNum.storeNumber,
-          null,
-          tupleNum.version,
-          null,
-          tupleNum.uid,
-          null,
-          0,
-          1,
-          0,
-          0,
-          "sampleTuple",
-          "sampleAppId",
-          "sampleAuthor",
-          null,
-          null
-          );
-
-  public static List<ResultTuple> sampleXyzResponse(int size, IStorage storage) {
-    List<ResultTuple> returnList = new ArrayList<>();
+  public static FeatureTupleList sampleXyzResponse(int size, IStorage storage) {
+    FeatureTupleList returnList = new FeatureTupleList();
     for (int i = 0; i < size; i++) {
-      byte[] bytesFeature = PgUtil.encodeFeature(new NakshaFeature(), 0, null);
-      Tuple tuple = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId()+i, metadata.getFlags(), bytesFeature, null, null, null, null);
-      returnList.add(new ResultTuple(storage, tupleNum, ExecutedOp.READ, tuple));
+      returnList.add(new FeatureTuple(randomFeature(Integer.toString(i))));
     }
     return returnList;
   }
-  public static List<ResultTuple> sampleXyzWriteResponse(int size, IStorage storage, ExecutedOp op) {
-    List<ResultTuple> returnList = new ArrayList<>();
+
+  public static FeatureTupleList sampleXyzWriteResponse(int size, Action action) {
+    final FeatureTupleList returnList = new FeatureTupleList();
     for (int i = 0; i < size; i++) {
-      byte[] bytesFeature = PgUtil.encodeFeature(new NakshaFeature(), 0, null);
-      Tuple tuple = new Tuple(storage, tupleNum, FetchMode.FETCH_ALL, metadata, metadata.getId()+i, metadata.getFlags(), bytesFeature, null, null, null, null);
-      returnList.add(new ResultTuple(storage, tupleNum, op,tuple));
+      returnList.add(new FeatureTuple(randomFeature(Integer.toString(i), (f) -> {
+        f.getProperties().getXyz().setRaw("action", action.toString());
+        return f;
+      })));
     }
     return returnList;
   }

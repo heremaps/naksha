@@ -9,16 +9,16 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
 
     /**
      * Check if the feature matches the query
-     * @param resultTuple the tuple containing the feature
+     * @param featureTuple the tuple containing the feature
      * @return the tuple back if matches, else return null
      */
-    override fun filter(resultTuple: ResultTuple): ResultTuple? {
-        val pSearch = req.query.properties ?: return resultTuple
-        if (resultTuple.tuple == null) return null
-        val feature = resultTuple.tuple?.feature ?: return null
+    override fun filter(featureTuple: FeatureTuple): FeatureTuple? {
+        val pSearch = req.query.properties ?: return featureTuple
+        if (featureTuple.tuple == null) return null
+        val feature = featureTuple.tuple?.feature ?: return null
         val decoder = JbFeatureDecoder()
         decoder.mapBytes(feature)
-        if (resolvePropsQuery(pSearch, decoder)) return resultTuple
+        if (resolvePropsQuery(pSearch, decoder)) return featureTuple
         return null
     }
 

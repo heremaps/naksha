@@ -76,7 +76,7 @@ public class WriteFeatureApi extends Api {
   }
 
   private void startWriteFeatureApiTask(WriteFeatureApiReqType reqType, RoutingContext routingContext) {
-    new WriteFeatureApiTask<>(
+    new WriteFeatureApiTask(
             reqType, verticle, naksha(), routingContext, verticle.createNakshaContext(routingContext))
         .start();
   }

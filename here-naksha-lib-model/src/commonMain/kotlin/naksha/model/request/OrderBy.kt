@@ -5,13 +5,14 @@ package naksha.model.request
 import naksha.base.NotNullEnum
 import naksha.base.NullableProperty
 import naksha.base.AnyObject
-import naksha.model.request.query.TupleColumn
+import naksha.model.request.query.MetaColumn
 import naksha.model.request.query.SortOrder
 import naksha.model.request.query.SortOrder.SortOrderCompanion.ANY
 import naksha.model.request.query.SortOrder.SortOrderCompanion.DESCENDING
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -26,7 +27,7 @@ import kotlin.jvm.JvmStatic
  * @constructor Creating an ordering, where the details
  */
 @JsExport
-open class OrderBy() : AnyObject() {
+class OrderBy() : AnyObject() {
 
     /**
      * Create a new order.
@@ -35,9 +36,10 @@ open class OrderBy() : AnyObject() {
      * @param next if a second-level order is requested, for example order by `id` and then by `txn`, and finally by `uid`.
      */
     @JsName("of")
-    constructor(column: TupleColumn? = null, order: SortOrder = SortOrder.ANY, next: OrderBy? = null) : this() {
+    @JvmOverloads
+    constructor(column: MetaColumn?, order: SortOrder = ANY, next: OrderBy? = null) : this() {
         this.column = column
-        this.order = order
+        this.sortOrder = order
         this.next = next
     }
 
@@ -50,57 +52,91 @@ open class OrderBy() : AnyObject() {
         fun deterministic(): OrderBy = OrderBy()
 
         /**
-         * Supported ordering by `version`.
+         * Supported ordering by `version` _(aka transaction-number)_.
          */
         @JsStatic
         @JvmStatic
-        fun version(): OrderBy = OrderBy(TupleColumn.version(), DESCENDING, OrderBy(TupleColumn.uid(), DESCENDING))
+        fun version(): OrderBy = OrderBy(MetaColumn.version())
+
+        /**
+         * Supported ordering by `tuple-number` _(so by storage, map, collection, feature, version, uid).
+         */
+        @JsStatic
+        @JvmStatic
+        fun tupleNumber(): OrderBy = OrderBy(column=MetaColumn.tupleNumber())
 
         /**
          * Supported ordering by `id` and `version`.
          */
         @JsStatic
         @JvmStatic
-        fun id(): OrderBy = OrderBy(TupleColumn.id(), next = version())
+        fun id(): OrderBy = OrderBy(MetaColumn.id(), next = version())
 
         /**
          * Supported ordering by `author`, `updatedAt`, `id`, and `version`.
          */
         @JsStatic
         @JvmStatic
-        fun author(): OrderBy = OrderBy(TupleColumn.author(), next = OrderBy(TupleColumn.updatedAt(), DESCENDING, id()))
+        fun author(): OrderBy = OrderBy(MetaColumn.author(), next = OrderBy(MetaColumn.updatedAt(), DESCENDING, id()))
 
-        private val COLUMN_NULL = NullableProperty<OrderBy, TupleColumn>(TupleColumn::class)
-        private val ORDER_ENUM = NotNullEnum<OrderBy, SortOrder>(SortOrder::class) { _, _ -> SortOrder.ANY }
-        private val ORDER_BY_NULL = NullableProperty<OrderBy, OrderBy>(OrderBy::class)
+        private val COLUMN_OR_NULL = NullableProperty<OrderBy, MetaColumn>(MetaColumn::class)
+        private val SORT_ORDER = NotNullEnum<OrderBy, SortOrder>(SortOrder::class) { _, _ -> ANY }
+        private val NEXT_OR_NULL = NullableProperty<OrderBy, OrderBy>(OrderBy::class)
     }
 
     /**
-     * The [row column][TupleColumn] by which to order, if _null_, then ordering is requested, but no specific order is needed.
+     * The [MetaColumn] by which to order, if `null`, then deterministic ordering is requested.
+     * @since 3.0
      */
-    var column by COLUMN_NULL
+    var column by COLUMN_OR_NULL
 
     /**
-     * The sort order, it is strongly recommended to stick with the default value [SortOrder.ANY].
+     * @see [column]
      */
-    var order by ORDER_ENUM
+    fun withColumn(value: MetaColumn?): OrderBy {
+        column = value
+        return this
+    }
 
     /**
-     * Optionally next order, so after ordering by this property, order those that are equal by the given one. If _null_, the order will be random when the properties are equal.
+     * The sort-order, it is recommended to stick with the default value [ANY][SortOrder.ANY].
+     * @since 3.0
      */
-    var next by ORDER_BY_NULL
+    var sortOrder by SORT_ORDER
+
+    /**
+     * @see [sortOrder]
+     */
+    fun withSortOrder(value: SortOrder): OrderBy {
+        sortOrder = value
+        return this
+    }
+
+    /**
+     * Optionally next order, so after ordering by this [MetaColumn], order those that are equal by the given next one. If `null`, the order will switch to just be deterministic, when the [MetaColumn] values are equal so far _(internally storages are recommended to use the [TupleNumber][naksha.model.TupleNumber] to the final ordering)_.
+     * @since 3.0
+     */
+    var next by NEXT_OR_NULL
+
+    /**
+     * @see [next]
+     */
+    fun withNext(value: OrderBy?): OrderBy {
+        next = value
+        return this
+    }
 
     /**
      * Tests if this represents deterministic ordering, which means that no specific column is selected (`null`), the order is [Any], and no other conditions are given ([next] = `null`).
-     * @return _true_ if this represents the deterministic order; _false_ otherwise.
+     * @return `true` if this represents the deterministic order; `false` otherwise.
      */
-    fun isDeterministic(): Boolean = column == null && order == ANY && next == null
+    fun isDeterministic(): Boolean = column == null && sortOrder == ANY && next == null
 
     override fun equals(other: Any?): Boolean {
         if (other !is OrderBy) return false
         return column == other.column
-                && order == other.order
-                && next == other.next
+            && sortOrder == other.sortOrder
+            && next == other.next
     }
 
     override fun hashCode(): Int = super.hashCode()
@@ -108,6 +144,6 @@ open class OrderBy() : AnyObject() {
     override fun toString(): String {
         val col = column ?: return ""
         val next = this.next
-        return "${col.name} $order${if (next != null) ", $next" else ""}"
+        return "${col.name} $sortOrder${if (next != null) ", $next" else ""}"
     }
 }

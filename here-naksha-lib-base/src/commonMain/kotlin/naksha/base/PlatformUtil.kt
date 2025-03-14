@@ -58,6 +58,13 @@ class PlatformUtil {
         val FLOAT_MIN: Double = Platform.toDoubleRawBits(Int64(0x36a0000000000000L))
 
         /**
+         * A single milliseconds.
+         */
+        @JsStatic
+        @JvmField
+        val MILLISECOND = Int64(1)
+
+        /**
          * A second in milliseconds.
          */
         @JsStatic
@@ -84,6 +91,13 @@ class PlatformUtil {
         @JsStatic
         @JvmField
         val DAY = Int64(24 * 60 * 60 * 1000)
+
+        /**
+         * A multiplier to convert milliseconds to microseconds or a divider, to turn microseconds into millis.
+         */
+        @JsStatic
+        @JvmField
+        val MILLIS_TO_MICROS = Int64(1000)
 
         /**
          * The default size of a view. This is used at various placed.
@@ -121,9 +135,14 @@ class PlatformUtil {
             val end = if (length >= 1) length else 12
             val chars = randomCharacters
             val sb = StringBuilder()
-            var i = 0
-            while (i++ < end) {
-                sb.append(chars[(random() * 64.0).toInt() and 63])
+            var pos = 0
+            var i = (random() * 64.0).toInt()
+            // The first character should not be 0 to 9!
+            if (i < 10) i += 10
+            sb.append(chars[i and 63])
+            while (++pos < end) {
+                i = (random() * 64.0).toInt()
+                sb.append(chars[i and 63])
             }
             return sb.toString()
         }

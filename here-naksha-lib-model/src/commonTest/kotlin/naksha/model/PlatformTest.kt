@@ -1,5 +1,7 @@
 package naksha.model
 
+import naksha.model.Naksha.NakshaCompanion.featureNumber
+import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -9,11 +11,11 @@ class PlatformTest {
     fun testPartitionNumber() {
         // expect
         val collectionPartitions = 128
-        assertEquals(44, Naksha.partitionNumber("foo") % collectionPartitions)
-        assertEquals(127, Naksha.partitionNumber("fooA") % collectionPartitions)
-        assertEquals(19, Naksha.partitionNumber("fooB") % collectionPartitions)
-        assertEquals(39, Naksha.partitionNumber("fooC") % collectionPartitions)
-        assertEquals(70, Naksha.partitionNumber("fooD") % collectionPartitions)
+        assertEquals(88, partitionNumber(featureNumber("foo")) % collectionPartitions)
+        assertEquals(99, partitionNumber(featureNumber("fooA")) % collectionPartitions)
+        assertEquals(58, partitionNumber(featureNumber("fooB")) % collectionPartitions)
+        assertEquals(72, partitionNumber(featureNumber("fooC")) % collectionPartitions)
+        assertEquals(12, partitionNumber(featureNumber("fooD")) % collectionPartitions)
     }
 
 }

@@ -6,7 +6,7 @@ import naksha.base.NotNullProperty
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
 import naksha.base.StringList
-import naksha.model.Naksha.NakshaCompanion.quoteLiteral
+import naksha.base.fn.Fn1
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -14,9 +14,15 @@ import kotlin.jvm.JvmStatic
 
 /**
  * The reference to a property within a feature.
+ *
+ * **Warning:** You should not search for the `id`, `geometry`, or anything from [`properties->@ns:com:here:xyz`][naksha.model.XyzNs] using this query, because there are specialized, and optimized, dedicated queries available. So avoid things like `PQuery(Property("id"), StringOp.EQUALS, "foo"`.
+ * @see naksha.model.request.ReadFeatures.featureIds
+ * @see ISpatialQuery
+ * @see IMetaQuery
+ * @see ITagQuery
  */
 @JsExport
-open class Property() : TupleColumn(FEATURE) {
+open class Property() : MetaColumn(FEATURE) {
 
     /**
      * Create a property from a path given as variable argument list.
@@ -64,7 +70,12 @@ open class Property() : TupleColumn(FEATURE) {
     private var array: Array<String>? = null
     private var string: String? = null
 
-    override fun toString(): String {
+    /**
+     * Convert the property into a path like `name->name->name`, optionally using the given function to escape the names.
+     * @param quote optional callback to quote the name-parts.
+     * @return this property as path.
+     */
+    fun toPath( quote: Fn1<String, String>?): String {
         val po = path.platformObject()
         var array = this.array
         var s = string
@@ -85,11 +96,14 @@ open class Property() : TupleColumn(FEATURE) {
         if (s != null) return s
         // This happens if the platform object was modified since we were called last, or we're called for the first time.
         array = Array(array_get_length(po)) { array_get(po, it) as String }
-        s = array.joinToString(separator = "->") { quoteLiteral(it) }
+        s = array.joinToString(separator = "->") { quote?.call(it) ?: it }
         this.array = array
         this.string = s
         return s
     }
+
+    override fun toString(): String = toPath(null)
+
     override fun hashCode(): Int = platformObject().hashCode()
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -43,7 +43,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                api(kotlin("stdlib-common"))
+                implementation(kotlin("stdlib-common"))
                 api(Lib.kotlinx_datetime)
                 api(project(":here-naksha-lib-base"))
             }

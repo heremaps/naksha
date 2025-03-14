@@ -58,15 +58,15 @@ class PsqlConnection internal constructor(
                 stmt.execute(sql)
                 stmt
             } else {
-                val query = PsqlQuery(sql)
+                val query = PsqlQuery(sql ,null)
                 val stmt = query.prepare(conn)
                 if (args.isNotEmpty()) query.bindArguments(stmt, args)
                 stmt.execute()
                 stmt
             }
             return PsqlCursor(stmt, true)
-        } catch (exception: Exception) {
-            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+        } catch (throwable: Throwable) {
+            throw PgExceptionMapper.map(throwable, sql)
         }
     }
 
@@ -76,22 +76,27 @@ class PsqlConnection internal constructor(
      * @param typeNames The name of the types of the arguments, to be at $n position, where $1 is the first array element.
      * @return The prepared plan.
      */
-    override fun prepare(sql: String, typeNames: Array<String>?): PgPlan =
-        PsqlPlan(PsqlQuery(sql), jdbc)
+    override fun prepare(sql: String, typeNames: Array<String>?): PgPlan {
+        try {
+            return PsqlPlan(PsqlQuery(sql, typeNames), jdbc)
+        } catch (throwable: Throwable) {
+            throw PgExceptionMapper.map(throwable, sql)
+        }
+    }
 
     override var autoCommit: Boolean
         get() {
             return try {
                 jdbc.autoCommit
-            } catch (exception: Exception) {
-                throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+            } catch (throwable: Throwable) {
+                throw PgExceptionMapper.map(throwable)
             }
         }
         set(value) {
             try {
                 jdbc.autoCommit = value
-            } catch (exception: Exception) {
-                throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+            } catch (throwable: Throwable) {
+                throw PgExceptionMapper.map(throwable)
             }
         }
 
@@ -101,8 +106,8 @@ class PsqlConnection internal constructor(
     override fun commit() {
         try {
             jdbc.commit()
-        } catch (exception: Exception) {
-            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+        } catch (throwable: Throwable) {
+            throw PgExceptionMapper.map(throwable)
         }
     }
 
@@ -112,8 +117,8 @@ class PsqlConnection internal constructor(
     override fun rollback() {
         try {
             jdbc.rollback()
-        } catch (exception: Exception) {
-            throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+        } catch (throwable: Throwable) {
+            throw PgExceptionMapper.map(throwable)
         }
     }
 
@@ -142,8 +147,8 @@ class PsqlConnection internal constructor(
                     pgConnection.autoCommit = false
                 }
                 instance.connectionPool[id]?.connection?.compareAndSet(weakRef, null)
-            } catch (exception: Exception) {
-                throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+            } catch (throwable: Throwable) {
+                throw PgExceptionMapper.map(throwable)
             }
         }
     }
@@ -158,8 +163,8 @@ class PsqlConnection internal constructor(
                 // Remove the connection from the pool and close it
                 instance.connectionPool.remove(id)
                 pgConnection.close()
-            } catch (exception: Exception) {
-                throw NakshaExceptionMapper.nakshaExceptionFrom(exception)
+            } catch (throwable: Throwable) {
+                throw PgExceptionMapper.map(throwable)
             }
         }
     }
