@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalJsExport::class)
+@file:OptIn(ExperimentalJsExport::class, ExperimentalJsStatic::class)
 
 package naksha.model.objects
 
@@ -8,12 +8,10 @@ import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.model.NakshaContext
 import naksha.model.Naksha
+import naksha.model.NakshaError
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaException
-import kotlin.js.ExperimentalJsExport
-import kotlin.js.JsExport
-import kotlin.js.JsName
-import kotlin.js.JsStatic
+import kotlin.js.*
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
