@@ -2,16 +2,15 @@
 
 package naksha.diff.jsonpatch
 
-import naksha.base.AnyObject
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
 @JsExport
-open class JsonPatchEntry(): AnyObject() {
-
+open class JsonPatchAdd(): JsonPatchEntry() {
     @JsName("of")
-    constructor(op: String, path: String): this() {
-        setRaw("op", op)
+    constructor(path: String, value: Any?): this() {
         setRaw("path", path)
+        setRaw("value", value)
+        setRaw("op", "add")
     }
 }
