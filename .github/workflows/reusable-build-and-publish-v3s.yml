@@ -65,7 +65,7 @@ jobs:
             here-naksha-lib-diff 
             here-naksha-lib-handlers 
             here-naksha-lib-hub 
-            # here-naksha-handler-activitylog 
+            here-naksha-handler-activitylog 
             here-naksha-lib-ext-manager 
           )
           for item in ${array[@]}; do

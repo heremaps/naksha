@@ -1,6 +1,5 @@
 package com.here.naksha.handler.activitylog;
 
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.test.common.FileUtil;
 import java.io.File;
 import java.nio.file.Path;
@@ -28,7 +27,6 @@ class ActivityLogEnhancerTest {
 
   private static final String SPACE_ID = "enhancer_test_space_id";
 
-
   @ParameterizedTest
   @MethodSource("samples")
   void shouldEnhanceFeatureWithPredecessor(String sampleDir, NakshaFeature oldFeature, NakshaFeature newFeature, String expectedFeatureJson)
@@ -37,7 +35,7 @@ class ActivityLogEnhancerTest {
     NakshaFeature enhancedFeature = ActivityLogEnhancer.enhanceWithActivityLog(newFeature, oldFeature, SPACE_ID);
 
     // And
-    String enhancedFeatureJson = JsonSerializable.serialize(enhancedFeature);
+    String enhancedFeatureJson = Platform.toJSON(enhancedFeature);
 
     // Then
     JSONAssert.assertEquals(

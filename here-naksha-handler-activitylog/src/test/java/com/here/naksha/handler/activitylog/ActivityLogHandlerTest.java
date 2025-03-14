@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.AdditionalMatchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -69,6 +70,10 @@ class ActivityLogHandlerTest {
   void setup() {
     MockitoAnnotations.openMocks(this);
     when(naksha.getSpaceStorage()).thenReturn(spaceStorage);
+    doCallRealMethod().when(spaceStorage).runInReadSession(any(), any());
+    doCallRealMethod().when(spaceStorage).useReadSession(any(), any());
+    doCallRealMethod().when(spaceStorage).useWriteSession(any(), any());
+    doCallRealMethod().when(spaceStorage).runInWriteSession(any(), any());
     handler = handlerForSpaceId(SPACE_ID);
     NakshaContext.currentContext().withAppId("test-app");
   }
