@@ -64,12 +64,12 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
   protected final View view;
   protected final @NotNull ParallelQueryExecutor parallelQueryExecutor;
   protected final SessionOptions options;
-  private final @NotNull ConcurrentHashMap<@NotNull ViewLayer, @NotNull IReadSession> subSessions;
+  private final @NotNull Map<@NotNull ViewLayer, @NotNull IReadSession> subSessions;
 
   ViewReadSession(@NotNull View view, SessionOptions options) {
     this.view = view;
     this.options = options;
-    this.subSessions = new ConcurrentHashMap<>();
+    this.subSessions = new HashMap<>();
     for (final @NotNull ViewLayer layer : view.getViewCollection().getLayers()) {
       subSessions.put(layer, layer.getStorage().newReadSession(options));
     }

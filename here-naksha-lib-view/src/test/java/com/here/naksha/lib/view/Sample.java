@@ -18,68 +18,30 @@
  */
 package com.here.naksha.lib.view;
 
-import java.util.ArrayList;
-import java.util.List;
-import naksha.base.JvmInt64;
+import naksha.model.Action;
 import naksha.model.IStorage;
-import naksha.model.Metadata;
-import naksha.model.Naksha;
-import naksha.model.Tuple;
-import naksha.model.TupleNumber;
-import naksha.model.Version;
-import naksha.model.objects.NakshaFeature;
 import naksha.model.request.FeatureTuple;
 import naksha.model.request.FeatureTupleList;
 
-import static naksha.base.StaticKt.Int64;
+import static naksha.model.RandomFeatures.randomFeature;
 
 public class Sample {
-
-  static final TupleNumber tupleNum = new TupleNumber(new JvmInt64(0), 0, 0, Int64(0), Version.fromDouble(3.0), 1);
-  static final Metadata metadata = new Metadata(
-      tupleNum,
-      0,
-      null,
-      new JvmInt64(0),
-      null,
-      null,
-      null,
-      null,
-      1,
-      0,
-      0,
-      "sampleTuple",
-      "sampleAppId",
-      "sampleAuthor",
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-  );
 
   public static FeatureTupleList sampleXyzResponse(int size, IStorage storage) {
     FeatureTupleList returnList = new FeatureTupleList();
     for (int i = 0; i < size; i++) {
-      byte[] bytesFeature = Naksha.encodeFeature(new NakshaFeature(), 0, null);
-      Tuple tuple = new Tuple(metadata, bytesFeature, null, null, null, null, false);
-      returnList.add(new FeatureTuple(tupleNum, tuple));
+      returnList.add(new FeatureTuple(randomFeature(Integer.toString(i))));
     }
     return returnList;
   }
 
-  public static FeatureTupleList sampleXyzWriteResponse(int size) {
+  public static FeatureTupleList sampleXyzWriteResponse(int size, Action action) {
     final FeatureTupleList returnList = new FeatureTupleList();
     for (int i = 0; i < size; i++) {
-      byte[] bytesFeature = Naksha.encodeFeature(new NakshaFeature(), 0, null);
-      Tuple tuple = new Tuple(metadata, bytesFeature, null, null, null, null, false);
-      returnList.add(new FeatureTuple(tupleNum, tuple));
+      returnList.add(new FeatureTuple(randomFeature(Integer.toString(i), (f) -> {
+        f.getProperties().getXyz().setRaw("action", action.toString());
+        return f;
+      })));
     }
     return returnList;
   }

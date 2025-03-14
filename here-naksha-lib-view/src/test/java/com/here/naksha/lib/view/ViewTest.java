@@ -132,18 +132,18 @@ public class ViewTest {
 //    when(map.getCollectionId(any())).thenReturn("Mock Collection");
 
     final WriteRequest request = new WriteRequest();
-    final NakshaFeature feature = new NakshaFeature("id0");
+    final NakshaFeature feature = new NakshaFeature("0");
     request.add(write.createFeature("", feature));
 //    when(storage.tupleToFeature(any())).thenReturn(feature);
 
-    Response success = new SuccessResponse(sampleXyzWriteResponse(1));
+    Response success = new SuccessResponse(sampleXyzWriteResponse(1, Action.CREATED));
     when(session.execute(request)).thenReturn(success);
     ViewWriteSession writeSession = view.newWriteSession(sessionOptions).init();
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
     assertEquals(feature.getId(), successResponse.getFeatures().get(0).getId());
-    assertEquals(Action.CREATED, successResponse.getFeatureTupleList().get(0).tuple.meta.action());
+    assertEquals(Action.CREATED, successResponse.getFeatureTupleList().get(0).getFeature().getProperties().getXyz().getAction());
     writeSession.commit();
   }
 
@@ -159,9 +159,9 @@ public class ViewTest {
     when(storage.newWriteSession(sessionOptions)).thenReturn(session);
 
     final WriteRequest request = new WriteRequest();
-    final NakshaFeature feature = new NakshaFeature("sampleTuple0");
+    final NakshaFeature feature = new NakshaFeature("0");
     request.add(write.deleteFeatureById(topologiesDS.getMapId(), topologiesDS.getCollectionId(), feature.getId()));
-    SuccessResponse successResponse1 = new SuccessResponse(sampleXyzWriteResponse(1));
+    SuccessResponse successResponse1 = new SuccessResponse(sampleXyzWriteResponse(1, Action.DELETED));
     when(session.execute(request)).thenReturn(successResponse1);
     ViewWriteSession writeSession = view.newWriteSession(sessionOptions).init();
 
@@ -169,7 +169,7 @@ public class ViewTest {
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
     assertEquals(feature.getId(), successResponse.getFeatureTupleList().get(0).getId());
-    assertEquals(Action.DELETED, successResponse.getFeatureTupleList().get(0).tuple.meta.action());
+    assertEquals(Action.DELETED, successResponse.getFeatureTupleList().get(0).getFeature().getProperties().getXyz().getAction());
     writeSession.commit();
   }
 
