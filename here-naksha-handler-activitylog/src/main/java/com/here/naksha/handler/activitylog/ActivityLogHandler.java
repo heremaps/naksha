@@ -147,7 +147,9 @@ public class ActivityLogHandler extends AbstractEventHandler {
   }
 
   private List<NakshaFeature> collectAllNecessaryFeatures(
-      List<NakshaFeature> historyFeatures, NakshaContext context) {
+      List<NakshaFeature> historyFeatures,
+      NakshaContext context
+  ) {
     List<NakshaFeature> missingPredecessors = fetchMissingPredecessors(missingPuuids(historyFeatures), context);
     return combine(historyFeatures, missingPredecessors);
   }
