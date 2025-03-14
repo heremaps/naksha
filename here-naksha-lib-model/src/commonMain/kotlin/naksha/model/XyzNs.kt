@@ -272,7 +272,7 @@ class XyzNs : AnyObject() {
      * - **Naksha**: This field is always set, it does not store a real [UUID](https://en.wikipedia.org/wiki/Universally_unique_identifier), but a [Guid] (global unique identifier).
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 1.0.0
+     * @since 1.0
      */
     val uuid by _STRING_NULL
     private var _uuid: String? = null
@@ -305,7 +305,7 @@ class XyzNs : AnyObject() {
      * - **Naksha**: This field is set for updated, deletion, and merge, but is a [Guid] (global unique identifier), not a [UUID](https://en.wikipedia.org/wiki/Universally_unique_identifier).
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 1.0.0
+     * @since 1.0
      */
     val puuid by _STRING_NULL
     private var _puuid: String? = null
@@ -340,7 +340,7 @@ class XyzNs : AnyObject() {
      * In **Naksha** the [muuid] can be used to calculate the changes the client originally did, which are not persisted anywhere in the case of an auto-merge. This is done by first creating a total difference, so what was changed between the current version ([uuid]), and the _base_ version ([muuid]). Then the changes that other clients did can be calculated as difference between the previous state ([puuid]), and the _base_ state ([muuid]). Now this difference need to be subtracted from the total difference. The resulting difference is what the client originally modified, when being applied as patch to the _base_ state ([muuid]), then the feature, that originally was created by the client, can be calculated, even while it was not persisted anywhere.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 1.0.0
+     * @since 1.0
      */
     val muuid by _STRING_NULL
     private var _muuid: String? = null
@@ -399,7 +399,7 @@ class XyzNs : AnyObject() {
      * The field is automatically set, if the [uuid] refers to a different storage, map, collection, or the `id` of the feature changes. This happens in simple cases, for example when the feature was forked, and inserted using a new feature-id, or when a topology is split, the new children will all have the `origin` set to the [Guid] of the feature that was originally split. If the children are split again, their `origin` will again refer to the feature that was split, effectively creating a tree of changes.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 1.0.0
+     * @since 1.0
      */
     val origin by _STRING_NULL
     private var _origin: String? = null
@@ -566,7 +566,7 @@ class XyzNs : AnyObject() {
      * The action that was done.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 1.0.0
+     * @since 1.0
      * @see [Action]
      */
     val action by _ACTION
@@ -575,7 +575,7 @@ class XyzNs : AnyObject() {
      * The operation that was done.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 1.0.0
+     * @since 1.0
      * @see [Operation]
      */
     val operation by _OPERATION
