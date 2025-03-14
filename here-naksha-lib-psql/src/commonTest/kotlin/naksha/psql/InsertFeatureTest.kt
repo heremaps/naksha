@@ -9,8 +9,8 @@ import naksha.model.request.query.SpIntersects
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import naksha.psql.base.PgTestBase
-import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
-import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeatures
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import kotlin.test.*
 
 class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", TEST_MAP_ID)) {
@@ -18,7 +18,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
     @Test
     fun shouldInsertSingleFeature() {
         // Given: features to create
-        val featureToCreate = generateRandomFeature()
+        val featureToCreate = randomFeature()
         val xyz = featureToCreate.properties.xyz
         xyz.tags.clear()
         xyz.tags.addTag("wicked", false)
@@ -64,7 +64,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
     fun shouldInsertManyFeatures() {
         val count = 500
         // Given: features to create
-        val featuresToCreate = generateRandomFeatures(count = count)
+        val featuresToCreate = randomFeatures(count = count)
         val writeFeaturesReq = WriteRequest().apply {
             featuresToCreate.forEach { featureToCreate ->
                 add(Write().createFeature(collection.mapId, collection.id, featureToCreate))
@@ -165,8 +165,8 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
     @Test
     fun shouldNotAllowDuplicatedId() {
         // Given
-        val originalFeature = generateRandomFeature()
-        val featureWithDuplicatedId = generateRandomFeature().apply { id = originalFeature.id }
+        val originalFeature = randomFeature()
+        val featureWithDuplicatedId = randomFeature().apply { id = originalFeature.id }
 
         // When
         insertFeature(originalFeature)

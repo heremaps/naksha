@@ -8,7 +8,7 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.base.PgTestBase
-import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeatures
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import kotlin.test.*
 
 class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
@@ -22,7 +22,7 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
     @BeforeTest
     fun prepareTestData() {
         // Create random features
-        val featuresToCreate = generateRandomFeatures(COUNT)
+        val featuresToCreate = randomFeatures(COUNT)
         val writeFeaturesReq = WriteRequest().apply {
             featuresToCreate.forEach { featureToCreate ->
                 add(Write().createFeature(collection.mapId, collection.id, featureToCreate))

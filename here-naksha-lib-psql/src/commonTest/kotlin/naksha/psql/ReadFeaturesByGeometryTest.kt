@@ -10,7 +10,7 @@ import naksha.model.request.WriteRequest
 import naksha.model.request.query.*
 import naksha.psql.assertions.AnyObjectFluidAssertions.Companion.assertThatAnyObject
 import naksha.psql.base.PgTestBase
-import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.*
 
 class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry_test")) {
@@ -83,7 +83,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
     @Test
     fun shouldReadFeatureByBbox() {
         // Given: features to create
-        val feature = generateRandomFeature()
+        val feature = randomFeature()
 
         // When: executing feature write request
         insertFeature(feature)
@@ -103,7 +103,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
     @Test
     fun shouldReturnFeaturesByHereTile() {
         // Given
-        val featureInPrague = generateRandomFeature().apply {
+        val featureInPrague = randomFeature().apply {
             referencePoint = SpPoint(
                 PointCoord(
                     longitude = 14.4178737288,
@@ -111,7 +111,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
                 )
             )
         }
-        val featureInParis = generateRandomFeature().apply {
+        val featureInParis = randomFeature().apply {
             referencePoint = SpPoint(
                 PointCoord(
                     longitude = 2.294513484201658,
@@ -135,7 +135,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
     @Test
     fun shouldReturnFeaturesWithCombinedQuery() {
         // Given
-        val somePlaceInPrague = generateRandomFeature().apply {
+        val somePlaceInPrague = randomFeature().apply {
             referencePoint = SpPoint(
                 PointCoord(
                     longitude = 14.4178737288,
@@ -143,7 +143,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
                 )
             )
         }
-        val valencia = generateRandomFeature().apply {
+        val valencia = randomFeature().apply {
             geometry = SpPolygon(
                 SpBoundingBox(
                     west = -0.412674,
@@ -178,7 +178,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
     @Test
     fun shouldReadByCorridor(){
         // Given
-        val feature = generateRandomFeature().apply {
+        val feature = randomFeature().apply {
             geometry = SpLineString().withCoordinates(LineStringCoord(
                 PointCoord(longitude = 45.0, latitude = 45.0),
                 PointCoord(longitude = 45.0, latitude = 46.0),
@@ -213,7 +213,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
         // Given
         val laxAirportCoord = PointCoord(longitude = -118.4079, latitude = 33.9434)
         val nrtAirportCoord = PointCoord(longitude = 139.733, latitude = 35.567)
-        val laxAirport = generateRandomFeature().apply {
+        val laxAirport = randomFeature().apply {
             geometry = SpPoint(laxAirportCoord)
         }
 

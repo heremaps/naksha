@@ -17,7 +17,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.base.PgTestBase
-import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -165,7 +165,7 @@ class SridTest : PgTestBase() {
             ?: throw IllegalArgumentException("No config for encoding: $encoding")
 
         // And: inserted feature with geometry
-        val feature = generateRandomFeature().apply {
+        val feature = randomFeature().apply {
             geometry = SpLineString().withCoordinates(
                 LineStringCoord(
                     PointCoord(longitude = 25.0, latitude = 25.0),

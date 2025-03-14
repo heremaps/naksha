@@ -7,7 +7,7 @@ import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.base.PgTestBase
-import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.*
 
 class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_ID)) {
@@ -16,7 +16,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
     fun insertFeatureWithAttachment() {
         val attachmentOriginal = "this is a test"
         val attachmentBytes = attachmentOriginal.encodeToByteArray()
-        val featureToCreate = generateRandomFeature()
+        val featureToCreate = randomFeature()
         val xyz = featureToCreate.properties.xyz
         xyz.tags.clear()
         xyz.tags.addTag("wicked", false)
@@ -67,7 +67,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
         val attachmentOriginal = "this is a test"
         val attachmentBytes = attachmentOriginal.encodeToByteArray()
         val featureId = PlatformUtil.randomString()
-        val featureToCreate = generateRandomFeature(featureId)
+        val featureToCreate = randomFeature(featureId)
         featureToCreate.properties["test"] = "start"
         val xyz = featureToCreate.properties.xyz
         xyz.tags.clear()
@@ -158,7 +158,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
         val attachmentOriginal = "this is a test"
         val attachmentBytes = attachmentOriginal.encodeToByteArray()
         val featureId = PlatformUtil.randomString()
-        val featureToCreate = generateRandomFeature(featureId)
+        val featureToCreate = randomFeature(featureId)
         featureToCreate.properties["test"] = "start"
         val xyz = featureToCreate.properties.xyz
         xyz.tags.clear()

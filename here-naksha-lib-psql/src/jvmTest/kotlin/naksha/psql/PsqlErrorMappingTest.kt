@@ -6,7 +6,7 @@ import naksha.model.request.ErrorResponse
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.base.PgTestBase
-import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -18,7 +18,7 @@ class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
     fun shouldReturnMissingCollectionError() {
         // Given
         val writeFeatureToMissingCollection = WriteRequest().add(
-            Write().createFeature(env.mapId, "missing_collection", generateRandomFeature())
+            Write().createFeature(env.mapId, "missing_collection", randomFeature())
         )
 
         // When
@@ -52,12 +52,12 @@ class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
     @Test
     fun shouldReturnConflictOnExistingFeature() {
         // Given
-        val feature = generateRandomFeature()
+        val feature = randomFeature()
         insertFeature(feature)
 
         // And
         val writeFeatureWithConflictingId = WriteRequest().add(
-            Write().createFeature(collection, generateRandomFeature().withId(feature.id))
+            Write().createFeature(collection, randomFeature(feature.id))
         )
 
         // When

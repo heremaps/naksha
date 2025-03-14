@@ -7,7 +7,7 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
 import naksha.model.request.query.*
 import naksha.psql.base.PgTestBase
-import naksha.psql.util.ProxyFeatureGenerator
+import naksha.model.RandomFeatures
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -232,7 +232,7 @@ class ReadFeaturesByTagsTest : PgTestBase(NakshaCollection("read_by_tags_test"))
     }
 
     private fun randomFeatureWithTags(vararg tags: String): NakshaFeature {
-        return ProxyFeatureGenerator.generateRandomFeature().apply {
+        return RandomFeatures.randomFeature().apply {
             properties.xyz.tags = TagList(*tags)
         }
     }

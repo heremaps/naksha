@@ -16,7 +16,7 @@ import naksha.model.request.WriteRequest
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.Plv8PerfTest.FeatureSource.*
 import naksha.psql.base.PgTestBase
-import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeatures
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
@@ -143,7 +143,7 @@ class Plv8PerfTest : PgTestBase(
 
     private fun generateFeatures(source: FeatureSource, numberOfFeatures: Int): List<NakshaFeature> {
         return when (source) {
-            GENERATED_RANDOM -> generateRandomFeatures(count = numberOfFeatures)
+            GENERATED_RANDOM -> randomFeatures(count = numberOfFeatures)
             JSON_TOPOLOGY -> List(numberOfFeatures) { featureCopy(topologyFeatureTemplate) }
             JSON_TOPOLOGY_SMALL -> List(numberOfFeatures) { featureCopy(smallTopologyFeatureTemplate) }
         }

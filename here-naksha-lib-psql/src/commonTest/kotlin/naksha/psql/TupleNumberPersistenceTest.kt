@@ -13,7 +13,7 @@ import naksha.model.objects.NakshaFeature
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.base.PgTestBase
-import naksha.psql.util.ProxyFeatureGenerator
+import naksha.model.RandomFeatures
 import kotlin.test.*
 
 class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistence_test")) {
@@ -27,7 +27,7 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
     @Test
     fun shouldSaveCorrectTxn() {
         // Given
-        val feature = ProxyFeatureGenerator.generateRandomFeature()
+        val feature = RandomFeatures.randomFeature()
 
         // And:
         val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
@@ -54,7 +54,7 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
     @Test
     fun shouldSaveCorrectStoreNumber() {
         // Given
-        val feature = ProxyFeatureGenerator.generateRandomFeature()
+        val feature = RandomFeatures.randomFeature()
 
         // When
         val writeOp = Write().createFeature(collection, feature)
@@ -87,7 +87,7 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
     @Test
     fun shouldSaveCorrectUuid() {
         // Given
-        val features = ProxyFeatureGenerator.generateRandomFeatures(count = 20)
+        val features = RandomFeatures.randomFeatures(count = 20)
 
         // When
         val writeRequest = WriteRequest()

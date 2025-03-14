@@ -11,7 +11,7 @@ import naksha.model.request.query.MetaColumn
 import naksha.model.request.query.SortOrder
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.base.PgTestBase
-import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeatures
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import kotlin.test.*
 
 class ReadOrderedTest : PgTestBase(NakshaCollection("read_ordered_test")) {
@@ -27,7 +27,7 @@ class ReadOrderedTest : PgTestBase(NakshaCollection("read_ordered_test")) {
     @BeforeTest
     fun prepareTestData() {
         // Create random features
-        val featuresToCreate = generateRandomFeatures(COUNT)
+        val featuresToCreate = randomFeatures(COUNT)
         val writeFeaturesReq = WriteRequest().apply {
             featuresToCreate.forEach { featureToCreate ->
                 add(Write().createFeature(collection.mapId, collection.id, featureToCreate))

@@ -6,25 +6,24 @@ import naksha.geo.SpPoint
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.ReadFeatures
 import naksha.psql.base.PgTestBase
-import naksha.psql.util.ProxyFeatureGenerator
-import naksha.psql.util.ProxyFeatureGenerator.generateRandomFeature
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.*
 
 class ReadFeaturesByRefTilesTest : PgTestBase(NakshaCollection("read_by_ref_tiles")) {
 
-    private val pragueCityHall = generateRandomFeature().apply {
+    private val pragueCityHall = randomFeature().apply {
         referencePoint = SpPoint(PointCoord(
             longitude = 14.4178737288,
             latitude = 50.0872507931
         ))
     }
-    private val eiffelTower = generateRandomFeature().apply {
+    private val eiffelTower = randomFeature().apply {
         referencePoint = SpPoint(PointCoord(
             longitude = 2.294513484201658,
             latitude = 48.858546539609414
         ))
     }
-    private val zagrebPromenade = generateRandomFeature().apply {
+    private val zagrebPromenade = randomFeature().apply {
         referencePoint = SpPoint(PointCoord(
             15.972726122592436,
             45.81509550000001
