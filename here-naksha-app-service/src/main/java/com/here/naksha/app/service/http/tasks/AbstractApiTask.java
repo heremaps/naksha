@@ -34,6 +34,7 @@ import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.lambdas.F1;
 import com.here.naksha.lib.core.models.ContextXyzFeatureResponse;
+import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.util.PropertyPathUtil;
 import com.here.naksha.lib.hub.NakshaHub;
@@ -72,6 +73,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     extends AbstractTask<XyzResponse, AbstractApiTask<T>> {
 
   private static final Logger logger = LoggerFactory.getLogger(AbstractApiTask.class);
+
   protected final @NotNull RoutingContext routingContext;
   protected final @NotNull NakshaHttpVerticle verticle;
 
@@ -188,6 +190,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       }
       // Populate handle (if provided), with the values ready for next iteration
       final String handleStr = getIterateHandleAsString(processedFeatures.size(), offset, maxLimit, handle);
+      // TODO: CASL-681 failes because of missing inserts
       return verticle.sendXyzResponse(
           routingContext,
           HttpResponseType.FEATURE_COLLECTION,

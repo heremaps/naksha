@@ -36,7 +36,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
@@ -185,7 +184,7 @@ public class NHSpaceStorageReader implements IReadSession {
       final @NotNull String spaceId, final @NotNull EventPipeline pipeline) {
     Space space = null;
     Response spaceResponse = nakshaHub.getAdminStorage()
-        .useReadSession(sessionOptions, reader -> reader.execute(readFeaturesByIdRequest(SPACES, spaceId)));
+        .useReadSession(sessionOptions, reader -> reader.execute(readFeaturesByIdRequest(nakshaHub.getAdminMapId(), SPACES, spaceId)));
     if (spaceResponse instanceof ErrorResponse er) {
       return er;
     } else if (spaceResponse instanceof SuccessResponse successResponse) {
@@ -206,7 +205,8 @@ public class NHSpaceStorageReader implements IReadSession {
 
     List<EventHandlerConfig> eventHandlers = null;
     Response handlersResponse = nakshaHub.getAdminStorage()
-        .useReadSession(sessionOptions, reader -> reader.execute(readFeaturesByIdsRequest(EVENT_HANDLERS, eventHandlerIds)));
+        .useReadSession(sessionOptions,
+            reader -> reader.execute(readFeaturesByIdsRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, eventHandlerIds)));
     if (handlersResponse instanceof ErrorResponse er) {
       return er;
     } else if (handlersResponse instanceof SuccessResponse successResponse) {

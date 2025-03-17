@@ -80,11 +80,6 @@ import org.slf4j.LoggerFactory;
 public class NakshaHub implements INaksha {
 
   /**
-   * The id of map used by default
-   */
-  public static String DEFAULT_HUB_MAP_ID = "naksha-hub";
-
-  /**
    * The id of default NakshaHub Config feature object
    */
   public static final @NotNull String DEF_CFG_ID = "default-config";
@@ -310,7 +305,7 @@ public class NakshaHub implements INaksha {
    * @param config config to be stored
    */
   private void writeConfig(IWriteSession admin, NakshaHubConfig config) {
-    final Request writeDefCfg = createFeatureRequest(CONFIGS, config);
+    final Request writeDefCfg = createFeatureRequest(adminMapId, CONFIGS, config);
     final Response writeConfigResp = admin.execute(writeDefCfg);
     if (writeConfigResp instanceof SuccessResponse) {
       admin.commit();
@@ -340,7 +335,7 @@ public class NakshaHub implements INaksha {
 
   private NakshaHubConfig fetchHubConfigFromDb(String configId, IWriteSession admin) {
     final List<String> cfgIdList = (configId != null) ? List.of(configId, DEF_CFG_ID) : List.of(DEF_CFG_ID);
-    final Request readAdminConfigs = readFeaturesByIdsRequest(CONFIGS, cfgIdList);
+    final Request readAdminConfigs = readFeaturesByIdsRequest(adminMapId, CONFIGS, cfgIdList);
     final Response readAdminConfigsResp = admin.execute(readAdminConfigs);
     if (readAdminConfigsResp instanceof SuccessResponse successResponse) {
       List<NakshaHubConfig> nakshaHubConfigs =
@@ -452,7 +447,7 @@ public class NakshaHub implements INaksha {
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public @NotNull IStorage getStorageById(final @NotNull String storageId) {
     return getAdminStorage().useReadSession(SessionOptions.from(currentContext()), admin -> {
-      Request readStorageById = readFeaturesByIdRequest(STORAGES, storageId);
+      Request readStorageById = readFeaturesByIdRequest(adminMapId, STORAGES, storageId);
       Response readStorageByIdResp = admin.execute(readStorageById);
       if (readStorageByIdResp instanceof SuccessResponse successResponse) {
         NakshaStorage storageConfig = readFeatureFromResponse(successResponse, NakshaStorage.class);

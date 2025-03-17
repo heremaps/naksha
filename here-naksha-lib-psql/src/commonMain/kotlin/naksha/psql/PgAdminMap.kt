@@ -560,6 +560,7 @@ WHERE id = $1"""
 FROM "naksha~admin".${maps.headTable.quotedName}
 WHERE naksha_tn_featureNumber(tn) = $1"""
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
+        conn.execute(getSearchPath())
         plan.execute(arrayOf(number.toUnsignedInt64())).fetch().use {
             outRows.addAll(cursor = it)
         }

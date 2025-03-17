@@ -474,13 +474,13 @@ actual class GeoUtil private actual constructor() {
             val coordinates = geometry.getCoordinates()
             if (coordinates.hasZ()) {
                 writer.setEncodeZ(true)
-                writer.setZPrecision(2)
+                writer.setZPrecision(7)
             } else {
                 writer.setEncodeZ(false)
             }
             if (coordinates.hasZ()) {
                 writer.setEncodeM(true)
-                writer.setMPrecision(2)
+                writer.setMPrecision(7)
             } else {
                 writer.setEncodeM(false)
             }

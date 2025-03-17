@@ -69,7 +69,7 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
 
   @Override
   public final @NotNull Response process(@NotNull IEvent event) {
-    final NakshaContext ctx = NakshaContext.currentContext().withMapId(nakshaHub().getAdminMapId());
+    final NakshaContext ctx = NakshaContext.currentContext();
     final Request request = event.getRequest();
     // process request using Naksha Admin Storage instance
     IStorage adminStorage = nakshaHub().getAdminStorage();

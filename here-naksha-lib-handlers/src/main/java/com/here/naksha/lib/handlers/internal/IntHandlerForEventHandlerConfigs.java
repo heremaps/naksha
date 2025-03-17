@@ -187,7 +187,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
   }
 
   private Response spaceExistenceValidation(List<String> spaceIds) {
-    ReadFeatures readFeaturesRequest = RequestHelper.readFeaturesByIdsRequest(SPACES, spaceIds);
+    ReadFeatures readFeaturesRequest = RequestHelper.readFeaturesByIdsRequest(nakshaHub.getAdminMapId(), SPACES, spaceIds);
     return nakshaHub().getAdminStorage().useReadSession(new SessionOptions(), readSession -> {
       final Response readResult = readSession.execute(readFeaturesRequest);
       if (readResult instanceof ErrorResponse errorResponse) {
@@ -234,7 +234,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
    * @return ErrorResult or null if storage exists
    */
   private @NotNull Response storageExistenceValidation(@NotNull String storageId) {
-    ReadFeatures findStorageById = readFeaturesByIdRequest(STORAGES, storageId);
+    ReadFeatures findStorageById = readFeaturesByIdRequest(nakshaHub.getAdminMapId(), STORAGES, storageId);
     return nakshaHub().getSpaceStorage().useReadSession(new SessionOptions(), readSession -> {
       Response result = readSession.execute(findStorageById);
       List<String> fetchedIds = ResultHelper.readIdsFromResult(result);

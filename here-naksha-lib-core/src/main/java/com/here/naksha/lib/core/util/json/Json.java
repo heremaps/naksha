@@ -188,7 +188,7 @@ public final class Json implements AutoCloseable {
     this.twkbWriter.setEncodeM(false);
     this.twkbWriter.setEncodeZ(true);
     this.twkbWriter.setXYPrecision(7);
-    this.twkbWriter.setZPrecision(3);
+    this.twkbWriter.setZPrecision(7);
     this.simpleReader = mapper.reader();
     this.simpleWriter = mapper.writer();
     this.simpleHashWriter = hashMapper.writer();

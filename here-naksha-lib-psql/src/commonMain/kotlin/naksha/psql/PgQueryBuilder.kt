@@ -34,7 +34,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         // Collect needed data
         val pgStorage = session.storage
         val mapId = req.mapId ?: NakshaContext.mapId()
-        val pgMap = session.getPgMapById(mapId) ?: throw illegalArg("Map with id '$mapId' does not exist")
+        val pgMap = session.getPgMapById(mapId) ?: throw mapNotFound("Map with id '$mapId' does not exist")
         // We select what the client wants, maximum is always 16777216
         // Finally, the storage can limit result-size further down below 16777216 (normally we do not expect this to happen).
         val REQ_LIMIT = min(max(0, req.limit ?: 16777216), session.storage.hardCap)
@@ -43,7 +43,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         for (collectionId in req.collectionIds) {
             if (collectionId == null) continue
             val pgCollection = session.getPgCollectionById(pgMap, collectionId) ?:
-                throw illegalArg("Collection with id '$collectionId' not found in map '$mapId'")
+                throw collectionNotFound("Collection with id '$collectionId' not found in map '$mapId'")
             pgCollections.add(pgCollection)
         }
         if (pgCollections.size <= 0) throw illegalArg("Empty collection-ids in request")

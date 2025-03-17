@@ -23,7 +23,7 @@ class PgInstanceConfig : AnyObject() {
         internal const val DEFAULT_PORT = 5432
         private val HOST = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> "localhost" }
         private val PORT = NotNullProperty<PgInstanceConfig, Int>(Int::class) { _,_ -> DEFAULT_PORT }
-        private val DATABASE = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_PASSWORD }
+        private val DATABASE = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_DB }
         private val USER = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_USER }
         private val PASSWORD = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_PASSWORD }
         private val READ_ONLY = NotNullProperty<PgInstanceConfig, Boolean>(Boolean::class) { _,_ -> false }
