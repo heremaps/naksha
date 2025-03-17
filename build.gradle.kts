@@ -25,3 +25,29 @@ tasks.withType<Jar> {
     from(rootProject.file("LICENSE"))
     into("")
 }
+
+// Helper, run as `gradle cleanAndTestAll`
+tasks.register("cleanAndTestAll") {
+    dependsOn(
+        // MPP
+        ":here-naksha-lib-base:cleanJvmTest",
+        ":here-naksha-lib-base:jvmTest",
+        ":here-naksha-lib-jbon:cleanJvmTest",
+        ":here-naksha-lib-jbon:jvmTest",
+        ":here-naksha-lib-geo:cleanJvmTest",
+        ":here-naksha-lib-geo:jvmTest",
+        ":here-naksha-lib-model:cleanJvmTest",
+        ":here-naksha-lib-model:jvmTest",
+        ":here-naksha-lib-psql:cleanJvmTest",
+        ":here-naksha-lib-psql:jvmTest",
+        // Java
+        ":here-naksha-lib-core:test",
+        ":here-naksha-lib-view:test",
+        ":here-naksha-lib-diff:test",
+        ":here-naksha-lib-handlers:test",
+        ":here-naksha-lib-hub:test",
+        ":here-naksha-lib-ext-manager:test",
+        ":here-naksha-storage-http:test",
+        ":here-naksha-handler-activitylog:test",
+    )
+}
