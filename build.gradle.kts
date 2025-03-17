@@ -146,6 +146,9 @@ subprojects {
     apply(plugin = "java-library")
     apply(plugin = "java-test-fixtures")
     apply(plugin = "jacoco")
+    /*jacoco {
+        toolVersion = "0.8.12"
+    }*/
 
     repositories {
         maven(uri("https://repo.osgeo.org/repository/release/"))
@@ -240,6 +243,40 @@ subprojects {
                 }
             }
         }
+    }
+
+
+    // Share sources folder with other projects for aggregated JaCoCo reports
+    configurations.create("transitiveSourcesElements") {
+        isVisible = false
+        isCanBeResolved = false
+        isCanBeConsumed = true
+        extendsFrom(configurations.implementation.get())
+        attributes {
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+            attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named("source-folders"))
+        }
+        sourceSets.main.get().java.srcDirs.forEach {
+            outgoing.artifact(it)
+        }
+    }
+
+    // Share the coverage data to be aggregated for the whole product
+    configurations.create("coverageDataElements") {
+        isVisible = false
+        isCanBeResolved = false
+        isCanBeConsumed = true
+        extendsFrom(configurations.implementation.get())
+        attributes {
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+            attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named("jacoco-coverage-data"))
+        }
+        // This will cause the test task to run if the coverage data is requested by the aggregation task
+        outgoing.artifact(tasks.test.map { task ->
+            task.extensions.getByType<JacocoTaskExtension>().destinationFile!!
+        })
     }
 
     java {
@@ -449,6 +486,10 @@ project(":here-naksha-handler-http") {
 
 configurations.implementation {
     exclude(module = "commons-logging")
+    exclude(module = "vertx-core")
+    exclude(module = "jackson-core")
+    exclude(module = "log4j-core")
+    exclude(module = "log4j-api")
 }
 
 project(":here-naksha-lib-handlers") {
@@ -673,4 +714,56 @@ fun getRequiredPropertyFromRootProject(propertyKey: String): String {
         Check your 'gradle.properties' file (in both project and ~/.gradle directory)
         """.trimIndent()
     )
+}
+
+// A resolvable configuration to collect source code
+val sourcesPath: Configuration by rootProject.configurations.creating {
+    isVisible = false
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    extendsFrom(configurations.implementation.get())
+    attributes {
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+        attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named("source-folders"))
+    }
+}
+
+// A resolvable configuration to collect JaCoCo coverage data
+val coverageDataPath: Configuration by rootProject.configurations.creating {
+    isVisible = false
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    extendsFrom(configurations.implementation.get())
+    attributes {
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+        attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named("jacoco-coverage-data"))
+    }
+}
+
+// Task to gather code coverage from multiple subprojects
+val aggrCodeCoverageReport by rootProject.tasks.registering(JacocoReport::class) {
+    //additionalClassDirs(configurations.runtimeClasspath.get())
+    additionalClassDirs(configurations.runtimeClasspath.get().filter {
+        it.getPath().contains("here-naksha-")
+    })
+    additionalSourceDirs(sourcesPath.incoming.artifactView { lenient(true) }.files)
+    executionData(coverageDataPath.incoming.artifactView { lenient(true) }.files.filter { it.exists() })
+
+    reports {
+        // xml is usually used to integrate code coverage with
+        // other tools like SonarQube, Coveralls or Codecov
+        xml.required.set(true)
+
+        // HTML reports can be used to see code coverage
+        // without any external tools
+        html.required.set(true)
+        //html.outputLocation = layout.buildDirectory.dir("jacocoHtml")
+    }
+}
+
+// Task to generate root level aggregated JaCoCo code coverage report
+rootProject.tasks.register("aggrJacocoTestReport") {
+    dependsOn(aggrCodeCoverageReport)
 }
