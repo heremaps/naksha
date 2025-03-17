@@ -100,6 +100,10 @@ kotlin {
                 implementation(Lib.mockito)
                 implementation(Lib.mockito_kotlin)
                 implementation(Lib.spatial4j)
+
+                // Include JMH and JMH annotation processor.
+                implementation("org.openjdk.jmh:jmh-core:1.37")
+                implementation("org.openjdk.jmh:jmh-generator-annprocess:1.37")
             }
         }
         jsMain {
