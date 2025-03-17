@@ -74,7 +74,9 @@ open class PsqlStorage : PgStorage(), IStorage {
 
     override fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection {
         val conn = cluster.newConnection(options, readOnly)
-        val query = "SET SESSION search_path TO \"naksha~admin\", hint_plan, public, topology;\n"
+        val query = """SET SESSION search_path TO "naksha~admin", hint_plan, public, topology;
+SET work_mem = '512MB';
+"""
         if (init != null) init.call(conn, query) else conn.execute(query).close()
         return conn
     }
