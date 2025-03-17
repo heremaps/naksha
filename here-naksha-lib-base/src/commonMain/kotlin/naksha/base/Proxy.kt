@@ -61,7 +61,7 @@ abstract class Proxy : PlatformObject {
                 val existing = Symbols.get(data, symbol)
                 if (klass.isInstance(existing)) return existing as T
             } else if (klass.isInstance(data)) return data as T
-            if (Platform.isAssignable(JsEnum::class, klass)) {
+            if (Platform.isAssignable(klass, JsEnum::class)) {
                 return JsEnum.get(raw, klass as KClass<out JsEnum>) as T
             }
             if (klass == Int64::class) {
