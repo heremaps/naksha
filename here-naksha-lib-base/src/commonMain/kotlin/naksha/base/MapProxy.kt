@@ -100,23 +100,28 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
         init: Fn2<out T?, in SELF, in KEY>? = null
     ): T {
         val data = platformObject()
-        var value: T? = null
+        var raw: Any? = null
         if (map_contains_key(data, key)) {
-            val raw = map_get(data, key)
-            value = box(raw, klass)
+            raw = map_get(data, key)
+            val value = box(raw, klass)
+            if (value != null) return value
         }
-        if (value == null) {
-            if (init != null) {
-                @Suppress("UNCHECKED_CAST")
-                value = init.call(this as SELF, key)
-                if (value != null) {
-                    map_set(data, key, unbox(value))
-                    return value
-                }
+        if (init != null) {
+            @Suppress("UNCHECKED_CAST")
+            val value = init.call(this as SELF, key)
+            if (value != null) {
+                map_set(data, key, unbox(value))
+                return value
             }
-            value = Platform.newInstanceOf(klass)
-            map_set(data, key, unbox(value))
         }
+        val value: T?
+        if (Platform.isAssignable(JsEnum::class, klass)) {
+            @Suppress("UNCHECKED_CAST")
+            value = JsEnum.get(raw, klass as KClass<out JsEnum>) as T
+        } else {
+            value = Platform.newInstanceOf(klass)
+        }
+        map_set(data, key, unbox(value))
         return value
     }
 

@@ -17,14 +17,21 @@ import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.Plv8PerfTest.FeatureSource.*
 import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
+import org.openjdk.jmh.annotations.BenchmarkMode
+import org.openjdk.jmh.annotations.Mode
+import org.openjdk.jmh.annotations.OutputTimeUnit
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.random.Random
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertIs
 
+@BenchmarkMode(Mode.AverageTime) // Measures average execution time
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
 class Plv8PerfTest : PgTestBase(
     NakshaCollection(
         id = "insert_perf_test_c",
@@ -38,8 +45,8 @@ class Plv8PerfTest : PgTestBase(
         val featureSource = JSON_TOPOLOGY_SMALL
         val NUM_OF_CPU = Runtime.getRuntime().availableProcessors()
         val NUM_OF_PARTITIONS = NUM_OF_CPU
-        val numberOfBatches = NUM_OF_PARTITIONS * 2
-        val numberOfFeaturesInBatch = 150
+        val numberOfBatches = NUM_OF_PARTITIONS * 8
+        val numberOfFeaturesInBatch = 200
         val concurrency = NUM_OF_CPU
 
         val jsonPath = Companion::class.java.getResource("/topology.json")
@@ -51,6 +58,11 @@ class Plv8PerfTest : PgTestBase(
         val smallTopologyFeatureTemplate: NakshaFeature = (Platform.fromJSON(smallJson) as JvmMap).proxy(NakshaFeature::class)
     }
 
+    @Ignore
+    fun shouldBeIgnored() {
+    }
+
+    //@Ignore
     @Test
     fun shouldInsertManyFeatures() {
         // Prepare
