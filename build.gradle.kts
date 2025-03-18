@@ -15,7 +15,7 @@ rootProject.dependencies {
     implementation(project(":here-naksha-app-service"))
 }
 
-// to include license files in Jar
+// To include license files in Jar.
 tasks.withType<Jar> {
     from(rootProject.file("HERE_NOTICE"))
     into("")
@@ -26,28 +26,88 @@ tasks.withType<Jar> {
     into("")
 }
 
+enum class CleanAndTest {
+    // Do not run tests
+    OFF,
+    // Run kotlin.test
+    KOTLIN,
+    // Run jvmTest
+    JAVA
+}
+
+enum class PublishModule {
+    // do NOT publish the module to artifactory
+    NO,
+    // publish the module to artifactory
+    YES
+}
+
+val modulesToTest = mapOf(
+    Pair(":here-naksha-lib-base", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
+    Pair(":here-naksha-lib-jbon", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
+    Pair(":here-naksha-lib-geo", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
+    Pair(":here-naksha-lib-model", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
+    Pair(":here-naksha-lib-psql", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
+    Pair(":here-naksha-lib-auth", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
+    Pair(":here-naksha-lib-core:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair(":here-naksha-lib-view:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair(":here-naksha-lib-diff:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair(":here-naksha-lib-handlers:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair(":here-naksha-lib-hub:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair(":here-naksha-lib-ext-manager:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair(":here-naksha-storage-http:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair(":here-naksha-handler-activitylog:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+)
+
 // Helper, run as `gradle cleanAndTestAll`
 tasks.register("cleanAndTestAll") {
-    dependsOn(
-        // MPP
-        ":here-naksha-lib-base:cleanJvmTest",
-        ":here-naksha-lib-base:jvmTest",
-        ":here-naksha-lib-jbon:cleanJvmTest",
-        ":here-naksha-lib-jbon:jvmTest",
-        ":here-naksha-lib-geo:cleanJvmTest",
-        ":here-naksha-lib-geo:jvmTest",
-        ":here-naksha-lib-model:cleanJvmTest",
-        ":here-naksha-lib-model:jvmTest",
-        ":here-naksha-lib-psql:cleanJvmTest",
-        ":here-naksha-lib-psql:jvmTest",
-        // Java
-        ":here-naksha-lib-core:test",
-        ":here-naksha-lib-view:test",
-        ":here-naksha-lib-diff:test",
-        ":here-naksha-lib-handlers:test",
-        ":here-naksha-lib-hub:test",
-        ":here-naksha-lib-ext-manager:test",
-        ":here-naksha-storage-http:test",
-        ":here-naksha-handler-activitylog:test",
-    )
+    apply(plugin = "naksha.spotless-kotlin")
+    modulesToTest.forEach {
+        when (it.value.first) {
+            CleanAndTest.KOTLIN -> {
+                dependsOn("${it.key}:cleanJvmTest")
+                dependsOn("${it.key}:jvmTest")
+            }
+            CleanAndTest.JAVA -> {
+                dependsOn("${it.key}:test")
+            }
+            else -> {}
+        }
+    }
 }
+
+// Helper, run as `gradle publishToLocal`
+tasks.register("publishToLocal") {
+    modulesToTest.forEach {
+        when (it.value.second) {
+            PublishModule.YES -> {
+                dependsOn("${it.key}:publishJvmPublicationToMavenLocal")
+                dependsOn("${it.key}:publishKotlinMultiplatformPublicationToMavenLocal")
+            }
+            else -> {}
+        }
+    }
+}
+
+// Helper, run as `gradle publishToHere`
+tasks.register("publishToHere") {
+    modulesToTest.forEach {
+        when (it.value.second) {
+            PublishModule.YES -> {
+                dependsOn("${it.key}:clean")
+                dependsOn("${it.key}:publishJvmPublicationToMavenRepository")
+                dependsOn("${it.key}:publishKotlinMultiplatformPublicationToMavenRepository")
+            }
+            else -> {}
+        }
+    }
+}
+
+//tasks.register("fixLicense") {
+//    subprojects.forEach { module ->
+//        val info = modulesToTest[module.name]
+//        println("Apply spotless to ${module.name}")
+//        // TODO: Apply spotless
+//        // id("naksha.spotless-kotlin")
+//    }
+//}
