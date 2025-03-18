@@ -690,6 +690,7 @@ rootProject.tasks.shadowJar {
 }
 
 rootProject.tasks.testCodeCoverageReport {
+    dependsOn("shadowJar")
     dependsOn(allprojects.flatMap { it.getTasksByName("jacocoTestReport", true) })
     dependsOn(allprojects.flatMap { it.getTasksByName("spotlessJava", true) })
     dependsOn(":spotlessInternalRegisterDependencies")
