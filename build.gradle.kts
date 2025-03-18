@@ -146,9 +146,6 @@ subprojects {
     apply(plugin = "java-library")
     apply(plugin = "java-test-fixtures")
     apply(plugin = "jacoco")
-    /*jacoco {
-        toolVersion = "0.8.12"
-    }*/
 
     repositories {
         maven(uri("https://repo.osgeo.org/repository/release/"))
@@ -246,6 +243,7 @@ subprojects {
     }
 
 
+/*
     // Share sources folder with other projects for aggregated JaCoCo reports
     configurations.create("transitiveSourcesElements") {
         isVisible = false
@@ -278,6 +276,7 @@ subprojects {
             task.extensions.getByType<JacocoTaskExtension>().destinationFile!!
         })
     }
+*/
 
     java {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -690,6 +689,12 @@ rootProject.tasks.shadowJar {
     }
 }
 
+rootProject.tasks.testCodeCoverageReport {
+    dependsOn(allprojects.flatMap { it.getTasksByName("jacocoTestReport", true) })
+    dependsOn(allprojects.flatMap { it.getTasksByName("spotlessJava", true) })
+    dependsOn(":spotlessInternalRegisterDependencies")
+}
+
 // print app version
 rootProject.tasks.register("printAppVersion") {
     println(rootProject.version)
@@ -716,6 +721,7 @@ fun getRequiredPropertyFromRootProject(propertyKey: String): String {
     )
 }
 
+/*
 // A resolvable configuration to collect source code
 val sourcesPath: Configuration by rootProject.configurations.creating {
     isVisible = false
@@ -764,6 +770,9 @@ val aggrCodeCoverageReport by rootProject.tasks.registering(JacocoReport::class)
 }
 
 // Task to generate root level aggregated JaCoCo code coverage report
+// Several sections are updated as per guidelines:
+//      - https://docs.gradle.org/7.3.3/samples/sample_jvm_multi_project_with_code_coverage.html
 rootProject.tasks.register("aggrJacocoTestReport") {
     dependsOn(aggrCodeCoverageReport)
 }
+*/
