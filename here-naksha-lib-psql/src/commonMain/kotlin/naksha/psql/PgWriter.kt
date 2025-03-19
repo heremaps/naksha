@@ -113,7 +113,7 @@ open class PgWriter internal constructor(val session: PgSession) {
             }
             if (tuple != null) tupleList.add(tuple)
         }
-        transaction.featuresModified = featuresModified
+        transaction.featuresModified += featuresModified
         // We do not put tuples into cache, before we are sure everything was successful!
         // Adding all together into the cache reduces the effort to iterate above all caches multiple times.
         Naksha.cache.store(tupleList)
