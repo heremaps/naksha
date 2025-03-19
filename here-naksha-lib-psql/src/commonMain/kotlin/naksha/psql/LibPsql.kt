@@ -1,11 +1,23 @@
+// This will be exposed
+// - in JavaScript at the namespace: naksha.psql.{name}
+// - jn Java at the class naksha.psql.LibPsqlKt.{name}
 package naksha.psql
 
 import naksha.model.Naksha
+import naksha.model.NakshaVersion
 import naksha.psql.PgType.Companion.BYTE_ARRAY
 import naksha.psql.PgType.Companion.INT
 import naksha.psql.PgType.Companion.INT64
 import naksha.psql.PgType.Companion.SHORT
 import naksha.psql.PgType.Companion.STRING
+
+/**
+ * The `naksha~admin` version.
+ *
+ * This is different from the normal [NakshaVersion.current], because `lib-psql` only increments the admin version, when the SQL functions are modified, and require an upgrade. So, even while client code may be modified, this still may not need an upgrade of the SQL functions.
+ * @since 3.0
+ */
+val adminVersion = NakshaVersion.of(NakshaVersion.v3_0_0_beta_6)
 
 /**
  * `$`: The separation string used to flag internal tables.
