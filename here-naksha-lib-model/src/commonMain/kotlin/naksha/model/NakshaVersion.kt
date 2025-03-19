@@ -119,10 +119,12 @@ class NakshaVersion(
 
         const val v3_0_0_beta_6 = "3.0.0-beta.6"
 
+        const val v3_0_0_beta_7 = "3.0.0-beta.7"
+
         /**
          * The latest version as string to constant usage cases.
          */
-        const val LATEST = v3_0_0_beta_6
+        const val LATEST = v3_0_0_beta_7
 
         /**
          * The current version of the Naksha library.

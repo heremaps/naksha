@@ -90,14 +90,19 @@ open class PgWriter internal constructor(val session: PgSession) {
         tupleNumbers.setCapacity(writes.size)
         val tupleList = ArrayList<Tuple>(writes.size)
         val transaction = tx.transaction
+        var featuresModified = 0
         for (write in targetWrites) {
-            tupleNumbers[write.i] = write.tupleNumber
+            val tupleNumber = write.tupleNumber
+            tupleNumbers[write.i] = tupleNumber
             val tuple = write.tuple
             if (write.isFeatureModification) {
                 val map = write.map
                 val col = write.collection
-                transaction.useMap(map.id, map.number).useCollection(col.id, col.number).add(write.action)
-                transaction.featuresModified += 1
+                val txCol = transaction.useMap(map.id, map.number).useCollection(col.id, col.number)
+                if (tupleNumber != null) {
+                    txCol.add(tupleNumber, col.partitions)
+                }
+                featuresModified += 1
             } else if (write.isMapModification) {
                 val map = write.pgMap
                 if (map != null) transaction.useMap(map.id, map.number, write.action)
@@ -108,6 +113,7 @@ open class PgWriter internal constructor(val session: PgSession) {
             }
             if (tuple != null) tupleList.add(tuple)
         }
+        transaction.featuresModified = featuresModified
         // We do not put tuples into cache, before we are sure everything was successful!
         // Adding all together into the cache reduces the effort to iterate above all caches multiple times.
         Naksha.cache.store(tupleList)
