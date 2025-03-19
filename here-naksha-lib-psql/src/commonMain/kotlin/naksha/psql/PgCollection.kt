@@ -80,8 +80,8 @@ open class PgCollection internal constructor(
     /**
      * The amount of performance partitions.
      */
-    var partitions: Int = 1
-        internal set
+    val partitions: Int
+        get() = head.partitions
 
     /**
      * The `HEAD` table, so where to store features or transactions into.

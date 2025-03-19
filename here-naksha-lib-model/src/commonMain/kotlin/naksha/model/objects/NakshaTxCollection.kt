@@ -11,6 +11,7 @@ import naksha.model.Action.Action_C.DELETED
 import naksha.model.Action.Action_C.UPDATED
 import naksha.model.NakshaError
 import naksha.model.NakshaException
+import naksha.model.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
@@ -41,6 +42,7 @@ class NakshaTxCollection() : AnyObject() {
         private val NUMBER = NotNullProperty<NakshaTxCollection, Int>(Int::class)
         private val ACTION_OR_NULL = NullableProperty<NakshaTxCollection, Action>(Action::class)
         private val COUNT = NotNullProperty<NakshaTxCollection, Int>(Int::class) { _, _ -> 0 }
+        private val FEATURES_BY_PARTITION = NullableProperty<NakshaTxCollection, NakshaTxFeatureByPartition>(NakshaTxFeatureByPartition::class)
     }
 
     /**
@@ -92,15 +94,31 @@ class NakshaTxCollection() : AnyObject() {
     var updatedBytes: Int by COUNT
 
     /**
+     * If the collection is partitioned, which partition got how many writes.
+     * @since 3.0
+     */
+    var featuresByPartition by FEATURES_BY_PARTITION
+
+    /**
      * Helper method to add one change.
-     * @param action the action that was done, only [CREATED], [UPDATED], and [DELETED] are counted.
+     * @param tupleNumber the tuple-number of the feature.
+     * @param partitions the amount of partitions of this collection; if it is partitioned.
      * @return this.
      */
-    fun add(action: Action): NakshaTxCollection {
-        when (action) {
+    fun add(tupleNumber: TupleNumber, partitions: Int? = null): NakshaTxCollection {
+        when (tupleNumber.action) {
             CREATED -> this.created += 1
             UPDATED -> this.updated += 1
             DELETED -> this.deleted += 1
+        }
+        if (partitions != null && partitions > 1) {
+            var featuresByPartition = this.featuresByPartition
+            if (featuresByPartition == null) {
+                featuresByPartition = NakshaTxFeatureByPartition()
+                this.featuresByPartition = featuresByPartition
+            }
+            val partition = tupleNumber.partitionNumber % partitions
+            featuresByPartition.add(partition, 1)
         }
         return this
     }
