@@ -61,14 +61,19 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      * - Throws [NakshaError.INITIALIZATION_FAILED], if the initialization failed.
      * - Throws [NakshaError.STORAGE_ID_MISMATCH], if the existing _storage-id_ and/or _storage-number_ of the data does not match the given ones in the configuration.
      * - Throws [NakshaError.ILLEGAL_ARGUMENT], if any configuration entry is invalid, for example [NakshaStorage.hardCap] too large.
-     * @param config the configuration as required.
+     * @param config the storage configuration as required.
      * @param create if not _null_, overrides [NakshaStorage.create].
      * @param upgrade if not _null_, overrides [NakshaStorage.upgrade].
      * @since 3.0.0
      */
     protected abstract fun initStorage(config: CONFIG, create: Boolean?, upgrade: Boolean?)
 
-    // Called by caching sub-system, which is the only one actually invoking initStorage!
+    /**
+     * Called by caching sub-system, which is the only one actually invoking initStorage!
+     * @param storage the storage configuration as required.
+     * @param create if not _null_, overrides [NakshaStorage.create].
+     * @param upgrade if not _null_, overrides [NakshaStorage.upgrade].
+     */
     internal fun invokeInitStorage(storage: NakshaStorage, create: Boolean?, upgrade: Boolean?) {
         lock.acquire().use {
             if (configRef.get() == null || create==true || upgrade==true) {

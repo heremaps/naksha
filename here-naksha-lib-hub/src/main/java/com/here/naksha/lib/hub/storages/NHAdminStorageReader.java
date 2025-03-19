@@ -19,7 +19,7 @@
 package com.here.naksha.lib.hub.storages;
 
 import java.util.List;
-import naksha.jbon.JbDictionary;
+
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.NakshaError;

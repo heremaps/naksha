@@ -25,7 +25,6 @@ import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
 import com.here.naksha.lib.core.EventPipeline;
-import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
@@ -37,7 +36,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import naksha.jbon.JbDictionary;
+
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;

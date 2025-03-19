@@ -22,6 +22,7 @@ CREATE EXTENSION IF NOT EXISTS postgis_topology;
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 CREATE EXTENSION IF NOT EXISTS btree_gin;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+--CREATE EXTENSION IF NOT EXISTS pg_cron;
 
 -- Set search path and install extension.
 SET SESSION search_path TO "naksha~admin", public, topology;

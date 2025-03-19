@@ -55,11 +55,21 @@ class PsqlAdminMap internal constructor(
         return null
     }
 
-    override fun createAdminMap(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion): Int
-            = upsertAdminMap(conn, config, storageId, storageNumber, psqlVersion, null, null)
+    override fun createAdminMap(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion): Int {
+        return upsertAdminMap(conn, storageId, storageNumber, psqlVersion, null, null)
+    }
 
     override fun upgradeAdminMap(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion, schemaOid: Int, installedVersion: NakshaVersion?) {
-        upsertAdminMap(conn, config, storageId, storageNumber, psqlVersion, schemaOid, installedVersion)
+        if (installedVersion != null && installedVersion > psqlVersion) {
+            if (config.version != null && psqlVersion == adminVersion) {
+                throw illegalState("This lib-psql version (${psqlVersion}) is lower than the installed version (${installedVersion})")
+            }
+            // This is an exception, someone set `version` in the config to some explicit value,
+            // therefore overriding the real adminVersion, which must only be done for debugging
+            // reasons, therefore we will allow downgrading of storage
+            logger.warn("Forcefully downgrade storage from $installedVersion to $psqlVersion")
+        }
+        upsertAdminMap(conn, storageId, storageNumber, psqlVersion, schemaOid, installedVersion)
     }
 
     /**
@@ -68,7 +78,6 @@ class PsqlAdminMap internal constructor(
      */
     private fun upsertAdminMap(
         conn: PgConnection,
-        config: PgConfig,
         storageId: String,
         storageNumber: Int64,
         psqlVersion: NakshaVersion,

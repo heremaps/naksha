@@ -56,16 +56,20 @@ class TestEnv(
     ).withMapId(this.mapId).attachToCurrentThread()
 
     /**
+     * The storage configuration used by default.
+     */
+    val storageConfig = NakshaStorage.fromJSON("""{
+  "id": "local_psql_test_storage",
+  "className": "naksha.psql.PsqlTestStorage"
+}""").proxy(PgConfig::class)
+
+    /**
      * The test local storage.
      *
      * **Note**: You can override the docker-config via environment variable `NAKSHA_TEST_PSQL_DB_URL`, for example
      */
     @JvmField
-    val storage = Naksha.useStorage(
-        NakshaStorage.fromJSON("""{
-  "id": "local_psql_test_storage",
-  "className": "naksha.psql.PsqlTestStorage"
-}""")) as PgStorage
+    val storage = Naksha.useStorage(storageConfig) as PgStorage
 
     /**
      * Session options patched for this test environment.

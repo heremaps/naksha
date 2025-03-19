@@ -65,7 +65,7 @@ public final class NakshaHubConfig extends NakshaFeature implements JsonSerializ
    * @return The default application name.
    */
   public static @NotNull String defaultAppName() {
-    return NAKSHA_APP_NAME + "/v" + NakshaVersion.latest;
+    return NAKSHA_APP_NAME + "/v" + NakshaVersion.current;
   }
 
   /**

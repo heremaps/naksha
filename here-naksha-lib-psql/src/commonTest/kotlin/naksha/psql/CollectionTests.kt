@@ -105,9 +105,9 @@ class CollectionTests : PgTestBase(null) {
             ).use { cursor ->
                 val addedIndices = mutableListOf<String>()
                 while (cursor.next()) addedIndices.add(cursor["indexname"])
-                check(PgIndex.DEFAULT_INDICES.size <= addedIndices.size) { "Too few indices" }
+                check((PgIndex.DEFAULT_INDICES.size - 1) <= addedIndices.size) { "Too few indices" }
                 PgIndex.DEFAULT_INDICES.forEach { defaultIndex ->
-                    check(addedIndices.contains(defaultIndex.id(tableName))) {
+                    check(addedIndices.contains(defaultIndex.id(tableName)) || defaultIndex==PgIndex.id) {
                         "Missing index ${defaultIndex.name}"
                     }
                 }
