@@ -49,19 +49,19 @@ val modulesToTest = mapOf(
     Pair(":here-naksha-lib-model", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair(":here-naksha-lib-psql", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair(":here-naksha-lib-auth", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
-    Pair(":here-naksha-lib-core:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
-    Pair(":here-naksha-lib-view:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
-    Pair(":here-naksha-lib-diff:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
-    Pair(":here-naksha-lib-handlers:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
-    Pair(":here-naksha-lib-hub:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
-    Pair(":here-naksha-lib-ext-manager:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
-    Pair(":here-naksha-storage-http:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
-    Pair(":here-naksha-handler-activitylog:test", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair(":here-naksha-lib-core", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair(":here-naksha-lib-view", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair(":here-naksha-lib-diff", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair(":here-naksha-lib-handlers", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair(":here-naksha-lib-hub", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair(":here-naksha-lib-ext-manager", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair(":here-naksha-storage-http", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair(":here-naksha-handler-activitylog", Pair(CleanAndTest.JAVA, PublishModule.NO)),
 )
 
 // Helper, run as `gradle cleanAndTestAll`
 tasks.register("cleanAndTestAll") {
-    apply(plugin = "naksha.spotless-kotlin")
+    //apply(plugin = "naksha.spotless-kotlin")
     modulesToTest.forEach {
         when (it.value.first) {
             CleanAndTest.KOTLIN -> {
