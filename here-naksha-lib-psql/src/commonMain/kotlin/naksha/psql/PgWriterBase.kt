@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.Int64
+import naksha.base.IntMutable
 import naksha.model.objects.NakshaTx
 
 /**
@@ -67,8 +68,48 @@ internal abstract class PgWriterBase protected constructor(
         .withMinSize(writes.size)
 
     /**
+     * Generates a live mapping between the write instructions and the partition-index into which they will write.
+     * @return a map where the key is the partition index and the value the amount of write-operations in this partition, with `-1` being used as key for unknown partition-index, or when there is no partitioning.
+     *
+     * @since 3.0
+     * @see [featureCountByPartitionJoined]
+     */
+    val featureCountByPartition: Map<Int, IntMutable>
+        get() {
+            val partitions = collection.head.partitions
+            val partIndices = mutableMapOf<Int, IntMutable>()
+            for (i in writes.indices) {
+                val write = writes[i]
+                val partIndex = write.tupleNumber?.partitionIndex(partitions) ?: -1
+                val existing = partIndices[partIndex]
+                if (existing != null) existing.plus(1) else partIndices[partIndex] = IntMutable(1)
+            }
+            return partIndices
+        }
+
+    /**
+     * The [featureCountByPartition] serialized into a string.
+     *
+     * This method should be preferred instead of doing:
+     * ```kotlin
+     * writer.featureCountByPartition.entries
+     *   .joinToString(", ") { "${it.key}=${it.value.value}" }
+     * ```
+     * It actually will not even invoke [featureCountByPartition], when there is no partitioning.
+     * @since 3.0
+     * @see [featureCountByPartition]
+     */
+    val featureCountByPartitionJoined: String
+        get() {
+            val partitions = collection.head.partitions
+            return if (partitions <= 1) "-1: ${writes.size}"
+            else featureCountByPartition.entries.joinToString(", ") { "${it.key}=${it.value.value}" }
+        }
+
+    /**
      * Execute the operation.
      * @param conn the connection to be used.
+     * @since 3.0
      */
     fun execute(conn: PgConnection) {
         collection.map.setSearchPath(conn)
@@ -78,6 +119,7 @@ internal abstract class PgWriterBase protected constructor(
     /**
      * Execute the operation.
      * @param conn the connection to be used.
+     * @since 3.0
      */
     protected abstract fun doExecute(conn: PgConnection)
 }

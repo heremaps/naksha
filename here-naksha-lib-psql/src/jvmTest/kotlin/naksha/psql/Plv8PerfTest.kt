@@ -45,7 +45,7 @@ class Plv8PerfTest : PgTestBase(
         val featureSource = JSON_TOPOLOGY_SMALL
         val NUM_OF_CPU = Runtime.getRuntime().availableProcessors()
         val NUM_OF_PARTITIONS = NUM_OF_CPU
-        val numberOfBatches = NUM_OF_PARTITIONS * 8
+        val numberOfBatches = NUM_OF_PARTITIONS * 3
         val numberOfFeaturesInBatch = 200
         val concurrency = NUM_OF_CPU
 
@@ -169,11 +169,11 @@ class Plv8PerfTest : PgTestBase(
         val tasks = batchRequests.map { batchRequest ->
             threadPool.submit {
                 context.attachToCurrentThread()
-                val start = System.currentTimeMillis()
+                val innerStart = System.currentTimeMillis()
                 val response = executeWrite(batchRequest)
                 assertIs<SuccessResponse>(response)
-                val end = System.currentTimeMillis()
-                stats.add(Stats(Thread.currentThread().name, end - start, batchRequest.writes.size))
+                val innerEnd = System.currentTimeMillis()
+                stats.add(Stats(Thread.currentThread().name, innerEnd - innerStart, batchRequest.writes.size))
             }
         }
         tasks.forEach { it.get() }

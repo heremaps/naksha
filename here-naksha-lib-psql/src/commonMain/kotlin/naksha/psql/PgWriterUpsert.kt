@@ -1,6 +1,8 @@
 package naksha.psql
 
+import naksha.base.IntMutable
 import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.logger
 import naksha.model.*
 import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
@@ -154,7 +156,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
         val end = Platform.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
         if (writes.size != 1 || writes[0].isFeatureModification) {
-            Platform.logger.info("UPSERT of ${inRows.size} rows took ${seconds * 1000}ms, therefore ${inRows.size / seconds} features/s")
+            logger.info("UPSERT of ${inRows.size} rows took ${seconds * 1000}ms, therefore ${inRows.size / seconds} features/s, partitions: $featureCountByPartitionJoined")
         }
         cursor.fetch().use {
             outRows.addAll(cursor)

@@ -29,6 +29,11 @@ expect class PgPlatform {
          * @param featureId the feature id.
          * @return the partition number of the feature, a value between 0 and 255.
          */
+        @Deprecated(
+            message = "This function will be removed in a future release.",
+            replaceWith = ReplaceWith("Naksha.partitionNumber(Naksha.featureNumber(featureId))"),
+            level = DeprecationLevel.WARNING
+        )
         fun partitionNumber(featureId: String): Int
 
         /**
