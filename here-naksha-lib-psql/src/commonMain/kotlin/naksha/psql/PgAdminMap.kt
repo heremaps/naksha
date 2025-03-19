@@ -8,6 +8,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import naksha.base.AtomicMap
 import naksha.base.Int64
+import naksha.model.NakshaVersion
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.toUnsignedInt64
 import naksha.jbon.IDictReader
@@ -165,7 +166,7 @@ abstract class PgAdminMap internal constructor(
         val brittle_spcname: String = config.brittle_tablespace ?: "brittle"
         val ephemeral_spcname: String = config.ephemeral_tablespace ?: "ephemeral"
         val config_version = config.version
-        val psql_version = if (config_version != null) NakshaVersion.of(config_version) else NakshaVersion.latest
+        val psql_version = if (config_version != null) NakshaVersion.of(config_version) else adminVersion
 
         // This only creates the logical structure, no database access is yet done!
         transactions = PgNakshaTransactions(this)
@@ -252,7 +253,7 @@ SELECT basics.*, procs.* FROM basics, procs;
             var installed_storage_id: String? = null
             var installed_storage_number: Int64? = null
             if (admin_schema_oid != null && has_naksha_version == true && has_naksha_storage_id == true && has_naksha_storage_number == true) {
-                conn.execute("SELECT \"${Naksha.ADMIN_MAP}\".naksha_version() AS v, \"${Naksha.ADMIN_MAP}\".naksha_storage_id() AS id, \"${Naksha.ADMIN_MAP}\".naksha_storage_number() AS n").fetch().use { cursor ->
+                conn.execute("SELECT \"${ADMIN_MAP}\".naksha_version() AS v, \"${ADMIN_MAP}\".naksha_storage_id() AS id, \"${ADMIN_MAP}\".naksha_storage_number() AS n").fetch().use { cursor ->
                     val v: Int64 = cursor["v"]
                     installed_version = NakshaVersion(v)
                     installed_storage_id = cursor["id"]

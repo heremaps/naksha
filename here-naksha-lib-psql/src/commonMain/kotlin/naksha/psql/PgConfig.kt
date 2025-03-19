@@ -125,7 +125,7 @@ class PgConfig() : NakshaStorage() {
     val override by BOOLEAN_FALSE
 
     /**
-     * Special parameter to force `lib-psql` to install the admin-map in this [version][naksha.model.NakshaVersion]. This is only for debugging purpose, and should not be used in any productive environment, normally the correct version is set, which is [latest][naksha.model.NakshaVersion.latest].
+     * Special parameter to force `lib-psql` to install the admin-map in this [version][naksha.model.NakshaVersion]. This is only for debugging purpose, and should not be used in any productive environment, normally the correct version is set, which is [adminVersion].
      *
      * **Warning**: This does not change the actual code that is installed, which will be always what is in the resources of the library, rather it modifies the version number that this code stores, so that the next time an upgrade will be executed. This option is really for debugging purpose only, use with care!
      * @since 3.0
