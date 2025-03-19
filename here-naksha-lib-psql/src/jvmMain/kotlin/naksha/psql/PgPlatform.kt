@@ -42,14 +42,13 @@ actual class PgPlatform {
          * @param featureId the feature id.
          * @return the partition number of the feature, a value between 0 and 255.
          */
+        @Deprecated(
+            message = "This function will be removed in a future release.",
+            replaceWith = ReplaceWith("Naksha.partitionNumber(Naksha.featureNumber(featureId))"),
+            level = DeprecationLevel.WARNING
+        )
         @JvmStatic
-        actual fun partitionNumber(featureId: String): Int {
-            val digest = md5Digest.get()
-            digest.reset()
-            digest.update(featureId.toByteArray(Charsets.UTF_8))
-            val hash = digest.digest()
-            return hash[0].toInt() and 0xff
-        }
+        actual fun partitionNumber(featureId: String): Int = Naksha.partitionNumber(Naksha.featureNumber(featureId))
 
         /**
          * Tests if this code is executed within a PostgresQL database using [PLV8 extension](https://plv8.github.io/).

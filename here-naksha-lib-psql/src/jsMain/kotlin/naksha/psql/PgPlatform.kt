@@ -1,5 +1,7 @@
 package naksha.psql
 
+import naksha.model.Naksha
+
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "OPT_IN_USAGE")
 @JsExport
 actual class PgPlatform {
@@ -42,13 +44,13 @@ parts && parts.length>0 ? (parts.length===1 ? plv8.quote_ident(parts[0]) : plv8.
          * @param featureId the feature id.
          * @return the partition number of the feature, a value between 0 and 255.
          */
+        @Deprecated(
+            message = "This function will be removed in a future release.",
+            replaceWith = ReplaceWith("Naksha.partitionNumber(Naksha.featureNumber(featureId))"),
+            level = DeprecationLevel.WARNING
+        )
         @JsStatic
-        actual fun partitionNumber(featureId: String): Int {
-            if (isPlv8()) {
-                return js("plv8.execute(\"SELECT get_byte(digest(\$1,'md5'),0) as i\",[featureId])[0].i").unsafeCast<Int>()
-            }
-            throw UnsupportedOperationException("PgUtil::partitionNumber is not implemented in the browser yet")
-        }
+        actual fun partitionNumber(featureId: String): Int = Naksha.partitionNumber(Naksha.featureNumber(featureId))
 
         /**
          * Tests if this code is executed within a PostgresQL database using [PLV8 extension](https://plv8.github.io/).
