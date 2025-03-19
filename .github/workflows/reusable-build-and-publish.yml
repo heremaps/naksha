@@ -44,7 +44,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
         with:
-          gradle-version: 8.6
+          gradle-version: 8.13
       ### Build, Test, Coverage Verification
       - name: Build fat jar, Run Unit tests, Verify code coverage
         run: gradle shadowJar jacocoTestReport testCodeCoverageReport jacocoTestCoverageVerification
