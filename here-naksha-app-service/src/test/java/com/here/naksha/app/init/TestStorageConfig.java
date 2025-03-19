@@ -55,7 +55,7 @@ public record TestStorageConfig(String mapId, PgConfig pgConfig) {
     }
     url = "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=" + password
           + "&schema=" + mapId
-          + "&app=" + "Naksha/v" + NakshaVersion.latest;
+          + "&app=" + "Naksha/v" + NakshaVersion.current;
     PgConfig pgConfig = new PgConfig(NakshaApp.HUB_ADMIN_STORAGE_ID).withMasterUri(url);
     return new TestStorageConfig(mapId, pgConfig);
   }

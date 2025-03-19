@@ -39,8 +39,6 @@ import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -52,8 +50,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import naksha.model.NakshaVersion;
-import naksha.psql.PgConfig;
-import naksha.psql.PgStorage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -131,7 +127,7 @@ public final class NakshaApp extends Thread {
    * @return The created Naksha-App instance.
    */
   public static @NotNull NakshaApp newInstance(@NotNull String... args) {
-    log.info("Naksha App v{}", NakshaVersion.latest);
+    log.info("Naksha App v{}", NakshaVersion.current);
 
     final String cfgId;
     final String url;

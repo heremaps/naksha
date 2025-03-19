@@ -1,5 +1,8 @@
 @file:Suppress("NOTHING_TO_INLINE", "unused")
 
+// This will be exposed
+// - in JavaScript at the namespace: naksha.base.{name}
+// - jn Java at the class naksha.base.LibBaseKt.{name}
 package naksha.base
 
 import kotlin.reflect.KClass

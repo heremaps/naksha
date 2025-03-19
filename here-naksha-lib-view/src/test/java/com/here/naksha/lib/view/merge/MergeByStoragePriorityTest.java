@@ -1,18 +1,14 @@
 package com.here.naksha.lib.view.merge;
 
 import com.here.naksha.lib.view.ViewLayerFeature;
-import naksha.base.JvmInt64;
-import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.FeatureTuple;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
 
-import static naksha.base.Platform.longToInt64;
-import static naksha.base.StaticKt.Int64;
+import static naksha.base.LibBaseKt.Int64;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;

@@ -1,3 +1,6 @@
+// This will be exposed
+// - in JavaScript at the namespace: naksha.jbon.{name}
+// - jn Java at the class naksha.jbon.LibJbonKt.{name}
 package naksha.jbon
 
 import naksha.base.DataViewProxy

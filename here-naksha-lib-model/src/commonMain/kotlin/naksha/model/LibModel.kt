@@ -1,19 +1,17 @@
 @file:OptIn(ExperimentalJsStatic::class)
 
+// This will be exposed
+// - in JavaScript at the namespace: naksha.model.{name}
+// - jn Java at the class naksha.model.LibModelKt.{name}
 package naksha.model
 
 import naksha.base.Int64
 import naksha.base.PlatformUtil.PlatformUtilCompanion.MILLISECOND
 import naksha.base.PlatformUtil.PlatformUtilCompanion.MILLIS_TO_MICROS
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
-// This will be exposed
-// - in JavaScript at the namespace: naksha.model.{name}
-// - jn Java at the class naksha.model.StaticKt.{name}
 @Deprecated("Replace with Action enumeration class",
     replaceWith = ReplaceWith("Action.CREATED.intValue"),
     level = DeprecationLevel.WARNING)

@@ -811,10 +811,9 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun useStorage(config: NakshaStorage): IStorage = _useStorage(config, false)
+        fun useStorage(config: NakshaStorage): IStorage = _useStorage(config, null)
 
-        private fun _useStorage(config: NakshaStorage, forceCreateOrUpgrade: Boolean): IStorage {
-            val createOrUpdate = if (forceCreateOrUpgrade) true else null
+        private fun _useStorage(config: NakshaStorage, forceCreateOrUpgrade: Boolean?): IStorage {
             val s = storagesByNumber[config.number]
             val s2 = storagesById[config.id]
             if (s !== s2) {
@@ -824,7 +823,7 @@ class Naksha private constructor() {
             }
             if (s != null && s.config == config) {
                 // Only invoke initStorage, when we are forced to do it!
-                if (createOrUpdate != null) s.invokeInitStorage(config, create = createOrUpdate, upgrade = createOrUpdate)
+                if (forceCreateOrUpgrade == true) s.invokeInitStorage(config, create = true, upgrade = true)
                 return s
             }
             lock.acquire().use {
@@ -841,7 +840,7 @@ class Naksha private constructor() {
                 }
                 val klass = Platform.klassForName<AbstractStorage<*>>(config.className)
                 storage = Platform.newInstanceOf(klass)
-                storage.invokeInitStorage(config, create = createOrUpdate, upgrade = createOrUpdate)
+                storage.invokeInitStorage(config, create = forceCreateOrUpgrade, upgrade = forceCreateOrUpgrade)
                 storagesById[config.id] = storage
                 storagesByNumber[config.number] = storage
                 return storage
