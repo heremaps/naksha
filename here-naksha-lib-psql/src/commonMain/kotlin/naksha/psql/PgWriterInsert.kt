@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.logger
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 
 /**
@@ -63,7 +64,7 @@ ${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = in
         val end = Platform.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
         if (writes.size != 1 || writes[0].isFeatureModification) {
-            Platform.logger.info("INSERT of ${inRows.size} rows took ${seconds * 1000}ms, therefore ${inRows.size / seconds} features/s")
+            logger.info("INSERT of ${inRows.size} rows took ${seconds * 1000}ms, therefore ${inRows.size / seconds} features/s, partitions: $featureCountByPartitionJoined")
         }
     }
 }

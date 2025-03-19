@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.logger
 import naksha.model.*
 import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
@@ -180,8 +181,8 @@ LEFT JOIN head_deleted ON head_deleted.id = query.id
         val end = Platform.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
         if (writes.size != 1 || writes[0].isFeatureModification) {
-            Platform.logger.info(
-                "DELETE for ${writes.size} rows resulted in ${inRows.size} rows deleted, ${seconds * 1000}ms, ${inRows.size / seconds} features/s"
+            logger.info(
+                "DELETE for ${writes.size} rows resulted in ${inRows.size} rows deleted, ${seconds * 1000}ms, ${inRows.size / seconds} features/s, partitions: $featureCountByPartitionJoined"
             )
         }
         cursor.fetch().use { cursor ->

@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.logger
 import naksha.model.*
 import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumnCompanion.allColumnNames
@@ -138,7 +139,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
         val end = Platform.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
         if (writes.size != 1 || writes[0].isFeatureModification) {
-            Platform.logger.info("UPDATE of ${rows.size} rows took ${seconds * 1000}ms, therefore ${rows.size / seconds} features/s")
+            logger.info("UPDATE of ${rows.size} rows took ${seconds * 1000}ms, therefore ${rows.size / seconds} features/s, partitions: $featureCountByPartitionJoined")
         }
         cursor.fetch().use {
             rows.addAll(cursor)
