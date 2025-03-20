@@ -31,7 +31,7 @@ import naksha.model.GeoEncoding.GeoEncoding_C.WKB_GZIP
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
-import naksha.model.NakshaVersion.Companion.LATEST
+import naksha.model.NakshaVersion.Companion.CURRENT
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaProperties
 import naksha.model.objects.NakshaStorage
@@ -936,7 +936,7 @@ class Naksha private constructor() {
                 var options = _adminOptions.get()
                 while (options == null) {
                     options = SessionOptions(
-                        appName = "lib-psql/$LATEST",
+                        appName = "lib-psql/$CURRENT",
                         appId = NakshaContext.appId(),
                         author = NakshaContext.author(),
                         parallel = false,
