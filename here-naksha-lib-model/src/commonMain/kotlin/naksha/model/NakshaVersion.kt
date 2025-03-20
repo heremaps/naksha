@@ -121,10 +121,13 @@ class NakshaVersion(
 
         const val v3_0_0_beta_7 = "3.0.0-beta.7"
 
+        const val v3_0_0_beta_8 = "3.0.0-beta.8"
+
         /**
-         * The latest version as string to constant usage cases.
+         * The current version as string to constant usage cases.
+         * @since 3.0
          */
-        const val LATEST = v3_0_0_beta_7
+        const val CURRENT = v3_0_0_beta_8
 
         /**
          * The current version of the Naksha library.
@@ -132,7 +135,7 @@ class NakshaVersion(
          */
         @JvmField
         @JsStatic
-        val current = of(LATEST)
+        val current = of(CURRENT)
 
         @JvmStatic
         @JsStatic

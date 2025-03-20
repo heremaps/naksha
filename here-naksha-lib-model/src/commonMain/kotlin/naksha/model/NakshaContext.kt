@@ -406,7 +406,7 @@ open class NakshaContext protected constructor() {
          * @since 3.0.0
          */
         @JvmField
-        val defaultAppName = AtomicRef("NakshaClient/${NakshaVersion.LATEST}")
+        val defaultAppName = AtomicRef("NakshaClient/${NakshaVersion.CURRENT}")
 
         /**
          * The default application identifier to use, defaults to `null`.

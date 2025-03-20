@@ -34,6 +34,7 @@ actual class GeoUtil private actual constructor() {
          * @return the GeoJSON geometry.
          * @since 3.0.0
          */
+        @JsStatic
         actual fun fromTWKB(raw: ByteArray?): SpGeometry? {
             if (raw == null) return null
             browserForbidden("fromTWKB")
@@ -47,6 +48,7 @@ actual class GeoUtil private actual constructor() {
          * @return the GeoJSON geometry.
          * @since 3.0.0
          */
+        @JsStatic
         actual fun fromEWKB(raw: ByteArray?): SpGeometry? {
             if (raw == null) return null
             browserForbidden("fromEWKB")
@@ -60,6 +62,7 @@ actual class GeoUtil private actual constructor() {
          * @return the GeoJSON geometry.
          * @since 3.0.0
          */
+        @JsStatic
         actual fun fromWKB(raw: ByteArray?): SpGeometry? {
             if (raw == null) return null
             browserForbidden("fromWKB")
@@ -73,6 +76,7 @@ actual class GeoUtil private actual constructor() {
          * @return the encoded GeoJSON geometry.
          * @since 3.0.0
          */
+        @JsStatic
         actual fun toTWKB(geometry: SpGeometry?): ByteArray? {
             if (geometry == null) return null
             browserForbidden("toTWKB")
@@ -86,6 +90,7 @@ actual class GeoUtil private actual constructor() {
          * @return the encoded GeoJSON geometry.
          * @since 3.0.0
          */
+        @JsStatic
         actual fun toEWKB(geometry: SpGeometry?): ByteArray? {
             if (geometry == null) return null
             browserForbidden("toEWKB")
@@ -99,6 +104,7 @@ actual class GeoUtil private actual constructor() {
          * @return the encoded GeoJSON geometry.
          * @since 3.0.0
          */
+        @JsStatic
         actual fun toWKB(geometry: SpGeometry?): ByteArray? {
             if (geometry == null) return null
             browserForbidden("toWKB")

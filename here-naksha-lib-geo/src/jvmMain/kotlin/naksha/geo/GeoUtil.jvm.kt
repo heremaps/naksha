@@ -41,6 +41,7 @@ actual class GeoUtil private actual constructor() {
          * @param jtsGeometry - JTS [GeometryCollection]
          * @return [SpGeometryCollection]
          */
+        @JvmStatic
         fun toGeometryCollection(jtsGeometry: GeometryCollection): SpGeometryCollection {
             val geometries = SpGeometryList()
             for (i in 0..<jtsGeometry.numGeometries) {
@@ -423,6 +424,7 @@ actual class GeoUtil private actual constructor() {
          * @return the GeoJSON geometry.
          * @since 3.0.0
          */
+        @JvmStatic
         actual fun fromTWKB(raw: ByteArray?): SpGeometry? {
             if (raw == null) return null
             val reader = TWKBReader(GeometryFactory(PrecisionModel(), 4326))
@@ -436,6 +438,7 @@ actual class GeoUtil private actual constructor() {
          * @return the GeoJSON geometry.
          * @since 3.0.0
          */
+        @JvmStatic
         actual fun fromEWKB(raw: ByteArray?): SpGeometry? {
             if (raw == null) return null
             val reader = WKBReader(GeometryFactory(PrecisionModel(), 4326))
@@ -449,6 +452,7 @@ actual class GeoUtil private actual constructor() {
          * @return the GeoJSON geometry.
          * @since 3.0.0
          */
+        @JvmStatic
         actual fun fromWKB(raw: ByteArray?): SpGeometry? {
             if (raw == null) return null
             val reader = WKBReader(GeometryFactory(PrecisionModel(), 4326))
@@ -462,6 +466,7 @@ actual class GeoUtil private actual constructor() {
          * @return the encoded GeoJSON geometry.
          * @since 3.0.0
          */
+        @JvmStatic
         actual fun toTWKB(geometry: SpGeometry?): ByteArray? {
             if (geometry == null) return null
             val writer = TWKBWriter()
@@ -489,6 +494,7 @@ actual class GeoUtil private actual constructor() {
          * @return the encoded GeoJSON geometry.
          * @since 3.0.0
          */
+        @JvmStatic
         actual fun toEWKB(geometry: SpGeometry?): ByteArray? {
             if (geometry == null) return null
             val writer = WKBWriter(3, ByteOrderValues.BIG_ENDIAN, true)
@@ -501,6 +507,7 @@ actual class GeoUtil private actual constructor() {
          * @return the encoded GeoJSON geometry.
          * @since 3.0.0
          */
+        @JvmStatic
         actual fun toWKB(geometry: SpGeometry?): ByteArray? {
             if (geometry == null) return null
             val writer = WKBWriter(3, ByteOrderValues.BIG_ENDIAN, true)
