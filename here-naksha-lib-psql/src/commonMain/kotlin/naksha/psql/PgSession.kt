@@ -205,11 +205,13 @@ open class PgSession(
      */
     override fun useTransaction(): NakshaTx = useTx().transaction
 
+    private var executionCount: Int = 0
+
     override fun execute(request: Request): Response {
         try {
             when (request) {
                 is WriteRequest -> {
-                    val writer = PgWriter(this)
+                    val writer = PgWriter(this, executionCount++ != 0)
                     return writer.execute(request.writes)
                 }
 
@@ -252,6 +254,7 @@ open class PgSession(
         val conn = pgConnection
         assertOpen()
         assertMutable()
+        executionCount = 0
         if (conn != null) {
             val tx = tx
             if (tx != null) {
@@ -259,7 +262,8 @@ open class PgSession(
                     val transaction = tx.transaction
                     val writeTx = Write().createFeature(Naksha.ADMIN_MAP, TRANSACTIONS_COL, transaction)
                     val writeRequest = WriteRequest().add(writeTx)
-                    val writer = PgWriter(this)
+                    // TODO: Should we use a savepoint here?
+                    val writer = PgWriter(this, false)
                     writer.execute(writeRequest.writes)
                 } catch (t: Throwable) {
                     throw generalException("Failed to save transaction", cause = t)
@@ -277,6 +281,7 @@ open class PgSession(
     }
 
     override fun rollback() {
+        executionCount = 0
         val conn = pgConnection
         if (conn != null) {
             try {

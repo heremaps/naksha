@@ -18,7 +18,19 @@ import kotlin.js.JsExport
  * @see [PgWrite]
  */
 @JsExport
-open class PgWriter internal constructor(val session: PgSession) {
+open class PgWriter internal constructor(
+    /**
+     * The session to which the writer is bound.
+     * @since 3.0
+     */
+    val session: PgSession,
+
+    /**
+     * If the writer should use save-point's.
+     * @since 3.0
+     */
+    val useSavepoint: Boolean
+) {
     /**
      * The storage to operate on.
      * @since 3.0
@@ -74,14 +86,14 @@ open class PgWriter internal constructor(val session: PgSession) {
         // Note: We must not close the connection, therefore no `session.useConnection().use {}`!
         val savepointId = PlatformUtil.randomString()
         val conn = session.useConnection()
-        conn.execute("SAVEPOINT \"$savepointId\"").close()
+        if (useSavepoint) conn.execute("SAVEPOINT \"$savepointId\"").close()
         try {
             prepareWrite(targetWrites)
             executeWrite(targetWrites)
             // If everything worked out as expected, we can drop the savepoint.
-            conn.execute("RELEASE SAVEPOINT \"$savepointId\"").close()
+            if (useSavepoint) conn.execute("RELEASE SAVEPOINT \"$savepointId\"").close()
         } catch (t: Throwable) {
-            conn.execute("ROLLBACK TO SAVEPOINT \"$savepointId\"").close()
+            if (useSavepoint) conn.execute("ROLLBACK TO SAVEPOINT \"$savepointId\"").close()
             throw PgExceptionMapper.map(t)
         }
 
