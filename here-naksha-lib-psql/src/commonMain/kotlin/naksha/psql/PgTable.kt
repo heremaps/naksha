@@ -229,7 +229,7 @@ open class PgTable(
         // execute a query activity in parallel, similar to max_parallel_workers_per_gather, but only for a specific table;
         // ALTER TABLE tabname SET (parallel_workers = N);
         val WITH = if (partitionByColumn == null)
-            "WITH (fillfactor=${if (isVolatile) 65 else 100},toast_tuple_target=1024)"
+            "WITH (fillfactor=${if (isVolatile) 90 else 100},toast_tuple_target=1024)"
         else
             ""
         val PARTITION_BY = when (partitionByColumn) {

@@ -9,8 +9,8 @@ import naksha.psql.PgColumn.PgColumnCompanion.allColumns
  * @since 3.0
  * @see [PgWriter]
  */
-internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, writes: List<PgWrite>)
-    : PgWriterBase(writer, collection, writes)
+internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, partition: Int, writes: List<PgWrite>)
+    : PgWriterBase(writer, collection, partition, writes)
 {
     init {
         inRows.addColumns(allColumns)
@@ -24,10 +24,11 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, writes
     }
 
     private fun plan(conn: PgConnection, collection: PgCollection): PgPlan {
-        val headTable = collection.headTable
-        val shadowTable = collection.deletedTable
+        val headTable = if (partition >= 0) collection.headTable.partitions[partition] else collection.headTable
+        val deletedTable = collection.deletedTable
+        val shadowTable: PgTable? = if (deletedTable != null && partition >= 0) deletedTable.partitions[partition] else deletedTable
 
-        val new_row = """WITH new_row AS (
+        val new_row = """WITH new_row AS NOT MATERIALIZED (
   SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.names()})
 )"""
 

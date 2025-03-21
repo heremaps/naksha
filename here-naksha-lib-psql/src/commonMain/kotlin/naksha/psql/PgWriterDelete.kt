@@ -11,8 +11,8 @@ import naksha.psql.PgColumn.PgColumnCompanion.allColumns
  * @since 3.0
  * @see [PgWriter]
  */
-internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes: List<PgWrite>)
-    : PgWriterBase(writer, collection, writes)
+internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partition: Int, writes: List<PgWrite>)
+    : PgWriterBase(writer, collection, partition, writes)
 {
     init {
         inRows.addColumn("id", PgType.STRING)
@@ -28,6 +28,7 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes
     }
 
     private fun plan(conn: PgConnection, collection: PgCollection, purge: Boolean): PgPlan {
+        // Note: Deletes never enter
         val headTable = collection.headTable
         val shadowTable = collection.deletedTable
         val historyTable = collection.historyTable
@@ -44,13 +45,13 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes
         val return_tuple = !do_any_insert || (purge && insert_into_history == null)
 
         // All input provided by client, `id` and optionally `version`, and `uid`
-        val query = """WITH query AS (
+        val query = """WITH query AS NOT MATERIALIZED (
   SELECT * FROM UNNEST($1, $2, $3) AS t(id, version, uid)
 )"""
 
         // select `id` and `tn` of all rows that match query.id
         // TODO: we could allow a search filter here, so extended WHERE query!
-        val head_select = """, head_select AS (
+        val head_select = """, head_select AS NOT MATERIALIZED (
   SELECT head.id AS id, head.tn AS tn
   FROM ${headTable.quotedName} AS head, query
   WHERE head.id = query.id
@@ -58,11 +59,10 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes
 
         // If the client requested an atomic deleted, so it provided a `version`, then
         // we only delete the head row, when the version matches.
-        val head_row = """, head_row AS (
+        val head_row = """, head_row AS NOT MATERIALIZED (
   SELECT ${allColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
   FROM ${headTable.quotedName} AS head, query
   WHERE head.id = query.id AND (query.version IS NULL OR query.version = naksha_tn_version(head.tn))
-  FOR UPDATE NOWAIT
 )"""
 
         // If the shadow table exists, delete old states

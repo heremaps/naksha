@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.base.IntMutable
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.model.*
@@ -12,8 +11,8 @@ import naksha.psql.PgColumn.PgColumnCompanion.allColumns
  * @since 3.0
  * @see [PgWriter]
  */
-internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, writes: List<PgWrite>)
-    : PgWriterBase(writer, collection, writes)
+internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partition: Int, writes: List<PgWrite>)
+    : PgWriterBase(writer, collection, partition, writes)
 {
     private val writeByTn = mutableMapOf<TupleNumber, PgWrite>()
 
@@ -30,21 +29,22 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, writes
     }
 
     private fun plan(conn: PgConnection, collection: PgCollection): PgPlan {
-        val headTable = collection.headTable
-        val shadowTable = collection.deletedTable
-        val historyTable = collection.historyTable
+        val headTable = if (partition >= 0) collection.headTable.partitions[partition] else collection.headTable
+        val deletedTable = collection.deletedTable
+        val shadowTable: PgTable? = if (deletedTable != null && partition >= 0) deletedTable.partitions[partition] else deletedTable
+        val hstYear = collection.historyTable?.get(version)
+        val historyTable = if (hstYear != null && partition >= 0) hstYear.partitions[partition] else hstYear
         val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
 
         // This is what we should INSERT or UPDATE.
-        val new_row = """WITH new_row AS (
+        val new_row = """WITH new_row AS NOT MATERIALIZED (
   SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.names()})
 )"""
 
         // Select existing.
-        val head_row = """, head_row AS (
+        val head_row = """, head_row AS NOT MATERIALIZED (
   SELECT * FROM ${headTable.quotedName}
   WHERE id IN (SELECT id FROM new_row)
-  FOR UPDATE NOWAIT
 )"""
 
         // If the shadow table exists, delete old states.
@@ -150,6 +150,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
             .addColumn("head_to_history_tn", PgType.BYTE_ARRAY)
         if (writes.isEmpty()) return
         val plan = plan(conn, collection)
+        // TupleNumber.fromB160(inRows.columns[11].values_field[0] as ByteArray, naksha.base.Int64(0), 0, 0).partitionNumber % 16
         val array = inRows.values()
         val start = Platform.currentNanos()
         val cursor = plan.execute(array)

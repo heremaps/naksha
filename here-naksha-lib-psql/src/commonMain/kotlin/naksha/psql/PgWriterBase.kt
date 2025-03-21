@@ -2,6 +2,7 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.base.IntMutable
+import naksha.model.Version
 import naksha.model.objects.NakshaTx
 
 /**
@@ -27,10 +28,16 @@ internal abstract class PgWriterBase protected constructor(
     val collection: PgCollection,
 
     /**
+     * The partition to write into, `-1` if writes should enter base table.
+     * @since 3.0
+     */
+    val partition: Int,
+
+    /**
      * The list of writes to perform.
      * @since 3.0
      */
-    val writes: List<PgWrite>
+    val writes: List<PgWrite>,
 ) {
     val session: PgSession
         get() = writer.session
@@ -49,6 +56,9 @@ internal abstract class PgWriterBase protected constructor(
      * @since 3.0
      */
     val tx = session.useTx()
+
+    val version: Version
+        get() = tx.version
 
     /**
      * The Naksha transaction.

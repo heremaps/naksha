@@ -133,7 +133,13 @@ open class PgCollection internal constructor(
         @Suppress("LeakingThis")
         headTable = if (this is PgNakshaTransactions) PgTransactions(this) else PgHead(this, storageClass, partitions)
         deletedTable = if (nakshaCollection.storeDeleted == StoreMode.OFF) null else PgDeleted(headTable)
-        historyTable = if (nakshaCollection.storeHistory == StoreMode.OFF) null else PgHistory(headTable)
+        val hst = if (nakshaCollection.storeHistory == StoreMode.OFF) null else PgHistory(headTable)
+        historyTable = hst
+        if (hst != null) {
+            val now = Timestamp.now()
+            hst.addYear(now.year)
+            hst.addYear(now.year + 1)
+        }
         metaTable = if (nakshaCollection.storeMeta == StoreMode.OFF) null else PgMeta(headTable)
     }
 

@@ -33,11 +33,22 @@ class PgHistory(val head: PgHead) : PgTable(
     }
 
     fun createYear(conn: PgConnection, year: Int) {
+        var yearTable = years[year]
+        if (yearTable == null) {
+            yearTable = PgHistoryYear(this, year)
+            years[year] = yearTable
+        }
+        yearTable.create(conn)
+        for (index in indices) {
+            yearTable.createIndex(conn, index)
+        }
+    }
+
+    fun addYear(year: Int) {
         if (year !in years) {
             val yearTable = PgHistoryYear(this, year)
-            yearTable.create(conn)
             years[year] = yearTable
-            for (index in indices) yearTable.createIndex(conn, index)
+            for (index in indices) yearTable.addIndex(index)
         }
     }
 

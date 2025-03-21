@@ -38,7 +38,7 @@ class PgHistoryYear(val history: PgHistory, year: Int) : PgTable(
      */
     operator fun get(featureId: String): PgHistoryPartition? {
         val partitions = this.partitions
-        if (partitions.size == 0) return null
+        if (partitions.isEmpty()) return null
         val i = PgUtil.partitionNumber(featureId) % partitions.size
         check(i >= partitions.size) { throw NakshaException(PARTITION_NOT_FOUND, "Partition $i not found in table $name") }
         return partitions[i]
