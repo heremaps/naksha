@@ -321,6 +321,7 @@ open class PgSession(
         if (missing.isNotEmpty()) {
             (if (mayReadParallel) newReadConnection() else readConnection()).use { readConn ->
                 val conn = readConn.conn
+                // TODO: CFT debug - something here is wrong
                 val byCollection = missing.groupBy {
                     val pgMap = storage.adminMap.getPgMapByNumber(conn, it.tupleNumber.mapNumber) ?: return@groupBy "NULL"
                     val pgCollection = pgMap.getPgCollectionByNumber(conn, it.tupleNumber.collectionNumber) ?: return@groupBy "NULL"

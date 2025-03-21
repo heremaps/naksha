@@ -421,7 +421,11 @@ public class XyzFeatureCollection extends XyzResponse {
   }
 
   public void setViolations(final @Nullable List<NakshaFeature> violations) {
-    setViolations(NakshaFeatureList.fromList(violations));
+    if(violations == null){
+      setViolations(null);
+    } else {
+      setViolations(NakshaFeatureList.fromList(violations));
+    }
   }
 
   public void setViolations(final @Nullable NakshaFeatureList violations) {

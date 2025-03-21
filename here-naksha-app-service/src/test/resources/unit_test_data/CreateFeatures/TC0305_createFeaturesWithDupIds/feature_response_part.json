@@ -1,6 +1,9 @@
 {
   "type": "FeatureCollection",
-  "updated": ["my-custom-id-305-1", "my-custom-id-305-2"],
+  "updated": [
+    "my-custom-id-305-1",
+    "my-custom-id-305-2"
+  ],
   "features": [
     {
       "id": "my-custom-id-305-1",
@@ -11,8 +14,12 @@
         "patched": "this new property is added"
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.68872, 50.0561, 292.94377758]
+        "type": "Point",
+        "coordinates": [
+          8.68872,
+          50.0561,
+          292.9437776
+        ]
       }
     },
     {
@@ -24,8 +31,12 @@
         "patched": "this new property is added"
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 9.68872, 51.0561, 293.94377758]
+        "type": "Point",
+        "coordinates": [
+          9.68872,
+          51.0561,
+          293.9437776
+        ]
       }
     },
     {
@@ -35,8 +46,12 @@
         "speedLimit": "50"
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 1.1, 2.2, 3.3]
+        "type": "Point",
+        "coordinates": [
+          1.1,
+          2.2,
+          3.3
+        ]
       }
     },
     {
@@ -45,8 +60,12 @@
         "speedLimit": "70"
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 4.4, 5.5, 6.6]
+        "type": "Point",
+        "coordinates": [
+          4.4,
+          5.5,
+          6.6
+        ]
       }
     }
   ]

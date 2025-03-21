@@ -181,7 +181,9 @@ public class NHSpaceStorageReader implements IReadSession {
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   protected @NotNull Response setupEventPipelineForSpaceId(
-      final @NotNull String spaceId, final @NotNull EventPipeline pipeline) {
+      final @NotNull String spaceId,
+      final @NotNull EventPipeline pipeline
+  ) {
     Space space = null;
     Response spaceResponse = nakshaHub.getAdminStorage()
         .useReadSession(sessionOptions, reader -> reader.execute(readFeaturesByIdRequest(nakshaHub.getAdminMapId(), SPACES, spaceId)));
@@ -195,7 +197,7 @@ public class NHSpaceStorageReader implements IReadSession {
           "Unexpected response type: " + spaceResponse.getClass().getName());
     }
     if (space == null) {
-      return new ErrorResponse(NakshaError.NOT_FOUND, "Space not found : " + spaceId);
+      return new ErrorResponse(NakshaError.NOT_FOUND, "Space not found: " + spaceId);
     }
     List<String> eventHandlerIds = space.getEventHandlerIds();
     if (eventHandlerIds == null || eventHandlerIds.isEmpty()) {

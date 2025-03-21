@@ -478,9 +478,9 @@ WHERE id = $1"""
         setSearchPath(conn)
         val SQL = """SELECT ${outRows.names()}
 FROM ${collections.headTable.quotedName}
-WHERE naksha_tn_featureNumber(id) = $1"""
+WHERE naksha_tn_feature_number(tn) = $1"""
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
-        plan.execute(arrayOf(number.toUnsignedInt64())).fetch().use {
+        plan.execute(arrayOf(number)).fetch().use {
             outRows.addAll(cursor = it)
         }
         if (outRows.size == 0) return null

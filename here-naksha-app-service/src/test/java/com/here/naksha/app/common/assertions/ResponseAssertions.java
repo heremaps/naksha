@@ -48,7 +48,7 @@ public class ResponseAssertions {
 
   public static JSONComparator STRICT_JSON_COMPARISON = new CustomComparator(JSONCompareMode.STRICT);
   public static JSONComparator LENIENT_JSON_COMPARISON = new CustomComparator(JSONCompareMode.LENIENT);
-  // TODO: CASL-681 fix/analyze XYZ ignoring part
+  // TODO: CASL-681 discuss
   public static JSONComparator IGNORE_XYZ = new CustomComparator(JSONCompareMode.LENIENT, new Customization("features[*].properties.@ns:com:here:xyz", (left, right) -> true));
 
   private final HttpResponse<String> subject;

@@ -9,8 +9,12 @@
         "existingProperty": true
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.68872, 50.0561, 292.94377758]
+        "type": "Point",
+        "coordinates": [
+          8.68872,
+          50.0561,
+          292.9437776
+        ]
       }
     }
   ]

@@ -9,8 +9,12 @@
         "existingProperty": "must not be deleted after POST"
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.68872, 50.0561, 292.94377758]
+        "type": "Point",
+        "coordinates": [
+          8.68872,
+          50.0561,
+          292.9437776
+        ]
       }
     },
     {
@@ -21,8 +25,12 @@
         "existingProperty": "must not be deleted after POST"
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 9.68872, 51.0561, 293.94377758]
+        "type": "Point",
+        "coordinates": [
+          9.68872,
+          51.0561,
+          293.9437776
+        ]
       }
     }
   ]

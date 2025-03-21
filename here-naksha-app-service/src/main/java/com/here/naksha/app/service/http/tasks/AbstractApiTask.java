@@ -234,7 +234,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       }
       if (featureMap.isEmpty() && (violations == null || violations.isEmpty())) {
         if (isDeleteOperation) {
-          logger.info("No data found in ResultCursor, returning empty collection");
+          logger.info("No data found, returning empty collection");
           return verticle.sendXyzResponse(
               routingContext, HttpResponseType.FEATURE_COLLECTION, emptyFeatureCollection());
         }
