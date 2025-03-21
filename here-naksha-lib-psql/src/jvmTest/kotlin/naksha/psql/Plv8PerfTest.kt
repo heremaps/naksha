@@ -44,10 +44,10 @@ class Plv8PerfTest : PgTestBase(
     companion object {
         val featureSource = JSON_TOPOLOGY_SMALL
         val NUM_OF_CPU = Runtime.getRuntime().availableProcessors()
-        val NUM_OF_PARTITIONS = NUM_OF_CPU
-        val numberOfBatches = NUM_OF_PARTITIONS * 3
+        val NUM_OF_PARTITIONS = 8
+        val numberOfBatches = NUM_OF_PARTITIONS * 2
         val numberOfFeaturesInBatch = 200
-        val concurrency = NUM_OF_CPU
+        val concurrency = NUM_OF_PARTITIONS
 
         val jsonPath = Companion::class.java.getResource("/topology.json")
         val json = Files.readString(Paths.get(jsonPath.toURI()))
