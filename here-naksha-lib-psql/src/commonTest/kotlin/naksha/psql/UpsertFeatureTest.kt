@@ -102,6 +102,7 @@ class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c", T
 
         // Then
         assertIs<SuccessResponse>(response)
+        // TODO: only the first one is updated
         response.features.forEach { feature ->
             assertNotNull(feature)
             assertEquals(Action.UPDATED, feature.properties.xyz.action)
