@@ -7,6 +7,7 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import naksha.psql.base.PgTestBase
 import kotlin.test.Test
@@ -14,7 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
-class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c")) {
+class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c", TEST_MAP_ID)) {
 
     @Test
     fun shouldPerformSimpleUpdateAndUpsert() {

@@ -7,9 +7,10 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.request.ReadFeatures
 import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.*
 
-class ReadFeaturesByRefTilesTest : PgTestBase(NakshaCollection("read_by_ref_tiles")) {
+class ReadFeaturesByRefTilesTest : PgTestBase(NakshaCollection("read_by_ref_tiles", TEST_MAP_ID)) {
 
     private val pragueCityHall = randomFeature().apply {
         referencePoint = SpPoint(PointCoord(

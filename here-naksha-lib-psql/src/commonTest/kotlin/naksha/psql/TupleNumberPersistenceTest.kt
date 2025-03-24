@@ -14,9 +14,10 @@ import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.*
 
-class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistence_test")) {
+class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistence_test", TEST_MAP_ID)) {
 
 
     @AfterTest

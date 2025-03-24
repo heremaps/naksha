@@ -11,9 +11,10 @@ import naksha.model.request.query.*
 import naksha.psql.assertions.AnyObjectFluidAssertions.Companion.assertThatAnyObject
 import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.*
 
-class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry_test")) {
+class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry_test", TEST_MAP_ID)) {
 
     @AfterTest
     fun cleanUp() {

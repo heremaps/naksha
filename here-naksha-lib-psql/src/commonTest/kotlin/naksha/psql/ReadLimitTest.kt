@@ -5,12 +5,13 @@ import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.base.PgTestBase
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class ReadLimitTest : PgTestBase(NakshaCollection("read_limit_test")) {
+class ReadLimitTest : PgTestBase(NakshaCollection("read_limit_test", TEST_MAP_ID)) {
 
     @Test
     fun shouldUseLimitWhenReturningResults() {
