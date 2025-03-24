@@ -216,17 +216,17 @@ class CreateFeatureTest extends ApiTest {
     HttpResponse<String> response;
 
     // Given: New Features in place
-    final String bodyJson = loadFileOrFail("CreateFeatures/TC0305_createFeaturesWithDupIds/create_features.json");
+    final String bodyJson = loadFileOrFail("CreateFeatures/TC0305_createFeaturesWithDupIds/initial_features_upsert.json");
     streamId = UUID.randomUUID().toString();
     response = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch");
 
     // When: Create Features request is submitted with the same Ids
-    final String request = loadFileOrFail("CreateFeatures/TC0305_createFeaturesWithDupIds/request.json");
+    final String request = loadFileOrFail("CreateFeatures/TC0305_createFeaturesWithDupIds/second_features_upsert.json");
     response = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", request, streamId);
 
     // Then: Perform assertions
-    final String expectedBodyPart = loadFileOrFail("CreateFeatures/TC0305_createFeaturesWithDupIds/feature_response_part.json");
+    final String expectedBodyPart = loadFileOrFail("CreateFeatures/TC0305_createFeaturesWithDupIds/expected_partial_response.json");
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
