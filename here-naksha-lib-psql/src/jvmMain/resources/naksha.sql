@@ -102,6 +102,12 @@ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT AS $$
          ((get_byte(data, pos)::int4) << 24)
 $$;
 
+CREATE OR REPLACE FUNCTION int2recv(data bytea, pos int4) RETURNS int2
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT AS $$
+SELECT (get_byte(data, pos + 1)::int2) |
+       ((get_byte(data, pos)::int2) << 8)
+$$;
+
 -- Returns the packed Naksha extension version: 16 bit major, 16 bit minor, 16 bit revision, 8 bit pre-release tag, 8 bit pre-release version.
 CREATE OR REPLACE FUNCTION naksha_version() RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
@@ -181,11 +187,39 @@ AS $$
   SELECT int8recv(tn, length(tn) - 20)
 $$;
 
+CREATE OR REPLACE FUNCTION naksha_tn_partition_number(tn bytea) RETURNS int4
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  -- The partition-number is the same as the lower 16-bit in the feature-number.
+  SELECT int2recv(tn, length(tn) - 14)::int4 & 65535
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_tn_partition_index(tn bytea, partitions int4) RETURNS int4
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  -- The partition-number is the same as the lower 16-bit in the feature-number.
+  SELECT (int2recv(tn, length(tn) - 14)::int4 & 65535) % partitions
+$$;
+
 CREATE OR REPLACE FUNCTION naksha_tn_version(tn bytea) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT int8recv(tn, length(tn) - 12)
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_tn_year(tn bytea) RETURNS int4
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  -- The top 8-bit are reserved and always 0
+  -- The next 15-bit are the year
+  -- So, we read the 16-bit, shift right by one, then set all top bit to zero,
+  --     because PostgresQL does only have arithmetic shift right (>>), but no
+  --     logical shift right (>>>)
+  SELECT ((int2recv(tn, length(tn) - 11)::int4) >> 1) & 32767
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_uid(tn bytea) RETURNS int4
@@ -199,7 +233,7 @@ CREATE OR REPLACE FUNCTION naksha_tn_action(tn bytea) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-    SELECT int4recv(tn, length(tn) - 4) & 3
+  SELECT int4recv(tn, length(tn) - 4) & 3
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_feature_number(id text) RETURNS int8
