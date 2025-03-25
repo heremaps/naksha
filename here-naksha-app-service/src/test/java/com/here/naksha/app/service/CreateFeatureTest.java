@@ -39,6 +39,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.UUID;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import org.junit.jupiter.api.Assertions;
@@ -242,8 +244,9 @@ class CreateFeatureTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // Given: Space (without EventHandler) configured in Admin storage
-    final Space space = parseJsonFileOrFail("CreateFeatures/TC0307_createFeaturesWithNoHandler/create_space.json", Space.class);
-    HttpResponse<String> response = getNakshaClient().post("hub/spaces", space.toString(), streamId);
+    final String spaceJson = loadFileOrFail("CreateFeatures/TC0307_createFeaturesWithNoHandler/create_space.json");
+    final Space space = JvmBoxingUtil.box(Platform.fromJSON(spaceJson), Space.class);
+    HttpResponse<String> response = getNakshaClient().post("hub/spaces", spaceJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Event Handler");
 
     // Given: Create Features request (against above Space)

@@ -1,4 +1,5 @@
 {
   "type": "ErrorResponse",
-  "error": "NotFound"
+  "error": "NotFound",
+  "errorMessage": "No associated handler"
 }
