@@ -79,17 +79,21 @@ open class PgWriter internal constructor(
     /**
      * Groups and orders writes by map, collection, partition, and eventually operation.
      *
-     * The partition `-1` requires a full table lock, therefore uses root table. This is always the case for deletes, but never for `INSERT`, `UPSERT` or `UPDATE`.
+     * @param map the map to write into.
+     * @param collection the collection to write into.
+     * @param writeOp the operation to perform, so `INSERT`, `UPSERT`, `UPDATE`, `DELETE` or `PURGE`.
+     * @param write the write instruction.
+     * @param byMap the map into which to store the write instruction.
+     * @param writeListCapacity the capacity of the write array, when a new one need to be allocated.
      * @since 3.0
      */
     private fun addPgWrite(
         map: PgMap,
         collection: PgCollection,
-        partition: Int,
         writeOp: WriteOp,
         write: PgWrite,
-        byMap: MutableMap<PgMap, MutableMap<PgCollection, MutableMap<Int, MutableMap<WriteOp, ArrayList<PgWrite>>>>>,
-        allocationSize: Int) {
+        byMap: MutableMap<PgMap, MutableMap<PgCollection, Array<MutableMap<WriteOp, ArrayList<PgWrite>>?>>>,
+        writeListCapacity: Int) {
         var byCollection = byMap[map]
         if (byCollection == null) {
             byCollection = mutableMapOf()
@@ -97,17 +101,20 @@ open class PgWriter internal constructor(
         }
         var byPartition = byCollection[collection]
         if (byPartition == null) {
-            byPartition = mutableMapOf()
+            byPartition = arrayOfNulls(if (collection.partitions > 1) collection.partitions + 1 else 1)
             byCollection[collection] = byPartition
         }
-        var byWriteOp = byPartition[partition]
+        val partition = write.partition
+        // Note: byPartition reserved the first entry (index #0) for the case that there is no partitioning,
+        //       therefore when there is no partitioning, the index becomes `0`, otherwise `1` to `n`.
+        var byWriteOp = byPartition[partition + 1]
         if (byWriteOp == null) {
             byWriteOp = mutableMapOf()
-            byPartition[partition] = byWriteOp
+            byPartition[partition + 1] = byWriteOp
         }
         var writeList = byWriteOp[writeOp]
         if (writeList == null) {
-            writeList = ArrayList(allocationSize)
+            writeList = ArrayList(writeListCapacity)
             byWriteOp[writeOp] = writeList
         }
         addSorted(writeList, write)
@@ -120,15 +127,14 @@ open class PgWriter internal constructor(
      * @since 3.0
      */
     private fun groupOperations(writes: ArrayList<PgWrite>)
-      : MutableMap<PgMap, MutableMap<PgCollection, MutableMap<Int, MutableMap<WriteOp, ArrayList<PgWrite>>>>> {
-        val byMap = mutableMapOf<PgMap, MutableMap<PgCollection, MutableMap<Int, MutableMap<WriteOp, ArrayList<PgWrite>>>>>()
-        var allocationSize = writes.size
+      : MutableMap<PgMap, MutableMap<PgCollection, Array<MutableMap<WriteOp, ArrayList<PgWrite>>?>>> {
+        val byMap = mutableMapOf<PgMap, MutableMap<PgCollection, Array<MutableMap<WriteOp, ArrayList<PgWrite>>?>>>()
+        var writeListCapacity = writes.size
         for (i in writes.indices) {
             val write = writes[i]
             val map = write.map
             val collection = write.collection
             val op = write.original.op
-            val partition: Int
             when (op) {
                 WriteOp.CREATE -> {
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
@@ -138,8 +144,6 @@ open class PgWriter internal constructor(
                     write.tuple = tuple
                     val tupleNumber = tuple.tupleNumber
                     write.tupleNumber = tupleNumber
-                    val partitions = collection.partitions
-                    partition = if (partitions > 1) tupleNumber.partitionNumber % partitions else -1
                 }
                 WriteOp.UPSERT -> {
                     // Note: We first try an INSERT, then, when that fails, we do an on-conflict UPDATE!
@@ -148,8 +152,6 @@ open class PgWriter internal constructor(
                     write.tuple = tuple
                     val tupleNumber = tuple.tupleNumber
                     write.tupleNumber = tuple.tupleNumber
-                    val partitions = collection.partitions
-                    partition = if (partitions > 1) tupleNumber.partitionNumber % partitions else -1
                 }
                 WriteOp.UPDATE -> {
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
@@ -157,26 +159,22 @@ open class PgWriter internal constructor(
                     write.tuple = tuple
                     val tupleNumber = tuple.tupleNumber
                     write.tupleNumber = tupleNumber
-                    val partitions = collection.partitions
-                    partition = if (partitions > 1) tupleNumber.partitionNumber % partitions else -1
                 }
                 WriteOp.DELETE -> {
                     if (write.isTransactionModification) throw forbidden("Transactions must not be deleted or purged")
                     write.final_uid = tx.uid.next(Action.DELETED)
-                    partition = -1
                 }
                 WriteOp.PURGE -> {
                     if (write.isTransactionModification) throw forbidden("Transactions must not be deleted or purged")
                     // Note: purge and delete are the same operation, except that a purge is not copied into deleted table!
                     write.final_uid = tx.uid.next(Action.DELETED)
-                    partition = -1
                 }
                 else -> {
                     throw illegalArg("Unknown write operation: $op")
                 }
             }
             // In the first run, there is a chance that all writes go into same partition, after that, we can have one less!
-            addPgWrite(map, collection, partition, op, write, byMap, allocationSize--)
+            addPgWrite(map, collection, op, write, byMap, writeListCapacity--)
         }
         // Sort all writes within the
         return byMap
@@ -206,10 +204,12 @@ open class PgWriter internal constructor(
                 for (colEntry in byCol) {
                     val collection = colEntry.key
                     val byPartition = colEntry.value
-                    for (partEntry in byPartition) {
-                        val partition = partEntry.key
-                        val byWriteOp = partEntry.value
-                        executeWrite(map, collection, partition, byWriteOp)
+                    for (i in byPartition.indices) {
+                        val byWriteOp = byPartition[i]
+                        if (byWriteOp != null) {
+                            val partition = i - 1 // index #0 represents no partitioning
+                            executeWrite(map, collection, partition, byWriteOp)
+                        }
                     }
                 }
             }

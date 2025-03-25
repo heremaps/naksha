@@ -12,6 +12,7 @@ import naksha.model.request.WriteRequest
 import naksha.model.objects.NakshaTx
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
+import kotlin.math.min
 
 /**
  * A session linked to a PostgresQL database.
@@ -321,16 +322,20 @@ open class PgSession(
         if (missing.isNotEmpty()) {
             (if (mayReadParallel) newReadConnection() else readConnection()).use { readConn ->
                 val conn = readConn.conn
-                val byCollection = missing.groupBy {
-                    val pgMap = storage.adminMap.getPgMapByNumber(conn, it.tupleNumber.mapNumber) ?: return@groupBy "NULL"
-                    val pgCollection = pgMap.getPgCollectionByNumber(conn, it.tupleNumber.collectionNumber) ?: return@groupBy "NULL"
-                    pgCollection
+                val byCollection = mutableMapOf<String, MutableList<PgRead>>()
+                val adminMap = storage.adminMap
+                for (featureTuple in missing) {
+                    val read = PgRead(conn, adminMap, featureTuple.tupleNumber)
+                    read.featureTuple = featureTuple
+                    var reads = byCollection[read.groupId]
+                    if (reads == null) {
+                        reads = ArrayList(min(1000, missing.size))
+                        byCollection[read.groupId] = reads
+                    }
+                    reads.add(read)
                 }
                 for (entry in byCollection) {
-                    val key = entry.key
-                    val pgCollection = if (key is PgCollection) key else continue
-                    val tupleFeatures = entry.value
-                    loadTuplesFromCollection(conn, pgCollection, tupleFeatures, mode)
+                    loadTuplesFromCollection(conn, entry.value, mode)
                 }
             }
         }
@@ -340,42 +345,51 @@ open class PgSession(
      * Load [Tuple] from a specific collection, can be executed in parallel, when multiple collections are needed. We should make parallel reading optional, we experienced that when used for example in EMR, too many connections can harm. However, the cache could keep objects in Redis or alike, and then read perfectly fine in parallel!
      *
      * @param conn the connection to use for this read.
-     * @param pgCollection the collection to read from.
-     * @param tupleFeatures the features to load from this collection (pre-filtered).
+     * @param reads the reads to perform.
      * @param mode the load-mode
      */
-    private fun loadTuplesFromCollection(conn: PgConnection, pgCollection: PgCollection, tupleFeatures: List<FeatureTuple>, mode: FetchMode) {
+    private fun loadTuplesFromCollection(conn: PgConnection, reads: List<PgRead>, mode: FetchMode) {
         // TODO: We can improve this to load the results as GZIP compressed binary!
         //       Read BINARY.md for more information.
         //       For the sake of delivery, we take the shortcut, and only us ARRAY_AGG
         //       Maybe this is already fast enough?
+        if (reads.isEmpty()) throw illegalState("Reads must not be empty")
+        val first = reads.first()
+        val map = first.map
+        val collection = first.collection
         val rows = PgColumnRows()
-            .withStorageNumber(pgCollection.storage.number)
-            .withMapNumber(pgCollection.map.number)
-            .withCollectionNumber(pgCollection.number)
+            .withStorageNumber(map.storage.number)
+            .withMapNumber(map.number)
+            .withCollectionNumber(collection.number)
             .addColumns(PgColumn.allColumns)
-        pgCollection.map.setSearchPath(conn)
-        val headTable = pgCollection.headTable
-        val historyTable = pgCollection.historyTable
-        val deletedTable = pgCollection.deletedTable
-        val SQL = if (historyTable != null) {
-            """WITH result AS(
-  SELECT ${rows.names()} FROM ${headTable.quotedName} WHERE tn = ANY($1)
-  UNION ALL
-  SELECT ${rows.names()} FROM ${historyTable.quotedName} WHERE tn = ANY($1)
-)
-SELECT ${rows.namesAggregate()} FROM result"""
-        } else if (deletedTable != null) {
-            """WITH result AS(
-  SELECT ${rows.names()} FROM ${headTable.quotedName} WHERE tn = ANY($1)
-  UNION ALL
-  SELECT ${rows.names()} FROM ${deletedTable.quotedName} WHERE tn = ANY($1)
-)
-SELECT ${rows.namesAggregate()} FROM result"""
-        } else {
-            "SELECT ${rows.namesAggregate()} FROM ${headTable.quotedName} WHERE tn = ANY($1)"
+        map.setSearchPath(conn)
+        val headTables = first.headTables
+        val historyTables = first.historyTables
+        val sql = StringBuilder()
+        sql.append("WITH result AS(\n")
+        var unionAll = false
+        val rowNames = rows.names()
+        for (headTable in headTables) {
+            if (unionAll) sql.append("\tUNION ALL\n") else unionAll = true
+            sql.append("SELECT ").append(rowNames).append(" FROM ").append(headTable.quotedName).append(" WHERE tn = ANY(\$1)\n")
         }
-        val tupleNumbers: Array<Any?> = tupleFeatures.map { it.tupleNumber.toB160() }.toTypedArray()
+        if (historyTables != null) {
+            for (hstTable in historyTables) {
+                if (unionAll) sql.append("\tUNION ALL\n") else unionAll = true
+                sql.append("SELECT ").append(rowNames).append(" FROM ").append(hstTable.quotedName).append(" WHERE tn = ANY(\$1)\n")
+            }
+        } else {
+            val shadowTables = first.shadowTables
+            if (shadowTables != null) {
+                for (shadowTable in shadowTables) {
+                    if (unionAll) sql.append("\tUNION ALL\n") else unionAll = true
+                    sql.append("SELECT ").append(rowNames).append(" FROM ").append(shadowTable.quotedName).append(" WHERE tn = ANY(\$1)\n")
+                }
+            }
+        }
+        sql.append(")\nSELECT ").append(rows.namesAggregate()).append(" FROM result")
+        val SQL = sql.toString()
+        val tupleNumbers: Array<Any?> = reads.map { it.tupleNumber!!.toB160() }.toTypedArray()
         conn.prepare(SQL, arrayOf(PgType.BYTE_ARRAY_ARRAY.text)).use { plan ->
             plan.execute(arrayOf(tupleNumbers)).fetch().use { cursor ->
                 rows.addAggregated(cursor)
@@ -385,9 +399,9 @@ SELECT ${rows.namesAggregate()} FROM result"""
             val tuple = rows[i] ?: continue
             Naksha.cache.store(tuple)
             val tupleNumber = tuple.tupleNumber
-            for (tupleFeature in tupleFeatures) {
-                if (tupleFeature.tupleNumber == tupleNumber) {
-                    tupleFeature.tuple = tuple
+            for (read in reads) {
+                if (read.tupleNumber == tupleNumber) {
+                    read.featureTuple?.tuple = tuple
                     break
                 }
             }

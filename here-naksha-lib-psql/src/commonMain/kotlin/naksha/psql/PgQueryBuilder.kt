@@ -131,7 +131,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         for (entry in pgCollections.withIndex()) {
             val pgCollection = entry.value
             val map = pgCollection.map
-            val head = pgCollection.headTable
+            val read = PgRead(pgMap, pgCollection)
 
             // Note: To simplify queries, we actually always embed the collection-number internally,
             //       eventually, before returning the result, we decide if we put it into the header
@@ -140,25 +140,31 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
             val select_cols_string = select_cols.joinToString(", ")
 
             val where = if (whereQuery.isEmpty()) "" else "WHERE $whereQuery"
-            if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
-            selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${head.quotedName} $where)\n")
-
-            val deleted = pgCollection.deletedTable
-            if (!req.queryHistory && req.queryDeleted && deleted != null) {
+            for (head in read.headTables) {
                 if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
-                selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${deleted.quotedName} $where)\n")
+                selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${head.quotedName} $where)\n")
             }
 
-            val history = pgCollection.historyTable
-            if (req.queryHistory && history != null) {
+            val deletedTables = read.shadowTables
+            if (!req.queryHistory && req.queryDeleted && deletedTables != null) {
+                for (deleted in deletedTables) {
+                    if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
+                    selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${deleted.quotedName} $where)\n")
+                }
+            }
+
+            val historyTables = read.historyTables
+            if (req.queryHistory && historyTables != null) {
                 // TODO: We need to improve, because we only want $versions variants!
                 // If only one version is requested, we can improve the query to only return this version!
                 val better_where = if (version != null && versions == 1)
                     (if (where.isEmpty()) "WHERE " else "$where AND ") + "naksha_tn_version($next_tn) > $version"
                 else
                     where
-                if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
-                selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${history.quotedName} $better_where)\n")
+                for (history in historyTables) {
+                    if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
+                    selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${history.quotedName} $better_where)\n")
+                }
             }
         }
         // Restore original value for `col_num` selection.

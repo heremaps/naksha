@@ -169,7 +169,7 @@ open class PgMap internal constructor(
             txn.create(conn)
             txn.createYear(conn, NOW.year)
             txn.createYear(conn, NOW.year + 1)
-            txn.createIndex(conn, PgIndex.tn_pkey)
+            //txn.createIndex(conn, PgIndex.tn_pkey)
             txn.createIndex(conn, PgIndex.id_unique)
             txn.createIndex(conn, PgIndex.txn_unique)
             for (index in indices) {
@@ -185,7 +185,7 @@ open class PgMap internal constructor(
             if (collection.metaTable != null) {
                 val meta = PgMeta(txn)
                 meta.create(conn)
-                meta.createIndex(conn, PgIndex.tn_pkey)
+                //meta.createIndex(conn, PgIndex.tn_pkey)
                 meta.createIndex(conn, PgIndex.id_unique)
                 for (index in indices) {
                     if (index != PgIndex.tn_pkey
@@ -200,7 +200,7 @@ open class PgMap internal constructor(
 
         val head = collection.headTable
         head.create(conn)
-        head.createIndex(conn, PgIndex.tn_pkey)
+        //head.createIndex(conn, PgIndex.tn_pkey)
         head.createIndex(conn, PgIndex.id_unique)
         for (index in indices) {
             if (index != PgIndex.tn_pkey
@@ -213,7 +213,7 @@ open class PgMap internal constructor(
         val deleted = collection.deletedTable
         if (deleted != null) {
             deleted.create(conn)
-            deleted.createIndex(conn, PgIndex.tn_pkey)
+            //deleted.createIndex(conn, PgIndex.tn_pkey)
             deleted.createIndex(conn, PgIndex.id_unique)
             for (index in indices) {
                 if (index != PgIndex.tn_pkey
@@ -227,7 +227,7 @@ open class PgMap internal constructor(
         val meta = collection.metaTable
         if (meta != null) {
             meta.create(conn)
-            meta.createIndex(conn, PgIndex.tn_pkey)
+            //meta.createIndex(conn, PgIndex.tn_pkey)
             meta.createIndex(conn, PgIndex.id_unique)
             for (index in indices) {
                 if (index != PgIndex.tn_pkey
@@ -243,7 +243,7 @@ open class PgMap internal constructor(
             history.create(conn)
             history.createYear(conn, NOW.year)
             history.createYear(conn, NOW.year + 1)
-            history.createIndex(conn, PgIndex.tn_pkey)
+            //history.createIndex(conn, PgIndex.tn_pkey)
             for (index in indices) {
                 if (index != PgIndex.tn_pkey) {
                     history.createIndex(conn, index)

@@ -3,6 +3,7 @@ package naksha.psql
 import naksha.base.Int64
 import naksha.base.IntMutable
 import naksha.model.Version
+import naksha.model.illegalState
 import naksha.model.objects.NakshaTx
 
 /**
@@ -115,6 +116,68 @@ internal abstract class PgWriterBase protected constructor(
             return if (partitions <= 1) "-1: ${writes.size}"
             else featureCountByPartition.entries.joinToString(", ") { "${it.key}=${it.value.value}" }
         }
+
+    /**
+     * If this write should be done into a partition.
+     */
+    val writeIntoPartition: Boolean = partition >= 0
+
+    /**
+     * The year when the transaction started, for transactions and history writes.
+     */
+    val year: Int = tx.version.year
+
+    private fun initHeadTable(): PgTable {
+        if (writeIntoPartition) {
+            return collection.headTable.partitions[partition]
+        }
+        if (collection.headTable is PgTransactions) {
+            val transactions = collection.headTable as PgTransactions
+            var table = transactions.years[year]
+            if (table == null) {
+                transactions.addYear(year)
+                table = transactions.years[year]
+                if (table == null) {
+                    throw illegalState("Internal error, failed to add transaction year $year")
+                }
+            }
+            return table
+        }
+        return collection.headTable
+    }
+
+    /**
+     * The head table to write into.
+     */
+    val headTable: PgTable = initHeadTable()
+
+    private fun initShadowTable(): PgTable? {
+        val deletedTable = collection.deletedTable ?: return null
+        return if (writeIntoPartition) deletedTable.partitions[partition] else deletedTable
+    }
+
+    /**
+     * The shadow table to write into.
+     */
+    val shadowTable: PgTable? = initShadowTable()
+
+    private fun initHistoryTable(): PgTable? {
+        val hst = collection.historyTable ?: return null
+        var yearTable: PgHistoryYear? = hst.years[year]
+        if (yearTable == null) {
+            hst.addYear(year)
+            yearTable = hst.years[year]
+            if (yearTable == null) {
+                throw illegalState("Internal error, failed to add history year $year")
+            }
+        }
+        return if (writeIntoPartition) yearTable.partitions[partition] else yearTable
+    }
+
+    /**
+     * The history table to write into, if any.
+     */
+    val historyTable: PgTable? = initHistoryTable()
 
     /**
      * Execute the operation.

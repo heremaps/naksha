@@ -33,11 +33,6 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
     }
 
     private fun plan(conn: PgConnection, collection: PgCollection): PgPlan {
-        val headTable = if (partition >= 0) collection.headTable.partitions[partition] else collection.headTable
-        val deletedTable = collection.deletedTable
-        val shadowTable: PgTable? = if (deletedTable != null && partition >= 0) deletedTable.partitions[partition] else deletedTable
-        val hstYear = collection.historyTable?.get(version)
-        val historyTable = if (hstYear != null && partition >= 0) hstYear.partitions[partition] else hstYear
         val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
 
         // All input provided by client (the updates)

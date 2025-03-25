@@ -2,7 +2,9 @@
 
 package naksha.psql
 
+import naksha.model.illegalState
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
+import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -10,30 +12,62 @@ import kotlin.jvm.JvmStatic
 
 /**
  * Information about a single database table.
- * @property collection the collection to which the table belongs.
- * @property name the table-name.
- * @property storageClass the storage-class where the table is located.
- * @property isVolatile if the table is volatile (is updated often); _false_ only for history tables.
- * @property partitionOfTable the parent table, if this is a partition of it.
- * @property partitionOfValue if this is a partition of a yearly history table, the year; otherwise, if this is a performance partition, the index in the partitions array, so a value between 0 and n, with n being `partitionOf.partitionCount - 1`.
- * @property partitionByColumn the column by which to partition.
- * @property partitionCount the amount of partitions, must be `0` when [partitionByColumn] is `null` or a value between `2` and 65536` _(exclusive)_, for fixed partition count.
+ * @see [PgHead]
+ * @see [PgTransactions]
+ * @see [PgDeleted]
+ * @see [PgHistory]
+ * @see [PgMeta]
  */
 @JsExport
 open class PgTable(
+    /**
+     * The collection to which the table belongs.
+     * @since 3.0
+     */
     @JvmField val collection: PgCollection,
+    /**
+     * The table-name.
+     * @since 3.0
+     */
     @JvmField val name: String,
+    /**
+     * The storage-class where the table is located.
+     * @since 3.0
+     */
     @JvmField val storageClass: PgStorageClass,
+    /**
+     * If the table is volatile (is updated often); `false` only for history tables.
+     * @since 3.0
+     */
     @JvmField val isVolatile: Boolean,
+    /**
+     * The parent table, if this is a partition of it.
+     * @since 3.0
+     */
     @JvmField val partitionOfTable: PgTable? = null,
+    /**
+     * If this is a partition of a [history table][PgHistory], the year; otherwise, if this is a performance partition, the index in the partitions array, so a value between 0 and n, with n being `partitionOf.partitionCount - 1`.
+     * @since 3.0
+     */
     @JvmField val partitionOfValue: Int = -1,
+    /**
+     * The column by which to partition, if this is a partitioned table; must be either [PgColumn.tn] or [PgColumn.next_tn].
+     * @since 3.0
+     */
     @JvmField val partitionByColumn: PgColumn? = null,
+    /**
+     * If this table is performance-partitioned, the amount of partitions, therefore
+     * - `0` when [partitionByColumn] is `null`
+     * - `0` when [partitionByColumn] is [PgColumn.next_tn], so the partitions are years.
+     * - `2 .. 1000` when [partitionByColumn] is [PgColumn.tn], so this is a performance-partitioned table.
+     * @since 3.0
+     */
     @JvmField val partitionCount: Int = 0
 ) {
 
     companion object PgTableCompanion {
         /**
-         * Tests if this is any HEAD table.
+         * Tests if this is any HEAD table _(either root or a performance-partition)_.
          * @param name the table name.
          * @return _true_ if this is any HEAD table.
          */
@@ -42,18 +76,18 @@ open class PgTable(
         fun isAnyHead(name: String): Boolean = isHead(name) || isHeadPartition(name)
 
         /**
-         * Tests if this is the root HEAD table or partition.
+         * Tests if this is the root HEAD table.
          * @param name the relation name.
-         * @return _true_ if this is the root HEAD table or partition.
+         * @return _true_ if this is the root HEAD table.
          */
         @JvmStatic
         @JsStatic
         fun isHead(name: String): Boolean = name.indexOf(PG_S) < 0 // does not contain a separator
 
         /**
-         * Tests if this is a partition of the HEAD table.
+         * Tests if this is a performance-partition of the HEAD table.
          * @param name the table name.
-         * @return _true_ if this is a partition of the HEAD table.
+         * @return _true_ if this is a performance-partition of the HEAD table.
          */
         @JvmStatic
         @JsStatic
@@ -78,9 +112,9 @@ open class PgTable(
         fun isDeleted(name: String): Boolean = name.endsWith(PG_DEL) // {name}$del
 
         /**
-         * Tests if this is a partition of the DELETED table.
+         * Tests if this is a performance-partition of the DELETED table.
          * @param name the table name.
-         * @return _true_ if this is a partition of the DELETED table.
+         * @return _true_ if this is a performance-partition of the DELETED table.
          */
         @JvmStatic
         @JsStatic
@@ -114,9 +148,9 @@ open class PgTable(
         fun isHistory(name: String): Boolean = name.endsWith("${PG_S}${PG_HST}") // {name}$hst
 
         /**
-         * Tests if this is a monthly partition of HISTORY, but not a partition.
+         * Tests if this is a year-partition of HISTORY, but not a performance-partition.
          * @param name the table name.
-         * @return _true_ if this is a monthly partition of HISTORY.
+         * @return _true_ if this is a year-partition of HISTORY.
          */
         @JvmStatic
         @JsStatic
@@ -124,9 +158,9 @@ open class PgTable(
             name.lastIndexOf(PG_YEAR) == (name.length - "${PG_YEAR}????".length) // end with $y????
 
         /**
-         * Tests if this is a sub-partition of a monthly HISTORY partition.
+         * Tests if this is a performance-partition of a HISTORY year-partition.
          * @param name the table name.
-         * @return _true_ if this is a sub-partition of a monthly HISTORY partition.
+         * @return _true_ if this is a performance-partition of a monthly HISTORY year-partition.
          */
         @JvmStatic
         @JsStatic
@@ -150,58 +184,70 @@ open class PgTable(
     @JvmField
     val quotedName: String = quoteIdent(name)
 
-    /**
-     * The SQL code needed to create the table.
-     * @return the SQL code needed to create the table.
-     */
-    @JvmField
-    internal val CREATE_SQL: String
+    private fun doInit(): Triple<String?, String?, String?> {
+        // Copy to stack, makes it easier for the compiler to remember when values are not null!
+        val partitionByColumn = this.partitionByColumn
+        val partitionCount = this.partitionCount
+        val parentTable = partitionOfTable
+        val partValue = partitionOfValue
+        val superTable: PgTable?
 
-    @JvmField
-    internal val CREATE_TABLE: String
-
-    @JvmField
-    internal val TABLESPACE: String
-
-    init {
-        // Sanity check only.
-        if (partitionByColumn == null) require(partitionCount == 0) {
-            "No partitioning, but partitionCount ($partitionCount) given for table '$name'"
-        } else {
-            // Note: We allow partitionBy to be set, with partitionCount being 0 or 2..256
-            require(partitionCount == 0 || partitionCount in 2..65535) {
-                "Invalid number of partitions for '$name', must bei 0 or 2 to 65535, given $partitionCount"
+        // If this is a child table
+        if (parentTable != null) {
+            require(parentTable.partitionByColumn != null) {
+                "The table '${name}' is a partition of '${parentTable.name}', but the parent does not declare 'partitionBy'"
             }
-        }
-        if (partitionOfTable != null) {
-            val parent = partitionOfTable
-            require(parent.partitionByColumn != null) {
-                "The table '${name}' is a partition of '${parent.name}', but the parent does not declare 'partitionBy'"
-            }
-            val pofValue = partitionOfValue
-            when (parent.partitionByColumn) {
+            superTable = parentTable.partitionOfTable
+            when (parentTable.partitionByColumn) {
                 PgColumn.tn -> {
-                    require(pofValue >= 0 && pofValue < parent.partitionCount) {
-                        """The table '$name' is a partition of '${parent.name}', but does not declare a valid 'partitionOfValue' (0 to ${parent.partitionCount}): $pofValue"""
+                    require(partValue >= 0 && partValue < parentTable.partitionCount) {
+                        """The table '$name' is a partition of '${parentTable.name}', but does not declare a valid 'partitionOfValue' (0 to ${parentTable.partitionCount}): $partValue"""
                     }
                 }
 
                 PgColumn.next_tn -> {
-                    require(pofValue in 2000..6000) {
-                        """The table '$name' is a partition of '${parent.name}', but does not declare a valid 'partitionOfValue' (expect a year): $pofValue"""
+                    require(partValue in 2000..2200) {
+                        """The table '$name' is a partition of '${parentTable.name}', but does not declare a valid 'partitionOfValue' (expect a year): $partValue"""
                     }
                 }
 
                 else -> throw IllegalArgumentException(
-                    """The table '$name' is partitioned by invalid column: ${parent.partitionByColumn} (must be ${PgColumn.tn.name} or ${PgColumn.next_tn.name})"""
+                    """The table '$name' is partitioned by invalid column: ${parentTable.partitionByColumn} (must be ${PgColumn.tn.name} or ${PgColumn.next_tn.name})"""
                 )
             }
+        } else {
+            superTable = null
         }
+
+        // If this table is partitioned.
+        if (partitionByColumn != null) {
+            when (partitionByColumn) {
+                PgColumn.tn -> {
+                    require(partitionCount in 2..1000) { "Invalid partition-count, expect 2 .. 1000, found : $partitionCount" }
+                }
+                // This is used in transaction table and history table, partition by year.
+                PgColumn.next_tn -> {
+                    require(partitionCount == 0) { "Invalid partition-count, expect 0, found : $partitionCount" }
+                }
+
+                else -> throw IllegalArgumentException("Unsupported partitionByColumn: '$partitionByColumn'")
+            }
+            // As this is a partitioned table, we do not create it.
+            return Triple(null, null, null)
+        }
+        // This table is not partitioned, so we need to create it.
+        require(partitionCount == 0) {
+            "No partitioning, but partitionCount ($partitionCount) given for table '$name'"
+        }
+
         val storage = collection.map.storage
+        val CREATE_TABLE: String
+        val TABLESPACE: String
         when (storageClass) {
             PgStorageClass.Ephemeral -> {
                 CREATE_TABLE = "CREATE TABLE IF NOT EXISTS "
-                TABLESPACE = if (storage.adminMap.ephemeralTableSpace != null) " TABLESPACE ${storage.adminMap.ephemeralTableSpace}" else ""
+                TABLESPACE =
+                    if (storage.adminMap.ephemeralTableSpace != null) " TABLESPACE ${storage.adminMap.ephemeralTableSpace}" else ""
             }
 
             PgStorageClass.Brittle -> {
@@ -219,38 +265,74 @@ open class PgTable(
                 TABLESPACE = ""
             }
         }
-        // Note: The rowid is important to implement fetch:
-        // SELECT * FROM table WHERE rowid = ANY($1::bytea[]);
-        // aka: SELECT * FROM table WHERE rowid = ANY(array[(int8send($txn)||int4send($uid)||int4send($flags)), ...]::bytea[]);
-        // SELECT array_agg(rowid) AS rowid_arr FROM table WHERE ...;
-        val TABLE_BODY = PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }
-        // See: https://www.ongres.com/blog/toast_and_its_influences_-on_parallelism_in_postgres/
-        // parallel_workers: A storage parameter for tables, that allows change the behavior of number of workers to
-        // execute a query activity in parallel, similar to max_parallel_workers_per_gather, but only for a specific table;
-        // ALTER TABLE tabname SET (parallel_workers = N);
-        val WITH = if (partitionByColumn == null)
-            "WITH (fillfactor=${if (isVolatile) 90 else 100},toast_tuple_target=1024)"
-        else
-            ""
-        val PARTITION_BY = when (partitionByColumn) {
-            // Not partitioned by itself.
-            null -> ""
-            // The tuple_number contains the partition-number in the top 8-bit (due to big-endian encoding).
-            PgColumn.tn -> {
-                require(partitionCount in 2..256) { "Invalid partition-count, expect 2 .. 256, found : $partitionCount" }
-                "PARTITION BY RANGE (naksha_partition_index(naksha_tn_feature_number(${PgColumn.tn}), $partitionCount))"
+        val YEARLY_CHECK: String
+        val PARTITION_CHECK: String
+        if (parentTable != null) {
+            // Partition of some kind.
+            if (superTable != null) {
+                // If the super-table is not null, then this must be a performance table of history, as we have two
+                // levels above us, which only happens for history, where we have:
+                // HISTORY (super), then YEARLY (parent), then PARTITION (this)
+                val superPartValue = parentTable.partitionOfValue
+                if (superPartValue !in 2000..2200) {
+                    throw illegalState("The table '${parentTable.name}' is a yearly partition with an illegal value for year: $superPartValue")
+                }
+                val partCount = parentTable.partitionCount
+                if (partValue !in 0 ..< partCount) {
+                    throw illegalState("The table '${name}' is performance-partitioned with an partition-number being illegal: $partValue; expected 0 till $partCount")
+                }
+                YEARLY_CHECK = ",CONSTRAINT ${quoteIdent(name + PG_YEAR_CONSTRAINT)} CHECK (next_tn IS NOT NULL AND naksha_tn_year(next_tn)=${superPartValue})\n"
+                PARTITION_CHECK = ",CONSTRAINT ${quoteIdent(name + PG_PART_CONSTRAINT)} CHECK (naksha_tn_partition_index(tn, $partCount)=$partValue)\n"
+            } else if (parentTable.partitionByColumn == PgColumn.next_tn) {
+                // This is a yearly partition, which only happens for transactions table!
+                if (partValue !in 2000..2200) {
+                    throw illegalState("The table '${parentTable.name}' is a yearly partition with an illegal value for year: $partValue")
+                }
+                YEARLY_CHECK = ",CONSTRAINT ${quoteIdent(name + PG_YEAR_CONSTRAINT)} CHECK (next_tn IS NOT NULL AND naksha_tn_year(next_tn)=$partValue)\n"
+                PARTITION_CHECK = ""
+            } else if (parentTable.partitionByColumn == PgColumn.tn) {
+                val partCount = parentTable.partitionCount
+                // This is a performance partition, without year on top.
+                if (partValue !in 0 ..< partCount) {
+                    throw illegalState("The table '${name}' is performance-partitioned with an partition-number being illegal: $partValue; expected 0 till $partCount")
+                }
+                YEARLY_CHECK = ""
+                PARTITION_CHECK = ",CONSTRAINT ${quoteIdent(name + PG_PART_CONSTRAINT)} CHECK (naksha_tn_partition_index(tn, $partCount)=$partValue)\n"
+            } else {
+                throw illegalState("Table '${name}' is partition by '${parentTable.partitionByColumn}', this is not supported")
             }
-            // This is used in transaction table and history table, partition by year.
-            PgColumn.next_tn -> "PARTITION BY RANGE (naksha_version_year(naksha_tn_version(${partitionByColumn.name})))"
-            else -> throw IllegalArgumentException("Unsupported partitionByColumn: '$partitionByColumn'")
-        }
-        if (partitionOfTable != null) {
-            val PARTITION_OF = """ PARTITION OF ${partitionOfTable.quotedName} FOR VALUES FROM (${partitionOfValue}) TO (${partitionOfValue + 1}) """
-            CREATE_SQL = """$CREATE_TABLE $quotedName ${PARTITION_OF}${PARTITION_BY}${WITH}${TABLESPACE}"""
         } else {
-            val PKEY = if (PARTITION_BY.isEmpty()) ",\nCONSTRAINT ${quoteIdent(name,"_pkey")} PRIMARY KEY (tn)" else ""
-            CREATE_SQL = "$CREATE_TABLE $quotedName (${TABLE_BODY}$PKEY)\n${PARTITION_BY}\n${WITH}${TABLESPACE}"
+            // Normal table, for example standard HEAD, DELETE or META
+            PARTITION_CHECK = ""
+            YEARLY_CHECK = ""
         }
+        val SQL = """$CREATE_TABLE $quotedName (
+${PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }},
+CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.tn})
+$YEARLY_CHECK$PARTITION_CHECK)
+WITH (fillfactor=${if (isVolatile) 85 else 100},toast_tuple_target=1024)
+$TABLESPACE"""
+        return Triple(SQL, CREATE_TABLE, TABLESPACE)
+    }
+
+    /**
+     * The SQL code needed to create the table.
+     * @return the SQL code needed to create the table.
+     */
+    @JvmField
+    internal val CREATE_SQL: String?
+
+    @JvmField
+    internal val CREATE_TABLE: String?
+
+    @JvmField
+    internal val TABLESPACE: String?
+
+    init {
+        val (CREATE_SQL, CREATE_TABLE, TABLESPACE) = doInit()
+        this.CREATE_SQL = CREATE_SQL
+        this.CREATE_TABLE = CREATE_TABLE
+        this.TABLESPACE = TABLESPACE
     }
 
     /**
@@ -274,7 +356,9 @@ open class PgTable(
     /**
      * Create the table and its partitions.
      */
-    internal open fun create(conn: PgConnection) = conn.execute(CREATE_SQL).close()
+    internal open fun create(conn: PgConnection) {
+        if (CREATE_SQL != null) conn.execute(CREATE_SQL).close()
+    }
 
     /**
      * Creates the given index to the table and all partitions.

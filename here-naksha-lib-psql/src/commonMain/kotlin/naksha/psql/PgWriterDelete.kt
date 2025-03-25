@@ -28,10 +28,6 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
     }
 
     private fun plan(conn: PgConnection, collection: PgCollection, purge: Boolean): PgPlan {
-        // Note: Deletes never enter
-        val headTable = collection.headTable
-        val shadowTable = collection.deletedTable
-        val historyTable = collection.historyTable
         // We do not insert into shadow, if the table does not exist, is disabled, or we are asked to PURGE
         val insert_into_shadow = if (!purge && shadowTable != null && collection.head.storeDeleted == StoreMode.ON) shadowTable else null
         // We do not insert into history, if the table does not exist, or is disabled
@@ -45,13 +41,13 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
         val return_tuple = !do_any_insert || (purge && insert_into_history == null)
 
         // All input provided by client, `id` and optionally `version`, and `uid`
-        val query = """WITH query AS NOT MATERIALIZED (
+        val query = """WITH query AS (
   SELECT * FROM UNNEST($1, $2, $3) AS t(id, version, uid)
 )"""
 
         // select `id` and `tn` of all rows that match query.id
         // TODO: we could allow a search filter here, so extended WHERE query!
-        val head_select = """, head_select AS NOT MATERIALIZED (
+        val head_select = """, head_select AS (
   SELECT head.id AS id, head.tn AS tn
   FROM ${headTable.quotedName} AS head, query
   WHERE head.id = query.id
@@ -59,7 +55,7 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
 
         // If the client requested an atomic deleted, so it provided a `version`, then
         // we only delete the head row, when the version matches.
-        val head_row = """, head_row AS NOT MATERIALIZED (
+        val head_row = """, head_row AS (
   SELECT ${allColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
   FROM ${headTable.quotedName} AS head, query
   WHERE head.id = query.id AND (query.version IS NULL OR query.version = naksha_tn_version(head.tn))
