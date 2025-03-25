@@ -8,7 +8,10 @@ import kotlin.js.JsName
 import kotlin.jvm.JvmField
 
 /**
- * The HISTORY table, partitioned by `txn_next`.
+ * The HISTORY table, partitioned by [next_tn][PgColumn.next_tn].
+ * @since 3.0
+ * @see [PgTable]
+ * @see [PgHistoryYear]
  */
 @JsExport
 class PgHistory(val head: PgHead) : PgTable(
