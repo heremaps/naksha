@@ -43,11 +43,12 @@ class Plv8PerfTest : PgTestBase(
 ) {
     companion object {
         val featureSource = JSON_TOPOLOGY_SMALL
-        val NUM_OF_CPU = Runtime.getRuntime().availableProcessors()
-        val NUM_OF_PARTITIONS = 8
-        val numberOfBatches = NUM_OF_PARTITIONS * 2
-        val numberOfFeaturesInBatch = 200
-        val concurrency = NUM_OF_PARTITIONS
+        val NUM_OF_PARTITIONS = 4
+        val OVERLOAD_FACTOR = 8
+        val BATCHES_PER_WORKER = 2
+        val FEATURES_PER_BATCH = 100
+        val numberOfBatches = NUM_OF_PARTITIONS * BATCHES_PER_WORKER * OVERLOAD_FACTOR
+        val concurrency = NUM_OF_PARTITIONS * OVERLOAD_FACTOR
 
         val jsonPath = Companion::class.java.getResource("/topology.json")
         val json = Files.readString(Paths.get(jsonPath.toURI()))
@@ -68,7 +69,7 @@ class Plv8PerfTest : PgTestBase(
         // Prepare
         val batchRequests = mutableListOf<WriteRequest>()
         for (i in 1..numberOfBatches) {
-            val featuresInBatch = generateFeatures(featureSource, numberOfFeaturesInBatch)
+            val featuresInBatch = generateFeatures(featureSource, FEATURES_PER_BATCH)
             val writeFeaturesReq = WriteRequest().apply {
                 featuresInBatch.forEach { featureToCreate ->
                     add(Write().createFeature(collection, featureToCreate))
@@ -78,7 +79,7 @@ class Plv8PerfTest : PgTestBase(
         }
 
         // Execute
-        println("Starting $numberOfBatches batches, $numberOfFeaturesInBatch features each, on $concurrency threads.")
+        println("Starting $numberOfBatches batches, $FEATURES_PER_BATCH features each, on $concurrency threads.")
         executeParallel(concurrency, batchRequests)
     }
 
@@ -88,7 +89,7 @@ class Plv8PerfTest : PgTestBase(
         // Prepare
         val batchRequests = mutableListOf<WriteRequest>()
         for (i in 1..numberOfBatches) {
-            val featuresInBatch = generateFeatures(featureSource, numberOfFeaturesInBatch)
+            val featuresInBatch = generateFeatures(featureSource, FEATURES_PER_BATCH)
 
             val writeFeaturesReq = WriteRequest().apply {
                 featuresInBatch.forEach { featureToCreate ->
@@ -99,7 +100,7 @@ class Plv8PerfTest : PgTestBase(
         }
 
         // Execute
-        println("Starting $numberOfBatches batches, $numberOfFeaturesInBatch features each, on $concurrency threads.")
+        println("Starting $numberOfBatches batches, $FEATURES_PER_BATCH features each, on $concurrency threads.")
         executeParallel(concurrency, batchRequests)
     }
 
@@ -109,7 +110,7 @@ class Plv8PerfTest : PgTestBase(
         val numberOfBatchesPerPartition = numberOfBatches / NUM_OF_PARTITIONS
 
         // Prepare
-        val allFeatures = generateFeatures(featureSource, numberOfFeaturesInBatch * numberOfBatches)
+        val allFeatures = generateFeatures(featureSource, FEATURES_PER_BATCH * numberOfBatches)
         val groupedFeatures =
             allFeatures.groupBy { "${partitionNumber(featureNumber(it.id)) % NUM_OF_PARTITIONS}_${Random.nextInt(0, numberOfBatchesPerPartition)}" }
 
@@ -124,9 +125,14 @@ class Plv8PerfTest : PgTestBase(
         }
 
         // Execute
-        println("Starting $numberOfBatches batches, $numberOfFeaturesInBatch features each, on $concurrency threads.")
+        println("Starting $numberOfBatches batches, $FEATURES_PER_BATCH features each, on $concurrency threads.")
         executeParallel(concurrency, batchRequests)
     }
+
+// TODO: Fix the test, as it does not group correctly!
+//    fun groupByPartition(features: List<NakshaFeature>): Map<Int, List<NakshaFeature>> {
+//        val group = mutableMapOf<Int, List<NakshaFeature>>()
+//    }
 
     //@Ignore
     @Test
@@ -134,7 +140,9 @@ class Plv8PerfTest : PgTestBase(
         val numberOfBatchesPerPartition = numberOfBatches / NUM_OF_PARTITIONS
 
         // Prepare
-        val allFeatures = generateFeatures(featureSource, numberOfFeaturesInBatch * numberOfBatches)
+        val allFeatures = generateFeatures(featureSource, FEATURES_PER_BATCH * numberOfBatches)
+        allFeatures[0].id = "A7l9RsIxWZCp2I6i3wXo" // fn=-6293233423437375615, pn=22401
+        allFeatures[1].id = "A6ixOLtAZF8IhKez25zY" // fn=-318328739946057960, pn=44824
         val groupedFeatures =
             allFeatures.groupBy { "${partitionNumber(featureNumber(it.id)) % NUM_OF_PARTITIONS}_${Random.nextInt(0, numberOfBatchesPerPartition)}" }
 
@@ -149,7 +157,7 @@ class Plv8PerfTest : PgTestBase(
         }
 
         // Execute
-        println("Starting $numberOfBatches batches, $numberOfFeaturesInBatch features each, on $concurrency threads.")
+        println("Starting $numberOfBatches batches, $FEATURES_PER_BATCH features each, on $concurrency threads.")
         executeParallel(concurrency, batchRequests)
     }
 
