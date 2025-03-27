@@ -19,9 +19,8 @@
 package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
-import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
-import static com.here.naksha.app.common.TestUtil.parseJsonFileOrFail;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
@@ -97,7 +96,7 @@ class DeleteFeatureTest extends ApiTest {
     response = nakshaClient
         .delete(
             "hub/spaces/" + SPACE_ID
-                + "/features?id=non-existing-phantom-feature&id=feature-1-to-delete&id=feature-2-to-delete",
+            + "/features?id=non-existing-phantom-feature&id=feature-1-to-delete&id=feature-2-to-delete",
             streamId);
 
     // Then: Perform assertions

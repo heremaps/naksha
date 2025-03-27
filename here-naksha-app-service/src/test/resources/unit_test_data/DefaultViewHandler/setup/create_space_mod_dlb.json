@@ -9,6 +9,7 @@
   "properties": {
     "collection": {
       "id": "topologies_dlb",
+      "mapId": "naksha-client-test-map",
       "type": "NakshaCollection"
     }
   }

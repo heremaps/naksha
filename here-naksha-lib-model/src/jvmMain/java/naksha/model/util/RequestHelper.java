@@ -171,8 +171,10 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull WriteRequest deleteFeaturesByIdsRequest(
-      final @NotNull String collectionId, final @NotNull List<String> ids) {
-    return deleteFeaturesByIdsRequest(new NakshaCollection(collectionId), ids);
+      final @NotNull String mapId,
+      final @NotNull String collectionId,
+      final @NotNull List<String> ids) {
+    return deleteFeaturesByIdsRequest(new NakshaCollection(collectionId, mapId), ids);
   }
 
   /**

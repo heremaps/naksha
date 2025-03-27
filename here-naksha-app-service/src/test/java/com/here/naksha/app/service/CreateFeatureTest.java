@@ -324,7 +324,7 @@ class CreateFeatureTest extends ApiTest {
                 {
                 "type": "FeatureCollection",
                 "features": [
-                """ + feature + "]}",
+                """ + Platform.toJSON(feature) + "]}",
             streamId);
 
     // Perform first assertions
@@ -343,7 +343,7 @@ class CreateFeatureTest extends ApiTest {
                 {
                 "type": "FeatureCollection",
                 "features": [
-                """ + feature + "]}",
+                """ + Platform.toJSON(feature) + "]}",
             streamId);
 
     // Perform second assertions
@@ -358,7 +358,7 @@ class CreateFeatureTest extends ApiTest {
                 {
                 "type": "FeatureCollection",
                 "features": [
-                """ + feature + "]}",
+                """ + Platform.toJSON(feature) + "]}",
             streamId);
 
     // Perform third assertions
@@ -422,8 +422,7 @@ class CreateFeatureTest extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasResBodySizeGTE(expBodySize)
-    ;
+        .hasResBodySizeGTE(expBodySize);
 
     // When: We query the same Feature from NakshaHub
     streamId = UUID.randomUUID().toString();
@@ -434,8 +433,7 @@ class CreateFeatureTest extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasResBodySizeGTE(expBodySize)
-    ;
+        .hasResBodySizeGTE(expBodySize);
   }
 
 }

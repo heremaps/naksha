@@ -213,7 +213,10 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     // Parse API parameters
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
 
-    final WriteRequest wrRequest = RequestHelper.deleteFeaturesByIdsRequest(spaceId, features);
+    // retrieve mapId for this space
+    String mapId = spaceMapResolver.getMapIdForSpace(spaceId);
+
+    final WriteRequest wrRequest = RequestHelper.deleteFeaturesByIdsRequest(mapId, spaceId, features);
 
     // Forward request to NH Space Storage writer instance
     Response response = executeWriteRequestFromSpaceStorage(wrRequest);

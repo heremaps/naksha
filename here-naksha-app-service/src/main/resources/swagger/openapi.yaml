@@ -2287,6 +2287,7 @@ components:
           example: 1234567890123
           format: int64
           readOnly: true
+          nullable: true
           type: integer
         updatedAt:
           description: >-
