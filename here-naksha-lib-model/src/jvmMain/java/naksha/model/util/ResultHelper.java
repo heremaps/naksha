@@ -23,6 +23,7 @@ import static naksha.base.Platform.javaProxy;
 import static naksha.base.Platform.klassFor;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -137,7 +138,7 @@ public class ResultHelper {
           SuccessResponse result, Class<T> featureType, long limit) {
     final NakshaFeatureList features = result.getFeatures();
     if (features.isEmpty()) {
-      throw new NoSuchElementException("Empty SuccessResponse");
+      return Collections.emptyMap();
     }
     final List<T> insertedFeatures = new ArrayList<>();
     final List<T> updatedFeatures = new ArrayList<>();
@@ -169,10 +170,10 @@ public class ResultHelper {
    * @param result      the Result which is to be read
    * @param featureType the type of feature to be extracted from result
    * @param <R>         type of feature
-   * @return a map grouping the lists of features extracted from ReadResult
+   * @return a map grouping the lists of features extracted from ReadResult (might be Map.empty())
    */
   public static <R extends NakshaFeature> Map<Action, List<R>> readFeaturesGroupedByAction(
-      SuccessResponse result, Class<R> featureType) throws NoSuchElementException {
+      SuccessResponse result, Class<R> featureType) {
     return readFeaturesGroupedByAction(result, featureType, Long.MAX_VALUE);
   }
 }
