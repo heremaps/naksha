@@ -471,7 +471,7 @@ actual class GeoUtil private actual constructor() {
             if (geometry == null) return null
             val writer = TWKBWriter()
             writer.setXYPrecision(7)
-            val coordinates = geometry.getCoordinates()
+            val coordinates = geometry.getCoordinates() // TODO: getCoordinates is broken when coords are itns
             if (coordinates.hasZ()) {
                 writer.setEncodeZ(true)
                 writer.setZPrecision(7)
