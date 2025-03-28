@@ -2,7 +2,7 @@
   "id": "${dataDb.storageId}",
   "type": "Storage",
   "title": "Test PSQL storage",
-  "description": "PSQL storage instance for testing purpose",
+  "description": "PSQL storage instance for testing purpose - by design shared by other tests",
   "className": "naksha.psql.PsqlStorage",
   "master": {
     "host": "${dataDb.host}",

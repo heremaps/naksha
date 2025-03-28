@@ -1,20 +1,38 @@
 package com.here.naksha.app.common;
 
-import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CommonApiTestSetup {
 
-  private static final String CREATE_STORAGE_JSON = "create_storage.json";
+  private static final Logger logger = LoggerFactory.getLogger(CommonApiTestSetup.class);
+  private static final String COMMON_STORAGE_JSON = "create_common_storage.json";
+
   private static final String CREATE_HANDLER_JSON = "create_event_handler.json";
   private static final String CREATE_SPACE_JSON = "create_space.json";
 
   private CommonApiTestSetup() {
+  }
+
+  /**
+   * Creates storage that is meant to be used by most of REST tests. This method should be run once per test suite run.
+   *
+   * @param nakshaClient web client that will send REST request
+   */
+  public static void setupCommonStorage(NakshaTestWebClient nakshaClient) {
+    try {
+      logger.info("Setting up common storage from file: '{}'", COMMON_STORAGE_JSON);
+      createStorage(nakshaClient, COMMON_STORAGE_JSON);
+    } catch (URISyntaxException | IOException | InterruptedException e) {
+      throw new RuntimeException("Unable to setup common storage", e);
+    }
   }
 
   /**
@@ -27,7 +45,6 @@ public class CommonApiTestSetup {
    */
   public static void setupSpaceAndRelatedResources(NakshaTestWebClient nakshaClient, String setupDir) {
     try {
-      createStorage(nakshaClient, setupDir + "/" + CREATE_STORAGE_JSON);
       createHandler(nakshaClient, setupDir + "/" + CREATE_HANDLER_JSON);
       createSpace(nakshaClient, setupDir + "/" + CREATE_SPACE_JSON);
     } catch (URISyntaxException | IOException | InterruptedException e) {

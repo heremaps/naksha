@@ -23,7 +23,6 @@ import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
 import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJson;
-import static com.here.naksha.app.common.TestUtil.parseJsonFileOrFail;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.IGNORE_XYZ;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
