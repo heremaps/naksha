@@ -96,7 +96,7 @@ public class RequestSender {
         // response = sendRequest(request);
         break;
       } catch (Exception e) {
-        if (isRetryEligibleException(e)) {
+        if (isRetryEligibleException(e) && i < keyProps.maxRetries) {
           log.warn(
               "We got retryable exception while executing Http request against remote server. Current retry attempt {} of {}. ",
               i,
