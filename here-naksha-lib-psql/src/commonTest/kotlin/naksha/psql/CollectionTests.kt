@@ -3,9 +3,26 @@ package naksha.psql
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import naksha.base.StringList
 import naksha.model.Naksha
 import naksha.model.NakshaError
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.APP_ID_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.AUTHOR_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS0_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS1_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS2_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS3_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV0_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV1_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV2_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV3_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.FEATURE_TYPE_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_2D_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.REF_POINT_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
 import naksha.model.request.ErrorResponse
@@ -60,7 +77,7 @@ class CollectionTests : PgTestBase(null) {
     }
 
     @Test
-    fun collectionShouldHasAllDbColumns() {
+    fun collectionShouldHaveAllColumns() {
         val collection = NakshaCollection("check_db_columns_test")
         executeWrite(
             WriteRequest().add(
@@ -81,23 +98,42 @@ class CollectionTests : PgTestBase(null) {
     }
 
     @Test
-    fun collectionShouldHasAllDbIndices() {
+    fun collectionShouldHaveIndices() {
         val collection = NakshaCollection("check_db_indices_test")
+        val indices = StringList(
+            ID_IDX,
+            HERE_TILE_IDX,
+            APP_ID_IDX,
+            AUTHOR_IDX,
+            TAGS_IDX,
+            REF_POINT_IDX,
+            GIST_2D_IDX,
+            FEATURE_TYPE_IDX,
+            CV0_IDX,
+            CV1_IDX,
+            CV2_IDX,
+            CV3_IDX,
+            CS0_IDX,
+            CS1_IDX,
+            CS2_IDX,
+            CS3_IDX,
+        )
+        collection.withIndices(indices)
         executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
             )
         )
         val currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
-        checkAllDefaultIndicesCreatedForTable(collection.id)
-        checkAllDefaultIndicesCreatedForTable("${collection.id}\$meta")
-        checkAllDefaultIndicesCreatedForTable("${collection.id}\$del")
-        checkAllDefaultIndicesCreatedForTable("${collection.id}\$hst\$y$currentYear")
-        checkAllDefaultIndicesCreatedForTable("${collection.id}\$hst\$y${currentYear + 1}")
-        checkAllDefaultIndicesCreatedForTable("${collection.id}\$meta")
+        checkIndicesCreatedForTable(collection.id, indices)
+        checkIndicesCreatedForTable("${collection.id}\$meta", indices)
+        checkIndicesCreatedForTable("${collection.id}\$del", indices)
+        checkIndicesCreatedForTable("${collection.id}\$hst\$y$currentYear", indices)
+        checkIndicesCreatedForTable("${collection.id}\$hst\$y${currentYear + 1}", indices)
+        checkIndicesCreatedForTable("${collection.id}\$meta", indices)
     }
 
-    private fun checkAllDefaultIndicesCreatedForTable(tableName: String) {
+    private fun checkIndicesCreatedForTable(tableName: String, indices: StringList) {
         storage.adminConnection().use { conn ->
             conn.execute(
                 sql = "SELECT indexname FROM pg_indexes WHERE tablename = $1;",
@@ -105,10 +141,21 @@ class CollectionTests : PgTestBase(null) {
             ).use { cursor ->
                 val addedIndices = mutableListOf<String>()
                 while (cursor.next()) addedIndices.add(cursor["indexname"])
-                check((PgIndex.DEFAULT_INDICES.size - 1) <= addedIndices.size) { "Too few indices" }
-                PgIndex.DEFAULT_INDICES.forEach { defaultIndex ->
-                    check(addedIndices.contains(defaultIndex.id(tableName)) || defaultIndex==PgIndex.id) {
-                        "Missing index ${defaultIndex.name}"
+                check(indices.size <= addedIndices.size) { "Too few indices" }
+                indices.forEach { indexName ->
+                    check(indexName != null)
+                    val pgIndex = PgIndex.of(indexName)
+                    check(pgIndex != null)
+                    // Note: We know that the `id` index is replaced with `id_unique` internally for HEAD tables!
+                    if (pgIndex == PgIndex.id) {
+                        check(addedIndices.contains(pgIndex.id(tableName))
+                                || addedIndices.contains(PgIndex.id_unique.id(tableName))) {
+                            "Missing index ${pgIndex.name} aka $indexName"
+                        }
+                    } else {
+                        check(addedIndices.contains(pgIndex.id(tableName))) {
+                            "Missing index ${pgIndex.name} aka $indexName"
+                        }
                     }
                 }
             }
@@ -185,7 +232,7 @@ class CollectionTests : PgTestBase(null) {
     }
 
     @Test
-    fun collectionShouldHasNoDeleteDBTable() {
+    fun collectionShouldNotHaveDeleteTable() {
         val collectionId = "check_no_del_table_test"
         var collection = NakshaCollection(
             id = collectionId,
