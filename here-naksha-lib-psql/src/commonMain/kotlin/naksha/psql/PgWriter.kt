@@ -41,7 +41,8 @@ open class PgWriter internal constructor(
      * The database connection to use for modifications.
      * @since 3.0
      */
-    val conn: PgConnection = session.useConnection()
+    val conn: PgConnection
+        get() = session.useConnection()
 
     /**
      * The transaction to update with what was done.
@@ -189,15 +190,17 @@ open class PgWriter internal constructor(
         // Add the input-index.
         val targetWrites = ArrayList<PgWrite>(writes.size)
         for (i in 0 ..< writes.size) targetWrites.add(PgWrite(writes[i], i))
-
-        // Perform the writes, if any error happens, we will roll back the session to where it was before we started.
-        // Note: We must not close the connection, therefore no `session.useConnection().use {}`!
         val savepointId = PlatformUtil.randomString()
-        val conn = session.useConnection()
-        if (useSavepoint) conn.execute("SAVEPOINT \"$savepointId\"").close()
+        var conn: PgConnection? = null
         try {
+            // This can be time-consuming, unless the connection is already open, try not to open it before we do this!
             prepareWrite(targetWrites)
             val byMap = groupOperations(targetWrites)
+
+            // Perform the writes, if any error happens, we will roll back the session to where it was before we started.
+            // Note: We must not close the connection, therefore no `session.useConnection().use {}`!
+            conn = this.conn
+            if (useSavepoint) conn.execute("SAVEPOINT \"$savepointId\"").close()
             for (mapEntry in byMap) {
                 val map = mapEntry.key
                 val byCol = mapEntry.value
@@ -216,7 +219,7 @@ open class PgWriter internal constructor(
             // If everything worked out as expected, we can drop the savepoint.
             if (useSavepoint) conn.execute("RELEASE SAVEPOINT \"$savepointId\"").close()
         } catch (t: Throwable) {
-            if (useSavepoint) conn.execute("ROLLBACK TO SAVEPOINT \"$savepointId\"").close()
+            if (conn != null && useSavepoint) conn.execute("ROLLBACK TO SAVEPOINT \"$savepointId\"").close()
             throw PgExceptionMapper.map(t)
         }
 
@@ -262,19 +265,21 @@ open class PgWriter internal constructor(
         for (write in writes) {
             val featureId = write.original.id
             val mapId = write.original.mapId ?: throw illegalArg("The given write does not have a map-id")
-            val map = storage.adminMap.getPgMapById(conn, mapId) ?:
+            val map = storage.adminMap.getPgMapById(null, mapId) ?:
+                storage.adminMap.getPgMapById(conn, mapId) ?:
                 throw mapNotFound("The write #${write.i} refers to not existing map '$mapId'")
             write.map = map
 
             val colId = write.original.collectionId ?: throw illegalArg("The given write does not have a collection-id")
-            val collection = map.getPgCollectionById(conn, colId) ?:
+            val collection = map.getPgCollectionById(null, colId) ?:
+                map.getPgCollectionById(conn, colId) ?:
                 throw collectionNotFound("The write #${write.i} refers to not existing collection '$colId'")
             write.collection = collection
 
             // If this operation modifies a map.
             if (write.isMapModification) {
                 val op = write.op
-                var pgMap = storage.adminMap.getPgMapById(conn, write.id)
+                var pgMap = storage.adminMap.getPgMapById(null, write.id) ?: storage.adminMap.getPgMapById(conn, write.id)
 
                 val nakshaMap: NakshaMap?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
@@ -305,7 +310,7 @@ open class PgWriter internal constructor(
             // If this operation modifies a collection.
             if (write.isCollectionModification) {
                 val op = write.op
-                var pgCollection = map.getPgCollectionById(conn, write.id)
+                var pgCollection = map.getPgCollectionById(null, write.id) ?: map.getPgCollectionById(conn, write.id)
 
                 val nakshaCollection: NakshaCollection?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
