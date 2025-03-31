@@ -29,7 +29,7 @@ internal class PsqlStorageListener(storage: PsqlStorage) : Thread("lib-psql-list
             while (shutdown.get()) {
                 try {
                     if (conn == null) {
-                        conn = cluster.newConnection(adminOptions, false) as PsqlConnection
+                        conn = cluster.newConnection(adminOptions, false, null) as PsqlConnection
                         stmt = conn.jdbc.createStatement()
                         stmt.execute("LISTEN ${quoteIdent(channel)}")
                     }

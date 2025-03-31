@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.fn.Fx2
 import naksha.model.SessionOptions
 import kotlin.js.JsExport
 
@@ -64,7 +65,8 @@ interface PgInstance {
      * - Throws [naksha.model.NakshaError.ILLEGAL_ARGUMENT], if the instance is read-only (read-replica). and a write-connection is requested.
      * @param options the connection options.
      * @param readOnly if the connection should be read-only.
+     * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the connection. It may just use this string, perform arbitrary additional work, or suppress initialization completely.
      * @return the connection.
      */
-    fun openConnection(options: SessionOptions, readOnly: Boolean): PgConnection
+    fun openConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection
 }
