@@ -19,9 +19,19 @@ open class StringList() : ListProxy<String>(String::class){
      * @since 3.0
      */
     @JsName("fromStrings")
-    @JvmOverloads
     constructor(vararg strings: String) : this() {
         addAll(strings)
+    }
+
+    /**
+     * Adds the specified element to the end of this list.
+     * @param element the element to add.
+     * @return this.
+     * @since 3.0
+     */
+    fun append(element: String?): StringList {
+        super.add(element)
+        return this
     }
 
     companion object StringList_C {
