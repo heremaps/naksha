@@ -64,7 +64,7 @@ public class ResponseAssertions {
   }
 
   public ResponseAssertions hasStatus(int expectedStatus) {
-    Assertions.assertEquals(expectedStatus, subject.statusCode(), "Response status mismatch");
+    Assertions.assertEquals(expectedStatus, subject.statusCode(), "Response status mismatch, body:\n" + subject.body());
     return this;
   }
 

@@ -6,7 +6,7 @@
       "id": "my-custom-id-3000-1",
       "geometry": {
         "type": "Point",
-        "coordinates": [8.68872, 50.0561, 292.94377758]
+        "coordinates": [8.68872, 50.0561, 292.9437776]
       },
       "properties": {
         "@ns:com:here:mom:delta": {
@@ -30,7 +30,7 @@
       "id": "my-custom-id-3000-2",
       "geometry": {
         "type": "Point",
-        "coordinates": [9.68872, 51.0561, 293.94377758]
+        "coordinates": [9.68872, 51.0561, 293.9437776]
       },
       "properties": {
         "@ns:com:here:mom:delta": {
@@ -101,7 +101,7 @@
       "momType": "supporting.Violation",
       "geometry": {
         "type": "Point",
-        "coordinates": [8.68872, 50.0561, 292.94377758]
+        "coordinates": [8.68872, 50.0561, 292.9437776]
       }
     },
     {
@@ -131,7 +131,7 @@
       "momType": "supporting.Violation",
       "geometry": {
         "type": "Point",
-        "coordinates": [9.68872, 51.0561, 293.94377758]
+        "coordinates": [9.68872, 51.0561, 293.9437776]
       }
     },
     {
@@ -161,7 +161,7 @@
       "momType": "supporting.Violation",
       "geometry": {
         "type": "Point",
-        "coordinates": [9.68872, 51.0561, 293.94377758]
+        "coordinates": [9.68872, 51.0561, 293.9437776]
       }
     },
     {

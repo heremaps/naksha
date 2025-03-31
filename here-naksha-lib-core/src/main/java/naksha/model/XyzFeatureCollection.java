@@ -83,6 +83,7 @@ public class XyzFeatureCollection extends XyzResponse {
 
   @Override
   public void onCreation() {
+    super.onCreation();
     setFeatures(new NakshaFeatureList());
     TYPE.setValue(this, FEATURE_COLLECTION_TYPE);
   }

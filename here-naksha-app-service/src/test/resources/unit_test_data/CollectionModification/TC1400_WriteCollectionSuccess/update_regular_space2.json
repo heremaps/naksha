@@ -9,6 +9,7 @@
   "properties": {
     "collection": {
       "id": "collection_mod_test",
+      "mapId": "naksha-client-test-map",
       "type": "NakshaCollection",
       "disableHistory": true,
       "autoPurge": true

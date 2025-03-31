@@ -5,5 +5,12 @@
   "description": "Sample Space description",
   "eventHandlerIds": [
     "activity_history_test_handler"
-  ]
+  ],
+  "properties": {
+    "collection": {
+      "id": "um-mod-dev:activity_history_test_collection",
+      "mapId": "naksha-client-test-map",
+      "type": "NakshaCollection"
+    }
+  }
 }

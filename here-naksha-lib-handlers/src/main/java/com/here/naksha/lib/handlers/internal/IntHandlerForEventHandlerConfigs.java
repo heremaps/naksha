@@ -43,8 +43,8 @@ import java.util.Optional;
 import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
-import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
@@ -257,8 +257,9 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
     }
     // Scan through all spaces with JSON property "eventHandlerIds" containing the targeted handler ID
     final Property pRef = new Property(EVENT_HANDLER_IDS);
-    final PQuery activeSpacesPOp = new PQuery(pRef, AnyOp.CONTAINS, new String[]{handlerId});
+    final PQuery activeSpacesPOp = new PQuery(pRef, AnyOp.CONTAINS, handlerId);
     final ReadFeatures readActiveHandlersRequest = new ReadFeatures().addCollectionId(SPACES);
+    readActiveHandlersRequest.setMapId(nakshaHub.getAdminMapId());
     readActiveHandlersRequest.getQuery().setProperties(activeSpacesPOp);
     return nakshaHub().getAdminStorage().useReadSession(new SessionOptions(), readSession -> {
       final Response readResult = readSession.execute(readActiveHandlersRequest);
@@ -269,6 +270,10 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
       try {
         spaces = ResultHelper.extractResponseItems((SuccessResponse) readResult, Space.class);
       } catch (NoSuchElementException emptyException) {
+        // No active space using the handler, proceed with deleting the handler
+        return SUCCESSFUL_VALIDATION;
+      }
+      if (spaces.isEmpty()) {
         // No active space using the handler, proceed with deleting the handler
         return SUCCESSFUL_VALIDATION;
       }

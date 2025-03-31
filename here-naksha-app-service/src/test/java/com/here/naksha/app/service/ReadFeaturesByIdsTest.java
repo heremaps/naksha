@@ -218,6 +218,7 @@ class ReadFeaturesByIdsTest extends ApiTest {
     ;
   }
 
+  // TODO: CASL-681 next step: fix StreamId population
   @Test
   void tc0408_withPropSelection() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/features

@@ -144,6 +144,24 @@ public class RequestHelper {
   }
 
   /**
+   * Helper method to create WriteFeatures request for updating multiple features.
+   *
+   * @param mapId Id of the map where the collection is defined
+   * @param collectionId name of the storage collection
+   * @param feature   feature object be upsert
+   * @param <FEATURE>  any object extending XyzFeature
+   * @return WriteFeatures request that can be used against IStorage methods
+   */
+  public static @NotNull <FEATURE extends NakshaFeature> WriteRequest upsertFeaturesRequest(
+      final @NotNull String mapId,
+      final @NotNull String collectionId,
+      FEATURE feature) {
+    final WriteRequest request = new WriteRequest();
+    request.add(new Write().upsertFeature(mapId, collectionId, feature));
+    return request;
+  }
+
+  /**
    * Helper method to create WriteFeatures request for upserting multiple features.
    *
    * @param collectionId name of the storage collection
