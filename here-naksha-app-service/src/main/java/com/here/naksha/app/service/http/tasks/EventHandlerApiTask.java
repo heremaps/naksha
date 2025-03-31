@@ -21,6 +21,7 @@ package com.here.naksha.app.service.http.tasks;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.HANDLER_ID;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
+import static naksha.model.util.RequestHelper.updateFeatureRequest;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
@@ -33,7 +34,6 @@ import naksha.base.JvmJsonUtil;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
-import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.RequestQuery;
@@ -110,6 +110,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
   private @NotNull XyzResponse executeGetHandlers() {
     // Create ReadFeatures Request to read all handlers from Admin DB
     final ReadFeatures request = new ReadFeatures().addCollectionId(EVENT_HANDLERS);
+    request.setMapId(naksha().getAdminMapId());
     // Submit request to NH Space Storage
     Response response = executeReadRequestFromSpaceStorage(request);
     // transform Response to Http FeatureCollection response
@@ -120,6 +121,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Create ReadFeatures Request to read the handler with the specific ID from Admin DB
     final String handlerId = routingContext.pathParam(HANDLER_ID);
     final ReadFeatures request = new ReadFeatures().addCollectionId(EVENT_HANDLERS);
+    request.setMapId(naksha().getAdminMapId());
     RequestQuery query = new RequestQuery();
     query.setProperties(new PQuery(new Property(NakshaFeature.ID_KEY), StringOp.EQUALS, handlerId));
     request.setQuery(query);
@@ -135,8 +137,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
       return verticle.sendErrorResponse(
           routingContext, NakshaError.ILLEGAL_ARGUMENT, mismatchMsg(handlerIdFromPath, handlerToUpdate));
     } else {
-      final WriteRequest updateHandlerReq =
-          RequestHelper.updateFeatureRequest(new NakshaCollection(EVENT_HANDLERS), handlerToUpdate);
+      final WriteRequest updateHandlerReq = updateFeatureRequest(naksha().getAdminMapId(), EVENT_HANDLERS, handlerToUpdate);
       Response updateHandlerResponse = executeWriteRequestFromSpaceStorage(updateHandlerReq);
       return transformResponseToXyzFeatureResponse(updateHandlerResponse, EventHandlerConfig.class, FAIL_ON_NO_ELEMENTS);
     }

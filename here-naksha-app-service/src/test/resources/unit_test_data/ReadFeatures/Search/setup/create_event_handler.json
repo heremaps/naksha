@@ -7,6 +7,6 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "search_features_test_storage"
+    "storageId": "${dataDb.storageId}"
   }
 }

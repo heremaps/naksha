@@ -5,7 +5,7 @@
     "naksha": {
       "readFeatures": [
         {
-          "storageId": "dev-*"
+          "storageId": "${dataDb.storageId}"
         }
       ]
     }

@@ -7,7 +7,7 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "patch_on_view_http_test_view_storage",
+    "storageId": "${dataDb.storageId}",
     "spaceIds": [
       "patch_on_view_test_psql_space",
       "patch_on_view_test_http_space"
