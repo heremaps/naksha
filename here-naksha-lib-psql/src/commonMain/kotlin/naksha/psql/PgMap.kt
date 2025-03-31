@@ -410,7 +410,7 @@ open class PgMap internal constructor(
      * @return the collection, if it exists; _null_ otherwise.
      * @since 3.0.0
      */
-    fun getPgCollectionById(conn: PgConnection, id: String): PgCollection? {
+    fun getPgCollectionById(conn: PgConnection?, id: String): PgCollection? {
         if (this is PgAdminMap) {
             return when (id) {
                 COLLECTIONS_COL -> collections
@@ -423,7 +423,7 @@ open class PgMap internal constructor(
         if (id == COLLECTIONS_COL) return collections
         val number = collectionNumberById[id]
         val existing = if (number != null) collectionCache[number] else null
-        if (existing != null) return existing
+        if (existing != null || conn == null) return existing
 
         // Read from database
         val outRows = PgColumnRows()
@@ -455,7 +455,7 @@ WHERE id = $1"""
      * @return the collection, if it exists; _null_ otherwise.
      * @since 3.0.0
      */
-    fun getPgCollectionByNumber(conn: PgConnection, number: Int): PgCollection? {
+    fun getPgCollectionByNumber(conn: PgConnection?, number: Int): PgCollection? {
         if (this is PgAdminMap) {
             return when (number) {
                 COLLECTIONS_COL_NUMBER -> collections
@@ -467,7 +467,7 @@ WHERE id = $1"""
         }
         if (number == COLLECTIONS_COL_NUMBER) return collections
         val existing = collectionCache[number]
-        if (existing != null) return existing
+        if (existing != null || conn == null) return existing
 
         // Read from database
         val outRows = PgColumnRows()
