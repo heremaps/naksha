@@ -189,7 +189,7 @@ open class PgSession(
         assertOpen()
         var tx: StorageTx? = this.tx
         if (tx == null) {
-            val txn = storage.adminMap.newTxn(useConnection())
+            val txn = storage.newConnection(options, false, null).use { conn -> storage.adminMap.newTxn(conn) }
             tx = StorageTx(storage, txn.version, options.appId, options.author, storage.adminMap)
             this.tx = tx
         }
