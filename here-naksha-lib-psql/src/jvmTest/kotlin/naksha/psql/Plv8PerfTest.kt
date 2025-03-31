@@ -17,6 +17,10 @@ import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.Plv8PerfTest.FeatureSource.*
 import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_2D_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
 import org.openjdk.jmh.annotations.OutputTimeUnit
@@ -39,13 +43,13 @@ class Plv8PerfTest : PgTestBase(
         partitions = NUM_OF_PARTITIONS,
         storeHistory = StoreMode.ON,
         storeDeleted = StoreMode.ON
-    )
+    ).withIndices(ID_IDX, GIST_2D_IDX, TAGS_IDX, HERE_TILE_IDX)//.withIndices(ID_IDX)
 ) {
     companion object {
         val featureSource = JSON_TOPOLOGY_SMALL
         val NUM_OF_PARTITIONS = 4
         val OVERLOAD_FACTOR = 8
-        val BATCHES_PER_WORKER = 2
+        val BATCHES_PER_WORKER = 4
         val FEATURES_PER_BATCH = 100
         val numberOfBatches = NUM_OF_PARTITIONS * BATCHES_PER_WORKER * OVERLOAD_FACTOR
         val concurrency = NUM_OF_PARTITIONS * OVERLOAD_FACTOR
