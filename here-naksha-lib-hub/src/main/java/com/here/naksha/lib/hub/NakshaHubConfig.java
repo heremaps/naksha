@@ -57,9 +57,19 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
   public static final Integer DEF_REQ_BODY_LIMIT = 25;
 
   /**
-   * The maximum Http request body limit in MB.
+   * The maximum supported Http request body limit in MB.
    */
   public static final Integer MAX_REQ_BODY_LIMIT = Math.max(25, DEF_REQ_BODY_LIMIT);
+
+  /**
+   * The default Http request header limit in KB.
+   */
+  public static final Integer DEF_REQ_HEADER_LIMIT = 8;
+
+  /**
+   * The maximum supported Http request header limit in KB.
+   */
+  public static final Integer MAX_REQ_HEADER_LIMIT = Math.max(16, DEF_REQ_HEADER_LIMIT);
 
   /**
    * Returns a default application name used at many placed.
@@ -120,6 +130,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
       @JsonProperty("storageParams") @Nullable Map<String, Object> storageParams,
       @JsonProperty("extensionConfigParams") @Nullable ExtensionConfigParams extensionConfigParams,
       @JsonProperty("requestBodyLimit") @Nullable Integer requestBodyLimit,
+      @JsonProperty("requestHeaderLimit") @Nullable Integer requestHeaderLimit,
       @JsonProperty("maxParallelRequestsPerCPU") @Nullable Integer maxParallelRequestsPerCPU,
       @JsonProperty("maxPctParallelRequestsPerActor") @Nullable Integer maxPctParallelRequestsPerActor) {
     super(id);
@@ -211,6 +222,17 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
       this.requestBodyLimit = DEF_REQ_BODY_LIMIT;
     } else {
       this.requestBodyLimit = requestBodyLimit;
+    }
+    if (requestHeaderLimit == null) {
+      this.requestHeaderLimit = DEF_REQ_HEADER_LIMIT;
+    } else if (requestHeaderLimit > MAX_REQ_HEADER_LIMIT) {
+      logger.warn(
+          "Configured request header limit {} KB not supported. Falling back to default limit of {} KB",
+          requestHeaderLimit,
+          DEF_REQ_HEADER_LIMIT);
+      this.requestHeaderLimit = DEF_REQ_HEADER_LIMIT;
+    } else {
+      this.requestHeaderLimit = requestBodyLimit;
     }
     this.maxParallelRequestsPerCPU =
         maxParallelRequestsPerCPU != null ? maxParallelRequestsPerCPU : defaultMaxParallelRequestsPerCPU();
@@ -414,6 +436,11 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
    * Optional Http request body limit in MB. Default is {@link #DEF_REQ_BODY_LIMIT}.
    */
   public final Integer requestBodyLimit;
+
+  /**
+   * Optional Http request header limit in KB. Default is {@link #DEF_REQ_HEADER_LIMIT}.
+   */
+  public final Integer requestHeaderLimit;
 
   /**
    * Optional Total Concurrency Limit
