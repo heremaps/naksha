@@ -20,10 +20,11 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static org.junit.jupiter.api.Assertions.*;
 
-@WireMockTest(httpPort = 9100)
+@WireMockTest(httpPort = RequestSenderTest.MOCK_PORT)
 class RequestSenderTest {
 
-    private static final String MOCK_URL = "http://localhost:9100"; // The port should be same as @WireMockTest
+    public static final int MOCK_PORT = 9100;
+    private static final String MOCK_URL = "http://localhost:"+MOCK_PORT;
     private static final String MOCK_ENDPOINT = "/my_env/my_storage/my_feat_type/features";
 
     @Mock

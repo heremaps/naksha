@@ -93,7 +93,6 @@ public class RequestSender {
         CompletableFuture<HttpResponse<byte[]>> futureResponse =
             httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray());
         response = futureResponse.get(keyProps.socketTimeoutSec, TimeUnit.SECONDS);
-        // response = sendRequest(request);
         break;
       } catch (Exception e) {
         if (isRetryEligibleException(e) && i < keyProps.maxRetries) {
@@ -127,7 +126,6 @@ public class RequestSender {
 
   private boolean isRetryEligibleException(@NotNull final Exception e) {
     return (e instanceof ExecutionException
-        && e.getCause() != null
         && e.getCause() instanceof IOException ioe
         && ioe.getMessage() != null
         && ioe.getMessage().contains("GOAWAY"));
