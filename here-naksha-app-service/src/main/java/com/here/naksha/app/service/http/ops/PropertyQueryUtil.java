@@ -197,19 +197,19 @@ public class PropertyQueryUtil {
   private static @NotNull IPropertyQuery mapAPIOperationToPropertyOperation(
       final @NotNull QueryOperation operation, final @NotNull String[] propPath, final @NotNull Number value) {
     if (operation == EQUALS) {
-      return new PQuery(Property.fromArray(propPath), DoubleOp.EQ, value);
+      return new PQuery(new Property(propPath), DoubleOp.EQ, value);
     } else if (operation == NOT_EQUALS) {
-      return new PNot(new PQuery(Property.fromArray(propPath), DoubleOp.EQ, value));
+      return new PNot(new PQuery(new Property(propPath), DoubleOp.EQ, value));
     } else if (operation == GREATER_THAN) {
-      return new PQuery(Property.fromArray(propPath), DoubleOp.GT, value);
+      return new PQuery(new Property(propPath), DoubleOp.GT, value);
     } else if (operation == GREATER_THAN_OR_EQUALS) {
-      return new PQuery(Property.fromArray(propPath), DoubleOp.GTE, value);
+      return new PQuery(new Property(propPath), DoubleOp.GTE, value);
     } else if (operation == LESS_THAN) {
-      return new PQuery(Property.fromArray(propPath), DoubleOp.LT, value);
+      return new PQuery(new Property(propPath), DoubleOp.LT, value);
     } else if (operation == LESS_THAN_OR_EQUALS) {
-      return new PQuery(Property.fromArray(propPath), DoubleOp.LTE, value);
+      return new PQuery(new Property(propPath), DoubleOp.LTE, value);
     } else if (operation == CONTAINS) {
-      return new PQuery(Property.fromArray(propPath), DoubleOp.CONTAINS, value);
+      return new PQuery(new Property(propPath), DoubleOp.CONTAINS, value);
     } else {
       throw new NakshaException(
           NakshaError.ILLEGAL_ARGUMENT,
@@ -220,11 +220,11 @@ public class PropertyQueryUtil {
   private static @NotNull IPropertyQuery mapAPIOperationToPropertyOperation(
       final @NotNull QueryOperation operation, final @NotNull String[] propPath, final @NotNull Boolean value) {
     if ((operation == EQUALS && value) || (operation == NOT_EQUALS && !value)) {
-      return new PQuery(Property.fromArray(propPath), AnyOp.IS_TRUE);
+      return new PQuery(new Property(propPath), AnyOp.IS_TRUE);
     } else if ((operation == EQUALS && !value) || (operation == NOT_EQUALS && value)) {
-      return new PQuery(Property.fromArray(propPath), AnyOp.IS_FALSE);
+      return new PQuery(new Property(propPath), AnyOp.IS_FALSE);
     } else if (operation == CONTAINS) {
-      return new PQuery(Property.fromArray(propPath), AnyOp.CONTAINS, value);
+      return new PQuery(new Property(propPath), AnyOp.CONTAINS, value);
     } else {
       throw new NakshaException(
           NakshaError.ILLEGAL_ARGUMENT,
@@ -233,14 +233,14 @@ public class PropertyQueryUtil {
   }
 
   private static @NotNull PQuery propertyExistsQuery(final @NotNull String[] propPath){
-    return new PQuery(Property.fromArray(propPath), AnyOp.EXISTS);
+    return new PQuery(new Property(propPath), AnyOp.EXISTS);
   }
 
   private static @NotNull PQuery propertyEqualsQuery(final @NotNull String[] propPath, String value){
-    return new PQuery(Property.fromArray(propPath), StringOp.EQUALS, value);
+    return new PQuery(new Property(propPath), StringOp.EQUALS, value);
   }
 
   private static @NotNull PQuery propertyContainsQuery(final @NotNull String[] propPath, String value){
-    return new PQuery(Property.fromArray(propPath), StringOp.CONTAINS, value);
+    return new PQuery(new Property(propPath), StringOp.CONTAINS, value);
   }
 }

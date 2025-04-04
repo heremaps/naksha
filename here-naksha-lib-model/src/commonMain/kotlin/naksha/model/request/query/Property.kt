@@ -35,19 +35,6 @@ open class Property() : MetaColumn(FEATURE) {
 
     companion object Property_C {
         /**
-         * Create a property from a path given as variable argument list.
-         * @param path the path as string-array.
-         * @return the property.
-         */
-        @JvmStatic
-        @JsStatic
-        fun fromArray(path: Array<String>): Property {
-            val p = Property()
-            p.addAll(path)
-            return p
-        }
-
-        /**
          * Simple constant for `properties`.
          */
         const val PROPERTIES = "properties"
@@ -75,7 +62,7 @@ open class Property() : MetaColumn(FEATURE) {
      * @param quote optional callback to quote the name-parts.
      * @return this property as path.
      */
-    fun toPath( quote: Fn1<String, String>?): String {
+    fun toPath(quote: Fn1<String, String>?): String {
         val po = path.platformObject()
         var array = this.array
         var s = string

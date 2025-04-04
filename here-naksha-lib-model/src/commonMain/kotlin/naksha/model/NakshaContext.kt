@@ -8,7 +8,6 @@ import naksha.base.fn.Fn0
 import naksha.base.fn.Fn3
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.NakshaMap
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -155,12 +154,12 @@ open class NakshaContext protected constructor() {
             return s.streamId
         }
         set(value) {
-            val s = _streamInfo
-            if (s != null && s.streamId == value) return
+            val currentInfo = _streamInfo
+            if (currentInfo != null && currentInfo.streamId == value) return
             // Create a new stream-information with the desired stream-id.
-            val info = streamInfoConstructorRef.call()
-            info.streamId = value
-            _streamInfo = s
+            val newInfo = streamInfoConstructorRef.call()
+            newInfo.streamId = value
+            _streamInfo = newInfo
         }
 
     /**

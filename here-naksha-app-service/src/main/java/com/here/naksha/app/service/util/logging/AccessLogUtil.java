@@ -181,7 +181,7 @@ public class AccessLogUtil {
     clientInfo.setUserAgent(context.request().getHeader(USER_AGENT));
     clientInfo.setRealm(context.request().getHeader(REALM));
 
-    context.put(STREAM_INFO_CTX_KEY, accessLog.getStreamInfo());
+    context.put(STREAM_INFO_CTX_KEY, accessLog.getStreamInfoOrCreateNewWithStreamId(streamId));
   }
 
   /**
