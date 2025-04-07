@@ -52,10 +52,19 @@ import kotlin.reflect.KClass
 @Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate")
 @JsExport
 open class PgIndex : JsEnum() {
+    // TODO: We need to allow `CREATE INDEX CONCURRENTLY`, when the index is not unique.
+    //       However, this can only be done, when being outside of a transaction!
+    //       We need to add special support for index modification outside of transactions.
+    //       So, when a client modifies a collection, we can use a second connection in auto-commit, and
+    //       create missing indices with a special query.
+    //       Storage-API then needs to create a table brittle, without indices, except for minimal ones,
+    //         then after importing, it should switch tables to logged, then add indices, which should be
+    //         done concurrently or the client needs to wait until the index is build, but then we need
+    //         to add an very large timeout.
     protected fun sql(using: String, table: PgTable, unique: Boolean, addFillFactor: Boolean, where: String?): String = """
-CREATE ${if (unique) "UNIQUE " else ""}INDEX IF NOT EXISTS ${quoteIdent(id(table))} ON ${table.quotedName}
+CREATE ${if (unique) "UNIQUE INDEX" else "INDEX "} IF NOT EXISTS ${quoteIdent(id(table))} ON ${table.quotedName}
 USING $using
-${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "65)" else "100)" else ""} ${table.TABLESPACE}
+${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "80)" else "100)" else ""} ${table.TABLESPACE}
 ${if (where==null) "" else "WHERE $where"};"""
 
     companion object PgIndex_C {
