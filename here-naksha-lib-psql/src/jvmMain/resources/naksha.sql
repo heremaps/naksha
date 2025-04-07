@@ -256,6 +256,13 @@ AS $$
   SELECT int4recv(digest(id,'md5'), 12) & 65535
 $$;
 
+CREATE OR REPLACE FUNCTION naksha_partition_index(id text, parts int4) RETURNS int4
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  SELECT (int4recv(digest(id,'md5'), 12) & 65535) % parts
+$$;
+
 CREATE OR REPLACE FUNCTION naksha_partition_index(feature_number int8, parts int4) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
@@ -557,4 +564,40 @@ AS $$
     AND psa.wait_event IN ('BufferContent', 'BufferMapping')
   GROUP BY psa.pid
   ORDER BY psa.pid
+$$;
+
+-- Creates a partition array
+CREATE OR REPLACE FUNCTION naksha_part_array(prefix TEXT, count INT) RETURNS TEXT[]
+LANGUAGE 'sql' VOLATILE PARALLEL SAFE STRICT
+AS $$
+  SELECT ARRAY(SELECT format('%s$p%s', 'topology', LPAD(gs::TEXT, 3, '0')) FROM generate_series(0, count-1) AS gs)
+$$;
+
+-- Estimate the features in the collection with that many partitions
+CREATE OR REPLACE FUNCTION naksha_estimate_feature_count(collection_id TEXT, partitions INT) RETURNS int8
+LANGUAGE 'sql' VOLATILE PARALLEL SAFE STRICT
+AS $$
+  SELECT sum(reltuples::int8) AS estimate
+  FROM pg_class
+  WHERE relname = ANY(naksha_part_array(collection_id,partitions));
+$$;
+
+-- Disable or enable auto-vacuum for tables.
+CREATE OR REPLACE FUNCTION naksha_set_autovacuum(schema text, tables text[], state text) RETURNS void
+LANGUAGE 'plpgsql' VOLATILE STRICT
+SET search_path FROM CURRENT
+AS $$
+DECLARE
+    tbl text;
+    sql text;
+BEGIN
+    IF state NOT IN ('on', 'off') THEN
+        RAISE EXCEPTION 'Invalid autovacuum state: %, expected "on" or "off"', state;
+    END IF;
+
+    FOREACH tbl IN ARRAY tables LOOP
+        sql := format('ALTER TABLE %I.%I SET (autovacuum_enabled = %s);', schema, tbl, state);
+        EXECUTE sql;
+    END LOOP;
+END;
 $$;
