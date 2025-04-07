@@ -2,11 +2,8 @@
 
 package naksha.psql
 
-import naksha.base.AtomicMap
-import naksha.base.AtomicNonNullRef
-import naksha.base.Epoch
+import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.toUnsignedInt64
 import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_NUMBER
@@ -23,6 +20,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
+import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
@@ -391,13 +389,16 @@ open class PgMap internal constructor(
      */
     open fun deletePgCollection(conn: PgConnection, collection: PgCollection) {
         setSearchPath(conn)
-        var SQL = "DROP TABLE IF EXISTS ${collection.headTable.quotedName} CASCADE;"
-        val history = collection.historyTable
-        if (history != null) SQL += "DROP TABLE IF EXISTS ${history.quotedName} CASCADE;"
+        val builder = StringBuilder()
+        val head = collection.headTable
+        builder.append("DROP TABLE IF EXISTS ${head.quotedName} CASCADE;\n")
         val deleted = collection.deletedTable
-        if (deleted != null) SQL += "DROP TABLE IF EXISTS ${deleted.quotedName} CASCADE;"
-        val meta = collections.metaTable
-        if (meta != null) SQL += "DROP TABLE IF EXISTS ${meta.quotedName} CASCADE;"
+        if (deleted != null) builder.append("DROP TABLE IF EXISTS ${deleted.quotedName} CASCADE;\n")
+        val meta = collection.metaTable
+        if (meta != null) builder.append("DROP TABLE IF EXISTS ${meta.quotedName} CASCADE;\n")
+        val history = collection.historyTable
+        if (history != null) builder.append("DROP TABLE IF EXISTS ${history.quotedName} CASCADE;\n")
+        val SQL = builder.toString()
         logger.info("Dropped collection {}@{}", collection.id, collection.number)
         conn.execute(SQL).close()
         invalidateCollection(collection)
