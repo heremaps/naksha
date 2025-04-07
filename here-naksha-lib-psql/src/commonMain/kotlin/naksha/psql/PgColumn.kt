@@ -84,6 +84,7 @@ class PgColumn : JsEnum() {
     var sqlDefinition: String = ""
         get() {
             // TODO: KotlinCompilerBug - How can field ever be null?
+            @Suppress("UselessCallOnNotNull")
             if (field.isNullOrEmpty()) {
                 field = "$name $type" + if (extra != null) " $extra" else ""
             }
@@ -293,7 +294,7 @@ class PgColumn : JsEnum() {
         val tn = def(PgColumn::class, "tn") { self ->
             self._i = 11
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE PLAIN NOT NULL" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN NOT NULL" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -312,7 +313,7 @@ class PgColumn : JsEnum() {
         val next_tn = def(PgColumn::class, "next_tn") { self ->
             self._i = 12
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE PLAIN" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -329,7 +330,7 @@ class PgColumn : JsEnum() {
         val prev_tn = def(PgColumn::class, "prev_tn") { self ->
             self._i = 13
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE PLAIN" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -354,7 +355,7 @@ class PgColumn : JsEnum() {
         val base_tn = def(PgColumn::class, "base_tn") { self ->
             self._i = 14
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE PLAIN" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -366,7 +367,7 @@ class PgColumn : JsEnum() {
         val id = def(PgColumn::class, "id") { self ->
             self._i = 15
             self._type = PgType.STRING
-            self._extra = "STORAGE PLAIN NOT NULL COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN NOT NULL COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -378,7 +379,7 @@ class PgColumn : JsEnum() {
         val app_id = def(PgColumn::class, "app_id") { self ->
             self._i = 16
             self._type = PgType.STRING
-            self._extra = "STORAGE PLAIN NOT NULL COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN NOT NULL COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -390,7 +391,7 @@ class PgColumn : JsEnum() {
         val author = def(PgColumn::class, "author") { self ->
             self._i = 17
             self._type = PgType.STRING
-            self._extra = "STORAGE PLAIN NOT NULL COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN NOT NULL COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -416,7 +417,7 @@ class PgColumn : JsEnum() {
         val origin = def(PgColumn::class, "origin") { self ->
             self._i = 18
             self._type = PgType.STRING
-            self._extra = "STORAGE PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -431,7 +432,7 @@ class PgColumn : JsEnum() {
         val target = def(PgColumn::class, "target") { self ->
             self._i = 19
             self._type = PgType.STRING
-            self._extra = "STORAGE PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -443,7 +444,7 @@ class PgColumn : JsEnum() {
         val ft = def(PgColumn::class, "ft") { self ->
             self._i = 20
             self._type = PgType.STRING
-            self._extra = "STORAGE PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -455,7 +456,7 @@ class PgColumn : JsEnum() {
         val cs0 = def(PgColumn::class, "cs0") { self ->
             self._i = 21
             self._type = PgType.STRING
-            self._extra = "STORAGE PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $MAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -467,7 +468,7 @@ class PgColumn : JsEnum() {
         val cs1 = def(PgColumn::class, "cs1") { self ->
             self._i = 22
             self._type = PgType.STRING
-            self._extra = "STORAGE PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $MAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -479,7 +480,7 @@ class PgColumn : JsEnum() {
         val cs2 = def(PgColumn::class, "cs2") { self ->
             self._i = 23
             self._type = PgType.STRING
-            self._extra = "STORAGE PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $MAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -491,7 +492,7 @@ class PgColumn : JsEnum() {
         val cs3 = def(PgColumn::class, "cs3") { self ->
             self._i = 24
             self._type = PgType.STRING
-            self._extra = "STORAGE PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $MAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
 
         // Assuming:
@@ -512,7 +513,7 @@ class PgColumn : JsEnum() {
         val tags = def(PgColumn::class, "tags") { self ->
             self._i = 25
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE $EXTERNAL"
+            self._extra = "STORAGE $MAIN"
         }
 
         /**
@@ -536,7 +537,7 @@ class PgColumn : JsEnum() {
         val geo = def(PgColumn::class, "geo") { self ->
             self._i = 27
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE $EXTERNAL"
+            self._extra = "STORAGE $MAIN"
         }
 
         /**
@@ -548,7 +549,7 @@ class PgColumn : JsEnum() {
         val feature = def(PgColumn::class, "feature") { self ->
             self._i = 28
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE $EXTERNAL"
+            self._extra = "STORAGE $MAIN"
         }
 
         /**
@@ -560,7 +561,7 @@ class PgColumn : JsEnum() {
         val attachment = def(PgColumn::class, "attachment") { self ->
             self._i = 29
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE $EXTERNAL"
+            self._extra = "STORAGE $MAIN"
         }
 
         /**
