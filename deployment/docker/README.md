@@ -88,12 +88,12 @@ docker build --platform=linux/arm64,linux/amd64 \
 cd ..
 
 # Build plrust image
-cd naksha-pg-5-plrust
-docker build --platform=linux/arm64,linux/amd64 \
-       --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
-       --build-arg="VERSION=${PLJAVA_VER}" \
-       -t "${DR_NAKSHA_POSTGRES}:plrust-${PLRUST_VER}" .
-cd ..
+#cd naksha-pg-5-plrust
+#docker build --platform=linux/arm64,linux/amd64 \
+#       --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
+#       --build-arg="VERSION=${PLJAVA_VER}" \
+#       -t "${DR_NAKSHA_POSTGRES}:plrust-${PLRUST_VER}" .
+#cd ..
 
 # Build the final postgres with run-scripts and default configurations
 # Note, this can be done multiple times without any need to re-build the previous images
@@ -101,9 +101,11 @@ cd ..
 cd naksha-pg-release
 docker build --platform=linux/arm64,linux/amd64 \
        --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
-       --build-arg="VERSION=${PLRUST_VER}" \
+       --build-arg="VERSION=${PLJAVA_VER}" \
        -t "${DR_NAKSHA_POSTGRES}:${RELEASE_VER}" \
        -t "${DR_NAKSHA_POSTGRES}:latest" .
+cd ..
+#       --build-arg="VERSION=${PLRUST_VER}" \ for later when we include PL Rust
 ```
 
 **Notes**:
