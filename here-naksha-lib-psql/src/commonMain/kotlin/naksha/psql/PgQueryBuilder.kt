@@ -174,7 +174,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val gzip = if (thePgCollection == null)
         // If we select from multiple collections, we have to encode the collection-number in the tuple-number.
         // This results in 128-bit per row, aka 16-byte per row, but 4 byte less in the header.
-        """gzip(
+        """(
   int4send((0 << 28)|(2 << 24)|sum(1)::int)|| -- type (0), subtype (2), length
   int4send(20 + sum(1)::int*16)|| -- byte-size
   int8send(${pgStorage.number})|| -- shared storage-number
@@ -184,7 +184,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
     // If we select only from exactly one table, we can embed the collection-number into the binary header.
     // This reduces the encoding of each tuple-number to 96-bit (12-byte), but adds 4-byte into the header
     // for the shared collection-number.
-    """gzip(
+    """(
   int4send((0 << 28)|(3 << 24)|sum(1)::int)|| -- type (0), subtype (3), length
   int4send(24 + sum(1)::int*12)|| -- byte-size
   int8send(${pgStorage.number})|| -- shared storage-number
