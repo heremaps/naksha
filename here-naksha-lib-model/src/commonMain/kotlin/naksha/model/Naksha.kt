@@ -145,7 +145,7 @@ class Naksha private constructor() {
          * - Encode the feature into `JBON` _(Java Binary Object Notation)_, and compress it using [GZIP](https://en.wikipedia.org/wiki/Gzip).
          */
         @JvmField
-        var DEFAULT_FLAGS = Flags(TWKB, JBON_GZIP, TagsEncoding.JSON_GZIP)
+        var DEFAULT_FLAGS = Flags(TWKB, JBON_GZIP, TagsEncoding.JSON)
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:
