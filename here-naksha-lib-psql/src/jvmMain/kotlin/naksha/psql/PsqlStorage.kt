@@ -9,7 +9,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import kotlin.reflect.KClass
 
 /**
- * The Java implementation of the [PgStorage], classname `naksha.psql.JvmPgStorage`.
+ * The Java implementation of the [PgStorage], classname `naksha.psql.PsqlStorage`.
  */
 open class PsqlStorage : PgStorage(), IStorage {
 

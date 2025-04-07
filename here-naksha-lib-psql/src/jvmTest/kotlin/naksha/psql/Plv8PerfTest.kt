@@ -34,6 +34,7 @@ import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertIs
 
+@Suppress("HasPlatformType", "MayBeConstant")
 @BenchmarkMode(Mode.AverageTime) // Measures average execution time
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 class Plv8PerfTest : PgTestBase(
