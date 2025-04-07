@@ -32,4 +32,9 @@ class ReadCollectionsTest : PgTestBase(NakshaCollection(
         assertEquals(collection.storeMeta, collectionFeature.storeMeta)
         assertEquals(collection.storeHistory, collectionFeature.storeHistory)
     }
+
+    @AfterTest
+    fun shouldDeleteCollection() {
+        dropCollection()
+    }
 }
