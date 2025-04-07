@@ -32,7 +32,6 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
         val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
 
         // This is what we should INSERT or UPDATE.
-        // SELECT pg_prewarm(${PgUtil.quoteLiteral(headTable.name)}, 'buffer');
         val new_row = """WITH new_row AS (
   SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.names()})
 )"""
@@ -113,16 +112,16 @@ SELECT
     head_updated.cc AS cc,
     head_updated.attachment AS attachment,
     head_row.tn AS head_row_tn,
-    clear_shadow.tn AS clear_shadow_tn,
     head_deleted.tn AS head_deleted_tn,
     head_inserted.tn AS head_inserted_tn,
+    ${if (clear_shadow.isNotEmpty()) "clear_shadow.tn AS clear_shadow_tn," else "null AS clear_shadow_tn,"}
     ${if (head_to_history.isNotEmpty()) "head_to_history.tn AS head_to_history_tn" else "null AS head_to_history_tn"}
 FROM new_row
 LEFT JOIN head_updated ON head_updated.id = new_row.id
 LEFT JOIN head_row ON head_row.id = new_row.id
-LEFT JOIN clear_shadow ON clear_shadow.id = new_row.id
 LEFT JOIN head_deleted ON head_deleted.id = new_row.id
 LEFT JOIN head_inserted ON head_inserted.id = new_row.id
+${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = new_row.id" else ""}
 ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.id = new_row.id" else ""}
 ;"""
         return conn.prepare(SQL, inRows.typeNames())
