@@ -36,16 +36,16 @@ The Naksha PostgresQL image is build in steps, follow these instructions:
 ```bash
 # Define postgres version, and revision to be build
 # v{pg-major}.{pg-minor}[.{pg-revision}]-r{revision}
-export BASE_VER="v17.4-r0"
-export POSTGIS_VER="v17.4-r0"
-export PLV8_VER="v17.4-r0"
-export MISC_VER="v17.4-r0"
-export PLJAVA_VER="v17.4-r0"
-export PLRUST_VER="v17.4-r0"
-export RELEASE_VER="v17.4-r0"
+export BASE_VER="v17.4-r1"
+export POSTGIS_VER="v17.4-r1"
+export PLV8_VER="v17.4-r1"
+export MISC_VER="v17.4-r1"
+export PLJAVA_VER="v17.4-r1"
+export PLRUST_VER="v17.4-r1"
+export RELEASE_VER="v17.4-r1"
 ```
 
-Ones done, start compiling
+Once done, start compiling
 
 ```bash
 cd deployment/docker/postgres
