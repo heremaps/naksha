@@ -72,7 +72,7 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmField
-        val SUFFIX = Array(256) { if (it < 10) "00$it" else if (it < 100) "0$it" else "$it" }
+        val SUFFIX = Array(1000) { if (it < 10) "00$it" else if (it < 100) "0$it" else "$it" }
 
         /**
          * Array to create a pseudo GeoHash, which is BASE-32 encoded.
