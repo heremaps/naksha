@@ -12,9 +12,9 @@ RUN dnf install -y java-21-amazon-corretto maven \
     && cd /tmp/ \
     && git clone https://github.com/tada/pljava.git \
     && cd pljava \
-    && git checkout V1_6_6 \
+    && git checkout V1_6_9 \
     && mvn clean install \
-    && java -jar pljava-packaging/target/pljava-pg16.jar \
+    && java -jar pljava-packaging/target/pljava-pg17.jar \
 # SELECT * FROM pg_available_extensions WHERE name = 'pljava';
 #
 # Cleanup

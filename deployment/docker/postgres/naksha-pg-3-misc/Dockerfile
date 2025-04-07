@@ -24,7 +24,7 @@ RUN cd /tmp/ \
     && cd /tmp/ \
     && git clone https://github.com/citusdata/pg_cron.git \
     && cd pg_cron \
-    && git checkout v1.6.2 \
+    && git checkout v1.6.4 \
     && make \
     && make install \
 # SELECT * FROM pg_available_extensions WHERE name = 'pg_cron';

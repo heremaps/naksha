@@ -7,7 +7,7 @@ FROM ${DR_NAKSHA_POSTGRES}:postgis-${VERSION}
 RUN cd /tmp/ \
     && git clone https://github.com/plv8/plv8.git \
     && cd plv8 \
-    && git checkout v3.2.2 \
+    && git checkout v3.2.3 \
     && make \
     && make install \
 # SELECT * FROM pg_available_extensions WHERE name = 'plv8';
