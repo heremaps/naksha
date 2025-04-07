@@ -168,7 +168,7 @@ class PsqlInstance(private val config: PgInstanceConfig) : PgInstance {
                 // We need to ensure that this connection is not dead, we use the initialization for this test.
                 try {
                     val query = """SET SESSION search_path TO "naksha~admin", hint_plan, public, topology;
-SET SESSION work_mem = '4MB';
+SET SESSION work_mem = '64MB';
 SET SESSION idle_in_transaction_session_timeout = '30s';"""
                     if (init != null) init.call(psqlConn, query) else psqlConn.execute(query).close()
                 } catch (_: Exception) {
