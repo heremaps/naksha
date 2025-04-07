@@ -222,8 +222,8 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
             .setHandle100ContinueAutomatically(true)
             .setTcpQuickAck(true)
             .setTcpFastOpen(true)
-            .setMaxInitialLineLength(16 * 1024 * 1024) // MB
-            .setMaxHeaderSize(hubConfig.requestHeaderLimit * 1024) // KB
+            .setMaxInitialLineLength(16 * 1024 * 1024) // MB to Bytes
+            .setMaxHeaderSize(hubConfig.requestHeaderLimit * 1024) // KB to Bytes
             .setIdleTimeout(300);
 
         vertx.createHttpServer(SERVER_OPTIONS)

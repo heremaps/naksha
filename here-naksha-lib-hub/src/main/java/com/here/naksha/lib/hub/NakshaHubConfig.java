@@ -232,7 +232,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
           DEF_REQ_HEADER_LIMIT);
       this.requestHeaderLimit = DEF_REQ_HEADER_LIMIT;
     } else {
-      this.requestHeaderLimit = requestBodyLimit;
+      this.requestHeaderLimit = requestHeaderLimit;
     }
     this.maxParallelRequestsPerCPU =
         maxParallelRequestsPerCPU != null ? maxParallelRequestsPerCPU : defaultMaxParallelRequestsPerCPU();
@@ -440,7 +440,7 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
   /**
    * Optional Http request header limit in KB. Default is {@link #DEF_REQ_HEADER_LIMIT}.
    */
-  public final Integer requestHeaderLimit;
+  public final @NotNull Integer requestHeaderLimit;
 
   /**
    * Optional Total Concurrency Limit
