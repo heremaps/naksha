@@ -62,7 +62,7 @@ public class HeaderLimitTest extends ApiTest {
         final String idsQueryParam = "id=my-custom-id-001" + "&id=my-custom-id-002";
         final String expectedBodyPart =
                 loadFileOrFail("HeaderLimit/TC001_GetByIds/feature_response_part.json");
-        // When: Header size is just below limit (i.e. 100 bytes below limit)
+        // When: Header size breaches the limit
         final NakshaHubConfig config = nakshaApp.getHub().getConfig();
         final String streamId = StringUtils.repeat("x", config.requestHeaderLimit * 1024);
 

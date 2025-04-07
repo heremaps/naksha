@@ -214,23 +214,23 @@ public final class NakshaHubConfig extends XyzFeature implements JsonSerializabl
     this.extensionConfigParams = extensionConfigParams;
     if (requestBodyLimit == null) {
       this.requestBodyLimit = DEF_REQ_BODY_LIMIT;
-    } else if (requestBodyLimit > MAX_REQ_BODY_LIMIT) {
+    } else if (requestBodyLimit <= 0 || requestBodyLimit > MAX_REQ_BODY_LIMIT) {
       logger.warn(
-          "Configured request body limit {} MB not supported. Falling back to default limit of {} MB",
+          "Configured request body limit {} MB not supported. Falling back to max limit of {} MB",
           requestBodyLimit,
-          DEF_REQ_BODY_LIMIT);
-      this.requestBodyLimit = DEF_REQ_BODY_LIMIT;
+          MAX_REQ_BODY_LIMIT);
+      this.requestBodyLimit = MAX_REQ_BODY_LIMIT;
     } else {
       this.requestBodyLimit = requestBodyLimit;
     }
     if (requestHeaderLimit == null) {
       this.requestHeaderLimit = DEF_REQ_HEADER_LIMIT;
-    } else if (requestHeaderLimit > MAX_REQ_HEADER_LIMIT) {
+    } else if (requestHeaderLimit <= 0 || requestHeaderLimit > MAX_REQ_HEADER_LIMIT) {
       logger.warn(
-          "Configured request header limit {} KB not supported. Falling back to default limit of {} KB",
+          "Configured request header limit {} KB not supported. Falling back to max limit of {} KB",
           requestHeaderLimit,
-          DEF_REQ_HEADER_LIMIT);
-      this.requestHeaderLimit = DEF_REQ_HEADER_LIMIT;
+          MAX_REQ_HEADER_LIMIT);
+      this.requestHeaderLimit = MAX_REQ_HEADER_LIMIT;
     } else {
       this.requestHeaderLimit = requestHeaderLimit;
     }
