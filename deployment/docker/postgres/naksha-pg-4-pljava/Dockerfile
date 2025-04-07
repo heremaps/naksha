@@ -22,4 +22,4 @@ RUN dnf install -y java-21-amazon-corretto maven \
 
 EXPOSE 5432
 
-CMD /usr/bin/run_postgres.sh
+CMD ["/usr/bin/run_postgres.sh"]

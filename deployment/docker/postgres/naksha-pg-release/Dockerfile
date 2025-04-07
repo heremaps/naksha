@@ -1,6 +1,6 @@
 ARG DR_NAKSHA_POSTGRES=hcr.data.here.com/naksha/postgres
 ARG VERSION
-FROM ${DR_NAKSHA_POSTGRES}:pljava-${VERSION}
+FROM ${DR_NAKSHA_POSTGRES}:plrust-${VERSION}
 
 ADD files /
 
@@ -12,4 +12,4 @@ RUN chown postgres:postgres /usr/bin/run_postgres.sh \
 
 EXPOSE 5432
 
-CMD /usr/bin/run_postgres.sh
+CMD ["/usr/bin/run_postgres.sh"]

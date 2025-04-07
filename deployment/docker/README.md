@@ -27,7 +27,8 @@ The PostgresQL docker will be build in multiple steps:
 - Step 2: Build the [PLV8 extension](./naksha-pg-2-plv8)
 - Step 3: Build other [miscellaneous extensions](./naksha-pg-3-misc) like GZIP
 - Step 4: Build [PL/Java extension](./naksha-pg-4-pljava), which is experimental for now
-- Step 5: Build the [release](./naksha-pg-release) that contains configuration and start script, we do it as a standalone step, because this allows easily to change the configuration of the PostgresQL database without the need to compile anything again.
+- Step 5: Build [PL/Rust extension](./naksha-pg-5-plrust)
+- Step 6: Build the [release](./naksha-pg-release) that contains configuration and start script, we do it as a standalone step, because this allows easily to change the configuration of the PostgresQL database without the need to compile anything again.
 
 ### Build
 The Naksha PostgresQL image is build in steps, follow these instructions:
@@ -35,12 +36,13 @@ The Naksha PostgresQL image is build in steps, follow these instructions:
 ```bash
 # Define postgres version, and revision to be build
 # v{pg-major}.{pg-minor}[.{pg-revision}]-r{revision}
-export BASE_VER="v16.2-r4"
-export POSTGIS_VER="v16.2-r4"
-export PLV8_VER="v16.2-r4"
-export MISC_VER="v16.2-r4"
-export PLJAVA_VER="v16.2-r4"
-export RELEASE_VER="v16.2-r4"
+export BASE_VER="v17.4-r0"
+export POSTGIS_VER="v17.4-r0"
+export PLV8_VER="v17.4-r0"
+export MISC_VER="v17.4-r0"
+export PLJAVA_VER="v17.4-r0"
+export PLRUST_VER="v17.4-r0"
+export RELEASE_VER="v17.4-r0"
 ```
 
 Ones done, start compiling
@@ -48,12 +50,12 @@ Ones done, start compiling
 ```bash
 cd deployment/docker/postgres
 
-# Build base image and push
+# Build base image
 cd naksha-pg-0-base
 docker build --platform=linux/arm64,linux/amd64 -t "$DR_NAKSHA_POSTGRES:base-${BASE_VER}" .
 cd ..
 
-# Build postgis image and push
+# Build postgis image
 cd naksha-pg-1-postgis
 docker build --platform=linux/arm64,linux/amd64 \
        --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
@@ -61,7 +63,7 @@ docker build --platform=linux/arm64,linux/amd64 \
        -t "${DR_NAKSHA_POSTGRES}:postgis-${POSTGIS_VER}" .
 cd ..
 
-# Build plv8 image and push
+# Build plv8 image
 cd naksha-pg-2-plv8
 docker build --platform=linux/arm64,linux/amd64 \
        --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
@@ -69,7 +71,7 @@ docker build --platform=linux/arm64,linux/amd64 \
        -t "${DR_NAKSHA_POSTGRES}:plv8-${PLV8_VER}" .
 cd ..
 
-# Build miscellaneous image and push
+# Build miscellaneous image
 cd naksha-pg-3-misc
 docker build --platform=linux/arm64,linux/amd64 \
        --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
@@ -77,12 +79,20 @@ docker build --platform=linux/arm64,linux/amd64 \
        -t "${DR_NAKSHA_POSTGRES}:misc-${MISC_VER}" .
 cd ..
 
-# Build pljava image and push
+# Build pljava image
 cd naksha-pg-4-pljava
 docker build --platform=linux/arm64,linux/amd64 \
        --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
        --build-arg="VERSION=${MISC_VER}" \
        -t "${DR_NAKSHA_POSTGRES}:pljava-${PLJAVA_VER}" .
+cd ..
+
+# Build plrust image
+cd naksha-pg-5-plrust
+docker build --platform=linux/arm64,linux/amd64 \
+       --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
+       --build-arg="VERSION=${PLJAVA_VER}" \
+       -t "${DR_NAKSHA_POSTGRES}:plrust-${PLRUST_VER}" .
 cd ..
 
 # Build the final postgres with run-scripts and default configurations
@@ -91,7 +101,7 @@ cd ..
 cd naksha-pg-release
 docker build --platform=linux/arm64,linux/amd64 \
        --build-arg="DR_NAKSHA_POSTGRES=$DR_NAKSHA_POSTGRES" \
-       --build-arg="VERSION=${PLJAVA_VER}" \
+       --build-arg="VERSION=${PLRUST_VER}" \
        -t "${DR_NAKSHA_POSTGRES}:${RELEASE_VER}" \
        -t "${DR_NAKSHA_POSTGRES}:latest" .
 ```
