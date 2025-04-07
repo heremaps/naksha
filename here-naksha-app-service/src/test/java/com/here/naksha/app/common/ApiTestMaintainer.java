@@ -62,6 +62,11 @@ public class ApiTestMaintainer implements BeforeAllCallback, ExtensionContext.St
     context.getRoot().getStore(GLOBAL).put(API_TEST_MAINTAINER_CONTEXT, this);
   }
 
+  /*
+    Using supportsParameter and resolveParameter functions, we inject running instance of NakshaApp into the eligible JUnits.
+    First function is to identify which JUnit test is interested in NakshaApp instance.
+    Second function is to actually inject the running instance of NakshaApp.
+  */
   @Override
   public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
     return parameterContext.isAnnotated(NakshaAppInjection.class) && parameterContext.getParameter().getType() == NakshaApp.class;
