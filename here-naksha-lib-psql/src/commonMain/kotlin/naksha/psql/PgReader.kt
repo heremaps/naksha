@@ -51,7 +51,7 @@ class PgReader(
                 allBytes = if (cursor.next()) { cursor.column("rs") as ByteArray? } else null
             }
             if (allBytes != null) {
-                val tupleNumberBinary = TupleNumberBinaryArray.fromGzip(allBytes)
+                val tupleNumberBinary = TupleNumberBinaryArray.fromByteArray(allBytes)
                 return SuccessResponse().withTupleNumberBinary(tupleNumberBinary)
             }
             return SuccessResponse()
