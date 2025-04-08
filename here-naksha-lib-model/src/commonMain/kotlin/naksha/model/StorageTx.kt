@@ -88,13 +88,13 @@ open class StorageTx private constructor(
      * The statistical transaction information, updated while this class is being used, should eventually be writted into the transaction-log of the storage.
      * @since 3.0
      */
-    open val transaction = NakshaTx().setVersion(version)
+    open val transaction: NakshaTx = NakshaTx().setVersion(version)
 
     /**
      * The `updated_at` value being used for all [Tuple] created, basically just reads `transaction.time`.
      * @since 3.0
      */
-    open val updatedAt
+    open val updatedAt: Int64
         get() = transaction.time
 
     /**

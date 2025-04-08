@@ -9,6 +9,10 @@ import kotlin.jvm.JvmField
 
 /**
  * The HEAD table of a collection.
+ * @since 3.0
+ * @see [PgTable]
+ * @see [PgHeadPartition]
+ * @see [PgTransactions]
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport

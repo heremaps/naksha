@@ -11,8 +11,8 @@ import naksha.psql.PgColumn.PgColumnCompanion.allColumns
  * @since 3.0
  * @see [PgWriter]
  */
-internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes: List<PgWrite>)
-    : PgWriterBase(writer, collection, writes)
+internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partition: Int, writes: List<PgWrite>)
+    : PgWriterBase(writer, collection, partition, writes)
 {
     init {
         inRows.addColumn("id", PgType.STRING)
@@ -28,9 +28,6 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes
     }
 
     private fun plan(conn: PgConnection, collection: PgCollection, purge: Boolean): PgPlan {
-        val headTable = collection.headTable
-        val shadowTable = collection.deletedTable
-        val historyTable = collection.historyTable
         // We do not insert into shadow, if the table does not exist, is disabled, or we are asked to PURGE
         val insert_into_shadow = if (!purge && shadowTable != null && collection.head.storeDeleted == StoreMode.ON) shadowTable else null
         // We do not insert into history, if the table does not exist, or is disabled
@@ -62,7 +59,6 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, writes
   SELECT ${allColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
   FROM ${headTable.quotedName} AS head, query
   WHERE head.id = query.id AND (query.version IS NULL OR query.version = naksha_tn_version(head.tn))
-  FOR UPDATE NOWAIT
 )"""
 
         // If the shadow table exists, delete old states

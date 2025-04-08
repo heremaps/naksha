@@ -113,7 +113,7 @@ class PgConfig() : NakshaStorage() {
             val list = StringList()
             val replicas = this.replicas
             for (replica in replicas) {
-                if (replica != null) list.add(replica.toString())
+                if (replica != null) list.add(replica.withReadOnly(true).toString())
             }
             return list
         }

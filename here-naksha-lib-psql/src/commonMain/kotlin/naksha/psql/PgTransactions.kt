@@ -10,6 +10,10 @@ import kotlin.jvm.JvmField
 /**
  * The TRANSACTIONS table, which is a special table that only exists in the [PgNakshaTransactions] collection. This table is partitioned by `txn` and replaces the HEAD table for the [PgNakshaTransactions] collection.
  * @param c the collection for which to create the HEAD table.
+ * @since 3.0
+ * @see [PgTable]
+ * @see [PgHead]
+ * @see [PgTransactionsYear]
  */
 @JsExport
 class PgTransactions(c: PgNakshaTransactions)
@@ -36,6 +40,14 @@ class PgTransactions(c: PgNakshaTransactions)
             yearTable.create(conn)
             years[year] = yearTable
             for (index in indices) yearTable.createIndex(conn, index)
+        }
+    }
+
+    fun addYear(year: Int) {
+        if (year !in years) {
+            val yearTable = PgTransactionsYear(this, year)
+            years[year] = yearTable
+            for (index in indices) yearTable.addIndex(index)
         }
     }
 

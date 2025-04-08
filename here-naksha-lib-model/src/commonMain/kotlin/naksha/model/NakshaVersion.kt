@@ -123,11 +123,14 @@ class NakshaVersion(
 
         const val v3_0_0_beta_8 = "3.0.0-beta.8"
 
+        // beta.9, to 15 were never committed, but can be dangling in caches, they were used for performance tests!
+        const val v3_0_0_beta_16 = "3.0.0-beta.16"
+
         /**
          * The current version as string to constant usage cases.
          * @since 3.0
          */
-        const val CURRENT = v3_0_0_beta_8
+        const val CURRENT = v3_0_0_beta_16
 
         /**
          * The current version of the Naksha library.

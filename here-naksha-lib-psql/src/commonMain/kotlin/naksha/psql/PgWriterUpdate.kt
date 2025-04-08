@@ -12,8 +12,8 @@ import naksha.psql.PgColumn.PgColumnCompanion.allColumns
  * @since 3.0
  * @see [PgWriter]
  */
-internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, writes: List<PgWrite>)
-    : PgWriterBase(writer, collection, writes)
+internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partition: Int, writes: List<PgWrite>)
+    : PgWriterBase(writer, collection, partition, writes)
 {
     private val writeById = mutableMapOf<String, PgWrite>()
 
@@ -33,9 +33,6 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, writes
     }
 
     private fun plan(conn: PgConnection, collection: PgCollection): PgPlan {
-        val headTable = collection.headTable
-        val shadowTable = collection.deletedTable
-        val historyTable = collection.historyTable
         val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
 
         // All input provided by client (the updates)
@@ -87,7 +84,7 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, writes
 )"""
 
         val inserted = """, inserted AS (
-INSERT INTO ${collection.headTable.quotedName} ($allColumnNames)
+INSERT INTO ${headTable.quotedName} ($allColumnNames)
 SELECT ${allColumns.joinToString(", ") {
     if (it === PgColumn.attachment)
     "CASE WHEN new_row.attachment = convert_to('undefined', 'UTF8') THEN head_row.attachment ELSE new_row.attachment END AS attachment"

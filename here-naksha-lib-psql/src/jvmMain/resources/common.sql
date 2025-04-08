@@ -22,6 +22,9 @@ CREATE EXTENSION IF NOT EXISTS postgis_topology;
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 CREATE EXTENSION IF NOT EXISTS btree_gin;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pg_buffercache; -- https://www.postgresql.org/docs/current/pgbuffercache.html
+CREATE EXTENSION IF NOT EXISTS pg_prewarm; -- https://www.postgresql.org/docs/current/pgprewarm.html
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements; -- https://www.postgresql.org/docs/current/pgstatstatements.html
 --CREATE EXTENSION IF NOT EXISTS pg_cron;
 
 -- Set search path and install extension.

@@ -2,11 +2,8 @@
 
 package naksha.psql
 
-import naksha.base.AtomicMap
-import naksha.base.AtomicNonNullRef
-import naksha.base.Epoch
+import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.toUnsignedInt64
 import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_NUMBER
@@ -23,6 +20,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
+import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
@@ -169,7 +167,7 @@ open class PgMap internal constructor(
             txn.create(conn)
             txn.createYear(conn, NOW.year)
             txn.createYear(conn, NOW.year + 1)
-            txn.createIndex(conn, PgIndex.tn_pkey)
+            //txn.createIndex(conn, PgIndex.tn_pkey)
             txn.createIndex(conn, PgIndex.id_unique)
             txn.createIndex(conn, PgIndex.txn_unique)
             for (index in indices) {
@@ -185,7 +183,7 @@ open class PgMap internal constructor(
             if (collection.metaTable != null) {
                 val meta = PgMeta(txn)
                 meta.create(conn)
-                meta.createIndex(conn, PgIndex.tn_pkey)
+                //meta.createIndex(conn, PgIndex.tn_pkey)
                 meta.createIndex(conn, PgIndex.id_unique)
                 for (index in indices) {
                     if (index != PgIndex.tn_pkey
@@ -200,7 +198,7 @@ open class PgMap internal constructor(
 
         val head = collection.headTable
         head.create(conn)
-        head.createIndex(conn, PgIndex.tn_pkey)
+        //head.createIndex(conn, PgIndex.tn_pkey)
         head.createIndex(conn, PgIndex.id_unique)
         for (index in indices) {
             if (index != PgIndex.tn_pkey
@@ -213,7 +211,7 @@ open class PgMap internal constructor(
         val deleted = collection.deletedTable
         if (deleted != null) {
             deleted.create(conn)
-            deleted.createIndex(conn, PgIndex.tn_pkey)
+            //deleted.createIndex(conn, PgIndex.tn_pkey)
             deleted.createIndex(conn, PgIndex.id_unique)
             for (index in indices) {
                 if (index != PgIndex.tn_pkey
@@ -227,7 +225,7 @@ open class PgMap internal constructor(
         val meta = collection.metaTable
         if (meta != null) {
             meta.create(conn)
-            meta.createIndex(conn, PgIndex.tn_pkey)
+            //meta.createIndex(conn, PgIndex.tn_pkey)
             meta.createIndex(conn, PgIndex.id_unique)
             for (index in indices) {
                 if (index != PgIndex.tn_pkey
@@ -243,7 +241,7 @@ open class PgMap internal constructor(
             history.create(conn)
             history.createYear(conn, NOW.year)
             history.createYear(conn, NOW.year + 1)
-            history.createIndex(conn, PgIndex.tn_pkey)
+            //history.createIndex(conn, PgIndex.tn_pkey)
             for (index in indices) {
                 if (index != PgIndex.tn_pkey) {
                     history.createIndex(conn, index)
@@ -391,13 +389,16 @@ open class PgMap internal constructor(
      */
     open fun deletePgCollection(conn: PgConnection, collection: PgCollection) {
         setSearchPath(conn)
-        var SQL = "DROP TABLE IF EXISTS ${collection.headTable.quotedName} CASCADE;"
-        val history = collection.historyTable
-        if (history != null) SQL += "DROP TABLE IF EXISTS ${history.quotedName} CASCADE;"
+        val builder = StringBuilder()
+        val head = collection.headTable
+        builder.append("DROP TABLE IF EXISTS ${head.quotedName} CASCADE;\n")
         val deleted = collection.deletedTable
-        if (deleted != null) SQL += "DROP TABLE IF EXISTS ${deleted.quotedName} CASCADE;"
-        val meta = collections.metaTable
-        if (meta != null) SQL += "DROP TABLE IF EXISTS ${meta.quotedName} CASCADE;"
+        if (deleted != null) builder.append("DROP TABLE IF EXISTS ${deleted.quotedName} CASCADE;\n")
+        val meta = collection.metaTable
+        if (meta != null) builder.append("DROP TABLE IF EXISTS ${meta.quotedName} CASCADE;\n")
+        val history = collection.historyTable
+        if (history != null) builder.append("DROP TABLE IF EXISTS ${history.quotedName} CASCADE;\n")
+        val SQL = builder.toString()
         logger.info("Dropped collection {}@{}", collection.id, collection.number)
         conn.execute(SQL).close()
         invalidateCollection(collection)
@@ -410,7 +411,7 @@ open class PgMap internal constructor(
      * @return the collection, if it exists; _null_ otherwise.
      * @since 3.0.0
      */
-    fun getPgCollectionById(conn: PgConnection, id: String): PgCollection? {
+    fun getPgCollectionById(conn: PgConnection?, id: String): PgCollection? {
         if (this is PgAdminMap) {
             return when (id) {
                 COLLECTIONS_COL -> collections
@@ -423,7 +424,7 @@ open class PgMap internal constructor(
         if (id == COLLECTIONS_COL) return collections
         val number = collectionNumberById[id]
         val existing = if (number != null) collectionCache[number] else null
-        if (existing != null) return existing
+        if (existing != null || conn == null) return existing
 
         // Read from database
         val outRows = PgColumnRows()
@@ -455,7 +456,7 @@ WHERE id = $1"""
      * @return the collection, if it exists; _null_ otherwise.
      * @since 3.0.0
      */
-    fun getPgCollectionByNumber(conn: PgConnection, number: Int): PgCollection? {
+    fun getPgCollectionByNumber(conn: PgConnection?, number: Int): PgCollection? {
         if (this is PgAdminMap) {
             return when (number) {
                 COLLECTIONS_COL_NUMBER -> collections
@@ -467,7 +468,7 @@ WHERE id = $1"""
         }
         if (number == COLLECTIONS_COL_NUMBER) return collections
         val existing = collectionCache[number]
-        if (existing != null) return existing
+        if (existing != null || conn == null) return existing
 
         // Read from database
         val outRows = PgColumnRows()

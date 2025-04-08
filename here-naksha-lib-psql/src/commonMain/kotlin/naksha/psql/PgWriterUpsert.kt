@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.base.IntMutable
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.model.*
@@ -12,8 +11,8 @@ import naksha.psql.PgColumn.PgColumnCompanion.allColumns
  * @since 3.0
  * @see [PgWriter]
  */
-internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, writes: List<PgWrite>)
-    : PgWriterBase(writer, collection, writes)
+internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partition: Int, writes: List<PgWrite>)
+    : PgWriterBase(writer, collection, partition, writes)
 {
     private val writeByTn = mutableMapOf<TupleNumber, PgWrite>()
 
@@ -30,9 +29,6 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, writes
     }
 
     private fun plan(conn: PgConnection, collection: PgCollection): PgPlan {
-        val headTable = collection.headTable
-        val shadowTable = collection.deletedTable
-        val historyTable = collection.historyTable
         val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
 
         // This is what we should INSERT or UPDATE.
@@ -44,7 +40,6 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, writes
         val head_row = """, head_row AS (
   SELECT * FROM ${headTable.quotedName}
   WHERE id IN (SELECT id FROM new_row)
-  FOR UPDATE NOWAIT
 )"""
 
         // If the shadow table exists, delete old states.
@@ -117,16 +112,16 @@ SELECT
     head_updated.cc AS cc,
     head_updated.attachment AS attachment,
     head_row.tn AS head_row_tn,
-    clear_shadow.tn AS clear_shadow_tn,
     head_deleted.tn AS head_deleted_tn,
     head_inserted.tn AS head_inserted_tn,
+    ${if (clear_shadow.isNotEmpty()) "clear_shadow.tn AS clear_shadow_tn," else "null AS clear_shadow_tn,"}
     ${if (head_to_history.isNotEmpty()) "head_to_history.tn AS head_to_history_tn" else "null AS head_to_history_tn"}
 FROM new_row
 LEFT JOIN head_updated ON head_updated.id = new_row.id
 LEFT JOIN head_row ON head_row.id = new_row.id
-LEFT JOIN clear_shadow ON clear_shadow.id = new_row.id
 LEFT JOIN head_deleted ON head_deleted.id = new_row.id
 LEFT JOIN head_inserted ON head_inserted.id = new_row.id
+${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = new_row.id" else ""}
 ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.id = new_row.id" else ""}
 ;"""
         return conn.prepare(SQL, inRows.typeNames())
@@ -151,6 +146,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
             .addColumn("head_to_history_tn", PgType.BYTE_ARRAY)
         if (writes.isEmpty()) return
         val plan = plan(conn, collection)
+        // TupleNumber.fromB160(inRows.columns[11].values_field[0] as ByteArray, naksha.base.Int64(0), 0, 0).partitionNumber % 16
         val array = inRows.values()
         val start = Platform.currentNanos()
         val cursor = plan.execute(array)

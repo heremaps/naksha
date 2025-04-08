@@ -45,9 +45,29 @@ internal const val PG_HST = "${PG_S}hst"
 internal const val PG_META = "${PG_S}meta"
 
 /**
- * `$i_`: The prefix used for indices, followed by the index identifier, e.g. `$i_id`
+ * `$i_???`: The prefix used for indices, followed by the index identifier, e.g. `$i_id`
  */
 internal const val PG_IDX = "${PG_S}i_"
+
+/**
+ * `$c_??`: The prefix used for constraints, followed by the identifier of the constraint.
+ */
+internal const val PG_CONSTRAINT = "${PG_S}c_"
+
+/**
+ * The name of the constraint above [tn_next][PgColumn.next_tn] (yearly partition).
+ */
+internal const val PG_TN_NEXT_CONSTRAINT = "${PG_CONSTRAINT}nt"
+
+/**
+ * The name of the constraint above [tn][PgColumn.tn] (performance partition).
+ */
+internal const val PG_PART_CONSTRAINT = "${PG_CONSTRAINT}tn"
+
+/**
+ * The name of the partition-constraint above [id][PgColumn.id].
+ */
+internal const val PG_ID_CONSTRAINT = "${PG_CONSTRAINT}id"
 
 /**
  * `$p_`: The prefix used for numerated partitions, the final value is `$p???` with `?` being `[0-9]`.

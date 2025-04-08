@@ -21,7 +21,7 @@ import kotlin.jvm.JvmStatic
 data class SessionOptions @JvmOverloads constructor(
     /**
      * An arbitrary name for debug logs, in `lib-psql` this will be used in the database connection as name and shown in `pg_stat_activity`.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JvmField
     val appName: String = NakshaContext.appName(),
