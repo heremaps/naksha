@@ -5,33 +5,46 @@ FROM ${DR_NAKSHA_POSTGRES}:pljava-${VERSION}
 
 # https://github.com/tcdi/plrust
 # https://plrust.io/install-plrust.html#trusted-installation-plus-cross-compilation
-RUN chown postgres -R /usr/share/postgresql/16/extension/ \
-    && chown postgres -R /usr/lib/postgresql/15/lib/ \
+RUN chown postgres -R "$(pg_config --sharedir)/extension" \
+    && chown postgres -R "$(pg_config --pkglibdir)"
 USER postgres
 RUN cd /tmp/ \
     && curl --tlsv1.3 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y \
+    && source ~/.cargo/env \
     && git clone https://github.com/tcdi/plrust.git \
-    && rustup default 1.86.0 \
-# install pgrx
-    && cargo install cargo-pgrx --locked \
-    && cargo pgrx init --pg16 /usr/local/bin/pg_config \
+    && cd /tmp/plrust \
+    && git checkout v1.2.8 \
+# temporarily adjust dependencies version to support postgres 16 \
+# https://github.com/tcdi/plrust/issues/417
+    && sed -i '/^quote = "1"/a\
+       litemap = { version = "=0.7.4", forced = true } \n \
+       zerofrom = { version = "=0.1.5", forced = true } \n' plrust/Cargo.toml \
+    && sed -i '/^pub(crate) fn cargo_toml_template/a\
+               home = { version = "=0.5.9", forced = true } \n \
+               litemap = { version = "=0.7.4", forced = true } \n \
+               zerofrom = { version = "=0.1.5", forced = true } \n' plrust/src/user_crate/crating.rs \
+    && rustup default 1.72.0 \
     && rustup component add llvm-tools-preview rustc-dev \
     && if [ "${TARGETPLATFORM}" = "linux/arm64" ]; then \
-               rustup target install aarch64-unknown-linux-gnu; \
-           elif [ "${TARGETPLATFORM}" = "linux/amd64" ]; then \
-               rustup target install x86_64-unknown-linux-gnu; \
-           fi \
-    && cd ~/plrust/plrustc \
+          rustup target install aarch64-unknown-linux-gnu; \
+        elif [ "${TARGETPLATFORM}" = "linux/amd64" ]; then \
+          rustup target install x86_64-unknown-linux-gnu; \
+        fi \
+#    && cargo build --release \
+# install pgrx
+    && cargo install cargo-pgrx --locked --version=0.11.0 \
+    && cargo pgrx init --pg16 /usr/local/bin/pg_config \
+    && cd /tmp/plrust/plrustc \
 # install plrust
     && ./build.sh \
-    && mv ~/plrust/build/bin/plrustc ~/.cargo/bin/ \
+    && mv /tmp/plrust/build/bin/plrustc ~/.cargo/bin/ \
 # install postgrestd
-    && cd ~/plrust/plrust \
+    && cd /tmp/plrust/plrust \
     && PG_VER=16 \
     && if [ "${TARGETPLATFORM}" = "linux/arm64" ]; then \
-                   STD_TARGETS="aarch64-postgres-linux-gnu "; \
+                   STD_TARGETS="aarch64-postgres-linux-gnu"; \
                elif [ "${TARGETPLATFORM}" = "linux/amd64" ]; then \
-                   STD_TARGETS="x86_64-postgres-linux-gnu "; \
+                   STD_TARGETS="x86_64-postgres-linux-gnu"; \
                fi \
     && ./build \
     && cargo pgrx install --release --features trusted -c /usr/bin/pg_config \
@@ -43,8 +56,12 @@ RUN cd /tmp/ \
           echo "shared_preload_libraries = 'plrust'" >> "$CONFIG_FILE"; \
         fi \
     && echo "plrust.work_dir = '/tmp'" >> "$CONFIG_FILE" \
+    && chown root -R "$(pg_config --sharedir)/extension" \
+    && chown root -R "$(pg_config --pkglibdir)" \
 # Cleanup
     && rm -rf /tmp/*
+
+USER root
 
 EXPOSE 5432
 
