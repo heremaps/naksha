@@ -1,5 +1,7 @@
 package naksha.psql
 
+import naksha.base.Int64
+
 /**
  * An SQL query to be executed against a Naksha table.
  * @since 3.0
@@ -24,7 +26,25 @@ data class PgQuery(
      * ```
      * @since 3.0
      */
-    val argTypes: Array<String>
+    val argTypes: Array<String>,
+
+    /**
+     * The storage-number of the storage from which the results are.
+     * @since 3.0
+     */
+    val storageNumber: Int64,
+
+    /**
+     * The map-number of the map from which the results are.
+     * @since 3.0
+     */
+    val mapNumber: Int,
+
+    /**
+     * If all results are from the same collection, then the collection-number of the collection from which the results are. If this is `null`, then the results are from multiple collections and each returned row contains `col_num`.
+     * @since 3.0
+     */
+    val collectionNumber: Int?
 ) {
 
     override fun equals(other: Any?): Boolean {
@@ -34,6 +54,9 @@ data class PgQuery(
         other as PgQuery
 
         if (sql != other.sql) return false
+        if (storageNumber != other.storageNumber) return false
+        if (mapNumber != other.mapNumber) return false
+        if (collectionNumber != other.collectionNumber) return false
         if (!argValues.contentEquals(other.argValues)) return false
         if (!argTypes.contentEquals(other.argTypes)) return false
 
@@ -42,6 +65,9 @@ data class PgQuery(
 
     override fun hashCode(): Int {
         var result = sql.hashCode()
+        result = 31 * result + storageNumber.hashCode()
+        result = 31 * result + mapNumber
+        result = 31 * result + (collectionNumber ?: 0)
         result = 31 * result + argValues.contentHashCode()
         result = 31 * result + argTypes.contentHashCode()
         return result

@@ -223,14 +223,19 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
 )"""
 
         // The final SQL query.
+        // We only need `col_num` and `tn`, the additional columns in limit were only for sorting!
+        // If we only select from a single collection (thePgCollection != null), then we only need
+        // the tuple-numbers, because we know the collection we read from!
         val SQL = """WITH query AS (
 $selects)$part$limited
-SELECT $gzip AS rs
-FROM limited"""
+SELECT ${if (thePgCollection == null) "col_num, tn" else "tn"} FROM limited"""
         return PgQuery(
             sql = SQL,
             argValues = whereClause?.argValues?.toTypedArray() ?: emptyArray(),
             argTypes = whereClause?.argTypeNames ?: emptyArray(),
+            pgStorage.number,
+            pgMap.number,
+            thePgCollection?.number
         )
     }
 }

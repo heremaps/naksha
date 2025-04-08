@@ -317,6 +317,8 @@ open class PgSession(
         return PgLock(this, useConnection(), lockId, false)
     }
 
+    override fun loadTuples(featureTuples: List<FeatureTuple?>) = loadTuples(featureTuples, 0, featureTuples.size, FETCH_ALL)
+
     override fun loadTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int, mode: FetchMode) {
         val missing = featureTuples.subList(from, to).mapNotNull { if (it != null && it.tuple == null) it else null }
         if (missing.isNotEmpty()) {
