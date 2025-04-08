@@ -55,27 +55,9 @@ jobs:
 #        run: gradle shadowJar jacocoTestReport jacocoTestCoverageVerification
         shell: bash
         run: |
-          array=( 
-            here-naksha-lib-base 
-            here-naksha-lib-jbon 
-            here-naksha-lib-geo 
-            here-naksha-lib-model 
-            here-naksha-lib-psql 
-            here-naksha-lib-core 
-            here-naksha-lib-view 
-            here-naksha-lib-diff 
-            here-naksha-lib-handlers 
-            here-naksha-lib-hub 
-            here-naksha-lib-ext-manager 
-            here-naksha-storage-http 
-            here-naksha-handler-activitylog 
-          )
-          for item in ${array[@]}; do
-            echo "gradle -x jsNodeTest :$item:build :$item:jacocoTestReport :$item:jacocoTestCoverageVerification"
-          done
           gradle cleanAndTest
       - name: Upload Test Report (HTML)
-        if: failure()
+        if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
           name: jvm-test-report
