@@ -70,6 +70,8 @@ tasks.register("cleanAndTestAll") {
             }
             CleanAndTest.JAVA -> {
                 dependsOn("${it.key}:test")
+                dependsOn("${it.key}:jacocoTestReport")
+                //dependsOn("${it.key}:jacocoTestCoverageVerification")
             }
             else -> {}
         }
