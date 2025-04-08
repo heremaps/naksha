@@ -64,6 +64,8 @@ import naksha.model.request.query.TagValueMatches;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static naksha.model.LibModelKt.FETCH_ALL;
+
 public class NHAdminReaderMock implements IReadSession {
 
   protected static @NotNull Map<String, TreeMap<String, NakshaFeature>> mockCollection;
@@ -300,5 +302,10 @@ public class NHAdminReaderMock implements IReadSession {
   @Override
   public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
+  }
+
+  @Override
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
+    loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
   }
 }

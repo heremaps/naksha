@@ -36,7 +36,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 
-class TagFilterHandlerTest {
+class TagFilterHandlerTest extends AbstractTest {
 
   @Test
   void testReadWithoutPOpAndSingleTagFilter() {

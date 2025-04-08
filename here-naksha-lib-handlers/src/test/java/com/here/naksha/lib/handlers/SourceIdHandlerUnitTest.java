@@ -28,7 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class SourceIdHandlerUnitTest {
+class SourceIdHandlerUnitTest extends AbstractTest {
 
     @Test
     void tc2002_testMapEqToContainsTag() {

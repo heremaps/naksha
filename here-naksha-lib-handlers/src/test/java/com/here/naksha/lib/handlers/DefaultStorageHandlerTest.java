@@ -32,7 +32,6 @@ import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
-import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
@@ -58,7 +57,11 @@ import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class DefaultStorageHandlerTest {
+class DefaultStorageHandlerTest extends AbstractTest {
+
+  public DefaultStorageHandlerTest() {
+    super("default_storage_handler_test_context", "default_storage_handler_test_map");
+  }
 
   private static final Logger log = LoggerFactory.getLogger(DefaultStorageHandlerTest.class);
 
@@ -74,14 +77,10 @@ class DefaultStorageHandlerTest {
   @Mock
   IReadSession storageReadSession;
 
-  NakshaContext nakshaContext;
-
   @BeforeEach
   void setup() {
     MockitoAnnotations.openMocks(this);
     configureStorageMocks();
-    nakshaContext = NakshaContext.newInstance("default_storage_handler_test_context");
-    nakshaContext.attachToCurrentThread();
   }
 
   @Test
@@ -314,7 +313,7 @@ class DefaultStorageHandlerTest {
       return switch (validCollectionSource) {
         case HANDLER_PROPERTIES -> handlerProperties.getCollection();
         case SPACE_PROPERTIES -> JvmBoxingUtil.box(space.getProperties(), SpaceProperties.class).getCollection();
-        case SPACE_ID -> new NakshaCollection(space.getId());
+        case SPACE_ID -> new NakshaCollection(space.getId()).withMapId(getMapId());
       };
     }
   }
@@ -360,6 +359,7 @@ class DefaultStorageHandlerTest {
     }
     final NakshaCollection nakshaCollection = new NakshaCollection();
     nakshaCollection.setId(collectionId);
+    nakshaCollection.setMapId(getMapId());
     SpaceProperties spaceProperties = new SpaceProperties();
     spaceProperties.setCollection(nakshaCollection);
     return spaceProperties;
@@ -370,6 +370,7 @@ class DefaultStorageHandlerTest {
     NakshaCollection collection = collectionId != null ? new NakshaCollection() : null;
     if (collection != null) {
       collection.setId(collectionId);
+      collection.setMapId(getMapId());
     }
     properties.setCollection(collection);
     return properties;
@@ -378,6 +379,7 @@ class DefaultStorageHandlerTest {
   private static DefaultStorageHandlerProperties handlerProperties(String storageId) {
     final NakshaCollection nakshaCollection = new NakshaCollection();
     nakshaCollection.setId("handler_collection");
+    nakshaCollection.setMapId(getMapId());
     DefaultStorageHandlerProperties properties = new DefaultStorageHandlerProperties();
     properties.setStorageId(storageId);
     properties.setCollection(nakshaCollection);

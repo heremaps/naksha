@@ -100,7 +100,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
     final NakshaContext ctx = NakshaContext.newInstance("naksha_mock");
     ctx.attachToCurrentThread();
     runInWriteSession(SessionOptions.from(ctx, true), admin -> {
-      final Response response = admin.execute(createFeatureRequest(CONFIGS, nakshaHubConfig));
+      final Response response = admin.execute(createFeatureRequest(ctx.getMapId(), CONFIGS, nakshaHubConfig));
       if (response instanceof ErrorResponse errorResponse) {
         admin.rollback();
         throw unchecked(

@@ -29,6 +29,8 @@ import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static naksha.model.LibModelKt.FETCH_ALL;
+
 public class MockReadSession implements IReadSession {
 
   FeatureTupleList results;
@@ -128,5 +130,10 @@ public class MockReadSession implements IReadSession {
   @Override
   public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
 
+  }
+
+  @Override
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
+    loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
   }
 }

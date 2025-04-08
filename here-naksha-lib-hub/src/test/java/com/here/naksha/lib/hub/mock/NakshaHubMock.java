@@ -26,6 +26,7 @@ import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.ExtensionConfig;
+import com.here.naksha.lib.hub.AbstractTest;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import java.util.Map;
 import java.util.TreeMap;
@@ -42,7 +43,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 //TODO: CASL-657 remove?
-public class NakshaHubMock implements INaksha {
+public class NakshaHubMock extends AbstractTest implements INaksha {
 
   /**
    * The in-memory mock storage, which will be used by Storage Mock reader/writer instances.
@@ -87,6 +88,11 @@ public class NakshaHubMock implements INaksha {
     //    this.nakshaHubConfig = customCfg;
   }
 
+  @Override
+  public @NotNull String getAdminMapId() {
+    return "naksha_hub_admin";
+  }
+
   /**
    * Returns a thin wrapper above the admin-database that adds authorization and internal event handling. Basically, this allows access to
    * the admin collections.
@@ -117,7 +123,7 @@ public class NakshaHubMock implements INaksha {
   @Override
   public @NotNull IStorage getStorageById(@NotNull String storageId) {
     return getAdminStorage().useReadSession(SessionOptions.from(currentContext(), false), reader -> {
-      final Response response = reader.execute(readFeaturesByIdRequest(STORAGES, storageId));
+      final Response response = reader.execute(readFeaturesByIdRequest(getMapId(), STORAGES, storageId));
       if (response instanceof SuccessResponse successResponse) {
         final NakshaStorage storageConfig = readFeatureFromResponse(successResponse, NakshaStorage.class);
         if (storageConfig == null) {
