@@ -14,6 +14,7 @@ target/
 build/
 file-uploads/
 /static/
+/here-naksha-lib-model/src/jvmMain/resources/version.json
 release.properties
 /xyz-handler-http/src/test/resources/endpoint
 *.log

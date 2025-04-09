@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
+import java.time.Instant
 
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
@@ -113,4 +113,40 @@ tasks {
         useJUnitPlatform()
         maxHeapSize = "8g"
     }
+}
+
+val versionJsonFile = project.projectDir.resolve("src/jvmMain/resources/version.json")
+val nakshaVersionFile = project.projectDir.resolve("src/commonMain/kotlin/naksha/model/NakshaVersion.kt")
+tasks.register("generateVersionFile") {
+    doLast {
+        val newJson = """{
+  "version": "${project.version}",
+  "buildTime": "${Instant.now()}"
+}""".trimIndent()
+        versionJsonFile.parentFile.mkdirs()
+        versionJsonFile.writeText(newJson)
+        println("✅ Generated ${versionJsonFile.path}: $newJson")
+
+        if (!nakshaVersionFile.exists()) throw GradleException("NakshaVersion class not found: ${nakshaVersionFile.path}")
+        val currentVersionRegex = Regex("""const val CURRENT = "([^"]+)"""")
+        val content = nakshaVersionFile.readText()
+        val match = currentVersionRegex.find(content)
+        val existingVersion = match?.groupValues?.get(1)
+        val newVersion = project.version.toString()
+        if (existingVersion == newVersion) {
+            println("✅ NakshaVersion.kt is up to date: $newVersion")
+        } else {
+            val updated = content.replace(
+                Regex("""const val CURRENT = "[^"]+""""),
+                """const val CURRENT = "${project.version}""""
+            )
+            nakshaVersionFile.writeText(updated)
+            println("✅ Updated CURRENT to ${project.version} in ${nakshaVersionFile.path}")
+        }
+
+    }
+}
+
+tasks.named("processResources") {
+    dependsOn("generateVersionFile")
 }
