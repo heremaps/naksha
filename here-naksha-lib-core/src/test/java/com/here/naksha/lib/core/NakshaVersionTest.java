@@ -24,10 +24,14 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NakshaVersionTest {
+  private final String v2_0_3 = "2.0.3";
+  private final String v2_0_4 = "2.0.4";
+  private final String v2_0_5 = "2.0.5";
+  private final String v3_0_0_alpha_0 = "3.0.0-alpha.0";
 
   @Test
   void testBasics() {
-    NakshaVersion v = NakshaVersion.of(NakshaVersion.v2_0_3);
+    NakshaVersion v = NakshaVersion.of(v2_0_3);
     assertNotNull(v);
     assertEquals(2, v.getMajor());
     assertEquals(0, v.getMinor());
@@ -51,14 +55,14 @@ class NakshaVersionTest {
 
   @Test
   void testPreRelease() {
-    NakshaVersion v = NakshaVersion.of(NakshaVersion.v3_0_0_alpha_0);
+    NakshaVersion v = NakshaVersion.of(v3_0_0_alpha_0);
     assertNotNull(v);
     assertEquals(3, v.getMajor());
     assertEquals(0, v.getMinor());
     assertEquals(0, v.getRevision());
     assertEquals(NakshaVersion.PreReleaseTag.alpha, v.getPreReleaseTag());
     assertEquals((byte) 0, v.getPreReleaseVersion());
-    assertEquals(NakshaVersion.v3_0_0_alpha_0, v.toString());
+    assertEquals(v3_0_0_alpha_0, v.toString());
 
     final NakshaVersion fromLong = new NakshaVersion(v.toLong());
     assertEquals(v.getMajor(), fromLong.getMajor());
@@ -71,10 +75,10 @@ class NakshaVersionTest {
 
   @Test
   void testOrder() {
-    final NakshaVersion v1 = NakshaVersion.of(NakshaVersion.v2_0_3);
-    final NakshaVersion v2 = NakshaVersion.of(NakshaVersion.v2_0_4);
-    final NakshaVersion v3 = NakshaVersion.of(NakshaVersion.v2_0_5);
-    final NakshaVersion v4 = NakshaVersion.of(NakshaVersion.v3_0_0_alpha_0);
+    final NakshaVersion v1 = NakshaVersion.of(v2_0_3);
+    final NakshaVersion v2 = NakshaVersion.of(v2_0_4);
+    final NakshaVersion v3 = NakshaVersion.of(v2_0_5);
+    final NakshaVersion v4 = NakshaVersion.of(v3_0_0_alpha_0);
     final NakshaVersion v5 = NakshaVersion.of("3.0.0-alpha.1");
     final NakshaVersion v6 = NakshaVersion.of("3.0.0-beta.0");
     final NakshaVersion v7 = NakshaVersion.of("3.0.0");
