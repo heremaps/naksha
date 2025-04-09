@@ -47,14 +47,6 @@ RUN cd /tmp/ \
                fi \
     && cargo pgrx init --pg16 "$(pg_config --bindir)/pg_config" \
     && cargo pgrx install --release --features trusted -c "$(pg_config --bindir)/pg_config"
-ENV POSTGRESQL_CONF="/usr/local/pgsql/data/postgresql.conf" \
-RUN if grep -q "^shared_preload_libraries" "$POSTGRESQL_CONF"; then \
-          grep "^shared_preload_libraries" "$POSTGRESQL_CONF" | grep -q "plrust" || \
-          sed -i "s/^\(shared_preload_libraries *= *'\(.*\)'\)/shared_preload_libraries = '\2, plrust'/" "$POSTGRESQL_CONF"; \
-        else \
-          echo "shared_preload_libraries = 'plrust'" >> "$POSTGRESQL_CONF"; \
-        fi \
-    && echo "plrust.work_dir = '/tmp'" >> "$POSTGRESQL_CONF" \
 USER root
 RUN chown root -R "$(pg_config --sharedir)/extension" \
     && chown root -R "$(pg_config --pkglibdir)" \
