@@ -66,6 +66,7 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
 
   private static final Logger logger = LoggerFactory.getLogger(WriteFeatureApiTask.class);
   private final @NotNull WriteFeatureApiReqType reqType;
+  private final @NotNull SpaceMapResolver spaceMapResolver;
 
   public enum WriteFeatureApiReqType {
     CREATE_FEATURES,
@@ -81,9 +82,12 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
       final @NotNull NakshaHttpVerticle verticle,
       final @NotNull INaksha nakshaHub,
       final @NotNull RoutingContext routingContext,
-      final @NotNull NakshaContext nakshaContext) {
+      final @NotNull NakshaContext nakshaContext,
+      final @NotNull SpaceMapResolver spaceMapResolver
+      ) {
     super(verticle, nakshaHub, routingContext, nakshaContext);
     this.reqType = reqType;
+    this.spaceMapResolver = spaceMapResolver;
   }
 
   /**
@@ -153,12 +157,15 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     final List<String> addTags = extractParamAsStringList(queryParams, ADD_TAGS);
     final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
 
+    // retrieve mapId for this space
+    String mapId = spaceMapResolver.getMapIdForSpace(spaceId);
+
     // as applicable, modify features based on parameters supplied
     for (final NakshaFeature feature : features) {
       addTagsToFeature(feature, addTags);
       removeTagsFromFeature(feature, removeTags);
     }
-    final WriteRequest wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, features);
+    final WriteRequest wrRequest = RequestHelper.upsertFeaturesRequest(mapId, spaceId, features);
 
     // Forward request to NH Space Storage writer instance
     Response response = executeWriteRequestFromSpaceStorage(wrRequest);
@@ -176,6 +183,9 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     final List<String> addTags = extractParamAsStringList(queryParams, ADD_TAGS);
     final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
 
+    // retrieve mapId for this space
+    String mapId = spaceMapResolver.getMapIdForSpace(spaceId);
+
     // Validate parameters
     validateFeatureId(routingContext, feature.getId());
 
@@ -183,7 +193,7 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     addTagsToFeature(feature, addTags);
     removeTagsFromFeature(feature, removeTags);
 
-    final WriteRequest wrRequest = RequestHelper.updateFeatureRequest(spaceId, feature);
+    final WriteRequest wrRequest = RequestHelper.updateFeatureRequest(mapId, spaceId, feature);
 
     // Forward request to NH Space Storage writer instance
     Response response = executeWriteRequestFromSpaceStorage(wrRequest);
@@ -203,7 +213,10 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     // Parse API parameters
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
 
-    final WriteRequest wrRequest = RequestHelper.deleteFeaturesByIdsRequest(spaceId, features);
+    // retrieve mapId for this space
+    String mapId = spaceMapResolver.getMapIdForSpace(spaceId);
+
+    final WriteRequest wrRequest = RequestHelper.deleteFeaturesByIdsRequest(mapId, spaceId, features);
 
     // Forward request to NH Space Storage writer instance
     Response response = executeWriteRequestFromSpaceStorage(wrRequest);
@@ -216,7 +229,11 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
     final String featureId = ApiParams.extractMandatoryPathParam(routingContext, FEATURE_ID);
 
-    final WriteRequest wrRequest = RequestHelper.deleteFeatureByIdRequest(spaceId, featureId);
+    // retrieve mapId for this space
+    String mapId = spaceMapResolver.getMapIdForSpace(spaceId);
+
+    // prepare request
+    final WriteRequest wrRequest = RequestHelper.deleteFeatureByIdRequest(mapId, spaceId, featureId);
 
     // Forward request to NH Space Storage writer instance
     Response response = executeWriteRequestFromSpaceStorage(wrRequest);
@@ -250,6 +267,9 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
       @Nullable List<String> addTags,
       @Nullable List<String> removeTags,
       int retry) {
+    // Retrieve map for this space
+    String mapId = spaceMapResolver.getMapIdForSpace(spaceId);
+
     // Patched feature list is to ensure the order of input features is retained
     final List<NakshaFeature> patchedFeatures;
     final List<String> featureIds = new ArrayList<>();
@@ -258,7 +278,7 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     }
 
     // Extract the version of features in storage
-    final ReadFeatures rdRequest = proxyWrapperOf(RequestHelper.readFeaturesByIdsRequest(spaceId, featureIds))
+    final ReadFeatures rdRequest = proxyWrapperOf(RequestHelper.readFeaturesByIdsRequest(mapId, spaceId, featureIds))
         .withReadRequestType(ReadFeaturesProxyWrapper.ReadRequestType.GET_BY_IDS)
         .withQueryParameters(Map.of(FEATURE_IDS, featureIds));
 
@@ -292,7 +312,7 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     patchedFeatures =
         performInMemoryPatching(featuresFromRequest, featuresToPatchFromStorage, addTags, removeTags);
 
-    final WriteRequest patchRequest = RequestHelper.upsertFeaturesRequest(spaceId, patchedFeatures);
+    final WriteRequest patchRequest = RequestHelper.upsertFeaturesRequest(mapId, spaceId, patchedFeatures);
     // Forward request to NH Space Storage writer instance
     return naksha().getSpaceStorage().useWriteSession(SessionOptions.from(context(), true), writer -> {
       final Response wrResponse = writer.execute(patchRequest);
@@ -322,7 +342,7 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
         if (responseType.equals(HttpResponseType.FEATURE)) {
           return transformResponseToXyzFeatureResponse(wrResponse, NakshaFeature.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
         }
-        return transformResponseToXyzCollectionResponse(wrResponse, NakshaFeature.class);
+        return transformWriteResultToXyzCollectionResponse(wrResponse, NakshaFeature.class, false);
       }
     });
   }

@@ -133,7 +133,7 @@ public class ViewTest {
 
     final WriteRequest request = new WriteRequest();
     final NakshaFeature feature = new NakshaFeature("0");
-    request.add(write.createFeature("", feature));
+    request.add(write.createFeature(TEST_MAP_ID, "", feature));
 //    when(storage.tupleToFeature(any())).thenReturn(feature);
 
     Response success = new SuccessResponse(sampleXyzWriteResponse(1, Action.CREATED));
@@ -214,7 +214,7 @@ public class ViewTest {
     View view = new View(viewLayerCollection);
 
     // when only by id
-    ReadFeatures request1 = RequestHelper.readFeaturesByIdsRequest(TOPO, List.of("1"));
+    ReadFeatures request1 = RequestHelper.readFeaturesByIdsRequest(TEST_MAP_ID, TOPO, List.of("1"));
     SuccessResponse response = (SuccessResponse) view.newReadSession(sessionOptions).execute(request1);
     assertNotNull(response.getFeatures());
     // then

@@ -2,16 +2,17 @@ package naksha.psql
 
 import naksha.model.Action
 import naksha.model.Naksha
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.base.PgTestBase
-import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import kotlin.test.*
 
-class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
+class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test", TEST_MAP_ID)) {
 
     companion object ReadHistoryTest_C {
         private const val COUNT = 10
@@ -145,6 +146,6 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
             assertEquals(Action.UPDATED, update2.properties.xyz.action)
         }
 
-        }
+    }
 
 }

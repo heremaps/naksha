@@ -20,6 +20,7 @@ package com.here.naksha.lib.hub.storages;
 
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
+import static naksha.model.LibModelKt.FETCH_ALL;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
@@ -36,7 +37,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
@@ -176,16 +176,23 @@ public class NHSpaceStorageReader implements IReadSession {
     return eventPipeline.sendEvent(rf);
   }
 
+  @Override
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
+    loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
+  }
+
   record SpaceAndHandlerConfigs(Space space, List<EventHandlerConfig> eventHandlerConfigs) {
 
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   protected @NotNull Response setupEventPipelineForSpaceId(
-      final @NotNull String spaceId, final @NotNull EventPipeline pipeline) {
+      final @NotNull String spaceId,
+      final @NotNull EventPipeline pipeline
+  ) {
     Space space = null;
     Response spaceResponse = nakshaHub.getAdminStorage()
-        .useReadSession(sessionOptions, reader -> reader.execute(readFeaturesByIdRequest(SPACES, spaceId)));
+        .useReadSession(sessionOptions, reader -> reader.execute(readFeaturesByIdRequest(nakshaHub.getAdminMapId(), SPACES, spaceId)));
     if (spaceResponse instanceof ErrorResponse er) {
       return er;
     } else if (spaceResponse instanceof SuccessResponse successResponse) {
@@ -196,7 +203,7 @@ public class NHSpaceStorageReader implements IReadSession {
           "Unexpected response type: " + spaceResponse.getClass().getName());
     }
     if (space == null) {
-      return new ErrorResponse(NakshaError.NOT_FOUND, "Space not found : " + spaceId);
+      return new ErrorResponse(NakshaError.NOT_FOUND, "Space not found: " + spaceId);
     }
     List<String> eventHandlerIds = space.getEventHandlerIds();
     if (eventHandlerIds == null || eventHandlerIds.isEmpty()) {
@@ -206,7 +213,8 @@ public class NHSpaceStorageReader implements IReadSession {
 
     List<EventHandlerConfig> eventHandlers = null;
     Response handlersResponse = nakshaHub.getAdminStorage()
-        .useReadSession(sessionOptions, reader -> reader.execute(readFeaturesByIdsRequest(EVENT_HANDLERS, eventHandlerIds)));
+        .useReadSession(sessionOptions,
+            reader -> reader.execute(readFeaturesByIdsRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, eventHandlerIds)));
     if (handlersResponse instanceof ErrorResponse er) {
       return er;
     } else if (handlersResponse instanceof SuccessResponse successResponse) {

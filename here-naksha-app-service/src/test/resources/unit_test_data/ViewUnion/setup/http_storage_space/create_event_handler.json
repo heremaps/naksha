@@ -7,6 +7,6 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "view_union_test_http_storage"
+    "storageId": "${dataDb.storageId}"
   }
 }

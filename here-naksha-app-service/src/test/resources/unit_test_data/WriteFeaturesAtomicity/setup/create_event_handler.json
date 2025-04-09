@@ -7,6 +7,6 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "write_features_atomicity_test_storage"
+    "storageId": "${dataDb.storageId}"
   }
 }

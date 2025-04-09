@@ -159,7 +159,7 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
       // Prepare request by id and query given layers.
       List<LayerReadRequest> missingFeaturesRequests = idsToFetch.entrySet().stream()
           .map(entry -> new LayerReadRequest(
-              readFeaturesByIdsRequest(entry.getKey().getCollectionId(), entry.getValue()),
+              readFeaturesByIdsRequest(entry.getKey().getMapId(), entry.getKey().getCollectionId(), entry.getValue()),
               entry.getKey(),
               subSessions.get(entry.getKey())))
           .collect(toList());

@@ -8,11 +8,12 @@ import naksha.model.request.SuccessResponse
 import naksha.model.request.query.*
 import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class ReadFeaturesByTagsTest : PgTestBase(NakshaCollection("read_by_tags_test")) {
+class ReadFeaturesByTagsTest : PgTestBase(NakshaCollection("read_by_tags_test", TEST_MAP_ID)) {
 
     @Test
     fun shouldReturnFeaturesWithExistingTag() {

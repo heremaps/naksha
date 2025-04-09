@@ -10,7 +10,7 @@
     "collection": {
       "maxAge": 2
     },
-    "storageId": "event_handler_api_test_storage"
+    "storageId": "${dataDb.storageId}"
   },
   "title": "Test Handler"
 }

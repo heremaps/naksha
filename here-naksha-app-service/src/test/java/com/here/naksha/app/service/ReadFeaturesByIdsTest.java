@@ -218,13 +218,17 @@ class ReadFeaturesByIdsTest extends ApiTest {
     ;
   }
 
+  /*
+    TODO: Fix with CASL-942
+    Fails due to bug in property search
+   */
   @Test
   void tc0408_withPropSelection() throws Exception {
     // Test API : GET /hub/spaces/{spaceId}/features
     // Validate features getting returned for Ids provided, in which only selected properties are returned
     // Given: Features By Ids request (against existing space)
     final String idsQueryParam = "id=my-custom-id-400-1,my-custom-id-400-2";
-    final String streamId = UUID.randomUUID().toString();
+    final String streamId = "tc0408streamId";//UUID.randomUUID().toString(); TODO: revert
     final String expectedBodyPart =
             loadFileOrFail("ReadFeatures/ByIds/TC0408_withPropSelection/feature_response_part.json")
                     .replaceAll("\\{\\{streamId}}",streamId);

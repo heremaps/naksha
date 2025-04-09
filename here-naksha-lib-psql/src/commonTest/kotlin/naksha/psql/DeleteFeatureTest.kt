@@ -15,7 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 
-class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c")) {
+class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c", TEST_MAP_ID)) {
 
     @Test
     fun shouldPerformDelete() {

@@ -20,6 +20,7 @@ import naksha.psql.PgType.Companion.STRING
 import naksha.psql.PgType.Companion.STRING_ARRAY
 import java.sql.Connection
 import java.sql.PreparedStatement
+import java.sql.ResultSet.*
 import java.util.ArrayList
 import java.util.HashMap
 
@@ -164,6 +165,6 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
     }
 
     fun prepare(conn: Connection): PreparedStatement {
-        return conn.prepareStatement(sql)
+        return conn.prepareStatement(sql, TYPE_FORWARD_ONLY, CONCUR_READ_ONLY, CLOSE_CURSORS_AT_COMMIT)
     }
 }

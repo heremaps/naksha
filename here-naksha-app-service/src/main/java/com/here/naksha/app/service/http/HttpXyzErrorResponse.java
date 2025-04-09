@@ -9,6 +9,8 @@ import org.jetbrains.annotations.NotNull;
 
 public class HttpXyzErrorResponse extends XyzResponse {
 
+  private static final String TYPE_KEY = "type";
+  private static final String TYPE = "ErrorResponse";
   private static final String ERROR_CODE_KEY = "error";
   private static final String ERROR_MESSAGE_KEY = "errorMessage";
 
@@ -17,6 +19,7 @@ public class HttpXyzErrorResponse extends XyzResponse {
     errorResponse.setErrorCode(errorCode);
     errorResponse.setErrorMessage(message);
     errorResponse.setStreamId(streamId);
+    errorResponse.put(TYPE_KEY, TYPE);
     return errorResponse;
   }
 

@@ -21,6 +21,7 @@ package com.here.naksha.app.service.http.apis;
 import static com.here.naksha.app.service.http.tasks.WriteFeatureApiTask.WriteFeatureApiReqType.*;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
+import com.here.naksha.app.service.http.tasks.SpaceMapResolver;
 import com.here.naksha.app.service.http.tasks.WriteFeatureApiTask;
 import com.here.naksha.app.service.http.tasks.WriteFeatureApiTask.WriteFeatureApiReqType;
 import io.vertx.ext.web.Router;
@@ -34,8 +35,11 @@ public class WriteFeatureApi extends Api {
 
   private static final Logger logger = LoggerFactory.getLogger(WriteFeatureApi.class);
 
-  public WriteFeatureApi(final @NotNull NakshaHttpVerticle verticle) {
+  private final SpaceMapResolver spaceMapResolver;
+
+  public WriteFeatureApi(final @NotNull NakshaHttpVerticle verticle, SpaceMapResolver spaceMapResolver) {
     super(verticle);
+    this.spaceMapResolver = spaceMapResolver;
   }
 
   @Override
@@ -77,7 +81,7 @@ public class WriteFeatureApi extends Api {
 
   private void startWriteFeatureApiTask(WriteFeatureApiReqType reqType, RoutingContext routingContext) {
     new WriteFeatureApiTask(
-            reqType, verticle, naksha(), routingContext, verticle.createNakshaContext(routingContext))
+            reqType, verticle, naksha(), routingContext, verticle.createNakshaContext(routingContext), spaceMapResolver)
         .start();
   }
 }

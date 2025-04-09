@@ -8,5 +8,17 @@ import kotlin.js.JsExport
  * Standard declaration of a list of doubles.
  */
 @JsExport
-open class DoubleList : ListProxy<Double>(Double::class)
+open class DoubleList : ListProxy<Double>(Double::class) {
+    /**
+     * Adds the specified element to the end of this list.
+     * @param element the element to add.
+     * @return this.
+     * @since 3.0
+     */
+    fun append(element: Double?): DoubleList {
+        super.add(element)
+        return this
+    }
+
+}
 

@@ -28,9 +28,11 @@ import com.here.naksha.lib.core.models.naksha.Space;
 import java.util.List;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
+import naksha.model.objects.NakshaCollection;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
@@ -54,7 +56,24 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
       return basicValidation;
     }
     Space space = (Space) write.getFeature();
+    Response mapIdValidation = mapIdExistenceValidation(space);
+    if (mapIdValidation instanceof ErrorResponse) {
+      return mapIdValidation;
+    }
     return handlerExistenceValidation(space);
+  }
+
+  private @NotNull Response mapIdExistenceValidation(Space space) {
+    NakshaCollection collection = space.getProperties().getCollection();
+    if (collection == null) {
+      return new ErrorResponse(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Space '" + space.getId() + "' does not have a collection"));
+    }
+    String mapId = collection.getMapId();
+    if (mapId == null) {
+      return new ErrorResponse(new NakshaError(NakshaError.ILLEGAL_ARGUMENT,
+          "Collection '" + collection.getId() + "' defined in Space '" + space.getId() + "' does not have a mapId"));
+    }
+    return new SuccessResponse();
   }
 
   private @NotNull Response handlerExistenceValidation(Space space) {
@@ -71,7 +90,7 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
 
   private List<String> getMissingHandlersFor(Space space) {
     List<String> expectedHandlerIds = space.getEventHandlerIds();
-    ReadFeatures getEventHandlersRequest = readFeaturesByIdsRequest(EVENT_HANDLERS, expectedHandlerIds);
+    ReadFeatures getEventHandlersRequest = readFeaturesByIdsRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, expectedHandlerIds);
     return nakshaHub().getSpaceStorage().useReadSession(SessionOptions.from(currentContext()), readSession -> {
       Response result = readSession.execute(getEventHandlersRequest);
       return missingHandlersIds(result, expectedHandlerIds);

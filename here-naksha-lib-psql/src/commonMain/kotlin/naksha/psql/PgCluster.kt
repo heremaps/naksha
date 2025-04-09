@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.fn.Fx2
 import naksha.model.SessionOptions
 import kotlin.js.JsExport
 
@@ -32,7 +33,8 @@ interface PgCluster {
      * - Throws [naksha.model.NakshaError.TOO_MANY_CONNECTIONS], if no more connections are available.
      * @param options the session options.
      * @param readOnly if the connection should be read-only; only if being _true_, read-replica are contacted, except [SessionOptions.useMaster] is explicit set.
+     * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the connection. It may just use this string, perform arbitrary additional work, or suppress initialization completely.
      * @return the PostgresQL connection.
      */
-    fun newConnection(options: SessionOptions, readOnly: Boolean): PgConnection
+    fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection
 }

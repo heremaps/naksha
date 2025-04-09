@@ -1,8 +1,6 @@
 package naksha.psql
 
-import naksha.model.NakshaException
-import naksha.model.TupleNumberBinaryArray
-import naksha.model.Version
+import naksha.model.*
 import naksha.model.request.*
 import kotlin.jvm.JvmField
 
@@ -35,26 +33,32 @@ class PgReader(
         get() = session.useTransaction().version
 
     fun execute(): Response {
-        val query = PgQueryBuilder(session, request).build()
-        val conn = session.useConnection()
-        session.storage.adminMap.setSearchPath(conn)
-        // TODO: Use prepare, add arguments!
-        val plan = conn.prepare(query.sql, query.argTypes)
-        plan.use {
-            val allBytes: ByteArray?
-            val cursor = try {
-                plan.execute(query.argValues)
-            } catch (nakshaException: NakshaException) {
-                return ErrorResponse(nakshaException)
+        try {
+            val query = PgQueryBuilder(session, request).build()
+            val conn = session.useConnection()
+            session.storage.adminMap.setSearchPath(conn)
+            // TODO: Use prepare, add arguments!
+            conn.prepare(query.sql, query.argTypes).use { plan ->
+                // Start allocating around 8 KiB
+                val featureTuples = FeatureTupleList()
+                featureTuples.setCapacity(1024)
+                // Note: We know that each result is only 12 or 20 byte
+                plan.setFetchSize(100_000)
+                plan.execute(query.argValues).use { cursor ->
+                    val storageNumber = query.storageNumber
+                    val mapNumber = query.mapNumber
+                    val collectionNumber = query.collectionNumber
+                    while (cursor.next()) {
+                        val col_num: Int = collectionNumber ?: cursor["col_num"]
+                        val tn: ByteArray = cursor["tn"]
+                        featureTuples.add(FeatureTuple(TupleNumber.fromB160(tn, storageNumber, mapNumber, col_num)))
+                    }
+                }
+                return SuccessResponse().withFeatureTupleList(featureTuples)
             }
-            cursor.use {
-                allBytes = if (cursor.next()) { cursor.column("rs") as ByteArray? } else null
-            }
-            if (allBytes != null) {
-                val tupleNumberBinary = TupleNumberBinaryArray.fromGzip(allBytes)
-                return SuccessResponse().withTupleNumberBinary(tupleNumberBinary)
-            }
-            return SuccessResponse()
+        } catch (e: Exception) {
+            val nakshaException = PgExceptionMapper.map(e)
+            return ErrorResponse(nakshaException)
         }
     }
 }

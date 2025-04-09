@@ -7,6 +7,6 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "read_features_by_ids_http_test_psql_storage"
+    "storageId": "${dataDb.storageId}"
   }
 }

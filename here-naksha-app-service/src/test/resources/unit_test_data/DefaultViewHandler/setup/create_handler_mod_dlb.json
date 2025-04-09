@@ -7,6 +7,6 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "mod-dlb-dev"
+    "storageId": "${dataDb.storageId}"
   }
 }

@@ -9,6 +9,7 @@
   "properties": {
     "collection": {
       "id": "search_features_test_collection",
+      "mapId": "naksha-client-test-map",
       "type": "NakshaCollection"
     }
   }

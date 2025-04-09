@@ -335,6 +335,7 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
     this.thread = thread;
     this.oldName = threadName;
     this.oldUncaughtExceptionHandler = threadUncaughtExceptionHandler;
+    this.context.attachToCurrentThread();
     // thread.setName(context.getStreamId());
     thread.setUncaughtExceptionHandler(this);
     this.oldContext = NakshaContext.currentContext();

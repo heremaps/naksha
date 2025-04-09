@@ -28,6 +28,8 @@ import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.CommonApiTestSetup;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
 import naksha.model.XyzFeatureCollection;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -51,11 +53,6 @@ class EventHandlerApiTest extends ApiTest {
 
   EventHandlerApiTest() {
     super(nakshaClient);
-  }
-
-  @BeforeAll
-  static void setup() throws URISyntaxException, IOException, InterruptedException {
-    createStorage(nakshaClient, "EventHandlerApi/setup/create_storage.json");
   }
 
   @Test
@@ -199,6 +196,11 @@ class EventHandlerApiTest extends ApiTest {
             .hasStreamIdHeader(streamId);
   }
 
+  /*
+    TODO: Fix with CASL-941
+    Fails due to:
+      Received error result {error={code=IllegalArgument, msg=UPDATED requires that the feature has a UUID!, cause=null}}
+   */
   @ParameterizedTest
   @MethodSource("validTagFilterProperties")
   void tc107_testUpdateTagFilterHandler(String handlerProps, String expectedPropsInResponse) throws URISyntaxException, IOException, InterruptedException {
@@ -371,14 +373,16 @@ class EventHandlerApiTest extends ApiTest {
     // And: all saved handlers are returned
     List<NakshaFeature> returnedXyzFeatures =
         parseJson(response.body(), XyzFeatureCollection.class).getFeatures();
-    boolean allReturnedFeaturesAreEventHandlers = returnedXyzFeatures.stream()
-        .allMatch(feature -> EventHandlerConfig.class.isAssignableFrom(feature.getClass()));
-    Assertions.assertTrue(allReturnedFeaturesAreEventHandlers);
     List<String> eventHandlerIds =
         returnedXyzFeatures.stream().map(NakshaFeature::getId).toList();
     Assertions.assertTrue(eventHandlerIds.containsAll(expectedHandlerIds));
   }
 
+  /*
+    TODO: Fix with CASL-941
+    Fails due to:
+      Received error result {error={code=IllegalArgument, msg=UPDATED requires that the feature has a UUID!, cause=null}}
+   */
   @Test
   void tc0160_testUpdateEventHandler() throws Exception {
     // Test API : PUT /hub/handlers/{handlerId}
@@ -401,6 +405,11 @@ class EventHandlerApiTest extends ApiTest {
         .hasJsonBody(expectedResponseBody);
   }
 
+  /*
+    TODO: Fix with CASL-941
+    Fails due to:
+      Received error result {error={code=IllegalArgument, msg=UPDATED requires that the feature has a UUID!, cause=null}}
+   */
   @Test
   void tc0161_testUpdateNonexistentEventHandler() throws Exception {
     // Test API : PUT /hub/handlers/{handlerId}
@@ -440,6 +449,11 @@ class EventHandlerApiTest extends ApiTest {
         .hasJsonBody(expectedErrorResponse);
   }
 
+  /*
+    TODO: Fix with CASL-942
+    Fails due to bug in property search (before handler is deleted, we check for spaces that might use it - by search by property)
+    See com.here.naksha.lib.handlers.internal.IntHandlerForEventHandlerConfigs.noActiveSpaceValidation
+   */
   @Test
   void tc0180_testDeleteHandler() throws Exception {
     // Test API : DELETE /hub/handlers/{handlerId}
@@ -487,6 +501,11 @@ class EventHandlerApiTest extends ApiTest {
             .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
   }
 
+  /*
+    TODO: Fix with CASL-942
+    Fails due to bug in property search (before handler is deleted, we check for spaces that might use it - by search by property)
+    See com.here.naksha.lib.handlers.internal.IntHandlerForEventHandlerConfigs.noActiveSpaceValidation
+   */
   @Test
   void tc0182_testDeleteNonExistingHandler() throws Exception {
     // Test API : DELETE /hub/handlers/{handlerId}

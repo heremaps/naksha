@@ -6,7 +6,7 @@
       "id": "my-custom-id-3001-1",
       "geometry": {
         "type": "Point",
-        "coordinates": [8.68872, 50.0561, 292.94377758]
+        "coordinates": [8.68872, 50.0561, 292.9437776]
       },
       "properties": {
         "@ns:com:here:mom:delta": {
@@ -30,7 +30,7 @@
       "id": "my-custom-id-3001-2",
       "geometry": {
         "type": "Point",
-        "coordinates": [8.68872, 50.0561, 292.94377758]
+        "coordinates": [8.68872, 50.0561, 292.9437776]
       },
       "properties": {
         "@ns:com:here:mom:delta": {

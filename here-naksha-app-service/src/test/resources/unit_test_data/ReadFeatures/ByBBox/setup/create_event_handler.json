@@ -7,6 +7,6 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "read_features_by_bbox_test_storage"
+    "storageId": "${dataDb.storageId}"
   }
 }

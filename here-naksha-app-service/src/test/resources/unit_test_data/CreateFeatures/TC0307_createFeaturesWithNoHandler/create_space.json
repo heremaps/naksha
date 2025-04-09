@@ -2,5 +2,12 @@
   "id": "um-space-no-handler",
   "type": "Space",
   "title": "Invalid Space for Testing purpose",
-  "description": "Invalid Space not associated with any Event Handler"
+  "description": "Invalid Space not associated with any Event Handler",
+  "properties": {
+    "collection": {
+      "id": "um-mod-dev:topology",
+      "mapId": "naksha-client-test-map",
+      "type": "NakshaCollection"
+    }
+  }
 }

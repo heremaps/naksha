@@ -36,7 +36,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class NakshaHubConfig extends NakshaFeature implements JsonSerializable {
+public final class NakshaHubConfig extends NakshaFeature {
 
   private static final Logger logger = LoggerFactory.getLogger(NakshaHubConfig.class);
 

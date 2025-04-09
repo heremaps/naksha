@@ -10,6 +10,7 @@
   "properties": {
     "collection": {
       "id": "source_id_handler_collection",
+      "mapId": "naksha-client-test-map",
       "type": "NakshaCollection"
     }
   }

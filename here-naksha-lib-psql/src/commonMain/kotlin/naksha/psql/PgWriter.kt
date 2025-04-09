@@ -41,7 +41,8 @@ open class PgWriter internal constructor(
      * The database connection to use for modifications.
      * @since 3.0
      */
-    val conn: PgConnection = session.useConnection()
+    val conn: PgConnection
+        get() = session.useConnection()
 
     /**
      * The transaction to update with what was done.
@@ -67,6 +68,120 @@ open class PgWriter internal constructor(
     }
 
     /**
+     * Add the given write into an ordered array-list, order by `id` ascending.
+     * @since 3.0
+     */
+    private fun addSorted(arrayList: ArrayList<PgWrite>, value: PgWrite) {
+        val index = arrayList.binarySearch { it.id.compareTo(value.id) }
+        val insertIndex = if (index < 0) -index - 1 else index
+        arrayList.add(insertIndex, value)
+    }
+
+    /**
+     * Groups and orders writes by map, collection, partition, and eventually operation.
+     *
+     * @param map the map to write into.
+     * @param collection the collection to write into.
+     * @param writeOp the operation to perform, so `INSERT`, `UPSERT`, `UPDATE`, `DELETE` or `PURGE`.
+     * @param write the write instruction.
+     * @param byMap the map into which to store the write instruction.
+     * @param writeListCapacity the capacity of the write array, when a new one need to be allocated.
+     * @since 3.0
+     */
+    private fun addPgWrite(
+        map: PgMap,
+        collection: PgCollection,
+        writeOp: WriteOp,
+        write: PgWrite,
+        byMap: MutableMap<PgMap, MutableMap<PgCollection, Array<MutableMap<WriteOp, ArrayList<PgWrite>>?>>>,
+        writeListCapacity: Int) {
+        var byCollection = byMap[map]
+        if (byCollection == null) {
+            byCollection = mutableMapOf()
+            byMap[map] = byCollection
+        }
+        var byPartition = byCollection[collection]
+        if (byPartition == null) {
+            byPartition = arrayOfNulls(if (collection.partitions > 1) collection.partitions + 1 else 1)
+            byCollection[collection] = byPartition
+        }
+        val partition = write.partition
+        // Note: byPartition reserved the first entry (index #0) for the case that there is no partitioning,
+        //       therefore when there is no partitioning, the index becomes `0`, otherwise `1` to `n`.
+        var byWriteOp = byPartition[partition + 1]
+        if (byWriteOp == null) {
+            byWriteOp = mutableMapOf()
+            byPartition[partition + 1] = byWriteOp
+        }
+        var writeList = byWriteOp[writeOp]
+        if (writeList == null) {
+            writeList = ArrayList(writeListCapacity)
+            byWriteOp[writeOp] = writeList
+        }
+        addSorted(writeList, write)
+    }
+
+    /**
+     * Group the writes by map, then by collection, and finally by partition with `-1` as partition number, when the table is not partitioned.
+     * @param writes the writes that should be done.
+     * @return a map by map, collection, and partition to write operations executed within.
+     * @since 3.0
+     */
+    private fun groupOperations(writes: ArrayList<PgWrite>)
+      : MutableMap<PgMap, MutableMap<PgCollection, Array<MutableMap<WriteOp, ArrayList<PgWrite>>?>>> {
+        val byMap = mutableMapOf<PgMap, MutableMap<PgCollection, Array<MutableMap<WriteOp, ArrayList<PgWrite>>?>>>()
+        var writeListCapacity = writes.size
+        for (i in writes.indices) {
+            val write = writes[i]
+            val map = write.map
+            val collection = write.collection
+            val op = write.original.op
+            when (op) {
+                WriteOp.CREATE -> {
+                    val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
+                    // In a CREATE case, UNDEFINED means the same as `null`
+                    val attachment = if (write.attachment === Write.UNDEFINED) null else write.attachment
+                    val tuple = tx.created(write.map.head, write.collection.head, f, attachment)
+                    write.tuple = tuple
+                    val tupleNumber = tuple.tupleNumber
+                    write.tupleNumber = tupleNumber
+                }
+                WriteOp.UPSERT -> {
+                    // Note: We first try an INSERT, then, when that fails, we do an on-conflict UPDATE!
+                    val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
+                    val tuple = tx.created(write.map.head, write.collection.head, f, write.attachment)
+                    write.tuple = tuple
+                    val tupleNumber = tuple.tupleNumber
+                    write.tupleNumber = tuple.tupleNumber
+                }
+                WriteOp.UPDATE -> {
+                    val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
+                    val tuple = tx.updated(write.map.head, write.collection.head, f, write.attachment)
+                    write.tuple = tuple
+                    val tupleNumber = tuple.tupleNumber
+                    write.tupleNumber = tupleNumber
+                }
+                WriteOp.DELETE -> {
+                    if (write.isTransactionModification) throw forbidden("Transactions must not be deleted or purged")
+                    write.final_uid = tx.uid.next(Action.DELETED)
+                }
+                WriteOp.PURGE -> {
+                    if (write.isTransactionModification) throw forbidden("Transactions must not be deleted or purged")
+                    // Note: purge and delete are the same operation, except that a purge is not copied into deleted table!
+                    write.final_uid = tx.uid.next(Action.DELETED)
+                }
+                else -> {
+                    throw illegalArg("Unknown write operation: $op")
+                }
+            }
+            // In the first run, there is a chance that all writes go into same partition, after that, we can have one less!
+            addPgWrite(map, collection, op, write, byMap, writeListCapacity--)
+        }
+        // Sort all writes within the
+        return byMap
+    }
+
+    /**
      * Performs the given writes.
      * @param writes the writes to perform.
      * @return the tuple-numbers of the
@@ -75,25 +190,36 @@ open class PgWriter internal constructor(
         // Add the input-index.
         val targetWrites = ArrayList<PgWrite>(writes.size)
         for (i in 0 ..< writes.size) targetWrites.add(PgWrite(writes[i], i))
-
-        // We sort the writes so that admin-map, map's collection, collection's collection are first.
-        // The rest is ordered by map-id, collection-id, feature-id, operation (INSERT, UPSERT, UPDATE, DELETE, PURGE).
-        // This guarantees that we first created the maps, then the collections, and finally perform the rest.
-        // The ordering is important to prevent deadlocks between different clients.
-        targetWrites.sortWith { a, b -> Write.sortCompare(a.original, b.original) }
-
-        // Perform the writes, if any error happens, we will roll back the session to where it was before we started.
-        // Note: We must not close the connection, therefore no `session.useConnection().use {}`!
         val savepointId = PlatformUtil.randomString()
-        val conn = session.useConnection()
-        if (useSavepoint) conn.execute("SAVEPOINT \"$savepointId\"").close()
+        var conn: PgConnection? = null
         try {
+            // This can be time-consuming, unless the connection is already open, try not to open it before we do this!
             prepareWrite(targetWrites)
-            executeWrite(targetWrites)
+            val byMap = groupOperations(targetWrites)
+
+            // Perform the writes, if any error happens, we will roll back the session to where it was before we started.
+            // Note: We must not close the connection, therefore no `session.useConnection().use {}`!
+            conn = this.conn
+            if (useSavepoint) conn.execute("SAVEPOINT \"$savepointId\"").close()
+            for (mapEntry in byMap) {
+                val map = mapEntry.key
+                val byCol = mapEntry.value
+                for (colEntry in byCol) {
+                    val collection = colEntry.key
+                    val byPartition = colEntry.value
+                    for (i in byPartition.indices) {
+                        val byWriteOp = byPartition[i]
+                        if (byWriteOp != null) {
+                            val partition = i - 1 // index #0 represents no partitioning
+                            executeWrite(map, collection, partition, byWriteOp)
+                        }
+                    }
+                }
+            }
             // If everything worked out as expected, we can drop the savepoint.
             if (useSavepoint) conn.execute("RELEASE SAVEPOINT \"$savepointId\"").close()
         } catch (t: Throwable) {
-            if (useSavepoint) conn.execute("ROLLBACK TO SAVEPOINT \"$savepointId\"").close()
+            if (conn != null && useSavepoint) conn.execute("ROLLBACK TO SAVEPOINT \"$savepointId\"").close()
             throw PgExceptionMapper.map(t)
         }
 
@@ -139,19 +265,21 @@ open class PgWriter internal constructor(
         for (write in writes) {
             val featureId = write.original.id
             val mapId = write.original.mapId ?: throw illegalArg("The given write does not have a map-id")
-            val map = storage.adminMap.getPgMapById(conn, mapId) ?:
+            val map = storage.adminMap.getPgMapById(null, mapId) ?:
+                storage.adminMap.getPgMapById(conn, mapId) ?:
                 throw mapNotFound("The write #${write.i} refers to not existing map '$mapId'")
             write.map = map
 
             val colId = write.original.collectionId ?: throw illegalArg("The given write does not have a collection-id")
-            val collection = map.getPgCollectionById(conn, colId) ?:
+            val collection = map.getPgCollectionById(null, colId) ?:
+                map.getPgCollectionById(conn, colId) ?:
                 throw collectionNotFound("The write #${write.i} refers to not existing collection '$colId'")
             write.collection = collection
 
             // If this operation modifies a map.
             if (write.isMapModification) {
                 val op = write.op
-                var pgMap = storage.adminMap.getPgMapById(conn, write.id)
+                var pgMap = storage.adminMap.getPgMapById(null, write.id) ?: storage.adminMap.getPgMapById(conn, write.id)
 
                 val nakshaMap: NakshaMap?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
@@ -182,7 +310,7 @@ open class PgWriter internal constructor(
             // If this operation modifies a collection.
             if (write.isCollectionModification) {
                 val op = write.op
-                var pgCollection = map.getPgCollectionById(conn, write.id)
+                var pgCollection = map.getPgCollectionById(null, write.id) ?: map.getPgCollectionById(conn, write.id)
 
                 val nakshaCollection: NakshaCollection?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
@@ -225,88 +353,40 @@ open class PgWriter internal constructor(
         return list
     }
 
-
-
-    private fun executeWrite(writes: ArrayList<PgWrite>) {
-        // We group the features into collections into which we should write.
-        val deletes = mutableMapOf<PgCollection, MutableList<PgWrite>>()
-        val purges = mutableMapOf<PgCollection, MutableList<PgWrite>>()
-        val inserts = mutableMapOf<PgCollection, MutableList<PgWrite>>()
-        val upserts = mutableMapOf<PgCollection, MutableList<PgWrite>>()
-        val updates = mutableMapOf<PgCollection, MutableList<PgWrite>>()
-        for (write in writes) {
-            when (val op = write.original.op) {
-                WriteOp.CREATE -> {
-                    val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                    // In a CREATE case, UNDEFINED means the same as `null`
-                    val attachment = if (write.attachment === Write.UNDEFINED) null else write.attachment
-                    val tuple = tx.created(write.map.head, write.collection.head, f, attachment)
-                    write.tuple = tuple
-                    write.tupleNumber = tuple.tupleNumber
-                    inserts.getOrCreate(write.collection).add(write)
-                }
-                WriteOp.UPSERT -> {
-                    // Note: We first try an INSERT, then, when that fails, we do an on-conflict UPDATE!
-                    val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                    val tuple = tx.created(write.map.head, write.collection.head, f, write.attachment)
-                    write.tuple = tuple
-                    write.tupleNumber = tuple.tupleNumber
-                    upserts.getOrCreate(write.collection).add(write)
-                }
-                WriteOp.UPDATE -> {
-                    val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                    val tuple = tx.updated(write.map.head, write.collection.head, f, write.attachment)
-                    write.tuple = tuple
-                    write.tupleNumber = tuple.tupleNumber
-                    updates.getOrCreate(write.collection).add(write)
-                }
-                WriteOp.DELETE -> {
-                    if (write.isTransactionModification) throw forbidden("Transactions must not be deleted or purged")
-                    write.final_uid = tx.uid.next(Action.DELETED)
-                    deletes.getOrCreate(write.collection).add(write)
-                }
-                WriteOp.PURGE -> {
-                    if (write.isTransactionModification) throw forbidden("Transactions must not be deleted or purged")
-                    // Note: purge and delete are the same operation, except that a purge is not copied into deleted table!
-                    write.final_uid = tx.uid.next(Action.DELETED)
-                    purges.getOrCreate(write.collection).add(write)
-                }
-                else -> {
-                    throw illegalArg("Unknown write operation: $op")
-                }
-            }
-        }
-
+    private fun executeWrite(map: PgMap, collection: PgCollection, partition: Int, byWriteOp: Map<WriteOp, List<PgWrite>>) {
         // DELETE
-        for (mapEntry in deletes) {
-            val collection = mapEntry.key
-            val tgWrites = mapEntry.value
-            val tupleWriter = PgWriterDelete(this, collection, tgWrites)
+        val deletes = byWriteOp[WriteOp.DELETE]
+        if (deletes != null) {
+            val tupleWriter = PgWriterDelete(this, collection, partition, deletes)
             tupleWriter.execute(conn)
         }
+
         // PURGE
+        val purges = byWriteOp[WriteOp.PURGE]
+        if (purges != null) {
+            // TODO: We somehow need to pass through purge option!
+            val tupleWriter = PgWriterDelete(this, collection, partition, purges)
+            tupleWriter.execute(conn)
+        }
 
         // INSERT
-        for (mapEntry in inserts) {
-            val collection = mapEntry.key
-            val tgWrites = mapEntry.value
-            val tupleWriter = PgWriterInsert(this, collection, tgWrites)
+        val inserts = byWriteOp[WriteOp.CREATE]
+        if (inserts != null) {
+            val tupleWriter = PgWriterInsert(this, collection, partition, inserts)
             tupleWriter.execute(conn)
         }
 
         // UPSERT
-        for (mapEntry in upserts) {
-            val collection = mapEntry.key
-            val tgWrites = mapEntry.value
-            val tupleWriter = PgWriterUpsert(this, collection, tgWrites)
+        val upserts = byWriteOp[WriteOp.UPSERT]
+        if (upserts != null) {
+            val tupleWriter = PgWriterUpsert(this, collection, partition, upserts)
             tupleWriter.execute(conn)
         }
 
         // UPDATE
-        for (mapEntry in updates) {
-            val collection = mapEntry.key
-            val tgWrites = mapEntry.value
-            val tupleWriter = PgWriterUpdate(this, collection, tgWrites)
+        val updates = byWriteOp[WriteOp.UPDATE]
+        if (updates != null) {
+            val tupleWriter = PgWriterUpdate(this, collection, partition, updates)
             tupleWriter.execute(conn)
         }
     }
@@ -347,48 +427,3 @@ open class PgWriter internal constructor(
         collection.map.deletePgCollection(conn, collection)
     }
 }
-
-/*
-
-
-SELECT * FROM UNNEST(
-    ARRAY[1, 2, 3],
-    ARRAY['a', 'b', 'c'],
-    ARRAY[10.1, 20.2, 30.3]
-) AS t(col1, col2, col3);
-
-
-UPSERT
-
-WITH new_row AS (
-    VALUES
-        ($1::int, $2::text, $3::text),   -- First row from client
-        ($4::int, $5::text, $6::text)    -- Second row from client
-)
-WITH head_row AS (
-    SELECT * FROM ${head_table}
-    WHERE id = new_row.id
-    FOR UPDATE NOWAIT
-),
-deleted_from_head AS (
-    DELETE FROM ${head_table}
-    WHERE tn IN (SELECT tn FROM head_row)
-    RETURNING id
-),
-history_row AS (
-    INSERT INTO ${history_table}
-    (id, tn, ...)
-    SELECT next_txn=${txn}, h.*
-    FROM head_row h
-    RETURNING tn
-),
-INSERT INTO ${head_table}
-(id, tn, ...)
-SELECT n.*, d.id as prev_tn
-FROM new_row n
-LEFT JOIN deleted_from_head d ON n.id = d.id
-RETURNING tn
-
-
-
- */

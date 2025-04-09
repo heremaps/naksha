@@ -11,9 +11,10 @@ import naksha.model.request.query.*
 import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.*
 
-class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta")) {
+class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta", TEST_MAP_ID)) {
     
     companion object {
         private const val TEST_FEATURE_ID = "read_by_meta_test_feature"

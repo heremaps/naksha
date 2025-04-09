@@ -10,7 +10,6 @@ import naksha.base.AtomicMap
 import naksha.base.Int64
 import naksha.model.NakshaVersion
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.toUnsignedInt64
 import naksha.jbon.IDictReader
 import naksha.jbon.JbDictionary
 import naksha.model.*
@@ -556,11 +555,14 @@ WHERE id = $1"""
             .withMapNumber(ADMIN_MAP_NUMBER)
             .withCollectionNumber(MAPS_COL_NUMBER)
             .addColumns(allColumns)
-        val SQL = """SELECT ${outRows.names()}
-FROM "naksha~admin".${maps.headTable.quotedName}
-WHERE naksha_tn_featureNumber(tn) = $1"""
+        val SQL = """
+            SELECT ${outRows.names()}
+            FROM "naksha~admin".${maps.headTable.quotedName}
+            WHERE naksha_tn_feature_number(tn) = $1
+            """.trimIndent()
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
-        plan.execute(arrayOf(number.toUnsignedInt64())).fetch().use {
+        conn.execute(getSearchPath())
+        plan.execute(arrayOf(number)).fetch().use {
             outRows.addAll(cursor = it)
         }
         if (outRows.size == 0) return null

@@ -7,6 +7,6 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "delete_features_test_storage"
+    "storageId": "${dataDb.storageId}"
   }
 }

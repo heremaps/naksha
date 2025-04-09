@@ -354,6 +354,7 @@ open class SuccessResponse() : Response() {
      * @since 3.0
      * @see [featureTupleList]
      */
+    // TODO: CASL-942 filter properties
     open fun withTupleNumberBinary(value: TupleNumberBinaryArray): SuccessResponse {
         val list = FeatureTupleList()
         list.setCapacity(value.size)

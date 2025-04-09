@@ -12,7 +12,7 @@ import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingS
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.Mockito.*;
 
-class AbstractEventHandlerTest {
+class AbstractEventHandlerTest extends AbstractTest {
 
   private AbstractEventHandler eventHandler;
 

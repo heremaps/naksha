@@ -2,9 +2,7 @@
 
 package naksha.geo
 
-import naksha.base.AnyObject
-import naksha.base.NotNullProperty
-import naksha.base.PlatformList
+import naksha.base.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -63,6 +61,7 @@ open class SpGeometry() : AnyObject() {
         val type = this.type ?: throw IllegalStateException("Missing 'type' in geometry")
         val coordinates = getRaw("coordinates") ?: throw IllegalStateException("Missing 'coordinates' in geometry")
         if (coordinates !is PlatformList) throw IllegalStateException("Invalid 'coordinates' in geometry, expect to be an array")
+        enforceDoubles(coordinates)
         return when (type) {
             SpType.Point.toString() -> coordinates.proxy(PointCoord::class)
             SpType.MultiPoint.toString() -> coordinates.proxy(MultiPointCoord::class)
@@ -71,6 +70,16 @@ open class SpGeometry() : AnyObject() {
             SpType.Polygon.toString() -> coordinates.proxy(PolygonCoord::class)
             SpType.MultiPolygon.toString() -> coordinates.proxy(MultiPolygonCoord::class)
             else -> throw IllegalStateException("The 'coordinates' in geometry are of an unknown type: $type")
+        }
+    }
+
+    private fun enforceDoubles(coordList: PlatformList) {
+        val len = PlatformListApi.array_get_length(coordList)
+        (0 until len).forEach {ind ->
+            val elem = PlatformListApi.array_get(coordList, ind)
+            if(elem is Number && elem !is Double){
+                PlatformListApi.array_set(coordList, ind, elem.toDouble())
+            }
         }
     }
 

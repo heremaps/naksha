@@ -23,6 +23,7 @@ import static com.here.naksha.app.service.http.tasks.ReadFeatureApiTask.ReadFeat
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.tasks.ReadFeatureApiTask;
 import com.here.naksha.app.service.http.tasks.ReadFeatureApiTask.ReadFeatureApiReqType;
+import com.here.naksha.app.service.http.tasks.SpaceMapResolver;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.openapi.RouterBuilder;
@@ -34,8 +35,11 @@ public class ReadFeatureApi extends Api {
 
   private static final Logger logger = LoggerFactory.getLogger(ReadFeatureApi.class);
 
-  public ReadFeatureApi(final @NotNull NakshaHttpVerticle verticle) {
+  private final SpaceMapResolver spaceMapResolver;
+
+  public ReadFeatureApi(final @NotNull NakshaHttpVerticle verticle, SpaceMapResolver spaceMapResolver) {
     super(verticle);
+    this.spaceMapResolver = spaceMapResolver;
   }
 
   @Override
@@ -87,7 +91,7 @@ public class ReadFeatureApi extends Api {
 
   private void startReadFeatureApiTask(ReadFeatureApiReqType reqType, RoutingContext routingContext) {
     new ReadFeatureApiTask<>(
-            reqType, verticle, naksha(), routingContext, verticle.createNakshaContext(routingContext))
+            reqType, verticle, naksha(), routingContext, verticle.createNakshaContext(routingContext), spaceMapResolver)
         .start();
   }
 }

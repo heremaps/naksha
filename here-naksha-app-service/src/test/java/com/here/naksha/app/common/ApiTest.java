@@ -18,13 +18,20 @@
  */
 package com.here.naksha.app.common;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class for all API-related tests. Extending this class ensures that NakshaApp & all required storages are running
  */
 @ExtendWith({ApiTestMaintainer.class})
 public abstract class ApiTest {
+
+  private static final AtomicBoolean storageInitialized = new AtomicBoolean(false);
+  private static final Logger logger = LoggerFactory.getLogger(ApiTest.class);
 
   private final NakshaTestWebClient nakshaClient;
 
@@ -38,5 +45,13 @@ public abstract class ApiTest {
 
   public NakshaTestWebClient getNakshaClient() {
     return nakshaClient;
+  }
+
+  @BeforeAll
+  public static void setupStorage(){
+    if(storageInitialized.compareAndSet(false, true)){
+      logger.info("Common storage not yet set, delegating initialization...");
+      CommonApiTestSetup.setupCommonStorage(new NakshaTestWebClient());
+    }
   }
 }

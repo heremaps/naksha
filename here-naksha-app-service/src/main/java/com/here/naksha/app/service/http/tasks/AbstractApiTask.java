@@ -26,6 +26,7 @@ import static naksha.model.util.ResultHelper.extractResponseItems;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 import static naksha.model.util.ResultHelper.readFeaturesGroupedByAction;
 
+import com.here.naksha.app.service.NakshaApp;
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.models.IterateHandle;
@@ -33,8 +34,10 @@ import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.lambdas.F1;
 import com.here.naksha.lib.core.models.ContextXyzFeatureResponse;
+import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.util.PropertyPathUtil;
+import com.here.naksha.lib.hub.NakshaHub;
 import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
 import java.util.List;
@@ -70,6 +73,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     extends AbstractTask<XyzResponse, AbstractApiTask<T>> {
 
   private static final Logger logger = LoggerFactory.getLogger(AbstractApiTask.class);
+
   protected final @NotNull RoutingContext routingContext;
   protected final @NotNull NakshaHttpVerticle verticle;
 
@@ -186,6 +190,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       }
       // Populate handle (if provided), with the values ready for next iteration
       final String handleStr = getIterateHandleAsString(processedFeatures.size(), offset, maxLimit, handle);
+      // TODO: CASL-681 failes because of missing inserts
       return verticle.sendXyzResponse(
           routingContext,
           HttpResponseType.FEATURE_COLLECTION,
@@ -229,7 +234,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       }
       if (featureMap.isEmpty() && (violations == null || violations.isEmpty())) {
         if (isDeleteOperation) {
-          logger.info("No data found in ResultCursor, returning empty collection");
+          logger.info("No data found, returning empty collection");
           return verticle.sendXyzResponse(
               routingContext, HttpResponseType.FEATURE_COLLECTION, emptyFeatureCollection());
         }

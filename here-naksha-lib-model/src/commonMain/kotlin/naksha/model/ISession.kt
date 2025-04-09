@@ -6,6 +6,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
 import naksha.model.request.*
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * When a session is opened, it is bound to the context in which the session shall operate.
@@ -138,6 +139,18 @@ interface ISession : AutoCloseable {
      * @since 3.0
      */
     fun getCollectionByNumber(map: NakshaMap, collectionNumber: Int): NakshaCollection?
+
+    /**
+     * Load all tuples into the given [feature-tuples][FeatureTuple].
+     *
+     * [Tuple] that can't be fetched will still be `null` after the method returns. The method should query the [Naksha.cache] before actually loading the [Tuple] from the storage _(without asking the cache to load from storage, otherwise this would be a recursion)_ .
+     *
+     * @param featureTuples a list of result-tuples to fetch.
+     * @since 3.0
+     * @see [Naksha.cache]
+     */
+    @JsName("loadAllTuples")
+    fun loadTuples(featureTuples: List<FeatureTuple?>)
 
     /**
      * Load all tuples into the given [feature-tuples][FeatureTuple].

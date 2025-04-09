@@ -9,6 +9,7 @@
   "properties": {
     "collection": {
       "id": "newly-added-collection-by-update",
+      "mapId": "naksha-client-test-map",
       "type": "NakshaCollection"
     }
   }

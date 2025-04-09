@@ -8,6 +8,8 @@ import kotlin.js.JsExport
  * A yearly partition of the transaction table.
  * @param transactions the transactions table.
  * @param year the year of this transactions table.
+ * @since 3.0
+ * @see [PgTransactions]
  */
 @JsExport
 class PgTransactionsYear(val transactions: PgTransactions, year: Int) : PgTable(

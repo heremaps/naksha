@@ -21,6 +21,7 @@ package com.here.naksha.lib.handlers;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_COLLECTION_CREATION;
+import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_MAP_CREATION;
 import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_STORAGE_INITIALIZATION;
 import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.FIRST_ATTEMPT;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
@@ -45,9 +46,11 @@ import naksha.model.IStorage;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
+import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.StreamInfo;
 import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaMap;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Request;
@@ -105,16 +108,23 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     addStorageIdToStreamInfo(storageId, ctx);
 
     // Obtain IStorage implementation using NakshaHub
-    final IStorage storageImpl = nakshaHub().getStorageById(storageId);
+    final IStorage storageImpl = nakshaHub().getStorageById(storageId); // TODO: analyze cache potential (CASL-928)
     logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
 
     NakshaCollection collection = chooseCollection(request);
-    applyCollectionId(request, collection.getId());
+    ensureCollectionHasMapId(collection);
+    applyMapIdAndCollectionId(request, collection);
     StopWatch storageTimer = new StopWatch();
     try {
       return forwardRequestToStorage(ctx, request, storageImpl, collection, FIRST_ATTEMPT, storageTimer);
     } finally {
       addStorageTimeToStreamInfo(storageTimer, ctx);
+    }
+  }
+
+  private void ensureCollectionHasMapId(NakshaCollection collection) {
+    if (collection.getMapId() == null) {
+      throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Collection '" + collection.getId() + "' has no mapId");
     }
   }
 
@@ -312,6 +322,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
           ctx, storageImpl, collection, request, previousError, storageTimer);
       case ATTEMPT_AFTER_STORAGE_INITIALIZATION -> reattemptAfterStorageInitialization(
           ctx, storageImpl, collection, request, previousError, storageTimer);
+      case ATTEMPT_AFTER_MAP_CREATION -> reattemptAfterMapCreation(ctx, storageImpl, collection, request, previousError, storageTimer);
       case ATTEMPT_AFTER_COLLECTION_CREATION -> previousError;
     };
   }
@@ -343,6 +354,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull StopWatch storageTimer) {
     if (indicateStorageNotInitialized(previousError)) {
       return retryDueToUninitializedStorage(ctx, storageImpl, collection, request, storageTimer);
+    } else if (indicatesMissingMap(previousError)) {
+      return retryDueToMissingMap(ctx, storageImpl, collection, request, storageTimer);
     } else if (indicatesMissingCollection(previousError)) {
       return retryDueToMissingCollection(ctx, storageImpl, collection, request, storageTimer);
     } else {
@@ -357,6 +370,23 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull Request request,
       final @NotNull ErrorResponse previousError,
       final @NotNull StopWatch storageTimer) {
+    if (indicatesMissingMap(previousError)) {
+      return retryDueToMissingMap(ctx, storageImpl, collection, request, storageTimer);
+    } else if (indicatesMissingCollection(previousError)) {
+      return retryDueToMissingCollection(ctx, storageImpl, collection, request, storageTimer);
+    } else {
+      return previousError;
+    }
+  }
+
+  private @NotNull Response reattemptAfterMapCreation(
+      final @NotNull NakshaContext ctx,
+      final @NotNull IStorage storageImpl,
+      final @NotNull NakshaCollection collection,
+      final @NotNull Request request,
+      final @NotNull ErrorResponse previousError,
+      final @NotNull StopWatch storageTimer
+  ) {
     if (indicatesMissingCollection(previousError)) {
       return retryDueToMissingCollection(ctx, storageImpl, collection, request, storageTimer);
     } else {
@@ -370,12 +400,40 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull IStorage storageImpl,
       final @NotNull NakshaCollection collection,
       final @NotNull Request request,
-      final @NotNull StopWatch storageTimer) {
+      final @NotNull StopWatch storageTimer
+  ) {
     logger.info("Initializing Storage before reattempting write request.");
     measuredStorageRunnable(() -> Naksha.setupStorage(storageImpl.getConfig()), storageTimer);
     logger.info("Storage initialized");
     return forwardRequestToStorage(
         ctx, request, storageImpl, collection, ATTEMPT_AFTER_STORAGE_INITIALIZATION, storageTimer);
+  }
+
+  private @NotNull Response retryDueToMissingMap(
+      final @NotNull NakshaContext ctx,
+      final @NotNull IStorage storageImpl,
+      final @NotNull NakshaCollection collection,
+      final @NotNull Request request,
+      final @NotNull StopWatch storageTimer
+  ) {
+    String mapId = collection.getMapId();
+    logger.info("Creating map '{}' specified by collection '{}'", mapId, collection.getId());
+    WriteRequest createMapRequest = new WriteRequest().add(new Write().createMap(new NakshaMap(mapId)));
+    Response createMapResponse = measuredStorageSupplier(() -> singleWrite(ctx, storageImpl, createMapRequest), storageTimer);
+    if (createMapResponse instanceof SuccessResponse) {
+      logger.info("Successfully created map '{}' specified by collection '{}'", mapId, collection.getId());
+      return forwardRequestToStorage(ctx, request, storageImpl, collection, ATTEMPT_AFTER_MAP_CREATION, storageTimer);
+    } else if (createMapResponse instanceof ErrorResponse er) {
+      logger.info("Failure while creating map '{}' specified by collection '{}': {}", mapId, collection.getId(), er.getError());
+      return er;
+    } else {
+      logger.info("Unknown response encountered while creating map '{}' specified by collection '{}': {}", mapId, collection.getId(),
+          createMapResponse);
+      return new ErrorResponse(new NakshaError(
+          NakshaError.EXCEPTION,
+          "Unknown response encountered while creating map: '" + mapId + "': " + createMapResponse
+      ));
+    }
   }
 
   private Response retryDueToMissingCollection(
@@ -416,24 +474,36 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     return NakshaError.UNINITIALIZED.equals(errorResponse.getError().getCode());
   }
 
+  private boolean indicatesMissingMap(@NotNull ErrorResponse errorResponse) {
+    return NakshaError.MAP_NOT_FOUND.equals(errorResponse.getError().getCode());
+  }
+
   private boolean indicatesMissingCollection(@NotNull ErrorResponse errorResponse) {
     return NakshaError.COLLECTION_NOT_FOUND.equals(errorResponse.getError().getCode());
   }
 
-  private void applyCollectionId(Request request, @NotNull String customCollectionId) {
+  private void applyMapIdAndCollectionId(Request request, @NotNull NakshaCollection collection) {
     if (request instanceof ReadFeatures rf) {
-      rf.setCollectionIds(StringList.of(customCollectionId));
+      rf.setMapId(collection.getMapId());
+      rf.setCollectionIds(StringList.of(collection.getId()));
     } else if (request instanceof WriteRequest wr) {
       if (isOnlyWriteCollections(wr)) {
-        collectionsFrom(wr).forEach(collection -> collection.setId(customCollectionId));
+        collectionsFrom(wr).forEach(collectionFromRequest -> {
+          collectionFromRequest.setMapId(collection.getMapId());
+          collectionFromRequest.setId(collection.getId());
+        });
       } else {
-        wr.getWrites().forEach(write -> write.setCollectionId(customCollectionId));
+        wr.getWrites().forEach(write -> {
+          write.setMapId(collection.getMapId());
+          write.setCollectionId(collection.getId());
+        });
       }
     }
   }
 
   // TODO: collectionId at handler level can be potentially removed in the future
   private @NotNull NakshaCollection chooseCollection(final Request request) {
+    // TODO: check if mapId is present
     final NakshaCollection collectionDefinedInHandler = properties.getCollection();
     if (collectionDefinedInHandler != null) {
       logger.info(
@@ -506,6 +576,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   enum OperationAttempt {
     FIRST_ATTEMPT,
     ATTEMPT_AFTER_STORAGE_INITIALIZATION,
+    ATTEMPT_AFTER_MAP_CREATION,
     ATTEMPT_AFTER_COLLECTION_CREATION
   }
 }

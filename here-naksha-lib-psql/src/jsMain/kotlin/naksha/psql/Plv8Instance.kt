@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.fn.Fx2
 import naksha.model.SessionOptions
 
 object Plv8Instance : PgInstance {
@@ -28,7 +29,7 @@ object Plv8Instance : PgInstance {
         get() = TODO("Not yet implemented")
         set(value) {}
 
-    override fun openConnection(options: SessionOptions, readOnly: Boolean): PgConnection {
+    override fun openConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection {
         TODO("Not yet implemented")
     }
 }

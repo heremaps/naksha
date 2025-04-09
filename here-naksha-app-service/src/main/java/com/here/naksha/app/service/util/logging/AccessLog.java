@@ -20,6 +20,7 @@ package com.here.naksha.app.service.util.logging;
 
 import static naksha.base.JvmAnyObjectUtil.getOrCreateProperty;
 import static naksha.base.JvmAnyObjectUtil.getProperty;
+import static naksha.base.JvmAnyObjectUtil.getPropertyOrReturnDefault;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -61,6 +62,10 @@ public class AccessLog extends AccessLogExtended {
 
   public StreamInfo getStreamInfo() {
     return getOrCreateProperty(this, STREAM_INFO_KEY, StreamInfo.class);
+  }
+
+  public StreamInfo getStreamInfoOrCreateNewWithStreamId(String streamId) {
+    return getOrCreateProperty(this, STREAM_INFO_KEY, StreamInfo.class, (o,k) -> new StreamInfo(streamId));
   }
 
   public void setStreamInfo(StreamInfo streamInfo) {

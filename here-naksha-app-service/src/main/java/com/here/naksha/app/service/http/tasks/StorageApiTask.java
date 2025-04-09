@@ -117,27 +117,27 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
     return transformedResponseTo(request);
   }
 
-  private @NotNull XyzResponse executeCreateStorage() throws JsonProcessingException {
+  private @NotNull XyzResponse executeCreateStorage() {
     final NakshaStorage newStorage = storageConfigFromRequestBody();
-    final WriteRequest wrRequest = RequestHelper.createFeatureRequest(STORAGES, newStorage);
+    final WriteRequest wrRequest = RequestHelper.createFeatureRequest(naksha().getAdminMapId(), STORAGES, newStorage);
     return transformedResponseTo(wrRequest);
   }
 
-  private @NotNull XyzResponse executeUpdateStorage() throws JsonProcessingException {
+  private @NotNull XyzResponse executeUpdateStorage() {
     final String storageIdFromPath = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
     final NakshaStorage storageFromBody = storageConfigFromRequestBody();
     if (!storageFromBody.getId().equals(storageIdFromPath)) {
       return verticle.sendErrorResponse(
           routingContext, NakshaError.ILLEGAL_ARGUMENT, mismatchMsg(storageIdFromPath, storageFromBody));
     } else {
-      final WriteRequest updateStorageReq = RequestHelper.updateFeatureRequest(STORAGES, storageFromBody);
+      final WriteRequest updateStorageReq = RequestHelper.updateFeatureRequest(naksha().getAdminMapId(), STORAGES, storageFromBody);
       return transformedResponseTo(updateStorageReq);
     }
   }
 
   private @NotNull XyzResponse executeDeleteStorage() {
     final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
-    final WriteRequest wrRequest = RequestHelper.deleteFeatureByIdRequest(STORAGES, storageId);
+    final WriteRequest wrRequest = RequestHelper.deleteFeatureByIdRequest(naksha().getAdminMapId(), STORAGES, storageId);
     Response response = executeWriteRequestFromSpaceStorage(wrRequest);
     return transformResponseToXyzFeatureResponse(response, NakshaStorage.class, NOT_FOUND_ON_NO_ELEMENTS,
         this::maskSensitiveProperties);

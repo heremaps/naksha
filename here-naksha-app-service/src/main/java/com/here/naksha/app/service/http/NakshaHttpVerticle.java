@@ -53,6 +53,7 @@ import com.here.naksha.app.service.http.apis.StorageApi;
 import com.here.naksha.app.service.http.apis.WriteFeatureApi;
 import com.here.naksha.app.service.http.auth.JWTPayload;
 import com.here.naksha.app.service.http.auth.NakshaJwtAuthHandler;
+import com.here.naksha.app.service.http.tasks.SpaceMapResolver;
 import com.here.naksha.app.service.util.logging.AccessLog;
 import com.here.naksha.app.service.util.logging.AccessLogUtil;
 import com.here.naksha.lib.core.AbstractTask;
@@ -91,6 +92,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import naksha.base.Platform;
 import naksha.base.ToJsonOptions;
@@ -125,6 +127,8 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
       .setMaxInitialLineLength(16 * 1024 * 1024) // mb
       .setIdleTimeout(300);
 
+  private static final AtomicReference<SpaceMapResolver> spaceMapResolverRef = new AtomicReference<>();
+
   /**
    * Creates a new verticle. Each verticle will be bound to a single IO worker.
    *
@@ -133,6 +137,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
    */
   public NakshaHttpVerticle(@NotNull INaksha naksha, int index, @NotNull NakshaApp app) {
     super(naksha, index, app);
+    spaceMapResolverRef.compareAndSet(null, new SpaceMapResolver(naksha));
 
     corsHandler = CorsHandler.create().allowCredentials(true); // .addRelativeOrigin(".*") <-- Not needed, default
     // The methods the client allowed to use.
@@ -171,13 +176,15 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
         final AuthenticationHandler jwtHandler = new NakshaJwtAuthHandler(app().authProvider, hubConfig, null);
         rb.securityHandler("Bearer", jwtHandler);
 
+        // Setup controllers
+        SpaceMapResolver spaceMapResolver = spaceMapResolverRef.get();
         final List<@NotNull Api> apiControllers = List.of(
             new HealthApi(this),
             new StorageApi(this),
-            new SpaceApi(this),
+            new SpaceApi(this, spaceMapResolver),
             new EventHandlerApi(this),
-            new ReadFeatureApi(this),
-            new WriteFeatureApi(this));
+            new ReadFeatureApi(this, spaceMapResolver),
+            new WriteFeatureApi(this, spaceMapResolver));
 
         // Add automatic routes.
         for (final Api api : apiControllers) {

@@ -145,7 +145,7 @@ class Naksha private constructor() {
          * - Encode the feature into `JBON` _(Java Binary Object Notation)_, and compress it using [GZIP](https://en.wikipedia.org/wiki/Gzip).
          */
         @JvmField
-        var DEFAULT_FLAGS = Flags(TWKB, JBON_GZIP, TagsEncoding.JSON_GZIP)
+        var DEFAULT_FLAGS = Flags(TWKB, JBON_GZIP, TagsEncoding.JSON)
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:
@@ -421,6 +421,19 @@ class Naksha private constructor() {
          */
         @JvmStatic
         internal val INT64_CLEAR_LOW16 = Int64(-65536)
+
+        /**
+         * Returns the partition-number from the given feature-id.
+         *
+         * This is basically just an unsigned 16-bit integer, extracted from the lowest 16-bit of the feature-number. When there are less than 65536 partitions, the value must be divided by the number of real partitions, and the rest indexes the partition, for example for 4 partitions do `partitionNumber(featureNumber) % 4`, what will be a value between 0 and 3.
+         * @param featureId the feature-id.
+         * @return the partition-number.
+         * @see [featureNumber]
+         */
+        @JsName("featureNumberById")
+        @JsStatic
+        @JvmStatic
+        fun partitionNumber(featureId: String): Int = partitionNumber(featureNumber(featureId))
 
         /**
          * Returns the partition-number from the given feature-number.

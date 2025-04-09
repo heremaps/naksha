@@ -1,13 +1,17 @@
 package naksha.psql
 
+import naksha.base.AtomicInt
 import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.fn.Fx2
 import naksha.model.SessionOptions
 import org.postgresql.PGProperty.*
 import org.postgresql.util.HostSpec
+import org.postgresql.util.PSQLException
 import java.lang.ref.WeakReference
 import java.sql.ResultSet
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.max
@@ -65,12 +69,14 @@ class PsqlInstance(private val config: PgInstanceConfig) : PgInstance {
     internal data class PooledPgConnection(
         val jdbcConn: org.postgresql.jdbc.PgConnection,
         val id: Long = connCounter.getAndDecrement(),
+        val idle: AtomicInteger = AtomicInteger(0),
         val connection: AtomicReference<WeakReference<PsqlConnection>?> = AtomicReference(),
         var e: Exception? = null
     ) {
         fun setSession(session: PsqlConnection): Boolean {
             if (this.connection.compareAndSet(null, session.weakRef)) {
                 e = Exception()
+                idle.set(0)
                 return true
             }
             return false
@@ -135,7 +141,7 @@ class PsqlInstance(private val config: PgInstanceConfig) : PgInstance {
             config.connectionLimit = min(8192, max(0, value))
         }
 
-    override fun openConnection(options: SessionOptions, readOnly: Boolean): PsqlConnection {
+    override fun openConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PsqlConnection {
         if (this.readOnly) require(readOnly) { "Failed to open a write connection to read-replica" }
         var psqlConn: PsqlConnection?
 
@@ -159,6 +165,16 @@ class PsqlInstance(private val config: PgInstanceConfig) : PgInstance {
             psqlConn = PsqlConnection(this, pooledConn.id, pooledConn.jdbcConn, options)
             if (pooledConn.setSession(psqlConn)) {
                 pooledConn.jdbcConn.isReadOnly = readOnly
+                // We need to ensure that this connection is not dead, we use the initialization for this test.
+                try {
+                    val query = """SET SESSION search_path TO "naksha~admin", hint_plan, public, topology;
+SET SESSION work_mem = '64MB';
+SET SESSION idle_in_transaction_session_timeout = '30s';"""
+                    if (init != null) init.call(psqlConn, query) else psqlConn.execute(query).close()
+                } catch (_: Exception) {
+                    connectionPool.remove(pooledConn.id)
+                    continue
+                }
                 return psqlConn
             }
             // Concurrent allocation, another thread was faster, go on.

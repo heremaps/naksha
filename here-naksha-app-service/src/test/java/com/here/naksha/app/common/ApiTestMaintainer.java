@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.extension.ExtensionContext.Namespace.GLOBAL;
 
 import com.here.naksha.app.init.context.ContainerTestContext;
 import com.here.naksha.app.init.context.TestContext;
+import naksha.model.Naksha;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;

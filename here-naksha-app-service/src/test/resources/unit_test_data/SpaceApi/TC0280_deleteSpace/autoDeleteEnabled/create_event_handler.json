@@ -7,7 +7,7 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "tc_280_storage_auto_delete_on",
+    "storageId": "${dataDb.storageId}",
     "autoDeleteCollection": true
   }
 }

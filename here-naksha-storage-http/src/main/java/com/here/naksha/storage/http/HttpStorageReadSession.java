@@ -35,6 +35,8 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static naksha.model.LibModelKt.FETCH_ALL;
+
 public final class HttpStorageReadSession implements IReadSession {
 
   private static final Logger log = LoggerFactory.getLogger(HttpStorageReadSession.class);
@@ -144,5 +146,10 @@ public final class HttpStorageReadSession implements IReadSession {
   public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
     // TODO: Technically, this translates into creating an ReadCollections query!
     throw new NotImplementedException("Not supported by HTTP storage");
+  }
+
+  @Override
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
+    loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
   }
 }

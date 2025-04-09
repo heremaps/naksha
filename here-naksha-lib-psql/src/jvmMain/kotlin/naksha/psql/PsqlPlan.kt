@@ -2,6 +2,8 @@ package naksha.psql
 
 import java.sql.Connection
 import java.sql.PreparedStatement
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * The Java implementation of a plan.
@@ -9,6 +11,11 @@ import java.sql.PreparedStatement
 class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
     val stmt: PreparedStatement = query.prepare(conn)
     var closed: Boolean = false
+
+    override fun setFetchSize(size: Int) {
+        check(!closed)
+        stmt.fetchSize = min(1_000_000, max(1_000, size))
+    }
 
     /**
      * Execute the prepared plan with the given arguments. The types must match to the prepared statement.

@@ -8,7 +8,7 @@ import naksha.model.request.WriteRequest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class RequestTypesUtilTest {
+public class RequestTypesUtilTest extends AbstractTest {
 
   @Test
   public void testIsCollectionsRequestType() {

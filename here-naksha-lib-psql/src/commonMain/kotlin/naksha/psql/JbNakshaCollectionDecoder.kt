@@ -64,7 +64,7 @@ class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbFeatureDecoder(di
     }
 
     fun partitionCount(): Int = _partitionCount
-    fun geoIndex(): String = _geoIndex ?: NakshaCollection.DEFAULT_GEO_INDEX
+    fun geoIndex(): String = _geoIndex ?: "gist"
     fun disableHistory(): Boolean = _disableHistory
     fun autoPurge(): Boolean = _autoPurge
     fun maxAge(): Int64 = _maxAge ?: Platform.INT64_MAX_VALUE

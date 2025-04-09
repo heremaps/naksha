@@ -6,11 +6,12 @@ import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import naksha.psql.base.PgTestBase
 import kotlin.test.*
 
-class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c")) {
+class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c", TEST_MAP_ID)) {
 
     @Test
     fun shouldPerformSimpleUpdateAndUpsert() {

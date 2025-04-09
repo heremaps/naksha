@@ -33,6 +33,8 @@ import static org.mockito.Mockito.when;
 
 class IntHandlerForStoragesTest {
 
+  private static final String TEST_MAP_ID = "test_map_id";
+
   @Mock
   INaksha naksha;
 
@@ -41,6 +43,7 @@ class IntHandlerForStoragesTest {
   @BeforeEach
   void setup() {
     MockitoAnnotations.openMocks(this);
+    when(naksha.getAdminMapId()).thenReturn(TEST_MAP_ID);
     handler = new IntHandlerForStorageConfigs(naksha);
   }
 
@@ -56,7 +59,7 @@ class IntHandlerForStoragesTest {
     NakshaStorage httpStorageConfig = httpStorageConfig(notHttpStorageProperties);
 
     // And:
-    WriteRequest writeStorageRequest = createFeatureRequest(STORAGES, httpStorageConfig);
+    WriteRequest writeStorageRequest = createFeatureRequest(TEST_MAP_ID, STORAGES, httpStorageConfig);
 
     // When:
     Response result = handler.process(eventWith(writeStorageRequest));
@@ -76,7 +79,7 @@ class IntHandlerForStoragesTest {
     NakshaStorage httpStorageConfig = httpStorageConfig(httpStorageProperties);
 
     // And:
-    WriteRequest writeStorageRequest = createFeatureRequest(STORAGES, httpStorageConfig);
+    WriteRequest writeStorageRequest = createFeatureRequest(TEST_MAP_ID, STORAGES, httpStorageConfig);
 
     // When:
     Response result = handler.process(eventWith(writeStorageRequest));

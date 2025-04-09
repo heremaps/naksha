@@ -39,6 +39,10 @@ import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
+/*
+  TODO: Fix with CASL-942
+  Partially fails due to bug in property search (p.length for example)
+ */
 class ReadFeaturesByRadiusPostTest extends ApiTest {
 
   private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();

@@ -148,6 +148,7 @@ class PsqlConnection internal constructor(
                 }
                 instance.connectionPool[id]?.connection?.compareAndSet(weakRef, null)
             } catch (throwable: Throwable) {
+                instance.connectionPool.remove(id)
                 throw PgExceptionMapper.map(throwable)
             }
         }

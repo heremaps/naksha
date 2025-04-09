@@ -14,7 +14,7 @@ import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import kotlin.test.*
 
-class ReadOrderedTest : PgTestBase(NakshaCollection("read_ordered_test")) {
+class ReadOrderedTest : PgTestBase(NakshaCollection("read_ordered_test", TEST_MAP_ID)) {
 
     companion object ReadOrderedTest_C {
         private const val COUNT = 100

@@ -13,6 +13,7 @@ class NakshaCollectionProxyTest {
         // when
         val collection = NakshaCollection(
             id = "ID",
+            mapId = "MAP_ID",
             partitions = 3,
             storeDeleted = StoreMode.SUSPEND,
             storeHistory = StoreMode.OFF

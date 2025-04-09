@@ -7,7 +7,7 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "missing_collection_test_storage",
+    "storageId": "${dataDb.storageId}",
     "autoCreateCollection": true
   }
 }

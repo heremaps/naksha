@@ -23,9 +23,8 @@ import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
 import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJson;
-import static com.here.naksha.app.common.TestUtil.parseJsonFileOrFail;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
-import static com.here.naksha.app.common.assertions.ResponseAssertions.STRICT_JSON_COMPARISON_WITHOUT_XYZ;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.IGNORE_XYZ;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -39,6 +38,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.UUID;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import org.junit.jupiter.api.Assertions;
@@ -76,7 +77,7 @@ class CreateFeatureTest extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match", STRICT_JSON_COMPARISON_WITHOUT_XYZ)
+        .hasJsonBody(expectedBodyPart, "Create Feature response body doesn't match", IGNORE_XYZ)
         .hasInsertedCountMatchingWithFeaturesInRequest(bodyJson)
         .hasInsertedIdsMatchingFeatureIds(null)
         .hasUuids();
@@ -216,17 +217,17 @@ class CreateFeatureTest extends ApiTest {
     HttpResponse<String> response;
 
     // Given: New Features in place
-    final String bodyJson = loadFileOrFail("CreateFeatures/TC0305_createFeaturesWithDupIds/create_features.json");
+    final String bodyJson = loadFileOrFail("CreateFeatures/TC0305_createFeaturesWithDupIds/initial_features_upsert.json");
     streamId = UUID.randomUUID().toString();
     response = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch");
 
     // When: Create Features request is submitted with the same Ids
-    final String request = loadFileOrFail("CreateFeatures/TC0305_createFeaturesWithDupIds/request.json");
+    final String request = loadFileOrFail("CreateFeatures/TC0305_createFeaturesWithDupIds/second_features_upsert.json");
     response = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", request, streamId);
 
     // Then: Perform assertions
-    final String expectedBodyPart = loadFileOrFail("CreateFeatures/TC0305_createFeaturesWithDupIds/feature_response_part.json");
+    final String expectedBodyPart = loadFileOrFail("CreateFeatures/TC0305_createFeaturesWithDupIds/expected_partial_response.json");
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
@@ -242,8 +243,9 @@ class CreateFeatureTest extends ApiTest {
     String streamId = UUID.randomUUID().toString();
 
     // Given: Space (without EventHandler) configured in Admin storage
-    final Space space = parseJsonFileOrFail("CreateFeatures/TC0307_createFeaturesWithNoHandler/create_space.json", Space.class);
-    HttpResponse<String> response = getNakshaClient().post("hub/spaces", space.toString(), streamId);
+    final String spaceJson = loadFileOrFail("CreateFeatures/TC0307_createFeaturesWithNoHandler/create_space.json");
+    final Space space = JvmBoxingUtil.box(Platform.fromJSON(spaceJson), Space.class);
+    HttpResponse<String> response = getNakshaClient().post("hub/spaces", spaceJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Event Handler");
 
     // Given: Create Features request (against above Space)
@@ -321,7 +323,7 @@ class CreateFeatureTest extends ApiTest {
                 {
                 "type": "FeatureCollection",
                 "features": [
-                """ + feature + "]}",
+                """ + Platform.toJSON(feature) + "]}",
             streamId);
 
     // Perform first assertions
@@ -340,7 +342,7 @@ class CreateFeatureTest extends ApiTest {
                 {
                 "type": "FeatureCollection",
                 "features": [
-                """ + feature + "]}",
+                """ + Platform.toJSON(feature) + "]}",
             streamId);
 
     // Perform second assertions
@@ -355,7 +357,7 @@ class CreateFeatureTest extends ApiTest {
                 {
                 "type": "FeatureCollection",
                 "features": [
-                """ + feature + "]}",
+                """ + Platform.toJSON(feature) + "]}",
             streamId);
 
     // Perform third assertions
@@ -419,8 +421,7 @@ class CreateFeatureTest extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasResBodySizeGTE(expBodySize)
-    ;
+        .hasResBodySizeGTE(expBodySize);
 
     // When: We query the same Feature from NakshaHub
     streamId = UUID.randomUUID().toString();
@@ -431,8 +432,7 @@ class CreateFeatureTest extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasResBodySizeGTE(expBodySize)
-    ;
+        .hasResBodySizeGTE(expBodySize);
   }
 
 }

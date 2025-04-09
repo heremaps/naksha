@@ -33,7 +33,6 @@ import java.util.Optional;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.mom.MomReference;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
@@ -49,8 +48,8 @@ public class ResponseAssertions {
 
   public static JSONComparator STRICT_JSON_COMPARISON = new CustomComparator(JSONCompareMode.STRICT);
   public static JSONComparator LENIENT_JSON_COMPARISON = new CustomComparator(JSONCompareMode.LENIENT);
-  // TODO: CASL-681 fix/analyze XYZ ignoring part
-  public static JSONComparator STRICT_JSON_COMPARISON_WITHOUT_XYZ = new CustomComparator(JSONCompareMode.STRICT, new Customization("features[*].properties.@ns:com:here:xyz", (left, right) -> true));
+  // TODO: CASL-681 discuss
+  public static JSONComparator IGNORE_XYZ = new CustomComparator(JSONCompareMode.LENIENT, new Customization("features[*].properties.@ns:com:here:xyz", (left, right) -> true));
 
   private final HttpResponse<String> subject;
   private XyzFeatureCollection collectionResponse;
@@ -65,7 +64,7 @@ public class ResponseAssertions {
   }
 
   public ResponseAssertions hasStatus(int expectedStatus) {
-    Assertions.assertEquals(expectedStatus, subject.statusCode(), "Response status mismatch");
+    Assertions.assertEquals(expectedStatus, subject.statusCode(), "Response status mismatch, body:\n" + subject.body());
     return this;
   }
 

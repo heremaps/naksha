@@ -34,7 +34,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         // Collect needed data
         val pgStorage = session.storage
         val mapId = req.mapId ?: NakshaContext.mapId()
-        val pgMap = session.getPgMapById(mapId) ?: throw illegalArg("Map with id '$mapId' does not exist")
+        val pgMap = session.getPgMapById(mapId) ?: throw mapNotFound("Map with id '$mapId' does not exist")
         // We select what the client wants, maximum is always 16777216
         // Finally, the storage can limit result-size further down below 16777216 (normally we do not expect this to happen).
         val REQ_LIMIT = min(max(0, req.limit ?: 16777216), session.storage.hardCap)
@@ -43,7 +43,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         for (collectionId in req.collectionIds) {
             if (collectionId == null) continue
             val pgCollection = session.getPgCollectionById(pgMap, collectionId) ?:
-                throw illegalArg("Collection with id '$collectionId' not found in map '$mapId'")
+                throw collectionNotFound("Collection with id '$collectionId' not found in map '$mapId'")
             pgCollections.add(pgCollection)
         }
         if (pgCollections.size <= 0) throw illegalArg("Empty collection-ids in request")
@@ -131,7 +131,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         for (entry in pgCollections.withIndex()) {
             val pgCollection = entry.value
             val map = pgCollection.map
-            val head = pgCollection.headTable
+            val read = PgRead(pgMap, pgCollection)
 
             // Note: To simplify queries, we actually always embed the collection-number internally,
             //       eventually, before returning the result, we decide if we put it into the header
@@ -140,25 +140,31 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
             val select_cols_string = select_cols.joinToString(", ")
 
             val where = if (whereQuery.isEmpty()) "" else "WHERE $whereQuery"
-            if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
-            selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${head.quotedName} $where)\n")
-
-            val deleted = pgCollection.deletedTable
-            if (!req.queryHistory && req.queryDeleted && deleted != null) {
+            for (head in read.headTables) {
                 if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
-                selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${deleted.quotedName} $where)\n")
+                selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${head.quotedName} $where)\n")
             }
 
-            val history = pgCollection.historyTable
-            if (req.queryHistory && history != null) {
+            val deletedTables = read.shadowTables
+            if (!req.queryHistory && req.queryDeleted && deletedTables != null) {
+                for (deleted in deletedTables) {
+                    if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
+                    selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${deleted.quotedName} $where)\n")
+                }
+            }
+
+            val historyTables = read.historyTables
+            if (req.queryHistory && historyTables != null) {
                 // TODO: We need to improve, because we only want $versions variants!
                 // If only one version is requested, we can improve the query to only return this version!
                 val better_where = if (version != null && versions == 1)
                     (if (where.isEmpty()) "WHERE " else "$where AND ") + "naksha_tn_version($next_tn) > $version"
                 else
                     where
-                if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
-                selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${history.quotedName} $better_where)\n")
+                for (history in historyTables) {
+                    if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
+                    selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${history.quotedName} $better_where)\n")
+                }
             }
         }
         // Restore original value for `col_num` selection.
@@ -168,7 +174,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val gzip = if (thePgCollection == null)
         // If we select from multiple collections, we have to encode the collection-number in the tuple-number.
         // This results in 128-bit per row, aka 16-byte per row, but 4 byte less in the header.
-        """gzip(
+        """(
   int4send((0 << 28)|(2 << 24)|sum(1)::int)|| -- type (0), subtype (2), length
   int4send(20 + sum(1)::int*16)|| -- byte-size
   int8send(${pgStorage.number})|| -- shared storage-number
@@ -178,7 +184,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
     // If we select only from exactly one table, we can embed the collection-number into the binary header.
     // This reduces the encoding of each tuple-number to 96-bit (12-byte), but adds 4-byte into the header
     // for the shared collection-number.
-    """gzip(
+    """(
   int4send((0 << 28)|(3 << 24)|sum(1)::int)|| -- type (0), subtype (3), length
   int4send(24 + sum(1)::int*12)|| -- byte-size
   int8send(${pgStorage.number})|| -- shared storage-number
@@ -217,14 +223,19 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
 )"""
 
         // The final SQL query.
+        // We only need `col_num` and `tn`, the additional columns in limit were only for sorting!
+        // If we only select from a single collection (thePgCollection != null), then we only need
+        // the tuple-numbers, because we know the collection we read from!
         val SQL = """WITH query AS (
 $selects)$part$limited
-SELECT $gzip AS rs
-FROM limited"""
+SELECT ${if (thePgCollection == null) "col_num, tn" else "tn"} FROM limited"""
         return PgQuery(
             sql = SQL,
             argValues = whereClause?.argValues?.toTypedArray() ?: emptyArray(),
             argTypes = whereClause?.argTypeNames ?: emptyArray(),
+            pgStorage.number,
+            pgMap.number,
+            thePgCollection?.number
         )
     }
 }
