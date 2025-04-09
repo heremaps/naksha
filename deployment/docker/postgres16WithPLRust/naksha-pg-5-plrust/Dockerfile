@@ -10,8 +10,10 @@ RUN dnf install clang \
     && chown postgres -R "$(pg_config --pkglibdir)"
 USER postgres
 RUN cd /tmp/ \
+# install rust via rustup
     && curl --tlsv1.3 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y \
     && source ~/.cargo/env \
+# install PL Rust from source
     && git clone https://github.com/tcdi/plrust.git \
     && cd /tmp/plrust \
     && git checkout v1.2.8 \
@@ -31,36 +33,33 @@ RUN cd /tmp/ \
         elif [ "${TARGETPLATFORM}" = "linux/amd64" ]; then \
           rustup target install x86_64-unknown-linux-gnu; \
         fi \
-# install pgrx
-    && cargo install cargo-pgrx --locked --version=0.11.0 \
-    && cargo pgrx init --pg16 "$(pg_config --sharedir)/pg_config" \
+    && cargo pgrx init --pg16 "$(pg_config --bindir)/pg_config" \
     && cd /tmp/plrust/plrustc \
 # install plrust
     && ./build.sh \
     && mv /tmp/plrust/build/bin/plrustc ~/.cargo/bin/ \
 # install postgrestd
     && cd /tmp/plrust/plrust \
-#    && PG_VER=16 \
     && if [ "${TARGETPLATFORM}" = "linux/arm64" ]; then \
                    STD_TARGETS="aarch64-postgres-linux-gnu" ./build; \
                elif [ "${TARGETPLATFORM}" = "linux/amd64" ]; then \
                    STD_TARGETS="x86_64-postgres-linux-gnu" ./build; \
                fi \
-    && cargo pgrx install --release --features trusted -c /usr/bin/pg_config \
-    && CONFIG_FILE="/etc/postgresql/16/main/postgresql.conf" \
-    && if grep -q "^shared_preload_libraries" "$CONFIG_FILE"; then \
-          grep "^shared_preload_libraries" "$CONFIG_FILE" | grep -q "plrust" || \
-          sed -i "s/^\(shared_preload_libraries *= *'\(.*\)'\)/shared_preload_libraries = '\2, plrust'/" "$CONFIG_FILE"; \
+    && cargo pgrx init --pg16 "$(pg_config --bindir)/pg_config" \
+    && cargo pgrx install --release --features trusted -c "$(pg_config --bindir)/pg_config"
+ENV POSTGRESQL_CONF="/usr/local/pgsql/data/postgresql.conf" \
+RUN if grep -q "^shared_preload_libraries" "$POSTGRESQL_CONF"; then \
+          grep "^shared_preload_libraries" "$POSTGRESQL_CONF" | grep -q "plrust" || \
+          sed -i "s/^\(shared_preload_libraries *= *'\(.*\)'\)/shared_preload_libraries = '\2, plrust'/" "$POSTGRESQL_CONF"; \
         else \
-          echo "shared_preload_libraries = 'plrust'" >> "$CONFIG_FILE"; \
+          echo "shared_preload_libraries = 'plrust'" >> "$POSTGRESQL_CONF"; \
         fi \
-    && echo "plrust.work_dir = '/tmp'" >> "$CONFIG_FILE" \
-    && chown root -R "$(pg_config --sharedir)/extension" \
+    && echo "plrust.work_dir = '/tmp'" >> "$POSTGRESQL_CONF" \
+USER root
+RUN chown root -R "$(pg_config --sharedir)/extension" \
     && chown root -R "$(pg_config --pkglibdir)" \
 # Cleanup
     && rm -rf /tmp/*
-
-USER root
 
 EXPOSE 5432
 
