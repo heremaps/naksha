@@ -11,7 +11,7 @@ RUN dnf install -y clang \
 USER postgres
 RUN cd /tmp/ \
 # install rust via rustup
-    && curl --tlsv1.3 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y \
+    && curl --tlsv1.3 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain "1.72.0" -y \
     && source ~/.cargo/env \
 # install PL Rust from source
     && git clone https://github.com/tcdi/plrust.git \
@@ -27,7 +27,6 @@ RUN cd /tmp/ \
                home = { version = "=0.5.9", forced = true } \n \
                litemap = { version = "=0.7.4", forced = true } \n \
                zerofrom = { version = "=0.1.5", forced = true } \n' plrust/src/user_crate/crating.rs \
-    && rustup default 1.72.0 \
     && rustup component add llvm-tools-preview rustc-dev \
     && if [ "${TARGETPLATFORM}" = "linux/arm64" ]; then \
           rustup target install aarch64-unknown-linux-gnu; \
