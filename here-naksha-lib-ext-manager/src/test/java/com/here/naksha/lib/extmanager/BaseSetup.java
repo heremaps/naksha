@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class BaseSetup {
-
   public ExtensionConfig getExtensionConfig() {
     return getExtensionConfig("src/test/resources/data/extension.txt");
   }
