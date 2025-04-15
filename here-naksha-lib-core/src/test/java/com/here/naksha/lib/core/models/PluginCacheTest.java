@@ -21,10 +21,8 @@ package com.here.naksha.lib.core.models;
 import static com.here.naksha.lib.core.models.PluginCache.eventHandlerConstructors;
 import static com.here.naksha.lib.core.models.PluginCache.extensionCache;
 import static com.here.naksha.lib.core.models.PluginCache.storageConstructors;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.IEventHandler;
@@ -100,15 +98,16 @@ class PluginCacheTest {
     assertNotNull(handler);
     assertInstanceOf(SuccessResult.class, handler.processEvent(null));
 
-    ExtensionConstructorByClassNameMap byName = extensionCache.get(extensionId);
+    ExtensionConstructorByClassNameMap byName = PluginCache.extensionCache.get(extensionId);
     assertNotNull(byName);
-    EventHandlerConstructorByTarget byTarget = byName.get(TestHandler.class.getName());
-    assertNotNull(byTarget);
-    Fe3<IEventHandler, INaksha, ?, ?> c2 = byTarget.get(TestTarget.class);
+
+    PluginCache.ConstructorCacheEntry entry = byName.get(TestHandler.class.getName());
+    assertNotNull(entry);
+
+    Fe3<IEventHandler, INaksha, ?, ?> c2 = entry.constructorMap.get(TestTarget.class);
     assertSame(c, c2);
 
     PluginCache.removeExtensionCache(extensionId);
-    assertNull(extensionCache.get(extensionId));
-
+    assertNull(PluginCache.extensionCache.get(extensionId));
   }
 }

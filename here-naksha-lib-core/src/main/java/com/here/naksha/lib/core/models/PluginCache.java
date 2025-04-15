@@ -53,8 +53,18 @@ public final class PluginCache {
   static final StorageConstructorByClassNameMap storageConstructors = new StorageConstructorByClassNameMap();
 
   // **********Extension cache****************
-  static class ExtensionConstructorByClassNameMap
-      extends ConcurrentHashMap<String, EventHandlerConstructorByTarget> {}
+
+  static class ConstructorCacheEntry {
+    final EventHandlerConstructorByTarget constructorMap;
+    final ClassLoader classLoader;
+
+    ConstructorCacheEntry(EventHandlerConstructorByTarget map, ClassLoader loader) {
+      this.constructorMap = map;
+      this.classLoader = loader;
+    }
+  }
+
+  static class ExtensionConstructorByClassNameMap extends ConcurrentHashMap<String, ConstructorCacheEntry> {}
 
   static ConcurrentHashMap<String, ExtensionConstructorByClassNameMap> extensionCache = new ConcurrentHashMap<>();
   // ******************************************
@@ -377,7 +387,7 @@ public final class PluginCache {
       final @NotNull ClassLoader extClassLoader) {
 
     final ConcurrentHashMap<Class<TARGET>, Fe3<IEventHandler, INaksha, CONFIG, TARGET>> constructorByTarget =
-        extensionConstructorMap(extensionId, className);
+        extensionConstructorMap(extensionId, className, extClassLoader);
     Fe3<IEventHandler, INaksha, CONFIG, TARGET> c = constructorByTarget.get(targetClass);
     if (c != null) {
       return c;
@@ -423,7 +433,9 @@ public final class PluginCache {
 
   static <CONFIG, TARGET> @NotNull
       ConcurrentHashMap<Class<TARGET>, Fe3<IEventHandler, INaksha, CONFIG, TARGET>> extensionConstructorMap(
-          final @NotNull String extensionId, final @NotNull String className) {
+          final @NotNull String extensionId,
+          final @NotNull String className,
+          final @NotNull ClassLoader extClassLoader) {
     ExtensionConstructorByClassNameMap byClassNameMap = extensionCache.get(extensionId);
     if (byClassNameMap == null) {
       byClassNameMap = new ExtensionConstructorByClassNameMap();
@@ -432,17 +444,22 @@ public final class PluginCache {
         byClassNameMap = existing;
       }
     }
-    EventHandlerConstructorByTarget byTarget = byClassNameMap.get(className);
-    if (byTarget == null) {
-      byTarget = new EventHandlerConstructorByTarget();
-      final EventHandlerConstructorByTarget existing = byClassNameMap.putIfAbsent(className, byTarget);
-      if (existing != null) {
-        byTarget = existing;
-      }
+    ConstructorCacheEntry entry = byClassNameMap.get(className);
+    if (entry != null && entry.classLoader != extClassLoader) {
+      // Different loader => invalidate stale constructor
+      byClassNameMap.remove(className);
+      entry = null;
+    }
+
+    if (entry == null) {
+      EventHandlerConstructorByTarget newTarget = new EventHandlerConstructorByTarget();
+      ConstructorCacheEntry newEntry = new ConstructorCacheEntry(newTarget, extClassLoader);
+      ConstructorCacheEntry existing = byClassNameMap.putIfAbsent(className, newEntry);
+      entry = existing != null ? existing : newEntry;
     }
     //noinspection unchecked,rawtypes
     return (ConcurrentHashMap<Class<TARGET>, Fe3<IEventHandler, INaksha, CONFIG, TARGET>>)
-        (ConcurrentHashMap) byTarget;
+        (ConcurrentHashMap) entry.constructorMap;
   }
 
   /**
