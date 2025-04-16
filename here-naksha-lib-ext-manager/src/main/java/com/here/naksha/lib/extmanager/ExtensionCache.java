@@ -143,6 +143,7 @@ public class ExtensionCache {
         }
       }
 
+      PluginCache.removeExtensionCache(extensionIdWthEnv);
       ValueTuple previousValue = loaderCache.put(extensionIdWthEnv, new ValueTuple(extension, loader, initObj));
       if (previousValue != null) {
         IExtensionInit previousInitObj = previousValue.getInstance();

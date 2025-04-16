@@ -53,20 +53,12 @@ public final class PluginCache {
   static final StorageConstructorByClassNameMap storageConstructors = new StorageConstructorByClassNameMap();
 
   // **********Extension cache****************
-
-  static class ConstructorCacheEntry {
-    final EventHandlerConstructorByTarget constructorMap;
-    final ClassLoader classLoader;
-
-    ConstructorCacheEntry(EventHandlerConstructorByTarget map, ClassLoader loader) {
-      this.constructorMap = map;
-      this.classLoader = loader;
-    }
-  }
-
-  static class ExtensionConstructorByClassNameMap extends ConcurrentHashMap<String, ConstructorCacheEntry> {}
+  static class ExtensionConstructorByClassNameMap
+      extends ConcurrentHashMap<String, EventHandlerConstructorByTarget> {}
 
   static ConcurrentHashMap<String, ExtensionConstructorByClassNameMap> extensionCache = new ConcurrentHashMap<>();
+
+  static final ConcurrentHashMap<String, ClassLoader> extensionCacheForClassLoader = new ConcurrentHashMap<>();
   // ******************************************
 
   /**
@@ -436,30 +428,33 @@ public final class PluginCache {
           final @NotNull String extensionId,
           final @NotNull String className,
           final @NotNull ClassLoader extClassLoader) {
+    ClassLoader existingLoader = extensionCacheForClassLoader.get(extensionId);
+    if (existingLoader != extClassLoader) {
+      removeExtensionCache(extensionId);
+      extensionCacheForClassLoader.put(extensionId, extClassLoader);
+    }
+
     ExtensionConstructorByClassNameMap byClassNameMap = extensionCache.get(extensionId);
     if (byClassNameMap == null) {
       byClassNameMap = new ExtensionConstructorByClassNameMap();
-      final ExtensionConstructorByClassNameMap existing = extensionCache.putIfAbsent(extensionId, byClassNameMap);
+      ExtensionConstructorByClassNameMap existing = extensionCache.putIfAbsent(extensionId, byClassNameMap);
       if (existing != null) {
         byClassNameMap = existing;
       }
     }
-    ConstructorCacheEntry entry = byClassNameMap.get(className);
-    if (entry != null && entry.classLoader != extClassLoader) {
-      // Different loader => invalidate stale constructor
-      byClassNameMap.remove(className);
-      entry = null;
+
+    EventHandlerConstructorByTarget byTarget = byClassNameMap.get(className);
+    if (byTarget == null) {
+      byTarget = new EventHandlerConstructorByTarget();
+      EventHandlerConstructorByTarget existing = byClassNameMap.putIfAbsent(className, byTarget);
+      if (existing != null) {
+        byTarget = existing;
+      }
     }
 
-    if (entry == null) {
-      EventHandlerConstructorByTarget newTarget = new EventHandlerConstructorByTarget();
-      ConstructorCacheEntry newEntry = new ConstructorCacheEntry(newTarget, extClassLoader);
-      ConstructorCacheEntry existing = byClassNameMap.putIfAbsent(className, newEntry);
-      entry = existing != null ? existing : newEntry;
-    }
     //noinspection unchecked,rawtypes
     return (ConcurrentHashMap<Class<TARGET>, Fe3<IEventHandler, INaksha, CONFIG, TARGET>>)
-        (ConcurrentHashMap) entry.constructorMap;
+        (ConcurrentHashMap) byTarget;
   }
 
   /**
@@ -468,5 +463,6 @@ public final class PluginCache {
    */
   public static void removeExtensionCache(final @NotNull String extensionId) {
     extensionCache.remove(extensionId);
+    extensionCacheForClassLoader.remove(extensionId);
   }
 }
