@@ -3,11 +3,7 @@ package com.here.naksha.lib.extmanager;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.ExtensionConfig;
@@ -121,7 +117,9 @@ public class ExtensionCacheTest extends BaseSetup {
     AmazonS3Helper s3Helper=mock(AmazonS3Helper.class);
     when(s3Helper.getFile(anyString())).thenReturn(new File(""));
 
-    try(MockedStatic<ClassLoaderHelper> mockedStatic=mockStatic(ClassLoaderHelper.class)) {
+    try(MockedStatic<ClassLoaderHelper> mockedStatic=mockStatic(ClassLoaderHelper.class);
+        MockedStatic<PluginCache> pluginCacheMock = mockStatic(PluginCache.class)
+    ) {
       ExtensionCache extensionCache =spy( new ExtensionCache(naksha));
       doReturn(s3Helper).when(extensionCache).getJarClient(anyString());
 
@@ -155,6 +153,10 @@ public class ExtensionCacheTest extends BaseSetup {
 
       // Verify that child_extension_2 has been removed
       Assertions.assertNull(extensionCache.getClassLoaderById(ext2Key));
+
+      // Verify that removeExtensionCache called 2 times
+      pluginCacheMock.verify(() -> PluginCache.removeExtensionCache(ext2Key), times(2));
+
     }
   }
 }
