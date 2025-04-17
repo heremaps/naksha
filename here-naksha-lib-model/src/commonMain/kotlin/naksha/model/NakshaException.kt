@@ -67,6 +67,15 @@ fun illegalArg(msg: String): NakshaException = NakshaException(ILLEGAL_ARGUMENT,
 fun illegalState(msg: String): NakshaException = NakshaException(ILLEGAL_STATE, msg)
 
 /**
+ * Create [ILLEGAL_STATE] exception.
+ * @param msg the message.
+ * @param reason the exception that caused this exception.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun illegalState(msg: String, reason: Exception): NakshaException = NakshaException(ILLEGAL_STATE, msg, reason)
+
+/**
  * Create [FORBIDDEN] exception.
  * @param msg the message.
  * @return the [NakshaException].

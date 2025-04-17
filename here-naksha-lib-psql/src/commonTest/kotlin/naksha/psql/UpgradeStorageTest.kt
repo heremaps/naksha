@@ -24,17 +24,18 @@ class UpgradeStorageTest : PgTestBase() {
     fun tryToUpgradeStorage() {
         assertStorageVersion(adminVersion)
 
-        // Downgrade storage.
+        // Downgrade storage, we need `override` instruction for this.
         val downgradeVersion = NakshaVersion.of("1.0.0")
         val downgradeConfig = NakshaStorage.fromJSON("""{
   "id": "local_psql_test_storage",
   "className": "naksha.psql.PsqlTestStorage",
-  "version": "$downgradeVersion"
+  "version": "$downgradeVersion",
+  "override": true
 }""").proxy(PgConfig::class)
         Naksha.setupStorage(downgradeConfig)
         assertStorageVersion(downgradeVersion)
 
-        // Upgrade storage again.
+        // Upgrade storage again, this time we should not need override.
         Naksha.setupStorage(env.storageConfig)
         assertStorageVersion(adminVersion)
     }

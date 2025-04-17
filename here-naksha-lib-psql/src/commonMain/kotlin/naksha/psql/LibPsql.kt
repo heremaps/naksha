@@ -12,12 +12,22 @@ import naksha.psql.PgType.Companion.SHORT
 import naksha.psql.PgType.Companion.STRING
 
 /**
+ * The minimal `naksha~admin` version this version is compatible with.
+ *
+ * If [PgConfig.upgrade] is `false`, and the storage is of a smaller version than this one, initialization will fail. Otherwise, the storage is acceptable, so the SQL changes are not that critical that an update must be done.
+ *
+ * This is different from the normal [NakshaVersion.current], because `lib-psql` only increments the admin version, when the SQL functions are modified, and require an upgrade. So, even while client code may be modified, this still may not need an upgrade of the SQL functions.
+ * @since 3.0
+ */
+val minAdminVersion = NakshaVersion.of("3.0.0-beta.17")
+
+/**
  * The `naksha~admin` version.
  *
  * This is different from the normal [NakshaVersion.current], because `lib-psql` only increments the admin version, when the SQL functions are modified, and require an upgrade. So, even while client code may be modified, this still may not need an upgrade of the SQL functions.
  * @since 3.0
  */
-val adminVersion = NakshaVersion.of("3.0.0-beta.16")
+val adminVersion = NakshaVersion.of("3.0.0-beta.17")
 
 /**
  * `$`: The separation string used to flag internal tables.

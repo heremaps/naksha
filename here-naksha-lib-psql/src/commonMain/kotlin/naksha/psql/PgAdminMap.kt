@@ -246,64 +246,81 @@ SELECT basics.*, procs.* FROM basics, procs;
                 has_naksha_storage_id = cursor.column("has_naksha_storage_id") as Boolean?
                 has_naksha_storage_number = cursor.column("has_naksha_storage_number") as Boolean?
             }
-            // Note: PostgresQL parses the query before it evaluates it, therefore, we must not access a schema that does not exist.
-            //       This forces us to execute the version read as a second query, ones we are sure that the schema and function exist.
-            var installed_version: NakshaVersion? = null
-            var installed_storage_id: String? = null
-            var installed_storage_number: Int64? = null
-            if (admin_schema_oid != null && has_naksha_version == true && has_naksha_storage_id == true && has_naksha_storage_number == true) {
+            if (admin_schema_oid == null) {
+                if (!doCreate) throw forbidden("Creation of admin-map needed, but forbidden by config")
+                logger.info("Install Naksha admin-map in version $psql_version for storage $id / $number")
+                schemaOid = createAdminMap(conn, config, id, number, psql_version)
+            } else {
+                schemaOid = admin_schema_oid
+                if (has_naksha_version != true) {
+                    throw illegalState("The storage '$id' does have an admin-map, but it is broken, because function `naksha_version` is missing")
+                }
+                if (has_naksha_storage_id != true) {
+                    throw illegalState("The storage '$id' does have an admin-map, but it is broken, because function `naksha_storage_id` is missing")
+                }
+                if (has_naksha_storage_number != true) {
+                    throw illegalState("The storage '$id' does have an admin-map, but it is broken, because function `naksha_storage_number` is missing")
+                }
+                var installed_version: NakshaVersion
+                var installed_storage_id: String
+                var installed_storage_number: Int64
                 conn.execute("SELECT \"${ADMIN_MAP}\".naksha_version() AS v, \"${ADMIN_MAP}\".naksha_storage_id() AS id, \"${ADMIN_MAP}\".naksha_storage_number() AS n").fetch().use { cursor ->
-                    val v: Int64 = cursor["v"]
-                    installed_version = NakshaVersion(v)
-                    installed_storage_id = cursor["id"]
-                    installed_storage_number = cursor["n"]
+                    try {
+                        val v: Int64 = cursor["v"]
+                        installed_version = NakshaVersion(v)
+                        installed_storage_id = cursor["id"]
+                        installed_storage_number = cursor["n"]
+                    } catch (pe: Exception) {
+                        throw illegalState("The storage '$id' does have an admin schema, but it is broken, because reading storage version, id, and/or number failed", pe)
+                    }
                 }
-            }
-            if (doOverride || installed_version != psql_version || admin_schema_oid == null) {
-                if (!NakshaContext.currentContext().su) {
-                    throw NakshaException(FORBIDDEN, "Admin privileges required to create or upgrade, please set 'su' flag in context")
-                }
-                if (installed_storage_id != null && installed_storage_id != id) {
-                    throw NakshaException(STORAGE_ID_MISMATCH, "The storage-id is '$installed_storage_id', but is expected to be '$id'")
-                }
-                if (installed_storage_number != null && installed_storage_number != number) {
+                if (installed_storage_id != id) {
                     throw NakshaException(
                         STORAGE_ID_MISMATCH,
-                        "The storage-number is '$installed_storage_number', but is expected to be '$number'"
+                        "Failed to initialize storage, the storage-id is '$installed_storage_id', but was expected to be '$id'"
                     )
-                }
-                if (admin_schema_oid == null) {
-                    if (!doCreate) throw NakshaException(FORBIDDEN, "Creation of admin-map needed, but forbidden")
-                    logger.info("Install Naksha admin schema in version $psql_version for storage $id / $number")
-                    schemaOid = createAdminMap(conn, config, id, number, psql_version)
-                } else {
-                    if (!doUpgrade) throw NakshaException(FORBIDDEN, "Upgrade of admin-map needed, but forbidden")
-                    logger.info("Upgrade Naksha admin schema from $installed_version to $psql_version for storage $id / $number")
-                    upgradeAdminMap(conn, config, id, number, psql_version, admin_schema_oid, installed_version)
-                    schemaOid = admin_schema_oid
-                }
-                logger.info("Installation done, commit changes")
-                conn.commit()
-            } else {
-                if (installed_storage_id != id) {
-                    throw NakshaException(STORAGE_ID_MISMATCH, "The storage-id is '$installed_storage_id', but is expected to be '$id'")
                 }
                 if (installed_storage_number != number) {
                     throw NakshaException(
                         STORAGE_ID_MISMATCH,
-                        "The storage-number is '$installed_storage_number', but is expected to be '$number'"
+                        "Failed to initialize the storage, the storage-number is '$installed_storage_number', but was expected to be '$number'"
                     )
                 }
-                schemaOid = admin_schema_oid
+                if (installed_version != psql_version) {
+                    logger.info("The admin-map of '$id' is in version $installed_version, this library uses version $psql_version")
+                    if (doOverride) {
+                        logger.warn("Forcefully upgrade storage '$id' admin-map (current=$installed_version, new=$psql_version)")
+                        upgradeAdminMap(conn, config, id, number, psql_version, admin_schema_oid, installed_version)
+                    } else {
+                        if (installed_version > psql_version) {
+                            throw illegalState("The storage '$id' is in a newer version ($installed_version) that this library ($psql_version), access denied (otherwise we risk damaging the storage)")
+                        }
+                        if (installed_version < minAdminVersion) {
+                            if (!doUpgrade) {
+                                throw illegalState("The storage '$id' is in a newer version ($installed_version) that this library ($psql_version), access denied (there is a risk damaging the storage)")
+                            }
+                            logger.info("Upgrade Naksha admin-map from $installed_version to $psql_version for storage $id")
+                            upgradeAdminMap(conn, config, id, number, psql_version, admin_schema_oid, installed_version)
+                        } else if (doUpgrade){
+                            logger.info("Upgrade Naksha admin-map from $installed_version to $psql_version for storage $id")
+                            upgradeAdminMap(conn, config, id, number, psql_version, admin_schema_oid, installed_version)
+                        } else {
+                            logger.info("In storage '$id' admin-map is in version $installed_version, this library is version $psql_version, but we should not upgrade the storage, and are okay working with the older version")
+                        }
+                    }
+                } else {
+                    logger.info("The admin-map of '$id' is up-to-date: $psql_version")
+                }
             }
-            logger.info("Load OID of sequence counters from admin schema (schema-oid=$schemaOid)")
+            logger.info("Load OID of '$NAKSHA_TXN_SEQ' from admin schema (schema-oid=$schemaOid)")
             val SQL = "SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_TXN_SEQ'"
             conn.execute(SQL).fetch().use { cursor ->
                 txnSequenceOid = cursor["oid"]
                 //mapNumberSequenceOid = cursor["map_oid"]
                 //colNumberSequenceOid = cursor["col_oid"]
             }
-            logger.info("Storage ${config.id} / ${config.number} initialized, txn-seq-oid=$txnSequenceOid")
+            logger.info("Storage ${config.id} / ${config.number} initialized, txn-seq-oid=$txnSequenceOid, commit")
+            conn.commit()
         }
     }
 
