@@ -3,6 +3,12 @@
 <head>
   <title>Naksha Web Documentation</title>
   <meta charset="UTF-8"/>
+  <!-- Include https://www.jsdelivr.com/package/npm/highlight.js -->
+  <link rel="stylesheet" href="highlight.js_11.11.1.css">
+  <script type="module">
+    import highlightJs from './highlight.js_11.11.1_esm.js'
+    globalThis.hljs = highlightJs;
+  </script>
   <script src="markdown-it.min.js"></script>
   <script src="mermaid.min.js"></script>
   <script src="remark.min.js"></script>
@@ -112,7 +118,8 @@
       document.getElementById("content").innerHTML = html + "<br /><br /><br /><br /><br />";
       document.getElementById("toc").innerHTML = toc_html;
       // Render Mermaid diagrams embedded into document.
-      showMermaid(undefined)
+      showMermaid();
+      hljs.highlightAll(); // hljs.highlightElement
     }
 
     function showMermaid() {
