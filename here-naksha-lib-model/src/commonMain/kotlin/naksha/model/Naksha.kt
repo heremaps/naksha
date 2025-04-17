@@ -238,13 +238,13 @@ class Naksha private constructor() {
          * A regular expression to test if a string contains potentially a 63-bit unsigned integer (`0 .. 9,223,372,036,854,775,807`).
          * @since 3.0
          */
-        private val is63BitUnsigned = Regex("\\d{1,19}")
+        private val is63BitUnsigned = Regex("^[1-9][0-9]{1,18}$")
 
         /**
          * A regular expression to test if a string contains potentially a 31-bit unsigned integer (`0 .. 2,147,483,647`).
          * @since 3.0
          */
-        private val is31BitUnsigned = Regex("\\d{1,10}")
+        private val is31BitUnsigned = Regex("^[1-9][0-9]{1,9}\$")
 
         /**
          * A method to calculate a valid storage-number from the storage-id.
@@ -257,7 +257,7 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun storageNumber(id: String): Int64 {
-            if (is63BitUnsigned.matches(id)) {
+            if (id == "0" || is63BitUnsigned.matches(id)) {
                 try {
                     return id.toLong(10).toInt64()
                 } catch (_: Exception) {}
@@ -278,7 +278,7 @@ class Naksha private constructor() {
         @JvmStatic
         fun mapNumber(id: String): Int {
            if (id == ADMIN_MAP) return ADMIN_MAP_NUMBER
-           if (is31BitUnsigned.matches(id)) {
+           if (id == "0" || is31BitUnsigned.matches(id)) {
                try {
                    return id.toUInt(10).toInt()
                } catch (_: Exception) {}
@@ -300,7 +300,7 @@ class Naksha private constructor() {
         fun collectionNumber(id: String): Int {
             val internalNumber = internalIdToNumber[id]
             if (id != ADMIN_MAP && internalNumber != null) return internalNumber
-            if (is31BitUnsigned.matches(id)) {
+            if (id == "0" || is31BitUnsigned.matches(id)) {
                 try {
                     return id.toUInt(10).toInt()
                 } catch (_: Exception) {}
@@ -351,7 +351,7 @@ class Naksha private constructor() {
         fun featureNumber(id: String): Int64 {
             val internalNumber = internalIdToNumber[id]
             if (internalNumber != null) return internalNumber.toInt64()
-            if (is63BitUnsigned.matches(id)) {
+            if (id == "0" || is63BitUnsigned.matches(id)) {
                 try {
                     return id.toLong(10).toInt64()
                 } catch (_: Exception) {}
