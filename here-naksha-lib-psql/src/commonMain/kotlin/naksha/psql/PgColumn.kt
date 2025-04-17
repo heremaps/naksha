@@ -379,7 +379,7 @@ class PgColumn : JsEnum() {
         val app_id = def(PgColumn::class, "app_id") { self ->
             self._i = 16
             self._type = PgType.STRING
-            self._extra = "STORAGE $PLAIN NOT NULL COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN COLLATE \"C\""
         }
 
         /**
@@ -391,7 +391,7 @@ class PgColumn : JsEnum() {
         val author = def(PgColumn::class, "author") { self ->
             self._i = 17
             self._type = PgType.STRING
-            self._extra = "STORAGE $PLAIN NOT NULL COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN COLLATE \"C\""
         }
 
         /**

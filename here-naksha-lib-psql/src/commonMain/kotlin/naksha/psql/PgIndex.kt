@@ -8,7 +8,7 @@ import naksha.model.request.query.SortOrder.SortOrderCompanion.DESCENDING
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.PgColumn.PgColumnCompanion.id as c_id
 import naksha.psql.PgColumn.PgColumnCompanion.tn as c_tn
-import naksha.psql.PgColumn.PgColumnCompanion.next_tn as c_txn_next
+import naksha.psql.PgColumn.PgColumnCompanion.next_tn as c_tn_next
 import naksha.psql.PgColumn.PgColumnCompanion.flags as c_flags
 import naksha.psql.PgColumn.PgColumnCompanion.app_id as c_app_id
 import naksha.psql.PgColumn.PgColumnCompanion.author as c_author
@@ -108,11 +108,11 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.internal = true
             self.columns = listOf(c_id)
             self.naturalOrder = listOf(DESCENDING)
-            self.includes = listOf(c_tn)
+            self.includes = listOf(c_tn, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_id text_pattern_ops DESC) INCLUDE ($c_tn, $c_txn_next)""",
+                        """btree ($c_id text_pattern_ops DESC) INCLUDE ($c_tn, $c_tn_next)""",
                         table, unique = true, addFillFactor = true, where = null
                     )
                 ).close()
@@ -133,11 +133,11 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.internal = true
             self.columns = listOf(c_id, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
-            self.includes = listOf(c_txn_next)
+            self.includes = listOf(c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_id text_pattern_ops DESC, $c_tn DESC) INCLUDE ($c_txn_next)""",
+                        """btree ($c_id text_pattern_ops DESC, $c_tn DESC) INCLUDE ($c_tn_next)""",
                         table, unique = false, addFillFactor = true, where = null
                     )
                 ).close()
@@ -145,7 +145,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * A unique index above the transaction-number _(aka version)_, including [tuple-number][PgColumn.tn] and [next_tn][PgColumn.next_tn] column.
+         * A unique index above the transaction-number _(aka version)_, including [id][PgColumn.id], [tuple-number][PgColumn.tn] and [next_tn][PgColumn.next_tn] column.
          *
          * - Automatically added to all [TRANSACTIONS][PgTransactions] tables.
          * - Must not be added to any other table.
@@ -158,11 +158,11 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.internal = true
             self.columns = listOf()
             self.naturalOrder = listOf(DESCENDING)
-            self.includes = listOf(c_tn, c_txn_next)
+            self.includes = listOf(c_id, c_tn, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree (naksha_tn_version(tn) DESC) INCLUDE ($c_tn, $c_txn_next)""",
+                        """btree (naksha_tn_version(tn) DESC) INCLUDE ($c_tn, $c_id, $c_tn_next)""",
                         table, unique = true, addFillFactor = true, where = null
                     )
                 ).close()
@@ -183,12 +183,12 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.name = "here_tile"
             self.columns = listOf(c_here_tile, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
-            self.includes = listOf(c_id, c_txn_next)
+            self.includes = listOf(c_id, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_here_tile DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
-                        table, unique = false, addFillFactor = true, where = null
+                        "btree ($c_here_tile DESC, $c_tn DESC) INCLUDE ($c_id, $c_tn_next)",
+                        table, unique = false, addFillFactor = true, where = "$c_here_tile IS NOT NULL"
                     )
                 ).close()
             }
@@ -209,12 +209,12 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.name = "app_id"
             self.columns = listOf(c_app_id, c_updated_at, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING, DESCENDING)
-            self.includes = listOf(c_id, c_txn_next)
+            self.includes = listOf(c_id, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_app_id text_pattern_ops DESC, $c_updated_at DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)""",
-                        table, unique = false, addFillFactor = true, where = null
+                        """btree ($c_app_id text_pattern_ops DESC, $c_updated_at DESC, $c_tn DESC) INCLUDE ($c_id, $c_tn_next)""",
+                        table, unique = false, addFillFactor = true, where = "$c_app_id IS NOT NULL"
                     )
                 ).close()
             }
@@ -235,12 +235,12 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.name = "author"
             self.columns = listOf(c_author, c_author_ts, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING, DESCENDING)
-            self.includes = listOf(c_tn, c_txn_next)
+            self.includes = listOf(c_id, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree (naksha_author($c_author, $c_app_id) text_pattern_ops DESC, naksha_author_ts($c_author_ts, $c_updated_at) DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)""",
-                        table, unique = false, addFillFactor = true, where = null
+                        """btree (naksha_author($c_author, $c_app_id) text_pattern_ops DESC, naksha_author_ts($c_author_ts, $c_updated_at) DESC, $c_tn DESC) INCLUDE ($c_id, $c_tn_next)""",
+                        table, unique = false, addFillFactor = true, where = "naksha_author($c_author, $c_app_id) IS NOT NULL"
                     )
                 ).close()
             }
@@ -254,12 +254,12 @@ ${if (where==null) "" else "WHERE $where"};"""
         @JsStatic
         val tags = def(PgIndex::class, "tag") { self ->
             self.name = "tags"
-            self.columns = listOf(c_tags, c_tn, c_txn_next)
+            self.columns = listOf(c_tags, c_tn, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gin (naksha_tags($c_tags, $c_flags), $c_tn, $c_txn_next)""",
-                        table, unique = false, addFillFactor = false, where = null // , where = "naksha_tags($c_tags, $c_flags) IS NOT NULL"
+                        """gin (naksha_tags($c_tags, $c_flags), $c_tn, $c_tn_next)""",
+                        table, unique = false, addFillFactor = false, where = "naksha_tags($c_tags, $c_flags) IS NOT NULL"
                     )
                 ).close()
             }
@@ -292,11 +292,11 @@ ${if (where==null) "" else "WHERE $where"};"""
         @JsStatic
         val gist_geo_2d = def(PgIndex::class, "g2d") { self ->
             self.name = "gist_geo_2d"
-            self.columns = listOf(c_geo, c_tn, c_txn_next)
+            self.columns = listOf(c_geo, c_tn, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gist (naksha_2d($c_geo, $c_flags), $c_tn, $c_txn_next)""",
+                        """gist (naksha_2d($c_geo, $c_flags), $c_tn, $c_tn_next)""",
                         table, unique = false, addFillFactor = true, where = "naksha_2d($c_geo, $c_flags) IS NOT NULL"
                     )
                 ).close()
@@ -311,11 +311,11 @@ ${if (where==null) "" else "WHERE $where"};"""
         @JsStatic
         val gist_geo_3d = def(PgIndex::class, "g3d") { self ->
             self.name = "gist_geo_3d"
-            self.columns = listOf(c_geo, c_tn, c_txn_next)
+            self.columns = listOf(c_geo, c_tn, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gist (naksha_3d($c_geo, $c_flags), $c_tn, $c_txn_next)""",
+                        """gist (naksha_3d($c_geo, $c_flags), $c_tn, $c_tn_next)""",
                         table, unique = false, addFillFactor = true, where = "naksha_3d($c_geo, $c_flags) IS NOT NULL"
                     )
                 ).close()
@@ -330,11 +330,11 @@ ${if (where==null) "" else "WHERE $where"};"""
         @JsStatic
         val gist_geo_4d = def(PgIndex::class, "g4d") { self ->
             self.name = "gist_geo_4d"
-            self.columns = listOf(c_geo, c_tn, c_txn_next)
+            self.columns = listOf(c_geo, c_tn, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gist (naksha_4d($c_geo, $c_flags), $c_tn, $c_txn_next)""",
+                        """gist (naksha_4d($c_geo, $c_flags), $c_tn, $c_tn_next)""",
                         table, unique = false, addFillFactor = true, where = "naksha_4d($c_geo, $c_flags) IS NOT NULL"
                     )
                 ).close()
@@ -408,11 +408,11 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.name = "feature_type"
             self.columns = listOf(c_ft, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
-            self.includes = listOf(c_id, c_txn_next)
+            self.includes = listOf(c_id, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_ft text_pattern_ops DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        "btree ($c_ft text_pattern_ops DESC, $c_tn DESC) INCLUDE ($c_id, $c_tn_next)",
                         table, unique = false, addFillFactor = true, where = "$c_ft IS NOT NULL"
                     )
                 ).close()
@@ -429,11 +429,11 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.name = "cv0"
             self.columns = listOf(c_cv0, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
-            self.includes = listOf(c_id, c_tn)
+            self.includes = listOf(c_id, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cv0 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        "btree ($c_cv0 DESC, $c_tn DESC) INCLUDE ($c_id, $c_tn_next)",
                         table, unique = false, addFillFactor = true, where = "$c_cv0 IS NOT NULL"
                     )
                 ).close()
@@ -450,11 +450,11 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.name = "cv1"
             self.columns = listOf(c_cv1, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
-            self.includes = listOf(c_id, c_txn_next)
+            self.includes = listOf(c_id, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cv1 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        "btree ($c_cv1 DESC, $c_tn DESC) INCLUDE ($c_id, $c_tn_next)",
                         table, unique = false, addFillFactor = true, where = "$c_cv1 IS NOT NULL"
                     )
                 ).close()
@@ -471,11 +471,11 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.name = "cv2"
             self.columns = listOf(c_cv2, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
-            self.includes = listOf(c_id, c_txn_next)
+            self.includes = listOf(c_id, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cv2 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        "btree ($c_cv2 DESC, $c_tn DESC) INCLUDE ($c_id, $c_tn_next)",
                         table, unique = false, addFillFactor = true, where = "$c_cv2 IS NOT NULL"
                     )
                 ).close()
@@ -492,11 +492,11 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.name = "cv3"
             self.columns = listOf(c_cv3, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
-            self.includes = listOf(c_id, c_txn_next)
+            self.includes = listOf(c_id, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cv3 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        "btree ($c_cv3 DESC, $c_tn DESC) INCLUDE ($c_id, $c_tn_next)",
                         table, unique = false, addFillFactor = true, where = "$c_cv3 IS NOT NULL"
                     )
                 ).close()
@@ -513,11 +513,11 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.name = "cs0"
             self.columns = listOf(c_cs0, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
-            self.includes = listOf(c_id, c_txn_next)
+            self.includes = listOf(c_id, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cs0 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        "btree ($c_cs0 DESC, $c_tn DESC) INCLUDE ($c_id, $c_tn_next)",
                         table, unique = false, addFillFactor = true, where = "$c_cs0 IS NOT NULL"
                     )
                 ).close()
@@ -533,12 +533,12 @@ ${if (where==null) "" else "WHERE $where"};"""
         val cs1 = def(PgIndex::class, "cs1") { self ->
             self.name = "cs1"
             self.columns = listOf(c_cs1, c_tn)
-            self.naturalOrder = listOf(DESCENDING, DESCENDING, DESCENDING)
-            self.includes = listOf(c_id, c_txn_next)
+            self.naturalOrder = listOf(DESCENDING, DESCENDING)
+            self.includes = listOf(c_id, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cs1 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        "btree ($c_cs1 DESC, $c_tn DESC) INCLUDE ($c_id, $c_tn_next)",
                         table, unique = false, addFillFactor = true, where = "$c_cs1 IS NOT NULL"
                     )
                 ).close()
@@ -555,11 +555,11 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.name = "cs2"
             self.columns = listOf(c_cs2, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
-            self.includes = listOf(c_id, c_txn_next)
+            self.includes = listOf(c_id, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cs2 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        "btree ($c_cs2 DESC, $c_tn DESC) INCLUDE ($c_id, $c_tn_next)",
                         table, unique = false, addFillFactor = true, where = "$c_cs2 IS NOT NULL"
                     )
                 ).close()
@@ -576,11 +576,11 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.name = "cs3"
             self.columns = listOf(c_cs3, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
-            self.includes = listOf(c_id, c_txn_next)
+            self.includes = listOf(c_id, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cs3 DESC, $c_tn DESC) INCLUDE ($c_id, $c_txn_next)",
+                        "btree ($c_cs3 DESC, $c_tn DESC) INCLUDE ($c_id, $c_tn_next)",
                         table, unique = false, addFillFactor = true, where = "$c_cs3 IS NOT NULL"
                     )
                 ).close()
