@@ -437,7 +437,7 @@ public final class PluginCache {
     ExtensionConstructorByClassNameMap byClassNameMap = extensionCache.get(extensionId);
     if (byClassNameMap == null) {
       byClassNameMap = new ExtensionConstructorByClassNameMap();
-      ExtensionConstructorByClassNameMap existing = extensionCache.putIfAbsent(extensionId, byClassNameMap);
+      final ExtensionConstructorByClassNameMap existing = extensionCache.putIfAbsent(extensionId, byClassNameMap);
       if (existing != null) {
         byClassNameMap = existing;
       }
@@ -446,7 +446,7 @@ public final class PluginCache {
     EventHandlerConstructorByTarget byTarget = byClassNameMap.get(className);
     if (byTarget == null) {
       byTarget = new EventHandlerConstructorByTarget();
-      EventHandlerConstructorByTarget existing = byClassNameMap.putIfAbsent(className, byTarget);
+      final EventHandlerConstructorByTarget existing = byClassNameMap.putIfAbsent(className, byTarget);
       if (existing != null) {
         byTarget = existing;
       }
