@@ -9,36 +9,37 @@
 ---
 # Naksha Project
 - Concepts
-  - **Naksha SAL _(Storage Abstraction Layer)_**
-  - **Naksha DMAL _(Data Model Abstraction Layer)_**
-    - _Only if time is left_
+  - **_Storage Abstraction Layer_**
+  - **_Data Model Abstraction Layer_** (_if time allows_)
 - Libraries
-  - `lib-model` - SAL
-  - `lib-psql` - SAL implementation
-  - `lib-base` - DMAL
+  - `lib-model` - _Storage Abstraction Layer_
+  - `lib-psql` - _Storage Abstraction Layer implementation_
+  - `lib-base` - _Data Model Abstraction Layer_ (_if time allows_)
 - Applications
 - Services
 - Extensions
 - Plugins
 
+This presentation will be around 30 mins.
+
 ---
 # Naksha Project
 - Concepts
-	- **Naksha SAL _(Storage Abstraction Layer)_**
-  - **Naksha DMAL _(Data Model Abstraction Layer)_**
-    - _Only if time is left_
+  - **_Storage Abstraction Layer_**
+  - **_Data Model Abstraction Layer_** (_if time allows_)
 - Libraries
-  - `lib-model` - SAL
-  - `lib-psql` - SAL implementation based upon PostgresQL
-  - `lib-base` - DMAL
-  - ~~**Naksha Geometries** _(`lib-geo`)_~~
-    - &nbsp;&nbsp;~~Implements [GeoJSON](https://www.rfc-editor.org/rfc/rfc7946) and helpers like Here-Tiles.~~
-  - ~~**Naksha JBON** _(`lib-jbon`)_~~
-    - &nbsp;&nbsp;~~Java Binary Object Notation, binary encoding for JSON, with dictionary compression~~
-  - ~~**Naksha Differences** _(`lib-diff`)_~~
-    - &nbsp;&nbsp;~~Calculates differences, patches, merges and applies them~~
-  - ~~**Naksha Views** _(`lib-view`)_~~
+  - `lib-model` - _Storage Abstraction Layer_
+  - `lib-psql` - _Storage Abstraction Layer implementation_
+  - `lib-base` - _Data Model Abstraction Layer_ (_if time allows_)
+  - ~~**Views** _(`lib-view`)_~~
     - &nbsp;&nbsp;~~Combine multiple collections into virtual ones~~
+  - ~~**Differences** _(`lib-diff`)_~~
+    - &nbsp;&nbsp;~~Calculates differences, patches, merges and applies them~~
+  - ~~**Geometries** _(`lib-geo`)_~~
+    - &nbsp;&nbsp;~~Implements [GeoJSON](https://www.rfc-editor.org/rfc/rfc7946) and helpers like Here-Tiles.~~
+  - ~~**JBON** _(`lib-jbon`)_~~
+    - &nbsp;&nbsp;~~Java Binary Object Notation, binary encoding for JSON~~
+    - &nbsp;&nbsp;~~Supports dictionary compression~~
 - ~~Applications~~
 - ~~Services~~
 - ~~Extensions~~
@@ -46,7 +47,7 @@
 
 ---
 # SAL - Storage Abstraction Layer
-The Naksha SAL logically organizes data in containers, being:
+The Naksha _Storage Abstraction Layer_ logically organizes data in containers, being:
 
 ```mermaid
 graph LR
@@ -60,30 +61,6 @@ graph LR
 	Collection -.-> Feature
 	Feature -.-> Tuple
 	Tuple -.->|next| Tuple
-```
-
----
-# SAL - Addressing
-- Within the SAL each feature is a container of **Tuple**.
-- A **Tuple** is an immutable state of a feature.
-- Every **Tuple** is uniquely addressed using a **Tuple-Number**.
-
-<br />
-
-```mermaid
-graph LR
-	Feature[(\n<b>Feature</b>\n\nid: String\nnumber: Int64)]
-	CreatedTuple[<b>Tuple</b>\n\naction: CREATED\ntupleNumber: bytea]
-	UpdatedTuple[<b>Tuple</b>\n\naction: UPDATED\ntupleNumber: bytea]
-	DeletedTuple[<b>Tuple</b>\n\naction: DELETED\ntupleNumber: bytea]
-	Feature -.head.- CreatedTuple
-	Feature -.head.- UpdatedTuple
-	Feature -.history.- CreatedTuple
-  Feature -.deleted.- DeletedTuple
-	CreatedTuple --update--> UpdatedTuple
-	UpdatedTuple --update--> UpdatedTuple
-	UpdatedTuple --delete--> DeletedTuple
-  CreatedTuple --delete--> DeletedTuple
 ```
 
 ---
@@ -118,33 +95,37 @@ graph LR
 ```
 
 ---
-# SAL - Feature Addressing
-- Each **Feature** has a global unique identifier called **GUID**.
-- The **GUID** is encoded in the meta-data of a feature.
-- The **GUID** is stringified as [URN](https://www.rfc-editor.org/rfc/rfc8141)
+# SAL - Addressing
+- Within the _Storage Abstraction Layer_ each feature is a container of **Tuple**.
+- A **Tuple** is an immutable state of a feature.
+- The feature logically points:
+  - to the latest state _(HEAD)_, if being alive
+  - to the final state _(DELETED)_, if being dead and activated in collection.
+  - to all past states _(HISTORY)_, if activated in collection. 
 
-```text
-urn:naksha:guid:{id}[:{stn}:{map}:{col}:{fn}[:{year}:{month}:{day}:{seq}:{uid}]]
-
-full: urn:naksha:guid:demo:4711:0815:1213:-5386453534:2025:03:20:12:3
-head: urn:naksha:guid:demo:4711:0815:1213:-5386453534
-edit: urn:naksha:guid:demo
+```mermaid
+graph LR
+	Feature[(\n<b>Feature</b>\n\nid: String\nnumber: Int64)]
+	CreatedTuple[<b>Tuple</b>\n\naction: CREATED\ntupleNumber: bytea]
+	UpdatedTuple[<b>Tuple</b>\n\naction: UPDATED\ntupleNumber: bytea]
+	DeletedTuple[<b>Tuple</b>\n\naction: DELETED\ntupleNumber: bytea]
+	Feature -.head.- CreatedTuple
+	Feature -.head.- UpdatedTuple
+	Feature -.history.- CreatedTuple
+  Feature -.deleted.- DeletedTuple
+	CreatedTuple --update--> UpdatedTuple
+	UpdatedTuple --update--> UpdatedTuple
+	UpdatedTuple --delete--> DeletedTuple
+  CreatedTuple --delete--> DeletedTuple
 ```
-- **id**: The **id** of the feature.
-- **stn**: The **storage-number** of the storage in which the feature is located.
-- **map**: The **map-number** of the map in which the feature is located.
-- **col**: The **collection-number** of the map in which the feature is located.
-- **fn**: The **feature-number** of the feature.
-- **year:month:day:seq:uid**: The **version** of the feature.
-
-**Note**: The encoded date is the day in which the transaction started, that created the referred state _(Tuple)_ of the feature.
+- Every **Tuple** is uniquely addressed using a **Tuple-Number**.
 
 ---
 # SAL - Tuple Addressing
 - Each **Tuple** has a worldwide unique identifier called **Tuple-Number**.
 ```mermaid
 classDiagram
-	direction TB
+	direction LR
 	class TupleNumber {
 		+int64 storageNumber
 		+int32 mapNumber
@@ -153,6 +134,7 @@ classDiagram
 		+int64 version
 		+int32 uid
 	}
+    TupleNumber --> version
 	class version {
 		+u8 reserved
 		+u15 year
@@ -161,15 +143,38 @@ classDiagram
 		+u32 tx-sequence
 	}
 ```
-- The **uid** is a transaction local unique identifier
 - The **tx-sequence** is a storage unique transaction identifier, reset daily.
 - This allows a maximum of ~49,000 transactions per second per storage.
-- Each transaction can perform a maximum of 4 billion operations.
-- Up to the year 4096, the version is 64-bit floating point save _(JavaScript)_.
+  - Up to the year 4096, the version is 64-bit floating point save _(JavaScript)_.
+- The **uid** is a transaction local unique identifier
+  - Each transaction can create up to 4 billion new **Tuple**.
+
+---
+# SAL - Feature Addressing
+- Each **Feature** has a global unique identifier called **GUID**.
+- The **GUID** is encoded in the meta-data of a feature.
+- The **GUID** is stringified as [URN](https://www.rfc-editor.org/rfc/rfc8141) with three distinct variants:
+
+```text
+urn:naksha:guid:{id}[:{stn}:{map}:{col}:{fn}[:{year}:{month}:{day}:{seq}:{uid}]]
+
+edit: urn:naksha:guid:demo
+head: urn:naksha:guid:demo:4711:0815:1213:-5386453534
+full: urn:naksha:guid:demo:4711:0815:1213:-5386453534:2025:03:20:12:3
+```
+- **id**: The **id** of the feature.
+- **stn**: The **storage-number** of the storage in which the feature is located.
+- **map**: The **map-number** of the map in which the feature is located.
+- **col**: The **collection-number** of the map in which the feature is located.
+- **fn**: The **feature-number** of the feature.
+- **year:month:day:seq**: The **version** of the feature.
+- **uid**: The transaction local identifier.
+
+**Note**: The encoded date is the day in which the transaction started, that created the referred state _(Tuple)_ of the feature.
 
 ---
 # SAL - Storage / Maps
-All maps always has a `naksha~collection`, used to administrate collections of the map:
+All maps always have a virtual collection with **id** `naksha~collection`, used to administrate collections of the map:
 
 ```mermaid
 %%{ init: { "flowchart": { "nodeSpacing": 10, "rankSpacing": 50 } } }%%
@@ -194,7 +199,7 @@ The answer is: In a special virtual-map in the storage: **`naksha~admin`**
 ```mermaid
 graph TB
 	Storage[\<b>Storage</b>/]
-	Admin[(\n<b>Virtual-Map</b>\n\nid: <b>naksha~admin</b>\nnumber: 0)]
+	Admin[(\n<b>Virtual-Admin-Map</b>\n\nid: <b>naksha~admin</b>\nnumber: 0)]
 	Collections[(\nCollection of <b>Collection</b>\n\nid: <b>naksha~collections</b>\nnumber: 0)]
 	Tx[(\nCollection of <b>Transaction</b>\n\nid: <b>naksha~transactions</b>\nnumber: 1)]
 	Maps[(\nCollection of <b>Map</b>\n\nid: <b>naksha~maps</b>\nnumber: 2)]
@@ -206,26 +211,29 @@ graph TB
 ```
 
 ---
-# SAL - Numbers
+# SAL - Feature-Numbers
 As every **Feature** has a unique **id** and a unique **number**, the **number** needs to be generated. This happens in two ways:
 
 - If the **id** is a decimal number between `0` and `9,223,372,036,854,775,807` _(`2^63-1`)_, then the number is parsed and used as **feature-number**, always being positive.
 - Otherwise, a [md5-hash](https://en.wikipedia.org/wiki/MD5) of the **id** is calculated, and the last 8 byte _(index `8` to `15`)_ are read in [Big-Endian](https://en.wikipedia.org/wiki/Endianness) encoding, setting the sign-bit, becoming the **feature-number**, always being negative.
-  - If there is a collision detected, the lower 16-bit are saved, then `65536` is added, the sign-bit is set again, the lower 16-bit are restored, and this number is tried. If colliding again, this is repeated until a free number is found.
-- The **feature-number** of **Map** and **Collection** is limited to 32-bit, therefore in this case the 64-bit number is truncated to 32-bit. The **number** `0` is reserved for internal purpose, and not a valid **feature-number**.
+  - If there is a collision detected `65536` is added, the sign-bit is set again, and the lower 16-bit are restored from the hash. If colliding again, this is repeated until a free number is found.
+  - This keeps the lower 16-bit in sync with the original [md5-hash](https://en.wikipedia.org/wiki/MD5).
+
+The **feature-number** of **Map** and **Collection** is limited to 32-bit, therefore in this case the 64-bit number is truncated to 32-bit. The **number** `0` is reserved for internal purpose, and not a valid number for **storage**, **map** or **collection**.
  
-Manual **feature-numbers** _(positives)_, those of **maps**, and **collections**, do not implement collision handling. Therefore, should there be two collections with different **id**, but same **feature-number**, they can't be stored, and the **id** needs to be adjusted. We're not currently aware of such a case.
+Manual **feature-numbers** _(positives)_ and those of **storages**, **maps**, and **collections**, do not implement collision handling. Therefore, should there be two collections with different **id**, but same **feature-number**, they can't be stored, and the **id** needs to be adjusted.
 
 ---
 # SAL - Performance Partitioning
-- The Naksha _Storage Abstraction Layer_ as well defines how data is partitioned.
-- All **Tuple** of a **Feature** are always stored in the same partition.
-- Therefore, all states of a **Feature** are guaranteed to be found in the same partition!
-- The lowest 16-bit of the **feature-number** are by definition the **partition-number** of the feature _(maps and collections them self are never partitioned)_.
-- If a **collection** is not partitioned, then the **partition-number** has no effect, otherwise, all **Tuple** of a feature are stored in the partition to which their **partition-number** is mapped.
-- The lower 16-bit are used by intention, to ensure that manually generated sequential **feature-numbers** do partition well, and so that search-results are scattered across partitions by default, to improve read performance _(default order is by **Tuple-Number**)_.
-- This explains why, in the case of a **feature-number** collision, `65536` is added. This keeps the lower 16-bit stable.
-- This ensures, that just by knowing the **id** of a feature, the partition in which it's **Tuple's** are stored is known !!!
+- The Naksha _Storage Abstraction Layer_ defines how **Tuple** are partitioned.
+- The lowest 16-bit of the **feature-number** is by definition the **partition-number** of the feature.
+  - This explains why, in the case of a **feature-number** collision, the lower 16-bit are kept in sync with the **id**-hash.
+  - We want to ensure, that just by knowing the **id** of a feature, the partition in which all it's **Tuple's** are stored is known.
+  - The lower 16-bit are used by intention, to ensure that manually generated sequential **feature-numbers** do partition well, and so that search-results are scattered across partitions by default, to improve read performance _(default order is by **Tuple-Number**)_.
+- If a **collection** is not partitioned, then the **partition-number** has no effect
+- If a **collection** is partitioned
+  - All **Tuple** of a feature are stored in the partition to which their **partition-number** is mapped.
+  - Therefore, all states of a **Feature** are guaranteed to be found in the same partition!
 
 ---
 # SAL - Limitations
@@ -288,18 +296,19 @@ graph TB
   uat(updatedAt:u48)
   ats(authorTs:u48)
   tn(tn:b160)
-  next(next_tn:b96)
   prev(prev_tn:b96)
+  next(<b>next_tn:b96</b>)
   flags(flags:i32)
   cc(cc:i32)
   hash(hash:i32)
   tile(here_tile:i32)
-  id(id:text)
+  id(<b>id:text</b>)
   appId(appId:text)
   author(author:text)
   origin(origin:text)
   target(target:text)
   ft(ft:text)
+  tags(<b>tags:map</b>)
   cv0(cv0:f64)
   cv1(cv1:f64)
   cv2(cv2:f64)
@@ -328,6 +337,7 @@ graph TB
   R4-->origin
   R4-->target
   R4-->ft
+  R4-->tags
   R4-->R5
   R5-->cv0
   R5-->cv1
@@ -359,39 +369,28 @@ classDiagram
     +featuresBytes: int32
     +seqNumber: int64
     +seqTs: int64
-    +maps: NakshaTxMapById
-  }
-  class NakshaTxMapById {
-    +get(mapId: String): NakshaTxMap
+    +maps: Map~String, NakshaTxMap~
   }
   class NakshaTxMap {
     +id: String
     +number: Int64
-    +action: String
-    +collections: NakshaTxCollectionById
-  }
-  class NakshaTxCollectionById {
-      +get(collectionId: String): NakshaTxCollection
+    +action: String?
+    +collections: Map~String, NakshaTxCollection~
   }
   class NakshaTxCollection {
       +id: String
       +number: Int64
-      +action: String
+      +action: String?
       +created: Int
       +createdBytes: Int
       +updated: Int
       +updatedBytes: Int
       +deleted: Int
-      +featuresByPartition: NakshaTxFeatureByPartition
-  }
-  class NakshaTxFeatureByPartition {
-      +get(partitionIndex: String): Int
+      +featuresByPartition: Map~String, Int~
   }
   NakshaTx -- NakshaFeature
-  NakshaTx -- NakshaTxMapById
-  NakshaTxMapById -- NakshaTxMap
-  NakshaTxCollectionById -- NakshaTxCollection
-  NakshaTxCollection -- NakshaTxFeatureByPartition
+  NakshaTx -- NakshaTxMap
+  NakshaTxMap -- NakshaTxCollection
 ```
 
 ---
@@ -497,5 +496,4 @@ Example, a feature with **id** being `HQzBtA1fQmcg`:
 # Demo
 - Show the Naksha _Storage Abstraction Layer_ API
 - Show how to actually use the _Storage Abstraction Layer_ API locally for development and debugging.
-- If time is left, show the Naksha _Data Model Abstraction Layer_ in practise.
 - **Note**: Naksha team provides and maintains a PostgresQL docker container, that is compatible to AWS Aurora and RDS instances!
