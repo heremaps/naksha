@@ -17,5 +17,9 @@ open class NakshaFeatureList : ListProxy<NakshaFeature>(NakshaFeature::class){
         @JvmStatic
         fun fromList(features: List<NakshaFeature>): NakshaFeatureList =
             NakshaFeatureList().apply { addAll(features) }
+
+        @JvmStatic
+        fun of(vararg features: NakshaFeature): NakshaFeatureList =
+            NakshaFeatureList().apply { addAll(features) }
     }
 }

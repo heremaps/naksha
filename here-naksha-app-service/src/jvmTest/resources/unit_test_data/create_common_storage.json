@@ -11,5 +11,8 @@
     "user": "${dataDb.user}",
     "password": "${dataDb.password}",
     "readOnly": false
-  }
+  },
+  "properties": {
+    "schema": "xyz"
+  },
 }
