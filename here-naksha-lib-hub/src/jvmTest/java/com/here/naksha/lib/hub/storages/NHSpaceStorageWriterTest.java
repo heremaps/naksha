@@ -2,6 +2,7 @@ package com.here.naksha.lib.hub.storages;
 
 
 import static com.here.naksha.lib.common.assertions.WriteRequestAssertions.assertThatWriteRequest;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.HUB_INTERNAL_MAP_ID;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
 import static naksha.model.NakshaContext.currentContext;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -9,6 +10,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -16,19 +18,23 @@ import static org.mockito.Mockito.when;
 
 import com.here.naksha.lib.common.TestNakshaContext;
 import com.here.naksha.lib.core.EventPipeline;
-import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.hub.AbstractTest;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import naksha.model.IReadSession;
+import naksha.model.IStorage;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
@@ -74,15 +80,17 @@ class NHSpaceStorageWriterTest extends AbstractTest {
     );
   }
 
-  // TODO: Fix me!
-  //@Test
+  @Test
   void shouldInvokeTwoPipelinesOnDeleteSpaceRequest() {
     // Given: Configured event pipeline spy - used for verifying that space entry deletion was invoked
     EventPipeline eventPipeline = alwaysSucceedingPipeline();
 
     // And: delete space request
     WriteRequest deleteSpaceRequest = new WriteRequest().add(
-        new Write().deleteFeatureById(null, SPACES, CUSTOM_SPACE));
+        new Write().deleteFeatureById(AbstractTest.getMapId(), SPACES, CUSTOM_SPACE));
+
+    // And:
+    nakshaAdminReaderReturnSpaceCollection();
 
     // When: executing delete space request
     Response result = writer.execute(deleteSpaceRequest);
@@ -111,15 +119,14 @@ class NHSpaceStorageWriterTest extends AbstractTest {
     assertInstanceOf(SuccessResponse.class, result);
   }
 
-  // TODO: Fix me!
-  // @Test
+   @Test
   void shouldNotTriggerSpaceEntryDeletionWhenPurgingFailed() {
     // Given: Configured event pipeline spy that fails on WriteCollections
     EventPipeline eventPipeline = eventPipelineFailingOn(writeCollectionRequest());
 
     // And: delete space request
     WriteRequest deleteSpaceRequest = new WriteRequest().add(
-        new Write().deleteFeatureById(null, SPACES, CUSTOM_SPACE));
+        new Write().deleteFeatureById(HUB_INTERNAL_MAP_ID, SPACES, CUSTOM_SPACE));
 
     // When: executing delete space request
     Response response = writer.execute(deleteSpaceRequest);
@@ -140,8 +147,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
     assertInstanceOf(ErrorResponse.class, response);
   }
 
-  // TODO: Fix me!
-  //@Test
+  @Test
   void shouldFailWhenSpaceEntryDeletionFailed() {
     // Given: Configured event pipeline spy that fails on writes to SPACES (ie when deleting a space)
     ArgumentMatcher<WriteRequest> anyWriteFeatureToAdminSpaces = writeFeaturesRequest(SPACES);
@@ -149,7 +155,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
 
     // And: delete space request
     WriteRequest deleteSpaceRequest = new WriteRequest().add(
-        new Write().deleteFeatureById(null, SPACES, CUSTOM_SPACE));
+        new Write().deleteFeatureById(HUB_INTERNAL_MAP_ID, SPACES, CUSTOM_SPACE));
 
     // When: executing delete space request
     Response response = writer.execute(deleteSpaceRequest);
@@ -176,6 +182,25 @@ class NHSpaceStorageWriterTest extends AbstractTest {
 
     // And: Result of the whole operation is negative (space entry deletion failed)
     assertInstanceOf(ErrorResponse.class, response);
+  }
+
+  private void nakshaAdminReaderReturnSpaceCollection(){
+    // setup space
+    Space space = new Space();
+    space.setId(CUSTOM_SPACE);
+    NakshaCollection spaceCollection = new NakshaCollection();
+    spaceCollection.setId("test_space_collection");
+    spaceCollection.setMapId(AbstractTest.getMapId());
+    space.getProperties().setCollection(spaceCollection);
+    // allow space to be returned from admin storage
+    IReadSession adminReadSession = mock(IReadSession.class);
+    SuccessResponse spaceResponse = new SuccessResponse();
+    spaceResponse.setFeatures(NakshaFeatureList.of(space));
+    when(adminReadSession.execute(any())).thenReturn(spaceResponse);
+    IStorage adminStorage = mock(IStorage.class);
+    when(adminStorage.newReadSession(any())).thenReturn(adminReadSession);
+    doCallRealMethod().when(adminStorage).useReadSession(any(), any());
+    when(naksha.getAdminStorage()).thenReturn(adminStorage);
   }
 
   private List<WriteRequest> requestsPassedToPipeline(EventPipeline eventPipeline) {
