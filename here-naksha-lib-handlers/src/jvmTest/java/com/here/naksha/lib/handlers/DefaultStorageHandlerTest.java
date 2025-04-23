@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Named.named;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -30,13 +29,11 @@ import java.util.stream.Stream;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.fn.Fn1;
 import naksha.base.fn.Fx1;
-import naksha.model.Action;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
 import naksha.model.NakshaError;
-import naksha.model.Operation;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
@@ -325,7 +322,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
   }
 
   @Test
-  void shouldUseMapFromStorageProps(){
+  void shouldUseMapFromStorageProps() {
     // Given:
     String mapIdFromStorageProps = "map_from_storage";
     configureStorageConfig(storageConfigWithMapId(mapIdFromStorageProps));
