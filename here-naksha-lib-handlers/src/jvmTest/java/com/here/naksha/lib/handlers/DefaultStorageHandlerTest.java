@@ -324,6 +324,38 @@ class DefaultStorageHandlerTest extends AbstractTest {
     assertEquals(mapId, mapWrite.getId());
   }
 
+  @Test
+  void shouldUseMapFromStorageProps(){
+    // Given:
+    String mapIdFromStorageProps = "map_from_storage";
+    configureStorageConfig(storageConfigWithMapId(mapIdFromStorageProps));
+
+    // And: Storage writer failing on WriteXyzFeatures due to sql exception
+    NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
+    WriteRequest writeRequest = new WriteRequest();
+    writeRequest.add(new Write().createFeature("map_from_request", "map_from_collection", featureToCreate));
+
+    // And
+    DefaultStorageHandler handler = storageHandler();
+
+    // When: Processing write features
+    ignoreExceptionsFrom(
+        () -> handler.processEvent(event(writeRequest)),
+        "The mock for storage writer is already configured to always fail - it's ok to allow this as we only want to check invocations"
+    );
+
+    // Then:
+    ArgumentCaptor<WriteRequest> storageWriterRequestCaptor = ArgumentCaptor.forClass(WriteRequest.class);
+    verify(storageWriteSession, times(1)).execute(storageWriterRequestCaptor.capture());
+    WriteRequest capturedWriteRequest = storageWriterRequestCaptor.getValue();
+    List<Write> subsmittedWrites = capturedWriteRequest.getWrites();
+    assertEquals(1, subsmittedWrites.size());
+    Write submittedWrite = subsmittedWrites.get(0);
+    assertEquals(WriteOp.CREATE, submittedWrite.getOp());
+    assertEquals(mapIdFromStorageProps, submittedWrite.getMapId());
+    assertEquals(handler.properties.getCollection().getId(), submittedWrite.getCollectionId());
+  }
+
   private static Write findSingleCreateCollectionWrite(List<WriteRequest> writeRequests) {
     List<Write> collectionWrites = getSingularWritesToCollection(writeRequests, Naksha.COLLECTIONS_COL);
     assertEquals(1, collectionWrites.size(), "Expected single collection write");
