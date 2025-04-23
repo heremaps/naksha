@@ -3,5 +3,8 @@
   "type": "Storage",
   "title": "Test mock storage",
   "description": "Mock storage instance for testing purpose",
-  "className": "com.here.naksha.lib.hub.mock.NHAdminMock"
+  "className": "com.here.naksha.lib.hub.mock.NHAdminMock",
+  "properties": {
+    "schema": "test-schema"
+  }
 }
