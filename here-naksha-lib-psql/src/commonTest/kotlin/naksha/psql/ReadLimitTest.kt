@@ -25,6 +25,7 @@ class ReadLimitTest : PgTestBase(NakshaCollection("read_limit_test", TEST_MAP_ID
 
         // When
         val readWithLimit = executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             limit = 2
         })

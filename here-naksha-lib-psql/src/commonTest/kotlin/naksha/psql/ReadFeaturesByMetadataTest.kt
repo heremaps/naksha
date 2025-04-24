@@ -225,6 +225,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta", T
 
         // And: execute
         val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             query.metadata = MetaAnd(
                 MetaQuery(MetaColumn.author(), StringOp.EQUALS, author),
@@ -370,6 +371,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta", T
 
         // And: execute
         val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             query.metadata = MetaOr(
                 MetaQuery(MetaColumn.author(), StringOp.EQUALS, "this_is_totally_off"),
@@ -409,6 +411,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta", T
 
         // And: Collection (with history & deleted tables) is queried for UPDATE
         val getHistoryWithoutUpdates = ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             queryHistory = true
             queryDeleted = true
@@ -440,6 +443,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta", T
 
         // And: History table is queried for everything besides CREATED
         val getHistoryWithoutUpdates = ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             queryHistory = true
             queryDeleted = true
@@ -459,6 +463,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta", T
     private fun insertFeatureAndGetXyz(feature: NakshaFeature): XyzNs {
         insertFeature(feature = feature)
         val persistedFeatureResponse =  executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds += feature.id
         })
@@ -471,6 +476,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(NakshaCollection("read_by_meta", T
 
     private fun executeMetaQuery(metaQuery: IMetaQuery): SuccessResponse {
         return executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             query.metadata = metaQuery
         })

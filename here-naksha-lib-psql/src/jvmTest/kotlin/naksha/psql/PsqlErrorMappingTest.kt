@@ -7,12 +7,13 @@ import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
-class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
+class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c", TEST_MAP_ID)) {
 
     @Test
     fun shouldReturnMissingCollectionError() {
@@ -35,7 +36,7 @@ class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
     fun shouldReturnConflictingCollectionError() {
         // Given
         val createAlreadyExistingCollection = WriteRequest().add(
-            Write().createCollection(NakshaCollection(collection.id))
+            Write().createCollection(NakshaCollection(collection.id, collection.mapId))
         )
 
         // When

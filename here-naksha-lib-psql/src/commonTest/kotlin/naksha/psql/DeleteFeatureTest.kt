@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.model.*
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
@@ -47,6 +48,7 @@ class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c", T
         // Verify that the feature does not exist
         Naksha.cache.clear()
         executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds += initialFeature.id
         }).let { // this = SuccessResponse
@@ -56,6 +58,7 @@ class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c", T
 
         // verify if history contains 2 versions
         executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true
@@ -68,6 +71,7 @@ class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c", T
 
         // verify if delete table contains element
         executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryDeleted = true

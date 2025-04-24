@@ -21,8 +21,10 @@ package com.here.naksha.lib.hub.mock;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.ALL_HUB_INTERNAL_COLLECTIONS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.CONFIGS;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static com.here.naksha.lib.hub.NakshaHubAdminStorageIdentifiers.DEFAULT_HUB_ADMIN_MAP_ID;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
 
+import com.here.naksha.lib.hub.NakshaHubAdminStorageIdentifiers;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import com.here.naksha.lib.hub.mock.NHAdminMock.Config;
 import java.util.Map;
@@ -100,7 +102,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
     final NakshaContext ctx = NakshaContext.newInstance("naksha_mock");
     ctx.attachToCurrentThread();
     runInWriteSession(SessionOptions.from(ctx, true), admin -> {
-      final Response response = admin.execute(createFeatureRequest(ctx.getMapId(), CONFIGS, nakshaHubConfig));
+      final Response response = admin.execute(createFeatureRequest(DEFAULT_HUB_ADMIN_MAP_ID, CONFIGS, nakshaHubConfig));
       if (response instanceof ErrorResponse errorResponse) {
         admin.rollback();
         throw unchecked(

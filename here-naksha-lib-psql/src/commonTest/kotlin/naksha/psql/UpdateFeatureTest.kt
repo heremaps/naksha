@@ -46,6 +46,7 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c", T
         // Retrieving feature by id
         Naksha.cache.clear()
         val readFeatureResp = executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds += initialFeature.id
         })
@@ -101,6 +102,7 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c", T
         // READ FEATURE HISTORY
         Naksha.cache.clear()
         val readResp = executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true

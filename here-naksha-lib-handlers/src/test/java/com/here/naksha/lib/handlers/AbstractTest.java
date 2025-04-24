@@ -41,7 +41,6 @@ abstract public class AbstractTest {
             return ctx.attachToCurrentThread().withAuthor(author).withSu(su);
         }
         ctx = NakshaContext.newInstance(getAppId(), author, null, su);
-        ctx.withMapId(getMapId());
         nakshaContext = ctx;
         return ctx.attachToCurrentThread();
     }

@@ -40,7 +40,6 @@ class TestEnv(
     val mapId: String = mapId ?: PgTest.TEST_MAP_ID
     init {
         PlatformUtil.ENABLE_INFO = enableInfoLogs
-        NakshaContext.defaultMapId.set(PgTest.TEST_MAP_ID)
         NakshaContext.defaultAppName.set(PgTest.TEST_APP_NAME)
         NakshaContext.defaultAppId.set(PgTest.TEST_APP_ID)
     }
@@ -53,7 +52,7 @@ class TestEnv(
         appId = PgTest.TEST_APP_ID,
         author = PgTest.TEST_APP_AUTHOR,
         su = true
-    ).withMapId(this.mapId).attachToCurrentThread()
+    ).attachToCurrentThread()
 
     /**
      * The storage configuration used by default.
