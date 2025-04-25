@@ -17,5 +17,6 @@ permissions:
 
 jobs:
   ### Job to Build and Publish artifacts
-  Build-and-Publish:
-    uses: ./.github/workflows/reusable-build-and-publish-v3s.yml
+# TODO: uncomment once GH financial issue is solved
+#  Build-and-Publish:
+#    uses: ./.github/workflows/reusable-build-and-publish-v3s.yml
