@@ -21,7 +21,6 @@ package com.here.naksha.lib.hub.storages;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteFeatures;
-import static naksha.model.NakshaContext.mapId;
 
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
@@ -58,6 +57,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
 
   private static final NakshaException NOT_SUPPORTED_ERROR = new NakshaException(
       new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Operation not supported by NHSpaceStorageWriter"));
+  private static final String NULL_MAP_ID_TO_BE_OVERRIDDEN = null;
 
   private static final Logger logger = LoggerFactory.getLogger(NHSpaceStorageWriter.class);
 
@@ -161,7 +161,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   private @NotNull Response executeDeleteSpace(@NotNull WriteRequest deleteSpaceEntryReq) {
     Write originalWrite = deleteSpaceEntryReq.getWrites().get(0);
     String spaceId = originalWrite.getId();
-    WriteRequest purgeCollectionReq = new WriteRequest().add(new Write().deleteCollectionById(mapId(), spaceId));
+    WriteRequest purgeCollectionReq = new WriteRequest().add(new Write().deleteCollectionById(NULL_MAP_ID_TO_BE_OVERRIDDEN, spaceId));
     Response purgeCollectionRes = executeSingleCollectionWrite(purgeCollectionReq, spaceId);
     if (purgeCollectionRes instanceof SuccessResponse) {
       return executeWriteToAdminSpaces(deleteSpaceEntryReq, originalWrite.getCollectionId());

@@ -240,6 +240,7 @@ class ReadFeaturesByTagsTest : PgTestBase(NakshaCollection("read_by_tags_test", 
 
     private fun executeTagsQuery(tagQuery: ITagQuery): SuccessResponse {
         return executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection!!.id
             query.tags = tagQuery
         })

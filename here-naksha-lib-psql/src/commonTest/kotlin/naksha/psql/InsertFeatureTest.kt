@@ -31,6 +31,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
 
         // And: reading all features from collection
         val readResponse = executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         })
@@ -91,6 +92,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
 
         // And: reading all features from collection
         val readResponse = executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
 //            this.version = version
 //            this.minVersion = version
@@ -135,6 +137,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
         Platform.logger.info("Clear cache and reload feature from database")
         Naksha.cache.clear(env.storage)
         val featuresByIdResponse = executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds.add(firstFeatureToCreate.id)
         })
@@ -154,6 +157,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
 
         // Read only one feature by bounding box.
         val featuresByBBox = executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             query.spatial =
                 SpIntersects(SpBoundingBox(firstFeatureToCreate.geometry).addMargin(0.0000001).toPolygon())

@@ -26,7 +26,6 @@ open class ReadCollections : ReadRequest() {
     /**
      * The id of the map from which to read.
      *
-     * If being _null_, the [map-id from the context][naksha.model.NakshaContext.mapId] is used.
      * @since 3.0
      */
     var mapId by STRING_OR_NULL

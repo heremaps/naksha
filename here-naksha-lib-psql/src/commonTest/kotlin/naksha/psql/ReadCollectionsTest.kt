@@ -22,6 +22,7 @@ class ReadCollectionsTest : PgTestBase(NakshaCollection(
     fun shouldReadCollectionMeta() {
         // When
         val retrievedCollectionMeta = executeRead(ReadCollections().apply {
+            mapId = TEST_MAP_ID
             collectionIds += collection.id
         })
 

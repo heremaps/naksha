@@ -21,7 +21,7 @@ import kotlin.jvm.JvmStatic
  * This class contains the minimal configuration needed for all storages, actual implementations may need more configuration properties.
  *
  * ### Note
- * There is no default-map configuration available, because the intention is that the users, for example Naksha-Hub, does pin the default map into the thread-local [context][NakshaContext.mapId]. This has the advantage, that potential clients can request to use a specific map for all requests, and everything automatically uses this context map. Apart from this, that means that all storages always use the same default map-id, being `unimap`, which avoids that clients have to guess the default map.
+ * There is no default-map configuration available, it's expected that clients provide the `mapId` explicitly.
  * @since 3.0
  */
 @Suppress("unused")

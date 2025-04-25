@@ -38,6 +38,7 @@ class UpsertFeatureTest : PgTestBase(NakshaCollection("upsert_feature_test_c", T
 
         // And: Retrieving feature by id
         val retrievedFeatures = executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true

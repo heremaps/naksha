@@ -195,7 +195,6 @@ public class NakshaHub implements INaksha {
       writer.commit();
     });
     NakshaContext nakshaHubAdminContext = NakshaContext.newInstance(NakshaHubConfig.defaultAppName(), NakshaHubConfig.defaultAppName());
-    nakshaHubAdminContext.setMapId(mapId);
     nakshaHubAdminContext.attachToCurrentThread();
     return nakshaHubAdminContext;
   }
@@ -261,7 +260,7 @@ public class NakshaHub implements INaksha {
     return getAdminStorage().useWriteSession(SessionOptions.from(nakshaContext, true), admin -> {
       if (customCfg != null) {
         WriteRequest writeCustomCfg = new WriteRequest()
-            .add(new Write().upsertFeature(NakshaContext.mapId(), CONFIGS, customCfg));
+            .add(new Write().upsertFeature(DEFAULT_HUB_ADMIN_MAP_ID, CONFIGS, customCfg));
         Response writeCustomCfgResponse = admin.execute(writeCustomCfg);
         if (writeCustomCfgResponse instanceof SuccessResponse) {
           admin.commit();

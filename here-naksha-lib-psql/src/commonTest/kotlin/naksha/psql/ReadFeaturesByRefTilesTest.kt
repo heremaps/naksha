@@ -52,6 +52,7 @@ class ReadFeaturesByRefTilesTest : PgTestBase(NakshaCollection("read_by_ref_tile
     fun shouldReadFeaturesByRefTiles() {
         // Given:
         val getFeaturesFromZagrebAndPrague = ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection!!.id
             query.refTiles += listOf(zagrebTileLv12.intKey, pragueTileLv12.intKey)
         }
@@ -69,6 +70,7 @@ class ReadFeaturesByRefTilesTest : PgTestBase(NakshaCollection("read_by_ref_tile
     fun shouldNotReturnAnythingOnMissingTiles() {
         // Given:
         val getFeaturesFromBologna = ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection!!.id
             query.refTiles += bolognaTileLv12.intKey
         }

@@ -82,7 +82,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
 
     // And: delete space request
     WriteRequest deleteSpaceRequest = new WriteRequest().add(
-        new Write().deleteFeatureById(currentContext().getMapId(), SPACES, CUSTOM_SPACE));
+        new Write().deleteFeatureById(null, SPACES, CUSTOM_SPACE));
 
     // When: executing delete space request
     Response result = writer.execute(deleteSpaceRequest);
@@ -119,7 +119,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
 
     // And: delete space request
     WriteRequest deleteSpaceRequest = new WriteRequest().add(
-        new Write().deleteFeatureById(currentContext().getMapId(), SPACES, CUSTOM_SPACE));
+        new Write().deleteFeatureById(null, SPACES, CUSTOM_SPACE));
 
     // When: executing delete space request
     Response response = writer.execute(deleteSpaceRequest);
@@ -149,7 +149,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
 
     // And: delete space request
     WriteRequest deleteSpaceRequest = new WriteRequest().add(
-        new Write().deleteFeatureById(currentContext().getMapId(), SPACES, CUSTOM_SPACE));
+        new Write().deleteFeatureById(null, SPACES, CUSTOM_SPACE));
 
     // When: executing delete space request
     Response response = writer.execute(deleteSpaceRequest);
