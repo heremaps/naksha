@@ -468,12 +468,11 @@ public class DefaultStorageHandler extends AbstractEventHandler {
           collectionFromRequest.setMapId(mapId);
           collectionFromRequest.setId(collectionId);
         });
-      } else {
-        wr.getWrites().forEach(write -> {
-          write.setMapId(mapId);
-          write.setCollectionId(collectionId);
-        });
       }
+      wr.getWrites().forEach(write -> {
+        write.setMapId(mapId);
+        write.setCollectionId(collectionId);
+      });
     }
   }
 
