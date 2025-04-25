@@ -9,7 +9,6 @@
   "properties": {
     "collection": {
       "id": "my_env/my_storage/my_feat_type",
-      "mapId": "naksha-client-test-map",
       "type": "NakshaCollection"
     }
   }

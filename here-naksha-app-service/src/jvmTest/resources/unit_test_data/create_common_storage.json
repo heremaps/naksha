@@ -13,6 +13,6 @@
     "readOnly": false
   },
   "properties": {
-    "schema": "xyz"
-  },
+    "schema": "${dataDb.schema}"
+  }
 }

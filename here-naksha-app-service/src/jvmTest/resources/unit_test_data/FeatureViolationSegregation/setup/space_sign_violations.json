@@ -10,7 +10,6 @@
   "properties": {
     "collection": {
       "id": "violations",
-      "mapId": "naksha-client-test-map",
       "type": "NakshaCollection"
     }
   }
