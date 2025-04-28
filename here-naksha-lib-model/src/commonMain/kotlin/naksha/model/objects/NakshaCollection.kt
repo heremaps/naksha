@@ -25,7 +25,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * Create a Naksha collection with settings.
      * @param id the collection-identifier.
-     * @param mapId the map-identifier of the map in which the collection should be created; if `null`, then [NakshaContext.mapId] is used.
+     * @param mapId the map-identifier of the map in which the collection should be created
      * @param partitions the partitions to create; defaults to `1`
      * @param storageClass the [storage-class][storageClass] to create; defaults to `null`
      * @param storeDeleted if [deleted states should be stored][storeDeleted], defaults to [StoreMode.ON]
@@ -44,7 +44,7 @@ open class NakshaCollection() : NakshaFeature() {
         storeMeta: StoreMode = StoreMode.ON,
     ) : this() {
         this.id = id
-        this.mapId = mapId ?: NakshaContext.mapId()
+        this.mapId = mapId
         this.storageClass = storageClass
         this.partitions = partitions
         this.storeDeleted = storeDeleted

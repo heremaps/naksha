@@ -33,7 +33,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
     private fun readFeatures(req: ReadFeatures): PgQuery {
         // Collect needed data
         val pgStorage = session.storage
-        val mapId = req.mapId ?: NakshaContext.mapId()
+        val mapId = req.mapId ?: throw illegalArg("mapId is missing")
         val pgMap = session.getPgMapById(mapId) ?: throw mapNotFound("Map with id '$mapId' does not exist")
         // We select what the client wants, maximum is always 16777216
         // Finally, the storage can limit result-size further down below 16777216 (normally we do not expect this to happen).

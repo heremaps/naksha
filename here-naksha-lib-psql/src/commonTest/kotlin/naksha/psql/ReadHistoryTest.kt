@@ -84,6 +84,7 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test", TEST_MA
         // Clear cache, and read the history of the feature.
         Naksha.cache.clear()
         executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds.add(collection.id)
             featureIds.add(featureId)
             queryHistory = true
@@ -126,6 +127,7 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test", TEST_MA
         }
 
         executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds.add(collection.id)
             featureIds.add(featureId)
             queryHistory = true
@@ -145,7 +147,5 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test", TEST_MA
 
             assertEquals(Action.UPDATED, update2.properties.xyz.action)
         }
-
     }
-
 }

@@ -39,6 +39,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
         // And: reading feature
         val retrievedFeatures = executeRead(
             ReadFeatures().apply {
+                mapId = collection.mapId
                 collectionIds += collection.id
                 featureIds += feature.id
             }
@@ -69,6 +70,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
         // And: reading feature
         val retrievedFeatures = executeRead(
             ReadFeatures().apply {
+                mapId = collection.mapId
                 collectionIds += collection.id
                 featureIds += feature.id
             }
@@ -243,6 +245,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
 
     private fun executeSpatialQuery(spatialQuery: ISpatialQuery): SuccessResponse {
         return executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             query.spatial = spatialQuery
         })

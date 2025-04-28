@@ -44,6 +44,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
         // Read the feature
         Naksha.cache.clear()
         executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         }).apply {
@@ -98,6 +99,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
         Naksha.cache.clear()
         val readFeature: NakshaFeature
         executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         }).apply {
@@ -189,6 +191,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
         Naksha.cache.clear()
         val readFeature: NakshaFeature
         executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         }).apply {

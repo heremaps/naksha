@@ -200,33 +200,6 @@ open class NakshaContext protected constructor() {
         return this
     }
 
-    private var _mapId: String? = null
-
-    /**
-     * The map to use.
-     *
-     * The map-id is read from the JWT `mapId` claim, but can be overridden by the client using the HTTP header `X-Map-Id` or by using specially crafted requests which explicitly specify the map-id. If neither is available, the default is [defaultMapId].
-     *
-     * Note: In `lib-psql` the default map is mapped to the default schema configured within the storage driver.
-     * @since 3.0.0
-     */
-    open var mapId: String
-        get() = _mapId ?: defaultMapId.get() ?: throw NakshaException(ILLEGAL_STATE, "Missing map-id")
-        set(value) {
-            _mapId = value
-        }
-
-    /**
-     * Change the current map-id.
-     * @param mapId the map-id to select.
-     * @return this.
-     * @since 3.0.0
-     */
-    open fun withMapId(mapId: String): NakshaContext {
-        this.mapId = mapId
-        return this
-    }
-
     /**
      * If the super-user flag is enabled. This normally is only done temporarily.
      * @since 2.0.7
@@ -394,13 +367,6 @@ open class NakshaContext protected constructor() {
     @Suppress("OPT_IN_USAGE")
     companion object NakshaContextCompanion {
         /**
-         * The default map-identifier to use, defaults to `unimap`.
-         * @since 3.0.0
-         */
-        @JvmField
-        val defaultMapId = AtomicRef<String>(null)
-
-        /**
          * The default application name to use, defaults to `NakshaClient/{version}`.
          * @since 3.0.0
          */
@@ -459,15 +425,6 @@ open class NakshaContext protected constructor() {
          */
         @JvmField
         val defaultLockTimeout = AtomicInt(10_000)
-
-        /**
-         * Returns the current map-id.
-         * @return the current map-id.
-         * @since 3.0.0
-         */
-        @JvmStatic
-        @JsStatic
-        fun mapId(): String = currentContext().mapId
 
         /**
          * Returns the current application name.

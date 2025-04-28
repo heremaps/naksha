@@ -102,8 +102,7 @@ public class RequestHelper {
   }
 
   /**
-   * Helper method to create WriteFeatures request for updating given feature. The update will utilize map retrieved from
-   * {@link NakshaContext#mapId()} and will not be atomic.
+   * Helper method to create WriteFeatures request for updating given feature. The update will not be atomic.
    *
    * @param mapId the map where collection is defined
    * @param collectionId the storage collection
