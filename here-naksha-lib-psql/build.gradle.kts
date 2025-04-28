@@ -37,7 +37,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(kotlin("stdlib-common"))
+                implementation(kotlin("stdlib"))
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-jbon"))
                 api(project(":here-naksha-lib-model"))

@@ -13,7 +13,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(kotlin("stdlib-common"))
+                implementation(kotlin("stdlib"))
                 implementation(kotlin("reflect"))
                 // https://github.com/Kotlin/kotlinx-datetime
                 api("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
@@ -46,22 +46,12 @@ kotlin {
                 api(kotlin("reflect"))
             }
         }
-//        nativeMain {
-//
-//        }
-//        val desktopMain by creating {
-//            dependsOn(commonMain.get())
-//        }
-//        linuxX64Main.get().dependsOn(desktopMain)
-//        mingwX64Main.get().dependsOn(desktopMain)
-//        macosX64Main.get().dependsOn(desktopMain)
     }
 
     jvm {}
     js(IR) {
         outputModuleName = "naksha_base"
         useEsModules()
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             target.set("es2015")
         }
@@ -79,34 +69,6 @@ kotlin {
             binaries.executable()
         }
     }
-
-//    linuxX64("native") {
-//        binaries.sharedLib {
-//            baseName = "native"
-//        }
-//    }
-//    linuxArm64("native") {
-//        binaries.sharedLib {
-//            baseName = "native"
-//        }
-//    }
-//    mingwX64("native") {
-//        binaries.sharedLib {
-//            baseName = "native"
-//        }
-//    }
-//    macosX64("native") {
-//        binaries.sharedLib {
-//            baseName = "native"
-//        }
-//    }
-//    macosArm64("native") {
-//        binaries {
-//            sharedLib {
-//                baseName = "native"
-//            }
-//        }
-//    }
 }
 
 configure<JavaPluginExtension> {

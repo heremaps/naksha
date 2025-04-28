@@ -42,7 +42,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(kotlin("stdlib-common"))
+                implementation(kotlin("stdlib"))
                 implementation(libs.kotlinx.datetime)
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-geo"))
