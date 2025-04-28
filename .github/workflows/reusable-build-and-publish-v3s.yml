@@ -14,20 +14,20 @@ env:
 jobs:
   main:
     runs-on: [self-hosted, naksha-x86] # ubuntu-latest
-    services:
-      postgres:
-        image: postgis/postgis
-        env:
-          POSTGRES_PASSWORD: password
-          POSTGRES_USER: postgres
-          POSTGRES_DB: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
+#    services:
+#      postgres:
+#        image: postgis/postgis
+#        env:
+#          POSTGRES_PASSWORD: password
+#          POSTGRES_USER: postgres
+#          POSTGRES_DB: postgres
+#        options: >-
+#          --health-cmd pg_isready
+#          --health-interval 10s
+#          --health-timeout 5s
+#          --health-retries 5
+#        ports:
+#          - 5432:5432
 #    strategy:
 #      matrix:
 #        ## current v3 target for testing: base, model, core, psql, view
