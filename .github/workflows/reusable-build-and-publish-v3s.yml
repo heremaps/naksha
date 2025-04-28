@@ -13,7 +13,7 @@ env:
 
 jobs:
   main:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, naksha-x86] # ubuntu-latest
     services:
       postgres:
         image: postgis/postgis
