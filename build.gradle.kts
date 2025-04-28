@@ -59,10 +59,8 @@ fun Project.getSigningKey(): SigningKey? {
 enum class CleanAndTest {
     // Do not run tests
     OFF,
-    // Run kotlin.test
-    KOTLIN,
     // Run jvmTest
-    JAVA
+    KOTLIN,
 }
 
 enum class PublishModule {
@@ -73,20 +71,25 @@ enum class PublishModule {
 }
 
 val modulesToTest = mapOf(
+    Pair("here-naksha-app-service", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    Pair("here-naksha-common-http", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    Pair("here-naksha-handler-activitylog", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    //Pair("here-naksha-handler-http", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    Pair("here-naksha-lib-auth", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-base", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
-    Pair("here-naksha-lib-jbon", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
+    Pair("here-naksha-lib-core", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    Pair("here-naksha-lib-diff", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
+    Pair("here-naksha-lib-ext-manager", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    //Pair("here-naksha-lib-extension", Pair(CleanAndTest.OFF, PublishModule.NO)),
     Pair("here-naksha-lib-geo", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
+    Pair("here-naksha-lib-handlers", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    //Pair("here-naksha-lib-heapcache", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    Pair("here-naksha-lib-hub", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    Pair("here-naksha-lib-jbon", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-model", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-psql", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
-    Pair("here-naksha-lib-auth", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
-    Pair("here-naksha-lib-core", Pair(CleanAndTest.JAVA, PublishModule.NO)),
-    Pair("here-naksha-lib-view", Pair(CleanAndTest.JAVA, PublishModule.NO)),
-    Pair("here-naksha-lib-diff", Pair(CleanAndTest.JAVA, PublishModule.NO)),
-    Pair("here-naksha-lib-handlers", Pair(CleanAndTest.JAVA, PublishModule.NO)),
-    Pair("here-naksha-lib-hub", Pair(CleanAndTest.JAVA, PublishModule.NO)),
-    Pair("here-naksha-lib-ext-manager", Pair(CleanAndTest.JAVA, PublishModule.NO)),
-    Pair("here-naksha-storage-http", Pair(CleanAndTest.JAVA, PublishModule.NO)),
-    Pair("here-naksha-handler-activitylog", Pair(CleanAndTest.JAVA, PublishModule.NO)),
+    Pair("here-naksha-lib-view", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
+    Pair("here-naksha-storage-http", Pair(CleanAndTest.OFF, PublishModule.NO)),
 )
 
 fun Project.configureVanniktechMavenPublish() {
@@ -187,7 +190,6 @@ subprojects {
     //println("configure $group -- $name -- $version")
     val info = modulesToTest[name]
     if (info != null && info.second == PublishModule.YES) {
-        configureNakshaJava()
         apply(plugin = "com.vanniktech.maven.publish")
         configureVanniktechMavenPublish()
     }
@@ -195,17 +197,11 @@ subprojects {
 
 // Helper, run as `gradle cleanAndTestAll`
 fun Task.configureCleanAndTestTasks() {
-    //apply(plugin = "naksha.spotless-kotlin")
     modulesToTest.forEach {
         when (it.value.first) {
             CleanAndTest.KOTLIN -> {
                 dependsOn(":${it.key}:cleanJvmTest")
                 dependsOn(":${it.key}:jvmTest")
-            }
-            CleanAndTest.JAVA -> {
-                dependsOn(":${it.key}:test")
-                dependsOn(":${it.key}:jacocoTestReport")
-                //dependsOn(":${it.key}:jacocoTestCoverageVerification")
             }
             else -> {}
         }

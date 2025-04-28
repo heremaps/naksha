@@ -38,7 +38,7 @@ That is also the way our tests are executed on GH pipeline.
 #### Notes:
 - The schema used by tests: `naksha_data_schema`
 - This schema will dropped before test suite starts
-- When running tests with local standalone instance, tests don't expect any extensions enabled (see [test-config.json](../main/resources/test-config.json)
+- When running tests with local standalone instance, tests don't expect any extensions enabled (see [test-config.json](../jvmMain/resources/test-config.json)
 - Related class: `com.here.naksha.app.init.context.LocalTestContext`
 
 ### Test Containers
@@ -67,7 +67,7 @@ In tests of Naksha service, it relies on custom container image (which is simply
   - `com.here.naksha.app.init.context.ContainerTestContext`
   - `com.here.naksha.app.init.PostgresContainer`
 - To see how the image is built, see [Dockerfile](psql_container/Dockerfile)
-- When running tests with test containers, tests expect `pg_hint_plan` and `pg_stat_statements` extensions enabled (see [test-config-with-extensions.json](../main/resources/test-config-with-extensions.json). These are taken care of due to image definition.
+- When running tests with test containers, tests expect `pg_hint_plan` and `pg_stat_statements` extensions enabled (see [test-config-with-extensions.json](../jvmMain/resources/test-config-with-extensions.json). These are taken care of due to image definition.
 
 #### Known issues (observed locally on Mac with M1/2 chips): 
 - When running all tests of Naksha Service and utilizing `postgis/postgis` image (or images based on it - like our custom one), one may notice segmentation fault related errors. This will be addressed and fixed.

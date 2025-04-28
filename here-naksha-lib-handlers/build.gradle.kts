@@ -1,22 +1,41 @@
 plugins {
-    java
-    `java-library`
-    `java-test-fixtures`
-    `jacoco-report-aggregation`
+    alias(libs.plugins.kotlin.multiplatform)
 }
 
-description = "Naksha Handlers library"
-dependencies {
-    implementation(project(":here-naksha-lib-core"))
-    implementation(project(":here-naksha-lib-model"))
-    implementation(project(":here-naksha-lib-view"))
-    implementation(project(":here-naksha-storage-http"))
+description = gatherDescription()
 
-    implementation(libs.commons.lang3)
-    implementation(libs.commons.dbutils)
-    implementation(libs.bundles.jackson)
+kotlin {
+    sourceSets {
+        jvmMain {
+            jvmToolchain(23)
+            dependencies {
+                implementation(project(":here-naksha-lib-core"))
+                implementation(project(":here-naksha-lib-model"))
+                implementation(project(":here-naksha-lib-view"))
+                implementation(project(":here-naksha-storage-http"))
 
-    testImplementation(libs.bundles.testing)
-    testImplementation(testFixtures(project(":here-naksha-lib-core")))
+                implementation(libs.commons.lang3)
+                implementation(libs.commons.dbutils)
+                implementation(libs.bundles.jackson)
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation(libs.bundles.testing)
+                //implementation(testFixtures(project(":here-naksha-lib-core")))
+            }
+        }
+    }
+
+    jvm {}
 }
-setOverallCoverage(0.0)
+
+tasks {
+    getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
+    getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
+    getByName<Test>("jvmTest") {
+        useJUnitPlatform()
+        maxHeapSize = "6g"
+    }
+}
+setOverallCoverage(0.0) // only increasing allowed!

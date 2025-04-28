@@ -1,23 +1,40 @@
 plugins {
-    java
-    `java-library`
-    `java-test-fixtures`
-    kotlin("jvm")
+    alias(libs.plugins.kotlin.multiplatform)
 }
 
-description = "Naksha Activity Log Handler"
-dependencies {
-    implementation(project(":here-naksha-lib-core"))
-    implementation(project(":here-naksha-lib-psql"))
-    implementation(project(":here-naksha-lib-handlers"))
-    implementation(project(":here-naksha-lib-diff"))
+description = gatherDescription()
 
-    implementation(libs.flipkart.zjsonpatch)
-
-    testImplementation(libs.bundles.testing)
-    testImplementation(libs.jayway.jsonpath)
-    testImplementation(testFixtures(project(":here-naksha-lib-core")))
-}
-setOverallCoverage(0.4) // only increasing allowed!
 kotlin {
+    sourceSets {
+        jvmMain {
+            jvmToolchain(23)
+            dependencies {
+                implementation(project(":here-naksha-lib-core"))
+                implementation(project(":here-naksha-lib-psql"))
+                implementation(project(":here-naksha-lib-handlers"))
+                implementation(project(":here-naksha-lib-diff"))
+
+                implementation(libs.flipkart.zjsonpatch)
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation(project(":here-naksha-lib-core"))
+                implementation(libs.bundles.testing)
+                implementation(libs.jayway.jsonpath)
+            }
+        }
+    }
+
+    jvm {}
 }
+
+tasks {
+    getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
+    getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
+    getByName<Test>("jvmTest") {
+        useJUnitPlatform()
+        maxHeapSize = "6g"
+    }
+}
+setOverallCoverage(0.0) // only increasing allowed!

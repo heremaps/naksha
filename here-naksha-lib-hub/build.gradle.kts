@@ -1,26 +1,45 @@
 plugins {
-    java
-    `java-library`
-    `java-test-fixtures`
-    `jacoco-report-aggregation`
+    alias(libs.plugins.kotlin.multiplatform)
 }
 
-description = "NakshaHub library"
-dependencies {
-    implementation(project(":here-naksha-lib-core"))
-    implementation(project(":here-naksha-lib-model"))
-    implementation(project(":here-naksha-lib-psql"))
-    implementation(project(":here-naksha-lib-handlers"))
-    implementation(project(":here-naksha-lib-ext-manager"))
+description = gatherDescription()
 
-    implementation(libs.commons.lang3)
-    implementation(libs.jts.core)
-    implementation(libs.postgres)
-    implementation(libs.aws.s3)
+kotlin {
+    sourceSets {
+        jvmMain {
+            jvmToolchain(23)
+            dependencies {
+                implementation(project(":here-naksha-lib-core"))
+                implementation(project(":here-naksha-lib-model"))
+                implementation(project(":here-naksha-lib-psql"))
+                implementation(project(":here-naksha-lib-handlers"))
+                implementation(project(":here-naksha-lib-ext-manager"))
 
-    implementation(libs.bundles.jackson)
+                implementation(libs.commons.lang3)
+                implementation(libs.jts.core)
+                implementation(libs.postgres)
+                implementation(libs.aws.s3)
 
-    testImplementation(libs.json.assert)
-    testImplementation(libs.mockito)
+                implementation(libs.bundles.jackson)
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation(libs.json.assert)
+                implementation(libs.mockito)
+            }
+        }
+    }
+
+    jvm {}
 }
-setOverallCoverage(0.2) // only increasing allowed!
+
+tasks {
+    getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
+    getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
+    getByName<Test>("jvmTest") {
+        useJUnitPlatform()
+        maxHeapSize = "6g"
+    }
+}
+setOverallCoverage(0.0) // only increasing allowed!

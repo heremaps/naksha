@@ -47,7 +47,7 @@ import org.junit.jupiter.api.Assertions;
 
 public class FileUtil {
 
-  private static final String TEST_DATA_FOLDER = "src/test/resources/unit_test_data/";
+  private static final String TEST_DATA_FOLDER = "src/jvmTest/resources/unit_test_data/";
 
   private FileUtil() {}
 
