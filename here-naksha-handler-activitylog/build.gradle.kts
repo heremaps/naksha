@@ -1,8 +1,10 @@
 plugins {
-    id("naksha.java")
-    id("naksha.publish")
+    java
+    `java-library`
+    `java-test-fixtures`
     kotlin("jvm")
 }
+
 description = "Naksha Activity Log Handler"
 dependencies {
     implementation(project(":here-naksha-lib-core"))
@@ -10,13 +12,12 @@ dependencies {
     implementation(project(":here-naksha-lib-handlers"))
     implementation(project(":here-naksha-lib-diff"))
 
-    implementation(Lib.flipkart_zjsonpatch)
-    testImplementation(Lib.jayway_jsonpath)
-    testImplementation(Lib.mockito)
-    testImplementation(Lib.json_assert)
+    implementation(libs.flipkart.zjsonpatch)
+
+    testImplementation(libs.bundles.testing)
+    testImplementation(libs.jayway.jsonpath)
     testImplementation(testFixtures(project(":here-naksha-lib-core")))
 }
 setOverallCoverage(0.4) // only increasing allowed!
 kotlin {
-    jvmToolchain(17)
 }

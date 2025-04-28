@@ -1,6 +1,8 @@
 plugins {
-    id("naksha.java")
-    id("naksha.publish")
+    java
+    `java-library`
+    `java-test-fixtures`
+    `jacoco-report-aggregation`
 }
 
 description = "Naksha Handlers library"
@@ -10,11 +12,11 @@ dependencies {
     implementation(project(":here-naksha-lib-view"))
     implementation(project(":here-naksha-storage-http"))
 
-    implementation(Lib.commons_lang3)
-    implementation(Lib.commons_dbutils)
+    implementation(libs.commons.lang3)
+    implementation(libs.commons.dbutils)
+    implementation(libs.bundles.jackson)
 
-    testImplementation(Lib.mockito)
-    testImplementation(Lib.json_assert)
+    testImplementation(libs.bundles.testing)
     testImplementation(testFixtures(project(":here-naksha-lib-core")))
 }
-    setOverallCoverage(0.0)
+setOverallCoverage(0.0)

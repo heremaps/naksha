@@ -1,13 +1,13 @@
-description = "Naksha View Library"
-
 plugins {
-    id("naksha.java")
-    id("naksha.publish")
+    java
+    `java-library`
+    `java-test-fixtures`
+    `jacoco-report-aggregation`
 }
 
+description = "Naksha View Library"
+
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
     withJavadocJar()
     withSourcesJar()
 }
@@ -15,10 +15,21 @@ dependencies {
     api(project(":here-naksha-lib-core"))
     implementation(project(":here-naksha-lib-model"))
 
-    implementation(Lib.commons_lang3)
-    testImplementation(Lib.mockito)
+    implementation(libs.commons.lang3)
+    testImplementation(libs.mockito)
     testImplementation(project(":here-naksha-lib-model"))
     testImplementation(project(":here-naksha-lib-psql"))
-    testImplementation(Lib.jts_core)
+    testImplementation(libs.jts.core)
 }
 setOverallCoverage(0.0) // only increasing allowed!
+
+tasks {
+    // Suppress Javadoc errors (we document our checked exceptions).
+    javadoc {
+        options {
+            this as StandardJavadocDocletOptions
+            addBooleanOption("Xdoclint:none", true)
+            addStringOption("Xmaxwarns", "1")
+        }
+    }
+}

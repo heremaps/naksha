@@ -1,11 +1,12 @@
 plugins {
-    id("naksha.java")
-    id("naksha.publish")
+    java
+    `java-library`
+    `java-test-fixtures`
+    `jacoco-report-aggregation`
 }
+
 description = "Naksha Http Storage Module"
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
     withJavadocJar()
     withSourcesJar()
 }
@@ -14,8 +15,9 @@ dependencies {
     implementation(project(":here-naksha-lib-core"))
     implementation(project(":here-naksha-common-http"))
 
-    implementation(Lib.commons_lang3)
+    implementation(libs.commons.lang3)
+    implementation(libs.bundles.jackson)
 
-    testImplementation(Lib.mockito)
+    testImplementation(libs.bundles.testing)
 }
 setOverallCoverage(0.0) // only increasing allowed!

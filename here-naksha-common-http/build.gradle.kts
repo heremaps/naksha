@@ -1,3 +1,4 @@
 plugins {
-    id("naksha.java")
+    java
+    `java-library`
 }

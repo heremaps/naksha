@@ -1,7 +1,10 @@
 plugins {
-    id("naksha.java")
-    id("naksha.publish")
+    java
+    `java-library`
+    `java-test-fixtures`
+    `jacoco-report-aggregation`
 }
+
 description = "NakshaHub library"
 dependencies {
     implementation(project(":here-naksha-lib-core"))
@@ -10,12 +13,14 @@ dependencies {
     implementation(project(":here-naksha-lib-handlers"))
     implementation(project(":here-naksha-lib-ext-manager"))
 
-    implementation(Lib.commons_lang3)
-    implementation(Lib.jts_core)
-    implementation(Lib.postgres)
-    implementation(Lib.aws_s3)
+    implementation(libs.commons.lang3)
+    implementation(libs.jts.core)
+    implementation(libs.postgres)
+    implementation(libs.aws.s3)
 
-    testImplementation(Lib.json_assert)
-    testImplementation(Lib.mockito)
+    implementation(libs.bundles.jackson)
+
+    testImplementation(libs.json.assert)
+    testImplementation(libs.mockito)
 }
 setOverallCoverage(0.2) // only increasing allowed!

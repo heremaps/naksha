@@ -7,7 +7,7 @@
 - Plugins
 
 ---
-# Naksha Project
+## What we talk about
 - Concepts
   - **_Storage Abstraction Layer_**
   - **_Data Model Abstraction Layer_** (_if time allows_)
@@ -23,7 +23,7 @@
 This presentation will be around 30 mins.
 
 ---
-# Naksha Project
+## What we do not talk about
 - Concepts
   - **_Storage Abstraction Layer_**
   - **_Data Model Abstraction Layer_** (_if time allows_)
@@ -35,6 +35,7 @@ This presentation will be around 30 mins.
     - &nbsp;&nbsp;~~Combine multiple collections into virtual ones~~
   - ~~**Differences** _(`lib-diff`)_~~
     - &nbsp;&nbsp;~~Calculates differences, patches, merges and applies them~~
+  - ~~**Authorization** _(lib-auth)_~~
   - ~~**Geometries** _(`lib-geo`)_~~
     - &nbsp;&nbsp;~~Implements [GeoJSON](https://www.rfc-editor.org/rfc/rfc7946) and helpers like Here-Tiles.~~
   - ~~**JBON** _(`lib-jbon`)_~~
@@ -46,7 +47,7 @@ This presentation will be around 30 mins.
 - ~~Plugins~~
 
 ---
-# SAL - Storage Abstraction Layer
+# `lib-model` - The Storage Abstraction Layer
 The Naksha _Storage Abstraction Layer_ logically organizes data in containers, being:
 
 ```mermaid
@@ -64,7 +65,7 @@ graph LR
 ```
 
 ---
-# SAL - Everything is a feature
+## `lib-model` - Everything is a feature
 - Within the SAL "everything" is a feature _(except for **Tuple**)_.
 
 ```mermaid
@@ -95,7 +96,7 @@ graph LR
 ```
 
 ---
-# SAL - Addressing
+## `lib-model` - Addressing
 - Within the _Storage Abstraction Layer_ each feature is a container of **Tuple**.
 - A **Tuple** is an immutable state of a feature.
 - The feature logically points:
@@ -121,7 +122,7 @@ graph LR
 - Every **Tuple** is uniquely addressed using a **Tuple-Number**.
 
 ---
-# SAL - Tuple Addressing
+## `lib-model` - Tuple Addressing
 - Each **Tuple** has a worldwide unique identifier called **Tuple-Number**.
 ```mermaid
 classDiagram
@@ -150,7 +151,7 @@ classDiagram
   - Each transaction can create up to 4 billion new **Tuple**.
 
 ---
-# SAL - Feature Addressing
+## `lib-model` - Feature Addressing
 - Each **Feature** has a global unique identifier called **GUID**.
 - The **GUID** is encoded in the meta-data of a feature.
 - The **GUID** is stringified as [URN](https://www.rfc-editor.org/rfc/rfc8141) with three distinct variants:
@@ -173,7 +174,7 @@ full: urn:naksha:guid:demo:4711:0815:1213:-5386453534:2025:03:20:12:3
 **Note**: The encoded date is the day in which the transaction started, that created the referred state _(Tuple)_ of the feature.
 
 ---
-# SAL - Storage / Maps
+## `lib-model` - Storage / Maps
 All maps always have a virtual collection with **id** `naksha~collection`, used to administrate collections of the map:
 
 ```mermaid
@@ -191,7 +192,7 @@ graph LR
 ```
 
 ---
-# SAL - The chicken-egg problem
+## `lib-model` - The chicken-egg problem
 As **Storage** and **Map** are **Features**, where are they stored? They should be stored in a **Collection**, but each collection must be stored in a **Map**, so, how can a **Map** itself be stored in a **Collection**?
 
 The answer is: In a special virtual-map in the storage: **`naksha~admin`**
@@ -211,7 +212,7 @@ graph TB
 ```
 
 ---
-# SAL - Feature-Numbers
+## `lib-model` - Feature-Numbers
 As every **Feature** has a unique **id** and a unique **number**, the **number** needs to be generated. This happens in two ways:
 
 - If the **id** is a decimal number between `0` and `9,223,372,036,854,775,807` _(`2^63-1`)_, then the number is parsed and used as **feature-number**, always being positive.
@@ -224,7 +225,7 @@ The **feature-number** of **Map** and **Collection** is limited to 32-bit, there
 Manual **feature-numbers** _(positives)_ and those of **storages**, **maps**, and **collections**, do not implement collision handling. Therefore, should there be two collections with different **id**, but same **feature-number**, they can't be stored, and the **id** needs to be adjusted.
 
 ---
-# SAL - Performance Partitioning
+## `lib-model` - Performance Partitioning
 - The Naksha _Storage Abstraction Layer_ defines how **Tuple** are partitioned.
 - The lowest 16-bit of the **feature-number** is by definition the **partition-number** of the feature.
   - This explains why, in the case of a **feature-number** collision, the lower 16-bit are kept in sync with the **id**-hash.
@@ -236,7 +237,7 @@ Manual **feature-numbers** _(positives)_ and those of **storages**, **maps**, an
   - Therefore, all states of a **Feature** are guaranteed to be found in the same partition!
 
 ---
-# SAL - Limitations
+## `lib-model` - Limitations
 The **identifiers** for **Storage**, **Map**, and **Collection** are limited to:
 
 `^[a-z][a-z0-9_:-]{0,41}$`
@@ -252,7 +253,7 @@ The SAL as well puts a soft-cap to 1000 partitions. Therefore, the soft-cap of t
 These are soft-caps, individual implementations are allowed to have much higher hard-caps, but need to handle collisions accordingly.
 
 ---
-# SAL - Tuple Details
+## `lib-model` - Tuple Details
 Each **Tuple** persists out of the following parts:
 
 ```mermaid
@@ -280,7 +281,7 @@ The **MetaData** is read from: `properties->@ns:com:here:xyz`
 The **attachment** is a special case, it is an arbitrary binary, not exposed through REST-APIs. It is part of the **Tuple** _(so of the state)_, but handled specially in the SAL.
 
 ---
-# SAL - Tuple MetaData
+## `lib-model` - Tuple MetaData
 
 ```mermaid
 %%{ init: { "flowchart": { "nodeSpacing": 10, "rankSpacing": 50 } } }%%
@@ -297,7 +298,7 @@ graph TB
   ats(authorTs:u48)
   tn(tn:b160)
   prev(prev_tn:b96)
-  next(<b>next_tn:b96</b>)
+  next{{<b>next_tn:b96</b>}}
   flags(flags:i32)
   cc(cc:i32)
   hash(hash:i32)
@@ -321,6 +322,8 @@ graph TB
   R1-->cat
   R1-->uat
   R1-->ats
+  R1-->appId
+  R1-->author
   R1-->R2
   R2-->tn
   R2-->next
@@ -332,13 +335,11 @@ graph TB
   R3-->tile
   R3-->R4
   R4-->id
-  R4-->appId
-  R4-->author
   R4-->origin
   R4-->target
   R4-->ft
-  R4-->tags
   R4-->R5
+  R5-->tags
   R5-->cv0
   R5-->cv1
   R5-->cv2
@@ -353,7 +354,24 @@ graph TB
 - **cc**: Change-Count, incremented with each update, start at `1` when a feature is created.
 
 ---
-# SAL - Transactions
+## `lib-model` - User/Time Tracking
+- Naksha intrinsically comes with a feature called user-/ and time-tracking.
+- This can be disabled for each collection setting the **`disableUserTracking`** and/or **`disableTimeTracking`** property to `true`.
+- If not disabled, each **Tuple** always has a change-log, which is important to understand who did which changes:
+  - Every **Tuple** does always have **appId** and **updatedAt** set to the application that produced this **Tuple** and the time it did this.
+  - If the application provides an **author**, then **author** is set to this value, and **authorTs** becomes **null**, which means, it matches **updatedAt**.
+  - If the application does not provide an **author** _(`null`)_, then the **author** and **updateTs** of the previous state is copied over into the current **Tuple**, if this is the first **Tuple** _(CREATED)_, then the **appId** is used as **author**, and **authorTs** is _(`null`)_.
+
+```mermaid
+%%{ init: { "flowchart": { "nodeSpacing": 10, "rankSpacing": 50 } } }%%
+graph LR
+  A("<b>A</b>\n\nappId + updatedAt\nauthor + authorTs")
+  B("<b>B</b>\n\nappId + updatedAt\nauthor + authorTs")
+  A-->B
+```
+
+---
+## `lib-model` - Transactions
 - Within a SAL all changes are part of transaction.
 - Each transaction does have a unique **transaction-number**, which for transactions is the same as the **version**.
 - Each transaction holds details about what changed.
@@ -394,7 +412,7 @@ classDiagram
 ```
 
 ---
-# SAL - Two Phase Queries
+## `lib-model` - Two Phase Queries
 The SAL defines that all queries are done in two phases, and it introduces a Caching Layer. Therefore, by definition, all queries are executed like:
 
 ```mermaid
@@ -420,7 +438,7 @@ graph LR
   - This value is set ones there is a new **Tuple**, so caches may not have this information.
 
 ---
-# SAL - Caching
+## `lib-model` - Caching
 - The SAL handles in-memory caching
 - The SAL allows to implement additional own caching layers
   - For example, caching in Redis, S3, or on ephemeral SSD
@@ -430,7 +448,12 @@ graph LR
   - `Naksha.cache.store(tupleList)`
 
 ---
-# `lib-psql` - SAL Implementation
+# Questions?
+
+**Next: `lib-psql` _(Storage Abstraction Layer implementation)_**
+
+---
+# `lib-psql` - The Implementation
 - One implementation of the _Storage Abstraction Layer_ is **`lib-psql`**.
 - **`lib-psql`** stores data in a PostgresQL database.
 - **Maps** are stored as **schemata**.
@@ -441,7 +464,7 @@ graph LR
     - "`{id}$hst${year}`": The _HISTORY_ is always partitioned by year, so when the **Tuple-Number** is known, we know in which partition this **Tuple** is stored.
 
 ---
-# `lib-psql` - Partitioning
+## `lib-psql` - Partitioning
 The `lib-psql` _SAL_ implementation supports partitioning with up to 1000 partitions per collection. If a collection is partitioned, all its tables are partitioned, for example a collection "`foo`" with 4 partitions:
 
 ```mermaid

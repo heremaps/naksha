@@ -2,7 +2,7 @@
 This document explains the `lib-model` data model, with the main purpose to support the concept of the **_Storage Abstraction Layer_**.
 
 ## Introduction
-All classes are part of the namespace `naksha.model`. The central entry point is the class `naksha.model.Naksha`, which holds a bunch of static methods that are quite important to use storages.
+All classes are part of the namespace `naksha.model`, with the central entry point being the class `naksha.model.Naksha`, which holds a bunch of static methods that are quite important to use storages.
 
 ## Bootstrap with _lib-psql_
 Before a storage can be used, the application should be linked against an implementation. This can be done at compile-time or at runtime, by simply adding the corresponding JAR to the classpath.
@@ -66,6 +66,7 @@ val nakshaStorage = NakshaStorage.fromJSON("""{
 }""")
 val storage = Naksha.useStorage(nakshaStorage)
 ```
+As you can see, you should best keep the configuration file of the database into the resources of your application, or load it from some configuration server, and then just use `Naksha.useStorage(NakshaStorage.fromJSON(jsonText))` to get the instance, keeping the object in some global static variable.
 
 ## _IStorage_
 Ones the `storage` is opened, it can be used. It will have the following basic interfaces:

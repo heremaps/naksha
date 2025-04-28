@@ -4,14 +4,10 @@ import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 
 plugins {
-    id("org.jetbrains.kotlin.multiplatform")
-    kotlin("plugin.js-plain-objects")
-    id("naksha.publish")
-    id("naksha.java")
-
-    // uncomment spotless to add license comments
-    // id("naksha.spotless-kotlin")
+    alias(libs.plugins.kotlin.multiplatform)
 }
+
+description = gatherDescription()
 
 kotlin {
     sourceSets {
@@ -28,7 +24,7 @@ kotlin {
                 implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation(Lib.kotlinx_datetime)
+                implementation(libs.kotlinx.datetime)
             }
         }
         jvmMain {
@@ -36,11 +32,11 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(kotlin("reflect"))
-                api(Lib.lz4_java)
-                implementation(Lib.jackson_kotlin)
+                api(libs.lz4.java)
+                implementation(libs.jackson.kotlin)
                 // https://mvnrepository.com/artifact/org.slf4j
-                api(Lib.slf4j_api)
-                implementation(Lib.slf4j_console)
+                api(libs.slf4j.api)
+                implementation(libs.slf4j.console)
             }
             resources.setSrcDirs(resources.srcDirs + "${layout.buildDirectory}/dist/js/productionExecutable/")
         }
@@ -61,12 +57,9 @@ kotlin {
 //        macosX64Main.get().dependsOn(desktopMain)
     }
 
-    jvm {
-        withJava()
-    }
-
+    jvm {}
     js(IR) {
-        moduleName = "naksha_base"
+        outputModuleName = "naksha_base"
         useEsModules()
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {

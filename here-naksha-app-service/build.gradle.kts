@@ -1,6 +1,7 @@
 plugins {
-    id("naksha.java")
-    id("naksha.publish")
+    java
+    `java-test-fixtures`
+    `jacoco-report-aggregation`
 }
 
 description = "Naksha Service"
@@ -12,25 +13,20 @@ dependencies {
     implementation(project(":here-naksha-lib-hub"))
     implementation(project(":here-naksha-common-http"))
     implementation(project(":here-naksha-lib-diff"))
-
-    implementation(Lib.log4j_slf4j)
-    implementation(Lib.log4j_api)
-    implementation(Lib.log4j_core)
-    implementation(Lib.otel)
-    implementation(Lib.commons_lang3)
-    implementation(Lib.jts_core)
-    implementation(Lib.postgres)
-    implementation(Lib.vertx_core)
-    implementation(Lib.vertx_auth_jwt)
-    implementation(Lib.vertx_web)
-    implementation(Lib.vertx_web_client)
-    implementation(Lib.vertx_web_openapi)
     implementation(project(":here-naksha-handler-activitylog"))
 
-    testImplementation(Lib.json_assert)
-    testImplementation(Lib.resillience4j_retry)
-    testImplementation(Lib.test_containers)
+    implementation(libs.commons.lang3)
+    implementation(libs.otel)
+    implementation(libs.postgres)
+    implementation(libs.bundles.logging)
+    implementation(libs.bundles.vertx)
+    implementation(libs.bundles.spatial)
+    implementation(libs.bundles.jackson)
+
+    testImplementation(libs.bundles.testing)
+    testImplementation(libs.resillience4j.retry)
+    testImplementation(libs.test.containers)
     testImplementation(testFixtures(project(":here-naksha-lib-core")))
-    testImplementation(Lib.wiremock)
+    testImplementation(libs.wiremock)
 }
 setOverallCoverage(0.25) // only increasing allowed!

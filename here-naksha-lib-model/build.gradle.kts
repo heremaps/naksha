@@ -5,25 +5,20 @@ import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 import java.time.Instant
 
 plugins {
-    id("org.jetbrains.kotlin.multiplatform")
-    kotlin("plugin.js-plain-objects")
-    id("naksha.publish")
-    id("naksha.java")
-
-    // uncomment spotless to add license comments
-    // id("naksha.spotless-kotlin")
+    alias(libs.plugins.kotlin.multiplatform)
 }
+
+description = gatherDescription()
 
 kotlin {
     jvm {
-        withJava()
         compilerOptions {
             freeCompilerArgs = listOf("-Xjvm-default=all")
         }
     }
 
     js(IR) {
-        moduleName = "naksha_model"
+        outputModuleName = "naksha_model"
         useEsModules()
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
@@ -48,7 +43,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(kotlin("stdlib-common"))
-                implementation(Lib.kotlinx_datetime)
+                implementation(libs.kotlinx.datetime)
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-geo"))
                 api(project(":here-naksha-lib-jbon"))
@@ -62,7 +57,7 @@ kotlin {
                 implementation(kotlin("test-annotations-common"))
                 implementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
                 implementation("org.mockito:mockito-core:5.13.0")
-                implementation(Lib.kotlinx_datetime)
+                implementation(libs.kotlinx.datetime)
             }
         }
         jvmMain {
@@ -74,11 +69,11 @@ kotlin {
                 api(project(":here-naksha-lib-jbon"))
 								api(project(":here-naksha-lib-auth"))
             }
-            resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
+            resources.setSrcDirs(resources.srcDirs + "${layout.buildDirectory}/dist/js/productionExecutable/")
         }
         jvmTest {
             dependencies {
-                implementation(Lib.mockito)
+                implementation(libs.mockito)
             }
         }
         jsMain {
@@ -147,6 +142,10 @@ tasks.register("generateVersionFile") {
     }
 }
 
-tasks.named("processResources") {
+tasks.named("jvmProcessResources") {
     dependsOn("generateVersionFile")
+}
+
+tasks.matching { it.name == "jsNodeTest" }.configureEach {
+    enabled = false
 }

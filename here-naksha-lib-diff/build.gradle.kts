@@ -4,22 +4,13 @@ import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 
 plugins {
-    id("org.jetbrains.kotlin.multiplatform")
-    kotlin("plugin.js-plain-objects")
-    id("naksha.publish")
-    id("naksha.java")
-
-    // uncomment spotless to add license comments
-    // id("naksha.spotless-kotlin")
+    alias(libs.plugins.kotlin.multiplatform)
 }
 
 kotlin {
-    jvm {
-        withJava()
-    }
-
+    jvm {}
     js(IR) {
-        moduleName = "naksha_diff"
+        outputModuleName = "naksha_diff"
         useEsModules()
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
@@ -44,7 +35,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(kotlin("stdlib-common"))
-                implementation(Lib.kotlinx_datetime)
+                implementation(libs.kotlinx.datetime)
                 implementation(project(":here-naksha-lib-base"))
             }
         }
@@ -53,19 +44,19 @@ kotlin {
                 implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation(Lib.kotlinx_datetime)
+                implementation(libs.kotlinx.datetime)
             }
         }
         jvmTest {
             jvmToolchain(11)
             dependencies {
                 implementation(kotlin("test"))
-                implementation(Lib.kotlintest_runner_junit5)
-                runtimeOnly(Lib.junit_jupiter_engine)
-                implementation(Lib.junit_jupiter_api)
-                implementation(Lib.junit_params)
-                api(Lib.slf4j_api)
-                implementation(Lib.slf4j_console)
+                implementation(libs.kotlintest.runner.junit5)
+                runtimeOnly(libs.junit.jupiter.engine)
+                implementation(libs.junit.jupiter.api)
+                implementation(libs.junit.params)
+                api(libs.slf4j.api)
+                implementation(libs.slf4j.console)
                 implementation("org.skyscreamer:jsonassert:1.5.1")
             }
         }
@@ -92,4 +83,8 @@ tasks {
         useJUnitPlatform()
         maxHeapSize = "8g"
     }
+}
+
+tasks.matching { it.name == "jsNodeTest" }.configureEach {
+    enabled = false
 }

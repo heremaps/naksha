@@ -7,6 +7,8 @@ gradle/
 *.iml
 *.iws
 *.ipr
+*.pgp
+*.gpg
 .vertx/
 .xyz-hub/
 .idea/

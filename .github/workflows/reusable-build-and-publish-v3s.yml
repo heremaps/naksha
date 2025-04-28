@@ -1,7 +1,6 @@
 on:
   workflow_call:
 
-
 env:
   MIN_COVERAGE_OVERALL: 0
   MIN_COVERAGE_CHANGED_FILES: 0

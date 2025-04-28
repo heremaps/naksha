@@ -1,13 +1,11 @@
 pluginManagement {
     repositories {
-        maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/bootstrap")
-        maven("https://plugins.gradle.org/m2/")
+        mavenLocal()
+        mavenCentral()
         gradlePluginPortal()
     }
 }
-plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.5.0"
-}
+
 rootProject.name = "naksha"
 
 include(":here-naksha-lib-base")
@@ -28,4 +26,4 @@ include(":here-naksha-common-http")
 include(":here-naksha-storage-http")
 include(":here-naksha-app-service")
 include(":here-naksha-lib-ext-manager")
-include("here-naksha-lib-diff")
+include(":here-naksha-lib-diff")

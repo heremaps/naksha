@@ -1,7 +1,5 @@
 package naksha.psql
 
-import kotlinx.js.JsPlainObject
-
 /**
  * Expose the native PLV8 api.
  *

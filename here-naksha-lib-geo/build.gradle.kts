@@ -4,22 +4,59 @@ import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 
 plugins {
-    id("org.jetbrains.kotlin.multiplatform")
-    kotlin("plugin.js-plain-objects")
-    id("naksha.publish")
-    id("naksha.java")
-
-    // uncomment spotless to add license comments
-    // id("naksha.spotless-kotlin")
+    alias(libs.plugins.kotlin.multiplatform)
 }
 
+description = gatherDescription()
+
 kotlin {
-    jvm {
-        withJava()
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation(kotlin("stdlib-common"))
+                implementation(libs.kotlinx.datetime)
+                implementation(project(":here-naksha-lib-base"))
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation(kotlin("test-common"))
+                implementation(kotlin("test-annotations-common"))
+                implementation(libs.kotlinx.datetime)
+            }
+        }
+        jvmMain {
+            jvmToolchain(11)
+            dependencies {
+                implementation(kotlin("stdlib-jdk8"))
+                implementation(project(":here-naksha-lib-base"))
+                implementation(libs.jts.core)
+                implementation(libs.jts.io.common)
+            }
+            resources.setSrcDirs(resources.srcDirs + "${layout.buildDirectory}/dist/js/productionExecutable/")
+        }
+        jvmTest {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation(libs.jts.io.common)
+                implementation(libs.kotlintest.runner.junit5)
+                runtimeOnly(libs.junit.jupiter.engine)
+                implementation(libs.junit.jupiter.api)
+                implementation(libs.junit.params)
+            }
+        }
+        jsMain {
+            dependencies {
+                implementation(kotlin("stdlib-js"))
+                implementation(project(":here-naksha-lib-base"))
+            }
+        }
     }
 
+    jvm {}
     js(IR) {
-        moduleName = "naksha_geo"
+        outputModuleName = "naksha_geo"
         useEsModules()
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
@@ -37,50 +74,6 @@ kotlin {
             generateTypeScriptDefinitions()
             binaries.library()
             binaries.executable()
-        }
-    }
-
-    sourceSets {
-        commonMain {
-            dependencies {
-                implementation(kotlin("stdlib-common"))
-                implementation(Lib.kotlinx_datetime)
-                implementation(project(":here-naksha-lib-base"))
-            }
-        }
-        commonTest {
-            dependencies {
-                implementation(kotlin("test"))
-                implementation(kotlin("test-common"))
-                implementation(kotlin("test-annotations-common"))
-                implementation(Lib.kotlinx_datetime)
-            }
-        }
-        jvmMain {
-            jvmToolchain(11)
-            dependencies {
-                implementation(kotlin("stdlib-jdk8"))
-                implementation(project(":here-naksha-lib-base"))
-                implementation(Lib.jts_core)
-                implementation(Lib.jts_io_common)
-            }
-            resources.setSrcDirs(resources.srcDirs + "$buildDir/dist/js/productionExecutable/")
-        }
-        jvmTest {
-            dependencies {
-                implementation(kotlin("test"))
-                implementation(Lib.jts_io_common)
-                implementation(Lib.kotlintest_runner_junit5)
-                runtimeOnly(Lib.junit_jupiter_engine)
-                implementation(Lib.junit_jupiter_api)
-                implementation(Lib.junit_params)
-            }
-        }
-        jsMain {
-            dependencies {
-                implementation(kotlin("stdlib-js"))
-                implementation(project(":here-naksha-lib-base"))
-            }
         }
     }
 }
