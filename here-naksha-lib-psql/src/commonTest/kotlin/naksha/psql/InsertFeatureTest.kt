@@ -107,6 +107,7 @@ class InsertFeatureTest : PgTestBase(NakshaCollection("insert_feature_test_c", T
 
         // And: reading all features from collection
         val readResponse = executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         })
