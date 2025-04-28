@@ -1,7 +1,5 @@
 gradlew
 gradlew.bat
-gradle
-gradle/
 .gradle
 .kotlin
 *.iml
