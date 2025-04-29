@@ -4,20 +4,16 @@ import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 
 plugins {
-    id("org.jetbrains.kotlin.multiplatform")
-    kotlin("plugin.js-plain-objects")
-    id("naksha.publish")
-    id("naksha.java")
-
-    // uncomment spotless to add license comments
-    // id("naksha.spotless-kotlin")
+    alias(libs.plugins.kotlin.multiplatform)
 }
+
+description = gatherDescription()
 
 kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(kotlin("stdlib-common"))
+                implementation(kotlin("stdlib"))
                 implementation(kotlin("reflect"))
                 // https://github.com/Kotlin/kotlinx-datetime
                 api("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
@@ -28,7 +24,7 @@ kotlin {
                 implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation(Lib.kotlinx_datetime)
+                implementation(libs.kotlinx.datetime)
             }
         }
         jvmMain {
@@ -36,11 +32,11 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(kotlin("reflect"))
-                api(Lib.lz4_java)
-                implementation(Lib.jackson_kotlin)
+                api(libs.lz4.java)
+                implementation(libs.jackson.kotlin)
                 // https://mvnrepository.com/artifact/org.slf4j
-                api(Lib.slf4j_api)
-                implementation(Lib.slf4j_console)
+                api(libs.slf4j.api)
+                implementation(libs.slf4j.console)
             }
             resources.setSrcDirs(resources.srcDirs + "${layout.buildDirectory}/dist/js/productionExecutable/")
         }
@@ -50,25 +46,12 @@ kotlin {
                 api(kotlin("reflect"))
             }
         }
-//        nativeMain {
-//
-//        }
-//        val desktopMain by creating {
-//            dependsOn(commonMain.get())
-//        }
-//        linuxX64Main.get().dependsOn(desktopMain)
-//        mingwX64Main.get().dependsOn(desktopMain)
-//        macosX64Main.get().dependsOn(desktopMain)
     }
 
-    jvm {
-        withJava()
-    }
-
+    jvm {}
     js(IR) {
-        moduleName = "naksha_base"
+        outputModuleName = "naksha_base"
         useEsModules()
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             target.set("es2015")
         }
@@ -86,34 +69,6 @@ kotlin {
             binaries.executable()
         }
     }
-
-//    linuxX64("native") {
-//        binaries.sharedLib {
-//            baseName = "native"
-//        }
-//    }
-//    linuxArm64("native") {
-//        binaries.sharedLib {
-//            baseName = "native"
-//        }
-//    }
-//    mingwX64("native") {
-//        binaries.sharedLib {
-//            baseName = "native"
-//        }
-//    }
-//    macosX64("native") {
-//        binaries.sharedLib {
-//            baseName = "native"
-//        }
-//    }
-//    macosArm64("native") {
-//        binaries {
-//            sharedLib {
-//                baseName = "native"
-//            }
-//        }
-//    }
 }
 
 configure<JavaPluginExtension> {

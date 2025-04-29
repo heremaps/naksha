@@ -20,16 +20,13 @@ package naksha.model.util;
 
 import java.util.List;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
-import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 
-@AvailableSince(NakshaVersion.v3_0_0)
 public class RequestHelper {
 
   private RequestHelper() {
@@ -42,7 +39,6 @@ public class RequestHelper {
    * @param featureId      id to fetch matching feature
    * @return ReadFeatures request that can be used against IStorage methods
    */
-  @AvailableSince(NakshaVersion.v3_0_0)
   public static @NotNull ReadFeatures readFeaturesByIdRequest(
       final @NotNull String mapId,
       final @NotNull String collectionName,
@@ -61,11 +57,10 @@ public class RequestHelper {
    * @param featureIds     list of ids to fetch matching features
    * @return ReadFeatures request that can be used against IStorage methods
    */
-  @AvailableSince(NakshaVersion.v3_0_0)
   public static @NotNull ReadFeatures readFeaturesByIdsRequest(
       final @NotNull String mapId,
       final @NotNull String collectionName,
-      final @NotNull List<@NotNull String> featureIds
+      final @NotNull List<String> featureIds
   ) {
     final ReadFeatures readFeatures = new ReadFeatures().addCollectionId(collectionName);
     readFeatures.setMapId(mapId);
@@ -82,7 +77,6 @@ public class RequestHelper {
    * @param <FEATURE>  any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  @AvailableSince(NakshaVersion.v3_0_0)
   public static <FEATURE extends NakshaFeature> @NotNull WriteRequest createFeatureRequest(
       final @NotNull String mapId,
       final @NotNull String collection,
@@ -219,7 +213,6 @@ public class RequestHelper {
    * @param id             feature object to be deleted
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  @AvailableSince(NakshaVersion.v3_0_0)
   public static @NotNull WriteRequest deleteFeatureByIdRequest(
       final @NotNull String mapId,
       final @NotNull String collectionId,
@@ -236,7 +229,6 @@ public class RequestHelper {
    * @param featureList list of feature objects to be created
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  @AvailableSince(NakshaVersion.v3_0_0)
   public static @NotNull WriteRequest createFeaturesRequest(
       final @NotNull String mapId,
       final @NotNull String collectionId,
@@ -254,7 +246,7 @@ public class RequestHelper {
     return createWriteCollectionsRequest(List.of(collection));
   }
 
-  public static @NotNull WriteRequest createWriteCollectionsRequest(final @NotNull List<@NotNull NakshaCollection> collections) {
+  public static @NotNull WriteRequest createWriteCollectionsRequest(final @NotNull List<NakshaCollection> collections) {
     final WriteRequest writeRequest = new WriteRequest();
     for (final NakshaCollection collection : collections) {
       writeRequest.add(new Write().createCollection(collection));

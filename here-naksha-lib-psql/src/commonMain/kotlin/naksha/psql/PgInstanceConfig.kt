@@ -29,7 +29,7 @@ class PgInstanceConfig : AnyObject() {
         private val READ_ONLY = NotNullProperty<PgInstanceConfig, Boolean>(Boolean::class) { _,_ -> false }
         private val CONNECTION_LIMIT = NotNullProperty<PgInstanceConfig, Int>(Int::class) { self,_ ->
             // Compatibility hack, see:
-            // https://github.com/heremaps/naksha/blob/v2/here-naksha-app-service/src/test/resources/unit_test_data/StorageApi/TC0001_createStorage/create_storage.json
+            // https://github.com/heremaps/naksha/blob/v2/here-naksha-app-service/src/jvmTest/resources/unit_test_data/StorageApi/TC0001_createStorage/create_storage.json
             val raw = self.getRaw("maxPoolSize")
             if (raw is Number) raw.toInt() else 1024
         }

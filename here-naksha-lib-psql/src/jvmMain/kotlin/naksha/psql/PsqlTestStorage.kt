@@ -35,12 +35,7 @@ class PsqlTestStorage : PsqlStorage() {
             }
         }
 
-        // If prefer and allowed to pull from HCR then "hcr.data.here.com/naksha/postgres:${architecture()}-latest"
-        // TODO: company docker hub image:
-        //internal const val POSTGRES_IMAGE_URI = "docker.io/heremaps/naksha-postgres:latest"
-        //internal val POSTGRES_IMAGE_URI = "hcr.data.here.com/naksha/postgres:${architecture()}-latest"
-        // https://hub.docker.com/r/phmai/naksha-postgres/tags
-        internal const val POSTGRES_IMAGE_URI = "phmai/naksha-postgres:v16.2-r4"
+        internal const val POSTGRES_IMAGE_URI = "ghcr.io/naksha-oss/naksha-postgres:v16.2-r4"
         internal val dockerContainerInfo = AtomicReference<PsqlTestDockerContainerInfo?>()
 
         /**

@@ -1,0 +1,109 @@
+//import org.gradle.api.publish.maven.MavenPublication
+//import org.gradle.kotlin.dsl.create
+//import org.gradle.kotlin.dsl.get
+//
+//plugins {
+//    id("java")
+//    id("maven-publish")
+//    id("com.vanniktech.maven.publish")
+//}
+//
+//val projectRepoURI = getRequiredPropertyFromRootProject("projectRepoURI")
+//val mavenUrl = getRequiredPropertyFromRootProject("mavenUrl")
+//val mavenUser = getRequiredPropertyFromRootProject("mavenUser")
+//val mavenPassword = getRequiredPropertyFromRootProject("mavenPassword")
+//
+//group = rootProject.group
+//version = rootProject.version as String
+//
+//publishing {
+//    publications {
+//        create<MavenPublication>("mavenX") {
+//            groupId = project.group.toString()
+//            artifactId = project.name
+//            version = project.version.toString()
+//            from(components["java"])
+//            pom {
+//                name = "Naksha"
+//                description = "Naksha geospatial service and libraries"
+//                url = "https://${projectRepoURI}"
+//                licenses {
+//                    license {
+//                        name = "The Apache License, Version 2.0"
+//                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+//                    }
+//                }
+//                scm {
+//                    connection = "scm:git:https://${projectRepoURI}.git"
+//                    developerConnection = "scm:git:ssh://git@${projectRepoURI}.git"
+//                    url = "https://${projectRepoURI}"
+//                }
+//                developers {
+//                    developer {
+//                        id = "xeus2001"
+//                        name = "Alexander Lowey-Weber"
+//                        email = "naksha@here.com"
+//                        url = "https://github.com/xeus2001"
+//                    }
+//                    developer {
+//                        id = "gunplar"
+//                        name = "Phuc Mai"
+//                        url = "https://github.com/gunplar"
+//                    }
+//                    developer {
+//                        id = "hirenkp2000"
+//                        name = "Hiren Patel"
+//                        url = "https://github.com/hirenkp2000"
+//                    }
+//                    developer {
+//                        id = "Amaneusz"
+//                        name = "Jakub Amanowicz "
+//                        url = "https://github.com/Amaneusz"
+//                    }
+//                }
+//            }
+//        }
+//
+//        println("--------- group: $group, version: $version, mavenUrl: $mavenUrl, mavenUser: $mavenUser, mavenPassword: $mavenPassword")
+//        artifacts {
+//            file("build/libs/${project.name}-${project.version}.jar")
+//            file("build/libs/${project.name}-${project.version}-javadoc.jar")
+//            file("build/libs/${project.name}-${project.version}-sources.jar")
+//        }
+//    }
+//}
+///*
+//mavenPublishing {
+//    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+//
+//    signAllPublications()
+//
+//    coordinates(group.toString(), "fibonacci", version.toString())
+//
+//    pom {
+//        name = "Fibonacci library"
+//        description = "A mathematics calculation library."
+//        inceptionYear = "2024"
+//        url = "https://github.com/kotlin-hands-on/fibonacci/"
+//        licenses {
+//            license {
+//                name = "The Apache License, Version 2.0"
+//                url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+//                distribution = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+//            }
+//        }
+//        developers {
+//            developer {
+//                id = "kotlin-hands-on"
+//                name = "Kotlin Developer Advocate"
+//                url = "https://github.com/kotlin-hands-on/"
+//            }
+//        }
+//        scm {
+//            url = "https://github.com/kotlin-hands-on/fibonacci/"
+//            connection = "scm:git:git://github.com/kotlin-hands-on/fibonacci.git"
+//            developerConnection = "scm:git:ssh://git@github.com/kotlin-hands-on/fibonacci.git"
+//        }
+//    }
+//}
+//*/

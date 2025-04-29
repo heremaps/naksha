@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+  <title>Naksha Web Documentation</title>
+  <meta charset="UTF-8"/>
+  <!-- Include https://www.jsdelivr.com/package/npm/highlight.js -->
+  <link rel="stylesheet" href="highlight.js_11.11.1.css">
+  <script type="module">
+    import highlightJs from './highlight.js_11.11.1_esm.js'
+    globalThis.hljs = highlightJs;
+  </script>
+  <script src="markdown-it.min.js"></script>
+  <script src="mermaid.min.js"></script>
+  <script src="remark.min.js"></script>
+  <style>
+    @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+    @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+    @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+    body {
+      font-family: 'Droid Serif';
+    }
+    h1, h2, h3, h4 {
+      font-family: 'Yanone Kaffeesatz';
+      font-weight: normal;
+    }
+    .remark-code, .remark-inline-code {
+      font-family: 'Ubuntu Mono';
+    }
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+    .content {
+      flex: 3;
+      padding: 2rem;
+    }
+    .toc {
+      flex: 1;
+      padding: 2rem;
+      background-color: #f9f9f9;
+      border-left: 1px solid #ddd;
+      max-width: 300px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    .toc ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    .toc li {
+      margin: 0.5rem 0;
+    }
+    .toc a {
+      text-decoration: none;
+      color: #3366cc;
+    }
+    .toc .level-2 {
+      margin-left: 1rem;
+    }
+    .toc .level-3 {
+      margin-left: 2rem;
+    }
+    .toc .level-4 {
+      margin-left: 3rem;
+    }
+    .toc .level-5 {
+      margin-left: 4rem;
+    }
+  </style>
+  <script>
+    mermaid.initialize({
+      startOnLoad: false,
+      cloneCssStyles: false
+    });
+
+    // We accept the query parameter ?page={path}
+    const INDEX_HTML = window.location.origin + window.location.pathname;
+    const ROOT_PATH = window.location.pathname.substring(0, window.location.pathname.indexOf('index.html'));
+    const INDEX_MD = window.location.origin + ROOT_PATH + "index.md";
+    const SLIDES_PATH = ROOT_PATH + 'slides/';
+    let md;
+    let slideshow;
+
+    function renderTOC(toc) {
+      return '<ul><a href="'+INDEX_HTML+'">&lt;&lt;&lt;&nbsp;Home&nbsp;&gt;&gt;&gt;</a></ul>'+'<ul>' + toc.map(item => {
+        return `<li class="level-${item.level}"><a href="#${item.id}">${item.title}</a></li>`;
+      }).join('') + '</ul>';
+    }
+
+    let toc;
+    function renderMarkdown(markdown, generateToc) {
+      document.getElementById("container").style.display = 'flex';
+      document.getElementById("source").style.display = 'none';
+      const tokens = md.parse(markdown, {});
+      let toc_html;
+      if (generateToc === true) {
+        toc = [];
+        tokens.forEach((token, idx) => {
+          if (token.type === 'heading_open') {
+            const contentToken = tokens[idx + 1];
+            const title = contentToken.content;
+            const slug = title.toLowerCase().replace(/\s+/g, '-');
+            token.attrs = token.attrs || [];
+            token.attrs.push(['id', slug]);
+            toc.push({id: slug, title: title, level: parseInt(token.tag.slice(1))});
+          }
+        });
+        toc_html = renderTOC(toc);
+      } else {
+        toc_html = "";
+      }
+      //let html = md.render(markdown);
+      let html = md.renderer.render(tokens, md.options, {});
+      // Render Markdown and TOC.
+      document.getElementById("content").innerHTML = html + "<br /><br /><br /><br /><br />";
+      document.getElementById("toc").innerHTML = toc_html;
+      // Render Mermaid diagrams embedded into document.
+      showMermaid();
+      hljs.highlightAll(); // hljs.highlightElement
+    }
+
+    function showMermaid() {
+      let diagrams = document.querySelectorAll(".mermaid, .language-mermaid");
+      diagrams.forEach((el) => {
+        if (el.tagName.toLowerCase() === "code" && el.parentElement.tagName.toLowerCase() === "pre") {
+          const div = document.createElement("div");
+          //el.classList.forEach(cls => div.classList.add(cls));
+          div.className = "mermaid";
+          div.textContent = el.textContent;
+          el.parentElement.replaceWith(div);
+        }
+      });
+      diagrams = document.querySelectorAll("div.mermaid");
+      let i;
+      for (i=0; i < diagrams.length; i++) {
+        if (diagrams[i].offsetWidth > 0) {
+          mermaid.init(undefined, diagrams[i]);
+        }
+      }
+    }
+
+    function replaceCodeBlocks(markdown, language) {
+      const regex = new RegExp("```" + language + "\\n([\\s\\S]*?)```", "g");
+      return markdown.replace(regex, (match, code) => {
+        const escaped = code.trim();
+        return `<div class="${language}">${escaped}</div>`;
+      });
+    }
+
+    function renderSlide(markdown) {
+      document.getElementById("container").style.display = 'none';
+      document.getElementById("source").style.display = 'block';
+      document.getElementById("source").textContent = replaceCodeBlocks(markdown, "mermaid");
+      slideshow = remark.create({
+        highlightStyle: 'monokai',
+        highlightLanguage: 'remark',
+        highlightLines: true
+      });
+      slideshow.on('afterShowSlide', showMermaid);
+      showMermaid();
+    }
+
+    function onLoad() {
+      md = window.markdownit();
+      let normalizeLink = md.normalizeLink;
+      md.normalizeLink = function (url) {
+        if (url.endsWith(".md")) {
+          return "javascript:renderUrl('" + url + "', false);";
+        }
+        return normalizeLink(url);
+      }
+      let validateLink = md.validateLink;
+      md.validateLink = function (url) {
+        if (url.startsWith("javascript:renderUrl('")) {
+          return true;
+        }
+        return validateLink(url);
+      }
+      renderUrl(window.location.href, true);
+    }
+
+    function loadAndRenderMarkdown(md_url) {
+      document.documentElement.classList.remove(...document.documentElement.classList);
+      document.body.classList.remove(...document.body.classList);
+      toc = null;
+      document.getElementById("container").style.display = 'none';
+      document.getElementById("source").style.display = 'none';
+      document.getElementById("content").innerHTML = '';
+      document.getElementById("toc").innerHTML = '';
+      document.getElementById("source").textContent = '';
+      document.querySelectorAll(
+              ".mermaidTooltip, .remark-notes-area, .remark-slides-area, .remark-preview-area, .remark-backdrop, .remark-pause, .remark-help"
+      ).forEach((el) => {
+        el.parentElement.removeChild(el);
+      });
+      console.log("loadAndRenderMarkdown("+md_url+")");
+      fetch(md_url)
+        .then(response => response.text())
+        .then(text => {
+          if (md_url.indexOf(SLIDES_PATH) >=0) {
+            renderSlide(text);
+          } else {
+            renderMarkdown(text, md_url !== INDEX_MD);
+          }
+        });
+    }
+
+    function ensureAbsoluteUrl(raw_url) {
+      if (!raw_url.startsWith('http')) {
+        if (!raw_url.startsWith('/'))
+          return window.location.origin + '/' + raw_url;
+        return window.location.origin + raw_url;
+      }
+      return raw_url;
+    }
+
+    let currentPage;
+    function renderUrl(raw_url, onLoad) {
+      raw_url = ensureAbsoluteUrl(raw_url);
+      console.log("renderUrl("+raw_url+")");
+      let url = new URL(raw_url);
+
+      // If we receive a query parameter `?page={md_url}`, parse it and use it.
+      let search = new URLSearchParams(url.search);
+      if (search.has("page")) {
+        raw_url = ensureAbsoluteUrl(search.get("page"));
+        url = new URL(raw_url);
+      }
+
+      // If the URL is a markdown file.
+      if (url.pathname.indexOf(ROOT_PATH) >= 0 && url.pathname.endsWith('.md')) {
+        // We need to update the history manually.
+        let md_url = url.origin + url.pathname;
+        if (onLoad !== true && currentPage !== md_url) {
+          let page_url;
+          if (md_url === INDEX_MD) {
+            page_url = INDEX_HTML;
+          } else {
+            page_url = INDEX_HTML + "?page=" + encodeURIComponent(md_url);
+          }
+          console.log("Push history state for url: " + md_url + "\n  as: " + page_url);
+          window.history.pushState({md_url: md_url}, '', page_url);
+        }
+        console.log("Render markdown for url: " + md_url);
+        currentPage = md_url;
+        loadAndRenderMarkdown(md_url);
+        return;
+      }
+
+      // Render index markdown, do not add into history.
+      loadAndRenderMarkdown(INDEX_MD);
+    }
+
+    window.addEventListener('popstate', (event) => {
+      const hash = location.hash.substring(1);
+      if (Array.isArray(toc)) {
+        for (let i=0; i < toc.length; i++) {
+          let el = toc[i];
+          if (el.id === hash) {
+            console.log('Ignore hash navigation to '+hash);
+            return;
+          }
+        }
+      }
+      if (event.state != null) {
+        renderUrl(event.state.md_url, false);
+      } else {
+        renderUrl(INDEX_MD, false);
+      }
+    });
+  </script>
+</head>
+<body onload="onLoad()">
+<div id="container" class="container" style="display:none; padding:5px; font-size:1.2em;">
+  <div id="content" class="content"></div>
+  <div id="toc" class="toc"></div>
+</div>
+<textarea id="source" style="display:none"></textarea>
+</body>
+</html>

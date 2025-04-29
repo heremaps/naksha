@@ -1,15 +1,38 @@
 plugins {
-    id("naksha.java")
-    id("naksha.publish")
+    alias(libs.plugins.kotlin.multiplatform)
 }
-description = "Naksha Extension Manager Library"
-dependencies {
-    api(project(":here-naksha-lib-core"))
 
-    implementation(Lib.aws_s3)
-    implementation(Lib.jcl_slf4j)
-    implementation(Lib.cytodynamics)
-    testImplementation(Lib.mockito)
-    testImplementation(project(":here-naksha-lib-core"))
+description = gatherDescription()
+
+kotlin {
+    sourceSets {
+        jvmMain {
+            jvmToolchain(23)
+            dependencies {
+                api(project(":here-naksha-lib-core"))
+
+                implementation(libs.aws.s3)
+                implementation(libs.jcl.slf4j)
+                implementation(libs.cytodynamics)
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation(libs.bundles.testing)
+                implementation(project(":here-naksha-lib-core"))
+            }
+        }
+    }
+
+    jvm {}
+}
+
+tasks {
+    getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
+    getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
+    getByName<Test>("jvmTest") {
+        useJUnitPlatform()
+        maxHeapSize = "6g"
+    }
 }
 setOverallCoverage(0.0) // only increasing allowed!
