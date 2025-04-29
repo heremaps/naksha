@@ -86,8 +86,16 @@
       return !rootPath.endsWith("/") ? rootPath + "/" : rootPath;
     }
 
+    function getDocsPath() {
+      let rootPath = getRootPath();
+      let i = rootPath.indexOf("/docs/");
+      if (i >= 0) return rootPath;
+      return rootPath.replace("/naksha/", "/docs/");
+    }
+
     // We accept the query parameter ?page={path}
     const INDEX_HTML = window.location.origin + window.location.pathname;
+    const DOCS_PATH = getDocsPath();
     const ROOT_PATH = getRootPath();
     const INDEX_MD = window.location.origin + ROOT_PATH + "index.md";
     const SLIDES_PATH = ROOT_PATH + 'slides/';
@@ -218,13 +226,18 @@
         });
     }
 
-    function ensureAbsoluteUrl(raw_url) {
-      if (!raw_url.startsWith('http')) {
-        if (!raw_url.startsWith('/'))
-          return window.location.origin + '/' + raw_url;
-        return window.location.origin + raw_url;
+    function ensureAbsoluteUrl(url) {
+      if (!url.startsWith('http')) {
+        if (!url.startsWith('/')) {
+          url = window.location.origin + '/' + url;
+        } else {
+          url = window.location.origin + url;
+        }
       }
-      return raw_url;
+      if (DOCS_PATH !== ROOT_PATH && url.indexOf(DOCS_PATH)) {
+        url = url.replace(DOCS_PATH, ROOT_PATH)
+      }
+      return url;
     }
 
     let currentPage;
