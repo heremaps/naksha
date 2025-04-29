@@ -76,9 +76,19 @@
       cloneCssStyles: false
     });
 
+    function getRootPath() {
+      let i = window.location.pathname.indexOf('index.html');
+      if (i < 0) {
+        // Should be "/docs/" or "/naksha/"
+        return window.location.pathname;
+      }
+      let rootPath = window.location.pathname.substring(0, i);
+      return !rootPath.endsWith("/") ? rootPath + "/" : rootPath;
+    }
+
     // We accept the query parameter ?page={path}
     const INDEX_HTML = window.location.origin + window.location.pathname;
-    const ROOT_PATH = window.location.pathname.substring(0, window.location.pathname.indexOf('index.html'));
+    const ROOT_PATH = getRootPath();
     const INDEX_MD = window.location.origin + ROOT_PATH + "index.md";
     const SLIDES_PATH = ROOT_PATH + 'slides/';
     let md;
