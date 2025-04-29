@@ -67,10 +67,13 @@ enum class PublishModule {
     // do NOT publish the module to artifactory
     NO,
     // publish the module to artifactory
-    YES
+    YES,
+    // configure the module for publication, but do not publish
+    CONFIG_ONLY
 }
 
 val modulesToTest = mapOf(
+    Pair("naksha", Pair(CleanAndTest.OFF, PublishModule.CONFIG_ONLY)),
     Pair("here-naksha-app-service", Pair(CleanAndTest.OFF, PublishModule.NO)),
     Pair("here-naksha-common-http", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     Pair("here-naksha-handler-activitylog", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
@@ -93,7 +96,7 @@ val modulesToTest = mapOf(
 )
 
 fun Project.configureVanniktechMavenPublish() {
-    println("Configure publishing for: $group:$name:$version")
+    println("\tConfigure publishing")
 //    val keyId = System.getenv("ORG_GRADLE_PROJECT_signingInMemoryKeyId")
 //    val key = System.getenv("ORG_GRADLE_PROJECT_signingInMemoryKey")
 //    val keyPwd = System.getenv("ORG_GRADLE_PROJECT_signingInMemoryKeyPassword")
@@ -175,6 +178,10 @@ fun Project.configureVanniktechMavenPublish() {
     }
 }
 
+// To be sure that we get that early on for publication (somehow this is collected early)
+group = "io.github.naksha-oss"
+version = getRequiredPropertyFromRootProject("version")
+
 allprojects {
     group = "io.github.naksha-oss"
     version = getRequiredPropertyFromRootProject("version")
@@ -184,10 +191,8 @@ allprojects {
         mavenCentral()
         mavenLocal()
     }
-}
 
-subprojects {
-    //println("configure $group -- $name -- $version")
+    println("Configure $name ---------> $group:$name:$version")
     val info = modulesToTest[name]
     if (info != null && info.second == PublishModule.YES) {
         apply(plugin = "com.vanniktech.maven.publish")
@@ -220,6 +225,7 @@ fun Task.publishToLocal() {
                 dependsOn(":${it.key}:publishJvmPublicationToMavenLocal")
                 dependsOn(":${it.key}:publishKotlinMultiplatformPublicationToMavenLocal")
             }
+            PublishModule.CONFIG_ONLY -> {}
             else -> {}
         }
     }
@@ -239,6 +245,7 @@ fun Task.publishToHere() {
                 dependsOn(":${it.key}:publishJvmPublicationToHereMavenRepository")
                 dependsOn(":${it.key}:publishKotlinMultiplatformPublicationToHereMavenRepository")
             }
+            PublishModule.CONFIG_ONLY -> {}
             else -> {}
         }
     }
@@ -272,15 +279,10 @@ fun Task.publishToCentral() {
     modulesToTest.forEach {
         when (it.value.second) {
             PublishModule.YES -> {
-                println("publish to maven central: ${it.key}")
-                //dependsOn("${it.key}:clean")
-                //dependsOn(":${it.key}:publishJvmPublicationToMavenPortalRepository")
-                //dependsOn(":${it.key}:publishKotlinMultiplatformPublicationToMavenPortalRepository")
-
-                //dependsOn(":${it.key}:publishJvmPublicationToMavenCentralRepository")
-                //dependsOn(":${it.key}:publishKotlinMultiplatformPublicationToMavenCentralRepository")
+                println("Publish to Maven-Central: ${it.key}")
                 dependsOn(":${it.key}:publishAndReleaseToMavenCentral")
             }
+            PublishModule.CONFIG_ONLY -> {}
             else -> {}
         }
     }
