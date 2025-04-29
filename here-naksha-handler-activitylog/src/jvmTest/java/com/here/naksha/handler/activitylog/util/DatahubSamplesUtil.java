@@ -17,7 +17,7 @@ public class DatahubSamplesUtil {
 
   public static final String SAMPLE_SPACE_ID = "SDNujm7h";
 
-  private static final String SAMPLES_DIR = "src/test/resources/dh_samples/";
+  private static final String SAMPLES_DIR = "src/jvmTest/resources/dh_samples/";
   private static final String SAMPLES_FILE = "PropSearchForFeatureId.json";
 
   public static DatahubSample loadDatahubSample() {

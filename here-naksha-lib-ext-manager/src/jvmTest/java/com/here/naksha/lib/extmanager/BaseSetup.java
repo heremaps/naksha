@@ -20,7 +20,7 @@ public class BaseSetup {
 
   public ExtensionConfig getExtensionConfig() {
     List<String> whitelistUrls= Arrays.asList(( "java.*,javax.*,com.here.naksha.*").split(","));
-    Path file = new File("src/test/resources/data/extension.txt").toPath();
+    Path file = new File("src/jvmTest/resources/data/extension.txt").toPath();
     List<Extension> list;
     try {
       String data = Files.readAllLines(file).stream().collect(Collectors.joining());

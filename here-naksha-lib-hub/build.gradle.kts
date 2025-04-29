@@ -26,7 +26,7 @@ kotlin {
         jvmTest {
             dependencies {
                 implementation(libs.json.assert)
-                implementation(libs.mockito)
+                implementation(libs.bundles.testing)
             }
         }
     }

@@ -20,7 +20,7 @@ import org.skyscreamer.jsonassert.JSONCompareMode;
 
 class ActivityLogEnhancerTest {
 
-  private static final String SAMPLES_DIR = "src/test/resources/enhancer_samples/";
+  private static final String SAMPLES_DIR = "src/jvmTest/resources/enhancer_samples/";
   private static final String NEW_FEATURE_JSON = "new_feature.json";
   private static final String OLD_FEATURE_JSON = "old_feature.json";
   private static final String EXPECTED_FEATURE_JSON = "expected_enhanced_feature.json";

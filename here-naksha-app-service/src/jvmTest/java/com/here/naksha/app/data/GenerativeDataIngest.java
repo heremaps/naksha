@@ -120,7 +120,7 @@ class GenerativeDataIngest extends AbstractDataIngest {
   static class TopologyFeatureGenerator {
 
     private static final String ID_PREFIX = "generated_feature_";
-    private static final String SAMPLES_DIR = "src/test/resources/ingest_data/";
+    private static final String SAMPLES_DIR = "src/jvmTest/resources/ingest_data/";
     private static final String BASE_JSON = "topology/sample_topology_feature.json";
 
     private static final AtomicLong COUNTER = new AtomicLong(0);

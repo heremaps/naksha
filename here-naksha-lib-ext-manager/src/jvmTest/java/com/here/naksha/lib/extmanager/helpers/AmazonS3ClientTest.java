@@ -25,14 +25,14 @@ public class AmazonS3ClientTest extends BaseSetup {
     S3Uri s3Uri= mock(S3Uri.class);
     doReturn(s3Uri).when(s3Helper).getS3Uri(anyString());
 //    doReturn(Optional.of("_tmp")).when(s3Uri).bucket();
-    doReturn(new FileInputStream("src/test/resources/data/extension.txt")).when(s3Helper).getS3Object(any());
+    doReturn(new FileInputStream("src/jvmTest/resources/data/extension.txt")).when(s3Helper).getS3Object(any());
     File file=s3Helper.getFile("s3://naksa-test/test.jar");
     Assertions.assertNotNull(file);
   }
 
   @Test
   public void testGetFileContent() throws IOException {
-    final String fileName="src/test/resources/data/extension.txt";
+    final String fileName="src/jvmTest/resources/data/extension.txt";
     String data= Files.readAllLines(Paths.get(fileName)).stream().collect(Collectors.joining());
     AmazonS3Helper s3Helper= Mockito.spy(new AmazonS3Helper());
 

@@ -11,7 +11,7 @@
 //spotless {
 //    java {
 //        // excluding tests where Builder pattern gets broken by palantir
-//        targetExclude("src/test/**")
+//        targetExclude("src/jvmTest/**")
 //        encoding("UTF-8")
 //        // TODO - Hardcoding it to 2023 for now to avoid all the files conflicting with open PRs
 //        // val YEAR = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy"))

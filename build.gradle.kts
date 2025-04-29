@@ -72,24 +72,24 @@ enum class PublishModule {
 
 val modulesToTest = mapOf(
     Pair("here-naksha-app-service", Pair(CleanAndTest.OFF, PublishModule.NO)),
-    Pair("here-naksha-common-http", Pair(CleanAndTest.OFF, PublishModule.NO)),
-    Pair("here-naksha-handler-activitylog", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    Pair("here-naksha-common-http", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
+    Pair("here-naksha-handler-activitylog", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     //Pair("here-naksha-handler-http", Pair(CleanAndTest.OFF, PublishModule.NO)),
     Pair("here-naksha-lib-auth", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-base", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-core", Pair(CleanAndTest.OFF, PublishModule.NO)),
     Pair("here-naksha-lib-diff", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
-    Pair("here-naksha-lib-ext-manager", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    Pair("here-naksha-lib-ext-manager", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     //Pair("here-naksha-lib-extension", Pair(CleanAndTest.OFF, PublishModule.NO)),
     Pair("here-naksha-lib-geo", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
-    Pair("here-naksha-lib-handlers", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    Pair("here-naksha-lib-handlers", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     //Pair("here-naksha-lib-heapcache", Pair(CleanAndTest.OFF, PublishModule.NO)),
-    Pair("here-naksha-lib-hub", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    Pair("here-naksha-lib-hub", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     Pair("here-naksha-lib-jbon", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-model", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-psql", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-view", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
-    Pair("here-naksha-storage-http", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    Pair("here-naksha-storage-http", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
 )
 
 fun Project.configureVanniktechMavenPublish() {
@@ -200,6 +200,7 @@ fun Task.configureCleanAndTestTasks() {
     modulesToTest.forEach {
         when (it.value.first) {
             CleanAndTest.KOTLIN -> {
+                println("Run tests for ${it.key}")
                 dependsOn(":${it.key}:cleanJvmTest")
                 dependsOn(":${it.key}:jvmTest")
             }

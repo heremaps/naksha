@@ -57,12 +57,12 @@ Naksha relies strongly on Postgres - you need running instance if you want to ru
 Supported Postgres version is 14+ (the newer the better).
 Apart from bare Postgres, Naksha needs [PostGIS]() extension which is mandatory. Apart from that, optional, but highly recommended extensions that are supported include: `pg_hint_plan` and `pg_stat_statements`.
 
-You can use standalone instance installed directly on your host machine but there's also a docker image that hosts Postgres 16 with all the extensions mentioned above already installed. You can find its definition in [this Dockerfile](here-naksha-app-service/src/test/psql_container/Dockerfile).
+You can use standalone instance installed directly on your host machine but there's also a docker image that hosts Postgres 16 with all the extensions mentioned above already installed. You can find its definition in [this Dockerfile](here-naksha-app-service/src/jvmTest/psql_container/Dockerfile).
 
 To use the containerized Postgres with your locally runnning Naksha:
-1) Navigate to [Dockerfile directory](here-naksha-app-service/src/test/psql_container):
+1) Navigate to [Dockerfile directory](here-naksha-app-service/src/jvmTest/psql_container):
    ```
-   cd here-naksha-app-service/src/test/psql_container
+   cd here-naksha-app-service/src/jvmTest/psql_container
    ```
 2) Build the image:
    ```

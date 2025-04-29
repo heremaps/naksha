@@ -18,7 +18,7 @@ kotlin {
         }
         jvmTest {
             dependencies {
-                implementation(libs.mockito)
+                implementation(libs.bundles.testing)
                 implementation(project(":here-naksha-lib-core"))
             }
         }

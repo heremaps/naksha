@@ -49,7 +49,7 @@ import org.junit.jupiter.api.Assertions;
 
 public class TestUtil {
 
-  private static final String TEST_DATA_FOLDER = "src/test/resources/unit_test_data/";
+  private static final String TEST_DATA_FOLDER = "src/jvmTest/resources/unit_test_data/";
   public static final String HDR_STREAM_ID = "Stream-Id";
 
   private TestUtil() {

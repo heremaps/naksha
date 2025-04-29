@@ -16,7 +16,7 @@ curations:
       concluded_license: "NONE"
 excludes:
   #paths:
-  #- pattern: "**/src/test/**"
+  #- pattern: "**/src/jvmTest/**"
   #  reason: "TEST_TOOL_OF"
   #  comment: "This directory only contains tests to verify correct functioning of XYZ Hub. Not included in released artifacts."
   scopes:

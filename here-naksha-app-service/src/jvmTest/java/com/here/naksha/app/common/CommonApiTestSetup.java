@@ -41,7 +41,7 @@ public class CommonApiTestSetup {
    * `create_space.json`)
    *
    * @param nakshaClient Naksha http client used for creating resource via REST API
-   * @param setupDir     subdirectory of 'src/test/resources/unit_test_data/' that contains resource definition in json format
+   * @param setupDir     subdirectory of 'src/jvmTest/resources/unit_test_data/' that contains resource definition in json format
    */
   public static void setupSpaceAndRelatedResources(NakshaTestWebClient nakshaClient, String setupDir) {
     try {

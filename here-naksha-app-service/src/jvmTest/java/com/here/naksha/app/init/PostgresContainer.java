@@ -71,7 +71,7 @@ public class PostgresContainer {
 
   private static class Config {
 
-    private static final String IMAGE_CONFIG_PATH = "src/test/psql_container/naksha_psql_image.conf";
+    private static final String IMAGE_CONFIG_PATH = "src/jvmTest/psql_container/naksha_psql_image.conf";
     private static final String CONTAINER_REPOSITORY_KEY = "CONTAINER_REPOSITORY";
     private static final String IMAGE_NAMESPACE_KEY = "IMAGE_NAMESPACE";
     private static final String IMAGE_NAME_KEY = "IMAGE_NAME";

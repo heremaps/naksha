@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractDataIngest {
   private static final Logger logger = LoggerFactory.getLogger(AbstractDataIngest.class);
 
-  protected static final String DATA_ROOT_FOLDER = "src/test/resources/ingest_data/";
+  protected static final String DATA_ROOT_FOLDER = "src/jvmTest/resources/ingest_data/";
   protected static final String DEF_BATCH_SIZE = "100";
 
   protected String nhUrl = "http://localhost:8080/";
