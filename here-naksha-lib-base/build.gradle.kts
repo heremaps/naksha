@@ -16,7 +16,7 @@ kotlin {
                 implementation(kotlin("stdlib"))
                 implementation(kotlin("reflect"))
                 // https://github.com/Kotlin/kotlinx-datetime
-                api("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
+                api(libs.kotlinx.datetime)
             }
         }
         commonTest {
@@ -32,6 +32,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(kotlin("reflect"))
+                api(libs.kotlinx.datetime)
                 api(libs.lz4.java)
                 implementation(libs.jackson.kotlin)
                 // https://mvnrepository.com/artifact/org.slf4j
@@ -44,6 +45,7 @@ kotlin {
             dependencies {
                 api(kotlin("stdlib-js"))
                 api(kotlin("reflect"))
+                api(libs.kotlinx.datetime)
             }
         }
     }

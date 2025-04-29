@@ -293,7 +293,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                         upgradeAdminMap(conn, config, id, number, psql_version, admin_schema_oid, installed_version)
                     } else {
                         if (installed_version > psql_version) {
-                            throw illegalState("The storage '$id' is in a newer version ($installed_version) that this library ($psql_version), access denied (otherwise we risk damaging the storage)")
+                            throw illegalState("The storage '$id' is in a newer version ($installed_version) than this library ($psql_version), access denied (otherwise we risk damaging the storage)")
                         }
                         if (installed_version < minAdminVersion) {
                             if (!doUpgrade) {
