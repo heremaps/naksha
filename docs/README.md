@@ -59,3 +59,5 @@ class Foo {
 ```
 
 ### `flowchart` _(`graph`)_
+
+- https://www.jetbrains.com/help/kotlin-multiplatform-dev/multiplatform-samples.html

@@ -89,7 +89,7 @@ class NakshaVersion(
          * The current version as string to constant usage cases.
          * @since 3.0
          */
-        const val CURRENT = "3.0.0-beta.21"
+        const val CURRENT = "3.0.0-beta.22"
         // WARNING: Do not update this property manually, it is automatically modified when building!
         //          Edit version only in `gradle.properties` file, which is used as well to create artifacts!
 
@@ -146,6 +146,7 @@ class NakshaVersion(
          * @since 3.0
          */
         none(FINAL_PRE_RELEASE_ENC),
+
         /**
          * Experimental early pre-release, API is subject to change.
          * @since 3.0
@@ -156,7 +157,13 @@ class NakshaVersion(
          * Experimental more stable pre-release, API is subject to change.
          * @since 3.0
          */
-        beta(1);
+        beta(1),
+
+        /**
+         * Release candidate, API should no longer be changed, but it is not guaranteed through.
+         * @since 3.0
+         */
+        rc(2);
 
         companion object {
             fun findByValue(enc: Int): PreReleaseTag {
