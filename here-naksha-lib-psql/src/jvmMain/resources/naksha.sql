@@ -253,7 +253,7 @@ CREATE OR REPLACE FUNCTION naksha_partition_number(id text) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT ((CASE WHEN id='0' OR (id~'^[1-9][0-9]{1,18}$' AND id::numeric <= 9223372036854775807) THEN id::int8 ELSE int4recv(digest(id,'md5'), 12) END) & 65535)
+  SELECT ((CASE WHEN id='0' OR (id~'^[1-9][0-9]{0,18}$' AND id::numeric <= 9223372036854775807) THEN id::int8 ELSE int4recv(digest(id,'md5'), 12) END) & 65535)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_partition_index(id text, parts int4) RETURNS int4
