@@ -89,7 +89,7 @@ class NakshaVersion(
          * The current version as string to constant usage cases.
          * @since 3.0
          */
-        const val CURRENT = "3.0.0-beta.21"
+        const val CURRENT = "3.0.0-beta.22"
         // WARNING: Do not update this property manually, it is automatically modified when building!
         //          Edit version only in `gradle.properties` file, which is used as well to create artifacts!
 
