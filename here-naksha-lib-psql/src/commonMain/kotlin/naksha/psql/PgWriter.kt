@@ -156,7 +156,7 @@ open class PgWriter internal constructor(
                 }
                 WriteOp.UPDATE -> {
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                    val tuple = tx.updated(write.map.head, write.collection.head, f, write.attachment, write.original.atomic)
+                    val tuple = tx.updated(write.map.head, write.collection.head, f, write.attachment)
                     write.tuple = tuple
                     val tupleNumber = tuple.tupleNumber
                     write.tupleNumber = tupleNumber

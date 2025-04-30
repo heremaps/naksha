@@ -19,7 +19,6 @@
 package naksha.model.util;
 
 import java.util.List;
-import naksha.model.NakshaContext;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
@@ -61,7 +60,7 @@ public class RequestHelper {
   public static @NotNull ReadFeatures readFeaturesByIdsRequest(
       final @Nullable String mapId,
       final @Nullable String collectionName,
-      final @NotNull List<@NotNull String> featureIds
+      final @NotNull List<String> featureIds
   ) {
     final ReadFeatures readFeatures = new ReadFeatures().addCollectionId(collectionName);
     readFeatures.setMapId(mapId);
@@ -105,7 +104,7 @@ public class RequestHelper {
   /**
    * Helper method to create WriteFeatures request for updating given feature. The update will not be atomic.
    *
-   * @param mapId the map where collection is defined
+   * @param mapId        the map where collection is defined
    * @param collectionId the storage collection
    * @param feature      feature object to be updated
    * @param <FEATURE>    any object extending XyzFeature
@@ -140,10 +139,10 @@ public class RequestHelper {
   /**
    * Helper method to create WriteFeatures request for updating multiple features.
    *
-   * @param mapId Id of the map where the collection is defined
+   * @param mapId        Id of the map where the collection is defined
    * @param collectionId name of the storage collection
-   * @param feature   feature object be upsert
-   * @param <FEATURE>  any object extending XyzFeature
+   * @param feature      feature object be upsert
+   * @param <FEATURE>    any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull <FEATURE extends NakshaFeature> WriteRequest upsertFeaturesRequest(
@@ -159,8 +158,8 @@ public class RequestHelper {
    * Helper method to create WriteFeatures request for upserting multiple features.
    *
    * @param collectionId name of the storage collection
-   * @param features   feature object array to be updated
-   * @param <FEATURE>  any object extending XyzFeature
+   * @param features     feature object array to be updated
+   * @param <FEATURE>    any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull <FEATURE extends NakshaFeature> WriteRequest upsertFeaturesRequest(
@@ -211,7 +210,7 @@ public class RequestHelper {
    * Helper method to create WriteFeatures request for deleting given feature.
    *
    * @param collectionId the storage collection
-   * @param id             feature object to be deleted
+   * @param id           feature object to be deleted
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull WriteRequest deleteFeatureByIdRequest(
@@ -226,8 +225,8 @@ public class RequestHelper {
   /**
    * Helper method to create WriteFeatures request with given list of features.
    *
-   * @param collectionId  the storage collection
-   * @param featureList list of feature objects to be created
+   * @param collectionId the storage collection
+   * @param featureList  list of feature objects to be created
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull WriteRequest createFeaturesRequest(
@@ -247,7 +246,7 @@ public class RequestHelper {
     return createWriteCollectionsRequest(List.of(collection));
   }
 
-  public static @NotNull WriteRequest createWriteCollectionsRequest(final @NotNull List<@NotNull NakshaCollection> collections) {
+  public static @NotNull WriteRequest createWriteCollectionsRequest(final @NotNull List<NakshaCollection> collections) {
     final WriteRequest writeRequest = new WriteRequest();
     for (final NakshaCollection collection : collections) {
       writeRequest.add(new Write().createCollection(collection));
