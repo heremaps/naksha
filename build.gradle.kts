@@ -72,7 +72,7 @@ enum class PublishModule {
     CONFIG_ONLY
 }
 
-val modulesToTest = mapOf(
+val allModules = mapOf(
     Pair("naksha", Pair(CleanAndTest.OFF, PublishModule.CONFIG_ONLY)),
     Pair("here-naksha-app-service", Pair(CleanAndTest.OFF, PublishModule.NO)),
     Pair("here-naksha-common-http", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
@@ -193,7 +193,7 @@ allprojects {
     }
 
     println("Configure $name ---------> $group:$name:$version")
-    val info = modulesToTest[name]
+    val info = allModules[name]
     if (info != null && info.second == PublishModule.YES) {
         apply(plugin = "com.vanniktech.maven.publish")
         configureVanniktechMavenPublish()
@@ -202,7 +202,7 @@ allprojects {
 
 // Helper, run as `gradle cleanAndTestAll`
 fun Task.configureCleanAndTestTasks() {
-    modulesToTest.forEach {
+    allModules.forEach {
         when (it.value.first) {
             CleanAndTest.KOTLIN -> {
                 println("Run tests for ${it.key}")
@@ -217,7 +217,7 @@ tasks.register("cleanAndTestAll") { configureCleanAndTestTasks() }
 
 // Helper, run as `gradle publishToLocal`
 fun Task.publishToLocal() {
-    modulesToTest.forEach {
+    allModules.forEach {
         when (it.value.second) {
             PublishModule.YES -> {
                 //val project = project(":${it.key}")
@@ -238,7 +238,7 @@ fun Task.publishToHere() {
         throw IllegalArgumentException(
             "Missing 'hereUrl', 'hereUser', and 'herePassword', declare in environment-variable or ~/.gradle/gradle.properties"
         )
-    modulesToTest.forEach {
+    allModules.forEach {
         when (it.value.second) {
             PublishModule.YES -> {
                 dependsOn(":${it.key}:clean")
@@ -276,11 +276,12 @@ fun Task.publishToCentral() {
         println("\tORG_GRADLE_PROJECT_mavenCentralPassword")
         throw IllegalArgumentException("Missing central credentials")
     }
-    modulesToTest.forEach {
+    allModules.forEach {
         when (it.value.second) {
             PublishModule.YES -> {
                 println("Publish to Maven-Central: ${it.key}")
-                dependsOn(":${it.key}:publishAndReleaseToMavenCentral")
+                dependsOn(":${it.key}:publishToMavenCentral")
+                //dependsOn(":${it.key}:publishAndReleaseToMavenCentral")
             }
             PublishModule.CONFIG_ONLY -> {}
             else -> {}
