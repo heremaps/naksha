@@ -7,6 +7,30 @@
 - Plugins
 
 ---
+## Why v3
+- `v3` was started due to internal _(Storage-API)_ requirements
+  - Postgres does not support compression for JSON data
+  - Size matters, data should be as small as possible
+  - Multi-Flow support, because in AWS a single-flow is limited to [5 Gbit](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-network-bandwidth.html)
+  - Geometry is stored as [TWKB](https://github.com/TWKB/Specification/blob/master/twkb.md)
+  - Feature is stored in [JBON](/docs/?page=http%3A%2F%2Flocalhost%3A8000%2Fdocs%2Flatest%2FJBON.md) binary encoding
+  - Support for binary attachments added _(not exposed via REST)_
+  - Make code available cross-platform, therefore _Kotlin_
+- Capabilities coming soon with `v3`:
+  - Disable user-tracking _(was always on in `v2`)_
+- Future capabilities:
+  - `lib-sqlite`: SAL implementation based upon [sqlite](https://sqlite.org/index.html)
+- Current deployments:
+  - [Maven Central](https://central.sonatype.com/search?q=naksha-oss)
+  - [GitHub Container Registry](https://github.com/naksha-oss?tab=packages)
+- Future deployments:
+  - [NPM](https://www.npmjs.com/)
+  - `Android`
+  - `Native`
+  - `Python` using [GraalVM Python](https://www.graalvm.org/python/)
+  - [AUR](https://aur.archlinux.org/), [DEB](https://wiki.debian.org/deb), and [RPM](https://rpm-guide.readthedocs.io/en/latest/rpm-guide.html) packages for standard Linux distributions
+
+---
 ## What we talk about
 - Concepts
   - **_Storage Abstraction Layer_**
