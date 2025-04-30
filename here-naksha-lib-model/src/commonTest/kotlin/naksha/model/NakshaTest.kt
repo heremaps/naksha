@@ -5,10 +5,7 @@ import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.PlatformUtil.PlatformUtilCompanion.randomString
 import naksha.model.Naksha.NakshaCompanion.INT64_SIGN_BIT
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class NakshaTest {
 
@@ -30,6 +27,29 @@ class NakshaTest {
         // expect
         assertTrue{ Naksha.isValidId("c1232_name") }
         assertFalse{ Naksha.isValidId("11232_name") }
+    }
+
+    @Test
+    fun shouldConvertNumericIdsToFeatureNumber() {
+        // expect
+        assertEquals(Int64(0L), Naksha.featureNumber("0"))
+        assertEquals(Int64(1L), Naksha.featureNumber("1"))
+        assertEquals(Int64(5000L), Naksha.featureNumber("5000"))
+        assertEquals(Int64(9223372036854775807L), Naksha.featureNumber("9223372036854775807"))
+    }
+
+    @Test
+    fun shouldNotConvertNegativeNumericIdsToFeatureNumber() {
+        // expect
+        assertNotEquals(Int64(-1L), Naksha.featureNumber("-1"))
+        assertNotEquals(Int64(-100L), Naksha.featureNumber("-100"))
+    }
+
+    @Test
+    fun shouldNotConvertNumericIdsWithLeadingZeroToFeatureNumber() {
+        // expect
+        assertNotEquals(Int64(0L), Naksha.featureNumber("00"))
+        assertNotEquals(Int64(1L), Naksha.featureNumber("01"))
     }
 
     @Test

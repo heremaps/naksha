@@ -238,13 +238,13 @@ class Naksha private constructor() {
          * A regular expression to test if a string contains potentially a 63-bit unsigned integer (`0 .. 9,223,372,036,854,775,807`).
          * @since 3.0
          */
-        private val is63BitUnsigned = Regex("^[1-9][0-9]{1,18}$")
+        private val is63BitUnsigned = Regex("^[1-9][0-9]{0,18}$")
 
         /**
          * A regular expression to test if a string contains potentially a 31-bit unsigned integer (`0 .. 2,147,483,647`).
          * @since 3.0
          */
-        private val is31BitUnsigned = Regex("^[1-9][0-9]{1,9}\$")
+        private val is31BitUnsigned = Regex("^[1-9][0-9]{0,9}\$")
 
         /**
          * A method to calculate a valid storage-number from the storage-id.
