@@ -11,6 +11,11 @@ import kotlin.test.*
 
 class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c", TEST_MAP_ID)) {
 
+    @AfterTest
+    fun cleanUp() {
+        dropCollection()
+    }
+
     @Test
     fun shouldPerformSimpleUpdateAndUpsert() {
         // CREATE FEATURE
