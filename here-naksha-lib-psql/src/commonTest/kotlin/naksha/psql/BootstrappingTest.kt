@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.psql.base.PgTestBase
 import kotlin.test.Test
 
 /**

@@ -6,10 +6,9 @@ import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaTx
 import naksha.model.request.*
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
-import naksha.psql.base.PgTestBase
 import kotlin.test.*
 
-class TransactionsTest : PgTestBase(NakshaCollection("transaction_test", TEST_MAP_ID)) {
+class TransactionsTest : PgTestBase() {
 
     @Test
     fun readTransactionInfo() {
@@ -49,7 +48,7 @@ class TransactionsTest : PgTestBase(NakshaCollection("transaction_test", TEST_MA
         val feature2 = NakshaFeature("f3")
         val writeRequest2 = WriteRequest().apply { add(Write().createFeature(collection, feature2)) }
 
-        val writeSession = env.storage.newWriteSession(null)
+        val writeSession = newWriteSession()
 
         // when
         assertIs<SuccessResponse>(writeSession.execute(writeRequest1))
@@ -71,7 +70,7 @@ class TransactionsTest : PgTestBase(NakshaCollection("transaction_test", TEST_MA
         val feature = NakshaFeature("f40")
         val writeRequest = WriteRequest().apply { add(Write().createFeature(collection, feature)) }
 
-        val writeSession = env.storage.newWriteSession(null)
+        val writeSession = newWriteSession()
 
         // when
         writeSession.useTransaction().properties.xyz.tags.addTag("sth", false)

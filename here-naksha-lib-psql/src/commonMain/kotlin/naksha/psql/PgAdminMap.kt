@@ -17,7 +17,6 @@ import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
 import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP_NUMBER
 import naksha.model.Naksha.NakshaCompanion.MAPS_COL_NUMBER
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
-import naksha.model.NakshaError.NakshaErrorCompanion.FORBIDDEN
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.model.objects.NakshaMap
@@ -46,13 +45,13 @@ abstract class PgAdminMap internal constructor(
     config: PgConfig,
 
     /**
-     * If not _null_, overrides [StorageConfig.create].
+     * If not _null_, overrides [NakshaStorage.create][naksha.model.objects.NakshaStorage.create].
      * @since 3.0.0
      */
     create: Boolean?,
 
     /**
-     * If not _null_, overrides [StorageConfig.upgrade].
+     * If not _null_, overrides [NakshaStorage.upgrade][naksha.model.objects.NakshaStorage.upgrade].
      * @since 3.0.0
      */
     upgrade: Boolean?

@@ -13,9 +13,7 @@ import naksha.model.objects.StoreMode
 import naksha.model.request.SuccessResponse
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.Plv8PerfTest.FeatureSource.*
-import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_2D_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
@@ -39,8 +37,7 @@ import kotlin.test.assertIs
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 class Plv8PerfTest : PgTestBase(
     NakshaCollection(
-        id = "insert_perf_test_c",
-        mapId = TEST_MAP_ID,
+        id = "",
         partitions = NUM_OF_PARTITIONS,
         storeHistory = StoreMode.ON,
         storeDeleted = StoreMode.ON

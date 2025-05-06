@@ -5,7 +5,6 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import naksha.base.StringList
 import naksha.model.Naksha
-import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.NakshaError
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.APP_ID_IDX
@@ -30,16 +29,14 @@ import naksha.model.request.ErrorResponse
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
-import naksha.psql.base.PgTestBase
 import kotlin.test.*
 
-class CollectionTests : PgTestBase(null) {
+class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
     @Test
     fun shouldDropCollection() {
         // Given: collection that will be tested
-        val collection = NakshaCollection("drop_collection_test", TEST_MAP_ID)
+        val collection = NakshaCollection("drop_collection_test", map.id)
 
         // When: creating empty collection
         executeWrite(
@@ -68,7 +65,7 @@ class CollectionTests : PgTestBase(null) {
         // When: Collection gets deleted
         executeWrite(
             WriteRequest().add(
-                Write().deleteCollectionById(env.mapId, collection.id)
+                Write().deleteCollectionById(collection.mapId, collection.id)
             )
         )
 
@@ -84,7 +81,7 @@ class CollectionTests : PgTestBase(null) {
 
     @Test
     fun collectionShouldHaveAllColumns() {
-        val collection = NakshaCollection("check_db_columns_test", TEST_MAP_ID)
+        val collection = NakshaCollection("check_db_columns_test", map.id)
         executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
@@ -105,7 +102,7 @@ class CollectionTests : PgTestBase(null) {
 
     @Test
     fun collectionShouldHaveIndices() {
-        val collection = NakshaCollection("check_db_indices_test", TEST_MAP_ID)
+        val collection = NakshaCollection("check_db_indices_test", map.id)
         val indices = StringList(
             ID_IDX,
             HERE_TILE_IDX,
@@ -173,7 +170,7 @@ class CollectionTests : PgTestBase(null) {
         val collectionName = "check_no_hst_table_test"
         val collection = NakshaCollection(
             id = collectionName,
-            mapId = TEST_MAP_ID,
+            mapId = map.id,
             storeHistory = StoreMode.OFF
         )
         executeWrite(
@@ -204,7 +201,7 @@ class CollectionTests : PgTestBase(null) {
 
 
         val readFeatureRequest = ReadFeatures()
-        readFeatureRequest.mapId = TEST_MAP_ID
+        readFeatureRequest.mapId = map.id
         readFeatureRequest.collectionIds.add(collectionName)
         readFeatureRequest.featureIds.add(feature.id)
         val readFeaturesResponse = executeRead(readFeatureRequest)
@@ -244,7 +241,7 @@ class CollectionTests : PgTestBase(null) {
         val collectionId = "check_no_del_table_test"
         var collection = NakshaCollection(
             id = collectionId,
-            mapId = TEST_MAP_ID,
+            mapId = map.id,
             storeDeleted = StoreMode.OFF
         )
 
@@ -277,7 +274,7 @@ class CollectionTests : PgTestBase(null) {
         feature = featureCreateResponse.features[0]!!
 
         val readFeature = ReadFeatures()
-        readFeature.mapId = TEST_MAP_ID
+        readFeature.mapId = map.id
         readFeature.collectionIds.add(collectionId)
         readFeature.featureIds.add(feature.id)
         val readFeatureResponse = executeRead(readFeature)
@@ -307,7 +304,7 @@ class CollectionTests : PgTestBase(null) {
     @Test
     fun updateCollection() {
         val collectionName = "update_collection_test"
-        var collection = NakshaCollection(id = collectionName, mapId = TEST_MAP_ID)
+        var collection = NakshaCollection(id = collectionName, mapId = map.id)
         val createResponse = executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
@@ -327,7 +324,7 @@ class CollectionTests : PgTestBase(null) {
         val responseCollection = assertNotNull(updateResponse.features[0]).proxy(NakshaCollection::class)
         assertEquals(StoreMode.SUSPEND, responseCollection.storeDeleted)
         val selectCollectionFromVirt = ReadFeatures().apply {
-            mapId = TEST_MAP_ID
+            mapId = map.id
             collectionIds += Naksha.COLLECTIONS_COL
             featureIds += collection.id
         }
@@ -338,7 +335,7 @@ class CollectionTests : PgTestBase(null) {
     @Test
     fun updateNotExistingCollection() {
         val collectionName = "not_existing_collection_test"
-        val collection = NakshaCollection(id = collectionName, mapId = TEST_MAP_ID)
+        val collection = NakshaCollection(id = collectionName, mapId = map.id)
         // update collection
         collection.storeDeleted = StoreMode.SUSPEND
         val response = executeWriteErrorResponse(
@@ -353,7 +350,7 @@ class CollectionTests : PgTestBase(null) {
     @Test
     fun shouldUpsertCollection() {
         val collectionName = "upsert_collection_test"
-        val collection = NakshaCollection(id = collectionName, mapId = TEST_MAP_ID)
+        val collection = NakshaCollection(id = collectionName, mapId = map.id)
         // create collection using upsert
         val response = executeWrite(
             WriteRequest().add(
@@ -381,7 +378,7 @@ class CollectionTests : PgTestBase(null) {
         // when
         val response = executeWrite(
             WriteRequest().add(
-                Write().deleteCollectionById(collectionId = collectionName, mapId = TEST_MAP_ID)
+                Write().deleteCollectionById(collectionId = collectionName, mapId = map.id)
             )
         )
 
@@ -397,15 +394,15 @@ class CollectionTests : PgTestBase(null) {
         val collectionId = "test_create_existing_collection"
         executeWrite(
             WriteRequest().add(
-                Write().createCollection(NakshaCollection(collectionId, TEST_MAP_ID))
+                Write().createCollection(NakshaCollection(collectionId, map.id))
             )
         )
 
         // When: create same collection once again
-        val response = env.storage.newWriteSession().use { session ->
+        val response = storage.newWriteSession(newSessionOptions()).use { session ->
             session.execute(
                 WriteRequest().add(
-                    Write().createCollection(NakshaCollection(collectionId, TEST_MAP_ID))
+                    Write().createCollection(NakshaCollection(collectionId, map.id))
                 )
             )
         }

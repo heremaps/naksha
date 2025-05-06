@@ -4,6 +4,8 @@ package naksha.psql
 
 import kotlin.js.JsExport
 
+// TODO: We need to move this class into tests, but currently this class is cross-used from lib-view!
+
 /**
  * General test setup.
  * @since 3.0.0
@@ -32,8 +34,13 @@ class PgTest {
         const val TEST_APP_AUTHOR = "naksha.psql.testAuthor"
 
         /**
-         * The default test map-id (schema) to use for testing.
+         * The default test map-id (schema) to use for testing _(`naksha_psql_test`)_.
          */
+        @Deprecated(
+            message = "Use 'map.id' of PgTestBase",
+            replaceWith = ReplaceWith("map.id"),
+            level = DeprecationLevel.WARNING
+        )
         const val TEST_MAP_ID = "naksha_psql_test"
     }
 }

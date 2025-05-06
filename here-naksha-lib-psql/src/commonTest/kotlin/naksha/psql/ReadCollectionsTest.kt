@@ -4,14 +4,12 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StoreMode.StoreMode_C.ON
 import naksha.model.request.ReadCollections
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
-import naksha.psql.base.PgTestBase
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class ReadCollectionsTest : PgTestBase(NakshaCollection(
-    id = "read_collections_c",
-    mapId = TEST_MAP_ID,
+class ReadCollectionsTest : PgTestBase(collection = NakshaCollection(
+    id = "",
     partitions = 2,
     storeDeleted = ON,
     storeHistory = ON,
@@ -22,7 +20,7 @@ class ReadCollectionsTest : PgTestBase(NakshaCollection(
     fun shouldReadCollectionMeta() {
         // When
         val retrievedCollectionMeta = executeRead(ReadCollections().apply {
-            mapId = TEST_MAP_ID
+            mapId = map.id
             collectionIds += collection.id
         })
 
@@ -34,10 +32,5 @@ class ReadCollectionsTest : PgTestBase(NakshaCollection(
         assertEquals(collection.storeDeleted, collectionFeature.storeDeleted)
         assertEquals(collection.storeMeta, collectionFeature.storeMeta)
         assertEquals(collection.storeHistory, collectionFeature.storeHistory)
-    }
-
-    @AfterTest
-    fun shouldDeleteCollection() {
-        dropCollection()
     }
 }

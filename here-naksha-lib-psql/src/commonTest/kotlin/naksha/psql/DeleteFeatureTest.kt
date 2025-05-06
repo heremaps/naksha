@@ -1,22 +1,18 @@
 package naksha.psql
 
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
 import naksha.model.request.ReadFeatures
-import naksha.model.request.SuccessResponse
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
-import naksha.psql.base.PgTestBase
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 
-class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c", TEST_MAP_ID)) {
+class DeleteFeatureTest : PgTestBase() {
 
     @Test
     fun shouldPerformDelete() {
@@ -65,8 +61,8 @@ class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c", T
             versions = 10
         }).apply { // this = SuccessResponse
             assertEquals(2, features.size)
-            assertSame(Action.DELETED, featureTupleList?.get(0)?.tuple?.meta?.flags?.actionEnum())
-            assertSame(Action.CREATED, featureTupleList?.get(1)?.tuple?.meta?.flags?.actionEnum())
+            assertSame(Action.DELETED, featureTupleList[0]?.tuple?.meta?.flags?.actionEnum())
+            assertSame(Action.CREATED, featureTupleList[1]?.tuple?.meta?.flags?.actionEnum())
         }
 
         // verify if delete table contains element
@@ -88,7 +84,7 @@ class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c", T
         // Create special test collection.
         val createCollectionReq = WriteRequest().add(
             Write().createCollection(
-                NakshaCollection("delete_no_history_but_shadow", TEST_MAP_ID)
+                NakshaCollection("delete_no_history_but_shadow", map.id)
                     .withStoreDeleted(StoreMode.ON)
                     .withStoreMeta(StoreMode.OFF)
                     .withStoreHistory(StoreMode.OFF)
@@ -98,7 +94,7 @@ class DeleteFeatureTest : PgTestBase(NakshaCollection("delete_feature_test_c", T
         assertEquals(1, createCollectionResp.length)
         assertEquals(1, createCollectionResp.features.size)
         val collection = assertNotNull(createCollectionResp.features[0]).proxy(NakshaCollection::class)
-        assertEquals(TEST_MAP_ID, collection.mapId)
+        assertEquals(map.id, collection.mapId)
         assertEquals("delete_no_history_but_shadow", collection.id)
 
         // Create feature.

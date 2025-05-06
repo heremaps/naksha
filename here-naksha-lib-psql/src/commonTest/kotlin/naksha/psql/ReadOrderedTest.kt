@@ -10,11 +10,10 @@ import naksha.model.request.WriteRequest
 import naksha.model.request.query.MetaColumn
 import naksha.model.request.query.SortOrder
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
-import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import kotlin.test.*
 
-class ReadOrderedTest : PgTestBase(NakshaCollection("read_ordered_test", TEST_MAP_ID)) {
+class ReadOrderedTest : PgTestBase() {
 
     companion object ReadOrderedTest_C {
         private const val COUNT = 100
