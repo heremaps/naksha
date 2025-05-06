@@ -2,7 +2,7 @@ package naksha.psql
 
 import naksha.model.objects.NakshaCollection
 
-class DeleteFeatureTestPartitioned : DeleteFeatureTest(collection = NakshaCollection(
+class DeleteFeaturePartitioned : DeleteFeatureBase(collection = NakshaCollection(
     id = "",
     partitions = 4
-))
+), mapId = "")
