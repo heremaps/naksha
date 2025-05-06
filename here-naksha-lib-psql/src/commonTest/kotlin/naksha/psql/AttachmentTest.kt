@@ -6,11 +6,10 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
-import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.*
 
-class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_ID)) {
+class AttachmentTest : PgTestBase() {
 
     @Test
     fun insertFeatureWithAttachment() {

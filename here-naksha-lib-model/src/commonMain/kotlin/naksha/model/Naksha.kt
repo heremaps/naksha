@@ -193,13 +193,19 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun verifyId(id: String?): String {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_ID_LENGTH) {
-                throw NakshaException(ILLEGAL_ID, "The given identifier is null, empty or has more than 32 characters")
+            if (id.isNullOrEmpty()) {
+                throw illegalId("The given identifier is null or empty")
+            }
+            if (id == "naksha") {
+                throw illegalId("The identifier 'naksha' is forbidden")
+            }
+            if (id.length > MAX_ID_LENGTH) {
+                throw illegalId("The identifier '$id' is too long: ${id.length}, must be maximal $MAX_ID_LENGTH")
             }
             var i = 0
             var c = id[i++]
             if (c.code < 'a'.code || c.code > 'z'.code) {
-                throw NakshaException(ILLEGAL_ID, "The first character must be a-z, but was $c")
+                throw illegalId("The first character must be a-z, but was $c")
             }
             while (i < id.length) {
                 c = id[i++]
@@ -207,7 +213,7 @@ class Naksha private constructor() {
                     in 'a'.code..'z'.code -> continue
                     in '0'.code..'9'.code -> continue
                     '_'.code, ':'.code, '-'.code -> continue
-                    else -> throw NakshaException(ILLEGAL_ID, "Invalid character at index $i: '$c', expected [a-z0-9_:-]")
+                    else -> throw illegalId("Invalid character at index $i: '$c', expected [a-z0-9_:-]")
                 }
             }
             return id

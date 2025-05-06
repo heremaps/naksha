@@ -1,23 +1,18 @@
 package naksha.psql
 
 import naksha.model.*
-import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
-import naksha.psql.base.PgTestBase
 import kotlin.test.*
 
-class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c", TEST_MAP_ID)) {
-
-    @AfterTest
-    fun cleanUp() {
-        dropCollection()
-    }
+//
+class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
 
     @Test
     fun shouldPerformSimpleUpdateAndUpsert() {
+        testWithCollection("shouldPerformSimpleUpdateAndUpsert")
+
         // CREATE FEATURE
         val initialFeature = NakshaFeature().apply {
             id = "feature_1"
@@ -69,7 +64,9 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c", T
     }
 
     @Test
-    fun shouldHaveValidHistoryFeatureAfterUpdate() {
+    fun testFeatureHistoryAfterUpdate() {
+        testWithCollection("testFeatureHistoryAfterUpdate")
+
         // CREATE FEATURE
         val initialFeature = NakshaFeature().apply { id = "feature_2" }
         val writeInitialFeature = WriteRequest().add(
@@ -137,7 +134,9 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c", T
     }
 
     @Test
-    fun atomicUpdateOfNotExistingFeatureWithoutUuid() {
+    fun atomicUpdateNotExistingWithoutUuid() {
+        testWithCollection("atomicUpdateNotExistingWithoutUuid")
+
         val featureId = "feature_not_existing"
         val feature = NakshaFeature().apply { id = featureId }
         val updateFeatureResponse = executeWriteErrorResponse(
@@ -149,7 +148,9 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c", T
     }
 
     @Test
-    fun atomicUpdateOfNotExistingFeatureWithFakeUuid() {
+    fun atomicUpdateNotExistingWithFakeUuid() {
+        testWithCollection("atomicUpdateNotExistingWithFakeUuid")
+
         val featureId = "feature_not_existing"
         val feature = NakshaFeature().apply {
             id = featureId
@@ -166,6 +167,8 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c", T
 
     @Test
     fun shouldRequireUuidForAtomicUpdate(){
+        testWithCollection("shouldRequireUuidForAtomicUpdate")
+
         // Given: initial feature - persisted
         val initialFeature = NakshaFeature().apply {
             id = "feature_for_update"
@@ -195,7 +198,9 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c", T
     }
 
     @Test
-    fun shouldAllowMissingUuidForNonAtomicUpdate(){
+    fun allowMissingUuidForNonAtomicUpdate(){
+        testWithCollection("allowMissingUuidForNonAtomicUpdate")
+
         // Given: initial feature - persisted
         val initialFeature = NakshaFeature().apply {
             id = "feature_for_update"
@@ -225,6 +230,8 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c", T
 
     @Test
     fun shouldPerformAtomicUpdate(){
+        testWithCollection("shouldPerformAtomicUpdate")
+
         // Given: initial feature - persisted
         val initialFeature = NakshaFeature().apply {
             id = "feature_for_update"

@@ -3,14 +3,11 @@ package naksha.psql
 import naksha.geo.HereTile
 import naksha.geo.PointCoord
 import naksha.geo.SpPoint
-import naksha.model.objects.NakshaCollection
 import naksha.model.request.ReadFeatures
-import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.*
 
-class ReadFeaturesByRefTilesTest : PgTestBase(NakshaCollection("read_by_ref_tiles", TEST_MAP_ID)) {
+class ReadFeaturesByRefTilesTest : PgTestBase(collection = null, mapId = "") {
 
     private val pragueCityHall = randomFeature().apply {
         referencePoint = SpPoint(PointCoord(
@@ -32,9 +29,8 @@ class ReadFeaturesByRefTilesTest : PgTestBase(NakshaCollection("read_by_ref_tile
     }
     private val zagrebTileLv12 = HereTile("122010112103")
     private val pragueTileLv12 = HereTile("122010322102")
-    private val bolognaTileLv12 = HereTile("120232222021")
+    private val bolognaTileLv12 = HereTile("120232222021") // empty!
 
-    @BeforeTest
     fun populateFeatures() {
         insertFeatures(
             pragueCityHall,
@@ -43,13 +39,11 @@ class ReadFeaturesByRefTilesTest : PgTestBase(NakshaCollection("read_by_ref_tile
         )
     }
 
-    @AfterTest
-    fun cleanUp(){
-        dropCollection()
-    }
-
     @Test
-    fun shouldReadFeaturesByRefTiles() {
+    fun readFeaturesByRefTiles() {
+        testWithCollection("readFeaturesByRefTiles")
+        populateFeatures()
+
         // Given:
         val getFeaturesFromZagrebAndPrague = ReadFeatures().apply {
             mapId = collection.mapId
@@ -67,11 +61,14 @@ class ReadFeaturesByRefTilesTest : PgTestBase(NakshaCollection("read_by_ref_tile
     }
 
     @Test
-    fun shouldNotReturnAnythingOnMissingTiles() {
+    fun returnNothingOnEmptyTiles() {
+        testWithCollection("returnNothingOnEmptyTiles")
+        populateFeatures()
+
         // Given:
         val getFeaturesFromBologna = ReadFeatures().apply {
             mapId = collection.mapId
-            collectionIds += collection!!.id
+            collectionIds += collection.id
             query.refTiles += bolognaTileLv12.intKey
         }
 

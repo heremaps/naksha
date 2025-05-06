@@ -4,7 +4,6 @@ import naksha.base.Int64
 import naksha.model.Naksha
 import naksha.model.NakshaVersion
 import naksha.model.objects.NakshaStorage
-import naksha.psql.base.PgTestBase
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -36,7 +35,7 @@ class UpgradeStorageTest : PgTestBase() {
         assertStorageVersion(downgradeVersion)
 
         // Upgrade storage again, this time we should not need override.
-        Naksha.setupStorage(env.storageConfig)
+        Naksha.setupStorage(storageConfig)
         assertStorageVersion(adminVersion)
     }
 }

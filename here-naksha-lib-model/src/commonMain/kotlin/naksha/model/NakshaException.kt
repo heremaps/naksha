@@ -10,6 +10,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.FEATURE_EXISTS
 import naksha.model.NakshaError.NakshaErrorCompanion.FEATURE_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.FORBIDDEN
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_EXISTS
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
@@ -49,6 +50,14 @@ expect class NakshaException : RuntimeException {
      */
     constructor(code: String, msg: String, cause: Throwable? = null)
 }
+
+/**
+ * Create [ILLEGAL_ID] exception.
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun illegalId(msg: String): NakshaException = NakshaException(ILLEGAL_ID, msg)
 
 /**
  * Create [ILLEGAL_ARGUMENT] exception.

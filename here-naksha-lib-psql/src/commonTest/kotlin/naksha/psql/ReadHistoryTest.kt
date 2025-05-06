@@ -9,10 +9,9 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
-import naksha.psql.base.PgTestBase
 import kotlin.test.*
 
-class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test", TEST_MAP_ID)) {
+class ReadHistoryTest : PgTestBase() {
 
     companion object ReadHistoryTest_C {
         private const val COUNT = 10
