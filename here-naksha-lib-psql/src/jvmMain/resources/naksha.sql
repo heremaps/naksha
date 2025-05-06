@@ -159,6 +159,12 @@ AS $$
   SELECT int8send(txn) || int4send(uid)
 $$;
 
+CREATE OR REPLACE FUNCTION naksha_tn_96(any_tn bytea) RETURNS bytea
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT substring(any_tn FROM length(any_tn) - 11 FOR 12)
+$$;
+
 CREATE OR REPLACE FUNCTION naksha_tn_storage_number(tn bytea) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT

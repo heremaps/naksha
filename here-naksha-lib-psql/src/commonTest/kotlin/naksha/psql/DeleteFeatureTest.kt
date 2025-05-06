@@ -12,7 +12,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 
-class DeleteFeatureTest : PgTestBase() {
+open class DeleteFeatureTest(
+    collection: NakshaCollection? = NakshaCollection(""),
+    mapId: String? = null
+) : PgTestBase(collection, mapId) {
 
     @Test
     fun shouldPerformDelete() {
