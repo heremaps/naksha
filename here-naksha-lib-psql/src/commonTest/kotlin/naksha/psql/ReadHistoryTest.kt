@@ -49,7 +49,7 @@ class ReadHistoryTest : PgTestBase() {
         var updatedFeature1 = createdFeature.copy<NakshaFeature>(true)
         updatedFeature1.properties[ALIAS] = "first_update"
         executeWrite(WriteRequest().apply {
-            add(Write().updateFeature(collection, updatedFeature1, false))
+            add(Write().updateFeature(collection, updatedFeature1, true))
         }).apply {
             assertEquals(1, features.size)
             updatedFeature1 = assertNotNull(features.first())
@@ -61,7 +61,7 @@ class ReadHistoryTest : PgTestBase() {
         var updatedFeature2 = updatedFeature1.copy<NakshaFeature>(true)
         updatedFeature2.properties[ALIAS] = "second_update"
         executeWrite(WriteRequest().apply {
-            add(Write().updateFeature(collection, updatedFeature2, false))
+            add(Write().updateFeature(collection, updatedFeature2, true))
         }).apply {
             assertEquals(1, features.size)
             updatedFeature2 = assertNotNull(features.first())
