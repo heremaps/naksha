@@ -3,15 +3,18 @@ package naksha.psql
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
-import naksha.model.request.ReadFeatures
-import naksha.model.request.Write
-import naksha.model.request.WriteRequest
+import naksha.model.request.*
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import naksha.psql.base.PgTestBase
 import kotlin.test.*
 
 class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c", TEST_MAP_ID)) {
+
+    @AfterTest
+    fun cleanUp() {
+        dropCollection()
+    }
 
     @Test
     fun shouldPerformSimpleUpdateAndUpsert() {
@@ -44,16 +47,7 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c", T
         assertEquals(2, updatedFeature.properties.xyz.changeCount)
 
         // Retrieving feature by id
-        Naksha.cache.clear()
-        val readFeatureResp = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
-            collectionIds += collection.id
-            featureIds += initialFeature.id
-        })
-        assertEquals(1, readFeatureResp.length)
-        val readFeature = assertNotNull(readFeatureResp.features[0])
-        assertEquals(initialFeature.id, readFeature.id)
-        assertEquals(2, updatedFeature.properties.xyz.changeCount)
+        val readFeature = fetchSingleFeature(initialFeature.id)
 
         // Then
         assertThatFeature(readFeature)
@@ -168,5 +162,107 @@ class UpdateFeatureTest : PgTestBase(NakshaCollection("update_feature_test_c", T
         )
         assertEquals(NakshaError.FEATURE_NOT_FOUND, updateFeatureResponse.error.code)
         assertTrue(updateFeatureResponse.error.msg.contains(featureId))
+    }
+
+    @Test
+    fun shouldRequireUuidForAtomicUpdate(){
+        // Given: initial feature - persisted
+        val initialFeature = NakshaFeature().apply {
+            id = "feature_for_update"
+            momType = "type_before"
+        }
+        val featureCreationResponse = executeWrite(WriteRequest().add(Write().createFeature(collection, initialFeature)))
+
+        // And: desired update - without prev UUID
+        val desiredFeature = NakshaFeature().apply {
+            id = initialFeature.id
+            momType = "type_after"
+            properties.xyz.setRaw("uuid", null)
+        }
+        val update = WriteRequest().add(Write().updateFeature(collection, desiredFeature, atomic = true))
+
+        // When: performing atomic update
+        val response = executeWriteErrorResponse(update)
+
+        // Then: request fails due to missing UUID
+        assertIs<ErrorResponse>(response)
+        assertEquals(NakshaError.ILLEGAL_ARGUMENT, response.error.code)
+
+        // And:
+        val persistedFeature = fetchSingleFeature(initialFeature.id)
+        assertEquals(initialFeature.momType,persistedFeature.momType)
+        assertEquals(featureCreationResponse.features[0]!!.featureNumber, persistedFeature.featureNumber)
+    }
+
+    @Test
+    fun shouldAllowMissingUuidForNonAtomicUpdate(){
+        // Given: initial feature - persisted
+        val initialFeature = NakshaFeature().apply {
+            id = "feature_for_update"
+            momType = "type_before"
+        }
+        executeWrite(WriteRequest().add(Write().createFeature(collection, initialFeature)))
+
+        // And: desired update - without prev UUID
+        val desiredFeature = NakshaFeature().apply {
+            id = initialFeature.id
+            momType = "type_after"
+            properties.xyz.setRaw("uuid", null)
+        }
+        val update = WriteRequest().add(Write().updateFeature(collection, desiredFeature, atomic = false))
+
+        // When: performing non-atomic update
+        val updateResponse = executeWrite(update)
+
+        // Then: request succeeds
+        assertIs<SuccessResponse>(updateResponse)
+
+        // And:
+        val persistedFeature = fetchSingleFeature(initialFeature.id)
+        assertEquals(desiredFeature.momType, persistedFeature.momType)
+        assertEquals(updateResponse.features[0]!!.featureNumber, persistedFeature.featureNumber)
+    }
+
+    @Test
+    fun shouldPerformAtomicUpdate(){
+        // Given: initial feature - persisted
+        val initialFeature = NakshaFeature().apply {
+            id = "feature_for_update"
+            momType = "type_before"
+        }
+        val featureCreationResponse = executeWrite(WriteRequest().add(Write().createFeature(collection, initialFeature)))
+        val initialFeatureUuid = featureCreationResponse.features[0]!!.properties.xyz.uuid
+
+        // And: desired update - with prev UUID
+        val desiredFeature = NakshaFeature().apply {
+            id = initialFeature.id
+            momType = "type_after"
+            properties.xyz.setRaw("uuid", initialFeatureUuid.toString())
+        }
+        val update = WriteRequest().add(Write().updateFeature(collection, desiredFeature, atomic = true))
+
+        // When: performing atomic update
+        val updateResponse = executeWrite(update)
+
+        // Then: request succeeds
+        assertIs<SuccessResponse>(updateResponse)
+
+        // And:
+        val persistedFeature = fetchSingleFeature(initialFeature.id)
+        assertEquals(desiredFeature.momType, persistedFeature.momType)
+        assertEquals(updateResponse.features[0]!!.featureNumber, persistedFeature.featureNumber)
+    }
+
+    private fun fetchSingleFeature(id: String): NakshaFeature {
+        Naksha.cache.clear()
+        val readFeatureResp = executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
+            collectionIds += collection.id
+            featureIds += id
+        })
+        assertEquals(1, readFeatureResp.length)
+        val retrievedFeature = assertNotNull(readFeatureResp.features[0])
+        assertEquals(id, retrievedFeature.id)
+        return retrievedFeature
     }
 }
