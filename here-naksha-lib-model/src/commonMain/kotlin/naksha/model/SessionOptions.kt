@@ -103,6 +103,13 @@ data class SessionOptions @JvmOverloads constructor(
     val lockTimeout: Int = NakshaContext.currentContext().lockTimeout,
 
     /**
+     * The timeout in milliseconds, when idle transactions are forcefully closed.
+     * @since 3.0
+     */
+    @JvmField
+    val idleTxTimeout: Int = NakshaContext.currentContext().idleTxTimeout,
+
+    /**
      * Stream information.
      * @since 3.0
      */

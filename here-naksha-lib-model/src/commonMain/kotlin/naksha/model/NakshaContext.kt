@@ -59,6 +59,12 @@ open class NakshaContext protected constructor() {
      */
     open val lockTimeout: Int = defaultLockTimeout.get()
 
+    /**
+     * The idle-transaction-timeout in milliseconds.
+     * @since 3.0.0
+     */
+    open val idleTxTimeout = defaultIdleTxTimeout.get()
+
     private var _appName: String? = null
 
     /**
@@ -425,6 +431,13 @@ open class NakshaContext protected constructor() {
          */
         @JvmField
         val defaultLockTimeout = AtomicInt(10_000)
+
+        /**
+         * The application wide default idle-transaction-timeout in milliseconds.
+         * @since 3.0.0
+         */
+        @JvmField
+        val defaultIdleTxTimeout = AtomicInt(10_000)
 
         /**
          * Returns the current application name.
