@@ -437,7 +437,7 @@ open class NakshaContext protected constructor() {
          * @since 3.0.0
          */
         @JvmField
-        val defaultIdleTxTimeout = AtomicInt(10_000)
+        val defaultIdleTxTimeout = AtomicInt(60_000)
 
         /**
          * Returns the current application name.
