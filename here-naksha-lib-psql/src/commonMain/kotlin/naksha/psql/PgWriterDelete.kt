@@ -100,7 +100,7 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
   RETURNING id, tn
 )"""
 
-        // Copy the tombstone into history
+        // Copy the tombstone into history.
         val history_tombstone = if (insert_into_history != null) """, history_tombstone AS (
  INSERT INTO ${insert_into_history.quotedName} 
  (${PgColumn.flags}, ${PgColumn.cc}, ${PgColumn.tn}, ${PgColumn.next_tn}, ${PgColumn.prev_tn}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})

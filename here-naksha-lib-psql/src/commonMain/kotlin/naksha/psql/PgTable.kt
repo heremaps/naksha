@@ -336,7 +336,7 @@ $TABLESPACE"""
                 }
                 val SQL = """$CREATE_TABLE $quotedName PARTITION OF ${parentTable.quotedName} (
   CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.tn}),
-  CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_tn IS NULL),
+  CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_tn IS ${if (isDeleted(parentTable.name)) "NOT NULL" else "NULL"}),
   CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK (naksha_tn_partition_index(tn, $parentPartCount)=$partitionValue),
   CONSTRAINT ${quoteIdent(name + PG_PART_CONSTRAINT)} CHECK (naksha_partition_index(id, $parentPartCount)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1}) 
@@ -381,7 +381,7 @@ $TABLESPACE"""
             // DELETED (this) -> PARTITION
             val SQL = """$CREATE_TABLE $quotedName (
 ${PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }},
-CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (${if (isDeleted(name)) "next_tn = tn" else "next_tn IS NULL"})
+CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (${if (isDeleted(name)) "next_tn = naksha_tn_96(tn)" else "next_tn IS NULL"})
 ) PARTITION BY RANGE (naksha_tn_partition_index(tn, $partitionCount)) 
 $TABLESPACE"""
             return Pair(SQL, TABLESPACE)
