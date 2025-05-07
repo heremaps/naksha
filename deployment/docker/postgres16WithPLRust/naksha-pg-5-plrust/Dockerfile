@@ -17,7 +17,7 @@ RUN cd /tmp/ \
     && git clone https://github.com/tcdi/plrust.git \
     && cd /tmp/plrust \
     && git checkout v1.2.8 \
-# temporarily adjust dependencies version to support postgres 16 \
+# temporarily adjust dependencies version to support postgres 16, relevant for v1.2.8
 # https://github.com/tcdi/plrust/issues/417
 # https://github.com/tcdi/plrust/issues/418
     && sed -i '/^omnipath = "0.1.6"/a\
@@ -34,11 +34,11 @@ RUN cd /tmp/ \
           rustup target install x86_64-unknown-linux-gnu; \
         fi \
     && cargo install cargo-pgrx --locked --version=0.11.0 \
+    && cargo pgrx init --pg16 "$(pg_config --bindir)/pg_config" \
     && cd /tmp/plrust/plrustc \
 # install plrust
     && ./build.sh \
     && mv /tmp/plrust/build/bin/plrustc ~/.cargo/bin/ \
-    && cargo pgrx init --pg16 "$(pg_config --bindir)/pg_config" \
 # install postgrestd
     && cd /tmp/plrust/plrust \
     && if [ "${TARGETPLATFORM}" = "linux/arm64" ]; then \
@@ -46,13 +46,12 @@ RUN cd /tmp/ \
                elif [ "${TARGETPLATFORM}" = "linux/amd64" ]; then \
                    STD_TARGETS="x86_64-postgres-linux-gnu" ./build; \
                fi \
-    && cargo pgrx init --pg16 "$(pg_config --bindir)/pg_config" \
     && cargo pgrx install --release --features trusted
 USER root
 RUN chown root -R "$(pg_config --sharedir)/extension" \
     && chown root -R "$(pg_config --pkglibdir)" \
 # Cleanup
-    && rm -rf /tmp/*
+    && rm -rf /tmp/plrust
 
 EXPOSE 5432
 
