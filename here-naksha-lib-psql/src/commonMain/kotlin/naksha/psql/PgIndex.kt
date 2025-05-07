@@ -145,6 +145,30 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
+         * A non-unique index above the `version`, which is extract from the [tuple-number][PgColumn.tn].
+         *
+         * - Always added to all tables.
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val version = def(PgIndex::class, "ver") { self ->
+            self.name = "version"
+            self.internal = true
+            self.columns = listOf(c_tn)
+            self.naturalOrder = listOf(DESCENDING)
+            self.includes = listOf(c_tn, c_id, c_tn_next)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        """btree (naksha_tn_version($c_tn) DESC) INCLUDE ($c_tn, $c_id, $c_tn_next)""",
+                        table, unique = false, addFillFactor = true, where = null
+                    )
+                ).close()
+            }
+        }
+
+        /**
          * A unique index above the transaction-number _(aka version)_, including [id][PgColumn.id], [tuple-number][PgColumn.tn] and [next_tn][PgColumn.next_tn] column.
          *
          * - Automatically added to all [TRANSACTIONS][PgTransactions] tables.
