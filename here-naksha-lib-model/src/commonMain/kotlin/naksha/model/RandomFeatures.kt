@@ -36,7 +36,7 @@ class RandomFeatures private constructor() {
          * The key of the first-name tag.
          * @since 3.0
          */
-        const val FIRST_NAME_TAG_PREFIX = "@:firstName:"
+        const val FIRST_NAME_TAG_PREFIX = "$FIRST_NAME="
 
         /**
          * The key of the middle-name property.
@@ -48,7 +48,7 @@ class RandomFeatures private constructor() {
          * The key of the middle-name tag.
          * @since 3.0
          */
-        const val MIDDLE_NAME_TAG_PREFIX = "@:middleName:"
+        const val MIDDLE_NAME_TAG_PREFIX = "$MIDDLE_NAME="
 
         /**
          * The key of the last-name property.
@@ -60,7 +60,7 @@ class RandomFeatures private constructor() {
          * The key of the last-name tag.
          * @since 3.0
          */
-        const val LAST_NAME_TAG_PREFIX = "@:lastName:"
+        const val LAST_NAME_TAG_PREFIX = "$LAST_NAME="
 
         /**
          * The key of the full-name property.
@@ -78,7 +78,7 @@ class RandomFeatures private constructor() {
          * The key of the age tag.
          * @since 3.0
          */
-        const val AGE_TAG_PREFIX = "@:age:"
+        const val AGE_TAG_PREFIX = "$AGE:="
 
         /**
          * Generates random [NakshaFeature] objects.
@@ -118,6 +118,7 @@ class RandomFeatures private constructor() {
          * To allow searching, tags are added with the [first-][FIRST_NAME_TAG_PREFIX], [middle-][MIDDLE_NAME_TAG_PREFIX], and [last-name][LAST_NAME_TAG_PREFIX], as well as the [age][AGE_TAG_PREFIX].
          *
          * @param featureId the feature-id to be set, defaults to [PlatformUtil.randomString].
+         * @param tagPossibility the possibility to add tags, defaults to `33%`.
          * @return a new random feature.
          * @since 3.0
          */
@@ -125,8 +126,8 @@ class RandomFeatures private constructor() {
         @JsStatic
         @JvmStatic
         @JvmOverloads
-        fun randomFeature(featureId: String = PlatformUtil.randomString()): NakshaFeature
-            = randomFeature(featureId) { it }
+        fun randomFeature(featureId: String = PlatformUtil.randomString(), tagPossibility: Double = 0.33): NakshaFeature
+            = randomFeature(featureId, tagPossibility) { it }
 
         /**
          * Creates a new random point feature.
@@ -138,6 +139,7 @@ class RandomFeatures private constructor() {
          * To allow searching, tags are added with the [first-][FIRST_NAME_TAG_PREFIX], [middle-][MIDDLE_NAME_TAG_PREFIX], and [last-name][LAST_NAME_TAG_PREFIX], as well as the [age][AGE_TAG_PREFIX].
          *
          * @param featureId the feature-id to be set, defaults to [PlatformUtil.randomString].
+         * @param tagPossibility the possibility to add tags, defaults to `33%`.
          * @param mutator a function called with the random [NakshaFeature], which may mutate the features, and then return it, optionally as different type.
          * @return a new random feature.
          * @since 3.0
@@ -145,7 +147,11 @@ class RandomFeatures private constructor() {
         @JsStatic
         @JvmStatic
         @JvmOverloads
-        fun <T : NakshaFeature> randomFeature(featureId: String = PlatformUtil.randomString(), mutator: Fn1<T, NakshaFeature>): T {
+        fun <T : NakshaFeature> randomFeature(
+            featureId: String = PlatformUtil.randomString(),
+            tagPossibility: Double = 0.33,
+            mutator: Fn1<T, NakshaFeature>
+        ): T {
             val feature = NakshaFeature(featureId)
             val longitude = (Platform.random() * 360 - 180).roundToDecimal(3) // -180.0 to 180.0
             val latitude = (Platform.random() * 180 - 90).roundToDecimal(3) // -90 to 90.0
@@ -178,11 +184,11 @@ class RandomFeatures private constructor() {
             } while (age > maxAge)
             feature.properties[AGE] = age
 
-            // 33% to get tags
-            if (Platform.random() <= 0.33) {
+            // x% to get tags
+            if (Platform.random() <= tagPossibility) {
                 val xyz = feature.properties.xyz
                 val tags = TagList()
-                // We add between 1 and 4 tags.
+                // We add between 1 and 4 adverb tags.
                 for (j in 0..3) {
                     var i = (Platform.random() * (adverbs.size - 1)).toInt()
                     while (true) {
