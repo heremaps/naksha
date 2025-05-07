@@ -88,13 +88,13 @@ open class StorageTx private constructor(
      * The statistical transaction information, updated while this class is being used, should eventually be writted into the transaction-log of the storage.
      * @since 3.0
      */
-    open val transaction = NakshaTx().setVersion(version)
+    open val transaction: NakshaTx = NakshaTx().setVersion(version)
 
     /**
      * The `updated_at` value being used for all [Tuple] created, basically just reads `transaction.time`.
      * @since 3.0
      */
-    open val updatedAt
+    open val updatedAt: Int64
         get() = transaction.time
 
     /**
@@ -122,6 +122,7 @@ open class StorageTx private constructor(
         feature: NakshaFeature,
         operation: Operation,
         action: Action = operation.action ?: throw illegalArg("There is no default action defined for operation $operation"),
+        atomic: Boolean = false
     ): Metadata {
         if (operation.action != action && operation.action != null) {
             throw illegalArg("The operation $operation is hard linked to the action ${operation.action}, therefore $action is an invalid action!")
@@ -133,8 +134,8 @@ open class StorageTx private constructor(
         val tn = TupleNumber(storageNumber, map.number, collection.number, feature.featureNumber, version, uid.next(action))
         // TODO: Handle other operations like rebase!
         val base_tn: TupleNumber? = null
-        val prev_tn: TupleNumber? = if (operation == Operation.CREATED) null else {
-            xyz.guid?.tupleNumber ?: throw illegalArg("$operation requires that the feature has a UUID!")
+        val prev_tn: TupleNumber? = if (operation == Operation.CREATED || (operation == Operation.UPDATED && !atomic)) null else {
+            xyz.guid?.tupleNumber ?: throw illegalArg("$operation with atomic=$atomic requires that the feature has a UUID!")
         }
         // Transactions are special, they are partitioned over `next_tn` in the HEAD, before being partitioned over `tn` in the year!
         val next_tn: TupleNumber? = if (map.id == Naksha.ADMIN_MAP && collection.id == Naksha.TRANSACTIONS_COL) tn else null
@@ -240,9 +241,10 @@ open class StorageTx private constructor(
         map: NakshaMap,
         collection: NakshaCollection,
         feature: NakshaFeature,
-        attachment: ByteArray?
+        attachment: ByteArray?,
+        atomic: Boolean = false,
     ): Tuple {
-        val metadata = metadataOf(map, collection, feature, Operation.UPDATED, Action.UPDATED)
+        val metadata = metadataOf(map, collection, feature, Operation.UPDATED, Action.UPDATED, atomic)
         val dictionary = dictReader?.getEncodingDictionary(feature)
         return Tuple(
             meta = metadata,

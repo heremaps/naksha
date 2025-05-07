@@ -1,6 +1,10 @@
 package naksha.psql
 
 class Plv8Plan : PgPlan {
+    override fun setFetchSize(size: Int) {
+        TODO("Not yet implemented")
+    }
+
     override fun execute(args: Array<Any?>?): Plv8Cursor {
         TODO("Not yet implemented")
     }

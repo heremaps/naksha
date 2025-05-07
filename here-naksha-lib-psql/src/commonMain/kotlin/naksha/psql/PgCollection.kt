@@ -144,6 +144,7 @@ open class PgCollection internal constructor(
      * @param schema The schema name.
      * @param schemaOid The object-id of the schema to look into.
      */
+    @Deprecated(message = "Needs to be fixed before used", level = DeprecationLevel.ERROR)
     private fun collectionAttachTriggers(sql: PgConnection, id: String, schema: String, schemaOid: Int) {
         var triggerName = id + "_before"
         var rows = sql.execute("SELECT tgname FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2", arrayOf(triggerName, schemaOid))

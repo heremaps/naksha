@@ -2,6 +2,7 @@ package naksha.geo
 
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 
 /**
  * A GeoJSON [Point](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1.1).
@@ -10,7 +11,16 @@ import kotlin.js.JsName
 @JsExport
 class SpPoint() : SpGeometry() {
 
+    @JvmOverloads
     @JsName("of")
+    constructor(longitude: Double, latitude: Double, z: Double? = null, m: Double? = null) : this() {
+        this.latitude = latitude
+        this.longitude = longitude
+        this.z = z
+        this.m = m
+    }
+
+    @JsName("ofCoords")
     constructor(coordinates: PointCoord) : this() {
         setCoordinates(coordinates)
     }
@@ -46,7 +56,7 @@ class SpPoint() : SpGeometry() {
     var longitude: Double
         get() = useCoordinates().getLongitude()
         set(value) {
-            useCoordinates().setLatitude(value)
+            useCoordinates().setLongitude(value)
         }
 
     /**

@@ -1,0 +1,16 @@
+{
+  "id": "regular_space_ah",
+  "type": "Space",
+  "title": "Space for testing Activity BHistory",
+  "description": "Sample Space description",
+  "eventHandlerIds": [
+    "regular_test_handler_ah"
+  ],
+  "properties": {
+    "collection": {
+      "id": "um-mod-dev:activity_history_test_collection_regular",
+      "mapId": "naksha-client-test-map",
+      "type": "NakshaCollection"
+    }
+  }
+}

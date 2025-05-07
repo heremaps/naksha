@@ -3,24 +3,40 @@ package naksha.psql
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import naksha.base.StringList
 import naksha.model.Naksha
 import naksha.model.NakshaError
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.APP_ID_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.AUTHOR_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS0_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS1_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS2_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS3_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV0_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV1_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV2_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV3_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.FEATURE_TYPE_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_2D_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.REF_POINT_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
 import naksha.model.request.ErrorResponse
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.psql.base.PgTestBase
 import kotlin.test.*
 
-class CollectionTests : PgTestBase(null) {
+class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
     @Test
     fun shouldDropCollection() {
         // Given: collection that will be tested
-        val collection = NakshaCollection("drop_collection_test")
+        val collection = NakshaCollection("drop_collection_test", map.id)
 
         // When: creating empty collection
         executeWrite(
@@ -30,12 +46,16 @@ class CollectionTests : PgTestBase(null) {
         )
 
         // Then: this collection is queryable and empty
-        val readAllFromCollection = ReadFeatures().apply { collectionIds += collection.id }
+        val readAllFromCollection = ReadFeatures().apply {
+            mapId = collection.mapId
+            collectionIds += collection.id
+        }
         val collectionContent = executeRead(readAllFromCollection)
         assertEquals(0, collectionContent.features.size)
 
         // And: Virtual Collections contain the created collection
         val selectCollectionFromVirt = ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += Naksha.COLLECTIONS_COL
             featureIds += collection.id
         }
@@ -45,7 +65,7 @@ class CollectionTests : PgTestBase(null) {
         // When: Collection gets deleted
         executeWrite(
             WriteRequest().add(
-                Write().deleteCollectionById(env.mapId, collection.id)
+                Write().deleteCollectionById(collection.mapId, collection.id)
             )
         )
 
@@ -60,8 +80,8 @@ class CollectionTests : PgTestBase(null) {
     }
 
     @Test
-    fun collectionShouldHasAllDbColumns() {
-        val collection = NakshaCollection("check_db_columns_test")
+    fun collectionShouldHaveAllColumns() {
+        val collection = NakshaCollection("check_db_columns_test", map.id)
         executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
@@ -81,23 +101,42 @@ class CollectionTests : PgTestBase(null) {
     }
 
     @Test
-    fun collectionShouldHasAllDbIndices() {
-        val collection = NakshaCollection("check_db_indices_test")
+    fun collectionShouldHaveIndices() {
+        val collection = NakshaCollection("check_db_indices_test", map.id)
+        val indices = StringList(
+            ID_IDX,
+            HERE_TILE_IDX,
+            APP_ID_IDX,
+            AUTHOR_IDX,
+            TAGS_IDX,
+            REF_POINT_IDX,
+            GIST_2D_IDX,
+            FEATURE_TYPE_IDX,
+            CV0_IDX,
+            CV1_IDX,
+            CV2_IDX,
+            CV3_IDX,
+            CS0_IDX,
+            CS1_IDX,
+            CS2_IDX,
+            CS3_IDX,
+        )
+        collection.withIndices(indices)
         executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
             )
         )
         val currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
-        checkAllDefaultIndicesCreatedForTable(collection.id)
-        checkAllDefaultIndicesCreatedForTable("${collection.id}\$meta")
-        checkAllDefaultIndicesCreatedForTable("${collection.id}\$del")
-        checkAllDefaultIndicesCreatedForTable("${collection.id}\$hst\$y$currentYear")
-        checkAllDefaultIndicesCreatedForTable("${collection.id}\$hst\$y${currentYear + 1}")
-        checkAllDefaultIndicesCreatedForTable("${collection.id}\$meta")
+        checkIndicesCreatedForTable(collection.id, indices)
+        checkIndicesCreatedForTable("${collection.id}\$meta", indices)
+        checkIndicesCreatedForTable("${collection.id}\$del", indices)
+        checkIndicesCreatedForTable("${collection.id}\$hst\$y$currentYear", indices)
+        checkIndicesCreatedForTable("${collection.id}\$hst\$y${currentYear + 1}", indices)
+        checkIndicesCreatedForTable("${collection.id}\$meta", indices)
     }
 
-    private fun checkAllDefaultIndicesCreatedForTable(tableName: String) {
+    private fun checkIndicesCreatedForTable(tableName: String, indices: StringList) {
         storage.adminConnection().use { conn ->
             conn.execute(
                 sql = "SELECT indexname FROM pg_indexes WHERE tablename = $1;",
@@ -105,10 +144,21 @@ class CollectionTests : PgTestBase(null) {
             ).use { cursor ->
                 val addedIndices = mutableListOf<String>()
                 while (cursor.next()) addedIndices.add(cursor["indexname"])
-                check((PgIndex.DEFAULT_INDICES.size - 1) <= addedIndices.size) { "Too few indices" }
-                PgIndex.DEFAULT_INDICES.forEach { defaultIndex ->
-                    check(addedIndices.contains(defaultIndex.id(tableName)) || defaultIndex==PgIndex.id) {
-                        "Missing index ${defaultIndex.name}"
+                check(indices.size <= addedIndices.size) { "Too few indices" }
+                indices.forEach { indexName ->
+                    check(indexName != null)
+                    val pgIndex = PgIndex.of(indexName)
+                    check(pgIndex != null)
+                    // Note: We know that the `id` index is replaced with `id_unique` internally for HEAD tables!
+                    if (pgIndex == PgIndex.id) {
+                        check(addedIndices.contains(pgIndex.id(tableName))
+                                || addedIndices.contains(PgIndex.id_unique.id(tableName))) {
+                            "Missing index ${pgIndex.name} aka $indexName"
+                        }
+                    } else {
+                        check(addedIndices.contains(pgIndex.id(tableName))) {
+                            "Missing index ${pgIndex.name} aka $indexName"
+                        }
                     }
                 }
             }
@@ -120,6 +170,7 @@ class CollectionTests : PgTestBase(null) {
         val collectionName = "check_no_hst_table_test"
         val collection = NakshaCollection(
             id = collectionName,
+            mapId = map.id,
             storeHistory = StoreMode.OFF
         )
         executeWrite(
@@ -150,6 +201,7 @@ class CollectionTests : PgTestBase(null) {
 
 
         val readFeatureRequest = ReadFeatures()
+        readFeatureRequest.mapId = map.id
         readFeatureRequest.collectionIds.add(collectionName)
         readFeatureRequest.featureIds.add(feature.id)
         val readFeaturesResponse = executeRead(readFeatureRequest)
@@ -185,10 +237,11 @@ class CollectionTests : PgTestBase(null) {
     }
 
     @Test
-    fun collectionShouldHasNoDeleteDBTable() {
+    fun collectionShouldNotHaveDeleteTable() {
         val collectionId = "check_no_del_table_test"
         var collection = NakshaCollection(
             id = collectionId,
+            mapId = map.id,
             storeDeleted = StoreMode.OFF
         )
 
@@ -221,6 +274,7 @@ class CollectionTests : PgTestBase(null) {
         feature = featureCreateResponse.features[0]!!
 
         val readFeature = ReadFeatures()
+        readFeature.mapId = map.id
         readFeature.collectionIds.add(collectionId)
         readFeature.featureIds.add(feature.id)
         val readFeatureResponse = executeRead(readFeature)
@@ -250,7 +304,7 @@ class CollectionTests : PgTestBase(null) {
     @Test
     fun updateCollection() {
         val collectionName = "update_collection_test"
-        var collection = NakshaCollection(id = collectionName)
+        var collection = NakshaCollection(id = collectionName, mapId = map.id)
         val createResponse = executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
@@ -270,6 +324,7 @@ class CollectionTests : PgTestBase(null) {
         val responseCollection = assertNotNull(updateResponse.features[0]).proxy(NakshaCollection::class)
         assertEquals(StoreMode.SUSPEND, responseCollection.storeDeleted)
         val selectCollectionFromVirt = ReadFeatures().apply {
+            mapId = map.id
             collectionIds += Naksha.COLLECTIONS_COL
             featureIds += collection.id
         }
@@ -280,7 +335,7 @@ class CollectionTests : PgTestBase(null) {
     @Test
     fun updateNotExistingCollection() {
         val collectionName = "not_existing_collection_test"
-        val collection = NakshaCollection(id = collectionName)
+        val collection = NakshaCollection(id = collectionName, mapId = map.id)
         // update collection
         collection.storeDeleted = StoreMode.SUSPEND
         val response = executeWriteErrorResponse(
@@ -295,7 +350,7 @@ class CollectionTests : PgTestBase(null) {
     @Test
     fun shouldUpsertCollection() {
         val collectionName = "upsert_collection_test"
-        val collection = NakshaCollection(id = collectionName)
+        val collection = NakshaCollection(id = collectionName, mapId = map.id)
         // create collection using upsert
         val response = executeWrite(
             WriteRequest().add(
@@ -323,7 +378,7 @@ class CollectionTests : PgTestBase(null) {
         // when
         val response = executeWrite(
             WriteRequest().add(
-                Write().deleteCollectionById(collectionId = collectionName)
+                Write().deleteCollectionById(collectionId = collectionName, mapId = map.id)
             )
         )
 
@@ -339,15 +394,15 @@ class CollectionTests : PgTestBase(null) {
         val collectionId = "test_create_existing_collection"
         executeWrite(
             WriteRequest().add(
-                Write().createCollection(NakshaCollection(collectionId))
+                Write().createCollection(NakshaCollection(collectionId, map.id))
             )
         )
 
         // When: create same collection once again
-        val response = env.storage.newWriteSession().use { session ->
+        val response = storage.newWriteSession(newSessionOptions()).use { session ->
             session.execute(
                 WriteRequest().add(
-                    Write().createCollection(NakshaCollection(collectionId))
+                    Write().createCollection(NakshaCollection(collectionId, map.id))
                 )
             )
         }

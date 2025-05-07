@@ -12,12 +12,22 @@ import naksha.psql.PgType.Companion.SHORT
 import naksha.psql.PgType.Companion.STRING
 
 /**
+ * The minimal `naksha~admin` version this version is compatible with.
+ *
+ * If [PgConfig.upgrade] is `false`, and the storage is of a smaller version than this one, initialization will fail. Otherwise, the storage is acceptable, so the SQL changes are not that critical that an update must be done.
+ *
+ * This is different from the normal [NakshaVersion.current], because `lib-psql` only increments the admin version, when the SQL functions are modified, and require an upgrade. So, even while client code may be modified, this still may not need an upgrade of the SQL functions.
+ * @since 3.0
+ */
+val minAdminVersion = NakshaVersion.of("3.0.0-beta.24")
+
+/**
  * The `naksha~admin` version.
  *
  * This is different from the normal [NakshaVersion.current], because `lib-psql` only increments the admin version, when the SQL functions are modified, and require an upgrade. So, even while client code may be modified, this still may not need an upgrade of the SQL functions.
  * @since 3.0
  */
-val adminVersion = NakshaVersion.of(NakshaVersion.v3_0_0_beta_6)
+val adminVersion = NakshaVersion.of("3.0.0-beta.24")
 
 /**
  * `$`: The separation string used to flag internal tables.
@@ -45,9 +55,29 @@ internal const val PG_HST = "${PG_S}hst"
 internal const val PG_META = "${PG_S}meta"
 
 /**
- * `$i_`: The prefix used for indices, followed by the index identifier, e.g. `$i_id`
+ * `$i_???`: The prefix used for indices, followed by the index identifier, e.g. `$i_id`
  */
 internal const val PG_IDX = "${PG_S}i_"
+
+/**
+ * `$c_??`: The prefix used for constraints, followed by the identifier of the constraint.
+ */
+internal const val PG_CONSTRAINT = "${PG_S}c_"
+
+/**
+ * The name of the constraint above [tn_next][PgColumn.next_tn] (yearly partition).
+ */
+internal const val PG_TN_NEXT_CONSTRAINT = "${PG_CONSTRAINT}nt"
+
+/**
+ * The name of the constraint above [tn][PgColumn.tn] (performance partition).
+ */
+internal const val PG_PART_CONSTRAINT = "${PG_CONSTRAINT}tn"
+
+/**
+ * The name of the partition-constraint above [id][PgColumn.id].
+ */
+internal const val PG_ID_CONSTRAINT = "${PG_CONSTRAINT}id"
 
 /**
  * `$p_`: The prefix used for numerated partitions, the final value is `$p???` with `?` being `[0-9]`.

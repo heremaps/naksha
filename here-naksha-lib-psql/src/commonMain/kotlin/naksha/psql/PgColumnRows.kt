@@ -322,6 +322,7 @@ internal class PgColumnRows {
                     column.values[row] = value
                 }
             }
+            return true
         }
         return false
     }

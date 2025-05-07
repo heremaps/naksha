@@ -10,6 +10,10 @@ import kotlin.jvm.JvmField
 
 /**
  * The DELETED table of a collection.
+ *
+ * @since 3.0
+ * @see [PgTable]
+ * @see [PgDeletedPartition]
  */
 @JsExport
 class PgDeleted(val head: PgHead) : PgTable(

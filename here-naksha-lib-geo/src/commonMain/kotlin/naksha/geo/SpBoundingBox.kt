@@ -51,8 +51,8 @@ class SpBoundingBox() : ListProxy<Double>(Double::class) {
     fun center(): SpPoint // TODO: Improve this implementation, add 3D!
         = SpPoint(
             PointCoord(
-                (getMaxLongitude() - getMinLongitude()) / 2.0,
-                (getMaxLatitude() - getMinLatitude()) / 2.0
+                getMinLongitude() + ((getMaxLongitude() - getMinLongitude()) / 2.0),
+                getMinLatitude() + ((getMaxLatitude() - getMinLatitude()) / 2.0)
             )
         )
 

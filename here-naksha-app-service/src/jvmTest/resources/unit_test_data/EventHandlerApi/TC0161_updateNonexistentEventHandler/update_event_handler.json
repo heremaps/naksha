@@ -1,0 +1,14 @@
+{
+  "id": "this-surely-does-not-exists",
+  "type": "EventHandler",
+  "title": "test Handler that does not exist",
+  "description": "Description",
+  "className": "com.here.naksha.lib.handlers.DefaultStorageHandler",
+  "active": true,
+  "properties": {
+    "storageId": "${dataDb.storageId}",
+    "collection": {
+      "maxAge": 3
+    }
+  }
+}

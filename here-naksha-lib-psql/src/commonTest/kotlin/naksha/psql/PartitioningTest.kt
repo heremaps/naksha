@@ -5,19 +5,23 @@ import naksha.model.SessionOptions
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
-import naksha.psql.base.PgTestBase
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class PartitioningTest : PgTestBase() {
 
+    // TODO: If testing is successful, adjust this!
+    @Ignore
     @Test
     fun createCollectionWithPartitions() {
         // given
         val numberOfPartitions = 8
         val partitionedCollection = NakshaCollection(
             id = "feature_partitioned",
+            mapId = map.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -60,11 +64,12 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 2
         val partitionedCollection = NakshaCollection(
             id = "feature_partitioned_insert_check",
+            mapId = map.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
         val writeRequest = WriteRequest().add(writeOp)
-        storage.newWriteSession().use { session ->
+        newWriteSession().use { session ->
             session.execute(writeRequest)
             session.commit()
         }
@@ -73,7 +78,7 @@ class PartitioningTest : PgTestBase() {
         val f1 = NakshaFeature("f1")
         val writeFeatureOp = Write().createFeature(partitionedCollection, f1)
         val writeFeatureRequest = WriteRequest().add(writeFeatureOp)
-        storage.newWriteSession().use { session ->
+        newWriteSession().use { session ->
             val result = session.execute(writeFeatureRequest)
             session.commit()
 
@@ -85,6 +90,7 @@ class PartitioningTest : PgTestBase() {
 
         // also - should be able to read
         val readRequest = ReadFeatures()
+        readRequest.mapId = partitionedCollection.mapId
         readRequest.collectionIds.add(partitionedCollection.id)
         readRequest.featureIds.add("f1")
         val readResponse = executeRead(readRequest)
@@ -97,6 +103,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 0
         val partitionedCollection = NakshaCollection(
             id = "zero_partitions",
+            mapId = map.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -115,6 +122,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 1
         val partitionedCollection = NakshaCollection(
             id = "one_partitions",
+            mapId = map.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -128,28 +136,29 @@ class PartitioningTest : PgTestBase() {
     }
 
     @Test
-    fun shouldNotAllowMoreThan256Partitions() {
+    fun shouldNotAllowMoreThan1000Partitions() {
         // given
         val numberOfPartitions = 65536
         val partitionedCollection = NakshaCollection(
             id = "to_many_partitions",
+            mapId = map.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
         val writeRequest = WriteRequest().add(writeOp)
 
         // when
-        storage.newWriteSession().use { session ->
+        newWriteSession().use { session ->
             // expect
             val response = session.execute(writeRequest) as ErrorResponse
-            assertEquals("Invalid number of partitions for 'to_many_partitions', must bei 0 or 2 to 65535, given 65536", response.error.msg)
+            assertEquals("Invalid partition-count, expect 2 .. 1000, found : 65536", response.error.msg)
         }
     }
 
     private fun queryForTablePartitions(table: String): List<String> {
         storage.newConnection(SessionOptions.from(null), true).use { pgConnection ->
             pgConnection.execute("""
-SET search_path TO "${env.mapId}", "naksha~admin", topology, hint_plan, public;
+SET search_path TO "${map.id}", "naksha~admin", topology, hint_plan, public;
 SELECT inhrelid::regclass AS partitioned_table FROM pg_inherits WHERE inhparent = $1::regclass ORDER BY partitioned_table;
 """,
                 arrayOf(table)

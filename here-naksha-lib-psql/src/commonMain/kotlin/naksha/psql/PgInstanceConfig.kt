@@ -23,13 +23,13 @@ class PgInstanceConfig : AnyObject() {
         internal const val DEFAULT_PORT = 5432
         private val HOST = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> "localhost" }
         private val PORT = NotNullProperty<PgInstanceConfig, Int>(Int::class) { _,_ -> DEFAULT_PORT }
-        private val DATABASE = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_PASSWORD }
+        private val DATABASE = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_DB }
         private val USER = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_USER }
         private val PASSWORD = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_PASSWORD }
         private val READ_ONLY = NotNullProperty<PgInstanceConfig, Boolean>(Boolean::class) { _,_ -> false }
         private val CONNECTION_LIMIT = NotNullProperty<PgInstanceConfig, Int>(Int::class) { self,_ ->
             // Compatibility hack, see:
-            // https://github.com/heremaps/naksha/blob/v2/here-naksha-app-service/src/test/resources/unit_test_data/StorageApi/TC0001_createStorage/create_storage.json
+            // https://github.com/heremaps/naksha/blob/v2/here-naksha-app-service/src/jvmTest/resources/unit_test_data/StorageApi/TC0001_createStorage/create_storage.json
             val raw = self.getRaw("maxPoolSize")
             if (raw is Number) raw.toInt() else 1024
         }

@@ -65,6 +65,21 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = original.id
 
     /**
+     * The partition-number in which the feature is located, this is a value between `0` and `65535`.
+     * @since 3.0
+     * @see [partition]
+     */
+    val partitionNumber: Int = Naksha.partitionNumber(id)
+
+    /**
+     * The partition-index, being `-1` if the collection does not have any performance-partitions, otherwise a value between `0` and `collection.partitions` _(exclusive)_.
+     * @since 3.0
+     * @see [partitionNumber]
+     */
+    val partition: Int
+        get() = if (collection.partitions > 1) partitionNumber % collection.partitions else -1
+
+    /**
      * The attachment as specified in the [Write] instruction, can be [Write.UNDEFINED].
      * @since 3.0
      */

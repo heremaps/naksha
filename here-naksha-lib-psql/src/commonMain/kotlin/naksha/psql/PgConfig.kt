@@ -63,7 +63,7 @@ class PgConfig() : NakshaStorage() {
             } catch (_: NakshaException) {}
         }
         // Try to port old code, so try properties.dbConfig
-        // https://github.com/heremaps/naksha/blob/v2/here-naksha-app-service/src/test/resources/unit_test_data/StorageApi/TC0001_createStorage/create_storage.json
+        // https://github.com/heremaps/naksha/blob/v2/here-naksha-app-service/src/jvmTest/resources/unit_test_data/StorageApi/TC0001_createStorage/create_storage.json
         val rawProperties = getRaw("properties")
         val rawDbConfig = if (rawProperties is AnyObject) rawProperties.getRaw("dbConfig") else null
         return if (rawDbConfig is AnyObject) rawDbConfig.proxy(PgInstanceConfig::class) else null
@@ -113,7 +113,7 @@ class PgConfig() : NakshaStorage() {
             val list = StringList()
             val replicas = this.replicas
             for (replica in replicas) {
-                if (replica != null) list.add(replica.toString())
+                if (replica != null) list.add(replica.withReadOnly(true).toString())
             }
             return list
         }

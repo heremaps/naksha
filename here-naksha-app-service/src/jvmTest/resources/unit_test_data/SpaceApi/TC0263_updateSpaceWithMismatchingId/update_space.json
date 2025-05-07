@@ -1,0 +1,16 @@
+{
+  "id": "other-test-space",
+  "type": "Space",
+  "title": "Space that should not be used to update `test-space`",
+  "description": "Descripion of Space used for testing",
+  "eventHandlerIds": [
+    "space-api-test-handler"
+  ],
+  "properties": {
+    "collection": {
+      "id": "um-mod-dev:test",
+      "mapId": "naksha-client-test-map",
+      "type": "NakshaCollection"
+    }
+  }
+}

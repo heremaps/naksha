@@ -1,0 +1,14 @@
+{
+  "id": "test-update-handler",
+  "type": "EventHandler",
+  "title": "Updated Test Handler",
+  "description": "Updated description of test-handler",
+  "className": "com.here.naksha.lib.handlers.DefaultStorageHandler",
+  "active": true,
+  "properties": {
+    "storageId": "${dataDb.storageId}",
+    "collection": {
+      "maxAge": 3
+    }
+  }
+}

@@ -9,7 +9,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import kotlin.reflect.KClass
 
 /**
- * The Java implementation of the [PgStorage], classname `naksha.psql.JvmPgStorage`.
+ * The Java implementation of the [PgStorage], classname `naksha.psql.PsqlStorage`.
  */
 open class PsqlStorage : PgStorage(), IStorage {
 
@@ -72,14 +72,8 @@ open class PsqlStorage : PgStorage(), IStorage {
 
     override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? = adminMap.getEncodingDictionary(feature, context)
 
-    override fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection {
-        val conn = cluster.newConnection(options, readOnly)
-        val query = """SET SESSION search_path TO "naksha~admin", hint_plan, public, topology;
-SET work_mem = '512MB';
-"""
-        if (init != null) init.call(conn, query) else conn.execute(query).close()
-        return conn
-    }
+    override fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection
+        = cluster.newConnection(options, readOnly, init)
 
     override fun adminConnection(): PgConnection = newConnection(Naksha.adminOptions, false)
 

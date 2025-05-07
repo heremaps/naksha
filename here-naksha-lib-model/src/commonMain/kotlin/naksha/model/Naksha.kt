@@ -145,7 +145,7 @@ class Naksha private constructor() {
          * - Encode the feature into `JBON` _(Java Binary Object Notation)_, and compress it using [GZIP](https://en.wikipedia.org/wiki/Gzip).
          */
         @JvmField
-        var DEFAULT_FLAGS = Flags(TWKB, JBON_GZIP, TagsEncoding.JSON_GZIP)
+        var DEFAULT_FLAGS = Flags(TWKB, JBON_GZIP, TagsEncoding.JSON)
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:
@@ -193,13 +193,19 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun verifyId(id: String?): String {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_ID_LENGTH) {
-                throw NakshaException(ILLEGAL_ID, "The given identifier is null, empty or has more than 32 characters")
+            if (id.isNullOrEmpty()) {
+                throw illegalId("The given identifier is null or empty")
+            }
+            if (id == "naksha") {
+                throw illegalId("The identifier 'naksha' is forbidden")
+            }
+            if (id.length > MAX_ID_LENGTH) {
+                throw illegalId("The identifier '$id' is too long: ${id.length}, must be maximal $MAX_ID_LENGTH")
             }
             var i = 0
             var c = id[i++]
             if (c.code < 'a'.code || c.code > 'z'.code) {
-                throw NakshaException(ILLEGAL_ID, "The first character must be a-z, but was $c")
+                throw illegalId("The first character must be a-z, but was $c")
             }
             while (i < id.length) {
                 c = id[i++]
@@ -207,7 +213,7 @@ class Naksha private constructor() {
                     in 'a'.code..'z'.code -> continue
                     in '0'.code..'9'.code -> continue
                     '_'.code, ':'.code, '-'.code -> continue
-                    else -> throw NakshaException(ILLEGAL_ID, "Invalid character at index $i: '$c', expected [a-z0-9_:-]")
+                    else -> throw illegalId("Invalid character at index $i: '$c', expected [a-z0-9_:-]")
                 }
             }
             return id
@@ -238,13 +244,13 @@ class Naksha private constructor() {
          * A regular expression to test if a string contains potentially a 63-bit unsigned integer (`0 .. 9,223,372,036,854,775,807`).
          * @since 3.0
          */
-        private val is63BitUnsigned = Regex("\\d{1,19}")
+        private val is63BitUnsigned = Regex("^[1-9][0-9]{0,18}$")
 
         /**
          * A regular expression to test if a string contains potentially a 31-bit unsigned integer (`0 .. 2,147,483,647`).
          * @since 3.0
          */
-        private val is31BitUnsigned = Regex("\\d{1,10}")
+        private val is31BitUnsigned = Regex("^[1-9][0-9]{0,9}\$")
 
         /**
          * A method to calculate a valid storage-number from the storage-id.
@@ -257,7 +263,7 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun storageNumber(id: String): Int64 {
-            if (is63BitUnsigned.matches(id)) {
+            if (id == "0" || is63BitUnsigned.matches(id)) {
                 try {
                     return id.toLong(10).toInt64()
                 } catch (_: Exception) {}
@@ -278,7 +284,7 @@ class Naksha private constructor() {
         @JvmStatic
         fun mapNumber(id: String): Int {
            if (id == ADMIN_MAP) return ADMIN_MAP_NUMBER
-           if (is31BitUnsigned.matches(id)) {
+           if (id == "0" || is31BitUnsigned.matches(id)) {
                try {
                    return id.toUInt(10).toInt()
                } catch (_: Exception) {}
@@ -300,7 +306,7 @@ class Naksha private constructor() {
         fun collectionNumber(id: String): Int {
             val internalNumber = internalIdToNumber[id]
             if (id != ADMIN_MAP && internalNumber != null) return internalNumber
-            if (is31BitUnsigned.matches(id)) {
+            if (id == "0" || is31BitUnsigned.matches(id)) {
                 try {
                     return id.toUInt(10).toInt()
                 } catch (_: Exception) {}
@@ -351,7 +357,7 @@ class Naksha private constructor() {
         fun featureNumber(id: String): Int64 {
             val internalNumber = internalIdToNumber[id]
             if (internalNumber != null) return internalNumber.toInt64()
-            if (is63BitUnsigned.matches(id)) {
+            if (id == "0" || is63BitUnsigned.matches(id)) {
                 try {
                     return id.toLong(10).toInt64()
                 } catch (_: Exception) {}
@@ -421,6 +427,19 @@ class Naksha private constructor() {
          */
         @JvmStatic
         internal val INT64_CLEAR_LOW16 = Int64(-65536)
+
+        /**
+         * Returns the partition-number from the given feature-id.
+         *
+         * This is basically just an unsigned 16-bit integer, extracted from the lowest 16-bit of the feature-number. When there are less than 65536 partitions, the value must be divided by the number of real partitions, and the rest indexes the partition, for example for 4 partitions do `partitionNumber(featureNumber) % 4`, what will be a value between 0 and 3.
+         * @param featureId the feature-id.
+         * @return the partition-number.
+         * @see [featureNumber]
+         */
+        @JsName("featureNumberById")
+        @JsStatic
+        @JvmStatic
+        fun partitionNumber(featureId: String): Int = partitionNumber(featureNumber(featureId))
 
         /**
          * Returns the partition-number from the given feature-number.

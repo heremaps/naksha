@@ -1,10 +1,8 @@
 package naksha.psql
 
-import naksha.psql.base.PgTestBase
 import kotlin.test.Test
-import kotlin.test.assertEquals
 
-class PsqlConnectionTest: PgTestBase() {
+class PsqlConnectionTest: PgTestBase(collection = null) {
 
     @Test
     fun testConnectionCloseAfterTimeout() {

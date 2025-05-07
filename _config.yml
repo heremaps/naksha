@@ -1,0 +1,7 @@
+# Exclude directories and files form Jekyll processing
+title: Naksha Documentation
+url: "https://heremaps.github.io/naksha/"
+exclude:
+  - docs/latest/
+  - docs/slides/
+theme: jekyll-theme-cayman

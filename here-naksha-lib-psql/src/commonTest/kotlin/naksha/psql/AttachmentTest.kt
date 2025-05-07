@@ -6,11 +6,10 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
-import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.*
 
-class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_ID)) {
+class AttachmentTest : PgTestBase() {
 
     @Test
     fun insertFeatureWithAttachment() {
@@ -44,6 +43,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
         // Read the feature
         Naksha.cache.clear()
         executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         }).apply {
@@ -98,6 +98,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
         Naksha.cache.clear()
         val readFeature: NakshaFeature
         executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         }).apply {
@@ -189,6 +190,7 @@ class AttachmentTest : PgTestBase(NakshaCollection("attachment_test", TEST_MAP_I
         Naksha.cache.clear()
         val readFeature: NakshaFeature
         executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         }).apply {

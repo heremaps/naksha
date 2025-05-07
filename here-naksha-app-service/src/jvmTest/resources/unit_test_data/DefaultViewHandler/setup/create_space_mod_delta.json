@@ -1,0 +1,16 @@
+{
+  "id": "mod-dev:topology-delta",
+  "type": "Space",
+  "title": "Topology Space for UniMap Moderation Dev Storage",
+  "description": "Space for managing Topology Feature collection in UniMap Moderation Dev Storage",
+  "eventHandlerIds": [
+    "mod-delta-handler-dev"
+  ],
+  "properties": {
+    "collection": {
+      "id": "topologies_delta",
+      "mapId": "naksha-client-test-map",
+      "type": "NakshaCollection"
+    }
+  }
+}

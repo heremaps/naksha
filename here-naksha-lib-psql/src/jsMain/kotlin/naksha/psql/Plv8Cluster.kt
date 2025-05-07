@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.fn.Fx2
 import naksha.model.SessionOptions
 
 object Plv8Cluster : PgCluster {
@@ -13,7 +14,7 @@ object Plv8Cluster : PgCluster {
     override val connectionLimit: Int
         get() = TODO("Not yet implemented")
 
-    override fun newConnection(options: SessionOptions, readOnly: Boolean): PgConnection {
+    override fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection {
         TODO("Not yet implemented")
     }
 }

@@ -60,15 +60,6 @@ class PsqlAdminMap internal constructor(
     }
 
     override fun upgradeAdminMap(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion, schemaOid: Int, installedVersion: NakshaVersion?) {
-        if (installedVersion != null && installedVersion > psqlVersion) {
-            if (config.version != null && psqlVersion == adminVersion) {
-                throw illegalState("This lib-psql version (${psqlVersion}) is lower than the installed version (${installedVersion})")
-            }
-            // This is an exception, someone set `version` in the config to some explicit value,
-            // therefore overriding the real adminVersion, which must only be done for debugging
-            // reasons, therefore we will allow downgrading of storage
-            logger.warn("Forcefully downgrade storage from $installedVersion to $psqlVersion")
-        }
         upsertAdminMap(conn, storageId, storageNumber, psqlVersion, schemaOid, installedVersion)
     }
 
@@ -188,12 +179,8 @@ class PsqlAdminMap internal constructor(
                 "storageNumber" to storageNumber.toString()
             )
         )
-        // Note: We reserve the first 1000 collection sequences for internal collections with hard-coded
-        //       storage-numbers, because they have no entries in the naksha~collections table!
         logger.info("Create transaction-seq, map-sequence, and collection-sequence ...")
         conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64} START 1 CACHE 10;").close()
-//        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_MAP_SEQ AS ${PgType.INT64} START 1 CACHE 1;").close()
-//        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_COL_SEQ AS ${PgType.INT64} START 100 CACHE 1;").close()
 
         logger.info("Create internal collections: transactions, collections, and dictionaries")
         createPgCollection(conn, collections) // 0
@@ -243,7 +230,8 @@ class PsqlAdminMap internal constructor(
     private fun executeSqlFromResource(conn: PgConnection, path: String, replacements: Map<String, String>? = null) {
         val resourceAsText = getResourceAsText(path)
         check(resourceAsText != null)
-        conn.execute(applyReplacements(resourceAsText, replacements)).close()
+        val finalResourceAsText = applyReplacements(resourceAsText, replacements)
+        conn.execute(finalResourceAsText).close()
     }
 
     /**

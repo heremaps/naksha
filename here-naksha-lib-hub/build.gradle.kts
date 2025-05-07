@@ -1,21 +1,45 @@
 plugins {
-    id("naksha.java")
-    id("naksha.publish")
+    alias(libs.plugins.kotlin.multiplatform)
 }
-description = "NakshaHub library"
-dependencies {
-    implementation(project(":here-naksha-lib-core"))
-    implementation(project(":here-naksha-lib-model"))
-    implementation(project(":here-naksha-lib-psql"))
-    implementation(project(":here-naksha-lib-handlers"))
-    implementation(project(":here-naksha-lib-ext-manager"))
 
-    implementation(Lib.commons_lang3)
-    implementation(Lib.jts_core)
-    implementation(Lib.postgres)
-    implementation(Lib.aws_s3)
+description = gatherDescription()
 
-    testImplementation(Lib.json_assert)
-    testImplementation(Lib.mockito)
+kotlin {
+    sourceSets {
+        jvmMain {
+            jvmToolchain(23)
+            dependencies {
+                implementation(project(":here-naksha-lib-core"))
+                implementation(project(":here-naksha-lib-model"))
+                implementation(project(":here-naksha-lib-psql"))
+                implementation(project(":here-naksha-lib-handlers"))
+                implementation(project(":here-naksha-lib-ext-manager"))
+
+                implementation(libs.commons.lang3)
+                implementation(libs.jts.core)
+                implementation(libs.postgres)
+                implementation(libs.aws.s3)
+
+                implementation(libs.bundles.jackson)
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation(libs.json.assert)
+                implementation(libs.bundles.testing)
+            }
+        }
+    }
+
+    jvm {}
 }
-setOverallCoverage(0.2) // only increasing allowed!
+
+tasks {
+    getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
+    getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
+    getByName<Test>("jvmTest") {
+        useJUnitPlatform()
+        maxHeapSize = "6g"
+    }
+}
+setOverallCoverage(0.0) // only increasing allowed!

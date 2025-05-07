@@ -8,6 +8,8 @@ import kotlin.js.JsExport
  * A feature partition for performance optimisation.
  * @property year the history year.
  * @param index the index in the history year partitions array.
+ * @since 3.0
+ * @see [PgHistoryYear]
  */
 @JsExport
 class PgHistoryPartition(val year: PgHistoryYear, index: Int) : PgTable(

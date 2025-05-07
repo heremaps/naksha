@@ -13,6 +13,9 @@ import kotlin.jvm.JvmField
  * Beware that the history is not partitioned by the year when the transaction happened, but by the moment the transaction was updated, and moved into the history. This is done, because we have the yearly partitions for garbage collection, and if the state of a row is moved into history, from this moment on we want to keep it for some time (e.g. one year), otherwise a feature that was updated 3 years ago the last time, and then moved into history, would be removed from history instantly.
  * @property history the history table.
  * @param year the year of this history table.
+ * @since 3.0
+ * @see [PgHistory]
+ * @see [PgHistoryPartition]
  */
 @JsExport
 class PgHistoryYear(val history: PgHistory, year: Int) : PgTable(
@@ -38,7 +41,7 @@ class PgHistoryYear(val history: PgHistory, year: Int) : PgTable(
      */
     operator fun get(featureId: String): PgHistoryPartition? {
         val partitions = this.partitions
-        if (partitions.size == 0) return null
+        if (partitions.isEmpty()) return null
         val i = PgUtil.partitionNumber(featureId) % partitions.size
         check(i >= partitions.size) { throw NakshaException(PARTITION_NOT_FOUND, "Partition $i not found in table $name") }
         return partitions[i]

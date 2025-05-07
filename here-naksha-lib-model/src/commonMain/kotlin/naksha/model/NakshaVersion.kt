@@ -85,49 +85,13 @@ class NakshaVersion(
 
         const val v3_0_0 = "3.0.0"
 
-        const val v3_0_0_alpha_0 = "3.0.0-alpha.0"
-
-        const val v3_0_0_alpha_1 = "3.0.0-alpha.1"
-
-        const val v3_0_0_alpha_2 = "3.0.0-alpha.2"
-
-        const val v3_0_0_alpha_8 = "3.0.0-alpha.8"
-
-        const val v3_0_0_alpha_9 = "3.0.0-alpha.9"
-
-        const val v3_0_0_alpha_10 = "3.0.0-alpha.10"
-
-        const val v3_0_0_alpha_11 = "3.0.0-alpha.11"
-
-        const val v3_0_0_alpha_12 = "3.0.0-alpha.12"
-
-        const val v3_0_0_alpha_13 = "3.0.0-alpha.13"
-
-        const val v3_0_0_alpha_14 = "3.0.0-alpha.14"
-
-        const val v3_0_0_alpha_15 = "3.0.0-alpha.15"
-
-        const val v3_0_0_alpha_16 = "3.0.0-alpha.16"
-
-        const val v3_0_0_beta_1 = "3.0.0-beta.1"
-
-        const val v3_0_0_beta_2 = "3.0.0-beta.2"
-
-        const val v3_0_0_beta_3 = "3.0.0-beta.3"
-
-        const val v3_0_0_beta_5 = "3.0.0-beta.5"
-
-        const val v3_0_0_beta_6 = "3.0.0-beta.6"
-
-        const val v3_0_0_beta_7 = "3.0.0-beta.7"
-
-        const val v3_0_0_beta_8 = "3.0.0-beta.8"
-
         /**
          * The current version as string to constant usage cases.
          * @since 3.0
          */
-        const val CURRENT = v3_0_0_beta_8
+        const val CURRENT = "3.0.0-beta.24"
+        // WARNING: Do not update this property manually, it is automatically modified when building!
+        //          Edit version only in `gradle.properties` file, which is used as well to create artifacts!
 
         /**
          * The current version of the Naksha library.
@@ -182,6 +146,7 @@ class NakshaVersion(
          * @since 3.0
          */
         none(FINAL_PRE_RELEASE_ENC),
+
         /**
          * Experimental early pre-release, API is subject to change.
          * @since 3.0
@@ -192,7 +157,13 @@ class NakshaVersion(
          * Experimental more stable pre-release, API is subject to change.
          * @since 3.0
          */
-        beta(1);
+        beta(1),
+
+        /**
+         * Release candidate, API should no longer be changed, but it is not guaranteed through.
+         * @since 3.0
+         */
+        rc(2);
 
         companion object {
             fun findByValue(enc: Int): PreReleaseTag {
@@ -226,7 +197,7 @@ class NakshaVersion(
     /**
      * Create a Naksha version from a multi-platform 64-bit binary encoding.
      * @param enc the multi-platform 64-bit binary encoding.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JsName("fromBigInt")
     constructor(enc: Int64) : this(enc.toLong())

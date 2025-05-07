@@ -32,12 +32,6 @@ open class NakshaMap() : NakshaFeature() {
 
     companion object NakshaMap_C {
         /**
-         * The default map.
-         * @since 3.0
-         */
-        const val DEFAULT = "unimap"
-
-        /**
          * The feature-type of this feature itself _(`naksha.Map`)_.
          * @since 3.0
          */

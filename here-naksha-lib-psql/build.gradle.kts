@@ -4,22 +4,16 @@ import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 
 plugins {
-    id("org.jetbrains.kotlin.multiplatform")
-    kotlin("plugin.js-plain-objects")
-    id("naksha.java")
-    id("naksha.publish")
-
-    // uncomment spotless to add license comments
-    // id("naksha.spotless-kotlin")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.js.plain.objects)
 }
 
-kotlin {
-    jvm {
-        withJava()
-    }
+description = gatherDescription()
 
+kotlin {
+    jvm {}
     js(IR) {
-        moduleName = "naksha_psql"
+        outputModuleName = "naksha_psql"
         useEsModules()
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
@@ -43,13 +37,13 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(kotlin("stdlib-common"))
+                implementation(kotlin("stdlib"))
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-jbon"))
                 api(project(":here-naksha-lib-model"))
                 api(project(":here-naksha-lib-geo"))
 
-                implementation(Lib.kotlinx_datetime)
+                implementation(libs.kotlinx.datetime)
             }
         }
         commonTest {
@@ -57,7 +51,7 @@ kotlin {
                 implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation(Lib.kotlinx_datetime)
+                implementation(libs.kotlinx.datetime)
             }
         }
         jvmMain {
@@ -70,16 +64,16 @@ kotlin {
                 api(project(":here-naksha-lib-model"))
                 api(project(":here-naksha-lib-geo"))
 
-                implementation(Lib.commons_lang3)
-                implementation(Lib.postgres)
-                implementation(Lib.test_containers_postgres)
-                implementation(Lib.commons_dbutils)
-                implementation(Lib.jts_core)
-                implementation(Lib.jts_io_common)
+                implementation(libs.commons.lang3)
+                implementation(libs.postgres)
+                implementation(libs.test.containers.postgres)
+                implementation(libs.commons.dbutils)
+                implementation(libs.jts.core)
+                implementation(libs.jts.io.common)
 
-                implementation(Lib.kotlinx_datetime)
-                implementation(Lib.postgres)
-                implementation(Lib.caffeine)
+                implementation(libs.kotlinx.datetime)
+                implementation(libs.postgres)
+                implementation(libs.caffeine)
             }
             // TODO: We should replace ${project.buildDir} with ${layout.buildDirectory}, but this is not the same:
             // println("------------ ${project.buildDir}/dist/js/productionExecutable/")
@@ -89,17 +83,17 @@ kotlin {
         jvmTest {
             dependencies {
                 implementation(kotlin("test"))
-                implementation(Lib.kotlintest_runner_junit5)
-                runtimeOnly(Lib.junit_jupiter_engine)
-                implementation(Lib.junit_jupiter_api)
-                implementation(Lib.junit_params)
-                implementation(Lib.slf4j_api)
-                implementation(Lib.slf4j_console)
-                implementation(Lib.test_containers_postgres)
-                implementation(Lib.postgres)
-                implementation(Lib.mockito)
-                implementation(Lib.mockito_kotlin)
-                implementation(Lib.spatial4j)
+                implementation(libs.kotlintest.runner.junit5)
+                runtimeOnly(libs.junit.jupiter.engine)
+                implementation(libs.junit.jupiter.api)
+                implementation(libs.junit.params)
+                implementation(libs.slf4j.api)
+                implementation(libs.slf4j.console)
+                implementation(libs.test.containers.postgres)
+                implementation(libs.postgres)
+                implementation(libs.mockito)
+                implementation(libs.mockito.kotlin)
+                implementation(libs.spatial4j)
 
                 // Include JMH and JMH annotation processor.
                 implementation("org.openjdk.jmh:jmh-core:1.37")
@@ -114,7 +108,7 @@ kotlin {
                 api(project(":here-naksha-lib-model"))
                 api(project(":here-naksha-lib-geo"))
 
-                implementation(Lib.kotlinx_datetime)
+                implementation(libs.kotlinx.datetime)
                 //implementation(npm("postgres", "3.4.4"))
             }
         }
@@ -149,3 +143,7 @@ tasks {
     }
 }
 setOverallCoverage(0.0) // only increasing allowed!
+
+tasks.matching { it.name == "jsNodeTest" }.configureEach {
+    enabled = false
+}

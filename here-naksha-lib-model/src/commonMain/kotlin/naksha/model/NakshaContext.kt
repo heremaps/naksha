@@ -8,7 +8,6 @@ import naksha.base.fn.Fn0
 import naksha.base.fn.Fn3
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.NakshaMap
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -59,6 +58,12 @@ open class NakshaContext protected constructor() {
      * @since 3.0.0
      */
     open val lockTimeout: Int = defaultLockTimeout.get()
+
+    /**
+     * The idle-transaction-timeout in milliseconds.
+     * @since 3.0.0
+     */
+    open val idleTxTimeout = defaultIdleTxTimeout.get()
 
     private var _appName: String? = null
 
@@ -155,12 +160,12 @@ open class NakshaContext protected constructor() {
             return s.streamId
         }
         set(value) {
-            val s = _streamInfo
-            if (s != null && s.streamId == value) return
+            val currentInfo = _streamInfo
+            if (currentInfo != null && currentInfo.streamId == value) return
             // Create a new stream-information with the desired stream-id.
-            val info = streamInfoConstructorRef.call()
-            info.streamId = value
-            _streamInfo = s
+            val newInfo = streamInfoConstructorRef.call()
+            newInfo.streamId = value
+            _streamInfo = newInfo
         }
 
     /**
@@ -198,33 +203,6 @@ open class NakshaContext protected constructor() {
      */
     open fun withAuthor(author: String?): NakshaContext {
         this.author = author
-        return this
-    }
-
-    private var _mapId: String? = null
-
-    /**
-     * The map to use.
-     *
-     * The map-id is read from the JWT `mapId` claim, but can be overridden by the client using the HTTP header `X-Map-Id` or by using specially crafted requests which explicitly specify the map-id. If neither is available, the default is [defaultMapId].
-     *
-     * Note: In `lib-psql` the default map is mapped to the default schema configured within the storage driver.
-     * @since 3.0.0
-     */
-    open var mapId: String
-        get() = _mapId ?: defaultMapId.get() ?: throw NakshaException(ILLEGAL_STATE, "Missing map-id")
-        set(value) {
-            _mapId = value
-        }
-
-    /**
-     * Change the current map-id.
-     * @param mapId the map-id to select.
-     * @return this.
-     * @since 3.0.0
-     */
-    open fun withMapId(mapId: String): NakshaContext {
-        this.mapId = mapId
         return this
     }
 
@@ -395,13 +373,6 @@ open class NakshaContext protected constructor() {
     @Suppress("OPT_IN_USAGE")
     companion object NakshaContextCompanion {
         /**
-         * The default map-identifier to use, defaults to `unimap`.
-         * @since 3.0.0
-         */
-        @JvmField
-        val defaultMapId = AtomicRef(NakshaMap.DEFAULT)
-
-        /**
          * The default application name to use, defaults to `NakshaClient/{version}`.
          * @since 3.0.0
          */
@@ -462,13 +433,11 @@ open class NakshaContext protected constructor() {
         val defaultLockTimeout = AtomicInt(10_000)
 
         /**
-         * Returns the current map-id.
-         * @return the current map-id.
+         * The application wide default idle-transaction-timeout in milliseconds.
          * @since 3.0.0
          */
-        @JvmStatic
-        @JsStatic
-        fun mapId(): String = currentContext().mapId
+        @JvmField
+        val defaultIdleTxTimeout = AtomicInt(10_000)
 
         /**
          * Returns the current application name.

@@ -16,14 +16,13 @@ import naksha.model.GeoEncoding.GeoEncoding_C.WKB_GZIP
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class SridTest : PgTestBase() {
-
 
     /**
     This might look odd at first glance but there's a reason to have test configs as separate being.
@@ -56,49 +55,49 @@ class SridTest : PgTestBase() {
             TWKB to SridTestConfig(
                 encodingName = "TWKB",
                 flags = flagsFor(TWKB),
-                mapId = env.mapId,
+                mapId = map.id,
                 collectionId = "srid_test_twkb"
             ),
             TWKB_GZIP to SridTestConfig(
                 encodingName = "TWKB_GZIP",
                 flags = flagsFor(TWKB_GZIP),
-                mapId = env.mapId,
+                mapId = map.id,
                 collectionId = "srid_test_twkb_gzip"
             ),
             WKB to SridTestConfig(
                 encodingName = "WKB",
                 flags = flagsFor(WKB),
-                mapId = env.mapId,
+                mapId = map.id,
                 collectionId = "srid_test_wkb"
             ),
             WKB_GZIP to SridTestConfig(
                 encodingName = "WKB_GZIP",
                 flags = flagsFor(WKB_GZIP),
-                mapId = env.mapId,
+                mapId = map.id,
                 collectionId = "srid_test_wkb_gzip"
             ),
             EWKB to SridTestConfig(
                 encodingName = "EWKB",
                 flags = flagsFor(EWKB),
-                mapId = env.mapId,
+                mapId = map.id,
                 collectionId = "srid_test_ewkb"
             ),
             EWKB_GZIP to SridTestConfig(
                 encodingName = "EWKB_GZIP",
                 flags = flagsFor(EWKB_GZIP),
-                mapId = env.mapId,
+                mapId = map.id,
                 collectionId = "srid_test_ewkb_gzip"
             ),
             GEO_JSON to SridTestConfig(
                 encodingName = "GEO_JSON",
                 flags = flagsFor(GEO_JSON),
-                mapId = env.mapId,
+                mapId = map.id,
                 collectionId = "srid_test_geojson"
             ),
             GEO_JSON_GZIP to SridTestConfig(
                 encodingName = "GEO_JSON_GZIP",
                 flags = flagsFor(GEO_JSON_GZIP),
-                mapId = env.mapId,
+                mapId = map.id,
                 collectionId = "srid_test_geojson_gzip"
             )
         )
@@ -212,7 +211,7 @@ class SridTest : PgTestBase() {
     }
 
     private fun writeSingleCollectionOp(collectionId: String, flags: Flags): Write {
-        val collection = NakshaCollection(collectionId)
+        val collection = NakshaCollection(collectionId, TEST_MAP_ID)
         collection.defaultFlags = flags
         return Write().createCollection(collection)
     }

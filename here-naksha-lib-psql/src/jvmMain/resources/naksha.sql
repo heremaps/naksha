@@ -10,6 +10,7 @@
 -- noinspection SqlResolveForFile @ routine/"ST_Force2D"
 -- noinspection SqlResolveForFile @ routine/"ST_Force3D"
 -- noinspection SqlResolveForFile @ routine/"ST_Force4D"
+-- noinspection SqlResolveForFile @ table/"pg_buffercache"
 --
 -- Read: https://www.postgresql.org/docs/current/sql-createfunction.html
 --
@@ -72,7 +73,7 @@ CREATE FUNCTION bytea_concat(a bytea, b bytea) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
 AS $$
   SELECT a || b
-END $$;
+$$;
 
 CREATE AGGREGATE bytea_agg(bytea) (
     SFUNC = bytea_concat,
@@ -101,137 +102,184 @@ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT AS $$
          ((get_byte(data, pos)::int4) << 24)
 $$;
 
+CREATE OR REPLACE FUNCTION int2recv(data bytea, pos int4) RETURNS int2
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT AS $$
+SELECT (get_byte(data, pos + 1)::int2) |
+       ((get_byte(data, pos)::int2) << 8)
+$$;
+
 -- Returns the packed Naksha extension version: 16 bit major, 16 bit minor, 16 bit revision, 8 bit pre-release tag, 8 bit pre-release version.
 CREATE OR REPLACE FUNCTION naksha_version() RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
 AS $$
   SELECT ${version}
-END $$;
+$$;
 
 -- Returns the storage-id of this storage, this is created when the Naksha extension is installed and never changes.
 CREATE OR REPLACE FUNCTION naksha_storage_id() RETURNS text
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
 AS $$
   SELECT ${storageIdLiteral}
-END $$;
+$$;
 
 -- Returns the storage-number of this storage, this is created when the Naksha extension is installed and never changes.
 CREATE OR REPLACE FUNCTION naksha_storage_number() RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
 AS $$
   SELECT ${storageNumber}
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_288(storage_num int8, map_num int4, col_num int4, feature_num int8, txn int8, uid int4) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   SELECT int8send(storage_num) || int4send(map_num) || int4send(col_num) || int8send(feature_num) || int8send(txn) || int4send(uid)
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_224(map_num int4, col_num int4, feature_num int8, txn int8, uid int4) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   SELECT int4send(map_num) || int4send(col_num) || int8send(feature_num) || int8send(txn) || int4send(uid)
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_192(col_num int4, feature_num int8, txn int8, uid int4) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   SELECT int4send(col_num) || int8send(feature_num) || int8send(txn) || int4send(uid)
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_160(feature_num int8, txn int8, uid int4) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   SELECT int8send(feature_num) || int8send(txn) || int4send(uid)
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_96(txn int8, uid int4) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   SELECT int8send(txn) || int4send(uid)
-END $$;
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_tn_96(any_tn bytea) RETURNS bytea
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT substring(any_tn FROM length(any_tn) - 11 FOR 12)
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_storage_number(tn bytea) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT int8recv(tn, length(tn) - 36)
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_map_number(tn bytea) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT int4recv(tn, length(tn) - 28)
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_collection_number(tn bytea) RETURNS int
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
     SELECT int4recv(tn, length(tn) - 24)
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_feature_number(tn bytea) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT int8recv(tn, length(tn) - 20)
-END $$;
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_tn_partition_number(tn bytea) RETURNS int4
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  -- The partition-number is the same as the lower 16-bit in the feature-number.
+  SELECT int2recv(tn, length(tn) - 14)::int4 & 65535
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_tn_partition_index(tn bytea, partitions int4) RETURNS int4
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  -- The partition-number is the same as the lower 16-bit in the feature-number.
+  SELECT (int2recv(tn, length(tn) - 14)::int4 & 65535) % partitions
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_version(tn bytea) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT int8recv(tn, length(tn) - 12)
-END $$;
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_tn_year(tn bytea) RETURNS int4
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  -- The top 8-bit are reserved and always 0
+  -- The next 15-bit are the year
+  -- So, we read the 16-bit, shift right by one, then set all top bit to zero,
+  --     because PostgresQL does only have arithmetic shift right (>>), but no
+  --     logical shift right (>>>)
+  SELECT ((int2recv(tn, length(tn) - 11)::int4) >> 1) & 32767
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_uid(tn bytea) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT int4recv(tn, length(tn) - 4)
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_action(tn bytea) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-    SELECT int4recv(tn, length(tn) - 4) & 3
-END $$;
+  SELECT int4recv(tn, length(tn) - 4) & 3
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_feature_number(id text) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT int8recv(digest(id,'md5'), 8) | (-9223372036854775807::int8 - 1)::int8
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_partition_number(feature_number int8) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   SELECT (feature_number & 65535)::int4
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_partition_number(id text) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT int4recv(digest(id,'md5'), 12) & 65535
-END $$;
+  SELECT ((CASE WHEN id='0' OR (id~'^[1-9][0-9]{0,18}$' AND id::numeric <= 9223372036854775807) THEN id::int8 ELSE int4recv(digest(id,'md5'), 12) END) & 65535)
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_partition_index(id text, parts int4) RETURNS int4
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  SELECT naksha_partition_number(id) % parts
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_partition_index(feature_number int8, parts int4) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   SELECT (feature_number & 65535)::int4 % parts
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_partition_index(partition_number int4, parts int4) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   SELECT partition_number % parts
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_version_of(year int4, month int4, day int4, seq int8) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
@@ -241,35 +289,35 @@ AS $$
          ((month::int8 & 15::int8) << 37) |
          ((day::int8 & 31::int8) << 32) |
          (seq & 4294967295::int8)
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_version_year(version int8) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT (version >> 41)::int4
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_version_month(version int8) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT (version >> 37)::int4 & 15
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_version_day(version int8) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT (version >> 32)::int4 & 31
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_version_seq(version int8) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT version & (4294967295::int8)
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_version_text(version int8) RETURNS text
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
@@ -279,37 +327,37 @@ AS $$
       || naksha_version_month(version) || ':'
       || naksha_version_day(version) || ':'
       || naksha_version_seq(version)
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_alt32(num int4) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   SELECT (num + 1) | -2147483648
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_alt64(num int8) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   SELECT ((num + 65536::int8) & (-65536::int8)) | (num & (65535::int8)) | (((-9223372036854775807::int8) - 1::int8)::int8)
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_created_at(created_at int8, updated_at int8) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
 AS $$
   SELECT COALESCE(created_at, updated_at)
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_author(author text, app_id text) RETURNS text
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
 AS $$
   SELECT COALESCE(author, app_id)
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_author_ts(author_ts int8, updated_at int8) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
 AS $$
   SELECT COALESCE(author_ts, updated_at)
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_jbon_feature_to_json(jbon bytea) RETURNS json
 LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE STRICT
@@ -333,7 +381,7 @@ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT naksha_jbon_feature_to_json(jbon)::jsonb
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_jbon_map_to_json(jbon bytea) RETURNS json
 LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE STRICT
@@ -357,7 +405,7 @@ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT naksha_jbon_map_to_json(jbon)::jsonb
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_tags(tags bytea, flags int4) RETURNS jsonb
 LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE STRICT
@@ -442,14 +490,13 @@ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT ST_Force2D(naksha_geometry(geo,flags))
-END; $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_3d(geo bytea, flags int4) RETURNS geometry
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT ST_Force3D(naksha_geometry(geo,flags), 0)
-END;
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_4d(geo bytea, flags int4) RETURNS geometry
@@ -457,7 +504,6 @@ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT ST_Force4D(naksha_geometry(geo,flags), 0, 0)
-END;
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_ref_point(ref_point bytea) RETURNS geometry
@@ -465,7 +511,6 @@ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT ST_SetSRID(ST_Force2D(ST_GeomFromTWKB(ref_point)), 4326)
-END;
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_flags_action(flags int4) RETURNS int2
@@ -473,11 +518,92 @@ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   -- 0=CREATED; 1=UPDATED; 2=DELETED; 3=UNKNOWN
   SELECT (flags >> 16) & 3
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_here_tile_trim_level(here_tile int4, new_level int4) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   SELECT here_tile >> (2 * (15 - LEAST(new_level, 15)))
-END $$;
+$$;
+
+-- https://www.postgresql.org/docs/current/pgbuffercache.html
+CREATE OR REPLACE FUNCTION naksha_db_cache(dbname text) RETURNS TABLE(relname TEXT, relkind TEXT, count INT)
+LANGUAGE 'sql' VOLATILE PARALLEL SAFE STRICT
+AS $$
+    SELECT c.relname, c.relkind, count(*)
+    FROM   pg_database AS a, pg_buffercache AS b, pg_class AS c
+    WHERE  c.relfilenode = b.relfilenode
+      AND b.reldatabase = a.oid
+      AND c.oid >= 16384
+      AND a.datname = dbname
+    GROUP BY 1, 2
+    ORDER BY 3 DESC
+$$;
+
+-- https://www.postgresql.org/docs/current/view-pg-locks.html
+-- https://www.postgresql.org/docs/current/monitoring-stats.html
+--
+-- [wait_event_type]
+-- LWLock 	The server process is waiting for a lightweight lock. Most such locks protect a
+--          particular data structure in shared memory. wait_event will contain a name
+--          identifying the purpose of the lightweight lock. (Some locks have specific names;
+--          others are part of a group of locks each with a similar purpose.)
+-- Lock 	The server process is waiting for a heavyweight lock. Heavyweight locks, also known
+--          as lock manager locks or simply locks, primarily protect SQL-visible objects such as
+--          tables. However, they are also used to ensure mutual exclusion for certain internal
+--          operations such as relation extension. wait_event will identify the type of lock awaited;
+-- IO 	    The server process is waiting for an I/O operation to complete. wait_event will identify the specific wait point;
+-- [wait_event]
+-- BufferContent 	Waiting to access a data page in memory.
+-- BufferMapping 	Waiting to associate a data block with a buffer in the buffer pool.
+CREATE OR REPLACE FUNCTION naksha_db_lwlocks() RETURNS TABLE(pid INT, info JSON, queries JSON)
+LANGUAGE 'sql' VOLATILE PARALLEL SAFE STRICT
+AS $$
+  SELECT
+    psa.pid,
+    json_agg(DISTINCT pl.relation::regclass) AS info,
+    json_agg(DISTINCT psa.query) AS queries
+  FROM pg_stat_activity psa
+  LEFT JOIN pg_locks pl ON psa.pid = pl.pid
+  WHERE psa.wait_event_type = 'LWLock'
+    AND psa.wait_event IN ('BufferContent', 'BufferMapping')
+  GROUP BY psa.pid
+  ORDER BY psa.pid
+$$;
+
+-- Creates a partition array
+CREATE OR REPLACE FUNCTION naksha_part_array(prefix TEXT, count INT) RETURNS TEXT[]
+LANGUAGE 'sql' VOLATILE PARALLEL SAFE STRICT
+AS $$
+  SELECT ARRAY(SELECT format('%s$p%s', 'topology', LPAD(gs::TEXT, 3, '0')) FROM generate_series(0, count-1) AS gs)
+$$;
+
+-- Estimate the features in the collection with that many partitions
+CREATE OR REPLACE FUNCTION naksha_estimate_feature_count(collection_id TEXT, partitions INT) RETURNS int8
+LANGUAGE 'sql' VOLATILE PARALLEL SAFE STRICT
+AS $$
+  SELECT sum(reltuples::int8) AS estimate
+  FROM pg_class
+  WHERE relname = ANY(naksha_part_array(collection_id,partitions));
+$$;
+
+-- Disable or enable auto-vacuum for tables.
+CREATE OR REPLACE FUNCTION naksha_set_autovacuum(schema text, tables text[], state text) RETURNS void
+LANGUAGE 'plpgsql' VOLATILE STRICT
+SET search_path FROM CURRENT
+AS $$
+DECLARE
+    tbl text;
+    sql text;
+BEGIN
+    IF state NOT IN ('on', 'off') THEN
+        RAISE EXCEPTION 'Invalid autovacuum state: %, expected "on" or "off"', state;
+    END IF;
+
+    FOREACH tbl IN ARRAY tables LOOP
+        sql := format('ALTER TABLE %I.%I SET (autovacuum_enabled = %s);', schema, tbl, state);
+        EXECUTE sql;
+    END LOOP;
+END;
+$$;

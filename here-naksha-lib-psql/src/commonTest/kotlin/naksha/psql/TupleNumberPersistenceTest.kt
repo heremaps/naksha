@@ -12,20 +12,16 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.*
 
-class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistence_test")) {
-
-
-    @AfterTest
-    fun cleanup() {
-        dropCollection()
-    }
+class TupleNumberPersistenceTest : PgTestBase(collection = null, mapId = "") {
 
     @Test
     fun shouldSaveCorrectTxn() {
+        testWithCollection("shouldSaveCorrectTxn")
+
         // Given
         val feature = RandomFeatures.randomFeature()
 
@@ -53,6 +49,8 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
 
     @Test
     fun shouldSaveCorrectStoreNumber() {
+        testWithCollection("shouldSaveCorrectStoreNumber")
+
         // Given
         val feature = RandomFeatures.randomFeature()
 
@@ -86,6 +84,8 @@ class TupleNumberPersistenceTest : PgTestBase(NakshaCollection("tuple_persistenc
 
     @Test
     fun shouldSaveCorrectUuid() {
+        testWithCollection("shouldSaveCorrectUuid")
+
         // Given
         val features = RandomFeatures.randomFeatures(count = 20)
 

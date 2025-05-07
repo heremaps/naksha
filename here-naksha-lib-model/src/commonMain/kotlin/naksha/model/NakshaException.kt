@@ -10,6 +10,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.FEATURE_EXISTS
 import naksha.model.NakshaError.NakshaErrorCompanion.FEATURE_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.FORBIDDEN
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_EXISTS
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
@@ -51,6 +52,14 @@ expect class NakshaException : RuntimeException {
 }
 
 /**
+ * Create [ILLEGAL_ID] exception.
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun illegalId(msg: String): NakshaException = NakshaException(ILLEGAL_ID, msg)
+
+/**
  * Create [ILLEGAL_ARGUMENT] exception.
  * @param msg the message.
  * @return the [NakshaException].
@@ -65,6 +74,15 @@ fun illegalArg(msg: String): NakshaException = NakshaException(ILLEGAL_ARGUMENT,
  * @since 3.0
  */
 fun illegalState(msg: String): NakshaException = NakshaException(ILLEGAL_STATE, msg)
+
+/**
+ * Create [ILLEGAL_STATE] exception.
+ * @param msg the message.
+ * @param reason the exception that caused this exception.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun illegalState(msg: String, reason: Exception): NakshaException = NakshaException(ILLEGAL_STATE, msg, reason)
 
 /**
  * Create [FORBIDDEN] exception.

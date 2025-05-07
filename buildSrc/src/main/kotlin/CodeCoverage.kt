@@ -1,7 +1,7 @@
 import org.gradle.api.Project
 
-val minOverallCoverageKey: String = "minOverallCoverage"
-val defaultOverallMinCoverage: Double = 0.8 // Don't decrease me!
+private const val minOverallCoverageKey: String = "minOverallCoverage"
+private const val defaultOverallMinCoverage: Double = 0.8 // Don't decrease me!
 
 fun Project.setOverallCoverage(minOverallCoverage: Double) {
     this.extensions.extraProperties.set(minOverallCoverageKey, minOverallCoverage)

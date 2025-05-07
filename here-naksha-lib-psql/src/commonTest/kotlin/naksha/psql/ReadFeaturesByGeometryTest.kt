@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.geo.*
-import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
@@ -9,19 +8,15 @@ import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.model.request.query.*
 import naksha.psql.assertions.AnyObjectFluidAssertions.Companion.assertThatAnyObject
-import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.*
 
-class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry_test")) {
-
-    @AfterTest
-    fun cleanUp() {
-        dropCollection()
-    }
+class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
 
     @Test
     fun shouldReturnSavedGeometry() {
+        testWithCollection("shouldReturnSavedGeometry")
+
         // Given: feature with geometry
         val feature = NakshaFeature().apply {
             id = "test_feature"
@@ -38,6 +33,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
         // And: reading feature
         val retrievedFeatures = executeRead(
             ReadFeatures().apply {
+                mapId = collection.mapId
                 collectionIds += collection.id
                 featureIds += feature.id
             }
@@ -51,6 +47,8 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
 
     @Test
     fun shouldReturnGeometryWithoutElevation() {
+        testWithCollection("shouldReturnGeometryWithoutElevation")
+
         // Given: feature with geometry
         val featureGeometry = SpPoint(PointCoord(1.0, 2.0))
         val feature = NakshaFeature().apply {
@@ -68,6 +66,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
         // And: reading feature
         val retrievedFeatures = executeRead(
             ReadFeatures().apply {
+                mapId = collection.mapId
                 collectionIds += collection.id
                 featureIds += feature.id
             }
@@ -82,6 +81,8 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
 
     @Test
     fun shouldReadFeatureByBbox() {
+        testWithCollection("shouldReadFeatureByBbox")
+
         // Given: features to create
         val feature = randomFeature()
 
@@ -102,6 +103,8 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
 
     @Test
     fun shouldReturnFeaturesByHereTile() {
+        testWithCollection("shouldReturnFeaturesByHereTile")
+
         // Given
         val featureInPrague = randomFeature().apply {
             referencePoint = SpPoint(
@@ -134,6 +137,8 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
 
     @Test
     fun shouldReturnFeaturesWithCombinedQuery() {
+        testWithCollection("shouldReturnFeaturesWithCombinedQuery")
+
         // Given
         val somePlaceInPrague = randomFeature().apply {
             referencePoint = SpPoint(
@@ -177,6 +182,8 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
 
     @Test
     fun shouldReadByCorridor(){
+        testWithCollection("shouldReadByCorridor")
+
         // Given
         val feature = randomFeature().apply {
             geometry = SpLineString().withCoordinates(LineStringCoord(
@@ -203,6 +210,8 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
 
     @Test
     fun shouldDistinguishDifferentBufferModes(){
+        testWithCollection("shouldDistinguishDifferentBufferModes")
+
         /**
          * Note: samples & values based on https://postgis.net/workshops/postgis-intro/geography.html
          * Actual distance between LAX and NRT:
@@ -242,6 +251,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(NakshaCollection("read_by_geometry
 
     private fun executeSpatialQuery(spatialQuery: ISpatialQuery): SuccessResponse {
         return executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds += collection.id
             query.spatial = spatialQuery
         })

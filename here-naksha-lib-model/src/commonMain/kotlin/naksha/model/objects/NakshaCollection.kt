@@ -25,7 +25,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * Create a Naksha collection with settings.
      * @param id the collection-identifier.
-     * @param mapId the map-identifier of the map in which the collection should be created; if `null`, then [NakshaContext.mapId] is used.
+     * @param mapId the map-identifier of the map in which the collection should be created
      * @param partitions the partitions to create; defaults to `1`
      * @param storageClass the [storage-class][storageClass] to create; defaults to `null`
      * @param storeDeleted if [deleted states should be stored][storeDeleted], defaults to [StoreMode.ON]
@@ -44,7 +44,7 @@ open class NakshaCollection() : NakshaFeature() {
         storeMeta: StoreMode = StoreMode.ON,
     ) : this() {
         this.id = id
-        this.mapId = mapId ?: NakshaContext.mapId()
+        this.mapId = mapId
         this.storageClass = storageClass
         this.partitions = partitions
         this.storeDeleted = storeDeleted
@@ -253,26 +253,60 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * The index list with all indices to add to the collection; if set to _null_, default indices are created.
+     * The index list with all indices to add to the collection; if set to `null`, default indices are created.
      *
      * For `lib-psql` the following indices are available:
-     * - `id_txn_uid`: id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE tn.
-     * - `here_tile`: here_tile DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE tn.
-     * - `app_id`: app_id text_pattern_ops DESC, updated_at DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE tn.
-     * - `author`: naksha_author(author, app_id) text_pattern_ops DESC, naksha_author_ts(author_ts, updated_at) DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE tn.
+     * - `id`: Index above the `id` property _(added by default into HEAD)_, includes `tn`, and `next_tn`.
+     * - `here_tile`: Index above `here_tile`, includes `id`, `tn`, and `next_tn`.
+     * - `app_id`: Index above `app_id`, includes `updated_at`, `id`, `tn`, and `next_tn`.
+     * - `author`: Index above `author`, includes `author_ts`, `id`, `tn`, and `tn_next`.
      * - `tags`: Index above tags, does not allow index-only scans or pre-ordering.
-     * - `ref_point`: Index above geometry, does not allow index-only scans or pre-ordering.
+     * - `ref_point`: Index above reference point geometry, does not allow index-only scans or pre-ordering.
      * - `gist_geo_(2d|3d|4d)` or `spgist_geo_(2d|3d|4d)`: Index above geometry, does not allow index-only scans or pre-ordering.
-     * - `ft`: ft text_pattern_ops DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE $c_tn
-     * - `cv0`, `cv1`, `cv2`, and `cv3`: cvX text_pattern_ops DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE $c_tn
-     * - `cs0`, `cs1`, `cs2`, and `cs3`: csX text_pattern_ops DESC, id text_pattern_ops DESC, txn DESC, uid DESC, txn_next DESC INCLUDE $c_tn
+     * - `ft`: Index above `ft`, includes `id`, `tn`, and `next_tn`.
+     * - `cv0`, `cv1`, `cv2`, and `cv3`: Index above `cvX`, includes `id`, `tn`, and `next_tn`, does not index `null` values.
+     * - `cs0`, `cs1`, `cs2`, and `cs3`: Index above `csX`, includes `id`, `tn`, and `next_tn`, does not index `null` values.
      *
-     * To use less or other indices, create an own list of indices out of the above given values, `lib-psql` will add all these indices by default, using `2d` variants for the geometry index by default. Beware, that many of the indices exclude _null_ values, and therefore do not costing anything, unless the values are used.
+     * To use a specific set of indices, create an own list of indices out of the above given values.
      *
-     * It is not recommended, to add multiple geometry indices, this can become extreme costly.
+     * **It is not recommended, to add multiple geometry indices, this can become extreme costly.**
      * @since 3.0
      */
     var indices by INDICES
+
+    /**
+     * Adds all given indices.
+     *
+     * ### Note
+     * This method does **not** add the given list, this method copies the elements from the given list into a new list.
+     * @param values the indices to add.
+     * @return this.
+     * @since 3.0
+     * @see [indices]
+     */
+    @JsName("withIndexList")
+    open fun withIndices(values: StringList): NakshaCollection {
+        val indices = StringList()
+        indices.setCapacity(values.size)
+        indices.addAll(values)
+        this.indices = indices
+        return this
+    }
+
+    /**
+     * Adds all given indices.
+     * @param values the indices to add.
+     * @return this.
+     * @since 3.0
+     * @see [indices]
+     */
+    open fun withIndices(vararg values: String): NakshaCollection {
+        val indices = StringList()
+        indices.setCapacity(values.size)
+        for (value in values) indices.append(value)
+        this.indices = indices
+        return this
+    }
 
     /**
      * Adds the given `index` into the list of [indices], when not being in already.
@@ -353,42 +387,136 @@ open class NakshaCollection() : NakshaFeature() {
 
     companion object NakshaCollection_C {
         /**
-         * The feature-type of this feature itself _(`naksha.Collection`)_.
+         * Index above the `id` property, includes `tn`, and `next_tn`.
+         * @since 3.0
+         */
+        const val ID_IDX = "id"
+
+        /**
+         * Index above `here_tile`, includes `id`, `tn`, and `next_tn`.
+         * @since 3.0
+         */
+        const val HERE_TILE_IDX = "here_tile"
+
+        /**
+         * Index above `app_id`, includes `updated_at`, `id`, `tn`, and `next_tn`.
+         * @since 3.0
+         */
+        const val APP_ID_IDX = "app_id"
+
+        /**
+         * Index above `author`, includes `author_ts`, `id`, `tn`, and `tn_next`.
+         * @since 3.0
+         */
+        const val AUTHOR_IDX = "author"
+
+        /**
+         * Index above tags, does not allow index-only scans or pre-ordering.
+         * @since 3.0
+         */
+        const val TAGS_IDX = "tags"
+
+        /**
+         * Index above reference point geometry, does not allow index-only scans or pre-ordering.
+         * @since 3.0
+         */
+        const val REF_POINT_IDX = "ref_point"
+
+        /**
+         * Index above geometry, does not allow index-only scans or pre-ordering.
+         * @since 3.0
+         */
+        const val GIST_2D_IDX = "gist_geo_2d"
+
+        /**
+         * Index above geometry, does not allow index-only scans or pre-ordering.
+         * @since 3.0
+         */
+        const val GIST_3D_IDX = "gist_geo_3d"
+
+        /**
+         * Index above geometry, does not allow index-only scans or pre-ordering.
+         * @since 3.0
+         */
+        const val GIST_4D_IDX = "gist_geo_4d"
+
+        /**
+         * Index above geometry, does not allow index-only scans or pre-ordering.
+         * @since 3.0
+         */
+        const val SP_GIST_2D_IDX = "spgist_geo_2d"
+
+        /**
+         * Index above geometry, does not allow index-only scans or pre-ordering.
+         * @since 3.0
+         */
+        const val SP_GIST_3D_IDX = "spgist_geo_3d"
+
+        /**
+         * Index above geometry, does not allow index-only scans or pre-ordering.
+         * @since 3.0
+         */
+        const val SP_GIST_4D_IDX = "spgist_geo_4d"
+
+        /**
+         * Index above geometry, does not allow index-only scans or pre-ordering.
+         * @since 3.0
+         */
+        const val FEATURE_TYPE_IDX = "feature_type"
+
+        /**
+         * Index above custom value `0`, does not index `null` values.
+         * @since 3.0
+         */
+        const val CV0_IDX = "cv0"
+
+        /**
+         * Index above custom value `1`, does not index `null` values.
+         * @since 3.0
+         */
+        const val CV1_IDX = "cv1"
+
+        /**
+         * Index above custom value `2`, does not index `null` values.
+         * @since 3.0
+         */
+        const val CV2_IDX = "cv2"
+
+        /**
+         * Index above custom value `3`, does not index `null` values.
+         * @since 3.0
+         */
+        const val CV3_IDX = "cv3"
+
+        /**
+         * Index above custom string `0`, does not index `null` values.
+         * @since 3.0
+         */
+        const val CS0_IDX = "cs0"
+
+        /**
+         * Index above custom string `1`, does not index `null` values.
+         * @since 3.0
+         */
+        const val CS1_IDX = "cs1"
+
+        /**
+         * Index above custom string `2`, does not index `null` values.
+         * @since 3.0
+         */
+        const val CS2_IDX = "cs2"
+
+        /**
+         * Index above custom string `3`, does not index `null` values.
+         * @since 3.0
+         */
+        const val CS3_IDX = "cs3"
+
+        /**
+         * Index above `ft` _(aka feature-type)_, includes `id`, `tn`, and `next_tn`.
          * @since 3.0
          */
         const val FEATURE_TYPE = "naksha.Collection"
-
-        /**
-         * partition count = 0 -> no partitions only head
-         * partition count = 2 -> 2 partitions
-         * partition count = n -> n partitions
-         * @since 3.0
-         */
-        const val NO_PARTITIONS = 0
-
-        /**
-         * To create a collection without a geometry index.
-         * @since 3.0
-         */
-        const val GEO_INDEX_NONE = "none"
-
-        /**
-         * To create a collection with a GIST geometry-index.
-         * @since 3.0
-         */
-        const val GEO_INDEX_GIST = "gist"
-
-        /**
-         * To create a collection with an SP-GIST geometry-index.
-         * @since 3.0
-         */
-        const val GEO_INDEX_SP_GIST = "sp-gist"
-
-        /**
-         * Default geo_index - may change over time.
-         * @since 3.0
-         */
-        const val DEFAULT_GEO_INDEX = GEO_INDEX_GIST
 
         /**
          * The value returned as [estimatedFeatureCount] and [estimatedDeletedFeatures], before the estimation was actually done, so when the number is totally unknown _(-1)_.
@@ -398,25 +526,10 @@ open class NakshaCollection() : NakshaFeature() {
         @JsStatic
         val UNKNOWN = Int64(-1)
 
-        /**
-         * The name of the [estimatedFeatureCount] property.
-         * @since 3.0
-         */
-        const val ESTIMATED_FEATURE_COUNT = "estimatedFeatureCount"
-
-        /**
-         * The name of the [estimatedDeletedFeatures] property.
-         * @since 3.0
-         */
-        const val ESTIMATED_DELETED_FEATURES = "estimatedDeletedFeatures"
-
         private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 1 }
-        //private val GEO_INDEX = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> DEFAULT_GEO_INDEX }
         private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String::class)
-        //private val BOOLEAN_FALSE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val DEFAULT_FLAGS = NullableProperty<NakshaCollection, Flags>(Flags::class)
-        //private val INT_NULL = NullableProperty<NakshaCollection, Int>(Int::class)
         private val MAP_ID = NullableProperty<NakshaCollection, String>(String::class)
         private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)
         private val DEFAULT_FEATURE_TYPE = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> TYPE }
@@ -425,7 +538,6 @@ open class NakshaCollection() : NakshaFeature() {
         private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 10_485_760 }
         private val _ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }
         private val _ESTIMATED_DELETED_FEATURES =  NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }
-        //private val AUTO_PURGE = NotNullProperty<NakshaCollection, Boolean>(Boolean::class) { _, _ -> false }
         private val STORE_HISTORY = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { self, _ ->
             // For downward compatibility with Naksha version 2
             val old = self.getRaw("disableHistory")

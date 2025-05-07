@@ -5,24 +5,24 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.request.ErrorResponse
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
-class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
+class PsqlErrorMappingTest : PgTestBase() {
 
     @Test
     fun shouldReturnMissingCollectionError() {
         // Given
         val writeFeatureToMissingCollection = WriteRequest().add(
-            Write().createFeature(env.mapId, "missing_collection", randomFeature())
+            Write().createFeature(map.id, "missing_collection", randomFeature())
         )
 
         // When
-        val resp = env.storage.newWriteSession().use { session ->
+        val resp = newWriteSession().use { session ->
             session.execute(writeFeatureToMissingCollection)
         }
 
@@ -35,11 +35,11 @@ class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
     fun shouldReturnConflictingCollectionError() {
         // Given
         val createAlreadyExistingCollection = WriteRequest().add(
-            Write().createCollection(NakshaCollection(collection.id))
+            Write().createCollection(NakshaCollection(collection.id, collection.mapId))
         )
 
         // When
-        val resp = env.storage.newWriteSession().use { session ->
+        val resp = newWriteSession().use { session ->
             session.execute(createAlreadyExistingCollection)
         }
 
@@ -61,7 +61,7 @@ class PsqlErrorMappingTest : PgTestBase(NakshaCollection("error_mapping_c")) {
         )
 
         // When
-        val resp = env.storage.newWriteSession().use { session ->
+        val resp = newWriteSession().use { session ->
             session.execute(writeFeatureWithConflictingId)
         }
 

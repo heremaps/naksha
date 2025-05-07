@@ -4,11 +4,11 @@ import naksha.model.Action
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
-import naksha.psql.base.PgTestBase
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.*
 
-class ReadFeaturesAll : PgTestBase(NakshaCollection("read_features_all")) {
+class ReadFeaturesAll : PgTestBase() {
 
     companion object ReadFeaturesAll_C {
         private const val COUNT = 100

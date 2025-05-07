@@ -2,16 +2,16 @@ package naksha.psql
 
 import naksha.model.Action
 import naksha.model.Naksha
+import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.psql.base.PgTestBase
-import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
+import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.*
 
-class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
+class ReadHistoryTest : PgTestBase() {
 
     companion object ReadHistoryTest_C {
         private const val COUNT = 10
@@ -49,7 +49,7 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
         var updatedFeature1 = createdFeature.copy<NakshaFeature>(true)
         updatedFeature1.properties[ALIAS] = "first_update"
         executeWrite(WriteRequest().apply {
-            add(Write().updateFeature(collection, updatedFeature1, false))
+            add(Write().updateFeature(collection, updatedFeature1, true))
         }).apply {
             assertEquals(1, features.size)
             updatedFeature1 = assertNotNull(features.first())
@@ -61,7 +61,7 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
         var updatedFeature2 = updatedFeature1.copy<NakshaFeature>(true)
         updatedFeature2.properties[ALIAS] = "second_update"
         executeWrite(WriteRequest().apply {
-            add(Write().updateFeature(collection, updatedFeature2, false))
+            add(Write().updateFeature(collection, updatedFeature2, true))
         }).apply {
             assertEquals(1, features.size)
             updatedFeature2 = assertNotNull(features.first())
@@ -83,6 +83,7 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
         // Clear cache, and read the history of the feature.
         Naksha.cache.clear()
         executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds.add(collection.id)
             featureIds.add(featureId)
             queryHistory = true
@@ -125,6 +126,7 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
         }
 
         executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
             collectionIds.add(collection.id)
             featureIds.add(featureId)
             queryHistory = true
@@ -144,7 +146,5 @@ class ReadHistoryTest : PgTestBase(NakshaCollection("read_history_test")) {
 
             assertEquals(Action.UPDATED, update2.properties.xyz.action)
         }
-
-        }
-
+    }
 }

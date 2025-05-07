@@ -8,18 +8,18 @@ public class PQueryFactory {
   }
 
   public static @NotNull PQuery propertyExistsQuery(final @NotNull String[] propPath) {
-    return new PQuery(Property.fromArray(propPath), AnyOp.EXISTS);
+    return new PQuery(new Property(propPath), AnyOp.EXISTS);
   }
 
   public static @NotNull PQuery propertyEqualsQuery(final @NotNull String[] propPath, String value) {
-    return new PQuery(Property.fromArray(propPath), StringOp.EQUALS, value);
+    return new PQuery(new Property(propPath), StringOp.EQUALS, value);
   }
 
   public static @NotNull PQuery propertyEqualsQuery(final @NotNull String[] propPath, Number value) {
-    return new PQuery(Property.fromArray(propPath), DoubleOp.EQ, value);
+    return new PQuery(new Property(propPath), DoubleOp.EQ, value);
   }
 
   public static @NotNull PQuery propertyContainsQuery(final @NotNull String[] propPath, String value) {
-    return new PQuery(Property.fromArray(propPath), StringOp.CONTAINS, value);
+    return new PQuery(new Property(propPath), StringOp.CONTAINS, value);
   }
 }
