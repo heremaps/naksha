@@ -163,7 +163,13 @@ class NakshaVersion(
          * Release candidate, API should no longer be changed, but it is not guaranteed through.
          * @since 3.0
          */
-        rc(2);
+        rc(2),
+
+        /**
+         * Not official custom release, e.g. customer build with specific extensions or fixes not yet available in the official releases.
+         * @since 3.0
+         */
+        custom(127);
 
         companion object {
             fun findByValue(enc: Int): PreReleaseTag {

@@ -149,15 +149,15 @@ open class PgMap internal constructor(
         // Ensure that all tables and indices are created in the correct map!
         setSearchPath(conn)
         val indices: List<PgIndex>
-        val indexNames = collection.head.indices
-        if (indexNames == null) {
-            indices = PgIndex.DEFAULT_INDICES
-        } else {
-            indices = mutableListOf()
-            for (indexName in indexNames) {
-                if (indexName == null) continue
-                val index = PgIndex.of(indexName)
-                if (index != null && !indices.contains(index)) indices.add(index)
+        val indexNames = collection.head.indices ?: PgIndex.DEFAULT_INDICES
+        indices = mutableListOf()
+        for (indexName in indexNames) {
+            if (indexName == null) continue
+            val index = PgIndex.of(indexName.toString())
+            if (index != null
+                && !indices.contains(index)
+                && !index.internal) {
+                indices.add(index)
             }
         }
         val NOW = Epoch()
@@ -167,30 +167,22 @@ open class PgMap internal constructor(
             txn.create(conn)
             txn.createYear(conn, NOW.year)
             txn.createYear(conn, NOW.year + 1)
-            //txn.createIndex(conn, PgIndex.tn_pkey)
+            //txn.createIndex(conn, PgIndex.tn_pkey) // PRIMARY KEY
             txn.createIndex(conn, PgIndex.id_unique)
             txn.createIndex(conn, PgIndex.txn_unique)
             for (index in indices) {
-                if (index != PgIndex.tn_pkey
-                    && index != PgIndex.txn_unique
-                    && index != PgIndex.id_unique
-                    && index != PgIndex.id) {
-                    txn.createIndex(conn, index)
-                }
+                txn.createIndex(conn, index)
             }
 
             // We can have a meta table for transactions, but no history or deleted!
             if (collection.metaTable != null) {
                 val meta = PgMeta(txn)
                 meta.create(conn)
-                //meta.createIndex(conn, PgIndex.tn_pkey)
+                //meta.createIndex(conn, PgIndex.tn_pkey) // PRIMARY KEY
                 meta.createIndex(conn, PgIndex.id_unique)
+                meta.createIndex(conn, PgIndex.version)
                 for (index in indices) {
-                    if (index != PgIndex.tn_pkey
-                        && index != PgIndex.id_unique
-                        && index != PgIndex.id) {
-                        meta.createIndex(conn, index)
-                    }
+                    meta.createIndex(conn, index)
                 }
             }
             return
@@ -198,41 +190,32 @@ open class PgMap internal constructor(
 
         val head = collection.headTable
         head.create(conn)
-        //head.createIndex(conn, PgIndex.tn_pkey)
+        //head.createIndex(conn, PgIndex.tn_pkey) // PRIMARY KEY
         head.createIndex(conn, PgIndex.id_unique)
+        head.createIndex(conn, PgIndex.version)
         for (index in indices) {
-            if (index != PgIndex.tn_pkey
-                && index != PgIndex.id_unique
-                && index != PgIndex.id) {
-                head.createIndex(conn, index)
-            }
+            head.createIndex(conn, index)
         }
 
         val deleted = collection.deletedTable
         if (deleted != null) {
             deleted.create(conn)
-            //deleted.createIndex(conn, PgIndex.tn_pkey)
+            //deleted.createIndex(conn, PgIndex.tn_pkey) // PRIMARY KEY
             deleted.createIndex(conn, PgIndex.id_unique)
+            deleted.createIndex(conn, PgIndex.version)
             for (index in indices) {
-                if (index != PgIndex.tn_pkey
-                    && index != PgIndex.id_unique
-                    && index != PgIndex.id) {
-                    deleted.createIndex(conn, index)
-                }
+                deleted.createIndex(conn, index)
             }
         }
 
         val meta = collection.metaTable
         if (meta != null) {
             meta.create(conn)
-            //meta.createIndex(conn, PgIndex.tn_pkey)
+            //meta.createIndex(conn, PgIndex.tn_pkey) // PRIMARY KEY
             meta.createIndex(conn, PgIndex.id_unique)
+            meta.createIndex(conn, PgIndex.version)
             for (index in indices) {
-                if (index != PgIndex.tn_pkey
-                    && index != PgIndex.id_unique
-                    && index != PgIndex.id) {
-                    meta.createIndex(conn, index)
-                }
+                meta.createIndex(conn, index)
             }
         }
 
@@ -241,11 +224,11 @@ open class PgMap internal constructor(
             history.create(conn)
             history.createYear(conn, NOW.year)
             history.createYear(conn, NOW.year + 1)
-            //history.createIndex(conn, PgIndex.tn_pkey)
+            //history.createIndex(conn, PgIndex.tn_pkey) // PRIMARY KEY
+            history.createIndex(conn, PgIndex.id)
+            history.createIndex(conn, PgIndex.version)
             for (index in indices) {
-                if (index != PgIndex.tn_pkey) {
-                    history.createIndex(conn, index)
-                }
+                history.createIndex(conn, index)
             }
         }
         invalidateCollection(collection)

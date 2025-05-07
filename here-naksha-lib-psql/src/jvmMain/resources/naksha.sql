@@ -520,6 +520,17 @@ AS $$
   SELECT (flags >> 16) & 3
 $$;
 
+CREATE OR REPLACE FUNCTION naksha_flags_action_text(flags int4) RETURNS text
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+AS $$
+  SELECT CASE ((flags >> 16) & 3)
+    WHEN 0 THEN 'CREATED'
+    WHEN 1 THEN 'UPDATED'
+    WHEN 2 THEN 'DELETED'
+    ELSE 'UNKNOWN'
+  END
+$$;
+
 CREATE OR REPLACE FUNCTION naksha_here_tile_trim_level(here_tile int4, new_level int4) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
