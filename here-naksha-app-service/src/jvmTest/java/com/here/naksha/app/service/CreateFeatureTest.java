@@ -18,7 +18,7 @@
  */
 package com.here.naksha.app.service;
 
-import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
 import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
@@ -59,7 +59,7 @@ class CreateFeatureTest extends ApiTest {
 
   @BeforeAll
   static void setup() {
-    setupSpaceAndRelatedResources(nakshaClient, "CreateFeatures/setup");
+    setupHandlerAndSpace(nakshaClient, "CreateFeatures/setup");
   }
 
   @Test

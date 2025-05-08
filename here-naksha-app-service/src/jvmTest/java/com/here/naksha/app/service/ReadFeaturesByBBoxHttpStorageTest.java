@@ -39,7 +39,7 @@ import java.util.stream.Stream;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
-import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static com.here.naksha.app.service.testutil.GzipUtil.stubOkGzipEncoded;
@@ -62,12 +62,12 @@ class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
     // Set up Http Storage based Space
-    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/http_storage_space");
+    setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/http_storage_space");
     // Set up (standard) Psql Storage based Space
-    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/psql_storage_space");
+    setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/psql_storage_space");
     // Set up View Space over Psql and Http Storage based spaces
     createHandler(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/view_space/create_sourceId_handler.json");
-    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/view_space");
+    setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/view_space");
     // Load some test data in PsqlStorage based Space
     final String initialFeaturesJson = loadFileOrFail("ReadFeatures/ByBBoxHttpStorage/setup/psql_storage_space/create_features.json");
     final HttpResponse<String> response = nakshaClient.post("hub/spaces/" + PSQL_SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());

@@ -18,7 +18,7 @@
  */
 package com.here.naksha.app.service;
 
-import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 
@@ -43,7 +43,7 @@ class WriteFeaturesAtomicityTest extends ApiTest {
 
   @BeforeAll
   static void prepareEnv() {
-    setupSpaceAndRelatedResources(nakshaClient, "WriteFeaturesAtomicity/setup");
+    setupHandlerAndSpace(nakshaClient, "WriteFeaturesAtomicity/setup");
   }
 
   @Test

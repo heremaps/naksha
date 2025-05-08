@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.net.http.HttpResponse;
 import java.util.UUID;
 
-import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.generateJWT;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
@@ -21,7 +21,7 @@ public class JwtTest extends ApiTest {
 
     @BeforeAll
     static void setup(){
-        setupSpaceAndRelatedResources(new NakshaTestWebClient(), "Auth/setup");
+        setupHandlerAndSpace(new NakshaTestWebClient(), "Auth/setup");
     }
 
     private static final String SPACE_ID = "auth_test_space";

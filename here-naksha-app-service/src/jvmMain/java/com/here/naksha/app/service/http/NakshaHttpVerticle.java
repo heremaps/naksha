@@ -579,7 +579,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
       case NakshaError.TIMEOUT -> {
         return HttpResponseStatus.GATEWAY_TIMEOUT;
       }
-      case NakshaError.NOT_FOUND -> {
+      case NakshaError.NOT_FOUND, NakshaError.FEATURE_NOT_FOUND -> {
         return NOT_FOUND;
       }
     }

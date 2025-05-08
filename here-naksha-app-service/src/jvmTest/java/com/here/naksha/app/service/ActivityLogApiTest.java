@@ -5,8 +5,6 @@ import com.here.naksha.app.common.CommonApiTestSetup;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.TestUtil;
 import naksha.model.XyzFeatureCollection;
-import naksha.geo.XyzProperties;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
@@ -36,7 +34,7 @@ class ActivityLogApiTest extends ApiTest {
 
   @BeforeAll
   static void setup() throws Exception {
-    setupSpaceAndRelatedResources(nakshaClient, "ActivityLog/setup/regularSpace");
+    setupHandlerAndSpace(nakshaClient, "ActivityLog/setup/regularSpace");
     createHandler(nakshaClient, "ActivityLog/setup/activityLogSpace/create_event_handler.json");
     createSpace(nakshaClient, "ActivityLog/setup/activityLogSpace/create_space.json");
   }

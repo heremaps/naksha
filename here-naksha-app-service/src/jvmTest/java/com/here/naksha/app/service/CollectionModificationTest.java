@@ -21,7 +21,7 @@ public class CollectionModificationTest extends ApiTest {
 
     @BeforeAll
     static void setup() throws Exception {
-        setupSpaceAndRelatedResources(nakshaClient, "CollectionModification/setup/regularSpace");
+        setupHandlerAndSpace(nakshaClient, "CollectionModification/setup/regularSpace");
         createHandler(nakshaClient, "CollectionModification/setup/historySpace/create_event_handler.json");
         createSpace(nakshaClient, "CollectionModification/setup/historySpace/create_space.json");
     }

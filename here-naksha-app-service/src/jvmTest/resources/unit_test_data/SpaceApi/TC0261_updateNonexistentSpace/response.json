@@ -1,5 +1,5 @@
 {
   "type": "ErrorResponse",
   "error": "NotFound",
-  "errorMessage": "Space not found : non-existent-space"
+  "errorMessage": "Space not found: non-existent-space"
 }

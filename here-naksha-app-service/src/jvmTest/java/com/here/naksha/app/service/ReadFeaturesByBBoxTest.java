@@ -18,7 +18,7 @@
  */
 package com.here.naksha.app.service;
 
-import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
@@ -45,7 +45,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
   */
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
-    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByBBox/setup");
+    setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByBBox/setup");
     String initialFeaturesJson = loadFileOrFail("ReadFeatures/ByBBox/setup/create_features.json");
     nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());
   }
