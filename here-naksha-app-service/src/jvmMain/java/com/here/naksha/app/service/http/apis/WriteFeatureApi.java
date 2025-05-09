@@ -18,10 +18,14 @@
  */
 package com.here.naksha.app.service.http.apis;
 
-import static com.here.naksha.app.service.http.tasks.WriteFeatureApiTask.WriteFeatureApiReqType.*;
+import static com.here.naksha.app.service.http.tasks.WriteFeatureApiTask.WriteFeatureApiReqType.CREATE_FEATURES;
+import static com.here.naksha.app.service.http.tasks.WriteFeatureApiTask.WriteFeatureApiReqType.DELETE_BY_ID;
+import static com.here.naksha.app.service.http.tasks.WriteFeatureApiTask.WriteFeatureApiReqType.DELETE_FEATURES;
+import static com.here.naksha.app.service.http.tasks.WriteFeatureApiTask.WriteFeatureApiReqType.PATCH_BY_ID;
+import static com.here.naksha.app.service.http.tasks.WriteFeatureApiTask.WriteFeatureApiReqType.UPDATE_BY_ID;
+import static com.here.naksha.app.service.http.tasks.WriteFeatureApiTask.WriteFeatureApiReqType.UPSERT_FEATURES;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
-import com.here.naksha.app.service.http.tasks.SpaceMapResolver;
 import com.here.naksha.app.service.http.tasks.WriteFeatureApiTask;
 import com.here.naksha.app.service.http.tasks.WriteFeatureApiTask.WriteFeatureApiReqType;
 import io.vertx.ext.web.Router;
@@ -35,11 +39,8 @@ public class WriteFeatureApi extends Api {
 
   private static final Logger logger = LoggerFactory.getLogger(WriteFeatureApi.class);
 
-  private final SpaceMapResolver spaceMapResolver;
-
-  public WriteFeatureApi(final @NotNull NakshaHttpVerticle verticle, SpaceMapResolver spaceMapResolver) {
+  public WriteFeatureApi(final @NotNull NakshaHttpVerticle verticle) {
     super(verticle);
-    this.spaceMapResolver = spaceMapResolver;
   }
 
   @Override
@@ -53,7 +54,8 @@ public class WriteFeatureApi extends Api {
   }
 
   @Override
-  public void addManualRoutes(final @NotNull Router router) {}
+  public void addManualRoutes(final @NotNull Router router) {
+  }
 
   private void createFeatures(final @NotNull RoutingContext routingContext) {
     startWriteFeatureApiTask(CREATE_FEATURES, routingContext);
@@ -81,7 +83,7 @@ public class WriteFeatureApi extends Api {
 
   private void startWriteFeatureApiTask(WriteFeatureApiReqType reqType, RoutingContext routingContext) {
     new WriteFeatureApiTask(
-            reqType, verticle, naksha(), routingContext, verticle.createNakshaContext(routingContext), spaceMapResolver)
+        reqType, verticle, naksha(), routingContext, verticle.createNakshaContext(routingContext))
         .start();
   }
 }

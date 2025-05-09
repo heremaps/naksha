@@ -94,7 +94,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
   private static final Logger logger = LoggerFactory.getLogger(ReadFeatureApiTask.class);
   private final @NotNull ReadFeatureApiReqType reqType;
-  private final @NotNull SpaceMapResolver spaceMapResolver;
 
   public enum ReadFeatureApiReqType {
     GET_BY_ID,
@@ -112,12 +111,10 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       final @NotNull NakshaHttpVerticle verticle,
       final @NotNull INaksha nakshaHub,
       final @NotNull RoutingContext routingContext,
-      final @NotNull NakshaContext nakshaContext,
-      final @NotNull SpaceMapResolver spaceMapResolver
+      final @NotNull NakshaContext nakshaContext
   ) {
     super(verticle, nakshaHub, routingContext, nakshaContext);
     this.reqType = reqType;
-    this.spaceMapResolver = spaceMapResolver;
   }
 
   /**
@@ -163,14 +160,11 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final List<String> featureIds = extractParamAsStringList(queryParameters, FEATURE_IDS);
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParameters);
 
-    // retrieve mapId for this space
-    String mapId = spaceMapResolver.getMapIdForSpace(spaceId);
-
     // Validate parameters
     if (featureIds == null || featureIds.isEmpty()) {
       return verticle.sendErrorResponse(routingContext, NakshaError.ILLEGAL_ARGUMENT, "Missing id parameter");
     }
-    final ReadFeaturesProxyWrapper rdRequest = proxyWrapperOf(readFeaturesByIdsRequest(mapId, spaceId, featureIds))
+    final ReadFeaturesProxyWrapper rdRequest = proxyWrapperOf(readFeaturesByIdsRequest(null, spaceId, featureIds))
         .withReadRequestType(ReadRequestType.GET_BY_IDS)
         .withQueryParameters(Map.of(FEATURE_IDS, featureIds));
 
@@ -189,10 +183,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final QueryParameterList queryParameters = queryParamsFromRequest(routingContext);
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParameters);
 
-    // retrieve mapId for this space
-    String mapId = spaceMapResolver.getMapIdForSpace(spaceId);
-
-    final ReadFeatures rdRequest = proxyWrapperOf(readFeaturesByIdRequest(mapId, spaceId, featureId))
+    final ReadFeatures rdRequest = proxyWrapperOf(readFeaturesByIdRequest(null, spaceId, featureId))
         .withReadRequestType(ReadRequestType.GET_BY_ID)
         .withQueryParameters(Map.of(FEATURE_ID, featureId));
 
@@ -451,13 +442,10 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Missing %s param".formatted(REF_FEATURE_ID));
     }
 
-    // retrieve mapId for this space
-    String mapId = spaceMapResolver.getMapIdForSpace(refSpaceId);
-
     // Find geometry by querying referenced feature
     NakshaFeature feature = null;
     // Forward Read request to NHSpaceStorage instance
-    final ReadFeatures rdRequest = proxyWrapperOf(readFeaturesByIdRequest(mapId, refSpaceId, refFeatureId))
+    final ReadFeatures rdRequest = proxyWrapperOf(readFeaturesByIdRequest(null, refSpaceId, refFeatureId))
         .withReadRequestType(ReadRequestType.GET_BY_ID)
         .withQueryParameters(Map.of(FEATURE_ID, refFeatureId));
     final Response response = executeReadRequestFromSpaceStorage(rdRequest);

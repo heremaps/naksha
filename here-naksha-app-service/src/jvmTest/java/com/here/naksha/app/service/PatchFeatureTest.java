@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.net.http.HttpResponse;
 import java.util.UUID;
 
-import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,7 +25,7 @@ class PatchFeatureTest extends ApiTest {
 
     @BeforeAll
     static void setup() {
-        setupSpaceAndRelatedResources(nakshaClient, "PatchFeatures/setup");
+        setupHandlerAndSpace(nakshaClient, "PatchFeatures/setup");
     }
 
     @Test

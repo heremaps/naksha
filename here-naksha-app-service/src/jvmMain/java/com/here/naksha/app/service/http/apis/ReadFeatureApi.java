@@ -18,12 +18,18 @@
  */
 package com.here.naksha.app.service.http.apis;
 
-import static com.here.naksha.app.service.http.tasks.ReadFeatureApiTask.ReadFeatureApiReqType.*;
+import static com.here.naksha.app.service.http.tasks.ReadFeatureApiTask.ReadFeatureApiReqType.GET_BY_BBOX;
+import static com.here.naksha.app.service.http.tasks.ReadFeatureApiTask.ReadFeatureApiReqType.GET_BY_ID;
+import static com.here.naksha.app.service.http.tasks.ReadFeatureApiTask.ReadFeatureApiReqType.GET_BY_IDS;
+import static com.here.naksha.app.service.http.tasks.ReadFeatureApiTask.ReadFeatureApiReqType.GET_BY_RADIUS;
+import static com.here.naksha.app.service.http.tasks.ReadFeatureApiTask.ReadFeatureApiReqType.GET_BY_RADIUS_POST;
+import static com.here.naksha.app.service.http.tasks.ReadFeatureApiTask.ReadFeatureApiReqType.GET_BY_TILE;
+import static com.here.naksha.app.service.http.tasks.ReadFeatureApiTask.ReadFeatureApiReqType.ITERATE;
+import static com.here.naksha.app.service.http.tasks.ReadFeatureApiTask.ReadFeatureApiReqType.SEARCH;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.tasks.ReadFeatureApiTask;
 import com.here.naksha.app.service.http.tasks.ReadFeatureApiTask.ReadFeatureApiReqType;
-import com.here.naksha.app.service.http.tasks.SpaceMapResolver;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.openapi.RouterBuilder;
@@ -35,11 +41,8 @@ public class ReadFeatureApi extends Api {
 
   private static final Logger logger = LoggerFactory.getLogger(ReadFeatureApi.class);
 
-  private final SpaceMapResolver spaceMapResolver;
-
-  public ReadFeatureApi(final @NotNull NakshaHttpVerticle verticle, SpaceMapResolver spaceMapResolver) {
+  public ReadFeatureApi(final @NotNull NakshaHttpVerticle verticle) {
     super(verticle);
-    this.spaceMapResolver = spaceMapResolver;
   }
 
   @Override
@@ -55,7 +58,8 @@ public class ReadFeatureApi extends Api {
   }
 
   @Override
-  public void addManualRoutes(final @NotNull Router router) {}
+  public void addManualRoutes(final @NotNull Router router) {
+  }
 
   private void getFeaturesById(final @NotNull RoutingContext routingContext) {
     startReadFeatureApiTask(GET_BY_IDS, routingContext);
@@ -91,7 +95,7 @@ public class ReadFeatureApi extends Api {
 
   private void startReadFeatureApiTask(ReadFeatureApiReqType reqType, RoutingContext routingContext) {
     new ReadFeatureApiTask<>(
-            reqType, verticle, naksha(), routingContext, verticle.createNakshaContext(routingContext), spaceMapResolver)
+        reqType, verticle, naksha(), routingContext, verticle.createNakshaContext(routingContext))
         .start();
   }
 }

@@ -1,6 +1,7 @@
 package com.here.naksha.lib.handlers;
 
 import static naksha.model.NakshaError.COLLECTION_NOT_FOUND;
+import static naksha.model.NakshaError.MAP_NOT_FOUND;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -36,6 +37,7 @@ import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
@@ -45,6 +47,7 @@ import naksha.model.request.WriteList;
 import naksha.model.request.WriteOp;
 import naksha.model.request.WriteRequest;
 import org.apache.commons.lang3.RandomUtils;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
@@ -63,6 +66,8 @@ class DefaultStorageHandlerTest extends AbstractTest {
     super("default_storage_handler_test_context", "default_storage_handler_test_map");
   }
 
+  private static final String HANDLER_ID = "test_handler";
+  private static final String STORAGE_ID = "dsh_test_storage_id";
   private static final Logger log = LoggerFactory.getLogger(DefaultStorageHandlerTest.class);
 
   @Mock
@@ -80,7 +85,9 @@ class DefaultStorageHandlerTest extends AbstractTest {
   @BeforeEach
   void setup() {
     MockitoAnnotations.openMocks(this);
-    configureStorageMocks();
+    when(storage.getId()).thenReturn(STORAGE_ID);
+    configureStorageSessionMocks();
+    configureStorageConfig(storageConfigWithMapId("test_map_id"));
   }
 
   @Test
@@ -234,6 +241,116 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
     // Then: No Write Collection request was passed to storage writer
     verify(storageWriteSession, never()).execute(argThat(matchesCreateCollectionRequest()));
+  }
+
+  @Test
+  void shouldFailWhenStorageHasNoConfig() {
+    // Given:
+    configureStorageConfig(null);
+
+    // And
+    DefaultStorageHandler handler = storageHandler();
+
+    // When:
+    Response response = handler.process(event(writeRandomFeature()));
+
+    // Then:
+    assertInstanceOf(ErrorResponse.class, response);
+    ErrorResponse errorResponse = (ErrorResponse) response;
+    assertEquals(NakshaError.ILLEGAL_STATE, errorResponse.getError().getCode());
+    assertEquals(
+        "Unable to determine 'mapId' for handler '" + HANDLER_ID + "', storage '" + STORAGE_ID + "' has no config.",
+        errorResponse.getError().getMsg()
+    );
+  }
+
+  @Test
+  void shouldFailWhenStorageConfigHasNoMapId() {
+    // Given:
+    configureStorageConfig(new NakshaStorage());
+
+    // And
+    DefaultStorageHandler handler = storageHandler();
+
+    // When:
+    Response response = handler.process(event(writeRandomFeature()));
+
+    // Then:
+    assertInstanceOf(ErrorResponse.class, response);
+    ErrorResponse errorResponse = (ErrorResponse) response;
+    assertEquals(NakshaError.ILLEGAL_STATE, errorResponse.getError().getCode());
+    assertEquals(
+        "Unable to determine 'mapId' for handler '" + HANDLER_ID + "' and through associated storage '" + STORAGE_ID + "'.",
+        errorResponse.getError().getMsg()
+    );
+  }
+
+  @Test
+  void shouldCreateMapIfMissing() {
+    // Given:
+    String mapId = "missing_map_id";
+    configureStorageConfig(storageConfigWithMapId(mapId));
+
+    // And: Storage writer failing on WriteXyzFeatures due to sql exception
+    NakshaError missingMapError = new NakshaError(MAP_NOT_FOUND, "Missing map");
+    when(storageWriteSession.execute(any(WriteRequest.class))).thenReturn(new ErrorResponse(missingMapError));
+
+    // And
+    DefaultStorageHandler handler = storageHandler();
+
+    // When: Processing write features
+    Request writeFeatureReq = writeRandomFeature();
+    ignoreExceptionsFrom(
+        () -> handler.processEvent(event(writeFeatureReq)),
+        "The mock for storage writer is already configured to always fail - it's ok to allow this as we only want to check invocations"
+    );
+
+    // Then:
+    ArgumentCaptor<WriteRequest> storageWriterRequestCaptor = ArgumentCaptor.forClass(WriteRequest.class);
+    verify(storageWriteSession, times(2)).execute(storageWriterRequestCaptor.capture());
+    List<WriteRequest> capturedWriteRequests = storageWriterRequestCaptor.getAllValues();
+    assertEquals(writeFeatureReq, capturedWriteRequests.get(0));
+
+    // And:
+    List<Write> secondRequestWrites = capturedWriteRequests.get(1).getWrites();
+    assertEquals(1, secondRequestWrites.size());
+    Write mapWrite = secondRequestWrites.get(0);
+    assertEquals(WriteOp.CREATE, mapWrite.getOp());
+    assertEquals(Naksha.ADMIN_MAP, mapWrite.getMapId());
+    assertEquals(Naksha.MAPS_COL, mapWrite.getCollectionId());
+    assertEquals(mapId, mapWrite.getId());
+  }
+
+  @Test
+  void shouldUseMapFromStorageProps() {
+    // Given:
+    String mapIdFromStorageProps = "map_from_storage";
+    configureStorageConfig(storageConfigWithMapId(mapIdFromStorageProps));
+
+    // And: Storage writer failing on WriteXyzFeatures due to sql exception
+    NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
+    WriteRequest writeRequest = new WriteRequest();
+    writeRequest.add(new Write().createFeature("map_from_request", "map_from_collection", featureToCreate));
+
+    // And
+    DefaultStorageHandler handler = storageHandler();
+
+    // When: Processing write features
+    ignoreExceptionsFrom(
+        () -> handler.processEvent(event(writeRequest)),
+        "The mock for storage writer is already configured to always fail - it's ok to allow this as we only want to check invocations"
+    );
+
+    // Then:
+    ArgumentCaptor<WriteRequest> storageWriterRequestCaptor = ArgumentCaptor.forClass(WriteRequest.class);
+    verify(storageWriteSession, times(1)).execute(storageWriterRequestCaptor.capture());
+    WriteRequest capturedWriteRequest = storageWriterRequestCaptor.getValue();
+    List<Write> subsmittedWrites = capturedWriteRequest.getWrites();
+    assertEquals(1, subsmittedWrites.size());
+    Write submittedWrite = subsmittedWrites.get(0);
+    assertEquals(WriteOp.CREATE, submittedWrite.getOp());
+    assertEquals(mapIdFromStorageProps, submittedWrite.getMapId());
+    assertEquals(handler.properties.getCollection().getId(), submittedWrite.getCollectionId());
   }
 
   private static Write findSingleCreateCollectionWrite(List<WriteRequest> writeRequests) {
@@ -412,12 +529,12 @@ class DefaultStorageHandlerTest extends AbstractTest {
   private DefaultStorageHandler storageHandler(DefaultStorageHandlerProperties properties, Space space) {
     EventHandlerConfig config = new EventHandlerConfig();
     config.setClassName(DefaultStorageHandler.class.getName());
-    config.setId("test_handler");
+    config.setId(HANDLER_ID);
     config.setProperties(properties);
     return new DefaultStorageHandler(config, naksha, space);
   }
 
-  private void configureStorageMocks() {
+  private void configureStorageSessionMocks() {
     when(naksha.getStorageById(any())).thenReturn(storage);
     when(storage.newWriteSession(any(SessionOptions.class))).thenReturn(storageWriteSession);
     when(storage.useWriteSession(any(SessionOptions.class), any(Fn1.class))).thenCallRealMethod();
@@ -425,6 +542,16 @@ class DefaultStorageHandlerTest extends AbstractTest {
     when(storage.newReadSession(any(SessionOptions.class))).thenReturn(storageReadSession);
     when(storage.useReadSession(any(SessionOptions.class), any(Fn1.class))).thenCallRealMethod();
     doNothing().when(storage).runInReadSession(any(SessionOptions.class), any(Fx1.class));
+  }
+
+  private NakshaStorage storageConfigWithMapId(@Nullable String mapId) {
+    NakshaStorage config = new NakshaStorage();
+    config.getProperties().put("schema", mapId);
+    return config;
+  }
+
+  private void configureStorageConfig(@Nullable NakshaStorage config) {
+    when(storage.getConfig()).thenReturn(config);
   }
 
   private void ignoreExceptionsFrom(Callable<?> callable, String reason) {

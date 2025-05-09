@@ -38,7 +38,6 @@ import naksha.model.NakshaException;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import naksha.model.util.RequestHelper;
@@ -50,7 +49,6 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
 
   private static final Logger logger = LoggerFactory.getLogger(SpaceApiTask.class);
   private final @NotNull SpaceApiReqType reqType;
-  private final @NotNull SpaceMapResolver spaceMapResolver;
 
   public enum SpaceApiReqType {
     GET_ALL_SPACES,
@@ -65,12 +63,10 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
       final @NotNull NakshaHttpVerticle verticle,
       final @NotNull INaksha nakshaHub,
       final @NotNull RoutingContext routingContext,
-      final @NotNull NakshaContext nakshaContext,
-      final @NotNull SpaceMapResolver spaceMapResolver
+      final @NotNull NakshaContext nakshaContext
   ) {
     super(verticle, nakshaHub, routingContext, nakshaContext);
     this.reqType = reqType;
-    this.spaceMapResolver = spaceMapResolver;
   }
 
   /**
@@ -108,12 +104,9 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
 
   private XyzResponse executeDeleteSpace() {
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
-    final WriteRequest wr = new WriteRequest().add(new Write().deleteFeatureById(naksha().getAdminMapId(), spaceId, SPACES));
+    final WriteRequest wr = new WriteRequest().add(new Write().deleteFeatureById(naksha().getAdminMapId(), SPACES, spaceId));
 
     Response response = executeWriteRequestFromSpaceStorage(wr);
-    if(response instanceof SuccessResponse) {
-      spaceMapResolver.removeMapEntryFor(spaceId);
-    }
     return transformResponseToXyzFeatureResponse(response, NakshaFeature.class, NOT_FOUND_ON_NO_ELEMENTS);
   }
 
@@ -121,9 +114,6 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
     final Space newSpace = spaceFromRequestBody();
     final WriteRequest wrRequest = RequestHelper.createFeatureRequest(naksha().getAdminMapId(), SPACES, newSpace);
     Response response = executeWriteRequestFromSpaceStorage(wrRequest);
-    if(response instanceof SuccessResponse){
-      spaceMapResolver.updateMapDataFor(newSpace);
-    }
     return transformResponseToXyzFeatureResponse(response, Space.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
   }
 
@@ -136,15 +126,13 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
     } else {
       final WriteRequest updateSpaceReq = RequestHelper.updateFeatureRequest(naksha().getAdminMapId(), SPACES, spaceFromBody);
       Response updateSpaceResponse = executeWriteRequestFromSpaceStorage(updateSpaceReq);
-      if(updateSpaceResponse instanceof SuccessResponse){
-        spaceMapResolver.updateMapDataFor(spaceFromBody);
-      }
       return transformResponseToXyzFeatureResponse(updateSpaceResponse, Space.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
     }
   }
 
   private @NotNull XyzResponse executeGetSpaces() {
     final ReadFeatures request = new ReadFeatures().addCollectionId(SPACES);
+    request.setMapId(naksha().getAdminMapId());
     Response response = executeReadRequestFromSpaceStorage(request);
     return transformResponseToXyzCollectionResponse(response, Space.class);
   }
@@ -152,6 +140,7 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
   private @NotNull XyzResponse executeGetSpaceById() {
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
     final ReadFeatures request = new ReadFeatures().addCollectionId(SPACES);
+    request.setMapId(naksha().getAdminMapId());
     request.setFeatureIds(StringList.of(spaceId));
     Response response = executeReadRequestFromSpaceStorage(request);
     return transformResponseToXyzFeatureResponse(response, Space.class, NOT_FOUND_ON_NO_ELEMENTS);

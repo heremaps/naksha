@@ -9,7 +9,7 @@
   "properties": {
     "collection": {
       "id": "um-mod-dev:activity_history_test_collection",
-      "mapId": "naksha-client-test-map",
+
       "type": "NakshaCollection"
     }
   }

@@ -41,9 +41,9 @@ import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
-import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import naksha.model.request.Write;
@@ -76,7 +76,9 @@ public class NHAdminMock extends AbstractStorage<Config> {
     // empty on purpose
   }
 
-  public static class Config extends NakshaStorage {}
+  public static class Config extends NakshaStorage {
+
+  }
 
   public NHAdminMock() {
     // this constructor is only to support Platform-based instantiation
@@ -132,7 +134,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
     runInWriteSession(SessionOptions.from(ctx, true), admin -> {
       WriteRequest writeAdminCollections = new WriteRequest();
       for (final String name : ALL_HUB_INTERNAL_COLLECTIONS) {
-        Write write = new Write().createCollection(new NakshaCollection(name));
+        Write write = new Write().createCollection(new NakshaCollection(name, DEFAULT_HUB_ADMIN_MAP_ID));
         writeAdminCollections.add(write);
       }
       final Response response = admin.execute(writeAdminCollections);

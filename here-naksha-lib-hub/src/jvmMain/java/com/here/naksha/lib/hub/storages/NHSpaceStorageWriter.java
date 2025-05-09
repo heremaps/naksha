@@ -181,17 +181,20 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     final Space space = ((Space) updateSpaceEntryReq.getWrites().get(0).getFeature());
     final SpaceProperties spaceProperties = space.getProperties();
     final NakshaCollection collection = spaceProperties.getCollection();
-    Response updateSpaceRes = null;
+    Response upsertSpaceRes = null;
     if (collection != null) {
       // submit Update Collection request to Custom Space based pipeline
-      WriteRequest updateCollectionReq = new WriteRequest().add(new Write().updateCollection(collection, true));
-      updateSpaceRes = executeSingleCollectionWrite(updateCollectionReq, space.getId());
-    }
-    if (collection == null || updateSpaceRes instanceof SuccessResponse) {
-      // submit Update Space request to Admin Space based pipeline
-      return executeWriteToAdminSpaces(updateSpaceEntryReq, SPACES);
+      WriteRequest upsertCollectionReq = new WriteRequest().add(new Write().upsertCollection(collection));
+      upsertSpaceRes = executeSingleCollectionWrite(upsertCollectionReq, space.getId());
+      if(upsertSpaceRes instanceof SuccessResponse) {
+        // we update the space only if the collection was changed correctly
+        return executeWriteToAdminSpaces(updateSpaceEntryReq, SPACES);
+      }
+      // changing collection failed - return failure
+      return upsertSpaceRes;
     } else {
-      return updateSpaceRes;
+      // no collection in Space, we only update the space
+      return executeWriteToAdminSpaces(updateSpaceEntryReq, SPACES);
     }
   }
 

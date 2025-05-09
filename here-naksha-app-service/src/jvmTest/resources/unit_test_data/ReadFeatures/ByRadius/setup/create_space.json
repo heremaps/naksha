@@ -9,7 +9,6 @@
   "properties": {
     "collection": {
       "id": "read_features_by_radius_test_collection",
-      "mapId": "naksha-client-test-map",
       "type": "NakshaCollection"
     }
   }

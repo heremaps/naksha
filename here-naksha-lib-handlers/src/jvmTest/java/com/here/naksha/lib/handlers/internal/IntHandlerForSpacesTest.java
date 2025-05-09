@@ -119,26 +119,6 @@ class IntHandlerForSpacesTest {
     ), errorResult.getError().getMsg());
   }
 
-  @ParameterizedTest
-  @MethodSource("persistingSpaceWithoutMapId")
-  void shouldNotStoreSpaceWithoutMapIdInCollection(WriteRequest writeSpace){
-    // Given:
-    Space space = (Space) writeSpace.getWrites().get(0).getFeature();
-    IEvent event = eventWith(writeSpace);
-
-    // And
-    handlersExist(space.getEventHandlerIds());
-    writingToAdminSucceeds();
-
-    // When
-    Response result = handler.process(event);
-
-    // Then
-    assertInstanceOf(ErrorResponse.class, result);
-    ErrorResponse errorResult = (ErrorResponse) result;
-    assertEquals(ILLEGAL_ARGUMENT, errorResult.getError().getCode());
-  }
-
   private static Stream<Named<WriteRequest>> persistingWritesWithInvalidSpace() {
     Space spaceWithoutTitle = space("no_title", null, "some_desc");
     Space spaceWithoutDescription = space("no_desc", "some_title", null);
@@ -162,15 +142,6 @@ class IntHandlerForSpacesTest {
         named("PUT Space without valid handlers", new WriteRequest().add(new Write().upsertFeature(null, SPACES, space))),
         named("UPDATE Space without valid handlers", new WriteRequest().add(new Write().updateFeature(SPACES, space, false))),
         named("CREATE Space without valid handlers", new WriteRequest().add(new Write().createFeature(SPACES, space)))
-    );
-  }
-
-  private static Stream<Named<WriteRequest>> persistingSpaceWithoutMapId() {
-    Space spaceWithoutCollection = space("space_id", "no_desc", "some_title", List.of("handler_1", "handler_2", "handler_3"));
-    return Stream.of(
-        named("PUT Space without collection", new WriteRequest().add(new Write().upsertFeature("some_map_id", SPACES, spaceWithoutCollection))),
-        named("UPDATE Space without collection", new WriteRequest().add(new Write().updateFeature("some_map_id", SPACES, spaceWithoutCollection, false))),
-        named("CREATE Space without collection", new WriteRequest().add(new Write().createFeature("some_map_id", SPACES, spaceWithoutCollection)))
     );
   }
 

@@ -240,7 +240,7 @@ public class NakshaHub implements INaksha {
   private static WriteRequest upsertAdminCollectionsRequest() {
     final WriteRequest writeRequest = new WriteRequest();
     for (String adminCollectionId : ALL_HUB_INTERNAL_COLLECTIONS) {
-      writeRequest.add(new Write().upsertCollection(new NakshaCollection(adminCollectionId)));
+      writeRequest.add(new Write().upsertCollection(new NakshaCollection(adminCollectionId, DEFAULT_HUB_ADMIN_MAP_ID)));
     }
     return writeRequest;
   }

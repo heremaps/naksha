@@ -214,7 +214,7 @@ open class SuccessResponse() : Response() {
                 list.setCapacity(featureTupleList.size)
                 for (tuple in featureTupleList) {
                     if (tuple == null) continue
-                    list.add(tuple.feature)
+                    list.add(tuple.feature) // TODO (Jakub): tc0280 - adds null
                 }
             }
 

@@ -130,7 +130,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
         feature = preResponseProcessing.call(feature);
       }
       if (feature == null) {
-        handleNoElements(noElementsStrategy);
+        return handleNoElements(noElementsStrategy);
       }
       final XyzFeatureCollection featureResponse = new XyzFeatureCollection().withFeatures(List.of(feature));
       return verticle.sendXyzResponse(routingContext, HttpResponseType.FEATURE, featureResponse);

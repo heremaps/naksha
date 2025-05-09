@@ -30,7 +30,7 @@ import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
 
-import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.*;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -42,7 +42,7 @@ class ReadFeaturesByIdsTest extends ApiTest {
 
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
-    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByIds/setup");
+    setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByIds/setup");
     String initialFeaturesJson = loadFileOrFail("ReadFeatures/ByIds/setup/create_features.json");
     nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());
   }

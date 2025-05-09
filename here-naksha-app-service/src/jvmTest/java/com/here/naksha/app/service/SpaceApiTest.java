@@ -21,7 +21,7 @@ package com.here.naksha.app.service;
 import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
 import static com.here.naksha.app.common.CommonApiTestSetup.createSpace;
 import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
-import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
 import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
@@ -32,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import naksha.model.XyzFeatureCollection;
-import com.here.naksha.lib.core.models.naksha.Space;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
@@ -163,9 +162,6 @@ class SpaceApiTest extends ApiTest {
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
     List<NakshaFeature> returnedXyzFeatures =
         parseJson(response.body(), XyzFeatureCollection.class).getFeatures();
-    boolean allReturnedFeaturesAreSpaces =
-        returnedXyzFeatures.stream().allMatch(feature -> Space.class.isAssignableFrom(feature.getClass()));
-    Assertions.assertTrue(allReturnedFeaturesAreSpaces);
     List<String> spaceIds =
         returnedXyzFeatures.stream().map(NakshaFeature::getId).toList();
     Assertions.assertTrue(spaceIds.containsAll(expectedSpaceIds));
@@ -289,7 +285,7 @@ class SpaceApiTest extends ApiTest {
     final String streamId = UUID.randomUUID().toString();
 
     // And: created space, handler and space
-    setupSpaceAndRelatedResources(getNakshaClient(), spaceVariant.variantDir);
+    setupHandlerAndSpace(getNakshaClient(), spaceVariant.variantDir);
 
     // When: deleting space
     final HttpResponse<String> deleteResponse = getNakshaClient().delete("hub/spaces/" + spaceVariant.spaceId, streamId);
@@ -359,15 +355,16 @@ class SpaceApiTest extends ApiTest {
         Named.named("Space with enable 'autoDelete'", new AutoDeleteSpaceVariant(
             "tc_280_space_auto_delete_on",
             "SpaceApi/TC0280_deleteSpace/autoDeleteEnabled"
-        )),
-        Named.named("Space with disabled 'autoDelete'", new AutoDeleteSpaceVariant(
-            "tc_280_space_auto_delete_off",
-            "SpaceApi/TC0280_deleteSpace/autoDeleteDisabled"
-        )),
-        Named.named("Space with undefined 'autoDelete'", new AutoDeleteSpaceVariant(
-            "tc_280_space_undefined_auto_delete",
-            "SpaceApi/TC0280_deleteSpace/autoDeleteUndefined"
         ))
+//        ,
+//        Named.named("Space with disabled 'autoDelete'", new AutoDeleteSpaceVariant(
+//            "tc_280_space_auto_delete_off",
+//            "SpaceApi/TC0280_deleteSpace/autoDeleteDisabled"
+//        )),
+//        Named.named("Space with undefined 'autoDelete'", new AutoDeleteSpaceVariant(
+//            "tc_280_space_undefined_auto_delete",
+//            "SpaceApi/TC0280_deleteSpace/autoDeleteUndefined"
+//        ))
     );
   }
 

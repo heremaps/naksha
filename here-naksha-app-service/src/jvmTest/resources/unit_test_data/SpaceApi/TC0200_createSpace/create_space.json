@@ -9,7 +9,6 @@
   "properties": {
     "collection": {
       "id": "um-mod-dev:test",
-      "mapId": "naksha-client-test-map",
       "type": "NakshaCollection",
       "autoPurge": true
     }

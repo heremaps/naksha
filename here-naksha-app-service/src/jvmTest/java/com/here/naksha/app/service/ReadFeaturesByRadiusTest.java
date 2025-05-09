@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 import static com.here.naksha.app.common.CommonApiTestSetup.createSpace;
-import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
@@ -103,7 +103,7 @@ class ReadFeaturesByRadiusTest extends ApiTest {
 
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
-    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/ByRadius/setup");
+    setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByRadius/setup");
     // create another space that will be used for providing feature reference
     createSpace(nakshaClient, "ReadFeatures/ByRadius/setup/create_ref_space.json");
     // create features in main space

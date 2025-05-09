@@ -37,7 +37,7 @@ import java.net.http.HttpResponse;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -57,7 +57,7 @@ class ReadFeaturesWithApiFaultsHttpStorageTest extends ApiTest {
 
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
-    setupSpaceAndRelatedResources(nakshaClient, "ReadFeatures/WithApiFaultsHttpStorage/setup");
+    setupHandlerAndSpace(nakshaClient, "ReadFeatures/WithApiFaultsHttpStorage/setup");
   }
 
   @Test

@@ -18,7 +18,7 @@
  */
 package com.here.naksha.app.service;
 
-import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,7 +42,7 @@ class DeleteFeatureTest extends ApiTest {
 
   @BeforeAll
   static void setup() {
-    setupSpaceAndRelatedResources(nakshaClient, "DeleteFeatures/setup");
+    setupHandlerAndSpace(nakshaClient, "DeleteFeatures/setup");
   }
 
   @Test

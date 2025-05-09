@@ -14,7 +14,7 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
-import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
@@ -29,12 +29,12 @@ public class PatchOnViewWithHttpStorageTest extends ApiTest {
     @BeforeAll
     static void setup() throws URISyntaxException, IOException, InterruptedException {
         // Set up Base space - using Http Storage
-        setupSpaceAndRelatedResources(nakshaClient, "PatchOnViewWithHttpStorage/setup/http_storage_space");
+        setupHandlerAndSpace(nakshaClient, "PatchOnViewWithHttpStorage/setup/http_storage_space");
         // Set up Delta space - using Psql Storage
         createHandler(nakshaClient, "PatchOnViewWithHttpStorage/setup/psql_storage_space/create_sourceId_handler.json");
-        setupSpaceAndRelatedResources(nakshaClient, "PatchOnViewWithHttpStorage/setup/psql_storage_space");
+        setupHandlerAndSpace(nakshaClient, "PatchOnViewWithHttpStorage/setup/psql_storage_space");
         // Set up View space - using above Delta and Base spaces
-        setupSpaceAndRelatedResources(nakshaClient, "PatchOnViewWithHttpStorage/setup/view_space");
+        setupHandlerAndSpace(nakshaClient, "PatchOnViewWithHttpStorage/setup/view_space");
         // Load some test data in Delta space
         final String initialFeaturesJson = loadFileOrFail("PatchOnViewWithHttpStorage/setup/psql_storage_space/create_features.json");
         final HttpResponse<String> response = nakshaClient.post("hub/spaces/" + PSQL_SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());

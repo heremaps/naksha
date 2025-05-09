@@ -56,24 +56,7 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
       return basicValidation;
     }
     Space space = (Space) write.getFeature();
-    Response mapIdValidation = mapIdExistenceValidation(space);
-    if (mapIdValidation instanceof ErrorResponse) {
-      return mapIdValidation;
-    }
     return handlerExistenceValidation(space);
-  }
-
-  private @NotNull Response mapIdExistenceValidation(Space space) {
-    NakshaCollection collection = space.getProperties().getCollection();
-    if (collection == null) {
-      return new ErrorResponse(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Space '" + space.getId() + "' does not have a collection"));
-    }
-    String mapId = collection.getMapId();
-    if (mapId == null) {
-      return new ErrorResponse(new NakshaError(NakshaError.ILLEGAL_ARGUMENT,
-          "Collection '" + collection.getId() + "' defined in Space '" + space.getId() + "' does not have a mapId"));
-    }
-    return new SuccessResponse();
   }
 
   private @NotNull Response handlerExistenceValidation(Space space) {

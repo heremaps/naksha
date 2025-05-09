@@ -170,8 +170,7 @@ class NakshaHubWiringTest extends AbstractTest {
     assertTrue(reqCaptor.getValue() instanceof ReadFeatures);
   }
 
-  // TODO: Fix me!
-  //@Test
+  @Test
   @Order(3)
   void testCreateFeatureRequestWiring() throws Exception {
     // Given: Storage, EventHandler and Space objects

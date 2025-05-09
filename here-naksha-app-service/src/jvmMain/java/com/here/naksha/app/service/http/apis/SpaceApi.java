@@ -27,7 +27,6 @@ import static com.here.naksha.app.service.http.tasks.SpaceApiTask.SpaceApiReqTyp
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.tasks.SpaceApiTask;
 import com.here.naksha.app.service.http.tasks.SpaceApiTask.SpaceApiReqType;
-import com.here.naksha.app.service.http.tasks.SpaceMapResolver;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.openapi.RouterBuilder;
@@ -38,14 +37,9 @@ import org.slf4j.LoggerFactory;
 public class SpaceApi extends Api {
 
   private static final Logger logger = LoggerFactory.getLogger(SpaceApi.class);
-  private final SpaceMapResolver spaceMapResolver;
 
-  public SpaceApi(
-      final @NotNull NakshaHttpVerticle verticle,
-      final @NotNull SpaceMapResolver spaceMapResolver
-  ) {
+  public SpaceApi( final @NotNull NakshaHttpVerticle verticle) {
     super(verticle);
-    this.spaceMapResolver = spaceMapResolver;
   }
 
   @Override
@@ -81,7 +75,7 @@ public class SpaceApi extends Api {
   }
 
   private void startSpaceApiTask(SpaceApiReqType reqType, RoutingContext routingContext) {
-    new SpaceApiTask(reqType, verticle, naksha(), routingContext, verticle.createNakshaContext(routingContext), spaceMapResolver)
+    new SpaceApiTask(reqType, verticle, naksha(), routingContext, verticle.createNakshaContext(routingContext))
         .start();
   }
 }
