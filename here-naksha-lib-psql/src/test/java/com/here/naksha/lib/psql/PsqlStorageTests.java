@@ -1249,7 +1249,7 @@ public class PsqlStorageTests extends PsqlTests {
     expect.accept(readFeatures);
 
     // when - search by element inside an array
-    POp jsonSearch5 = POp.contains(new NonIndexedPRef("properties", "references", "0", "id"), "urn:here::here:Topology:106003684");
+    POp jsonSearch5 = POp.eq(new NonIndexedPRef("properties", "references", "0", "id"), "urn:here::here:Topology:106003684");
     readFeatures.setPropertyOp(jsonSearch5);
     // then
     expect.accept(readFeatures);
