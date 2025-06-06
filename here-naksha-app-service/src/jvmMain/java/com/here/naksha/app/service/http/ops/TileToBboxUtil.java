@@ -21,7 +21,7 @@ package com.here.naksha.app.service.http.ops;
 import static com.here.naksha.common.http.apis.ApiParamsConst.TILE_TYPE_QUADKEY;
 
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
-import naksha.geo.GeoBoundingBox;
+import naksha.geo.BBox;
 import naksha.geo.SpPolygon;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
@@ -51,7 +51,7 @@ public class TileToBboxUtil {
     }
   }
 
-  private static GeoBoundingBox bboxForTile(String tileId) {
+  private static BBox bboxForTile(String tileId) {
     return WebMercatorTile.forQuadkey(tileId).getBBox(DONT_CLONE);
   }
 }

@@ -1,20 +1,39 @@
 package naksha.geo
 
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class SpMultiPoint() : SpGeometry() {
 
-    @JsName("of")
+    @JsName("SpMultiPointOf")
     constructor(coordinates: MultiPointCoord) : this() {
-        setCoordinates(coordinates)
+        this.coordinates = coordinates
     }
 
-    override fun getCoordinates(): MultiPointCoord = super.getCoordinates() as MultiPointCoord
-    fun withCoordinates(coordinates: MultiPointCoord): SpMultiPoint {
-        setCoordinates(coordinates)
+    companion object SpMultiPointCompanion {
+        /**
+         * The [PlatformType] of [SpMultiPoint].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<SpMultiPoint> = forKClass(SpMultiPoint::class)
+            .withPackageName(PACKAGE_NAME)
+            .withJsonType("MultiPoint")
+    }
+
+    override var coordinates: MultiPointCoord
+        get() = get_coordinates() as MultiPointCoord
+        set(value) { set_coordinates(value) }
+
+    fun withCoordinates(value: MultiPointCoord): SpMultiPoint {
+        set_coordinates(value)
         return this
     }
 }

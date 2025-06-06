@@ -1,20 +1,39 @@
 package naksha.geo
 
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class SpLineString() : SpGeometry() {
 
-    @JsName("of")
+    @JsName("SpLineStringOf")
     constructor(coordinates: LineStringCoord) : this() {
-        setCoordinates(coordinates)
+        this.coordinates = coordinates
     }
 
-    override fun getCoordinates(): LineStringCoord = super.getCoordinates() as LineStringCoord
-    fun withCoordinates(coordinates: LineStringCoord): SpLineString {
-        setCoordinates(coordinates)
+    companion object SpLineStringCompanion {
+        /**
+         * The [PlatformType] of [SpLineString].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<SpLineString> = forKClass(SpLineString::class)
+            .withPackageName(PACKAGE_NAME)
+            .withJsonType("LineString")
+    }
+
+    override var coordinates: LineStringCoord
+        get() = get_coordinates() as LineStringCoord
+        set(value) { set_coordinates(value) }
+
+    fun withCoordinates(value: LineStringCoord): SpLineString {
+        set_coordinates(value)
         return this
     }
 }

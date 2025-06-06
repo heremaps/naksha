@@ -9,10 +9,13 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 
 /**
  * A [GeoJSON Point Coordinates](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1.2).
  *
+ * ## Note
+ * If `z` is null, this coordinate is truncated to a size of 2, so `m` is automatically removed. In other words, a coordinate can only have an `m` value, if it has as well a valid `z` value.
  * @since 3.0
  * @see ICoordinates
  */
@@ -20,15 +23,23 @@ import kotlin.jvm.JvmField
 @JsExport
 class PointCoord() : ListProxy<Double>(Double_TYPE), ICoordinates {
 
-    @Suppress("SENSELESS_COMPARISON")
-    @JsName("fromLonLat")
-    constructor(longitude: Double, latitude: Double, vararg additional: Double) : this() {
+    /**
+     * Create an initialized coordinate.
+     * @param longitude The longitude.
+     * @param latitude The latitude.
+     * @param z If not `null`, then the `z` value, being elevation or altitude.
+     * @param m If not `null`, then`z` must not be `null` either.
+     * @since 3.0
+     */
+    @JsName("PointCoordOf")
+    @JvmOverloads
+    constructor(longitude: Double, latitude: Double, z: Double? = null, m: Double? = null) : this() {
         this.longitude = longitude
         this.latitude = latitude
-        if (additional != null && additional.isNotEmpty()) {
-            this.z = additional[0]
-            if (additional.size >= 2) this.m = additional[1]
-        }
+        if (z != null) {
+            this.z = z
+            if (m != null) this.m = m
+        } else if (m != null) throw illegalArg("If m is given (4D), z must be given too (3D)")
     }
 
     companion object PointCoordCompanion {
@@ -54,20 +65,17 @@ class PointCoord() : ListProxy<Double>(Double_TYPE), ICoordinates {
 
     override fun fix(): PointCoord {
         val po = platformObject()
-        array_set(po, LON, sp_lon(sp_double(this[LON])) ?: throw illegalState("Longitude has an invalid value: ${this[LON]}"))
-        array_set(po, LAT,  sp_lat(sp_double(this[LAT])) ?: throw illegalState("Latitude has an invalid value: ${this[LAT]}"))
-        val z = array_get(po, Z)
-        if (Z < size && z != null) {
-            array_set(po, Z, sp_double(z) ?: throw illegalState("Z has an invalid value: $z"))
+        array_set(po, LON, sp_lon(sp_double(array_get(po, LON))) ?:
+            throw illegalState("Longitude has an invalid value: ${this[LON]}"))
+        array_set(po, LAT,sp_lat(sp_double(array_get(po, LAT))) ?:
+            throw illegalState("Latitude has an invalid value: ${this[LAT]}"))
+        val z = sp_double(array_get(po, Z))
+        if (z == null) {
+            size = 2
+            return this
         }
-        val m = array_get(po, M)
-        if (M < size && m != null) {
-            array_set(po, M, sp_double(m) ?: throw illegalState("M has an invalid value: $m"))
-        }
-        // Truncate, if possible.
-        if (m == null) {
-            size = if (z != null) 3 else 2
-        }
+        val m = sp_double(array_get(po, M))
+        if (m == null) size = 3
         return this
     }
 
@@ -78,10 +86,14 @@ class PointCoord() : ListProxy<Double>(Double_TYPE), ICoordinates {
     var longitude: Double
         get() = as_double_or_zero(getRaw(LON))
         set(value) {
-            val lon = sp_lon(sp_double(value)) ?: throw illegalArg("Longitude has an invalid value: $value")
-            array_set(platformObject(), LON, lon)
+            val lon = sp_lon(sp_double(value)) ?: throw illegalArg("Illegal value for longitude: $value")
+            setRaw(LON, lon)
         }
-    fun hasLongitude(): Boolean = is_double(getRaw(LON))
+
+    fun withLongitude(longitude: Double): PointCoord {
+        this.longitude = longitude
+        return this
+    }
 
     /**
      * The WGS'84 latitude of the point.
@@ -90,10 +102,14 @@ class PointCoord() : ListProxy<Double>(Double_TYPE), ICoordinates {
     var latitude: Double
         get() = as_double_or_zero(getRaw(LAT))
         set(value) {
-            val lat = sp_lat(sp_double(value)) ?: throw illegalArg("Latitude has an invalid value: $value")
-            array_set(platformObject(), LAT, lat)
+            val lat = sp_lat(sp_double(value)) ?: throw illegalArg("Illegal value for latitude: $value")
+            setRaw(LAT, lat)
         }
-    fun hasLatitude(): Boolean = is_double(getRaw(LAT))
+
+    fun withLatitude(latitude: Double): PointCoord {
+        this.latitude = latitude
+        return this
+    }
 
     /**
      * The `z` value of the coordinate, normally used for [elevation or altitude](https://en.wikipedia.org/wiki/Elevation).
@@ -103,11 +119,19 @@ class PointCoord() : ListProxy<Double>(Double_TYPE), ICoordinates {
         get() = as_double_or_null(getRaw(Z))
         set(value) {
             val z = sp_double(value)
-            if (z == null && value != null) throw illegalArg("Z has an invalid value: $value")
-            array_set(platformObject(), Z, z)
+            if (z == null && value != null) throw illegalArg("Illegal value for Z: $value")
+            if (z == null) {
+                if (size >= 3) size = 2
+            } else {
+                setRaw(Z, z)
+            }
         }
     override fun hasZ(): Boolean = is_double(getRaw(Z))
     fun removeZ(): Double? = as_double_or_null(removeAt(Z))
+    fun withZ(z: Double?): PointCoord {
+        this.z = z
+        return this
+    }
 
     /**
      * The `m` value of the coordinate.
@@ -119,9 +143,77 @@ class PointCoord() : ListProxy<Double>(Double_TYPE), ICoordinates {
         get() = as_double_or_null(getRaw(M))
         set(value) {
             val m = sp_double(value)
-            if (m == null && value != null) throw illegalArg("M has an invalid value: $value")
-            array_set(platformObject(), M, m)
+            if (m == null && value != null) throw illegalArg("Illegal value for M: $value")
+            if (m == null) {
+                if (size >= 4) size = 3
+            } else {
+                setRaw(M, m)
+            }
         }
     override fun hasM(): Boolean = is_double(getRaw(M))
     fun removeM(): Double? = as_double_or_null(removeAt(M))
+    fun withM(m: Double?): PointCoord {
+        this.m = m
+        return this
+    }
+
+    /**
+     * Tests if this coordinate is 2D.
+     * @since 3.0
+     */
+    fun is2D(): Boolean = size == 2
+
+    /**
+     * Tests if this coordinate is 3D.
+     * @since 3.0
+     */
+    fun is3D(): Boolean = size == 3
+
+    /**
+     * Tests if this coordinate is 3D.
+     * @since 3.0
+     */
+    fun is4D(): Boolean = size == 4
+
+    /**
+     * Ensure that this is a 2D coordinate.
+     * @since 3.0
+     */
+    fun to2D(): PointCoord {
+        val po = platformObject()
+        setCapacity(4)
+        array_set(po, LON, sp_lon(sp_double(array_get(po, LON))) ?: 0.0)
+        array_set(po, LAT, sp_lat(sp_double(array_get(po, LAT))) ?: 0.0)
+        size = 2
+        return this
+    }
+
+    /**
+     * Ensure that this is a 3D coordinate.
+     * @since 3.0
+     */
+    fun to3D(): PointCoord {
+        val po = platformObject()
+        setCapacity(4)
+        array_set(po, LON, sp_lon(sp_double(array_get(po, LON))) ?: 0.0)
+        array_set(po, LAT, sp_lat(sp_double(array_get(po, LAT))) ?: 0.0)
+        array_set(po, Z, sp_double(array_get(po, Z)) ?: 0.0)
+        size = 3
+        return this
+    }
+
+    /**
+     * Ensure that this is a 4D coordinate.
+     * @since 3.0
+     */
+    fun to4D(): PointCoord {
+        val po = platformObject()
+        setCapacity(4)
+        array_set(po, LON, sp_lon(sp_double(array_get(po, LON))) ?: 0.0)
+        array_set(po, LAT, sp_lat(sp_double(array_get(po, LAT))) ?: 0.0)
+        array_set(po, Z, sp_double(array_get(po, Z)) ?: 0.0)
+        array_set(po, M, sp_double(array_get(po, M)) ?: 0.0)
+        size = 4
+        return this
+    }
 }

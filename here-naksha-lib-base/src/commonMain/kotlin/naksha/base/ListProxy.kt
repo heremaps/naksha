@@ -187,6 +187,16 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
         return box(array_set(data, index, unbox(element)), elementType)
     }
 
+    /**
+     * Sets the raw value stored in the platform list.
+     *
+     * # Warning
+     * Do only use this method if you are totally clear what you want, because it has no security or type checks!
+     * @param index The index to write.
+     * @param value The value to write.
+     */
+    protected fun setRaw(index: Int, value: Any?) { array_set(platformObject(), index, value) }
+
     override fun retainAll(elements: Collection<E?>): Boolean {
         val unboxed: Array<Any?> = elements.map { unbox(it) }.toTypedArray()
         return array_retain_all(platformObject(), *unboxed)

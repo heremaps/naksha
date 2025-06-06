@@ -19,7 +19,7 @@ import kotlin.jvm.JvmField
 @JsExport
 class MultiPointCoord() : ListProxy<PointCoord>(PointCoord.TYPE), ICoordinates {
 
-    @JsName("fromPointCoord")
+    @JsName("MultiPointCoordOf")
     constructor(vararg points: PointCoord) : this() {
         addAll(points)
     }

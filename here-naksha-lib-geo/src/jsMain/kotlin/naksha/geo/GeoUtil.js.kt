@@ -3,6 +3,7 @@
 package naksha.geo
 
 import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.fromJSON
 import naksha.base.PlatformMap
 
 /**
@@ -39,7 +40,7 @@ actual class GeoUtil private actual constructor() {
             if (raw == null) return null
             browserForbidden("fromTWKB")
             val json = exec("ST_GeomFromTWKB($1::bytea)", raw) as String
-            return (Platform.fromJSON(json) as PlatformMap).proxy(SpGeometry::class)
+            return fromJSON(json, SpGeometry.TYPE)
         }
 
         /**
@@ -53,7 +54,7 @@ actual class GeoUtil private actual constructor() {
             if (raw == null) return null
             browserForbidden("fromEWKB")
             val json = exec("ST_GeomFromEWKB($1::bytea)", raw) as String
-            return (Platform.fromJSON(json) as PlatformMap).proxy(SpGeometry::class)
+            return fromJSON(json, SpGeometry.TYPE)
         }
 
         /**
@@ -67,7 +68,7 @@ actual class GeoUtil private actual constructor() {
             if (raw == null) return null
             browserForbidden("fromWKB")
             val json = exec("ST_GeomFromWKB($1::bytea, 4326)", raw) as String
-            return (Platform.fromJSON(json) as PlatformMap).proxy(SpGeometry::class)
+            return fromJSON(json, SpGeometry.TYPE)
         }
 
         /**

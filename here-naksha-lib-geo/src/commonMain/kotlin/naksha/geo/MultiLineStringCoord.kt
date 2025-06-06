@@ -18,7 +18,7 @@ import kotlin.jvm.JvmField
 @JsExport
 class MultiLineStringCoord() : ListProxy<LineStringCoord>(LineStringCoord.TYPE), ICoordinates {
 
-    @JsName("fromLineStringCoord")
+    @JsName("MultiLineStringCoordOf")
     constructor(vararg lineStrings: LineStringCoord) : this() {
         addAll(lineStrings)
     }

@@ -5,6 +5,7 @@ package naksha.geo
 
 import naksha.base.Int64
 import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformUtil.PlatformUtilCompanion.round_double
 import naksha.base.illegalArg
 import kotlin.jvm.JvmField
 import kotlin.math.round
@@ -27,18 +28,6 @@ val ICoordinates_TYPE = forKClass(ICoordinates::class).withPackageName(PACKAGE_N
  * @since 3.0
  */
 const val SP_COMPONENT_MULTIPLIER_DOUBLE: Double = 10_000_000.0 // 1e7
-
-/**
- * The multiplier/divisor used when converting doubles into a spatial fixed integer _(`10_000_000` aka 1e7)_.
- * @since 3.0
- */
-const val SP_COMPONENT_MULTIPLIER_INT: Int = 10_000_000
-
-/**
- * The maximum double value of a spatial component.
- * @since 3.0
- */
-const val SP_COMPONENT_MAX_DOUBLE: Double = 1_800_000_000.0
 
 /**
  * The maximum 32-bit integer value of a spatial fixed integer.
@@ -93,68 +82,78 @@ internal const val Z = 2
 internal const val M = 3
 
 /**
- * Round the given double using [round half to even](https://en.wikipedia.org/wiki/Rounding#Rounding_half_to_even) for seventh decimal digit.
- *
- * # Important
- * It is important, that after every calculation a rounding happens to guarantee that we always keep spatial coordinates in the optimal _(and unique)_ representation. Technically, when we only want 7 decimal digits, there are plenty of possible representations for `0.1234567` like `0.12345671`, `0.12345672`, `0.12345674`, all of them represent `0.1234567`, but as more calculations we do, as more errors we introduce. Therefore, we need to round after every single calculation.
- *
- * It is not obvious, but by rounding after every single calculate, we guarantee that:
- *
- * `a + b + c` == `(a + b) + c` == `a + (b + c)`
- *
- * This is not the case without rounding, let's show this by using an example _(execute in any browser console)_:
- * ```js
- * var a = 0.1234567;
- * var b = -100.0;
- * var c = +100.0;
- * var r1 = a + (b + c);
- * var r2 = (a + b) + c
- * console.log( r1, " != ", r2 );
- * // 0.1234567  !=  0.12345670000000553
- * ```
- * Now, with the rounding implemented like here, we get:
- * ```js
- * function sp_round(value) {
- *   return Math.round(value * 10_000_000.0)
- *          / 10_000_000.0;
- * }
- * var a = 0.1234567;
- * var b = -100.0;
- * var c = +100.0;
- * var r1 = sp_round( a + sp_round(b + c) );
- * var r2 = sp_round( sp_round(a + b) + c );
- * console.log( r1, " == ", r2 );
- * // 0.1234567  ==  0.1234567
- * ```
- * @param component The spatial component.
- * @return the spatial component rounded to 7 decimal digits.
- * @since 3.0
- * @see sp_double
- * @see sp_lon
- * @see sp_lat
- * @see sp_double_to_int
- * @see sp_int_to_double
+ * Index of west _(left-, min-)_ longitude in 2D and 3D bounding box: `0`
  */
-fun sp_round(component: Double): Double = round(component * SP_COMPONENT_MULTIPLIER_DOUBLE) / SP_COMPONENT_MULTIPLIER_DOUBLE
+internal const val WEST = 0
+
+/**
+ * Index of south _(bottom-, min-)_ latitude in 2D and 3D bounding box: `1`
+ */
+internal const val SOUTH = 1
+
+/**
+ * Index of min-z in 3D bounding box: `2`
+ */
+internal const val MIN_Z_3D = 2
+
+/**
+ * Index of east _(right-, max-)_ longitude in 2D bounding box: `2`
+ */
+internal const val EAST_2D = 2
+
+/**
+ * Index of east _(right-, max-)_ longitude in 3D bounding box: `3`
+ */
+internal const val EAST_3D = 3
+
+/**
+ * Index of north _(top-, max-)_ latitude in 2D bounding box: `3`
+ */
+internal const val NORTH_2D = 3
+
+/**
+ * Index of north _(top-, max-)_ latitude in 3D bounding box: `4`
+ */
+internal const val NORTH_3D = 4
+
+/**
+ * Index of max-z in 3D bounding box: `5`
+ */
+internal const val MAX_Z_3D = 5
+
+/**
+ * The size of an empty bounding box: `0`
+ */
+internal const val SIZE_EMPTY = 0
+
+/**
+ * The size of a 2D bounding box: `4`
+ */
+internal const val SIZE_2D = 4
+
+/**
+ * The size of a 3D bounding box: `6`
+ */
+internal const val SIZE_3D = 6
 
 /**
  * Convert the given value into a spatial component with 7 decimal digits _(does round)_.
  * @param value The value to convert and round.
  * @return the given `value`, rounded to 7 decimal digits, or `null`, if the value can't be converted.
- * @see sp_round
+ * @see round_double
  */
 fun sp_double(value: Any?): Double? = when(value) {
-    is Double -> if (value.isNaN()) null else sp_round(value)
-    is Float -> if (value.isNaN()) null else sp_round(value.toDouble())
-    is Int64 -> if (value < SP_COMPONENT_MIN_INT || value > SP_COMPONENT_MAX_INT) null else sp_round(value.toDouble())
+    is Double -> if (value.isNaN()) null else round_double(value)
+    is Float -> if (value.isNaN()) null else round_double(value.toDouble())
+    is Int64 -> if (value < SP_COMPONENT_MIN_INT || value > SP_COMPONENT_MAX_INT) null else round_double(value.toDouble())
     is Long -> {
         val i64 = Int64(value)
-        if (i64 < SP_COMPONENT_MIN_INT || i64 > SP_COMPONENT_MAX_INT) null else sp_round(value.toDouble())
+        if (i64 < SP_COMPONENT_MIN_INT || i64 > SP_COMPONENT_MAX_INT) null else round_double(value.toDouble())
     }
-    is Number -> sp_round(value.toDouble())
+    is Number -> round_double(value.toDouble())
     is String -> {
         val f64 = value.toDoubleOrNull()
-        if (f64 == null || f64.isNaN()) null else sp_round(f64)
+        if (f64 == null || f64.isNaN()) null else round_double(f64)
     }
     else -> null
 }
@@ -163,7 +162,7 @@ fun sp_double(value: Any?): Double? = when(value) {
  * Round and validate the given component to longitude _(does not round)_.
  * @param component The component to validate.
  * @return the longitude component or `null`, if the given component is out of range.
- * @see sp_round
+ * @see round_double
  */
 fun sp_lon(component: Double?): Double? = if (component == null || component < -180.0 || component > 180.0) null else component
 
@@ -171,7 +170,7 @@ fun sp_lon(component: Double?): Double? = if (component == null || component < -
  * Round and validate the given component to latitude _(does not round)_.
  * @param component The component to validate.
  * @return the latitude component or `null`, if the given component is out of range.
- * @see sp_round
+ * @see round_double
  */
 fun sp_lat(component: Double?): Double? = if (component == null || component < -90.0 || component > 90.0) null else component
 
@@ -181,7 +180,7 @@ fun sp_lat(component: Double?): Double? = if (component == null || component < -
  * - Throws [NakshaError.ILLEGAL_ARGUMENT][naksha.base.NakshaError.ILLEGAL_ARGUMENT] if the given value is out of range.
  * @param component The spatial component.
  * @return the spatial fixed integer.
- * @see sp_round
+ * @see round_double
  */
 fun sp_double_to_int(component: Double): Int {
     if (component < -180.0 || component > 180.0) throw illegalArg("The component must be between -180 and 180")
@@ -194,9 +193,9 @@ fun sp_double_to_int(component: Double): Int {
  * - Throws [NakshaError.ILLEGAL_ARGUMENT][naksha.base.NakshaError.ILLEGAL_ARGUMENT] if the given value is out of range.
  * @param fixed The spatial fixed integer.
  * @return the spatial component.
- * @see sp_round
+ * @see round_double
  */
-fun sp_int_to_double(fixed: Int): Double = sp_round(fixed.toDouble() / SP_COMPONENT_MULTIPLIER_DOUBLE)
+fun sp_int_to_double(fixed: Int): Double = round_double(fixed.toDouble() / SP_COMPONENT_MULTIPLIER_DOUBLE)
 
 /**
  * Tests if the given value is a double and not NaN.
@@ -210,7 +209,7 @@ internal inline fun is_double(value: Any?): Boolean = value is Double && !value.
  * Returns either the given value as double or `0.0`, if the value is no double or NaN _(does not round)_.
  * @param value The value that should be a valid double.
  * @return the given value or `0.0`, if the value is no double or NaN.
- * @see sp_round
+ * @see round_double
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun as_double_or_zero(value: Any?): Double = if (value !is Double || value.isNaN()) 0.0 else value
@@ -219,7 +218,7 @@ internal inline fun as_double_or_zero(value: Any?): Double = if (value !is Doubl
  * Returns the given value as double or `null`, if the value is no double or NaN _(does not round)_.
  * @param value The value that should be a valid double.
  * @return the given value as double or `null`.
- * @see sp_round
+ * @see round_double
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun as_double_or_null(value: Any?): Double? = if (value !is Double || value.isNaN()) null else value
@@ -231,12 +230,29 @@ internal inline fun as_double_or_null(value: Any?): Double? = if (value !is Doub
 @JvmField
 val initialized = run {
     PointCoord.TYPE.initialize()
+    SpPoint.TYPE.initialize()
+
     MultiPointCoord.TYPE.initialize()
+    SpMultiPoint.TYPE.initialize()
+
     LineStringCoord.TYPE.initialize()
     LinearRingCoord.TYPE.initialize()
+    SpLineString.TYPE.initialize()
+
     MultiLineStringCoord.TYPE.initialize()
+    SpMultiLineString.TYPE.initialize()
+
     PolygonCoord.TYPE.initialize()
+    SpPolygon.TYPE.initialize()
+
     MultiPolygonCoord.TYPE.initialize()
-    // TODO: Initialize others ...
+    SpMultiPolygon.TYPE.initialize()
+
+    BBox.TYPE.initialize()
+    GeoFeature.TYPE.initialize()
+    GeoFeatureList.TYPE.initialize()
+    GeoCollection.TYPE.initialize()
+
+    HereTile.TYPE.initialize()
     true
 }

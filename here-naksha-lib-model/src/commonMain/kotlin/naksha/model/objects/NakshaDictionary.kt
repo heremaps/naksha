@@ -5,7 +5,7 @@ package naksha.model.objects
 import naksha.base.AnyList
 import naksha.base.Int64
 import naksha.base.NotNullProperty
-import naksha.geo.GeoBoundingBox
+import naksha.geo.BBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.jbon.JbDictionary
@@ -40,7 +40,7 @@ open class NakshaDictionary() : NakshaFeature() {
     override fun withFeatureNumber(value: Int64): NakshaDictionary = super.withFeatureNumber(value) as NakshaDictionary
     override fun withType(value: String): NakshaDictionary = super.withType(value) as NakshaDictionary
     override fun withFeatureType(value: String): NakshaDictionary = super.withFeatureType(value) as NakshaDictionary
-    override fun withBbox(value: GeoBoundingBox?): NakshaDictionary = super.withBbox(value) as NakshaDictionary
+    override fun withBbox(value: BBox?): NakshaDictionary = super.withBbox(value) as NakshaDictionary
     override fun withGeometry(value: SpGeometry?): NakshaDictionary = super.withGeometry(value) as NakshaDictionary
     override fun withReferencePoint(value: SpPoint?): NakshaDictionary = super.withReferencePoint(value) as NakshaDictionary
     override fun withProperties(value: NakshaProperties): NakshaDictionary = super.withProperties(value) as NakshaDictionary

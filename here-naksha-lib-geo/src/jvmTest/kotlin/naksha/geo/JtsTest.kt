@@ -1,7 +1,7 @@
 package naksha.geo
 
-import naksha.base.JvmMap
-import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.fromJSON
+import naksha.base.Platform.PlatformCompanion.toJSON
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Test
 import org.locationtech.jts.geom.LineString
@@ -12,6 +12,7 @@ import org.locationtech.jts.geom.Point
 import org.locationtech.jts.geom.Polygon
 import org.locationtech.jts.io.geojson.GeoJsonReader
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 class JtsTest {
 
@@ -26,25 +27,25 @@ class JtsTest {
         val y2 = 2.1
 
         // when
-        val polygon = SpPolygon(GeoBoundingBox(x1, y1, x2, y2))
+        val polygon = SpPolygon(BBox(x1, y1, x2, y2))
 
         // then
-        val coords = polygon.getCoordinates()[0]!!
+        val coords = assertNotNull(polygon.coordinates[0])
 
-        assertEquals(1.0, coords[0]!!.getLongitude())
-        assertEquals(1.1, coords[0]!!.getLatitude())
+        assertEquals(1.0, assertNotNull(coords[0]).longitude)
+        assertEquals(1.1, assertNotNull(coords[0]).latitude)
 
-        assertEquals(2.0, coords[1]!!.getLongitude())
-        assertEquals(1.1, coords[1]!!.getLatitude())
+        assertEquals(2.0, assertNotNull(coords[1]).longitude)
+        assertEquals(1.1, assertNotNull(coords[1]).latitude)
 
-        assertEquals(2.0, coords[2]!!.getLongitude())
-        assertEquals(2.1, coords[2]!!.getLatitude())
+        assertEquals(2.0, assertNotNull(coords[2]).longitude)
+        assertEquals(2.1, assertNotNull(coords[2]).latitude)
 
-        assertEquals(1.0, coords[3]!!.getLongitude())
-        assertEquals(2.1, coords[3]!!.getLatitude())
+        assertEquals(1.0, assertNotNull(coords[3]).longitude)
+        assertEquals(2.1, assertNotNull(coords[3]).latitude)
 
-        assertEquals(1.0, coords[4]!!.getLongitude())
-        assertEquals(1.1, coords[4]!!.getLatitude())
+        assertEquals(1.0, assertNotNull(coords[4]).longitude)
+        assertEquals(1.1, assertNotNull(coords[4]).latitude)
     }
 
     @Test
@@ -57,17 +58,17 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
+        val spGeometry = assertNotNull(fromJSON(json, SpGeometry.TYPE))
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
-        val jtsFromProxy = GeoUtil.toJtsGeometry(proxyGeometryFromJson)
+        val jtsFromProxy = GeoUtil.toJtsGeometry(spGeometry)
         val proxyFromJts = GeoUtil.toProxyGeometry(jtsFromJson)
 
         // then
         assertInstanceOf(Point::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(Platform.toJSON(proxyFromJts), Platform.toJSON(proxyGeometryFromJson))
+        assertEquals(toJSON(proxyFromJts), toJSON(spGeometry))
     }
 
     @Test
@@ -83,17 +84,17 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
+        val spGeometry = assertNotNull(fromJSON(json, SpGeometry.TYPE))
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
-        val jtsFromProxy = GeoUtil.toJtsGeometry(proxyGeometryFromJson)
+        val jtsFromProxy = GeoUtil.toJtsGeometry(spGeometry)
         val proxyFromJts = GeoUtil.toProxyGeometry(jtsFromJson)
 
         // then
         assertInstanceOf(MultiPoint::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(Platform.toJSON(proxyFromJts), Platform.toJSON(proxyGeometryFromJson))
+        assertEquals(toJSON(proxyFromJts), toJSON(spGeometry))
     }
 
     @Test
@@ -109,17 +110,17 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
+        val spGeometry = assertNotNull(fromJSON(json, SpGeometry.TYPE))
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
-        val jtsFromProxy = GeoUtil.toJtsGeometry(proxyGeometryFromJson)
+        val jtsFromProxy = GeoUtil.toJtsGeometry(spGeometry)
         val proxyFromJts = GeoUtil.toProxyGeometry(jtsFromJson)
 
         // then
         assertInstanceOf(LineString::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(Platform.toJSON(proxyFromJts), Platform.toJSON(proxyGeometryFromJson))
+        assertEquals(toJSON(proxyFromJts), toJSON(spGeometry))
     }
 
     @Test
@@ -141,17 +142,17 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
+        val spGeometry = assertNotNull(fromJSON(json, SpGeometry.TYPE))
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
-        val jtsFromProxy = GeoUtil.toJtsGeometry(proxyGeometryFromJson)
+        val jtsFromProxy = GeoUtil.toJtsGeometry(spGeometry)
         val proxyFromJts = GeoUtil.toProxyGeometry(jtsFromJson)
 
         // then
         assertInstanceOf(MultiLineString::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(Platform.toJSON(proxyFromJts), Platform.toJSON(proxyGeometryFromJson))
+        assertEquals(toJSON(proxyFromJts), toJSON(spGeometry))
     }
 
     @Test
@@ -163,37 +164,37 @@ class JtsTest {
             "coordinates": [
               [
                 [
-                  28.596898251874165,
-                  11.794941370567287
+                  28.5968982,
+                  11.7949413
                 ],
                 [
-                  38.413029200628415,
-                  -5.137906502534122
+                  38.4130292,
+                  -5.1379065
                 ],
                 [
-                  41.68388501908956,
-                  11.9426922326914
+                  41.6838850,
+                  11.9426922
                 ],
                 [
-                  28.596898251874165,
-                  11.794941370567287
+                  28.5968982,
+                  11.7949413
                 ]
               ]
             ]
           }
-        """.trimIndent()
+        """
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
+        val spGeometry = assertNotNull(fromJSON(json, SpGeometry.TYPE))
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
-        val jtsFromProxy = GeoUtil.toJtsGeometry(proxyGeometryFromJson)
+        val jtsFromProxy = GeoUtil.toJtsGeometry(spGeometry)
         val proxyFromJts = GeoUtil.toProxyGeometry(jtsFromJson)
 
         // then
         assertInstanceOf(Polygon::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(Platform.toJSON(proxyFromJts), Platform.toJSON(proxyGeometryFromJson))
+        assertEquals(toJSON(proxyFromJts), toJSON(spGeometry))
     }
 
     @Test
@@ -205,55 +206,55 @@ class JtsTest {
             "coordinates": [
               [
                 [
-                  28.596898251874165,
-                  11.794941370567287
+                  28.5968982,
+                  11.7949413
                 ],
                 [
-                  38.413029200628415,
-                  -5.137906502534122
+                  38.4130292,
+                  -5.1379065
                 ],
                 [
-                  41.68388501908956,
-                  11.9426922326914
+                  41.6838850,
+                  11.9426922
                 ],
                 [
-                  28.596898251874165,
-                  11.794941370567287
+                  28.5968982,
+                  11.7949413
                 ]
               ],
               [
                 [
-                  34.49338528240901,
-                  8.301855939379635
+                  34.4933852,
+                   8.3018559
                 ],
                 [
-                  38.40485302348304,
-                  8.157163482762314
+                  38.4048530,
+                   8.1571634
                 ],
                 [
-                  35.24529722445408,
-                  5.568479831724019
+                  35.2452972,
+                   5.5684798
                 ],
                 [
-                  34.49338528240901,
-                  8.301855939379635
+                  34.4933852,
+                   8.3018559
                 ]
               ]
             ]
           }
-        """.trimIndent()
+        """
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
+        val spGeometry = assertNotNull(fromJSON(json, SpGeometry.TYPE))
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
-        val jtsFromProxy = GeoUtil.toJtsGeometry(proxyGeometryFromJson)
+        val jtsFromProxy = GeoUtil.toJtsGeometry(spGeometry)
         val proxyFromJts = GeoUtil.toProxyGeometry(jtsFromJson)
 
         // then
         assertInstanceOf(Polygon::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(Platform.toJSON(proxyFromJts), Platform.toJSON(proxyGeometryFromJson))
+        assertEquals(toJSON(proxyFromJts), toJSON(spGeometry))
     }
 
     @Test
@@ -266,58 +267,58 @@ class JtsTest {
                [
                   [
                     [
-                      28.596898251874165,
-                      11.794941370567287
+                      28.5968982,
+                      11.7949413
                     ],
                     [
-                      38.413029200628415,
-                      -5.137906502534122
+                      38.4130292,
+                      -5.1379065
                     ],
                     [
-                      41.68388501908956,
-                      11.9426922326914
+                      41.6838850,
+                      11.9426922
                     ],
                     [
-                      28.596898251874165,
-                      11.794941370567287
+                      28.5968982,
+                      11.7949413
                     ]
                   ]
               ],
               [
                   [
                     [
-                      34.49338528240901,
-                      8.301855939379635
+                      34.4933852,
+                       8.3018559
                     ],
                     [
-                      38.40485302348304,
-                      8.157163482762314
+                      38.4048530,
+                       8.1571634
                     ],
                     [
-                      35.24529722445408,
-                      5.568479831724019
+                      35.2452972,
+                       5.5684798
                     ],
                     [
-                      34.49338528240901,
-                      8.301855939379635
+                      34.4933852,
+                       8.3018559
                     ]
                   ]
               ]
             ]
           }
-        """.trimIndent()
+        """
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
+        val spGeometry = assertNotNull(fromJSON(json, SpGeometry.TYPE))
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
-        val jtsFromProxy = GeoUtil.toJtsGeometry(proxyGeometryFromJson)
+        val jtsFromProxy = GeoUtil.toJtsGeometry(spGeometry)
         val proxyFromJts = GeoUtil.toProxyGeometry(jtsFromJson)
 
         // then
         assertInstanceOf(MultiPolygon::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(Platform.toJSON(proxyFromJts), Platform.toJSON(proxyGeometryFromJson))
+        assertEquals(toJSON(proxyFromJts), toJSON(spGeometry))
     }
 
     @Test
@@ -326,13 +327,13 @@ class JtsTest {
         val json = """{"coordinates":[1.0, 2.0]}"""
 
         // when
-        val proxyPoint = (Platform.fromJSON(json) as JvmMap).proxy(SpPoint::class)
-        val jtsFromProxy = GeoUtil.toJtsGeometry(proxyPoint)
+        val spPoint = assertNotNull(fromJSON(json, SpPoint.TYPE))
+        val jtsFromProxy = GeoUtil.toJtsGeometry(spPoint)
 
         // then
-        assertEquals(SpType.Point.toString(), proxyPoint.type)
+        assertEquals(SpPoint.TYPE.jsonType, spPoint.type)
         assertEquals(Point.TYPENAME_POINT, jtsFromProxy.geometryType)
-        assertEquals(1.0, jtsFromProxy.coordinates.get(0).x)
-        assertEquals(2.0, jtsFromProxy.coordinates.get(0).y)
+        assertEquals(1.0, jtsFromProxy.coordinates[0].x)
+        assertEquals(2.0, jtsFromProxy.coordinates[0].y)
     }
 }

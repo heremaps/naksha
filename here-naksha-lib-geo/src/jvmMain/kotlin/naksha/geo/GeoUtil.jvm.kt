@@ -1,5 +1,6 @@
 package naksha.geo
 
+import naksha.base.illegalArg
 import org.locationtech.jts.geom.*
 import org.locationtech.jts.io.ByteOrderValues
 import org.locationtech.jts.io.WKBReader
@@ -124,14 +125,25 @@ actual class GeoUtil private actual constructor() {
         }
 
         /**
-         * Converts JTS [Array<LinearRing>] into [LineStringCoord]
+         * Converts JTS [Array<Coordinate>] into [LinearRingCoord]
          *
-         * @param linearRings - JTS [Array<LinearRing>]
-         * @return [LineStringCoord]
+         * @param jtsCoords - JTS [Array<Coordinate>]
+         * @return [LinearRingCoord]
          */
         @JvmStatic
-        fun toLinearRingCoord(linearRings: Array<LinearRing>): Array<LineStringCoord> {
-            return linearRings.map { toLineStringCoord(it.coordinates) }.toTypedArray()
+        fun toLinearRingCoord(jtsCoords: Array<Coordinate>): LinearRingCoord {
+            return LinearRingCoord(*jtsCoords.map(::toPointCoord).toTypedArray())
+        }
+
+        /**
+         * Converts JTS [Array<LinearRing>] into [LinearRingCoord]
+         *
+         * @param linearRings - JTS [Array<LinearRing>]
+         * @return [LinearRingCoord]
+         */
+        @JvmStatic
+        fun toLinearRingCoordArray(linearRings: Array<LinearRing>): Array<LinearRingCoord> {
+            return linearRings.map { toLinearRingCoord(it.coordinates) }.toTypedArray()
         }
 
         /**
@@ -157,7 +169,8 @@ actual class GeoUtil private actual constructor() {
          */
         @JvmStatic
         fun toPolygonCoord(jtsCoords: Array<LinearRing>): PolygonCoord {
-            return PolygonCoord(*toLinearRingCoord(jtsCoords))
+            if (jtsCoords.isEmpty()) throw illegalArg("Empty polygon")
+            return PolygonCoord(*toLinearRingCoordArray(jtsCoords))
         }
 
         /**
@@ -195,7 +208,7 @@ actual class GeoUtil private actual constructor() {
 
         @JvmStatic
         fun toMultiPolygonCoord(polygons: Array<SpPolygon>): MultiPolygonCoord {
-            return MultiPolygonCoord(*polygons.map { it.getCoordinates() }.toTypedArray())
+            return MultiPolygonCoord(*polygons.map { it.coordinates }.toTypedArray())
         }
 
         /**
@@ -205,11 +218,12 @@ actual class GeoUtil private actual constructor() {
          * @return [Coordinate]
          */
         @JvmStatic
-        fun toJtsCoordinate(point: PointCoord): Coordinate =
-            if (point.hasZ())
-                Coordinate(point.getLongitude(), point.getLatitude(), point.getZ() ?: 0.0)
-            else
-                CoordinateXY(point.getLongitude(), point.getLatitude())
+        fun toJtsCoordinate(point: PointCoord): Coordinate {
+            val lon = point.longitude
+            val lat = point.latitude
+            val z = point.z
+            return if (z != null) Coordinate(lon, lat, z) else CoordinateXY(lon, lat)
+        }
 
         /**
          * Converts proxy model to JTS [Geometry] using [factory] with default SRID: 4326
@@ -221,16 +235,14 @@ actual class GeoUtil private actual constructor() {
          */
         @JvmStatic
         fun toJtsGeometry(geometry: SpGeometry): Geometry {
-            return when (geometry.type) {
-                SpType.Point.toString() -> toJtsPoint(geometry.asPoint())
-                SpType.MultiPoint.toString() -> toJtsMultiPoint(geometry.asMultiPoint())
-                SpType.LineString.toString() -> toJtsLineString(geometry.asLineString())
-                SpType.MultiLineString.toString() -> toJtsMultiLineString(geometry.asMultiLineString())
-                SpType.Polygon.toString() -> toJtsPolygon(geometry.asPolygon())
-                SpType.MultiPolygon.toString() -> toJtsMultiPolygon(geometry.asMultiPolygon())
-                SpType.GeometryCollection.toString() -> toJtsGeometryCollection(geometry.asGeometryCollection())
-                else -> throw IllegalArgumentException("Unknown proxy type ${geometry::class.simpleName}")
-            }
+            if (geometry.isPoint()) return toJtsPoint(geometry.asPoint())
+            if (geometry.isMultiPoint()) return toJtsMultiPoint(geometry.asMultiPoint())
+            if (geometry.isLineString()) return toJtsLineString(geometry.asLineString())
+            if (geometry.isMultiLineString()) return toJtsMultiLineString(geometry.asMultiLineString())
+            if (geometry.isPolygon()) return toJtsPolygon(geometry.asPolygon())
+            if (geometry.isMultiPolygon()) return toJtsMultiPolygon(geometry.asMultiPolygon())
+            if (geometry.isGeometryCollection()) return toJtsGeometryCollection(geometry.asGeometryCollection())
+            throw IllegalArgumentException("Unknown geometry type ${geometry.type}")
         }
 
         /**
@@ -253,7 +265,7 @@ actual class GeoUtil private actual constructor() {
          * @throws [RuntimeException] when proxy has null coordinates
          */
         @JvmStatic
-        fun toJtsPoint(geometry: SpPoint): Point = toJtsPoint(geometry.getCoordinates())
+        fun toJtsPoint(geometry: SpPoint): Point = toJtsPoint(geometry.coordinates)
 
         /**
          * Converts [PointCoord] to JTS [Point]
@@ -275,7 +287,7 @@ actual class GeoUtil private actual constructor() {
          * @throws [RuntimeException] when proxy has null coordinates
          */
         @JvmStatic
-        fun toJtsMultiPoint(geometry: SpMultiPoint): MultiPoint = toJtsMultiPoint(geometry.getCoordinates())
+        fun toJtsMultiPoint(geometry: SpMultiPoint): MultiPoint = toJtsMultiPoint(geometry.coordinates)
 
         /**
          * Converts [MultiPointCoord] to JTS [MultiPoint]
@@ -297,7 +309,7 @@ actual class GeoUtil private actual constructor() {
          * @return [LineString]
          */
         @JvmStatic
-        fun toJtsLineString(geometry: SpLineString): LineString = toJtsLineString(geometry.getCoordinates())
+        fun toJtsLineString(geometry: SpLineString): LineString = toJtsLineString(geometry.coordinates)
 
         /**
          * Converts [LineStringCoord] to JTS [LineString]
@@ -320,7 +332,7 @@ actual class GeoUtil private actual constructor() {
          * @throws [RuntimeException] when proxy has null coordinates
          */
         @JvmStatic
-        fun toJtsPolygon(geometry: SpPolygon): Polygon = toJtsPolygon(geometry.getCoordinates())
+        fun toJtsPolygon(geometry: SpPolygon): Polygon = toJtsPolygon(geometry.coordinates)
 
         /**
          * Converts [PolygonCoord] to JTS [Polygon]
@@ -358,7 +370,7 @@ actual class GeoUtil private actual constructor() {
          */
         @JvmStatic
         fun toJtsMultiLineString(geometry: SpMultiLineString): MultiLineString =
-            toJtsMultiLineString(geometry.getCoordinates())
+            toJtsMultiLineString(geometry.coordinates)
 
         /**
          * Converts [MultiLineStringCoord] to JTS [MultiLineString]
@@ -384,7 +396,7 @@ actual class GeoUtil private actual constructor() {
          * @throws [RuntimeException] when proxy has null coordinates
          */
         @JvmStatic
-        fun toJtsMultiPolygon(geometry: SpMultiPolygon): MultiPolygon = toJtsMultiPolygon(geometry.getCoordinates())
+        fun toJtsMultiPolygon(geometry: SpMultiPolygon): MultiPolygon = toJtsMultiPolygon(geometry.coordinates)
 
         /**
          * Converts [MultiPolygonCoord] to JTS [MultiPolygon]
@@ -471,14 +483,14 @@ actual class GeoUtil private actual constructor() {
             if (geometry == null) return null
             val writer = TWKBWriter()
             writer.setXYPrecision(7)
-            val coordinates = geometry.getCoordinates() // TODO: getCoordinates is broken when coords are itns
+            val coordinates = geometry.coordinates
             if (coordinates.hasZ()) {
                 writer.setEncodeZ(true)
                 writer.setZPrecision(7)
             } else {
                 writer.setEncodeZ(false)
             }
-            if (coordinates.hasZ()) {
+            if (coordinates.hasM()) {
                 writer.setEncodeM(true)
                 writer.setMPrecision(7)
             } else {

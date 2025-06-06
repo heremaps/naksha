@@ -1,11 +1,7 @@
 package naksha.geo
 
-import naksha.base.Platform
-import naksha.base.PlatformMap
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertNotNull
+import naksha.base.Platform.PlatformCompanion.fromJSON
+import kotlin.test.*
 
 class FeatureTest {
     @Test
@@ -21,16 +17,16 @@ class FeatureTest {
         "coordinates": [
           [
             [
-              20.6899332428942,
-              6.680566836459747
+              20.6899332,
+               6.6805668
             ],
             [
-              20.5619886821394,
-              4.796809744839422
+              20.5619886,
+               4.7968097
             ],
             [
-              20.6899332428942,
-              6.680566836459747
+              20.6899332,
+               6.6805668
             ]
           ]
         ]
@@ -38,9 +34,7 @@ class FeatureTest {
     }
 """
 
-        val parsedJson = Platform.fromJSON(polygonJson)
-        assertIs<PlatformMap>(parsedJson)
-        val feature = Platform.proxy(parsedJson, GeoFeature::class)
+        val feature = assertNotNull(fromJSON(polygonJson, GeoFeature.TYPE))
         assertEquals("Feature", feature.type)
         assertEquals("Example", feature.id)
         val bbox = feature.bbox
@@ -53,12 +47,13 @@ class FeatureTest {
         assertEquals(1.0, bbox[4])
         assertEquals(0.0, bbox[5])
 
-        val geometry = feature.geometry
-        assertEquals(SpType.Polygon.toString(), geometry.type)
-        val polygon = geometry.asPolygon()
-        assertEquals(1, polygon.getCoordinates().size)
-        val polygonCoords = polygon.getCoordinates()
-        assertEquals(3, polygonCoords[0]?.size)
-        assertEquals(20.6899332428942, polygonCoords[0]?.get(0)?.getLongitude())
+        val polygon = assertIs<SpPolygon>(feature.geometry)
+        val polygonCoords = polygon.coordinates
+        assertEquals(1, polygon.coordinates.size)
+        val polyCoords = assertNotNull(polygonCoords[0])
+        assertEquals(3, polyCoords.size)
+        val p = assertNotNull(polyCoords[0])
+        assertEquals(20.6899332, p.longitude)
+        assertEquals(6.6805668, p.latitude)
     }
 }

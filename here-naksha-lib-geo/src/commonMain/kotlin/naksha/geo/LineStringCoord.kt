@@ -17,9 +17,9 @@ import kotlin.jvm.JvmField
  * @see ICoordinates
  */
 @JsExport
-sealed class LineStringCoord() : ListProxy<PointCoord>(PointCoord.TYPE), ICoordinates {
+open class LineStringCoord() : ListProxy<PointCoord>(PointCoord.TYPE), ICoordinates {
 
-    @JsName("fromPointCoord")
+    @JsName("LineStringCoordOf")
     constructor(vararg points: PointCoord) : this() {
         addAll(points)
     }

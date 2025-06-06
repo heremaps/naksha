@@ -1,10 +1,9 @@
 package naksha.geo
 
-import naksha.base.Platform
-import naksha.base.PlatformObject
+import naksha.base.Platform.PlatformCompanion.fromJSON
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 
 
 class PolygonProxyTest {
@@ -31,21 +30,19 @@ class PolygonProxyTest {
             ]
           ]
         ]
-      }
-        """.trimIndent()
+      }"""
 
         // when
-        val parsedJson = Platform.fromJSON(polygonJson)
-        assertIs<PlatformObject>(parsedJson)
-        val geometry = Platform.proxy(parsedJson, SpPolygon::class)
+        val polygon = assertNotNull(fromJSON(polygonJson, SpPolygon.TYPE))
 
         // then
-        assertEquals(SpType.Polygon.toString(), geometry.type)
-        val polygon = geometry.asPolygon()
-        assertEquals(1, polygon.getCoordinates().size)
-        val polygonCoords = polygon.getCoordinates()
-        assertEquals(3, polygonCoords[0]?.size)
-        assertEquals(20.6899332428942, polygonCoords[0]?.get(0)?.getLongitude())
+        assertEquals(SpPolygon.TYPE.jsonType, polygon.type)
+        assertEquals(1, polygon.coordinates.size)
+        val polygonCoords = polygon.coordinates
+        val linearRingCoord = assertNotNull(polygonCoords[0])
+        assertEquals(3, linearRingCoord.size)
+        val p = assertNotNull(linearRingCoord[0])
+        assertEquals(20.6899332428942, p.longitude)
     }
 
 }

@@ -177,6 +177,60 @@ class PlatformUtil private constructor() {
         }
 
         /**
+         * The multiplier/divisor used when converting doubles into spatial components _(`10_000_000.0` aka `1e7`)_.
+         * @since 3.0
+         */
+        const val ROUND_MULTIPLIER_DOUBLE: Double = 10_000_000.0 // 1e7
+
+        /**
+         * The multiplier/divisor used when converting doubles into a spatial fixed integer _(`10_000_000` aka 1e7)_.
+         * @since 3.0
+         */
+        const val ROUND_MULTIPLIER_INT: Int = 10_000_000
+
+        /**
+         * Round the given double using [round half to even](https://en.wikipedia.org/wiki/Rounding#Rounding_half_to_even) for seventh decimal digit.
+         *
+         * # Important
+         * It is important, that after every calculation a rounding happens to guarantee that we always keep spatial coordinates in the optimal _(and unique)_ representation. Technically, when we only want 7 decimal digits, there are plenty of possible representations for `0.1234567` like `0.12345671`, `0.12345672`, `0.12345674`, all of them represent `0.1234567`, but as more calculations we do, as more errors we introduce. Therefore, we need to round after every single calculation.
+         *
+         * It is not obvious, but by rounding after every single calculate, we guarantee that:
+         *
+         * `a + b + c` == `(a + b) + c` == `a + (b + c)`
+         *
+         * This is not the case without rounding, let's show this by using an example _(execute in any browser console)_:
+         * ```js
+         * var a = 0.1234567;
+         * var b = -100.0;
+         * var c = +100.0;
+         * var r1 = a + (b + c);
+         * var r2 = (a + b) + c
+         * console.log( r1, " != ", r2 );
+         * // 0.1234567  !=  0.12345670000000553
+         * ```
+         * Now, with the rounding implemented like here, we get:
+         * ```js
+         * function round_double(value) {
+         *   return Math.round(value * 10_000_000.0)
+         *          / 10_000_000.0;
+         * }
+         * var a = 0.1234567;
+         * var b = -100.0;
+         * var c = +100.0;
+         * var r1 = round_double( a + round_double(b + c) );
+         * var r2 = round_double( round_double(a + b) + c );
+         * console.log( r1, " == ", r2 );
+         * // 0.1234567  ==  0.1234567
+         * ```
+         * @param value The double value.
+         * @return the double value rounded to 7 decimal digits.
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun round_double(value: Double): Double = round(value * ROUND_MULTIPLIER_DOUBLE) / ROUND_MULTIPLIER_DOUBLE
+
+        /**
          * Tests if the given value is logically a floating point number _(12.0 is not, 12.5 is)_.
          * @param value The value to test.
          * @return _true_ if the given `value` is logically a floating point number; _false_ otherwise.

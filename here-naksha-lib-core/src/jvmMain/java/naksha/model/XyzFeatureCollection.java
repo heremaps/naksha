@@ -28,7 +28,7 @@ import naksha.base.JvmPropertyUtil;
 import naksha.base.NotNullProperty;
 import naksha.base.NullableProperty;
 import naksha.base.StringList;
-import naksha.geo.GeoBoundingBox;
+import naksha.geo.BBox;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
 import org.jetbrains.annotations.NotNull;
@@ -45,8 +45,8 @@ public class XyzFeatureCollection extends XyzResponse {
       JvmPropertyUtil.notNullProperty(
           NakshaFeatureList.class, "features", (xfc, name) -> new NakshaFeatureList());
 
-  private static final NullableProperty<XyzFeatureCollection, GeoBoundingBox> BBOX =
-      JvmPropertyUtil.nullableProperty(GeoBoundingBox.class, "bbox");
+  private static final NullableProperty<XyzFeatureCollection, BBox> BBOX =
+      JvmPropertyUtil.nullableProperty(BBox.class, "bbox");
 
   private static final NullableProperty<XyzFeatureCollection, Boolean> PARTIAL =
       JvmPropertyUtil.nullableProperty(Boolean.class, "partial");
@@ -88,16 +88,16 @@ public class XyzFeatureCollection extends XyzResponse {
     TYPE.setValue(this, FEATURE_COLLECTION_TYPE);
   }
 
-  public GeoBoundingBox getBbox() {
+  public BBox getBbox() {
     return BBOX.getValue(this);
   }
 
-  public void setBbox(GeoBoundingBox bbox) {
+  public void setBbox(BBox bbox) {
     BBOX.setValue(this, bbox);
   }
 
   @SuppressWarnings("unused")
-  public XyzFeatureCollection withBbox(final GeoBoundingBox bbox) {
+  public XyzFeatureCollection withBbox(final BBox bbox) {
     setBbox(bbox);
     return this;
   }

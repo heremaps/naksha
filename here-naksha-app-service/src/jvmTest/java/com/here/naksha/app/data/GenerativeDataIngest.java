@@ -20,7 +20,7 @@ import naksha.base.Platform;
 import naksha.base.ToJsonOptions;
 import naksha.geo.LineStringCoord;
 import naksha.geo.PointCoord;
-import naksha.geo.GeoBoundingBox;
+import naksha.geo.BBox;
 import naksha.geo.SpLineString;
 import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Test;
@@ -141,7 +141,7 @@ class GenerativeDataIngest extends AbstractDataIngest {
     }
 
     private SpLineString randomLineInTile(String tileId) {
-      GeoBoundingBox tileBbox = WebMercatorTile.forQuadkey(tileId).getBBox(false);
+      BBox tileBbox = WebMercatorTile.forQuadkey(tileId).getBBox(false);
       double lonDist = tileBbox.getMaxLongitude() - tileBbox.getMinLongitude();
       double latDist = tileBbox.getMaxLatitude() - tileBbox.getMinLatitude();
       double currentLon = tileBbox.getMinLongitude() + random.nextDouble(lonDist);

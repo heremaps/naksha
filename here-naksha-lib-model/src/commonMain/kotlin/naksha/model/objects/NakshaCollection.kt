@@ -3,7 +3,7 @@
 package naksha.model.objects
 
 import naksha.base.*
-import naksha.geo.GeoBoundingBox
+import naksha.geo.BBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.model.Flags
@@ -56,7 +56,7 @@ open class NakshaCollection() : NakshaFeature() {
     override fun withFeatureNumber(value: Int64): NakshaCollection = super.withFeatureNumber(value) as NakshaCollection
     override fun withType(value: String): NakshaCollection = super.withType(value) as NakshaCollection
     override fun withFeatureType(value: String): NakshaCollection = super.withFeatureType(value) as NakshaCollection
-    override fun withBbox(value: GeoBoundingBox?): NakshaCollection = super.withBbox(value) as NakshaCollection
+    override fun withBbox(value: BBox?): NakshaCollection = super.withBbox(value) as NakshaCollection
     override fun withGeometry(value: SpGeometry?): NakshaCollection = super.withGeometry(value) as NakshaCollection
     override fun withReferencePoint(value: SpPoint?): NakshaCollection = super.withReferencePoint(value) as NakshaCollection
     override fun withProperties(value: NakshaProperties): NakshaCollection = super.withProperties(value) as NakshaCollection

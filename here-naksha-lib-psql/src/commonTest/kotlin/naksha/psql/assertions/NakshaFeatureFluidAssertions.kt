@@ -2,7 +2,7 @@ package naksha.psql.assertions
 
 import naksha.base.AnyList
 import naksha.base.AnyObject
-import naksha.geo.GeoBoundingBox
+import naksha.geo.BBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.model.objects.NakshaFeature
@@ -36,7 +36,7 @@ class NakshaFeatureFluidAssertions private constructor(val subject: NakshaFeatur
     fun hasType(type: String): NakshaFeatureFluidAssertions =
         apply { assertEquals(type, subject.type) }
 
-    fun hasBbox(boundingBox: GeoBoundingBox?): NakshaFeatureFluidAssertions =
+    fun hasBbox(boundingBox: BBox?): NakshaFeatureFluidAssertions =
         apply {
             val subjectBbox = subject.bbox
             if (boundingBox == null) {

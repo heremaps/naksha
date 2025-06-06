@@ -3,6 +3,7 @@ package naksha.geo
 import naksha.base.ListProxy
 import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.base.PlatformType
+import naksha.base.illegalArg
 import naksha.base.illegalState
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -19,11 +20,11 @@ import kotlin.jvm.JvmField
 class PolygonCoord(): ListProxy<LinearRingCoord>(LinearRingCoord.TYPE), ICoordinates {
 
     @JsName("PolygonCoordOf")
-    constructor(exteriorRing: LinearRingCoord, vararg interiorRings: LinearRingCoord) : this() {
-        val size = 1 + interiorRings.size
+    constructor(vararg rings: LinearRingCoord) : this() {
+        val size = rings.size
+        if (size == 0) throw illegalArg("Empty polygon")
         setCapacity(size)
-        add(exteriorRing)
-        if (interiorRings.isNotEmpty()) for (ir in interiorRings) add(ir)
+        addAll(rings)
     }
 
     companion object PolygonCoordCompanion {

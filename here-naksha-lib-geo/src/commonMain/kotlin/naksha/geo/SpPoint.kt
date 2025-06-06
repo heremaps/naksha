@@ -15,18 +15,23 @@ import kotlin.jvm.JvmOverloads
 @JsExport
 class SpPoint() : SpGeometry() {
 
+    @JsName("SpPointOf")
+    constructor(coordinates: PointCoord) : this() {
+        this.coordinates = coordinates
+    }
+
+    /**
+     * Create an initialized point.
+     * @param longitude The longitude.
+     * @param latitude The latitude.
+     * @param z If not `null`, then the `z` value, being elevation or altitude.
+     * @param m If not `null`, then`z` must not be `null` either.
+     * @since 3.0
+     */
     @JvmOverloads
     @JsName("fromLonLatZM")
     constructor(longitude: Double, latitude: Double, z: Double? = null, m: Double? = null) : this() {
-        this.coordinates =
-        this.longitude = longitude
-        this.z = z
-        this.m = m
-    }
-
-    @JsName("fromPointCoord")
-    constructor(coordinates: PointCoord) : this() {
-        this.coordinates = coordinates
+        this.coordinates = PointCoord(longitude, latitude, z, m)
     }
 
     companion object SpPointCompanion {
@@ -39,5 +44,14 @@ class SpPoint() : SpGeometry() {
         val TYPE: PlatformType<SpPoint> = forKClass(SpPoint::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("Point")
+    }
+
+    override var coordinates: PointCoord
+        get() = get_coordinates() as PointCoord
+        set(value) { set_coordinates(value) }
+
+    fun withCoordinates(value: PointCoord): SpPoint {
+        set_coordinates(value)
+        return this
     }
 }

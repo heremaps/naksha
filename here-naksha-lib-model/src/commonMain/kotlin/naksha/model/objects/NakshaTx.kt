@@ -3,7 +3,7 @@
 package naksha.model.objects
 
 import naksha.base.*
-import naksha.geo.GeoBoundingBox
+import naksha.geo.BBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.model.*
@@ -25,7 +25,7 @@ open class NakshaTx : NakshaFeature() {
     override fun withFeatureNumber(value: Int64): NakshaTx = super.withFeatureNumber(value) as NakshaTx
     override fun withType(value: String): NakshaTx = super.withType(value) as NakshaTx
     override fun withFeatureType(value: String): NakshaTx = super.withFeatureType(value) as NakshaTx
-    override fun withBbox(value: GeoBoundingBox?): NakshaTx = super.withBbox(value) as NakshaTx
+    override fun withBbox(value: BBox?): NakshaTx = super.withBbox(value) as NakshaTx
     override fun withGeometry(value: SpGeometry?): NakshaTx = super.withGeometry(value) as NakshaTx
     override fun withReferencePoint(value: SpPoint?): NakshaTx = super.withReferencePoint(value) as NakshaTx
     override fun withProperties(value: NakshaProperties): NakshaTx = super.withProperties(value) as NakshaTx

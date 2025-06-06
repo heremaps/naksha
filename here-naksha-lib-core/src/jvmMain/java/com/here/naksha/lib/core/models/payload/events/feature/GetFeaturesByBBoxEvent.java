@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.payload.events.clustering.Clustering;
 import com.here.naksha.lib.core.models.payload.events.tweaks.Tweaks;
-import naksha.geo.GeoBoundingBox;
+import naksha.geo.BBox;
 import org.jetbrains.annotations.Nullable;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -31,7 +31,7 @@ import org.jetbrains.annotations.Nullable;
 public class GetFeaturesByBBoxEvent extends SpatialQueryEvent {
 
   @JsonProperty
-  public GeoBoundingBox bbox;
+  public BBox bbox;
 
   @JsonProperty
   public Clustering clustering;
@@ -39,11 +39,11 @@ public class GetFeaturesByBBoxEvent extends SpatialQueryEvent {
   @JsonProperty
   public Tweaks tweaks;
 
-  public GeoBoundingBox getBbox() {
+  public BBox getBbox() {
     return this.bbox;
   }
 
-  public void setBbox(GeoBoundingBox bbox) {
+  public void setBbox(BBox bbox) {
     this.bbox = bbox;
   }
 

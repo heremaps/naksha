@@ -1,7 +1,7 @@
 package naksha.model.objects
 
 import naksha.base.*
-import naksha.geo.GeoBoundingBox
+import naksha.geo.BBox
 import naksha.geo.GeoFeature
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
@@ -63,7 +63,7 @@ open class NakshaFeature() : AnyObject() {
 
         private val ID_RANDOM = NotNullProperty<NakshaFeature, String>(String::class) { _, _ -> PlatformUtil.randomString(12) }
         private val TYPE_DEFAULT = NotNullProperty<NakshaFeature, String>(String::class) { self, _ -> self.typeDefaultValue() }
-        private val BBOX_NULL = NullableProperty<NakshaFeature, GeoBoundingBox>(GeoBoundingBox::class)
+        private val BBOX_NULL = NullableProperty<NakshaFeature, BBox>(BBox::class)
         private val GEOMETRY_NULL = NullableProperty<NakshaFeature, SpGeometry>(SpGeometry::class)
         private val REFERENCE_POINT_NULL = NullableProperty<NakshaFeature, SpPoint>(SpPoint::class)
         private val PROPERTIES = NotNullProperty<NakshaFeature, NakshaProperties>(NakshaProperties::class)
@@ -252,7 +252,7 @@ open class NakshaFeature() : AnyObject() {
     /**
      * @see bbox
      */
-    open fun withBbox(value: GeoBoundingBox?): NakshaFeature {
+    open fun withBbox(value: BBox?): NakshaFeature {
         bbox = value
         return this
     }

@@ -21,12 +21,12 @@ package com.here.naksha.lib.core.models.geojson;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import naksha.geo.GeoBoundingBox;
+import naksha.geo.BBox;
 import org.junit.jupiter.api.Test;
 
 public class HQuadTest {
 
-  GeoBoundingBox bbox = new GeoBoundingBox()
+  BBox bbox = new BBox()
       .withEastLongitude(13.38134765625)
       .withNorthLatitude(52.53662109375)
       .withWestLongitude(13.359375)
@@ -37,7 +37,7 @@ public class HQuadTest {
   @Test
   public void testBase4Quadkey() {
     HQuad hQuad = new HQuad(base4QK, true);
-    GeoBoundingBox boundingBox = hQuad.getBoundingBox();
+    BBox boundingBox = hQuad.getBoundingBox();
     assertEquals(bbox.getWestLongitude(), boundingBox.getWestLongitude());
     assertEquals(bbox.getSouthLatitude(), boundingBox.getSouthLatitude());
     assertEquals(bbox.getEastLongitude(), boundingBox.getEastLongitude());
@@ -51,7 +51,7 @@ public class HQuadTest {
   @Test
   public void testBase10Quadkey() {
     HQuad hQuad = new HQuad(base10QK, false);
-    GeoBoundingBox boundingBox = hQuad.getBoundingBox();
+    BBox boundingBox = hQuad.getBoundingBox();
     assertEquals(bbox.getWestLongitude(), boundingBox.getWestLongitude());
     assertEquals(bbox.getSouthLatitude(), boundingBox.getSouthLatitude());
     assertEquals(bbox.getEastLongitude(), boundingBox.getEastLongitude());
@@ -65,7 +65,7 @@ public class HQuadTest {
   @Test
   public void testLRC() {
     HQuad hQuad = new HQuad(8800, 6486, 14);
-    GeoBoundingBox boundingBox = hQuad.getBoundingBox();
+    BBox boundingBox = hQuad.getBoundingBox();
     assertEquals(bbox.getWestLongitude(), boundingBox.getWestLongitude());
     assertEquals(bbox.getSouthLatitude(), boundingBox.getSouthLatitude());
     assertEquals(bbox.getEastLongitude(), boundingBox.getEastLongitude());
@@ -95,7 +95,7 @@ public class HQuadTest {
   public void testGeometryFromHereTileIdBase10QK() {
     final String tileId = "23618381";
     HQuad hQuad = new HQuad(tileId, false);
-    GeoBoundingBox bbox = hQuad.getBoundingBox();
+    BBox bbox = hQuad.getBoundingBox();
     assertEquals(bbox.getWestLongitude(), 13.623046875, "West coordinate doesn't match");
     assertEquals(bbox.getSouthLatitude(), 52.20703125, "South coordinate doesn't match");
     assertEquals(bbox.getEastLongitude(), 13.7109375, "East coordinate doesn't match");
@@ -106,7 +106,7 @@ public class HQuadTest {
   public void testGeometryFromHereTileIdBase4QK() {
     final String tileId = "122012031031";
     HQuad hQuad = new HQuad(tileId, true);
-    GeoBoundingBox bbox = hQuad.getBoundingBox();
+    BBox bbox = hQuad.getBoundingBox();
     assertEquals(bbox.getWestLongitude(), 13.623046875, "West coordinate doesn't match");
     assertEquals(bbox.getSouthLatitude(), 52.20703125, "South coordinate doesn't match");
     assertEquals(bbox.getEastLongitude(), 13.7109375, "East coordinate doesn't match");

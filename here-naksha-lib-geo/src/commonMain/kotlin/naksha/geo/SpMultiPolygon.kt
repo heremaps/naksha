@@ -1,20 +1,39 @@
 package naksha.geo
 
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class SpMultiPolygon() : SpGeometry() {
 
-    @JsName("of")
+    @JsName("SpMultiPolygonOf")
     constructor(coordinates: MultiPolygonCoord) : this() {
-        setCoordinates(coordinates)
+        this.coordinates = coordinates
     }
 
-    override fun getCoordinates(): MultiPolygonCoord = super.getCoordinates() as MultiPolygonCoord
-    fun withCoordinates(coordinates: MultiPolygonCoord): SpMultiPolygon {
-        setCoordinates(coordinates)
+    companion object SpMultiPolygonCompanion {
+        /**
+         * The [PlatformType] of [SpMultiPolygon].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<SpMultiPolygon> = forKClass(SpMultiPolygon::class)
+            .withPackageName(PACKAGE_NAME)
+            .withJsonType("MultiPolygon")
+    }
+
+    override var coordinates: MultiPolygonCoord
+        get() = get_coordinates() as MultiPolygonCoord
+        set(value) { set_coordinates(value) }
+
+    fun withCoordinates(value: MultiPolygonCoord): SpMultiPolygon {
+        set_coordinates(value)
         return this
     }
 }
