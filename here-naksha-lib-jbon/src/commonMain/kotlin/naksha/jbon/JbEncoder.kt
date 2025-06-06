@@ -836,7 +836,7 @@ open class JbEncoder(var global: IDict? = null) : Binary() {
      */
     fun buildFeatureFromMap(map: MapProxy<String, *>): ByteArray {
         clear()
-        val id: String? = map.getAs("id", String::class)
+        val id: String? = map.getAs("id", String_TYPE)
         xyz = null
         val start = startMap()
         for (entry in map) {

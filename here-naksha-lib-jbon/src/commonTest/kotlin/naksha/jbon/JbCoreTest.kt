@@ -1,12 +1,13 @@
 package naksha.jbon
 
 import naksha.base.*
+import naksha.base.Platform.PlatformCompanion.fromJSON
 import kotlin.test.*
 
 class JbCoreTest {
     companion object {
-        internal val TINY_FLOATS = floatArrayOf(-8f, -7f, -6f, -5f, -4f, -3f, -2f, -1f, 0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f)
-        internal val TINY_DOUBLES = doubleArrayOf(-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0)
+        //internal val TINY_FLOATS = floatArrayOf(-8f, -7f, -6f, -5f, -4f, -3f, -2f, -1f, 0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f)
+        //internal val TINY_DOUBLES = doubleArrayOf(-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0)
         internal val dictManager = JbDictManager()
     }
 
@@ -28,8 +29,13 @@ class JbCoreTest {
         var i = 0
         while (i < r.length) {
             val c = r[i++]
-            assertTrue(c in '0'..'9' || c in 'a'..'z' || c in 'A'..'Z' || c == '_' || c == '-',
-                    "Invalid character: " + c)
+            assertTrue(c in '0'..'9'
+                    || c in 'a'..'z'
+                    || c in 'A'..'Z'
+                    || c == '_'
+                    || c == '-',
+                "Invalid character: $c"
+            )
         }
     }
 
@@ -59,11 +65,10 @@ class JbCoreTest {
         assertEquals(expected, (intValue and 0xff).toByte())
     }
 
-    @Suppress("UNCHECKED_CAST")
     @Test
     fun testJson() {
         // Test parse.
-        val raw = Platform.fromJSON("""
+        val map = assertNotNull(fromJSON("""
 {
     "id": "foo",
     "properties": {
@@ -71,9 +76,7 @@ class JbCoreTest {
         "age": 99,
         "array": [1, 2, 3, 4, 5]
     }
-}""".trimIndent())
-        assertTrue(raw is PlatformMap)
-        val map = raw.proxy(AnyObject::class)
+}""", AnyObject.TYPE))
         assertEquals(2, map.size)
         assertTrue(map.containsKey("id"))
         assertEquals("foo", map["id"])
@@ -152,14 +155,14 @@ class JbCoreTest {
         val builder = JbEncoder(256)
         val reader = JbDecoder().mapBinary(builder, 0, 256)
         // the values -16 to 15 should be encoded in one byte
-        builder.encodeInt32(-16);
+        builder.encodeInt32(-16)
         assertTrue(reader.isInt())
         assertEquals(-16, reader.decodeInt32(0))
         assertEquals(1, reader.unitSize())
         assertEquals(1, builder.clear())
         reader.reset()
 
-        builder.encodeInt32(15);
+        builder.encodeInt32(15)
         assertTrue(reader.isInt())
         assertEquals(15, reader.decodeInt32(0))
         assertEquals(1, reader.unitSize())
@@ -167,7 +170,7 @@ class JbCoreTest {
         reader.reset()
 
         // the values below -16 and above 15 should be encoded in two byte
-        builder.encodeInt32(-17);
+        builder.encodeInt32(-17)
         assertEquals(-17, reader.binary.getInt8(1))
         assertTrue(reader.isInt())
         assertEquals(-17, reader.decodeInt32(0))
@@ -175,7 +178,7 @@ class JbCoreTest {
         assertEquals(2, builder.clear())
         reader.reset()
 
-        builder.encodeInt32(16);
+        builder.encodeInt32(16)
         assertEquals(16, reader.binary.getInt8(1))
         assertTrue(reader.isInt())
         assertEquals(16, reader.decodeInt32(0))
@@ -840,8 +843,8 @@ class JbCoreTest {
     fun testBuildingCollectionWithOnlyId() {
         val builder = JbEncoder()
         val featureJson = """{"id":"bar"}"""
-        val featureMap = Platform.fromJSON(featureJson) as PlatformMap
-        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(AnyObject::class))
+        val featureMap = assertIs<AnyObject>(fromJSON(featureJson))
+        val featureBytes = builder.buildFeatureFromMap(featureMap)
         val feature = JbRecordDecoder(dictManager)
         feature.mapBytes(featureBytes)
         assertEquals("bar", feature.id())
@@ -851,8 +854,8 @@ class JbCoreTest {
     fun testSelectPath() {
         val builder = JbEncoder()
         val featureJson = """{"id":"bar","properties":{"foo": "hello","bar":[0,1,2,3,4]}}"""
-        val featureMap = Platform.fromJSON(featureJson) as PlatformMap
-        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(AnyObject::class))
+        val featureMap = assertIs<AnyObject>(fromJSON(featureJson))
+        val featureBytes = builder.buildFeatureFromMap(featureMap)
         val feature = JbFeatureDecoder(dictManager)
         feature.mapBytes(featureBytes)
 

@@ -2,8 +2,8 @@ package naksha.jbon
 
 import naksha.base.AnyObject
 import naksha.base.Platform
+import naksha.base.PlatformType
 import kotlin.js.JsExport
-import kotlin.reflect.KClass
 
 /**
  * A feature is a record, where the root unit is a map.
@@ -146,6 +146,5 @@ open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(d
      * @param T the proxy type to return.
      * @return the feature as T.
      */
-    @Suppress("NON_EXPORTABLE_TYPE")
-    fun <T: AnyObject> proxy(klass: KClass<T>): T = toMap().proxy(klass)
+    fun <T: AnyObject> proxy(type: PlatformType<T>): T = type.proxy(toMap())
 }
