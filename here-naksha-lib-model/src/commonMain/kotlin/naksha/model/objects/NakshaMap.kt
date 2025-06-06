@@ -3,7 +3,7 @@
 package naksha.model.objects
 
 import naksha.base.*
-import naksha.geo.SpBoundingBox
+import naksha.geo.GeoBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.model.*
@@ -23,7 +23,7 @@ open class NakshaMap() : NakshaFeature() {
      * @since 3.0
      */
     @Suppress("LeakingThis")
-    @JsName("of")
+    @JsName("NakshaMapOf")
     constructor(id: String): this() {
         this.id = id
         this.type = typeDefaultValue()
@@ -46,7 +46,7 @@ open class NakshaMap() : NakshaFeature() {
     override fun withFeatureNumber(value: Int64): NakshaMap = super.withFeatureNumber(value) as NakshaMap
     override fun withType(value: String): NakshaMap = super.withType(value) as NakshaMap
     override fun withFeatureType(value: String): NakshaMap = super.withFeatureType(value) as NakshaMap
-    override fun withBbox(value: SpBoundingBox?): NakshaMap = super.withBbox(value) as NakshaMap
+    override fun withBbox(value: GeoBoundingBox?): NakshaMap = super.withBbox(value) as NakshaMap
     override fun withGeometry(value: SpGeometry?): NakshaMap = super.withGeometry(value) as NakshaMap
     override fun withReferencePoint(value: SpPoint?): NakshaMap = super.withReferencePoint(value) as NakshaMap
     override fun withProperties(value: NakshaProperties): NakshaMap = super.withProperties(value) as NakshaMap

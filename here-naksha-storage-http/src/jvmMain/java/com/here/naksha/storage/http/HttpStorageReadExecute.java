@@ -35,7 +35,7 @@ import java.util.function.Function;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.StringList;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;

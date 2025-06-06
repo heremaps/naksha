@@ -13,7 +13,7 @@ import kotlin.jvm.JvmStatic
  */
 @Suppress("DuplicatedCode")
 @JsExport
-class Fnv1a32 {
+class Fnv1a32 private constructor() {
     companion object Fnv1a32Companion {
         /**
          * Start a new hash.

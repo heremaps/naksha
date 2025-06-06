@@ -20,16 +20,15 @@ package naksha.base;
 
 import java.util.UUID;
 
+import static naksha.base.Platform.forClass;
+
 class SampleJavaProxy extends AnyObject {
 
   static final UUID DEFAULT_VERSION = UUID.randomUUID();
 
-  private static final NotNullProperty<SampleJavaProxy, String> ID =
-      JvmPropertyUtil.notNullProperty(String.class, "id");
-  private static final NullableProperty<SampleJavaProxy, String> TITLE =
-      JvmPropertyUtil.nullableProperty(String.class, "title");
-  private static final NotNullProperty<SampleJavaProxy, UUID> VERSION =
-      JvmPropertyUtil.notNullProperty(UUID.class, "version", (proxy, name) -> DEFAULT_VERSION);
+  private static final NotNullProperty<SampleJavaProxy, String> ID = new NotNullProperty<>(forClass(String.class), "id");
+  private static final NullableProperty<SampleJavaProxy, String> TITLE = new NullableProperty<>(forClass(String.class), "title");
+  private static final NotNullProperty<SampleJavaProxy, UUID> VERSION = new NotNullProperty<>(forClass(UUID.class), "version", (proxy, name) -> DEFAULT_VERSION);
 
   public String getId() {
     return ID.getValue(this);

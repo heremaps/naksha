@@ -1,5 +1,6 @@
 package naksha.base
 
+import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.base.Platform.PlatformCompanion.newDataView
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_byte_array
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_float32
@@ -28,7 +29,7 @@ import kotlin.math.max
  *
  * The class operates on a [PlatformDataView], which maps a [ByteArray] that should be read and/or modified. The [byteLength] is basically the capacity available for reading and writing.
  *
- * @constructor The default constructor creates an empty, mutable, resizable editor.
+ * @constructor The default constructor creates an empty, mutable, resizable binary.
  */
 @Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate", "unused")
 @JsExport
@@ -79,6 +80,14 @@ open class Binary() : BinaryView {
 
     @Suppress("UNUSED_PARAMETER")
     companion object BinaryCompanion {
+        /**
+         * The [PlatformType] of [Binary].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<Binary> = forKClass(Binary::class).withPackageName(PACKAGE_NAME)
+
         /**
          * The byte-array that represents undefined.
          */

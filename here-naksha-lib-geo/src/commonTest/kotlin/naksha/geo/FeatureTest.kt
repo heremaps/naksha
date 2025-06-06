@@ -40,7 +40,7 @@ class FeatureTest {
 
         val parsedJson = Platform.fromJSON(polygonJson)
         assertIs<PlatformMap>(parsedJson)
-        val feature = Platform.proxy(parsedJson, SpFeature::class)
+        val feature = Platform.proxy(parsedJson, GeoFeature::class)
         assertEquals("Feature", feature.type)
         assertEquals("Example", feature.id)
         val bbox = feature.bbox

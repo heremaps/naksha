@@ -4,11 +4,13 @@ package naksha.base
 
 import kotlin.js.JsExport
 import kotlin.js.JsName
-import kotlin.reflect.KClass
 
 /**
- * The platform object is any object that allows to apply proxies. All platform objects can store symbols, which will not
- * be serialized and are hidden properties of objects.
+ * A platform object is any object that supports [SymbolMember], so runtime linked hidden members, plus management of arbitrary properties.
+ *
+ * ### Note
+ * In _Java_ this is implemented in `JvmObject`, in _JavaScript_ this is simply `Object`. Therefore, in _JavaScript_ all objects can be used to link proxies, while in _Java_ only those extending `JvmObject` can be linked against [proxies][Proxy].
+ * @see [Platform.isPlatformObject]
  */
 @JsExport
 @JsName("Object")

@@ -2,7 +2,7 @@
 
 package naksha.psql
 
-import naksha.model.illegalState
+import naksha.base.illegalState
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.js.JsStatic

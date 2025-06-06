@@ -18,20 +18,12 @@
  */
 package com.here.naksha.lib.handlers.util;
 
-import com.here.naksha.lib.core.lambdas.F1;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-import naksha.model.request.RequestQuery;
-import naksha.model.request.query.IPropertyQuery;
-import naksha.model.request.query.PAnd;
-import naksha.model.request.query.PFalse;
-import naksha.model.request.query.PNot;
-import naksha.model.request.query.POr;
-import naksha.model.request.query.PQuery;
-import naksha.model.request.query.PTrue;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
+import naksha.model.request.query.*;
 
 public class PropertyOperationUtil {
 

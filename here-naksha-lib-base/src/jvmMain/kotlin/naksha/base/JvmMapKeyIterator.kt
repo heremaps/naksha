@@ -1,30 +1,49 @@
 package naksha.base
 
-internal class JvmMapKeyIterator<K>() : PlatformIterator<K>() {
-    private var it:  Iterator<K>? = null
-    private lateinit var result: PlatformIteratorResult<K>
+import java.util.ConcurrentModificationException
+
+internal class JvmMapKeyIterator<K>(private val map: Map<K,*>) : PlatformIterator<K>() {
+    private val result: PlatformIteratorResult<K> = PlatformIteratorResult(false, null)
+    private var pos: Int = 0
 
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN", "UNCHECKED_CAST")
-    constructor(map: PlatformMap?) : this() {
-        it = if (map is java.util.Map<*,*>) (map as java.util.Map<K,*>).keySet().iterator() else null
-        result = PlatformIteratorResult(true, null)
+    private fun reset(): Iterator<K> {
+        // Create an iterator.
+        val it: Iterator<K> = if (map is JvmMap) {
+            (map as java.util.Map<K,*>).keySet().iterator()
+        } else {
+            map.keys.iterator()
+        }
+        // Restore old position, if necessary.
+        val old_pos = this.pos
+        this.pos = 0
+        for (i in 0 until old_pos) {
+            if (it.hasNext()) next() else break
+        }
+
+        // Return correctly positioned iterator.
+        return it
     }
 
-    constructor(map: Map<K,*>?) : this() {
-        it = map?.keys?.iterator()
-        result = PlatformIteratorResult(false, null)
-    }
+    private var it: Iterator<K>? = reset()
 
     override fun next(): PlatformIteratorResult<K> {
         val it = this.it
         val result = this.result
-        if (it?.hasNext() == true) {
-            result.value =  it.next()
-            result.done = false
-        } else {
-            result.done = true
-            result.value = null
+        try {
+            if (it?.hasNext() == true) {
+                result.value = it.next()
+                result.done = false
+                pos++
+            } else {
+                this.it = null
+                result.value = null
+                result.done = true
+            }
+            return result
+        } catch (e: ConcurrentModificationException) {
+            this.it = reset()
+            return next()
         }
-        return result
     }
 }

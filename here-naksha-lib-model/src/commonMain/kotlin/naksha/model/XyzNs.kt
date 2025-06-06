@@ -515,7 +515,7 @@ class XyzNs : AnyObject() {
      * previous one.
      * @since 1.0
      */
-    var tags by _TAGS
+    var tags: TagList by _TAGS
 
     /**
      * The version of the feature.
@@ -578,7 +578,7 @@ class XyzNs : AnyObject() {
      * @since 1.0
      * @see [Operation]
      */
-    val operation by _OPERATION
+    val operation: Operation by _OPERATION
 
     /**
      * The identifier of the application that modified the feature the last.

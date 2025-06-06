@@ -20,6 +20,11 @@ import com.here.naksha.handler.activitylog.sample.DatahubSamplesUtil.DatahubSamp
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
+import com.here.naksha.test.common.assertions.PropertyQueryAssertions;
+import naksha.base.JvmInt64;
+import naksha.base.NakshaError;
+import naksha.model.*;
+
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;

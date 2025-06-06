@@ -6,7 +6,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Set;
 import naksha.base.JvmBoxingUtil;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;

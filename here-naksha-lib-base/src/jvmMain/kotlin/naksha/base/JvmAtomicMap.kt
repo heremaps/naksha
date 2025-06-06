@@ -2,4 +2,4 @@ package naksha.base
 
 import java.util.concurrent.ConcurrentHashMap
 
-class JvmAtomicMap<K: Any, V: Any> : ConcurrentHashMap<K, V>(), AtomicMap<K, V>
+class JvmAtomicMap<K, V> : ConcurrentHashMap<K, V>(), AtomicMap<K, V>

@@ -6,7 +6,7 @@ import com.here.naksha.storage.http.HttpStorage;
 import com.here.naksha.storage.http.HttpStorageProperties;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaProperties;

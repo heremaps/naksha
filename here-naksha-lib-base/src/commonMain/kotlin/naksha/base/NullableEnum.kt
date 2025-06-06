@@ -1,6 +1,8 @@
 package naksha.base
 
+import naksha.base.fn.Fn2
 import kotlin.js.JsExport
+import kotlin.jvm.JvmOverloads
 import kotlin.reflect.KClass
 
 /**
@@ -32,14 +34,14 @@ import kotlin.reflect.KClass
  * ```
  * @param OBJECT_TYPE the type of the object to which to attach the property.
  * @param PROPERTY_TYPE the type of the property, must have the base type of the map as super type.
- * @param klass the [KClass] of the property type.
+ * @param type the [PlatformType] of the property type.
  * @param name the name of the property in the map, if different from the property name, if _null_, the property name is used.
  * @param init the initializer to create an initial value, when the property does not exist or is of an invalid type.
  */
-@Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
+@Suppress("OPT_IN_USAGE")
 @JsExport
-open class NullableEnum<OBJECT_TYPE : AnyObject, PROPERTY_TYPE : JsEnum>(
-    klass: KClass<out PROPERTY_TYPE>,
+open class NullableEnum<OBJECT_TYPE : AnyObject, PROPERTY_TYPE : JsEnum> @JvmOverloads constructor (
+    type: PlatformType<PROPERTY_TYPE>,
     name: String? = null,
-    init: ((self: OBJECT_TYPE, name: String) -> PROPERTY_TYPE?)? = null
-) : NullableMapEnum<OBJECT_TYPE, Any, PROPERTY_TYPE>(klass, name, init)
+    init: Fn2<PROPERTY_TYPE?, OBJECT_TYPE, String>? = null
+) : NullableMapEnum<OBJECT_TYPE, Any, PROPERTY_TYPE>(type, name, init)

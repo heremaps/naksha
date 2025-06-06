@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmMap;
 import naksha.base.Platform;
-import naksha.geo.SpBoundingBox;
+import naksha.geo.GeoBoundingBox;
 import naksha.geo.SpMultiPolygon;
 import naksha.geo.PointCoord;
 import naksha.geo.SpPoint;
@@ -51,7 +51,7 @@ public class BBoxTest {
         "{\"type\":\"MultiPolygon\",\"coordinates\":[[[[101.2,1.2],[101.8,1.2],[101.8,1.8],[101.2,1.8],[101.2,1.2]],[[101.2,1.2],[101.3,1.2],[101.3,1.3],[101.2,1.3],[101.2,1.2]],[[101.6,1.4],[101.7,1.4],[101.7,1.5],[101.6,1.5],[101.6,1.4]],[[101.5,1.6],[101.6,1.6],[101.6,1.7],[101.5,1.7],[101.5,1.6]]],[[[100.0,0.0],[101.0,0.0],[101.0,1.0],[100.0,1.0],[100.0,0.0]],[[100.35,0.35],[100.65,0.35],[100.65,0.65],[100.35,0.65],[100.35,0.35]]]]}";
     JvmMap jvmMap = (JvmMap) Platform.fromJSON(multipolygonGJ, FromJsonOptions.DEFAULT);
     SpMultiPolygon multipolygon = jvmMap.proxy(Platform.klassFor(SpMultiPolygon.class));
-    SpBoundingBox bbox = new SpBoundingBox(multipolygon.getCoordinates());
+    GeoBoundingBox bbox = new GeoBoundingBox(multipolygon.getCoordinates());
 
     assertEquals(100.0, bbox.getMinLongitude(), 0.0);
     assertEquals(101.8, bbox.getMaxLongitude(), 0.0);

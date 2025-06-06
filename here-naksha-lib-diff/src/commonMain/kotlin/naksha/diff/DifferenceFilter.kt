@@ -7,26 +7,26 @@ class DifferenceFilter private constructor() {
     companion object DifferenceFilter_C {
 
         /**
-         * Removes all occurences of [RemoveOp] from composite [Difference] types as [ListDiff] or [MapDiff]
-         * Note that supplied [difference] will be affected (it is also returned)
+         * Removes all occurrences of [RemoveDiff] from composite [Difference] types as [ListDiff] or [MapDiff]
+         * Note that supplied [diff] will be affected (it is also returned)
          *
-         * @param difference [Difference] to be filtered
+         * @param diff [Difference] to be filtered
          * @since 3.0.0
          */
         @JvmStatic
-        fun removeAllRemoveOp(difference: Difference?) {
-            when (difference) {
-                is MapDiff -> removeAllRemoveOpFromMap(difference)
-                is ListDiff -> removeAllRemoveOpFromList(difference)
+        fun removeAllRemoveOp(diff: Difference?) {
+            when (diff) {
+                is MapDiff -> removeAllRemoveOpFromMap(diff)
+                is ListDiff -> removeAllRemoveOpFromList(diff)
             }
         }
 
         private fun removeAllRemoveOpFromMap(mapDiff: MapDiff) {
-            removeAllRemoveOpFromIterator(mapDiff.iterator()) { it.value }
+            removeAllRemoveOpFromIterator(mapDiff.differences.iterator()) { it.value }
         }
 
         private fun removeAllRemoveOpFromList(listDiff: ListDiff) {
-            removeAllRemoveOpFromIterator(listDiff.iterator()) { it }
+            removeAllRemoveOpFromIterator(listDiff.differences.iterator()) { it }
         }
 
         private fun <T> removeAllRemoveOpFromIterator(
@@ -35,7 +35,7 @@ class DifferenceFilter private constructor() {
         ) {
             while (iterator.hasNext()) {
                 when (val diff = diffRetrieval(iterator.next())) {
-                    is RemoveOp -> iterator.remove()
+                    is RemoveDiff -> iterator.remove()
                     else -> removeAllRemoveOp(diff)
                 }
             }

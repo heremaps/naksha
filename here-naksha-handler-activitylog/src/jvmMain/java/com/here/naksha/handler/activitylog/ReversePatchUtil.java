@@ -112,11 +112,11 @@ class ReversePatchUtil {
     if (shouldFilter(currentPath)) {
       return;
     }
-    if (primitiveDiff instanceof InsertOp) {
+    if (primitiveDiff instanceof InsertDiff) {
       builder.reverseInsert(currentPath);
-    } else if (primitiveDiff instanceof RemoveOp removeOp) {
+    } else if (primitiveDiff instanceof RemoveDiff removeOp) {
       builder.reverseRemove(removeOp, currentPath);
-    } else if (primitiveDiff instanceof UpdateOp updateOp) {
+    } else if (primitiveDiff instanceof UpdateDiff updateOp) {
       builder.reverseUpdate(updateOp, currentPath);
     } else {
       throw new UnsupportedOperationException("Unable to process unknown PrimitiveDifference type: "

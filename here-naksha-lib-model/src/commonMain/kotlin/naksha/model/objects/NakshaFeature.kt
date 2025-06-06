@@ -1,19 +1,19 @@
 package naksha.model.objects
 
 import naksha.base.*
-import naksha.geo.SpBoundingBox
-import naksha.geo.SpFeature
+import naksha.geo.GeoBoundingBox
+import naksha.geo.GeoFeature
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.model.*
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 /**
- * The Naksha Feature extending the default [SpFeature].
+ * The Naksha Feature extending the default [GeoFeature].
  */
 @Suppress("LeakingThis", "OPT_IN_USAGE")
 @JsExport
@@ -63,7 +63,7 @@ open class NakshaFeature() : AnyObject() {
 
         private val ID_RANDOM = NotNullProperty<NakshaFeature, String>(String::class) { _, _ -> PlatformUtil.randomString(12) }
         private val TYPE_DEFAULT = NotNullProperty<NakshaFeature, String>(String::class) { self, _ -> self.typeDefaultValue() }
-        private val BBOX_NULL = NullableProperty<NakshaFeature, SpBoundingBox>(SpBoundingBox::class)
+        private val BBOX_NULL = NullableProperty<NakshaFeature, GeoBoundingBox>(GeoBoundingBox::class)
         private val GEOMETRY_NULL = NullableProperty<NakshaFeature, SpGeometry>(SpGeometry::class)
         private val REFERENCE_POINT_NULL = NullableProperty<NakshaFeature, SpPoint>(SpPoint::class)
         private val PROPERTIES = NotNullProperty<NakshaFeature, NakshaProperties>(NakshaProperties::class)
@@ -252,7 +252,7 @@ open class NakshaFeature() : AnyObject() {
     /**
      * @see bbox
      */
-    open fun withBbox(value: SpBoundingBox?): NakshaFeature {
+    open fun withBbox(value: GeoBoundingBox?): NakshaFeature {
         bbox = value
         return this
     }

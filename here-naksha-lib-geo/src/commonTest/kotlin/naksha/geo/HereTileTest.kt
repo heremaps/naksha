@@ -105,17 +105,17 @@ class HereTileTest {
     @Test
     fun testHereTile() {
         assertFailsWith<IllegalArgumentException> {
-            HereTile(0.0, 0.0, 16)
+            HereTile(latitude = 0.0, longitude = 0.0, level = 16)
         }
         assertFailsWith<IllegalArgumentException> {
-            HereTile(-91.0, 0.0, 0)
+            HereTile(latitude = -91.0, longitude = 0.0, level = 0)
         }
         assertFailsWith<IllegalArgumentException> {
-            HereTile(0.0, 181.0, 0)
+            HereTile(latitude = 0.0, longitude = 181.0, level = 0)
         }
 
         fun assertHereTile(expectedQuadKey: String, latitude: Double, longitude: Double, level: Int) {
-            val actualIntKey = HereTile(latitude, longitude, level)
+            val actualIntKey = HereTile(latitude=latitude, longitude=longitude, level=level)
             // prefix with "1" for level indicator and then convert base 4 string to integer
             val expected = HereTile(expectedQuadKey)
             assertEquals(expected, actualIntKey)

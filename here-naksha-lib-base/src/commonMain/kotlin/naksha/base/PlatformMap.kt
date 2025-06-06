@@ -6,19 +6,10 @@ import kotlin.js.JsName
 import kotlin.reflect.KClass
 
 /**
- * A not thread safe map, where the keys must not be _null_ and values must not be _undefined_. This map does guarantee the
- * insertion order of the keys, so when iterating above the object, the keys stay in order. This is kind an important if the
- * key order is significant, for example when calculating a hash.
+ * A not thread safe map, where the keys must not be _null_ and values must not be _undefined_. This map does guarantee the insertion order of the keys, so when iterating above the map entries, the key-value pairs stay in order. This is kind an important, if the key order is significant, for example when calculating a hash.
+ * @since 3.0
  */
 @OptIn(ExperimentalJsExport::class)
 @JsExport
 @JsName("Map")
-interface PlatformMap : PlatformObject {
-    /**
-     * Create a proxy or return the existing proxy.
-     * @param klass the proxy class.
-     * @return the proxy instance.
-     * @throws IllegalArgumentException if this is no [PlatformMap], [PlatformList] or [PlatformMap].
-     */
-    fun <T : Proxy> proxy(@Suppress("NON_EXPORTABLE_TYPE") klass: KClass<T>): T
-}
+interface PlatformMap : PlatformObject

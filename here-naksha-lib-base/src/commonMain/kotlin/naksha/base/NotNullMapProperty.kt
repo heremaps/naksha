@@ -1,5 +1,6 @@
 package naksha.base
 
+import naksha.base.fn.Fn2
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
@@ -28,23 +29,23 @@ import kotlin.reflect.KProperty
  * @param MAP the type of the map to which to attach the property.
  * @param MAP_VALUE_TYPE the base type of all values in the map.
  * @param PROPERTY_TYPE the type of the property, must have the base type of the map as super type.
- * @property klass the [KClass] of the property type.
+ * @property type the [PlatformType] of the property type.
  * @property name the name of the property in the map, if different from the property name, if _null_, the property name is used.
  * @property init the initializer to create a new value, when the property does not exist or the value is not of the desired type. If the
  * initializer returns _null_, the value is created by invoking the default constructor of the value type.
  */
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
 @JsExport
-open class NotNullMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE : Any, PROPERTY_TYPE : MAP_VALUE_TYPE>(
-    val klass: KClass<out PROPERTY_TYPE>,
+open class NotNullMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE, PROPERTY_TYPE : MAP_VALUE_TYPE> @JvmOverloads constructor(
+    val type: PlatformType<PROPERTY_TYPE>,
     val name: String? = null,
-    val init: ((self: MAP, name: String) -> PROPERTY_TYPE?)? = null
+    val init: Fn2<PROPERTY_TYPE?, MAP, String>? = null
 ) {
 
     @JvmOverloads
     open fun getValue(self: MAP, propertyName: String? = null): PROPERTY_TYPE = self.getOrCreate(
         this.name ?: propertyName ?: throw IllegalArgumentException("Undefined property name"),
-        klass,
+        type,
         init
     )
 

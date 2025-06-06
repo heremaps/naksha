@@ -2,9 +2,9 @@ package naksha.diff.jsonpatch
 
 import naksha.base.Platform
 import naksha.diff.DifferenceCalculator
+import naksha.diff.JsonPatchFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 
 // most of these tests are based on [DifferenceCalculatorTest]

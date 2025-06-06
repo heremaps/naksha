@@ -2,8 +2,8 @@
 
 package naksha.psql
 
-import naksha.model.NakshaError
-import naksha.model.NakshaException
+import naksha.base.NakshaError
+import naksha.base.NakshaException
 
 /**
  * Helper to map native exceptions into [NakshaException].

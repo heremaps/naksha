@@ -3,14 +3,13 @@
 package naksha.model.objects
 
 import naksha.base.*
-import naksha.geo.SpBoundingBox
+import naksha.geo.GeoBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
-import naksha.model.NakshaContext
 import naksha.model.Naksha
-import naksha.model.NakshaError
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaException
+import naksha.base.NakshaError
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaException
 import kotlin.js.*
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
@@ -34,7 +33,7 @@ open class NakshaStorage() : NakshaFeature() {
      * @param className the full qualified name of the class to instantiate.
      * @since 3.0
      */
-    @JsName("of")
+    @JsName("NakshaStorageOf")
     constructor(id: String, className: String) : this() {
         this.id = id
         this.className = className
@@ -81,7 +80,7 @@ open class NakshaStorage() : NakshaFeature() {
     override fun withFeatureNumber(value: Int64): NakshaStorage = super.withFeatureNumber(value) as NakshaStorage
     override fun withType(value: String): NakshaStorage = super.withType(value) as NakshaStorage
     override fun withFeatureType(value: String): NakshaStorage = super.withFeatureType(value) as NakshaStorage
-    override fun withBbox(value: SpBoundingBox?): NakshaStorage = super.withBbox(value) as NakshaStorage
+    override fun withBbox(value: GeoBoundingBox?): NakshaStorage = super.withBbox(value) as NakshaStorage
     override fun withGeometry(value: SpGeometry?): NakshaStorage = super.withGeometry(value) as NakshaStorage
     override fun withReferencePoint(value: SpPoint?): NakshaStorage = super.withReferencePoint(value) as NakshaStorage
     override fun withProperties(value: NakshaProperties): NakshaStorage = super.withProperties(value) as NakshaStorage

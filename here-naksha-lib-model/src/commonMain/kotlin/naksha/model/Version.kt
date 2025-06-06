@@ -3,6 +3,8 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.base.NakshaError
+import naksha.base.NakshaException
 import naksha.base.Timestamp
 import kotlin.js.JsExport
 import kotlin.js.JsName

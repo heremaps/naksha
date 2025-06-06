@@ -2,10 +2,12 @@
 
 package naksha.model
 
-import naksha.base.Int64
-import naksha.base.MapProxy
+import naksha.base.*
+import naksha.base.Platform.PlatformCompanion.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Map of tags persisted as (key, value) pairs where values are nullable.
@@ -20,14 +22,23 @@ import kotlin.js.JsName
  * with use of [TagNormalizer] (that is used for example by [TagList])
  */
 @JsExport
-open class TagMap() : MapProxy<String, Any>(String::class, Any::class) {
+open class TagMap() : MapProxy<String, Any>(String_TYPE, Any_TYPE) {
 
-    @Suppress("LeakingThis")
     @JsName("of")
     constructor(tagList: TagList) : this() {
         tagList.filterNotNull()
             .map { TagNormalizer.splitNormalizedTag(it) }
             .forEach { (key, value) -> put(key, value) }
+    }
+
+    companion object TagMapCompanion {
+        /**
+         * The [PlatformType] of [TagMap].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<TagMap> = forKClass(TagMap::class).withPackageName(PACKAGE_NAME)
     }
 
     /**
@@ -41,6 +52,29 @@ open class TagMap() : MapProxy<String, Any>(String::class, Any::class) {
         }
         return list
     }
+
+    /**
+     * Copy all tags from the given tag-map.
+     * @param other The other tag-map from which to copy.
+     * @return this.
+     * @since 3.0
+     */
+    fun copyFrom(other: TagMap?): TagMap {
+        if (other != null) {
+            for (e in other) this[e.key] = e.value
+        }
+        return this
+    }
+
+    /**
+     * Copy all tags from the given tag-map.
+     * @param other The other tag-map from which to copy.
+     * @return this.
+     * @since 3.0
+     */
+    @JsName("copyFromTagList")
+    fun copyFrom(other: TagList?): TagMap
+        = if (other != null) copyFrom(other.toTagMap()) else this
 
     /**
      * Converts (key, value) pair to String, so it can be part of [TagList].

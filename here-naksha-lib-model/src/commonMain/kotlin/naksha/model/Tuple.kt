@@ -7,7 +7,6 @@ import naksha.base.WeakRef
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
-import kotlin.jvm.JvmOverloads
 
 /**
  * A tuple represents a specific immutable state of a feature on the heap. The default constructor creates a metadata-only entry.

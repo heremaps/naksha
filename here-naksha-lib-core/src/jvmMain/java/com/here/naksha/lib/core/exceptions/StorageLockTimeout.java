@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import static naksha.model.NakshaError.TIMEOUT;
+import static naksha.base.NakshaError.TIMEOUT;
 
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;

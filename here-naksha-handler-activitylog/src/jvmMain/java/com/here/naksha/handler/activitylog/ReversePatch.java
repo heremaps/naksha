@@ -21,6 +21,9 @@ package com.here.naksha.handler.activitylog;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import naksha.diff.RemoveDiff;
+import naksha.diff.UpdateDiff;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -88,13 +91,13 @@ public record ReversePatch(
       return this;
     }
 
-    Builder reverseRemove(RemoveOp removeOp, String path) {
+    Builder reverseRemove(RemoveDiff removeOp, String path) {
       insert++;
       ops.add(PatchOp.insert(path, removeOp.getOldValue()));
       return this;
     }
 
-    Builder reverseUpdate(UpdateOp updateOp, String path) {
+    Builder reverseUpdate(UpdateDiff updateOp, String path) {
       update++;
       ops.add(PatchOp.update(path, updateOp.getOldValue()));
       return this;

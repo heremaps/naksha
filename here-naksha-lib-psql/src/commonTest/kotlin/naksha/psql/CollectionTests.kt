@@ -5,7 +5,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import naksha.base.StringList
 import naksha.model.Naksha
-import naksha.model.NakshaError
+import naksha.base.NakshaError
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.APP_ID_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.AUTHOR_IDX

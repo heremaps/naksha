@@ -80,7 +80,7 @@ class DiffAndPatchTest {
         val diff = DifferenceCalculator.calculateDifference(left, right)
 
         // And:
-        Patcher.patch(left!!, diff)
+        Patcher.patch(left, diff)
 
         // Then:
         val leftJson = Platform.toJSON(left)

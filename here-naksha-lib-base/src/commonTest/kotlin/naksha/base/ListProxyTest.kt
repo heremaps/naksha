@@ -2,8 +2,8 @@ package naksha.base
 
 import kotlin.test.*
 
-private class TestListInt : ListProxy<Int>(Int::class)
-private class TestListString : ListProxy<String>(String::class)
+private class TestListInt : ListProxy<Int>(Int_Type)
+private class TestListString : ListProxy<String>(String_TYPE)
 
 class ListProxyTest {
 
@@ -82,6 +82,21 @@ class ListProxyTest {
 
         // when
         list.addAll(listOf(10, 11))
+
+        // then
+        assertEquals(3, list.size)
+        assertEquals(10, list[1])
+        assertEquals(11, list[2])
+    }
+
+    @Test
+    fun testAddAllArray() {
+        // given
+        val list = TestListInt()
+        list.add(7)
+
+        // when
+        list.addAll(arrayOf(10, 11))
 
         // then
         assertEquals(3, list.size)
@@ -194,5 +209,22 @@ class ListProxyTest {
         assertEquals(7, iterator.next())
         assertEquals(8, iterator.next())
         assertFailsWith<NoSuchElementException> { iterator.next() }
+    }
+
+    @Suppress("ReplaceCallWithBinaryOperator")
+    @Test
+    fun testEquals() {
+        val a = AnyList(1, 2, 3, 4)
+        val b = AnyList(1, 2, 3, 4)
+        assertTrue(a.equals(b))
+        assertTrue(b.equals(a))
+
+        val c = AnyList(1, 2, 3)
+        assertFalse(c.equals(a))
+        assertFalse(c.equals(b))
+        assertTrue(c.equals(c))
+
+        assertFalse(a.equals(c))
+        assertFalse(b.equals(c))
     }
 }

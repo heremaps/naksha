@@ -1,10 +1,8 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.DEFAULT_SYMBOL
-import kotlin.reflect.KClass
-
 /**
  * The base class of all other platform objects.
+ * @since 3.0
  */
 open class JvmObject : PlatformObject {
     internal companion object {
@@ -13,9 +11,16 @@ open class JvmObject : PlatformObject {
     }
 
     /**
-     * The Naksha default symbol, only used as long as no other symbols are defined.
+     * If only one [SymbolMember] is added to the [PlatformObject], the symbol of the member.
+     * @since 3.0
      */
-    private var baseSym: Any? = undefined
+    private var symbol: Symbol? = null
+
+    /**
+     * If only one [SymbolMember] is added to the [PlatformObject] _([symbol] is not `null`)_, then the value of the member.
+     * @since 3.0
+     */
+    private var value: Any? = null
 
     /**
      * The map for additional symbols; if any.
@@ -26,19 +31,23 @@ open class JvmObject : PlatformObject {
      * Returns the number of assigned symbols.
      * @return the number of assigned symbols.
      */
-    fun symbolsCount() : Int = symbols?.size ?: if (baseSym != null) 1 else 0
+    fun symbolsCount() : Int = symbols?.size ?: if (symbol != null) 1 else 0
 
     /**
      * Returns the symbols map.
+     *
+     * If no such map exists yet, creates one.
      * @return The symbols map.
      */
     fun symbols(): HashMap<Symbol, Any?> {
         var s = symbols
         if (s == null) {
             s = HashMap()
-            if (baseSym != undefined) {
-                s[DEFAULT_SYMBOL] = baseSym
-                baseSym = undefined
+            val symbol = this.symbol
+            if (symbol != null) {
+                s[symbol] = value
+                this.symbol = null
+                this.value = null
             }
             symbols = s
         }
@@ -53,7 +62,7 @@ open class JvmObject : PlatformObject {
     open fun containsSymbol(sym: Symbol): Boolean {
         val s = symbols
         if (s != null) return s.containsKey(sym)
-        return sym === DEFAULT_SYMBOL && baseSym != undefined
+        return this.symbol === sym
     }
 
     /**
@@ -64,7 +73,7 @@ open class JvmObject : PlatformObject {
     open fun getSymbol(sym: Symbol): Any? {
         val s = symbols
         if (s != null) return s[sym]
-        return if (sym === DEFAULT_SYMBOL) baseSym else null
+        return if (this.symbol === sym) value else null
     }
 
     /**
@@ -77,9 +86,10 @@ open class JvmObject : PlatformObject {
         if (s != null) {
             return if (s.containsKey(sym)) s.remove(sym) else null
         }
-        if (sym === DEFAULT_SYMBOL) {
-            val old = if (baseSym === undefined) null else baseSym
-            baseSym = undefined
+        if (this.symbol === sym) {
+            val old = this.value
+            this.symbol = null
+            this.value = null
             return old
         }
         return null
@@ -99,10 +109,10 @@ open class JvmObject : PlatformObject {
             }
             return false
         }
-        if (sym === DEFAULT_SYMBOL) {
-            val removed = baseSym != undefined
-            baseSym = undefined
-            return removed
+        if (this.symbol === sym) {
+            this.symbol = null
+            this.value = null
+            return true
         }
         return false
     }
@@ -115,23 +125,26 @@ open class JvmObject : PlatformObject {
      */
     open fun setSymbol(sym: Symbol, value: Any?): Any? {
         if (value === undefined) return removeSymbol(sym)
-        var s = symbols
-        if (s == null && sym === DEFAULT_SYMBOL) {
-            val old = if (baseSym === undefined) null else baseSym
-            baseSym = value
-            return old
+        var symbols = this.symbols
+        if (symbols == null) {
+            val symbol = this.symbol
+            if (symbol === sym || symbol == null) {
+                val old = this.value
+                this.symbol = sym
+                this.value = value
+                return old
+            }
         }
-        if (s == null) s = symbols()
-        val old = s[sym]
-        s[sym] = value
+        symbols = symbols()
+        val old = symbols[sym]
+        symbols[sym] = value
         return old
     }
 
     /**
-     * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
-     * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
-     * @param klass The proxy class.
+     * Invokes [PlatformType.proxy] of ths given `type` against this object.
+     * @param type The [PlatformType] of the proxy to create.
      * @return The proxy instance.
      */
-    fun <T : Proxy> proxy(klass: KClass<T>): T = Platform.proxy(this, klass)
+    fun <T : Proxy> proxy(type: PlatformType<T>): T = type.proxy(this)
 }

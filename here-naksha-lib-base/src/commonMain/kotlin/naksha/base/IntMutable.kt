@@ -2,7 +2,10 @@
 
 package naksha.base
 
+import naksha.base.Platform.PlatformCompanion.forKClass
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A simple helper class to have mutable, not thread safe, integers.
@@ -16,6 +19,16 @@ data class IntMutable(
      */
     var value: Int = 0
 ) {
+    companion object IntMutableCompanion {
+        /**
+         * The [PlatformType] of [IntMutable].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<IntMutable> = forKClass(IntMutable::class).withPackageName(PACKAGE_NAME)
+    }
+
     /**
      * Add the given `value` to this, and return this.
      * @param value the value to add.

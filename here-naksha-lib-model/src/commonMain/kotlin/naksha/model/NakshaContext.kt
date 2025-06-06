@@ -6,7 +6,7 @@ import naksha.auth.UserRightsMatrix
 import naksha.base.*
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn3
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -21,7 +21,7 @@ import kotlin.reflect.KClass
 //       We can derive both from the same base class, something like ThreadSafeObject or whatever.
 
 /**
- * The Naksha Context is a thread-local that stores credentials, and shared request information.
+ * The Naksha Context is a thread-local that stores credentials, and request information.
  *
  * The main purpose is to ensure that all entities can perform authorization, and share debugging information, like the stream-identifier for logging. It is recommended that each application creates its own stream-information class, with own special properties next to the shared general ones.
  *
@@ -37,33 +37,39 @@ import kotlin.reflect.KClass
 open class NakshaContext protected constructor() {
     /**
      * The time in milliseconds to wait for the TCP handshake.
-     * @since 3.0.0
+     * @since 3.0
      */
     open var connectTimeout: Int = defaultConnectTimeout.get()
 
     /**
      * The time in milliseconds to wait for the TCP socket when reading or writing from it.
-     * @since 3.0.0
+     * @since 3.0
      */
     open val socketTimeout: Int = defaultSocketTimeout.get()
 
     /**
      * The statement-timeout in milliseconds, this means how long to wait for each CREATE, UPDATE or DELETE to be executed.
-     * @since 3.0.0
+     * @since 3.0
      */
     open val stmtTimeout: Int = defaultStmtTimeout.get()
 
     /**
      * The lock-timeout in milliseconds, when the storage has to use locking.
-     * @since 3.0.0
+     * @since 3.0
      */
     open val lockTimeout: Int = defaultLockTimeout.get()
 
     /**
      * The idle-transaction-timeout in milliseconds.
-     * @since 3.0.0
+     * @since 3.0
      */
     open val idleTxTimeout = defaultIdleTxTimeout.get()
+
+    /**
+     * Whenever the pipeline of a space is entered, the `id` of the space is pushed to the end of the `spaceIds` list, and when the pipeline is left, the last `id` is removed from the `spaceIds` list.
+     * @since 3.0
+     */
+    open val spaceIds: StringList = StringList()
 
     private var _appName: String? = null
 
@@ -120,7 +126,7 @@ open class NakshaContext protected constructor() {
 
     /**
      * The stream-information.
-     * @since 3.0.0
+     * @since 3.0
      */
     open var streamInfo: StreamInfo
         get() {
@@ -216,7 +222,7 @@ open class NakshaContext protected constructor() {
      * Set the super-user flag.
      * @param su enable or disable super-user flag.
      * @return this
-     * @since 3.0.0
+     * @since 3.0
      */
     open fun withSu(su: Boolean): NakshaContext {
         this.su = su
@@ -374,14 +380,14 @@ open class NakshaContext protected constructor() {
     companion object NakshaContextCompanion {
         /**
          * The default application name to use, defaults to `NakshaClient/{version}`.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         val defaultAppName = AtomicRef("NakshaClient/${NakshaVersion.CURRENT}")
 
         /**
          * The default application identifier to use, defaults to `null`.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         val defaultAppId = AtomicRef<String>(null)
@@ -390,7 +396,7 @@ open class NakshaContext protected constructor() {
          * The default exclude path to use, when calculating hashes.
          *
          * This is an application wide setting, that when not being _null_, will cause all contexts that have no exclude path, to use this one!
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         val defaultExcludePaths = AtomicRef<List<Array<String>>>(null)
@@ -399,42 +405,42 @@ open class NakshaContext protected constructor() {
          * The default exclude function to use, when calculating hashes.
          *
          * This is an application wide setting, that when not being _null_, will cause all contexts that have no exclude function, to use this one!
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         val defaultExcludeFn = AtomicRef<Fn3<Boolean, NakshaFeature, List<String>, Any?>>(null)
 
         /**
          * The application wide default time in milliseconds to wait for the TCP handshake.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         val defaultConnectTimeout = AtomicInt(60_000)
 
         /**
          * The application wide default time in milliseconds to wait for the TCP socket when reading or writing from it.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         val defaultSocketTimeout = AtomicInt(60_000)
 
         /**
          * The application wide default statement-timeout in milliseconds, this means how long to wait for each CREATE, UPDATE or DELETE to be executed.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         val defaultStmtTimeout = AtomicInt(60_000)
 
         /**
          * The application wide default lock-timeout in milliseconds, when the storage has to use locking.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         val defaultLockTimeout = AtomicInt(10_000)
 
         /**
          * The application wide default idle-transaction-timeout in milliseconds.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmField
         val defaultIdleTxTimeout = AtomicInt(60_000)
@@ -442,7 +448,7 @@ open class NakshaContext protected constructor() {
         /**
          * Returns the current application name.
          * @return the current application name.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
@@ -451,7 +457,7 @@ open class NakshaContext protected constructor() {
         /**
          * Returns the current application identifier.
          * @return the current application identifier.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic

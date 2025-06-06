@@ -4,8 +4,9 @@ package naksha.psql
 
 import naksha.base.AtomicInt
 import naksha.base.Int64
+import naksha.base.NakshaException
 import naksha.model.*
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

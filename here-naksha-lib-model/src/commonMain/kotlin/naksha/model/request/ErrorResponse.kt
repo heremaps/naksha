@@ -3,8 +3,8 @@
 package naksha.model.request
 
 import naksha.base.NotNullProperty
-import naksha.model.NakshaError
-import naksha.model.NakshaException
+import naksha.base.NakshaError
+import naksha.base.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
@@ -48,7 +48,7 @@ open class ErrorResponse() : Response() {
     }
 
     companion object ErrorResponse_C {
-        private val ERROR = NotNullProperty<ErrorResponse, NakshaError>(NakshaError::class) { _,_ ->
+        private val ERROR = NotNullProperty<ErrorResponse, NakshaError>(NakshaError::class) { _, _ ->
             NakshaError(NakshaError.EXCEPTION, "Unknown error")
         }
     }

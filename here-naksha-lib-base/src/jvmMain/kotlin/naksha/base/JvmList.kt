@@ -9,6 +9,17 @@ import kotlin.math.round
  * The JVM implementation of a [PlatformList].
  */
 open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
+    constructor(vararg entries: Any?) : this() {
+        val list: ArrayList<Any?>?
+        if (entries.isNotEmpty()) {
+            list = ArrayList(entries.size + 4)
+            list.addAll(entries)
+        } else {
+            list = null
+        }
+        this.list = list
+    }
+
     companion object {
         // We need to hack a bit, because of the stupidity today, that "private" properties are not accessible,
         // even for the price of total inefficiency, when not done! We rather waste huge amount of CPU cycles,
@@ -103,20 +114,6 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
         return -1
     }
 
-    constructor(vararg entries: Any?) : this() {
-        val list: ArrayList<Any?>?
-        if (entries.isNotEmpty()) {
-            list = ArrayList(entries.size + 4)
-            list.addAll(entries)
-        } else {
-            list = null
-        }
-        this.list = list
-    }
-
-    /**
-     *
-     */
     fun setCapacity(capacity: Int) {
         check(capacity >= 0) { "capacity must be >= 0" }
         var list = this.list
@@ -170,7 +167,7 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
         }
 
     /**
-     * Ensures that the list as at least the given size. If the list is too short, inflate it with _null_ value.
+     * Ensures that the list has at least the given size. If the list is too short, inflate it with _null_ value.
      * @param size the size required.
      * @return _true_ if the size was modified; _false_ otherwise.
      */

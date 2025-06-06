@@ -2,10 +2,10 @@
 
 package naksha.base
 
+import naksha.base.fn.Fn0
 import kotlin.math.round
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
-import kotlin.reflect.createInstance
 
 @JsExport
 actual class Platform {
@@ -55,10 +55,8 @@ actual class Platform {
          */
         internal val u64_arr: dynamic = js("new BigUint64Array(16)")
 
-        // TODO: Find out what really need to be copied to make "is" working and only copy this!
         @Suppress("UNUSED_PARAMETER")
-        internal fun copyPrototypeToPrototype(source: Any, target: Any) = js(
-            """
+        internal fun copyPrototypeToPrototype(source: Any, target: Any) = js("""
             var sp = Object.getPrototypeOf(source);
             var tp = Object.getPrototypeOf(target);
             var symbols = Object.getOwnPropertySymbols(sp);
@@ -71,26 +69,66 @@ actual class Platform {
             var keys = Object.getOwnPropertyNames(sp);
             for (i in keys) {
                 var key = keys[i];
+                if (key=="constructor") continue;
+                if (tp.hasOwnProperty(key)) continue;
                 desc.value = sp[key];
-                if ("constructor"==key) continue;
                 Object.defineProperty(tp, key, desc);
             };"""
         )
 
         @JsStatic
-        @Suppress("NON_EXPORTABLE_TYPE")
         actual fun initialize(): Boolean {
             if (!isInitialized) {
                 isInitialized = true
+                // TODO: eval is really bad here, we need to replace it, but how? Kotlin really sucks with js(...) execution!
+                js("""
+                    var buffer = new ArrayBuffer(16);
+                    var view = new DataView(buffer);
+                    var pt = Object.getPrototypeOf(view);
+                    pt.getInt64 = pt.getBigInt64;
+                    pt.setInt64 = pt.setBigInt64;
+                    Object.defineProperty(pt, '_byteArray', {
+                        value: null,
+                        enumerable: false,
+                        writable: true
+                    });
+                    eval("Object.defineProperty(pt,'byteArray',{enumerable:true,get:function(){let v=this._byteArray;if(v instanceof Uint8Array)return v;v=new Uint8Array(this.buffer);this._byteArray=v;return v;}});");
+                """)
+                // This is the last eval:
+                /*
+                    Object.defineProperty(pt, 'byteArray', {
+                        enumerable: true,
+                        get() {
+                           let v = this._byteArray;
+                           if (v instanceof Uint8Array) return v;
+                           v = new Uint8Array(this.buffer);
+                           this._byteArray = v;
+                           return v;
+                        }
+                    });
+                 */
                 val objectTemplate = object : PlatformObject {}
-                val listTemplate = object : PlatformList {
-                    override fun <T : Proxy> proxy(klass: KClass<T>): T = proxy(this, klass)
-                }
-                val mapTemplate = object : PlatformMap {
-                    override fun <T : Proxy> proxy(klass: KClass<T>): T = proxy(this, klass)
-                }
+                val listTemplate = object : PlatformList {}
+                val mapTemplate = object : PlatformMap {}
                 val dataViewTemplate = object : PlatformDataView {
-                    override fun <T : Proxy> proxy(klass: KClass<T>): T = proxy(this, klass)
+                    override val byteArray: ByteArray
+                        get() = TODO()
+                    override val byteLength: Int
+                        get() = 0
+                    override val byteOffset: Int
+                        get() = 0
+                    override fun getFloat32(byteOffset: Int, littleEndian: Boolean): Float = 0.0f
+                    override fun setFloat32(byteOffset: Int, value: Float, littleEndian: Boolean) {}
+                    override fun getFloat64(byteOffset: Int, littleEndian: Boolean): Double = 0.0
+                    override fun setFloat64(byteOffset: Int, value: Double, littleEndian: Boolean) {}
+                    override fun getInt8(byteOffset: Int): Byte = 0
+                    override fun setInt8(byteOffset: Int, value: Byte) {}
+                    override fun getInt16(byteOffset: Int, littleEndian: Boolean): Short = 0
+                    override fun setInt16(byteOffset: Int, value: Short, littleEndian: Boolean) {}
+                    override fun getInt32(byteOffset: Int, littleEndian: Boolean): Int = 0
+                    override fun setInt32(byteOffset: Int, value: Int, littleEndian: Boolean) {}
+                    override fun getInt64(byteOffset: Int, littleEndian: Boolean): Int64 = Int64(0)
+                    override fun setInt64(byteOffset: Int, value: Int64, littleEndian: Boolean) {}
                 }
                 val symbolTemplate = object : Symbol {}
                 val weakRefTemplate = object : WeakRef<Int> {
@@ -107,8 +145,7 @@ actual class Platform {
                 copyPrototypeToPrototype(JsInt64(), js("BigInt(0)").unsafeCast<Any>())
                 // Patch the Int64::class, so that it works as expected (it should only detect BigInt!)
                 val i64Class = Int64::class
-                js(
-                    """
+                js("""
                     var pt = Object.getPrototypeOf(i64Class);
                     var keys = Object.getOwnPropertyNames(pt);
                     var isInstanceOfName = null;
@@ -122,18 +159,128 @@ actual class Platform {
                     //       but we only want to overload the one of Int64::class!
                     i64Class[isInstanceOfName] = function(value) {
                       return value != null && typeof value.valueOf()==="bigint";
-                    };"""
-                )
+                    };
+                """)
                 return true
             }
             return false
+        }
+
+        private val byConstructor: HashMap<JsClass<*>, JsPlatformType<*>> = HashMap()
+
+        /**
+         * Query the [JsPlatformType] instance for the given full qualified name.
+         * @param name the full qualified name of a type.
+         * @return the [JsPlatformType].
+         * @since 3.0
+         */
+        @Suppress("UNCHECKED_CAST")
+        @JsStatic
+        actual fun <T: Any> forName(name: String): PlatformType<T>? {
+            var pType: JsPlatformType<T>? = JsPlatformType.byName[name] as JsPlatformType<T>?
+            if (pType != null) return pType
+            pType = forNameAlias[name] as JsPlatformType<T>?
+            if (pType != null) return pType
+
+            @Suppress("CanBeVal") //
+            var instance: T? = null
+            js("""var i=0; var p=name.split("."); var k=globalThis;
+while (k && i<p.length) k=k[p[i++]];
+if (typeof k==='function') instance=Object.create(k.prototype);""")
+            if (instance == null) return null
+            pType = forInstance(instance).unsafeCast<JsPlatformType<T>>()
+            pType.name = name
+            return pType
+        }
+
+        @JsStatic
+        actual fun forJsonType(jsonType: String?): AnyPlatformTypeList {
+            val all = JsPlatformType.byJsonType[jsonType]
+            return if (all != null) AnyPlatformTypeList(*all) else AnyPlatformTypeList()
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        @JsStatic
+        actual fun <T> forFirstJsonType(jsonType: String?, type: PlatformType<T>): PlatformType<T>? {
+            val foundTypes = JsPlatformType.byJsonType[jsonType] ?: return null
+            for (foundType in foundTypes) {
+                if (foundType.isAssignableTo(type)) {
+                    return foundType as PlatformType<T>
+                }
+            }
+            return null
+        }
+
+        /**
+         * Query the [JsPlatformType] instance for the given Kotlin class.
+         * @param kClass the Kotlin class for which to return the [JsPlatformType].
+         * @return the [JsPlatformType].
+         * @since 3.0
+         */
+        @Suppress("NON_EXPORTABLE_TYPE")
+        @JsStatic
+        actual fun <T: Any> forKClass(kClass: KClass<T>): PlatformType<T> = forJsClass(kClass.js)
+
+        /**
+         * Query the [JsPlatformType] instance for the given JavaScript constructor.
+         * @param constructor the JavaScript constructor for which to return the [JsPlatformType].
+         * @return the [JsPlatformType].
+         * @since 3.0
+         */
+        @Suppress("UNCHECKED_CAST")
+        @JsStatic
+        fun <T: Any> forJsClass(constructor: JsClass<T>): JsPlatformType<T> {
+            var pType: JsPlatformType<T>? = byConstructor[constructor] as JsPlatformType<T>?
+            if (pType != null) return pType
+            pType = JsPlatformType(constructor)
+            byConstructor[pType.jsClass] = pType
+            return pType
+        }
+
+        /**
+         * Query the [JsPlatformType] of the given instance.
+         * @param instance the instance for which to return the [JsPlatformType].
+         * @return the [JsPlatformType].
+         * @since 3.0
+         */
+        @Suppress("UNCHECKED_CAST")
+        @JsStatic
+        actual fun <T: Any> forInstance(instance: T): PlatformType<T> {
+            val constructor: JsClass<T> = js("instance.constructor").unsafeCast<JsClass<T>>()
+            val pType: JsPlatformType<T>? = byConstructor[constructor] as JsPlatformType<T>?
+            if (pType != null) return pType
+            return forKClass(instance::class as KClass<T>)
+        }
+
+        private val IDENTITY_HASH_CODE_SYMBOL = Symbols.forName("identityHashCode")
+        private var nextIdentityHashCode = 1
+
+        @JsStatic
+        actual fun identityHashCode(obj: Any?): Int {
+            if (obj == null) return 0
+            val primitive = unboxPrimitiveOrNull(obj)
+            if (primitive != null) {
+                val type = jsTypeOf(primitive)
+                if (type == "boolean") return if (primitive.unsafeCast<Boolean>()) 1 else 0
+                if (type == "number") return primitive.unsafeCast<Double>().toInt()
+                if (type == "string") return primitive.unsafeCast<String>().hashCode()
+                if (type == "bigint") return primitive.unsafeCast<Int64>().hashCode()
+                if (type == "symbol") return primitive.unsafeCast<Symbol>().hashCode()
+                throw generalException("Found unknown primitive type: $primitive")
+            }
+            var hashCode = obj.asDynamic()[IDENTITY_HASH_CODE_SYMBOL] as Int?
+            if (hashCode == null) {
+                hashCode = nextIdentityHashCode++
+                obj.asDynamic()[IDENTITY_HASH_CODE_SYMBOL] = hashCode
+            }
+            return hashCode
         }
 
         @JsStatic
         actual val UNDEFINED: Any = js("undefined").unsafeCast<Any>()
 
         @JsStatic
-        actual val DEFAULT_SYMBOL = symbol("com.here.naksha.lib.nak")
+        actual val DEFAULT_SYMBOL = js("Symbol.for(\"com.here.naksha\")").unsafeCast<Symbol>()
 
         @JsStatic
         actual val ITERATOR: Symbol = js("Symbol.iterator").unsafeCast<Symbol>()
@@ -148,15 +295,22 @@ actual class Platform {
         actual val MAX_SAFE_INT: Double = 9007199254740991.0
 
         @JsStatic
+        actual val MAX_SAFE_INT64: Int64 = js("BigInt('9007199254740991')").unsafeCast<Int64>()
+
+        @JsStatic
         actual val MIN_SAFE_INT: Double = -9007199254740991.0
+
+        @JsStatic
+        actual val MIN_SAFE_INT64: Int64 = js("BigInt('-9007199254740991')").unsafeCast<Int64>()
 
         @JsStatic
         actual val EPSILON: Double = js("Number.EPSILON").unsafeCast<Double>()
 
         @JsStatic
-        actual fun intern(s: String, cd: Boolean): String = js("(cd ? s.normalize('NFC') : s.normalize('NFKC'))").unsafeCast<String>()
+        actual val forNameAlias: AtomicMap<String, PlatformType<*>> = AtomicMap()
 
-        private fun symbol(key: String?): Symbol = js("(key ? Symbol.for(key) : Symbol())").unsafeCast<Symbol>()
+        @JsStatic
+        actual fun intern(s: String, cd: Boolean): String = js("(cd ? s.normalize('NFC') : s.normalize('NFKC'))").unsafeCast<String>()
 
         @JsStatic
         actual fun newMap(vararg entries: Any?): PlatformMap {
@@ -173,7 +327,7 @@ actual class Platform {
         }
 
         @JsStatic
-        actual fun <K : Any, V : Any> newAtomicMap(): AtomicMap<K, V> = JsAtomicMap()
+        actual fun <K, V> newAtomicMap(): AtomicMap<K, V> = JsAtomicMap()
 
         @JsStatic
         actual fun <R: Any> newAtomicRef(startValue: R?): AtomicRef<R> = JsAtomicRef(startValue)
@@ -204,6 +358,9 @@ actual class Platform {
         }
 
         @JsStatic
+        actual fun newArray(capacity: Int): PlatformList = js("[]").unsafeCast<PlatformList>()
+
+        @JsStatic
         actual fun newByteArray(size: Int): ByteArray = ByteArray(size)
 
         @JsStatic
@@ -226,11 +383,56 @@ actual class Platform {
 
         @JsStatic
         actual fun unbox(value: Any?): Any? {
-            if (value == null) return value
+            if (value == null) return null
             if (value is Proxy) return value.platformObject()
             if (value is JsEnum) return value.value
-            return if (isScalar(value)) value.asDynamic().valueOf() else value
+            return unboxPrimitive(value)
         }
+
+        /**
+         * Unbox primitive.
+         *
+         * @param value The value that should be unboxed.
+         * @return the unboxed primitive, if [value] is a boxed primitive; [value] otherwise.
+         * @since 3.0
+         */
+        internal fun unboxPrimitive(value: Any?): Any? {
+            if (value is Long) return Int64(value) //
+            return js(
+                """switch (Object.prototype.toString.call(value)) {
+case '[object BigInt]':  return BigInt.prototype.valueOf.call(value);
+case '[object Number]':  return Number.prototype.valueOf.call(value);
+case '[object String]':  return String.prototype.valueOf.call(value);
+case '[object Boolean]': return Boolean.prototype.valueOf.call(value);
+case '[object Symbol]':  return Symbol.prototype.valueOf.call(value);
+default:                 return value;
+}""")
+        }
+
+        /**
+         * Unbox primitive.
+         *
+         * @param value The value that should be unboxed.
+         * @return the unboxed primitive, if [value] is a boxed primitive; `null` otherwise.
+         * @since 3.0
+         */
+        internal fun unboxPrimitiveOrNull(value: Any?): Any? {
+            if (value is Long) return Int64(value) //
+            return js(
+                """switch (Object.prototype.toString.call(value)) {
+case '[object BigInt]':  return BigInt.prototype.valueOf.call(value);
+case '[object Number]':  return Number.prototype.valueOf.call(value);
+case '[object String]':  return String.prototype.valueOf.call(value);
+case '[object Boolean]': return Boolean.prototype.valueOf.call(value);
+case '[object Symbol]':  return Symbol.prototype.valueOf.call(value);
+default:                 return null;
+}""")
+        }
+
+        @Suppress("ACTUAL_ANNOTATIONS_NOT_MATCH_EXPECT")
+        @JsStatic
+        actual fun <T> box(raw: Any?, type: PlatformType<T>, alternative: T?, init: Fn0<T?>?): T?
+            = boxInto(raw, type, alternative, init)
 
         @JsStatic
         actual fun toInt(value: Any): Int = when (value) {
@@ -267,9 +469,12 @@ actual class Platform {
         @Suppress("NON_EXPORTABLE_TYPE")
         actual fun longToInt64(value: Long): Int64 {
             val view = convertView
-            view.setInt32(0, (value ushr 32).toInt())
-            view.setInt32(4, value.toInt())
-            return view.getBigInt64(0).unsafeCast<Int64>()
+            val high32: Int = (value ushr 32).toInt()
+            val low32: Int = value.toInt()
+            view.setInt32(0, high32)
+            view.setInt32(4, low32)
+            val v = view.getBigInt64(0).unsafeCast<Int64>()
+            return v
         }
 
         @JsStatic
@@ -301,10 +506,27 @@ actual class Platform {
             js("o && (typeof o.valueOf()==='number' || typeof o.valueOf()==='bigint')").unsafeCast<Boolean>()
 
         @JsStatic
+        actual fun isPlatformObject(o: Any?) : Boolean {
+            val value = unbox(o)
+            return js("""(value !== null && (typeof value === 'object' && (
+    Array.isArray(value) ||
+    value instanceof Map ||
+    value instanceof DataView ||
+    Object.prototype.toString.call(value) === '[object Object]'
+)))""").unsafeCast<Boolean>()
+        }
+
+        @JsStatic
+        actual fun asPlatformObject(o: Any?): PlatformObject {
+            if (o == null) throw illegalArg("Cannot cast null to PlatformObject")
+            return o.unsafeCast<PlatformObject>()
+        }
+
+        @JsStatic
         actual fun isScalar(o: Any?): Boolean {
             if (o == null) return true
             return when (jsTypeOf(o.asDynamic().valueOf())) {
-                "string", "number", "bigint", "boolean" -> true
+                "string", "number", "bigint", "boolean", "symbol" -> true
                 else -> false
             }
         }
@@ -337,26 +559,6 @@ actual class Platform {
 
         private val assignables = HashMap<KClass<*>, HashMap<KClass<*>, Boolean>>()
 
-        @Suppress("NON_EXPORTABLE_TYPE")
-        @JsStatic
-        actual fun isAssignable(source: KClass<*>, target: KClass<*>): Boolean {
-            var assignable = assignables[target]
-            if (assignable == null) {
-                assignable = HashMap()
-                assignables[target] = assignable
-            }
-            var isAssignable = assignable[source]
-            if (isAssignable == null) {
-                isAssignable = target.isInstance(allocateInstance(source))
-                assignable[source] = isAssignable
-            }
-            return isAssignable
-        }
-
-        @Suppress("NON_EXPORTABLE_TYPE")
-        @JsStatic
-        actual fun isProxyKlass(klass: KClass<*>): Boolean = isAssignable(klass, Proxy::class)
-
         /**
          * Returns the [KClass] created **by** the given constructor. This is mainly for JavaScript, it will simply query a cached and if not
          * found, it will create an instance, query the [KClass] using [klassOf] and add it into the cache. Therefore, the cost of
@@ -369,22 +571,6 @@ actual class Platform {
         @JsStatic
         fun <T : Any> klassFor(constructor: KFunction<T>): KClass<out T>
             = (js("Object.create(constructor.prototype)") as T)::class
-
-        @Suppress("NON_EXPORTABLE_TYPE", "UNCHECKED_CAST")
-        @JsStatic
-        actual fun <T : Any> klassForName(name: String): KClass<T> {
-            @Suppress("CanBeVal") //
-            var instance: T? = null
-            js("""var i=0; var p=name.split("."); var k=globalThis;
-while (k && i<p.length) k=k[p[i++]];
-if (typeof k==='function') instance=Object.create(k.prototype);""")
-            if (instance == null) throw IllegalArgumentException("Class not found '$name'")
-            return instance::class as KClass<T>
-        }
-
-        @Suppress("NON_EXPORTABLE_TYPE", "UNCHECKED_CAST")
-        @JsStatic
-        actual fun <T : Any> klassOf(o: T): KClass<T> = o::class as KClass<T>
 
         /**
          * The KClass for [Any].
@@ -471,53 +657,6 @@ if (typeof k==='function') instance=Object.create(k.prototype);""")
         @JsStatic
         actual fun isNil(any: Any?): Boolean = js("any===null || any===undefined").unsafeCast<Boolean>()
 
-        /**
-         * Creates a new instance of the given type.
-         * @param klass The type of which to create a new instance.
-         * @return The new instance.
-         * @throws IllegalArgumentException If the given class does not have a parameterless constructor.
-         */
-        @Suppress("NON_EXPORTABLE_TYPE")
-        @JsStatic
-        actual fun <T : Any> newInstanceOf(klass: KClass<out T>): T {
-            try {
-                return klass.createInstance()
-            } catch (e: Exception) {
-                if (e is IllegalArgumentException) throw e
-                throw IllegalArgumentException(e)
-            }
-        }
-
-        /**
-         * Creates a new instance of the given type, bypassing the constructor, so it returns the uninitialized class.
-         * @param klass The type of which to create a new instance.
-         * @return The new instance.
-         */
-        @Suppress("NON_EXPORTABLE_TYPE")
-        @JsStatic
-        actual fun <T : Any> allocateInstance(klass: KClass<out T>): T {
-            // We can bypass the constructor, but before we do this, we need to ensure that the companion object
-            // is created, and all other things of the class are ready. We can only do this by initializing the class!
-            initializeKlass(klass)
-            val constructor = klass.js
-            return js("Object.create(constructor.prototype)").unsafeCast<T>()
-        }
-
-        private val initializedClasses = HashMap<KClass<*>, Boolean>()
-
-        @Suppress("NON_EXPORTABLE_TYPE")
-        @JsStatic
-        actual fun initializeKlass(klass: KClass<*>) {
-            if (!initializedClasses.containsKey(klass)) {
-                try {
-                    klass.createInstance()
-                } catch (ignore: Throwable) {
-                } finally {
-                    initializedClasses[klass] = true
-                }
-            }
-        }
-
         @JsStatic
         actual fun <T> copy(obj: T?, recursive: Boolean): T? = js("""
 if (typeof obj !== 'object' || obj === null) return obj;
@@ -565,7 +704,7 @@ return obj;
         @JsName("toJsonWithOptions")
         @JsStatic
         actual fun toJSON(obj: Any?, options: ToJsonOptions): String {
-            val o = if (obj is Proxy) obj.platformObject() else obj
+            val o = unbox(obj)
             return js(
                 """JSON.stringify(o, function(k, v) {
   if (!v) return v;
@@ -578,11 +717,17 @@ return obj;
 
         @JsName("fromJson")
         @JsStatic
-        actual fun fromJSON(json: String): Any? = fromJSON(json, FromJsonOptions.DEFAULT)
+        actual fun fromJSON(json: String): Any?
+            = fromJSON(json, Any_TYPE, FromJsonOptions.DEFAULT)
 
-        @JsName("fromJsonWithOptions")
+        @JsName("fromJsonAs")
         @JsStatic
-        actual fun fromJSON(json: String, options: FromJsonOptions): Any? = js(
+        actual fun <T> fromJSON(json: String, type: PlatformType<T>): T?
+            = fromJSON(json, type, FromJsonOptions.DEFAULT)
+
+        @JsName("fromJsonAsWithOptions")
+        @JsStatic
+        actual fun <T> fromJSON(json: String, type: PlatformType<T>, options: FromJsonOptions): T? = box(js(
             """JSON.parse(json, function(k, v) {
   if (!v) return v;
   if (typeof v === "string" && v.startsWith("data:bigint")) {
@@ -592,7 +737,7 @@ return obj;
   if (!Array.isArray(v) && typeof v === "object") return new Map(Object.entries(v));
   return v;
 })"""
-        ).unsafeCast<Any?>()
+        ).unsafeCast<Any?>(), type)
 
         /**
          * Convert the given platform native objects recursively into multi-platform objects. So all maps are corrected to [PlatformMap],
@@ -619,28 +764,6 @@ return obj;
         @JsStatic
         actual fun toPlatform(obj: Any?, exporters: List<PlatformExporter>): Any? {
             TODO("Not yet implemented toPlatform")
-        }
-
-        /**
-         * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
-         * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
-         * @param pobject The object at which to query for the proxy.
-         * @param klass The proxy class.
-         * @param doNotOverride If _true_, do not override existing symbols bound to incompatible types, but throw an [IllegalStateException]
-         * @return The proxy instance.
-         * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
-         */
-        @Suppress("NON_EXPORTABLE_TYPE")
-        @JsStatic
-        actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
-            val o = pobject.asDynamic()
-            val sym = Symbols.of(klass)
-            val p = o[sym]
-            if (klass.isInstance(p)) return p.unsafeCast<T>()
-            check(!doNotOverride || p !is Proxy) { "new proxy forbidden, because doNotOverride set" }
-            val proxy = klass.createInstance()
-            proxy.bind(pobject, sym)
-            return proxy
         }
 
         /**

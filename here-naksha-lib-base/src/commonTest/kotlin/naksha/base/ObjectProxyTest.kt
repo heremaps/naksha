@@ -1,12 +1,13 @@
 package naksha.base
 
+import naksha.base.Platform.PlatformCompanion.forKClass
 import kotlin.test.*
 
 class Foo : AnyObject() {
     companion object {
-        val NAME = NotNullProperty<Foo, String>(String::class) { _, _ -> "Bernd" }
-        val AGE = NotNullProperty<Foo, Int>(Int::class) { _, _ -> 0 }
-        val XYZ = NullableProperty<Foo, String>(String::class, name = "@ns:com:here:xyz")
+        val NAME = NotNullProperty<Foo, String>(String_TYPE) { _, _ -> "Bernd" }
+        val AGE = NotNullProperty<Foo, Int>(Int_Type) { _, _ -> 0 }
+        val XYZ = NullableProperty<Foo, String>(String_TYPE, name = "@ns:com:here:xyz")
     }
 
     var name: String by NAME
@@ -16,8 +17,8 @@ class Foo : AnyObject() {
 
 class Bar : AnyObject() {
     companion object {
-        val FOO = NotNullProperty<Bar, Foo>(Foo::class)
-        val FOO2 = NullableProperty<Bar, Foo>(Foo::class)
+        val FOO = NotNullProperty<Bar, Foo>(forKClass(Foo::class))
+        val FOO2 = NullableProperty<Bar, Foo>(forKClass(Foo::class))
     }
 
     var foo: Foo by FOO
@@ -41,9 +42,11 @@ class ObjectProxyTest {
         val bar = Bar()
         val foo = bar.foo
         assertNotNull(foo)
-        assertSame(foo, bar.foo)
+        val foo2 = bar.foo
+        assertSame(foo, foo2)
         bar.foo.age = 12
-        assertEquals(12, bar.foo.age)
+        val age = bar.foo.age
+        assertEquals(12, age)
         assertFalse(bar.foo.hasRaw("name"))
         assertEquals("Bernd", bar.foo.name)
         assertTrue(bar.foo.hasRaw("name"))

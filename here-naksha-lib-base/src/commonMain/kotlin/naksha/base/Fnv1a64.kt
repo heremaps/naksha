@@ -13,7 +13,7 @@ import kotlin.jvm.JvmStatic
  */
 @Suppress("DuplicatedCode")
 @JsExport
-class Fnv1a64 {
+class Fnv1a64 private constructor() {
     companion object Fnv1a64Companion {
 
         /**

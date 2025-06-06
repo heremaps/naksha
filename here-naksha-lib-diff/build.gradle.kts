@@ -10,34 +10,11 @@ plugins {
 description = gatherDescription()
 
 kotlin {
-    jvm {}
-    js(IR) {
-        outputModuleName = "naksha_diff"
-        useEsModules()
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            target.set("es2015")
-        }
-        nodejs {
-            compilerOptions {
-                moduleKind = JsModuleKind.MODULE_ES
-                moduleName = "naksha_diff"
-                sourceMap = true
-                useEsClasses = true
-                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
-                sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
-            }
-            generateTypeScriptDefinitions()
-            binaries.library()
-            binaries.executable()
-        }
-    }
-
     sourceSets {
         commonMain {
             dependencies {
                 implementation(kotlin("stdlib"))
-                implementation(libs.kotlinx.datetime)
+                api(libs.kotlinx.datetime)
                 implementation(project(":here-naksha-lib-base"))
             }
         }
@@ -63,6 +40,29 @@ kotlin {
             }
         }
     }
+
+    jvm {}
+    js(IR) {
+        outputModuleName = "naksha_diff"
+        useEsModules()
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        compilerOptions {
+            target.set("es2015")
+        }
+        nodejs {
+            compilerOptions {
+                moduleKind = JsModuleKind.MODULE_ES
+                moduleName = "naksha_diff"
+                sourceMap = true
+                useEsClasses = true
+                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
+                sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
+            }
+            generateTypeScriptDefinitions()
+            binaries.library()
+            binaries.executable()
+        }
+    }
 }
 
 configure<JavaPluginExtension> {
@@ -85,8 +85,4 @@ tasks {
         useJUnitPlatform()
         maxHeapSize = "8g"
     }
-}
-
-tasks.matching { it.name == "jsNodeTest" }.configureEach {
-    enabled = false
 }

@@ -47,7 +47,7 @@ import naksha.geo.ProxyGeoUtil;
 import naksha.geo.SpGeometry;
 import naksha.model.Action;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;

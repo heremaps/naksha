@@ -3,7 +3,9 @@ package naksha.base
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import naksha.base.Platform.PlatformCompanion.forKClass
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
@@ -13,6 +15,16 @@ import kotlin.jvm.JvmField
 @Suppress("OPT_IN_USAGE", "unused")
 @JsExport
 open class Epoch(val millis: Int64 = Platform.currentMillis()) {
+    companion object EpochCompanion {
+        /**
+         * The [PlatformType] of [Epoch].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<Epoch> = forKClass(Epoch::class).withPackageName(PACKAGE_NAME)
+    }
+
     private val dateTime = Instant.fromEpochMilliseconds(millis.toLong()).toLocalDateTime(TimeZone.UTC)
 
     /**

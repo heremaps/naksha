@@ -5,13 +5,13 @@ package naksha.model.objects
 import naksha.base.AnyList
 import naksha.base.Int64
 import naksha.base.NotNullProperty
-import naksha.geo.SpBoundingBox
+import naksha.geo.GeoBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.jbon.JbDictionary
 import naksha.jbon.JbEncoder
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaException
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -40,7 +40,7 @@ open class NakshaDictionary() : NakshaFeature() {
     override fun withFeatureNumber(value: Int64): NakshaDictionary = super.withFeatureNumber(value) as NakshaDictionary
     override fun withType(value: String): NakshaDictionary = super.withType(value) as NakshaDictionary
     override fun withFeatureType(value: String): NakshaDictionary = super.withFeatureType(value) as NakshaDictionary
-    override fun withBbox(value: SpBoundingBox?): NakshaDictionary = super.withBbox(value) as NakshaDictionary
+    override fun withBbox(value: GeoBoundingBox?): NakshaDictionary = super.withBbox(value) as NakshaDictionary
     override fun withGeometry(value: SpGeometry?): NakshaDictionary = super.withGeometry(value) as NakshaDictionary
     override fun withReferencePoint(value: SpPoint?): NakshaDictionary = super.withReferencePoint(value) as NakshaDictionary
     override fun withProperties(value: NakshaProperties): NakshaDictionary = super.withProperties(value) as NakshaDictionary

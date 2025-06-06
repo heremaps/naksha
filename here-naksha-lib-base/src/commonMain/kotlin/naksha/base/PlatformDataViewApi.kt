@@ -7,7 +7,7 @@ package naksha.base
  * @since 3.0.0
  */
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
-expect class PlatformDataViewApi {
+expect class PlatformDataViewApi private constructor() {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView
     companion object PlatformDataViewApiCompanion {
         /**

@@ -12,7 +12,7 @@ import kotlin.jvm.JvmStatic
  */
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
-class CodePoints {
+class CodePoints private constructor() {
     companion object CodePointsCompanion {
         private const val MIN_SUPPLEMENTARY_CODE_POINT = 0x10000
         private const val MAX_CODE_POINT = 0x10FFFF

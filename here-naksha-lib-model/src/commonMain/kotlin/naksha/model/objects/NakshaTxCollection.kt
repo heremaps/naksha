@@ -9,8 +9,8 @@ import naksha.model.Action
 import naksha.model.Action.Action_C.CREATED
 import naksha.model.Action.Action_C.DELETED
 import naksha.model.Action.Action_C.UPDATED
-import naksha.model.NakshaError
-import naksha.model.NakshaException
+import naksha.base.NakshaError
+import naksha.base.NakshaException
 import naksha.model.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -137,7 +137,8 @@ class NakshaTxCollection() : AnyObject() {
      */
     fun addValues(counts: NakshaTxCollection): NakshaTxCollection {
         if (id != counts.id) {
-            throw NakshaException(NakshaError.ILLEGAL_ARGUMENT,
+            throw NakshaException(
+                NakshaError.ILLEGAL_ARGUMENT,
                 "The given 'counts' is for another collection: ${counts.id}")
         }
         this.created += counts.created

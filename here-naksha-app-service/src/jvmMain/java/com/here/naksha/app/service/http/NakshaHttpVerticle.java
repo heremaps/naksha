@@ -96,7 +96,7 @@ import naksha.base.Platform;
 import naksha.base.ToJsonOptions;
 import naksha.model.BinaryResponse;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.NotModifiedResponse;
 import naksha.model.StreamInfo;
 import naksha.model.XyzFeatureCollection;

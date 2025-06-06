@@ -1,7 +1,7 @@
 package naksha.model.request.notification
 
 import naksha.model.request.ErrorResponse
-import naksha.model.NakshaError
+import naksha.base.NakshaError
 import naksha.base.Int64
 import naksha.base.MapProxy
 import kotlin.js.ExperimentalJsExport

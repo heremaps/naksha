@@ -1,11 +1,12 @@
 package naksha.base
 
+import naksha.base.Platform.PlatformCompanion.forKClass
 import kotlin.test.*
 
-internal class TestMapStringString : MapProxy<String, String>(String::class, String::class)
-internal class TestStringList : ListProxy<String>(String::class)
+internal class TestMapStringString : MapProxy<String, String>(String_TYPE, String_TYPE)
+internal class TestStringList : ListProxy<String>(String_TYPE)
 
-class P_MapTest {
+class MapProxyTest {
 
     @Test
     fun createMapWithSomeKeysAndValues() {
@@ -23,10 +24,10 @@ class P_MapTest {
         // The order need to the insertion order!
 
         // Test keys.
-        val keyIt = PlatformMapApi.map_key_iterator(map.platformObject())
+        val keyIt: PlatformIterator<Any> = PlatformMapApi.map_key_iterator(map.platformObject())
         assertNotNull(keyIt)
         apply {
-            var next = keyIt.next()
+            var next: PlatformIteratorResult<Any> = keyIt.next()
             assertNotNull(next)
             assertFalse(next.done)
             assertEquals("foo", next.value)
@@ -35,13 +36,18 @@ class P_MapTest {
             assertNotNull(next)
             assertFalse(next.done)
             assertEquals("bar", next.value)
+
+            next = keyIt.next()
+            assertNotNull(next)
+            assertTrue(next.done)
+            assertNull(next.value)
         }
 
         // Test values.
-        val valueIt = PlatformMapApi.map_value_iterator(map.platformObject())
+        val valueIt: PlatformIterator<Any?> = PlatformMapApi.map_value_iterator(map.platformObject())
         assertNotNull(keyIt)
         apply {
-            var next = valueIt.next()
+            var next: PlatformIteratorResult<Any?> = valueIt.next()
             assertNotNull(next)
             assertFalse(next.done)
             assertEquals("world", next.value)
@@ -50,18 +56,24 @@ class P_MapTest {
             assertNotNull(next)
             assertFalse(next.done)
             assertEquals("hello", next.value)
+
+            next = valueIt.next()
+            assertNotNull(next)
+            assertTrue(next.done)
+            assertNull(next.value)
         }
 
         // Test entries.
-        val entryIt = PlatformMapApi.map_iterator(map.platformObject())
+        val entryIt: PlatformIterator<PlatformList> = PlatformMapApi.map_iterator(map.platformObject())
         assertNotNull(entryIt)
         apply {
-            var next = entryIt.next()
+            var next: PlatformIteratorResult<PlatformList> = entryIt.next()
             assertNotNull(next)
             assertFalse(next.done)
             var value = next.value
             check(value != null)
-            var proxy = value.proxy(TestStringList::class)
+            val type: PlatformType<TestStringList> = forKClass(TestStringList::class)
+            var proxy = value.proxy(type)
             assertEquals("foo", proxy[0])
             assertEquals("world", proxy[1])
 
@@ -69,7 +81,7 @@ class P_MapTest {
             assertNotNull(next)
             value = next.value
             check(value != null)
-            proxy = value.proxy(TestStringList::class)
+            proxy = value.proxy(type)
             assertEquals("bar", proxy[0])
             assertEquals("hello", proxy[1])
 

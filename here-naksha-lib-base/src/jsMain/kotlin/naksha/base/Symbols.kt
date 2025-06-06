@@ -3,7 +3,6 @@
 package naksha.base
 
 import naksha.base.Platform.PlatformCompanion.DEFAULT_SYMBOL
-import kotlin.reflect.KClass
 
 /**
  * A singleton that grants access to symbols. Symbols are a way to bind proxies (and other hidden data) to platform objects.
@@ -21,33 +20,31 @@ actual class Symbols {
         actual fun newInstance(description: String?): Symbol = js("Symbol(description)").unsafeCast<Symbol>()
 
         /**
-         * Returns the symbol for the given string from the global registry. It is recommended to use a package name, for example
-         * _com.here.naksha_ is used for [DEFAULT_SYMBOL], the default Naksha multi-platform library.
+         * Returns the symbol for the given string from the global registry. It is recommended to use a package name, for example _com.here.naksha_ is used for [DEFAULT_SYMBOL], the default Naksha multi-platform library.
          * @param key The symbol key; if _null_, a random symbol not part of the registry is created.
          * @return The existing symbol, if no such symbol exist yet, creates a new one.
          */
         @JsStatic
-        actual fun forName(key: String?): Symbol = js("Symbol.for(description)").unsafeCast<Symbol>()
+        actual fun forName(key: String?): Symbol = js("(key ? Symbol.for(key) : Symbol())").unsafeCast<Symbol>()
 
         private var symbolResolvers: List<SymbolResolver>? = null
 
         /**
-         * Returns the default symbol to bind the given [KClass] against. If no symbol is returned by the registered symbol resolvers,
-         * it returns [DEFAULT_SYMBOL].
-         * @param klass The [KClass] for which to return the default symbol.
-         * @return The default symbol to bind the given [KClass] against.
+         * Returns the default [symbol][Symbol] to bind the given [JsPlatformType] against. If no [symbol][Symbol] is found by any of the registered [symbol resolvers][SymbolResolver], this method returns [DEFAULT_SYMBOL].
+         * @param type The [JsPlatformType] for which to return the default [symbol][Symbol].
+         * @return The default [symbol][Symbol] to bind the given [JsPlatformType] against.
+         * @since 3.0
          */
-        @Suppress("NON_EXPORTABLE_TYPE")
         @JsStatic
-        actual fun <T : Any> of(klass: KClass<out T>): Symbol {
+        actual fun of(type: PlatformType<*>): Symbol {
             val resolvers = symbolResolvers
             if (resolvers != null) {
                 for (resolver in resolvers) {
                     try {
-                        val symbol = resolver.call(klass)
+                        val symbol = resolver.call(type)
                         if (symbol != null) return symbol
                     } catch (e: Exception) {
-                        Platform.logger.error("The symbol resolver raised an exception: {}", e.stackTraceToString())
+                        Platform.logger.error("The symbol resolver raised an exception: {}", e)
                     }
                 }
             }

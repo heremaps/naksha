@@ -4,7 +4,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import org.jetbrains.annotations.NotNull;
 
 public class HttpXyzErrorResponse extends XyzResponse {

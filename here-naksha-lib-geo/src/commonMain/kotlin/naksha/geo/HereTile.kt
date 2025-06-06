@@ -1,10 +1,15 @@
 @file:OptIn(ExperimentalJsExport::class)
+@file:Suppress("OPT_IN_USAGE")
 
 package naksha.geo
 
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 import kotlin.math.abs
 import kotlin.math.min
@@ -47,6 +52,14 @@ data class HereTile(val intKey: Int) {
     constructor(latitude: Double, longitude: Double, level: Int = 15) : this(convertLatLngToIntKey(latitude, longitude, level))
 
     companion object HereTileCompanion {
+        /**
+         * The [PlatformType] of [HereTile].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<HereTile> = forKClass(HereTile::class).withPackageName(PACKAGE_NAME)
+
         private fun assertIntKey(intKey: Int) {
             if (intKey < 1 || intKey > 1610612735) throw IllegalArgumentException("not a valid HERE Tile intKey: $intKey")
 

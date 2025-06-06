@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.NakshaError
 import naksha.model.*
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*

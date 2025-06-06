@@ -1,5 +1,6 @@
 package naksha.base
 
+import naksha.base.PlatformUtil.PlatformUtilCompanion.deepEquals
 import kotlin.test.Test
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotSame
@@ -20,16 +21,26 @@ class DeepEqualTest {
         obj1["array"] = arrayOf("a", "b", "c")
         obj2["array"] = arrayOf("a", "b", "c")
         assertNotEquals(obj1, obj2, "Check if Kotlin now perform deep equal comparison on array contents!")
-        assertTrue(PlatformUtil.deepEquals(obj1,obj2), "PlatformUtil.deepEqual() not working!")
+        assertTrue(deepEquals(obj1,obj2), "PlatformUtil.deepEqual() not working!")
+    }
+
+    @Test
+    fun testListOf() {
+        val obj1 = AnyObject()
+        val obj2 = AnyObject()
+        obj1["array"] = listOf(1,2)
+        obj2["array"] = listOf(1,2)
+        assertNotEquals(obj1, obj2, "Check if Kotlin now perform deep equal comparison on array contents!")
+        assertTrue(deepEquals(obj1,obj2), "PlatformUtil.deepEqual() not working!")
     }
 
     @Test
     fun nestedListInArrayInMap() {
         val obj1 = AnyObject()
         val obj2 = AnyObject()
-        obj1["array"] = arrayOf("a", arrayOf("x", AnyObject().addAll("foo","bar")), listOf(1,2))
-        obj2["array"] = arrayOf("a", arrayOf("x", AnyObject().addAll("foo","bar")), listOf(1,2))
+        obj1["array"] = arrayOf("a", arrayOf("x", MapProxy.addAll(AnyObject(), "foo", "bar")), listOf(1,2))
+        obj2["array"] = arrayOf("a", arrayOf("x", MapProxy.addAll(AnyObject(), "foo", "bar")), listOf(1,2))
         assertNotEquals(obj1, obj2, "Check if Kotlin now perform deep equal comparison on array contents!")
-        assertTrue(PlatformUtil.deepEquals(obj1,obj2), "PlatformUtil.deepEqual() not working!")
+        assertTrue(deepEquals(obj1,obj2), "PlatformUtil.deepEqual() not working!")
     }
 }

@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core;
 
-import static naksha.model.NakshaError.NOT_IMPLEMENTED;
+import static naksha.base.NakshaError.NOT_IMPLEMENTED;
 
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;

@@ -10,7 +10,7 @@ class ListProxyRemovalTest {
     @Test
     fun shouldRemoveInIterator(){
         // Given
-        val listProxy = ListProxy<String>( String::class)
+        val listProxy = ListProxy<String>(String_TYPE)
         listProxy.addAll( listOf(
             "one",
             "two",

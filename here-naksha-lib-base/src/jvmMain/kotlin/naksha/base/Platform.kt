@@ -1,7 +1,6 @@
 package naksha.base
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect
-import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.PropertyAccessor
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonFactoryBuilder
@@ -11,26 +10,19 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.module.kotlin.kotlinModule
-import naksha.base.Platform.PlatformCompanion.proxy
+import naksha.base.JvmPlatformType.PlatformTypeCompanion.jvmClassToPlatformType
+import naksha.base.fn.Fn0
 import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
-import java.lang.invoke.MethodHandles
-import java.lang.reflect.Method
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.text.Normalizer
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.round
 import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
-import kotlin.reflect.full.isSuperclassOf
-import kotlin.reflect.full.primaryConstructor
-
 
 /**
  * The JVM implementation of the static Naksha multi-platform singleton.
@@ -116,50 +108,34 @@ actual class Platform {
         private val int64ValueCache = arrayOfNulls<JvmInt64>(1 shl 8) // 256 * 8 = 1kb
 
         /**
-         * The cache for all declared symbols.
-         */
-        @JvmField
-        internal val symbolsCache = ConcurrentHashMap<String, Symbol>()
-
-        /**
          * The platform specific value of undefined.
          */
         @JvmField
         actual val UNDEFINED: Any = Object()
 
         /**
-         * The symbol (_com.here.naksha.lib.nak_) to store the default Naksha multi-platform types in.
+         * The symbol (_com.here.naksha_) to store the default Naksha multi-platform types in.
          */
         @JvmField
-        actual val DEFAULT_SYMBOL: Symbol = Symbols.forName("com.here.naksha.lib.nak")
+        actual val DEFAULT_SYMBOL: Symbol = Symbols.forName("com.here.naksha")
 
-        /**
-         * The maximum value of a 64-bit integer.
-         * @return The maximum value of a 64-bit integer.
-         */
         @JvmField
         actual val INT64_MAX_VALUE: Int64 = JvmInt64(Long.MAX_VALUE)
 
-        /**
-         * The minimum value of a 64-bit integer.
-         * @return The minimum value of a 64-bit integer.
-         */
         @JvmField
         actual val INT64_MIN_VALUE: Int64 = JvmInt64(Long.MIN_VALUE)
 
-        /**
-         * The minimum integer that can safely stored in a double.
-         * @return The minimum integer that can safely stored in a double.
-         */
         @JvmField
         actual val MAX_SAFE_INT: Double = 9007199254740991.0
 
-        /**
-         * The maximum integer that can safely stored in a double.
-         * @return The maximum integer that can safely stored in a double.
-         */
+        @JvmField
+        actual val MAX_SAFE_INT64: Int64 = Int64(9007199254740991L)
+
         @JvmField
         actual val MIN_SAFE_INT: Double = -9007199254740991.0
+
+        @JvmField
+        actual val MIN_SAFE_INT64: Int64 = Int64(-9007199254740991L)
 
         /**
          * The difference between 1 and the smallest floating point number greater than 1.
@@ -173,6 +149,9 @@ actual class Platform {
         @JvmField
         val unsafe: Unsafe
 
+        @JvmField
+        actual val forNameAlias: AtomicMap<String, PlatformType<*>> = AtomicMap()
+
         /**
          * The base-offset in a byte-array.
          */
@@ -181,95 +160,103 @@ actual class Platform {
 
         @JvmField
         internal val initialized = AtomicBoolean(false)
-
-        private val nonArgsConstuctorsCache: AtomicMap<KClass<out Any>, KFunction<Any>>
-        private val ensureClassInitialized: Method? // unsafe.ensureClassInitialized
-        private val lookupInstance: Any? // MethodHandles.lookup()
-        private val ensureInitialized: Method? // MethodHandles.lookup().ensureInitialized(klass);
-
         init {
             val unsafeConstructor = Unsafe::class.java.getDeclaredConstructor()
             unsafeConstructor.isAccessible = true
             unsafe = unsafeConstructor.newInstance()
             val someByteArray = ByteArray(8)
             baseOffset = unsafe.arrayBaseOffset(someByteArray.javaClass)
-            nonArgsConstuctorsCache = AtomicMap()
-
-            var _ensureClassInitialized: Method?
-            var _ensureInitialized: Method?
-            var _lookupInstance: Any?
-            try {
-                // Note: Before Java 15, `MethodHandles.lookup().ensureInitialized(klass)` does not exist, we need to use Unsafe!
-                _ensureClassInitialized = unsafe.javaClass.getMethod("ensureClassInitialized", Class::class.java)
-                _lookupInstance = null
-                _ensureInitialized = null
-            } catch (ignore: NoSuchMethodException) {
-                // In Java 23+ `Unsafe.ensureClassInitialized` does not exist, use `MethodHandles.lookup().ensureInitialized(klass)`!
-                _ensureClassInitialized = null
-                val lookupMethod = MethodHandles::class.java.getMethod("lookup")
-                _lookupInstance = lookupMethod.invoke(null)
-                _ensureInitialized = _lookupInstance.javaClass.getMethod("ensureInitialized", Class::class.java)
-            }
-            ensureClassInitialized = _ensureClassInitialized
-            lookupInstance = _lookupInstance
-            ensureInitialized = _ensureInitialized
         }
 
         @JvmStatic
-        actual fun initialize(): Boolean {
-            if (initialized.compareAndSet(false, true)) {
-                // TODO: Do we need to do anything?
-                return true
+        actual fun initialize(): Boolean = initialized.compareAndSet(false, true)
+
+        @Suppress("UNCHECKED_CAST")
+        @JvmStatic
+        actual fun <T : Any> forName(name: String): PlatformType<T>? {
+            val alias = forNameAlias[name]
+            if (alias != null) alias as PlatformType<T>
+            try {
+                val jvmClass = Class.forName(name, true, this::class.java.classLoader) as Class<T>
+                return forClass(jvmClass)
+            } catch (_: Exception) {
+                return null
             }
-            return false
         }
 
-        // TODO: Add cache and normalization!
         @JvmStatic
-        actual fun intern(s: String, cd: Boolean): String = s
-
-        @JvmStatic
-        actual fun isAssignable(source: KClass<*>, target: KClass<*>): Boolean = source.java.isAssignableFrom(target.java)
-
-        @JvmStatic
-        actual fun isProxyKlass(klass: KClass<*>): Boolean = Proxy::class.isSuperclassOf(klass)
-
-        @JvmStatic
-        actual fun <T : Any> klassForName(name: String): KClass<T> {
-            try {
-                @Suppress("UNCHECKED_CAST")
-                return (Class.forName(name, true, this::class.java.classLoader).kotlin) as KClass<T>
-            } catch (e: Exception) {
-                throw IllegalArgumentException("Class '$name' not found", e)
-            }
+        actual fun forJsonType(jsonType: String?): AnyPlatformTypeList {
+            val all = JvmPlatformType.jsonTypeToPlatformType[jsonType]
+            return if (all != null) AnyPlatformTypeList(*all) else AnyPlatformTypeList()
         }
 
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
-        actual fun <T : Any> klassOf(o: T): KClass<T> = o::class as KClass<T>
-
-        /**
-         * Returns the Kotlin class of the given Java class.
-         * @param javaClass The Java class.
-         * @return The Kotlin class.
-         * @see [proxy]
-         * @see [Proxy.proxy]
-         */
-        @JvmStatic
-        fun <T : Any> klassFor(javaClass: Class<T>): KClass<T> = javaClass.kotlin
-
-        /**
-         * Java specific helper, that accepts a Java class to proxy.
-         * @param javaClass The Java class.
-         * @return the proxy.
-         * @see [proxy]
-         * @see [Proxy.proxy]
-         */
-        @JvmStatic
-        fun <T : Proxy> javaProxy(any: PlatformObject?, javaClass: Class<T>): T? {
-            if (any == null) return null
-            return any.proxy(javaClass.kotlin)
+        actual fun <T> forFirstJsonType(jsonType: String?, type: PlatformType<T>): PlatformType<T>? {
+            val foundTypes = JvmPlatformType.jsonTypeToPlatformType[jsonType] ?: return null
+            for (foundType in foundTypes) {
+                if (foundType.isAssignableTo(type)) {
+                    return foundType as PlatformType<T>
+                }
+            }
+            return null
         }
+
+        /**
+         * Query the [JvmPlatformType] instance for the given Kotlin class.
+         * @param kClass the Kotlin class for which to return the [JvmPlatformType].
+         * @return the [JvmPlatformType].
+         * @since 3.0
+         */
+        @JvmStatic
+        actual fun <T: Any> forKClass(kClass: KClass<T>): PlatformType<T> = forClass(kClass.java)
+
+        /**
+         * Query the [JvmPlatformType] instance for the given Java class.
+         * @param jvmClass the Java class for which to return the [JvmPlatformType].
+         * @return the [JvmPlatformType].
+         * @since 3.0
+         */
+        @Suppress("UNCHECKED_CAST")
+        @JvmStatic
+        fun <T: Any> forClass(jvmClass: Class<T>): PlatformType<T> {
+            // Map possibly given native primitive types to boxed types.
+            val javaClass = if (jvmClass.isPrimitive) when (jvmClass) {
+                java.lang.Boolean.TYPE -> Boolean::class.java
+                java.lang.Byte.TYPE -> Byte::class.java
+                java.lang.Short.TYPE -> Short::class.java
+                Character.TYPE -> Char::class.java
+                Integer.TYPE -> Integer::class.java
+                java.lang.Long.TYPE -> Long::class.java
+                java.lang.Float.TYPE -> Float::class.java
+                java.lang.Double.TYPE -> Double::class.java
+                else -> jvmClass
+            } as Class<T> else jvmClass
+            var type: JvmPlatformType<T>? = jvmClassToPlatformType[javaClass] as JvmPlatformType<T>?
+            if (type != null) return type
+
+            val kClass = javaClass.kotlin
+            type = JvmPlatformType(javaClass, kClass)
+            val existing = jvmClassToPlatformType.putIfAbsent(javaClass, type) as JvmPlatformType<T>?
+            if (existing != null) return existing
+            return type
+        }
+
+        /**
+         * Query the [JvmPlatformType] of the given instance.
+         * @param instance the instance for which to return the [JvmPlatformType].
+         * @return the [JvmPlatformType].
+         * @since 3.0
+         */
+        @JvmStatic
+        actual fun <T: Any> forInstance(instance: T): PlatformType<T> = forClass(instance.javaClass)
+
+        @JvmStatic
+        actual fun identityHashCode(obj: Any?): Int = System.identityHashCode(obj)
+
+        // TODO: Add cache and normalization!
+        @JvmStatic
+        actual fun intern(s: String, cd: Boolean): String = s
 
         /**
          * Returns the Java class of the given Kotlin class.
@@ -283,7 +270,7 @@ actual class Platform {
         actual fun newMap(vararg entries: Any?): PlatformMap = JvmMap(*entries)
 
         @JvmStatic
-        actual fun <K : Any, V : Any> newAtomicMap(): AtomicMap<K, V> = JvmAtomicMap()
+        actual fun <K, V> newAtomicMap(): AtomicMap<K, V> = JvmAtomicMap()
 
         @JvmStatic
         actual fun <R: Any> newAtomicRef(startValue: R?): AtomicRef<R> = JvmAtomicRef(startValue)
@@ -307,6 +294,13 @@ actual class Platform {
         actual fun newList(vararg entries: Any?): PlatformList = JvmList(*entries)
 
         @JvmStatic
+        actual fun newArray(capacity: Int): PlatformList {
+            val array = JvmList()
+            array.setCapacity(capacity)
+            return array
+        }
+
+        @JvmStatic
         actual fun newByteArray(size: Int): ByteArray = ByteArray(size)
 
         @JvmStatic
@@ -320,11 +314,19 @@ actual class Platform {
 
         @JvmStatic
         actual fun unbox(value: Any?): Any? {
-            if (value is Proxy) return value.platformObject() as? JvmObject
-            if (value is Array<*>) return JvmList(*value)
+            if (value == null) return null
+            if (value is JvmObject) return value
+            if (value is Proxy) return value.platformObject() // as? JvmObject
             if (value is JsEnum) return value.value
+            if (value is Array<*>) return JvmList(*value)
+            if (value is Long) return JvmInt64(value)
             return value
         }
+
+        @JvmStatic
+        @JvmOverloads
+        actual fun <T> box(raw: Any?, type: PlatformType<T>, alternative: T?, init: Fn0<T?>?): T?
+            = boxInto(raw, type, alternative, init)
 
         /**
          * Returns the [JvmObject] of the given object.
@@ -397,7 +399,16 @@ actual class Platform {
         actual fun isNumber(o: Any?): Boolean = o is Number
 
         @JvmStatic
-        actual fun isScalar(o: Any?): Boolean = o == null || o is Number || o is String || o is Boolean
+        actual fun isPlatformObject(o: Any?): Boolean = o is JvmObject
+
+        @JvmStatic
+        actual fun asPlatformObject(o: Any?): PlatformObject {
+            if (o !is JvmObject) throw illegalArg("Cannot cast object to PlatformObject, requires base implementation JvmObject")
+            return o
+        }
+
+        @JvmStatic
+        actual fun isScalar(o: Any?): Boolean = o == null || o is Number || o is String || o is Boolean || o is Symbol
 
         @JvmStatic
         actual fun isInteger(o: Any?): Boolean = o is Byte || o is Short || o is Int || o is Long || o is JvmInt64
@@ -411,30 +422,6 @@ actual class Platform {
         @JvmStatic
         actual fun hashCodeOf(o: Any?): Int = throw UnsupportedOperationException()
 
-        @JvmStatic
-        actual fun <T : Any> newInstanceOf(klass: KClass<out T>): T = resolveConstructorFor(klass).call()
-
-        @JvmStatic
-        @Suppress("UNCHECKED_CAST")
-        actual fun <T : Any> allocateInstance(klass: KClass<out T>): T = unsafe.allocateInstance(klass.java) as T
-
-        @JvmStatic
-        actual fun initializeKlass(klass: KClass<*>) {
-            // This code is required, because in Java 23 they removed unsafe.ensureClassInitialized, but
-            // the replacement method does not exist before Java 15, this is such a nonsense!
-            val lookupInstance = this.lookupInstance
-            val ensureInitialized = this.ensureInitialized
-            if (ensureInitialized != null && lookupInstance != null) {
-                ensureInitialized.invoke(lookupInstance, klass.java)
-                // == MethodHandles.lookup().ensureInitialized(klass.java);
-            } else {
-                val ensureClassInitialized = this.ensureClassInitialized
-                require(ensureClassInitialized != null) { "Failed to use unsafe.ensureClassInitialized" }
-                ensureClassInitialized.invoke(unsafe, klass.java)
-                // == unsafe.ensureClassInitialized(klass.java)
-            }
-        }
-
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
         actual fun <T> copy(obj: T?, recursive: Boolean): T? {
@@ -447,7 +434,7 @@ actual class Platform {
                 is Float -> obj
                 is Double -> obj
                 is String -> obj
-                is JvmDataView -> newDataView(obj.getByteArray().copyOf()) as T
+                is JvmDataView -> newDataView(obj.byteArray.copyOf()) as T
                 is JvmMap -> {
                     val copy = JvmMap()
                     for (entry in obj) {
@@ -485,12 +472,17 @@ actual class Platform {
         internal val fromJsonOptions = ThreadLocal<FromJsonOptions>()
 
         @JvmStatic
-        actual fun fromJSON(json: String): Any? = fromJSON(json, FromJsonOptions.DEFAULT)
+        actual fun fromJSON(json: String): Any?
+            = fromJSON(json, Any_TYPE, FromJsonOptions.DEFAULT)
 
         @JvmStatic
-        actual fun fromJSON(json: String, options: FromJsonOptions): Any? {
+        actual fun <T> fromJSON(json: String, type: PlatformType<T>): T?
+            = fromJSON(json, type, FromJsonOptions.DEFAULT)
+
+        @JvmStatic
+        actual fun <T> fromJSON(json: String, type: PlatformType<T>, options: FromJsonOptions): T? {
             fromJsonOptions.set(options)
-            return objectMapper.get().readValue(json, Any::class.java)
+            return box(objectMapper.get().readValue(json, Any::class.java), type)
         }
 
         @JvmStatic
@@ -582,50 +574,6 @@ actual class Platform {
          */
         @JvmStatic
         actual fun isNil(any: Any?): Boolean = any == null
-
-        /**
-         * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
-         * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
-         * @param pobject The object at which to query for the proxy.
-         * @param klass The proxy class.
-         * @param doNotOverride If _true_, do not override existing symbols bound to incompatible types, but throw an [IllegalStateException]
-         * @return The proxy instance.
-         * @throws IllegalStateException If [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
-         */
-        @Suppress("UNCHECKED_CAST")
-        @JvmStatic
-        actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
-            val obj = unbox(pobject)
-            require(obj is JvmObject)
-            val symbol = Symbols.of(klass)
-            var proxy = obj.getSymbol(symbol)
-            if (proxy != null) {
-                if (klass.isInstance(proxy)) return proxy as T
-                if (doNotOverride) throw IllegalStateException("The symbol $symbol is already bound to incompatible type")
-            }
-
-            proxy = resolveConstructorFor(klass).call()
-            proxy.bind(obj, symbol)
-            return proxy
-        }
-
-        private fun <T: Any> resolveConstructorFor(klass: KClass<T>): KFunction<T>{
-            var constructor = nonArgsConstuctorsCache[klass]
-            if(constructor == null){
-                constructor = nonArgConstructorFor(klass)
-                nonArgsConstuctorsCache[klass] = constructor
-            }
-            return constructor as KFunction<T>
-        }
-
-        /**
-         * Returns non-arg constructor for [klass] or throws [IllegalArgumentException] if none is found.
-         */
-        private fun <T : Any> nonArgConstructorFor(klass: KClass<T>): KFunction<T> {
-            return klass.constructors.firstOrNull { constructor: KFunction<T> ->
-                constructor.parameters.isEmpty()
-            } ?: throw IllegalArgumentException("Unable to find non-arg constructor for class: ${klass.qualifiedName}")
-        }
 
         /**
          * The default logger singleton to be used as initial value by the default [loggerThreadLocal]. This is based upon

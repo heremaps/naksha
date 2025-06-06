@@ -1,6 +1,8 @@
 package naksha.diff
 
 import naksha.base.Platform
+import naksha.base.PlatformUtil
+import naksha.base.PlatformUtil.PlatformUtilCompanion.deepEquals
 import naksha.diff.*
 import org.json.JSONException
 import org.junit.jupiter.api.Assertions
@@ -61,34 +63,34 @@ class MigratedJsonBasedDiffTest {
         assertIs<MapDiff>(diff34)
 
         // Assert outermost layer
-        val mapDiff34: MapDiff = diff34 as MapDiff
+        val mapDiff34: MapDiff = diff34
         // TODO if possible to serialize Difference, simply compare the serialized Difference object with test file content
-        assertIs<InsertOp>(mapDiff34["isAdded"])
-        assertIs<UpdateOp>(mapDiff34["willBeUpdated"])
-        assertIs<RemoveOp>(mapDiff34["firstToBeDeleted"])
-        assertIs<MapDiff>(mapDiff34["map"])
-        assertIs<ListDiff>(mapDiff34["array"])
-        assertIs<RemoveOp>(mapDiff34["speedLimit"])
+        assertIs<InsertDiff>(mapDiff34.differences["isAdded"])
+        assertIs<UpdateDiff>(mapDiff34.differences["willBeUpdated"])
+        assertIs<RemoveDiff>(mapDiff34.differences["firstToBeDeleted"])
+        assertIs<MapDiff>(mapDiff34.differences["map"])
+        assertIs<ListDiff>(mapDiff34.differences["array"])
+        assertIs<RemoveDiff>(mapDiff34.differences["speedLimit"])
 
         // Assert nested layer
-        val nestedMapDiff34 = mapDiff34["map"] as MapDiff
+        val nestedMapDiff34 = mapDiff34.differences["map"] as MapDiff
         // "mapID" is retained, does not appear in nestedMapDiff34
-        assertIs<InsertOp>(nestedMapDiff34["isAdded"])
-        assertIs<UpdateOp>(nestedMapDiff34["willBeUpdated"])
-        assertIs<RemoveOp>(nestedMapDiff34["willBeDeleted"])
+        assertIs<InsertDiff>(nestedMapDiff34.differences["isAdded"])
+        assertIs<UpdateDiff>(nestedMapDiff34.differences["willBeUpdated"])
+        assertIs<RemoveDiff>(nestedMapDiff34.differences["willBeDeleted"])
 
         // Assert nested array
-        val nestedArrayDiff34 = mapDiff34["array"] as ListDiff
-        assertIs<UpdateOp>(nestedArrayDiff34[1])
-        assertIs<MapDiff>(nestedArrayDiff34[2])
+        val nestedArrayDiff34 = mapDiff34.differences["array"] as ListDiff
+        assertIs<UpdateDiff>(nestedArrayDiff34.differences[1])
+        assertIs<MapDiff>(nestedArrayDiff34.differences[2])
         // "retainedElement" is retained, does not appear in nestedMapDiff34
         // InsertOp case for array (ListDiff) is addressed in the test testCompareSameArrayDifferentOrder()
-        assertIs<RemoveOp>(nestedArrayDiff34[3])
+        assertIs<RemoveDiff>(nestedArrayDiff34.differences[3])
 
         // Some extra nested JSON object in array assertions
-        assertIs<InsertOp>((nestedArrayDiff34[2] as MapDiff)["isAddedProperty"])
-        assertIs<UpdateOp>((nestedArrayDiff34[2] as MapDiff)["nestedShouldBeUpdated"])
-        assertIs<RemoveOp>((nestedArrayDiff34[2] as MapDiff)["willBeDeletedProperty"])
+        assertIs<InsertDiff>((nestedArrayDiff34.differences[2] as MapDiff).differences["isAddedProperty"])
+        assertIs<UpdateDiff>((nestedArrayDiff34.differences[2] as MapDiff).differences["nestedShouldBeUpdated"])
+        assertIs<RemoveDiff>((nestedArrayDiff34.differences[2] as MapDiff).differences["willBeDeletedProperty"])
 
         // Modify the whole difference to get rid of all RemoveOp
         DifferenceFilter.removeAllRemoveOp(mapDiff34)
@@ -118,16 +120,16 @@ class MigratedJsonBasedDiffTest {
         val diff35 = DifferenceCalculator.calculateDifference(f3, f5)
         assertIs<MapDiff>(diff35)
 
-        assertEquals(2, diff35.size)
-        assertTrue(diff35["array"] is ListDiff)
-        assertTrue(diff35["speedLimit"] is RemoveOp)
-        val nestedArrayDiff35 = diff35["array"] as ListDiff
+        assertEquals(2, diff35.differences.size)
+        assertTrue(diff35.differences["array"] is ListDiff)
+        assertTrue(diff35.differences["speedLimit"] is RemoveDiff)
+        val nestedArrayDiff35 = assertIs<ListDiff>(diff35.differences["array"])
         // The patcher compares array element by element in order,
         // so the nested JSON in feature 3 is compared against the string in feature 5
         // and the string in feature 3 is against the nested JSON in feature 5
-        assertTrue(nestedArrayDiff35[2] is UpdateOp)
-        assertTrue(nestedArrayDiff35[3] is UpdateOp)
-        assertTrue(nestedArrayDiff35[4] is InsertOp)
+        assertTrue(nestedArrayDiff35.differences[2] is UpdateDiff)
+        assertTrue(nestedArrayDiff35.differences[3] is UpdateDiff)
+        assertTrue(nestedArrayDiff35.differences[4] is InsertDiff)
 
         // Check that the patched feature 3 has the same content as 5
         val patchedf3Tof5 = Patcher.patch(f3, diff35)
@@ -169,12 +171,8 @@ class MigratedJsonBasedDiffTest {
 
     @Test
     fun testIgnoreAll() {
-        val ignoreAll = object : DiffContext {
-            override fun ignore(key: Any, sourceMap: Map<*, *>, targetOrPatchMap: Map<*, *>): Boolean =
-                true
-
-            override fun areTwoNumbersEqual(first: Number, second: Number): Boolean =
-                DiffContext.Default.areTwoNumbersEqual(first, second)
+        val ignoreAll = object : DefaultDiffContext() {
+            override fun ignore(key: Any, sourceMap: Map<*, *>, targetOrPatchMap: Map<*, *>): Boolean = true
         }
 
         val f1 = loadFeature("feature_1.json")
@@ -189,7 +187,7 @@ class MigratedJsonBasedDiffTest {
 
     @Test
     fun testXyzNamespace() {
-        val ignoreSomeXyzKeys = object : DiffContext {
+        val ignoreSomeXyzKeys = object : DefaultDiffContext() {
             override fun ignore(key: Any, sourceMap: Map<*, *>, targetOrPatchMap: Map<*, *>): Boolean =
                 key in setOf(
                     "txn",
@@ -202,9 +200,6 @@ class MigratedJsonBasedDiffTest {
                     "createdAt",
                     "updatedAt",
                 )
-
-            override fun areTwoNumbersEqual(first: Number, second: Number): Boolean =
-                DiffContext.Default.areTwoNumbersEqual(first, second)
         }
 
         val f1 = loadFeature("feature_1.json")
@@ -216,27 +211,27 @@ class MigratedJsonBasedDiffTest {
         val diff = DifferenceCalculator.calculateDifference(f1, f2, ignoreSomeXyzKeys)
 
         assertIs<MapDiff>(diff)
-        assertEquals(1, diff.size)
+        assertEquals(1, diff.differences.size)
 
-        val propertiesDiff = diff["properties"] as MapDiff
-        assertEquals(1, propertiesDiff.size)
+        val propertiesDiff = diff.differences["properties"] as MapDiff
+        assertEquals(1, propertiesDiff.differences.size)
 
-        val xyzNsDiff = propertiesDiff["@ns:com:here:xyz"] as MapDiff
-        assertEquals(2, xyzNsDiff.size)
+        val xyzNsDiff = propertiesDiff.differences["@ns:com:here:xyz"] as MapDiff
+        assertEquals(2, xyzNsDiff.differences.size)
 
-        val actionDiff = xyzNsDiff["action"]
-        assertIs<UpdateOp>(actionDiff)
+        val actionDiff = xyzNsDiff.differences["action"]
+        assertIs<UpdateDiff>(actionDiff)
         assertEquals("CREATE", actionDiff.oldValue)
         assertEquals("UPDATE", actionDiff.newValue)
 
-        val tagsDiff = xyzNsDiff["tags"]
+        val tagsDiff = xyzNsDiff.differences["tags"]
         assertIs<ListDiff>(tagsDiff)
-        assertEquals(23, tagsDiff.size)
+        assertEquals(23, tagsDiff.differences.size)
         for (i in 0 .. 21)  {
-            assertNull(tagsDiff[i])
+            assertNull(tagsDiff.differences[i])
         }
-        val inserted = tagsDiff[22]
-        assertIs<InsertOp>(inserted)
+        val inserted = tagsDiff.differences[22]
+        assertIs<InsertDiff>(inserted)
         assertEquals("utm_dummy_update", inserted.newValue)
     }
 
@@ -247,7 +242,7 @@ class MigratedJsonBasedDiffTest {
         val difference = DifferenceCalculator.calculateDifference(before, after)
 
         // Then:
-        assertEquals(expectedResult, difference)
+        assertTrue(deepEquals(expectedResult, difference))
     }
 
     private fun loadFeature(fileName: String): Any =
@@ -265,50 +260,56 @@ class MigratedJsonBasedDiffTest {
         private fun listDiffSamples(): Stream<Arguments> {
             return Stream.of(
                 Arguments.arguments(
-                    listOf("one", "two"), listOf("one", "three"),
-                    listDiff(
+                    listOf("one", "two"),
+                    listOf("one", "three"),
+                    listDiff(2, 2,
                         null,
-                        UpdateOp("two", "three")
+                        UpdateDiff("two", "three"))
+                ),
+                Arguments.arguments(
+                    listOf("one", "two", "three"),
+                    listOf("three", "four"),
+                    listDiff(3, 2,
+                        UpdateDiff("one", "three"),
+                        UpdateDiff("two", "four"),
+                        RemoveDiff("three")
                     )
                 ),
                 Arguments.arguments(
-                    listOf("one", "two", "three"), listOf("three", "four"),
-                    listDiff(
-                        UpdateOp("one", "three"),
-                        UpdateOp("two", "four"),
-                        RemoveOp("three")
+                    listOf("one", "two"),
+                    listOf("three", "four", "five"),
+                    listDiff( 2, 3,
+                        UpdateDiff("one", "three"),
+                        UpdateDiff("two", "four"),
+                        InsertDiff("five")
                     )
                 ),
                 Arguments.arguments(
-                    listOf("one", "two"), listOf("three", "four", "five"),
-                    listDiff(
-                        UpdateOp("one", "three"),
-                        UpdateOp("two", "four"),
-                        InsertOp("five")
+                    listOf<Any>(),
+                    listOf("one", "two", "three"),
+                    listDiff( 0, 3,
+                        InsertDiff("one"),
+                        InsertDiff("two"),
+                        InsertDiff("three")
                     )
                 ),
                 Arguments.arguments(
-                    listOf<Any>(), listOf("one", "two", "three"),
-                    listDiff(
-                        InsertOp("one"),
-                        InsertOp("two"),
-                        InsertOp("three")
-                    )
-                ),
-                Arguments.arguments(
-                    listOf("one", "two", "three"), listOf<Any>(),
-                    listDiff(
-                        RemoveOp("one"),
-                        RemoveOp("two"),
-                        RemoveOp("three")
+                    listOf("one", "two", "three"),
+                    listOf<Any>(),
+                    listDiff(3, 0,
+                        RemoveDiff("one"),
+                        RemoveDiff("two"),
+                        RemoveDiff("three")
                     )
                 )
             )
         }
 
-        private fun listDiff(vararg diffs: Difference?): ListDiff {
+        private fun listDiff(originalLength:Int, newLength:Int, vararg diffs: Difference?): ListDiff {
             val listDiff = ListDiff()
-            listDiff.addAll(listOf(*diffs))
+            listDiff.originalLength = originalLength
+            listDiff.newLength = newLength
+            listDiff.differences.addAll(listOf(*diffs))
             return listDiff
         }
     }

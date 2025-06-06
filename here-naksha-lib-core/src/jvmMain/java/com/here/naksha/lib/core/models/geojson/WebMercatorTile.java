@@ -21,7 +21,7 @@ package com.here.naksha.lib.core.models.geojson;
 import com.here.naksha.lib.core.models.geojson.declaration.ILonLat;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import naksha.geo.SpBoundingBox;
+import naksha.geo.GeoBoundingBox;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.PrecisionModel;
@@ -72,10 +72,10 @@ public class WebMercatorTile {
   /** The Mercator meters of the bottom tile border. */
   public final double bottom;
 
-  private SpBoundingBox bbox;
+  private GeoBoundingBox bbox;
   private PreparedGeometry polygon;
   private String quadkey;
-  private SpBoundingBox eBbox;
+  private GeoBoundingBox eBbox;
   private int eBuffer;
   private PreparedGeometry ePolygon;
   private int ePolygonBuffer;
@@ -309,7 +309,7 @@ public class WebMercatorTile {
    * @param bbox of tile
    * @return ZoomLevel of tile
    */
-  public static int getZoomFromBBOX(SpBoundingBox bbox) {
+  public static int getZoomFromBBOX(GeoBoundingBox bbox) {
     return (int) Math.ceil(Math.log((360d / bbox.widthInDegree(false))) / Math.log(2));
   }
 
@@ -470,7 +470,7 @@ public class WebMercatorTile {
     return forWeb(level, x, (1 << level) - 1);
   }
 
-  public SpBoundingBox getBBox(boolean clone) {
+  public GeoBoundingBox getBBox(boolean clone) {
     if (bbox == null) {
       double mapSize = 1 << level;
       double x0 = (clip(x, 0, mapSize - 1) / mapSize) - 0.5;
@@ -485,10 +485,10 @@ public class WebMercatorTile {
       double minLat = 90.0 - 360.0 * Math.atan(Math.exp(-y1 * 2.0 * Math.PI)) / Math.PI;
       double maxLon = 360.0 * x1;
 
-      bbox = new SpBoundingBox(minLon, minLat, maxLon, maxLat);
+      bbox = new GeoBoundingBox(minLon, minLat, maxLon, maxLat);
     }
     if (clone) {
-      return new SpBoundingBox(
+      return new GeoBoundingBox(
           bbox.getMinLongitude(), bbox.getMinLatitude(), bbox.getMaxLongitude(), bbox.getMaxLatitude());
     }
     return bbox;
@@ -499,7 +499,7 @@ public class WebMercatorTile {
       return polygon;
     }
 
-    final SpBoundingBox bbox = getBBox(false);
+    final GeoBoundingBox bbox = getBBox(false);
     final Envelope envelope = new Envelope(
         bbox.getMinLongitude(), bbox.getMaxLongitude(), bbox.getMinLatitude(), bbox.getMaxLatitude());
     polygon = PreparedGeometryFactory.prepare(factory.toGeometry(envelope));
@@ -511,7 +511,7 @@ public class WebMercatorTile {
    *
    * @param buffer buffer size in pixels on the respective level.
    */
-  public SpBoundingBox getExtendedBBox(int buffer) {
+  public GeoBoundingBox getExtendedBBox(int buffer) {
     if (eBbox != null && eBuffer == buffer) {
       return eBbox;
     }
@@ -540,7 +540,7 @@ public class WebMercatorTile {
     double maxLon = 360.0 * x1;
 
     eBuffer = buffer;
-    eBbox = new SpBoundingBox(minLon, minLat, maxLon, maxLat);
+    eBbox = new GeoBoundingBox(minLon, minLat, maxLon, maxLat);
     return eBbox;
   }
 
@@ -549,7 +549,7 @@ public class WebMercatorTile {
       return ePolygon;
     }
 
-    final SpBoundingBox bbox = getExtendedBBox(buffer);
+    final GeoBoundingBox bbox = getExtendedBBox(buffer);
     final Envelope envelope = new Envelope(
         bbox.getMinLongitude(), bbox.getMaxLongitude(), bbox.getMinLatitude(), bbox.getMaxLatitude());
 

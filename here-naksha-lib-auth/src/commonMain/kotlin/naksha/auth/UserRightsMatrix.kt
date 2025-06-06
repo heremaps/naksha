@@ -2,193 +2,138 @@
 
 package naksha.auth
 
-import naksha.auth.action.AccessRightsAction
-import naksha.auth.attribute.ResourceAttributes
-import naksha.auth.check.CheckCompiler
-import naksha.base.ListProxy
-import naksha.base.MapProxy
-import naksha.base.AnyObject
+import naksha.base.*
+import naksha.base.Platform.PlatformCompanion.forKClass
 import kotlin.js.JsExport
+import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
+import kotlin.jvm.JvmStatic
 
 /**
- * The URM [UserRightsMatrix] as returned by the UPM (User-Permission-Management).
+ * The URM _(User Rights Matrix)_ is a map where the key represents the `id` of a service for which a user has rights to execute operations, and the value represent the rights of the user for that service.
  *
- * Main function of URM is [UserRightsMatrix.matches] that check whether corresponding [AccessRightsMatrix] (ARM)
- * allows the bearer of this URM to perform a given ACTION upon a RESOURCE within the SERVICE.
+ * The URM is normally returned by the UPM _(User Permission Management)_, and therefore normally only parsed from the authentication context using [fromJSON]. The main function of URM is [matches], which checks whether the given [ServiceOps] are allowed for the user.
  *
- * Both URM and ARM are objects nested in specific hierarchy:
- * - Services are defined on top (see 'naksha' in example below)
- * - Services contain Actions (for example 'readFeatures')
- * - Actions are arrays of attribute maps (these maps are [UserRights] in URM and [ResourceAttributes] in ARM)
- *
- * For given URM and ARM, there is a match if:
- * - both contain the same Services
- * - each Service contain corresponding Actions
- * - all corresponding Actions match - which means that [UserAction] must match [AccessRightsAction]
- * - action matching happens in [UserAction.matches], see docs there
- *
+ * Assume the following URM is received for the current user:
  * ```js
- * { // UserRightsMatrix <-> AccessRightsMatrix
- *   "naksha": { // UserRightsService <-> AccessRightsService
- *     "readFeatures": [ // UserRightsAction <-> AccessRightsAction
- *       { // UserRights <-> ResourceAttributes
- *         "id": "prefix-*",        // check for "id": needs to start with 'prefix-' (gets compiled to StartsWithCheck)
- *         "storageId": "storage"   // check for "storageId": must be equal to 'storage' (gets compiled to EqualityCheck)
- *         "tags": [ "t1-*", "t2" ]   // check for "tags": must contain tag that starts with 't1-' and other that is equal to 't2' (ComposedCheck)
+ * { // User-Rights-Matrix
+ *   naksha: { // 'naksha' User-Rights
+ *     // The 'read-features' operation of Naksha
+ *     readFeatures: [ // User-Rights-Filters
+ *       // A single User-Rights-Filter
+ *       {
+ *         // 'id' needs to start with 'prefix-'
+ *         id: "prefix-*",
+ *         // 'storageId' must be equal to 'foo'
+ *         storageId: "foo",
+ *         // must have a tag that starts with 't1-',
+ *         // and another tag being exactly 't2'
+ *         tags: {op:"matchesKey", allOf:["t1-*", "t2"]}
  *       }
  *     ]
+ *   },
+ *   mapFeedback: { // 'map-feedback' User-Rights
+ *     ...
+ *   },
+ *   moderation: { // 'moderation' User-Rights
  *   }
  * }
  * ```
- */
-@JsExport
-class UserRightsMatrix : MapProxy<String, ServiceUserRights>(String::class, ServiceUserRights::class) {
-
-    /**
-     * URM matches ARM when each service from URM matches corresponding service in ARM
-     * Service match is evaluated in [ServiceUserRights.matches]
-     */
-    fun matches(accessRightsMatrix: AccessRightsMatrix): Boolean {
-        return all { (service, userServiceRights) ->
-            val resourceAttributes = accessRightsMatrix[service]
-            if (userServiceRights == null || resourceAttributes == null) {
-                false
-            } else {
-                userServiceRights.matches(resourceAttributes)
-            }
-        }
-    }
-
-    fun withService(name: String, service: ServiceUserRights): UserRightsMatrix = apply {
-        val existing = getAs(name, ServiceUserRights::class)
-        if (existing == null) {
-            put(name, service)
-        } else {
-            existing.mergeActionsFrom(service)
-        }
-    }
-
-    fun useService(name: String): ServiceUserRights =
-        getOrCreate<ServiceUserRights, String, UserRightsMatrix>(name, ServiceUserRights::class)
-}
-
-@JsExport
-class ServiceUserRights : MapProxy<String, UserAction>(String::class, UserAction::class) {
-
-    /**
-     * Service defined in URM matches service from ARM when all actions for given service are matching
-     * Action match is evaluated in [UserAction.matches]
-     */
-    fun matches(serviceAccessRights: ServiceAccessRights): Boolean {
-        return all { (actionName, userAction) ->
-            val resourceAction = serviceAccessRights[actionName]
-            if (userAction == null || resourceAction == null) {
-                false
-            } else {
-                userAction.matches(resourceAction)
-            }
-        }
-    }
-
-    fun withAction(actionName: String, userRightsAction: UserAction) = apply {
-        put(actionName, userRightsAction)
-    }
-
-    fun mergeActionsFrom(otherService: ServiceUserRights): ServiceUserRights = apply {
-        putAll(otherService)
-    }
-}
-
-@JsExport
-class UserAction : ListProxy<UserRights>(UserRights::class) {
-
-    /**
-     * If [AccessRightsAction] passed to this function is empty, it is assumed that there is no restriction
-     * and user is allowed to perform given action.
-     *
-     * [UserAction] matches [AccessRightsAction] when for all [ResourceAttributes] that [AccessRightsAction] contain:
-     * - [ResourceAttributes] is null or empty (it is assumed then that there are no access restrictions)
-     * - at least single [UserRights] matches [ResourceAttributes] which happens in [UserRights.matches]
-     */
-    fun matches(accessRightsAction: AccessRightsAction<*, *>): Boolean {
-        return accessRightsAction.all { resourceAttributes ->
-            if (resourceAttributes == null) {
-                true
-            } else {
-                any { rawCheckMap ->
-                    if (rawCheckMap == null) {
-                        return false
-                    }
-                    rawCheckMap.matches(resourceAttributes)
-                }
-            }
-        }
-    }
-
-    fun withRights(check: UserRights): UserAction = apply {
-        add(check)
-    }
-}
-
-/**
- * [UserRights] represent attribute map of an action ([UserAction]) from URM side.
- * It's corresponding type on ARM side is [ResourceAttributes] that is comapred againts.
  *
- * The difference is, [UserRights] hold checks, while [ResourceAttributes] hold raw values that these checks
- * are being run against.
+ * Kotlin example of compact pre-execution usage:
+ * ```kotlin
+ * // When the request is received:
+ * val urm = UserRightsMatrix.fromJSON(urmJson)
+ *
+ * // Update features
+ * val features = ...
+ * val ops = NakshaOps()
+ * for (f in features) {
+ *   ops.updateFeatures += WriteFeatureOp.fromFeature(f)
+ * }
+ * if (!nakshaRights.matches(ops)) {
+ *   throw AccessDenied()
+ * }
+ * // Execute the write
+ * ```
+ *
+ * Kotlin example of fine-grained post-execution usage:
+ * ```kotlin
+ * // When the request is received:
+ * val urm = UserRightsMatrix.fromJSON(urmJson)
+ * val nakshaRights = urm["naksha"]
+ *
+ * // Read features
+ * val features = readFeatures()
+ *
+ * // Filter features
+ * for (f in features) {
+ *   val ops = NakshaOps()
+ *   ops.readFeatures += ReadFeatureOp.fromFeature(f)
+ *   if (!nakshaRights.matches(ops)) features.remove(f)
+ * }
+ *
+ * // Now, "features" does only contain those features
+ * // the user has access to.
+ * ```
+ * It is as well possible to execute a fine-grained pre-execution filter, for example to improve the error messages.
+ * @since 3.0
+ * @see UserRights
  */
-class UserRights : AnyObject() {
+@JsExport
+class UserRightsMatrix : MapProxy<String, UserRights>(String_TYPE, UserRights.TYPE) {
+    companion object UserRightsMatrixCompanion {
+        /**
+         * The [PlatformType] of [UserRightsMatrix].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<UserRightsMatrix> = forKClass(UserRightsMatrix::class).withPackageName(PACKAGE_NAME)
+
+        /**
+         * Parse the given JSON and return the [URM][UserRightsMatrix].
+         * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given `json` is invalid and no [URM][UserRightsMatrix].
+         * @param json The JSON that stores the [URM][UserRightsMatrix].
+         * @return the successfully parsed [URM][UserRightsMatrix].
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun fromJSON(json: String): UserRightsMatrix {
+            return Platform.fromJSON(json, TYPE) ?: throw illegalArg("Invalid URM JSON given")
+        }
+    }
 
     /**
-     * [UserRights] matches [ResourceAttributes] when all of it's compiled checks hold true against resource values.
-     *
-     * For example when dealing with UserRights:
-     * ```js
-     * {
-     *      "foo": "prefix-*",
-     *      "bar": "*-suffix,
-     *      "fuzz": "buzz"
-     * }
-     * ```
-     * and ResourceAttributes
-     * ```js
-     * {
-     *      "foo": "prefix-ABC",
-     *      "bar": "ABD-suffix,
-     *      "fuzz": "meh"
-     * }
-     * ```
-     *
-     * the matching process will look as follows:
-     * 1) the UserRights entries will get compiled to instances of [CompiledCheck] (see: [CheckCompiler.compile])
-     * 2) compilation will end up with this kind of map:
-     *     ```js
-     *     {
-     *          "foo": StartsWithCheck("prefix-"),
-     *          "bar": EndsWithCheck("-suffix),
-     *          "fuzz": EqualsCheck("buzz")
-     *     }
-     *     ```
-     * 3) for each key, value from [ResourceAttributes] will be obtained
-     * 4a) if value is missing - the result is `false`
-     * 4b) if value is there, the result will be obtained from the check ([CompiledCheck.matches])
-     * 5) the match must be positive for every key-value pairs
-     *
-     * In the example above, the result is `false` because 'fuzz' is not equal to 'meh'
+     * Tests if the user is allowed to execute all operations of all given services.
+     * @param serviceOpsMatrix The operations of services that the user wants to execute.
+     * @return _true_ if the user is allowed to execute all operations of all services; _false_ otherwise.
+     * @since 3.0
      */
-    fun matches(attributes: ResourceAttributes): Boolean {
-        if (isEmpty()) {
-            return true
+    fun matches(serviceOpsMatrix: ServiceOpsMatrix): Boolean {
+        for (serviceName in serviceOpsMatrix.keys) {
+            val serviceOps = serviceOpsMatrix[serviceName] ?: continue
+            val userRights = this[serviceName] ?: return false
+            if (!userRights.matches(serviceOps)) return false
         }
-        val checkMap = CheckCompiler.compile(this)
-        return all { (propertyName, _) ->
-            checkMap[propertyName]
-                ?.matches(attributes[propertyName])
-                ?: false
-        }
+        return true
     }
 
-    fun withPropertyCheck(propertyName: String, rawCheck: Any) = apply {
-        set(propertyName, rawCheck)
+    /**
+     * Tests if the user is allowed to execute operations of a specific service.
+     * @param operations The operations the user wants to execute.
+     * @param serviceName Optionally overrides [ServiceOps.serviceName].
+     * @return _true_ if the user is allowed to execute all given operations; _false_ otherwise.
+     * @since 3.0
+     */
+    @JsName("matchesOps")
+    @JvmOverloads
+    fun matches(operations: ServiceOps, serviceName: String? = null): Boolean {
+        val userRights = this[serviceName ?: operations.serviceName] ?: return false
+        return userRights.matches(operations)
     }
+
 }

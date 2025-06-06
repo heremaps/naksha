@@ -21,7 +21,7 @@ package com.here.naksha.storage.http;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import java.util.List;
 
-import naksha.jbon.JbDictionary;
+import naksha.base.NakshaError;
 import naksha.model.*;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaMap;

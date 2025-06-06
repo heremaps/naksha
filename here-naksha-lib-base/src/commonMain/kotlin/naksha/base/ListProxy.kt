@@ -1,7 +1,9 @@
-@file:Suppress("OPT_IN_USAGE")
+@file:Suppress("OPT_IN_USAGE", "NON_EXPORTABLE_TYPE")
 
 package naksha.base
 
+import naksha.base.Platform.PlatformCompanion.forInstance
+import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_delete
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_entries
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
@@ -17,26 +19,40 @@ import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set_length
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_splice
 import naksha.base.fn.Fn2
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.math.max
 import kotlin.reflect.KClass
 
 /**
  * A multi-platform list that can store _null_ values.
  * @param <E> The not nullable element type.
- * @property _elementKlass The class of the element.
+ * @property _elementType The class of the element.
  */
-@Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
-open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(), MutableList<E?> {
+open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), MutableList<E?> {
+    companion object ListProxyCompanion {
+        /**
+         * The [PlatformType] of [ListProxy].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(ListProxy::class).withPackageName(PACKAGE_NAME)
+    }
 
     /**
-     * Returns the element class of the proxy.
+     * Returns the [PlatformType] of the list elements.
+     * @since 3.0
      */
-    val elementKlass: KClass<out E>
-        get() = _elementKlass
+    val elementType: PlatformType<E>
+        get() = _elementType
 
     override fun createData(): PlatformList = Platform.newList()
     override fun platformObject(): PlatformList = super.platformObject() as PlatformList
+
+    @Suppress("UNCHECKED_CAST")
+    override fun platformType(): PlatformType<ListProxy<E>> = super.platformType() as PlatformType<ListProxy<E>>
 
     override fun bind(data: PlatformObject, symbol: Symbol) {
         require(data is PlatformList)
@@ -50,9 +66,9 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
     fun getCapacity() : Int = array_get_capacity(platformObject())
 
     /**
-     * Sets the capacity to the given value, if possible, there is no guarantee that this method has any real effect.
+     * Sets the capacity to the given value, if possible.
      *
-     * Note, the capacity can never be changed below the current size, any call like this will be ignored.
+     * There is no guarantee that this method has any real effect. The capacity can never be changed below the current size, any call like this will be ignored.
      * @param capacity the wished minimum capacity.
      */
     fun setCapacity(capacity:Int) = array_set_capacity(platformObject(), capacity)
@@ -64,23 +80,24 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
      * @param alternative The alternative to return, when the element is not of the specified type.
      * @return The element.
      */
-    protected open fun getOr(index: Int, alternative: E): E? = box(array_get(platformObject(), index), _elementKlass, alternative)
+    protected open fun getOr(index: Int, alternative: E): E?
+        = Platform.box(array_get(platformObject(), index), elementType, alternative)
 
     /**
      * Helper to return the value of the key, if the key does not exist or is not of the expected type, a new value is created, stored
      * with the key and returned.
      * @param index the key to query.
-     * @param klass the [KClass] of the expected value type.
+     * @param type the [KClass] of the expected value type.
      * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return the value.
      */
-    fun <T : Any, SELF: ListProxy<E>> getOrInit(index: Int, klass: KClass<out T>, init: Fn2<out T, in SELF, in Int>): T {
+    fun <T : Any, SELF: ListProxy<E>> getOrInit(index: Int, type: PlatformType<out T>, init: Fn2<out T, in SELF, in Int>): T {
         val data = platformObject()
         val i = if (index < 0) max(0, array_get_length(data) + index) else index
         var value: T? = null
         if (i < array_get_length(data)) {
             val raw = array_get(data, i)
-            value = box(raw, klass)
+            value = Platform.box(raw, type)
         }
         if (value == null) {
             @Suppress("UNCHECKED_CAST")
@@ -94,17 +111,17 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
      * Helper to return the value of the key, if the key does not exist or is not of the expected type, a new
      * value is created, stored with the key and returned.
      * @param index the key to query.
-     * @param klass the [KClass] of the expected value.
+     * @param type the [KClass] of the expected value.
      * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return The value.
      */
-    fun <T : Any, SELF: ListProxy<E>> getOrCreate(index: Int, klass: KClass<out T>, init: Fn2<out T?, in SELF, in Int>? = null): T {
+    fun <T : Any, SELF: ListProxy<E>> getOrCreate(index: Int, type: PlatformType<out T>, init: Fn2<out T?, in SELF, in Int>? = null): T {
         val data = platformObject()
         val i = if (index < 0) max(0, array_get_length(data) + index) else index
         var value: T? = null
         if (i < array_get_length(data)) {
             val raw = array_get(data, i)
-            value = box(raw, klass)
+            value = box(raw, type)
         }
         if (value == null) {
             if (init != null) {
@@ -115,7 +132,7 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
                     return value
                 }
             }
-            value = Platform.newInstanceOf(klass)
+            value = type.newInstance()
             array_set(data, i, unbox(value))
         }
         return value
@@ -133,31 +150,32 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
 
     override fun clear() = array_set_length(platformObject(), 0)
 
-    override fun get(index: Int): E? = box(array_get(platformObject(), index), _elementKlass)
+    override fun get(index: Int): E? = box(array_get(platformObject(), index), elementType)
+
+    /**
+     * Returns the raw value stored in the platform list.
+     * @param index The index to read.
+     * @return the raw value stored in the platform list; `null` if the index is out of bounds.
+     */
+    fun getRaw(index: Int): Any? = array_get(platformObject(), index)
 
     override fun isEmpty(): Boolean = array_get_length(platformObject()) == 0
 
-    override fun iterator(): MutableIterator<E?> {
-        return ListProxyIterator(toMutableList(platformObject()).listIterator(), this)
-    }
+    override fun iterator(): MutableIterator<E?> = ListProxyMutableIterator(this, -1)
 
-    override fun listIterator(): MutableListIterator<E?> {
-        return ListProxyIterator(toMutableList(platformObject()).listIterator(), this)
-    }
+    override fun listIterator(): MutableListIterator<E?> = ListProxyMutableIterator(this, -1)
 
-    override fun listIterator(index: Int): MutableListIterator<E?> {
-        return ListProxyIterator(toMutableList(platformObject()).listIterator(index), this)
-    }
+    override fun listIterator(index: Int): MutableListIterator<E?> = ListProxyMutableIterator(this, -1)
 
     override fun removeAt(index: Int): E? {
         val data = platformObject()
         if (index < 0 || index >= array_get_length(data)) return null
-        return box(array_delete(data, index), _elementKlass)
+        return box(array_delete(data, index), elementType)
     }
 
     override fun subList(fromIndex: Int, toIndex: Int): ListProxy<E> {
-        val list = Platform.allocateInstance(this::class)
-        list._elementKlass = _elementKlass
+        val list = platformType().allocate()
+        list._elementType = elementType
         list.setCapacity(max(toIndex - fromIndex, 16))
         var i = fromIndex
         while (i < toIndex) list.add(get(i++))
@@ -166,11 +184,11 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
 
     override fun set(index: Int, element: E?): E? {
         val data = platformObject()
-        return box(array_set(data, index, unbox(element)), _elementKlass)
+        return box(array_set(data, index, unbox(element)), elementType)
     }
 
     override fun retainAll(elements: Collection<E?>): Boolean {
-        val unboxed: Array<Any?> = elements.map { Platform.unbox(it) }.toTypedArray()
+        val unboxed: Array<Any?> = elements.map { unbox(it) }.toTypedArray()
         return array_retain_all(platformObject(), *unboxed)
     }
 
@@ -210,10 +228,17 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
     override fun addAll(elements: Collection<E?>): Boolean {
         val data = platformObject()
         if (elements.isNotEmpty()) {
-            for (e in elements) array_push(data, Platform.unbox(e))
+            for (e in elements) array_push(data, unbox(e))
             return true
         }
         return false
+    }
+
+    fun addAll(elements: Array<out E>): Boolean {
+        if (elements.isEmpty()) return false
+        setCapacity(size + elements.size)
+        for (element in elements) add(element)
+        return true
     }
 
     override fun addAll(index: Int, elements: Collection<E?>): Boolean {
@@ -221,7 +246,7 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
         if (elements.isNotEmpty()) {
             val array = arrayOfNulls<Any?>(elements.size)
             var i = 0
-            for (e in elements) array[i++] = Platform.unbox(e)
+            for (e in elements) array[i++] = unbox(e)
             array_splice(data, index, 0, *array)
             return true
         }
@@ -230,11 +255,11 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
 
     override fun add(index: Int, element: E?) {
         if(index < 0) throw IndexOutOfBoundsException(index.toString())
-        array_splice(platformObject(), index, 0, Platform.unbox(element))
+        array_splice(platformObject(), index, 0, unbox(element))
     }
 
     override fun add(element: E?): Boolean {
-        array_push(platformObject(), Platform.unbox(element))
+        array_push(platformObject(), unbox(element))
         return true
     }
 
@@ -243,7 +268,7 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
         val mutableList: MutableList<E?> = mutableListOf()
         var next = iterator.next()
         while (!next.done) {
-            mutableList.add(box(next.value, _elementKlass))
+            mutableList.add(box(next.value, elementType))
             next = iterator.next()
         }
         return mutableList
@@ -284,21 +309,19 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
         return (if (a == array.size) array else array.copyOf(a)) as Array<Any>
     }
 
-    class ListProxyIterator<T: Any>(
-        private val basicIterator: MutableListIterator<T?>,
-        private val owner: ListProxy<T>
-    ): MutableListIterator<T?> by basicIterator {
-
-        private var currentItem: T? = null
-
-        override fun next(): T? {
-            val next = basicIterator.next()
-            currentItem = next
-            return next
+    @Suppress("UNCHECKED_CAST")
+    override fun equals(other: Any?): Boolean {
+        if (other == null) return false
+        val thisType = forInstance(this)
+        val otherType = forInstance(other)
+        if (thisType !== otherType) return false
+        val o = other as ListProxy<E>
+        if (this.size != o.size) return false
+        for (i in o.size - 1 downTo 0) {
+            val thisVal = this[i]
+            val otherVal = o[i]
+            if (thisVal != otherVal) return false
         }
-
-        override fun remove() {
-            owner.remove(currentItem)
-        }
+        return true
     }
 }

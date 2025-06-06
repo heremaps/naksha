@@ -3,7 +3,7 @@ package naksha.psql
 import naksha.base.Int64
 import naksha.base.IntMutable
 import naksha.model.Version
-import naksha.model.illegalState
+import naksha.base.illegalState
 import naksha.model.objects.NakshaTx
 
 /**

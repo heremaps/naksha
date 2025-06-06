@@ -2,7 +2,7 @@
 
 package naksha.model.request
 
-import naksha.geo.SpFeatureCollection
+import naksha.geo.GeoFeatureCollection
 import naksha.model.*
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaFeatureList
@@ -386,9 +386,9 @@ open class SuccessResponse() : Response() {
     }
 
     /**
-     * Returns this success-response as [GeoJSON feature collection][SpFeatureCollection].
+     * Returns this success-response as [GeoJSON feature collection][GeoFeatureCollection].
      *
-     * To turn a [GeoJSON feature collection][SpFeatureCollection] into a [SuccessResponse], just do:
+     * To turn a [GeoJSON feature collection][GeoFeatureCollection] into a [SuccessResponse], just do:
      * ```kotlin
      * val collection: SpFeatureCollection = ...;
      * val response = collection.proxy(SuccessResponse::class)
@@ -400,12 +400,12 @@ open class SuccessResponse() : Response() {
      * final SuccessResponse response =
      *       javaProxy(collection, SuccessResponse.class);
      * ```
-     * @return this response as [GeoJSON feature collection][SpFeatureCollection].
+     * @return this response as [GeoJSON feature collection][GeoFeatureCollection].
      * @since 3.0
      */
-    fun asFeatureCollection(): SpFeatureCollection {
+    fun asFeatureCollection(): GeoFeatureCollection {
         this.features
-        return proxy(SpFeatureCollection::class)
+        return proxy(GeoFeatureCollection::class)
     }
 
     /**

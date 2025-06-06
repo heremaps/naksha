@@ -92,7 +92,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
         // And: execute read by bounding box.
         val featuresByBBox = executeSpatialQuery(
             SpIntersects(
-                SpBoundingBox(feature.geometry).addMargin(0.0000001).toPolygon()
+                GeoBoundingBox(feature.geometry).addMargin(0.0000001).toPolygon()
             )
         )
 
@@ -150,7 +150,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
         }
         val valencia = randomFeature().apply {
             geometry = SpPolygon(
-                SpBoundingBox(
+                GeoBoundingBox(
                     west = -0.412674,
                     south = 39.441761,
                     east = -0.334053,
@@ -162,7 +162,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
         // And
         val hasGeometryInSpain = SpIntersects(
             SpPolygon(
-                SpBoundingBox(-10.239258, 35.639441, 2.787695, 43.921637)
+                GeoBoundingBox(-10.239258, 35.639441, 2.787695, 43.921637)
             )
         )
         val hasRefPointInPrague = SpRefInHereTile(HereTile("122010322102"))

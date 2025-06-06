@@ -18,6 +18,7 @@
  */
 package naksha.base;
 
+import static naksha.base.Platform.forClass;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -33,7 +34,7 @@ class ParentProxyingTest {
     ProxyParent parent = new ProxyParent();
 
     // When:
-    var child = parent.proxy(Platform.klassFor(ProxyChild.class));
+    var child = parent.proxy(forClass(ProxyChild.class));
 
     // Then:
     assertNotNull(child);
@@ -46,8 +47,8 @@ class ParentProxyingTest {
     ProxyParent parent = new ProxyParent();
 
     // Then:
-    assertThrows(IllegalArgumentException.class, () -> {
-      parent.proxy(Platform.klassFor(ProxyChildWithoutNonArgConstructor.class));
+    assertThrows(NakshaException.class, () -> {
+      parent.proxy(forClass(ProxyChildWithoutNonArgConstructor.class));
     });
   }
 
@@ -57,8 +58,8 @@ class ParentProxyingTest {
     ProxyParent parent = new ProxyParent();
 
     // Then:
-    assertThrows(IllegalCallableAccessException.class, () -> {
-      parent.proxy(Platform.klassFor(ProxyChildWithoutPublicConstructor.class));
+    assertThrows(NakshaException.class, () -> {
+      parent.proxy(forClass(ProxyChildWithoutPublicConstructor.class));
     });
   }
 

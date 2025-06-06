@@ -12,7 +12,7 @@ import naksha.base.PlatformMap
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 @JsExport
 actual class GeoUtil private actual constructor() {
-    actual companion object GeoUtil_C {
+    actual companion object GeoUtilCompanion {
 
         // ----------------------------------< JS only >------------------------------------------
 

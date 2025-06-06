@@ -1,27 +1,41 @@
 package naksha.base
 
+import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.base.Platform.PlatformCompanion.newDataView
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_size
 import naksha.base.PlatformUtil.PlatformUtilCompanion.defaultDataViewSize
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
- * The Naksha type for a data view.
+ * The proxy type for a data view.
+ *
+ * This class helps in implementing specific binary types.
  * @property binary The binary editor being used to modify the underlying [PlatformDataView].
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
 open class DataViewProxy(internal val binary: Binary = Binary()) : Proxy(), BinaryView by binary {
 
+    companion object DataViewProxyCompanion {
+        /**
+         * The [PlatformType] of [AnyObject].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<DataViewProxy> = forKClass(DataViewProxy::class).withPackageName(PACKAGE_NAME)
+    }
+
     /**
      * Create a new view with a new byte array of the given size backing it.
      * @param size The amount of byte to allocate.
      */
-    @Suppress("LeakingThis")
     @JsName("forSize")
     constructor(size: Int = defaultDataViewSize) : this(Binary()) {
-        bind(newDataView(ByteArray(size)), Symbols.of(this::class))
+        createSize = size
     }
 
     /**
@@ -36,7 +50,7 @@ open class DataViewProxy(internal val binary: Binary = Binary()) : Proxy(), Bina
         val off = offset ?: 0
         val len = length ?: (byteArray.size - off)
         val data = newDataView(byteArray, off, len)
-        val sym = Symbols.of(this::class)
+        val sym = Symbols.of(TYPE)
         bind(data, sym)
     }
 
@@ -48,6 +62,8 @@ open class DataViewProxy(internal val binary: Binary = Binary()) : Proxy(), Bina
         binary.end = dataview_get_size(data)
         super.bind(data, symbol)
     }
+
     override fun platformObject(): PlatformDataView = super.platformObject() as PlatformDataView
-    override fun createData(): PlatformDataView = newDataView(ByteArray(defaultDataViewSize))
+    private var createSize: Int = defaultDataViewSize
+    override fun createData(): PlatformDataView = newDataView(ByteArray(createSize))
 }

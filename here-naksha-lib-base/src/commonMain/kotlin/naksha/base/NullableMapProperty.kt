@@ -3,12 +3,10 @@ package naksha.base
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_contains_key
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
-import naksha.base.Proxy.ProxyCompanion.box
-import naksha.base.Proxy.ProxyCompanion.unbox
+import naksha.base.fn.Fn2
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
-import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
 /**
@@ -33,37 +31,37 @@ import kotlin.reflect.KProperty
  * @param MAP the type of the map to which to attach the property.
  * @param MAP_VALUE_TYPE the base type of all values in the map.
  * @param PROPERTY_TYPE the type of the property, must have the base type of the map as super type.
- * @param klass the [KClass] of the property type.
+ * @param type the [PlatformType] of the property type.
+ * @param name the name of the property in the map, if different from the property name, if _null_, the property name is used.
  * @param autoCreate if the value should be auto-created, when it is _null_. If additionally an [init] is defined, then this invoked
  * before auto-generating a value.
  * @param autoRemove if the value should be removed, when it is set to _null_.
- * @param name the name of the property in the map, if different from the property name, if _null_, the property name is used.
  * @param init the initializer to create a new value, when the property does not exist or the value is not of the desired type. If the
  * initializer returns _null_, the value is created by invoking the default constructor of the value type.
  */
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
 @JsExport
-open class NullableMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE : Any, PROPERTY_TYPE : MAP_VALUE_TYPE>(
-    val klass: KClass<out PROPERTY_TYPE>,
+open class NullableMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE, PROPERTY_TYPE : MAP_VALUE_TYPE> @JvmOverloads constructor(
+    val type: PlatformType<PROPERTY_TYPE>,
+    val name: String? = null,
     val autoCreate: Boolean = false,
     val autoRemove: Boolean = false,
-    val name: String? = null,
-    val init: ((self: MAP, name: String) -> PROPERTY_TYPE?)? = null
+    val init: Fn2<PROPERTY_TYPE?, MAP, String>? = null
 ) {
     @JvmOverloads
     open fun getValue(self: MAP, propertyName: String? = null): PROPERTY_TYPE? {
         val key =
             this.name ?: propertyName ?: throw IllegalArgumentException("Undefined property name")
-        if (autoCreate) return self.getOrCreate(key, klass, init)
+        if (autoCreate) return self.getOrCreate(key, type, init)
         val data = self.platformObject()
         var value: PROPERTY_TYPE? = null
         if (map_contains_key(data, key)) {
             val raw = map_get(data, key)
-            value = box(raw, klass)
+            value = self.box(raw, type)
         }
         if (value == null && init != null) {
-            value = init.invoke(self, key)
-            map_set(data, key, unbox(value))
+            value = init.call(self, key)
+            map_set(data, key, self.unbox(value))
         }
         return value
     }

@@ -29,14 +29,19 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.Map;
 import naksha.base.AnyObject;
+import naksha.base.Platform;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaStorage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class NakshaHubConfig extends NakshaFeature {
+/**
+ * The configuration of Naksha-Hub and the admin-storage where the Hub keeps internal configurations, like spaces, storages, handlers, <code>...</code>.
+ */
+public final class NakshaHubConfig extends NakshaStorage {
 
   private static final Logger logger = LoggerFactory.getLogger(NakshaHubConfig.class);
 

@@ -2,9 +2,10 @@ package naksha.model
 
 import naksha.base.AtomicRef
 import naksha.base.Int64
+import naksha.base.NakshaException
 import naksha.base.Platform
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.model.objects.NakshaStorage
 import kotlin.reflect.KClass
 

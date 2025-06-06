@@ -2,7 +2,7 @@
 
 package naksha.psql
 
-import naksha.model.NakshaException
+import naksha.base.NakshaException
 
 actual class PgExceptionMapper {
     actual companion object PgExceptionMapper_C {

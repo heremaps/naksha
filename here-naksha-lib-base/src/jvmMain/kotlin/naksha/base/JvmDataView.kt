@@ -2,28 +2,23 @@ package naksha.base
 
 import naksha.base.Platform.PlatformCompanion.longToInt64
 import java.nio.ByteOrder
-import kotlin.reflect.KClass
-import kotlin.reflect.full.primaryConstructor
 
 /**
  * The JVM implementation of [PlatformDataViewApi].
- * @param byteArray The byte-array to map.
- * @param offset The offset of the first byte
- * @param length The amount of byte to map.
  */
-open class JvmDataView(byteArray: ByteArray, offset: Int = 0, length: Int = byteArray.size - offset) : JvmObject(), PlatformDataView {
+@Suppress("LeakingThis", "DEPRECATION")
+open class JvmDataView(
+    override val byteArray: ByteArray,
+    override val byteOffset: Int = 0,
+    override val byteLength: Int = byteArray.size - byteOffset
+) : JvmObject(), PlatformDataView {
     init {
-        require(offset >= 0 && offset <= byteArray.size)
-        require(length >= offset && (offset + length) <= byteArray.size)
+        require(byteOffset >= 0 && byteOffset <= byteArray.size)
+        require(byteLength >= byteOffset && (byteOffset + byteLength) <= byteArray.size)
     }
 
-    private val buffer: ByteArray = byteArray
-    private val startOffset: Int = Platform.baseOffset + offset
-    private val endOffset: Int = startOffset + length
-
-    fun getByteArray(): ByteArray {
-        return buffer
-    }
+    private val startOffset: Int = Platform.baseOffset + byteOffset
+    private val endOffset: Int = startOffset + byteLength
 
     fun getStart(): Int {
         return startOffset - Platform.baseOffset
@@ -82,57 +77,57 @@ open class JvmDataView(byteArray: ByteArray, offset: Int = 0, length: Int = byte
         return value
     }
 
-    fun getFloat32(pos: Int, littleEndian: Boolean): Float {
-        val value = Platform.unsafe.getFloat(buffer, offset(pos, 4))
+    override fun getFloat32(byteOffset: Int, littleEndian: Boolean): Float {
+        val value = Platform.unsafe.getFloat(byteArray, offset(byteOffset, 4))
         return ordered(value, littleEndian)
     }
 
-    fun setFloat32(pos: Int, value: Float, littleEndian: Boolean) {
-        Platform.unsafe.putFloat(buffer, offset(pos, 4), ordered(value, littleEndian))
+    override fun setFloat32(byteOffset: Int, value: Float, littleEndian: Boolean) {
+        Platform.unsafe.putFloat(byteArray, offset(byteOffset, 4), ordered(value, littleEndian))
     }
 
-    fun getFloat64(pos: Int, littleEndian: Boolean): Double {
-        val value = Platform.unsafe.getDouble(buffer, offset(pos, 8))
+    override fun getFloat64(byteOffset: Int, littleEndian: Boolean): Double {
+        val value = Platform.unsafe.getDouble(byteArray, offset(byteOffset, 8))
         return ordered(value, littleEndian)
     }
 
-    fun setFloat64(pos: Int, value: Double, littleEndian: Boolean) {
-        Platform.unsafe.putDouble(buffer, offset(pos, 8), ordered(value, littleEndian))
+    override fun setFloat64(byteOffset: Int, value: Double, littleEndian: Boolean) {
+        Platform.unsafe.putDouble(byteArray, offset(byteOffset, 8), ordered(value, littleEndian))
     }
 
-    fun getInt8(pos: Int): Byte {
-        return Platform.unsafe.getByte(buffer, offset(pos, 1))
+    override fun getInt8(byteOffset: Int): Byte {
+        return Platform.unsafe.getByte(byteArray, offset(byteOffset, 1))
     }
 
-    fun setInt8(pos: Int, value: Byte) {
-        Platform.unsafe.putByte(buffer, offset(pos, 1), value)
+    override fun setInt8(byteOffset: Int, value: Byte) {
+        Platform.unsafe.putByte(byteArray, offset(byteOffset, 1), value)
     }
 
-    fun getInt16(pos: Int, littleEndian: Boolean): Short {
-        val value = Platform.unsafe.getShort(buffer, offset(pos, 2))
+    override fun getInt16(byteOffset: Int, littleEndian: Boolean): Short {
+        val value = Platform.unsafe.getShort(byteArray, offset(byteOffset, 2))
         return ordered(value, littleEndian)
     }
 
-    fun setInt16(pos: Int, value: Short, littleEndian: Boolean) {
-        Platform.unsafe.putShort(buffer, offset(pos, 2), ordered(value, littleEndian))
+    override fun setInt16(byteOffset: Int, value: Short, littleEndian: Boolean) {
+        Platform.unsafe.putShort(byteArray, offset(byteOffset, 2), ordered(value, littleEndian))
     }
 
-    fun getInt32(pos: Int, littleEndian: Boolean): Int {
-        val value = Platform.unsafe.getInt(buffer, offset(pos, 4))
+    override fun getInt32(byteOffset: Int, littleEndian: Boolean): Int {
+        val value = Platform.unsafe.getInt(byteArray, offset(byteOffset, 4))
         return ordered(value, littleEndian)
     }
 
-    fun setInt32(pos: Int, value: Int, littleEndian: Boolean) {
-        Platform.unsafe.putInt(buffer, offset(pos, 4), ordered(value, littleEndian))
+    override fun setInt32(byteOffset: Int, value: Int, littleEndian: Boolean) {
+        Platform.unsafe.putInt(byteArray, offset(byteOffset, 4), ordered(value, littleEndian))
     }
 
-    fun getInt64(pos: Int, littleEndian: Boolean): Int64 {
-        val value = Platform.unsafe.getLong(buffer, offset(pos, 8))
+    override fun getInt64(byteOffset: Int, littleEndian: Boolean): Int64 {
+        val value = Platform.unsafe.getLong(byteArray, offset(byteOffset, 8))
         return longToInt64(ordered(value, littleEndian))
     }
 
-    fun setInt64(pos: Int, value: Int64, littleEndian: Boolean) {
+    override fun setInt64(byteOffset: Int, value: Int64, littleEndian: Boolean) {
         check(value is JvmInt64)
-        Platform.unsafe.putLong(buffer, offset(pos, 8), ordered(value.toLong(), littleEndian))
+        Platform.unsafe.putLong(byteArray, offset(byteOffset, 8), ordered(value.toLong(), littleEndian))
     }
 }

@@ -2,12 +2,7 @@ package naksha.psql
 
 import com.github.benmanes.caffeine.cache.*
 import naksha.base.*
-import naksha.model.Naksha
-import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP_NUMBER
-import naksha.model.Naksha.NakshaCompanion.MAPS_COL_NUMBER
-import naksha.model.illegalArg
-import naksha.model.objects.NakshaMap
-import naksha.psql.PgColumn.PgColumnCompanion.allColumns
+import naksha.base.illegalArg
 import java.util.concurrent.TimeUnit
 
 /**

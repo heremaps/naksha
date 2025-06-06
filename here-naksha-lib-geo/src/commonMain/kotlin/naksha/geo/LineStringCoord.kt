@@ -1,25 +1,52 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.geo
 
 import naksha.base.ListProxy
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
+import naksha.base.illegalState
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
-@Suppress("OPT_IN_USAGE")
+/**
+ * A [GeoJSON LineString Coordinates](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1.4).
+ * @since 3.0
+ * @see ICoordinates
+ */
 @JsExport
-class LineStringCoord() : ListProxy<PointCoord>(PointCoord::class), ICoordinates {
+sealed class LineStringCoord() : ListProxy<PointCoord>(PointCoord.TYPE), ICoordinates {
 
-    @JsName("of")
+    @JsName("fromPointCoord")
     constructor(vararg points: PointCoord) : this() {
         addAll(points)
     }
 
-    override fun hasZ(): Boolean {
-        for (p in this) if (p != null && p.hasZ()) return true
-        return false
+    companion object LineStringCoordCompanion {
+        /**
+         * The [PlatformType] of [LineStringCoord].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<LineStringCoord> = forKClass(LineStringCoord::class)
+            .withPackageName(PACKAGE_NAME)
+            .withJsonType("LineString")
     }
 
-    override fun hasM(): Boolean {
-        for (p in this) if (p != null && p.hasM()) return true
-        return false
+    override fun fix(): LineStringCoord {
+        var end = 0
+        for (i in 0 until size) {
+            val p = this[i] ?: continue
+            p.fix()
+            if (end != i) this[end] = p
+            end++
+        }
+        if (size > end) size = end
+        return this
     }
+    override fun hasZ(): Boolean = this.any { hasZ() }
+    override fun hasM(): Boolean = this.any { hasM() }
 }

@@ -17,7 +17,7 @@ import kotlin.js.JsExport
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-interface AtomicMap<K : Any, V : Any> : MutableMap<K, V> {
+interface AtomicMap<K, V> : MutableMap<K, V> {
 
     /**
      * If the specified key is not already associated with a value, associates it with the given value. This is equivalent to

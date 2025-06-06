@@ -131,7 +131,7 @@ Here `{x.x.x}` is the Naksha application version (for example, if version is `2.
 
 Next to this, an explicit location can be specified via the environment variable `NAKSHA_CONFIG_PATH`, this path will not be extended by the `naksha/v{x.x.x}` folder, so you can directly specify where to keep the config files. This is important when you want to start multiple versions of the service: `NAKSHA_CONFIG_PATH=~/.config/naksha/ java -jar naksha.jar {arguments}`.
 
-In the custom config file, the name of the individual properties can be set as per source code here [NakshaHubConfig](here-naksha-lib-hub/src/main/java/com/here/naksha/lib/hub/NakshaHubConfig.java).
+In the custom config file, the name of the individual properties can be set as per source code here [NakshaHubConfig](here-naksha-lib-hub/src/jvmMain/java/com/here/naksha/lib/hub/NakshaHubConfig.java).
 All properties annotated with `@JsonProperty` can be set in custom config file.
 
 Config file is loaded using `{config-id}` supplied as CLI argument, as per following precedence on file location (first match wins):

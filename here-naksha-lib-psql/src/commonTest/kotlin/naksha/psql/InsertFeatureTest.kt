@@ -1,8 +1,9 @@
 package naksha.psql
 
 import naksha.base.Int64
+import naksha.base.NakshaError
 import naksha.base.Platform
-import naksha.geo.SpBoundingBox
+import naksha.geo.GeoBoundingBox
 import naksha.model.*
 import naksha.model.request.*
 import naksha.model.request.query.SpIntersects
@@ -261,7 +262,7 @@ class InsertFeatureTest : PgTestBase() {
             mapId = collection.mapId
             collectionIds += collection.id
             query.spatial =
-                SpIntersects(SpBoundingBox(firstFeatureToCreate.geometry).addMargin(0.0000001).toPolygon())
+                SpIntersects(GeoBoundingBox(firstFeatureToCreate.geometry).addMargin(0.0000001).toPolygon())
         })
         assertEquals(1, featuresByBBox.features.size)
         assertEquals(firstFeatureToCreate.id, featuresByBBox.features[0]!!.id)

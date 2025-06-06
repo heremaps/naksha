@@ -1,37 +1,52 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.diff
 
+import naksha.base.Any_TYPE
+import naksha.base.Platform.PlatformCompanion.box
+import naksha.base.PlatformUtil
+import naksha.base.PlatformUtil.PlatformUtilCompanion.asSafeDouble
+import naksha.base.PlatformUtil.PlatformUtilCompanion.asSafeInt
+import naksha.base.PlatformUtil.PlatformUtilCompanion.asSafeInt64
+import naksha.base.PlatformUtil.PlatformUtilCompanion.isLogicalDouble
+import naksha.base.PlatformUtil.PlatformUtilCompanion.isLogicalInt
+import naksha.base.PlatformUtil.PlatformUtilCompanion.isLogicalInt64
+import kotlin.js.JsExport
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
+@JsExport
 class DifferenceCalculator private constructor() {
     companion object DifferenceCalculator_C {
 
         /**
-         * Returns the difference of the two states or null, if both entities are equal. This method will
-         * return [InsertOp] if the source state is null, [RemoveOp] if the target state is
-         * null, [MapDiff] if both states are [Map maps] that differ, [ListDiff] if both
-         * states are [List] lists that differ and [UpdateOp] if the two states are different,
-         * but none of them is null and not both of them are [Map] or [List].
+         * Returns the difference of the two objects or `null`, if both objects are equal or the same.
          *
-         * @param source first object with the source state to be compared against second target
-         *                    state.
-         * @param target the target state against which to compare the source state.
-         * @param diffContext context used for comparisons, determines which fields should be ignored and how the numbers should be compared. By default, the [DiffContext.Default] is used
+         * This method will return [InsertDiff] if the source is `null`, [RemoveDiff] if the target is `null`, [MapDiff] if both objects are maps that differ, [ListDiff] if both object are lists that differ, and [UpdateDiff] in any other case.
+         *
+         * @param source The source object to be compared against target object.
+         * @param target The target object against which to compare the source object.
+         * @param diffContext The context used for comparisons, determines which fields should be ignored, and how doubles should be compared. By default, the [DefaultDiffContext.INSTANCE] is used.
          * @return the difference between the two states or null, if both states are equal.
          * @since 3.0.0
          */
         @JvmOverloads
         @JvmStatic
-        fun calculateDifference(
+        fun calculateDifference(source: Any?, target: Any?, diffContext: DiffContext = DefaultDiffContext.INSTANCE): Difference? {
+            return calculateAnyDifference(box(source, Any_TYPE), box(target, Any_TYPE), diffContext)
+        }
+
+        private fun calculateAnyDifference(
             source: Any?,
             target: Any?,
-            diffContext: DiffContext = DiffContext.Default
+            diffContext: DiffContext = DefaultDiffContext.INSTANCE
         ): Difference? {
+            if (source === target) return null
             if (source == null) {
-                return InsertOp(newValue = target)
+                return InsertDiff(newValue = target)
             }
             if (target == null) {
-                return RemoveOp(oldValue = source)
+                return RemoveDiff(oldValue = source)
             }
             if (source is Map<*, *> && target is Map<*, *>) {
                 return calculateMapDifference(source, target, diffContext)
@@ -42,17 +57,24 @@ class DifferenceCalculator private constructor() {
             if (source is Array<*> && target is Array<*>) {
                 return calculateListDifference(source.asList(), target.asList(), diffContext)
             }
-            if (source is Number && target is Number && diffContext.areTwoNumbersEqual(
-                    source,
-                    target
-                )
-            ) {
-                return null
+            // Floating point handling
+            if (isLogicalDouble(source) || isLogicalDouble(target)) {
+                val s = asSafeDouble(source)
+                val t = asSafeDouble(target)
+                if (s != null && t != null && diffContext.equalsDouble(s, t)) return null
+            } else if (isLogicalInt(source) || isLogicalInt(target)) {
+                val s = asSafeInt(source)
+                val t = asSafeInt(target)
+                if (s != null && t != null && s == t) return null
+            } else if (isLogicalInt64(source) || isLogicalInt64(target)) {
+                val s = asSafeInt64(source)
+                val t = asSafeInt64(target)
+                if (s != null && t != null && s == t) return null
             }
             if (source == target) {
                 return null
             }
-            return UpdateOp(oldValue = source, newValue = target)
+            return UpdateDiff(oldValue = source, newValue = target)
         }
 
         private fun calculateMapDifference(
@@ -61,16 +83,17 @@ class DifferenceCalculator private constructor() {
             diffContext: DiffContext
         ): MapDiff? {
             val resultDiff = MapDiff()
+            val differences = resultDiff.differences
             for ((sourceKey, sourceValue) in source) {
                 if (sourceKey == null || diffContext.ignore(sourceKey, source, target)) {
                     continue
                 }
                 if (sourceKey !in target) {
-                    resultDiff[sourceKey] = RemoveOp(sourceValue)
+                    differences[sourceKey] = RemoveDiff(sourceValue)
                 } else {
-                    val entryDiff = calculateDifference(sourceValue, target[sourceKey], diffContext)
+                    val entryDiff = calculateAnyDifference(sourceValue, target[sourceKey], diffContext)
                     if (entryDiff != null) {
-                        resultDiff[sourceKey] = entryDiff
+                        differences[sourceKey] = entryDiff
                     }
                 }
             }
@@ -81,9 +104,9 @@ class DifferenceCalculator private constructor() {
                 ) {
                     continue
                 }
-                resultDiff[targetKey] = InsertOp(targetValue)
+                differences[targetKey] = InsertDiff(targetValue)
             }
-            return if (resultDiff.isEmpty()) {
+            return if (differences.isEmpty()) {
                 null
             } else {
                 resultDiff
@@ -100,29 +123,30 @@ class DifferenceCalculator private constructor() {
             val targetSize = target.size
             resultDiff.originalLength = sourceSize
             resultDiff.newLength = targetSize
+            val differences = resultDiff.differences
             val lastCommonIndex = minOf(sourceSize, targetSize) - 1
             var isModified = false
 
             // calculate diffs for common indices
-            (0..lastCommonIndex).forEach { index ->
-                val entryDiff = calculateDifference(source[index], target[index], diffContext)
+            for (index in 0..lastCommonIndex) {
+                val entryDiff = calculateAnyDifference(source[index], target[index], diffContext)
                 if (entryDiff != null) {
                     isModified = true
                 }
-                resultDiff.add(entryDiff)
+                differences.add(entryDiff)
             }
             // if source is longer than target, fill missing entries with removals
             if (sourceSize > targetSize) {
                 isModified = true
-                (lastCommonIndex + 1..<sourceSize).forEach { index ->
-                    resultDiff.add(RemoveOp(source[index]))
+                for (index in lastCommonIndex + 1..<sourceSize) {
+                    differences.add(RemoveDiff(source[index]))
                 }
             }
             // if target is longer than source, fill missing entries with insertions
             else if (targetSize > sourceSize) {
                 isModified = true
-                (lastCommonIndex + 1..<targetSize).forEach { index ->
-                    resultDiff.add(InsertOp(target[index]))
+                for (index in lastCommonIndex + 1..<targetSize) {
+                    differences.add(InsertDiff(target[index]))
                 }
             }
             if (!isModified) {

@@ -9,27 +9,28 @@ class DifferenceFilterTest {
     @Test
     fun shouldFilterRemoveOpsFromMap() {
         // Given
-        val mapDiff = MapDiff()
-        mapDiff["simpleUpdate"] = UpdateOp("old_1", "new_1")
-        mapDiff["simpleRemoval"] = RemoveOp("del_1")
-        mapDiff["simpleInsert"] = InsertOp("in_1")
-        val nestedDiff = MapDiff()
-        val nestedList = ListDiff()
-        nestedList.add(UpdateOp("old_2", "new_2"))
-        nestedList.add(RemoveOp("del_2"))
-        nestedDiff["nestedList"] = nestedList
-        mapDiff["nestedDiff"] = nestedDiff
+        val mapDiff = MapDiff().apply {
+            differences["simpleUpdate"] = UpdateDiff("old_1", "new_1")
+            differences["simpleRemoval"] = RemoveDiff("del_1")
+            differences["simpleInsert"] = InsertDiff("in_1")
+            differences["nestedDiff"] = MapDiff().apply {
+                differences["nestedList"] = ListDiff().apply {
+                    differences.add(UpdateDiff("old_2", "new_2"))
+                    differences.add(RemoveDiff("del_2"))
+                }
+            }
+        }
 
         // When
         DifferenceFilter.removeAllRemoveOp(mapDiff)
 
         // Then
-        assertEquals(3, mapDiff.size)
+        assertEquals(3, mapDiff.differences.size)
         val filteredKeys = setOf("simpleUpdate", "simpleInsert", "nestedDiff")
-        assertEquals(filteredKeys, mapDiff.keys.toSet())
-        val filteredNestedList = (mapDiff["nestedDiff"] as MapDiff)["nestedList"] as ListDiff
-        assertEquals(1, filteredNestedList.size)
-        assertIs<UpdateOp>(filteredNestedList[0])
+        assertEquals(filteredKeys, mapDiff.differences.keys.toSet())
+        val filteredNestedList = (mapDiff.differences["nestedDiff"] as MapDiff).differences["nestedList"] as ListDiff
+        assertEquals(1, filteredNestedList.differences.size)
+        assertIs<UpdateDiff>(filteredNestedList.differences[0])
     }
 
     @Test

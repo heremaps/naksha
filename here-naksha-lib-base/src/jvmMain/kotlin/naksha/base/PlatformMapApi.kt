@@ -38,12 +38,12 @@ actual class PlatformMapApi {
             if (map is JvmMap && value != null) map.containsValue(value) else false
 
         @JvmStatic
-        actual fun map_iterator(map: PlatformMap?): PlatformIterator<PlatformList> = JvmMapEntryIterator(map)
+        actual fun map_iterator(map: PlatformMap?): PlatformIterator<PlatformList> = JvmMapEntryIterator(map as JvmMap)
 
         @JvmStatic
-        actual fun map_key_iterator(map: PlatformMap?): PlatformIterator<Any> = JvmMapKeyIterator(map)
+        actual fun map_key_iterator(map: PlatformMap?): PlatformIterator<Any> = JvmMapKeyIterator(map as JvmMap)
 
         @JvmStatic
-        actual fun map_value_iterator(map: PlatformMap?): PlatformIterator<Any?> = JvmMapValueIterator(map)
+        actual fun map_value_iterator(map: PlatformMap?): PlatformIterator<Any?> = JvmMapValueIterator(map as JvmMap)
     }
 }

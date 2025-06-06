@@ -1,15 +1,17 @@
-@file:Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "OPT_IN_USAGE")
+@file:Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 
 package naksha.base
 
+import naksha.base.fn.Fn0
+import kotlin.jvm.JvmOverloads
 import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
 
 /**
  * The platform abstraction, implemented for each platform to support the multi-platform code. All methods in this singleton are
  * by definition thread safe.
+ * @since 3.0
  */
-expect class Platform {
+expect class Platform private constructor() {
     companion object PlatformCompanion {
         /**
          * The platform specific value of undefined.
@@ -39,21 +41,39 @@ expect class Platform {
         val INT64_MIN_VALUE: Int64
 
         /**
-         * The minimum integer that can safely stored in a double.
-         * @return The minimum integer that can safely stored in a double.
+         * The maximum integer that can safely stored in a double _(`9,007,199,254,740,991`, 2^53-1)_.
+         * @return The maximum integer that can safely stored in a double.
          */
         val MAX_SAFE_INT: Double
 
         /**
-         * The maximum integer that can safely stored in a double.
+         * The maximum integer that can safely stored in a double _(`9,007,199,254,740,991`, 2^53-1)_.
          * @return The maximum integer that can safely stored in a double.
          */
+        val MAX_SAFE_INT64: Int64
+
+        /**
+         * The minimum integer that can safely stored in a double _(`-9,007,199,254,740,991`, -(2^53-1))_.
+         * @return The minimum integer that can safely stored in a double.
+         */
         val MIN_SAFE_INT: Double
+
+        /**
+         * The minimum integer that can safely stored in a double _(`-9,007,199,254,740,991`, -(2^53-1))_.
+         * @return The minimum integer that can safely stored in a double.
+         */
+        val MIN_SAFE_INT64: Int64
 
         /**
          * The difference between 1 and the smallest floating point number greater than 1.
          */
         val EPSILON: Double
+
+        /**
+         * A map to manage name aliases for types.
+         * @since 3.0
+         */
+        val forNameAlias: AtomicMap<String, PlatformType<*>>
 
         /**
          * The KClass for [Any].
@@ -130,52 +150,60 @@ expect class Platform {
         fun initialize(): Boolean
 
         /**
-         * Tests if the [target] class or interface is either the same as, or is a superclass or superinterface of, the class
-         * or interface represented by the specified [source] parameter.
-         *
-         * For example `isAssignable(CharSequence, String)` would be _false_ (not every [CharSequence] is always a [String]),
-         * while `isAssignable(String, CharSequence)` will be _true_ (every [String] is always a [CharSequence]).
-         *
-         * In other words, this method tests if the [source] type can be cast down to the [target] type, so if
-         * **`source as target`** is possible.
-         *
-         * **Warning**: An assignment is not the same as an instanceof test. For example for interfaces the example can be tricky,
-         * because formally the cast from a [CharSequence] to a [String] is not an assignable form, but technically can still
-         * succeed, if the object being tried to cast down is actually a string, just the compiler type is formally [CharSequence].
-         * Formally this kind of cast is an assignment from [String] to [String] not being known at compile time.
-         *
-         * @param source The type that should be cast.
-         * @param target The target type to which to cast.
-         * @return _true_ if the [source] type can be cast to the [target] type in all cases; _false_ otherwise.
-         */
-        fun isAssignable(source: KClass<*>, target: KClass<*>): Boolean
-
-        /**
-         * Tests if the given type is any [Proxy]. This is necessary to be used with [proxy].
-         * @param klass The type to test.
-         * @return _true_ if the given type is a [Proxy] type; _false_ otherwise.
-         */
-        fun isProxyKlass(klass: KClass<*>): Boolean
-
-        /**
-         * Returns the [KClass] **of** the given object.
-         * @param o The object to query.
-         * @return The [KClass] **of** the given object.
-         * @throws IllegalArgumentException If the given object has no valid [KClass].
-         */
-        fun <T : Any> klassOf(o: T): KClass<T>
-
-        /**
-         * A reflective method to turn a full qualified classname into a klass instance.
+         * A reflective method to turn a full qualified classname into a [PlatformType] instance.
          *
          * - In the JVM this method will use `Class.forName` to find the class, initialize it, and then return the Kotlin class of it.
-         * - In JavaScript this method will use `globalThis` to find the constructor, so `com.here.example.Foo` will resolve into `globalThis.com.here.example.Foo`, this is expected to be a constructor function, then using [klassFor] to resolve it into the Kotlin class.
-         * @param name the full qualified name of the Klass.
-         * @return the Klass.
-         * @since 3.0.0
-         * @throws IllegalArgumentException if no such Klass is found.
+         * - In JavaScript this method will use `globalThis` to find the constructor of the given instance, so `com.here.example.Foo` will resolve into `globalThis["com"]["here"]["example"]["Foo"]`, this is expected to be a constructor function, then using `ofJs` to resolve it into the [PlatformType] class. In JavaScript calling this function updates the [name] of the [PlatformType], if not yet being detected.
+         * Query the [PlatformType] instance for the given full qualified name.
+         *
+         * @param name the full qualified name of a type.
+         * @return the [PlatformType] or `null`, if no such type exists.
+         * @since 3.0
          */
-        fun <T : Any> klassForName(name: String): KClass<T>
+        fun <T : Any> forName(name: String): PlatformType<T>?
+
+        /**
+         * A reflective method to find all types that has in a JSON representation the property `type` set to the given value.
+         *
+         * @param jsonType the value read from the `type` property of a JSON object.
+         * @return a list of potential [platform types][PlatformType] that serialize to this type; can be an empty list, if no known type matches this.
+         * @since 3.0
+         */
+        fun forJsonType(jsonType: String?): AnyPlatformTypeList
+
+        /**
+         * A reflective method to find the first type that has in a JSON representation the property `type` set to the given value, and that is _(or implements)_ the given type.
+         *
+         * @param jsonType The value read from the `type` property of a JSON object.
+         * @param type The [PlatformType] that is searched for.
+         * @return either the first matching [PlatformType] or `null`, if no type matches.
+         * @since 3.0
+         */
+        fun <T> forFirstJsonType(jsonType: String?, type: PlatformType<T>): PlatformType<T>?
+
+        /**
+         * A reflection method to query the [PlatformType] instance for the given Kotlin class.
+         * @param kClass the Kotlin class for which to return the [PlatformType].
+         * @return the [PlatformType].
+         * @since 3.0
+         */
+        fun <T: Any> forKClass(kClass: KClass<T>): PlatformType<T>
+
+        /**
+         * A reflection method to query the [PlatformType] of the given instance.
+         * @param instance the instance for which to return the [PlatformType].
+         * @return the [PlatformType].
+         * @since 3.0
+         */
+        fun <T: Any> forInstance(instance: T): PlatformType<T>
+
+        /**
+         * Returns the same hash code for the given object as would be returned by the default method hashCode(), whether or not the given object's class overrides hashCode(). The hash code for the null reference is zero.
+         * @param obj The object for which to return the identity hash-code.
+         * @return the identity hash-code.
+         * @since 3.0
+         */
+        fun identityHashCode(obj: Any?): Int
 
         /**
          * Intern the given string and perform a [NFC](https://unicode.org/reports/tr15/) (Canonical Decomposition,
@@ -196,6 +224,13 @@ expect class Platform {
         fun newList(vararg entries: Any?): PlatformList
 
         /**
+         * Creates a new array.
+         * @param capacity The capacity to initialize the array with.
+         * @return The created array.
+         */
+        fun newArray(capacity: Int): PlatformList
+
+        /**
          * Creates a new map.
          * @param entries The entries to add into the map. Can be a list of [Pair] or alternating (`key`, `value`)'s.
          * @return The created map.
@@ -206,7 +241,7 @@ expect class Platform {
          * Create a new concurrent map.
          * @return The concurrent map.
          */
-        fun <K : Any, V : Any> newAtomicMap(): AtomicMap<K, V>
+        fun <K, V> newAtomicMap(): AtomicMap<K, V>
 
         /**
          * Create a new atomic reference.
@@ -281,25 +316,29 @@ expect class Platform {
         fun newLock(): PlatformLock
 
         /**
-         * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride] is _true_,
-         * the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
-         * @param pobject the object at which to query for the proxy ([PlatformMap], [PlatformList] or [PlatformDataView]).
-         * @param klass the proxy class.
-         * @param doNotOverride if _true_, do not override existing symbols bound to incompatible types, but throw an
-         * [IllegalStateException].
-         * @return the proxy instance.
-         * @throws IllegalArgumentException if the given `object` is not [PlatformMap], [PlatformList] or [PlatformDataView].
-         * @throws IllegalStateException if [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
-         */
-        fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean = false): T
-
-        /**
-         * Return the native platform object for the given proxy. If the given object is no proxy, the object is returned
-         * as given.
+         * Unpack the given object to the closed native representation.
+         *
+         * - If the given object is a [Proxy], returns the [PlatformObject] of the proxy.
+         * - If the given object is [Long], then [Int64] is returned.
+         * - If the given object is an [JsEnum], the underlying value is returned ([JsEnum.value]).
+         * - Otherwise, the given object is returned as is.
+         *
          * @param value The object to access.
          * @return The [PlatformObject] if a [Proxy] given; otherwise the value itself.
          */
         fun unbox(value: Any?): Any?
+
+        /**
+         * Box the given value into the given type.
+         *
+         * @param raw The raw value to convert.
+         * @param alternative The alternative to return, when the raw value can't be converted.
+         * @param init The initializer, when the raw value can't be converted, preferred above [alternative] if given.
+         * @return The raw value as given type, the result of [init], or the given [alternative] (in that order).
+         * @since 3.0
+         */
+        @JvmOverloads
+        fun <T> box(raw: Any?, type: PlatformType<T>, alternative: T? = null, init: Fn0<T?>? = null): T?
 
         /**
          * Create a 32-bit integer from the given value.
@@ -364,21 +403,58 @@ expect class Platform {
         fun int64ToLong(value: Int64): Long
 
         /**
-         * Tests if the given object is a scalar, so _null_, _undefined_, any [Number], [String] or [Boolean].
+         * A cross-platform test if the given object is a [PlatformObject].
+         *
+         * ### Note
+         * In Java this is the same as doing `if (o instanceof JvmObject)`, in JavaScript there are some edge cases to cover, for example when boxing primitives:
+         * ```javascript
+         * var x = 5
+         * (x instanceof Object) -> false
+         * typeof x -> "number"
+         *
+         * var b = Object(5)
+         * (b instanceof Object) -> true
+         * typeof b -> "object"
+         * ```
+         * The issue is, that `Object(5)` technically is a boxed number like `Integer` in Java, but:
+         * ```javascript
+         * Object.prototype.toString.apply(Object(5))
+         * -> "[object Number]"
+         * Object.prototype.toString.apply(Object())
+         * -> "[object Object]"
+         * ```
+         * Therefore, all objects in _JavaScript_ do have the capability to box arbitrary values, which can be extracted using `valueOf()` method, even allowing to override that method. So, `isPlatformObject` simply helps to treat `Object(5)` as a boxed number, `Object(true)` as boxed boolean aso, so logically as `Integer`, `Boolean`, ..., instead of identifying them as a real `PlatformObject`.
+         *
+         * @param o The object to test.
+         * @return _true_ if the object is a valid [PlatformObject]; _false_ otherwise.
+         */
+        fun isPlatformObject(o: Any?): Boolean
+
+        /**
+         * Cast the given object into an [PlatformObject].
+         *
+         * In _Java_ this is the same as `o as JvmObject`, in _JavaScript_ a pure cast via `o as PlatformObject` can fail for some standard Kotlin types, like collections or hash-map. Even while they are technically [PlatformObject] in _JavaScript_, Kotlin has some odd way to check for the interface implementation, calling this method can avoid issues.
+         *
+         * - Throws [NakshaError.ILLEGAL_ARGUMENT] if the given object is no valid platform object.
+         */
+        fun asPlatformObject(o: Any?): PlatformObject
+
+        /**
+         * Tests if the given object is a scalar, so `null`, `undefined`, [Number], [String], [Boolean], or [Symbol].
          * @param o The object to test.
          * @return _true_ if the object is a scalar; _false_ otherwise.
          */
         fun isScalar(o: Any?): Boolean
 
         /**
-         * Tests if the given object is a [Number] or [Int64].
+         * Tests if the given object is a [Number].
          * @param o The object to test.
-         * @return _true_ if the object is a [Number] or [Int64]; _false_ otherwise.
+         * @return _true_ if the object is a [Number]; _false_ otherwise.
          */
         fun isNumber(o: Any?): Boolean
 
         /**
-         * Tests if the given object is a [Byte], [Short], [Int] or [Int64].
+         * Tests if the given object is a [Byte], [Short], [Int], or [Int64] _(aka `Long` in Java)_.
          * @param o The object to test.
          * @return _true_ if the object is a [Byte], [Short], [Int] or [Int64]; _false_ otherwise.
          */
@@ -408,27 +484,6 @@ expect class Platform {
          * @return The 32-bit hash code.
          */
         fun hashCodeOf(o: Any?): Int
-
-        /**
-         * Creates a new initialized instance of the given type, using the parameterless constructor.
-         * @param klass The type of which to create a new instance.
-         * @return The new instance.
-         * @throws IllegalArgumentException If there is no parameterless constructor.
-         */
-        fun <T : Any> newInstanceOf(klass: KClass<out T>): T
-
-        /**
-         * Creates a new instance of the given type, bypassing the constructor, so it returns the uninitialized class.
-         * @param klass The type of which to create a new instance.
-         * @return The new instance.
-         */
-        fun <T : Any> allocateInstance(klass: KClass<out T>): T
-
-        /**
-         * Forces the class loader to initialize the given Kotlin class.
-         * @param klass The type to initialize.
-         */
-        fun initializeKlass(klass: KClass<*>)
 
         /**
          * Ask the platform to make a copy of the given platform object.
@@ -479,17 +534,24 @@ expect class Platform {
 
         /**
          * Deserialize the given JSON.
+         * @param json The JSON string to parse.
+         * @param type The desired type.
+         * @return The parsed JSON.
+         * @see [FromJsonOptions.DEFAULT]
+         */
+        fun <T> fromJSON(json: String, type: PlatformType<T>): T?
+
+        /**
+         * Deserialize the given JSON.
          * @param json the JSON string to parse.
+         * @param type The desired type.
          * @param options the options to use; defaults to [FromJsonOptions.DEFAULT].
          * @return The parsed JSON.
          */
-        fun fromJSON(json: String, options: FromJsonOptions = FromJsonOptions.DEFAULT): Any?
+        fun <T> fromJSON(json: String, type: PlatformType<T>, options: FromJsonOptions = FromJsonOptions.DEFAULT): T?
 
         /**
-         * Convert the given platform native objects recursively into multi-platform objects. So all maps are corrected to [PlatformMap],
-         * all strings starting with `data:bigint,` or Java `Long`'s are converted into [Int64]'s, lists are corrected to [PlatformList],
-         * and so on. This can be used after a JSON was parsed from an arbitrary platform tool into some platform specific standard
-         * objects or when exchanging data with a platform specific library that does not like the multi-platform objects.
+         * Convert the given platform native objects recursively into multi-platform objects. So all maps are corrected to [PlatformMap], all strings starting with `data:bigint,` or Java `Long`'s are converted into [Int64]'s, lists are corrected to [PlatformList], and so on. This can be used after a JSON was parsed from an arbitrary platform tool into some platform specific standard objects or when exchanging data with a platform specific library that does not like the multi-platform objects.
          * @param obj The platform native objects to convert recursively.
          * @param importers The importers to use.
          * @return The given platform native objects converted into multi-platform objects.
@@ -497,9 +559,7 @@ expect class Platform {
         fun fromPlatform(obj: Any?, importers: List<PlatformImporter>): Any?
 
         /**
-         * Convert the given multi-platform objects recursively into the default platform native objects, for example [PlatformMap] may
-         * become a pure `Object` in JavaScript. This is often useful when exchanging code with libraries that do not support `Map`.
-         * In Java this will convert to [PlatformMap] to [LinkedHashMap].
+         * Convert the given multi-platform objects recursively into the default platform native objects, for example [PlatformMap] may become a pure `Object` in JavaScript. This is often useful when exchanging code with libraries that do not support `Map`. In Java this will convert to [PlatformMap] to [LinkedHashMap].
          * @param obj The multi-platform objects to be converted into platform native objects.
          * @param exporters The exporters to use.
          * @return The platform native objects.

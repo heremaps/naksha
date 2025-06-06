@@ -2,34 +2,63 @@
 
 package naksha.base
 
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
+import naksha.base.Platform.PlatformCompanion.forInstance
+import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_clear
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_contains_key
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_contains_value
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_iterator
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_remove
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_size
 import naksha.base.fn.Fn2
 import kotlin.collections.MutableMap.MutableEntry
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
  * A map that is not thread-safe.
+ * @property keyType The [PlatformType] of the keys.
+ * @property valueType The [PlatformType] of the values.
  */
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
-open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlass: KClass<out V>) :
-    Proxy(), MutableMap<K, V?> {
+open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformType<V>) : Proxy(), MutableMap<K, V?> {
+
+    companion object MapProxyCompanion {
+        /**
+         * The [PlatformType] of [MapProxy].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<MapProxy<*,*>> = forKClass(MapProxy::class).withPackageName(PACKAGE_NAME)
+
+        /**
+         * Add all given keys into the given map, and return the map.
+         * @param map The map into which to add the given key(s).
+         * @param keys The key(s) to add _(value will be `null`)_
+         * @return The map with the key(s) added.
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun <KEY, VALUE, PROXY : MapProxy<KEY, VALUE>> addAll(map: PROXY, vararg keys: KEY): PROXY {
+            for (key in keys) {
+                map.put(key, map[key])
+            }
+            return map
+        }
+    }
 
     override fun createData(): PlatformMap = Platform.newMap()
     override fun platformObject(): PlatformMap = super.platformObject() as PlatformMap
 
     override fun bind(data: PlatformObject, symbol: Symbol) {
-        require(data is PlatformMap)
+        if (data !is PlatformMap) throw illegalArg("Can't bind to non platform object")
         super.bind(data, symbol)
     }
 
@@ -42,7 +71,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
     fun <T : Any> getOr(key: K, alternative: T): T {
         val data = platformObject()
         val raw = map_get(data, key)
-        val value = box(raw, Platform.klassOf(alternative))
+        val value = box(raw, forInstance(alternative))
         return value ?: alternative
     }
 
@@ -56,7 +85,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
     fun <T : Any> getOrSet(key: K, alternative: T): T {
         val data = platformObject()
         val raw = map_get(data, key)
-        var value = box(raw, Platform.klassOf(alternative))
+        var value = box(raw, forInstance(alternative))
         if (value == null) {
             value = alternative
             map_set(data, key, unbox(value))
@@ -68,24 +97,21 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * Helper to return the value of the key, if the key does not exist or is not of the expected type, a new value is created, stored
      * with the key and returned.
      * @param key the key to query.
-     * @param klass the [KClass] of the expected value type.
+     * @param type the [KClass] of the expected value type.
      * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return the value.
      */
-    fun <T : Any, KEY : K, SELF : MapProxy<K, V>> getOrInit(
-        key: KEY,
-        klass: KClass<out T>,
-        init: Fn2<out T, in SELF, in KEY>
-    ): T {
+    fun <T, KEY: K, SELF: MapProxy<K, V>> getOrInit(key: KEY, type: PlatformType<out T>, init: Fn2<out T, in SELF, in KEY>): T {
         val data = platformObject()
         var value: T? = null
         if (map_contains_key(data, key)) {
             val raw = map_get(data, key)
-            value = box(raw, klass)
+            value = box(raw, type)
         }
         if (value == null) {
             @Suppress("UNCHECKED_CAST")
             value = init.call(this as SELF, key)
+            if (value == null) throw illegalState("Failed to get or init '$key', init method returned null")
             map_set(data, key, unbox(value))
         }
         return value
@@ -95,50 +121,51 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * Helper to return the value of the key, if the key does not exist or is not of the expected type, a new
      * value is created, stored with the key and returned.
      * @param key the key to query.
-     * @param klass the [KClass] of the expected value.
+     * @param type the [PlatformType] of the expected value.
      * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return The value.
      */
-    fun <T : Any, KEY : K, SELF : MapProxy<K, V>> getOrCreate(
+    fun <T, KEY: K, SELF: MapProxy<K, V>> getOrCreate(
         key: KEY,
-        klass: KClass<out T>,
+        type: PlatformType<T>,
         init: Fn2<out T?, in SELF, in KEY>? = null
     ): T {
         val data = platformObject()
         var raw: Any? = null
         if (map_contains_key(data, key)) {
             raw = map_get(data, key)
-            val value = box(raw, klass)
+            val value = box(raw, type)
             if (value != null) return value
         }
         if (init != null) {
             @Suppress("UNCHECKED_CAST")
             val value = init.call(this as SELF, key)
             if (value != null) {
-                map_set(data, key, unbox(value))
+                val unboxed = unbox(value)
+                map_set(data, key, unboxed)
                 return value
             }
         }
         val value: T?
-        if (Platform.isAssignable(JsEnum::class, klass)) {
+        if (type.isAssignableTo(JsEnum.TYPE)) {
             @Suppress("UNCHECKED_CAST")
-            value = JsEnum.get(raw, klass as KClass<out JsEnum>) as T
+            value = JsEnum.get(raw, type as PlatformType<out JsEnum>) as T
         } else {
-            value = Platform.newInstanceOf(klass)
+            value = type.newInstance()
         }
-        map_set(data, key, unbox(value))
+        val unboxed = unbox(value)
+        map_set(data, key, unboxed)
         return value
     }
 
     /**
      * Helper to return the value of the key in the desired type. If the key does not exist, or is not of the expected type, `null` is returned.
-     * @param <T> The expected type.
      * @param key The key to query.
+     * @param type The expected type.
      * @return The value as expected type or `null`, if no such key exists, or the value can't be proxied as the desired type.
      * @see [getOrNull]
      */
-    fun <T : Any> getAs(key: K, klass: KClass<out T>): T? =
-        box(map_get(platformObject(), key), klass)
+    fun <T> getAs(key: K, type: PlatformType<T>): T? = box(map_get(platformObject(), key), type)
 
     /**
      * Helper to return the value of the key in the desired type. If the key does not exist, or is not of the expected type, `null` is returned.
@@ -147,8 +174,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * @return The value as expected type or `null`, if no such key exists, or the value can't be proxied as the desired type.
      * @see [getAs]
      */
-    fun <T : Any> getOrNull(key: K, klass: KClass<out T>): T? =
-        box(map_get(platformObject(), key), klass)
+    fun <T> getOrNull(key: K, type: PlatformType<T>): T? = box(map_get(platformObject(), key), type)
 
     /**
      * Convert the given value into a key.
@@ -156,7 +182,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * @param alt The alternative to return when the value can't be cast.
      * @return The given value as key.
      */
-    open fun toKey(value: Any?, alt: K? = null): K? = box(value, keyKlass, alt)
+    open fun toKey(value: Any?, alt: K? = null): K? = box(value, keyType, alt)
 
     /**
      * Convert the given value into a value.
@@ -165,43 +191,19 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * @param alt The alternative to return when the value can't be cast.
      * @return The given value as value.
      */
-    open fun toValue(key: K, value: Any?, alt: V? = null): V? = box(value, valueKlass, alt)
+    open fun toValue(key: K, value: Any?, alt: V? = null): V? = box(value, valueType, alt)
 
     override val entries: MutableSet<MutableEntry<K, V?>>
-        get() {
-            val basicEntries: MutableSet<MutableEntry<K, V?>> = rawEntries()
-                .map { platformList ->
-                    require(array_get_length(platformList) == 2) { "Expected PlatformList with size of 2 (key and value)" }
-                    val key = toKey(array_get(platformList, 0))
-                    requireNotNull(key) { "Key can't be null" }
-                    Entry(key, toValue(key, array_get(platformList, 1)), this)
-                }
-                .toMutableSet()
-            return MapProxyEntrySet(basicEntries, this)
-        }
+        get() = MapProxyMutableEntrySet(this)
 
     override val keys: MutableSet<K>
-        get() {
-            return rawEntries()
-                .mapNotNull { platformList ->
-                    require(array_get_length(platformList) == 2) { "Expected PlatformList with size of 2 (key and value)" }
-                    toKey(array_get(platformList, 0))
-                }
-                .toMutableSet()
-        }
+        get() = MapProxyMutableKeySet(this)
 
     override val size: Int
         get() = map_size(platformObject())
 
     override val values: MutableCollection<V?>
-        get() {
-            return rawEntries()
-                .mapNotNull { platformList ->
-                    require(array_get_length(platformList) == 2) { "Expected PlatformList with size of 2 (key and value)" }
-                    box(array_get(platformList, 1), valueKlass)
-                }
-                .toMutableSet()
-        }
+        get() = MapProxyMutableValueCollection(this)
 
     override fun clear() = map_clear(platformObject())
 
@@ -213,19 +215,23 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
         from.onEach { (key, value) -> put(key, value) }
     }
 
-    fun addAll(vararg items: Any?) {
+    open fun addAll(vararg items: Any?) {
         val data = platformObject()
         var i = 0
         while (i < items.size) {
-            val key = toKey(items[i++])
+            val original = items[i++]
+            val key = toKey(original)
             val value = if (i < items.size) unbox(items[i++]) else null
-            require(key != null)
+            if (key == null) {
+                if (original == null) throw illegalArg("Invalid key: null")
+                val originalType = forInstance(original)
+                throw illegalArg("Invalid key: '${originalType.name}', expected: '${keyType.name}'")
+            }
             map_set(data, key, value)
         }
     }
 
-    override fun put(key: K, value: V?): V? =
-        toValue(key, map_set(platformObject(), key, unbox(value)))
+    override fun put(key: K, value: V?): V? = toValue(key, map_set(platformObject(), key, unbox(value)))
 
     override fun get(key: K): V? = toValue(key, map_get(platformObject(), key))
 
@@ -258,63 +264,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      */
     fun removeRaw(key: Any): Any? = map_remove(platformObject(), key)
 
-    override fun containsValue(value: V?): Boolean = map_contains_value(platformObject(), value)
+    override fun containsValue(value: V?): Boolean = map_contains_value(platformObject(), unbox(value))
 
     override fun containsKey(key: K): Boolean = map_contains_key(platformObject(), key)
-
-    class Entry<K : Any, V : Any>(
-        override val key: K,
-        initialValue: V?,
-        private val owner: MapProxy<K, V>
-    ) : MutableEntry<K, V?> {
-
-        private var currentValue: V? = initialValue
-
-        override fun setValue(newValue: V?): V? {
-            val oldValue = currentValue
-            currentValue = newValue
-            owner.setRaw(key, newValue)
-            return oldValue
-        }
-
-        override val value: V?
-            get() = currentValue
-    }
-
-    class MapProxyEntrySet<K : Any, V : Any>(
-        private val basicEntries: MutableSet<MutableEntry<K, V?>>,
-        private val owner: MapProxy<K, V>
-    ) : MutableSet<MutableEntry<K, V?>> by basicEntries {
-
-        override fun iterator(): MutableIterator<MutableEntry<K, V?>> {
-            return MapProxyEntriesIterator(basicEntries.iterator(), owner)
-        }
-    }
-
-    class MapProxyEntriesIterator<K : Any, V : Any>(
-        private val basicIterator: MutableIterator<MutableEntry<K, V?>>,
-        private val owner: MapProxy<K, V>
-    ) : MutableIterator<MutableEntry<K, V?>> by basicIterator {
-
-        private var currentKey: K? = null
-
-        override fun next(): MutableEntry<K, V?> {
-            val next = basicIterator.next()
-            currentKey = next.key
-            return next
-        }
-
-        override fun remove() {
-            owner.removeRaw(
-                currentKey ?: throw IllegalStateException("Iterator is invalid position")
-            )
-        }
-    }
-
-    private fun rawEntries(): Sequence<PlatformList> {
-        val platformIterator = map_iterator(platformObject())
-        return generateSequence(platformIterator.next().value) {
-            platformIterator.next().value
-        }
-    }
 }

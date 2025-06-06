@@ -1,5 +1,6 @@
 package naksha.base
 
+import naksha.base.fn.Fn2
 import kotlin.js.JsExport
 import kotlin.jvm.JvmOverloads
 import kotlin.reflect.KClass
@@ -25,15 +26,15 @@ import kotlin.reflect.KClass
  * ```
  * @param OBJECT_TYPE the type of the object.
  * @param PROPERTY_TYPE the type of the property.
- * @param klass the [KClass] of the property type.
+ * @param type the [PlatformType] of the property type.
  * @param name the name of the property in the map, if different from the property name, if _null_, the property name is used.
  * @param init the initializer to create a new value, when the property does not exist or the value is not of the desired type. If the
  * initializer returns _null_, the value is created by invoking the default constructor of the value type.
  */
-@Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
+@Suppress("OPT_IN_USAGE")
 @JsExport
-open class NotNullProperty<OBJECT_TYPE : AnyObject, PROPERTY_TYPE : Any>(
-    klass: KClass<out PROPERTY_TYPE>,
+open class NotNullProperty<OBJECT_TYPE : AnyObject, PROPERTY_TYPE : Any> @JvmOverloads constructor(
+    type: PlatformType<PROPERTY_TYPE>,
     name: String? = null,
-    init: ((self: OBJECT_TYPE, name: String) -> PROPERTY_TYPE?)? = null
-) : NotNullMapProperty<OBJECT_TYPE, Any, PROPERTY_TYPE>(klass, name, init)
+    init: Fn2<PROPERTY_TYPE?, OBJECT_TYPE, String>? = null
+) : NotNullMapProperty<OBJECT_TYPE, Any, PROPERTY_TYPE>(type, name, init)

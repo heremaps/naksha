@@ -4,8 +4,8 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.fn.Fx2
 import naksha.jbon.JbDictionary
 import naksha.model.*
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import kotlin.reflect.KClass
 
 /**

@@ -18,14 +18,15 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import static naksha.model.NakshaError.EXCEPTION;
+import static naksha.base.NakshaError.EXCEPTION;
 
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /** An exception, which will cause the connector to respond with an ErrorResponse object.
- * @deprecated Please use {@link naksha.model.NakshaException} instead
+ * @deprecated Please use {@link NakshaException} instead
  */
 public class XyzErrorException extends RuntimeException {
 

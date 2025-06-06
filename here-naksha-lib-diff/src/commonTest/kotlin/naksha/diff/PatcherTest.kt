@@ -1,5 +1,6 @@
 package naksha.diff
 
+import naksha.base.NakshaException
 import naksha.base.Platform
 import kotlin.test.*
 
@@ -19,17 +20,17 @@ class PatcherTest {
 
     @Test
     fun shouldFailOnNotMatchingDiff(){
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<NakshaException> {
             Patcher.patch(toBePatched = mapOf("foo" to "bar"), diff = ListDiff())
         }
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<NakshaException> {
             Patcher.patch(toBePatched = listOf(1, 2, 3), diff = MapDiff())
         }
     }
 
     @Test
     fun shouldFailOnUnsupportedObject(){
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<NakshaException> {
             Patcher.patch("Not map or list", MapDiff())
         }
     }
@@ -52,13 +53,12 @@ class PatcherTest {
 
         // And:
         val patch = MapDiff()
-        patch["age"] = UpdateOp(oldValue = 37, newValue = 41)
-        val addressPatch = MapDiff()
-        addressPatch["city"] = UpdateOp(oldValue = "London", newValue = "Fordwich")
-        addressPatch["street"] = RemoveOp(oldValue = "Abbey Road")
-        addressPatch["houseNo"] = UpdateOp(oldValue = 12, newValue = 71)
-        patch["address"] = addressPatch
-
+        patch.differences["age"] = UpdateDiff(oldValue = 37, newValue = 41)
+        patch.differences["address"] = MapDiff().apply {
+            differences["city"] = UpdateDiff(oldValue = "London", newValue = "Fordwich")
+            differences["street"] = RemoveDiff(oldValue = "Abbey Road")
+            differences["houseNo"] = UpdateDiff(oldValue = 12, newValue = 71)
+        }
 
         // When
         Patcher.patch(patchedObject, patch)
@@ -79,10 +79,10 @@ class PatcherTest {
 
         // And
         val listDiff = ListDiff()
-        listDiff.add(null) // leaving 0 as is
-        listDiff.add(UpdateOp(oldValue = "one", newValue = 1)) // "one" -> 1
-        listDiff.add(RemoveOp(oldValue = 2)) // remove 2
-        listDiff.add(InsertOp(newValue = 4)) // insert 4
+        listDiff.differences.add(null) // leaving 0 as is
+        listDiff.differences.add(UpdateDiff(oldValue = "one", newValue = 1)) // "one" -> 1
+        listDiff.differences.add(RemoveDiff(oldValue = 2)) // remove 2
+        listDiff.differences.add(InsertDiff(newValue = 4)) // insert 4
 
         // When
         Patcher.patch(patchedList, listDiff)

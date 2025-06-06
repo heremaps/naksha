@@ -2,9 +2,10 @@
 
 package naksha.psql
 
+import naksha.base.NakshaException
 import naksha.base.fn.Fx2
 import naksha.model.*
-import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
+import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import kotlin.js.JsExport
 
 // TODO: Create "naksha~admin" map with map-number 0

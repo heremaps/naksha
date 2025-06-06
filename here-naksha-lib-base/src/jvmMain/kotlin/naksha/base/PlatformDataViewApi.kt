@@ -6,7 +6,7 @@ actual class PlatformDataViewApi {
     actual companion object PlatformDataViewApiCompanion {
         @JvmStatic
         actual fun dataview_get_byte_array(view: PlatformDataView): ByteArray =
-            (view as JvmDataView).getByteArray()
+            (view as JvmDataView).byteArray
 
         @JvmStatic
         actual fun dataview_get_start(view: PlatformDataView): Int =

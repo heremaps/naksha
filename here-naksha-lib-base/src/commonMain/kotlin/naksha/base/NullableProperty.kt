@@ -1,6 +1,8 @@
 package naksha.base
 
+import naksha.base.fn.Fn2
 import kotlin.js.JsExport
+import kotlin.jvm.JvmOverloads
 import kotlin.reflect.KClass
 
 /**
@@ -24,20 +26,20 @@ import kotlin.reflect.KClass
  * ```
  * @param OBJECT_TYPE the type of the object to which to attach the property.
  * @param PROPERTY_TYPE the type of the property, must have the base type of the map as super type.
- * @property klass the [KClass] of the property type.
+ * @property type the [PlatformType] of the property type.
+ * @property name the name of the property in the map, if different from the property name, if _null_, the property name is used.
  * @property autoCreate if the value should be auto-created, when it is _null_. If additionally an [init] is defined, then this invoked
  * before auto-generating a value.
  * @param autoRemove if the value should be removed, when it is set to _null_.
- * @property name the name of the property in the map, if different from the property name, if _null_, the property name is used.
  * @property init the initializer to create a new value, when the property does not exist or the value is not of the desired type. If the
  * initializer returns _null_, the value is created by invoking the default constructor of the value type.
  */
-@Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
+@Suppress("OPT_IN_USAGE")
 @JsExport
-open class NullableProperty<OBJECT_TYPE : AnyObject, PROPERTY_TYPE : Any>(
-    klass: KClass<out PROPERTY_TYPE>,
+open class NullableProperty<OBJECT_TYPE : AnyObject, PROPERTY_TYPE : Any> @JvmOverloads constructor(
+    type: PlatformType<PROPERTY_TYPE>,
+    name: String? = null,
     autoCreate: Boolean = false,
     autoRemove: Boolean = false,
-    name: String? = null,
-    init: ((self: OBJECT_TYPE, name: String) -> PROPERTY_TYPE?)? = null
-) : NullableMapProperty<OBJECT_TYPE, Any, PROPERTY_TYPE>(klass, autoCreate, autoRemove, name, init)
+    init: Fn2<PROPERTY_TYPE?, OBJECT_TYPE, String>? = null
+) : NullableMapProperty<OBJECT_TYPE, Any, PROPERTY_TYPE>(type, name, autoCreate, autoRemove, init)

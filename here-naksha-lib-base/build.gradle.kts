@@ -14,9 +14,8 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(kotlin("stdlib"))
-                implementation(kotlin("reflect"))
-                // https://github.com/Kotlin/kotlinx-datetime
                 api(libs.kotlinx.datetime)
+                implementation(kotlin("reflect"))
             }
         }
         commonTest {
@@ -63,7 +62,7 @@ kotlin {
                 moduleName = "naksha_base"
                 sourceMap = true
                 useEsClasses = true
-                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
+                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_FQ_NAMES
                 sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
             }
             generateTypeScriptDefinitions()

@@ -26,7 +26,7 @@ class JtsTest {
         val y2 = 2.1
 
         // when
-        val polygon = SpPolygon(SpBoundingBox(x1, y1, x2, y2))
+        val polygon = SpPolygon(GeoBoundingBox(x1, y1, x2, y2))
 
         // then
         val coords = polygon.getCoordinates()[0]!!

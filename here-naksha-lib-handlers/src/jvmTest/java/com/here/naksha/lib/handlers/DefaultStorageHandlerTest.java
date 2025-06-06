@@ -1,7 +1,7 @@
 package com.here.naksha.lib.handlers;
 
-import static naksha.model.NakshaError.COLLECTION_NOT_FOUND;
-import static naksha.model.NakshaError.MAP_NOT_FOUND;
+import static naksha.base.NakshaError.COLLECTION_NOT_FOUND;
+import static naksha.base.NakshaError.MAP_NOT_FOUND;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -33,7 +33,7 @@ import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;

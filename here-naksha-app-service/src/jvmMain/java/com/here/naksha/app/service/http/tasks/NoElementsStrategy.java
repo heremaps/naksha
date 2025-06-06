@@ -18,8 +18,8 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 
 public enum NoElementsStrategy {
   FAIL_ON_NO_ELEMENTS(new NakshaError(

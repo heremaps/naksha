@@ -2,9 +2,7 @@
 
 package naksha.model
 
-import naksha.base.Fnv1a32
-import naksha.base.Int64
-import naksha.base.Platform
+import naksha.base.*
 import naksha.base.fn.Fn3
 import naksha.geo.HereTile
 import naksha.model.objects.NakshaFeature
@@ -324,7 +322,7 @@ data class Metadata(
         @JsStatic
         fun calculateHereTile(feature: NakshaFeature): Int {
             val c = feature.referencePoint ?: feature.geometry?.calculateCentroid()
-            return if (c != null) HereTile(c.latitude, c.longitude).intKey else Fnv1a32.string(0, feature.id)
+            return if (c != null) HereTile(latitude = c.latitude, longitude = c.longitude).intKey else Fnv1a32.string(0, feature.id)
         }
     }
 

@@ -3,18 +3,22 @@
 package naksha.base
 
 import kotlin.js.JsExport
-import kotlin.reflect.KClass
 
 /**
- * A lambda to query the default symbol to which to bind a given [KClass] to.
+ * A lambda to query the default symbol to link a given value [type][PlatformType].
+ *
+ * Creating _symbol resolvers_ allows to link certain [types][PlatformType] into specific namespaces, a namespace is represented by a [Symbol].
+ * @see Symbols
+ * @see Symbol
+ * @see SymbolMember
  */
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
 interface SymbolResolver {
     /**
-     * A method called to return the symbol to which to bind the given [KClass].
-     * @param klass The [KClass] for which to return the default symbol.
-     * @return The default symbol or _null_, if this resolver is not responsible for the given [KClass].
+     * A method called to return the [symbol][Symbol] to which values of the given [type][PlatformType] are linked by default.
+     * @param type The [PlatformType] of the value for which to return the default [Symbol].
+     * @return The default [Symbol] or `null`, if this resolver is not responsible for the given [PlatformType].
      */
-    fun call(klass: KClass<*>): Symbol?
+    fun call(type: PlatformType<*>): Symbol?
 }

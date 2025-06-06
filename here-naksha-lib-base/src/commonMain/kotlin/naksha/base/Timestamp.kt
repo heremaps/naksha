@@ -4,10 +4,11 @@
 package naksha.base
 
 import kotlinx.datetime.*
+import naksha.base.Platform.PlatformCompanion.forKClass
 import kotlin.js.ExperimentalJsExport
-import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
@@ -37,6 +38,14 @@ class Timestamp(
     val nanos: Int
 ) {
     companion object TimestampCompanion {
+        /**
+         * The [PlatformType] of [Timestamp].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<Timestamp> = forKClass(Timestamp::class).withPackageName(PACKAGE_NAME)
+
         /**
          * Returns the current timestamp.
          * @return The current timestamp.

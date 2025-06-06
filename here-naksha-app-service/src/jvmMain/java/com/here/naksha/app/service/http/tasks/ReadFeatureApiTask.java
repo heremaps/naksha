@@ -67,13 +67,13 @@ import java.util.Map;
 import java.util.Set;
 import naksha.base.StringList;
 import naksha.geo.PointCoord;
-import naksha.geo.SpBoundingBox;
+import naksha.geo.GeoBoundingBox;
 import naksha.geo.SpGeometry;
 import naksha.geo.SpPoint;
 import naksha.geo.SpPolygon;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
@@ -221,7 +221,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     ApiParams.validateParamRange(SOUTH, south, -90, 90);
 
     // Prepare read request based on parameters supplied
-    final SpBoundingBox bbox = new SpBoundingBox(west, south, east, north);
+    final GeoBoundingBox bbox = new GeoBoundingBox(west, south, east, north);
     final ITagQuery tagQuery = TagQueryUtil.tagQueryFromParams(queryParams);
     final IPropertyQuery propertyQuery = PropertyQueryUtil.propertyQueryFromParams(queryParams);
     final StringList suppliedFeatureIds = FeatureIdQueryUtil.featureIdsFromParams(queryParams);

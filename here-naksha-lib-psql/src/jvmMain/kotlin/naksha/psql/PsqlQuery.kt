@@ -2,7 +2,7 @@ package naksha.psql
 
 import naksha.base.AnyList
 import naksha.base.Int64
-import naksha.model.illegalArg
+import naksha.base.illegalArg
 import naksha.psql.PgType.Companion.BOOLEAN
 import naksha.psql.PgType.Companion.BOOLEAN_ARRAY
 import naksha.psql.PgType.Companion.BYTE_ARRAY

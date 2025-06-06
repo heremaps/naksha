@@ -1,25 +1,51 @@
 package naksha.geo
 
 import naksha.base.ListProxy
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
+import naksha.base.illegalState
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
+/**
+ * A [GeoJSON MultiPolygon Coordinates](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1.7).
+ * @since 3.0
+ * @see ICoordinates
+ */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class MultiPolygonCoord() : ListProxy<PolygonCoord>(PolygonCoord::class), ICoordinates {
+class MultiPolygonCoord() : ListProxy<PolygonCoord>(PolygonCoord.TYPE), ICoordinates {
 
-    @JsName("of")
+    @JsName("MultiPolygonCoordOf")
     constructor(vararg polygons: PolygonCoord) : this() {
         addAll(polygons)
     }
 
-    override fun hasZ(): Boolean {
-        for (p in this) if (p != null && p.hasZ()) return true
-        return false
+    companion object MultiPolygonCoordCompanion {
+        /**
+         * The [PlatformType] of [MultiPolygonCoord].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<MultiPolygonCoord> = forKClass(MultiPolygonCoord::class)
+            .withPackageName(PACKAGE_NAME)
+            .withJsonType("MultiPolygon")
     }
 
-    override fun hasM(): Boolean {
-        for (p in this) if (p != null && p.hasM()) return true
-        return false
+    override fun fix(): MultiPolygonCoord {
+        var end = 0
+        for (i in 0 until size) {
+            val p = this[i] ?: continue
+            p.fix()
+            if (end != i) this[end] = p
+            end++
+        }
+        if (size > end) size = end
+        return this
     }
+    override fun hasZ(): Boolean = this.any { hasZ() }
+    override fun hasM(): Boolean = this.any { hasM() }
 }

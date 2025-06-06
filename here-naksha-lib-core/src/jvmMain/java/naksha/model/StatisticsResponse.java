@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.here.naksha.lib.core.models.payload.events.info.GetStatisticsEvent;
 import java.util.List;
-import naksha.geo.SpBoundingBox;
+import naksha.geo.GeoBoundingBox;
 import naksha.model.request.Response;
 
 /** The response that is sent for a {@link GetStatisticsEvent}. */
@@ -38,7 +38,7 @@ public class StatisticsResponse extends Response {
   private Value<Long> byteSize;
 
   private Value<Long> dataSize;
-  private Value<SpBoundingBox> bbox;
+  private Value<GeoBoundingBox> bbox;
   private PropertiesStatistics properties;
   private Value<List<PropertyStatistics>> tags;
   private Value<List<String>> geometryTypes;
@@ -147,7 +147,7 @@ public class StatisticsResponse extends Response {
    * @return the most outer bounding box around all features being within the space; null if no
    *     feature is in the space.
    */
-  public Value<SpBoundingBox> getBbox() {
+  public Value<GeoBoundingBox> getBbox() {
     return this.bbox;
   }
 
@@ -156,7 +156,7 @@ public class StatisticsResponse extends Response {
    *
    * @param bbox the bbox value to be set
    */
-  public void setBbox(Value<SpBoundingBox> bbox) {
+  public void setBbox(Value<GeoBoundingBox> bbox) {
     this.bbox = bbox;
   }
 
@@ -166,7 +166,7 @@ public class StatisticsResponse extends Response {
    * @return this.
    */
   @SuppressWarnings({"unused"})
-  public StatisticsResponse withBBox(Value<SpBoundingBox> bbox) {
+  public StatisticsResponse withBBox(Value<GeoBoundingBox> bbox) {
     setBbox(bbox);
     return this;
   }

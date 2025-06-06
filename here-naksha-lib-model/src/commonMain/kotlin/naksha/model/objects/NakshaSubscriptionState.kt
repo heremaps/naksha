@@ -3,7 +3,7 @@
 package naksha.model.objects
 
 import naksha.base.*
-import naksha.model.NakshaError
+import naksha.base.NakshaError
 import kotlin.js.JsExport
 import kotlin.js.JsName
 

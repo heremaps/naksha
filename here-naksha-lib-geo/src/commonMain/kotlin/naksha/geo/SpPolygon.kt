@@ -13,7 +13,7 @@ class SpPolygon() : SpGeometry() {
     }
 
     @JsName("ofBoundingBox")
-    constructor(bbox: SpBoundingBox) : this() {
+    constructor(bbox: GeoBoundingBox) : this() {
         val lineString = LineStringCoord(
             PointCoord(bbox.getWestLongitude(), bbox.getSouthLatitude()),
             PointCoord(bbox.getEastLongitude(), bbox.getSouthLatitude()),

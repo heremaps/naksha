@@ -38,7 +38,7 @@ import com.here.naksha.lib.core.models.payload.events.info.GetStorageStatisticsE
 import com.here.naksha.lib.core.models.payload.events.info.HealthCheckEvent;
 import com.here.naksha.lib.core.models.payload.events.space.ModifySpaceEvent;
 import javax.annotation.Nonnull;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;

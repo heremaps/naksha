@@ -2,8 +2,11 @@
 
 package naksha.base
 
+import naksha.base.Platform.PlatformCompanion.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
@@ -11,14 +14,14 @@ import kotlin.jvm.JvmStatic
  * @since 3.0
  */
 @JsExport
-open class StringList() : ListProxy<String>(String::class) {
+open class StringList() : ListProxy<String>(String_TYPE){
 
     /**
      * Create an initialized string list.
      * @since 3.0
      */
-    @JsName("fromStrings")
-    constructor(vararg strings: String) : this() {
+    @JsName("of")
+    constructor(vararg strings: String?) : this() {
         addAll(strings)
     }
 
@@ -29,7 +32,7 @@ open class StringList() : ListProxy<String>(String::class) {
      * @since 3.0
      */
     fun append(element: String?): StringList {
-        super.add(element)
+        add(element)
         return this
     }
 
@@ -46,7 +49,26 @@ open class StringList() : ListProxy<String>(String::class) {
         return true
     }
 
-    companion object StringList_C {
+    /**
+     * Adds all given strings to the end of this list.
+     * @param element the strings to add.
+     * @return this.
+     * @since 3.0
+     */
+    fun appendAll(vararg element: String?): StringList {
+        addAll(element)
+        return this
+    }
+
+    companion object StringListCompanion {
+        /**
+         * The [PlatformType] of [StringList].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<StringList> = forKClass(StringList::class).withPackageName(PACKAGE_NAME)
+
         @JvmStatic
         fun fromList(strings: List<String>): StringList =
             StringList().apply { addAll(strings) }

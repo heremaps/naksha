@@ -1,7 +1,7 @@
 package naksha.psql
 
-import naksha.model.NakshaError.NakshaErrorCompanion.PARTITION_NOT_FOUND
-import naksha.model.NakshaException
+import naksha.base.NakshaError.NakshaErrorCompanion.PARTITION_NOT_FOUND
+import naksha.base.NakshaException
 import naksha.psql.PgUtil.PgUtilCompanion.partitionNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName

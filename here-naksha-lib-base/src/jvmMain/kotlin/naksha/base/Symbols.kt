@@ -3,7 +3,6 @@ package naksha.base
 import naksha.base.Platform.PlatformCompanion.DEFAULT_SYMBOL
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.reflect.KClass
 
 /**
  * A singleton that grants access to symbols. Symbols are a way to bind proxies (and other hidden data) to platform objects.
@@ -30,20 +29,26 @@ actual class Symbols {
 
         private val symbolResolverRef = AtomicReference<List<SymbolResolver>?>()
 
+        /**
+         * Returns the default [symbol][Symbol] to bind the given [JvmPlatformType] against. If no [symbol][Symbol] is found by any of the registered [symbol resolvers][SymbolResolver], this method returns [DEFAULT_SYMBOL].
+         * @param type The [JvmPlatformType] for which to return the default [symbol][Symbol].
+         * @return The default [symbol][Symbol] to bind the given [JvmPlatformType] against.
+         * @since 3.0
+         */
         @JvmStatic
-        actual fun <T : Any> of(klass: KClass<out T>): Symbol {
+        actual fun of(type: PlatformType<*>): Symbol {
             val resolvers = symbolResolverRef.get()
             if (resolvers != null) {
                 for (resolver in resolvers) {
                     try {
-                        val symbol = resolver.call(klass)
+                        val symbol = resolver.call(type)
                         if (symbol != null) return symbol
                     } catch (e: Exception) {
-                        Platform.logger.error("The symbol resolver raised an exception: {}", e.stackTraceToString())
+                        Platform.logger.error("The symbol resolver raised an exception: {}", e)
                     }
                 }
             }
-            return DEFAULT_SYMBOL
+            return type.symbol
         }
 
         @JvmStatic
@@ -107,8 +112,8 @@ actual class Symbols {
          */
         @JvmStatic
         actual fun iterator(obj: PlatformObject): PlatformIterator<PlatformList> {
-            require(obj is JvmObject) { "Unsupported platform object $obj" }
-            return JvmMapEntryIterator(obj.symbols)
+            if (obj is JvmObject) return JvmMapEntryIterator(obj.symbols as Map<*, *>)
+            throw illegalArg("Unsupported platform object $obj")
         }
 
         /**

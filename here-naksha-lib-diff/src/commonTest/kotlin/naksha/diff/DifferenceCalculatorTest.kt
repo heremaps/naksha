@@ -1,5 +1,6 @@
 package naksha.diff
 
+import naksha.base.AnyObject
 import naksha.base.Platform
 import naksha.diff.DifferenceCalculator.DifferenceCalculator_C.calculateDifference
 import kotlin.test.*
@@ -16,12 +17,19 @@ class DifferenceCalculatorTest {
         """.trimIndent())!!
 
         val diff = MapDiff()
-        diff["foo"] = UpdateOp(oldValue = "bar", newValue = "new_bar")
-        diff["lorem"] = RemoveOp(oldValue = "ipsum")
-        diff["new_field"] = InsertOp(newValue = 123)
+        diff["foo"] = UpdateDiff(oldValue = "bar", newValue = "new_bar")
+        diff["lorem"] = RemoveDiff(oldValue = "ipsum")
+        diff["new_field"] = InsertDiff(newValue = 123)
+
+        // Ensure that the diff is correct
+        assertEquals(3, diff.size)
+        val entryIt = diff.entries.iterator()
+        assertTrue(entryIt.hasNext())
+        val fooEntry = entryIt.next()
+        assertEquals("foo", fooEntry.key)
+        assertIs<UpdateDiff>(fooEntry.value)
 
         Patcher.patch(objectToPatch, diff)
-
         val x = Platform.toJSON(objectToPatch)
     }
 
@@ -34,7 +42,7 @@ class DifferenceCalculatorTest {
         val diff = calculateDifference(source = null, target = target)
 
         // Then
-        assertIs<InsertOp>(diff)
+        assertIs<InsertDiff>(diff)
         assertEquals(target, diff.newValue)
     }
 
@@ -47,7 +55,7 @@ class DifferenceCalculatorTest {
         val diff = calculateDifference(source = source, target = null)
 
         // Then
-        assertIs<RemoveOp>(diff)
+        assertIs<RemoveDiff>(diff)
         assertEquals(source, diff.oldValue)
     }
 
@@ -88,14 +96,14 @@ class DifferenceCalculatorTest {
         // Then
         assertNotNull(leftToRightDiff)
         assertIs<MapDiff>(leftToRightDiff)
-        assertTrue(leftToRightDiff.keys.containsAll(setOf("age", "address")))
-        assertEquals(2, leftToRightDiff.size)
-        assertEquals(UpdateOp(37, 39), leftToRightDiff["age"])
-        val leftToRightAddressChange = leftToRightDiff["address"]
+        assertTrue(leftToRightDiff.differences.keys.containsAll(setOf("age", "address")))
+        assertEquals(2, leftToRightDiff.differences.size)
+        assertEquals(UpdateDiff(37, 39), leftToRightDiff.differences["age"])
+        val leftToRightAddressChange = leftToRightDiff.differences["address"]
         assertIs<MapDiff>(leftToRightAddressChange)
-        assertEquals(UpdateOp("London", "Fordwich"), leftToRightAddressChange["city"])
-        assertEquals(RemoveOp("Abbey Road"), leftToRightAddressChange["street"])
-        assertEquals(UpdateOp(12, 71), leftToRightAddressChange["houseNo"])
+        assertEquals(UpdateDiff("London", "Fordwich"), leftToRightAddressChange.differences["city"])
+        assertEquals(RemoveDiff("Abbey Road"), leftToRightAddressChange.differences["street"])
+        assertEquals(UpdateDiff(12, 71), leftToRightAddressChange.differences["houseNo"])
 
         // When
         val rightToLeftDiff = calculateDifference(right, left)
@@ -103,14 +111,14 @@ class DifferenceCalculatorTest {
         // Then
         assertNotNull(rightToLeftDiff)
         assertIs<MapDiff>(rightToLeftDiff)
-        assertTrue(rightToLeftDiff.keys.containsAll(setOf("age", "address")))
-        assertEquals(2, rightToLeftDiff.size)
-        assertEquals(UpdateOp(39, 37), rightToLeftDiff["age"])
-        val rightToLeftAddressChange = rightToLeftDiff["address"]
+        assertTrue(rightToLeftDiff.differences.keys.containsAll(setOf("age", "address")))
+        assertEquals(2, rightToLeftDiff.differences.size)
+        assertEquals(UpdateDiff(39, 37), rightToLeftDiff.differences["age"])
+        val rightToLeftAddressChange = rightToLeftDiff.differences["address"]
         assertIs<MapDiff>(rightToLeftAddressChange)
-        assertEquals(UpdateOp("Fordwich", "London"), rightToLeftAddressChange["city"])
-        assertEquals(InsertOp("Abbey Road"), rightToLeftAddressChange["street"])
-        assertEquals(UpdateOp(71, 12), rightToLeftAddressChange["houseNo"])
+        assertEquals(UpdateDiff("Fordwich", "London"), rightToLeftAddressChange.differences["city"])
+        assertEquals(InsertDiff("Abbey Road"), rightToLeftAddressChange.differences["street"])
+        assertEquals(UpdateDiff(71, 12), rightToLeftAddressChange.differences["houseNo"])
     }
 
     @Test
@@ -125,11 +133,11 @@ class DifferenceCalculatorTest {
         // Then
         assertNotNull(shorterToLongerDiff)
         assertIs<ListDiff>(shorterToLongerDiff)
-        assertEquals(4, shorterToLongerDiff.size)
-        assertEquals(null, shorterToLongerDiff[0]) // no diff -> null
-        assertEquals(UpdateOp(1, "one"), shorterToLongerDiff[1])
-        assertEquals(null, shorterToLongerDiff[2]) // no diff -> null
-        assertEquals(InsertOp("three"), shorterToLongerDiff[3])
+        assertEquals(4, shorterToLongerDiff.differences.size)
+        assertEquals(null, shorterToLongerDiff.differences[0]) // no diff -> null
+        assertEquals(UpdateDiff(1, "one"), shorterToLongerDiff.differences[1])
+        assertEquals(null, shorterToLongerDiff.differences[2]) // no diff -> null
+        assertEquals(InsertDiff("three"), shorterToLongerDiff.differences[3])
 
         // When: diffing longer with shorter (reverse-diff of the previous operation)
         val longerToShorterDiff = calculateDifference(longer, shorter)
@@ -137,11 +145,11 @@ class DifferenceCalculatorTest {
         // Then
         assertNotNull(longerToShorterDiff)
         assertIs<ListDiff>(longerToShorterDiff)
-        assertEquals(4, longerToShorterDiff.size)
-        assertEquals(null, longerToShorterDiff[0]) // no diff -> null
-        assertEquals(UpdateOp("one", 1), longerToShorterDiff[1])
-        assertEquals(null, longerToShorterDiff[2]) // no diff -> null
-        assertEquals(RemoveOp("three"), longerToShorterDiff[3])
+        assertEquals(4, longerToShorterDiff.differences.size)
+        assertEquals(null, longerToShorterDiff.differences[0]) // no diff -> null
+        assertEquals(UpdateDiff("one", 1), longerToShorterDiff.differences[1])
+        assertEquals(null, longerToShorterDiff.differences[2]) // no diff -> null
+        assertEquals(RemoveDiff("three"), longerToShorterDiff.differences[3])
     }
 
     @Test
@@ -201,12 +209,9 @@ class DifferenceCalculatorTest {
         """.trimIndent())
 
         // And:
-        val diffContext = object:DiffContext {
+        val diffContext = object : DefaultDiffContext() {
             override fun ignore(key: Any, sourceMap: Map<*, *>, targetOrPatchMap: Map<*, *>): Boolean =
                 key == "bar"
-
-            override fun areTwoNumbersEqual(first: Number, second: Number): Boolean =
-                DiffContext.Default.areTwoNumbersEqual(first, second)
         }
 
         // When:
@@ -220,7 +225,7 @@ class DifferenceCalculatorTest {
 
         // Then
         assertIs<MapDiff>(diffWithoutIgnore)
-        assertEquals(UpdateOp(123, 456), diffWithoutIgnore["bar"])
+        assertEquals(UpdateDiff(123, 456), diffWithoutIgnore.differences["bar"])
     }
 
     @Test
@@ -299,37 +304,37 @@ class DifferenceCalculatorTest {
         // Then:
         assertNotNull(diff)
         assertIs<MapDiff>(diff)
-        val staffDiff = diff["staff"]
+        val staffDiff = diff.differences["staff"]
         assertIs<ListDiff>(staffDiff)
-        val firstEmployee = staffDiff[0]
+        val firstEmployee = staffDiff.differences[0]
         assertIs<MapDiff>(firstEmployee)
-        assertEquals(UpdateOp("junior", "senior"), firstEmployee["seniority"])
-        val firstEmployeeRoles = firstEmployee["roles"]
+        assertEquals(UpdateDiff("junior", "senior"), firstEmployee.differences["seniority"])
+        val firstEmployeeRoles = firstEmployee.differences["roles"]
         assertIs<ListDiff>(firstEmployeeRoles)
-        val firstRoleOfFirstEmployee = firstEmployeeRoles[0]
+        val firstRoleOfFirstEmployee = firstEmployeeRoles.differences[0]
         assertIs<MapDiff>(firstRoleOfFirstEmployee)
-        assertEquals(UpdateOp("s1", "s2"), firstRoleOfFirstEmployee["system"])
-        val secondRoleOfFirstEmployee = firstEmployeeRoles[1]
-        assertIs<RemoveOp>(secondRoleOfFirstEmployee)
+        assertEquals(UpdateDiff("s1", "s2"), firstRoleOfFirstEmployee.differences["system"])
+        val secondRoleOfFirstEmployee = firstEmployeeRoles.differences[1]
+        assertIs<RemoveDiff>(secondRoleOfFirstEmployee)
         val removedRoleOfFirstEmployee = secondRoleOfFirstEmployee.oldValue
         assertIs<Map<*, *>>(removedRoleOfFirstEmployee)
         assertEquals("s2", removedRoleOfFirstEmployee["system"])
         assertEquals("user", removedRoleOfFirstEmployee["role"])
-        val secondEmployee = staffDiff[1]
+        val secondEmployee = staffDiff.differences[1]
         assertIs<MapDiff>(secondEmployee)
-        assertEquals(UpdateOp("Phil", "Stan"), secondEmployee["name"])
-        assertEquals(UpdateOp(456, 999), secondEmployee["id"])
-        assertEquals(RemoveOp("senior"), secondEmployee["seniority"])
-        val secondEmployeeRoles = secondEmployee["roles"]
+        assertEquals(UpdateDiff("Phil", "Stan"), secondEmployee.differences["name"])
+        assertEquals(UpdateDiff(456, 999), secondEmployee.differences["id"])
+        assertEquals(RemoveDiff("senior"), secondEmployee.differences["seniority"])
+        val secondEmployeeRoles = secondEmployee.differences["roles"]
         assertIs<ListDiff>(secondEmployeeRoles)
-        val firstRoleOfSecondEmployeeOp = secondEmployeeRoles[0]
-        assertIs<RemoveOp>(firstRoleOfSecondEmployeeOp)
+        val firstRoleOfSecondEmployeeOp = secondEmployeeRoles.differences[0]
+        assertIs<RemoveDiff>(firstRoleOfSecondEmployeeOp)
         val firstRemovedRoleOfSecondEmployee = firstRoleOfSecondEmployeeOp.oldValue
         assertIs<Map<*, *>>(firstRemovedRoleOfSecondEmployee)
         assertEquals("s1", firstRemovedRoleOfSecondEmployee["system"])
         assertEquals("admin", firstRemovedRoleOfSecondEmployee["role"])
-        val secondRoleOfSecondEmployeeOp = secondEmployeeRoles[1]
-        assertIs<RemoveOp>(secondRoleOfSecondEmployeeOp)
+        val secondRoleOfSecondEmployeeOp = secondEmployeeRoles.differences[1]
+        assertIs<RemoveDiff>(secondRoleOfSecondEmployeeOp)
         val secondRemovedRoleOfSecondEmployee = secondRoleOfSecondEmployeeOp.oldValue
         assertIs<Map<*, *>>(secondRemovedRoleOfSecondEmployee)
         assertEquals("s2", secondRemovedRoleOfSecondEmployee["system"])
@@ -348,11 +353,11 @@ class DifferenceCalculatorTest {
         // Then
         assertNotNull(shorterToLongerDiff)
         assertIs<ListDiff>(shorterToLongerDiff)
-        assertEquals(4, shorterToLongerDiff.size)
-        assertEquals(null, shorterToLongerDiff[0]) // no diff -> null
-        assertEquals(UpdateOp(1, "one"), shorterToLongerDiff[1])
-        assertEquals(null, shorterToLongerDiff[2]) // no diff -> null
-        assertEquals(InsertOp("three"), shorterToLongerDiff[3])
+        assertEquals(4, shorterToLongerDiff.differences.size)
+        assertEquals(null, shorterToLongerDiff.differences[0]) // no diff -> null
+        assertEquals(UpdateDiff(1, "one"), shorterToLongerDiff.differences[1])
+        assertEquals(null, shorterToLongerDiff.differences[2]) // no diff -> null
+        assertEquals(InsertDiff("three"), shorterToLongerDiff.differences[3])
 
         // When: diffing longer with shorter (reverse-diff of the previous operation)
         val longerToShorterDiff = calculateDifference(longer, shorter)
@@ -360,10 +365,10 @@ class DifferenceCalculatorTest {
         // Then
         assertNotNull(longerToShorterDiff)
         assertIs<ListDiff>(longerToShorterDiff)
-        assertEquals(4, longerToShorterDiff.size)
-        assertEquals(null, longerToShorterDiff[0]) // no diff -> null
-        assertEquals(UpdateOp("one", 1), longerToShorterDiff[1])
-        assertEquals(null, longerToShorterDiff[2]) // no diff -> null
-        assertEquals(RemoveOp("three"), longerToShorterDiff[3])
+        assertEquals(4, longerToShorterDiff.differences.size)
+        assertEquals(null, longerToShorterDiff.differences[0]) // no diff -> null
+        assertEquals(UpdateDiff("one", 1), longerToShorterDiff.differences[1])
+        assertEquals(null, longerToShorterDiff.differences[2]) // no diff -> null
+        assertEquals(RemoveDiff("three"), longerToShorterDiff.differences[3])
     }
 }
