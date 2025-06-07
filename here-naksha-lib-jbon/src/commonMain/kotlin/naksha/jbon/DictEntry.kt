@@ -2,7 +2,11 @@
 
 package naksha.jbon
 
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A dictionary entry.
@@ -35,4 +39,14 @@ data class DictEntry(
      * @since 3.0.0
      */
     val value: Any?
-)
+) {
+    companion object DictEntryCompanion {
+        /**
+         * The [PlatformType] of [DictEntry].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<DictEntry> = forKClass(DictEntry::class).withPackageName(PACKAGE_NAME)
+    }
+}

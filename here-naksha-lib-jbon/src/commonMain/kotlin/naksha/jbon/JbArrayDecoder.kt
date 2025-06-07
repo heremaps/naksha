@@ -1,6 +1,10 @@
 package naksha.jbon
 
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * An array implementation.
@@ -9,6 +13,16 @@ import kotlin.js.JsExport
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class JbArrayDecoder : JbEntryArray<JbArrayDecoder>() {
+
+    companion object JbArrayDecoderCompanion {
+        /**
+         * The [PlatformType] of [JbArrayDecoder].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<JbArrayDecoder> = forKClass(JbArrayDecoder::class).withPackageName(PACKAGE_NAME)
+    }
 
     override fun onMap() {}
 

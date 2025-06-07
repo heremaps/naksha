@@ -2,11 +2,26 @@ package naksha.jbon
 
 import naksha.base.Binary
 import naksha.base.BinaryView
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class JbPath(var dictManager: JbDictManager? = null, private var binaryView: BinaryView) {
+
+    companion object JbPathCompanion {
+        /**
+         * The [PlatformType] of [JbPath].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<JbPath> = forKClass(JbPath::class).withPackageName(PACKAGE_NAME)
+    }
+
     private var jmap: JbMapDecoder = JbMapDecoder()
     private var feature: JbRecordDecoder = JbRecordDecoder(dictManager)
 

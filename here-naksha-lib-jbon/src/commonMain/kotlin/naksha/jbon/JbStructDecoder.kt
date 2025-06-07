@@ -1,11 +1,16 @@
 @file:OptIn(ExperimentalJsExport::class)
+@file:Suppress("OPT_IN_USAGE")
 
 package naksha.jbon
 
 import naksha.base.BinaryView
 import naksha.base.Binary
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * The base class for all structure readers (JBON structure types). A structure does always have the unit-header. Apart from this, the
@@ -16,6 +21,16 @@ import kotlin.js.JsExport
 @Suppress("UNCHECKED_CAST", "MemberVisibilityCanBePrivate")
 @JsExport
 abstract class JbStructDecoder<SELF : JbStructDecoder<SELF>> {
+
+    companion object JbStructDecoderCompanion {
+        /**
+         * The [PlatformType] of [JbStructDecoder].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<JbStructDecoder<*>> = forKClass(JbStructDecoder::class).withPackageName(PACKAGE_NAME)
+    }
 
     /**
      * The decoder used to read from the structure.

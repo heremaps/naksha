@@ -1,6 +1,10 @@
 package naksha.jbon
 
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Intermediate class with shared code for array and map.
@@ -9,6 +13,17 @@ import kotlin.js.JsExport
 @Suppress("UNCHECKED_CAST", "OPT_IN_USAGE")
 @JsExport
 abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStructDecoder<SELF>() {
+
+    companion object JbEntryArrayCompanion {
+        /**
+         * The [PlatformType] of [JbEntryArray].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<JbEntryArray<*>> = forKClass(JbEntryArray::class).withPackageName(PACKAGE_NAME)
+    }
+
     /**
      * The current index in the entry list.
      */

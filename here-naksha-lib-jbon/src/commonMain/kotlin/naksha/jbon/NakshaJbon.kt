@@ -1,9 +1,40 @@
 // This will be exposed
 // - in JavaScript at the namespace: naksha.jbon.{name}
-// - jn Java at the class naksha.jbon.LibJbonKt.{name}
+// - jn Java at the class naksha.jbon.NakshaJbonKt.{name}
 package naksha.jbon
 
 import naksha.base.DataViewProxy
+import naksha.base.Platform.PlatformCompanion.forKClass
+
+/**
+ * The package name `naksha.jbon`
+ * @since 3.0
+ */
+const val PACKAGE_NAME = "naksha.jbon"
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [IDict] interface.
+ * @since 3.0
+ */
+val IDict_TYPE = forKClass(IDict::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [IDictBuilder] interface.
+ * @since 3.0
+ */
+val IDictBuilder_TYPE = forKClass(IDictBuilder::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [IDictManager] interface.
+ * @since 3.0
+ */
+val IDictManager_TYPE = forKClass(IDictManager::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [IDictReader] interface.
+ * @since 3.0
+ */
+val IDictReader_TYPE = forKClass(IDictReader::class).withPackageName(PACKAGE_NAME)
 
 // Encoding constants
 internal const val ENC_MASK = 0b1100_0000

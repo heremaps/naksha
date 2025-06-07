@@ -1,8 +1,12 @@
 package naksha.jbon
 
 import naksha.base.AnyObject
+import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.base.PlatformMap
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A map view.
@@ -11,6 +15,16 @@ import kotlin.js.JsExport
 @Suppress("DuplicatedCode", "OPT_IN_USAGE")
 @JsExport
 class JbMapDecoder : JbEntryArray<JbMapDecoder>() {
+
+    companion object JbMapDecoderCompanion {
+       /**
+         * The [PlatformType] of [JbMapDecoder].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<JbMapDecoder> = forKClass(JbMapDecoder::class).withPackageName(PACKAGE_NAME)
+    }
 
     override fun onMap() {}
 

@@ -17,6 +17,10 @@ import kotlin.reflect.KClass
  */
 abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
 
+    companion object AbstractStorageCompanion {
+
+    }
+
     /**
      * A lock for the storage to synchronize access to some properties and to prevent, that multiple threads in parallel initialize the storage, can be used by applications too, but should be avoided.
      *

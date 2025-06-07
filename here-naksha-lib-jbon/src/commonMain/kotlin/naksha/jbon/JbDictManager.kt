@@ -1,7 +1,11 @@
 package naksha.jbon
 
 import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A thread safe in-memory dictionary manager, that only keep dictionaries in memory.
@@ -10,6 +14,17 @@ import kotlin.js.JsExport
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class JbDictManager : IDictManager {
+
+    companion object JbDictManagerCompanion {
+        /**
+         * The [PlatformType] of [JbDictManager].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<JbDictManager> = forKClass(JbDictManager::class).withPackageName(PACKAGE_NAME)
+    }
+
     private val cache = Platform.newAtomicMap<String, JbDictionary>()
 
     override fun putDictionary(dict: JbDictionary) {

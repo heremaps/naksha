@@ -1,6 +1,7 @@
 package naksha.jbon;
 
 import naksha.base.*
+import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_size
 import kotlin.js.*
 import kotlin.jvm.JvmField
@@ -80,6 +81,14 @@ open class JbEncoder(var global: IDict? = null) : Binary() {
     }
 
     companion object JbEncoderCompanion {
+        /**
+         * The [PlatformType] of [JbEncoder].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<JbEncoder> = forKClass(JbEncoder::class).withPackageName(PACKAGE_NAME)
+
         /**
          * An array that stores _true_ for every character that should belong to a **word**, when auto-splitting
          * strings for the local dictionary. Ones a character being _false_ is found, the string is split at that

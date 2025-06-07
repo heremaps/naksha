@@ -1,13 +1,30 @@
 @file:OptIn(ExperimentalJsExport::class)
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.jbon
 
 import naksha.base.Int64
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
 
 @JsExport
 class XyzVersion(val major: Int, val minor: Int, val revision: Int) : Comparable<XyzVersion> {
     companion object XyzVersionCompanion {
+        /**
+         * The [PlatformType] of [XyzVersion].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<XyzVersion> = forKClass(XyzVersion::class).withPackageName(PACKAGE_NAME)
+
+        @JvmStatic
+        @JsStatic
         fun fromString(s: String): XyzVersion {
             val majorEnd: Int = s.indexOf('.')
             // "5" -> 5,0,0
@@ -26,6 +43,8 @@ class XyzVersion(val major: Int, val minor: Int, val revision: Int) : Comparable
                     s.substring(minorEnd + 1).toInt())
         }
 
+        @JvmStatic
+        @JsStatic
         fun fromBigInt(v: Int64) : XyzVersion {
             val major = (v ushr 32).toInt()
             val minor = (v.toInt() ushr 16) and 0xffff

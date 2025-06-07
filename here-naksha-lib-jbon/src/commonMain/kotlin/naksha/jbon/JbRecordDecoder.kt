@@ -1,6 +1,10 @@
 package naksha.jbon
 
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A mapper that allows reading a JBON feature. After mapping, the [reader] can be used to access the content of the feature. Beware that the content of an JBON feature can be anything, but most often will be a map. To read this kind of features, simply use the [JbFeatureDecoder] class.
@@ -10,6 +14,17 @@ import kotlin.js.JsExport
 @Suppress("OPT_IN_USAGE")
 @JsExport
 open class JbRecordDecoder(var dictReader: IDictReader? = null) : JbStructDecoder<JbRecordDecoder>() {
+
+    companion object JbRecordDecoderCompanion {
+        /**
+         * The [PlatformType] of [JbRecordDecoder].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<JbRecordDecoder> = forKClass(JbRecordDecoder::class).withPackageName(PACKAGE_NAME)
+    }
+
     private var id: String? = null
     private var featureType: Int = -1
 

@@ -1,6 +1,10 @@
 package naksha.jbon
 
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 // TODO: Implement IDict
 // TODO: Create a JbDictBuilder, that implements IDictBuilder and change JbEncoder to use an IDictBuilder for the local dictionary!
@@ -18,6 +22,17 @@ import kotlin.js.JsExport
 @Suppress("DuplicatedCode", "OPT_IN_USAGE")
 @JsExport
 class JbDictionary : JbStructDecoder<JbDictionary>(), IDict {
+
+    companion object JbDictionaryCompanion {
+        /**
+         * The [PlatformType] of [JbDictionary].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<JbDictionary> = forKClass(JbDictionary::class).withPackageName(PACKAGE_NAME)
+    }
+
     /**
      * Cached ID of the dictionary, if any.
      */

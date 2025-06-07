@@ -4,10 +4,12 @@ package naksha.jbon
 
 import naksha.base.*
 import naksha.base.Binary.BinaryCompanion.EMPTY_IMMUTABLE
+import naksha.base.Platform.PlatformCompanion.forKClass
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
@@ -20,6 +22,14 @@ open class JbDecoder {
 
     @OptIn(ExperimentalJsStatic::class)
     companion object JbDecoderCompanion {
+        /**
+         * The [PlatformType] of [JbDecoder].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<JbDecoder> = forKClass(JbDecoder::class).withPackageName(PACKAGE_NAME)
+
         /**
          * Returns the human-readable name for the given unit-type.
          * @param unitType The unit-type as returned by [unitType].
