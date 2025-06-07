@@ -17,8 +17,14 @@ import kotlin.jvm.JvmStatic
 
 /**
  * The base [GeoJSON geometry object](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1).
+ *
+ * ### Coordinates
+ * [ICoordinates], [PointCoord], [MultiPointCoord], [LineStringCoord], [LinearRingCoord], [MultiLineStringCoord], [PolygonCoord], [MultiPolygonCoord].
+ *
+ * ### Geometries
+ * [SpGeometry], [SpPoint], [SpMultiPoint], [SpLineString], [SpMultiLineString], [SpPolygon], [SpMultiPolygon]
+ *
  * @since 3.0
- * @see SpPoint
  */
 @JsExport
 open class SpGeometry() : AnyObject() {

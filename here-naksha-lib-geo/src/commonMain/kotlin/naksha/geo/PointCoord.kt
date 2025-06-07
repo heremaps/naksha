@@ -12,12 +12,20 @@ import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 
 /**
- * A [GeoJSON Point Coordinates](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1.2).
+ * A [GeoJSON Point Coordinates](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1.2), which is basically one [Position](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1.1).
+ *
+ * The [GeoJSON Position](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1.1) is merged with the [GeoJSON Point coordinates](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1.2) as this is basically the same.
  *
  * ## Note
  * If `z` is null, this coordinate is truncated to a size of 2, so `m` is automatically removed. In other words, a coordinate can only have an `m` value, if it has as well a valid `z` value.
+ *
+ * ### Coordinates
+ * [ICoordinates], [PointCoord], [MultiPointCoord], [LineStringCoord], [LinearRingCoord], [MultiLineStringCoord], [PolygonCoord], [MultiPolygonCoord].
+ *
+ * ### Geometries
+ * [SpGeometry], [SpPoint], [SpMultiPoint], [SpLineString], [SpMultiLineString], [SpPolygon], [SpMultiPolygon]
+ *
  * @since 3.0
- * @see ICoordinates
  */
 @Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate", "unused")
 @JsExport

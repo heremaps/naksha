@@ -6,6 +6,14 @@ import kotlin.js.JsExport
 
 /**
  * The interface for all [GeoJSON coordinates](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1.1).
+ *
+ * The [GeoJSON Position](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1.1) is merged with the [GeoJSON Point coordinates](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1.2) as this is basically the same.
+ *
+ * ### Coordinates
+ * [ICoordinates], [PointCoord], [MultiPointCoord], [LineStringCoord], [LinearRingCoord], [MultiLineStringCoord], [PolygonCoord], [MultiPolygonCoord].
+ *
+ * ### Geometries
+ * [SpGeometry], [SpPoint], [SpMultiPoint], [SpLineString], [SpMultiLineString], [SpPolygon], [SpMultiPolygon]
  * @since 3.0
  */
 @JsExport

@@ -10,6 +10,13 @@ import kotlin.jvm.JvmOverloads
 
 /**
  * A GeoJSON [Point](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1.1).
+ *
+ * ### Coordinates
+ * [ICoordinates], [PointCoord], [MultiPointCoord], [LineStringCoord], [LinearRingCoord], [MultiLineStringCoord], [PolygonCoord], [MultiPolygonCoord].
+ *
+ * ### Geometries
+ * [SpGeometry], [SpPoint], [SpMultiPoint], [SpLineString], [SpMultiLineString], [SpPolygon], [SpMultiPolygon]
+ *
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
@@ -54,4 +61,6 @@ class SpPoint() : SpGeometry() {
         set_coordinates(value)
         return this
     }
+
+
 }

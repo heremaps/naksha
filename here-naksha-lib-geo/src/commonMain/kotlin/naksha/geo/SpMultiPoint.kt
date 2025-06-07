@@ -7,6 +7,16 @@ import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
+/**
+ * A GeoJSON [MultiPoint](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1.3).
+ *
+ * ### Coordinates
+ * [ICoordinates], [PointCoord], [MultiPointCoord], [LineStringCoord], [LinearRingCoord], [MultiLineStringCoord], [PolygonCoord], [MultiPolygonCoord].
+ *
+ * ### Geometries
+ * [SpGeometry], [SpPoint], [SpMultiPoint], [SpLineString], [SpMultiLineString], [SpPolygon], [SpMultiPolygon]
+ *
+ */
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class SpMultiPoint() : SpGeometry() {

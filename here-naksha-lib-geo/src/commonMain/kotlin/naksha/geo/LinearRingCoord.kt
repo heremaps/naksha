@@ -14,8 +14,14 @@ import kotlin.jvm.JvmField
  * A linear ring is the same as a [GeoJSON LineString](https://datatracker.ietf.org/doc/html/rfc7946#section-3.1.4), except that the first and last position must be exactly the same.
  *
  * The only difference between [LinearRingCoord] and [LineStringCoord] lies in the implementation of the [fix] method. For a linear ring, it will copy the first position into the last, when this is yet the case.
+ *
+ * ### Coordinates
+ * [ICoordinates], [PointCoord], [MultiPointCoord], [LineStringCoord], [LinearRingCoord], [MultiLineStringCoord], [PolygonCoord], [MultiPolygonCoord].
+ *
+ * ### Geometries
+ * [SpGeometry], [SpPoint], [SpMultiPoint], [SpLineString], [SpMultiLineString], [SpPolygon], [SpMultiPolygon]
+ *
  * @since 3.0
- * @see ICoordinates
  */
 @JsExport
 class LinearRingCoord() : LineStringCoord() {
