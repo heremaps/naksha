@@ -19,7 +19,7 @@
 package com.here.naksha.lib.view;
 
 import static java.util.stream.Collectors.*;
-import static naksha.model.LibModelKt.FETCH_ALL;
+import static naksha.model.NakshaModelKt.FETCH_ALL;
 import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 
 import com.here.naksha.lib.view.concurrent.LayerReadRequest;

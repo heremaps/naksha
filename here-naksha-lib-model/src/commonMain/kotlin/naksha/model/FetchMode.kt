@@ -1,4 +1,8 @@
 @file:Suppress("NOTHING_TO_INLINE", "unused")
+
+// This will be exposed
+// - in JavaScript at the namespace: naksha.model.{name}
+// - jn Java at the class naksha.model.FetchModeKt.{name}
 package naksha.model
 
 /**

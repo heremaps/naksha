@@ -24,7 +24,7 @@ import kotlin.js.JsExport
  * @since 3.0.0
  */
 @JsExport
-open class FlagsBits {
+open class FlagsBits private constructor() {
     companion object FlagsBitsCompanion {
         // --------------------------------------< Geometry >-------------------------------------
         // NOTE: We keep geometry encoding in the lowest bits by intention!

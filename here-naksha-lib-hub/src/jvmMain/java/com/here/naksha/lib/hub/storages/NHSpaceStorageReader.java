@@ -20,7 +20,7 @@ package com.here.naksha.lib.hub.storages;
 
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
-import static naksha.model.LibModelKt.FETCH_ALL;
+import static naksha.model.NakshaModelKt.FETCH_ALL;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;

@@ -2,15 +2,72 @@
 
 // This will be exposed
 // - in JavaScript at the namespace: naksha.model.{name}
-// - jn Java at the class naksha.model.LibModelKt.{name}
+// - jn Java at the class naksha.model.NakshaModelKt.{name}
 package naksha.model
 
 import naksha.base.Int64
+import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.base.PlatformUtil.PlatformUtilCompanion.MILLISECOND
 import naksha.base.PlatformUtil.PlatformUtilCompanion.MILLIS_TO_MICROS
+import naksha.jbon.IDict
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+
+/**
+ * The package name `naksha.model`.
+ * @since 3.0
+ */
+const val PACKAGE_NAME = "naksha.model"
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [ILock] interface.
+ * @since 3.0
+ */
+@v30_experimental
+val ILock_TYPE = forKClass(ILock::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [IMetadata] interface.
+ * @since 3.0
+ */
+val IMetadata_TYPE = forKClass(IMetadata::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [IMetadataArray] interface.
+ * @since 3.0
+ */
+val IMetadataArray_TYPE = forKClass(IMetadataArray::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [IReadSession] interface.
+ * @since 3.0
+ */
+val IReadSession_TYPE = forKClass(IReadSession::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [ISession] interface.
+ * @since 3.0
+ */
+val ISession_TYPE = forKClass(ISession::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [ITuple] interface.
+ * @since 3.0
+ */
+val ITuple_TYPE = forKClass(ITuple::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [ITupleCache] interface.
+ * @since 3.0
+ */
+val ITupleCache_TYPE = forKClass(ITupleCache::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [IWriteSession] interface.
+ * @since 3.0
+ */
+val IWriteSession_TYPE = forKClass(IWriteSession::class).withPackageName(PACKAGE_NAME)
 
 @Deprecated("Replace with Action enumeration class",
     replaceWith = ReplaceWith("Action.CREATED.intValue"),

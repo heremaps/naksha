@@ -8,11 +8,9 @@ import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.model.Naksha
 import naksha.base.NakshaError
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.base.NakshaException
+import naksha.base.Platform.PlatformCompanion.forKClass
 import kotlin.js.*
-import kotlin.jvm.JvmOverloads
-import kotlin.jvm.JvmStatic
+import kotlin.jvm.JvmField
 
 /**
  * A Naksha storage configuration.
@@ -39,52 +37,33 @@ open class NakshaStorage() : NakshaFeature() {
         this.className = className
     }
 
-    companion object StorageConfig_C {
+    companion object NakshaStorageCompanion {
         /**
-         * The feature-type of this feature itself _(`naksha.Storage`)_.
+         * The [PlatformType] of [NakshaStorage].
          * @since 3.0
          */
-        const val FEATURE_TYPE = "naksha.Storage"
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(NakshaStorage::class).withPackageName(PACKAGE_NAME).withJsonType("naksha.Storage")
 
         const val CLASSNAME_FIELD = "className"
 
-        private val ID = NotNullProperty<NakshaStorage, String>(String::class)
-        private val CLASSNAME = NotNullProperty<NakshaStorage, String>(String::class, CLASSNAME_FIELD) { self, _ -> self.defaultClassName() }
-        private val HARDCAP = NotNullProperty<NakshaStorage, Int>(Int::class) { _, _ -> 0 }
-        private val CREATE = NotNullProperty<NakshaStorage, Boolean>(Boolean::class) { _, _ -> false }
-        private val UPGRADE = NotNullProperty<NakshaStorage, Boolean>(Boolean::class) { _, _ -> false }
-
-        /**
-         * Helper class to parse a JSON configuration into a [NakshaStorage].
-         * - Throws [NakshaError.ILLEGAL_ARGUMENT] if the given JSON is invalid.
-         * @param json the JSON string.
-         * @param fromJsonOptions optional parser options, defaults to [FromJsonOptions.DEFAULT].
-         * @return the parsed JSON configuration.
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        @JvmOverloads
-        fun fromJSON(json: String, fromJsonOptions: FromJsonOptions? = null): NakshaStorage {
-            try {
-                return (Platform.fromJSON(json, fromJsonOptions ?: FromJsonOptions.DEFAULT) as PlatformMap).proxy(NakshaStorage::class)
-            } catch (e: Exception) {
-                if (e is NakshaException) throw e
-                throw NakshaException(ILLEGAL_ARGUMENT, "Failed to parse JSON: $json", e)
-            }
-        }
+        private val ID = NotNullProperty<NakshaStorage, String>(String_TYPE)
+        private val CLASSNAME = NotNullProperty<NakshaStorage, String>(String_TYPE, CLASSNAME_FIELD) { self, _ -> self.defaultClassName() }
+        private val HARDCAP = NotNullProperty<NakshaStorage, Int>(Int_Type) { _, _ -> 0 }
+        private val CREATE = NotNullProperty<NakshaStorage, Boolean>(Boolean_TYPE) { _, _ -> false }
+        private val UPGRADE = NotNullProperty<NakshaStorage, Boolean>(Boolean_TYPE) { _, _ -> false }
     }
 
-    override fun featureTypeDefaultValue(): String = FEATURE_TYPE
-    override fun withId(value: String): NakshaStorage = super.withId(value) as NakshaStorage
+    override fun withId(id: String): NakshaStorage = super.withId(id) as NakshaStorage
+    override fun withBBox(bbox: BBox): NakshaStorage = super.withBBox(bbox) as NakshaStorage
+    override fun withAutoBBox(): NakshaStorage = super.withAutoBBox() as NakshaStorage
+    override fun withGeometry(geometry: SpGeometry): NakshaStorage = super.withGeometry(geometry) as NakshaStorage
+    override val properties: NakshaProperties
+        get() = get_properties(NakshaProperties.TYPE)
+    override fun withProperties(properties: AnyObject): NakshaStorage = super.withProperties(properties) as NakshaStorage
     override fun withFeatureNumber(value: Int64): NakshaStorage = super.withFeatureNumber(value) as NakshaStorage
-    override fun withType(value: String): NakshaStorage = super.withType(value) as NakshaStorage
-    override fun withFeatureType(value: String): NakshaStorage = super.withFeatureType(value) as NakshaStorage
-    override fun withBbox(value: BBox?): NakshaStorage = super.withBbox(value) as NakshaStorage
-    override fun withGeometry(value: SpGeometry?): NakshaStorage = super.withGeometry(value) as NakshaStorage
     override fun withReferencePoint(value: SpPoint?): NakshaStorage = super.withReferencePoint(value) as NakshaStorage
-    override fun withProperties(value: NakshaProperties): NakshaStorage = super.withProperties(value) as NakshaStorage
-    override fun withMomType(value: String?): NakshaStorage = super.withMomType(value) as NakshaStorage
 
     /**
      * The default classname to use, if any.

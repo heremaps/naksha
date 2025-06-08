@@ -2,20 +2,28 @@
 
 package naksha.model.mom
 
-import naksha.base.Int64
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
-import naksha.base.AnyObject
+import naksha.base.*
+import naksha.base.Platform.PlatformCompanion.forKClass
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 @JsExport
 class MomDeltaNs : AnyObject() {
 
-    companion object NakshaDeltaProxyCompanion {
-        private val STRING_NULL = NullableProperty<MomDeltaNs, String>(String::class)
-        private val CHANGE_STATE = NotNullProperty<MomDeltaNs, String>(String::class) { _, _ -> MomChangeState.CREATED.text }
-        private val REVIEW_STATE = NotNullProperty<MomDeltaNs, String>(String::class) { _, _ -> MomReviewState.UNPUBLISHED.text }
-        private val INT64 = NotNullProperty<MomDeltaNs, Int64>(Int64::class) { _, _ -> Int64(0) }
+    companion object MomDeltaNsCompanion {
+        /**
+         * The [PlatformType] of [MomDeltaNs].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(MomDeltaNs::class).withPackageName(PACKAGE_NAME)
+
+        private val STRING_NULL = NullableProperty<MomDeltaNs, String>(String_TYPE)
+        private val CHANGE_STATE = NotNullProperty<MomDeltaNs, String>(String_TYPE) { _, _ -> MomChangeState.CREATED.text }
+        private val REVIEW_STATE = NotNullProperty<MomDeltaNs, String>(String_TYPE) { _, _ -> MomReviewState.UNPUBLISHED.text }
+        private val INT64 = NotNullProperty<MomDeltaNs, Int64>(Int64_TYPE) { _, _ -> Int64(0) }
     }
 
     /**

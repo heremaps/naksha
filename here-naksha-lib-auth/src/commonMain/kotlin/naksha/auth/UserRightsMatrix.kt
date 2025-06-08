@@ -103,7 +103,7 @@ class UserRightsMatrix : MapProxy<String, UserRights>(String_TYPE, UserRights.TY
         @JvmStatic
         @JsStatic
         fun fromJSON(json: String): UserRightsMatrix {
-            return Platform.fromJSON(json, TYPE) ?: throw illegalArg("Invalid URM JSON given")
+            return Platform.fromJson(json, TYPE) ?: throw illegalArg("Invalid URM JSON given")
         }
     }
 

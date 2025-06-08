@@ -52,8 +52,9 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 open class GeoFeature : AnyObject() {
+
     init {
-        initType()
+        initTypeAndId()
     }
 
     /**
@@ -77,8 +78,10 @@ open class GeoFeature : AnyObject() {
      * - Otherwise, sets [featureType] to [PlatformType.jsonType].
      * @since 3.0
      */
-    protected fun initType() {
-        setRaw("type", FEATURE)
+    protected fun initTypeAndId() {
+        val po = platformObject()
+        map_set(po, "type", FEATURE)
+        map_set(po, "id", randomString())
         val jsonType = forInstance(this).jsonType
         if (jsonType != null && jsonType != FEATURE) {
             if (isMomType()) setMomType(jsonType)
@@ -148,13 +151,41 @@ open class GeoFeature : AnyObject() {
      * The unique identifier of the feature.
      * @since 3.0
      */
-    open var id: String by ID_MEMBER
+    var id: String by ID_MEMBER
+
+    open fun withId(id: String): GeoFeature {
+        this.id = id
+        return this
+    }
 
     /**
      * The bounding box.
      * @since 3.0
      */
-    open var bbox: BBox? by BBOX_NULL_MEMBER
+    var bbox: BBox? by BBOX_NULL_MEMBER
+
+    open fun withBBox(bbox: BBox): GeoFeature {
+        this.bbox = bbox
+        return this
+    }
+
+    /**
+     * Calculate the bounding box from the geometry and updated the [bbox] property.
+     *
+     * Example:
+     * ```kotlin
+     * val geo: GeoFeature = GeoFeature()
+     *     .withId("demo")
+     *     .withGeometry(geometry)
+     *     .withAutoBBox()
+     * ```
+     * @return this.
+     * @since 3.0
+     */
+    open fun withAutoBBox(): GeoFeature {
+        this.bbox = BBox(geometry)
+        return this
+    }
 
     /**
      * The geometry of the feature.
@@ -163,6 +194,44 @@ open class GeoFeature : AnyObject() {
     open var geometry: SpGeometry
         get() = SpGeometry.forValue(getRaw("geometry"))
         set(value) { set("geometry", value) }
+
+    open fun withGeometry(geometry: SpGeometry): GeoFeature {
+        this.geometry = geometry
+        return this
+    }
+
+    /**
+     * The properties of the feature.
+     * @since 3.0
+     */
+    open val properties: AnyObject
+        get() = get_properties(AnyObject.TYPE)
+
+    /**
+     * Internal method to read properties.
+     * @param type The type that should be returned.
+     * @return the properties.
+     */
+    protected fun <T : MapProxy<String,*>> get_properties(type: PlatformType<out T>): T {
+        val po = platformObject()
+        var properties = map_get(po, "properties")
+        if (properties == null) {
+            properties = Platform.newMap()
+            map_set(po, "properties", properties)
+        }
+        return type.proxy(properties)
+    }
+
+    /**
+     * Set the [properties].
+     * @param properties The properties to set.
+     * @return this.
+     * @see properties
+     */
+    open fun withProperties(properties: AnyObject): GeoFeature {
+        setRaw("properties", unbox(properties))
+        return this
+    }
 
     /**
      * The type of the feature, reads only `type` property.
@@ -224,14 +293,4 @@ open class GeoFeature : AnyObject() {
             // Eventually, everything is a "Feature"
             return FEATURE
         }
-
-    /**
-     * Calculate the bounding box from the geometry and updated the [bbox] property.
-     * @return this.
-     * @since 3.0
-     */
-    open fun updateBoundingBox(): GeoFeature {
-        this.bbox = BBox(this.geometry)
-        return this
-    }
 }

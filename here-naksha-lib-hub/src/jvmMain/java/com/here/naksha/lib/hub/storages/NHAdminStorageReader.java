@@ -35,7 +35,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static naksha.model.LibModelKt.FETCH_ALL;
+import static naksha.model.NakshaModelKt.FETCH_ALL;
 
 public class NHAdminStorageReader implements IReadSession {
 

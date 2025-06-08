@@ -1,5 +1,13 @@
 package com.here.naksha.lib.view;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
+
 import naksha.base.StringList;
 import naksha.geo.PointCoord;
 import naksha.geo.SpPoint;
@@ -10,13 +18,7 @@ import naksha.model.Tuple;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.StoreMode;
-import naksha.model.request.FeatureTuple;
-import naksha.model.request.FeatureTupleList;
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
-import naksha.model.request.Write;
-import naksha.model.request.WriteRequest;
+import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;

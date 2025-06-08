@@ -34,7 +34,7 @@ public class BBoxTest {
   @Test
   public void pointCoordinates() throws Exception {
     String pointGJ = "{\"type\":\"Point\",\"coordinates\":[1,1]}";
-    JvmMap jvmMap = (JvmMap) Platform.fromJSON(pointGJ, FromJsonOptions.DEFAULT);
+    JvmMap jvmMap = (JvmMap) Platform.fromJson(pointGJ, FromJsonOptions.DEFAULT);
     SpPoint point = jvmMap.proxy(Platform.klassFor(SpPoint.class));
     PointCoord coordinates = point.getCoordinates();
 //    final BoundingBoxProxy bbox = new BoundingBoxProxy(coordinates);
@@ -49,7 +49,7 @@ public class BBoxTest {
   public void multipolygonCoordinates() throws Exception {
     String multipolygonGJ =
         "{\"type\":\"MultiPolygon\",\"coordinates\":[[[[101.2,1.2],[101.8,1.2],[101.8,1.8],[101.2,1.8],[101.2,1.2]],[[101.2,1.2],[101.3,1.2],[101.3,1.3],[101.2,1.3],[101.2,1.2]],[[101.6,1.4],[101.7,1.4],[101.7,1.5],[101.6,1.5],[101.6,1.4]],[[101.5,1.6],[101.6,1.6],[101.6,1.7],[101.5,1.7],[101.5,1.6]]],[[[100.0,0.0],[101.0,0.0],[101.0,1.0],[100.0,1.0],[100.0,0.0]],[[100.35,0.35],[100.65,0.35],[100.65,0.65],[100.35,0.65],[100.35,0.35]]]]}";
-    JvmMap jvmMap = (JvmMap) Platform.fromJSON(multipolygonGJ, FromJsonOptions.DEFAULT);
+    JvmMap jvmMap = (JvmMap) Platform.fromJson(multipolygonGJ, FromJsonOptions.DEFAULT);
     SpMultiPolygon multipolygon = jvmMap.proxy(Platform.klassFor(SpMultiPolygon.class));
     BBox bbox = new BBox(multipolygon.getCoordinates());
 

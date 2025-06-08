@@ -3,6 +3,7 @@
 package naksha.model.objects
 
 import naksha.base.*
+import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.geo.BBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
@@ -11,6 +12,7 @@ import naksha.model.Naksha
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
@@ -31,7 +33,7 @@ open class NakshaCollection() : NakshaFeature() {
      * @param storeHistory if [historic states should be stored][storeHistory], defaults to [StoreMode.ON]
      * @param storeMeta if [statistics should be stored][storeMeta], defaults to [StoreMode.ON]
      */
-    @JsName("of")
+    @JsName("NakshaCollectionOf")
     @JvmOverloads
     constructor(
         id: String,
@@ -51,16 +53,15 @@ open class NakshaCollection() : NakshaFeature() {
         this.storeMeta = storeMeta
     }
 
-    override fun featureTypeDefaultValue(): String = FEATURE_TYPE
-    override fun withId(value: String): NakshaCollection = super.withId(value) as NakshaCollection
+    override fun withId(id: String): NakshaCollection = super.withId(id) as NakshaCollection
+    override fun withBBox(bbox: BBox): NakshaCollection = super.withBBox(bbox) as NakshaCollection
+    override fun withAutoBBox(): NakshaCollection = super.withAutoBBox() as NakshaCollection
+    override fun withGeometry(geometry: SpGeometry): NakshaCollection = super.withGeometry(geometry) as NakshaCollection
+    override val properties: NakshaProperties
+        get() = get_properties(NakshaProperties.TYPE)
+    override fun withProperties(properties: AnyObject): NakshaCollection = super.withProperties(properties) as NakshaCollection
     override fun withFeatureNumber(value: Int64): NakshaCollection = super.withFeatureNumber(value) as NakshaCollection
-    override fun withType(value: String): NakshaCollection = super.withType(value) as NakshaCollection
-    override fun withFeatureType(value: String): NakshaCollection = super.withFeatureType(value) as NakshaCollection
-    override fun withBbox(value: BBox?): NakshaCollection = super.withBbox(value) as NakshaCollection
-    override fun withGeometry(value: SpGeometry?): NakshaCollection = super.withGeometry(value) as NakshaCollection
     override fun withReferencePoint(value: SpPoint?): NakshaCollection = super.withReferencePoint(value) as NakshaCollection
-    override fun withProperties(value: NakshaProperties): NakshaCollection = super.withProperties(value) as NakshaCollection
-    override fun withMomType(value: String?): NakshaCollection = super.withMomType(value) as NakshaCollection
 
     override fun featureNumberOfId(id: String): Int64 = Naksha.collectionNumber(id).toInt64()
 
@@ -164,7 +165,7 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * If the `featureType`as returned by [NakshaFeature.featureType] equals to this value, then the [metadata feature-type][naksha.model.Metadata.ft] will be `null`, otherwise [metadata feature-type][naksha.model.Metadata.ft] is set to the [NakshaFeature.featureType].
+     * If the `featureType` equals to this value, then the [metadata feature-type][naksha.model.Metadata.ft] will be `null`, otherwise [metadata feature-type][naksha.model.Metadata.ft] is set to the [NakshaFeature.featureType].
      *
      * ### Note
      * The index on the [feature-type][naksha.model.Metadata.ft] is partial, features are only indexed when `ft` is not `null`, what is always the case, when it matches the [defaultFeatureType]. This is based upon the assumption, that in most cases all features within a collection do have the same feature-type. If this assumption holds true, and index would be a big waste, even when only a few features differ from the [defaultFeatureType], adding all values into the index would be a waste. So, this property is for the query planner to take advantage of this fact, when searching for feature-type. If the feature-type is the [defaultFeatureType], this means most of the time a full collection scan, so usage of the feature-type index is not helpful.
@@ -384,7 +385,15 @@ open class NakshaCollection() : NakshaFeature() {
      */
     val estimatedDeletedFeatures: Int64 by _ESTIMATED_DELETED_FEATURES
 
-    companion object NakshaCollection_C {
+    companion object NakshaCollectionCompanion {
+        /**
+         * The [PlatformType] of [NakshaCollection].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(NakshaCollection::class).withPackageName(PACKAGE_NAME).withJsonType("naksha.Collection")
+
         /**
          * Index above the `id` property, includes `tn`, and `next_tn`.
          * @since 3.0
@@ -515,7 +524,7 @@ open class NakshaCollection() : NakshaFeature() {
          * Index above `ft` _(aka feature-type)_, includes `id`, `tn`, and `next_tn`.
          * @since 3.0
          */
-        const val FEATURE_TYPE = "naksha.Collection"
+        const val FEATURE_TYPE = "ft"
 
         /**
          * The value returned as [estimatedFeatureCount] and [estimatedDeletedFeatures], before the estimation was actually done, so when the number is totally unknown _(-1)_.
@@ -525,28 +534,28 @@ open class NakshaCollection() : NakshaFeature() {
         @JsStatic
         val UNKNOWN = Int64(-1)
 
-        private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 1 }
-        private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String::class)
-        private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String::class)
-        private val DEFAULT_FLAGS = NullableProperty<NakshaCollection, Flags>(Flags::class)
-        private val MAP_ID = NullableProperty<NakshaCollection, String>(String::class)
-        private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)
-        private val DEFAULT_FEATURE_TYPE = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> TYPE }
-        private val INDICES = NullableProperty<NakshaCollection, StringList>(StringList::class)
-        private val MAX_AGE = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> Int64(-1) }
-        private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 10_485_760 }
-        private val _ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }
-        private val _ESTIMATED_DELETED_FEATURES =  NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }
-        private val STORE_HISTORY = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { self, _ ->
+        private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int_Type) { _, _ -> 1 }
+        private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String_TYPE)
+        private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String_TYPE)
+        private val DEFAULT_FLAGS = NullableProperty<NakshaCollection, Flags>(Int_Type)
+        private val MAP_ID = NullableProperty<NakshaCollection, String>(String_TYPE)
+        private val STRING_NULL = NullableProperty<NakshaCollection, String>(String_TYPE)
+        private val DEFAULT_FEATURE_TYPE = NotNullProperty<NakshaCollection, String>(String_TYPE) { _, _ -> "Feature" }
+        private val INDICES = NullableProperty<NakshaCollection, StringList>(StringList.TYPE)
+        private val MAX_AGE = NotNullProperty<NakshaCollection, Int64>(Int64_TYPE) { _, _ -> Int64(-1) }
+        private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int_Type) { _, _ -> 10_485_760 }
+        private val _ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Int64>(Int64_TYPE) { _, _ -> UNKNOWN }
+        private val _ESTIMATED_DELETED_FEATURES =  NotNullProperty<NakshaCollection, Int64>(Int64_TYPE) { _, _ -> UNKNOWN }
+        private val STORE_HISTORY = NotNullEnum<NakshaCollection, StoreMode>(StoreMode.TYPE) { self, _ ->
             // For downward compatibility with Naksha version 2
             val old = self.getRaw("disableHistory")
             if (old == true) StoreMode.SUSPEND else StoreMode.ON
         }
-        private val STORE_DELETED = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { self, _ ->
+        private val STORE_DELETED = NotNullEnum<NakshaCollection, StoreMode>(StoreMode.TYPE) { self, _ ->
             // For downward compatibility with Naksha version 2
             val old = self.getRaw("autoPurge")
             if (old == true) StoreMode.SUSPEND else StoreMode.ON
         }
-        private val STORE_META = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { _, _ -> StoreMode.ON }
+        private val STORE_META = NotNullEnum<NakshaCollection, StoreMode>(StoreMode.TYPE) { _, _ -> StoreMode.ON }
     }
 }

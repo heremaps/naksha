@@ -19,7 +19,7 @@ import kotlin.jvm.JvmStatic
  */
 @JsExport
 class BinaryUtil private constructor() {
-    companion object BinaryUtil_C {
+    companion object BinaryUtilCompanion {
         /**
          * Naksha-binary-type value for [TupleNumberBinaryArray].
          * @since 3.0.0

@@ -35,7 +35,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static naksha.model.LibModelKt.FETCH_ALL;
+import static naksha.model.NakshaModelKt.FETCH_ALL;
 
 public final class HttpStorageReadSession implements IReadSession {
 

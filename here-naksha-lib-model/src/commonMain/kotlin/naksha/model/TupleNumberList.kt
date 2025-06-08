@@ -8,8 +8,8 @@ import naksha.base.Platform
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
 import naksha.base.illegalState
-import naksha.model.BinaryUtil.BinaryUtil_C.TYPE_TUPLE_NUMBER_ARRAY
-import naksha.model.BinaryUtil.BinaryUtil_C.writeSimpleHeader
+import naksha.model.BinaryUtil.BinaryUtilCompanion.TYPE_TUPLE_NUMBER_ARRAY
+import naksha.model.BinaryUtil.BinaryUtilCompanion.writeSimpleHeader
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B192
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B224

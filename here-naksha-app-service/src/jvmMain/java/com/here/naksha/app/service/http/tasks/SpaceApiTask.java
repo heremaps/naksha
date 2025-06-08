@@ -148,7 +148,7 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
 
   private Space spaceFromRequestBody() {
     final String bodyJson = routingContext.body().asString();
-    return JvmBoxingUtil.box(Platform.fromJSON(bodyJson, FromJsonOptions.DEFAULT), Space.class);
+    return JvmBoxingUtil.box(Platform.fromJson(bodyJson, FromJsonOptions.DEFAULT), Space.class);
   }
 
   private static String mismatchMsg(String spaceIdFromPath, Space spaceFromBody) {

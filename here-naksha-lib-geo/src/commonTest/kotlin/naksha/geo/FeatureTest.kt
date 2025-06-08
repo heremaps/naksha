@@ -108,27 +108,30 @@ class FeatureTest {
     @Test
     fun testFooToJson() {
         val feature = Foo()
+        feature.id = "demo"
         feature.name = "Example"
         val json = Platform.toJSON(feature)
-        val expect = """{"type":"Feature","featureType":"foo","name":"Example"}"""
+        val expect = """{"type":"Feature","id":"demo","featureType":"foo","name":"Example"}"""
         assertEquals(expect, json)
     }
 
     @Test
     fun testDataHubFooToJson() {
         val feature = DataHubFoo()
+        feature.id = "demo"
         feature.name = "Example"
         val json = Platform.toJSON(feature)
-        val expect = """{"type":"Feature","featureType":"dataHubFoo","properties":{"featureType":"dataHubFoo"},"name":"Example"}"""
+        val expect = """{"type":"Feature","id":"demo","featureType":"dataHubFoo","properties":{"featureType":"dataHubFoo"},"name":"Example"}"""
         assertEquals(expect, json)
     }
 
     @Test
     fun testMomFooToJson() {
         val feature = MomFoo()
+        feature.id = "demo"
         feature.name = "Example"
         val json = Platform.toJSON(feature)
-        val expect = """{"type":"Feature","momType":"momFoo","properties":{"featureType":"momFoo"},"name":"Example"}"""
+        val expect = """{"type":"Feature","id":"demo","momType":"momFoo","properties":{"featureType":"momFoo"},"name":"Example"}"""
         assertEquals(expect, json)
     }
 }

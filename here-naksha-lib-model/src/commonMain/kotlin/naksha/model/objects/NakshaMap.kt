@@ -3,12 +3,15 @@
 package naksha.model.objects
 
 import naksha.base.*
+import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.geo.BBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.model.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A map within a storage; maps are used to group collections.
@@ -22,35 +25,33 @@ open class NakshaMap() : NakshaFeature() {
      * @param id the identifier to set.
      * @since 3.0
      */
-    @Suppress("LeakingThis")
     @JsName("NakshaMapOf")
     constructor(id: String): this() {
         this.id = id
-        this.type = typeDefaultValue()
-        this.featureType = featureTypeDefaultValue()
     }
 
-    companion object NakshaMap_C {
+    companion object NakshaMapCompanion {
         /**
-         * The feature-type of this feature itself _(`naksha.Map`)_.
+         * The [PlatformType] of [NakshaMap].
          * @since 3.0
          */
-        const val FEATURE_TYPE = "naksha.Map"
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(NakshaMap::class).withPackageName(PACKAGE_NAME).withJsonType("naksha.Map")
 
-        private val STORAGE_ID = NullableProperty<NakshaMap, String>(String::class)
-        private val DEFAULT_FLAGS = NullableProperty<NakshaMap, Flags>(Flags::class)
+        private val STORAGE_ID = NullableProperty<NakshaMap, String>(String_TYPE)
+        private val DEFAULT_FLAGS = NullableProperty<NakshaMap, Flags>(Int_Type)
     }
 
-    override fun featureTypeDefaultValue(): String = FEATURE_TYPE
-    override fun withId(value: String): NakshaMap = super.withId(value) as NakshaMap
+    override fun withId(id: String): NakshaMap = super.withId(id) as NakshaMap
+    override fun withBBox(bbox: BBox): NakshaMap = super.withBBox(bbox) as NakshaMap
+    override fun withAutoBBox(): NakshaMap = super.withAutoBBox() as NakshaMap
+    override fun withGeometry(geometry: SpGeometry): NakshaMap = super.withGeometry(geometry) as NakshaMap
+    override val properties: NakshaProperties
+        get() = get_properties(NakshaProperties.TYPE)
+    override fun withProperties(properties: AnyObject): NakshaMap = super.withProperties(properties) as NakshaMap
     override fun withFeatureNumber(value: Int64): NakshaMap = super.withFeatureNumber(value) as NakshaMap
-    override fun withType(value: String): NakshaMap = super.withType(value) as NakshaMap
-    override fun withFeatureType(value: String): NakshaMap = super.withFeatureType(value) as NakshaMap
-    override fun withBbox(value: BBox?): NakshaMap = super.withBbox(value) as NakshaMap
-    override fun withGeometry(value: SpGeometry?): NakshaMap = super.withGeometry(value) as NakshaMap
     override fun withReferencePoint(value: SpPoint?): NakshaMap = super.withReferencePoint(value) as NakshaMap
-    override fun withProperties(value: NakshaProperties): NakshaMap = super.withProperties(value) as NakshaMap
-    override fun withMomType(value: String?): NakshaMap = super.withMomType(value) as NakshaMap
 
     /**
      * The encoding flags to be used for new rows of all collections of this map, that do not have an own [defaultFlags][NakshaCollection.defaultFlags].

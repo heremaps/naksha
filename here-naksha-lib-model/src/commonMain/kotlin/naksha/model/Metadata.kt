@@ -3,8 +3,10 @@
 package naksha.model
 
 import naksha.base.*
+import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.base.fn.Fn3
 import naksha.geo.HereTile
+import naksha.geo.PointCoord
 import naksha.model.objects.NakshaFeature
 import kotlin.concurrent.Volatile
 import kotlin.js.JsExport
@@ -136,7 +138,14 @@ data class Metadata(
     }
     override fun toString(): String = "$id:$tupleNumber"
 
-    companion object Metadata_C {
+    companion object MetadataCompanion {
+        /**
+         * The [PlatformType] of [Metadata].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<Metadata> = forKClass(Metadata::class).withPackageName(naksha.jbon.PACKAGE_NAME)
 
         /**
          * Helper method to create the new metadata, when performing the given operation, with the given feature as outcome of the operation, in the given session.
@@ -321,7 +330,7 @@ data class Metadata(
         @JvmStatic
         @JsStatic
         fun calculateHereTile(feature: NakshaFeature): Int {
-            val c = feature.referencePoint ?: feature.geometry?.calculateCentroid()
+            val c: PointCoord? = (feature.referencePoint ?: feature.geometry?.calculateCentroid())?.coordinates
             return if (c != null) HereTile(latitude = c.latitude, longitude = c.longitude).intKey else Fnv1a32.string(0, feature.id)
         }
     }

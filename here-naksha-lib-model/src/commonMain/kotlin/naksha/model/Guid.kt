@@ -6,6 +6,8 @@ import naksha.base.NakshaError
 import naksha.base.NakshaException
 import naksha.base.Platform.PlatformCompanion.decodeURIComponent
 import naksha.base.Platform.PlatformCompanion.encodeURIComponent
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -62,6 +64,14 @@ data class Guid(
     }
 
     companion object GuidCompanion {
+        /**
+         * The [PlatformType] of [Guid].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<Guid> = forKClass(Guid::class).withPackageName(naksha.jbon.PACKAGE_NAME)
+
         internal const val URN = 0
         internal const val NAKSHA = 1
         internal const val GUID = 2

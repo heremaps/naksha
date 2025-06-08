@@ -415,7 +415,7 @@ public class NakshaHub implements INaksha {
       }
       Extension extension;
       try {
-        extension = JvmBoxingUtil.box(Platform.fromJSON(exJson, FromJsonOptions.DEFAULT), Extension.class);
+        extension = JvmBoxingUtil.box(Platform.fromJson(exJson, FromJsonOptions.DEFAULT), Extension.class);
         extList.add(extension);
       } catch (Exception e) {
         logger.error("Failed to convert extension meta data to Extension object. {} ", exJson, e);

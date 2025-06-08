@@ -3,14 +3,12 @@
 package naksha.model.request.query
 
 import naksha.base.NotNullProperty
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get_length
 import naksha.base.StringList
 import naksha.base.fn.Fn1
 import kotlin.js.JsExport
 import kotlin.js.JsName
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmStatic
 
 /**
  * The reference to a property within a feature.
@@ -69,11 +67,11 @@ open class Property() : MetaColumn(FEATURE) {
         if (s != null) {
             if (array == null) {
                 s = null
-            } else if (array.size != array_get_length(po)) {
+            } else if (array.size != list_get_length(po)) {
                 s = null
             } else {
                 for (i in array.indices) {
-                    if (array[i] !== array_get(po, i)) {
+                    if (array[i] !== list_get(po, i)) {
                         s = null
                         break
                     }
@@ -82,7 +80,7 @@ open class Property() : MetaColumn(FEATURE) {
         }
         if (s != null) return s
         // This happens if the platform object was modified since we were called last, or we're called for the first time.
-        array = Array(array_get_length(po)) { array_get(po, it) as String }
+        array = Array(list_get_length(po)) { list_get(po, it) as String }
         s = array.joinToString(separator = "->") { quote?.call(it) ?: it }
         this.array = array
         this.string = s
@@ -97,11 +95,11 @@ open class Property() : MetaColumn(FEATURE) {
         if (other !is Property) return false
         val po = path.platformObject()
         val other_po = other.path.platformObject()
-        val length = array_get_length(po)
-        if (length != array_get_length(other_po)) return false
+        val length = list_get_length(po)
+        if (length != list_get_length(other_po)) return false
         var i = 0
         while (i < length) {
-            if (array_get(po, i) != array_get(other_po, i)) return false
+            if (list_get(po, i) != list_get(other_po, i)) return false
             i++
         }
         return true

@@ -24,7 +24,7 @@ public class BaseSetup {
     List<Extension> list;
     try {
       String data = Files.readAllLines(file).stream().collect(Collectors.joining());
-      list = JvmBoxingUtil.box(Platform.fromJSON(data, FromJsonOptions.DEFAULT), ExtensionList.class);
+      list = JvmBoxingUtil.box(Platform.fromJson(data, FromJsonOptions.DEFAULT), ExtensionList.class);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

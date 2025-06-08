@@ -1,6 +1,8 @@
 package naksha.model
 
 import naksha.base.JsEnum
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import naksha.model.FlagsBits.FlagsBitsCompanion.OP_SHIFT
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -18,13 +20,19 @@ import kotlin.reflect.KClass
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class Operation : JsEnum() {
-    @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = Operation::class
-
+    override fun namespace() = TYPE
     override fun initClass() {}
 
     @Suppress("MemberVisibilityCanBePrivate")
     companion object Operation_C {
+        /**
+         * The [PlatformType] of [Operation].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(Operation::class).withPackageName(PACKAGE_NAME)
+
         // action = CREATED
         internal const val CREATED_VALUE = 0 shl OP_SHIFT
         internal const val CREATED_STRING = "CREATED"
@@ -78,7 +86,7 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val CREATED = defIgnoreCase(Operation::class, CREATED_STRING) { self ->
+        val CREATED = defIgnoreCase(TYPE, CREATED_STRING) { self ->
             self.intValue = CREATED_VALUE
             self.shortId = CREATED_SHORT
             self.action = Action.CREATED
@@ -91,7 +99,7 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val UPDATED = defIgnoreCase(Operation::class, UPDATED_STRING) { self ->
+        val UPDATED = defIgnoreCase(TYPE, UPDATED_STRING) { self ->
             self.intValue = UPDATED_VALUE
             self.shortId = UPDATED_SHORT
             self.action = Action.UPDATED
@@ -104,7 +112,7 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val DELETED = defIgnoreCase(Operation::class, DELETED_STRING) { self ->
+        val DELETED = defIgnoreCase(TYPE, DELETED_STRING) { self ->
             self.intValue = DELETED_VALUE
             self.shortId = DELETED_SHORT
             self.action = Action.DELETED
@@ -119,7 +127,7 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val FORKED = defIgnoreCase(Operation::class, FORKED_STRING) { self ->
+        val FORKED = defIgnoreCase(TYPE, FORKED_STRING) { self ->
             self.intValue = FORKED_VALUE
             self.shortId = FORKED_SHORT
             self.action = Action.CREATED
@@ -135,7 +143,7 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val MERGED = defIgnoreCase(Operation::class, MERGED_STRING) { self ->
+        val MERGED = defIgnoreCase(TYPE, MERGED_STRING) { self ->
             self.intValue = MERGED_VALUE
             self.shortId = MERGED_SHORT
             self.action = Action.UPDATED
@@ -153,7 +161,7 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val SPLIT = defIgnoreCase(Operation::class, SPLIT_STRING) { self ->
+        val SPLIT = defIgnoreCase(TYPE, SPLIT_STRING) { self ->
             self.intValue = SPLIT_VALUE
             self.shortId = SPLIT_SHORT
             self.action = null
@@ -171,7 +179,7 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val JOINED = defIgnoreCase(Operation::class, JOINED_STRING) { self ->
+        val JOINED = defIgnoreCase(TYPE, JOINED_STRING) { self ->
             self.intValue = JOINED_VALUE
             self.shortId = JOINED_SHORT
             self.action = null
@@ -187,7 +195,7 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val REBASED = defIgnoreCase(Operation::class, REBASED_STRING) { self ->
+        val REBASED = defIgnoreCase(TYPE, REBASED_STRING) { self ->
             self.intValue = REBASED_VALUE
             self.shortId = REBASED_SHORT
             self.action = null
@@ -199,7 +207,7 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val UNDEFINED = defIgnoreCase(Operation::class, UNDEFINED_STRING) { self ->
+        val UNDEFINED = defIgnoreCase(TYPE, UNDEFINED_STRING) { self ->
             self.intValue = UNDEFINED_VALUE
             self.shortId = UNDEFINED_SHORT
             self.action = Action.UNDEFINED

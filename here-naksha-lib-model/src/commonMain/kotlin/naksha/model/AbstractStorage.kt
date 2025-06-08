@@ -1,13 +1,15 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.model
 
-import naksha.base.AtomicRef
-import naksha.base.Int64
-import naksha.base.NakshaException
-import naksha.base.Platform
+import naksha.base.*
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
+import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.model.objects.NakshaStorage
-import kotlin.reflect.KClass
+import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * The base class for all storage implementations.
@@ -15,10 +17,17 @@ import kotlin.reflect.KClass
  * It is mandatory to extend this class when creating a storage, otherwise the caching sub-system won't work. Technically, the caching will only create an instance of a storage, when there is not yet one with the same configuration.
  * @since 3.0.0
  */
+@JsExport
 abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
 
     companion object AbstractStorageCompanion {
-
+        /**
+         * The [PlatformType] of [AbstractStorage].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE: PlatformType<AbstractStorage<*>> = forKClass(AbstractStorage::class).withPackageName(naksha.jbon.PACKAGE_NAME)
     }
 
     /**
@@ -32,7 +41,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      * The _KClass_ of the configuration needed.
      * @since 3.0.0
      */
-    abstract val configKlass: KClass<CONFIG>
+    abstract val configKlass: PlatformType<CONFIG>
 
     /**
      * The atomic reference to the configuration for internal use within [initStorage].

@@ -3,22 +3,26 @@
 package naksha.model.mom
 
 import naksha.base.ListProxy
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
+import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
-import kotlin.jvm.JvmStatic
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A list of MOM references.
+ * @since 3.0
  */
 @JsExport
-class MomReferenceList : ListProxy<MomReference>(MomReference::class) {
-    companion object MomReferenceList_C {
-
-        @JvmStatic
-        fun fromList(features: List<MomReference>): MomReferenceList =
-            MomReferenceList().apply { addAll(features) }
-
-        @JvmStatic
-        fun of(vararg features: MomReference): MomReferenceList =
-            MomReferenceList().apply { addAll(features) }
+class MomReferenceList : ListProxy<MomReference>(MomReference.TYPE) {
+    companion object MomReferenceListCompanion {
+        /**
+         * The [PlatformType] of [MomReferenceList].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(MomReferenceList::class).withPackageName(PACKAGE_NAME)
     }
 }

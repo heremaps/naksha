@@ -29,7 +29,7 @@ import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static naksha.model.LibModelKt.FETCH_ALL;
+import static naksha.model.NakshaModelKt.FETCH_ALL;
 
 public class MockReadSession implements IReadSession {
 

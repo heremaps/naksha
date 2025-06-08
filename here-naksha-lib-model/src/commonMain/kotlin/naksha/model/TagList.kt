@@ -3,19 +3,21 @@
 package naksha.model
 
 import naksha.base.ListProxy
-import naksha.base.NormalizerForm
-import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
+import naksha.base.String_TYPE
 import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
  * A list of tags.
  */
 @JsExport
-open class TagList() : ListProxy<String>(String::class) {
+open class TagList() : ListProxy<String>(String_TYPE) {
 
     /**
      * Create a tag list from the given arguments; the tags are normalized.
@@ -155,7 +157,15 @@ open class TagList() : ListProxy<String>(String::class) {
      */
     fun toTagMap(): TagMap = TagMap(this)
 
-    companion object TagList_C {
+    companion object TagListCompanion {
+        /**
+         * The [PlatformType] of [TagList].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(TagList::class).withPackageName(PACKAGE_NAME)
+
         /**
          * Create a tag list from the given array; the tags are normalized.
          * @param tags the tags.

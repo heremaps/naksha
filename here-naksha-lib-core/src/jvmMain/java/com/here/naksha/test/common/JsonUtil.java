@@ -49,7 +49,7 @@ public class JsonUtil {
   public static <T extends AnyObject> T parseJson(final @NotNull String jsonStr, final @NotNull Class<T> type) {
     T obj = null;
     try {
-      obj = JvmBoxingUtil.box(Platform.fromJSON(jsonStr, FromJsonOptions.DEFAULT), type);
+      obj = JvmBoxingUtil.box(Platform.fromJson(jsonStr, FromJsonOptions.DEFAULT), type);
     } catch (Exception ex) {
       Assertions.fail("Unable to parse jsonStr " + jsonStr, ex);
       return null;

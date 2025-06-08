@@ -90,7 +90,7 @@ public class TestUtil {
   }
 
   public static <T> T parseJson(final @NotNull String jsonStr, final @NotNull Class<T> type) {
-    return JvmBoxingUtil.box(Platform.fromJSON(jsonStr, FromJsonOptions.DEFAULT), type);
+    return JvmBoxingUtil.box(Platform.fromJson(jsonStr, FromJsonOptions.DEFAULT), type);
   }
 
   public static <T> T parseJsonFileOrFail(final @NotNull String fileName, final @NotNull Class<T> type) {

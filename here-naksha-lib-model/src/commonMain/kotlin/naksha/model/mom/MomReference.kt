@@ -4,8 +4,13 @@ package naksha.model.mom
 
 import naksha.base.NullableProperty
 import naksha.base.AnyObject
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
+import naksha.base.String_TYPE
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * MOM reference object holding minimum equivalent fields from MOM reference object.
@@ -20,8 +25,16 @@ class MomReference() : AnyObject() {
         this.featureType = featureType
     }
 
-    companion object MomReference_C {
-        private val STRING_NULL = NullableProperty<MomReference, String>(String::class)
+    companion object MomReferenceCompanion {
+        /**
+         * The [PlatformType] of [MomReference].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(MomReference::class).withPackageName(PACKAGE_NAME)
+
+        private val STRING_NULL = NullableProperty<MomReference, String>(String_TYPE)
     }
 
     /**

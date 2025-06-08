@@ -4,7 +4,7 @@ import naksha.auth.check.Equals
 import naksha.auth.check.StartsWith
 import naksha.auth.naksha.FeatureParams
 import naksha.auth.naksha.NakshaOps
-import naksha.base.Platform.PlatformCompanion.fromJSON
+import naksha.base.Platform.PlatformCompanion.fromJson
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaMap
@@ -16,7 +16,7 @@ class UserRightsMatrixTest {
     @Test
     fun shouldMatchSimpleArm() {
         // Given:
-        val urm = fromJSON("""{
+        val urm = fromJson("""{
   "naksha": {
     "readFeatures": [
         {"id": "test_feature", "storageId", "demo-*"}

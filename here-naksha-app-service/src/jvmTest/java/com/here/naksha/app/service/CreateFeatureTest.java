@@ -244,7 +244,7 @@ class CreateFeatureTest extends ApiTest {
 
     // Given: Space (without EventHandler) configured in Admin storage
     final String spaceJson = loadFileOrFail("CreateFeatures/TC0307_createFeaturesWithNoHandler/create_space.json");
-    final Space space = JvmBoxingUtil.box(Platform.fromJSON(spaceJson), Space.class);
+    final Space space = JvmBoxingUtil.box(Platform.fromJson(spaceJson), Space.class);
     HttpResponse<String> response = getNakshaClient().post("hub/spaces", spaceJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Event Handler");
 

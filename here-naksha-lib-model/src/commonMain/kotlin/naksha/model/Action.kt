@@ -1,6 +1,8 @@
 package naksha.model
 
 import naksha.base.JsEnum
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_SHIFT
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -17,13 +19,20 @@ import kotlin.reflect.KClass
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class Action : JsEnum() {
-    @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = Action::class
+    override fun namespace(): PlatformType<out JsEnum> = TYPE
 
     override fun initClass() {}
 
     @Suppress("MemberVisibilityCanBePrivate")
-    companion object Action_C {
+    companion object ActionCompanion {
+        /**
+         * The [PlatformType] of [Action].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(Action::class).withPackageName(naksha.jbon.PACKAGE_NAME)
+
         internal const val CREATED_VALUE = 0 shl ACTION_SHIFT
         internal const val CREATED_STRING = "CREATE"
         internal const val CREATED_SHORT = "c"
@@ -46,7 +55,7 @@ class Action : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val CREATED = defIgnoreCase(Action::class, CREATED_STRING) { self ->
+        val CREATED = defIgnoreCase(TYPE, CREATED_STRING) { self ->
             self.intValue = CREATED_VALUE
             self.shortId = CREATED_SHORT
         }
@@ -57,7 +66,7 @@ class Action : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val UPDATED = defIgnoreCase(Action::class, UPDATED_STRING) { self ->
+        val UPDATED = defIgnoreCase(TYPE, UPDATED_STRING) { self ->
             self.intValue = UPDATED_VALUE
             self.shortId = UPDATED_SHORT
         }
@@ -68,7 +77,7 @@ class Action : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val DELETED = defIgnoreCase(Action::class, DELETED_STRING) { self ->
+        val DELETED = defIgnoreCase(TYPE, DELETED_STRING) { self ->
             self.intValue = DELETED_VALUE
             self.shortId = DELETED_SHORT
         }
@@ -79,7 +88,7 @@ class Action : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val UNDEFINED = defIgnoreCase(Action::class, UNDEFINED_STRING) { self ->
+        val UNDEFINED = defIgnoreCase(TYPE, UNDEFINED_STRING) { self ->
             self.intValue = UNDEFINED_VALUE
             self.shortId = UNDEFINED_SHORT
         }

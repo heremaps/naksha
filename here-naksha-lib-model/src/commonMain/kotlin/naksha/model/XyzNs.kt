@@ -3,9 +3,11 @@
 package naksha.model
 
 import naksha.base.*
+import naksha.base.Platform.PlatformCompanion.forKClass
 import kotlin.DeprecationLevel.WARNING
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
@@ -27,6 +29,14 @@ import kotlin.jvm.JvmStatic
 class XyzNs : AnyObject() {
 
     companion object XyzNsCompanion {
+        /**
+         * The [PlatformType] of [XyzNs].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(XyzNs::class).withPackageName(PACKAGE_NAME)
+
         const val TAGS_KEY = "tags"
         /**
          * The key of the [uuid] property.
@@ -186,15 +196,15 @@ class XyzNs : AnyObject() {
          */
         const val CS3 = "c3"
 
-        private val _ACTION = NotNullEnum<XyzNs, Action>(Action::class) { _, _ -> Action.CREATED }
-        private val _OPERATION = NotNullEnum<XyzNs, Operation>(Operation::class) { _, _ -> Operation.CREATED }
-        private val _APP_ID = NotNullProperty<XyzNs, String>(String::class) { _, _ -> NakshaContext.appId() }
-        private val _STRING_NULL = NullableProperty<XyzNs, String>(String::class, autoRemove = true)
-        private val _INT_0 = NotNullProperty<XyzNs, Int>(Int::class) { _, _ -> 0 }
-        private val _INT_NULL = NullableProperty<XyzNs, Int>(Int::class, autoRemove = true)
-        private val _UPDATED_AT = NotNullProperty<XyzNs, Int64>(Int64::class) { _, _ -> Platform.currentMillis() }
-        private val _DOUBLE_NULL = NullableProperty<XyzNs, Double>(Double::class, autoRemove = true)
-        private val _TAGS = NotNullProperty<XyzNs, TagList>(TagList::class) { _, _ -> TagList() }
+        private val _ACTION = NotNullEnum<XyzNs, Action>(Action.TYPE) { _, _ -> Action.CREATED }
+        private val _OPERATION = NotNullEnum<XyzNs, Operation>(Operation.TYPE) { _, _ -> Operation.CREATED }
+        private val _APP_ID = NotNullProperty<XyzNs, String>(String_TYPE) { _, _ -> NakshaContext.appId() }
+        private val _STRING_NULL = NullableProperty<XyzNs, String>(String_TYPE, autoRemove = true)
+        private val _INT_0 = NotNullProperty<XyzNs, Int>(Int_Type) { _, _ -> 0 }
+        private val _INT_NULL = NullableProperty<XyzNs, Int>(Int_Type, autoRemove = true)
+        private val _UPDATED_AT = NotNullProperty<XyzNs, Int64>(Int64_TYPE) { _, _ -> Platform.currentMillis() }
+        private val _DOUBLE_NULL = NullableProperty<XyzNs, Double>(Double_TYPE, autoRemove = true)
+        private val _TAGS = NotNullProperty<XyzNs, TagList>(TagList.TYPE) { _, _ -> TagList() }
         private var AS_IS: CharArray = CharArray(128 - 32) { (it + 32).toChar() }
         private var TO_LOWER: CharArray = CharArray(128 - 32) { (it + 32).toChar().lowercaseChar() }
 
@@ -238,7 +248,7 @@ class XyzNs : AnyObject() {
                 if (meta.cs1 != null) setRaw(CS1, meta.cs1)
                 if (meta.cs2 != null) setRaw(CS2, meta.cs2)
                 if (meta.cs3 != null) setRaw(CS3, meta.cs3)
-            }.proxy(XyzNs::class)
+            }.proxy(TYPE)
         }
 
         /**

@@ -6,7 +6,7 @@ import naksha.base.illegalArg
 import naksha.geo.HereTile
 import naksha.geo.SpGeometry
 import naksha.model.*
-import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
+import naksha.model.GeoEncoding.GeoEncodingComponent.TWKB
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
 

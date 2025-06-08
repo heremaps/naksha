@@ -2,15 +2,16 @@
 
 package naksha.model.objects
 
-import naksha.base.AnyObject
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
+import naksha.base.*
+import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.model.XyzNs
 import naksha.model.mom.MomDeltaNs
 import naksha.model.mom.MomMetaNs
 import naksha.model.mom.MomReferenceList
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * The properties of a standard Naksha feature.
@@ -19,7 +20,15 @@ import kotlin.js.JsName
 @JsExport
 open class NakshaProperties : AnyObject() {
 
-    companion object {
+    companion object NakshaPropertiesCompanion {
+        /**
+         * The [PlatformType] of [NakshaProperties].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(NakshaProperties::class).withPackageName(PACKAGE_NAME)
+
         /**
          * The key of the feature-type property (`featureType`).
          * @since 3.0
@@ -56,11 +65,11 @@ open class NakshaProperties : AnyObject() {
          */
         const val TAGS = "tags"
 
-        private val _XYZ = NotNullProperty<NakshaProperties, XyzNs>(XyzNs::class, name = XYZ_KEY)
-        private val _DELTA_PROXY_NULL = NullableProperty<NakshaProperties, MomDeltaNs>(MomDeltaNs::class, name = DELTA_KEY, autoRemove = true)
-        private val _META_PROXY_NULL = NullableProperty<NakshaProperties, MomMetaNs>(MomMetaNs::class, name = META_KEY, autoRemove = true)
-        private val _REFERENCES_NULL = NullableProperty<NakshaProperties, MomReferenceList>(MomReferenceList::class, autoRemove = true)
-        private val _STRING_NULL = NullableProperty<NakshaProperties, String>(String::class, autoRemove = true)
+        private val _XYZ = NotNullProperty<NakshaProperties, XyzNs>(XyzNs.TYPE, name = XYZ_KEY)
+        private val _DELTA_PROXY_NULL = NullableProperty<NakshaProperties, MomDeltaNs>(MomDeltaNs.TYPE, name = DELTA_KEY, autoRemove = true)
+        private val _META_PROXY_NULL = NullableProperty<NakshaProperties, MomMetaNs>(MomMetaNs.TYPE, name = META_KEY, autoRemove = true)
+        private val _REFERENCES_NULL = NullableProperty<NakshaProperties, MomReferenceList>(MomReferenceList.TYPE, autoRemove = true)
+        private val _STRING_NULL = NullableProperty<NakshaProperties, String>(String_TYPE, autoRemove = true)
     }
 
     /**

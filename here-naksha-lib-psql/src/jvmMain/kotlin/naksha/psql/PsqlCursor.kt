@@ -225,7 +225,7 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
             "timestamp" -> valueOrNull(rs, longToInt64(rs.getTimestamp(index).toInstant().toEpochMilli()))
             "date" -> valueOrNull(rs, longToInt64(rs.getDate(index).toInstant().toEpochMilli()))
             "bytea" -> valueOrNull(rs, rs.getBytes(index))
-            "jsonb" -> Platform.fromJSON(rs.getString(index))
+            "jsonb" -> Platform.fromJson(rs.getString(index))
             else -> rs.getObject(index)
         }
     }

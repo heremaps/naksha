@@ -296,7 +296,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
 
   protected <P extends AnyObject> @NotNull P parseRequestBodyAs(final Class<P> type) {
     final String bodyJson = routingContext.body().asString();
-    return requireNonNull(box(Platform.fromJSON(bodyJson, FromJsonOptions.DEFAULT), type));
+    return requireNonNull(box(Platform.fromJson(bodyJson, FromJsonOptions.DEFAULT), type));
   }
 
   protected <F extends NakshaFeature> @Nullable F1<F, F> standardReadFeaturesPreResponseProcessing(

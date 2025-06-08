@@ -20,8 +20,6 @@ import static naksha.base.Platform.javaProxy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import kotlin.reflect.KClass;
-import naksha.base.Platform;
 import naksha.geo.PointCoord;
 import naksha.geo.SpPoint;
 import naksha.model.objects.NakshaFeature;

@@ -61,7 +61,7 @@ class ActivityLogEnhancerTest {
   private static NakshaFeature featureFromFile(String sampleDir, String fileName) {
     String fileContent = FileUtil.loadFileOrFail(sampleDir, fileName);
     return JvmBoxingUtil.box(
-            Platform.fromJSON(fileContent, FromJsonOptions.DEFAULT),
+            Platform.fromJson(fileContent, FromJsonOptions.DEFAULT),
             NakshaFeature.class
     );
   }

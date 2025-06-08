@@ -2,7 +2,7 @@ package naksha.auth.check
 
 import naksha.auth.*
 import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.Platform.PlatformCompanion.fromJSON
+import naksha.base.Platform.PlatformCompanion.fromJson
 import kotlin.test.*
 
 class CheckMapCompilerTest {
@@ -13,7 +13,7 @@ class CheckMapCompilerTest {
         // A virtual operation 'demoOp', that accepts one parameter named 'foo', and we want the user
         // to only have the right to execute the operation, when the 'foo' parameter starts with 'prefix-',
         // ends with '-suffix' or is exactly 'strict'
-        val userRights = assertNotNull(fromJSON("""
+        val userRights = assertNotNull(fromJson("""
 {
   "demoOp": [
     { "foo": "prefix-*", "bar": "*-suffix", "xyz": "strict" }
@@ -56,7 +56,7 @@ class CheckMapCompilerTest {
         // Given:
         // A virtual operation 'demoOp', that accepts one parameter named 'name', and we want that the user
         // only has rights to execute this operation, when the 'name' parameter is "foo", "bar", or "buzz"
-        val userRights = assertNotNull(fromJSON("""
+        val userRights = assertNotNull(fromJson("""
 {
   "demoOp": [
     { "name": ["foo", "bar", "buzz"] }
@@ -85,7 +85,7 @@ class CheckMapCompilerTest {
         // Given:
         // A virtual operation 'demoOp', that accepts one parameter named 'name', and we want that the user
         // only has rights to execute this operation, when the 'name' parameter matches a check, that does not exist
-        val userRights = assertNotNull(fromJSON("""
+        val userRights = assertNotNull(fromJson("""
 {
   "demoOp": [
     { "name": {} }

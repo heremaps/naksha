@@ -3,7 +3,7 @@
 package naksha.model
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.fromJSON
+import naksha.base.Platform.PlatformCompanion.fromJson
 import naksha.base.Platform.PlatformCompanion.gzipDeflate
 import naksha.base.Platform.PlatformCompanion.gzipInflate
 import naksha.base.Platform.PlatformCompanion.md5
@@ -16,18 +16,18 @@ import naksha.geo.GeoUtil.GeoUtilCompanion.toTWKB
 import naksha.geo.GeoUtil.GeoUtilCompanion.toWKB
 import naksha.geo.SpGeometry
 import naksha.jbon.*
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON_GZIP
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON_GZIP
-import naksha.model.GeoEncoding.GeoEncoding_C.EWKB
-import naksha.model.GeoEncoding.GeoEncoding_C.EWKB_GZIP
-import naksha.model.GeoEncoding.GeoEncoding_C.GEO_JSON
-import naksha.model.GeoEncoding.GeoEncoding_C.GEO_JSON_GZIP
-import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
-import naksha.model.GeoEncoding.GeoEncoding_C.TWKB_GZIP
-import naksha.model.GeoEncoding.GeoEncoding_C.WKB
-import naksha.model.GeoEncoding.GeoEncoding_C.WKB_GZIP
+import naksha.model.FeatureEncoding.FeatureEncodingCompanion.JBON
+import naksha.model.FeatureEncoding.FeatureEncodingCompanion.JBON_GZIP
+import naksha.model.FeatureEncoding.FeatureEncodingCompanion.JSON
+import naksha.model.FeatureEncoding.FeatureEncodingCompanion.JSON_GZIP
+import naksha.model.GeoEncoding.GeoEncodingComponent.EWKB
+import naksha.model.GeoEncoding.GeoEncodingComponent.EWKB_GZIP
+import naksha.model.GeoEncoding.GeoEncodingComponent.GEO_JSON
+import naksha.model.GeoEncoding.GeoEncodingComponent.GEO_JSON_GZIP
+import naksha.model.GeoEncoding.GeoEncodingComponent.TWKB
+import naksha.model.GeoEncoding.GeoEncodingComponent.TWKB_GZIP
+import naksha.model.GeoEncoding.GeoEncodingComponent.WKB
+import naksha.model.GeoEncoding.GeoEncodingComponent.WKB_GZIP
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
 import naksha.model.NakshaVersion.Companion.CURRENT
@@ -588,7 +588,7 @@ class Naksha private constructor() {
             if (encoding == JSON || encoding == JSON_GZIP) {
                 // We do not want to encode geometry.
                 val f = feature.copy<NakshaFeature>(false)
-                f.removeRaw(NakshaFeature.GEOMETRY)
+                f.removeRaw(NakshaFeature.GEOMETRY_KEY)
                 // We do not want to encode properties.@ns:com:here:xyz.
                 val p = feature.properties.copy<NakshaProperties>(false)
                 p.removeRaw(NakshaProperties.XYZ_KEY)
@@ -623,7 +623,7 @@ class Naksha private constructor() {
                 return decoder.toAnyObject().proxy(NakshaFeature::class)
             }
             if (encoding == JSON || encoding == JSON_GZIP) {
-                val decoded = fromJSON(bytes.decodeToString())
+                val decoded = fromJson(bytes.decodeToString())
                 if (decoded is PlatformMap) return decoded.proxy(NakshaFeature::class)
             }
             return null
@@ -651,7 +651,7 @@ class Naksha private constructor() {
             }
             if (encoding == TagsEncoding.JSON || encoding == TagsEncoding.JSON_GZIP) {
                 val text = raw.decodeToString()
-                val decoded = fromJSON(text)
+                val decoded = fromJson(text)
                 if (decoded is PlatformMap) return decoded.proxy(TagMap::class)
             }
             return null
@@ -700,7 +700,7 @@ class Naksha private constructor() {
                 TWKB, TWKB_GZIP -> fromTWKB(rawBytes)
                 WKB, WKB_GZIP -> fromWKB(rawBytes)
                 EWKB, EWKB_GZIP -> fromEWKB(rawBytes)
-                GEO_JSON, GEO_JSON_GZIP -> (fromJSON(rawBytes.decodeToString()) as PlatformMap).proxy(SpGeometry::class)
+                GEO_JSON, GEO_JSON_GZIP -> (fromJson(rawBytes.decodeToString()) as PlatformMap).proxy(SpGeometry::class)
                 else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown geometry encoding")
             }
 

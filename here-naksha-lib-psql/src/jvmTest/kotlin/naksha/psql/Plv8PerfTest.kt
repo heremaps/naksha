@@ -15,10 +15,10 @@ import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.Plv8PerfTest.FeatureSource.*
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_2D_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollectionCompanion.GIST_2D_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollectionCompanion.HERE_TILE_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollectionCompanion.ID_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollectionCompanion.TAGS_IDX
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
 import org.openjdk.jmh.annotations.OutputTimeUnit
@@ -54,11 +54,11 @@ class Plv8PerfTest : PgTestBase(
 
         val jsonPath = Companion::class.java.getResource("/topology.json")
         val json = Files.readString(Paths.get(jsonPath.toURI()))
-        val topologyFeatureTemplate: NakshaFeature = (Platform.fromJSON(json) as JvmMap).proxy(NakshaFeature::class)
+        val topologyFeatureTemplate: NakshaFeature = (Platform.fromJson(json) as JvmMap).proxy(NakshaFeature::class)
 
         val smallJsonPath = Companion::class.java.getResource("/small_topology.json")
         val smallJson = Files.readString(Paths.get(smallJsonPath.toURI()))
-        val smallTopologyFeatureTemplate: NakshaFeature = (Platform.fromJSON(smallJson) as JvmMap).proxy(NakshaFeature::class)
+        val smallTopologyFeatureTemplate: NakshaFeature = (Platform.fromJson(smallJson) as JvmMap).proxy(NakshaFeature::class)
     }
 
     @Ignore

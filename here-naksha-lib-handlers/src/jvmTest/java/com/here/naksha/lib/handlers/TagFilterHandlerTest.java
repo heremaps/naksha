@@ -183,7 +183,7 @@ class TagFilterHandlerTest extends AbstractTest {
       final @NotNull String outputFilePath) throws JSONException {
     // Given: WriteXyzFeatures request with some tags already part of features
     final String featuresJson = FileUtil.loadFileOrFail(inputFilePath);
-    final JvmMap rawInputCollection = (JvmMap) Platform.fromJSON(featuresJson, FromJsonOptions.DEFAULT);
+    final JvmMap rawInputCollection = (JvmMap) Platform.fromJson(featuresJson, FromJsonOptions.DEFAULT);
     final XyzFeatureCollection inputCollection = JvmBoxingUtil.box(rawInputCollection, XyzFeatureCollection.class);
     final WriteRequest wf = RequestHelper.upsertFeaturesRequest("some_map", "some_space", inputCollection.getFeatures());
 

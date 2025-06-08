@@ -2,14 +2,15 @@
 
 package naksha.model
 
+import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_SHIFT
 import kotlin.js.JsExport
 
 /**
  * Helper for geometry encoding in [Flags].
  */
 @JsExport
-class GeoEncoding : FlagsBits() {
-    companion object GeoEncoding_C {
+class GeoEncoding private constructor() {
+    companion object GeoEncodingComponent {
         /**
          * Geometry encoded in [TWKB](https://github.com/TWKB/Specification/blob/master/twkb.md) with precision 7 (so it fits into 32-bit integer encoding).
          *

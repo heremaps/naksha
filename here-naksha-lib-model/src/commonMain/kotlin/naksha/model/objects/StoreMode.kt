@@ -2,7 +2,10 @@
 package naksha.model.objects
 
 import naksha.base.JsEnum
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.reflect.KClass
 
@@ -15,7 +18,15 @@ import kotlin.reflect.KClass
  */
 @JsExport
 class StoreMode: JsEnum() {
-    companion object StoreMode_C {
+    companion object StoreModeCompanion {
+        /**
+         * The [PlatformType] of [StoreMode].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(StoreMode::class).withPackageName(PACKAGE_NAME)
+
         /**
          * The default storage-mode, data should be stored.
          * @since 3.0.0

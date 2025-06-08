@@ -5,8 +5,8 @@ package naksha.model
 import naksha.base.Int64
 import naksha.base.illegalArg
 import naksha.jbon.IDictReader
-import naksha.model.Metadata.Metadata_C.calculateHash
-import naksha.model.Metadata.Metadata_C.calculateHereTile
+import naksha.model.Metadata.MetadataCompanion.calculateHash
+import naksha.model.Metadata.MetadataCompanion.calculateHereTile
 import naksha.model.objects.*
 import kotlin.js.JsExport
 import kotlin.js.JsName

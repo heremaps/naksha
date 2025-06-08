@@ -70,6 +70,6 @@ public class IterateHandle extends AnyObject {
 
   public static IterateHandle base64DecodedDeserializedJson(final @NotNull String handle) {
     final String json = new String(Base64.getDecoder().decode(handle));
-    return JvmBoxingUtil.box(Platform.fromJSON(json, FromJsonOptions.DEFAULT), IterateHandle.class);
+    return JvmBoxingUtil.box(Platform.fromJson(json, FromJsonOptions.DEFAULT), IterateHandle.class);
   }
 }

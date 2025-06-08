@@ -63,7 +63,7 @@ import naksha.model.request.query.TagValueMatches;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static naksha.model.LibModelKt.FETCH_ALL;
+import static naksha.model.NakshaModelKt.FETCH_ALL;
 
 public class NHAdminReaderMock implements IReadSession {
 
