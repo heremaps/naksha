@@ -39,6 +39,10 @@ open class LineStringCoord() : ListProxy<PointCoord>(PointCoord.TYPE), ICoordina
         val TYPE: PlatformType<LineStringCoord> = forKClass(LineStringCoord::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("LineString")
+
+        init {
+            initialize()
+        }
     }
 
     override fun fix(): LineStringCoord {

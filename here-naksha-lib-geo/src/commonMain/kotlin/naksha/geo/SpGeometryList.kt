@@ -23,5 +23,9 @@ class SpGeometryList : ListProxy<SpGeometry>(SpGeometry.TYPE) {
         @JvmField
         @JsStatic
         val TYPE: PlatformType<SpGeometryList> = forKClass(SpGeometryList::class).withPackageName(PACKAGE_NAME)
+
+        init {
+            initialize()
+        }
     }
 }

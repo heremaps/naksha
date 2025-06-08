@@ -39,6 +39,10 @@ class LinearRingCoord() : LineStringCoord() {
         @JvmField
         @JsStatic
         val TYPE: PlatformType<LinearRingCoord> = forKClass(LinearRingCoord::class).withPackageName(PACKAGE_NAME)
+
+        init {
+            initialize()
+        }
     }
 
     override fun fix(): LinearRingCoord {

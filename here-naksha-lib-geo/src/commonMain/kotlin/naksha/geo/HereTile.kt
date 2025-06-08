@@ -146,6 +146,10 @@ data class HereTile(val intKey: Int) {
             x = (x or (x shl 1)) and 0x55555555
             return x
         }
+
+        init {
+            initialize()
+        }
     }
 
     /**

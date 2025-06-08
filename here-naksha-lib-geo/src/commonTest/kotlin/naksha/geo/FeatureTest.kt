@@ -1,6 +1,7 @@
 package naksha.geo
 
-import naksha.base.Platform.PlatformCompanion.fromJSON
+import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.PlatformCompanion.fromJson
 import kotlin.test.*
 
 class FeatureTest {
@@ -34,7 +35,7 @@ class FeatureTest {
     }
 """
 
-        val feature = assertNotNull(fromJSON(polygonJson, GeoFeature.TYPE))
+        val feature = assertNotNull(fromJson(polygonJson, GeoFeature.TYPE))
         assertEquals("Feature", feature.type)
         assertEquals("Example", feature.id)
         val bbox = feature.bbox
@@ -55,5 +56,25 @@ class FeatureTest {
         val p = assertNotNull(polyCoords[0])
         assertEquals(20.6899332, p.longitude)
         assertEquals(6.6805668, p.latitude)
+    }
+
+    class Foo : GeoFeature() {
+        companion object Foo_C {
+            val TYPE = forKClass(Foo::class)
+                .withPackageName("naksha.geo")
+                .withJsonType("foo")
+            }
+        }
+
+    @Test
+    fun testOwnType() {
+        Foo.TYPE.initialize()
+        val json = """{
+    "id": "demo",
+    "type": "Feature",
+    "featureType": "foo"
+  }"""
+        val foo = fromJson(json)
+        assertIs<Foo>(assertNotNull(foo))
     }
 }

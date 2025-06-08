@@ -1,6 +1,6 @@
 package naksha.geo
 
-import naksha.base.Platform.PlatformCompanion.fromJSON
+import naksha.base.Platform.PlatformCompanion.fromJson
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -33,7 +33,7 @@ class PolygonProxyTest {
       }"""
 
         // when
-        val polygon = assertNotNull(fromJSON(polygonJson, SpPolygon.TYPE))
+        val polygon = assertNotNull(fromJson(polygonJson, SpPolygon.TYPE))
 
         // then
         assertEquals(SpPolygon.TYPE.jsonType, polygon.type)

@@ -3,9 +3,9 @@ package naksha.geo
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.forInstance
 import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set_length
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set_length
 import naksha.base.PlatformUtil.PlatformUtilCompanion.round_double
 import naksha.base.fn.Fn0
 import kotlin.js.JsExport
@@ -60,6 +60,10 @@ class BBox() : ListProxy<Double>(Double_TYPE) {
         @JvmField
         @JsStatic
         val TYPE: PlatformType<BBox> = forKClass(BBox::class).withPackageName(PACKAGE_NAME)
+
+        init {
+            initialize()
+        }
     }
 
     override fun createData(): PlatformList = Platform.newArray(6)
@@ -416,17 +420,17 @@ class BBox() : ListProxy<Double>(Double_TYPE) {
         val north = sp_lat(round_double(latitude) + margin) ?: throw illegalArg("Illegal latitude: $latitude")
         val po = platformObject()
         if (is3D()) {
-            array_set(po, WEST, west)
-            array_set(po, SOUTH, south)
-            array_set(po, EAST_3D, east)
-            array_set(po, NORTH_3D, north)
+            list_set(po, WEST, west)
+            list_set(po, SOUTH, south)
+            list_set(po, EAST_3D, east)
+            list_set(po, NORTH_3D, north)
             return this
         }
         if (!is2D()) to2D()
-        array_set(po, WEST, west)
-        array_set(po, SOUTH, south)
-        array_set(po, EAST_2D, east)
-        array_set(po, NORTH_2D, north)
+        list_set(po, WEST, west)
+        list_set(po, SOUTH, south)
+        list_set(po, EAST_2D, east)
+        list_set(po, NORTH_2D, north)
         return this
     }
 
@@ -567,18 +571,18 @@ class BBox() : ListProxy<Double>(Double_TYPE) {
         if (is3D()) {
             // from: [west, north, min_z, east, south, max_z]
             // from: [west, north, east, south]
-            array_set(po, EAST_2D, array_get(po, EAST_3D))
-            array_set(po, NORTH_2D, array_get(po, NORTH_3D))
-            array_set_length(po, SIZE_2D)
+            list_set(po, EAST_2D, list_get(po, EAST_3D))
+            list_set(po, NORTH_2D, list_get(po, NORTH_3D))
+            list_set_length(po, SIZE_2D)
             return this
         }
         // We have either an empty box or something totally invalid
         setCapacity(6)
-        array_set_length(po, SIZE_2D)
-        array_set(po, WEST, 0.0)
-        array_set(po, SOUTH, 0.0)
-        array_set(po, EAST_2D, 0.0)
-        array_set(po, NORTH_2D, 0.0)
+        list_set_length(po, SIZE_2D)
+        list_set(po, WEST, 0.0)
+        list_set(po, SOUTH, 0.0)
+        list_set(po, EAST_2D, 0.0)
+        list_set(po, NORTH_2D, 0.0)
         return this
     }
 
@@ -594,15 +598,15 @@ class BBox() : ListProxy<Double>(Double_TYPE) {
         if (is3D()) return this
         // to: [west, north, min_z, east, south, max_z]
         val po = platformObject()
-        val west = as_double_or_zero(array_get(po, WEST))
-        val north = as_double_or_zero(array_get(po, SOUTH))
+        val west = as_double_or_zero(list_get(po, WEST))
+        val north = as_double_or_zero(list_get(po, SOUTH))
         val min_z = round_double(minZ)
         val east: Double
         val south: Double
         if (is2D()) {
             // from: [west, north, east, south]
-            east = as_double_or_zero(array_get(po, EAST_2D))
-            south = as_double_or_zero(array_get(po, NORTH_2D))
+            east = as_double_or_zero(list_get(po, EAST_2D))
+            south = as_double_or_zero(list_get(po, NORTH_2D))
         } else {
             east = 0.0
             south = 0.0
@@ -611,13 +615,13 @@ class BBox() : ListProxy<Double>(Double_TYPE) {
 
         // to: [west, north, min_z, east, south, max_z]
         setCapacity(6)
-        array_set_length(po, SIZE_3D)
-        array_set(po, WEST, west)
-        array_set(po, SOUTH, north)
-        array_set(po, MIN_Z_3D, min_z)
-        array_set(po, EAST_3D, east)
-        array_set(po, NORTH_3D, south)
-        array_set(po, MAX_Z_3D, max_z)
+        list_set_length(po, SIZE_3D)
+        list_set(po, WEST, west)
+        list_set(po, SOUTH, north)
+        list_set(po, MIN_Z_3D, min_z)
+        list_set(po, EAST_3D, east)
+        list_set(po, NORTH_3D, south)
+        list_set(po, MAX_Z_3D, max_z)
         return this
     }
 

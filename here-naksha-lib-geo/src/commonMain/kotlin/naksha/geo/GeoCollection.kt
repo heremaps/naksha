@@ -35,6 +35,10 @@ open class GeoCollection() : AnyObject() {
             .withJsonType("FeatureCollection")
 
         private val FEATURES_MEMBER = NotNullProperty<GeoCollection, GeoFeatureList>(GeoFeatureList.TYPE) { _, _ -> GeoFeatureList() }
+
+        init {
+            initialize()
+        }
     }
 
     /**

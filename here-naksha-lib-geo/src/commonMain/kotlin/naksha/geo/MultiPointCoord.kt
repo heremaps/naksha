@@ -39,6 +39,10 @@ class MultiPointCoord() : ListProxy<PointCoord>(PointCoord.TYPE), ICoordinates {
         val TYPE: PlatformType<MultiPointCoord> = forKClass(MultiPointCoord::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("MultiPoint")
+
+        init {
+            initialize()
+        }
     }
 
     override fun fix(): MultiPointCoord {

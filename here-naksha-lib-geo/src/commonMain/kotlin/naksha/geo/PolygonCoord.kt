@@ -43,6 +43,10 @@ class PolygonCoord(): ListProxy<LinearRingCoord>(LinearRingCoord.TYPE), ICoordin
         val TYPE: PlatformType<PolygonCoord> = forKClass(PolygonCoord::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("Polygon")
+
+        init {
+            initialize()
+        }
     }
 
     override fun fix(): PolygonCoord {

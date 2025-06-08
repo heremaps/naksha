@@ -37,6 +37,10 @@ class SpMultiLineString() : SpGeometry() {
         val TYPE: PlatformType<SpMultiLineString> = forKClass(SpMultiLineString::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("MultiLineString")
+
+        init {
+            initialize()
+        }
     }
 
     override var coordinates: MultiLineStringCoord

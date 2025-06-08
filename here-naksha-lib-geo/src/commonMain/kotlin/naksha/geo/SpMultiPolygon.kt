@@ -37,6 +37,10 @@ class SpMultiPolygon() : SpGeometry() {
         val TYPE: PlatformType<SpMultiPolygon> = forKClass(SpMultiPolygon::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("MultiPolygon")
+
+        init {
+            initialize()
+        }
     }
 
     override var coordinates: MultiPolygonCoord

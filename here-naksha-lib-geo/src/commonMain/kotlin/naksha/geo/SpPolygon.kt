@@ -50,6 +50,10 @@ class SpPolygon() : SpGeometry() {
         val TYPE: PlatformType<SpPolygon> = forKClass(SpPolygon::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("Polygon")
+
+        init {
+            initialize()
+        }
     }
 
     override var coordinates: PolygonCoord

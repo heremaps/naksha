@@ -51,6 +51,10 @@ class SpPoint() : SpGeometry() {
         val TYPE: PlatformType<SpPoint> = forKClass(SpPoint::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("Point")
+
+        init {
+            initialize()
+        }
     }
 
     override var coordinates: PointCoord

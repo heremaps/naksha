@@ -39,6 +39,10 @@ class MultiPolygonCoord() : ListProxy<PolygonCoord>(PolygonCoord.TYPE), ICoordin
         val TYPE: PlatformType<MultiPolygonCoord> = forKClass(MultiPolygonCoord::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("MultiPolygon")
+
+        init {
+            initialize()
+        }
     }
 
     override fun fix(): MultiPolygonCoord {

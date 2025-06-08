@@ -2,8 +2,8 @@ package naksha.geo
 
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set
 import naksha.base.fn.Fn0
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -60,6 +60,10 @@ class PointCoord() : ListProxy<Double>(Double_TYPE), ICoordinates {
         val TYPE: PlatformType<PointCoord> = forKClass(PointCoord::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("Point")
+
+        init {
+            initialize()
+        }
     }
 
     override fun createData(): PlatformList = Platform.newArray(4)
@@ -73,16 +77,16 @@ class PointCoord() : ListProxy<Double>(Double_TYPE), ICoordinates {
 
     override fun fix(): PointCoord {
         val po = platformObject()
-        array_set(po, LON, sp_lon(sp_double(array_get(po, LON))) ?:
+        list_set(po, LON, sp_lon(sp_double(list_get(po, LON))) ?:
             throw illegalState("Longitude has an invalid value: ${this[LON]}"))
-        array_set(po, LAT,sp_lat(sp_double(array_get(po, LAT))) ?:
+        list_set(po, LAT,sp_lat(sp_double(list_get(po, LAT))) ?:
             throw illegalState("Latitude has an invalid value: ${this[LAT]}"))
-        val z = sp_double(array_get(po, Z))
+        val z = sp_double(list_get(po, Z))
         if (z == null) {
             size = 2
             return this
         }
-        val m = sp_double(array_get(po, M))
+        val m = sp_double(list_get(po, M))
         if (m == null) size = 3
         return this
     }
@@ -190,8 +194,8 @@ class PointCoord() : ListProxy<Double>(Double_TYPE), ICoordinates {
     fun to2D(): PointCoord {
         val po = platformObject()
         setCapacity(4)
-        array_set(po, LON, sp_lon(sp_double(array_get(po, LON))) ?: 0.0)
-        array_set(po, LAT, sp_lat(sp_double(array_get(po, LAT))) ?: 0.0)
+        list_set(po, LON, sp_lon(sp_double(list_get(po, LON))) ?: 0.0)
+        list_set(po, LAT, sp_lat(sp_double(list_get(po, LAT))) ?: 0.0)
         size = 2
         return this
     }
@@ -203,9 +207,9 @@ class PointCoord() : ListProxy<Double>(Double_TYPE), ICoordinates {
     fun to3D(): PointCoord {
         val po = platformObject()
         setCapacity(4)
-        array_set(po, LON, sp_lon(sp_double(array_get(po, LON))) ?: 0.0)
-        array_set(po, LAT, sp_lat(sp_double(array_get(po, LAT))) ?: 0.0)
-        array_set(po, Z, sp_double(array_get(po, Z)) ?: 0.0)
+        list_set(po, LON, sp_lon(sp_double(list_get(po, LON))) ?: 0.0)
+        list_set(po, LAT, sp_lat(sp_double(list_get(po, LAT))) ?: 0.0)
+        list_set(po, Z, sp_double(list_get(po, Z)) ?: 0.0)
         size = 3
         return this
     }
@@ -217,10 +221,10 @@ class PointCoord() : ListProxy<Double>(Double_TYPE), ICoordinates {
     fun to4D(): PointCoord {
         val po = platformObject()
         setCapacity(4)
-        array_set(po, LON, sp_lon(sp_double(array_get(po, LON))) ?: 0.0)
-        array_set(po, LAT, sp_lat(sp_double(array_get(po, LAT))) ?: 0.0)
-        array_set(po, Z, sp_double(array_get(po, Z)) ?: 0.0)
-        array_set(po, M, sp_double(array_get(po, M)) ?: 0.0)
+        list_set(po, LON, sp_lon(sp_double(list_get(po, LON))) ?: 0.0)
+        list_set(po, LAT, sp_lat(sp_double(list_get(po, LAT))) ?: 0.0)
+        list_set(po, Z, sp_double(list_get(po, Z)) ?: 0.0)
+        list_set(po, M, sp_double(list_get(po, M)) ?: 0.0)
         size = 4
         return this
     }

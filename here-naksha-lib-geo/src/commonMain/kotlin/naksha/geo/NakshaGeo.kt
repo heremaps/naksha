@@ -3,10 +3,10 @@
 // - jn Java at the class naksha.geo.NakshaGeoKt.{name}
 package naksha.geo
 
-import naksha.base.Int64
+import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.base.PlatformUtil.PlatformUtilCompanion.round_double
-import naksha.base.illegalArg
+import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.jvm.JvmField
 import kotlin.math.round
 
@@ -223,36 +223,35 @@ internal inline fun as_double_or_zero(value: Any?): Double = if (value !is Doubl
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun as_double_or_null(value: Any?): Double? = if (value !is Double || value.isNaN()) null else value
 
-/**
- * Will always be true, used as initialization block.
- * @since 3.0
- */
-@JvmField
-val initialized = run {
-    PointCoord.TYPE.initialize()
-    SpPoint.TYPE.initialize()
+private val isInitialied = AtomicBool(false)
+internal fun initialize() {
+    if (isInitialied.compareAndSet(expect = false, update = true)) {
+        Platform.globalDetectors.add(GeoTypeDetector.instance)
 
-    MultiPointCoord.TYPE.initialize()
-    SpMultiPoint.TYPE.initialize()
+        PointCoord.TYPE.initialize()
+        SpPoint.TYPE.initialize()
 
-    LineStringCoord.TYPE.initialize()
-    LinearRingCoord.TYPE.initialize()
-    SpLineString.TYPE.initialize()
+        MultiPointCoord.TYPE.initialize()
+        SpMultiPoint.TYPE.initialize()
 
-    MultiLineStringCoord.TYPE.initialize()
-    SpMultiLineString.TYPE.initialize()
+        LineStringCoord.TYPE.initialize()
+        LinearRingCoord.TYPE.initialize()
+        SpLineString.TYPE.initialize()
 
-    PolygonCoord.TYPE.initialize()
-    SpPolygon.TYPE.initialize()
+        MultiLineStringCoord.TYPE.initialize()
+        SpMultiLineString.TYPE.initialize()
 
-    MultiPolygonCoord.TYPE.initialize()
-    SpMultiPolygon.TYPE.initialize()
+        PolygonCoord.TYPE.initialize()
+        SpPolygon.TYPE.initialize()
 
-    BBox.TYPE.initialize()
-    GeoFeature.TYPE.initialize()
-    GeoFeatureList.TYPE.initialize()
-    GeoCollection.TYPE.initialize()
+        MultiPolygonCoord.TYPE.initialize()
+        SpMultiPolygon.TYPE.initialize()
 
-    HereTile.TYPE.initialize()
-    true
+        BBox.TYPE.initialize()
+        GeoFeature.TYPE.initialize()
+        GeoFeatureList.TYPE.initialize()
+        GeoCollection.TYPE.initialize()
+
+        HereTile.TYPE.initialize()
+    }
 }

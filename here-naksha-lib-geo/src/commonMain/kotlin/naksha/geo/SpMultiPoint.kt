@@ -36,6 +36,10 @@ class SpMultiPoint() : SpGeometry() {
         val TYPE: PlatformType<SpMultiPoint> = forKClass(SpMultiPoint::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("MultiPoint")
+
+        init {
+            initialize()
+        }
     }
 
     override var coordinates: MultiPointCoord

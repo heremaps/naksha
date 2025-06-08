@@ -39,6 +39,10 @@ class MultiLineStringCoord() : ListProxy<LineStringCoord>(LineStringCoord.TYPE),
         val TYPE: PlatformType<MultiLineStringCoord> = forKClass(MultiLineStringCoord::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("MultiLineString")
+
+        init {
+            initialize()
+        }
     }
 
     override fun fix(): MultiLineStringCoord {

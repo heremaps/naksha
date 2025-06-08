@@ -33,6 +33,10 @@ class SpGeometryCollection() : SpGeometry() {
             .withJsonType("GeometryCollection")
 
         private val GEOMETRIES_MEMBER = NullableProperty<SpGeometryCollection, SpGeometryList>(SpGeometryList.TYPE)
+
+        init {
+            initialize()
+        }
     }
 
     /**

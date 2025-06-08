@@ -1,6 +1,6 @@
 package naksha.geo
 
-import naksha.base.Platform.PlatformCompanion.fromJSON
+import naksha.base.Platform.PlatformCompanion.fromJson
 import naksha.base.Platform.PlatformCompanion.toJSON
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Test
@@ -58,7 +58,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val spGeometry = assertNotNull(fromJSON(json, SpGeometry.TYPE))
+        val spGeometry = assertNotNull(fromJson(json, SpGeometry.TYPE))
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -84,7 +84,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val spGeometry = assertNotNull(fromJSON(json, SpGeometry.TYPE))
+        val spGeometry = assertNotNull(fromJson(json, SpGeometry.TYPE))
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -110,7 +110,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val spGeometry = assertNotNull(fromJSON(json, SpGeometry.TYPE))
+        val spGeometry = assertNotNull(fromJson(json, SpGeometry.TYPE))
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -142,7 +142,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val spGeometry = assertNotNull(fromJSON(json, SpGeometry.TYPE))
+        val spGeometry = assertNotNull(fromJson(json, SpGeometry.TYPE))
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -184,7 +184,7 @@ class JtsTest {
           }
         """
 
-        val spGeometry = assertNotNull(fromJSON(json, SpGeometry.TYPE))
+        val spGeometry = assertNotNull(fromJson(json, SpGeometry.TYPE))
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -244,7 +244,7 @@ class JtsTest {
           }
         """
 
-        val spGeometry = assertNotNull(fromJSON(json, SpGeometry.TYPE))
+        val spGeometry = assertNotNull(fromJson(json, SpGeometry.TYPE))
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -308,7 +308,7 @@ class JtsTest {
           }
         """
 
-        val spGeometry = assertNotNull(fromJSON(json, SpGeometry.TYPE))
+        val spGeometry = assertNotNull(fromJson(json, SpGeometry.TYPE))
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -327,7 +327,7 @@ class JtsTest {
         val json = """{"coordinates":[1.0, 2.0]}"""
 
         // when
-        val spPoint = assertNotNull(fromJSON(json, SpPoint.TYPE))
+        val spPoint = assertNotNull(fromJson(json, SpPoint.TYPE))
         val jtsFromProxy = GeoUtil.toJtsGeometry(spPoint)
 
         // then

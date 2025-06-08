@@ -67,6 +67,10 @@ open class SpGeometry() : AnyObject() {
         }
 
         private val TYPE_MEMBER = NotNullProperty<SpGeometry, String>(String_TYPE) { self, _ -> forInstance(self).jsonType }
+
+        init {
+            initialize()
+        }
     }
 
     /**

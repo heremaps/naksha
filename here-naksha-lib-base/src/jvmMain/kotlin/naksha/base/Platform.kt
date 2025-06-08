@@ -523,7 +523,7 @@ actual class Platform {
 
         @JvmStatic
         actual fun <T> fromJson(json: String, type: PlatformType<T>): T?
-            = from_json(json, null)
+            = from_json(json, type)
 
         @JvmStatic
         actual fun <T> fromJson(json: String, type: PlatformType<T>, options: FromJsonOptions): T?

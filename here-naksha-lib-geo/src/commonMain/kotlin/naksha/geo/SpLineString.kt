@@ -37,6 +37,10 @@ class SpLineString() : SpGeometry() {
         val TYPE: PlatformType<SpLineString> = forKClass(SpLineString::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("LineString")
+
+        init {
+            initialize()
+        }
     }
 
     override var coordinates: LineStringCoord
