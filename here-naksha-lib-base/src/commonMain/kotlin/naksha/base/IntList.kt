@@ -20,7 +20,7 @@ open class IntList : ListProxy<Int>(Int_Type) {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<IntList> = forKClass(IntList::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(IntList::class).withPackageName(PACKAGE_NAME)
     }
 
     /**

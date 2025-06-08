@@ -24,7 +24,7 @@ open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(d
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<JbFeatureDecoder> = forKClass(JbFeatureDecoder::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(JbFeatureDecoder::class).withPackageName(PACKAGE_NAME)
     }
 
     private lateinit var _map: JbMapDecoder

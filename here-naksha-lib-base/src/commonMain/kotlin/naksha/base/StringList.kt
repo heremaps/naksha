@@ -67,7 +67,7 @@ open class StringList() : ListProxy<String>(String_TYPE){
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<StringList> = forKClass(StringList::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(StringList::class).withPackageName(PACKAGE_NAME)
 
         @JvmStatic
         fun fromList(strings: List<String>): StringList =

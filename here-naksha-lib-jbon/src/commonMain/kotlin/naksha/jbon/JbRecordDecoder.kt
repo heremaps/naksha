@@ -22,7 +22,7 @@ open class JbRecordDecoder(var dictReader: IDictReader? = null) : JbStructDecode
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<JbRecordDecoder> = forKClass(JbRecordDecoder::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(JbRecordDecoder::class).withPackageName(PACKAGE_NAME)
     }
 
     private var id: String? = null

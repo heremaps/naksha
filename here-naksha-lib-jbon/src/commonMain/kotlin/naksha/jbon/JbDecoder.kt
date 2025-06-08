@@ -28,7 +28,7 @@ open class JbDecoder {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<JbDecoder> = forKClass(JbDecoder::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(JbDecoder::class).withPackageName(PACKAGE_NAME)
 
         /**
          * Returns the human-readable name for the given unit-type.

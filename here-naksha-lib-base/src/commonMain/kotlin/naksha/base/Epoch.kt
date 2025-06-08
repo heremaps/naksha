@@ -22,7 +22,7 @@ open class Epoch(val millis: Int64 = Platform.currentMillis()) {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<Epoch> = forKClass(Epoch::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(Epoch::class).withPackageName(PACKAGE_NAME)
     }
 
     private val dateTime = Instant.fromEpochMilliseconds(millis.toLong()).toLocalDateTime(TimeZone.UTC)

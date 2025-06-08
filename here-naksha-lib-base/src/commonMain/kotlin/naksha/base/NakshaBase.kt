@@ -22,11 +22,15 @@ import naksha.base.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.base.Platform.PlatformCompanion.asPlatformObject
 import naksha.base.Platform.PlatformCompanion.detectMap
 import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.Platform.PlatformCompanion.forName
 import naksha.base.Platform.PlatformCompanion.isPlatformObject
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
+
+/**
+ * The package name `naksha.base`.
+ * @since 3.0
+ */
+const val PACKAGE_NAME = "naksha.base"
 
 inline fun Int64(value: Long) = Platform.longToInt64(value)
 inline fun Int64(value: Int) = Platform.toInt64(value)
@@ -135,12 +139,6 @@ inline operator fun <reified T> Array<T>.minus(element: T?): Array<T> {
 }
 
 /**
- * The package name `naksha.base`.
- * @since 3.0
- */
-const val PACKAGE_NAME = "naksha.base"
-
-/**
  * The [PlatformType] for `any`.
  * @since 3.0
  */
@@ -175,6 +173,12 @@ val Double_TYPE = forKClass(Double::class)
  * @since 3.0
  */
 val String_TYPE = forKClass(String::class)
+
+/**
+ * The [PlatformType] for `ByteArray`.
+ * @since 3.0
+ */
+val ByteArray_TYPE = forKClass(ByteArray::class)
 
 /**
  * The [PlatformType] for `throwable`.

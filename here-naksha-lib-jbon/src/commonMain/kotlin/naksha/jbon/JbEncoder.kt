@@ -87,7 +87,7 @@ open class JbEncoder(var global: IDict? = null) : Binary() {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<JbEncoder> = forKClass(JbEncoder::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(JbEncoder::class).withPackageName(PACKAGE_NAME)
 
         /**
          * An array that stores _true_ for every character that should belong to a **word**, when auto-splitting

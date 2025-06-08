@@ -24,6 +24,6 @@ data class SymbolMember(val self: PlatformObject, val symbol: Symbol, val value:
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<SymbolMember> = forKClass(SymbolMember::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(SymbolMember::class).withPackageName(PACKAGE_NAME)
     }
 }

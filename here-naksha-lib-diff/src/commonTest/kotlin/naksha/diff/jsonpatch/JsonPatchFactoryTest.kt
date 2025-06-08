@@ -18,7 +18,7 @@ class JsonPatchFactoryTest {
     @Test
     fun shouldCreateJsonPatchForSimpleMapDiff() {
         // Given:
-        val left = Platform.fromJSON(
+        val left = Platform.fromJson(
             """
             {
                 "name": "John",
@@ -33,7 +33,7 @@ class JsonPatchFactoryTest {
         )
 
         // And
-        val right = Platform.fromJSON(
+        val right = Platform.fromJson(
             """
             {
                 "name": "John",
@@ -135,7 +135,7 @@ class JsonPatchFactoryTest {
     @Test
     fun shouldCreateJsonPatchForComplexMaps(){
         // Given:
-        val left = Platform.fromJSON(
+        val left = Platform.fromJson(
             """
             {
                 "company": "Abc",
@@ -176,7 +176,7 @@ class JsonPatchFactoryTest {
         )
 
         // And
-        val right = Platform.fromJSON(
+        val right = Platform.fromJson(
             """
             {
                 "company": "Abc",
@@ -253,8 +253,8 @@ class JsonPatchFactoryTest {
     }
 
     private fun assertJsonsAreEqual(expected: String, actual: String) {
-        val expectedFlat = Platform.toJSON(Platform.fromJSON(expected))
-        val actualFlat = Platform.toJSON(Platform.fromJSON(actual))
+        val expectedFlat = Platform.toJSON(Platform.fromJson(expected))
+        val actualFlat = Platform.toJSON(Platform.fromJson(actual))
         assertEquals(expectedFlat, actualFlat)
     }
 }

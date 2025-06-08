@@ -19,7 +19,7 @@ data class ToJsonOptions(val int64Encoding: Int64Encoding = Int64Encoding.AS_INT
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<ToJsonOptions> = forKClass(ToJsonOptions::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(ToJsonOptions::class).withPackageName(PACKAGE_NAME)
 
         /**
          * The default JSON serialization options being used, when none are given explicitly.

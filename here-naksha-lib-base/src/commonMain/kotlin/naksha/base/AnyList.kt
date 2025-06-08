@@ -35,7 +35,7 @@ open class AnyList() : ListProxy<Any>(Any_TYPE) {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<AnyList> = forKClass(AnyList::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(AnyList::class).withPackageName(PACKAGE_NAME)
     }
 
     /**

@@ -28,7 +28,7 @@ data class FromJsonOptions @JvmOverloads constructor(
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<FromJsonOptions> = forKClass(FromJsonOptions::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(FromJsonOptions::class).withPackageName(PACKAGE_NAME)
 
         /**
          * The default JSON parsing options being used, when none are given explicitly.

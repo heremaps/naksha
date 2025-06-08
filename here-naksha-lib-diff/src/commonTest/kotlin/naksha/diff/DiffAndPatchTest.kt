@@ -9,7 +9,7 @@ class DiffAndPatchTest {
     @Test
     fun diffingAndPatchingShouldResultInOriginalObject() {
         // Given:
-        val left = Platform.fromJSON(
+        val left = Platform.fromJson(
             """
             {
                 "company": "Abc",
@@ -50,7 +50,7 @@ class DiffAndPatchTest {
         )
 
         // And
-        val right = Platform.fromJSON(
+        val right = Platform.fromJson(
             """
             {
                 "company": "Abc",

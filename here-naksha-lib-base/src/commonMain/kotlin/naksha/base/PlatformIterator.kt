@@ -19,7 +19,7 @@ abstract class PlatformIterator<VALUE> {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<PlatformIterator<*>> = forKClass(PlatformIterator::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(PlatformIterator::class).withPackageName(PACKAGE_NAME)
     }
 
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_iterator_protocol

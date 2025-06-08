@@ -22,6 +22,6 @@ open class AnyMap : MapProxy<Any, Any>(Any_TYPE, Any_TYPE) {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<AnyMap> = forKClass(AnyMap::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(AnyMap::class).withPackageName(PACKAGE_NAME)
     }
 }

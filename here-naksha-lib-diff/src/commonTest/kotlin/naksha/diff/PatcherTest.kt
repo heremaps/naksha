@@ -38,7 +38,7 @@ class PatcherTest {
     @Test
     fun shouldPatchMap(){
         // Given:
-        val patchedObject = Platform.fromJSON(
+        val patchedObject = Platform.fromJson(
             """
             {
                 "name": "John",

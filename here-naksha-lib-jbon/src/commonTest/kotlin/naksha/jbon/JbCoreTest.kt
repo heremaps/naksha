@@ -1,7 +1,7 @@
 package naksha.jbon
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.fromJSON
+import naksha.base.Platform.PlatformCompanion.fromJson
 import kotlin.test.*
 
 class JbCoreTest {
@@ -68,7 +68,7 @@ class JbCoreTest {
     @Test
     fun testJson() {
         // Test parse.
-        val map = assertNotNull(fromJSON("""
+        val map = assertNotNull(fromJson("""
 {
     "id": "foo",
     "properties": {
@@ -843,7 +843,7 @@ class JbCoreTest {
     fun testBuildingCollectionWithOnlyId() {
         val builder = JbEncoder()
         val featureJson = """{"id":"bar"}"""
-        val featureMap = assertIs<AnyObject>(fromJSON(featureJson))
+        val featureMap = assertIs<AnyObject>(fromJson(featureJson))
         val featureBytes = builder.buildFeatureFromMap(featureMap)
         val feature = JbRecordDecoder(dictManager)
         feature.mapBytes(featureBytes)
@@ -854,7 +854,7 @@ class JbCoreTest {
     fun testSelectPath() {
         val builder = JbEncoder()
         val featureJson = """{"id":"bar","properties":{"foo": "hello","bar":[0,1,2,3,4]}}"""
-        val featureMap = assertIs<AnyObject>(fromJSON(featureJson))
+        val featureMap = assertIs<AnyObject>(fromJson(featureJson))
         val featureBytes = builder.buildFeatureFromMap(featureMap)
         val feature = JbFeatureDecoder(dictManager)
         feature.mapBytes(featureBytes)

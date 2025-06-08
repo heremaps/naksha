@@ -1,7 +1,6 @@
 package naksha.diff
 
 import naksha.base.Platform
-import naksha.base.PlatformUtil
 import naksha.base.PlatformUtil.PlatformUtilCompanion.deepEquals
 import naksha.diff.*
 import org.json.JSONException
@@ -31,7 +30,7 @@ import kotlin.test.assertNull
  *  - `Patcher.getDifference` is [DifferenceCalculator.calculateDifference]
  *  - `PatcherUtils.removeAllRemoveOp` is [DifferenceFilter.removeAllRemoveOp]
  *  - `Patcher.patch` remained as [Patcher.patch]
- *  - JSON (de)serialization happens via [Platform.toJSON] and [Platform.fromJSON]
+ *  - JSON (de)serialization happens via [Platform.toJSON] and [Platform.fromJson]
  */
 class MigratedJsonBasedDiffTest {
     @Test
@@ -246,7 +245,7 @@ class MigratedJsonBasedDiffTest {
     }
 
     private fun loadFeature(fileName: String): Any =
-        Platform.fromJSON(getResourceAsText(fileName))
+        Platform.fromJson(getResourceAsText(fileName))
             ?: "Could not load/convert feature for filename: $fileName"
 
     private fun getResourceAsText(fileName: String): String =

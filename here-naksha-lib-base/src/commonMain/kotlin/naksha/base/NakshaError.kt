@@ -45,7 +45,7 @@ open class NakshaError() : AnyObject() {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<NakshaError> = forKClass(NakshaError::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(NakshaError::class).withPackageName(PACKAGE_NAME)
 
         /**
          * An internal error code to abort visitors.

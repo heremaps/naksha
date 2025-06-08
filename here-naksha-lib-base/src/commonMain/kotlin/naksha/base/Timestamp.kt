@@ -44,7 +44,7 @@ class Timestamp(
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<Timestamp> = forKClass(Timestamp::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(Timestamp::class).withPackageName(PACKAGE_NAME)
 
         /**
          * Returns the current timestamp.

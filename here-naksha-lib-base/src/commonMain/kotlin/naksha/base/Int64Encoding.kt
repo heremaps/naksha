@@ -18,7 +18,7 @@ class Int64Encoding : JsEnum() {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<Int64Encoding> = forKClass(Int64Encoding::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(Int64Encoding::class).withPackageName(PACKAGE_NAME)
 
         /**
          * Encode as 64-bit integer (_default_).

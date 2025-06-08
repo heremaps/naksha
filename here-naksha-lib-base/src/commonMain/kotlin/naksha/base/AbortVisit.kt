@@ -22,7 +22,7 @@ class AbortVisit<T>(val value: T) : NakshaError(ABORT_VISIT, "aborted visit") {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<AbortVisit<*>> = forKClass(AbortVisit::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(AbortVisit::class).withPackageName(PACKAGE_NAME)
 
         /**
          * Aborts a visitor with the given value, the method does not return, because it throws an exception.

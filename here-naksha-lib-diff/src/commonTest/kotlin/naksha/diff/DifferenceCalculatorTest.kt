@@ -1,6 +1,5 @@
 package naksha.diff
 
-import naksha.base.AnyObject
 import naksha.base.Platform
 import naksha.diff.DifferenceCalculator.DifferenceCalculator_C.calculateDifference
 import kotlin.test.*
@@ -9,7 +8,7 @@ class DifferenceCalculatorTest {
 
     @Test
     fun x(){
-        val objectToPatch = Platform.fromJSON("""
+        val objectToPatch = Platform.fromJson("""
             {
                 "foo": "bar",
                 "lorem": "ipsum"
@@ -62,7 +61,7 @@ class DifferenceCalculatorTest {
     @Test
     fun shouldCalculateDiffForSimpleMaps() {
         // Given:
-        val left = Platform.fromJSON(
+        val left = Platform.fromJson(
             """
             {
                 "name": "John",
@@ -77,7 +76,7 @@ class DifferenceCalculatorTest {
         )
 
         // And
-        val right = Platform.fromJSON(
+        val right = Platform.fromJson(
             """
             {
                 "name": "John",
@@ -193,7 +192,7 @@ class DifferenceCalculatorTest {
     @Test
     fun shouldIgnoreSpecifiedKeys() {
         // Given:
-        val left = Platform.fromJSON("""
+        val left = Platform.fromJson("""
             {
                 "foo": "abc",
                 "bar": 123
@@ -201,7 +200,7 @@ class DifferenceCalculatorTest {
         """.trimIndent())
 
         // And:
-        val right = Platform.fromJSON("""
+        val right = Platform.fromJson("""
             {
                 "foo": "abc",
                 "bar": 456
@@ -231,7 +230,7 @@ class DifferenceCalculatorTest {
     @Test
     fun shouldCalculateDiffForComplexMaps() {
         // Given:
-        val left = Platform.fromJSON(
+        val left = Platform.fromJson(
             """
             {
                 "company": "Abc",
@@ -272,7 +271,7 @@ class DifferenceCalculatorTest {
         )
 
         // And
-        val right = Platform.fromJSON(
+        val right = Platform.fromJson(
             """
             {
                 "company": "Abc",

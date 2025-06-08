@@ -47,6 +47,6 @@ data class DictEntry(
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<DictEntry> = forKClass(DictEntry::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(DictEntry::class).withPackageName(PACKAGE_NAME)
     }
 }

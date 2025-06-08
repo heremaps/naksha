@@ -35,7 +35,7 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<MapProxy<*,*>> = forKClass(MapProxy::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(MapProxy::class).withPackageName(PACKAGE_NAME)
 
         /**
          * Add all given keys into the given map, and return the map.

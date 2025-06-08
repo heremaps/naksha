@@ -20,7 +20,7 @@ open class Int64List : ListProxy<Int64>(Int64_TYPE) {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<Int64List> = forKClass(Int64List::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(Int64List::class).withPackageName(PACKAGE_NAME)
     }
 
     /**

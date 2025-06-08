@@ -30,7 +30,7 @@ class JbDictionary : JbStructDecoder<JbDictionary>(), IDict {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<JbDictionary> = forKClass(JbDictionary::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(JbDictionary::class).withPackageName(PACKAGE_NAME)
     }
 
     /**

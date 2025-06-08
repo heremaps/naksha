@@ -26,7 +26,7 @@ open class DataViewProxy(internal val binary: Binary = Binary()) : Proxy(), Bina
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<DataViewProxy> = forKClass(DataViewProxy::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(DataViewProxy::class).withPackageName(PACKAGE_NAME)
     }
 
     /**

@@ -22,7 +22,7 @@ class JbDictManager : IDictManager {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<JbDictManager> = forKClass(JbDictManager::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(JbDictManager::class).withPackageName(PACKAGE_NAME)
     }
 
     private val cache = Platform.newAtomicMap<String, JbDictionary>()

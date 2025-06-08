@@ -29,7 +29,7 @@ abstract class JbStructDecoder<SELF : JbStructDecoder<SELF>> {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<JbStructDecoder<*>> = forKClass(JbStructDecoder::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(JbStructDecoder::class).withPackageName(PACKAGE_NAME)
     }
 
     /**

@@ -36,7 +36,7 @@ abstract class Proxy : PlatformObject {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<Proxy> = forKClass(Proxy::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(Proxy::class).withPackageName(PACKAGE_NAME)
     }
 
     /**

@@ -26,7 +26,7 @@ data class IntMutable(
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<IntMutable> = forKClass(IntMutable::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(IntMutable::class).withPackageName(PACKAGE_NAME)
     }
 
     /**

@@ -21,6 +21,6 @@ open class PlatformIteratorResult<VALUE>(var done: Boolean, var value: VALUE?) {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<PlatformIteratorResult<*>> = forKClass(PlatformIteratorResult::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(PlatformIteratorResult::class).withPackageName(PACKAGE_NAME)
     }
 }

@@ -23,7 +23,7 @@ class JbMapDecoder : JbEntryArray<JbMapDecoder>() {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<JbMapDecoder> = forKClass(JbMapDecoder::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(JbMapDecoder::class).withPackageName(PACKAGE_NAME)
     }
 
     override fun onMap() {}

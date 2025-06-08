@@ -86,7 +86,7 @@ open class Binary() : BinaryView {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<Binary> = forKClass(Binary::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(Binary::class).withPackageName(PACKAGE_NAME)
 
         /**
          * The byte-array that represents undefined.

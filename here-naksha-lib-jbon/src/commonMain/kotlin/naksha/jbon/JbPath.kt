@@ -19,7 +19,7 @@ class JbPath(var dictManager: JbDictManager? = null, private var binaryView: Bin
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<JbPath> = forKClass(JbPath::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(JbPath::class).withPackageName(PACKAGE_NAME)
     }
 
     private var jmap: JbMapDecoder = JbMapDecoder()

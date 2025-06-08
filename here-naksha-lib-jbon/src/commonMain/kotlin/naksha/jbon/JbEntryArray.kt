@@ -21,7 +21,7 @@ abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStructDecoder<SELF>()
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<JbEntryArray<*>> = forKClass(JbEntryArray::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(JbEntryArray::class).withPackageName(PACKAGE_NAME)
     }
 
     /**

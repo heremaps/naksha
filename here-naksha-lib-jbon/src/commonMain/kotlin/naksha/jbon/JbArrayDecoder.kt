@@ -21,7 +21,7 @@ class JbArrayDecoder : JbEntryArray<JbArrayDecoder>() {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<JbArrayDecoder> = forKClass(JbArrayDecoder::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(JbArrayDecoder::class).withPackageName(PACKAGE_NAME)
     }
 
     override fun onMap() {}

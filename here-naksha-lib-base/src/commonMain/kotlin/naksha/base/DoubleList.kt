@@ -19,7 +19,7 @@ open class DoubleList : ListProxy<Double>(Double_TYPE) {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<DoubleList> = forKClass(DoubleList::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(DoubleList::class).withPackageName(PACKAGE_NAME)
     }
 
     /**

@@ -2,11 +2,14 @@
 
 package naksha.base
 
+import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.base.fn.Fn1
 import naksha.base.fn.Fn2
 import naksha.base.fn.Fx1
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 
 /**
@@ -20,6 +23,17 @@ import kotlin.jvm.JvmOverloads
  */
 @JsExport
 open class AtomicSet<E> private constructor(array: Array<E>, private val EMPTY: Array<E>) {
+
+    companion object AtomicSetCompanion {
+        /**
+         * The [PlatformType] of [AtomicSet].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(AtomicSet::class).withPackageName(PACKAGE_NAME)
+    }
+
     private val contentRef: AtomicNonNullRef<Array<E>> = AtomicNonNullRef(array)
 
     /**

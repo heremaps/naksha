@@ -21,6 +21,6 @@ open class AnyObject : MapProxy<String, Any>(String_TYPE, Any_TYPE) {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<AnyObject> = forKClass(AnyObject::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(AnyObject::class).withPackageName(PACKAGE_NAME)
     }
 }

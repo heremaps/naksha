@@ -21,7 +21,7 @@ class XyzVersion(val major: Int, val minor: Int, val revision: Int) : Comparable
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<XyzVersion> = forKClass(XyzVersion::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(XyzVersion::class).withPackageName(PACKAGE_NAME)
 
         @JvmStatic
         @JsStatic

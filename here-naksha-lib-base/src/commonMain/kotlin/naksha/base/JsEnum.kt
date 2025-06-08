@@ -89,7 +89,7 @@ abstract class JsEnum : CharSequence {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<JsEnum> = forKClass(JsEnum::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(JsEnum::class).withPackageName(PACKAGE_NAME)
 
         private fun alignValue(value: Any?): Any? {
             if (value == null) return null

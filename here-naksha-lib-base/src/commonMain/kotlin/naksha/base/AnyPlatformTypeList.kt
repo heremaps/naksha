@@ -27,7 +27,7 @@ open class AnyPlatformTypeList(): ListProxy<PlatformType<*>>(PlatformType_TYPE) 
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<AnyPlatformTypeList> = forKClass(AnyPlatformTypeList::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(AnyPlatformTypeList::class).withPackageName(PACKAGE_NAME)
     }
 
     /**
