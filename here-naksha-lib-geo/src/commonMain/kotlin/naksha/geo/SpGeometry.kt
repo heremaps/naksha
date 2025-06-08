@@ -44,7 +44,7 @@ open class SpGeometry() : AnyObject() {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<SpGeometry> = forKClass(SpGeometry::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(SpGeometry::class).withPackageName(PACKAGE_NAME)
 
         /**
          * Returns the correct concrete type for the given geometry.

@@ -59,7 +59,7 @@ class BBox() : ListProxy<Double>(Double_TYPE) {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<BBox> = forKClass(BBox::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(BBox::class).withPackageName(PACKAGE_NAME)
 
         init {
             initialize()

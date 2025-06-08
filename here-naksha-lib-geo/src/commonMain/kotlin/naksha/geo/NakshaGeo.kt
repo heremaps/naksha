@@ -6,7 +6,6 @@ package naksha.geo
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.base.PlatformUtil.PlatformUtilCompanion.round_double
-import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.jvm.JvmField
 import kotlin.math.round
 
@@ -135,6 +134,11 @@ internal const val SIZE_2D = 4
  * The size of a 3D bounding box: `6`
  */
 internal const val SIZE_3D = 6
+
+/**
+ * The string `Feature`.
+ */
+internal const val FEATURE = "Feature"
 
 /**
  * Convert the given value into a spatial component with 7 decimal digits _(does round)_.

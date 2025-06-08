@@ -5,6 +5,8 @@ package naksha.geo
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.forInstance
 import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
 import naksha.base.PlatformUtil.PlatformUtilCompanion.randomString
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -50,6 +52,77 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 open class GeoFeature : AnyObject() {
+    init {
+        initType()
+    }
+
+    /**
+     * If this is a [MOM](https://www.here.com/learn/blog/unimap-map-object-model) type.
+     * @since 3.0
+     */
+    protected open fun isMomType(): Boolean = false
+
+    /**
+     * If this is an old Data-Hub type.
+     * @since 3.0
+     */
+    protected open fun isDataHubType(): Boolean = false
+
+    /**
+     * Automatically invoked by the constructor of [GeoFeature].
+     *
+     * The default implementation checks the [PlatformType.jsonType] of this instance, it any is available:
+     * - If [isMomType], set [momType] and `properties.featureType` to [PlatformType.jsonType].
+     * - If [isDataHubType], set [featureType] and `properties.featureType` to [PlatformType.jsonType].
+     * - Otherwise, sets [featureType] to [PlatformType.jsonType].
+     * @since 3.0
+     */
+    protected fun initType() {
+        setRaw("type", FEATURE)
+        val jsonType = forInstance(this).jsonType
+        if (jsonType != null && jsonType != FEATURE) {
+            if (isMomType()) setMomType(jsonType)
+            else if (isDataHubType()) setFeatureType(jsonType, true)
+            else setFeatureType(jsonType, false)
+        }
+    }
+
+    /**
+     * Should only be called from constructors, initializes the feature-type.
+     * @param featureType The value to set.
+     * @param set_properties if _true_, copies the [featureType] into `properties.featureType`.
+     * @since 3.0
+     */
+    private fun setFeatureType(featureType: String, set_properties: Boolean) {
+        val po = platformObject()
+        map_set(po, "type", FEATURE)
+        map_set(po, "featureType", featureType)
+        if (set_properties) {
+            var properties = map_get(po, "properties")
+            if (properties !is PlatformMap) {
+                properties = Platform.newMap()
+                map_set(po, "properties", properties)
+            }
+            map_set(properties, "featureType" ,featureType)
+        }
+    }
+
+    /**
+     * Should only be called from constructors, initializes [momType] and `properties.featureType`.
+     * @param momType The [MOM](https://www.here.com/learn/blog/unimap-map-object-model)-type.
+     * @since 3.0
+     */
+    private fun setMomType(momType: String) {
+        val po = platformObject()
+        map_set(po, "type", FEATURE)
+        map_set(po, "momType", momType)
+        var properties = map_get(po, "properties")
+        if (properties !is PlatformMap) {
+            properties = Platform.newMap()
+            map_set(po, "properties", properties)
+        }
+        map_set(properties, "featureType", momType)
+    }
 
     companion object GeoFeatureCompanion {
         /**
@@ -58,12 +131,12 @@ open class GeoFeature : AnyObject() {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<GeoFeature> = forKClass(GeoFeature::class)
+        val TYPE = forKClass(GeoFeature::class)
             .withPackageName(PACKAGE_NAME)
-            .withJsonType("Feature")
+            .withJsonType(FEATURE)
 
         private val ID_MEMBER = NotNullProperty<GeoFeature, String>(String_TYPE) { _, _ -> randomString() }
-        private val TYPE_MEMBER = NotNullProperty<GeoFeature, String>(String_TYPE) { self, _ -> forInstance(self).jsonType }
+        private val TYPE_MEMBER = NotNullProperty<GeoFeature, String>(String_TYPE) { _, _ -> FEATURE }
         private val BBOX_NULL_MEMBER = NullableProperty<GeoFeature, BBox>(BBox.TYPE)
 
         init {
@@ -92,10 +165,65 @@ open class GeoFeature : AnyObject() {
         set(value) { set("geometry", value) }
 
     /**
-     * The type of the feature.
+     * The type of the feature, reads only `type` property.
      * @since 3.0
      */
-    open var type by TYPE_MEMBER
+    val type: String by TYPE_MEMBER
+
+    /**
+     * The feature-type of the feature, custom [HERE Technologies](https://here.com) extension, normally returns [PlatformType.jsonType].
+     *
+     * Checks:
+     * - `momType` _(if [isMomType])_
+     * - `properties.featureType` _(if [isMomType] or [isDataHubType])_
+     * - `featureType`
+     * - `type`
+     * @since 3.0
+     */
+    val featureType: String
+        get() = momType
+
+    /**
+     * The mom-type of the feature, custom [HERE Technologies](https://here.com) extension.
+     *
+     * Checks:
+     * - `momType` _(if [isMomType])_
+     * - `properties.featureType` _(if [isMomType] or [isDataHubType])_
+     * - `featureType`
+     * - `type`
+     * @since 3.0
+     */
+    val momType: String
+        get() {
+            val po = platformObject()
+            var type: Any?
+
+            // momType
+            if (isMomType()) {
+                type = map_get(po, "momType")
+                if (type is String) return type
+            }
+
+            if (isMomType() || isDataHubType()) {
+                // properties.featureType
+                val properties = map_get(po, "properties")
+                if (properties is PlatformMap) {
+                    type = map_get(properties, "featureType")
+                    if (type is String) return type
+                }
+            }
+
+            // featureType
+            type = map_get(po, "featureType")
+            if (type is String) return type
+
+            // type
+            type = map_get(po, "type")
+            if (type is String) return type
+
+            // Eventually, everything is a "Feature"
+            return FEATURE
+        }
 
     /**
      * Calculate the bounding box from the geometry and updated the [bbox] property.

@@ -58,7 +58,7 @@ data class HereTile(val intKey: Int) {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<HereTile> = forKClass(HereTile::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(HereTile::class).withPackageName(PACKAGE_NAME)
 
         private fun assertIntKey(intKey: Int) {
             if (intKey < 1 || intKey > 1610612735) throw IllegalArgumentException("not a valid HERE Tile intKey: $intKey")

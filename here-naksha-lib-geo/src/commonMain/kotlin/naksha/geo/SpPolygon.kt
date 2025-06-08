@@ -47,7 +47,7 @@ class SpPolygon() : SpGeometry() {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<SpPolygon> = forKClass(SpPolygon::class)
+        val TYPE = forKClass(SpPolygon::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("Polygon")
 

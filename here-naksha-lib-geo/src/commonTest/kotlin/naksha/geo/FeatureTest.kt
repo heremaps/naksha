@@ -1,7 +1,10 @@
 package naksha.geo
 
+import naksha.base.NullableProperty
+import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.base.Platform.PlatformCompanion.fromJson
+import naksha.base.String_TYPE
 import kotlin.test.*
 
 class FeatureTest {
@@ -58,13 +61,37 @@ class FeatureTest {
         assertEquals(6.6805668, p.latitude)
     }
 
-    class Foo : GeoFeature() {
+    open class Foo : GeoFeature() {
         companion object Foo_C {
             val TYPE = forKClass(Foo::class)
-                .withPackageName("naksha.geo")
+                .withPackageName(PACKAGE_NAME)
                 .withJsonType("foo")
-            }
+
+            private val NAME_MEMBER = NullableProperty<Foo, String>(String_TYPE)
         }
+
+        var name: String? by NAME_MEMBER
+    }
+
+    class DataHubFoo : Foo() {
+        companion object DataHubFoo_C {
+            val TYPE = forKClass(DataHubFoo::class)
+                .withPackageName(PACKAGE_NAME)
+                .withJsonType("dataHubFoo")
+        }
+
+        override fun isDataHubType(): Boolean = true
+    }
+
+    class MomFoo : Foo() {
+        companion object MomFoo_C {
+            val TYPE = forKClass(MomFoo::class)
+                .withPackageName(PACKAGE_NAME)
+                .withJsonType("momFoo")
+        }
+
+        override fun isMomType(): Boolean = true
+    }
 
     @Test
     fun testOwnType() {
@@ -76,5 +103,32 @@ class FeatureTest {
   }"""
         val foo = fromJson(json)
         assertIs<Foo>(assertNotNull(foo))
+    }
+
+    @Test
+    fun testFooToJson() {
+        val feature = Foo()
+        feature.name = "Example"
+        val json = Platform.toJSON(feature)
+        val expect = """{"type":"Feature","featureType":"foo","name":"Example"}"""
+        assertEquals(expect, json)
+    }
+
+    @Test
+    fun testDataHubFooToJson() {
+        val feature = DataHubFoo()
+        feature.name = "Example"
+        val json = Platform.toJSON(feature)
+        val expect = """{"type":"Feature","featureType":"dataHubFoo","properties":{"featureType":"dataHubFoo"},"name":"Example"}"""
+        assertEquals(expect, json)
+    }
+
+    @Test
+    fun testMomFooToJson() {
+        val feature = MomFoo()
+        feature.name = "Example"
+        val json = Platform.toJSON(feature)
+        val expect = """{"type":"Feature","momType":"momFoo","properties":{"featureType":"momFoo"},"name":"Example"}"""
+        assertEquals(expect, json)
     }
 }

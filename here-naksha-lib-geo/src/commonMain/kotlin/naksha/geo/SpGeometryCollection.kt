@@ -28,7 +28,7 @@ class SpGeometryCollection() : SpGeometry() {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<SpGeometryCollection> = forKClass(SpGeometryCollection::class)
+        val TYPE = forKClass(SpGeometryCollection::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("GeometryCollection")
 

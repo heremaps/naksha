@@ -48,7 +48,7 @@ class SpPoint() : SpGeometry() {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<SpPoint> = forKClass(SpPoint::class)
+        val TYPE = forKClass(SpPoint::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("Point")
 

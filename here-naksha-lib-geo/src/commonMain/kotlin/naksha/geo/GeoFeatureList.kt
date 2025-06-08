@@ -29,7 +29,7 @@ open class GeoFeatureList() : ListProxy<GeoFeature>(GeoFeature.TYPE) {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<GeoFeatureList> = forKClass(GeoFeatureList::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(GeoFeatureList::class).withPackageName(PACKAGE_NAME)
 
         init {
             initialize()

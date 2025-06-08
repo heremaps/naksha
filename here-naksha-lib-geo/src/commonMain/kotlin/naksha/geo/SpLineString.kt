@@ -34,7 +34,7 @@ class SpLineString() : SpGeometry() {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<SpLineString> = forKClass(SpLineString::class)
+        val TYPE = forKClass(SpLineString::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("LineString")
 

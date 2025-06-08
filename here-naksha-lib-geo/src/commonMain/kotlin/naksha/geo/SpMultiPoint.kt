@@ -33,7 +33,7 @@ class SpMultiPoint() : SpGeometry() {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<SpMultiPoint> = forKClass(SpMultiPoint::class)
+        val TYPE = forKClass(SpMultiPoint::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("MultiPoint")
 

@@ -38,7 +38,7 @@ class LinearRingCoord() : LineStringCoord() {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<LinearRingCoord> = forKClass(LinearRingCoord::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(LinearRingCoord::class).withPackageName(PACKAGE_NAME)
 
         init {
             initialize()

@@ -40,7 +40,7 @@ class PolygonCoord(): ListProxy<LinearRingCoord>(LinearRingCoord.TYPE), ICoordin
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<PolygonCoord> = forKClass(PolygonCoord::class)
+        val TYPE = forKClass(PolygonCoord::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("Polygon")
 

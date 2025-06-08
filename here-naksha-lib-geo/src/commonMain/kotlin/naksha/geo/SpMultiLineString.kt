@@ -34,7 +34,7 @@ class SpMultiLineString() : SpGeometry() {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<SpMultiLineString> = forKClass(SpMultiLineString::class)
+        val TYPE = forKClass(SpMultiLineString::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("MultiLineString")
 

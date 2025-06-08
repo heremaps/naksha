@@ -36,7 +36,7 @@ class MultiPolygonCoord() : ListProxy<PolygonCoord>(PolygonCoord.TYPE), ICoordin
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<MultiPolygonCoord> = forKClass(MultiPolygonCoord::class)
+        val TYPE = forKClass(MultiPolygonCoord::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("MultiPolygon")
 

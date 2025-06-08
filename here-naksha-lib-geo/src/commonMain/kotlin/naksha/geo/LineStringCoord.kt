@@ -36,7 +36,7 @@ open class LineStringCoord() : ListProxy<PointCoord>(PointCoord.TYPE), ICoordina
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<LineStringCoord> = forKClass(LineStringCoord::class)
+        val TYPE = forKClass(LineStringCoord::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("LineString")
 

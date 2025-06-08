@@ -57,7 +57,7 @@ class PointCoord() : ListProxy<Double>(Double_TYPE), ICoordinates {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<PointCoord> = forKClass(PointCoord::class)
+        val TYPE = forKClass(PointCoord::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("Point")
 

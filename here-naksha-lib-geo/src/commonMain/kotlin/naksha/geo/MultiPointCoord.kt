@@ -36,7 +36,7 @@ class MultiPointCoord() : ListProxy<PointCoord>(PointCoord.TYPE), ICoordinates {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<MultiPointCoord> = forKClass(MultiPointCoord::class)
+        val TYPE = forKClass(MultiPointCoord::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("MultiPoint")
 

@@ -36,7 +36,7 @@ class MultiLineStringCoord() : ListProxy<LineStringCoord>(LineStringCoord.TYPE),
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<MultiLineStringCoord> = forKClass(MultiLineStringCoord::class)
+        val TYPE = forKClass(MultiLineStringCoord::class)
             .withPackageName(PACKAGE_NAME)
             .withJsonType("MultiLineString")
 

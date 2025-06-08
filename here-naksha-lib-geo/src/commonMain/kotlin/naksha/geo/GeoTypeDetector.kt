@@ -32,7 +32,7 @@ class GeoTypeDetector private constructor(): TypeDetector {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<GeoTypeDetector> = forKClass(GeoTypeDetector::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(GeoTypeDetector::class).withPackageName(PACKAGE_NAME)
 
         /**
          * The [GeoTypeDetector] singleton.
