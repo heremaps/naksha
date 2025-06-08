@@ -5,20 +5,20 @@ package naksha.base
 expect class PlatformListApi private constructor() {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
     companion object PlatformListApiCompanion {
-        fun array_get_length(array: PlatformList?): Int
-        fun array_set_length(array: PlatformList?, length: Int)
-        fun array_get_capacity(array: PlatformList?): Int
-        fun array_set_capacity(array: PlatformList?, capacity: Int)
-        fun array_clear(array: PlatformList?)
-        fun array_get(array: PlatformList?, i: Int): Any?
-        fun array_set(array: PlatformList?, i: Int, value: Any?): Any?
-        fun array_delete(array: PlatformList?, i: Int): Any?
-        fun array_splice(array: PlatformList?, start: Int, deleteCount: Int = 0, vararg add: Any?): PlatformList
-        fun array_retain_all(array: PlatformList?, vararg keep: Any?): Boolean
+        fun list_get_length(array: PlatformList?): Int
+        fun list_set_length(array: PlatformList?, length: Int)
+        fun list_get_capacity(array: PlatformList?): Int
+        fun list_set_capacity(array: PlatformList?, capacity: Int)
+        fun list_clear(array: PlatformList?)
+        fun list_get(array: PlatformList?, i: Int): Any?
+        fun list_set(array: PlatformList?, i: Int, value: Any?): Any?
+        fun list_delete(array: PlatformList?, i: Int): Any?
+        fun list_splice(array: PlatformList?, start: Int, deleteCount: Int = 0, vararg add: Any?): PlatformList
+        fun list_retain_all(array: PlatformList?, vararg keep: Any?): Boolean
 
         /**
          * Compares [searchElement] to elements of the array using strict equality (the same algorithm used by the === operator).
-         * NaN values are never compared as equal, so [array_index_of] always returns -1 when [searchElement] is _NaN_.
+         * NaN values are never compared as equal, so [list_index_of] always returns -1 when [searchElement] is _NaN_.
          *
          * @param searchElement element to locate in the array.
          * @param fromIndex Optional, zero-based index at which to start searching, converted to an integer.
@@ -27,11 +27,11 @@ expect class PlatformListApi private constructor() {
          * - If fromIndex >= length, the array is not searched and -1 is returned.
          * @return The first index of searchElement in the array; -1 if not found.
          */
-        fun array_index_of(array: PlatformList?, searchElement: Any?, fromIndex: Int = 0): Int
+        fun list_index_of(array: PlatformList?, searchElement: Any?, fromIndex: Int = 0): Int
 
         /**
          * Compares [searchElement] to elements of the array using strict equality (the same algorithm used by the === operator).
-         * _NaN_ values are never compared as equal, so [array_last_index_of] always returns `-1` when [searchElement] is _NaN_.
+         * _NaN_ values are never compared as equal, so [list_last_index_of] always returns `-1` when [searchElement] is _NaN_.
          *
          * @param searchElement element to locate in the array.
          * @param fromIndex Optional, zero-based index at which to start searching backwards, converted to an integer.
@@ -40,13 +40,13 @@ expect class PlatformListApi private constructor() {
          * - If fromIndex >= length or fromIndex is omitted, length - 1 is used, causing the entire array to be searched. You can think of it conceptually as starting at a nonexistent position beyond the end of the array and going backwards from there. It eventually reaches the real end position of the array, at which point it starts searching backwards through the actual array elements.
          * @return The last index of searchElement in the array; -1 if not found.
          */
-        fun array_last_index_of(array: PlatformList?, searchElement: Any?, fromIndex: Int = array_get_length(array)): Int
+        fun list_last_index_of(array: PlatformList?, searchElement: Any?, fromIndex: Int = list_get_length(array)): Int
 
         /**
          * Returns an iterator above the values of the array.
          * @return The iterator above the values of the array.
          */
-        fun array_entries(array: PlatformList?): PlatformIterator<Any?>
+        fun list_entries(array: PlatformList?): PlatformIterator<Any?>
 
         /**
          * Appends values to the start of the array.
@@ -54,7 +54,7 @@ expect class PlatformListApi private constructor() {
          * @param elements The elements to append.
          * @return The new length of the array.
          */
-        fun array_unshift(array: PlatformList?, vararg elements: Any?): Int
+        fun list_unshift(array: PlatformList?, vararg elements: Any?): Int
 
         /**
          * Appends values to the end of the array.
@@ -62,20 +62,20 @@ expect class PlatformListApi private constructor() {
          * @param elements The elements to append.
          * @return The new length of the array.
          */
-        fun array_push(array: PlatformList?, vararg elements: Any?): Int
+        fun list_push(array: PlatformList?, vararg elements: Any?): Int
 
         /**
          * Removes the element at the zeroth index and shifts the values at consecutive indexes down, then returns the removed
          * value. If the length is 0, _undefined_ is returned.
          * @param array Base array to operate on.
          */
-        fun array_shift(array: PlatformList?): Any?
+        fun list_shift(array: PlatformList?): Any?
 
         /**
-         * Removes the last element from the array and returns that value. Calling [array_pop] on an empty array, returns _undefined_.
+         * Removes the last element from the array and returns that value. Calling [list_pop] on an empty array, returns _undefined_.
          * @param array Base array to operate on.
          */
-        fun array_pop(array: PlatformList?): Any?
+        fun list_pop(array: PlatformList?): Any?
 
         /**
          * Sort the elements of this array in place and return the reference to this array, sorted. The default sort order is
@@ -83,7 +83,7 @@ expect class PlatformListApi private constructor() {
          *
          * The time and space complexity of the sort cannot be guaranteed as it depends on the implementation.
          *
-         * To sort the elements in an array without mutating the original array, use [array_to_sorted].
+         * To sort the elements in an array without mutating the original array, use [list_to_sorted].
          * @param array Base array to operate on.
          * @param compareFn The (optional) compare function; if _null_ sorting will be ascending by [toString] UTF-16 code units.
          * A function that determines the order of the elements. The function is called with the following arguments:
@@ -99,10 +99,10 @@ expect class PlatformListApi private constructor() {
          * To memorize this, remember that (a, b) => a - b sorts numbers in ascending order.
          * @return _this_.
          */
-        fun array_sort(array: PlatformList?, compareFn: ((Any?, Any?) -> Int)? = null): PlatformList
+        fun list_sort(array: PlatformList?, compareFn: ((Any?, Any?) -> Int)? = null): PlatformList
 
         /**
-         * This is the copying version of the [array_sort] method. It returns a new array with the elements sorted in ascending order
+         * This is the copying version of the [list_sort] method. It returns a new array with the elements sorted in ascending order
          * or sorting using the given compare-function.
          *
          * @param array Base array to operate on.
@@ -120,6 +120,6 @@ expect class PlatformListApi private constructor() {
          * To memorize this, remember that (a, b) => a - b sorts numbers in ascending order.
          * @return A copy of this array, but sorted.
          */
-        fun array_to_sorted(array: PlatformList?, compareFn: ((Any?, Any?) -> Int)? = null): PlatformList
+        fun list_to_sorted(array: PlatformList?, compareFn: ((Any?, Any?) -> Int)? = null): PlatformList
     }
 }

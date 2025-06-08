@@ -17,11 +17,14 @@ import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaError.NakshaErrorCompanion.MAP_EXISTS
 import naksha.base.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
+import naksha.base.NakshaError.NakshaErrorCompanion.NOT_FOUND
 import naksha.base.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.base.Platform.PlatformCompanion.asPlatformObject
+import naksha.base.Platform.PlatformCompanion.detectMap
 import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.base.Platform.PlatformCompanion.forName
 import naksha.base.Platform.PlatformCompanion.isPlatformObject
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
 
@@ -386,6 +389,14 @@ fun forbidden(msg: String): NakshaException = NakshaException(FORBIDDEN, msg)
 fun generalException(msg: String, cause: Throwable? = null): NakshaException = NakshaException(EXCEPTION, msg, cause)
 
 /**
+ * Create [NOT_FOUND] exception.
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun notFound(msg: String): NakshaException = NakshaException(NOT_FOUND, msg)
+
+/**
  * Create [MAP_NOT_FOUND] exception.
  * @param msg the message.
  * @return the [NakshaException].
@@ -449,6 +460,10 @@ fun conflict(msg: String): NakshaException = NakshaException(CONFLICT, msg)
  */
 fun unsupportedOp(msg: String): NakshaException = NakshaException(UNSUPPORTED_OPERATION, msg)
 
+private fun autoDetectMap() {
+
+}
+
 /**
  * Box the given value into the given type.
  *
@@ -467,7 +482,7 @@ internal fun <T> boxInto(raw: Any?, type: PlatformType<T>, alternative: T? = nul
         if (type == Any_TYPE) {
             val existing = Symbols.get(asPlatformObject(data))
             if (existing != null) return existing as T
-            if (data is PlatformMap) return AnyObject.TYPE.proxy(data) as T
+            if (data is PlatformMap) return detectMap(data).proxy(data) as T
             if (data is PlatformList) return AnyList.TYPE.proxy(data) as T
             if (data is PlatformDataView) return DataViewProxy.TYPE.proxy(data) as T
             return raw as T?
@@ -481,26 +496,13 @@ internal fun <T> boxInto(raw: Any?, type: PlatformType<T>, alternative: T? = nul
             if (existing != null) return existing
         }
 
-        // If data is a platform-map, we can read `type` property to detect the type.
-        if (data is PlatformMap) {
-            val typeName = PlatformMapApi.map_get(data, "type") as? String
-            if (typeName != null) {
-                val typeForName = forName<Any>(typeName)
-                // If there is a detected type, and the requested one can be assigned to it,
-                // this means either an interface was given or an abstract base class.
-                if (typeForName != null
-                    && typeForName.isProxy()
-                    && typeForName.isInstantiatable
-                    && typeForName.isAssignableTo(type)) {
-                    return typeForName.proxy(data) as T
-                }
-            }
-        }
-
         // If there is anything assigned already to the platform-map, and of correct type, return existing.
         // This captures interfaces in maps without `type` property.
         val existing = Symbols.get(asPlatformObject(data))
         if (type.isInstance(existing)) return type.cast(existing)
+
+        // If data is a platform-map, we can read detect the property to detect the type.
+        if (data is PlatformMap) return detectMap(data).proxy(data) as T
 
         // Otherwise, if raw or data maps correctly, return, otherwise init or alternative.
         if (type.isInstance(raw)) return type.cast(raw)
@@ -532,6 +534,9 @@ internal fun <T> boxInto(raw: Any?, type: PlatformType<T>, alternative: T? = nul
 
     return if (init != null) init.call() else alternative
 }
+
+// TODO: Move this into an AtomicMapSet, working basically like the AtomicSet, just two level
+//       We need it, and maybe others need it too, so let's offer it.
 
 /**
  * To be used with an `AtomicMap<K, Array<V>>` to atomically remove a value.

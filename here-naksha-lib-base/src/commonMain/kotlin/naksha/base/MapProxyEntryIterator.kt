@@ -2,8 +2,8 @@
 
 package naksha.base
 
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get_length
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_iterator
 import kotlin.collections.MutableMap.MutableEntry
 import kotlin.js.JsExport
@@ -24,9 +24,9 @@ internal class MapProxyEntryIterator<K, V> internal constructor(private val map:
         if (current.done) throw NoSuchElementException()
 
         val list = current.value ?: throw NoSuchElementException()
-        val len = array_get_length(list)
+        val len = list_get_length(list)
         if (len < 1) throw NoSuchElementException()
-        val key = array_get(list, 0)
+        val key = list_get(list, 0)
         if (!map.keyType.isInstance(key)) throw illegalState("Invalid key ('$key') found in map")
         _current = current
         _key = key as K

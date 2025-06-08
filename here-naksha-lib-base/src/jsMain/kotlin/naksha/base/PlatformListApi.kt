@@ -7,27 +7,27 @@ actual class PlatformListApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
     actual companion object PlatformListApiCompanion {
         @JsStatic
-        actual fun array_get_length(array: PlatformList?): Int = array.asDynamic().length.unsafeCast<Int>()
+        actual fun list_get_length(array: PlatformList?): Int = array.asDynamic().length.unsafeCast<Int>()
 
         @JsStatic
-        actual fun array_set_length(array: PlatformList?, length: Int) {
+        actual fun list_set_length(array: PlatformList?, length: Int) {
             array.asDynamic().length = length
         }
 
         @JsStatic
-        actual fun array_get_capacity(array: PlatformList?): Int = (array.asDynamic()?.length ?: 0).unsafeCast<Int>()
+        actual fun list_get_capacity(array: PlatformList?): Int = (array.asDynamic()?.length ?: 0).unsafeCast<Int>()
 
         @JsStatic
-        actual fun array_set_capacity(array: PlatformList?, capacity: Int) {}
+        actual fun list_set_capacity(array: PlatformList?, capacity: Int) {}
 
         @JsStatic
-        actual fun array_clear(array: PlatformList?) = array_set_length(array, 0)
+        actual fun list_clear(array: PlatformList?) = list_set_length(array, 0)
 
         @JsStatic
-        actual fun array_get(array: PlatformList?, i: Int): Any? = array.asDynamic()[i].unsafeCast<Any?>()
+        actual fun list_get(array: PlatformList?, i: Int): Any? = array.asDynamic()[i].unsafeCast<Any?>()
 
         @JsStatic
-        actual fun array_set(array: PlatformList?, i: Int, value: Any?): Any? {
+        actual fun list_set(array: PlatformList?, i: Int, value: Any?): Any? {
             require(i >= 0) { "array_set: Invalid index $i, must be >= 0" }
             val arr = array.asDynamic()
             val old = arr[i]
@@ -36,10 +36,10 @@ actual class PlatformListApi {
         }
 
         @JsStatic
-        actual fun array_delete(array: PlatformList?, i: Int): Any? = array.asDynamic().splice(i, 1)[0]
+        actual fun list_delete(array: PlatformList?, i: Int): Any? = array.asDynamic().splice(i, 1)[0]
 
         @JsStatic
-        actual fun array_splice(
+        actual fun list_splice(
             array: PlatformList?,
             start: Int,
             deleteCount: Int,
@@ -48,7 +48,7 @@ actual class PlatformListApi {
 
         /**
          * Compares [searchElement] to elements of the array using strict equality (the same algorithm used by the === operator).
-         * NaN values are never compared as equal, so [array_index_of] always returns -1 when [searchElement] is _NaN_.
+         * NaN values are never compared as equal, so [list_index_of] always returns -1 when [searchElement] is _NaN_.
          *
          * @param searchElement element to locate in the array.
          * @param fromIndex Optional, zero-based index at which to start searching, converted to an integer.
@@ -58,7 +58,7 @@ actual class PlatformListApi {
          * @return The first index of searchElement in the array; -1 if not found.
          */
         @JsStatic
-        actual fun array_index_of(
+        actual fun list_index_of(
             array: PlatformList?,
             searchElement: Any?,
             fromIndex: Int
@@ -66,7 +66,7 @@ actual class PlatformListApi {
 
         /**
          * Compares [searchElement] to elements of the array using strict equality (the same algorithm used by the === operator).
-         * _NaN_ values are never compared as equal, so [array_last_index_of] always returns `-1` when [searchElement] is _NaN_.
+         * _NaN_ values are never compared as equal, so [list_last_index_of] always returns `-1` when [searchElement] is _NaN_.
          *
          * @param searchElement element to locate in the array.
          * @param fromIndex Optional, zero-based index at which to start searching backwards, converted to an integer.
@@ -76,7 +76,7 @@ actual class PlatformListApi {
          * @return The last index of searchElement in the array; -1 if not found.
          */
         @JsStatic
-        actual fun array_last_index_of(
+        actual fun list_last_index_of(
             array: PlatformList?,
             searchElement: Any?,
             fromIndex: Int
@@ -87,7 +87,7 @@ actual class PlatformListApi {
          * @return The iterator above the values of the array.
          */
         @JsStatic
-        actual fun array_entries(array: PlatformList?): PlatformIterator<Any?> = js("array[Symbol.iterator]()")
+        actual fun list_entries(array: PlatformList?): PlatformIterator<Any?> = js("array[Symbol.iterator]()")
             .unsafeCast<PlatformIterator<Any?>>()
 
         /**
@@ -96,7 +96,7 @@ actual class PlatformListApi {
          * @return The new length of the array.
          */
         @JsStatic
-        actual fun array_unshift(array: PlatformList?, vararg elements: Any?): Int = js("eval('array.unshift(...elements)')")
+        actual fun list_unshift(array: PlatformList?, vararg elements: Any?): Int = js("eval('array.unshift(...elements)')")
             .unsafeCast<Int>()
 
         /**
@@ -106,20 +106,20 @@ actual class PlatformListApi {
          * @return The new length of the array.
          */
         @JsStatic
-        actual fun array_push(array: PlatformList?, vararg elements: Any?): Int = js("eval('array.push(...elements)')").unsafeCast<Int>()
+        actual fun list_push(array: PlatformList?, vararg elements: Any?): Int = js("eval('array.push(...elements)')").unsafeCast<Int>()
 
         /**
          * Removes the element at the zeroth index and shifts the values at consecutive indexes down, then returns the removed
          * value. If the length is 0, _undefined_ is returned.
          */
         @JsStatic
-        actual fun array_shift(array: PlatformList?): Any? = js("array.shift()").unsafeCast<Any?>()
+        actual fun list_shift(array: PlatformList?): Any? = js("array.shift()").unsafeCast<Any?>()
 
         /**
-         * Removes the last element from the array and returns that value. Calling [array_pop] on an empty array, returns _undefined_.
+         * Removes the last element from the array and returns that value. Calling [list_pop] on an empty array, returns _undefined_.
          */
         @JsStatic
-        actual fun array_pop(array: PlatformList?): Any? = js("array.pop()").unsafeCast<Any?>()
+        actual fun list_pop(array: PlatformList?): Any? = js("array.pop()").unsafeCast<Any?>()
 
         /**
          * Sort the elements of this array in place and return the reference to this array, sorted. The default sort order is
@@ -127,29 +127,29 @@ actual class PlatformListApi {
          *
          * The time and space complexity of the sort cannot be guaranteed as it depends on the implementation.
          *
-         * To sort the elements in an array without mutating the original array, use [array_to_sorted].
+         * To sort the elements in an array without mutating the original array, use [list_to_sorted].
          * @param compareFn The (optional) function to compare; if _null_ sorting will be ascending by [toString] UTF-16 code units.
          * @return _this_.
          */
         @JsStatic
-        actual fun array_sort(array: PlatformList?, compareFn: ((Any?, Any?) -> Int)?): PlatformList {
+        actual fun list_sort(array: PlatformList?, compareFn: ((Any?, Any?) -> Int)?): PlatformList {
             TODO("Not yet implemented array_sort")
         }
 
         /**
-         * This is the copying version of the [array_sort] method. It returns a new array with the elements sorted in ascending order
+         * This is the copying version of the [list_sort] method. It returns a new array with the elements sorted in ascending order
          * or sorting using the given compare-function.
          *
          * @param compareFn The (optional) function to compare; if _null_ sorting will be ascending by [toString] UTF-16 code units.
          * @return A copy of this array, but sorted.
          */
         @JsStatic
-        actual fun array_to_sorted(array: PlatformList?, compareFn: ((Any?, Any?) -> Int)?): PlatformList {
+        actual fun list_to_sorted(array: PlatformList?, compareFn: ((Any?, Any?) -> Int)?): PlatformList {
             TODO("Not yet implemented array_to_sorted")
         }
 
         @JsStatic
-        actual fun array_retain_all(array: PlatformList?, vararg keep: Any?): Boolean {
+        actual fun list_retain_all(array: PlatformList?, vararg keep: Any?): Boolean {
             val arr = array.asDynamic()
             if (arr === null || arr === undefined || arr.length == 0) return false
             if (keep.isEmpty()) {

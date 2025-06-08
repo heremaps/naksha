@@ -48,6 +48,12 @@ open class NakshaError() : AnyObject() {
         val TYPE: PlatformType<NakshaError> = forKClass(NakshaError::class).withPackageName(PACKAGE_NAME)
 
         /**
+         * An internal error code to abort visitors.
+         * @since 3.0
+         */
+        const val ABORT_VISIT = "naksha.base.AbortVisit"
+
+        /**
          * A general error (not further specified) happened while processing the request.
          * @since 3.0
          */
@@ -207,7 +213,7 @@ open class NakshaError() : AnyObject() {
         const val PAYLOAD_TOO_LARGE = "PayloadTooLarge"
 
         /**
-         * The requested feature was not available.
+         * The requested was not available.
          *
          * This will result in an HTTP 404 response.
          * @since 3.0

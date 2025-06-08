@@ -78,7 +78,7 @@ interface PlatformType<T> {
     fun withJsonType(jsonType: String?): PlatformType<T>
 
     /**
-     * Helper method to set the [jsonType] to [name], which will force the [Platform.toJSON] method to inject the `type` property with the value as specified in [jsonType]. This allows the deserializer _([Platform.fromJSON])_ to restore the correct object type or [Proxy].
+     * Helper method to set the [jsonType] to [name], which will force the [Platform.toJSON] method to inject the `type` property with the value as specified in [jsonType]. This allows the deserializer _([Platform.fromJson])_ to restore the correct object type or [Proxy].
      *
      * @return this.
      * @since 3.0

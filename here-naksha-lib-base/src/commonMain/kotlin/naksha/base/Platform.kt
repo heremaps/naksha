@@ -509,6 +509,24 @@ expect class Platform private constructor() {
         fun <T> copy(obj: T?, recursive: Boolean) : T?
 
         /**
+         * The global [TypeDetector]'s.
+         * @since 3.0
+         * @see box
+         */
+        val globalDetectors: AtomicSet<TypeDetector>
+
+        /**
+         * Detects the type of the given [PlatformMap].
+         *
+         * This method is invoked by [box] _(without custom [detectors])_, when an [PlatformMap] should be boxed.
+         *
+         * @param map The map for which the best type should be detected.
+         * @param detectors A set of detectors to try, before using the [global detectors][globalDetectors].
+         * @return the best matching [MapProxy], worst case is [AnyObject].
+         */
+        fun detectMap(map: PlatformMap, detectors: AtomicSet<TypeDetector>? = null): PlatformType<MapProxy<String,*>>
+
+        /**
          * Serialize the given value to JSON.
          * @param obj the object to serialize.
          * @return the JSON string.
@@ -530,7 +548,14 @@ expect class Platform private constructor() {
          * @return The parsed JSON.
          * @see [FromJsonOptions.DEFAULT]
          */
-        fun fromJSON(json: String): Any?
+        fun fromJson(json: String): Any?
+
+        /**
+         * Deserialize the given JSON.
+         * @param json The JSON string to parse.
+         * @return The parsed JSON.
+         */
+        fun fromJson(json: String, options: FromJsonOptions): Any?
 
         /**
          * Deserialize the given JSON.
@@ -539,7 +564,7 @@ expect class Platform private constructor() {
          * @return The parsed JSON.
          * @see [FromJsonOptions.DEFAULT]
          */
-        fun <T> fromJSON(json: String, type: PlatformType<T>): T?
+        fun <T> fromJson(json: String, type: PlatformType<T>): T?
 
         /**
          * Deserialize the given JSON.
@@ -548,7 +573,7 @@ expect class Platform private constructor() {
          * @param options the options to use; defaults to [FromJsonOptions.DEFAULT].
          * @return The parsed JSON.
          */
-        fun <T> fromJSON(json: String, type: PlatformType<T>, options: FromJsonOptions = FromJsonOptions.DEFAULT): T?
+        fun <T> fromJson(json: String, type: PlatformType<T>, options: FromJsonOptions): T?
 
         /**
          * Convert the given platform native objects recursively into multi-platform objects. So all maps are corrected to [PlatformMap], all strings starting with `data:bigint,` or Java `Long`'s are converted into [Int64]'s, lists are corrected to [PlatformList], and so on. This can be used after a JSON was parsed from an arbitrary platform tool into some platform specific standard objects or when exchanging data with a platform specific library that does not like the multi-platform objects.

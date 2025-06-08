@@ -7,35 +7,35 @@ actual class PlatformListApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
     actual companion object PlatformListApiCompanion {
         @JvmStatic
-        actual fun array_get_length(array: PlatformList?): Int {
+        actual fun list_get_length(array: PlatformList?): Int {
             return (array as JvmList?)?.size ?: 0
         }
 
         @JvmStatic
-        actual fun array_set_length(array: PlatformList?, length: Int) {
+        actual fun list_set_length(array: PlatformList?, length: Int) {
             require(array is JvmList)
             array.size = length
         }
 
         @JvmStatic
-        actual fun array_get_capacity(array: PlatformList?): Int {
+        actual fun list_get_capacity(array: PlatformList?): Int {
             require(array is JvmList)
             return array.getCapacity()
         }
 
         @JvmStatic
-        actual fun array_set_capacity(array: PlatformList?, capacity: Int) {
+        actual fun list_set_capacity(array: PlatformList?, capacity: Int) {
             require(array is JvmList)
             array.setCapacity(capacity)
         }
 
         @JvmStatic
-        actual fun array_clear(array: PlatformList?) {
+        actual fun list_clear(array: PlatformList?) {
             (array as JvmList?)?.clear()
         }
 
         @JvmStatic
-        actual fun array_get(array: PlatformList?, i: Int): Any? {
+        actual fun list_get(array: PlatformList?, i: Int): Any? {
             if (array == null) return null
             require(array is JvmList)
             if (i < 0) throw IndexOutOfBoundsException(i)
@@ -43,7 +43,7 @@ actual class PlatformListApi {
         }
 
         @JvmStatic
-        actual fun array_set(array: PlatformList?, i: Int, value: Any?): Any? {
+        actual fun list_set(array: PlatformList?, i: Int, value: Any?): Any? {
             require(array is JvmList)
             if (i < 0) throw IndexOutOfBoundsException(i)
             array.ensureSize(i + 1)
@@ -53,7 +53,7 @@ actual class PlatformListApi {
         }
 
         @JvmStatic
-        actual fun array_delete(array: PlatformList?, i: Int): Any? {
+        actual fun list_delete(array: PlatformList?, i: Int): Any? {
             if (array == null) return null
             require(array is JvmList)
             if (i < 0) throw IndexOutOfBoundsException(i)
@@ -61,7 +61,7 @@ actual class PlatformListApi {
         }
 
         @JvmStatic
-        actual fun array_splice(
+        actual fun list_splice(
             array: PlatformList?,
             start: Int,
             deleteCount: Int,
@@ -82,7 +82,7 @@ actual class PlatformListApi {
 
         /**
          * Compares [searchElement] to elements of the array using strict equality (the same algorithm used by the === operator).
-         * NaN values are never compared as equal, so [array_index_of] always returns -1 when [searchElement] is _NaN_.
+         * NaN values are never compared as equal, so [list_index_of] always returns -1 when [searchElement] is _NaN_.
          *
          * @param searchElement element to locate in the array.
          * @param fromIndex Optional, zero-based index at which to start searching, converted to an integer.
@@ -92,7 +92,7 @@ actual class PlatformListApi {
          * @return The first index of searchElement in the array; -1 if not found.
          */
         @JvmStatic
-        actual fun array_index_of(
+        actual fun list_index_of(
             array: PlatformList?,
             searchElement: Any?,
             fromIndex: Int
@@ -100,7 +100,7 @@ actual class PlatformListApi {
 
         /**
          * Compares [searchElement] to elements of the array using strict equality (the same algorithm used by the === operator).
-         * _NaN_ values are never compared as equal, so [array_last_index_of] always returns `-1` when [searchElement] is _NaN_.
+         * _NaN_ values are never compared as equal, so [list_last_index_of] always returns `-1` when [searchElement] is _NaN_.
          *
          * @param searchElement element to locate in the array.
          * @param fromIndex Optional, zero-based index at which to start searching backwards, converted to an integer.
@@ -110,7 +110,7 @@ actual class PlatformListApi {
          * @return The last index of searchElement in the array; -1 if not found.
          */
         @JvmStatic
-        actual fun array_last_index_of(
+        actual fun list_last_index_of(
             array: PlatformList?,
             searchElement: Any?,
             fromIndex: Int
@@ -124,7 +124,7 @@ actual class PlatformListApi {
          * @return The iterator above the values of the array.
          */
         @JvmStatic
-        actual fun array_entries(array: PlatformList?): PlatformIterator<Any?> {
+        actual fun list_entries(array: PlatformList?): PlatformIterator<Any?> {
             return JvmListIterator(array ?: EMPTY_LIST)
         }
 
@@ -135,7 +135,7 @@ actual class PlatformListApi {
          * @return The new length of the array.
          */
         @JvmStatic
-        actual fun array_unshift(array: PlatformList?, vararg elements: Any?): Int {
+        actual fun list_unshift(array: PlatformList?, vararg elements: Any?): Int {
             require(array is JvmList)
             var i = elements.size - 1
             while (i >= 0) array.add(0, elements[i--])
@@ -149,7 +149,7 @@ actual class PlatformListApi {
          * @return The new length of the array.
          */
         @JvmStatic
-        actual fun array_push(array: PlatformList?, vararg elements: Any?): Int {
+        actual fun list_push(array: PlatformList?, vararg elements: Any?): Int {
             require(array is JvmList)
             array.addAll(elements)
             return array.size
@@ -161,16 +161,16 @@ actual class PlatformListApi {
          * @param array Base array to operate on.
          */
         @JvmStatic
-        actual fun array_shift(array: PlatformList?): Any? {
+        actual fun list_shift(array: PlatformList?): Any? {
             TODO("Not yet implemented")
         }
 
         /**
-         * Removes the last element from the array and returns that value. Calling [array_pop] on an empty array, returns _undefined_.
+         * Removes the last element from the array and returns that value. Calling [list_pop] on an empty array, returns _undefined_.
          * @param array Base array to operate on.
          */
         @JvmStatic
-        actual fun array_pop(array: PlatformList?): Any? {
+        actual fun list_pop(array: PlatformList?): Any? {
             TODO("Not yet implemented")
         }
 
@@ -180,18 +180,18 @@ actual class PlatformListApi {
          *
          * The time and space complexity of the sort cannot be guaranteed as it depends on the implementation.
          *
-         * To sort the elements in an array without mutating the original array, use [array_to_sorted].
+         * To sort the elements in an array without mutating the original array, use [list_to_sorted].
          * @param array Base array to operate on.
          * @param compareFn The (optional) function to compare; if _null_ sorting will be ascending by [toString] UTF-16 code units.
          * @return _this_.
          */
         @JvmStatic
-        actual fun array_sort(array: PlatformList?, compareFn: ((Any?, Any?) -> Int)?): PlatformList {
+        actual fun list_sort(array: PlatformList?, compareFn: ((Any?, Any?) -> Int)?): PlatformList {
             TODO("Not yet implemented")
         }
 
         /**
-         * This is the copying version of the [array_sort] method. It returns a new array with the elements sorted in ascending order
+         * This is the copying version of the [list_sort] method. It returns a new array with the elements sorted in ascending order
          * or sorting using the given compare-function.
          *
          * @param array Base array to operate on.
@@ -199,12 +199,12 @@ actual class PlatformListApi {
          * @return A copy of this array, but sorted.
          */
         @JvmStatic
-        actual fun array_to_sorted(array: PlatformList?, compareFn: ((Any?, Any?) -> Int)?): PlatformList {
+        actual fun list_to_sorted(array: PlatformList?, compareFn: ((Any?, Any?) -> Int)?): PlatformList {
             TODO("Not yet implemented")
         }
 
         @JvmStatic
-        actual fun array_retain_all(array: PlatformList?, vararg keep: Any?): Boolean {
+        actual fun list_retain_all(array: PlatformList?, vararg keep: Any?): Boolean {
             if (array == null) return false
             return (array as JvmList).retainAll(keep)
         }

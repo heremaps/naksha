@@ -3,11 +3,11 @@
 package naksha.base
 
 import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_capacity
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set_capacity
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get_capacity
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get_length
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set_capacity
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_contains_key
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_key_iterator
@@ -18,7 +18,6 @@ import naksha.base.fn.Fn1
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.jvm.JvmStatic
 
 /**
  * The base class for proxy types bound to [PlatformList], [PlatformMap], or [PlatformDataView].
@@ -94,13 +93,13 @@ abstract class Proxy : PlatformObject {
                     it_result = it.next()
                 }
             } else if (initialized is PlatformList && data is PlatformList) {
-                val end = array_get_length(initialized)
-                var start = array_get_length(data)
+                val end = list_get_length(initialized)
+                var start = list_get_length(data)
                 if (start < end) {
-                    if (array_get_capacity(data) < end) array_set_capacity(data, end)
+                    if (list_get_capacity(data) < end) list_set_capacity(data, end)
                     while (start < end) {
-                        val value = array_get(initialized, start)
-                        array_set(data, start, value)
+                        val value = list_get(initialized, start)
+                        list_set(data, start, value)
                         start++
                     }
                 }

@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import naksha.base.JvmPlatformType.PlatformTypeCompanion.jvmClassToPlatformType
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
 import naksha.base.fn.Fn0
 import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
@@ -469,20 +470,76 @@ actual class Platform {
         }
 
         @JvmField
+        actual val globalDetectors: AtomicSet<TypeDetector> = AtomicSet(arrayOf())
+
+        @Suppress("UNCHECKED_CAST")
+        @JvmStatic
+        @JvmOverloads
+        actual fun detectMap(map: PlatformMap, detectors: AtomicSet<TypeDetector>?): PlatformType<MapProxy<String,*>> {
+            if (detectors != null) {
+                val detected: PlatformType<MapProxy<String, *>>? = detectors.forEach {
+                    val t = it.detectMap(map)
+                    if (t != null) AbortVisit.with(t)
+                }
+                if (detected != null) return detected
+            }
+            // Custom detectors where not provided or failed.
+
+            // Run global detector.
+            val globalDetectors = this.globalDetectors
+            val detected: PlatformType<MapProxy<String, *>>? = globalDetectors.forEach {
+                val t = it.detectMap(map)
+                if (t != null) AbortVisit.with(t)
+            }
+            if (detected != null) return detected
+            // Global detection failed.
+
+            // Perform standard detection using `type` property.
+            val type_name = map_get(map, "type")
+            if (type_name is String) {
+                val all = JvmPlatformType.jsonTypeToPlatformType[type_name]
+                if (all != null) {
+                    for (type in all) {
+                        if (type.isProxy() && type.isInstantiatable && type.isAssignableTo(MapProxy.TYPE)) {
+                            return type as PlatformType<MapProxy<String, *>>
+                        }
+                    }
+                }
+            }
+            // Nothing was available, return AnyObject.
+            return AnyObject.TYPE as PlatformType<MapProxy<String,*>>
+        }
+
+        @JvmField
         internal val fromJsonOptions = ThreadLocal<FromJsonOptions>()
 
         @JvmStatic
-        actual fun fromJSON(json: String): Any?
-            = fromJSON(json, Any_TYPE, FromJsonOptions.DEFAULT)
+        actual fun fromJson(json: String): Any?
+            = from_json(json, null)
 
         @JvmStatic
-        actual fun <T> fromJSON(json: String, type: PlatformType<T>): T?
-            = fromJSON(json, type, FromJsonOptions.DEFAULT)
+        actual fun fromJson(json: String, options: FromJsonOptions): Any?
+            = from_json(json, null, options)
 
         @JvmStatic
-        actual fun <T> fromJSON(json: String, type: PlatformType<T>, options: FromJsonOptions): T? {
+        actual fun <T> fromJson(json: String, type: PlatformType<T>): T?
+            = from_json(json, null)
+
+        @JvmStatic
+        actual fun <T> fromJson(json: String, type: PlatformType<T>, options: FromJsonOptions): T?
+            = from_json(json, type, options)
+
+        @Suppress("UNCHECKED_CAST")
+        private fun <T> from_json(json: String, type: PlatformType<T>?, options: FromJsonOptions = FromJsonOptions.DEFAULT): T? {
             fromJsonOptions.set(options)
-            return box(objectMapper.get().readValue(json, Any::class.java), type)
+            val raw = objectMapper.get().readValue(json, Any::class.java) ?: return null
+            val detectors = options.detectors
+            if (detectors != null && (type == null || type == Any_TYPE) && raw is PlatformMap) {
+                return detectMap(raw, detectors).proxy(raw) as T
+            }
+
+            // When we reach this, either we have no auto-detection or we leave this to box method.
+            return box(raw, type ?: Any_TYPE) as T
         }
 
         @JvmStatic

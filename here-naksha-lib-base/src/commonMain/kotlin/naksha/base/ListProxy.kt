@@ -4,19 +4,19 @@ package naksha.base
 
 import naksha.base.Platform.PlatformCompanion.forInstance
 import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_delete
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_entries
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_capacity
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_index_of
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_last_index_of
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_push
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_retain_all
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set_capacity
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set_length
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_splice
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_delete
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_entries
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get_capacity
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get_length
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_index_of
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_last_index_of
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_push
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_retain_all
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set_capacity
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set_length
+import naksha.base.PlatformListApi.PlatformListApiCompanion.list_splice
 import naksha.base.fn.Fn2
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -63,7 +63,7 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
      * Returns the current capacity of the underlying platform object.
      * @return the current capacity of the platform list.
      */
-    fun getCapacity() : Int = array_get_capacity(platformObject())
+    fun getCapacity() : Int = list_get_capacity(platformObject())
 
     /**
      * Sets the capacity to the given value, if possible.
@@ -71,7 +71,7 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
      * There is no guarantee that this method has any real effect. The capacity can never be changed below the current size, any call like this will be ignored.
      * @param capacity the wished minimum capacity.
      */
-    fun setCapacity(capacity:Int) = array_set_capacity(platformObject(), capacity)
+    fun setCapacity(capacity:Int) = list_set_capacity(platformObject(), capacity)
 
     /**
      * Returns the element at the given index. If no such index exists or the element is not of the specified type,
@@ -81,7 +81,7 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
      * @return The element.
      */
     protected open fun getOr(index: Int, alternative: E): E?
-        = Platform.box(array_get(platformObject(), index), elementType, alternative)
+        = Platform.box(list_get(platformObject(), index), elementType, alternative)
 
     /**
      * Helper to return the value of the key, if the key does not exist or is not of the expected type, a new value is created, stored
@@ -93,16 +93,16 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
      */
     fun <T : Any, SELF: ListProxy<E>> getOrInit(index: Int, type: PlatformType<out T>, init: Fn2<out T, in SELF, in Int>): T {
         val data = platformObject()
-        val i = if (index < 0) max(0, array_get_length(data) + index) else index
+        val i = if (index < 0) max(0, list_get_length(data) + index) else index
         var value: T? = null
-        if (i < array_get_length(data)) {
-            val raw = array_get(data, i)
+        if (i < list_get_length(data)) {
+            val raw = list_get(data, i)
             value = Platform.box(raw, type)
         }
         if (value == null) {
             @Suppress("UNCHECKED_CAST")
             value = init.call(this as SELF, i)
-            array_set(data, i, unbox(value))
+            list_set(data, i, unbox(value))
         }
         return value
     }
@@ -117,10 +117,10 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
      */
     fun <T : Any, SELF: ListProxy<E>> getOrCreate(index: Int, type: PlatformType<out T>, init: Fn2<out T?, in SELF, in Int>? = null): T {
         val data = platformObject()
-        val i = if (index < 0) max(0, array_get_length(data) + index) else index
+        val i = if (index < 0) max(0, list_get_length(data) + index) else index
         var value: T? = null
-        if (i < array_get_length(data)) {
-            val raw = array_get(data, i)
+        if (i < list_get_length(data)) {
+            val raw = list_get(data, i)
             value = box(raw, type)
         }
         if (value == null) {
@@ -128,12 +128,12 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
                 @Suppress("UNCHECKED_CAST")
                 value = init.call(this as SELF, i)
                 if (value != null) {
-                    array_set(data, i, unbox(value))
+                    list_set(data, i, unbox(value))
                     return value
                 }
             }
             value = type.newInstance()
-            array_set(data, i, unbox(value))
+            list_set(data, i, unbox(value))
         }
         return value
     }
@@ -145,21 +145,21 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
      * @since 3.0
      */
     override var size: Int
-        get() = array_get_length(platformObject())
-        set(newLength) = array_set_length(platformObject(), newLength)
+        get() = list_get_length(platformObject())
+        set(newLength) = list_set_length(platformObject(), newLength)
 
-    override fun clear() = array_set_length(platformObject(), 0)
+    override fun clear() = list_set_length(platformObject(), 0)
 
-    override fun get(index: Int): E? = box(array_get(platformObject(), index), elementType)
+    override fun get(index: Int): E? = box(list_get(platformObject(), index), elementType)
 
     /**
      * Returns the raw value stored in the platform list.
      * @param index The index to read.
      * @return the raw value stored in the platform list; `null` if the index is out of bounds.
      */
-    fun getRaw(index: Int): Any? = array_get(platformObject(), index)
+    fun getRaw(index: Int): Any? = list_get(platformObject(), index)
 
-    override fun isEmpty(): Boolean = array_get_length(platformObject()) == 0
+    override fun isEmpty(): Boolean = list_get_length(platformObject()) == 0
 
     override fun iterator(): MutableIterator<E?> = ListProxyMutableIterator(this, -1)
 
@@ -169,8 +169,8 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
 
     override fun removeAt(index: Int): E? {
         val data = platformObject()
-        if (index < 0 || index >= array_get_length(data)) return null
-        return box(array_delete(data, index), elementType)
+        if (index < 0 || index >= list_get_length(data)) return null
+        return box(list_delete(data, index), elementType)
     }
 
     override fun subList(fromIndex: Int, toIndex: Int): ListProxy<E> {
@@ -184,7 +184,7 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
 
     override fun set(index: Int, element: E?): E? {
         val data = platformObject()
-        return box(array_set(data, index, unbox(element)), elementType)
+        return box(list_set(data, index, unbox(element)), elementType)
     }
 
     /**
@@ -195,11 +195,11 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
      * @param index The index to write.
      * @param value The value to write.
      */
-    protected fun setRaw(index: Int, value: Any?) { array_set(platformObject(), index, value) }
+    protected fun setRaw(index: Int, value: Any?) { list_set(platformObject(), index, value) }
 
     override fun retainAll(elements: Collection<E?>): Boolean {
         val unboxed: Array<Any?> = elements.map { unbox(it) }.toTypedArray()
-        return array_retain_all(platformObject(), *unboxed)
+        return list_retain_all(platformObject(), *unboxed)
     }
 
     override fun removeAll(elements: Collection<E?>): Boolean {
@@ -212,17 +212,17 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
 
     override fun remove(element: E?): Boolean {
         val data = platformObject()
-        val i = array_index_of(data, element, 0)
+        val i = list_index_of(data, element, 0)
         if (i >= 0) {
-            array_delete(data, i)
+            list_delete(data, i)
             return true
         }
         return false
     }
 
-    override fun lastIndexOf(element: E?): Int = array_last_index_of(platformObject(), element)
+    override fun lastIndexOf(element: E?): Int = list_last_index_of(platformObject(), element)
 
-    override fun indexOf(element: E?): Int = array_index_of(platformObject(), element)
+    override fun indexOf(element: E?): Int = list_index_of(platformObject(), element)
 
     override fun containsAll(elements: Collection<E?>): Boolean {
         for (element in elements) {
@@ -238,7 +238,7 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
     override fun addAll(elements: Collection<E?>): Boolean {
         val data = platformObject()
         if (elements.isNotEmpty()) {
-            for (e in elements) array_push(data, unbox(e))
+            for (e in elements) list_push(data, unbox(e))
             return true
         }
         return false
@@ -257,7 +257,7 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
             val array = arrayOfNulls<Any?>(elements.size)
             var i = 0
             for (e in elements) array[i++] = unbox(e)
-            array_splice(data, index, 0, *array)
+            list_splice(data, index, 0, *array)
             return true
         }
         return false
@@ -265,16 +265,16 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
 
     override fun add(index: Int, element: E?) {
         if(index < 0) throw IndexOutOfBoundsException(index.toString())
-        array_splice(platformObject(), index, 0, unbox(element))
+        list_splice(platformObject(), index, 0, unbox(element))
     }
 
     override fun add(element: E?): Boolean {
-        array_push(platformObject(), unbox(element))
+        list_push(platformObject(), unbox(element))
         return true
     }
 
     private fun toMutableList(platformList: PlatformList): MutableList<E?> {
-        val iterator = array_entries(platformList)
+        val iterator = list_entries(platformList)
         val mutableList: MutableList<E?> = mutableListOf()
         var next = iterator.next()
         while (!next.done) {

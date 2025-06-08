@@ -2,6 +2,7 @@
 
 package naksha.base
 
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
 import naksha.base.fn.Fn0
 import kotlin.math.round
 import kotlin.reflect.KClass
@@ -715,20 +716,66 @@ return obj;
             ).unsafeCast<String>()
         }
 
-        @JsName("fromJson")
         @JsStatic
-        actual fun fromJSON(json: String): Any?
-            = fromJSON(json, Any_TYPE, FromJsonOptions.DEFAULT)
+        actual val globalDetectors: AtomicSet<TypeDetector> = AtomicSet(arrayOf())
+
+        @JsStatic
+        @Suppress("UNCHECKED_CAST")
+        actual fun detectMap(map: PlatformMap, detectors: AtomicSet<TypeDetector>?): PlatformType<MapProxy<String,*>> {
+            if (detectors != null) {
+                val detected: PlatformType<MapProxy<String, *>>? = detectors.forEach {
+                    val t = it.detectMap(map)
+                    if (t != null) AbortVisit.with(t)
+                }
+                if (detected != null) return detected
+            }
+            // Custom detectors where not provided or failed.
+
+            // Run global detector.
+            val globalDetectors = this.globalDetectors
+            val detected: PlatformType<MapProxy<String, *>>? = globalDetectors.forEach {
+                val t = it.detectMap(map)
+                if (t != null) AbortVisit.with(t)
+            }
+            if (detected != null) return detected
+            // Global detection failed.
+
+            // Perform standard detection using `type` property.
+            val type_name = map_get(map, "type")
+            if (type_name is String) {
+                val all = JsPlatformType.byJsonType[type_name]
+                if (all != null) {
+                    for (type in all) {
+                        if (type.isProxy() && type.isInstantiatable && type.isAssignableTo(MapProxy.TYPE)) {
+                            return type as PlatformType<MapProxy<String, *>>
+                        }
+                    }
+                }
+            }
+            // Nothing was available, return AnyObject.
+            return AnyObject.TYPE as PlatformType<MapProxy<String,*>>
+        }
+
+        @JsStatic
+        actual fun fromJson(json: String): Any?
+            = fromJson(json, Any_TYPE, FromJsonOptions.DEFAULT)
+
+        @JsName("fromJsonWithOptions")
+        @JsStatic
+        actual fun fromJson(json: String, options: FromJsonOptions): Any?
+           = fromJson(json, Any_TYPE, options)
 
         @JsName("fromJsonAs")
         @JsStatic
-        actual fun <T> fromJSON(json: String, type: PlatformType<T>): T?
-            = fromJSON(json, type, FromJsonOptions.DEFAULT)
+        actual fun <T> fromJson(json: String, type: PlatformType<T>): T?
+            = fromJson(json, type, FromJsonOptions.DEFAULT)
 
+        @Suppress("UNCHECKED_CAST")
         @JsName("fromJsonAsWithOptions")
         @JsStatic
-        actual fun <T> fromJSON(json: String, type: PlatformType<T>, options: FromJsonOptions): T? = box(js(
-            """JSON.parse(json, function(k, v) {
+        actual fun <T> fromJson(json: String, type: PlatformType<T>, options: FromJsonOptions): T? {
+            val raw = js(
+                """JSON.parse(json, function(k, v) {
   if (!v) return v;
   if (typeof v === "string" && v.startsWith("data:bigint")) {
     var i = v.indexOf(",");
@@ -736,8 +783,13 @@ return obj;
   }
   if (!Array.isArray(v) && typeof v === "object") return new Map(Object.entries(v));
   return v;
-})"""
-        ).unsafeCast<Any?>(), type)
+})""").unsafeCast<Any?>()
+            val detectors = options.detectors
+            if (detectors != null && type == Any_TYPE && raw is PlatformMap) {
+                return detectMap(raw, detectors).proxy(raw) as T
+            }
+            return box(raw, type)
+        }
 
         /**
          * Convert the given platform native objects recursively into multi-platform objects. So all maps are corrected to [PlatformMap],

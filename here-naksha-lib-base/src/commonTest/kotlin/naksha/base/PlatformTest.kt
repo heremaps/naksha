@@ -2,6 +2,7 @@ package naksha.base
 
 import naksha.base.Platform.PlatformCompanion.forKClass
 import naksha.base.Platform.PlatformCompanion.identityHashCode
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
 import naksha.base.PlatformUtil.PlatformUtilCompanion.asSafeDouble
 import naksha.base.PlatformUtil.PlatformUtilCompanion.asSafeInt
 import naksha.base.PlatformUtil.PlatformUtilCompanion.asSafeInt64
@@ -13,7 +14,7 @@ import kotlin.test.*
 class PlatformTest {
     @Test
     fun testFromJSON() {
-        val raw = Platform.fromJSON(
+        val raw = Platform.fromJson(
             """{
   "id": "Foo",
   "properties": {
@@ -116,7 +117,7 @@ class PlatformTest {
                 ]
             }
         """.trimIndent()
-        val map = assertIs<AnyObject>(Platform.fromJSON(json))
+        val map = assertIs<AnyObject>(Platform.fromJson(json))
         assertEquals(2, map.size)
         val keys: MutableSet<String> = map.keys
         val keysIt: MutableIterator<String> = keys.iterator()
@@ -280,4 +281,47 @@ class PlatformTest {
 
         assertNotEquals(listId, list2Id)
     }
+
+    class MyFooObject : AnyObject() {
+        companion object MyFooObjectCompanion {
+            val TYPE = forKClass(MyFooObject::class).withPackageName(PACKAGE_NAME)
+            private val ID_MEMBER = NotNullProperty<MyFooObject, String>(String_TYPE)
+        }
+
+        var id: String by ID_MEMBER
+    }
+
+    class MyFooObjectDetector : TypeDetector {
+        override fun detectMap(map: PlatformMap): PlatformType<out MapProxy<*, *>>?
+            = if ("MyFooObject" == map_get(map, "@customType")) MyFooObject.TYPE else null
+    }
+
+    @Test
+    fun testTypeDetection() {
+        val json = """{
+    "id": "Hello",
+    "@customType": "MyFooObject"
+}"""
+        val detectors = AtomicSet<TypeDetector>(arrayOf(MyFooObjectDetector()))
+        val fromJsonOptions = FromJsonOptions(detectors = detectors)
+        val fooObject = assertIs<MyFooObject>(Platform.fromJson(json, fromJsonOptions))
+        assertEquals("Hello", fooObject.id)
+    }
+
+    @Test
+    fun testGlobalTypeDetection() {
+        val json = """{
+    "id": "Hello",
+    "@customType": "MyFooObject"
+}"""
+        val detector = MyFooObjectDetector()
+        Platform.globalDetectors.add(detector)
+        try {
+            val fooObject = assertIs<MyFooObject>(Platform.fromJson(json))
+            assertEquals("Hello", fooObject.id)
+        } finally {
+            Platform.globalDetectors.remove(detector)
+        }
+    }
+
 }
