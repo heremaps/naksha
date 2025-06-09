@@ -34,7 +34,10 @@ import kotlin.jvm.JvmClassMappingKt;
 import kotlin.jvm.JvmSuppressWildcards;
 import kotlin.reflect.KClass;
 import naksha.base.JvmBoxingUtil;
+import naksha.base.JvmMapProxy;
+import naksha.base.MapProxy;
 import naksha.base.Platform;
+import naksha.base.fn.Fn1;
 import naksha.model.Action;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
@@ -90,6 +93,17 @@ public class ResultHelper {
       }
     }
     return features;
+  }
+
+  public static <R extends NakshaFeature> JvmMapProxy<String, R> extractAndGroupAllFeaturesById(SuccessResponse response, Class<R> featureType) {
+    JvmMapProxy<String, R> featuresById = new JvmMapProxy<>(String.class, featureType);
+    final Iterator<NakshaFeature> iterator = response.getFeatures().iterator();
+    NakshaFeature current;
+    while (iterator.hasNext()) {
+      current = iterator.next();
+      featuresById.put(current.getId(), JvmBoxingUtil.box(current, featureType));
+    }
+    return featuresById;
   }
 
   /**
