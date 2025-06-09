@@ -40,6 +40,7 @@ import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import naksha.base.MapProxy;
 import naksha.diff.Difference;
 import naksha.diff.DifferenceCalculator;
 import naksha.diff.DifferenceFilter;
@@ -48,12 +49,14 @@ import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
+import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import naksha.model.util.RequestHelper;
 import naksha.model.util.ResultHelper;
@@ -156,8 +159,7 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
 
     // as applicable, modify features based on parameters supplied
     for (final NakshaFeature feature : features) {
-      addTagsToFeature(feature, addTags);
-      removeTagsFromFeature(feature, removeTags);
+      modifyTagsFromFeature(feature, addTags, removeTags);
     }
     final WriteRequest wrRequest = RequestHelper.upsertFeaturesRequest(null, spaceId, features);
 
@@ -181,9 +183,7 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     validateFeatureId(routingContext, feature.getId());
 
     // as applicable, modify features based on parameters supplied
-    addTagsToFeature(feature, addTags);
-    removeTagsFromFeature(feature, removeTags);
-
+    modifyTagsFromFeature(feature, addTags, removeTags);
     final WriteRequest wrRequest = RequestHelper.updateFeatureRequest(null, spaceId, feature);
 
     // Forward request to NH Space Storage writer instance
@@ -253,52 +253,63 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
       @Nullable List<String> removeTags,
       int retry) {
 
-    // Patched feature list is to ensure the order of input features is retained
-    final List<NakshaFeature> patchedFeatures;
-    final List<String> featureIds = new ArrayList<>();
+    // Extract ids so that we can fetch existing features
+    final List<String> requestFeaturesIds = new ArrayList<>();
     for (NakshaFeature feature : featuresFromRequest) {
-      featureIds.add(feature.getId());
+      requestFeaturesIds.add(feature.getId());
     }
 
-    // Extract the version of features in storage
-    final ReadFeatures rdRequest = proxyWrapperOf(RequestHelper.readFeaturesByIdsRequest(null, spaceId, featureIds))
+    // Fetch features that already exist in the storeage
+    final ReadFeatures getExistingFeatures = proxyWrapperOf(RequestHelper.readFeaturesByIdsRequest(null, spaceId, requestFeaturesIds))
         .withReadRequestType(ReadFeaturesProxyWrapper.ReadRequestType.GET_BY_IDS)
-        .withQueryParameters(Map.of(FEATURE_IDS, featureIds));
+        .withQueryParameters(Map.of(FEATURE_IDS, requestFeaturesIds));
+    Response existingFeaturesResp = executeReadRequestFromSpaceStorage(getExistingFeatures);
 
-    Response response = executeReadRequestFromSpaceStorage(rdRequest);
-    List<NakshaFeature> featuresToPatchFromStorage;
-    if (response instanceof SuccessResponse successResponse) {
-      featuresToPatchFromStorage = ResultHelper.extractResponseItems(successResponse, NakshaFeature.class);
-    } else if (response instanceof ErrorResponse errorResponse) {
-      logger.error("Error encountered while reading features from storage. Feature ids: {}, error: {}", featureIds,
+    // Handle response - group existing features by id (optimize subsequent traversals)
+    MapProxy<String, NakshaFeature> existingFeaturesById;
+    if (existingFeaturesResp instanceof SuccessResponse successResponse) {
+      existingFeaturesById = ResultHelper.extractAndGroupAllFeaturesById(successResponse, NakshaFeature.class);
+    } else if (existingFeaturesResp instanceof ErrorResponse errorResponse) {
+      logger.error("Error encountered while reading features from storage. Feature ids: {}, error: {}", requestFeaturesIds,
           errorResponse.getError());
       return verticle.sendErrorResponse(routingContext, errorResponse.getError());
     } else {
-      logger.error("Unexpected response while reading features from storage. Feature ids: {}, unknown response: {}", featureIds, response);
+      logger.error("Unexpected response while reading features from storage. Feature ids: {}, unknown response: {}", requestFeaturesIds,
+          existingFeaturesResp);
       return verticle.sendErrorResponse(routingContext,
-          new NakshaError(NakshaError.EXCEPTION, "Unexpected response while reading features from storage: " + response));
+          new NakshaError(NakshaError.EXCEPTION, "Unexpected response while reading features from storage: " + existingFeaturesResp));
     }
-    if (featuresToPatchFromStorage.isEmpty()) {
+    if (existingFeaturesById.isEmpty()) {
       if (responseType == HttpResponseType.FEATURE) {
         logger.error(
             "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature ({}) does not exist.",
-            featureIds);
+            requestFeaturesIds);
         return verticle.sendErrorResponse(routingContext, new NakshaError(NakshaError.NOT_FOUND, "Feature does not exist."));
       } else if (!responseType.equals(HttpResponseType.FEATURE_COLLECTION)) {
         logger.error("Unsupported HttpResponseType was called: {}", responseType);
         return verticle.sendErrorResponse(routingContext, new NakshaError(NakshaError.EXCEPTION, "Internal server error."));
       }
-      // Else none of the features exists in storage, will create them later
     }
 
-    // Attempt patching, keeping the order of the features from the request
-    patchedFeatures =
-        performInMemoryPatching(featuresFromRequest, featuresToPatchFromStorage, addTags, removeTags);
+    // Prepare WriteRequest - separating insert from updates and keeping the order of the features from the request
+    WriteRequest insertsAndUpdates = new WriteRequest();
+    for (NakshaFeature featureFromRequest : featuresFromRequest) {
+      NakshaFeature correspondingExistingFeature = existingFeaturesById.get(featureFromRequest.getId());
+      if (correspondingExistingFeature == null) {
+        // Feature not yet persisted - just insert
+        modifyTagsFromFeature(featureFromRequest, addTags, removeTags);
+        insertsAndUpdates.add(new Write().createFeature(null, spaceId, featureFromRequest));
+      } else {
+        // Feature exists - prepare patch for update (atomic == true, we want version validation)
+        NakshaFeature patchedFeature = patchedFeature(featureFromRequest, correspondingExistingFeature);
+        modifyTagsFromFeature(patchedFeature, addTags, removeTags);
+        insertsAndUpdates.add(new Write().updateFeature(null, spaceId, patchedFeature, true));
+      }
+    }
 
-    final WriteRequest patchRequest = RequestHelper.upsertFeaturesRequest(null, spaceId, patchedFeatures);
     // Forward request to NH Space Storage writer instance
     return naksha().getSpaceStorage().useWriteSession(SessionOptions.from(context(), true), writer -> {
-      final Response wrResponse = writer.execute(patchRequest);
+      final Response wrResponse = writer.execute(insertsAndUpdates);
       if (wrResponse == null) {
         // unexpected null response
         writer.rollback();
@@ -330,47 +341,18 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     });
   }
 
-  /**
-   * Return a list of patched XyzFeature, including the ones not yet existing, ready for upsert
-   */
-  private List<NakshaFeature> performInMemoryPatching(
-      @NotNull List<NakshaFeature> featuresFromRequest,
-      @NotNull List<NakshaFeature> featuresToPatchFromStorage,
-      @Nullable List<String> addTags,
-      @Nullable List<String> removeTags) {
-    final List<NakshaFeature> patchedFeatureList = new ArrayList<>();
-    for (final NakshaFeature inputFeature : featuresFromRequest) {
-      // we take input feature as default
-      NakshaFeature featureToPatch = inputFeature;
-      // check if input feature matches with any of the existing features in storage
-      if (inputFeature.getId() != null) {
-        for (NakshaFeature storageFeature : featuresToPatchFromStorage) {
-          if (inputFeature.getId().equals(storageFeature.getId())) {
-            // we found matching feature in storage, so we take patched version of the feature
-            final Difference difference = DifferenceCalculator.calculateDifference(storageFeature, inputFeature);
-            DifferenceFilter.removeAllRemoveOp(difference);
-            featureToPatch = Patcher.patch(storageFeature, difference);
-            break;
-          }
-        }
-      }
-      // We now have featureToPatch which needs to be modified (if needed) and to be added to the list
-      addTagsToFeature(featureToPatch, addTags);
-      removeTagsFromFeature(featureToPatch, removeTags);
-      patchedFeatureList.add(featureToPatch);
-    }
-    return patchedFeatureList;
+  private NakshaFeature patchedFeature(
+      @NotNull NakshaFeature featureFromRequest,
+      @NotNull NakshaFeature featureToPatchFromStorage
+  ) {
+    Difference difference = DifferenceCalculator.calculateDifference(featureToPatchFromStorage, featureFromRequest);
+    DifferenceFilter.removeAllRemoveOp(difference);
+    return Patcher.patch(featureToPatchFromStorage, difference);
   }
 
-  private void addTagsToFeature(NakshaFeature feature, List<String> addTags) {
-    if (addTags != null) {
-      feature.getProperties().getXyz().addTags(addTags, true);
-    }
-  }
-
-  private void removeTagsFromFeature(NakshaFeature feature, List<String> removeTags) {
-    if (removeTags != null) {
-      feature.getProperties().getXyz().removeTags(removeTags, true);
-    }
+  private void modifyTagsFromFeature(NakshaFeature feature, List<String> tagsToBeAdded, List<String> tagsToBeRemoved) {
+    XyzNs xyzNamespace = feature.getProperties().getXyz();
+    xyzNamespace.addTags(tagsToBeAdded, true);
+    xyzNamespace.removeTags(tagsToBeRemoved, true);
   }
 }

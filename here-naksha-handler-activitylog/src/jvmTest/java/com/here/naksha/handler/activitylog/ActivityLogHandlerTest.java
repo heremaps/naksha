@@ -1,9 +1,9 @@
 package com.here.naksha.handler.activitylog;
 
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.*;
+import static com.here.naksha.handler.activitylog.NakshaFeatureBuilder.nakshaFeature;
 import static com.here.naksha.handler.activitylog.assertions.ActivityLogSuccessResultAssertions.assertThatResult;
 import static com.here.naksha.test.common.assertions.PropertyQueryAssertions.assertThatPropertyQuery;
-import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.AdditionalMatchers.not;
@@ -17,11 +17,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.here.naksha.handler.activitylog.util.DatahubSamplesUtil;
-import com.here.naksha.handler.activitylog.util.DatahubSamplesUtil.DatahubSample;
+import com.here.naksha.handler.activitylog.sample.DatahubSamplesUtil;
+import com.here.naksha.handler.activitylog.sample.DatahubSamplesUtil.DatahubSample;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
@@ -35,13 +32,13 @@ import java.util.stream.Stream;
 
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
-import naksha.model.objects.NakshaProperties;
 import naksha.model.request.*;
 import naksha.model.request.query.POr;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -54,6 +51,8 @@ import org.mockito.MockitoAnnotations;
 class ActivityLogHandlerTest {
 
   private static final String SPACE_ID = "test_activity_space";
+  private static final JvmInt64 T0 = new JvmInt64(1749477141945L);
+  private static final JvmInt64 T1 = new JvmInt64(1749477141955L);
 
   @Mock
   INaksha naksha;
@@ -176,28 +175,27 @@ class ActivityLogHandlerTest {
   void shouldComposeActivityFeatures() throws Exception {
     // Given: old version of feature
     String featureId = "featureId";
-    NakshaFeature oldFeature = nakshaFeature(
-        featureId,
-        "initial_uuid",
-        null,
-        Action.CREATED,
-        Map.of(
-            "op", "old feature",
-            "magicNumber", 123
-        )
-    );
+    NakshaFeature oldFeature = nakshaFeature(featureId)
+        .withUuid("initial_uuid")
+        .withPuuid(null)
+        .withAction(Action.CREATED)
+        .withCustomProperties(
+            Map.of(
+                "op", "old feature",
+                "magicNumber", 123
+            )
+        ).build();
 
     // And: new version of feature
-    NakshaFeature newFeature = nakshaFeature(
-        featureId,
-        "new_uuid",
-        "initial_uuid",
-        Action.UPDATED,
-        Map.of(
+    NakshaFeature newFeature = nakshaFeature(featureId)
+        .withUuid("new_uuid")
+        .withPuuid("initial_uuid")
+        .withAction(Action.UPDATED)
+        .withCustomProperties(Map.of(
             "op", "new feature",
             "magicBoolean", true
-        )
-    );
+        ))
+        .build();
 
     // And: space storage that returns these features for some ReadFeatures request
     ReadFeatures request = new ReadFeatures();
@@ -251,14 +249,30 @@ class ActivityLogHandlerTest {
 
     // And: Space storage that will return two history features for client's request
     IReadSession readSession = spaceStorageSessionReturningHistoryFeatures(firstRequest,
-        nakshaFeature("id_1", "uuid_1", "puuid_1", Action.UPDATED),
-        nakshaFeature("id_2", "uuid_2", "puuid_2", Action.DELETED)
+        nakshaFeature("id_1")
+            .withUuid("uuid_1")
+            .withPuuid("puuid_1")
+            .withAction(Action.UPDATED)
+            .build(),
+        nakshaFeature("id_2")
+            .withUuid("uuid_2")
+            .withPuuid("puuid_2")
+            .withAction(Action.DELETED)
+            .build()
     );
 
     // And: Space storage that will return two predecessors for any other request
     when(readSession.execute(not(eq(firstRequest)))).thenReturn(new SuccessResponse(NakshaFeatureList.fromList(List.of(
-        nakshaFeature("id_1", "puuid_1", null, Action.CREATED),
-        nakshaFeature("id_2", "puuid_2", null, Action.CREATED)
+        nakshaFeature("id_1")
+            .withUuid("puuid_1")
+            .withPuuid(null)
+            .withAction(Action.CREATED)
+            .build(),
+        nakshaFeature("id_2")
+            .withUuid("puuid_2")
+            .withPuuid(null)
+            .withAction(Action.CREATED)
+            .build()
     ))));
 
     // When: Handler processes event with original client's request
@@ -310,12 +324,11 @@ class ActivityLogHandlerTest {
     ReadFeatures request = new ReadFeatures();
 
     // And: space storage that returns some feature with 'CREATE' action for given request
-    spaceStorageSessionReturningHistoryFeatures(request, nakshaFeature(
-        "featureId",
-        "uuid",
-        null,
-        Action.CREATED
-    ));
+    spaceStorageSessionReturningHistoryFeatures(request, nakshaFeature("featureId")
+        .withUuid("uuid")
+        .withPuuid(null)
+        .withAction(Action.CREATED)
+        .build());
 
     // When: handler processes event bearing such request
     Response result = handler.processEvent(eventWith(request));
@@ -337,24 +350,26 @@ class ActivityLogHandlerTest {
 
     // And: space storage that returns features with 'DELETE' and `CREATE` actions for given request
     spaceStorageSessionReturningHistoryFeatures(request,
-        nakshaFeature(
-            "featureId",
-            "delete_uuid",
-            "create_uuid",
-            Action.DELETED
-        ),
-        nakshaFeature(
-            "featureId",
-            "create_uuid",
-            null,
-            Action.CREATED
-        )
+        nakshaFeature("featureId")
+            .withUuid("delete_uuid")
+            .withPuuid("create_uuid")
+            .withAction(Action.DELETED)
+            .withCreatedAt(T0)
+            .withUpdatedAt(T1)
+            .build(),
+        nakshaFeature("featureId")
+            .withUuid("create_uuid")
+            .withPuuid(null)
+            .withAction(Action.CREATED)
+            .withCreatedAt(T0)
+            .withUpdatedAt(T0)
+            .build()
     );
 
     // When: handler processes event bearing such request
     Response result = handler.processEvent(eventWith(request));
 
-    // Then: there is no reverse patch for any fo these features
+    // Then: there is no reverse patch for any of these features
     assertThatResult(result)
         .hasActivityFeatures(
             first -> first
@@ -368,19 +383,6 @@ class ActivityLogHandlerTest {
                 .hasActivityLogId("featureId")
                 .hasReversePatch(null)
         );
-  }
-
-  private ActivityLogHandler handlerForSpaceId(String spaceId) {
-    when(eventHandler.getProperties()).thenReturn(new ActivityLogHandlerProperties(spaceId));
-    return new ActivityLogHandler(eventHandler, naksha);
-  }
-
-  private static JsonNode jsonNode(String rawJson) {
-    try {
-      return new ObjectMapper().readTree(rawJson);
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   @Test
@@ -407,34 +409,16 @@ class ActivityLogHandlerTest {
     assertThatResult(result).hasActivityFeaturesIdenticalTo(datahubSample.activityFeatures());
   }
 
-  private static String uuid(NakshaFeature newFeature) {
-    return newFeature.getProperties().getXyz().getUuid();
+  private ActivityLogHandler handlerForSpaceId(String spaceId) {
+    when(eventHandler.getProperties()).thenReturn(new ActivityLogHandlerProperties(spaceId));
+    return new ActivityLogHandler(eventHandler, naksha);
   }
 
-  private static NakshaFeature nakshaFeature(String id, String uuid, String puuid, Action action) {
-    return nakshaFeature(id, uuid, puuid, action, emptyMap());
-  }
-
-  private static NakshaFeature nakshaFeature(String id, String uuid, String puuid, Action action, Map properties) {
-    NakshaFeature feature = new NakshaFeature(id);
-    XyzNs xyzNamespace = new XyzNs();
-    xyzNamespace.put(UUID,uuid);
-    xyzNamespace.put(PUUID,puuid);
-    xyzNamespace.put(ACTION,action);
-    xyzNamespace.put(CREATED_AT, new JvmInt64(System.currentTimeMillis()));
-    xyzNamespace.put(UPDATED_AT,new JvmInt64(System.currentTimeMillis()+100));
-    NakshaProperties xyzProperties = new NakshaProperties();
-    xyzProperties.putAll(properties);
-    xyzProperties.setXyz(xyzNamespace);
-    feature.setProperties(xyzProperties);
-    return feature;
-  }
-
-  IReadSession spaceStorageSessionReturningHistoryFeatures(ReadRequest handledRequest, NakshaFeature... historyFeatures) {
+  private IReadSession spaceStorageSessionReturningHistoryFeatures(ReadRequest handledRequest, NakshaFeature... historyFeatures) {
     return spaceStorageSessionReturningHistoryFeatures(handledRequest, List.of(historyFeatures));
   }
 
-  IReadSession spaceStorageSessionReturningHistoryFeatures(ReadRequest handledRequest, List<NakshaFeature> historyFeatures) {
+  private IReadSession spaceStorageSessionReturningHistoryFeatures(ReadRequest handledRequest, List<NakshaFeature> historyFeatures) {
     IReadSession readSession = mock(IReadSession.class);
     when(readSession.execute(handledRequest)).thenReturn(new SuccessResponse(NakshaFeatureList.fromList(historyFeatures)));
     when(spaceStorage.newReadSession(any())).thenReturn(readSession);
@@ -445,6 +429,10 @@ class ActivityLogHandlerTest {
     IEvent event = Mockito.mock(IEvent.class);
     when(event.getRequest()).thenReturn(request);
     return event;
+  }
+
+  private static String uuid(NakshaFeature newFeature) {
+    return newFeature.getProperties().getXyz().getUuid();
   }
 
   private static Stream<Request> unhandledRequests() {

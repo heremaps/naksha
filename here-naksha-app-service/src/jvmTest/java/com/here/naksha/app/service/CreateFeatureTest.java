@@ -304,17 +304,21 @@ class CreateFeatureTest extends ApiTest {
     final NakshaProperties newPropsOldUuid = feature.getProperties();
     final NakshaProperties newPropsOutdatedUuid = newPropsOldUuid.copy(true);
     final NakshaProperties nullUuidProps = new NakshaProperties();
-    // Correct UUID
+
+    // And: first set of new properties with UUID that points to current feature state (head)
     newPropsOldUuid.put("speedLimit", "30");
     newPropsOldUuid.put("newProperty", "was patched in");
     newPropsOldUuid.remove("existingProperty");
-    // Now correct but will be wrong UUID
+
+    // And: second set of new properties that are correct and point to currentl feature state (head)
+    // Note: this `outdatedUuid` will should outdated after first patch (UUID of head state should change)
     newPropsOutdatedUuid.put("speedLimit", "120");
-    // Null UUID
+
+    // And: set ofm properties with Null UUID
     nullUuidProps.put("uuid", null);
     nullUuidProps.put("patchedWithNullUUID", "yesyesyes");
 
-    // Execute request, correct UUID, should success
+    // When: execute request with first set of properties with correct UUID, should success
     feature.setProperties(newPropsOldUuid);
     final HttpResponse<String> responsePatchSuccess = getNakshaClient()
         .post(
@@ -326,14 +330,14 @@ class CreateFeatureTest extends ApiTest {
                 """ + Platform.toJSON(feature) + "]}",
             streamId);
 
-    // Perform first assertions
+    // Then: first patch succeeded
     final String firstResponse = loadFileOrFail("CreateFeatures/TC0309_createFeaturesWithUuid/first_response.json");
     assertThat(responsePatchSuccess)
         .hasStreamIdHeader(getHeader(responsePatchSuccess, HDR_STREAM_ID))
         .hasStatus(200)
         .hasJsonBody(firstResponse);
 
-    // Execute request, outdated UUID, should fail
+    // When: execute request with now outdated UUID, should fail
     feature.setProperties(newPropsOutdatedUuid);
     final HttpResponse<String> responseUpdateFail = getNakshaClient()
         .post(
@@ -345,10 +349,10 @@ class CreateFeatureTest extends ApiTest {
                 """ + Platform.toJSON(feature) + "]}",
             streamId);
 
-    // Perform second assertions
+    // Then: second patch should fail due to UUID conflict
     assertEquals(409, responseUpdateFail.statusCode(), "ResCode mismatch");
 
-    // Execute request, null UUID, should success with overriding
+    // When: executing request with null UUID, should success with overriding
     feature.setProperties(nullUuidProps);
     final HttpResponse<String> responseSuccessNoUuidGiven = getNakshaClient()
         .post(
@@ -360,7 +364,7 @@ class CreateFeatureTest extends ApiTest {
                 """ + Platform.toJSON(feature) + "]}",
             streamId);
 
-    // Perform third assertions
+    // Then: third patch should succeed
     final String thirdResponse = loadFileOrFail("CreateFeatures/TC0309_createFeaturesWithUuid/third_response.json");
     assertThat(responseSuccessNoUuidGiven)
         .hasStreamIdHeader(getHeader(responsePatchSuccess, HDR_STREAM_ID))
