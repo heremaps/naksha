@@ -302,7 +302,7 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
       } else {
         // Feature exists - prepare patch for update (atomic == true, we want version validation)
         NakshaFeature patchedFeature = patchedFeature(featureFromRequest, correspondingExistingFeature);
-        modifyTagsFromFeature(featureFromRequest, addTags, removeTags);
+        modifyTagsFromFeature(patchedFeature, addTags, removeTags);
         insertsAndUpdates.add(new Write().updateFeature(null, spaceId, patchedFeature, true));
       }
     }
