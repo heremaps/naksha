@@ -1,4 +1,4 @@
-package com.here.naksha.handler.activitylog.util;
+package com.here.naksha.handler.activitylog.sample;
 
 import com.here.naksha.handler.activitylog.ActivityLogComparator;
 import com.here.naksha.handler.activitylog.NakshaActivityLog;
