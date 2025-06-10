@@ -24,6 +24,7 @@ import naksha.base.AnyObject;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
+import naksha.base.PlatformMap;
 import naksha.base.ToJsonOptions;
 import org.jetbrains.annotations.NotNull;
 
@@ -31,6 +32,12 @@ public class IterateHandle extends AnyObject {
 
   private static final String OFFSET_KEY = "offset";
   private static final String LIMIT_KEY = "limit";
+
+  @Override
+  public void onCreation() {
+    setOffset(0);
+    setLimit(0);
+  }
 
   public int getOffset() {
     return (int) getRaw(OFFSET_KEY);

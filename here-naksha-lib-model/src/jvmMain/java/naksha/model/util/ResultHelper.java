@@ -83,6 +83,7 @@ public class ResultHelper {
     int cnt = 0;
     while (iterator.hasNext() && cnt < limit) {
       if (pos++ < offset) {
+        iterator.next();
         continue; // skip initial records till we reach to desired offset
       }
       try {
