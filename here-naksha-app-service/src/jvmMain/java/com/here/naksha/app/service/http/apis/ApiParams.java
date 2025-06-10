@@ -18,7 +18,10 @@
  */
 package com.here.naksha.app.service.http.apis;
 
-import static com.here.naksha.common.http.apis.ApiParamsConst.*;
+import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_ID;
+import static com.here.naksha.common.http.apis.ApiParamsConst.LAT;
+import static com.here.naksha.common.http.apis.ApiParamsConst.LON;
+import static com.here.naksha.common.http.apis.ApiParamsConst.NULL_COORDINATE;
 
 import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.models.payload.events.QueryParameter;
@@ -33,7 +36,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public final class ApiParams {
-  private ApiParams(){}
+
+  private ApiParams() {
+  }
 
   public static @NotNull String extractMandatoryPathParam(
       final @NotNull RoutingContext routingContext, final @NotNull String param) {
@@ -47,13 +52,19 @@ public final class ApiParams {
   public static @Nullable QueryParameter extractQueryParamForKey(
       final @Nullable QueryParameterList queryParams, final @NotNull String key, final boolean isMandatory) {
     if (queryParams == null) {
-      if (isMandatory) throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Query parameters missing");
-      else return null;
+      if (isMandatory) {
+        throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Query parameters missing");
+      } else {
+        return null;
+      }
     }
     final QueryParameter queryParam = queryParams.get(key);
     if (queryParam == null || queryParam.values().isEmpty()) {
-      if (isMandatory) throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Parameter " + key + " missing");
-      else return null;
+      if (isMandatory) {
+        throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Parameter " + key + " missing");
+      } else {
+        return null;
+      }
     }
     return queryParam;
   }
@@ -112,39 +123,28 @@ public final class ApiParams {
     return extractQueryParamAsLong(queryParams, key, isMandatory, 0);
   }
 
-  public static long extractQueryParamAsLong(
-      final @Nullable QueryParameterList queryParams,
-      final @NotNull String key,
-      final boolean isMandatory,
-      final long defVal) {
-    return extractTypedQueryParam(queryParams, key, isMandatory, defVal, Long.class);
-  }
-
-  public static int extractQueryParamAsInt(
+  public static Integer extractQueryParamAsInt(
       final @Nullable QueryParameterList queryParams,
       final @NotNull String key,
       final boolean isMandatory,
       final int defVal) {
-    return extractTypedQueryParam(queryParams, key, isMandatory, defVal, Integer.class);
+    // We delegate to long extraction because QueryParameterList only support long and double numeric values
+    // see QueryParameterDecoder::sbToValue
+    Long longVal = extractQueryParamAsLong(queryParams, key, isMandatory, defVal);
+    return longVal.intValue();
   }
 
-  public static <T> T extractTypedQueryParam(
+  public static Long extractQueryParamAsLong(
       final @Nullable QueryParameterList queryParams,
       final @NotNull String key,
       final boolean isMandatory,
-      final T defVal,
-      final Class<T> type) {
+      final long defVal) {
     final QueryParameter queryParam = extractQueryParamForKey(queryParams, key, isMandatory);
     if (queryParam == null && !isMandatory) {
       return defVal;
     }
     final ValueList values = queryParam.values();
-    final Object value = values.get(0);
-    if (!type.isInstance(value)) {
-      throw new NakshaException(
-          NakshaError.ILLEGAL_ARGUMENT, "Invalid value " + values.getString(0) + " for parameter " + key);
-    }
-    return type.cast(value);
+    return values.getLong(0);
   }
 
   public static void validateParamRange(
@@ -206,8 +206,12 @@ public final class ApiParams {
   }
 
   public static void validateLatLon(final double lat, final double lon) {
-    if (lat != NULL_COORDINATE) validateParamRange(LAT, lat, -90, 90);
-    if (lon != NULL_COORDINATE) validateParamRange(LON, lon, -180, 180);
+    if (lat != NULL_COORDINATE) {
+      validateParamRange(LAT, lat, -90, 90);
+    }
+    if (lon != NULL_COORDINATE) {
+      validateParamRange(LON, lon, -180, 180);
+    }
     // Validate that both lat and lon provided or none of them
     if (lat == NULL_COORDINATE && lon != NULL_COORDINATE) {
       // only lon provided, lan is not
