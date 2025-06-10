@@ -1,0 +1,5 @@
+{
+  "error": "IllegalArgument",
+  "errorMessage": "Invalid request input parameter value for QUERY-parameter 'limit'. Reason: PARSING_ERROR",
+  "type": "ErrorResponse"
+}

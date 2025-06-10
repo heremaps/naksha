@@ -350,7 +350,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Note : subsequent steps need to support queryParams being null
 
     // extract limit parameter
-    int offset = 0;
     int clientLimit = ApiParams.extractQueryParamAsInt(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     // extract handle parameter
     IterateHandle handle = ApiParams.extractQueryParamAsIterateHandle(queryParams, HANDLE);
@@ -358,7 +357,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     if (handle == null) {
       handle = new IterateHandle().withLimit(clientLimit);
     }
-    offset = handle.getOffset();
+    int offset = handle.getOffset();
     clientLimit = handle.getLimit();
     clientLimit = (clientLimit < 0 || clientLimit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : clientLimit;
     final Map<String, Object> queryParamsMap = Map.of(LIMIT, clientLimit);

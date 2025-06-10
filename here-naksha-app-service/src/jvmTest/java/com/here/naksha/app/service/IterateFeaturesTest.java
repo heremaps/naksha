@@ -26,11 +26,11 @@ import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.assertions.ResponseAssertions;
-import naksha.model.XyzFeatureCollection;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
+import naksha.model.XyzFeatureCollection;
 import org.json.JSONException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -210,5 +210,22 @@ class IterateFeaturesTest extends ApiTest {
         .hasStatus(400)
         .hasStreamIdHeader(secondStreamId)
         .hasJsonBody(secondExpectedBodyPart, "Final Iterate response body doesn't match");
+  }
+
+  @Test
+  void tc1106_shouldFailForInvalidQueryParam() throws URISyntaxException, InterruptedException, IOException {
+    // Given: iterate parameters for first request
+    final String invalidLimitQueryParam = "limit=3.5";
+    final String expectedErrorBody = loadFileOrFail("ReadFeatures/Iterate/TC1106_invalidQueryParam/error_response.json");
+    final String streamId = UUID.randomUUID().toString();
+
+    // When: Iterate Features request is submitted to NakshaHub
+    HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/iterate" + "?" + invalidLimitQueryParam, streamId);
+
+    // Then: Perform assertions
+    ResponseAssertions.assertThat(response)
+        .hasStatus(400)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedErrorBody, "Expected error body doesn't match");
   }
 }
