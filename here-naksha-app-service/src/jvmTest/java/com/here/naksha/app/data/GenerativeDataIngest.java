@@ -144,7 +144,7 @@ class GenerativeDataIngest extends AbstractDataIngest {
       SpBoundingBox tileBbox = WebMercatorTile.forQuadkey(tileId).getBBox(false);
       double lonDist = tileBbox.getMaxLongitude() - tileBbox.getMinLongitude();
       double latDist = tileBbox.getMaxLatitude() - tileBbox.getMinLatitude();
-      double currentLon = tileBbox.getMinLatitude() + random.nextDouble(lonDist);
+      double currentLon = tileBbox.getMinLongitude() + random.nextDouble(lonDist);
       double currentLat = tileBbox.getMinLatitude() + random.nextDouble(latDist);
       int pointsInLine = random.nextInt(2, 10);
       LineStringCoord coordinates = new LineStringCoord();
