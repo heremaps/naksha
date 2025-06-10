@@ -211,4 +211,21 @@ class IterateFeaturesTest extends ApiTest {
         .hasStreamIdHeader(secondStreamId)
         .hasJsonBody(secondExpectedBodyPart, "Final Iterate response body doesn't match");
   }
+
+  @Test
+  void tc1106_shouldFailForInvalidQueryParam() throws URISyntaxException, InterruptedException, JSONException, IOException {
+    // Given: iterate parameters for first request
+    final String invalidLimitQueryParam = "limit=3.5";
+    final String expectedErrorBody = loadFileOrFail("ReadFeatures/Iterate/TC1105_invalidQueryParam/error_response.json");
+    final String streamId = UUID.randomUUID().toString();
+
+    // When: First iterate Features request is submitted to NakshaHub
+    HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/iterate" + "?" + invalidLimitQueryParam, streamId);
+
+    // Then: Perform assertions
+    ResponseAssertions.assertThat(response)
+        .hasStatus(400)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedErrorBody, "Expected error body doesn't match");
+  }
 }
