@@ -24,7 +24,6 @@ import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUN
 import static com.here.naksha.common.http.apis.ApiParamsConst.STORAGE_ID;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.lib.core.INaksha;
@@ -49,8 +48,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
 
   private static final Logger logger = LoggerFactory.getLogger(StorageApiTask.class);
 
-  private static final Set<String> SENSITIVE_PROPERTIES_LOWERCASE =
-      Set.of("password", "authorization");
+  private static final Set<String> SENSITIVE_PROPERTIES_LOWERCASE = Set.of("password", "authorization");
   private final @NotNull StorageApiReqType reqType;
 
   public enum StorageApiReqType {

@@ -1,9 +1,12 @@
 package com.here.naksha.app.service.http.ops;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Test;
@@ -42,7 +45,7 @@ class MaskingUtilTest {
     MaskingUtil.maskProperties(feature, sensitiveProperties);
 
     // Then:
-    assertEquals(Map.of(
+    assertPropertiesMatch(feature.getProperties(), Map.of(
         "sensitiveObject", MaskingUtil.MASK,
         "headers", Map.of(
             "Authorization", MaskingUtil.MASK,
@@ -57,7 +60,25 @@ class MaskingUtilTest {
                 )
             )
         )
-    ), feature.getProperties());
+    ));
+  }
+
+
+  private static void assertPropertiesMatch(Map actual, Map<String, Object> expected) {
+    assertEquals(actual.size(), expected.size(), "Size mismatch when comparing properties");
+    expected.forEach((key, expectedValue) -> {
+      if (!actual.containsKey(key)) {
+        fail("Expected property '%s' not found in the properties".formatted(key));
+      }
+      Object actualValue = actual.get(key);
+      if (expectedValue instanceof Map expectedValueMap) {
+        assertInstanceOf(Map.class, actualValue, "Property '%s' should be a map".formatted(key));
+        assertPropertiesMatch((Map) actualValue, expectedValueMap);
+      } else {
+        assertEquals(expectedValue, actualValue,
+            "Mismatch for property '%s' - expected: '%s', got: '%s'".formatted(key, expectedValue, actualValue));
+      }
+    });
   }
 
   private static NakshaFeature featureWithProps(Map<String, Object> props) {

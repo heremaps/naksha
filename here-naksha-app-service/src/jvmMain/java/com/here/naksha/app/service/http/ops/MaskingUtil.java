@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 import naksha.model.objects.NakshaFeature;
 
 public class MaskingUtil {
@@ -31,8 +32,12 @@ public class MaskingUtil {
   private MaskingUtil() {
   }
 
-  public static void maskProperties(NakshaFeature feature, Set<String> propertiesToMaskLowercase) {
-    maskProperties(feature.getProperties(), propertiesToMaskLowercase);
+  public static void maskProperties(NakshaFeature feature, Set<String> propertiesToMask) {
+    maskProperties(feature.getProperties(), lowercased(propertiesToMask));
+  }
+
+  private static Set<String> lowercased(Set<String> input){
+    return input.stream().map(String::toLowerCase).collect(Collectors.toSet());
   }
 
   private static void maskProperties(Map<String, Object> propertiesAsMap, Set<String> propertiesToMaskLowercase) {

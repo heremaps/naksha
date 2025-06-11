@@ -22,7 +22,8 @@ import kotlin.reflect.KClass
  */
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
-open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlass: KClass<out V>) : Proxy(), MutableMap<K, V?> {
+open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlass: KClass<out V>) :
+    Proxy(), MutableMap<K, V?> {
 
     override fun createData(): PlatformMap = Platform.newMap()
     override fun platformObject(): PlatformMap = super.platformObject() as PlatformMap
@@ -71,7 +72,11 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return the value.
      */
-    fun <T : Any, KEY: K, SELF: MapProxy<K, V>> getOrInit(key: KEY, klass: KClass<out T>, init: Fn2<out T, in SELF, in KEY>): T {
+    fun <T : Any, KEY : K, SELF : MapProxy<K, V>> getOrInit(
+        key: KEY,
+        klass: KClass<out T>,
+        init: Fn2<out T, in SELF, in KEY>
+    ): T {
         val data = platformObject()
         var value: T? = null
         if (map_contains_key(data, key)) {
@@ -94,7 +99,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return The value.
      */
-    fun <T : Any, KEY: K, SELF: MapProxy<K, V>> getOrCreate(
+    fun <T : Any, KEY : K, SELF : MapProxy<K, V>> getOrCreate(
         key: KEY,
         klass: KClass<out T>,
         init: Fn2<out T?, in SELF, in KEY>? = null
@@ -132,7 +137,8 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * @return The value as expected type or `null`, if no such key exists, or the value can't be proxied as the desired type.
      * @see [getOrNull]
      */
-    fun <T : Any> getAs(key: K, klass: KClass<out T>): T? = box(map_get(platformObject(), key), klass)
+    fun <T : Any> getAs(key: K, klass: KClass<out T>): T? =
+        box(map_get(platformObject(), key), klass)
 
     /**
      * Helper to return the value of the key in the desired type. If the key does not exist, or is not of the expected type, `null` is returned.
@@ -141,7 +147,8 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      * @return The value as expected type or `null`, if no such key exists, or the value can't be proxied as the desired type.
      * @see [getAs]
      */
-    fun <T : Any> getOrNull(key: K, klass: KClass<out T>): T? = box(map_get(platformObject(), key), klass)
+    fun <T : Any> getOrNull(key: K, klass: KClass<out T>): T? =
+        box(map_get(platformObject(), key), klass)
 
     /**
      * Convert the given value into a key.
@@ -167,7 +174,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
                     require(array_get_length(platformList) == 2) { "Expected PlatformList with size of 2 (key and value)" }
                     val key = toKey(array_get(platformList, 0))
                     requireNotNull(key) { "Key can't be null" }
-                    Entry(key, toValue(key, array_get(platformList, 1)))
+                    Entry(key, toValue(key, array_get(platformList, 1)), this)
                 }
                 .toMutableSet()
             return MapProxyEntrySet(basicEntries, this)
@@ -217,7 +224,8 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
         }
     }
 
-    override fun put(key: K, value: V?): V? = toValue(key, map_set(platformObject(), key, unbox(value)))
+    override fun put(key: K, value: V?): V? =
+        toValue(key, map_set(platformObject(), key, unbox(value)))
 
     override fun get(key: K): V? = toValue(key, map_get(platformObject(), key))
 
@@ -254,17 +262,22 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
 
     override fun containsKey(key: K): Boolean = map_contains_key(platformObject(), key)
 
-    class Entry<K, V>(override val key: K, initialValue: V) : MutableEntry<K, V> {
+    class Entry<K : Any, V : Any>(
+        override val key: K,
+        initialValue: V?,
+        private val owner: MapProxy<K, V>
+    ) : MutableEntry<K, V?> {
 
-        private var currentValue: V = initialValue
+        private var currentValue: V? = initialValue
 
-        override fun setValue(newValue: V): V {
+        override fun setValue(newValue: V?): V? {
             val oldValue = currentValue
             currentValue = newValue
+            owner.setRaw(key, newValue)
             return oldValue
         }
 
-        override val value: V
+        override val value: V?
             get() = currentValue
     }
 
@@ -292,7 +305,9 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
         }
 
         override fun remove() {
-            owner.removeRaw(currentKey ?: throw IllegalStateException("Iterator is invalid position"))
+            owner.removeRaw(
+                currentKey ?: throw IllegalStateException("Iterator is invalid position")
+            )
         }
     }
 
