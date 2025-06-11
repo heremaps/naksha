@@ -32,12 +32,8 @@ public class MaskingUtil {
   private MaskingUtil() {
   }
 
-  public static void maskProperties(NakshaFeature feature, Set<String> propertiesToMask) {
-    maskProperties(feature.getProperties(), lowercased(propertiesToMask));
-  }
-
-  private static Set<String> lowercased(Set<String> input){
-    return input.stream().map(String::toLowerCase).collect(Collectors.toSet());
+  public static void maskProperties(NakshaFeature feature, Set<String> lowercasedPropertiesToMask) {
+    maskProperties(feature.getProperties(), lowercasedPropertiesToMask);
   }
 
   private static void maskProperties(Map<String, Object> propertiesAsMap, Set<String> propertiesToMaskLowercase) {

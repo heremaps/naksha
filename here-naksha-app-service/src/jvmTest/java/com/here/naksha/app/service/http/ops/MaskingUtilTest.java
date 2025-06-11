@@ -39,10 +39,10 @@ class MaskingUtilTest {
     ));
 
     // And:
-    Set<String> sensitiveProperties = Set.of("sensitiveObject", "Authorization");
+    Set<String> lowercasedSensitiveProperties = Set.of("sensitiveobject", "authorization");
 
     // When:
-    MaskingUtil.maskProperties(feature, sensitiveProperties);
+    MaskingUtil.maskProperties(feature, lowercasedSensitiveProperties);
 
     // Then:
     assertPropertiesMatch(feature.getProperties(), Map.of(

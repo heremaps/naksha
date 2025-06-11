@@ -48,7 +48,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
 
   private static final Logger logger = LoggerFactory.getLogger(StorageApiTask.class);
 
-  private static final Set<String> SENSITIVE_PROPERTIES_LOWERCASE = Set.of("password", "authorization");
+  private static final Set<String> SENSITIVE_PROPERTIES_LOWERCASED = Set.of("password", "authorization");
   private final @NotNull StorageApiReqType reqType;
 
   public enum StorageApiReqType {
@@ -158,7 +158,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
   }
 
   private NakshaStorage maskSensitiveProperties(NakshaStorage storageConfig) {
-    maskProperties(storageConfig, StorageApiTask.SENSITIVE_PROPERTIES_LOWERCASE);
+    maskProperties(storageConfig, StorageApiTask.SENSITIVE_PROPERTIES_LOWERCASED);
     return storageConfig;
   }
 
