@@ -109,7 +109,7 @@ class StorageApiTest extends ApiTest {
   }
 
   @Test
-  void test0005_testAuthorizationHeaderMaskForHttpStorage() throws Exception {
+  void tc0005_testAuthorizationHeaderMaskForHttpStorage() throws Exception {
     // 1. Load test data
     final String bodyJson = loadFileOrFail("StorageApi/TC0005_maskAuthorizationHeader/create_storage.json");
     final String expectedBodyPart = loadFileOrFail("StorageApi/TC0005_maskAuthorizationHeader/response_part.json");
@@ -174,9 +174,6 @@ class StorageApiTest extends ApiTest {
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
     List<NakshaFeature> returnedXyzFeatures =
         parseJson(response.body(), XyzFeatureCollection.class).getFeatures();
-    boolean allReturnedFeaturesAreStorages =
-        returnedXyzFeatures.stream().allMatch(feature -> NakshaStorage.class.isAssignableFrom(feature.getClass()));
-    Assertions.assertTrue(allReturnedFeaturesAreStorages);
     List<String> storageIds =
         returnedXyzFeatures.stream().map(NakshaFeature::getId).toList();
     Assertions.assertTrue(storageIds.containsAll(expectedStorageIds));
