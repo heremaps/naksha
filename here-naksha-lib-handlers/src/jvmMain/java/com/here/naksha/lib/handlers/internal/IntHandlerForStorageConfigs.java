@@ -21,6 +21,9 @@ package com.here.naksha.lib.handlers.internal;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.handlers.internal.HttpStorageValidation.validateConfigForHttpStorage;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
+import static naksha.model.NakshaError.CONFLICT;
+import static naksha.model.NakshaError.EXCEPTION;
+import static naksha.model.util.ResultHelper.extractResponseItems;
 
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
@@ -32,8 +35,8 @@ import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
-import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
@@ -108,27 +111,19 @@ public class IntHandlerForStorageConfigs extends AdminFeatureEventHandler<Naksha
     final ReadFeatures readActiveHandlersRequest = new ReadFeatures().addCollectionId(EVENT_HANDLERS);
     readActiveHandlersRequest.setMapId(nakshaHub.getAdminMapId());
     readActiveHandlersRequest.getQuery().setProperties(activeHandlersPOp);
-    return nakshaHub().getAdminStorage().useReadSession(SessionOptions.from(NakshaContext.currentContext()), readSession -> {
-      final Response readResult = readSession.execute(readActiveHandlersRequest);
-      if (!(readResult instanceof SuccessResponse)) {
-        return readResult;
-      }
-      final SuccessResponse successResponse = (SuccessResponse) readResult;
-      final List<EventHandlerConfig> eventHandlers;
-      try {
-        eventHandlers = ResultHelper.extractResponseItems(successResponse, EventHandlerConfig.class);
-      } catch (NoSuchElementException emptyException) {
-        // No active handler using the storage, proceed with deleting the storage
+    Response activeHandlersResponse = nakshaHub().getAdminStorage()
+        .useReadSession(SessionOptions.from(NakshaContext.currentContext()), readSession -> readSession.execute(readActiveHandlersRequest));
+    if(activeHandlersResponse instanceof SuccessResponse successResponse) {
+      final List<EventHandlerConfig> eventHandlers = extractResponseItems(successResponse, EventHandlerConfig.class);
+      if(eventHandlers.isEmpty()) {
         return SUCCESSFUL_VALIDATION;
-      } finally {
-        readSession.close();
       }
-      final List<String> handlerIds =
-          eventHandlers.stream().map(NakshaFeature::getId).toList();
-      readSession.close();
-      return new ErrorResponse(
-          NakshaError.CONFLICT, "The storage is still in use by these event handlers: " + handlerIds);
-    });
+      final List<String> handlerIds = eventHandlers.stream().map(NakshaFeature::getId).toList();
+      return new ErrorResponse(CONFLICT, "The storage is still in use by these event handlers: " + handlerIds);
+    } else if (activeHandlersResponse instanceof ErrorResponse errorResponse) {
+        return errorResponse;
+    } else {
+      return new ErrorResponse(EXCEPTION, "Unexpected response while fetching storage's handlers: " + activeHandlersResponse);
+    }
   }
-
 }
