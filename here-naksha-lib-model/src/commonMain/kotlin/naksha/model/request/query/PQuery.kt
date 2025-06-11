@@ -48,8 +48,4 @@ open class PQuery() : AnyObject(), IPropertyQuery {
      * The parameter value of the operation; if any.
      */
     var value by ANY
-//   TODO
-//    override fun toString(): String {
-//
-//    }
 }
