@@ -99,7 +99,7 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
   }
 
   public ReadFeaturesProxyWrapper withPropertyQuery(IPropertyQuery propertyQuery){
-    getQuery().setProperties(propertyQuery);
+    super.withPropertyQuery(propertyQuery);
     return this;
   }
 
