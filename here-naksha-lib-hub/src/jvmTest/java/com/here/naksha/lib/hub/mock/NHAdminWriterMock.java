@@ -48,7 +48,7 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
   }
 
   @Override
-  public @NotNull Response execute(@NotNull Request request) {
+  public @NotNull Response performExecute(@NotNull Request request) {
     if (request instanceof WriteRequest wr) {
       for (Write write : wr.getWrites()) {
         Response singularResponse;

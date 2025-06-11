@@ -118,7 +118,7 @@ class NakshaHubWiringTest extends AbstractTest {
 
     // When: Request is submitted to Hub Space Storage
     hub.getSpaceStorage().runInWriteSession(SessionOptions.from(newTestNakshaContext(), true), admin -> {
-      admin.execute(request);
+      admin.performExecute(request);
       admin.commit();
     });
 
@@ -152,7 +152,7 @@ class NakshaHubWiringTest extends AbstractTest {
 
     // When: Request is submitted to Hub Space Storage
     hub.getSpaceStorage().runInReadSession(SessionOptions.from(newTestNakshaContext(), true), reader -> {
-      reader.execute(request);
+      reader.performExecute(request);
     });
 
     // Then:
