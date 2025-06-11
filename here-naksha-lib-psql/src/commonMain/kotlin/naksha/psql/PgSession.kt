@@ -208,7 +208,7 @@ open class PgSession(
 
     private var executionCount: Int = 0
 
-    override fun execute(request: Request): Response {
+    override fun performExecute(request: Request): Response {
         try {
             when (request) {
                 is WriteRequest -> {

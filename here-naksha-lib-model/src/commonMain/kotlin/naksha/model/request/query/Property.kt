@@ -38,6 +38,7 @@ open class Property() : MetaColumn(FEATURE) {
          * Simple constant for `properties`.
          */
         const val PROPERTIES = "properties"
+        const val EVENT_HANDLER_IDS = "eventHandlerIds"
 
         /**
          * Simple constant for `@ns:com:here:xyz`.
