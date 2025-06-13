@@ -103,8 +103,8 @@ interface ISession : AutoCloseable {
 
             // Apply all filters from the request sequentially.
             var currentList = response.featureTupleList.asList().filterNotNull()
-            for (filter in request.resultFilters) {
-                currentList = currentList.mapNotNull { featureTuple -> filter?.filter(featureTuple) }
+            for (filter in request.resultFilters.filterNotNull()) {
+                currentList = currentList.mapNotNull { featureTuple -> filter.filter(featureTuple) }
             }
 
             // Update the response with the new, filtered list.
