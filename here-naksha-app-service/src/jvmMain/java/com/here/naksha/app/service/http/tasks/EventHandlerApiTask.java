@@ -21,7 +21,7 @@ package com.here.naksha.app.service.http.tasks;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.HANDLER_ID;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
-import static naksha.model.util.RequestHelper.updateFeatureRequest;
+import static naksha.model.util.RequestHelper.nonAtomicUpdateFeatureRequest;
 import static naksha.model.util.RequestHelper.upsertFeaturesRequest;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
@@ -131,7 +131,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
       return verticle.sendErrorResponse(
           routingContext, NakshaError.ILLEGAL_ARGUMENT, mismatchMsg(handlerIdFromPath, handlerToUpdate));
     } else {
-      final WriteRequest updateHandlerReq = updateFeatureRequest(naksha().getAdminMapId(), EVENT_HANDLERS, handlerToUpdate);
+      final WriteRequest updateHandlerReq = RequestHelper.nonAtomicUpdateFeatureRequest(naksha().getAdminMapId(), EVENT_HANDLERS, handlerToUpdate);
       Response updateHandlerResponse = executeWriteRequestFromSpaceStorage(updateHandlerReq);
       return transformResponseToXyzFeatureResponse(updateHandlerResponse, EventHandlerConfig.class, FAIL_ON_NO_ELEMENTS);
     }

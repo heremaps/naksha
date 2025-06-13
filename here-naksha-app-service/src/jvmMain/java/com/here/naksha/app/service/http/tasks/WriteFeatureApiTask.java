@@ -27,6 +27,8 @@ import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_IDS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.REMOVE_TAGS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.SPACE_ID;
 import static com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper.proxyWrapperOf;
+import static naksha.model.util.RequestHelper.atomicUpdateFeatureRequest;
+import static naksha.model.util.RequestHelper.nonAtomicUpdateFeatureRequest;
 
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
@@ -158,10 +160,17 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
 
     // as applicable, modify features based on parameters supplied
+    final WriteRequest wrRequest = new WriteRequest();
     for (final NakshaFeature feature : features) {
       modifyTagsFromFeature(feature, addTags, removeTags);
+      if(hasSpecifiedVersion(feature)) {
+        // version defined - perform atomic update including version validation
+        wrRequest.add(new Write().updateFeature(null, spaceId, feature, true));
+      } else {
+        // no version - overwrite the feature, regardless whether it exists or not (forceful upsert)
+        wrRequest.add(new Write().upsertFeature(null, spaceId, feature));
+      }
     }
-    final WriteRequest wrRequest = RequestHelper.upsertFeaturesRequest(null, spaceId, features);
 
     // Forward request to NH Space Storage writer instance
     Response response = executeWriteRequestFromSpaceStorage(wrRequest);
@@ -184,12 +193,23 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
 
     // as applicable, modify features based on parameters supplied
     modifyTagsFromFeature(feature, addTags, removeTags);
-    final WriteRequest wrRequest = RequestHelper.updateFeatureRequest(null, spaceId, feature);
+    WriteRequest writeRequest;
+    if(hasSpecifiedVersion(feature)) {
+      // version defined - perform atomic update including version validation
+      writeRequest = atomicUpdateFeatureRequest(null, spaceId, feature);
+    } else {
+      // no version - perform non atomic update (force update, without version check)
+      writeRequest = nonAtomicUpdateFeatureRequest(null, spaceId, feature);
+    }
 
     // Forward request to NH Space Storage writer instance
-    Response response = executeWriteRequestFromSpaceStorage(wrRequest);
+    Response response = executeWriteRequestFromSpaceStorage(writeRequest);
     // transform WriteResult to Http FeatureCollection response
     return transformResponseToXyzFeatureResponse(response, NakshaFeature.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
+  }
+
+  private boolean hasSpecifiedVersion(NakshaFeature feature) {
+    return feature.getProperties().getXyz().getUuid() != null;
   }
 
   private @NotNull XyzResponse executeDeleteFeatures() {
