@@ -124,7 +124,7 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
       return verticle.sendErrorResponse(
           routingContext, NakshaError.ILLEGAL_ARGUMENT, mismatchMsg(spaceIdFromPath, spaceFromBody));
     } else {
-      final WriteRequest updateSpaceReq = RequestHelper.updateFeatureRequest(naksha().getAdminMapId(), SPACES, spaceFromBody);
+      final WriteRequest updateSpaceReq = RequestHelper.nonAtomicUpdateFeatureRequest(naksha().getAdminMapId(), SPACES, spaceFromBody);
       Response updateSpaceResponse = executeWriteRequestFromSpaceStorage(updateSpaceReq);
       return transformResponseToXyzFeatureResponse(updateSpaceResponse, Space.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
     }

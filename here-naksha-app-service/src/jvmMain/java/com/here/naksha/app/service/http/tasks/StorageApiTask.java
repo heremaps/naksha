@@ -130,7 +130,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
       return verticle.sendErrorResponse(
           routingContext, NakshaError.ILLEGAL_ARGUMENT, mismatchMsg(storageIdFromPath, storageFromBody));
     } else {
-      final WriteRequest updateStorageReq = RequestHelper.updateFeatureRequest(naksha().getAdminMapId(), STORAGES, storageFromBody);
+      final WriteRequest updateStorageReq = RequestHelper.nonAtomicUpdateFeatureRequest(naksha().getAdminMapId(), STORAGES, storageFromBody);
       return transformedResponseTo(updateStorageReq);
     }
   }

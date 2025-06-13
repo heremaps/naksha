@@ -93,7 +93,7 @@ public class RequestHelper {
    * @param <FEATURE>  any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest updateFeatureRequest(
+  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest nonAtomicUpdateFeatureRequest(
       final @NotNull NakshaCollection collection,
       final @NotNull FEATURE feature
   ) {
@@ -110,12 +110,30 @@ public class RequestHelper {
    * @param <FEATURE>    any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest updateFeatureRequest(
+  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest nonAtomicUpdateFeatureRequest(
       final @Nullable String mapId,
       final @Nullable String collectionId,
       final @NotNull FEATURE feature
   ) {
     final Write write = new Write().updateFeature(mapId, collectionId, feature, false);
+    return new WriteRequest().add(write);
+  }
+
+  /**
+   * Helper method to create WriteFeatures request for updating given feature. The update will be atomic.
+   *
+   * @param mapId        the map where collection is defined
+   * @param collectionId the storage collection
+   * @param feature      feature object to be updated
+   * @param <FEATURE>    any object extending XyzFeature
+   * @return WriteFeatures request that can be used against IStorage methods
+   */
+  public static <FEATURE extends NakshaFeature> @NotNull WriteRequest atomicUpdateFeatureRequest(
+      final @Nullable String mapId,
+      final @Nullable String collectionId,
+      final @NotNull FEATURE feature
+  ) {
+    final Write write = new Write().updateFeature(mapId, collectionId, feature, true);
     return new WriteRequest().add(write);
   }
 
@@ -127,7 +145,7 @@ public class RequestHelper {
    * @param <FEATURE>  any object extending XyzFeature
    * @return WriteFeatures request that can be used against IStorage methods
    */
-  public static @NotNull <FEATURE extends NakshaFeature> WriteRequest updateFeaturesRequest(
+  public static @NotNull <FEATURE extends NakshaFeature> WriteRequest atomicUpdateFeaturesRequest(
       final @NotNull NakshaCollection collection, final @NotNull List<FEATURE> features) {
     final WriteRequest request = new WriteRequest();
     for (FEATURE feature : features) {
