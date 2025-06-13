@@ -4,6 +4,8 @@ import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.CommonApiTestSetup;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.TestUtil;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
 import naksha.model.XyzFeatureCollection;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import naksha.model.XyzNs;
@@ -401,8 +403,8 @@ class ActivityLogApiTest extends ApiTest {
   }
 
   private List<FeatureMetadata> featuresMetadata(String featureCollectionResponseJson) {
-    return JsonSerializable.deserialize(featureCollectionResponseJson, XyzFeatureCollection.class)
-        .getFeatures().stream()
+    XyzFeatureCollection featureCollection = JvmBoxingUtil.box(Platform.fromJSON(featureCollectionResponseJson), XyzFeatureCollection.class);
+    return featureCollection.getFeatures().stream()
         .map(NakshaFeature::getProperties)
         .map(NakshaProperties::getXyz)
         .map(FeatureMetadata::from)

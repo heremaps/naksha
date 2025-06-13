@@ -1,5 +1,6 @@
 package com.here.naksha.handler.activitylog;
 
+import static com.here.naksha.handler.activitylog.ActivityLogHandlerProperties.activityLogHandlerProperties;
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.*;
 import static com.here.naksha.handler.activitylog.NakshaFeatureBuilder.nakshaFeature;
 import static com.here.naksha.handler.activitylog.assertions.ActivityLogSuccessResultAssertions.assertThatResult;
@@ -410,7 +411,7 @@ class ActivityLogHandlerTest {
   }
 
   private ActivityLogHandler handlerForSpaceId(String spaceId) {
-    when(eventHandler.getProperties()).thenReturn(new ActivityLogHandlerProperties(spaceId));
+    when(eventHandler.getProperties()).thenReturn(activityLogHandlerProperties(spaceId));
     return new ActivityLogHandler(eventHandler, naksha);
   }
 
