@@ -2,23 +2,23 @@ package naksha.model
 
 import naksha.base.NakshaException
 import naksha.base.PlatformDataView
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int8
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_int8
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
 
 /**
  * A reader for C-strings, so ASCII-zero terminated string. Empty strings are represented as _null_.
- * @since 3.0.0
+ * @since 3.0
  */
 internal class CStringReader(
     /**
      * The view to read from.
-     * @since 3.0.0
+     * @since 3.0
      */
     val view: PlatformDataView,
 
     /**
      * The byte-offset in the view to start reading at.
-     * @since 3.0.0
+     * @since 3.0
      */
     var offset: Int
 ) {

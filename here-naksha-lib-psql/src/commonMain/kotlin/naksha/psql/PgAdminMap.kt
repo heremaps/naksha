@@ -8,18 +8,18 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import naksha.base.*
 import naksha.model.NakshaVersion
-import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.Platform.Platform_C.logger
 import naksha.jbon.IDictReader
 import naksha.jbon.JbDictionary
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
-import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP_NUMBER
-import naksha.model.Naksha.NakshaCompanion.MAPS_COL_NUMBER
-import naksha.base.NakshaError.NakshaErrorCompanion.EXCEPTION
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.base.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
+import naksha.model.Naksha.Naksha_C.ADMIN_MAP
+import naksha.model.Naksha.Naksha_C.ADMIN_MAP_NUMBER
+import naksha.model.Naksha.Naksha_C.MAPS_COL_NUMBER
+import naksha.base.NakshaError.NakshaError_C.EXCEPTION
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaError_C.STORAGE_ID_MISMATCH
 import naksha.model.objects.NakshaMap
-import naksha.psql.PgColumn.PgColumnCompanion.allColumns
+import naksha.psql.PgColumn.PgColumn_C.allColumns
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

@@ -9,7 +9,7 @@ package naksha.base
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect class PlatformDataViewApi private constructor() {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView
-    companion object PlatformDataViewApiCompanion {
+    companion object PlatformDataViewApi_C {
         /**
          * Return a byte-array sharing the byte-buffer with view.
          * @param view the view to query.

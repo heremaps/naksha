@@ -1,6 +1,6 @@
 package naksha.geo
 
-import naksha.base.Platform.PlatformCompanion.fromJson
+import naksha.base.Platform.Platform_C.fromJson
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

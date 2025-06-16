@@ -2,7 +2,7 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -19,7 +19,7 @@ data class IntMutable(
      */
     var value: Int = 0
 ) {
-    companion object IntMutableCompanion {
+    companion object IntMutable_C {
         /**
          * The [PlatformType] of [IntMutable].
          * @since 3.0
@@ -27,6 +27,8 @@ data class IntMutable(
         @JvmField
         @JsStatic
         val TYPE = forKClass(IntMutable::class).withPackageName(PACKAGE_NAME)
+
+        init { initialize() }
     }
 
     /**

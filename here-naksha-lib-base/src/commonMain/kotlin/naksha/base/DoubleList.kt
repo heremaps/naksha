@@ -2,7 +2,7 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -12,7 +12,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 open class DoubleList : ListProxy<Double>(Double_TYPE) {
-    companion object DoubleListCompanion {
+    companion object DoubleList_C {
         /**
          * The [PlatformType] of [DoubleList].
          * @since 3.0
@@ -20,6 +20,8 @@ open class DoubleList : ListProxy<Double>(Double_TYPE) {
         @JvmField
         @JsStatic
         val TYPE = forKClass(DoubleList::class).withPackageName(PACKAGE_NAME)
+
+        init { initialize() }
     }
 
     /**

@@ -83,8 +83,8 @@ class DiffAndPatchTest {
         Patcher.patch(left, diff)
 
         // Then:
-        val leftJson = Platform.toJSON(left)
-        val rightJson = Platform.toJSON(right)
+        val leftJson = Platform.toJson(left)
+        val rightJson = Platform.toJson(right)
         assertEquals(leftJson, rightJson)
     }
 }

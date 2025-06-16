@@ -4,8 +4,8 @@ import kotlinx.coroutines.runBlocking
 import naksha.base.JvmMap
 import naksha.base.Platform
 import naksha.base.PlatformUtil
-import naksha.model.Naksha.NakshaCompanion.featureNumber
-import naksha.model.Naksha.NakshaCompanion.partitionNumber
+import naksha.model.Naksha.Naksha_C.featureNumber
+import naksha.model.Naksha.Naksha_C.partitionNumber
 import naksha.model.NakshaContext
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -15,10 +15,10 @@ import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.Plv8PerfTest.FeatureSource.*
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
-import naksha.model.objects.NakshaCollection.NakshaCollectionCompanion.GIST_2D_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollectionCompanion.HERE_TILE_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollectionCompanion.ID_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollectionCompanion.TAGS_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_2D_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
 import org.openjdk.jmh.annotations.OutputTimeUnit

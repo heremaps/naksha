@@ -2,7 +2,7 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -17,7 +17,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 data class SymbolMember(val self: PlatformObject, val symbol: Symbol, val value: Any?) {
-    companion object SymbolMemberCompanion {
+    companion object SymbolMember_C {
         /**
          * The [PlatformType] of [SymbolMember].
          * @since 3.0
@@ -25,5 +25,7 @@ data class SymbolMember(val self: PlatformObject, val symbol: Symbol, val value:
         @JvmField
         @JsStatic
         val TYPE = forKClass(SymbolMember::class).withPackageName(PACKAGE_NAME)
+
+        init { initialize() }
     }
 }

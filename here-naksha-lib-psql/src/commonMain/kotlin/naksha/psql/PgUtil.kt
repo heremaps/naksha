@@ -6,15 +6,15 @@ import naksha.base.*
 import naksha.geo.SpGeometry
 import naksha.jbon.*
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
-import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
-import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL
-import naksha.model.Naksha.NakshaCompanion.MAPS_COL
-import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.Naksha.Naksha_C.ADMIN_MAP
+import naksha.model.Naksha.Naksha_C.COLLECTIONS_COL
+import naksha.model.Naksha.Naksha_C.DICTIONARIES_COL
+import naksha.model.Naksha.Naksha_C.MAPS_COL
+import naksha.model.Naksha.Naksha_C.TRANSACTIONS_COL
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaFeature
-import naksha.psql.PgPlatform.PgPlatformCompanion.quote_ident
-import naksha.psql.PgPlatform.PgPlatformCompanion.quote_literal
+import naksha.psql.PgPlatform.PgPlatform_C.quote_ident
+import naksha.psql.PgPlatform.PgPlatform_C.quote_literal
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -25,7 +25,7 @@ import kotlin.jvm.JvmStatic
  */
 @JsExport
 class PgUtil private constructor() {
-    companion object PgUtilCompanion {
+    companion object PgUtil_C {
         /**
          * The quoted identifier of the administration map to be used in queries.
          * @since 3.0.0

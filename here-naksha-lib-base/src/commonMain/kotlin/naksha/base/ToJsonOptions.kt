@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -12,7 +12,7 @@ import kotlin.jvm.JvmField
 @Suppress("OPT_IN_USAGE")
 @JsExport
 data class ToJsonOptions(val int64Encoding: Int64Encoding = Int64Encoding.AS_INTEGER) {
-    companion object ToJsonOptionsCompanion {
+    companion object ToJsonOptions_C {
         /**
          * The [PlatformType] of [ToJsonOptions].
          * @since 3.0
@@ -27,5 +27,7 @@ data class ToJsonOptions(val int64Encoding: Int64Encoding = Int64Encoding.AS_INT
         @JvmField
         @JsStatic
         val DEFAULT = ToJsonOptions()
+
+        init { initialize() }
     }
 }

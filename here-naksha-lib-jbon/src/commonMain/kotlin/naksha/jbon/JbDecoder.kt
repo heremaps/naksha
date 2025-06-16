@@ -3,8 +3,8 @@
 package naksha.jbon
 
 import naksha.base.*
-import naksha.base.Binary.BinaryCompanion.EMPTY_IMMUTABLE
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Binary.Binary_C.EMPTY_IMMUTABLE
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport
@@ -21,7 +21,7 @@ import kotlin.jvm.JvmStatic
 open class JbDecoder {
 
     @OptIn(ExperimentalJsStatic::class)
-    companion object JbDecoderCompanion {
+    companion object JbDecoder_C {
         /**
          * The [PlatformType] of [JbDecoder].
          * @since 3.0

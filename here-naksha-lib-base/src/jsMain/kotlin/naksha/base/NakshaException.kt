@@ -3,17 +3,17 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 
 @JsExport
 actual class NakshaException actual constructor(actual val error: NakshaError) : RuntimeException(error.msg, error.cause) {
-    actual companion object NakshaExceptionCompanion {
+    actual companion object NakshaException_C {
         /**
          * The [PlatformType] of [NakshaException].
          * @since 3.0
          */
         @JsStatic
-        actual val TYPE: PlatformType<NakshaException> = forKClass(NakshaException::class).withPackageName(PACKAGE_NAME)
+        actual val TYPE = forKClass(NakshaException::class).withPackageName(PACKAGE_NAME)
     }
 
     @JsName("of")

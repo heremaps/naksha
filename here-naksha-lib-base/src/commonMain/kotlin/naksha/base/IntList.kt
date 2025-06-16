@@ -2,7 +2,7 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -11,9 +11,9 @@ import kotlin.jvm.JvmField
  * Standard declaration of a list of integers.
  */
 @JsExport
-open class IntList : ListProxy<Int>(Int_Type) {
+open class IntList : ListProxy<Int>(Int_TYPE) {
 
-    companion object IntListCompanion {
+    companion object IntList_C {
         /**
          * The [PlatformType] of [IntList].
          * @since 3.0
@@ -21,6 +21,8 @@ open class IntList : ListProxy<Int>(Int_Type) {
         @JvmField
         @JsStatic
         val TYPE = forKClass(IntList::class).withPackageName(PACKAGE_NAME)
+
+        init { initialize() }
     }
 
     /**

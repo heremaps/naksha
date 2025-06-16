@@ -2,7 +2,7 @@ package naksha.jbon
 
 import naksha.base.AnyObject
 import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -17,7 +17,7 @@ import kotlin.jvm.JvmField
 @JsExport
 open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(dictReader) {
 
-    companion object JbFeatureDecoderCompanion {
+    companion object JbFeatureDecoder_C {
         /**
          * The [PlatformType] of [JbFeatureDecoder].
          * @since 3.0

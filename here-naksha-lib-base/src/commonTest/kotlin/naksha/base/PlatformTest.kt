@@ -1,14 +1,14 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.Platform.PlatformCompanion.identityHashCode
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
-import naksha.base.PlatformUtil.PlatformUtilCompanion.asSafeDouble
-import naksha.base.PlatformUtil.PlatformUtilCompanion.asSafeInt
-import naksha.base.PlatformUtil.PlatformUtilCompanion.asSafeInt64
-import naksha.base.PlatformUtil.PlatformUtilCompanion.isLogicalDouble
-import naksha.base.PlatformUtil.PlatformUtilCompanion.isLogicalInt
-import naksha.base.PlatformUtil.PlatformUtilCompanion.isLogicalInt64
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.Platform.Platform_C.identityHashCode
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
+import naksha.base.PlatformUtil.PlatformUtil_C.asSafeDouble
+import naksha.base.PlatformUtil.PlatformUtil_C.asSafeInt
+import naksha.base.PlatformUtil.PlatformUtil_C.asSafeInt64
+import naksha.base.PlatformUtil.PlatformUtil_C.isLogicalDouble
+import naksha.base.PlatformUtil.PlatformUtil_C.isLogicalInt
+import naksha.base.PlatformUtil.PlatformUtil_C.isLogicalInt64
 import kotlin.test.*
 
 class PlatformTest {
@@ -33,7 +33,7 @@ class PlatformTest {
         assertNotNull(properties)
         val xyz = properties.getAs("@ns:com:here:xyz", AnyObject.TYPE)
         assertNotNull(xyz)
-        assertEquals(14, xyz.getAs("someInt", Int_Type))
+        assertEquals(14, xyz.getAs("someInt", Int_TYPE))
         assertTrue(xyz["bigInt"] is Number)
         val hexBigInt = xyz["hexBigInt"]
         assertTrue(hexBigInt is Int64)
@@ -60,7 +60,7 @@ class PlatformTest {
         (data["array"] as AnyList).add("c")
         data["map"] = AnyObject()
         (data["map"] as AnyObject)["foo"] = "bar"
-        val json = Platform.toJSON(data)
+        val json = Platform.toJson(data)
         Platform.logger.info("json: {}", json)
         val jsonString = "{\"name\":\"Mustermann\",\"age\":69,\"boolean\":true,\"array\":[\"a\",\"b\",\"c\"],\"map\":{\"foo\":\"bar\"}}"
         assertEquals(jsonString, json)
@@ -226,7 +226,7 @@ class PlatformTest {
     }
 
     class MyJsonType : AnyObject() {
-        companion object MyJsonTypeCompanion {
+        companion object MyJsonType_C {
             val TYPE = forKClass(MyJsonType::class)
                 .withPackageName(PACKAGE_NAME)
                 .withJsonType("myFooBar")
@@ -234,7 +234,7 @@ class PlatformTest {
     }
 
     class MyFooBar : AnyObject() {
-        companion object MyFooBarCompanion {
+        companion object MyFooBar_C {
             val TYPE = forKClass(MyFooBar::class)
                 .withPackageName(PACKAGE_NAME)
                 .withJsonType("myFooBar")
@@ -283,7 +283,7 @@ class PlatformTest {
     }
 
     class MyFooObject : AnyObject() {
-        companion object MyFooObjectCompanion {
+        companion object MyFooObject_C {
             val TYPE = forKClass(MyFooObject::class).withPackageName(PACKAGE_NAME)
             private val ID_MEMBER = NotNullProperty<MyFooObject, String>(String_TYPE)
         }
@@ -324,4 +324,201 @@ class PlatformTest {
         }
     }
 
+    class BasicTypedObject : AnyTypedObject() {
+        companion object MyTypedObject_C {
+            val TYPE = forKClass(BasicTypedObject::class).withJsonType("basic")
+        }
+    }
+
+    @Test
+    fun testBasicTypedObject() {
+        BasicTypedObject.TYPE.initialize()
+        BasicTypedObject().apply {
+            assertEquals("basic", type)
+
+            // Read raw.
+            assertEquals("basic", getRaw("type"))
+            assertFalse(containsKey("momType"))
+            assertFalse(containsKey("featureType"))
+            assertFalse(containsKey("properties"))
+        }
+
+        val json = """{
+    "type": "basic"
+}"""
+        val myTypedObject = assertIs<BasicTypedObject>(Platform.fromJson(json))
+        myTypedObject.apply {
+            assertEquals("basic", type)
+
+            // Read raw.
+            assertEquals("basic", getRaw("type"))
+            assertFalse(containsKey("momType"))
+            assertFalse(containsKey("featureType"))
+            assertFalse(containsKey("properties"))
+        }
+    }
+
+    class CustomFeature : AnyTypedObject() {
+        companion object MyTypedObject_C {
+            val TYPE = forKClass(CustomFeature::class).withJsonType("custom")
+        }
+
+        override fun isFeature(): Boolean = true
+    }
+
+    @Test
+    fun testCustomFeature() {
+        CustomFeature.TYPE.initialize()
+        CustomFeature().apply {
+            assertEquals("custom", type)
+
+            // Read raw.
+            assertEquals("Feature", getRaw("type"))
+            assertFalse(containsKey("momType"))
+            assertEquals( "custom", getRaw("featureType"))
+            assertFalse(containsKey("properties"))
+        }
+
+        val json = """{
+    "type": "Feature",
+    "featureType": "custom"
+}"""
+        val parsed = assertIs<CustomFeature>(Platform.fromJson(json))
+        parsed.apply {
+            assertEquals("custom", type)
+
+            // Read raw.
+            assertEquals("Feature", getRaw("type"))
+            assertFalse(containsKey("momType"))
+            assertEquals( "custom", getRaw("featureType"))
+            assertFalse(containsKey("properties"))
+        }
+    }
+
+    class CustomMomObject : AnyTypedObject() {
+        companion object CustomMomObject_C {
+            val TYPE = forKClass(CustomMomObject::class).withJsonType("myMom")
+        }
+
+        override fun isMomType(): Boolean = true
+    }
+
+    @Test
+    fun testMomType() {
+        CustomMomObject.TYPE.initialize()
+        val new_object = CustomMomObject()
+        new_object.apply {
+            assertEquals("myMom", type)
+
+            // Read raw.
+            assertEquals("Feature", getRaw("type"))
+            assertEquals( "myMom", getRaw("momType"))
+            assertFalse(containsKey("featureType"))
+            assertFalse(containsKey("properties"))
+        }
+
+        // Try parsing.
+        val json = """{
+    "type": "Feature",
+    "momType": "myMom"
+}"""
+        val parsed = assertIs<CustomMomObject>(Platform.fromJson(json))
+        parsed.apply {
+            assertEquals("myMom", type)
+
+            // Read raw.
+            assertEquals("Feature", getRaw("type"))
+            assertEquals( "myMom", getRaw("momType"))
+            assertFalse(containsKey("featureType"))
+            assertFalse(containsKey("properties"))
+        }
+    }
+
+    class CustomDataHubObject : AnyTypedObject() {
+        companion object CustomDataHubObject_C {
+            val TYPE = forKClass(CustomDataHubObject::class).withJsonType("myDataHub")
+        }
+
+        @Suppress("OVERRIDE_DEPRECATION")
+        override fun isDataHubType(): Boolean = true
+    }
+
+    @Test
+    fun testCustomDataHubType() {
+        CustomDataHubObject.TYPE.initialize()
+        CustomDataHubObject().apply {
+            assertEquals("myDataHub", type)
+
+            // Read raw.
+            assertEquals("Feature", getRaw("type"))
+            assertFalse(containsKey("momType"))
+            assertFalse(containsKey("featureType"))
+            val properties = assertIs<PlatformMap>(getRaw("properties"))
+            assertEquals("myDataHub", map_get(properties, "featureType"))
+        }
+
+        // Try parsing.
+        val json = """{
+    "type": "Feature",
+    "properties": {
+        "featureType": "myDataHub"
+    }
+}"""
+        val parsed = assertIs<CustomDataHubObject>(Platform.fromJson(json))
+        parsed.apply {
+            assertEquals("myDataHub", type)
+
+            // Read raw.
+            assertEquals("Feature", getRaw("type"))
+            assertFalse(containsKey("momType"))
+            assertFalse(containsKey("featureType"))
+            val properties = assertIs<PlatformMap>(getRaw("properties"))
+            assertEquals("myDataHub", map_get(properties, "featureType"))
+        }
+    }
+
+    class CustomDataHubMomObject : AnyTypedObject() {
+        companion object CustomDataHubMomObject_C {
+            val TYPE = forKClass(CustomDataHubMomObject::class).withJsonType("dataHubAndMom")
+        }
+
+        override fun isMomType(): Boolean = true
+        @Suppress("OVERRIDE_DEPRECATION")
+        override fun isDataHubType(): Boolean = true
+    }
+
+    @Test
+    fun testCustomDataHubMomType() {
+        CustomDataHubMomObject.TYPE.initialize()
+        CustomDataHubMomObject().apply {
+            assertEquals("dataHubAndMom", type)
+
+            // Read raw.
+            assertEquals("Feature", getRaw("type"))
+            assertEquals( "dataHubAndMom", getRaw("momType"))
+            assertFalse(containsKey("featureType"))
+            val properties = assertIs<PlatformMap>(getRaw("properties"))
+            assertEquals("dataHubAndMom", map_get(properties, "featureType"))
+        }
+
+        // Try parsing.
+        val json = """{
+    "type": "Feature",
+    "momType": "dataHubAndMom",
+    "properties": {
+        "featureType": "dataHubAndMom"
+    }
+}"""
+        val parsed = assertIs<CustomDataHubMomObject>(Platform.fromJson(json))
+        parsed.apply {
+            assertEquals("dataHubAndMom", type)
+
+            // Read raw.
+            assertEquals("Feature", getRaw("type"))
+            assertEquals( "dataHubAndMom", getRaw("momType"))
+            assertFalse(containsKey("featureType"))
+            val properties = assertIs<PlatformMap>(getRaw("properties"))
+            assertEquals("dataHubAndMom", map_get(properties, "featureType"))
+        }
+    }
 }

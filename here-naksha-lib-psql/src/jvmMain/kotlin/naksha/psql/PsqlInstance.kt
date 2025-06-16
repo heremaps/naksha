@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.Platform.Platform_C.logger
 import naksha.base.fn.Fx2
 import naksha.model.SessionOptions
 import org.postgresql.PGProperty.*

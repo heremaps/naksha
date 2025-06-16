@@ -6,10 +6,13 @@ import kotlin.js.JsExport
 
 /**
  * Marker interface for property queries.
+ * @since 3.0
+ * @see IQuery
+ * @see IPropertyQuery
+ * @see PQuery
  * @see PAnd
  * @see POr
  * @see PNot
- * @see PQuery
  */
 @JsExport
 interface IPropertyQuery : IQuery

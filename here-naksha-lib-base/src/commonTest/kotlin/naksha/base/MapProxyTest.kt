@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.test.*
 
 internal class TestMapStringString : MapProxy<String, String>(String_TYPE, String_TYPE)

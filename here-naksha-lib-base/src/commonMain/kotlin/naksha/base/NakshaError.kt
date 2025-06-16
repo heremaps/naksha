@@ -2,8 +2,8 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.PlatformUtil.PlatformUtilCompanion.randomString
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformUtil.PlatformUtil_C.randomString
 import naksha.base.fn.Fx2
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -38,7 +38,7 @@ open class NakshaError() : AnyObject() {
         if (streamId != null) this.streamId = streamId
     }
 
-    companion object NakshaErrorCompanion {
+    companion object NakshaError_C {
         /**
          * The [PlatformType] of [NakshaError].
          * @since 3.0
@@ -282,6 +282,8 @@ open class NakshaError() : AnyObject() {
                 logger.info("{} {}", err.code, err.msg)
             }
         })
+
+        init { initialize() }
     }
 
     /**

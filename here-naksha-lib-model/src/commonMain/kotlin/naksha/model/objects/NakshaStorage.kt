@@ -8,7 +8,7 @@ import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.model.Naksha
 import naksha.base.NakshaError
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.*
 import kotlin.jvm.JvmField
 
@@ -20,10 +20,17 @@ import kotlin.jvm.JvmField
  * ### Note
  * There is no default-map configuration available, it's expected that clients provide the `mapId` explicitly.
  * @since 3.0
+ * @see NakshaObject
+ * @see NakshaStorage
+ * @see NakshaMap
+ * @see NakshaCollection
+ * @see NakshaDictionary
+ * @see NakshaSubscriptionState
+ * @see NakshaTx
  */
 @Suppress("unused")
 @JsExport
-open class NakshaStorage() : NakshaFeature() {
+open class NakshaStorage() : NakshaObject() {
 
     /**
      * Create a new storage with the given identifier and class-name.
@@ -37,7 +44,7 @@ open class NakshaStorage() : NakshaFeature() {
         this.className = className
     }
 
-    companion object NakshaStorageCompanion {
+    companion object NakshaStorage_C {
         /**
          * The [PlatformType] of [NakshaStorage].
          * @since 3.0
@@ -50,7 +57,7 @@ open class NakshaStorage() : NakshaFeature() {
 
         private val ID = NotNullProperty<NakshaStorage, String>(String_TYPE)
         private val CLASSNAME = NotNullProperty<NakshaStorage, String>(String_TYPE, CLASSNAME_FIELD) { self, _ -> self.defaultClassName() }
-        private val HARDCAP = NotNullProperty<NakshaStorage, Int>(Int_Type) { _, _ -> 0 }
+        private val HARDCAP = NotNullProperty<NakshaStorage, Int>(Int_TYPE) { _, _ -> 0 }
         private val CREATE = NotNullProperty<NakshaStorage, Boolean>(Boolean_TYPE) { _, _ -> false }
         private val UPGRADE = NotNullProperty<NakshaStorage, Boolean>(Boolean_TYPE) { _, _ -> false }
     }
@@ -58,7 +65,7 @@ open class NakshaStorage() : NakshaFeature() {
     override fun withId(id: String): NakshaStorage = super.withId(id) as NakshaStorage
     override fun withBBox(bbox: BBox): NakshaStorage = super.withBBox(bbox) as NakshaStorage
     override fun withAutoBBox(): NakshaStorage = super.withAutoBBox() as NakshaStorage
-    override fun withGeometry(geometry: SpGeometry): NakshaStorage = super.withGeometry(geometry) as NakshaStorage
+    override fun withGeometry(geometry: SpGeometry?): NakshaStorage = super.withGeometry(geometry) as NakshaStorage
     override val properties: NakshaProperties
         get() = get_properties(NakshaProperties.TYPE)
     override fun withProperties(properties: AnyObject): NakshaStorage = super.withProperties(properties) as NakshaStorage

@@ -1,11 +1,11 @@
 package naksha.psql
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.Platform.Platform_C.logger
 import naksha.model.*
 import naksha.model.objects.StoreMode
-import naksha.psql.PgColumn.PgColumnCompanion.allColumnNames
-import naksha.psql.PgColumn.PgColumnCompanion.allColumns
+import naksha.psql.PgColumn.PgColumn_C.allColumnNames
+import naksha.psql.PgColumn.PgColumn_C.allColumns
 
 /**
  * Execute a [UPDATE][naksha.model.request.WriteOp.UPDATE].

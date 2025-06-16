@@ -97,7 +97,7 @@ class GenerativeDataIngest extends AbstractDataIngest {
         .toList();
     FeatureCollectionRequest request = new FeatureCollectionRequest()
         .withFeatures(featuresInBatch);
-    return Platform.toJSON(request, ToJsonOptions.DEFAULT);
+    return Platform.toJson(request, ToJsonOptions.DEFAULT);
   }
 
   private List<NakshaFeature> featuresForTile(String tileId, int count) {

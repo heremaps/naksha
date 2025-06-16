@@ -2,8 +2,13 @@
 
 package naksha.model.request
 
+import naksha.base.Boolean_TYPE
 import naksha.base.NotNullProperty
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Ask the storage to perform a set of write operations.
@@ -25,8 +30,16 @@ import kotlin.js.JsExport
 @JsExport
 open class WriteRequest : Request() {
     companion object WriteRequest_C {
-        private val WRITE_LIST = NotNullProperty<WriteRequest, WriteList>(WriteList::class)
-        private val BOOLEAN = NotNullProperty<WriteRequest, Boolean>(Boolean::class) { _, _ -> false }
+        /**
+         * The [PlatformType] of [WriteRequest].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(WriteRequest::class).withPackageName(PACKAGE_NAME)
+
+        private val WRITE_LIST = NotNullProperty<WriteRequest, WriteList>(WriteList.TYPE)
+        private val BOOLEAN = NotNullProperty<WriteRequest, Boolean>(Boolean_TYPE) { _, _ -> false }
     }
 
     override fun defaultRowOptions() : ReturnColumns = ReturnColumns.none().withMeta(true)
@@ -42,7 +55,7 @@ open class WriteRequest : Request() {
      * Adds the given write operation to the end of the [writes] list.
      *
      * @param op the write operation to append.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun add(op: Write): WriteRequest {
         writes.add(op)

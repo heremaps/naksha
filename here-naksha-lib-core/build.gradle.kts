@@ -11,6 +11,7 @@ kotlin {
             dependencies {
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-jbon"))
+                api(project(":here-naksha-lib-mom"))
                 api(project(":here-naksha-lib-model"))
                 api(libs.jetbrains.annotations)
 

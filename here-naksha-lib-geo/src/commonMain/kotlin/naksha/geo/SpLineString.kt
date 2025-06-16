@@ -1,6 +1,6 @@
 package naksha.geo
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -27,7 +27,7 @@ class SpLineString() : SpGeometry() {
         this.coordinates = coordinates
     }
 
-    companion object SpLineStringCompanion {
+    companion object SpLineString_C {
         /**
          * The [PlatformType] of [SpLineString].
          * @since 3.0

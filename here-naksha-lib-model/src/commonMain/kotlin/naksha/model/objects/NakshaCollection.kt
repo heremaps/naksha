@@ -3,7 +3,7 @@
 package naksha.model.objects
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.geo.BBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
@@ -19,9 +19,16 @@ import kotlin.jvm.JvmStatic
 /**
  * A Naksha collection.
  * @since 3.0
+ * @see NakshaObject
+ * @see NakshaStorage
+ * @see NakshaMap
+ * @see NakshaCollection
+ * @see NakshaDictionary
+ * @see NakshaSubscriptionState
+ * @see NakshaTx
  */
 @JsExport
-open class NakshaCollection() : NakshaFeature() {
+open class NakshaCollection() : NakshaObject() {
 
     /**
      * Create a Naksha collection with settings.
@@ -56,7 +63,7 @@ open class NakshaCollection() : NakshaFeature() {
     override fun withId(id: String): NakshaCollection = super.withId(id) as NakshaCollection
     override fun withBBox(bbox: BBox): NakshaCollection = super.withBBox(bbox) as NakshaCollection
     override fun withAutoBBox(): NakshaCollection = super.withAutoBBox() as NakshaCollection
-    override fun withGeometry(geometry: SpGeometry): NakshaCollection = super.withGeometry(geometry) as NakshaCollection
+    override fun withGeometry(geometry: SpGeometry?): NakshaCollection = super.withGeometry(geometry) as NakshaCollection
     override val properties: NakshaProperties
         get() = get_properties(NakshaProperties.TYPE)
     override fun withProperties(properties: AnyObject): NakshaCollection = super.withProperties(properties) as NakshaCollection
@@ -385,14 +392,16 @@ open class NakshaCollection() : NakshaFeature() {
      */
     val estimatedDeletedFeatures: Int64 by _ESTIMATED_DELETED_FEATURES
 
-    companion object NakshaCollectionCompanion {
+    companion object NakshaCollection_C {
         /**
          * The [PlatformType] of [NakshaCollection].
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val TYPE = forKClass(NakshaCollection::class).withPackageName(PACKAGE_NAME).withJsonType("naksha.Collection")
+        val TYPE = forKClass(NakshaCollection::class)
+            .withPackageName(PACKAGE_NAME)
+            .withJsonType("naksha.Collection")
 
         /**
          * Index above the `id` property, includes `tn`, and `next_tn`.
@@ -534,16 +543,16 @@ open class NakshaCollection() : NakshaFeature() {
         @JsStatic
         val UNKNOWN = Int64(-1)
 
-        private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int_Type) { _, _ -> 1 }
+        private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int_TYPE) { _, _ -> 1 }
         private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String_TYPE)
         private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String_TYPE)
-        private val DEFAULT_FLAGS = NullableProperty<NakshaCollection, Flags>(Int_Type)
+        private val DEFAULT_FLAGS = NullableProperty<NakshaCollection, Flags>(Int_TYPE)
         private val MAP_ID = NullableProperty<NakshaCollection, String>(String_TYPE)
         private val STRING_NULL = NullableProperty<NakshaCollection, String>(String_TYPE)
         private val DEFAULT_FEATURE_TYPE = NotNullProperty<NakshaCollection, String>(String_TYPE) { _, _ -> "Feature" }
         private val INDICES = NullableProperty<NakshaCollection, StringList>(StringList.TYPE)
         private val MAX_AGE = NotNullProperty<NakshaCollection, Int64>(Int64_TYPE) { _, _ -> Int64(-1) }
-        private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int_Type) { _, _ -> 10_485_760 }
+        private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int_TYPE) { _, _ -> 10_485_760 }
         private val _ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Int64>(Int64_TYPE) { _, _ -> UNKNOWN }
         private val _ESTIMATED_DELETED_FEATURES =  NotNullProperty<NakshaCollection, Int64>(Int64_TYPE) { _, _ -> UNKNOWN }
         private val STORE_HISTORY = NotNullEnum<NakshaCollection, StoreMode>(StoreMode.TYPE) { self, _ ->

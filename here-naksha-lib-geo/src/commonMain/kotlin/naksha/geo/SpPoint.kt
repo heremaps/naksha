@@ -1,6 +1,6 @@
 package naksha.geo
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -41,7 +41,7 @@ class SpPoint() : SpGeometry() {
         this.coordinates = PointCoord(longitude, latitude, z, m)
     }
 
-    companion object SpPointCompanion {
+    companion object SpPoint_C {
         /**
          * The [PlatformType] of [SpPoint].
          * @since 3.0

@@ -4,7 +4,7 @@
 package naksha.jbon
 
 import naksha.base.DataViewProxy
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 
 /**
  * The package name `naksha.jbon`

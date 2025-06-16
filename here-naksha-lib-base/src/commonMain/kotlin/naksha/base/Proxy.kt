@@ -2,17 +2,17 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get_capacity
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get_length
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set_capacity
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_contains_key
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_key_iterator
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
-import naksha.base.PlatformUtil.PlatformUtilCompanion.deepEquals
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformListApi.PlatformListApi_C.list_get
+import naksha.base.PlatformListApi.PlatformListApi_C.list_get_capacity
+import naksha.base.PlatformListApi.PlatformListApi_C.list_get_length
+import naksha.base.PlatformListApi.PlatformListApi_C.list_set
+import naksha.base.PlatformListApi.PlatformListApi_C.list_set_capacity
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_contains_key
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_key_iterator
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_set
+import naksha.base.PlatformUtil.PlatformUtil_C.deepEquals
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
 import kotlin.js.JsExport
@@ -29,7 +29,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 abstract class Proxy : PlatformObject {
-    companion object ProxyCompanion {
+    companion object Proxy_C {
         /**
          * The [PlatformType] of [Proxy].
          * @since 3.0
@@ -37,6 +37,8 @@ abstract class Proxy : PlatformObject {
         @JvmField
         @JsStatic
         val TYPE = forKClass(Proxy::class).withPackageName(PACKAGE_NAME)
+
+        init { initialize() }
     }
 
     /**
@@ -253,7 +255,7 @@ abstract class Proxy : PlatformObject {
         return platformObject() == Platform.unbox(other)
     }
 
-    override fun toString(): String = Platform.toJSON(this)
+    override fun toString(): String = Platform.toJson(this)
 
     /**
      * Create a copy of this object.

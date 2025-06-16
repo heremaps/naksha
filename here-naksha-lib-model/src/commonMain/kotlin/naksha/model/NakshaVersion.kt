@@ -21,6 +21,8 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -48,6 +50,14 @@ class NakshaVersion(
 
     @Suppress("OPT_IN_USAGE")
     companion object {
+        /**
+         * The [PlatformType] of [NakshaVersion].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(NakshaVersion::class).withPackageName(PACKAGE_NAME)
+
         /**
          * Naksha version constant. The last version compatible with XYZ-Hub.
          */

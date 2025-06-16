@@ -8,7 +8,7 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
- * Bit definition for the store-number:
+ * Bit definition for the storage-number:
  * ```
  *  R[ MN ][       CN        ][PN]
  *  0[000]-[0000-0000-0000-00][00]
@@ -19,8 +19,9 @@ import kotlin.jvm.JvmField
  * - R: Reserved (_4-bit_) - bits 60-63
 */
 @JsExport
-open class StoreNumberBits {
-    companion object StoreNumber_C {
+@Deprecated(message = "To be remove with RC", level = DeprecationLevel.ERROR)
+class StoreNumberBits private constructor() {
+    companion object StoreNumberBits_C {
         // -------------------------------< PARTITION NUMBER >------------------------------------
 
         /**

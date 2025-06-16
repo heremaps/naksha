@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -11,7 +11,7 @@ import kotlin.jvm.JvmField
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class Int64Encoding : JsEnum() {
-    companion object Int64EncodingCompanion {
+    companion object Int64Encoding_C {
         /**
          * The [PlatformType] of [DoubleList].
          * @since 3.0
@@ -61,6 +61,8 @@ class Int64Encoding : JsEnum() {
         @JvmField
         @JsStatic
         val AS_BASE64_DATA_URL = def(TYPE, "base64_data_url")
+
+        init { initialize() }
     }
 
     override fun namespace(): PlatformType<out JsEnum> = TYPE

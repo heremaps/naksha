@@ -6,10 +6,12 @@ import kotlin.js.JsExport
 
 /**
  * Marker interface for metadata queries.
+ * @see IQuery
+ * @see IMetaQuery
+ * @see MetaQuery
  * @see MetaAnd
  * @see MetaOr
  * @see MetaNot
- * @see MetaQuery
  */
 @JsExport
 interface IMetaQuery : IQuery

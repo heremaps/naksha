@@ -225,7 +225,7 @@ public class AccessLogUtil {
       return;
     }
 
-    logger.info(Platform.toJSON(accessLog, ToJsonOptions.DEFAULT));
+    logger.info(Platform.toJson(accessLog, ToJsonOptions.DEFAULT));
 
     // Log relevant details for generating API metrics
     final AccessLog.RequestInfo req = accessLog.getReqInfo();

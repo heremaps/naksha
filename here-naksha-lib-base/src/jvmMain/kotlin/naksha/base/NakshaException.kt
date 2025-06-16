@@ -2,16 +2,16 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 
 actual class NakshaException actual constructor(actual val error: NakshaError) : RuntimeException(error.msg, error.cause) {
-    actual companion object NakshaExceptionCompanion {
+    actual companion object NakshaException_C {
         /**
          * The [PlatformType] of [NakshaException].
          * @since 3.0
          */
         @JvmField
-        actual val TYPE: PlatformType<NakshaException> = forKClass(NakshaException::class).withPackageName(PACKAGE_NAME)
+        actual val TYPE = forKClass(NakshaException::class).withPackageName(PACKAGE_NAME)
     }
     actual constructor(code: String, msg: String) : this(NakshaError(code, msg))
     actual constructor(code: String, msg: String, streamId: String) : this(NakshaError(code, msg, streamId = streamId))

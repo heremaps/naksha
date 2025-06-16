@@ -12,7 +12,7 @@ import kotlin.reflect.KClass
  * @since 3.0
  */
 expect class Platform private constructor() {
-    companion object PlatformCompanion {
+    companion object Platform_C {
         /**
          * The platform specific value of undefined.
          */
@@ -169,7 +169,7 @@ expect class Platform private constructor() {
          * @return a list of potential [platform types][PlatformType] that serialize to this type; can be an empty list, if no known type matches this.
          * @since 3.0
          */
-        fun forJsonType(jsonType: String?): AnyPlatformTypeList
+        fun forJsonType(jsonType: String?): PlatformTypeList
 
         /**
          * A reflective method to find the first type that has in a JSON representation the property `type` set to the given value, and that is _(or implements)_ the given type.
@@ -337,7 +337,6 @@ expect class Platform private constructor() {
          * @return The raw value as given type, the result of [init], or the given [alternative] (in that order).
          * @since 3.0
          */
-        @JvmOverloads
         fun <T> box(raw: Any?, type: PlatformType<T>, alternative: T? = null, init: Fn0<T?>? = null): T?
 
         /**
@@ -509,7 +508,7 @@ expect class Platform private constructor() {
         fun <T> copy(obj: T?, recursive: Boolean) : T?
 
         /**
-         * The global [TypeDetector]'s.
+         * The global [TypeDetector]'s, checked in reverse order, so last added detector is called first.
          * @since 3.0
          * @see box
          */
@@ -532,7 +531,7 @@ expect class Platform private constructor() {
          * @return the JSON string.
          * @see [ToJsonOptions.DEFAULT]
          */
-        fun toJSON(obj: Any?): String
+        fun toJson(obj: Any?): String
 
         /**
          * Serialize the given value to JSON.
@@ -540,7 +539,7 @@ expect class Platform private constructor() {
          * @param options the options to use; defaults to [ToJsonOptions.DEFAULT].
          * @return the JSON string.
          */
-        fun toJSON(obj: Any?, options: ToJsonOptions = ToJsonOptions.DEFAULT): String
+        fun toJson(obj: Any?, options: ToJsonOptions = ToJsonOptions.DEFAULT): String
 
         /**
          * Deserialize the given JSON.

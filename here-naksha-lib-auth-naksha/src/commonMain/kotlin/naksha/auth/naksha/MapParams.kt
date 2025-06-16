@@ -3,7 +3,7 @@
 package naksha.auth.naksha
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.TagMap
 import naksha.model.objects.NakshaMap
 import naksha.model.objects.NakshaStorage
@@ -38,7 +38,7 @@ class MapParams() : NakshaParams() {
         storageTags = storage.properties.xyz.tags.toTagMap()
     }
 
-    companion object MapResourceCompanion {
+    companion object MapResource_C {
         /**
          * The [PlatformType] of [MapParams].
          * @since 3.0

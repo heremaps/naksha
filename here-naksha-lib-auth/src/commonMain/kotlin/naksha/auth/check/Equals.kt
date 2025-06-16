@@ -3,13 +3,13 @@
 package naksha.auth.check
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.PlatformUtil.PlatformUtilCompanion.asSafeDouble
-import naksha.base.PlatformUtil.PlatformUtilCompanion.asSafeInt
-import naksha.base.PlatformUtil.PlatformUtilCompanion.asSafeInt64
-import naksha.base.PlatformUtil.PlatformUtilCompanion.isLogicalDouble
-import naksha.base.PlatformUtil.PlatformUtilCompanion.isLogicalInt
-import naksha.base.PlatformUtil.PlatformUtilCompanion.isLogicalInt64
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformUtil.PlatformUtil_C.asSafeDouble
+import naksha.base.PlatformUtil.PlatformUtil_C.asSafeInt
+import naksha.base.PlatformUtil.PlatformUtil_C.asSafeInt64
+import naksha.base.PlatformUtil.PlatformUtil_C.isLogicalDouble
+import naksha.base.PlatformUtil.PlatformUtil_C.isLogicalInt
+import naksha.base.PlatformUtil.PlatformUtil_C.isLogicalInt64
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -30,7 +30,7 @@ class Equals() : Check("eq") {
         useAnyOf().addAll(anyOf)
     }
 
-    companion object EqualsCompanion {
+    companion object Equals_C {
         /**
          * The [PlatformType] of [Equals].
          * @since 3.0

@@ -4,7 +4,7 @@ package naksha.auth.naksha
 
 import naksha.auth.ServiceOps
 import naksha.base.NotNullProperty
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -33,7 +33,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class NakshaOps : ServiceOps() {
-    companion object NakshaOpsCompanion {
+    companion object NakshaOps_C {
         /**
          * The [PlatformType] of [NakshaOps].
          * @since 3.0

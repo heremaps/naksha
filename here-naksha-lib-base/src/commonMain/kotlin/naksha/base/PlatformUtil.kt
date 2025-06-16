@@ -1,10 +1,10 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.MAX_SAFE_INT
-import naksha.base.Platform.PlatformCompanion.MAX_SAFE_INT64
-import naksha.base.Platform.PlatformCompanion.MIN_SAFE_INT
-import naksha.base.Platform.PlatformCompanion.MIN_SAFE_INT64
-import naksha.base.Platform.PlatformCompanion.random
+import naksha.base.Platform.Platform_C.MAX_SAFE_INT
+import naksha.base.Platform.Platform_C.MAX_SAFE_INT64
+import naksha.base.Platform.Platform_C.MIN_SAFE_INT
+import naksha.base.Platform.Platform_C.MIN_SAFE_INT64
+import naksha.base.Platform.Platform_C.random
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -18,7 +18,7 @@ import kotlin.math.round
 @Suppress("OPT_IN_USAGE", "unused")
 @JsExport
 class PlatformUtil private constructor() {
-    companion object PlatformUtilCompanion {
+    companion object PlatformUtil_C {
         /**
          * A switch to toggle debug logs (disabled by default).
          *
@@ -427,5 +427,7 @@ class PlatformUtil private constructor() {
                 else -> obj1 == obj2  // Primitive types, or any other objects
             }
         }
+
+        init { initialize() }
     }
 }

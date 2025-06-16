@@ -6,7 +6,7 @@ import naksha.geo.GeoFeature
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.model.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -30,7 +30,7 @@ open class NakshaFeature() : GeoFeature() {
         this.id = id
     }
 
-    companion object NakshaFeatureCompanion {
+    companion object NakshaFeature_C {
         /**
          * The [PlatformType] of [NakshaFeature].
          * @since 3.0
@@ -39,15 +39,15 @@ open class NakshaFeature() : GeoFeature() {
         @JsStatic
         val TYPE = forKClass(NakshaFeature::class).withPackageName(PACKAGE_NAME)
 
+        const val PROPERTIES_KEY = "properties"
+
         private val REFERENCE_POINT_MEMBER = NullableProperty<NakshaFeature, SpPoint>(SpPoint.TYPE)
-        private val TITLE_MEMBER = NullableProperty<NakshaFeature, String>(String_TYPE)
-        private val DESCRIPTION_MEMBER = NullableProperty<NakshaFeature, String>(String_TYPE)
     }
 
     override fun withId(id: String): NakshaFeature = super.withId(id) as NakshaFeature
     override fun withBBox(bbox: BBox): NakshaFeature = super.withBBox(bbox) as NakshaFeature
     override fun withAutoBBox(): NakshaFeature = super.withAutoBBox() as NakshaFeature
-    override fun withGeometry(geometry: SpGeometry): NakshaFeature = super.withGeometry(geometry) as NakshaFeature
+    override fun withGeometry(geometry: SpGeometry?): NakshaFeature = super.withGeometry(geometry) as NakshaFeature
     override val properties: NakshaProperties
         get() = get_properties(NakshaProperties.TYPE)
     override fun withProperties(properties: AnyObject): NakshaFeature = super.withProperties(properties) as NakshaFeature
@@ -159,14 +159,4 @@ open class NakshaFeature() : GeoFeature() {
      */
     open val storageNumber: Int64?
         get() = guid?.tupleNumber?.storageNumber
-
-    /**
-     * Human-readable title.
-     */
-    open var title by TITLE_MEMBER
-
-    /**
-     * Human-readable description.
-     */
-    open var description by DESCRIPTION_MEMBER
 }

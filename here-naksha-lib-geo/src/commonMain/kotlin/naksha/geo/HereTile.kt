@@ -3,7 +3,7 @@
 
 package naksha.geo
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -51,7 +51,7 @@ data class HereTile(val intKey: Int) {
     @JvmOverloads
     constructor(latitude: Double, longitude: Double, level: Int = 15) : this(convertLatLngToIntKey(latitude, longitude, level))
 
-    companion object HereTileCompanion {
+    companion object HereTile_C {
         /**
          * The [PlatformType] of [HereTile].
          * @since 3.0

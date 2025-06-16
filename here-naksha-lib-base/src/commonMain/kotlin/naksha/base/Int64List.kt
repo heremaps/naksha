@@ -2,7 +2,7 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -13,7 +13,7 @@ import kotlin.jvm.JvmField
 @JsExport
 open class Int64List : ListProxy<Int64>(Int64_TYPE) {
 
-    companion object Int64ListCompanion {
+    companion object Int64List_C {
         /**
          * The [PlatformType] of [Int64List].
          * @since 3.0
@@ -21,6 +21,8 @@ open class Int64List : ListProxy<Int64>(Int64_TYPE) {
         @JvmField
         @JsStatic
         val TYPE = forKClass(Int64List::class).withPackageName(PACKAGE_NAME)
+
+        init { initialize() }
     }
 
     /**

@@ -3,10 +3,13 @@
 package naksha.model.request
 
 import naksha.base.Platform
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.model.*
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
@@ -37,9 +40,18 @@ open class FeatureTuple(
      * @since 3.0
      */
     @JsName("fromNakshaFeature")
-    @Suppress("LeakingThis")
     constructor(feature: NakshaFeature) : this(feature.tupleNumber) {
         this.feature = feature
+    }
+
+    companion object FeatureTuple_C {
+        /**
+         * The [PlatformType] of [FeatureTuple].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(FeatureTuple::class).withPackageName(PACKAGE_NAME)
     }
 
     /**
@@ -100,7 +112,7 @@ open class FeatureTuple(
             var json = cachedJson
             val tuple = this.tuple
             if (tuple != null && tuple !== cachedTuple) {
-                json = Platform.toJSON(feature)
+                json = Platform.toJson(feature)
                 cachedJson = json
             }
             return json

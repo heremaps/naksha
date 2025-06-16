@@ -1,12 +1,12 @@
 package naksha.geo
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forInstance
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set_length
-import naksha.base.PlatformUtil.PlatformUtilCompanion.round_double
+import naksha.base.Platform.Platform_C.forInstance
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformListApi.PlatformListApi_C.list_get
+import naksha.base.PlatformListApi.PlatformListApi_C.list_set
+import naksha.base.PlatformListApi.PlatformListApi_C.list_set_length
+import naksha.base.PlatformUtil.PlatformUtil_C.round_double
 import naksha.base.fn.Fn0
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -52,7 +52,7 @@ class BBox() : ListProxy<Double>(Double_TYPE) {
         if (coordinates != null) addCoordinates(coordinates)
     }
 
-    companion object BBoxCompanion {
+    companion object BBox_C {
         /**
          * The [PlatformType] of [BBox].
          * @since 3.0

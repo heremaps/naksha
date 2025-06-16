@@ -3,13 +3,9 @@
 package naksha.model.objects
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.XyzNs
-import naksha.model.mom.MomDeltaNs
-import naksha.model.mom.MomMetaNs
-import naksha.model.mom.MomReferenceList
 import kotlin.js.JsExport
-import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
@@ -18,9 +14,9 @@ import kotlin.jvm.JvmField
  * @since 1.0
  */
 @JsExport
-open class NakshaProperties : AnyObject() {
+open class NakshaProperties : AnyTypedObject() {
 
-    companion object NakshaPropertiesCompanion {
+    companion object NakshaProperties_C {
         /**
          * The [PlatformType] of [NakshaProperties].
          * @since 3.0
@@ -42,34 +38,12 @@ open class NakshaProperties : AnyObject() {
         const val XYZ_KEY = "@ns:com:here:xyz"
 
         /**
-         * The key of the Mom-Delta namespace property (`@ns:com:here:delta`).
-         * @since 3.0
-         */
-        const val DELTA_KEY = "@ns:com:here:mom:delta"
-
-        /**
-         * The key of the Mom-Meta namespace property (`@ns:com:here:meta`).
-         * @since 3.0
-         */
-        const val META_KEY = "@ns:com:here:mom:meta"
-
-        /**
-         * Properties used by the deprecated Activity-Log service, just here to allow downward
-         * compatibility.
-         */
-        const val XYZ_ACTIVITY_LOG_NS = "@ns:com:here:xyz:log"
-
-        /**
          * The key of the tags, they do override the tags in the XYZ namespace when set.
          * @since 3.0
          */
         const val TAGS = "tags"
 
         private val _XYZ = NotNullProperty<NakshaProperties, XyzNs>(XyzNs.TYPE, name = XYZ_KEY)
-        private val _DELTA_PROXY_NULL = NullableProperty<NakshaProperties, MomDeltaNs>(MomDeltaNs.TYPE, name = DELTA_KEY, autoRemove = true)
-        private val _META_PROXY_NULL = NullableProperty<NakshaProperties, MomMetaNs>(MomMetaNs.TYPE, name = META_KEY, autoRemove = true)
-        private val _REFERENCES_NULL = NullableProperty<NakshaProperties, MomReferenceList>(MomReferenceList.TYPE, autoRemove = true)
-        private val _STRING_NULL = NullableProperty<NakshaProperties, String>(String_TYPE, autoRemove = true)
     }
 
     /**
@@ -77,41 +51,4 @@ open class NakshaProperties : AnyObject() {
      * @since 1.0
      */
     var xyz by _XYZ
-
-    /**
-     * The MOM delta namespace.
-     * @since 1.0
-     */
-    var delta by _DELTA_PROXY_NULL
-
-    /**
-     * The MOM delta namespace.
-     * @since 1.0
-     */
-    var meta by _META_PROXY_NULL
-
-    /**
-     * References to MOM objects.
-     * @since 1.0
-     */
-    var references by _REFERENCES_NULL
-
-    /**
-     * The feature-type; if any is set.
-     *
-     * **This property should be read and changed via [NakshaFeature.featureType] or [NakshaFeature.momType] instead!**
-     * @since 1.0
-     * @see [NakshaFeature.featureType]
-     * @see [NakshaFeature.momType]
-     */
-    val featureType by _STRING_NULL
-
-    fun useDeltaNamespace(): MomDeltaNs {
-        var deltaProxy = this.delta
-        if (deltaProxy == null) {
-            deltaProxy = MomDeltaNs()
-            this.delta = deltaProxy
-        }
-        return deltaProxy
-    }
 }

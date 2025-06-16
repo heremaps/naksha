@@ -2,7 +2,7 @@
 
 package naksha.model
 
-import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_SHIFT
+import naksha.model.FlagsBits.FlagsBits_C.GEO_SHIFT
 import kotlin.js.JsExport
 
 /**

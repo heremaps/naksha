@@ -4,14 +4,15 @@ package naksha.model.request
 
 import naksha.base.*
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
-import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
-import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL
-import naksha.model.Naksha.NakshaCompanion.MAPS_COL
-import naksha.model.Naksha.NakshaCompanion.featureNumber
-import naksha.model.Naksha.NakshaCompanion.isInternalId
-import naksha.model.Naksha.NakshaCompanion.partitionNumber
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.model.Naksha.Naksha_C.ADMIN_MAP
+import naksha.model.Naksha.Naksha_C.COLLECTIONS_COL
+import naksha.model.Naksha.Naksha_C.DICTIONARIES_COL
+import naksha.model.Naksha.Naksha_C.MAPS_COL
+import naksha.model.Naksha.Naksha_C.featureNumber
+import naksha.model.Naksha.Naksha_C.isInternalId
+import naksha.model.Naksha.Naksha_C.partitionNumber
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaDictionary
@@ -19,6 +20,7 @@ import naksha.model.objects.NakshaMap
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
@@ -52,6 +54,14 @@ import kotlin.jvm.JvmStatic
 open class Write : AnyObject() {
 
     companion object Write_C {
+        /**
+         * The [PlatformType] of [Write].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(Write::class).withPackageName(PACKAGE_NAME)
+
         /**
          * A special byte-array instance that represents `undefined`.
          * @since 3.0
@@ -125,11 +135,11 @@ open class Write : AnyObject() {
             } else map_diff
         }
 
-        private val OP = NotNullEnum<Write, WriteOp>(WriteOp::class) { _, _ -> WriteOp.NULL }
-        private val MAP_ID = NullableProperty<Write, String>(String::class)
-        private val COLLECTION_ID = NullableProperty<Write, String>(String::class)
-        private val FEATURE_NULL = NullableProperty<Write, NakshaFeature>(NakshaFeature::class)
-        private val BOOLEAN_FALSE = NotNullProperty<Write, Boolean>(Boolean::class) { _, _ -> false }
+        private val OP = NotNullEnum<Write, WriteOp>(WriteOp.TYPE) { _, _ -> WriteOp.NULL }
+        private val MAP_ID = NullableProperty<Write, String>(String_TYPE)
+        private val COLLECTION_ID = NullableProperty<Write, String>(String_TYPE)
+        private val FEATURE_NULL = NullableProperty<Write, NakshaFeature>(NakshaFeature.TYPE)
+        private val BOOLEAN_FALSE = NotNullProperty<Write, Boolean>(Boolean_TYPE) { _, _ -> false }
     }
 
     /**

@@ -3,13 +3,22 @@
 package naksha.model.request.query
 
 import naksha.base.AnyObject
+import naksha.base.Int_TYPE
 import naksha.base.NotNullProperty
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.geo.HereTile
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Read all features that have their reference point in the given tile.
+ * @since 3.0
+ * @see IQuery
+ * @see ISpatialQuery
+ * @see SpRefInHereTile
  */
 @JsExport
 open class SpRefInHereTile() : AnyObject(), ISpatialQuery {
@@ -49,7 +58,15 @@ open class SpRefInHereTile() : AnyObject(), ISpatialQuery {
     }
 
     companion object SpRefInHereTile_C {
-        private val INT = NotNullProperty<SpRefInHereTile, Int>(Int::class) { _, _ -> 0 }
+        /**
+         * The [PlatformType] of [SpRefInHereTile].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(SpRefInHereTile::class).withPackageName(PACKAGE_NAME)
+
+        private val INT = NotNullProperty<SpRefInHereTile, Int>(Int_TYPE) { _, _ -> 0 }
     }
 
     /**

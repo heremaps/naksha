@@ -2,7 +2,7 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -10,9 +10,12 @@ import kotlin.jvm.JvmField
 
 /**
  * Standard definition of a list that can hold any value.
- * - [AnyList]
- * - [AnyMap]
- * - [AnyObject]
+ * @see DataViewProxy
+ * @see AnyList
+ * @see AnyMap
+ * @see AnyObject
+ * @see AnyTypedObject
+ * @see AnyTypedIdObject
  */
 @JsExport
 open class AnyList() : ListProxy<Any>(Any_TYPE) {
@@ -28,7 +31,7 @@ open class AnyList() : ListProxy<Any>(Any_TYPE) {
         }
     }
 
-    companion object AnyListCompanion {
+    companion object AnyList_C {
         /**
          * The [PlatformType] of [AnyList].
          * @since 3.0
@@ -36,6 +39,8 @@ open class AnyList() : ListProxy<Any>(Any_TYPE) {
         @JvmField
         @JsStatic
         val TYPE = forKClass(AnyList::class).withPackageName(PACKAGE_NAME)
+
+        init { initialize() }
     }
 
     /**

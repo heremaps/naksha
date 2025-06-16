@@ -5,19 +5,19 @@
 // - jn Java at the class naksha.model.FlagsKt.{name}
 package naksha.model
 
-import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_CLEAR
-import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_MASK
-import naksha.model.FlagsBits.FlagsBitsCompanion.OP_CLEAR
-import naksha.model.FlagsBits.FlagsBitsCompanion.OP_MASK
-import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_CLEAR
-import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_GZIP_BIT
-import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_MASK
-import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_CLEAR
-import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_GZIP_BIT
-import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_MASK
-import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_CLEAR
-import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_GZIP_BIT
-import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_MASK
+import naksha.model.FlagsBits.FlagsBits_C.ACTION_CLEAR
+import naksha.model.FlagsBits.FlagsBits_C.ACTION_MASK
+import naksha.model.FlagsBits.FlagsBits_C.OP_CLEAR
+import naksha.model.FlagsBits.FlagsBits_C.OP_MASK
+import naksha.model.FlagsBits.FlagsBits_C.FEATURE_CLEAR
+import naksha.model.FlagsBits.FlagsBits_C.FEATURE_GZIP_BIT
+import naksha.model.FlagsBits.FlagsBits_C.FEATURE_MASK
+import naksha.model.FlagsBits.FlagsBits_C.GEO_CLEAR
+import naksha.model.FlagsBits.FlagsBits_C.GEO_GZIP_BIT
+import naksha.model.FlagsBits.FlagsBits_C.GEO_MASK
+import naksha.model.FlagsBits.FlagsBits_C.TAGS_CLEAR
+import naksha.model.FlagsBits.FlagsBits_C.TAGS_GZIP_BIT
+import naksha.model.FlagsBits.FlagsBits_C.TAGS_MASK
 
 /**
  * Collection of bits making the `flags`. The flags store the encoding in the storage, so how the binaries are encoded:
@@ -31,7 +31,7 @@ import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_MASK
  * - OP: operation - bits: 12-15 (4-bit)
  * - AC: action - bits: 16-17 (2-bit)
  * - RESERVED: reserved - bit: 18-31 (14-bit)
- * @since 3.0.0
+ * @since 3.0
  */
 typealias Flags = Int
 
@@ -39,7 +39,7 @@ typealias Flags = Int
  * Create flags from an integer value or using the defaults.
  * @param flags the integer value of flags.
  * @return the give value, cast to [Flags] alias.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags(flags: Int = 0): Flags = flags
 
@@ -49,7 +49,7 @@ inline fun Flags(flags: Int = 0): Flags = flags
  * @param featureEncoding the feature encoding.
  * @param tagsEncoding the tags encoding.
  * @return the flags binary.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags(geoEncoding: Int, featureEncoding: Int, tagsEncoding: Int): Flags =
     geoEncoding or featureEncoding or tagsEncoding
@@ -57,7 +57,7 @@ inline fun Flags(geoEncoding: Int, featureEncoding: Int, tagsEncoding: Int): Fla
 /**
  * Decodes the geometry encoding from flags.
  * @return the geometry encoding from flags.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.geoEncoding(): Int = this and GEO_MASK
 
@@ -65,35 +65,35 @@ inline fun Flags.geoEncoding(): Int = this and GEO_MASK
  * Updates the geometry encoding in the given flags.
  * @param encoding the encoding to set.
  * @return the new flags.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.withGeoEncoding(encoding: Int): Flags = (this and GEO_CLEAR) or (encoding and GEO_MASK)
 
 /**
  * Tests if the geometry is GZIP compressed.
  * @return _true_ when the geometry is GZIP compressed; _false_ otherwise.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.geoGzip(): Boolean = (this and GEO_GZIP_BIT) == GEO_GZIP_BIT
 
 /**
  * Enable GZIP compression for geometry.
  * @return the new flags.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.geoGzipOn(): Flags = this or GEO_GZIP_BIT
 
 /**
  * Disable GZIP compression for geometry.
  * @return the new flags.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.geoGzipOff(): Flags = this and GEO_GZIP_BIT.inv()
 
 /**
  * Returns the feature encoding.
  * @return the feature encoding.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.featureEncoding(): Int = this and FEATURE_MASK
 
@@ -101,35 +101,35 @@ inline fun Flags.featureEncoding(): Int = this and FEATURE_MASK
  * Updates the feature encoding in the given flags.
  * @param encoding the encoding to set.
  * @return the new flags.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.withFeatureEncoding(encoding: Int): Flags = (this and FEATURE_CLEAR) or (encoding and FEATURE_MASK)
 
 /**
  * Tests if the feature is GZIP compressed.
  * @return _true_ when the feature is GZIP compressed; _false_ otherwise.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.featureGzip(): Boolean = (this and FEATURE_GZIP_BIT) == FEATURE_GZIP_BIT
 
 /**
  * Enable GZIP compression for the feature.
  * @return the new flags.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.featureGzipOn(): Flags = this or FEATURE_GZIP_BIT
 
 /**
  * Disable GZIP compression for the feature.
  * @return the new flags.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.featureGzipOff(): Flags = this and FEATURE_GZIP_BIT.inv()
 
 /**
  * Returns the tags encoding.
  * @return the tags encoding.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.tagsEncoding(): Int = this and TAGS_MASK
 
@@ -137,42 +137,42 @@ inline fun Flags.tagsEncoding(): Int = this and TAGS_MASK
  * Updates the tags encoding in the given flags.
  * @param encoding the encoding to set.
  * @return the new flags.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.withTagsEncoding(encoding: Int): Flags = (this and TAGS_CLEAR) or (encoding and TAGS_MASK)
 
 /**
  * Tests if the tags is GZIP compressed.
  * @return _true_ when the tags is GZIP compressed; _false_ otherwise.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.tagsGzip(): Boolean = (this and TAGS_GZIP_BIT) == TAGS_GZIP_BIT
 
 /**
  * Enable GZIP compression for the tags.
  * @return the new flags.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.tagsGzipOn(): Flags = this or TAGS_GZIP_BIT
 
 /**
  * Disable GZIP compression for the tags.
  * @return the new flags.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.tagsGzipOff(): Flags = this and TAGS_GZIP_BIT.inv()
 
 /**
  * Returns the operation encoding.
  * @return the operation encoding.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.operation(): Int = this and OP_MASK
 
 /**
  * Returns the operation-enumeration value from the encoding.
  * @return the operation-enumeration value from the encoding.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.operationEnum(): Operation = Operation.fromValue(operation())
 
@@ -180,7 +180,7 @@ inline fun Flags.operationEnum(): Operation = Operation.fromValue(operation())
  * Updates the operation encoding.
  * @param value the encoding to set.
  * @return the new flags.
- * @since 3.0.0
+ * @since 3.0
  * @see [Operation]
  */
 inline fun Flags.withOperation(value: Int): Flags = (this and OP_CLEAR) or (value and OP_MASK)
@@ -189,7 +189,7 @@ inline fun Flags.withOperation(value: Int): Flags = (this and OP_CLEAR) or (valu
  * Updates the operation encoding.
  * @param op the operation to set.
  * @return the new flags.
- * @since 3.0.0
+ * @since 3.0
  * @see [Operation]
  */
 inline fun Flags.withOperation(op: Operation): Flags = (this and OP_CLEAR) or (op.intValue)
@@ -197,14 +197,14 @@ inline fun Flags.withOperation(op: Operation): Flags = (this and OP_CLEAR) or (o
 /**
  * Returns the action encoding.
  * @return the action encoding.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.action(): Int = this and ACTION_MASK
 
 /**
  * Returns the action-enumeration value from the encoding.
  * @return the action-enumeration value from the encoding.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.actionEnum(): Action = Action.fromValue(action())
 
@@ -212,7 +212,7 @@ inline fun Flags.actionEnum(): Action = Action.fromValue(action())
  * Updates the action encoding.
  * @param value the encoding to set.
  * @return the new flags.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.withAction(value: Int): Flags = (this and ACTION_CLEAR) or (value and ACTION_MASK)
 
@@ -220,7 +220,7 @@ inline fun Flags.withAction(value: Int): Flags = (this and ACTION_CLEAR) or (val
  * Updates the action encoding.
  * @param action the action-enumeration value to set.
  * @return the new flags.
- * @since 3.0.0
+ * @since 3.0
  */
 inline fun Flags.withAction(action: Action): Flags = (this and ACTION_CLEAR) or (action.intValue)
 

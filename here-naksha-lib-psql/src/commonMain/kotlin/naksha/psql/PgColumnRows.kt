@@ -4,7 +4,7 @@ import naksha.base.Int64
 import naksha.model.*
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B96
-import naksha.psql.PgColumn.PgColumnCompanion.allColumns
+import naksha.psql.PgColumn.PgColumn_C.allColumns
 
 /**
  * Helper class to convert rows into arrays of column and vice versa. The main purpose is to read and write full tuples, but it supports basically as well virtual columns.

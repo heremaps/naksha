@@ -1,12 +1,18 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.model
 
 import naksha.base.NormalizerForm
 import naksha.base.NormalizerForm.NFD
 import naksha.base.NormalizerForm.NFKC
 import naksha.base.Platform
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
 import naksha.model.TagNormalizer.TagNormalizer_C.splitNormalizedTag
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
@@ -56,6 +62,7 @@ class TagNormalizer private constructor() {
          * Main method for raw tag normalization. See[TagNormalizer] doc for more
          */
         @JvmStatic
+        @JsStatic
         fun normalizeTag(tag: String): String {
             val policy = policyFor(tag)
             val normalized = Platform.normalize(tag, policy.normalizerForm)

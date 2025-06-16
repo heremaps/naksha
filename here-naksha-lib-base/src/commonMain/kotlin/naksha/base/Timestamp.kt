@@ -4,7 +4,7 @@
 package naksha.base
 
 import kotlinx.datetime.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -37,7 +37,7 @@ class Timestamp(
     val micros: Int,
     val nanos: Int
 ) {
-    companion object TimestampCompanion {
+    companion object Timestamp_C {
         /**
          * The [PlatformType] of [Timestamp].
          * @since 3.0
@@ -121,5 +121,7 @@ class Timestamp(
                 nanos
             )
         }
+
+        init { initialize() }
     }
 }

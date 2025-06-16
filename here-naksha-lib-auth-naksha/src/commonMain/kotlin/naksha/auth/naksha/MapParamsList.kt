@@ -3,7 +3,7 @@
 package naksha.auth.naksha
 
 import naksha.auth.ServiceOpParamsList
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -20,7 +20,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class MapParamsList : ServiceOpParamsList<MapParams>(MapParams.TYPE) {
-    companion object MapParamsListCompanion {
+    companion object MapParamsList_C {
         /**
          * The [PlatformType] of [MapParamsList].
          * @since 3.0

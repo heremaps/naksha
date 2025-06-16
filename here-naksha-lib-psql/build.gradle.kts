@@ -40,8 +40,9 @@ kotlin {
                 implementation(kotlin("stdlib"))
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-jbon"))
-                api(project(":here-naksha-lib-model"))
                 api(project(":here-naksha-lib-geo"))
+                api(project(":here-naksha-lib-model"))
+                api(project(":here-naksha-lib-mom"))
 
                 implementation(libs.kotlinx.datetime)
             }
@@ -62,7 +63,7 @@ kotlin {
                 api(project(":here-naksha-lib-jbon"))
                 api(project(":here-naksha-lib-geo"))
                 api(project(":here-naksha-lib-model"))
-                api(project(":here-naksha-lib-geo"))
+                api(project(":here-naksha-lib-mom"))
 
                 implementation(libs.commons.lang3)
                 implementation(libs.postgres)
@@ -105,8 +106,9 @@ kotlin {
                 implementation(kotlin("stdlib-js"))
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-jbon"))
-                api(project(":here-naksha-lib-model"))
                 api(project(":here-naksha-lib-geo"))
+                api(project(":here-naksha-lib-model"))
+                api(project(":here-naksha-lib-mom"))
 
                 implementation(libs.kotlinx.datetime)
                 //implementation(npm("postgres", "3.4.4"))

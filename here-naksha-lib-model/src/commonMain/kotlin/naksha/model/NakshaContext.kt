@@ -6,7 +6,8 @@ import naksha.auth.UserRightsMatrix
 import naksha.base.*
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn3
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -377,7 +378,15 @@ open class NakshaContext protected constructor() {
     }
 
     @Suppress("OPT_IN_USAGE")
-    companion object NakshaContextCompanion {
+    companion object NakshaContext_C {
+        /**
+         * The [PlatformType] of [NakshaContext].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(NakshaContext::class).withPackageName(PACKAGE_NAME)
+
         /**
          * The default application name to use, defaults to `NakshaClient/{version}`.
          * @since 3.0

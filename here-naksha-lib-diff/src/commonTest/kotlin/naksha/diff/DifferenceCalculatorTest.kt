@@ -29,7 +29,7 @@ class DifferenceCalculatorTest {
         assertIs<UpdateDiff>(fooEntry.value)
 
         Patcher.patch(objectToPatch, diff)
-        val x = Platform.toJSON(objectToPatch)
+        val x = Platform.toJson(objectToPatch)
     }
 
     @Test

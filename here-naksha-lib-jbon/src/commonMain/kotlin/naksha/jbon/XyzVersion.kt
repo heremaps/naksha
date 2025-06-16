@@ -4,7 +4,7 @@
 package naksha.jbon
 
 import naksha.base.Int64
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -14,7 +14,7 @@ import kotlin.jvm.JvmStatic
 
 @JsExport
 class XyzVersion(val major: Int, val minor: Int, val revision: Int) : Comparable<XyzVersion> {
-    companion object XyzVersionCompanion {
+    companion object XyzVersion_C {
         /**
          * The [PlatformType] of [XyzVersion].
          * @since 3.0

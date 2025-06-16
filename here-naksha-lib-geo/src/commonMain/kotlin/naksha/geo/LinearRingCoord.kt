@@ -2,7 +2,7 @@
 
 package naksha.geo
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.base.illegalState
 import kotlin.js.JsExport
@@ -31,7 +31,7 @@ class LinearRingCoord() : LineStringCoord() {
         addAll(points)
     }
 
-    companion object LinearRingCoordCompanion {
+    companion object LinearRingCoord_C {
         /**
          * The [PlatformType] of [LinearRingCoord].
          * @since 3.0

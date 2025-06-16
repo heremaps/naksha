@@ -5,7 +5,7 @@ package naksha.base
 @JsExport
 actual class PlatformDataViewApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView
-    actual companion object PlatformDataViewApiCompanion {
+    actual companion object PlatformDataViewApi_C {
         @JsStatic
         actual fun dataview_get_byte_array(view: PlatformDataView): ByteArray = js("new Int8Array(view.buffer)").unsafeCast<ByteArray>()
 

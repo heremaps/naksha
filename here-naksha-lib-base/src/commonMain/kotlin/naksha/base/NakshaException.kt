@@ -12,7 +12,7 @@ package naksha.base
  * @since 3.0
  */
 expect class NakshaException : RuntimeException {
-    companion object NakshaExceptionCompanion {
+    companion object NakshaException_C {
         /**
          * The [PlatformType] of [NakshaException].
          * @since 3.0

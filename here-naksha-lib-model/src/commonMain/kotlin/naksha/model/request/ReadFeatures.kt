@@ -5,34 +5,43 @@ package naksha.model.request
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.StringList
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.GuidList
 import naksha.model.Version
 import naksha.model.request.query.IPropertyQuery
 import naksha.model.request.query.ITagQuery
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Read features from a collection of a map of a storage.
  *
  * If a logical **OR** between the different condition is needed, for example search for features being in a certain bounding box **or** having a certain tag, then two read-requests should be executed, and joined by the client. These queries can be executed in parallel using two distinct sessions to improve the performance.
  *
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 open class ReadFeatures : ReadRequest() {
 
     companion object ReadFeatures_C {
-        private val STRING_OR_NULL = NullableProperty<ReadRequest, String>(String::class)
-        private val BOOLEAN_OR_FALSE =
-            NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
-        private val BOOLEAN_OR_TRUE =
-            NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> true }
-        private val INT_OR_1 = NotNullProperty<ReadRequest, Int>(Int::class) { _, _ -> 1 }
-        private val VERSION_OR_NULL = NullableProperty<ReadRequest, Version>(Version::class)
-        private val STRING_LIST = NotNullProperty<ReadRequest, StringList>(StringList::class)
-        private val ORDER_BY_OR_NULL = NullableProperty<ReadRequest, OrderBy>(OrderBy::class)
-        private val GUID_LIST = NotNullProperty<ReadRequest, GuidList>(GuidList::class)
-        private val QUERY = NotNullProperty<ReadRequest, RequestQuery>(RequestQuery::class)
+        /**
+         * The [PlatformType] of [ReadFeatures].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(ReadFeatures::class).withPackageName(PACKAGE_NAME)
+
+        private val STRING_OR_NULL = NullableProperty<ReadRequest, String>(String_TYPE)
+        private val BOOLEAN_OR_FALSE = NotNullProperty<ReadRequest, Boolean>(Boolean_TYPE) { _, _ -> false }
+        private val BOOLEAN_OR_TRUE = NotNullProperty<ReadRequest, Boolean>(Boolean_TYPE) { _, _ -> true }
+        private val INT_OR_1 = NotNullProperty<ReadRequest, Int>(Int_TYPE) { _, _ -> 1 }
+        private val VERSION_OR_NULL = NullableProperty<ReadRequest, Version>(Version.TYPE)
+        private val STRING_LIST = NotNullProperty<ReadRequest, StringList>(StringList.TYPE)
+        private val ORDER_BY_OR_NULL = NullableProperty<ReadRequest, OrderBy>(OrderBy.TYPE)
+        private val GUID_LIST = NotNullProperty<ReadRequest, GuidList>(GuidList.TYPE)
+        private val QUERY = NotNullProperty<ReadRequest, RequestQuery>(RequestQuery.TYPE)
     }
 
     /**
@@ -155,7 +164,7 @@ open class ReadFeatures : ReadRequest() {
      * If set to anything not being `1` _(the default)_ and [queryHistory] is `false`, the request will be rejected with [ILLEGAL_ARGUMENT][naksha.model.NakshaError.ILLEGAL_ARGUMENT].
      *
      * If multiple versions are requested, the execution may become drastically slower, therefore this feature should be used with care!
-     * @since 3.0.0
+     * @since 3.0
      */
     var versions by INT_OR_1
 
@@ -163,7 +172,7 @@ open class ReadFeatures : ReadRequest() {
      * Limit the read to all rows with the given minimal version, `null` if no limit.
      *
      * If set to anything not being `null` _(the default)_ and [queryHistory] is `false`, the request will be rejected with [ILLEGAL_ARGUMENT][naksha.model.NakshaError.ILLEGAL_ARGUMENT].
-     * @since 3.0.0
+     * @since 3.0
      */
     var minVersion by VERSION_OR_NULL
 
@@ -173,7 +182,7 @@ open class ReadFeatures : ReadRequest() {
      * This effectively is a request for a specific version, if no [minVersion] is set, and [versions] is default or explicitly `1`.
      *
      * If set to anything not being `null` _(the default)_ and [queryHistory] is `false`, the request will be rejected with [ILLEGAL_ARGUMENT][naksha.model.NakshaError.ILLEGAL_ARGUMENT].
-     * @since 3.0.0
+     * @since 3.0
      */
     var version by VERSION_OR_NULL
 
@@ -186,7 +195,7 @@ open class ReadFeatures : ReadRequest() {
 
     /**
      * Add all features that match the given IDs into the result-set.
-     * @since 3.0.0
+     * @since 3.0
      */
     var featureIds by STRING_LIST
 
@@ -194,13 +203,13 @@ open class ReadFeatures : ReadRequest() {
      * Add all features that match the given [GUIDs][naksha.model.Guid] into the result-set.
      *
      * This can be used to load features in specific states.
-     * @since 3.0.0
+     * @since 3.0
      */
     var guids by GUID_LIST
 
     /**
      * Add all features that match the given query into the result-set.
-     * @since 3.0.0
+     * @since 3.0
      */
     var query by QUERY
 

@@ -3,12 +3,17 @@
 package naksha.model.request
 
 import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.geo.HereTile
 import naksha.model.XyzNs
+import naksha.model.XyzNs.XyzNs_C.TAGS_KEY
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaFeature.NakshaFeature_C.PROPERTIES_KEY
 import naksha.model.objects.NakshaProperties
+import naksha.model.objects.NakshaProperties.NakshaProperties_C.XYZ_KEY
 import naksha.model.request.query.*
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
@@ -28,40 +33,48 @@ import kotlin.jvm.JvmField
 open class RequestQuery : AnyObject() {
 
     companion object RequestQuery_C {
+        /**
+         * The [PlatformType] of [RequestQuery].
+         * @since 3.0
+         */
         @JvmField
-        val TAGS_PROP_PATH = arrayOf(NakshaFeature.PROPERTIES_KEY, NakshaProperties.XYZ_KEY, XyzNs.TAGS_KEY)
+        @JsStatic
+        val TYPE = forKClass(RequestQuery::class).withPackageName(PACKAGE_NAME)
 
-        private val INT_LIST = NotNullProperty<RequestQuery, IntList>(IntList::class)
-        private val SPATIAL_QUERY_OR_NULL = NullableProperty<RequestQuery, ISpatialQuery>(ISpatialQuery::class)
-        private val TAG_QUERY_OR_NULL = NullableProperty<RequestQuery, ITagQuery>(ITagQuery::class)
-        private val PROPERTIES_QUERY_OR_NULL = NullableProperty<RequestQuery, IPropertyQuery>(IPropertyQuery::class)
-        private val METADATA_QUERY_OR_NULL = NullableProperty<RequestQuery, IMetaQuery>(IMetaQuery::class)
+        @JvmField
+        val TAGS_PROP_PATH = arrayOf(PROPERTIES_KEY, XYZ_KEY, TAGS_KEY)
+
+        private val INT_LIST = NotNullProperty<RequestQuery, IntList>(IntList.TYPE)
+        private val SPATIAL_QUERY_OR_NULL = NullableProperty<RequestQuery, ISpatialQuery>(ISpatialQuery_TYPE)
+        private val TAG_QUERY_OR_NULL = NullableProperty<RequestQuery, ITagQuery>(ITagQuery_TYPE)
+        private val PROPERTIES_QUERY_OR_NULL = NullableProperty<RequestQuery, IPropertyQuery>(IPropertyQuery_TYPE)
+        private val METADATA_QUERY_OR_NULL = NullableProperty<RequestQuery, IMetaQuery>(IMetaQuery_TYPE)
     }
 
     /**
      * Search for features matching the given spatial query.
-     * @since 3.0.0
+     * @since 3.0
      * @see ISpatialQuery
      */
     var spatial by SPATIAL_QUERY_OR_NULL
 
     /**
      * Search for features matching the given tag query.
-     * @since 3.0.0
+     * @since 3.0
      * @see ITagQuery
      */
     var tags by TAG_QUERY_OR_NULL
 
     /**
      * Search for features matching the given property query.
-     * @since 3.0.0
+     * @since 3.0
      * @see IPropertyQuery
      */
     var properties by PROPERTIES_QUERY_OR_NULL
 
     /**
      * Search for features matching the given metadata query.
-     * @since 3.0.0
+     * @since 3.0
      * @see IMetaQuery
      */
     var metadata by METADATA_QUERY_OR_NULL
@@ -70,7 +83,7 @@ open class RequestQuery : AnyObject() {
      * Search for features that have a reference point in one of the given tiles.
      *
      * If the list is empty, no limit is applied.
-     * @since 3.0.0
+     * @since 3.0
      */
     var refTiles by INT_LIST
 
@@ -78,7 +91,7 @@ open class RequestQuery : AnyObject() {
      * Adds the given tile to the list of tiles to query for reference points, so updating [refTiles].
      * @param tile the tile to search in.
      * @return this.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun addRefTile(tile: HereTile): RequestQuery {
         refTiles.add(tile.intKey)
@@ -89,7 +102,7 @@ open class RequestQuery : AnyObject() {
      * Removes the given tile from the list of tiles to query for reference points, so updating [refTiles].
      * @param tile the tile no longer search in.
      * @return this.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun removeRefTile(tile: HereTile): RequestQuery {
         refTiles.remove(tile.intKey)

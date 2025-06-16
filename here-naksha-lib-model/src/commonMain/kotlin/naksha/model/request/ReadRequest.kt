@@ -2,25 +2,33 @@
 
 package naksha.model.request
 
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
+import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.FETCH_ALL
 import naksha.model.FetchMode
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * All read-requests should extend this base class.
  *
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 open class ReadRequest : Request() {
-    companion object ReadRequestCompanion {
-        private val INT_NULL = NullableProperty<ReadRequest, Int>(Int::class)
-        private val BOOLEAN =
-            NullableProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
-        private val FETCH_MODE =
-            NotNullProperty<Request, FetchMode>(FetchMode::class) { _, _ -> FETCH_ALL }
+    companion object ReadRequest_C {
+        /**
+         * The [PlatformType] of [ReadRequest].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(ReadRequest::class).withPackageName(PACKAGE_NAME)
+
+        private val INT_NULL = NullableProperty<ReadRequest, Int>(Int_TYPE)
+        private val BOOLEAN = NullableProperty<ReadRequest, Boolean>(Boolean_TYPE) { _, _ -> false }
+        private val FETCH_MODE = NotNullProperty<Request, FetchMode>(Int_TYPE) { _, _ -> FETCH_ALL }
     }
 
     override fun defaultRowOptions(): ReturnColumns = ReturnColumns.all()
@@ -31,7 +39,7 @@ open class ReadRequest : Request() {
      * If _null_, the storage will automatically return the complete result-set up to the soft-cap, except the soft-cap exceeds the [hard-cap][naksha.model.IStorage.hardCap]. If the soft-cap (_limit_) is bigger than what the storage supports as [hard-cap][naksha.model.IStorage.hardCap], the [hard-cap][naksha.model.IStorage.hardCap] is used by the storage.
      *
      * To query more than the [hard-cap][naksha.model.IStorage.hardCap] of a storage, a streaming processing is needed. The interface for this is not yet designed, but may come with later model specifications.
-     * @since 3.0.0
+     * @since 3.0
      */
     var limit by INT_NULL
 
@@ -45,7 +53,7 @@ open class ReadRequest : Request() {
      * A middle ground is to order by data that is part of the [metadata][naksha.model.Metadata]. This requires the storage to load all rows with their metadata into memory, but it does not yet need to load the feature itself, nor the geometry, tags or attachment.
      *
      * The worst case is an order by something very custom, when requested, the storage needs not only the [tuple-numbers][naksha.model.TupleNumber], but the full rows with all data. In that case all results are loaded into memory, filtered, and eventually ordered.
-     * @since 3.0.0
+     * @since 3.0
      */
     var returnHandle by BOOLEAN
 

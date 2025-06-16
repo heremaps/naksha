@@ -2,15 +2,21 @@
 
 package naksha.model.request.query
 
-import naksha.base.AnyObject
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
+import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 
 /**
  * A property query within the Naksha feature.
+ * @since 3.0
+ * @see IQuery
+ * @see IPropertyQuery
+ * @see PQuery
+ * @see Property
  */
 @JsExport
 open class PQuery() : AnyObject(), IPropertyQuery {
@@ -20,7 +26,7 @@ open class PQuery() : AnyObject(), IPropertyQuery {
      * @param op the operation to execute.
      * @param value the parameter value of the operation.
      */
-    @JsName("of")
+    @JsName("PQueryOf")
     @JvmOverloads
     constructor(property: Property, op: AnyOp, value: Any? = null) : this() {
         this.property = property
@@ -28,10 +34,18 @@ open class PQuery() : AnyObject(), IPropertyQuery {
         this.value = value
     }
 
-    companion object PropertyQueryCompanion {
-        private val PROPERTY = NotNullProperty<PQuery, Property>(Property::class)
-        private val QUERY_OP = NotNullProperty<PQuery, AnyOp>(AnyOp::class)
-        private val ANY = NullableProperty<PQuery, Any>(Any::class)
+    companion object PQuery_C {
+        /**
+         * The [PlatformType] of [PQuery].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PQuery::class).withPackageName(PACKAGE_NAME)
+
+        private val PROPERTY = NotNullProperty<PQuery, Property>(Property.TYPE)
+        private val QUERY_OP = NotNullProperty<PQuery, AnyOp>(AnyOp.TYPE)
+        private val ANY = NullableProperty<PQuery, Any>(Any_TYPE)
     }
 
     /**

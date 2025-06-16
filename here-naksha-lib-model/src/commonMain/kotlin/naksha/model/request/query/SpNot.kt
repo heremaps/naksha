@@ -4,11 +4,19 @@ package naksha.model.request.query
 
 import naksha.base.AnyObject
 import naksha.base.NotNullProperty
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Negates the query.
+ * @since 3.0
+ * @see IQuery
+ * @see ISpatialQuery
+ * @see SpNot
  */
 @JsExport
 class SpNot() : AnyObject(), ISpatialQuery {
@@ -23,7 +31,15 @@ class SpNot() : AnyObject(), ISpatialQuery {
     }
 
     companion object SpNot_C {
-        private val QUERY = NotNullProperty<SpNot, ISpatialQuery>(ISpatialQuery::class)
+        /**
+         * The [PlatformType] of [SpNot].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(SpNot::class).withPackageName(PACKAGE_NAME)
+
+        private val QUERY = NotNullProperty<SpNot, ISpatialQuery>(ISpatialQuery_TYPE)
     }
 
     /**

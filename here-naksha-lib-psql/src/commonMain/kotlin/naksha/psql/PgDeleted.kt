@@ -2,9 +2,9 @@
 
 package naksha.psql
 
-import naksha.base.NakshaError.NakshaErrorCompanion.PARTITION_NOT_FOUND
+import naksha.base.NakshaError.NakshaError_C.PARTITION_NOT_FOUND
 import naksha.base.NakshaException
-import naksha.psql.PgUtil.PgUtilCompanion.partitionNumber
+import naksha.psql.PgUtil.PgUtil_C.partitionNumber
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 

@@ -1,12 +1,12 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.test.*
 
 class Foo : AnyObject() {
     companion object {
         val NAME = NotNullProperty<Foo, String>(String_TYPE) { _, _ -> "Bernd" }
-        val AGE = NotNullProperty<Foo, Int>(Int_Type) { _, _ -> 0 }
+        val AGE = NotNullProperty<Foo, Int>(Int_TYPE) { _, _ -> 0 }
         val XYZ = NullableProperty<Foo, String>(String_TYPE, name = "@ns:com:here:xyz")
     }
 

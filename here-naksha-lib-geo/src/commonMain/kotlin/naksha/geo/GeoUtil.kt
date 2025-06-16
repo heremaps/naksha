@@ -6,7 +6,7 @@ package naksha.geo
  */
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect class GeoUtil private constructor() {
-    companion object GeoUtilCompanion {
+    companion object GeoUtil_C {
         /**
          * Decode a TWKB GeoJSON geometry from encoded bytes.
          * @param raw the TWKB.

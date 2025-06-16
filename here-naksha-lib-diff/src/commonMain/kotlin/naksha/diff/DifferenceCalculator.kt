@@ -3,14 +3,14 @@
 package naksha.diff
 
 import naksha.base.Any_TYPE
-import naksha.base.Platform.PlatformCompanion.box
+import naksha.base.Platform.Platform_C.box
 import naksha.base.PlatformUtil
-import naksha.base.PlatformUtil.PlatformUtilCompanion.asSafeDouble
-import naksha.base.PlatformUtil.PlatformUtilCompanion.asSafeInt
-import naksha.base.PlatformUtil.PlatformUtilCompanion.asSafeInt64
-import naksha.base.PlatformUtil.PlatformUtilCompanion.isLogicalDouble
-import naksha.base.PlatformUtil.PlatformUtilCompanion.isLogicalInt
-import naksha.base.PlatformUtil.PlatformUtilCompanion.isLogicalInt64
+import naksha.base.PlatformUtil.PlatformUtil_C.asSafeDouble
+import naksha.base.PlatformUtil.PlatformUtil_C.asSafeInt
+import naksha.base.PlatformUtil.PlatformUtil_C.asSafeInt64
+import naksha.base.PlatformUtil.PlatformUtil_C.isLogicalDouble
+import naksha.base.PlatformUtil.PlatformUtil_C.isLogicalInt
+import naksha.base.PlatformUtil.PlatformUtil_C.isLogicalInt64
 import kotlin.js.JsExport
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic

@@ -2,14 +2,12 @@
 
 package naksha.model
 
-import naksha.base.Int64
-import naksha.base.ListProxy
-import naksha.base.Platform
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
-import naksha.base.illegalState
-import naksha.model.BinaryUtil.BinaryUtilCompanion.TYPE_TUPLE_NUMBER_ARRAY
-import naksha.model.BinaryUtil.BinaryUtilCompanion.writeSimpleHeader
+import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_set_int32
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_set_int64
+import naksha.model.BinaryUtil.BinaryUtil_C.TYPE_TUPLE_NUMBER_ARRAY
+import naksha.model.BinaryUtil.BinaryUtil_C.writeSimpleHeader
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B192
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B224
@@ -19,15 +17,16 @@ import naksha.model.request.FeatureTuple
 import naksha.model.request.FeatureTupleList
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
  * A list of [tuple-numbers][TupleNumber].
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
-class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
+class TupleNumberList : ListProxy<TupleNumber>(TupleNumber.TYPE) {
 
     /**
      * Convert this list of [TupleNumber] into a list of [FeatureTuple].
@@ -56,7 +55,7 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
      *
      * The returned byte-array can be read using [TupleNumberBinaryArray].
      * @return the list as byte-array.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun toByteArray(): ByteArray {
         var length = this.size
@@ -179,13 +178,21 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
 
     companion object TupleNumberList_C {
         /**
+         * The [PlatformType] of [TupleNumberList].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(TupleNumberList::class).withPackageName(PACKAGE_NAME)
+
+        /**
          * Convert the given [tuple-number-binary-array][TupleNumberBinaryArray] into a [tuple-number list][TupleNumberList].
          *
          * @param array the tuple-number-binary-array.
          * @param from the index of the first entry to convert.
          * @param to the index of the first entry **not** to convert.
          * @return the given binary converted into a list of tuple-number.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic

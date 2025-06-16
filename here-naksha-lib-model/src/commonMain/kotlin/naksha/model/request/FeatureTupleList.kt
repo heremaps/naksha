@@ -5,21 +5,32 @@ package naksha.model.request
 import naksha.base.ListProxy
 import naksha.base.NakshaException
 import naksha.model.*
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 import kotlin.math.min
 
 /**
  * A list of [result tuples][FeatureTuple].
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
-open class FeatureTupleList : ListProxy<FeatureTuple>(FeatureTuple::class) {
+open class FeatureTupleList : ListProxy<FeatureTuple>(FeatureTuple.TYPE) {
     companion object FeatureTupleList_C {
+        /**
+         * The [PlatformType] of [FeatureTupleList].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(FeatureTupleList::class).withPackageName(PACKAGE_NAME)
+
         /**
          * Convert the given [tuple-number-binary-array][TupleNumberBinaryArray] into a [feature-tuple list][FeatureTupleList].
          *
@@ -32,7 +43,7 @@ open class FeatureTupleList : ListProxy<FeatureTuple>(FeatureTuple::class) {
          * @param from the index of the first entry to convert.
          * @param to the index of the first entry **not** to convert.
          * @return the given binary converted into a list of feature-tuple.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
@@ -55,7 +66,7 @@ open class FeatureTupleList : ListProxy<FeatureTuple>(FeatureTuple::class) {
          * Convert the given array of tuple-number into a list of feature-tuple to be loaded using [ISession.loadTuples].
          * @param array the array of tuple-number.
          * @return a list of [FeatureTuple] with the logically same content as the given array.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic

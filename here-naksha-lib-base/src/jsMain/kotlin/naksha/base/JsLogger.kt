@@ -2,11 +2,11 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.toJSON
-import naksha.base.PlatformUtil.PlatformUtilCompanion.ENABLE_DEBUG
-import naksha.base.PlatformUtil.PlatformUtilCompanion.ENABLE_ERROR
-import naksha.base.PlatformUtil.PlatformUtilCompanion.ENABLE_INFO
-import naksha.base.PlatformUtil.PlatformUtilCompanion.ENABLE_WARN
+import naksha.base.Platform.Platform_C.toJson
+import naksha.base.PlatformUtil.PlatformUtil_C.ENABLE_DEBUG
+import naksha.base.PlatformUtil.PlatformUtil_C.ENABLE_ERROR
+import naksha.base.PlatformUtil.PlatformUtil_C.ENABLE_INFO
+import naksha.base.PlatformUtil.PlatformUtil_C.ENABLE_WARN
 
 @Suppress("SENSELESS_COMPARISON")
 internal class JsLogger : PlatformLogger {
@@ -33,7 +33,7 @@ internal class JsLogger : PlatformLogger {
                 if (v is Throwable) {
                     r += v.stackTrace.joinToString("\n")
                 } else if (v !== null && v !== undefined && (jsTypeOf(v.valueOf()) == "object")) {
-                    r += toJSON(v) + m.substring(2)
+                    r += toJson(v) + m.substring(2)
                 } else {
                     r += v + m.substring(2)
                 }

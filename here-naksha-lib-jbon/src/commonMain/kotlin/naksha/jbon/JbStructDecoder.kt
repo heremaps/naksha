@@ -5,7 +5,7 @@ package naksha.jbon
 
 import naksha.base.BinaryView
 import naksha.base.Binary
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -22,7 +22,7 @@ import kotlin.jvm.JvmField
 @JsExport
 abstract class JbStructDecoder<SELF : JbStructDecoder<SELF>> {
 
-    companion object JbStructDecoderCompanion {
+    companion object JbStructDecoder_C {
         /**
          * The [PlatformType] of [JbStructDecoder].
          * @since 3.0

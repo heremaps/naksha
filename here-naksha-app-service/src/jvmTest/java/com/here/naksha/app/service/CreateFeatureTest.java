@@ -327,7 +327,7 @@ class CreateFeatureTest extends ApiTest {
                 {
                 "type": "FeatureCollection",
                 "features": [
-                """ + Platform.toJSON(feature) + "]}",
+                """ + Platform.toJson(feature) + "]}",
             streamId);
 
     // Then: first patch succeeded
@@ -346,7 +346,7 @@ class CreateFeatureTest extends ApiTest {
                 {
                 "type": "FeatureCollection",
                 "features": [
-                """ + Platform.toJSON(feature) + "]}",
+                """ + Platform.toJson(feature) + "]}",
             streamId);
 
     // Then: second patch should fail due to UUID conflict
@@ -361,7 +361,7 @@ class CreateFeatureTest extends ApiTest {
                 {
                 "type": "FeatureCollection",
                 "features": [
-                """ + Platform.toJSON(feature) + "]}",
+                """ + Platform.toJson(feature) + "]}",
             streamId);
 
     // Then: third patch should succeed

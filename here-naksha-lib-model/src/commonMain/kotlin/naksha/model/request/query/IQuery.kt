@@ -6,6 +6,7 @@ import kotlin.js.JsExport
 
 /**
  * Marker interface for queries.
+ * @see IQuery
  * @see IMetaQuery
  * @see IPropertyQuery
  * @see ISpatialQuery

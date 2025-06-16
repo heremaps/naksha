@@ -1,7 +1,7 @@
 package naksha.jbon
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.fromJson
+import naksha.base.Platform.Platform_C.fromJson
 import kotlin.test.*
 
 class JbCoreTest {
@@ -98,7 +98,7 @@ class JbCoreTest {
         assertEquals(2, properties.size)
 
         // Test stringify.
-        val json = Platform.toJSON(map)
+        val json = Platform.toJson(map)
         assertEquals(49, json.length)
         assertTrue(json.contains("properties"))
     }

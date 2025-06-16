@@ -3,7 +3,7 @@
 package naksha.auth.naksha
 
 import naksha.auth.ServiceOpParamsList
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -17,7 +17,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class SpaceParamsList : ServiceOpParamsList<SpaceParams>(SpaceParams.TYPE) {
-    companion object SpaceResourceListCompanion {
+    companion object SpaceResourceList_C {
         /**
          * The [PlatformType] of [SpaceParamsList].
          * @since 3.0

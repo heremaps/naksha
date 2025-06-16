@@ -2,20 +2,27 @@
 
 package naksha.model.request.query
 
-import naksha.base.NotNullProperty
-import naksha.base.NullableEnum
-import naksha.base.NullableProperty
+import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 
 /**
  * Computes a POLYGON or MULTIPOLYGON that represents all points whose distance from a geometry/geography is less than or equal to a given distance. A negative distance shrinks the geometry rather than expanding it. A negative distance may shrink a polygon completely, in which case POLYGON EMPTY is returned. For points and lines negative distances always return empty results.
  *
  * This is based upon the [PostGIS definition](https://postgis.net/docs/ST_Buffer.html).
+ * @since 3.0
+ * @see IQuery
+ * @see ISpatialQuery
+ * @see SpIntersects
+ * @see SpTransformation
+ * @see SpBuffer
  */
 @JsExport
-open class SpBuffer() : SpTransformation() {
+class SpBuffer() : SpTransformation() {
     /**
      * Create an initialized SP buffer.
      *
@@ -50,13 +57,21 @@ open class SpBuffer() : SpTransformation() {
     }
 
     companion object SpBuffer_C {
-        private val DOUBLE = NotNullProperty<SpBuffer, Double>(Double::class) { _,_ -> 0.0 }
-        private val DOUBLE_NULL = NullableProperty<SpBuffer, Double>(Double::class)
-        private val BOOLEAN = NotNullProperty<SpBuffer, Boolean>(Boolean::class) { _,_ -> true }
-        private val INT_NULL = NullableProperty<SpBuffer, Int>(Int::class)
-        private val JOIN_STYLE = NullableEnum<SpBuffer, SpJoinStyle>(SpJoinStyle::class)
-        private val ENDCAP_NULL = NullableEnum<SpBuffer, SpEndCap>(SpEndCap::class)
-        private val SIDE_NULL = NullableEnum<SpBuffer, SpSide>(SpSide::class)
+        /**
+         * The [PlatformType] of [SpBuffer].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(SpBuffer::class).withPackageName(PACKAGE_NAME)
+
+        private val DOUBLE = NotNullProperty<SpBuffer, Double>(Double_TYPE) { _, _ -> 0.0 }
+        private val DOUBLE_NULL = NullableProperty<SpBuffer, Double>(Double_TYPE)
+        private val BOOLEAN = NotNullProperty<SpBuffer, Boolean>(Boolean_TYPE) { _, _ -> true }
+        private val INT_NULL = NullableProperty<SpBuffer, Int>(Int_TYPE)
+        private val JOIN_STYLE = NullableEnum<SpBuffer, SpJoinStyle>(SpJoinStyle.TYPE)
+        private val ENDCAP_NULL = NullableEnum<SpBuffer, SpEndCap>(SpEndCap.TYPE)
+        private val SIDE_NULL = NullableEnum<SpBuffer, SpSide>(SpSide.TYPE)
     }
 
     /**

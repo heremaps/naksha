@@ -2,9 +2,9 @@
 
 package naksha.base
 
-import naksha.base.JsEnum.JsEnumCompanion.get
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.JsEnum.JsEnum_C.get
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.Platform.Platform_C.logger
 import naksha.base.fn.Fx1
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -82,7 +82,7 @@ abstract class JsEnum : CharSequence {
     var isDefined: Boolean = false
         private set
 
-    companion object JsEnumCompanion {
+    companion object JsEnum_C {
         /**
          * The [PlatformType] of [JsEnum].
          * @since 3.0
@@ -369,6 +369,8 @@ abstract class JsEnum : CharSequence {
                 return e as ENUM
             }
         }
+
+        init { initialize() }
     }
 
     /**

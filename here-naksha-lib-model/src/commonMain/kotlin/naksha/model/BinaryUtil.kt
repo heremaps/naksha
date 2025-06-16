@@ -4,10 +4,10 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.base.PlatformDataView
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int16
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_int16
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_int32
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_int64
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_set_int32
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmOverloads
@@ -15,38 +15,38 @@ import kotlin.jvm.JvmStatic
 
 /**
  * A helper to encode and decode a binary header.
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 class BinaryUtil private constructor() {
-    companion object BinaryUtilCompanion {
+    companion object BinaryUtil_C {
         /**
          * Naksha-binary-type value for [TupleNumberBinaryArray].
-         * @since 3.0.0
+         * @since 3.0
          */
         const val TYPE_TUPLE_NUMBER_ARRAY = 0
 
         /**
          * Naksha-binary-type value for [MetadataBinaryObject].
-         * @since 3.0.0
+         * @since 3.0
          */
         const val TYPE_METADATA_OBJECT = 1
 
         /**
          * Naksha-binary-type value for [MetadataBinaryArray].
-         * @since 3.0.0
+         * @since 3.0
          */
         const val TYPE_METADATA_ARRAY = 2
 
         /**
          * Naksha-binary-type value for [TupleBinaryObject].
-         * @since 3.0.0
+         * @since 3.0
          */
         const val TYPE_TUPLE_OBJECT = 3
 
         /**
          * Naksha-binary-type value for [TupleBinaryArray].
-         * @since 3.0.0
+         * @since 3.0
          */
         const val TYPE_TUPLE_ARRAY = 4
 
@@ -61,7 +61,7 @@ class BinaryUtil private constructor() {
          * @param length the length (number of entities).
          * @param size the size including the header (which is 8-byte), the client knows this, because it needs to allocate the buffer.
          * @return the offset where to start writing the content.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
@@ -77,7 +77,7 @@ class BinaryUtil private constructor() {
          * @param view the view into the binary.
          * @param offset the byte-offset in the view where the binary starts.
          * @return _true_ if this the header does have an extension section.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
@@ -93,7 +93,7 @@ class BinaryUtil private constructor() {
          * @param view the view into the binary.
          * @param offset the byte-offset in the view where the binary starts.
          * @return the content-type.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
@@ -105,7 +105,7 @@ class BinaryUtil private constructor() {
          * @param view the view into the binary.
          * @param offset the byte-offset in the view where the binary starts.
          * @return the content-subtype.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
@@ -117,7 +117,7 @@ class BinaryUtil private constructor() {
          * @param view the view into the binary.
          * @param offset the byte-offset in the view where the binary starts.
          * @return the length.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
@@ -129,7 +129,7 @@ class BinaryUtil private constructor() {
          * @param view the view into the binary.
          * @param offset the byte-offset in the view where the binary starts.
          * @return the byte-size of the binary, including the header.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
@@ -141,7 +141,7 @@ class BinaryUtil private constructor() {
          * @param view the view into the binary.
          * @param offset the byte-offset in the view where the binary starts.
          * @return the byte-offset of the content.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic

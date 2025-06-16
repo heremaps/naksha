@@ -2,18 +2,17 @@
 
 package naksha.model.objects
 
-import naksha.base.NotNullProperty
-import naksha.base.AnyObject
-import naksha.base.NullableProperty
+import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.Action
 import naksha.model.Action.Action_C.CREATED
 import naksha.model.Action.Action_C.DELETED
 import naksha.model.Action.Action_C.UPDATED
-import naksha.base.NakshaError
-import naksha.base.NakshaException
 import naksha.model.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 
 /**
@@ -37,12 +36,20 @@ class NakshaTxCollection() : AnyObject() {
         this.action = action
     }
 
-    companion object {
-        private val ID = NotNullProperty<NakshaTxCollection, String>(String::class)
-        private val NUMBER = NotNullProperty<NakshaTxCollection, Int>(Int::class)
-        private val ACTION_OR_NULL = NullableProperty<NakshaTxCollection, Action>(Action::class)
-        private val COUNT = NotNullProperty<NakshaTxCollection, Int>(Int::class) { _, _ -> 0 }
-        private val FEATURES_BY_PARTITION = NullableProperty<NakshaTxCollection, NakshaTxFeatureByPartition>(NakshaTxFeatureByPartition::class)
+    companion object NakshaTxCollection_C {
+        /**
+         * The [PlatformType] of [NakshaTxCollection].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(NakshaTxCollection::class).withPackageName(PACKAGE_NAME)
+
+        private val ID = NotNullProperty<NakshaTxCollection, String>(String_TYPE)
+        private val NUMBER = NotNullProperty<NakshaTxCollection, Int>(Int_TYPE)
+        private val ACTION_OR_NULL = NullableProperty<NakshaTxCollection, Action>(Action.TYPE)
+        private val COUNT = NotNullProperty<NakshaTxCollection, Int>(Int_TYPE) { _, _ -> 0 }
+        private val FEATURES_BY_PARTITION = NullableProperty<NakshaTxCollection, NakshaTxFeatureByPartition>(NakshaTxFeatureByPartition.TYPE)
     }
 
     /**

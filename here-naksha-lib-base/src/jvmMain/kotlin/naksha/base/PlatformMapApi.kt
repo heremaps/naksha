@@ -3,7 +3,7 @@ package naksha.base
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class PlatformMapApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map
-    actual companion object PlatformMapApiCompanion {
+    actual companion object PlatformMapApi_C {
         @JvmStatic
         actual fun map_get(map: PlatformMap?, key: Any?): Any? = if (map is JvmMap && key != null) map[key] else null
 

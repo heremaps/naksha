@@ -3,7 +3,7 @@
 package naksha.psql
 
 import naksha.base.NakshaError
-import naksha.base.NakshaError.NakshaErrorCompanion.EXCEPTION
+import naksha.base.NakshaError.NakshaError_C.EXCEPTION
 import naksha.base.NakshaException
 import org.postgresql.util.PSQLException
 import java.sql.BatchUpdateException

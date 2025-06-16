@@ -3,7 +3,7 @@
 package naksha.auth
 
 import naksha.base.MapProxy
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.base.String_TYPE
 import kotlin.js.JsExport
@@ -20,7 +20,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class ServiceOpsMatrix : MapProxy<String, ServiceOps>(String_TYPE, ServiceOps.TYPE) {
-    companion object ServiceOpsMatrixCompanion {
+    companion object ServiceOpsMatrix_C {
         /**
          * The [PlatformType] of [ServiceOpsMatrix].
          * @since 3.0

@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.PlatformUtil.PlatformUtilCompanion.deepEquals
+import naksha.base.PlatformUtil.PlatformUtil_C.deepEquals
 import kotlin.test.Test
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotSame

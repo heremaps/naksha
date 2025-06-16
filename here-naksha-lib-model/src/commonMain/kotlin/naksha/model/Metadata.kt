@@ -3,7 +3,7 @@
 package naksha.model
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.fn.Fn3
 import naksha.geo.HereTile
 import naksha.geo.PointCoord
@@ -18,7 +18,7 @@ import kotlin.jvm.JvmStatic
  * The immutable on-heap representation of the metadata of a [Tuple].
  *
  * This is mainly used by applications, therefore the default value of [tupleNumber] is [TupleNumber.HEAD].
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 data class Metadata(
@@ -138,14 +138,14 @@ data class Metadata(
     }
     override fun toString(): String = "$id:$tupleNumber"
 
-    companion object MetadataCompanion {
+    companion object Metadata_C {
         /**
          * The [PlatformType] of [Metadata].
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<Metadata> = forKClass(Metadata::class).withPackageName(naksha.jbon.PACKAGE_NAME)
+        val TYPE = forKClass(Metadata::class).withPackageName(PACKAGE_NAME)
 
         /**
          * Helper method to create the new metadata, when performing the given operation, with the given feature as outcome of the operation, in the given session.
@@ -158,7 +158,7 @@ data class Metadata(
          * @param operation the [operation][Operation] that is performed.
          * @param action the [action][Action] being performed, if not given, it is expected that the given [operation][Operation] has a [fixed action][Operation.action].
          * @return the new metadata that is correct for the new state, based upon the given data.
-         * @since 3.0.0
+         * @since 3.0
          * @see [StorageTx]
          */
         @JvmStatic
@@ -213,7 +213,7 @@ data class Metadata(
         /**
          * Import other metadata into the heap representation.
          * @param other the other metadata.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
@@ -250,7 +250,7 @@ data class Metadata(
          * @param featureType the **feature-type**.
          * @param xyz the [XYZ namespace][XyzNs].
          * @return the [Metadata] created from it.
-         * @since 3.0.0
+         * @since 3.0
          * @see [XyzNs.fromMetadata]
          */
         @JvmStatic

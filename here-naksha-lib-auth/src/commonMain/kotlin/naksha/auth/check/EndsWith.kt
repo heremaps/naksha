@@ -3,7 +3,7 @@
 package naksha.auth.check
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -23,7 +23,7 @@ class EndsWith() : Check("matches") {
         useAnyOf().addAll(anyOf)
     }
 
-    companion object EndsWithCompanion {
+    companion object EndsWith_C {
         /**
          * The [PlatformType] of [EndsWith].
          * @since 3.0

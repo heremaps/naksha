@@ -3,7 +3,7 @@
 package naksha.auth.naksha
 
 import naksha.base.NotNullProperty
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.base.StringList
 import naksha.model.TagMap
@@ -38,7 +38,7 @@ class SpaceParams() : NakshaParams() {
         }
     }
 
-    companion object SpaceResourceCompanion {
+    companion object SpaceResource_C {
         /**
          * The [PlatformType] of [SpaceParams].
          * @since 3.0

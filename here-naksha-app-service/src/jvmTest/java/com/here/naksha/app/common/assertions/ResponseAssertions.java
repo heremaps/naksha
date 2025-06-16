@@ -31,7 +31,7 @@ import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Optional;
 import naksha.model.XyzFeatureCollection;
-import naksha.model.mom.MomReference;
+import naksha.mom.v2.MomReference;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

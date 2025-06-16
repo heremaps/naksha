@@ -3,7 +3,7 @@
 package naksha.auth
 
 import naksha.base.ListProxy
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -20,7 +20,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 open class ServiceOpParamsList<E: ServiceOpParams>(elementType: PlatformType<E>) : ListProxy<E>(elementType) {
-    companion object ServiceOpParamsListCompanion {
+    companion object ServiceOpParamsList_C {
         /**
          * The [PlatformType] of [ServiceOpParamsList].
          * @since 3.0

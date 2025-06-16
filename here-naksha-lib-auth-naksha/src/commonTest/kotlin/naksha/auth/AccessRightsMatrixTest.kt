@@ -5,8 +5,8 @@ package naksha.auth
 //import naksha.auth.action.ReadFeatures
 //import naksha.auth.attribute.CollectionAttributes
 //import naksha.auth.attribute.FeatureAttributes
-//import naksha.auth.naksha.NakshaResource.NakshaResourceCompanion.ID_KEY
-//import naksha.auth.naksha.NakshaResource.NakshaResourceCompanion.TAGS_KEY
+//import naksha.auth.naksha.NakshaResource.NakshaResource_C.ID_KEY
+//import naksha.auth.naksha.NakshaResource.NakshaResource_C.TAGS_KEY
 //import naksha.base.AnyList
 //import naksha.base.Platform
 //import kotlin.test.*

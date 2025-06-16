@@ -1,6 +1,6 @@
 package naksha.jbon
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -23,7 +23,7 @@ import kotlin.jvm.JvmField
 @JsExport
 class JbDictionary : JbStructDecoder<JbDictionary>(), IDict {
 
-    companion object JbDictionaryCompanion {
+    companion object JbDictionary_C {
         /**
          * The [PlatformType] of [JbDictionary].
          * @since 3.0

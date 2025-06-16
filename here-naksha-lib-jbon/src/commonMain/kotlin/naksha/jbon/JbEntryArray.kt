@@ -1,6 +1,6 @@
 package naksha.jbon
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -14,7 +14,7 @@ import kotlin.jvm.JvmField
 @JsExport
 abstract class JbEntryArray<SELF : JbEntryArray<SELF>> : JbStructDecoder<SELF>() {
 
-    companion object JbEntryArrayCompanion {
+    companion object JbEntryArray_C {
         /**
          * The [PlatformType] of [JbEntryArray].
          * @since 3.0

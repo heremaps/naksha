@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.DEFAULT_SYMBOL
+import naksha.base.Platform.Platform_C.DEFAULT_SYMBOL
 
 /**
  * A singleton that grants access to [symbols][Symbol]. [Symbols][Symbol] are a way to [bind][Proxy.bind] [proxies][Proxy] _(and other hidden data)_ to [platform objects][PlatformObject].
@@ -10,7 +10,7 @@ import naksha.base.Platform.PlatformCompanion.DEFAULT_SYMBOL
  */
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect class Symbols private constructor() {
-    companion object SymbolsCompanion {
+    companion object Symbols_C {
         // TODO: Add some simple binding methods for symbols, like:
         //       bind(klass: KClass<out T>, symbol: Symbol)
         //       unbind(klass: KClass<out T>)

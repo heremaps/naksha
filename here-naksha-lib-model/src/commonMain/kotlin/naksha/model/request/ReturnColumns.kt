@@ -4,9 +4,13 @@ package naksha.model.request
 
 import naksha.base.NotNullProperty
 import naksha.base.AnyObject
+import naksha.base.Boolean_TYPE
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
@@ -36,6 +40,14 @@ open class ReturnColumns() : AnyObject() {
 
     companion object ReturnColumns_C {
         /**
+         * The [PlatformType] of [ReturnColumns].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(ReturnColumns::class).withPackageName(PACKAGE_NAME)
+
+        /**
          * Create return-options with all columns being enabled.
          * @return new return-options with all columns being enabled.
          */
@@ -51,7 +63,7 @@ open class ReturnColumns() : AnyObject() {
         @JsStatic
         fun none(): ReturnColumns = ReturnColumns()
 
-        private val BOOLEAN = NotNullProperty<ReturnColumns, Boolean>(Boolean::class) { _, _ -> false }
+        private val BOOLEAN = NotNullProperty<ReturnColumns, Boolean>(Boolean_TYPE) { _, _ -> false }
     }
 
     /**

@@ -7,7 +7,7 @@ import kotlin.jvm.JvmStatic
 
 class Patcher private constructor() {
 
-    companion object PatcherCompanion {
+    companion object Patcher_C {
 
         /**
          * Applies supplied [Difference] on given object, effectively patching it.

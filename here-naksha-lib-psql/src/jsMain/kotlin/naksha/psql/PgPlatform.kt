@@ -5,7 +5,7 @@ import naksha.model.Naksha
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "OPT_IN_USAGE")
 @JsExport
 actual class PgPlatform {
-    actual companion object PgPlatformCompanion {
+    actual companion object PgPlatform_C {
         private fun plv8Forbidden(opName: String) {
             if (isPlv8()) throw UnsupportedOperationException("${opName}: Not supported in PLV8 storage")
         }

@@ -2,21 +2,26 @@
 
 package naksha.model.request.query
 
-import naksha.base.AnyObject
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
+import naksha.base.*
 import naksha.geo.SpGeometry
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.base.NakshaException
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 
 /**
  * Tests for an intersection of features geometry with the given one.
+ * @since 3.0
+ * @see IQuery
+ * @see ISpatialQuery
+ * @see SpIntersects
+ * @see SpTransformation
  */
 @JsExport
-open class SpIntersects() : AnyObject(), ISpatialQuery {
+class SpIntersects() : AnyObject(), ISpatialQuery {
 
     /**
      * Create an initialized intersection.
@@ -33,6 +38,7 @@ open class SpIntersects() : AnyObject(), ISpatialQuery {
      *
      * @property geometry the geometry against which existing features should be tested for intersection.
      * @property transformation the optional transformation to apply to the given geometry.
+     * @since 3.0
      */
     @JsName("of")
     @JvmOverloads
@@ -41,11 +47,19 @@ open class SpIntersects() : AnyObject(), ISpatialQuery {
         this.transformation = transformation
     }
 
-    companion object SpIntersectsCompanion {
-        private val GEOMETRY = NotNullProperty<SpIntersects, SpGeometry>(SpGeometry::class) {
+    companion object SpIntersects_C {
+        /**
+         * The [PlatformType] of [SpIntersects].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(SpIntersects::class).withPackageName(PACKAGE_NAME)
+
+        private val GEOMETRY = NotNullProperty<SpIntersects, SpGeometry>(SpGeometry.TYPE) {
           _,_ -> throw NakshaException(ILLEGAL_STATE, "geometry must not be null")
         }
-        private val TRANSFORMATION_NULL = NullableProperty<SpIntersects, SpTransformation>(SpTransformation::class)
+        private val TRANSFORMATION_NULL = NullableProperty<SpIntersects, SpTransformation>(SpTransformation.TYPE)
     }
 
     /**

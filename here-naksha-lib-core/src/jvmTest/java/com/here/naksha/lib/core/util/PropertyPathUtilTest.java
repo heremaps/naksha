@@ -141,7 +141,7 @@ class PropertyPathUtilTest {
 
         // Then: validate output Json content matches the expectations
         assertNotNull(newF);
-        final String actualJsonData = Platform.toJSON(newF, ToJsonOptions.DEFAULT);
+        final String actualJsonData = Platform.toJson(newF, ToJsonOptions.DEFAULT);
         JSONAssert.assertEquals("Extracted property map doesn't match", expectedJsonData, actualJsonData, JSONCompareMode.STRICT);
     }
 

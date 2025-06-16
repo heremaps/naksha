@@ -2,7 +2,7 @@
 
 package naksha.auth.check
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -23,7 +23,7 @@ class StartsWith() : Check("startsWith") {
         useAnyOf().addAll(anyOf)
     }
 
-    companion object StartsWithCompanion {
+    companion object StartsWith_C {
         /**
          * The [PlatformType] of [StartsWith].
          * @since 3.0

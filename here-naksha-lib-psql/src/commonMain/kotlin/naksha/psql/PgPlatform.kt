@@ -5,7 +5,7 @@ package naksha.psql
  */
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect class PgPlatform {
-    companion object PgPlatformCompanion {
+    companion object PgPlatform_C {
         /**
          * Quotes a string literal, so a custom string. For PostgresQL database this means to replace all single quotes
          * (`'`) with two single quotes (`''`). This encloses the string with quotation characters, when needed.

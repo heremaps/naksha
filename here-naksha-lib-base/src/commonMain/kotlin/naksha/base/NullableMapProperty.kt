@@ -1,8 +1,8 @@
 package naksha.base
 
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_contains_key
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_contains_key
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_set
 import naksha.base.fn.Fn2
 import kotlin.js.JsExport
 import kotlin.js.JsName

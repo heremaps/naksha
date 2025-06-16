@@ -3,7 +3,7 @@ package naksha.model
 import naksha.base.AnyObject
 import naksha.base.Int64
 import naksha.jbon.JbEncoder
-import naksha.model.Naksha.NakshaCompanion.featureNumber
+import naksha.model.Naksha.Naksha_C.featureNumber
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.PropertyFilter
 import naksha.model.request.ReadFeatures

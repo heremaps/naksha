@@ -78,7 +78,7 @@ interface PlatformType<T> {
     fun withJsonType(jsonType: String?): PlatformType<T>
 
     /**
-     * Helper method to set the [jsonType] to [name], which will force the [Platform.toJSON] method to inject the `type` property with the value as specified in [jsonType]. This allows the deserializer _([Platform.fromJson])_ to restore the correct object type or [Proxy].
+     * Helper method to set the [jsonType] to [name], which will force the [Platform.toJson] method to inject the `type` property with the value as specified in [jsonType]. This allows the deserializer _([Platform.fromJson])_ to restore the correct object type or [Proxy].
      *
      * @return this.
      * @since 3.0
@@ -111,8 +111,9 @@ interface PlatformType<T> {
      *
      * This will cause all static init-code to be invoked, and ensures that all static properties have correct values. If the class is already initialized, does nothing. Normally, Java and JavaScript do initialize classes lazy, so not before needed. However, some classes create static properties, which register them self with some registry, in that case the class should be initialized when the application starts. This is for example the case for enumerations.
      * @since 3.0
+     * @return this.
      */
-    fun initialize()
+    fun initialize(): PlatformType<T>
 
     /**
      * Call the parameterless constructor of the type using platform specific methods.

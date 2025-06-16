@@ -1,6 +1,6 @@
 package naksha.jbon
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -15,7 +15,7 @@ import kotlin.jvm.JvmField
 @JsExport
 open class JbRecordDecoder(var dictReader: IDictReader? = null) : JbStructDecoder<JbRecordDecoder>() {
 
-    companion object JbRecordDecoderCompanion {
+    companion object JbRecordDecoder_C {
         /**
          * The [PlatformType] of [JbRecordDecoder].
          * @since 3.0

@@ -1,23 +1,23 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.Platform.PlatformCompanion.newDataView
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_byte_array
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_float32
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_float64
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int16
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int8
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_size
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_start
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_float32
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_float64
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int16
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int8
-import naksha.base.PlatformUtil.PlatformUtilCompanion.defaultDataViewSize
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.Platform.Platform_C.newDataView
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_byte_array
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_float32
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_float64
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_int16
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_int32
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_int64
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_int8
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_size
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_start
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_set_float32
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_set_float64
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_set_int16
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_set_int32
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_set_int64
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_set_int8
+import naksha.base.PlatformUtil.PlatformUtil_C.defaultDataViewSize
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -79,7 +79,7 @@ open class Binary() : BinaryView {
     }
 
     @Suppress("UNUSED_PARAMETER")
-    companion object BinaryCompanion {
+    companion object Binary_C {
         /**
          * The [PlatformType] of [Binary].
          * @since 3.0
@@ -130,6 +130,8 @@ open class Binary() : BinaryView {
                     field = value
                 }
         }
+
+        init { initialize() }
     }
 
     override var byteArray: ByteArray

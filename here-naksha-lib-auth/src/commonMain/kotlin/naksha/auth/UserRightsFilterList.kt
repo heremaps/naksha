@@ -3,7 +3,7 @@
 package naksha.auth
 
 import naksha.base.ListProxy
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -20,7 +20,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class UserRightsFilterList : ListProxy<UserRightsFilter>(UserRightsFilter.TYPE) {
-    companion object UserRightsFilterListCompanion {
+    companion object UserRightsFilterList_C {
         /**
          * The [PlatformType] of [UserRightsFilterList].
          * @since 3.0

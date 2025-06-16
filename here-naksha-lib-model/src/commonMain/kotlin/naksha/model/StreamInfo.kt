@@ -3,10 +3,12 @@
 package naksha.model
 
 import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
-import kotlin.reflect.KClass
 
 /**
  * Thread safe stream information, can be extended by the application.
@@ -16,6 +18,14 @@ import kotlin.reflect.KClass
 open class StreamInfo() {
 
     companion object StreamInfo_C {
+        /**
+         * The [PlatformType] of [StreamInfo].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(StreamInfo::class).withPackageName(PACKAGE_NAME)
+
         protected const val STREAM_ID = "streamId"
         protected const val SPACE_ID = "spaceId"
         protected const val STORAGE_ID = "storageId"
@@ -30,14 +40,20 @@ open class StreamInfo() {
 
     /**
      * Copy the stream-information into a new platform object, so it can be JSON serialized.
-     * @param klass the type to return, if _null_, [AnyObject] is returned.
+     * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given type is no proxy, not instantiable, or no map.
+     * @param type the [PlatformType] to return, if _null_, [AnyObject] is returned.
      * @return a copy of the stream-information, the copy is no deep copy.
      * @since 3.0
      */
-    @Suppress("NON_EXPORTABLE_TYPE", "UNCHECKED_CAST")
+    @Suppress("UNCHECKED_CAST")
     @JvmOverloads
-    open fun <T : AnyObject> toAnyObject(klass: KClass<T>? = null): T {
-        val any = Platform.newInstanceOf(klass ?: AnyObject::class)
+    open fun <T : MapProxy<String,*>> toAnyObject(type: PlatformType<T>? = null): T {
+        val pType = if (type == null) AnyObject.TYPE else {
+            if (!type.isProxy()) throw illegalArg("The given type (${type.name}) is no proxy")
+            if (!type.isInstantiatable) throw illegalArg("The given type (${type.name}) is not instantiatable")
+            type
+        }
+        val any = pType.newInstance() as MapProxy<String, Any?>
         for (entry in data) any.setRaw(entry.key, entry.value)
         any[TIME_IN_STORAGE] = timeInStorageMs.get()
         return any as T

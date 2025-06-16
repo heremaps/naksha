@@ -6,7 +6,7 @@ package naksha.base
 @JsExport
 actual class PlatformMapApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map
-    actual companion object PlatformMapApiCompanion {
+    actual companion object PlatformMapApi_C {
         private val EMPTY_MAP = js("new Map()")
 
         @JsStatic

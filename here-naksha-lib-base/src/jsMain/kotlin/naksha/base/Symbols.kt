@@ -2,14 +2,14 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.DEFAULT_SYMBOL
+import naksha.base.Platform.Platform_C.DEFAULT_SYMBOL
 
 /**
  * A singleton that grants access to symbols. Symbols are a way to bind proxies (and other hidden data) to platform objects.
  */
 @JsExport
 actual class Symbols {
-    actual companion object SymbolsCompanion {
+    actual companion object Symbols_C {
 
         /**
          * Creates a new symbol with the given description.

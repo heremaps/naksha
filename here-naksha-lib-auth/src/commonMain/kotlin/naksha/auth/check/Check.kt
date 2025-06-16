@@ -3,8 +3,8 @@
 package naksha.auth.check
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -48,7 +48,7 @@ open class Check() : AnyObject() {
         set("op", op)
     }
 
-    companion object CheckCompanion {
+    companion object Check_C {
         /**
          * The [PlatformType] of [Check].
          * @since 3.0

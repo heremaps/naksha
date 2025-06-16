@@ -2,21 +2,21 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forInstance
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_delete
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_entries
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get_capacity
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get_length
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_index_of
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_last_index_of
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_push
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_retain_all
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set_capacity
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set_length
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_splice
+import naksha.base.Platform.Platform_C.forInstance
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformListApi.PlatformListApi_C.list_delete
+import naksha.base.PlatformListApi.PlatformListApi_C.list_entries
+import naksha.base.PlatformListApi.PlatformListApi_C.list_get
+import naksha.base.PlatformListApi.PlatformListApi_C.list_get_capacity
+import naksha.base.PlatformListApi.PlatformListApi_C.list_get_length
+import naksha.base.PlatformListApi.PlatformListApi_C.list_index_of
+import naksha.base.PlatformListApi.PlatformListApi_C.list_last_index_of
+import naksha.base.PlatformListApi.PlatformListApi_C.list_push
+import naksha.base.PlatformListApi.PlatformListApi_C.list_retain_all
+import naksha.base.PlatformListApi.PlatformListApi_C.list_set
+import naksha.base.PlatformListApi.PlatformListApi_C.list_set_capacity
+import naksha.base.PlatformListApi.PlatformListApi_C.list_set_length
+import naksha.base.PlatformListApi.PlatformListApi_C.list_splice
 import naksha.base.fn.Fn2
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -31,7 +31,7 @@ import kotlin.reflect.KClass
  */
 @JsExport
 open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), MutableList<E?> {
-    companion object ListProxyCompanion {
+    companion object ListProxy_C {
         /**
          * The [PlatformType] of [ListProxy].
          * @since 3.0
@@ -39,6 +39,8 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
         @JvmField
         @JsStatic
         val TYPE = forKClass(ListProxy::class).withPackageName(PACKAGE_NAME)
+
+        init { initialize() }
     }
 
     /**

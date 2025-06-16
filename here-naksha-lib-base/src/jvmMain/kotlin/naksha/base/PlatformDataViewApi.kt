@@ -3,7 +3,7 @@ package naksha.base
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class PlatformDataViewApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView
-    actual companion object PlatformDataViewApiCompanion {
+    actual companion object PlatformDataViewApi_C {
         @JvmStatic
         actual fun dataview_get_byte_array(view: PlatformDataView): ByteArray =
             (view as JvmDataView).byteArray

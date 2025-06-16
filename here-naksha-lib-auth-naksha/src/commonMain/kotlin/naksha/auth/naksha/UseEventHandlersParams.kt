@@ -3,7 +3,7 @@
 package naksha.auth.naksha
 
 import naksha.base.NullableProperty
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.base.String_TYPE
 import naksha.base.StringList
@@ -37,7 +37,7 @@ class UseEventHandlersParams(): NakshaParams() {
         this.spaceId = spaceId
     }
 
-    companion object EventHandlerResourceCompanion {
+    companion object EventHandlerResource_C {
         /**
          * The [PlatformType] of [UseEventHandlersParams].
          * @since 3.0

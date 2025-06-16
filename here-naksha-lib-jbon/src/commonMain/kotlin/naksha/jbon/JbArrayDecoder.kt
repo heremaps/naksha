@@ -1,6 +1,6 @@
 package naksha.jbon
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -14,7 +14,7 @@ import kotlin.jvm.JvmField
 @JsExport
 class JbArrayDecoder : JbEntryArray<JbArrayDecoder>() {
 
-    companion object JbArrayDecoderCompanion {
+    companion object JbArrayDecoder_C {
         /**
          * The [PlatformType] of [JbArrayDecoder].
          * @since 3.0

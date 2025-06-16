@@ -65,7 +65,7 @@ interface IMetadata {
 
     /**
      * The [TupleNumber] of this [Tuple], which will be a combination of [storageNumber], [mapNumber], [collectionNumber], [partitionNumber], [txn], and [uid].
-     * @since 3.0.0
+     * @since 3.0
      */
     val tupleNumber: TupleNumber
 

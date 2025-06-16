@@ -1,8 +1,8 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.Platform.PlatformCompanion.unbox
-import naksha.base.Platform.PlatformCompanion.unsafe
+import naksha.base.Platform.Platform_C.logger
+import naksha.base.Platform.Platform_C.unbox
+import naksha.base.Platform.Platform_C.unsafe
 import java.lang.invoke.MethodHandles
 import java.lang.reflect.Constructor
 import java.lang.reflect.Method
@@ -43,7 +43,7 @@ class JvmPlatformType<T : Any> internal constructor(
         else -> null
     }
 
-    companion object PlatformTypeCompanion {
+    companion object PlatformType_C {
         private val lock: PlatformLock = Platform.newLock()
         private val initCache: AtomicMap<JvmPlatformType<*>, Boolean> = AtomicMap()
 
@@ -125,8 +125,8 @@ class JvmPlatformType<T : Any> internal constructor(
 
     override val isInstantiatable: Boolean = nonArgConstructor != null
 
-    override fun initialize() {
-        if (initCache[this] == true) return
+    override fun initialize(): PlatformType<T> {
+        if (initCache[this] == true) return this
         // Not yet initialized.
         lock.acquire().use {
             // If we're the first entering the initialization phase, do it.
@@ -146,6 +146,7 @@ class JvmPlatformType<T : Any> internal constructor(
                 }
             }
         }
+        return this
     }
 
     /**

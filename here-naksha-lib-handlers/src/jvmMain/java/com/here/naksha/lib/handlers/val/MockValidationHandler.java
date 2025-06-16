@@ -26,7 +26,7 @@ import com.here.naksha.lib.core.models.storage.ContextWriteFeatures;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
 import naksha.base.JvmBoxingUtil;
-import naksha.model.mom.MomReference;
+import naksha.mom.v2.MomReference;
 import naksha.model.mom.MomReferenceList;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;

@@ -5,7 +5,7 @@ import java.security.MessageDigest
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class PgPlatform {
-    actual companion object PgPlatformCompanion {
+    actual companion object PgPlatform_C {
 
         /**
          * A parameter that can be given to [getTestStorage] to not start a docker container, but to connect the test storage against an

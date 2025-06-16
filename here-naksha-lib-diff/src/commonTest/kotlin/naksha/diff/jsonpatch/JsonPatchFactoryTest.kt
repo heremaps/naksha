@@ -253,8 +253,8 @@ class JsonPatchFactoryTest {
     }
 
     private fun assertJsonsAreEqual(expected: String, actual: String) {
-        val expectedFlat = Platform.toJSON(Platform.fromJson(expected))
-        val actualFlat = Platform.toJSON(Platform.fromJson(actual))
+        val expectedFlat = Platform.toJson(Platform.fromJson(expected))
+        val actualFlat = Platform.toJson(Platform.fromJson(actual))
         assertEquals(expectedFlat, actualFlat)
     }
 }

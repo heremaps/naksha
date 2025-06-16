@@ -3,9 +3,9 @@
 package naksha.model
 
 import naksha.base.*
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaError_C.UNINITIALIZED
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -15,37 +15,37 @@ import kotlin.jvm.JvmField
  * The base class for all storage implementations.
  *
  * It is mandatory to extend this class when creating a storage, otherwise the caching sub-system won't work. Technically, the caching will only create an instance of a storage, when there is not yet one with the same configuration.
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
 
-    companion object AbstractStorageCompanion {
+    companion object AbstractStorage_C {
         /**
          * The [PlatformType] of [AbstractStorage].
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<AbstractStorage<*>> = forKClass(AbstractStorage::class).withPackageName(naksha.jbon.PACKAGE_NAME)
+        val TYPE = forKClass(AbstractStorage::class).withPackageName(PACKAGE_NAME)
     }
 
     /**
      * A lock for the storage to synchronize access to some properties and to prevent, that multiple threads in parallel initialize the storage, can be used by applications too, but should be avoided.
      *
-     * @since 3.0.0
+     * @since 3.0
      */
     override val lock = Platform.newLock()
 
     /**
      * The _KClass_ of the configuration needed.
-     * @since 3.0.0
+     * @since 3.0
      */
     abstract val configKlass: PlatformType<CONFIG>
 
     /**
      * The atomic reference to the configuration for internal use within [initStorage].
-     * @since 3.0.0
+     * @since 3.0
      */
     protected var configRef: AtomicRef<CONFIG> = AtomicRef(null)
     private var _id: String? = null
@@ -78,7 +78,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      * @param config the storage configuration as required.
      * @param create if not _null_, overrides [NakshaStorage.create].
      * @param upgrade if not _null_, overrides [NakshaStorage.upgrade].
-     * @since 3.0.0
+     * @since 3.0
      */
     protected abstract fun initStorage(config: CONFIG, create: Boolean?, upgrade: Boolean?)
 
@@ -104,7 +104,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
 
     /**
      * Helper method invoked by [initStorage] after the initialization has been done successfully, so just after [id], and [number] were set, but before the [lock] is released.
-     * @since 3.0.0
+     * @since 3.0
      */
     protected abstract fun afterInit()
 
@@ -114,7 +114,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      * This method will remove the instance from the [Naksha] singleton.
      *
      * @param dropCache if the cache should be dropped (new mandatory argument with v3.0.0).
-     * @since 3.0.0
+     * @since 3.0
      */
     protected abstract fun shutdownStorage(dropCache: Boolean)
 
@@ -143,7 +143,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
     /**
      * Mainly for internal purpose, tests if the storage is already initialized.
      *
-     * @since 3.0.0
+     * @since 3.0
      * @return _true_ if the storage is initialized; _false_ otherwise.
      */
     val initialized: Boolean
@@ -151,7 +151,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
 
     /**
      * Helper method to be called by the storage, ones a [shutdownStorage] is done, to finally remove the cache.
-     * @since 3.0.0
+     * @since 3.0
      */
     protected open fun dropCache() {
         // Naksha.cache.removedStorage(this)

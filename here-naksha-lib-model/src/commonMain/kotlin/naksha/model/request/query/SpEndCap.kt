@@ -3,18 +3,34 @@
 package naksha.model.request.query
 
 import naksha.base.JsEnum
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.reflect.KClass
 
+/**
+ * TODO
+ *
+ * @since 3.0
+ * @see SpBuffer
+ */
 @JsExport
 class SpEndCap : JsEnum() {
     companion object SpEndCap_C {
-        val ROUND = def(SpEndCap::class, "round")
-        val BUTT = def(SpEndCap::class, "butt").alias<SpEndCap>("flat")
+        /**
+         * The [PlatformType] of [SpEndCap].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(SpEndCap::class).withPackageName(PACKAGE_NAME)
+
+        val ROUND = def(TYPE, "round")
+        val BUTT = def(TYPE, "butt").alias<SpEndCap>("flat")
     }
 
-    @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = SpEndCap::class
-
+    override fun namespace() = TYPE
     override fun initClass() {}
 }

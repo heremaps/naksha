@@ -1,9 +1,9 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package naksha.model.mom
+package naksha.mom.v2
 
 import naksha.base.AnyObject
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -16,7 +16,7 @@ import kotlin.jvm.JvmField
 @JsExport
 class MomMetaNs : AnyObject() {
 
-    companion object MomMetaNsCompanion {
+    companion object MomMetaNs_C {
         /**
          * The [PlatformType] of [MomMetaNs].
          * @since 3.0

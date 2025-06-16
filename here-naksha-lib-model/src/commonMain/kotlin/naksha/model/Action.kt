@@ -1,9 +1,9 @@
 package naksha.model
 
 import naksha.base.JsEnum
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
-import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_SHIFT
+import naksha.model.FlagsBits.FlagsBits_C.ACTION_SHIFT
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -24,14 +24,14 @@ class Action : JsEnum() {
     override fun initClass() {}
 
     @Suppress("MemberVisibilityCanBePrivate")
-    companion object ActionCompanion {
+    companion object Action_C {
         /**
          * The [PlatformType] of [Action].
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val TYPE = forKClass(Action::class).withPackageName(naksha.jbon.PACKAGE_NAME)
+        val TYPE = forKClass(Action::class).withPackageName(PACKAGE_NAME)
 
         internal const val CREATED_VALUE = 0 shl ACTION_SHIFT
         internal const val CREATED_STRING = "CREATE"

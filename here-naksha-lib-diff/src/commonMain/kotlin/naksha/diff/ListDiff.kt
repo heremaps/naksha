@@ -3,7 +3,7 @@
 package naksha.diff
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -14,7 +14,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class ListDiff: AnyObject(), Difference {
-    companion object ListDiffCompanion {
+    companion object ListDiff_C {
         /**
          * The [PlatformType] of [ListDiff].
          * @since 3.0
@@ -24,7 +24,7 @@ class ListDiff: AnyObject(), Difference {
         val TYPE = forKClass(ListDiff::class).withPackageName(PACKAGE_NAME).withNameAsJsonType()
 
         private val DIFFERENCES = NotNullProperty<ListDiff, DifferenceList>(DifferenceList.TYPE) { _, _ -> DifferenceList() }
-        private val INT_0 = NotNullProperty<ListDiff, Int>(Int_Type) { _, _ -> 0 }
+        private val INT_0 = NotNullProperty<ListDiff, Int>(Int_TYPE) { _, _ -> 0 }
     }
 
     /**

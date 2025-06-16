@@ -2,7 +2,7 @@
 
 package naksha.diff
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -21,7 +21,7 @@ class RemoveDiff() : PrimitiveDiff() {
         setRaw(OLD_VALUE_KEY, oldValue)
     }
 
-    companion object RemoveDiffCompanion {
+    companion object RemoveDiff_C {
         /**
          * The [PlatformType] of [RemoveDiff].
          * @since 3.0

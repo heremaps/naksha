@@ -3,7 +3,7 @@
 package naksha.model
 
 import naksha.base.ListProxy
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -16,13 +16,13 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class GuidList : ListProxy<Guid>(Guid.TYPE) {
-    companion object GuidListCompanion {
+    companion object GuidList_C {
         /**
          * The [PlatformType] of [GuidList].
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<GuidList> = forKClass(GuidList::class).withPackageName(naksha.jbon.PACKAGE_NAME)
+        val TYPE = forKClass(GuidList::class).withPackageName(PACKAGE_NAME)
     }
 }

@@ -3,12 +3,20 @@
 package naksha.model.request.query
 
 import naksha.base.NotNullProperty
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
+import naksha.base.String_TYPE
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Tests if the value of a tag match the given regular expression.
- * @since 3.0.0
+ * @since 3.0
+ * @see IQuery
+ * @see ITagQuery
+ * @see TagQuery
  */
 @JsExport
 class TagValueMatches() : TagQuery() {
@@ -28,7 +36,7 @@ class TagValueMatches() : TagQuery() {
      *
      * @param name the name of the tag.
      * @param regex the regular expression against which the tag value should be matched; requires that the value is a string.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JsName("of")
     constructor(name: String, regex: String) : this() {
@@ -36,13 +44,21 @@ class TagValueMatches() : TagQuery() {
         this.regex = regex
     }
 
-    companion object TagExists_C {
-        private val REGEX = NotNullProperty<TagValueMatches, String>(String::class) { _, _ -> ".*" }
+    companion object TagValueMatches_C {
+        /**
+         * The [PlatformType] of [TagValueMatches].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(TagValueMatches::class).withPackageName(PACKAGE_NAME)
+
+        private val REGEX = NotNullProperty<TagValueMatches, String>(String_TYPE) { _, _ -> ".*" }
     }
 
     /**
      * The regular expression against which the tag value should be matched; requires that the value is a string.
-     * @since 3.0.0
+     * @since 3.0
      */
     var regex by REGEX
 

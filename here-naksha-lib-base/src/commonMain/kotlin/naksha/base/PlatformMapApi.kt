@@ -12,7 +12,7 @@ package naksha.base
  */
 expect class PlatformMapApi private constructor() {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map
-    companion object PlatformMapApiCompanion {
+    companion object PlatformMapApi_C {
         /**
          * Clears the [PlatformMap].
          * @param map The [PlatformMap] to clear.

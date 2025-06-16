@@ -4,7 +4,7 @@ package naksha.diff
 
 import naksha.base.AnyObject
 import naksha.base.NotNullProperty
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -16,7 +16,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class MapDiff : AnyObject(), Difference {
-    companion object MapDiffCompanion {
+    companion object MapDiff_C {
         /**
          * The [PlatformType] of [MapDiff].
          * @since 3.0

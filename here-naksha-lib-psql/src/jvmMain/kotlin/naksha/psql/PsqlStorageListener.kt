@@ -1,8 +1,8 @@
 package naksha.psql
 
-import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.Platform.Platform_C.logger
 import naksha.model.Naksha
-import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
+import naksha.psql.PgUtil.PgUtil_C.quoteIdent
 import org.postgresql.PGNotification
 import java.lang.ref.WeakReference
 import java.sql.Statement

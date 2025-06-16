@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -21,7 +21,7 @@ data class FromJsonOptions @JvmOverloads constructor(
     val detectors: AtomicSet<TypeDetector>? = null
 ) {
     @OptIn(ExperimentalJsStatic::class)
-    companion object FromJsonOptionsCompanion {
+    companion object FromJsonOptions_C {
         /**
          * The [PlatformType] of [FromJsonOptions].
          * @since 3.0
@@ -37,5 +37,7 @@ data class FromJsonOptions @JvmOverloads constructor(
         @JvmField
         @JsStatic
         val DEFAULT = FromJsonOptions()
+
+        init { initialize() }
     }
 }

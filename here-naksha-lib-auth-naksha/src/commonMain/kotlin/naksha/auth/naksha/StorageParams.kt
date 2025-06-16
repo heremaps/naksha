@@ -3,7 +3,7 @@
 package naksha.auth.naksha
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.TagMap
 import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
@@ -32,7 +32,7 @@ class StorageParams() : NakshaParams() {
         className = storage.className
     }
 
-    companion object StorageResourceCompanion {
+    companion object StorageResource_C {
         /**
          * The [PlatformType] of [StorageParams].
          * @since 3.0

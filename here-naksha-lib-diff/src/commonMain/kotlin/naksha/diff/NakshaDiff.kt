@@ -3,7 +3,7 @@
 // - jn Java at the class naksha.diff.NakshaDiffKt.{name}
 package naksha.diff
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 
 /**

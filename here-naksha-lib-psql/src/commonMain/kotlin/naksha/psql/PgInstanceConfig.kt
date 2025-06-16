@@ -4,7 +4,7 @@ package naksha.psql
 
 import naksha.base.AnyObject
 import naksha.base.NotNullProperty
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_ARGUMENT
 import naksha.base.NakshaException
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport

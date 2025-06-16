@@ -3,7 +3,7 @@
 package naksha.auth.naksha
 
 import naksha.auth.ServiceOpParamsList
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -17,7 +17,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class StorageParamsList : ServiceOpParamsList<StorageParams>(StorageParams.TYPE) {
-    companion object StorageResourceListCompanion {
+    companion object StorageResourceList_C {
         /**
          * The [PlatformType] of [StorageParamsList].
          * @since 3.0

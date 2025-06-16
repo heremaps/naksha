@@ -1,7 +1,7 @@
 package naksha.geo
 
 import naksha.base.ListProxy
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.base.illegalState
 import kotlin.js.JsExport
@@ -29,7 +29,7 @@ class MultiPolygonCoord() : ListProxy<PolygonCoord>(PolygonCoord.TYPE), ICoordin
         addAll(polygons)
     }
 
-    companion object MultiPolygonCoordCompanion {
+    companion object MultiPolygonCoord_C {
         /**
          * The [PlatformType] of [MultiPolygonCoord].
          * @since 3.0

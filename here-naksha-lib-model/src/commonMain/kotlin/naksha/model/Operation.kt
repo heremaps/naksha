@@ -1,9 +1,9 @@
 package naksha.model
 
 import naksha.base.JsEnum
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
-import naksha.model.FlagsBits.FlagsBitsCompanion.OP_SHIFT
+import naksha.model.FlagsBits.FlagsBits_C.OP_SHIFT
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -14,7 +14,7 @@ import kotlin.reflect.KClass
  * An enumeration about the operation being performed.
  *
  * This describes in greater detail what was logically done to feature, not what the effect was, which is described by the [Action].
- * @since 3.0.0
+ * @since 3.0
  * @see [Action]
  */
 @Suppress("OPT_IN_USAGE")
@@ -82,7 +82,7 @@ class Operation : JsEnum() {
 
         /**
          * The feature was created.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmField
@@ -95,7 +95,7 @@ class Operation : JsEnum() {
 
         /**
          * The feature was updated.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmField
@@ -108,7 +108,7 @@ class Operation : JsEnum() {
 
         /**
          * The feature was deleted.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmField
@@ -123,7 +123,7 @@ class Operation : JsEnum() {
          * The feature is created, but originates from another storage, map, or collection, or the `id` of the feature was changed.
          *
          * The [origin][Metadata.origin] will refer to the original [Tuple] that was copied.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmField
@@ -139,7 +139,7 @@ class Operation : JsEnum() {
          *
          * The [base_tn][Metadata.baseTupleNumber] refers to the shared base [Tuple] that was modified by this and the foreign _principal_.
          * @see [Metadata.baseTupleNumber]
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmField
@@ -238,7 +238,7 @@ class Operation : JsEnum() {
 
         /**
          * Helper to parse a string into an [Operation].
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
@@ -246,7 +246,7 @@ class Operation : JsEnum() {
 
         /**
          * Helper to get the [Operation] from the value.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
@@ -255,7 +255,7 @@ class Operation : JsEnum() {
 
     /**
      * The integer value.
-     * @since 3.0.0
+     * @since 3.0
      * @see [fromValue]
      */
     var intValue: Int = UNDEFINED_VALUE
@@ -263,7 +263,7 @@ class Operation : JsEnum() {
 
     /**
      * The short identifier, if there is any.
-     * @since 3.0.0
+     * @since 3.0
      */
     var shortId: String = UNDEFINED_STRING
         private set
@@ -272,14 +272,14 @@ class Operation : JsEnum() {
      * The [Action] that correlates to this operation, if there is a single action hard-wired with the operation.
      *
      * This is not the case for all operations, for example a [rebase][REBASED] is one operation, but can lead to different actions, as rebasing may create, update, and delete features as a result.
-     * @since 3.0.0
+     * @since 3.0
      */
     var action: Action? = null
         private set
 
     /**
      * The list of all [actions][Action] that are allowed to this operation.
-     * @since 3.0.0
+     * @since 3.0
      */
     var actions: Array<Action> = emptyArray()
         private set

@@ -3,13 +3,17 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.base.illegalArg
 import naksha.jbon.IDictReader
-import naksha.model.Metadata.MetadataCompanion.calculateHash
-import naksha.model.Metadata.MetadataCompanion.calculateHereTile
+import naksha.model.Metadata.Metadata_C.calculateHash
+import naksha.model.Metadata.Metadata_C.calculateHereTile
 import naksha.model.objects.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A wrapper for an ongoing Naksha transaction, used by [write session's][IWriteSession].
@@ -84,6 +88,16 @@ open class StorageTx private constructor(
         dictReader: IDictReader?,
     ): this(storage, storage.number, version, appId, author, dictReader)
 
+    companion object StorageTx_C {
+        /**
+         * The [PlatformType] of [StorageTx].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(StorageTx::class).withPackageName(PACKAGE_NAME)
+    }
+
     /**
      * The statistical transaction information, updated while this class is being used, should eventually be writted into the transaction-log of the storage.
      * @since 3.0
@@ -113,7 +127,7 @@ open class StorageTx private constructor(
      * @param operation the [operation][Operation] that is performed.
      * @param action the [action][Action] being performed, if not given, it is expected that the given [operation][Operation] has a [fixed action][Operation.action].
      * @return the new metadata that is correct for the new state, based upon the given data.
-     * @since 3.0.0
+     * @since 3.0
      * @see [StorageTx]
      */
     protected open fun metadataOf(
@@ -157,7 +171,7 @@ open class StorageTx private constructor(
         val cv1 = feature.properties.xyz.cv1
         val cv2 = feature.properties.xyz.cv2
         val cv3 = feature.properties.xyz.cv3
-        val featureType = if (collection.defaultFeatureType == feature.featureType) null else feature.featureType
+        val featureType = if (collection.defaultFeatureType == feature.type) null else feature.type
         return Metadata(
             tupleNumber = tn,
             flags = flags,

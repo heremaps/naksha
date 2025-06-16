@@ -2,8 +2,7 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.fn.Fn1
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.fn.Fn2
 import naksha.base.fn.Fx1
 import kotlin.js.JsExport
@@ -24,7 +23,7 @@ import kotlin.jvm.JvmOverloads
 @JsExport
 open class AtomicSet<E> private constructor(array: Array<E>, private val EMPTY: Array<E>) {
 
-    companion object AtomicSetCompanion {
+    companion object AtomicSet_C {
         /**
          * The [PlatformType] of [AtomicSet].
          * @since 3.0
@@ -32,6 +31,15 @@ open class AtomicSet<E> private constructor(array: Array<E>, private val EMPTY: 
         @JvmField
         @JsStatic
         val TYPE = forKClass(AtomicSet::class).withPackageName(PACKAGE_NAME)
+
+        //
+        // We must not call initialize, because actually `Platform.globalDetectors` uses AtomicSet,
+        // and initialize will insert something into this set, so we have a chicken-egg issue here.
+        // In a nutshell:
+        // The creation of the AtomicSet in `Platform.globalDetectors` causes initialize, which
+        // requires the AtomicSet to be available!
+        //
+        // init { initialize() }
     }
 
     private val contentRef: AtomicNonNullRef<Array<E>> = AtomicNonNullRef(array)
@@ -444,20 +452,20 @@ open class AtomicSet<E> private constructor(array: Array<E>, private val EMPTY: 
      *
      * If the set is modified while this method is running, the changes are ignored. So, this method logically makes a snapshot of the content and then iterates the snapshot. The method can abort the visit by calling [AbortVisit.with].
      * @param initialValue The initial value of the product.
+     * @param backwards If explicitly _true_, then iterates from last to first; otherwise _(default)_ from first to last.
      * @param visitor The visitor to call for each value in the set, is invoked with two parameters, the product as returned by the previous visitor, and the current element from this set; the visitor should return the calculated product.
      * @return the calculated product.
      * @since 3.0
      * @see AbortVisit.with
      */
     @Suppress("UNCHECKED_CAST")
-    fun <R> dot(initialValue: R?, visitor: Fn2<R?, R?, E>): R? {
+    @JvmOverloads
+    fun <R> dot(initialValue: R?= null, backwards: Boolean = false, visitor: Fn2<R?, R?, E>): R? {
         val existing = contentRef.get()
         var v = initialValue
         try {
-            for (i in existing.indices) {
-                val element = existing[i]
-                v = visitor.call(v, element)
-            }
+            if (backwards) for (i in existing.lastIndex downTo 0) v = visitor.call(v, existing[i])
+            else for (i in existing.indices) v = visitor.call(v, existing[i])
         } catch (e: NakshaException) {
             val err = e.error
             if (err is AbortVisit<*>) return err.value as R?
@@ -470,19 +478,19 @@ open class AtomicSet<E> private constructor(array: Array<E>, private val EMPTY: 
      * For each element being in the set, call the given visitor.
      *
      * If the set is modified while this method is running, the changes are ignored. So, this method logically makes a snapshot of the content and then iterates the snapshot. The method can abort the visit by calling [AbortVisit.with], in that case returning a value is possible.
+     * @param backwards If explicitly _true_, then iterates from last to first; otherwise _(default)_ from first to last.
      * @param visitor The visitor to call for each value in the set.
      * @return normally `null`, except the `visitor` aborts via [AbortVisit.with], then a value can be returned.
      * @since 3.0
      * @see AbortVisit.with
      */
     @Suppress("UNCHECKED_CAST")
-    fun <R> forEach(visitor: Fx1<E>): R? {
+    @JvmOverloads
+    fun <R> forEach(backwards: Boolean = false, visitor: Fx1<E>): R? {
         val existing = contentRef.get()
         try {
-            for (i in existing.indices) {
-                val element = existing[i]
-                visitor.call(element)
-            }
+            if (backwards) for (i in existing.lastIndex downTo 0) visitor.call(existing[i])
+            else for (i in existing.indices) visitor.call(existing[i])
         } catch (e: NakshaException) {
             val err = e.error
             if (err is AbortVisit<*>) return err.value as R?
@@ -490,6 +498,7 @@ open class AtomicSet<E> private constructor(array: Array<E>, private val EMPTY: 
         }
         return null
     }
+
 
     /**
      * Copy this set.

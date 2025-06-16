@@ -3,7 +3,7 @@
 package naksha.auth.check
 
 import naksha.base.ListProxy
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -22,7 +22,7 @@ class CheckList() : ListProxy<Check>(Check.TYPE) {
         addAll(checks)
     }
 
-    companion object CheckListCompanion {
+    companion object CheckList_C {
         /**
          * The [PlatformType] of [CheckList].
          * @since 3.0

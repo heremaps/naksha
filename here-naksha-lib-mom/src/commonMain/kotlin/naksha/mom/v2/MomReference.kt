@@ -1,10 +1,10 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package naksha.model.mom
+package naksha.mom.v2
 
 import naksha.base.NullableProperty
 import naksha.base.AnyObject
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.base.String_TYPE
 import kotlin.js.JsExport
@@ -18,14 +18,14 @@ import kotlin.jvm.JvmField
 @JsExport
 class MomReference() : AnyObject() {
 
-    @JsName("of")
+    @JsName("MomReferenceOf")
     constructor(id: String?, spaceId: String?, featureType: String?) : this() {
         this.id = id
         this.spaceId = spaceId
         this.featureType = featureType
     }
 
-    companion object MomReferenceCompanion {
+    companion object Mom2Reference_C {
         /**
          * The [PlatformType] of [MomReference].
          * @since 3.0

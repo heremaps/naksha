@@ -21,11 +21,11 @@ import kotlin.js.JsExport
  * - A: has-author-ts - bit 24 _(1-bit, 4194304)_
  * - C: has-created-at - bit 25 _(1-bit, 8388608)_
  * - RSV: reserved - bit: 26-31 (6-bit)
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 open class FlagsBits private constructor() {
-    companion object FlagsBitsCompanion {
+    companion object FlagsBits_C {
         // --------------------------------------< Geometry >-------------------------------------
         // NOTE: We keep geometry encoding in the lowest bits by intention!
         //       This allows us to test if the geometry need to be unzipped by just masking the

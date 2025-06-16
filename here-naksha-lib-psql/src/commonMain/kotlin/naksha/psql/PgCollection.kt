@@ -4,7 +4,7 @@ import naksha.base.*
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StoreMode
-import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
+import naksha.psql.PgUtil.PgUtil_C.quoteIdent
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 

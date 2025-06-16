@@ -4,7 +4,7 @@ package naksha.psql
 
 import naksha.base.*
 import naksha.model.*
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
 import naksha.model.request.*

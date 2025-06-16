@@ -14,7 +14,7 @@ import kotlin.jvm.JvmStatic
 @Suppress("DuplicatedCode")
 @JsExport
 class Fnv1a32 private constructor() {
-    companion object Fnv1a32Companion {
+    companion object Fnv1a32_C {
         /**
          * Start a new hash.
          * @return the default initial value.
@@ -200,5 +200,7 @@ class Fnv1a32 private constructor() {
             }
             return hash
         }
+
+        init { initialize() }
     }
 }

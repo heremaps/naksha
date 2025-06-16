@@ -3,7 +3,7 @@ package naksha.psql
 import naksha.base.AnyObject
 import naksha.base.Int64
 import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.longToInt64
+import naksha.base.Platform.Platform_C.longToInt64
 import naksha.base.toInt64
 import java.sql.ResultSet
 import java.sql.Statement

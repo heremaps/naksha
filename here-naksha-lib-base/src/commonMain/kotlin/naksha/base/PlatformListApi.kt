@@ -4,7 +4,7 @@ package naksha.base
 
 expect class PlatformListApi private constructor() {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
-    companion object PlatformListApiCompanion {
+    companion object PlatformListApi_C {
         fun list_get_length(array: PlatformList?): Int
         fun list_set_length(array: PlatformList?, length: Int)
         fun list_get_capacity(array: PlatformList?): Int

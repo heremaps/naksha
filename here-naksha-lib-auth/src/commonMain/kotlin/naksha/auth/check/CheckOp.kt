@@ -3,7 +3,7 @@
 package naksha.auth.check
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -16,7 +16,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 open class CheckOp : JsEnum() {
-    companion object CheckOpCompanion {
+    companion object CheckOp_C {
         /**
          * The [PlatformType] of [CheckOp].
          * @since 3.0

@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -14,7 +14,7 @@ import kotlin.jvm.JvmField
 @Suppress("OPT_IN_USAGE")
 @JsExport
 open class PlatformIteratorResult<VALUE>(var done: Boolean, var value: VALUE?) {
-    companion object PlatformIteratorResultCompanion {
+    companion object PlatformIteratorResult_C {
         /**
          * The [PlatformType] of [PlatformIteratorResult].
          * @since 3.0
@@ -22,5 +22,7 @@ open class PlatformIteratorResult<VALUE>(var done: Boolean, var value: VALUE?) {
         @JvmField
         @JsStatic
         val TYPE = forKClass(PlatformIteratorResult::class).withPackageName(PACKAGE_NAME)
+
+        init { initialize() }
     }
 }

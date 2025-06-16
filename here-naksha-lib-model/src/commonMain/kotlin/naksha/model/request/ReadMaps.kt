@@ -1,13 +1,17 @@
-@file:OptIn(ExperimentalJsExport::class)
+@file:Suppress("OPT_IN_USAGE")
 
 package naksha.model.request
 
 import naksha.base.NotNullProperty
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.base.StringList
 import naksha.model.Naksha
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A request to read [map features][naksha.model.objects.NakshaMap] from a storage.
@@ -20,13 +24,21 @@ open class ReadMaps() : ReadRequest() {
      * @param mapIds the map identifiers.
      * @since 3.0
      */
-    @JsName("of")
+    @JsName("ReadMapsOf")
     constructor(vararg mapIds: String) : this() {
         this.mapIds.addAll(mapIds)
     }
 
     companion object ReadMaps_C {
-        private val STRING_LIST = NotNullProperty<ReadMaps, StringList>(StringList::class)
+        /**
+         * The [PlatformType] of [ReadMaps].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(ReadMaps::class).withPackageName(PACKAGE_NAME)
+
+        private val STRING_LIST = NotNullProperty<ReadMaps, StringList>(StringList.TYPE)
     }
 
     /**

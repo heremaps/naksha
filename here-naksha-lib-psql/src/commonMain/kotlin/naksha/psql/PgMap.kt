@@ -3,23 +3,23 @@
 package naksha.psql
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.Platform.Platform_C.logger
 import naksha.model.Naksha
-import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
-import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_NUMBER
-import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL
-import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL_NUMBER
-import naksha.model.Naksha.NakshaCompanion.MAPS_COL
-import naksha.model.Naksha.NakshaCompanion.MAPS_COL_NUMBER
-import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
-import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_NUMBER
+import naksha.model.Naksha.Naksha_C.COLLECTIONS_COL
+import naksha.model.Naksha.Naksha_C.COLLECTIONS_COL_NUMBER
+import naksha.model.Naksha.Naksha_C.DICTIONARIES_COL
+import naksha.model.Naksha.Naksha_C.DICTIONARIES_COL_NUMBER
+import naksha.model.Naksha.Naksha_C.MAPS_COL
+import naksha.model.Naksha.Naksha_C.MAPS_COL_NUMBER
+import naksha.model.Naksha.Naksha_C.TRANSACTIONS_COL
+import naksha.model.Naksha.Naksha_C.TRANSACTIONS_COL_NUMBER
 import naksha.base.NakshaError
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
 import naksha.base.NakshaException
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
-import naksha.psql.PgColumn.PgColumnCompanion.allColumns
-import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
+import naksha.psql.PgColumn.PgColumn_C.allColumns
+import naksha.psql.PgUtil.PgUtil_C.quoteIdent
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 

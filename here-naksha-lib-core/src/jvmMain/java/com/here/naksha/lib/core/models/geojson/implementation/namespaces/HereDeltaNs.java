@@ -21,8 +21,8 @@ package com.here.naksha.lib.core.models.geojson.implementation.namespaces;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.util.json.JsonObject;
-import naksha.model.mom.MomChangeState;
-import naksha.model.mom.MomReviewState;
+import naksha.mom.v2.MomChangeState;
+import naksha.mom.v2.MomReviewState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

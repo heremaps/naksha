@@ -1,8 +1,8 @@
 package naksha.auth.check
 
 import naksha.auth.*
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.Platform.PlatformCompanion.fromJson
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.Platform.Platform_C.fromJson
 import kotlin.test.*
 
 class CheckMapCompilerTest {

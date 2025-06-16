@@ -1,8 +1,8 @@
 package naksha.jbon;
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_size
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_size
 import kotlin.js.*
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
@@ -80,7 +80,7 @@ open class JbEncoder(var global: IDict? = null) : Binary() {
         this.resize = true
     }
 
-    companion object JbEncoderCompanion {
+    companion object JbEncoder_C {
         /**
          * The [PlatformType] of [JbEncoder].
          * @since 3.0

@@ -3,9 +3,9 @@
 package naksha.geo
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.Platform.PlatformCompanion.unbox
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.Platform.Platform_C.unbox
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -25,7 +25,7 @@ import kotlin.jvm.JvmField
 @JsExport
 class GeoTypeDetector private constructor(): TypeDetector {
 
-    companion object GeoTypeDetectorCompanion {
+    companion object GeoTypeDetector_C {
         /**
          * The [PlatformType] of [GeoTypeDetector].
          * @since 3.0

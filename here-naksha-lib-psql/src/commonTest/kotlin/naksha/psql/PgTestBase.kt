@@ -5,7 +5,7 @@ package naksha.psql
 
 import naksha.base.AtomicMap
 import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.Platform.Platform_C.logger
 import naksha.base.PlatformUtil
 import naksha.model.*
 import naksha.model.objects.NakshaCollection

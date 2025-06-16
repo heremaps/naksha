@@ -65,7 +65,7 @@ public class IterateHandle extends AnyObject {
   }
 
   public String base64EncodedSerializedJson() {
-    return Base64.getEncoder().encodeToString(Platform.toJSON(this, ToJsonOptions.DEFAULT).getBytes(StandardCharsets.UTF_8));
+    return Base64.getEncoder().encodeToString(Platform.toJson(this, ToJsonOptions.DEFAULT).getBytes(StandardCharsets.UTF_8));
   }
 
   public static IterateHandle base64DecodedDeserializedJson(final @NotNull String handle) {

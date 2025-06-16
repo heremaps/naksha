@@ -1,7 +1,7 @@
 package naksha.geo
 
 import naksha.base.NullableProperty
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -21,7 +21,7 @@ class SpGeometryCollection() : SpGeometry() {
         this.geometries = geometries
     }
 
-    companion object SpGeometryCollectionCompanion {
+    companion object SpGeometryCollection_C {
         /**
          * The [PlatformType] of [SpGeometryCollection].
          * @since 3.0

@@ -2,9 +2,9 @@
 
 package naksha.psql
 
-import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
-import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
-import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_NUMBER
+import naksha.model.Naksha.Naksha_C.ADMIN_MAP
+import naksha.model.Naksha.Naksha_C.TRANSACTIONS_COL
+import naksha.model.Naksha.Naksha_C.TRANSACTIONS_COL_NUMBER
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StoreMode
 import kotlin.js.JsExport

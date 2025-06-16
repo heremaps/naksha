@@ -1,7 +1,7 @@
 package naksha.geo
 
-import naksha.base.Platform.PlatformCompanion.fromJson
-import naksha.base.Platform.PlatformCompanion.toJSON
+import naksha.base.Platform.Platform_C.fromJson
+import naksha.base.Platform.Platform_C.toJson
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Test
 import org.locationtech.jts.geom.LineString
@@ -68,7 +68,7 @@ class JtsTest {
         // then
         assertInstanceOf(Point::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(toJSON(proxyFromJts), toJSON(spGeometry))
+        assertEquals(toJson(proxyFromJts), toJson(spGeometry))
     }
 
     @Test
@@ -94,7 +94,7 @@ class JtsTest {
         // then
         assertInstanceOf(MultiPoint::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(toJSON(proxyFromJts), toJSON(spGeometry))
+        assertEquals(toJson(proxyFromJts), toJson(spGeometry))
     }
 
     @Test
@@ -120,7 +120,7 @@ class JtsTest {
         // then
         assertInstanceOf(LineString::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(toJSON(proxyFromJts), toJSON(spGeometry))
+        assertEquals(toJson(proxyFromJts), toJson(spGeometry))
     }
 
     @Test
@@ -152,7 +152,7 @@ class JtsTest {
         // then
         assertInstanceOf(MultiLineString::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(toJSON(proxyFromJts), toJSON(spGeometry))
+        assertEquals(toJson(proxyFromJts), toJson(spGeometry))
     }
 
     @Test
@@ -194,7 +194,7 @@ class JtsTest {
         // then
         assertInstanceOf(Polygon::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(toJSON(proxyFromJts), toJSON(spGeometry))
+        assertEquals(toJson(proxyFromJts), toJson(spGeometry))
     }
 
     @Test
@@ -254,7 +254,7 @@ class JtsTest {
         // then
         assertInstanceOf(Polygon::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(toJSON(proxyFromJts), toJSON(spGeometry))
+        assertEquals(toJson(proxyFromJts), toJson(spGeometry))
     }
 
     @Test
@@ -318,7 +318,7 @@ class JtsTest {
         // then
         assertInstanceOf(MultiPolygon::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(toJSON(proxyFromJts), toJSON(spGeometry))
+        assertEquals(toJson(proxyFromJts), toJson(spGeometry))
     }
 
     @Test

@@ -4,7 +4,7 @@ import naksha.auth.check.Equals
 import naksha.auth.check.StartsWith
 import naksha.auth.naksha.FeatureParams
 import naksha.auth.naksha.NakshaOps
-import naksha.base.Platform.PlatformCompanion.fromJson
+import naksha.base.Platform.Platform_C.fromJson
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaMap

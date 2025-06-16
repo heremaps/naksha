@@ -64,8 +64,8 @@ public class ActivityLogFeatureAssertions {
 
   public ActivityLogFeatureAssertions isIdenticalToDatahubSampleFeature(NakshaFeature datahubFeature, String message) throws JSONException {
     alignDiff(subject);
-    String subjectJson = Platform.toJSON(subject, ToJsonOptions.DEFAULT);
-    String datahubFeatureJson = Platform.toJSON(datahubFeature, ToJsonOptions.DEFAULT);
+    String subjectJson = Platform.toJson(subject, ToJsonOptions.DEFAULT);
+    String datahubFeatureJson = Platform.toJson(datahubFeature, ToJsonOptions.DEFAULT);
     JSONAssert.assertEquals(message, datahubFeatureJson, subjectJson, JSONCompareMode.LENIENT);
     return this;
   }

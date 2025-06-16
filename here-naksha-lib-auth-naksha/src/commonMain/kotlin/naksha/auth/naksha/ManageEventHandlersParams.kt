@@ -3,7 +3,7 @@
 package naksha.auth.naksha
 
 import naksha.base.NullableProperty
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.base.String_TYPE
 import naksha.base.StringList
@@ -35,7 +35,7 @@ class ManageEventHandlersParams(): NakshaParams() {
         className = eventHandler.getAs("className", String_TYPE)
     }
 
-    companion object ManageEventHandlerCompanion {
+    companion object ManageEventHandler_C {
         /**
          * The [PlatformType] of [ManageEventHandlersParams].
          * @since 3.0

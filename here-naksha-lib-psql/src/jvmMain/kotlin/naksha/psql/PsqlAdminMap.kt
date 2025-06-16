@@ -1,12 +1,12 @@
 package naksha.psql
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.Platform.Platform_C.logger
 import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
-import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
+import naksha.psql.PgUtil.PgUtil_C.quoteLiteral
 
 /**
  * The admin-map of the [PsqlStorage].

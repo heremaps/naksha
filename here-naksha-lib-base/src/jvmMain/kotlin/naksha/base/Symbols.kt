@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.DEFAULT_SYMBOL
+import naksha.base.Platform.Platform_C.DEFAULT_SYMBOL
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicReference
  */
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class Symbols {
-    actual companion object SymbolsCompanion {
+    actual companion object Symbols_C {
         private val symbolsCache = ConcurrentHashMap<String, Symbol>()
 
         @JvmStatic

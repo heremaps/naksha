@@ -6,8 +6,8 @@ import naksha.base.mapNotFound
 import naksha.base.unsupportedOp
 import naksha.model.request.*
 import naksha.model.request.query.MetaColumn
-import naksha.model.request.query.SortOrder.SortOrderCompanion.ASCENDING
-import naksha.psql.PgColumn.PgColumnCompanion.next_tn
+import naksha.model.request.query.SortOrder.SortOrder_C.ASCENDING
+import naksha.psql.PgColumn.PgColumn_C.next_tn
 import kotlin.math.max
 import kotlin.math.min
 

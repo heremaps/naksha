@@ -3,7 +3,7 @@
 package naksha.model.objects
 
 import naksha.base.ListProxy
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -12,11 +12,12 @@ import kotlin.jvm.JvmStatic
 
 /**
  * A list of Naksha features.
+ * @since 3.0
  */
 @JsExport
 open class NakshaFeatureList : ListProxy<NakshaFeature>(NakshaFeature.TYPE){
 
-    companion object NakshaFeatureListCompanion {
+    companion object NakshaFeatureList_C {
         /**
          * The [PlatformType] of [NakshaFeatureList].
          * @since 3.0

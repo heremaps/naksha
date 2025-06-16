@@ -3,7 +3,11 @@
 package naksha.model.request
 
 import naksha.base.AnyObject
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A response to a [Request].
@@ -13,13 +17,23 @@ import kotlin.js.JsExport
 @JsExport
 open class Response : AnyObject() {
 
+    companion object Response_C {
+        /**
+         * The [PlatformType] of [Response].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(Response::class).withPackageName(PACKAGE_NAME)
+    }
+
     /**
      * The size of the underlying platform object, so the hash-map, **not the amount of results**!
      *
      * ## Warning
      * This does not return the amount of results, please use [length] for this!
      * @since 3.0
-     * @see [length]
+     * @see length
      */
     @Deprecated(message = "You very likely mean length", replaceWith = ReplaceWith("length"), level = DeprecationLevel.WARNING)
     override val size: Int = super.size
@@ -38,5 +52,5 @@ open class Response : AnyObject() {
      * @see [length]
      */
     @Deprecated(message = "Please use length", replaceWith = ReplaceWith("length"), level = DeprecationLevel.ERROR)
-    open fun resultSize(): Int = length
+    fun resultSize(): Int = length
 }

@@ -2,7 +2,7 @@
 
 package naksha.auth.check
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -23,7 +23,7 @@ class MatchesKey() : Check("matchesKey") {
         useAnyOf().addAll(anyOf)
     }
 
-    companion object MatchesKeyCompanion {
+    companion object MatchesKey_C {
         /**
          * The [PlatformType] of [MatchesKey].
          * @since 3.0

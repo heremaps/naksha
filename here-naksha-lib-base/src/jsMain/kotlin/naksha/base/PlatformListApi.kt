@@ -5,7 +5,7 @@ package naksha.base
 @JsExport
 actual class PlatformListApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
-    actual companion object PlatformListApiCompanion {
+    actual companion object PlatformListApi_C {
         @JsStatic
         actual fun list_get_length(array: PlatformList?): Int = array.asDynamic().length.unsafeCast<Int>()
 

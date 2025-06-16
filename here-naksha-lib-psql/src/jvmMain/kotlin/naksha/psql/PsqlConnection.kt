@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
 import naksha.base.NakshaException
 import naksha.model.SessionOptions
 import java.lang.ref.WeakReference

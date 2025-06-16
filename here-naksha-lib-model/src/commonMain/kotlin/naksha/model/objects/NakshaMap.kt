@@ -3,7 +3,7 @@
 package naksha.model.objects
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.geo.BBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
@@ -16,9 +16,16 @@ import kotlin.jvm.JvmField
 /**
  * A map within a storage; maps are used to group collections.
  * @since 3.0
+ * @see NakshaObject
+ * @see NakshaStorage
+ * @see NakshaMap
+ * @see NakshaCollection
+ * @see NakshaDictionary
+ * @see NakshaSubscriptionState
+ * @see NakshaTx
  */
 @JsExport
-open class NakshaMap() : NakshaFeature() {
+open class NakshaMap() : NakshaObject() {
 
     /**
      * Create a new map feature with the given identifier.
@@ -30,23 +37,25 @@ open class NakshaMap() : NakshaFeature() {
         this.id = id
     }
 
-    companion object NakshaMapCompanion {
+    companion object NakshaMap_C {
         /**
          * The [PlatformType] of [NakshaMap].
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val TYPE = forKClass(NakshaMap::class).withPackageName(PACKAGE_NAME).withJsonType("naksha.Map")
+        val TYPE = forKClass(NakshaMap::class)
+            .withPackageName(PACKAGE_NAME)
+            .withJsonType("naksha.Map")
 
         private val STORAGE_ID = NullableProperty<NakshaMap, String>(String_TYPE)
-        private val DEFAULT_FLAGS = NullableProperty<NakshaMap, Flags>(Int_Type)
+        private val DEFAULT_FLAGS = NullableProperty<NakshaMap, Flags>(Int_TYPE)
     }
 
     override fun withId(id: String): NakshaMap = super.withId(id) as NakshaMap
     override fun withBBox(bbox: BBox): NakshaMap = super.withBBox(bbox) as NakshaMap
     override fun withAutoBBox(): NakshaMap = super.withAutoBBox() as NakshaMap
-    override fun withGeometry(geometry: SpGeometry): NakshaMap = super.withGeometry(geometry) as NakshaMap
+    override fun withGeometry(geometry: SpGeometry?): NakshaMap = super.withGeometry(geometry) as NakshaMap
     override val properties: NakshaProperties
         get() = get_properties(NakshaProperties.TYPE)
     override fun withProperties(properties: AnyObject): NakshaMap = super.withProperties(properties) as NakshaMap

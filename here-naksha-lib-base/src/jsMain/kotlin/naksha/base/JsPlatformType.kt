@@ -3,9 +3,9 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.DEFAULT_SYMBOL
-import naksha.base.Platform.PlatformCompanion.isPlatformObject
-import naksha.base.Platform.PlatformCompanion.unbox
+import naksha.base.Platform.Platform_C.DEFAULT_SYMBOL
+import naksha.base.Platform.Platform_C.isPlatformObject
+import naksha.base.Platform.Platform_C.unbox
 import kotlin.reflect.KClass
 import kotlin.reflect.createInstance
 
@@ -22,7 +22,7 @@ class JsPlatformType<T : Any> internal constructor(
      */
     val jsClass: JsClass<T>
 ) : PlatformType<T> {
-    companion object JsPlatformTypeCompanion {
+    companion object JsPlatformType_C {
         /**
          * The platform type by name.
          * @since 3.0
@@ -191,7 +191,7 @@ js("""
     // findPackageName(c, [], [], globalThis)
 
     @Suppress("UselessCallOnNotNull")
-    override fun initialize() {
+    override fun initialize(): PlatformType<T> {
         if (!isInitialized) {
             // We need to set here, so that we do not end up in recursive calls.
             isInitialized = true
@@ -207,6 +207,7 @@ js("""
                 symbol = DEFAULT_SYMBOL
             }
         }
+        return this
     }
 
     /**

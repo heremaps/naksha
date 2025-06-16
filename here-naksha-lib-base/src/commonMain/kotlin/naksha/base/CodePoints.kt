@@ -13,7 +13,7 @@ import kotlin.jvm.JvmStatic
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
 class CodePoints private constructor() {
-    companion object CodePointsCompanion {
+    companion object CodePoints_C {
         private const val MIN_SUPPLEMENTARY_CODE_POINT = 0x10000
         private const val MAX_CODE_POINT = 0x10FFFF
 
@@ -81,5 +81,7 @@ class CodePoints private constructor() {
         fun toCodePoint(highSurrogate: Char, lowSurrogate: Char): Int {
             return (highSurrogate.code shl 10) + lowSurrogate.code + SURROGATE_DECODE_OFFSET
         }
+
+        init { initialize() }
     }
 }

@@ -3,11 +3,12 @@
 package naksha.model
 
 import naksha.base.*
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
-import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_SHIFT
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_set_int32
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_set_int64
+import naksha.model.FlagsBits.FlagsBits_C.ACTION_SHIFT
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B96
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B192
@@ -43,7 +44,7 @@ data class TupleNumber(
 
     /**
      * The map-number of the map in which the tuple is stored within the storage.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JvmField val mapNumber: Int,
 
@@ -147,7 +148,7 @@ data class TupleNumber(
     /**
      * Return the [TupleNumber] as string.
      * @return `{storage-number}:{map-number}:{collection-number}:{feature-number}:{year}:{month}:{day}:{seq}:{uid}`
-     * @since 3.0.0
+     * @since 3.0
      * @see [fromString]
      * @see [toUrn]
      * @see [fromUrn]
@@ -292,6 +293,14 @@ data class TupleNumber(
     }
 
     companion object TupleNumber_C {
+        /**
+         * The [PlatformType] of [TupleNumber].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(TupleNumber::class).withPackageName(PACKAGE_NAME)
+
         internal const val STORAGE_NUMBER = 0
         internal const val MAP_NUMBER = 1
         internal const val COLLECTION_NUMBER = 2

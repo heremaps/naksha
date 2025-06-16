@@ -2,7 +2,7 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -15,7 +15,7 @@ import kotlin.jvm.JvmStatic
  */
 @JsExport
 class AbortVisit<T>(val value: T) : NakshaError(ABORT_VISIT, "aborted visit") {
-    companion object AbortVisitCompanion : NakshaError() {
+    companion object AbortVisit_C : NakshaError() {
         /**
          * The [PlatformType] of [AbortVisit].
          * @since 3.0
@@ -32,5 +32,7 @@ class AbortVisit<T>(val value: T) : NakshaError(ABORT_VISIT, "aborted visit") {
         @JvmStatic
         @JsStatic
         fun <T> with(value: T): Nothing = throw NakshaException(AbortVisit(value))
+
+        init { initialize() }
     }
 }

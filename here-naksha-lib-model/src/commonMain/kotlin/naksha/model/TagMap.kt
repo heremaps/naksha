@@ -3,7 +3,7 @@
 package naksha.model
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -31,7 +31,7 @@ open class TagMap() : MapProxy<String, Any>(String_TYPE, Any_TYPE) {
             .forEach { (key, value) -> put(key, value) }
     }
 
-    companion object TagMapCompanion {
+    companion object TagMap_C {
         /**
          * The [PlatformType] of [TagMap].
          * @since 3.0

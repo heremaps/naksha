@@ -3,8 +3,12 @@
 package naksha.model
 
 import naksha.base.AtomicInt
-import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_SHIFT
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
+import naksha.model.FlagsBits.FlagsBits_C.ACTION_SHIFT
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A `uid` manager to ensure that correct `uid` values are generated.
@@ -12,6 +16,16 @@ import kotlin.js.JsExport
  */
 @JsExport
 class UidManager {
+    companion object UidManager_C {
+        /**
+         * The [PlatformType] of [UidManager].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(UidManager::class).withPackageName(PACKAGE_NAME)
+    }
+
     private val value = AtomicInt(-4)
 
     /**

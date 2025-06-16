@@ -282,7 +282,7 @@ class TupleCache internal constructor() {
     /**
      * A method being invoked when a new storage was added to the [Naksha registry][Naksha].
      * @param storage the storage that was added.
-     * @since 3.0.0
+     * @since 3.0
      */
     internal fun addStorage(storage: IStorage) {
         forEachCache {
@@ -293,7 +293,7 @@ class TupleCache internal constructor() {
     /**
      * A method being invoked when a previously registered storage was removed from the [Naksha registry][Naksha].
      * @param storage the storage that was removed.
-     * @since 3.0.0
+     * @since 3.0
      */
     internal fun removedStorage(storage: IStorage) {
         forEachCache {
@@ -332,7 +332,7 @@ class TupleCache internal constructor() {
 
     /**
      * Removes all cache entries (clear the cache).
-     * @since 3.0.0
+     * @since 3.0
      */
     fun clear() {
         forEachCache { it.clear() }
@@ -341,7 +341,7 @@ class TupleCache internal constructor() {
     /**
      * Removes all cache entries for the given storage.
      * @param storage the storage for which to clear cache entries.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JsName("clearForStorage")
     fun clear(storage: IStorage) {

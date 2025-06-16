@@ -3,7 +3,7 @@
 package naksha.auth
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -26,7 +26,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 open class ServiceOps : AnyObject() {
-    companion object ServiceOpsCompanion {
+    companion object ServiceOps_C {
         /**
          * The [PlatformType] of [ServiceOps].
          * @since 3.0

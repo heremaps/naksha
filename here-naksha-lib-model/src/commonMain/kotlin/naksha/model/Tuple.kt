@@ -3,9 +3,12 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.base.WeakRef
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
@@ -62,6 +65,16 @@ data class Tuple(
      */
     @JvmField val complete: Boolean = false,
 ) : ITuple {
+
+    companion object Tuple_C {
+        /**
+         * The [PlatformType] of [Tuple].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(Tuple::class).withPackageName(PACKAGE_NAME)
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

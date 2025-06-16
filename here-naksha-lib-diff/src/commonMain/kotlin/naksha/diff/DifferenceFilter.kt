@@ -4,7 +4,7 @@ import kotlin.jvm.JvmStatic
 
 class DifferenceFilter private constructor() {
 
-    companion object DifferenceFilterCompanion {
+    companion object DifferenceFilter_C {
 
         /**
          * Removes all occurrences of [RemoveDiff] from composite [Difference] types as [ListDiff] or [MapDiff]

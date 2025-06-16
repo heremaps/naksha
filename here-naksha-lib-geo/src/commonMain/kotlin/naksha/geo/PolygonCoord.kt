@@ -1,7 +1,7 @@
 package naksha.geo
 
 import naksha.base.ListProxy
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.base.illegalArg
 import naksha.base.illegalState
@@ -33,7 +33,7 @@ class PolygonCoord(): ListProxy<LinearRingCoord>(LinearRingCoord.TYPE), ICoordin
         addAll(rings)
     }
 
-    companion object PolygonCoordCompanion {
+    companion object PolygonCoord_C {
         /**
          * The [PlatformType] of [PolygonCoord].
          * @since 3.0

@@ -5,24 +5,24 @@
 // - jn Java at the class naksha.base.NakshaBaseKt.{name}
 package naksha.base
 
-import naksha.base.NakshaError.NakshaErrorCompanion.COLLECTION_EXISTS
-import naksha.base.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
-import naksha.base.NakshaError.NakshaErrorCompanion.CONFLICT
-import naksha.base.NakshaError.NakshaErrorCompanion.EXCEPTION
-import naksha.base.NakshaError.NakshaErrorCompanion.FEATURE_EXISTS
-import naksha.base.NakshaError.NakshaErrorCompanion.FEATURE_NOT_FOUND
-import naksha.base.NakshaError.NakshaErrorCompanion.FORBIDDEN
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.base.NakshaError.NakshaErrorCompanion.MAP_EXISTS
-import naksha.base.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
-import naksha.base.NakshaError.NakshaErrorCompanion.NOT_FOUND
-import naksha.base.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
-import naksha.base.Platform.PlatformCompanion.asPlatformObject
-import naksha.base.Platform.PlatformCompanion.detectMap
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.Platform.PlatformCompanion.isPlatformObject
+import naksha.base.NakshaError.NakshaError_C.COLLECTION_EXISTS
+import naksha.base.NakshaError.NakshaError_C.COLLECTION_NOT_FOUND
+import naksha.base.NakshaError.NakshaError_C.CONFLICT
+import naksha.base.NakshaError.NakshaError_C.EXCEPTION
+import naksha.base.NakshaError.NakshaError_C.FEATURE_EXISTS
+import naksha.base.NakshaError.NakshaError_C.FEATURE_NOT_FOUND
+import naksha.base.NakshaError.NakshaError_C.FORBIDDEN
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_ID
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaError_C.MAP_EXISTS
+import naksha.base.NakshaError.NakshaError_C.MAP_NOT_FOUND
+import naksha.base.NakshaError.NakshaError_C.NOT_FOUND
+import naksha.base.NakshaError.NakshaError_C.UNSUPPORTED_OPERATION
+import naksha.base.Platform.Platform_C.asPlatformObject
+import naksha.base.Platform.Platform_C.detectMap
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.Platform.Platform_C.isPlatformObject
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
 
@@ -31,6 +31,11 @@ import naksha.base.fn.Fn1
  * @since 3.0
  */
 const val PACKAGE_NAME = "naksha.base"
+
+/**
+ * The string `Feature`.
+ */
+internal const val FEATURE = "Feature"
 
 inline fun Int64(value: Long) = Platform.longToInt64(value)
 inline fun Int64(value: Int) = Platform.toInt64(value)
@@ -142,181 +147,181 @@ inline operator fun <reified T> Array<T>.minus(element: T?): Array<T> {
  * The [PlatformType] for `any`.
  * @since 3.0
  */
-val Any_TYPE = forKClass(Any::class)
+val Any_TYPE = forKClass(Any::class).initialize()
 
 /**
  * The [PlatformType] for `boolean`.
  * @since 3.0
  */
-val Boolean_TYPE = forKClass(Boolean::class)
+val Boolean_TYPE = forKClass(Boolean::class).initialize()
 
 /**
  * The [PlatformType] for `int`.
  * @since 3.0
  */
-val Int_Type = forKClass(Int::class)
+val Int_TYPE = forKClass(Int::class).initialize()
 
 /**
  * The [PlatformType] for `int64`.
  * @since 3.0
  */
-val Int64_TYPE = forKClass(Int64::class)
+val Int64_TYPE = forKClass(Int64::class).initialize()
 
 /**
  * The [PlatformType] for `double`.
  * @since 3.0
  */
-val Double_TYPE = forKClass(Double::class)
+val Double_TYPE = forKClass(Double::class).initialize()
 
 /**
  * The [PlatformType] for `string`.
  * @since 3.0
  */
-val String_TYPE = forKClass(String::class)
+val String_TYPE = forKClass(String::class).initialize()
 
 /**
  * The [PlatformType] for `ByteArray`.
  * @since 3.0
  */
-val ByteArray_TYPE = forKClass(ByteArray::class)
+val ByteArray_TYPE = forKClass(ByteArray::class).initialize()
 
 /**
  * The [PlatformType] for `throwable`.
  * @since 3.0
  */
-val Throwable_TYPE = forKClass(Throwable::class)
+val Throwable_TYPE = forKClass(Throwable::class).initialize()
 
 /**
  * The [PlatformType] for `exception`.
  * @since 3.0
  */
-val Exception_TYPE = forKClass(Exception::class)
+val Exception_TYPE = forKClass(Exception::class).initialize()
 
 /**
  * The [PlatformType] of [AtomicBool].
  * @since 3.0
  */
-val AtomicBool_TYPE: PlatformType<AtomicBool> = forKClass(AtomicBool::class).withPackageName(PACKAGE_NAME)
+val AtomicBool_TYPE = forKClass(AtomicBool::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [AtomicInt].
  * @since 3.0
  */
-val AtomicInt_TYPE: PlatformType<AtomicInt> = forKClass(AtomicInt::class).withPackageName(PACKAGE_NAME)
+val AtomicInt_TYPE = forKClass(AtomicInt::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [AtomicInt64].
  * @since 3.0
  */
-val AtomicInt64_TYPE: PlatformType<AtomicInt64> = forKClass(AtomicInt64::class).withPackageName(PACKAGE_NAME)
+val AtomicInt64_TYPE = forKClass(AtomicInt64::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [AtomicMap].
  * @since 3.0
  */
-val AtomicMap_TYPE: PlatformType<AtomicMap<*,*>> = forKClass(AtomicMap::class).withPackageName(PACKAGE_NAME)
+val AtomicMap_TYPE = forKClass(AtomicMap::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [AtomicNonNullRef].
  * @since 3.0
  */
-val AtomicNonNullRef_TYPE: PlatformType<AtomicNonNullRef<*>> = forKClass(AtomicNonNullRef::class).withPackageName(PACKAGE_NAME)
+val AtomicNonNullRef_TYPE = forKClass(AtomicNonNullRef::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [AtomicRef].
  * @since 3.0
  */
-val AtomicRef_TYPE: PlatformType<AtomicRef<*>> = forKClass(AtomicRef::class).withPackageName(PACKAGE_NAME)
+val AtomicRef_TYPE = forKClass(AtomicRef::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [WeakRef].
  * @since 3.0
  */
-val WeakRef_TYPE: PlatformType<WeakRef<*>> = forKClass(WeakRef::class).withPackageName(PACKAGE_NAME)
+val WeakRef_TYPE = forKClass(WeakRef::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [BinaryView].
  * @since 3.0
  */
-val BinaryView_TYPE: PlatformType<BinaryView> = forKClass(BinaryView::class).withPackageName(PACKAGE_NAME)
+val BinaryView_TYPE = forKClass(BinaryView::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [Like].
  * @since 3.0
  */
-val Like_TYPE: PlatformType<Like> = forKClass(Like::class).withPackageName(PACKAGE_NAME)
+val Like_TYPE = forKClass(Like::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformDataView].
  * @since 3.0
  */
-val PlatformDataView_Type: PlatformType<PlatformDataView> = forKClass(PlatformDataView::class).withPackageName(PACKAGE_NAME)
+val PlatformDataView_Type = forKClass(PlatformDataView::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformObject].
  * @since 3.0
  */
-val PlatformObject_TYPE: PlatformType<PlatformObject> = forKClass(PlatformObject::class).withPackageName(PACKAGE_NAME)
+val PlatformObject_TYPE = forKClass(PlatformObject::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformList].
  * @since 3.0
  */
-val PlatformList_TYPE: PlatformType<PlatformList> = forKClass(PlatformList::class).withPackageName(PACKAGE_NAME)
+val PlatformList_TYPE = forKClass(PlatformList::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformMap].
  * @since 3.0
  */
-val PlatformMap_TYPE: PlatformType<PlatformMap> = forKClass(PlatformMap::class).withPackageName(PACKAGE_NAME)
+val PlatformMap_TYPE = forKClass(PlatformMap::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformImporter].
  * @since 3.0
  */
-val PlatformImporter_TYPE: PlatformType<PlatformImporter> = forKClass(PlatformImporter::class).withPackageName(PACKAGE_NAME)
+val PlatformImporter_TYPE = forKClass(PlatformImporter::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformExporter].
  * @since 3.0
  */
-val PlatformExporter_TYPE: PlatformType<PlatformExporter> = forKClass(PlatformExporter::class).withPackageName(PACKAGE_NAME)
+val PlatformExporter_TYPE = forKClass(PlatformExporter::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformLock].
  * @since 3.0
  */
-val PlatformLock_TYPE: PlatformType<PlatformLock> = forKClass(PlatformLock::class).withPackageName(PACKAGE_NAME)
+val PlatformLock_TYPE = forKClass(PlatformLock::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformLogger].
  * @since 3.0
  */
-val PlatformLogger_TYPE: PlatformType<PlatformLogger> = forKClass(PlatformLogger::class).withPackageName(PACKAGE_NAME)
+val PlatformLogger_TYPE = forKClass(PlatformLogger::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformThreadLocal].
  * @since 3.0
  */
-val PlatformThreadLocal_TYPE: PlatformType<PlatformThreadLocal<*>> = forKClass(PlatformThreadLocal::class).withPackageName(PACKAGE_NAME)
+val PlatformThreadLocal_TYPE = forKClass(PlatformThreadLocal::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [Symbol].
  * @since 3.0
  */
-val Symbol_TYPE: PlatformType<Symbol> = forKClass(Symbol::class).withPackageName(PACKAGE_NAME)
+val Symbol_TYPE = forKClass(Symbol::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [SymbolResolver].
  * @since 3.0
  */
-val SymbolResolver_TYPE: PlatformType<SymbolResolver> = forKClass(SymbolResolver::class).withPackageName(PACKAGE_NAME)
+val SymbolResolver_TYPE = forKClass(SymbolResolver::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformType].
  * @since 3.0
  */
-val PlatformType_TYPE: PlatformType<PlatformType<*>> = forKClass(PlatformType::class).withPackageName(PACKAGE_NAME)
+val PlatformType_TYPE = forKClass(PlatformType::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * If the given exception is a [NakshaException], rethrow it, otherwise call the given function to wrap the exception into a [NakshaException]. Usage like:
@@ -464,10 +469,6 @@ fun conflict(msg: String): NakshaException = NakshaException(CONFLICT, msg)
  */
 fun unsupportedOp(msg: String): NakshaException = NakshaException(UNSUPPORTED_OPERATION, msg)
 
-private fun autoDetectMap() {
-
-}
-
 /**
  * Box the given value into the given type.
  *
@@ -479,62 +480,66 @@ private fun autoDetectMap() {
  */
 @Suppress("UNCHECKED_CAST")
 internal fun <T> boxInto(raw: Any?, type: PlatformType<T>, alternative: T? = null, init: Fn0<T?>? = null): T? {
-    val data = Platform.unbox(raw) ?: return if (init != null) init.call() else alternative
+    // If raw is for example Foo, and we ask boxInto(raw, Foo.TYPE), we want to just return raw.
+    if (type != Any_TYPE && type.isInstance(raw)) return raw as T
 
-    if (isPlatformObject(data)) {
+    // Otherwise, unbox and start checking.
+    val unboxed = Platform.unbox(raw) ?: return if (init != null) init.call() else alternative
+
+    if (isPlatformObject(unboxed)) {
         // If ANY type is okay:
         if (type == Any_TYPE) {
-            val existing = Symbols.get(asPlatformObject(data))
+            val existing = Symbols.get(asPlatformObject(unboxed))
             if (existing != null) return existing as T
-            if (data is PlatformMap) return detectMap(data).proxy(data) as T
-            if (data is PlatformList) return AnyList.TYPE.proxy(data) as T
-            if (data is PlatformDataView) return DataViewProxy.TYPE.proxy(data) as T
+            if (unboxed is PlatformMap) return detectMap(unboxed).proxy(unboxed) as T
+            if (unboxed is PlatformList) return AnyList.TYPE.proxy(unboxed) as T
+            if (unboxed is PlatformDataView) return DataViewProxy.TYPE.proxy(unboxed) as T
             return raw as T?
         }
 
         // If a proxy is requested, try to create one, or return existing one.
         if (type.isProxy()) {
-            if (type.isInstantiatable) return type.proxy(data)
+            if (type.isInstantiatable) return type.proxy(unboxed)
 
-            val existing = type.getProxy(asPlatformObject(data))
+            val existing = type.getProxy(asPlatformObject(unboxed))
             if (existing != null) return existing
         }
 
         // If there is anything assigned already to the platform-map, and of correct type, return existing.
         // This captures interfaces in maps without `type` property.
-        val existing = Symbols.get(asPlatformObject(data))
+        val existing = Symbols.get(asPlatformObject(unboxed))
         if (type.isInstance(existing)) return type.cast(existing)
 
         // If data is a platform-map, we can read detect the property to detect the type.
-        if (data is PlatformMap) return detectMap(data).proxy(data) as T
+        if (unboxed is PlatformMap) return detectMap(unboxed).proxy(unboxed) as T
 
         // Otherwise, if raw or data maps correctly, return, otherwise init or alternative.
         if (type.isInstance(raw)) return type.cast(raw)
-        if (type.isInstance(data)) return type.cast(data)
+        if (type.isInstance(unboxed)) return type.cast(unboxed)
         return if (init != null) init.call() else alternative
     }
 
     // If enum was requested, turn the value into an enumeration value.
     if (JsEnum.TYPE.isAssignableFrom(type)) {
-        return JsEnum.get(data, type as PlatformType<JsEnum>) as T
+        return JsEnum.get(unboxed, type as PlatformType<JsEnum>) as T
     }
 
     // If Int64 is requested.
     if (type == Int64_TYPE) {
-        val value = when (data) {
-            is Short -> Int64(data.toInt())
-            is Int -> Int64(data)
-            is Long -> Int64(data)
-            is Float -> if (data % 1.0f == 0.0f) Int64(data.toDouble()) else data
-            is Double -> if (data % 1.0 == 0.0) Int64(data) else data
-            else -> data
+        val value = when (unboxed) {
+            is Short -> Int64(unboxed.toInt())
+            is Int -> Int64(unboxed)
+            is Long -> Int64(unboxed)
+            is Float -> if (unboxed % 1.0f == 0.0f) Int64(unboxed.toDouble()) else unboxed
+            is Double -> if (unboxed % 1.0 == 0.0) Int64(unboxed) else unboxed
+            else -> unboxed
         }
         if (value is Int64) return value as T
     }
 
     // If raw or data are of an acceptable correct type, return them
     if (type.isInstance(raw)) return raw as T
-    if (type.isInstance(data)) return data as T
+    if (type.isInstance(unboxed)) return unboxed as T
 
     return if (init != null) init.call() else alternative
 }
@@ -592,5 +597,51 @@ inline fun <K, reified V> atomicMapArrayAdd(map: AtomicMap<K, Array<V>>, key: K,
         val new_array = Array(existing.size + 1) { if (it == existing.size) value else existing[it] }
         if (map.replace(key, existing, new_array)) return new_array.lastIndex
         // Concurrent map update, retry.
+    }
+}
+
+
+// ----------------------------------------------------------------------------------------------------------------------------------------
+private val isInitialied = AtomicBool(false)
+internal fun initialize() {
+    if (isInitialied.compareAndSet(expect = false, update = true)) {
+        // Order is significant, we try to initialize the static TYPE properties!
+        forKClass(Proxy::class).initialize()
+        forKClass(ListProxy::class).initialize()
+        forKClass(MapProxy::class).initialize()
+        forKClass(DataViewProxy::class).initialize()
+
+        forKClass(AnyList::class).initialize()
+        forKClass(AnyMap::class).initialize()
+        forKClass(AnyObject::class).initialize()
+        forKClass(Binary::class).initialize()
+
+        forKClass(AnyTypedObject::class).initialize()
+        forKClass(AnyTypedIdObject::class).initialize()
+
+        forKClass(IntList::class).initialize()
+        forKClass(Int64List::class).initialize()
+        forKClass(StringList::class).initialize()
+
+        forKClass(NakshaError::class).initialize()
+        forKClass(NakshaException::class).initialize()
+
+        forKClass(AbortVisit::class).initialize()
+        forKClass(DoubleList::class).initialize()
+        forKClass(Epoch::class).initialize()
+        forKClass(FromJsonOptions::class).initialize()
+        forKClass(Int64Encoding::class).initialize()
+        forKClass(IntMutable::class).initialize()
+        forKClass(JsEnum::class).initialize()
+        forKClass(PlatformIterator::class).initialize()
+        forKClass(PlatformIteratorResult::class).initialize()
+        forKClass(PlatformTypeList::class).initialize()
+        forKClass(SymbolMember::class).initialize()
+        forKClass(Timestamp::class).initialize()
+        forKClass(AnyTypedObjectDetector::class).initialize()
+        forKClass(ToJsonOptions::class).initialize()
+
+        // Eventually, add typed object detector
+        Platform.globalDetectors.add(AnyTypedObjectDetector.instance)
     }
 }

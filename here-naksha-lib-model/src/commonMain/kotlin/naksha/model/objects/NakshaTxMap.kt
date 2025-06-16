@@ -2,12 +2,13 @@
 
 package naksha.model.objects
 
-import naksha.base.AnyObject
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
+import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.Action
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 
 /**
@@ -26,10 +27,18 @@ class NakshaTxMap() : AnyObject() {
     }
 
     companion object NakshaTxMap_C {
-        private val ID = NotNullProperty<NakshaTxMap, String>(String::class)
-        private val NUMBER = NotNullProperty<NakshaTxMap, Int>(Int::class)
-        private val ACTION_OR_NULL = NullableProperty<NakshaTxMap, Action>(Action::class)
-        private val COLLECTIONS = NotNullProperty<NakshaTxMap, NakshaTxCollectionById>(NakshaTxCollectionById::class)
+        /**
+         * The [PlatformType] of [NakshaTxMap].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(NakshaTxMap::class).withPackageName(PACKAGE_NAME)
+
+        private val ID = NotNullProperty<NakshaTxMap, String>(String_TYPE)
+        private val NUMBER = NotNullProperty<NakshaTxMap, Int>(Int_TYPE)
+        private val ACTION_OR_NULL = NullableProperty<NakshaTxMap, Action>(Action.TYPE)
+        private val COLLECTIONS = NotNullProperty<NakshaTxMap, NakshaTxCollectionById>(NakshaTxCollectionById.TYPE)
     }
 
     /**

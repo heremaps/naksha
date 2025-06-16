@@ -1,9 +1,9 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.Platform.PlatformCompanion.newDataView
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_size
-import naksha.base.PlatformUtil.PlatformUtilCompanion.defaultDataViewSize
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.Platform.Platform_C.newDataView
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_size
+import naksha.base.PlatformUtil.PlatformUtil_C.defaultDataViewSize
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -14,12 +14,18 @@ import kotlin.jvm.JvmField
  *
  * This class helps in implementing specific binary types.
  * @property binary The binary editor being used to modify the underlying [PlatformDataView].
+ * @see DataViewProxy
+ * @see AnyList
+ * @see AnyMap
+ * @see AnyObject
+ * @see AnyTypedObject
+ * @see AnyTypedIdObject
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
 open class DataViewProxy(internal val binary: Binary = Binary()) : Proxy(), BinaryView by binary {
 
-    companion object DataViewProxyCompanion {
+    companion object DataViewProxy_C {
         /**
          * The [PlatformType] of [AnyObject].
          * @since 3.0
@@ -27,6 +33,8 @@ open class DataViewProxy(internal val binary: Binary = Binary()) : Proxy(), Bina
         @JvmField
         @JsStatic
         val TYPE = forKClass(DataViewProxy::class).withPackageName(PACKAGE_NAME)
+
+        init { initialize() }
     }
 
     /**

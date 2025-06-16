@@ -13,7 +13,6 @@ import naksha.model.featureGzip
 import naksha.model.request.query.*
 
 class PropertyFilter(val req: ReadFeatures) : ResultFilter {
-
     /**
      * Check if the feature matches the query
      * @param featureTuple the tuple containing the feature

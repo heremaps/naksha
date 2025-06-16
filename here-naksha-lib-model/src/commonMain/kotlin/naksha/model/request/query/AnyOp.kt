@@ -3,76 +3,79 @@
 package naksha.model.request.query
 
 import naksha.base.JsEnum
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
+import naksha.model.request.RequestQuery
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
  * An arbitrary query operation.
- * @since 3.0.0
- * @see [DoubleOp]
- * @see [StringOp]
+ * @since 3.0
+ * @see AnyOp
+ * @see DoubleOp
+ * @see StringOp
  */
 @JsExport
 open class AnyOp : JsEnum() {
-    @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = AnyOp::class
+    companion object AnyOp_C {
+        /**
+         * The [PlatformType] of [AnyOp].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(AnyOp::class).withPackageName(PACKAGE_NAME)
 
-    override fun initClass() {
-        register(DoubleOp::class)
-        register(StringOp::class)
-    }
-
-    companion object QOpCompanion {
         /**
          * Tests if the property exists.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmField
-        val EXISTS = def(AnyOp::class, "exists")
+        val EXISTS = def(TYPE, "exists")
 
         /**
          * Tests if the field value equals to any of the given values, requires the parameter value to be an [Array].
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmField
-        val IS_ANY_OF = def(AnyOp::class, "anyOf")
+        val IS_ANY_OF = def(TYPE, "anyOf")
 
         /**
          * Tests if the field value is _null_.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmField
-        val IS_NULL = def(AnyOp::class, "isNull")
+        val IS_NULL = def(TYPE, "isNull")
 
         /**
          * Tests if the field value is not _null_.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmField
-        val IS_NOT_NULL = def(AnyOp::class, "isNotNull")
+        val IS_NOT_NULL = def(TYPE, "isNotNull")
 
         /**
          * Tests if the field value is explicitly _true_.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmField
-        val IS_TRUE = def(AnyOp::class, "isTrue")
+        val IS_TRUE = def(TYPE, "isTrue")
 
         /**
          * Tests if the field value is explicitly _false_.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmField
-        val IS_FALSE = def(AnyOp::class, "isFalse")
+        val IS_FALSE = def(TYPE, "isFalse")
 
         /**
          * Performs in property inspection.
@@ -95,10 +98,17 @@ open class AnyOp : JsEnum() {
          * You can query path `["properties","reference"]` by direct children: `[{"id":"106003684"}]` and `[{"prop":{"a":1}}]`, but querying by sub property that is not direct child won't work: `{"a":1}`.
          *
          * Also have in mind that provided [Property] can't contain array properties in the middle of path. Array property are allowed only as last element of path. This is correct: `properties -> reference`, and this is not correct: `properties -> reference -> id`, because `reference` is an array.
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmField
-        val CONTAINS = def(AnyOp::class, "contains")
+        val CONTAINS = def(TYPE, "contains")
     }
+
+    override fun namespace() = TYPE
+    override fun initClass() {
+        register(DoubleOp.TYPE)
+        register(StringOp.TYPE)
+    }
+
 }

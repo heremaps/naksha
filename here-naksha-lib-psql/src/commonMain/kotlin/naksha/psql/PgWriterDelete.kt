@@ -1,12 +1,12 @@
 package naksha.psql
 
 import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.Platform.Platform_C.logger
 import naksha.base.conflict
 import naksha.base.featureNotFound
 import naksha.base.generalException
 import naksha.model.objects.StoreMode
-import naksha.psql.PgColumn.PgColumnCompanion.allColumns
+import naksha.psql.PgColumn.PgColumn_C.allColumns
 
 /**
  * Execute a [DELETE][naksha.model.request.WriteOp.DELETE].

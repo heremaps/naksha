@@ -3,7 +3,7 @@
 package naksha.auth.naksha
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.TagMap
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -46,7 +46,7 @@ class FeatureParams() : NakshaParams() {
         storageTags = storage.properties.xyz.tags.toTagMap()
     }
 
-    companion object FeatureParamsCompanion {
+    companion object FeatureParams_C {
         /**
          * The [PlatformType] of [FeatureParams].
          * @since 3.0

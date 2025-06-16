@@ -6,7 +6,7 @@ import kotlin.js.JsExport
 
 /**
  * A read session.
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 interface IReadSession: ISession

@@ -3,7 +3,7 @@
 package naksha.diff
 
 import naksha.base.ListProxy
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -15,7 +15,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class DifferenceList: ListProxy<Difference>(DIFFERENCE) {
-    companion object DifferenceListCompanion {
+    companion object DifferenceList_C {
         /**
          * The [PlatformType] of [DifferenceList].
          * @since 3.0

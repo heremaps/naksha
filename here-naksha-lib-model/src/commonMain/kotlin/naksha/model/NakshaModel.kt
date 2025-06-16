@@ -6,9 +6,9 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.PlatformUtil.PlatformUtilCompanion.MILLISECOND
-import naksha.base.PlatformUtil.PlatformUtilCompanion.MILLIS_TO_MICROS
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformUtil.PlatformUtil_C.MILLISECOND
+import naksha.base.PlatformUtil.PlatformUtil_C.MILLIS_TO_MICROS
 import naksha.jbon.IDict
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsStatic
@@ -50,6 +50,12 @@ val IReadSession_TYPE = forKClass(IReadSession::class).withPackageName(PACKAGE_N
  * @since 3.0
  */
 val ISession_TYPE = forKClass(ISession::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [IStorage] interface.
+ * @since 3.0
+ */
+val IStorage_TYPE = forKClass(IStorage::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [ITuple] interface.
@@ -132,7 +138,7 @@ val LATENCY_MEMORY = Int64(0)
  *   ACTION_CREATE
  * )
  * ```
- * @since 3.0.0
+ * @since 3.0
  */
 @Deprecated("Replaced with official DEFAULT_FLAGS in Naksha",
     replaceWith = ReplaceWith("Naksha.DEFAULT_FLAGS"),
@@ -143,79 +149,79 @@ val DEFAULT_FLAGS = Naksha.DEFAULT_FLAGS
 
 /**
  * The [meta][Tuple.meta] bit.
- * @since 3.0.0
+ * @since 3.0
  */
 const val META_BIT: FetchMode = 1
 
 /**
  * The bitmask to AND apply to clear the _meta_ bit.
- * @since 3.0.0
+ * @since 3.0
  */
 const val META_CLEAR: FetchMode = META_BIT.inv()
 
 /**
  * The _geometry_ bit, covering [geometry][Tuple.geo] and the [reference-point][Tuple.referencePoint].
- * @since 3.0.0
+ * @since 3.0
  */
 const val GEOMETRY_BIT: FetchMode = 2
 
 /**
  * The bitmask to AND apply to clear the _geometry_ bit.
- * @since 3.0.0
+ * @since 3.0
  */
 const val GEOMETRY_CLEAR: FetchMode = GEOMETRY_BIT.inv()
 
 /**
  * The _feature_ bit, covers [feature][Tuple.feature] and [tags][Tuple.tags].
- * @since 3.0.0
+ * @since 3.0
  */
 const val FEATURE_BIT: FetchMode = 4
 
 /**
  * The bitmask to AND apply to clear the _feature_ bit.
- * @since 3.0.0
+ * @since 3.0
  */
 const val FEATURE_CLEAR: FetchMode = FEATURE_BIT.inv()
 
 /**
  * The [attachment][Tuple.attachment] bit.
- * @since 3.0.0
+ * @since 3.0
  */
 const val ATTACHMENT_BIT: FetchMode = 8
 
 /**
  * The bitmask to AND apply to clear the _attachment_ bit.
- * @since 3.0.0
+ * @since 3.0
  */
 const val ATTACHMENT_CLEAR: FetchMode = ATTACHMENT_BIT.inv()
 
 /**
  * All values need to be fetched.
- * @since 3.0.0
+ * @since 3.0
  */
 const val FETCH_ALL: FetchMode = 15
 
 /**
  * All values are valid now.
- * @since 3.0.0
+ * @since 3.0
  */
 const val IS_COMPLETE: FetchMode = 15
 
 /**
  * A bit that can be set, to avoid fetching from cache, can be added to [FETCH_ALL] to ensure that all data is fetched from the storage, overriding the currently cached version.
- * @since 3.0.0
+ * @since 3.0
  */
 const val NO_CACHE_BIT: FetchMode = 16
 
 /**
  * The bitmask to AND apply to clear the no-cache bit.
- * @since 3.0.0
+ * @since 3.0
  */
 const val NO_CACHE_CLEAR: FetchMode = NO_CACHE_BIT.inv()
 
 /**
  * A mask to clear invalid bits form the fetch-mode.
- * @since 3.0.0
+ * @since 3.0
  */
 const val FETCH_MASK: FetchMode = 31
 

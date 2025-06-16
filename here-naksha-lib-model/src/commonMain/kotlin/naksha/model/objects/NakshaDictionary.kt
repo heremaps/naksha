@@ -2,51 +2,57 @@
 
 package naksha.model.objects
 
-import naksha.base.AnyList
-import naksha.base.Int64
-import naksha.base.NotNullProperty
+import naksha.base.*
 import naksha.geo.BBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.jbon.JbDictionary
 import naksha.jbon.JbEncoder
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.base.NakshaException
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
+
+// TODO: We need to fix dictionaries to be able to store objects, and arrays.
 
 /**
  * A Naksha dictionary.
- * @since 3.0.0
+ * @since 3.0
+ * @see NakshaObject
+ * @see NakshaStorage
+ * @see NakshaMap
+ * @see NakshaCollection
+ * @see NakshaDictionary
+ * @see NakshaSubscriptionState
+ * @see NakshaTx
  */
 @JsExport
-open class NakshaDictionary() : NakshaFeature() {
-    // TODO: We need to fix dictionaries to be able to store objects, and arrays.
+open class NakshaDictionary() : NakshaObject() {
 
     /**
      * Create a new dictionary with the given identifier
      *
      * @param id the dictionary identifier.
-     * @since 3.0.0
+     * @since 3.0
      */
-    @Suppress("LeakingThis")
-    @JsName("of")
+    @JsName("NakshaDictionaryOf")
     constructor(id: String): this() {
         this.id = id
     }
 
-    override fun featureTypeDefaultValue(): String = FEATURE_TYPE
-    override fun withId(value: String): NakshaDictionary = super.withId(value) as NakshaDictionary
-    override fun withFeatureNumber(value: Int64): NakshaDictionary = super.withFeatureNumber(value) as NakshaDictionary
-    override fun withType(value: String): NakshaDictionary = super.withType(value) as NakshaDictionary
-    override fun withFeatureType(value: String): NakshaDictionary = super.withFeatureType(value) as NakshaDictionary
-    override fun withBbox(value: BBox?): NakshaDictionary = super.withBbox(value) as NakshaDictionary
-    override fun withGeometry(value: SpGeometry?): NakshaDictionary = super.withGeometry(value) as NakshaDictionary
-    override fun withReferencePoint(value: SpPoint?): NakshaDictionary = super.withReferencePoint(value) as NakshaDictionary
-    override fun withProperties(value: NakshaProperties): NakshaDictionary = super.withProperties(value) as NakshaDictionary
-    override fun withMomType(value: String?): NakshaDictionary = super.withMomType(value) as NakshaDictionary
-
     companion object NakshaDictionary_C {
+        /**
+         * The [PlatformType] of [NakshaDictionary].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(NakshaDictionary::class)
+            .withPackageName(PACKAGE_NAME)
+            .withJsonType("naksha.Dictionary")
+
         /**
          * The feature-type of this feature itself.
          * @since 3.0
@@ -57,7 +63,7 @@ open class NakshaDictionary() : NakshaFeature() {
          * Convert the given JBON bytes into an in-memory dictionary.
          * @param bytes the byte-array with the content.
          * @return the Naksha dictionary.
-         * @since 3.0.0
+         * @since 3.0
          */
         fun fromByteArray(bytes: ByteArray, start: Int = 0, end: Int = bytes.size): NakshaDictionary
             = fromJbDictionary(JbDictionary().mapBytes(bytes, start, end))
@@ -66,7 +72,7 @@ open class NakshaDictionary() : NakshaFeature() {
          * Convert the given JBON bytes into an in-memory dictionary.
          * @param jbDict the JBON dictionary.
          * @return the Naksha dictionary.
-         * @since 3.0.0
+         * @since 3.0
          */
         fun fromJbDictionary(jbDict: JbDictionary): NakshaDictionary {
             jbDict.loadAll()
@@ -80,14 +86,24 @@ open class NakshaDictionary() : NakshaFeature() {
             return dict
         }
 
-        private val ENTRIES = NotNullProperty<NakshaDictionary, AnyList>(AnyList::class) { _, _ -> AnyList() }
+        private val ENTRIES = NotNullProperty<NakshaDictionary, AnyList>(AnyList.TYPE) { _, _ -> AnyList() }
     }
+
+    override fun withId(id: String): NakshaDictionary = super.withId(id) as NakshaDictionary
+    override fun withBBox(bbox: BBox): NakshaDictionary = super.withBBox(bbox) as NakshaDictionary
+    override fun withAutoBBox(): NakshaDictionary = super.withAutoBBox() as NakshaDictionary
+    override fun withGeometry(geometry: SpGeometry?): NakshaDictionary = super.withGeometry(geometry) as NakshaDictionary
+    override val properties: NakshaProperties
+        get() = get_properties(NakshaProperties.TYPE)
+    override fun withProperties(properties: AnyObject): NakshaDictionary = super.withProperties(properties) as NakshaDictionary
+    override fun withFeatureNumber(value: Int64): NakshaDictionary = super.withFeatureNumber(value) as NakshaDictionary
+    override fun withReferencePoint(value: SpPoint?): NakshaDictionary = super.withReferencePoint(value) as NakshaDictionary
 
     /**
      * The content of the dictionary.
      *
      * Note that in the current implementation the only value acceptable is a string, but technically even objects should be allowed here. This has to be fixed in future releases.
-     * @since 3.0.0
+     * @since 3.0
      */
     var content by ENTRIES
 
@@ -95,9 +111,9 @@ open class NakshaDictionary() : NakshaFeature() {
      * Convert this instance into a JBON encoded global dictionary.
      *
      * @return this dictionary encoded into JBON.
-     * @since 3.0.0
+     * @since 3.0
      */
-    fun toJBON(): JbDictionary {
+    fun toJbon(): JbDictionary {
         val encoder = JbEncoder()
         for (entry in content.withIndex()) {
             val value = entry.value

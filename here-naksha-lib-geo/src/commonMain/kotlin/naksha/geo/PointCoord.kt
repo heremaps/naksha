@@ -1,9 +1,9 @@
 package naksha.geo
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_set
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformListApi.PlatformListApi_C.list_get
+import naksha.base.PlatformListApi.PlatformListApi_C.list_set
 import naksha.base.fn.Fn0
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -50,7 +50,7 @@ class PointCoord() : ListProxy<Double>(Double_TYPE), ICoordinates {
         } else if (m != null) throw illegalArg("If m is given (4D), z must be given too (3D)")
     }
 
-    companion object PointCoordCompanion {
+    companion object PointCoord_C {
         /**
          * The [PlatformType] of [PointCoord].
          * @since 3.0

@@ -8,10 +8,13 @@ pluginManagement {
 
 rootProject.name = "naksha"
 
+// When you add a new module, update:
+// buildSrc/src/main/kotlin/Descriptions.kt
 include(":here-naksha-lib-base")
 include(":here-naksha-lib-geo")
 include(":here-naksha-lib-auth")
 include(":here-naksha-lib-model")
+include(":here-naksha-lib-mom")
 include(":here-naksha-lib-auth-naksha")
 include(":here-naksha-lib-jbon")
 include(":here-naksha-lib-psql")

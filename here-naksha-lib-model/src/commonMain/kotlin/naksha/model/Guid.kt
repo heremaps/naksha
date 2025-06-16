@@ -4,9 +4,9 @@ package naksha.model
 
 import naksha.base.NakshaError
 import naksha.base.NakshaException
-import naksha.base.Platform.PlatformCompanion.decodeURIComponent
-import naksha.base.Platform.PlatformCompanion.encodeURIComponent
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.decodeURIComponent
+import naksha.base.Platform.Platform_C.encodeURIComponent
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
@@ -23,20 +23,20 @@ import kotlin.jvm.JvmStatic
  * `urn:naksha:guid:{feature-id}:{storage-number}:{map-number}:{collection-number}:{feature-number}:{year}:{month}:{day}:{seq}:{uid}`
  *
  * The [Guid] is exposed through the [XYZ namespace][XyzNs] in the [uuid][XyzNs.uuid] property.
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 data class Guid(
     /**
      * The feature-id of the feature.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JvmField
     val id: String,
 
     /**
      * The tuple-number.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JvmField
     val tupleNumber: TupleNumber
@@ -46,14 +46,14 @@ data class Guid(
     /**
      * Tests if this is a _HEAD_ [Guid].
      * @return _true_ if this is a _HEAD_ [Guid]; _false_ otherwise.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun isHead(): Boolean = tupleNumber == TupleNumber.HEAD
 
     /**
      * Return the GUID in URN form.
      * @return the GUID in URN form.
-     * @since 3.0.0
+     * @since 3.0
      */
     override fun toString(): String {
         if (!this::_string.isInitialized) {
@@ -63,14 +63,14 @@ data class Guid(
         return _string
     }
 
-    companion object GuidCompanion {
+    companion object Guid_C {
         /**
          * The [PlatformType] of [Guid].
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<Guid> = forKClass(Guid::class).withPackageName(naksha.jbon.PACKAGE_NAME)
+        val TYPE = forKClass(Guid::class).withPackageName(PACKAGE_NAME)
 
         internal const val URN = 0
         internal const val NAKSHA = 1
@@ -134,7 +134,7 @@ data class Guid(
          * Turn the given [IMetadata] into a [Guid].
          * @param metadata the [IMetadata] for which to generate a [Guid].
          * @return the created [Guid].
-         * @since 3.0.0
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic

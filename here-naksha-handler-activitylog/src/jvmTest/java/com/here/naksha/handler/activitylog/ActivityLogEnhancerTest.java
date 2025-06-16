@@ -34,7 +34,7 @@ class ActivityLogEnhancerTest {
     NakshaFeature enhancedFeature = ActivityLogEnhancer.enhanceWithActivityLog(newFeature, oldFeature, SPACE_ID);
 
     // And
-    String enhancedFeatureJson = Platform.toJSON(enhancedFeature);
+    String enhancedFeatureJson = Platform.toJson(enhancedFeature);
 
     // Then
     JSONAssert.assertEquals(

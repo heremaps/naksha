@@ -21,6 +21,7 @@ private val Descriptions = mapOf(
     "here-naksha-lib-hub" to "TBD",
     "here-naksha-lib-jbon" to "Naksha library, adding support to encode and decode JBON (Java Binary Object Notation).",
     "here-naksha-lib-model" to "Naksha library, adding the Storage-Abstraction-Layer of Naksha, this is the base of all Naksha storage operations. It defines interfaces, helper classes, abstract base classes, and more, needed to use storage implementations or assisting in making new storage implementations.",
+    "here-naksha-lib-mom" to "MOM library, adding support for the HERE Map Object Model.",
     "here-naksha-lib-psql" to "Naksha library, implementation of the Naksha Storage-Abstraction-Layer.",
     "here-naksha-lib-view" to "Naksha library, adding capabilities to combine multiple storages, maps, collections into a single virtual view.",
     "here-naksha-storage-http" to "TBD",

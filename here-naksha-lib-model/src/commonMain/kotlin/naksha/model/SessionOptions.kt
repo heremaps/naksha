@@ -2,6 +2,8 @@
 
 package naksha.model
 
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.base.fn.Fn3
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
@@ -137,6 +139,14 @@ data class SessionOptions @JvmOverloads constructor(
         get() = author ?: appId
 
     companion object SessionOptions_C {
+        /**
+         * The [PlatformType] of [SessionOptions].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(SessionOptions::class).withPackageName(PACKAGE_NAME)
+
         /**
          * Helper for JavaScript and Java to create a new default instance without providing too many arguments.
          * @param context the context, if being _null_, then [NakshaContext.currentContext] is called.

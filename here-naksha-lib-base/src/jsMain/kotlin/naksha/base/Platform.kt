@@ -2,7 +2,7 @@
 
 package naksha.base
 
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
 import naksha.base.fn.Fn0
 import kotlin.math.round
 import kotlin.reflect.KClass
@@ -10,7 +10,7 @@ import kotlin.reflect.KFunction
 
 @JsExport
 actual class Platform {
-    actual companion object PlatformCompanion {
+    actual companion object Platform_C {
         private var isInitialized: Boolean = false
 
         internal val U64_MAX_VALUE = js("BigInt.asUintN(64,BigInt('18446744073709551615'))").unsafeCast<Int64>()
@@ -195,9 +195,9 @@ if (typeof k==='function') instance=Object.create(k.prototype);""")
         }
 
         @JsStatic
-        actual fun forJsonType(jsonType: String?): AnyPlatformTypeList {
+        actual fun forJsonType(jsonType: String?): PlatformTypeList {
             val all = JsPlatformType.byJsonType[jsonType]
-            return if (all != null) AnyPlatformTypeList(*all) else AnyPlatformTypeList()
+            return if (all != null) PlatformTypeList(*all) else PlatformTypeList()
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -700,11 +700,11 @@ return obj;
 
         @JsName("toJson")
         @JsStatic
-        actual fun toJSON(obj: Any?): String = toJSON(obj, ToJsonOptions.DEFAULT)
+        actual fun toJson(obj: Any?): String = toJson(obj, ToJsonOptions.DEFAULT)
 
         @JsName("toJsonWithOptions")
         @JsStatic
-        actual fun toJSON(obj: Any?, options: ToJsonOptions): String {
+        actual fun toJson(obj: Any?, options: ToJsonOptions): String {
             val o = unbox(obj)
             return js(
                 """JSON.stringify(o, function(k, v) {
@@ -723,7 +723,7 @@ return obj;
         @Suppress("UNCHECKED_CAST")
         actual fun detectMap(map: PlatformMap, detectors: AtomicSet<TypeDetector>?): PlatformType<MapProxy<String,*>> {
             if (detectors != null) {
-                val detected: PlatformType<MapProxy<String, *>>? = detectors.forEach {
+                val detected: PlatformType<MapProxy<String, *>>? = detectors.forEach(backwards = true) {
                     val t = it.detectMap(map)
                     if (t != null) AbortVisit.with(t)
                 }
@@ -733,7 +733,7 @@ return obj;
 
             // Run global detector.
             val globalDetectors = this.globalDetectors
-            val detected: PlatformType<MapProxy<String, *>>? = globalDetectors.forEach {
+            val detected: PlatformType<MapProxy<String, *>>? = globalDetectors.forEach(backwards = true) {
                 val t = it.detectMap(map)
                 if (t != null) AbortVisit.with(t)
             }

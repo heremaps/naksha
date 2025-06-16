@@ -3,7 +3,7 @@
 package naksha.geo
 
 import naksha.base.ListProxy
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -22,7 +22,7 @@ open class GeoFeatureList() : ListProxy<GeoFeature>(GeoFeature.TYPE) {
         addAll(features)
     }
 
-    companion object GeoFeatureListCompanion {
+    companion object GeoFeatureList_C {
         /**
          * The [PlatformType] of [GeoFeatureList].
          * @since 3.0

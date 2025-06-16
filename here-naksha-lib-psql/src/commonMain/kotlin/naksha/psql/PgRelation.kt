@@ -2,7 +2,7 @@
 
 package naksha.psql
 
-import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
+import naksha.psql.PgUtil.PgUtil_C.quoteLiteral
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -143,7 +143,7 @@ data class PgRelation(
 
     // ---
 
-    companion object PgRelationCompanion {
+    companion object PgRelation_C {
         /**
          * Execute a query in [pg_class](https://www.postgresql.org/docs/current/catalog-pg-class.html) to receive all information rows about the given collection.
          * @param conn the connection to use for the query.

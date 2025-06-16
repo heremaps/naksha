@@ -1,9 +1,9 @@
 package naksha.base
 
-import naksha.base.PlatformUtil.PlatformUtilCompanion.ENABLE_DEBUG
-import naksha.base.PlatformUtil.PlatformUtilCompanion.ENABLE_ERROR
-import naksha.base.PlatformUtil.PlatformUtilCompanion.ENABLE_INFO
-import naksha.base.PlatformUtil.PlatformUtilCompanion.ENABLE_WARN
+import naksha.base.PlatformUtil.PlatformUtil_C.ENABLE_DEBUG
+import naksha.base.PlatformUtil.PlatformUtil_C.ENABLE_ERROR
+import naksha.base.PlatformUtil.PlatformUtil_C.ENABLE_INFO
+import naksha.base.PlatformUtil.PlatformUtil_C.ENABLE_WARN
 import org.slf4j.LoggerFactory
 
 class JvmLogger : PlatformLogger {

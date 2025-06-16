@@ -4,7 +4,7 @@ package naksha.auth.naksha
 
 import naksha.auth.ServiceOpParams
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.NakshaContext
 import naksha.model.TagMap
 import naksha.model.objects.NakshaFeature
@@ -34,7 +34,7 @@ open class NakshaParams() : ServiceOpParams() {
         fromFeature(feature)
     }
 
-    companion object NakshaResourceCompanion {
+    companion object NakshaResource_C {
         /**
          * The [PlatformType] of [NakshaParams].
          * @since 3.0

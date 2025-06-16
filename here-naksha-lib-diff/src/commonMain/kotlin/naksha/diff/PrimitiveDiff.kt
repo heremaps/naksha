@@ -5,7 +5,7 @@ package naksha.diff
 import naksha.base.Any_TYPE
 import naksha.base.AnyObject
 import naksha.base.NullableProperty
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -29,7 +29,7 @@ abstract class PrimitiveDiff(): AnyObject(), Difference {
         set(NEW_VALUE_KEY, new)
     }
 
-    companion object PrimitiveDiffCompanion {
+    companion object PrimitiveDiff_C {
         /**
          * The [PlatformType] of [PrimitiveDiff].
          * @since 3.0

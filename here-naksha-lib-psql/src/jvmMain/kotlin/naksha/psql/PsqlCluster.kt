@@ -2,7 +2,7 @@ package naksha.psql
 
 import naksha.base.Platform
 import naksha.base.fn.Fx2
-import naksha.base.NakshaError.NakshaErrorCompanion.EXCEPTION
+import naksha.base.NakshaError.NakshaError_C.EXCEPTION
 import naksha.base.NakshaException
 import naksha.model.SessionOptions
 import kotlin.math.min

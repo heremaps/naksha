@@ -3,7 +3,7 @@
 package naksha.geo
 
 import naksha.base.ListProxy
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -29,7 +29,7 @@ class MultiPointCoord() : ListProxy<PointCoord>(PointCoord.TYPE), ICoordinates {
         addAll(points)
     }
 
-    companion object MultiPointCoordCompanion {
+    companion object MultiPointCoord_C {
         /**
          * The [PlatformType] of [MultiPointCoord].
          * @since 3.0

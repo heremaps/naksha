@@ -3,7 +3,7 @@
 package naksha.model
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.DeprecationLevel.WARNING
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -28,7 +28,7 @@ import kotlin.jvm.JvmStatic
 @JsExport
 class XyzNs : AnyObject() {
 
-    companion object XyzNsCompanion {
+    companion object XyzNs_C {
         /**
          * The [PlatformType] of [XyzNs].
          * @since 3.0
@@ -200,8 +200,8 @@ class XyzNs : AnyObject() {
         private val _OPERATION = NotNullEnum<XyzNs, Operation>(Operation.TYPE) { _, _ -> Operation.CREATED }
         private val _APP_ID = NotNullProperty<XyzNs, String>(String_TYPE) { _, _ -> NakshaContext.appId() }
         private val _STRING_NULL = NullableProperty<XyzNs, String>(String_TYPE, autoRemove = true)
-        private val _INT_0 = NotNullProperty<XyzNs, Int>(Int_Type) { _, _ -> 0 }
-        private val _INT_NULL = NullableProperty<XyzNs, Int>(Int_Type, autoRemove = true)
+        private val _INT_0 = NotNullProperty<XyzNs, Int>(Int_TYPE) { _, _ -> 0 }
+        private val _INT_NULL = NullableProperty<XyzNs, Int>(Int_TYPE, autoRemove = true)
         private val _UPDATED_AT = NotNullProperty<XyzNs, Int64>(Int64_TYPE) { _, _ -> Platform.currentMillis() }
         private val _DOUBLE_NULL = NullableProperty<XyzNs, Double>(Double_TYPE, autoRemove = true)
         private val _TAGS = NotNullProperty<XyzNs, TagList>(TagList.TYPE) { _, _ -> TagList() }

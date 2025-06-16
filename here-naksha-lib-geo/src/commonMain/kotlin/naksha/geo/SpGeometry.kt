@@ -3,12 +3,12 @@
 package naksha.geo
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.asPlatformObject
-import naksha.base.Platform.PlatformCompanion.forFirstJsonType
-import naksha.base.Platform.PlatformCompanion.forInstance
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.Platform.PlatformCompanion.isPlatformObject
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
+import naksha.base.Platform.Platform_C.asPlatformObject
+import naksha.base.Platform.Platform_C.forFirstJsonType
+import naksha.base.Platform.Platform_C.forInstance
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.Platform.Platform_C.isPlatformObject
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -37,7 +37,7 @@ open class SpGeometry() : AnyObject() {
         set("coordinates", coordinates)
     }
 
-    companion object SpGeometryCompanion {
+    companion object SpGeometry_C {
         /**
          * The [PlatformType] of [SpGeometry].
          * @since 3.0
@@ -55,7 +55,7 @@ open class SpGeometry() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun forValue(value: Any?): SpGeometry {
+        fun forValue(value: Any): SpGeometry {
             val unboxed = Platform.unbox(value) ?: throw illegalArg("THe given geometry is null")
             if (!isPlatformObject(unboxed)) throw illegalArg("The given geometry is no platform map")
             val po = asPlatformObject(unboxed)

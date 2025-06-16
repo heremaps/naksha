@@ -107,7 +107,7 @@ public abstract class AbstractDataIngest {
       final int reqBatchSize) {
     final FeatureCollectionRequest request = new FeatureCollectionRequest();
     int endIdx = Math.min(crtIdx + reqBatchSize, totalFeatures);
-    return Platform.toJSON(request.withFeatures(features.subList(crtIdx, endIdx)), ToJsonOptions.DEFAULT);
+    return Platform.toJson(request.withFeatures(features.subList(crtIdx, endIdx)), ToJsonOptions.DEFAULT);
   }
 
   private void nullifyUuid(final @NotNull List<NakshaFeature> features) {

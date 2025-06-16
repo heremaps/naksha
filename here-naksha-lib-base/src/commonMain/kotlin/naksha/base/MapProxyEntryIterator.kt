@@ -2,9 +2,9 @@
 
 package naksha.base
 
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get_length
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_iterator
+import naksha.base.PlatformListApi.PlatformListApi_C.list_get
+import naksha.base.PlatformListApi.PlatformListApi_C.list_get_length
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_iterator
 import kotlin.collections.MutableMap.MutableEntry
 import kotlin.js.JsExport
 

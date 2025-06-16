@@ -10,8 +10,8 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
-import naksha.base.JvmPlatformType.PlatformTypeCompanion.jvmClassToPlatformType
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
+import naksha.base.JvmPlatformType.PlatformType_C.jvmClassToPlatformType
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
 import naksha.base.fn.Fn0
 import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
@@ -30,7 +30,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class Platform {
-    actual companion object PlatformCompanion {
+    actual companion object Platform_C {
 
         @JvmField
         internal val module = SimpleModule().apply {
@@ -186,9 +186,9 @@ actual class Platform {
         }
 
         @JvmStatic
-        actual fun forJsonType(jsonType: String?): AnyPlatformTypeList {
+        actual fun forJsonType(jsonType: String?): PlatformTypeList {
             val all = JvmPlatformType.jsonTypeToPlatformType[jsonType]
-            return if (all != null) AnyPlatformTypeList(*all) else AnyPlatformTypeList()
+            return if (all != null) PlatformTypeList(*all) else PlatformTypeList()
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -325,7 +325,14 @@ actual class Platform {
         }
 
         @JvmStatic
-        @JvmOverloads
+        fun <T> box(raw: Any?, type: PlatformType<T>): T?
+            = boxInto(raw, type, null, null)
+
+        @JvmStatic
+        fun <T> box(raw: Any?, type: PlatformType<T>, alternative: T?): T?
+            = boxInto(raw, type, alternative, null)
+
+        @JvmStatic
         actual fun <T> box(raw: Any?, type: PlatformType<T>, alternative: T?, init: Fn0<T?>?): T?
             = boxInto(raw, type, alternative, init)
 
@@ -461,10 +468,10 @@ actual class Platform {
         internal val toJsonOptions = ThreadLocal<ToJsonOptions>()
 
         @JvmStatic
-        actual fun toJSON(obj: Any?): String = toJSON(obj, ToJsonOptions.DEFAULT)
+        actual fun toJson(obj: Any?): String = toJson(obj, ToJsonOptions.DEFAULT)
 
         @JvmStatic
-        actual fun toJSON(obj: Any?, options: ToJsonOptions): String {
+        actual fun toJson(obj: Any?, options: ToJsonOptions): String {
             toJsonOptions.set(options)
             return objectMapper.get().writeValueAsString(unbox(obj))
         }
@@ -477,7 +484,7 @@ actual class Platform {
         @JvmOverloads
         actual fun detectMap(map: PlatformMap, detectors: AtomicSet<TypeDetector>?): PlatformType<MapProxy<String,*>> {
             if (detectors != null) {
-                val detected: PlatformType<MapProxy<String, *>>? = detectors.forEach {
+                val detected: PlatformType<MapProxy<String, *>>? = detectors.forEach(backwards = true) {
                     val t = it.detectMap(map)
                     if (t != null) AbortVisit.with(t)
                 }
@@ -487,7 +494,7 @@ actual class Platform {
 
             // Run global detector.
             val globalDetectors = this.globalDetectors
-            val detected: PlatformType<MapProxy<String, *>>? = globalDetectors.forEach {
+            val detected: PlatformType<MapProxy<String, *>>? = globalDetectors.forEach(backwards = true) {
                 val t = it.detectMap(map)
                 if (t != null) AbortVisit.with(t)
             }

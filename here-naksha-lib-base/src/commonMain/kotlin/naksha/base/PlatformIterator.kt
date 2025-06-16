@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -12,7 +12,7 @@ import kotlin.jvm.JvmField
 @Suppress("OPT_IN_USAGE")
 @JsExport
 abstract class PlatformIterator<VALUE> {
-    companion object PlatformIteratorCompanion {
+    companion object PlatformIterator_C {
         /**
          * The [PlatformType] of [PlatformIterator].
          * @since 3.0
@@ -20,6 +20,8 @@ abstract class PlatformIterator<VALUE> {
         @JvmField
         @JsStatic
         val TYPE = forKClass(PlatformIterator::class).withPackageName(PACKAGE_NAME)
+
+        init { initialize() }
     }
 
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_iterator_protocol

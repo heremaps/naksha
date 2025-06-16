@@ -6,10 +6,14 @@ import kotlin.js.JsExport
 
 /**
  * Marker interface to all tag queries.
+ *
+ * @since 3.0
+ * @see IQuery
+ * @see ITagQuery
+ * @see TagQuery
  * @see TagOr
  * @see TagAnd
  * @see TagNot
- * @see TagQuery
  */
 @JsExport
 interface ITagQuery : IQuery

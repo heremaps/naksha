@@ -4,29 +4,29 @@ import naksha.base.AtomicMap
 import naksha.base.JsEnum
 import naksha.base.fn.Fx2
 import naksha.model.request.query.SortOrder
-import naksha.model.request.query.SortOrder.SortOrderCompanion.DESCENDING
-import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
-import naksha.psql.PgColumn.PgColumnCompanion.id as c_id
-import naksha.psql.PgColumn.PgColumnCompanion.tn as c_tn
-import naksha.psql.PgColumn.PgColumnCompanion.next_tn as c_tn_next
-import naksha.psql.PgColumn.PgColumnCompanion.flags as c_flags
-import naksha.psql.PgColumn.PgColumnCompanion.app_id as c_app_id
-import naksha.psql.PgColumn.PgColumnCompanion.author as c_author
-import naksha.psql.PgColumn.PgColumnCompanion.author_ts as c_author_ts
-import naksha.psql.PgColumn.PgColumnCompanion.updated_at as c_updated_at
-import naksha.psql.PgColumn.PgColumnCompanion.geo as c_geo
-import naksha.psql.PgColumn.PgColumnCompanion.here_tile as c_here_tile
-import naksha.psql.PgColumn.PgColumnCompanion.tags as c_tags
-import naksha.psql.PgColumn.PgColumnCompanion.ref_point as c_ref_point
-import naksha.psql.PgColumn.PgColumnCompanion.ft as c_ft
-import naksha.psql.PgColumn.PgColumnCompanion.cv0 as c_cv0
-import naksha.psql.PgColumn.PgColumnCompanion.cv1 as c_cv1
-import naksha.psql.PgColumn.PgColumnCompanion.cv2 as c_cv2
-import naksha.psql.PgColumn.PgColumnCompanion.cv3 as c_cv3
-import naksha.psql.PgColumn.PgColumnCompanion.cs0 as c_cs0
-import naksha.psql.PgColumn.PgColumnCompanion.cs1 as c_cs1
-import naksha.psql.PgColumn.PgColumnCompanion.cs2 as c_cs2
-import naksha.psql.PgColumn.PgColumnCompanion.cs3 as c_cs3
+import naksha.model.request.query.SortOrder.SortOrder_C.DESCENDING
+import naksha.psql.PgUtil.PgUtil_C.quoteIdent
+import naksha.psql.PgColumn.PgColumn_C.id as c_id
+import naksha.psql.PgColumn.PgColumn_C.tn as c_tn
+import naksha.psql.PgColumn.PgColumn_C.next_tn as c_tn_next
+import naksha.psql.PgColumn.PgColumn_C.flags as c_flags
+import naksha.psql.PgColumn.PgColumn_C.app_id as c_app_id
+import naksha.psql.PgColumn.PgColumn_C.author as c_author
+import naksha.psql.PgColumn.PgColumn_C.author_ts as c_author_ts
+import naksha.psql.PgColumn.PgColumn_C.updated_at as c_updated_at
+import naksha.psql.PgColumn.PgColumn_C.geo as c_geo
+import naksha.psql.PgColumn.PgColumn_C.here_tile as c_here_tile
+import naksha.psql.PgColumn.PgColumn_C.tags as c_tags
+import naksha.psql.PgColumn.PgColumn_C.ref_point as c_ref_point
+import naksha.psql.PgColumn.PgColumn_C.ft as c_ft
+import naksha.psql.PgColumn.PgColumn_C.cv0 as c_cv0
+import naksha.psql.PgColumn.PgColumn_C.cv1 as c_cv1
+import naksha.psql.PgColumn.PgColumn_C.cv2 as c_cv2
+import naksha.psql.PgColumn.PgColumn_C.cv3 as c_cv3
+import naksha.psql.PgColumn.PgColumn_C.cs0 as c_cs0
+import naksha.psql.PgColumn.PgColumn_C.cs1 as c_cs1
+import naksha.psql.PgColumn.PgColumn_C.cs2 as c_cs2
+import naksha.psql.PgColumn.PgColumn_C.cs3 as c_cs3
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic

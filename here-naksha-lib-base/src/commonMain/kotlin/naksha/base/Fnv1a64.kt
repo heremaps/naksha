@@ -14,7 +14,7 @@ import kotlin.jvm.JvmStatic
 @Suppress("DuplicatedCode")
 @JsExport
 class Fnv1a64 private constructor() {
-    companion object Fnv1a64Companion {
+    companion object Fnv1a64_C {
 
         /**
          * The multiplier used.
@@ -155,5 +155,7 @@ class Fnv1a64 private constructor() {
             hash *= MUL
             return hash
         }
+
+        init { initialize() }
     }
 }

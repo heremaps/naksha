@@ -3,7 +3,7 @@
 package naksha.auth.naksha
 
 import naksha.auth.ServiceOpParamsList
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -17,7 +17,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class UseEventHandlersParamsList : ServiceOpParamsList<UseEventHandlersParams>(UseEventHandlersParams.TYPE) {
-    companion object UseEventHandlersParamsListCompanion {
+    companion object UseEventHandlersParamsList_C {
         /**
          * The [PlatformType] of [UseEventHandlersParamsList].
          * @since 3.0

@@ -3,11 +3,13 @@
 package naksha.model.objects
 
 import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.geo.BBox
 import naksha.geo.SpGeometry
-import naksha.geo.SpPoint
 import naksha.model.*
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 
 /**
@@ -16,27 +18,41 @@ import kotlin.jvm.JvmOverloads
  * This is a bit special, it requires that [id] is the stringified [version].
  *
  * @since 3.0
+ * @see NakshaObject
+ * @see NakshaStorage
+ * @see NakshaMap
+ * @see NakshaCollection
+ * @see NakshaDictionary
+ * @see NakshaSubscriptionState
+ * @see NakshaTx
  */
 @JsExport
-open class NakshaTx : NakshaFeature() {
+open class NakshaTx : NakshaObject() {
 
-    override fun featureTypeDefaultValue(): String = "naksha.Tx"
-    override fun withId(value: String): NakshaTx = super.withId(value) as NakshaTx
-    override fun withFeatureNumber(value: Int64): NakshaTx = super.withFeatureNumber(value) as NakshaTx
-    override fun withType(value: String): NakshaTx = super.withType(value) as NakshaTx
-    override fun withFeatureType(value: String): NakshaTx = super.withFeatureType(value) as NakshaTx
-    override fun withBbox(value: BBox?): NakshaTx = super.withBbox(value) as NakshaTx
-    override fun withGeometry(value: SpGeometry?): NakshaTx = super.withGeometry(value) as NakshaTx
-    override fun withReferencePoint(value: SpPoint?): NakshaTx = super.withReferencePoint(value) as NakshaTx
-    override fun withProperties(value: NakshaProperties): NakshaTx = super.withProperties(value) as NakshaTx
-    override fun withMomType(value: String?): NakshaTx = super.withMomType(value) as NakshaTx
+    companion object NakshaTx_C {
+        /**
+         * The [PlatformType] of [NakshaTx].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(NakshaTx::class)
+            .withPackageName(PACKAGE_NAME)
+            .withJsonType("naksha.Tx")
 
-    companion object NakshaTransaction_C {
-        private val INT_0 = NotNullProperty<NakshaTx, Int>(Int::class, init = { _, _ -> 0 })
-        private val MAPS = NotNullProperty<NakshaTx, NakshaTxMapById>(NakshaTxMapById::class)
-        private val INT64_NULL = NotNullProperty<NakshaTx, Int64>(Int64::class)
-        private val TIME = NotNullProperty<NakshaTx, Int64>(Int64::class) { _, _ -> Platform.currentMillis() }
+        private val INT_0 = NotNullProperty<NakshaTx, Int>(Int_TYPE, init = { _, _ -> 0 })
+        private val MAPS = NotNullProperty<NakshaTx, NakshaTxMapById>(NakshaTxMapById.TYPE)
+        private val INT64_NULL = NotNullProperty<NakshaTx, Int64>(Int64_TYPE)
+        private val TIME = NotNullProperty<NakshaTx, Int64>(Int64_TYPE) { _, _ -> Platform.currentMillis() }
     }
+
+    override fun withId(id: String): NakshaTx = super.withId(id) as NakshaTx
+    override fun withBBox(bbox: BBox): NakshaTx = super.withBBox(bbox) as NakshaTx
+    override fun withAutoBBox(): NakshaTx = super.withAutoBBox() as NakshaTx
+    override fun withGeometry(geometry: SpGeometry?): NakshaTx = super.withGeometry(geometry) as NakshaTx
+    override val properties: NakshaProperties
+        get() = get_properties(NakshaProperties.TYPE)
+    override fun withProperties(properties: AnyObject): NakshaTx = super.withProperties(properties) as NakshaTx
 
     /**
      * Sets [id], [version], [txn], and [time] in a synchronized manner.
@@ -94,7 +110,7 @@ open class NakshaTx : NakshaFeature() {
      * The feature-id of a transaction **must be** the stringified [version].
      */
     override var id: String
-        get() = getAs("id", String::class) ?: throw illegalState("The property 'id' must be a valid string")
+        get() = getAs("id", String_TYPE) ?: throw illegalState("The property 'id' must be a valid string")
         set(value) {
             val txn = Int64(value.toLong())
             setVersion(Version(txn))

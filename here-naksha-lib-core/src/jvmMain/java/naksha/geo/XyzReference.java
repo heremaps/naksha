@@ -24,13 +24,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.here.naksha.lib.core.util.json.JsonObject;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import naksha.model.NakshaVersion;
+import naksha.mom.v2.MomReference;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Xyz reference object holding minimum equivalent fields from MOM reference object
- * @deprecated please use {@link naksha.model.mom.MomReference} instead.
+ * @deprecated please use {@link MomReference} instead.
  */
 @Deprecated
 @AvailableSince(NakshaVersion.v2_0_11)

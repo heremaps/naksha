@@ -3,22 +3,34 @@
 package naksha.model.request.query
 
 import naksha.base.JsEnum
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.reflect.KClass
 
 /**
  * The join style.
+ * @since 3.0
+ * @see SpBuffer
  */
 @JsExport
 class SpJoinStyle : JsEnum() {
     companion object SpJoinStyle_C {
-        val ROUND = def(SpJoinStyle::class, "round")
-        val MITRE = def(SpJoinStyle::class, "mitre")
-        val BEVEL = def(SpJoinStyle::class, "bevel")
+        /**
+         * The [PlatformType] of [SpJoinStyle].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(SpJoinStyle::class).withPackageName(PACKAGE_NAME)
+
+        val ROUND = def(TYPE, "round")
+        val MITRE = def(TYPE, "mitre")
+        val BEVEL = def(TYPE, "bevel")
     }
 
-    @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = SpJoinStyle::class
-
+    override fun namespace() = TYPE
     override fun initClass() {}
 }

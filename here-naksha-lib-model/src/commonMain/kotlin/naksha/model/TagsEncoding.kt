@@ -2,6 +2,7 @@
 
 package naksha.model
 
+import naksha.model.FlagsBits.FlagsBits_C.TAGS_SHIFT
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -9,7 +10,7 @@ import kotlin.js.JsExport
  * Helper for tags encoding in [Flags].
  */
 @JsExport
-class TagsEncoding private constructor(): FlagsBits() {
+class TagsEncoding private constructor() {
     companion object TagsEncoding_C {
         /**
          * A JSON encoded using [JBON](https://github.com/heremaps/naksha/blob/v3/docs/JBON.md) encoding.

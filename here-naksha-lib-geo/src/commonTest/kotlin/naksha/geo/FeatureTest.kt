@@ -2,8 +2,8 @@ package naksha.geo
 
 import naksha.base.NullableProperty
 import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.Platform.PlatformCompanion.fromJson
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.Platform.Platform_C.fromJson
 import naksha.base.String_TYPE
 import kotlin.test.*
 
@@ -80,6 +80,7 @@ class FeatureTest {
                 .withJsonType("dataHubFoo")
         }
 
+        @Suppress("OVERRIDE_DEPRECATION")
         override fun isDataHubType(): Boolean = true
     }
 
@@ -91,6 +92,8 @@ class FeatureTest {
         }
 
         override fun isMomType(): Boolean = true
+        @Suppress("OVERRIDE_DEPRECATION")
+        override fun isDataHubType(): Boolean = true
     }
 
     @Test
@@ -110,28 +113,51 @@ class FeatureTest {
         val feature = Foo()
         feature.id = "demo"
         feature.name = "Example"
-        val json = Platform.toJSON(feature)
-        val expect = """{"type":"Feature","id":"demo","featureType":"foo","name":"Example"}"""
+        val json = Platform.toJson(feature)
+        val expect = """{"type":"Feature","featureType":"foo","id":"demo","name":"Example"}"""
         assertEquals(expect, json)
     }
 
     @Test
     fun testDataHubFooToJson() {
+        DataHubFoo.TYPE.initialize()
         val feature = DataHubFoo()
         feature.id = "demo"
         feature.name = "Example"
-        val json = Platform.toJSON(feature)
-        val expect = """{"type":"Feature","id":"demo","featureType":"dataHubFoo","properties":{"featureType":"dataHubFoo"},"name":"Example"}"""
+        val json = Platform.toJson(feature)
+        val expect = """{"type":"Feature","properties":{"featureType":"dataHubFoo"},"id":"demo","name":"Example"}"""
         assertEquals(expect, json)
     }
 
     @Test
     fun testMomFooToJson() {
+        MomFoo.TYPE.initialize()
         val feature = MomFoo()
         feature.id = "demo"
         feature.name = "Example"
-        val json = Platform.toJSON(feature)
-        val expect = """{"type":"Feature","id":"demo","momType":"momFoo","properties":{"featureType":"momFoo"},"name":"Example"}"""
+        val json = Platform.toJson(feature)
+        val expect = """{"type":"Feature","momType":"momFoo","properties":{"featureType":"momFoo"},"id":"demo","name":"Example"}"""
         assertEquals(expect, json)
+    }
+
+    @Test
+    fun removeGeometry() {
+        val feature = GeoFeature()
+        feature.id = "demo"
+        feature.geometry = SpPoint(0.0, 0.0)
+        feature.apply {
+            assertEquals(3, size)
+            assertTrue(containsKey("id"))
+            assertTrue(containsKey("type"))
+            assertTrue(containsKey("geometry"))
+        }
+
+        feature.geometry = null
+        feature.apply {
+            assertEquals(2, size)
+            assertTrue(containsKey("id"))
+            assertTrue(containsKey("type"))
+            assertFalse(containsKey("geometry"))
+        }
     }
 }

@@ -4,7 +4,7 @@ package naksha.geo
 
 import naksha.base.AnyObject
 import naksha.base.NotNullProperty
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -23,7 +23,7 @@ open class GeoCollection() : AnyObject() {
         this.features.addAll(features)
     }
 
-    companion object GeoCollectionCompanion {
+    companion object GeoCollection_C {
         /**
          * The [PlatformType] of [GeoCollection].
          * @since 3.0

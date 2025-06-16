@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.PlatformUtil.PlatformUtilCompanion.round_double
+import naksha.base.PlatformUtil.PlatformUtil_C.round_double
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals

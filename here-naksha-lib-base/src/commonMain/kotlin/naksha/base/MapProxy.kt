@@ -2,15 +2,15 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forInstance
-import naksha.base.Platform.PlatformCompanion.forKClass
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_clear
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_contains_key
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_contains_value
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_remove
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_size
+import naksha.base.Platform.Platform_C.forInstance
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_clear
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_contains_key
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_contains_value
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_remove
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_set
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_size
 import naksha.base.fn.Fn2
 import kotlin.collections.MutableMap.MutableEntry
 import kotlin.js.JsExport
@@ -28,7 +28,7 @@ import kotlin.reflect.KClass
 @JsExport
 open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformType<V>) : Proxy(), MutableMap<K, V?> {
 
-    companion object MapProxyCompanion {
+    companion object MapProxy_C {
         /**
          * The [PlatformType] of [MapProxy].
          * @since 3.0
@@ -52,6 +52,8 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
             }
             return map
         }
+
+        init { initialize() }
     }
 
     override fun createData(): PlatformMap = Platform.newMap()

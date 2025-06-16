@@ -3,7 +3,7 @@
 package naksha.psql
 
 import naksha.base.illegalState
-import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
+import naksha.psql.PgUtil.PgUtil_C.quoteIdent
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -64,7 +64,7 @@ open class PgTable(
     @JvmField val partitionCount: Int = 0
 ) {
 
-    companion object PgTableCompanion {
+    companion object PgTable_C {
         /**
          * Tests if this is any HEAD table _(either root or a performance-partition)_.
          * @param name the table name.

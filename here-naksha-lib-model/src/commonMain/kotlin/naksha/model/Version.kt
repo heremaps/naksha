@@ -2,10 +2,9 @@
 
 package naksha.model
 
-import naksha.base.Int64
-import naksha.base.NakshaError
-import naksha.base.NakshaException
-import naksha.base.Timestamp
+import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.model.request.ReadFeatures
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -52,7 +51,15 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
     @JsName("fromLong")
     constructor(txn: Long) : this(Int64(txn))
 
-    companion object VersionCompanion {
+    companion object Version_C {
+        /**
+         * The [PlatformType] of [Version].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(Version::class).withPackageName(PACKAGE_NAME)
+
         /**
          * Create the version number from a double (in JavaScript, number).
          * @param v the version number encoded in a double.

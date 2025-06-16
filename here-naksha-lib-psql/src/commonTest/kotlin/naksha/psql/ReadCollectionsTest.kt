@@ -1,7 +1,7 @@
 package naksha.psql
 
 import naksha.model.objects.NakshaCollection
-import naksha.model.objects.StoreMode.StoreModeCompanion.ON
+import naksha.model.objects.StoreMode.StoreMode_C.ON
 import naksha.model.request.ReadCollections
 import kotlin.test.Test
 import kotlin.test.assertEquals

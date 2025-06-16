@@ -2,15 +2,20 @@
 
 package naksha.model.request.query
 
-import naksha.base.AnyObject
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
+import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.model.request.RequestQuery
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A meta-data query within the Naksha feature.
  * @since 3.0
+ * @see IQuery
+ * @see IMetaQuery
+ * @see MetaColumn
  */
 @JsExport
 open class MetaQuery() : AnyObject(), IMetaQuery {
@@ -21,17 +26,25 @@ open class MetaQuery() : AnyObject(), IMetaQuery {
      * @param value the parameter value of the operation.
      * @since 3.0
      */
-    @JsName("of")
+    @JsName("MetaQueryOf")
     constructor(column: MetaColumn, op: AnyOp, value: Any? = null) : this() {
         this.column = column
         this.op = op
         this.value = value
     }
 
-    companion object PropertyQueryCompanion {
-        private val COLUMNS = NotNullProperty<MetaQuery, MetaColumn>(MetaColumn::class)
-        private val QUERY_OP = NotNullProperty<MetaQuery, AnyOp>(AnyOp::class)
-        private val ANY = NullableProperty<MetaQuery, Any>(Any::class)
+    companion object MetaQuery_C {
+        /**
+         * The [PlatformType] of [MetaQuery].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(MetaQuery::class).withPackageName(PACKAGE_NAME)
+
+        private val COLUMNS = NotNullProperty<MetaQuery, MetaColumn>(MetaColumn.TYPE)
+        private val QUERY_OP = NotNullProperty<MetaQuery, AnyOp>(AnyOp.TYPE)
+        private val ANY = NullableProperty<MetaQuery, Any>(Any_TYPE)
     }
 
     /**
@@ -41,6 +54,7 @@ open class MetaQuery() : AnyObject(), IMetaQuery {
 
     /**
      * The operation to execute.
+     * @see AnyOp
      */
     var op by QUERY_OP
 

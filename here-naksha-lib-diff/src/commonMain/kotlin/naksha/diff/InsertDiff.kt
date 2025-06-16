@@ -2,7 +2,7 @@
 
 package naksha.diff
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -21,7 +21,7 @@ class InsertDiff() : PrimitiveDiff() {
         set(NEW_VALUE_KEY, newValue)
     }
 
-    companion object InsertDiffCompanion {
+    companion object InsertDiff_C {
         /**
          * The [PlatformType] of [InsertDiff].
          * @since 3.0

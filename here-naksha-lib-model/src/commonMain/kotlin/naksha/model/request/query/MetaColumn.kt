@@ -4,9 +4,13 @@ package naksha.model.request.query
 
 import naksha.base.AnyObject
 import naksha.base.NotNullProperty
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
+import naksha.base.String_TYPE
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
 /**
@@ -30,10 +34,13 @@ import kotlin.jvm.JvmStatic
  * ```
  *
  * @since 3.0
- * @see [MetaQuery]
- * @see [MetaAnd]
- * @see [MetaOr]
- * @see [MetaNot]
+ * @see IQuery
+ * @see IMetaQuery
+ * @see MetaQuery
+ * @see MetaColumn
+ * @see MetaAnd
+ * @see MetaOr
+ * @see MetaNot
  */
 @JsExport
 open class MetaColumn() : AnyObject() {
@@ -41,7 +48,7 @@ open class MetaColumn() : AnyObject() {
     /**
      * Create a column reference.
      * @param name the field name.
-     * @since 3.0.0
+     * @since 3.0
      */
     @JsName("of")
     constructor(name: String) : this() {
@@ -52,7 +59,15 @@ open class MetaColumn() : AnyObject() {
     override fun hashCode(): Int = toString().hashCode()
     override fun equals(other: Any?): Boolean = toString() == other.toString()
 
-    companion object TupleColumn_C {
+    companion object MetaColumn_C {
+        /**
+         * The [PlatformType] of [MetaColumn].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(MetaColumn::class).withPackageName(PACKAGE_NAME)
+
         /**
          * The name of the virtual columns that stores the [feature-id][naksha.model.Tuple.id].
          *
@@ -718,7 +733,7 @@ open class MetaColumn() : AnyObject() {
         @JsStatic
         fun attachment(): MetaColumn = MetaColumn(ATTACHMENT)
 
-        private val NAME = NotNullProperty<MetaColumn, String>(String::class) { _, _ -> "" }
+        private val NAME = NotNullProperty<MetaColumn, String>(String_TYPE) { _, _ -> "" }
     }
 
     /**

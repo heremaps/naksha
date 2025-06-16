@@ -60,7 +60,7 @@ public class JsonUtil {
   public static String toJson(final @NotNull Object obj) {
     String jsonStr = null;
     try {
-      jsonStr = Platform.toJSON(obj, ToJsonOptions.DEFAULT);
+      jsonStr = Platform.toJson(obj, ToJsonOptions.DEFAULT);
     } catch (Exception ex) {
       throw unchecked(ex);
     }

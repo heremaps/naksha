@@ -2,7 +2,7 @@ package naksha.jbon
 
 import naksha.base.Binary
 import naksha.base.BinaryView
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -12,7 +12,7 @@ import kotlin.jvm.JvmField
 @JsExport
 class JbPath(var dictManager: JbDictManager? = null, private var binaryView: BinaryView) {
 
-    companion object JbPathCompanion {
+    companion object JbPath_C {
         /**
          * The [PlatformType] of [JbPath].
          * @since 3.0

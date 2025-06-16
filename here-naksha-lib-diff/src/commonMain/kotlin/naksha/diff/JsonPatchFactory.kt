@@ -26,7 +26,7 @@ class JsonPatchFactory private constructor() {
             if (difference == null) return EMPTY_JSON_ARRAY
             val accumulator = AnyList()
             accumulateJsonPatchEntries(difference, ROOT_PATH, accumulator)
-            return Platform.toJSON(accumulator)
+            return Platform.toJson(accumulator)
         }
 
 

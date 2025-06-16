@@ -4,7 +4,7 @@ package naksha.auth
 
 import naksha.auth.check.Check
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -24,7 +24,7 @@ import kotlin.jvm.JvmField
 @JsExport
 class UserRightsFilter : MapProxy<String, Check>(String_TYPE, Check.TYPE) {
 
-    companion object UserRightsFilterCompanion {
+    companion object UserRightsFilter_C {
         /**
          * The [PlatformType] of [UserRightsFilter].
          * @since 3.0

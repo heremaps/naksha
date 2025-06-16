@@ -3,21 +3,28 @@
 package naksha.model.request.query
 
 import naksha.base.NotNullProperty
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get
-import naksha.base.PlatformListApi.PlatformListApiCompanion.list_get_length
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformListApi.PlatformListApi_C.list_get
+import naksha.base.PlatformListApi.PlatformListApi_C.list_get_length
+import naksha.base.PlatformType
 import naksha.base.StringList
 import naksha.base.fn.Fn1
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * The reference to a property within a feature.
  *
  * **Warning:** You should not search for the `id`, `geometry`, or anything from [`properties->@ns:com:here:xyz`][naksha.model.XyzNs] using this query, because there are specialized, and optimized, dedicated queries available. So avoid things like `PQuery(Property("id"), StringOp.EQUALS, "foo"`.
- * @see naksha.model.request.ReadFeatures.featureIds
- * @see ISpatialQuery
- * @see IMetaQuery
- * @see ITagQuery
+ * @see IQuery
+ * @see IPropertyQuery
+ * @see PQuery
+ * @see Property
+ * @see PAnd
+ * @see POr
+ * @see PNot
  */
 @JsExport
 open class Property() : MetaColumn(FEATURE) {
@@ -26,12 +33,20 @@ open class Property() : MetaColumn(FEATURE) {
      * Create a property from a path given as variable argument list.
      * @param path the path-segments.
      */
-    @JsName("of")
+    @JsName("PropertyOf")
     constructor(vararg path: String) : this() {
         for (p in path) this.path.add(p)
     }
 
     companion object Property_C {
+        /**
+         * The [PlatformType] of [Property].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(Property::class).withPackageName(PACKAGE_NAME)
+
         /**
          * Simple constant for `properties`.
          */
@@ -44,7 +59,7 @@ open class Property() : MetaColumn(FEATURE) {
 
         const val TAGS = "tags"
 
-        private val PATH = NotNullProperty<Property, StringList>(StringList::class)
+        private val PATH = NotNullProperty<Property, StringList>(StringList.TYPE)
     }
 
     /**

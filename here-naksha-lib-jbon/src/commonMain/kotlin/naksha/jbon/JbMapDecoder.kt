@@ -1,7 +1,7 @@
 package naksha.jbon
 
 import naksha.base.AnyObject
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformMap
 import naksha.base.PlatformType
 import kotlin.js.JsExport
@@ -16,7 +16,7 @@ import kotlin.jvm.JvmField
 @JsExport
 class JbMapDecoder : JbEntryArray<JbMapDecoder>() {
 
-    companion object JbMapDecoderCompanion {
+    companion object JbMapDecoder_C {
        /**
          * The [PlatformType] of [JbMapDecoder].
          * @since 3.0

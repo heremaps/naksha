@@ -2,7 +2,7 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -60,7 +60,7 @@ open class StringList() : ListProxy<String>(String_TYPE){
         return this
     }
 
-    companion object StringListCompanion {
+    companion object StringList_C {
         /**
          * The [PlatformType] of [StringList].
          * @since 3.0
@@ -76,6 +76,8 @@ open class StringList() : ListProxy<String>(String_TYPE){
         @JvmStatic
         fun of(vararg strings: String): StringList =
             StringList().apply { addAll(strings) }
+
+        init { initialize() }
     }
 }
 

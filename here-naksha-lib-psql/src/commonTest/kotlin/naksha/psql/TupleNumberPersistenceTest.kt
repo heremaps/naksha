@@ -5,8 +5,8 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import naksha.model.Action
 import naksha.model.Naksha
-import naksha.model.Naksha.NakshaCompanion.featureNumber
-import naksha.model.Naksha.NakshaCompanion.partitionNumber
+import naksha.model.Naksha.Naksha_C.featureNumber
+import naksha.model.Naksha.Naksha_C.partitionNumber
 import naksha.model.UidManager
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature

@@ -3,6 +3,8 @@
 package naksha.model
 
 import naksha.base.JsEnum
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -15,12 +17,15 @@ import kotlin.reflect.KClass
  */
 @JsExport
 class TupleNumberVariant internal constructor() : JsEnum() {
-    @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = TupleNumberVariant::class
-
-    override fun initClass() {}
-
     companion object TupleNumberVariant_C {
+        /**
+         * The [PlatformType] of [TupleNumberVariant].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(TupleNumberVariant::class).withPackageName(PACKAGE_NAME)
+
         /**
          * The 288-bit _(36 byte)_ encoding, variant `0`.
          * - `storage-number`
@@ -33,7 +38,7 @@ class TupleNumberVariant internal constructor() : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val B288 = def(TupleNumberVariant::class, 0) { self ->
+        val B288 = def(TYPE, 0) { self ->
             self.subType = 0
             self.encodingBytes = 36
             self.sharedBytes = 0
@@ -52,7 +57,7 @@ class TupleNumberVariant internal constructor() : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val B224 = def(TupleNumberVariant::class, 1) { self ->
+        val B224 = def(TYPE, 1) { self ->
             self.subType = 1
             self.encodingBytes = 28
             self.sharedBytes = 8
@@ -70,7 +75,7 @@ class TupleNumberVariant internal constructor() : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val B192 = def(TupleNumberVariant::class, 2) { self ->
+        val B192 = def(TYPE, 2) { self ->
             self.subType = 2
             self.encodingBytes = 24
             self.sharedBytes = 12
@@ -87,7 +92,7 @@ class TupleNumberVariant internal constructor() : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val B160 = def(TupleNumberVariant::class, 3) { self ->
+        val B160 = def(TYPE, 3) { self ->
             self.subType = 3
             self.encodingBytes = 20
             self.sharedBytes = 16
@@ -103,7 +108,7 @@ class TupleNumberVariant internal constructor() : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val B96 = def(TupleNumberVariant::class, 4) { self ->
+        val B96 = def(TYPE, 4) { self ->
             self.subType = 4
             self.encodingBytes = 12
             self.sharedBytes = 24
@@ -117,7 +122,7 @@ class TupleNumberVariant internal constructor() : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val UNDEFINED = def(TupleNumberVariant::class, "undefined")
+        val UNDEFINED = def(TYPE, "undefined")
 
         private val FROM_STRING = mapOf(
             Pair(B288.subType.toString(), B288),
@@ -177,6 +182,9 @@ class TupleNumberVariant internal constructor() : JsEnum() {
         @JvmStatic
         fun fromValue(value: Int): TupleNumberVariant = FROM_VALUE[value] ?: UNDEFINED
     }
+
+    override fun namespace() = TYPE
+    override fun initClass() {}
 
     /**
      * The subtype, when encoded in a [TupleNumberBinaryArray].

@@ -2,9 +2,13 @@
 
 package naksha.model.request
 
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.model.Naksha
 import naksha.model.Version
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Perform a read from the transaction log to query for [transaction features][naksha.model.objects.NakshaTx].
@@ -15,6 +19,16 @@ open class ReadTransactions : ReadFeatures() {
     init {
         mapId = Naksha.ADMIN_MAP
         collectionIds.add(Naksha.TRANSACTIONS_COL)
+    }
+
+    companion object ReadTransactions_C {
+        /**
+         * The [PlatformType] of [ReadTransactions].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(ReadTransactions::class).withPackageName(PACKAGE_NAME)
     }
 
     /**

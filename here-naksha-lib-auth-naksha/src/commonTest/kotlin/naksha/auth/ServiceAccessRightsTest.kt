@@ -4,8 +4,8 @@ package naksha.auth
 //import naksha.auth.action.ReadFeatures
 //import naksha.auth.attribute.EventHandlerAttributes
 //import naksha.auth.attribute.FeatureAttributes
-//import naksha.auth.attribute.FeatureAttributes.FeatureAttributesCompanion.COLLECTION_ID_KEY
-//import naksha.auth.attribute.FeatureAttributes.FeatureAttributesCompanion.STORAGE_ID_KEY
+//import naksha.auth.attribute.FeatureAttributes.FeatureAttributes_C.COLLECTION_ID_KEY
+//import naksha.auth.attribute.FeatureAttributes.FeatureAttributes_C.STORAGE_ID_KEY
 //import kotlin.test.*
 
 

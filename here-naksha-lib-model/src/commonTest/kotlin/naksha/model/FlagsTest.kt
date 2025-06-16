@@ -1,13 +1,13 @@
 package naksha.model
 
-import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_SHIFT
-import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_CLEAR
-import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_SHIFT
-import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_CLEAR
-import naksha.model.FlagsBits.FlagsBitsCompanion.GEO_SHIFT
-import naksha.model.FlagsBits.FlagsBitsCompanion.OP_SHIFT
-import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_CLEAR
-import naksha.model.FlagsBits.FlagsBitsCompanion.TAGS_SHIFT
+import naksha.model.FlagsBits.FlagsBits_C.ACTION_SHIFT
+import naksha.model.FlagsBits.FlagsBits_C.FEATURE_CLEAR
+import naksha.model.FlagsBits.FlagsBits_C.FEATURE_SHIFT
+import naksha.model.FlagsBits.FlagsBits_C.GEO_CLEAR
+import naksha.model.FlagsBits.FlagsBits_C.GEO_SHIFT
+import naksha.model.FlagsBits.FlagsBits_C.OP_SHIFT
+import naksha.model.FlagsBits.FlagsBits_C.TAGS_CLEAR
+import naksha.model.FlagsBits.FlagsBits_C.TAGS_SHIFT
 import kotlin.test.*
 
 class FlagsTest {

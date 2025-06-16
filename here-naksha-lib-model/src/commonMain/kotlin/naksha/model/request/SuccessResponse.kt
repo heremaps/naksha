@@ -2,12 +2,16 @@
 
 package naksha.model.request
 
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.geo.GeoCollection
 import naksha.model.*
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaFeatureList
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 
 /**
@@ -149,13 +153,21 @@ open class SuccessResponse() : Response() {
      */
     override val length: Int
         get() {
-            val features = getAs(FEATURES, NakshaFeatureList::class)
+            val features = getAs(FEATURES, NakshaFeatureList.TYPE)
             if (features is NakshaFeatureList) return features.size
-            val featureTupleList = getAs(FEATURE_TUPLE_LIST, FeatureTupleList::class)
+            val featureTupleList = getAs(FEATURE_TUPLE_LIST, FeatureTupleList.TYPE)
             return featureTupleList?.size ?: 0
         }
 
     companion object SuccessResponse_C {
+        /**
+         * The [PlatformType] of [SuccessResponse].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(SuccessResponse::class).withPackageName(PACKAGE_NAME)
+
         private const val FEATURE_TUPLE_LIST = "featureTupleList"
         private const val FEATURES = "features"
     }
@@ -169,12 +181,12 @@ open class SuccessResponse() : Response() {
      */
     open var featureTupleList: FeatureTupleList
         get() {
-            var list = getAs(FEATURE_TUPLE_LIST, FeatureTupleList::class)
+            var list = getAs(FEATURE_TUPLE_LIST, FeatureTupleList.TYPE)
             if (list != null) return list
             list = FeatureTupleList()
 
             // Optionally convert existing features.
-            val featureList = getAs(FEATURES, NakshaFeatureList::class)
+            val featureList = getAs(FEATURES, NakshaFeatureList.TYPE)
             if (featureList != null) {
                 list.setCapacity(featureList.size)
                 for (feature in featureList) {
@@ -203,12 +215,12 @@ open class SuccessResponse() : Response() {
      */
     open var features: NakshaFeatureList
         get() {
-            var list = getAs(FEATURES, NakshaFeatureList::class)
+            var list = getAs(FEATURES, NakshaFeatureList.TYPE)
             if (list != null) return list
             list = NakshaFeatureList()
 
             // Optionally convert existing feature-tuple.
-            val featureTupleList = getAs(FEATURE_TUPLE_LIST, FeatureTupleList::class)
+            val featureTupleList = getAs(FEATURE_TUPLE_LIST, FeatureTupleList.TYPE)
             if (featureTupleList != null) {
                 featureTupleList.loadAll(acceptFeature = true)
                 list.setCapacity(featureTupleList.size)
@@ -405,7 +417,7 @@ open class SuccessResponse() : Response() {
      */
     fun asFeatureCollection(): GeoCollection {
         this.features
-        return proxy(GeoCollection::class)
+        return proxy(GeoCollection.TYPE)
     }
 
     /**

@@ -4,7 +4,7 @@ package naksha.diff
 
 import naksha.base.Any_TYPE
 import naksha.base.MapProxy
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -16,7 +16,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class DifferenceMap: MapProxy<Any, Difference>(Any_TYPE, DIFFERENCE) {
-    companion object DifferenceMapCompanion {
+    companion object DifferenceMap_C {
         /**
          * The [PlatformType] of [DifferenceMap].
          * @since 3.0

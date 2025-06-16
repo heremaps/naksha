@@ -1,7 +1,7 @@
 package naksha.model
 
-import naksha.model.Naksha.NakshaCompanion.featureNumber
-import naksha.model.Naksha.NakshaCompanion.partitionNumber
+import naksha.model.Naksha.Naksha_C.featureNumber
+import naksha.model.Naksha.Naksha_C.partitionNumber
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

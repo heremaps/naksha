@@ -1,7 +1,7 @@
 package naksha.diff
 
 import naksha.base.Platform
-import naksha.base.PlatformUtil.PlatformUtilCompanion.deepEquals
+import naksha.base.PlatformUtil.PlatformUtil_C.deepEquals
 import naksha.diff.*
 import org.json.JSONException
 import org.junit.jupiter.api.Assertions
@@ -30,7 +30,7 @@ import kotlin.test.assertNull
  *  - `Patcher.getDifference` is [DifferenceCalculator.calculateDifference]
  *  - `PatcherUtils.removeAllRemoveOp` is [DifferenceFilter.removeAllRemoveOp]
  *  - `Patcher.patch` remained as [Patcher.patch]
- *  - JSON (de)serialization happens via [Platform.toJSON] and [Platform.fromJson]
+ *  - JSON (de)serialization happens via [Platform.toJson] and [Platform.fromJson]
  */
 class MigratedJsonBasedDiffTest {
     @Test
@@ -100,8 +100,8 @@ class MigratedJsonBasedDiffTest {
 
         // Check that the patched feature 3 has the correct content as 4 but no JSON properties deleted
         JSONAssert.assertEquals(
-            Platform.toJSON(expectedPatchedf3),
-            Platform.toJSON(patchedf3),
+            Platform.toJson(expectedPatchedf3),
+            Platform.toJson(patchedf3),
             JSONCompareMode.STRICT
         )
         val newDiff = DifferenceCalculator.calculateDifference(patchedf3, expectedPatchedf3)
@@ -133,8 +133,8 @@ class MigratedJsonBasedDiffTest {
         // Check that the patched feature 3 has the same content as 5
         val patchedf3Tof5 = Patcher.patch(f3, diff35)
         JSONAssert.assertEquals(
-            Platform.toJSON(patchedf3Tof5),
-            Platform.toJSON(f3),
+            Platform.toJson(patchedf3Tof5),
+            Platform.toJson(f3),
             JSONCompareMode.STRICT
         )
         val newDiff = DifferenceCalculator.calculateDifference(patchedf3Tof5, f5)
@@ -160,8 +160,8 @@ class MigratedJsonBasedDiffTest {
         assertNotNull(expectedPatchedf3)
 
         JSONAssert.assertEquals(
-            Platform.toJSON(expectedPatchedf3),
-            Platform.toJSON(patchedf3Tof6),
+            Platform.toJson(expectedPatchedf3),
+            Platform.toJson(patchedf3Tof6),
             JSONCompareMode.STRICT
         )
         val newDiff36 = DifferenceCalculator.calculateDifference(patchedf3Tof6, expectedPatchedf3)

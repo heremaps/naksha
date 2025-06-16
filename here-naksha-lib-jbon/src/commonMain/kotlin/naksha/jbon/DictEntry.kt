@@ -2,7 +2,7 @@
 
 package naksha.jbon
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -40,7 +40,7 @@ data class DictEntry(
      */
     val value: Any?
 ) {
-    companion object DictEntryCompanion {
+    companion object DictEntry_C {
         /**
          * The [PlatformType] of [DictEntry].
          * @since 3.0

@@ -110,7 +110,7 @@ class PgColumn : JsEnum() {
             return ident
         }
 
-    companion object PgColumnCompanion {
+    companion object PgColumn_C {
         /**
          * Prevents either compression or out-of-line storage. This is the only possible strategy for columns of non-TOAST-able data types.
          * @since 3.0

@@ -3,6 +3,8 @@
 package naksha.model.request.query
 
 import naksha.base.JsEnum
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -13,13 +15,15 @@ import kotlin.reflect.KClass
  */
 @JsExport
 class SortOrder : JsEnum() {
-    @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = SortOrder::class
+    companion object SortOrder_C {
+        /**
+         * The [PlatformType] of [SortOrder].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(SortOrder::class).withPackageName(PACKAGE_NAME)
 
-    override fun initClass() {
-    }
-
-    companion object SortOrderCompanion {
         /**
          * Any sort order is okay, as long as it is deterministic, allows to use the natural order of the index.
          *
@@ -27,20 +31,24 @@ class SortOrder : JsEnum() {
          */
         @JvmField
         @JsStatic
-        val ANY = def(SortOrder::class, "")
+        val ANY = def(TYPE, "")
 
         /**
          * Sort ascending.
          */
         @JvmField
         @JsStatic
-        val ASCENDING = def(SortOrder::class, "ASC")
+        val ASCENDING = def(TYPE, "ASC")
 
         /**
          * Sort descending.
          */
         @JvmField
         @JsStatic
-        val DESCENDING = def(SortOrder::class, "DESC")
+        val DESCENDING = def(TYPE, "DESC")
     }
+
+    override fun namespace() = TYPE
+    override fun initClass() {}
+
 }

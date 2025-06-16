@@ -3,17 +3,22 @@
 package naksha.model.request.notification
 
 import naksha.base.NotNullProperty
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.model.IStorage
 import naksha.model.objects.NakshaSubscriptionState
+import naksha.model.request.FeatureTuple
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 // TODO: Please document me!
 
 @JsExport
 open class ExtSubNotification() : SubNotification() {
 
-    @JsName("of")
+    @JsName("ExtSubNotificationOf")
     constructor(storage: IStorage, subscriptionId: String, state: NakshaSubscriptionState): this() {
         setRaw("storage", storage)
         setRaw("subscriptionId", subscriptionId)
@@ -21,7 +26,15 @@ open class ExtSubNotification() : SubNotification() {
     }
 
     companion object ExtSubNotification_C {
-        private val ROWS_BY_TXN = NotNullProperty<ExtSubNotification, TuplesByTxn>(TuplesByTxn::class)
+        /**
+         * The [PlatformType] of [ExtSubNotification].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(ExtSubNotification::class).withPackageName(PACKAGE_NAME)
+
+        private val ROWS_BY_TXN = NotNullProperty<ExtSubNotification, TuplesByTxn>(TuplesByTxn.TYPE)
     }
 
     /**

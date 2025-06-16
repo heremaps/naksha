@@ -1,7 +1,7 @@
 package naksha.jbon
 
 import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -15,7 +15,7 @@ import kotlin.jvm.JvmField
 @JsExport
 class JbDictManager : IDictManager {
 
-    companion object JbDictManagerCompanion {
+    companion object JbDictManager_C {
         /**
          * The [PlatformType] of [JbDictManager].
          * @since 3.0

@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.test.*
 
 class PlatformTypeTest {
@@ -47,8 +47,8 @@ class PlatformTypeTest {
     fun testPrimitives() {
         assertTrue(Boolean_TYPE.isInstance(true))
         assertTrue(Boolean_TYPE.isInstance(false))
-        assertTrue(Int_Type.isInstance(1))
-        assertTrue(Int_Type.isInstance(-200000))
+        assertTrue(Int_TYPE.isInstance(1))
+        assertTrue(Int_TYPE.isInstance(-200000))
         assertTrue(Double_TYPE.isInstance(1.0))
         assertTrue(Double_TYPE.isInstance(-500.123))
         val i64 = Int64(100L)

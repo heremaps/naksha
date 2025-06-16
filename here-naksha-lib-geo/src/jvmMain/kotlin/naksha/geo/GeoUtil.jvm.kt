@@ -10,7 +10,7 @@ import org.locationtech.jts.io.twkb.TWKBWriter
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class GeoUtil private actual constructor() {
-    actual companion object GeoUtilCompanion {
+    actual companion object GeoUtil_C {
 
         // ----------------------------------< JAVA only >----------------------------------------
 

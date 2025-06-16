@@ -175,7 +175,7 @@ class SourceIdHandlerUnitTest extends AbstractTest {
         // Then: validate that the feature in the original request is modified as per expectation
         assertNotNull(wf.getWrites().get(0));
         assertNotNull(wf.getWrites().get(0).getFeature());
-        final String featureString = Platform.toJSON(wf.getWrites().get(0).getFeature(), ToJsonOptions.DEFAULT);
+        final String featureString = Platform.toJson(wf.getWrites().get(0).getFeature(), ToJsonOptions.DEFAULT);
         JSONAssert.assertEquals("Output Feature not as expected", expectedFeatureJson, featureString, JSONCompareMode.STRICT);
     }
 

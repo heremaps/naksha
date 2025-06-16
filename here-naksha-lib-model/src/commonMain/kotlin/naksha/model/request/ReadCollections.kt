@@ -1,26 +1,33 @@
-@file:OptIn(ExperimentalJsExport::class)
+@file:Suppress("OPT_IN_USAGE")
 
 package naksha.model.request
 
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
-import naksha.base.StringList
+import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.Naksha
-import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
-import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A request to read [collection features][naksha.model.objects.NakshaCollection] from a map of the storage.
  *
  * **Hint**: To query multiple maps, it is recommended to simply open multiple sessions in parallel, query for the collections, then join the results.
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 open class ReadCollections : ReadRequest() {
     companion object ReadCollections_C {
-        private val STRING_OR_NULL = NullableProperty<ReadCollections, String>(String::class)
-        private val STRING_LIST = NotNullProperty<ReadCollections, StringList>(StringList::class)
+        /**
+         * The [PlatformType] of [ReadCollections].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(ReadCollections::class).withPackageName(PACKAGE_NAME)
+
+        private val STRING_OR_NULL = NullableProperty<ReadCollections, String>(String_TYPE)
+        private val STRING_LIST = NotNullProperty<ReadCollections, StringList>(StringList.TYPE)
     }
 
     /**

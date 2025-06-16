@@ -1,7 +1,7 @@
 package naksha.geo
 
 import naksha.base.ListProxy
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.base.illegalState
 import kotlin.js.JsExport
@@ -29,7 +29,7 @@ class MultiLineStringCoord() : ListProxy<LineStringCoord>(LineStringCoord.TYPE),
         addAll(lineStrings)
     }
 
-    companion object MultiLineStringCoordCompanion {
+    companion object MultiLineStringCoord_C {
         /**
          * The [PlatformType] of [MultiLineStringCoord].
          * @since 3.0

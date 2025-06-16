@@ -6,7 +6,7 @@ import naksha.base.AnyObject
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.StringList
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
 import naksha.base.NakshaException
 import naksha.model.objects.NakshaStorage
 import kotlin.js.ExperimentalJsExport

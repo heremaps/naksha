@@ -4,11 +4,25 @@ package naksha.model.objects
 
 import naksha.base.*
 import naksha.base.NakshaError
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 // TODO: Improve and document me!
 
+/**
+ * TODO
+ * @since 3.0
+ * @see NakshaObject
+ * @see NakshaStorage
+ * @see NakshaMap
+ * @see NakshaCollection
+ * @see NakshaDictionary
+ * @see NakshaSubscriptionState
+ * @see NakshaTx
+ */
 @JsExport
 open class NakshaSubscriptionState() : AnyObject() {
 
@@ -17,12 +31,22 @@ open class NakshaSubscriptionState() : AnyObject() {
         setRaw("id", id)
     }
 
-    companion object {
-        private val ID = NotNullProperty<NakshaSubscriptionState, String>(String::class) { _, _ -> PlatformUtil.randomString() }
-        private val INT_0 = NotNullProperty<NakshaSubscriptionState, Int>(Int::class) { _, _ -> 0 }
-        private val INT64_0 = NotNullProperty<NakshaSubscriptionState, Int64>(Int64::class) { _, _ -> Int64(0) }
-        private val ERROR_NULL = NullableProperty<NakshaSubscriptionState, NakshaError>(NakshaError::class)
-        private val ANY_OBJECT = NotNullProperty<NakshaSubscriptionState, AnyObject>(AnyObject::class)
+    companion object NakshaSubscriptionState_C {
+        /**
+         * The [PlatformType] of [NakshaSubscriptionState].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(NakshaSubscriptionState::class)
+            .withPackageName(PACKAGE_NAME)
+            .withJsonType("naksha.SubscriptionState")
+
+        private val ID = NotNullProperty<NakshaSubscriptionState, String>(String_TYPE) { _, _ -> PlatformUtil.randomString() }
+        private val INT_0 = NotNullProperty<NakshaSubscriptionState, Int>(Int_TYPE) { _, _ -> 0 }
+        private val INT64_0 = NotNullProperty<NakshaSubscriptionState, Int64>(Int64_TYPE) { _, _ -> Int64(0) }
+        private val ERROR_NULL = NullableProperty<NakshaSubscriptionState, NakshaError>(NakshaError.TYPE)
+        private val ANY_OBJECT = NotNullProperty<NakshaSubscriptionState, AnyObject>(AnyObject.TYPE)
     }
 
     /**

@@ -3,7 +3,7 @@
 package naksha.model
 
 import naksha.base.ListProxy
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.base.String_TYPE
 import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
@@ -157,7 +157,7 @@ open class TagList() : ListProxy<String>(String_TYPE) {
      */
     fun toTagMap(): TagMap = TagMap(this)
 
-    companion object TagListCompanion {
+    companion object TagList_C {
         /**
          * The [PlatformType] of [TagList].
          * @since 3.0

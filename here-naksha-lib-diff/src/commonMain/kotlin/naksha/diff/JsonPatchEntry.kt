@@ -3,7 +3,7 @@
 package naksha.diff
 
 import naksha.base.AnyObject
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName

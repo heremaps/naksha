@@ -3,8 +3,8 @@ package naksha.model
 import naksha.base.Binary
 import naksha.base.Int64
 import naksha.base.Platform
-import naksha.base.PlatformUtil.PlatformUtilCompanion.randomString
-import naksha.model.Naksha.NakshaCompanion.INT64_SIGN_BIT
+import naksha.base.PlatformUtil.PlatformUtil_C.randomString
+import naksha.model.Naksha.Naksha_C.INT64_SIGN_BIT
 import kotlin.test.*
 
 class NakshaTest {

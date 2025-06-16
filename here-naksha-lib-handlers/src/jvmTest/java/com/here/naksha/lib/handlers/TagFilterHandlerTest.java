@@ -204,7 +204,7 @@ class TagFilterHandlerTest extends AbstractTest {
       features.add(write.getFeature());
     }
     final XyzFeatureCollection outputCollection = new XyzFeatureCollection().withFeatures(features);
-    return Platform.toJSON(outputCollection, ToJsonOptions.DEFAULT);
+    return Platform.toJson(outputCollection, ToJsonOptions.DEFAULT);
   }
 
 }

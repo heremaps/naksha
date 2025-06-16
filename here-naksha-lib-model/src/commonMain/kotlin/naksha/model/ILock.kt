@@ -14,14 +14,14 @@ import kotlin.js.JsExport
 interface ILock: AutoCloseable {
     /**
      * The storage that provided the lock.
-     * @since 3.0.0
+     * @since 3.0
      */
     val storage: IStorage
 
     /**
      * Tests if the lock is closed.
      * @return _true_ if the lock is closed (has been released).
-     * @since 3.0.0
+     * @since 3.0
      */
     fun isClosed(): Boolean
 }

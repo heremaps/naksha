@@ -1,6 +1,6 @@
 package naksha.geo
 
-import naksha.base.Platform.PlatformCompanion.forKClass
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -40,7 +40,7 @@ class SpPolygon() : SpGeometry() {
         this.coordinates = coordinates
     }
 
-    companion object SpPolygonCompanion {
+    companion object SpPolygon_C {
         /**
          * The [PlatformType] of [SpPolygon].
          * @since 3.0

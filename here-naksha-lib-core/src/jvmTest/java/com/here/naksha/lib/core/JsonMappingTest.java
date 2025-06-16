@@ -54,7 +54,7 @@ public class JsonMappingTest {
       final NakshaFeature obj = jvmMap.proxy(Platform.klassFor(NakshaFeature.class));      assertNotNull(obj);
 
       obj.getProperties().put("y", 7);
-      String result = Platform.toJSON(obj, ToJsonOptions.DEFAULT);
+      String result = Platform.toJson(obj, ToJsonOptions.DEFAULT);
 
       final String expected = "{\"type\":\"Feature\",\"id\":\"xyz123\",\"properties\":{\"x\":5,\"y\":7}}";
       assertTrue(jsonCompare(expected, result));

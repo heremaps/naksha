@@ -5,26 +5,27 @@ package naksha.model.request
 import naksha.base.NotNullEnum
 import naksha.base.NullableProperty
 import naksha.base.AnyObject
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.model.request.query.MetaColumn
 import naksha.model.request.query.SortOrder
-import naksha.model.request.query.SortOrder.SortOrderCompanion.ANY
-import naksha.model.request.query.SortOrder.SortOrderCompanion.DESCENDING
+import naksha.model.request.query.SortOrder.SortOrder_C.ANY
+import naksha.model.request.query.SortOrder.SortOrder_C.DESCENDING
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
- * Describes a sort order in a [result-set][naksha.model.request.IResultSet].
+ * Describes a sort order in a result-set.
  *
  * **Warning**: Using custom ordering may not be supported by the storage. The best is to only use the pre-defined sort orders:
  * - [deterministic]
  * - [version]
  * - [id]
  * - [author]
- *
- * @constructor Creating an ordering, where the details
  */
 @JsExport
 class OrderBy() : AnyObject() {
@@ -43,7 +44,15 @@ class OrderBy() : AnyObject() {
         this.next = next
     }
 
-    companion object OrderByCompanion {
+    companion object OrderBy_C {
+        /**
+         * The [PlatformType] of [OrderBy].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(OrderBy::class).withPackageName(PACKAGE_NAME)
+
         /**
          * Create a deterministic order of a result-set, but without specifying by which column to order, nor how to [sort][SortOrder.ANY]. Therefore, the ordering can be done very efficiently by the storage (it can for example read in index order).
          */
@@ -79,9 +88,9 @@ class OrderBy() : AnyObject() {
         @JvmStatic
         fun author(): OrderBy = OrderBy(MetaColumn.author(), next = OrderBy(MetaColumn.updatedAt(), DESCENDING, id()))
 
-        private val COLUMN_OR_NULL = NullableProperty<OrderBy, MetaColumn>(MetaColumn::class)
-        private val SORT_ORDER = NotNullEnum<OrderBy, SortOrder>(SortOrder::class) { _, _ -> ANY }
-        private val NEXT_OR_NULL = NullableProperty<OrderBy, OrderBy>(OrderBy::class)
+        private val COLUMN_OR_NULL = NullableProperty<OrderBy, MetaColumn>(MetaColumn.TYPE)
+        private val SORT_ORDER = NotNullEnum<OrderBy, SortOrder>(SortOrder.TYPE) { _, _ -> ANY }
+        private val NEXT_OR_NULL = NullableProperty<OrderBy, OrderBy>(TYPE)
     }
 
     /**
@@ -139,6 +148,7 @@ class OrderBy() : AnyObject() {
             && next == other.next
     }
 
+    @Suppress("RedundantOverride")
     override fun hashCode(): Int = super.hashCode()
 
     override fun toString(): String {

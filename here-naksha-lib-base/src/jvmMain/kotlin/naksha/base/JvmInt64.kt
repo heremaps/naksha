@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.longToInt64
+import naksha.base.Platform.Platform_C.longToInt64
 
 /**
  * The JVM Int64 implementation. If an instance is needed use [Platform.longToInt64].

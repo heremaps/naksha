@@ -2,14 +2,12 @@
 
 package naksha.model
 
-import naksha.base.Int64
-import naksha.base.NakshaException
-import naksha.base.Platform
-import naksha.base.PlatformDataView
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_byte_array
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.*
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_byte_array
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_int32
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_int64
+import naksha.base.NakshaError.NakshaError_C.ILLEGAL_ARGUMENT
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.request.FeatureTupleList
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -21,7 +19,7 @@ import kotlin.jvm.JvmStatic
 /**
  * A helper that allows reading a binary encoded array of [TupleNumber]'s.
  *
- * This binary can be serialized technically, but just using the [Platform.toJSON][naksha.base.Platform.toJSON] method, because it requires a binary encoding, which means serialization and deserialization into a [Data URL](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data), which is normally not supported out of the box by standard JSON parsers/serializers, it is a proprietary extension to the JSON standard, the same way that 64-bit integers are handled as special [Data URL](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data) by [Platform.toJSON][naksha.base.Platform.toJSON].
+ * This binary can be serialized technically, but just using the [Platform.toJSON][naksha.base.Platform.toJson] method, because it requires a binary encoding, which means serialization and deserialization into a [Data URL](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data), which is normally not supported out of the box by standard JSON parsers/serializers, it is a proprietary extension to the JSON standard, the same way that 64-bit integers are handled as special [Data URL](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data) by [Platform.toJSON][naksha.base.Platform.toJson].
  *
  * @since 3.0
  */
@@ -306,7 +304,7 @@ data class TupleNumberBinaryArray(
      * Returns the uid at the given index.
      * @param index the index.
      * @return the uid.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun getUid(index: Int): Int {
         val offset = offset(index)
@@ -317,14 +315,14 @@ data class TupleNumberBinaryArray(
     /**
      * Compress this byte-array and return the compressed version (this is helpful for caching).
      * @return the compressed tuple-number array.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun gzip(): ByteArray = Platform.gzipDeflate(bytes)
 
     /**
      * Unpack this into an array of [tuple-numbers][TupleNumber].
      * @return an array of [tuple-numbers][TupleNumber].
-     * @since 3.0.0
+     * @since 3.0
      */
     fun toArray(): Array<TupleNumber> = Array(bytes.size) { get(it)!! }
 
@@ -430,7 +428,15 @@ data class TupleNumberBinaryArray(
 
     override fun toString(): String = bytes.contentToString()
 
-    companion object TupleNumberByteArray_C {
+    companion object TupleNumberBinaryArray_C {
+        /**
+         * The [PlatformType] of [TupleNumberBinaryArray].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(TupleNumberBinaryArray::class).withPackageName(PACKAGE_NAME)
+
         /**
          * The default empty tuple-number cache.
          */
@@ -440,7 +446,7 @@ data class TupleNumberBinaryArray(
          * Return a [TupleNumberBinaryArray] from a compressed byte-array.
          * @param compressed the compressed tuple-number array.
          * @return the [TupleNumberBinaryArray].
-         * @since 3.0.0
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
