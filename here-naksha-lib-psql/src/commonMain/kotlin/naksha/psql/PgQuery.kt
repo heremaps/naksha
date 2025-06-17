@@ -1,6 +1,12 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
 import naksha.base.Int64
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * An SQL query to be executed against a Naksha table.
@@ -46,6 +52,16 @@ data class PgQuery(
      */
     val collectionNumber: Int?
 ) {
+
+    companion object PgQuery_C {
+        /**
+         * The [PlatformType] of [PgQuery].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgQuery::class).withPackageName(PACKAGE_NAME)
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

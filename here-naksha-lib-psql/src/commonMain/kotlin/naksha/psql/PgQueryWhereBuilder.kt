@@ -1,7 +1,11 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
 import naksha.base.NakshaError
 import naksha.base.NakshaException
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.base.illegalArg
 import naksha.geo.HereTile
 import naksha.geo.SpGeometry
@@ -9,6 +13,8 @@ import naksha.model.*
 import naksha.model.GeoEncoding.GeoEncodingComponent.TWKB
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Helper to convert a [ReadFeatures] request into a sql `WHERE` query.
@@ -17,6 +23,18 @@ import naksha.model.request.query.*
  * @see [build]
  */
 internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
+
+    companion object PgQueryWhereBuilder_C {
+        /**
+         * The [PlatformType] of [PgQueryWhereBuilder].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgQueryWhereBuilder::class).withPackageName(PACKAGE_NAME)
+
+        private val tagsAsJsonb = "naksha_tags(${PgColumn.tags}, ${PgColumn.flags})"
+    }
 
     private val argValues: MutableList<Any?> = mutableListOf()
     private val argTypes: MutableList<PgType> = mutableListOf()
@@ -463,9 +481,5 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
                 "Unknown DoubleOp: $doubleOp"
             )
         }
-    }
-
-    companion object {
-        private val tagsAsJsonb = "naksha_tags(${PgColumn.tags}, ${PgColumn.flags})"
     }
 }

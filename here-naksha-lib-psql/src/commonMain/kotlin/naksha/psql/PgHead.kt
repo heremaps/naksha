@@ -2,9 +2,12 @@ package naksha.psql
 
 import naksha.base.NakshaError.NakshaError_C.PARTITION_NOT_FOUND
 import naksha.base.NakshaException
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.psql.PgUtil.PgUtil_C.partitionNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
@@ -41,6 +44,16 @@ open class PgHead protected constructor(
         partitionCount = if (partCount <= 1) 0 else partCount,
         partitionBy = if (partCount >= 2) PgColumn.tn else null
     )
+
+    companion object PgHead_C {
+        /**
+         * The [PlatformType] of [PgHead].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgHead::class).withPackageName(PACKAGE_NAME)
+    }
 
     /**
      * All performance partitions to stored into; empty if no performance partitioning.

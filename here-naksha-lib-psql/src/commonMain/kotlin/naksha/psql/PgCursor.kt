@@ -1,10 +1,10 @@
 package naksha.psql
 
 import naksha.base.AnyObject
-import naksha.base.Platform
+import naksha.base.Platform.Platform_C.forInstance
+import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
-import kotlin.reflect.KClass
 
 /**
  * A cursor as it is returned by the [PLV8](https://plv8.github.io/) engine. In Java this is a thin wrapper around a
@@ -81,9 +81,9 @@ interface PgCursor : AutoCloseable {
      */
     fun <T : Any> columnOr(name: String, alternative: T): T {
         val v = column(name)
-        val klass = Platform.klassOf(alternative)
+        val type = forInstance(alternative)
         @Suppress("UNCHECKED_CAST")
-        return if (klass.isInstance(v)) v as T else alternative
+        return if (type.isInstance(v)) v as T else alternative
     }
 
     /**
@@ -101,11 +101,11 @@ interface PgCursor : AutoCloseable {
 
     /**
      * Convert the current row into a map, and return the corresponding proxy.
-     * @param klass the proxy type to map.
+     * @param type the proxy type to map.
      * @return the proxy about the row.
      * @throws IllegalStateException if the cursor is not positioned above a valid row, [isRow] returns _false_.
      */
-    fun <T : AnyObject> map(@Suppress("NON_EXPORTABLE_TYPE") klass: KClass<T>): T
+    fun <T : AnyObject> map(type: PlatformType<T>): T
 
     /**
      * Closes the cursor.

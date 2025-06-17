@@ -6,14 +6,15 @@ import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
 import naksha.base.NakshaError.NakshaError_C.UNINITIALIZED
-import kotlin.reflect.KClass
+import naksha.base.PlatformType
 
 /**
  * The Java implementation of the [PgStorage], classname `naksha.psql.PsqlStorage`.
  */
 open class PsqlStorage : PgStorage(), IStorage {
 
-    override val configKlass: KClass<PgConfig> = PgConfig::class
+    override val configType: PlatformType<PgConfig>
+        get() = PgConfig.TYPE
 
     override val adminMap: PsqlAdminMap
         get() = super.adminMap as PsqlAdminMap

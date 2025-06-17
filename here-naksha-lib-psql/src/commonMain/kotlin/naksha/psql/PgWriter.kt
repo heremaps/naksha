@@ -3,12 +3,15 @@
 package naksha.psql
 
 import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
 import naksha.model.objects.NakshaTx
 import naksha.model.request.*
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A helper to write tuples into collections.
@@ -31,6 +34,16 @@ open class PgWriter internal constructor(
      */
     val useSavepoint: Boolean
 ) {
+    companion object PgWriter_C {
+        /**
+         * The [PlatformType] of [PgWriter].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgWriter::class).withPackageName(PACKAGE_NAME)
+    }
+
     /**
      * The storage to operate on.
      * @since 3.0
@@ -284,7 +297,7 @@ open class PgWriter internal constructor(
                 val nakshaMap: NakshaMap?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
                     val feature = write.feature ?: throw illegalArg("The write #${write.i} is $op, but the feature is null")
-                    nakshaMap = if (feature is NakshaMap) feature else feature.proxy(NakshaMap::class)
+                    nakshaMap = if (feature is NakshaMap) feature else feature.proxy(NakshaMap.TYPE)
                     nakshaMap.storageId = storage.id
                     if (pgMap == null) {
                         if (op == WriteOp.UPDATE) {
@@ -315,7 +328,7 @@ open class PgWriter internal constructor(
                 val nakshaCollection: NakshaCollection?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
                     val feature = write.feature ?: throw illegalArg("The write #${write.i} is $op, but the feature is null")
-                    nakshaCollection = if (feature is NakshaCollection) feature else feature.proxy(NakshaCollection::class)
+                    nakshaCollection = if (feature is NakshaCollection) feature else feature.proxy(NakshaCollection.TYPE)
                     if (pgCollection == null) {
                         if (op == WriteOp.UPDATE) {
                             throw collectionNotFound(

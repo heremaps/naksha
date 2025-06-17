@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalJsExport::class)
+@file:Suppress("OPT_IN_USAGE")
 
 package naksha.psql
 
@@ -7,8 +7,12 @@ import naksha.base.Int64
 import naksha.base.NakshaException
 import naksha.model.*
 import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A simple wrapper for a PostgresQL session lock.
@@ -41,6 +45,16 @@ internal class PgLock internal constructor(
      */
     val isSessionLock: Boolean
 ) : ILock {
+
+    companion object PgLock_C {
+        /**
+         * The [PlatformType] of [PgLock].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgLock::class).withPackageName(PACKAGE_NAME)
+    }
 
     /**
      * The lock-number generated from the lock-id.

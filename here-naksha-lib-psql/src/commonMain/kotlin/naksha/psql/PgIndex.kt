@@ -2,6 +2,8 @@ package naksha.psql
 
 import naksha.base.AtomicMap
 import naksha.base.JsEnum
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.base.fn.Fx2
 import naksha.model.request.query.SortOrder
 import naksha.model.request.query.SortOrder.SortOrder_C.DESCENDING
@@ -32,7 +34,6 @@ import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
-import kotlin.reflect.KClass
 
 /**
  * The base class for indices. We have different kind of indices, but there is a general rule for all fuzzy indices.
@@ -69,6 +70,14 @@ ${if (where==null) "" else "WHERE $where"};"""
 
     companion object PgIndex_C {
         /**
+         * The [PlatformType] of [PgIndex].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgIndex::class).withPackageName(PACKAGE_NAME)
+
+        /**
          * The primary key about the tuple-number.
          *
          * This entry is not used, its only formally here, because the column itself does have the attribute `PRIMARY KEY`, which is important for joins, replication, and such things. This column will always be named automatically by postgres as `table_pkey`.
@@ -78,7 +87,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val tn_pkey = def(PgIndex::class, "tnu") { self ->
+        val tn_pkey = def(TYPE, "tnu") { self ->
             self.name = "tn_unique"
             self.internal = true
             self.columns = listOf(c_tn)
@@ -103,7 +112,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val id_unique = def(PgIndex::class, "idu") { self ->
+        val id_unique = def(TYPE, "idu") { self ->
             self.name = "id_unique"
             self.internal = true
             self.columns = listOf(c_id)
@@ -128,7 +137,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val id = def(PgIndex::class, "idi") { self ->
+        val id = def(TYPE, "idi") { self ->
             self.name = "id"
             self.internal = true
             self.columns = listOf(c_id, c_tn)
@@ -152,7 +161,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val version = def(PgIndex::class, "ver") { self ->
+        val version = def(TYPE, "ver") { self ->
             self.name = "version"
             self.internal = true
             self.columns = listOf(c_tn)
@@ -177,7 +186,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val txn_unique = def(PgIndex::class, "txn") { self ->
+        val txn_unique = def(TYPE, "txn") { self ->
             self.name = "txn_unique"
             self.internal = true
             self.columns = listOf()
@@ -203,7 +212,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val here_tile = def(PgIndex::class, "hti") { self ->
+        val here_tile = def(TYPE, "hti") { self ->
             self.name = "here_tile"
             self.columns = listOf(c_here_tile, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
@@ -229,7 +238,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val app_id = def(PgIndex::class, "aid") { self ->
+        val app_id = def(TYPE, "aid") { self ->
             self.name = "app_id"
             self.columns = listOf(c_app_id, c_updated_at, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING, DESCENDING)
@@ -255,7 +264,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val author = def(PgIndex::class, "ath") { self ->
+        val author = def(TYPE, "ath") { self ->
             self.name = "author"
             self.columns = listOf(c_author, c_author_ts, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING, DESCENDING)
@@ -276,7 +285,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val tags = def(PgIndex::class, "tag") { self ->
+        val tags = def(TYPE, "tag") { self ->
             self.name = "tags"
             self.columns = listOf(c_tags, c_tn, c_tn_next)
             self.createFn = Fx2 { conn, table ->
@@ -295,7 +304,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val ref_point = def(PgIndex::class, "ref") { self ->
+        val ref_point = def(TYPE, "ref") { self ->
             self.name = "ref_point"
             self.columns = listOf(c_ref_point)
             self.createFn = Fx2 { conn, table ->
@@ -314,7 +323,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val gist_geo_2d = def(PgIndex::class, "g2d") { self ->
+        val gist_geo_2d = def(TYPE, "g2d") { self ->
             self.name = "gist_geo_2d"
             self.columns = listOf(c_geo, c_tn, c_tn_next)
             self.createFn = Fx2 { conn, table ->
@@ -333,7 +342,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val gist_geo_3d = def(PgIndex::class, "g3d") { self ->
+        val gist_geo_3d = def(TYPE, "g3d") { self ->
             self.name = "gist_geo_3d"
             self.columns = listOf(c_geo, c_tn, c_tn_next)
             self.createFn = Fx2 { conn, table ->
@@ -352,7 +361,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val gist_geo_4d = def(PgIndex::class, "g4d") { self ->
+        val gist_geo_4d = def(TYPE, "g4d") { self ->
             self.name = "gist_geo_4d"
             self.columns = listOf(c_geo, c_tn, c_tn_next)
             self.createFn = Fx2 { conn, table ->
@@ -371,7 +380,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val spgist_geo_2d = def(PgIndex::class, "s2d") { self ->
+        val spgist_geo_2d = def(TYPE, "s2d") { self ->
             self.name = "spgist_geo_2d"
             self.columns = listOf(c_geo)
             self.createFn = Fx2 { conn, table ->
@@ -390,7 +399,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val spgist_geo_3d = def(PgIndex::class, "s3d") { self ->
+        val spgist_geo_3d = def(TYPE, "s3d") { self ->
             self.name = "spgist_geo_3d"
             self.columns = listOf(c_geo)
             self.createFn = Fx2 { conn, table ->
@@ -409,7 +418,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val spgist_geo_4d = def(PgIndex::class, "s4d") { self ->
+        val spgist_geo_4d = def(TYPE, "s4d") { self ->
             self.name = "spgist_geo_4d"
             self.columns = listOf(c_geo)
             self.createFn = Fx2 { conn, table ->
@@ -428,7 +437,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val ft = def(PgIndex::class, "ft") { self ->
+        val ft = def(TYPE, "ft") { self ->
             self.name = "feature_type"
             self.columns = listOf(c_ft, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
@@ -449,7 +458,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val cv0 = def(PgIndex::class, "cv0") { self ->
+        val cv0 = def(TYPE, "cv0") { self ->
             self.name = "cv0"
             self.columns = listOf(c_cv0, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
@@ -470,7 +479,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val cv1 = def(PgIndex::class, "cv1") { self ->
+        val cv1 = def(TYPE, "cv1") { self ->
             self.name = "cv1"
             self.columns = listOf(c_cv1, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
@@ -491,7 +500,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val cv2 = def(PgIndex::class, "cv2") { self ->
+        val cv2 = def(TYPE, "cv2") { self ->
             self.name = "cv2"
             self.columns = listOf(c_cv2, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
@@ -512,7 +521,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val cv3 = def(PgIndex::class, "cv3") { self ->
+        val cv3 = def(TYPE, "cv3") { self ->
             self.name = "cv3"
             self.columns = listOf(c_cv3, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
@@ -533,7 +542,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val cs0 = def(PgIndex::class, "cs0") { self ->
+        val cs0 = def(TYPE, "cs0") { self ->
             self.name = "cs0"
             self.columns = listOf(c_cs0, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
@@ -554,7 +563,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val cs1 = def(PgIndex::class, "cs1") { self ->
+        val cs1 = def(TYPE, "cs1") { self ->
             self.name = "cs1"
             self.columns = listOf(c_cs1, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
@@ -575,7 +584,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val cs2 = def(PgIndex::class, "cs2") { self ->
+        val cs2 = def(TYPE, "cs2") { self ->
             self.name = "cs2"
             self.columns = listOf(c_cs2, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
@@ -596,7 +605,7 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val cs3 = def(PgIndex::class, "cs3") { self ->
+        val cs3 = def(TYPE, "cs3") { self ->
             self.name = "cs3"
             self.columns = listOf(c_cs3, c_tn)
             self.naturalOrder = listOf(DESCENDING, DESCENDING)
@@ -628,7 +637,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         @JvmStatic
         @JsStatic
         fun of(name: String): PgIndex? {
-            val existing = getDefined(name, PgIndex::class) ?: indexByName[name]
+            val existing = getDefined(name, TYPE) ?: indexByName[name]
             if (existing != null) return existing
             val start = name.lastIndexOf(PG_IDX)
             if (start < 0) return null
@@ -637,7 +646,7 @@ ${if (where==null) "" else "WHERE $where"};"""
             // So we extract what is left from the index identifier and the compare it against all enumeration values.
             // Note: It could only have truncated the last byte or many more, dependent on how long the collection id is!
             val pg_truncated_id = name.substring(start + PG_IDX.length)
-            for (e in iterate(PgIndex::class)) if (e.text.startsWith(pg_truncated_id)) return e
+            for (e in iterate(TYPE)) if (e.text.startsWith(pg_truncated_id)) return e
             return null
         }
 
@@ -650,7 +659,7 @@ ${if (where==null) "" else "WHERE $where"};"""
             // Sanity check.
             val byName = indexByName
             val map = HashMap<String, PgIndex>()
-            for (index in iterate(PgIndex::class)) {
+            for (index in iterate(TYPE)) {
                 val pg_truncated_id = truncate(index.text)
                 if (pg_truncated_id in map) {
                     val c = map[pg_truncated_id]!!
@@ -756,11 +765,9 @@ ${if (where==null) "" else "WHERE $where"};"""
         dropFn?.call(conn, table) ?: conn.execute("DROP INDEX IF EXISTS ${quoteIdent(id(table))} CASCADE").close()
     }
 
-    @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = PgIndex::class
-
+    override fun namespace() = TYPE
     override fun initClass() {
-        register(PgIndex::class)
+        register(TYPE)
     }
 
 }

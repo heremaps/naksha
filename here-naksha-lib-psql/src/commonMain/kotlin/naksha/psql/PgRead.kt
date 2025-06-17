@@ -1,10 +1,16 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.base.collectionNotFound
 import naksha.base.illegalState
 import naksha.base.mapNotFound
 import naksha.model.*
 import naksha.model.request.FeatureTuple
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Helper to simplify reading from partitioned tables.
@@ -57,6 +63,14 @@ internal data class PgRead(
     val groupId: String = if (!readPartition) "${map.id}:${collection.id}" else "${map.id}:${collection.id}:${partition}"
 ) {
     companion object PgRead_C {
+        /**
+         * The [PlatformType] of [PgRead].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgRead::class).withPackageName(PACKAGE_NAME)
+
         private val UNDEFINED = ArrayList<PgTable>(0)
     }
 

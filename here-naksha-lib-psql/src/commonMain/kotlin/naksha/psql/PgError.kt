@@ -2,7 +2,11 @@
 
 package naksha.psql
 
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * An error as reported by PostgresQL.
@@ -19,4 +23,14 @@ data class PgError(
      * The human-readable error message.
      */
     val errMsg: String
-)
+) {
+    companion object PgError_C {
+        /**
+         * The [PlatformType] of [PgError].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgError::class).withPackageName(PACKAGE_NAME)
+    }
+}

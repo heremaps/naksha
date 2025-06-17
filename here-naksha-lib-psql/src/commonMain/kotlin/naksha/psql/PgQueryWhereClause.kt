@@ -1,4 +1,11 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
+
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * A SQL `WHERE` query.
@@ -23,6 +30,16 @@ internal data class PgQueryWhereClause(
      */
     val argTypes: MutableList<PgType>,
 ) {
+    companion object PgQueryWhereClause_C {
+        /**
+         * The [PlatformType] of [PgQueryWhereClause].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgQueryWhereClause::class).withPackageName(PACKAGE_NAME)
+    }
+
     /**
      * Returns the [argTypes] as typed-array _(`Array<String>`)_.
      * @since 3.0

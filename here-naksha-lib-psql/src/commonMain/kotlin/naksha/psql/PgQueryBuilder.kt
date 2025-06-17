@@ -1,13 +1,15 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
-import naksha.base.collectionNotFound
-import naksha.base.illegalArg
-import naksha.base.mapNotFound
-import naksha.base.unsupportedOp
+import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.request.*
 import naksha.model.request.query.MetaColumn
 import naksha.model.request.query.SortOrder.SortOrder_C.ASCENDING
 import naksha.psql.PgColumn.PgColumn_C.next_tn
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.math.max
 import kotlin.math.min
 
@@ -18,6 +20,16 @@ import kotlin.math.min
  * @since 3.0
  */
 class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
+
+    companion object PgQueryBuilder_C {
+        /**
+         * The [PlatformType] of [PgQueryBuilder].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgQueryBuilder::class).withPackageName(PACKAGE_NAME)
+    }
 
     /**
      * Create the [PgQuery] from the given request.

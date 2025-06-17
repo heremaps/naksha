@@ -2,6 +2,8 @@
 
 package naksha.psql
 
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.psql.PgUtil.PgUtil_C.quoteLiteral
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -144,6 +146,14 @@ data class PgRelation(
     // ---
 
     companion object PgRelation_C {
+        /**
+         * The [PlatformType] of [PgRelation].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgRelation::class).withPackageName(PACKAGE_NAME)
+
         /**
          * Execute a query in [pg_class](https://www.postgresql.org/docs/current/catalog-pg-class.html) to receive all information rows about the given collection.
          * @param conn the connection to use for the query.

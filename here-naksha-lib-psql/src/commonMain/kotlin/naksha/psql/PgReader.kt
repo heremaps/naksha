@@ -1,7 +1,12 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.model.*
 import naksha.model.request.*
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 class PgReader(
@@ -15,6 +20,16 @@ class PgReader(
      */
     @JvmField val request: ReadRequest,
 ) {
+
+    companion object PgReader_C {
+        /**
+         * The [PlatformType] of [PgRead].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgReader::class).withPackageName(PACKAGE_NAME)
+    }
 
     /**
      * The connection to use.

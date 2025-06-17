@@ -2,7 +2,11 @@
 
 package naksha.psql
 
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 // TODO: We need to move this class into tests, but currently this class is cross-used from lib-view!
 
@@ -13,6 +17,14 @@ import kotlin.js.JsExport
 @JsExport
 class PgTest {
     companion object PgTest_C {
+        /**
+         * The [PlatformType] of [PgTest].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgTest::class).withPackageName(PACKAGE_NAME)
+
         /**
          * The default storage identifier for testing.
          */

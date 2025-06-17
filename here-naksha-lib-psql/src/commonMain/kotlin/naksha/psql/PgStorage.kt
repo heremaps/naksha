@@ -6,7 +6,11 @@ import naksha.base.NakshaException
 import naksha.base.fn.Fx2
 import naksha.model.*
 import naksha.base.NakshaError.NakshaError_C.UNINITIALIZED
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 // TODO: Create "naksha~admin" map with map-number 0
 //       Create the "naksha~transactions", "naksha~dictionaries" collections in it
@@ -75,6 +79,16 @@ import kotlin.js.JsExport
 @Suppress("OPT_IN_USAGE")
 @JsExport
 abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
+
+    companion object PgStorage_C {
+        /**
+         * The [PlatformType] of [PgStorage].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgStorage::class).withPackageName(PACKAGE_NAME)
+    }
 
     private var _adminMap: PgAdminMap? = null
 

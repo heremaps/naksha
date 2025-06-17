@@ -1,11 +1,16 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
 import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.Platform.Platform_C.logger
 import naksha.model.*
 import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumn_C.allColumnNames
 import naksha.psql.PgColumn.PgColumn_C.allColumns
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Execute a [UPDATE][naksha.model.request.WriteOp.UPDATE].
@@ -15,6 +20,16 @@ import naksha.psql.PgColumn.PgColumn_C.allColumns
 internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partition: Int, writes: List<PgWrite>)
     : PgWriterBase(writer, collection, partition, writes)
 {
+    companion object PgWriterUpdate_C {
+        /**
+         * The [PlatformType] of [PgWriterUpdate].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgWriterUpdate::class).withPackageName(PACKAGE_NAME)
+    }
+
     private val writeById = mutableMapOf<String, PgWrite>()
 
     init {

@@ -2,9 +2,12 @@
 
 package naksha.psql
 
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.model.Version
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
@@ -18,6 +21,16 @@ class PgHistory(val head: PgHead) : PgTable(
     head.collection, "${head.collection.id}${PG_HST}", head.storageClass, false,
     partitionByColumn = PgColumn.next_tn
 ) {
+    companion object PgHistory_C {
+        /**
+         * The [PlatformType] of [PgHistory].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgHistory::class).withPackageName(PACKAGE_NAME)
+    }
+
     /**
      * All partitions, with key being the year (`txn >> 41`).
      */

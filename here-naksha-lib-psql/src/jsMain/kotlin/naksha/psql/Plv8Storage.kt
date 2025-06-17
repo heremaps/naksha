@@ -2,6 +2,7 @@
 
 package naksha.psql
 
+import naksha.base.PlatformType
 import naksha.base.fn.Fx2
 import naksha.jbon.JbDictionary
 import naksha.model.Flags
@@ -21,8 +22,8 @@ class Plv8Storage : PgStorage() {
         TODO("Not yet implemented")
     }
 
-    override val configKlass: KClass<PgConfig>
-        get() = TODO("Not yet implemented")
+    override val configType: PlatformType<PgConfig>
+        get() = PgConfig.TYPE
 
     override fun initStorage(config: PgConfig, create: Boolean?, upgrade: Boolean?) {
         TODO("Not yet implemented")

@@ -1,12 +1,14 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
-import naksha.base.Platform
+import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.Platform.Platform_C.logger
-import naksha.base.conflict
-import naksha.base.featureNotFound
-import naksha.base.generalException
 import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumn_C.allColumns
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Execute a [DELETE][naksha.model.request.WriteOp.DELETE].
@@ -16,6 +18,16 @@ import naksha.psql.PgColumn.PgColumn_C.allColumns
 internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partition: Int, writes: List<PgWrite>)
     : PgWriterBase(writer, collection, partition, writes)
 {
+    companion object PgWriterDelete_C {
+        /**
+         * The [PlatformType] of [PgWriterDelete].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgWriterDelete::class).withPackageName(PACKAGE_NAME)
+    }
+
     init {
         inRows.addColumn("id", PgType.STRING)
         inRows.addColumn("version", PgType.INT64)

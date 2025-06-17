@@ -1,11 +1,17 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaMap
 import naksha.model.request.Write
 import naksha.model.request.WriteOp
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Pure data class to enrich a write operation with additional information, used by [PgWriter].
@@ -14,6 +20,15 @@ import naksha.model.request.WriteOp
  * @see [PgWriter]
  */
 internal data class PgWrite(val original: Write, val i: Int) {
+    companion object PgWrite_C {
+        /**
+         * The [PlatformType] of [PgWrite].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgWrite::class).withPackageName(PACKAGE_NAME)
+    }
 
     /**
      * The map into which to write.

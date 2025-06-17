@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.AnyObject
+import naksha.base.PlatformType
 import kotlin.reflect.KClass
 
 /**
@@ -39,7 +40,7 @@ class Plv8Cursor: PgCursor {
         TODO("Not yet implemented")
     }
 
-    override fun <T : AnyObject> map(klass: KClass<T>): T {
+    override fun <T : AnyObject> map(type: PlatformType<T>): T {
         TODO("Not yet implemented")
     }
 

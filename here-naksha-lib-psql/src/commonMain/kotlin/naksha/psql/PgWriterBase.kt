@@ -1,10 +1,16 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
 import naksha.base.Int64
 import naksha.base.IntMutable
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.model.Version
 import naksha.base.illegalState
 import naksha.model.objects.NakshaTx
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Base class for all operations, so for:
@@ -40,6 +46,16 @@ internal abstract class PgWriterBase protected constructor(
      */
     val writes: List<PgWrite>,
 ) {
+    companion object PgWriterBase_C {
+        /**
+         * The [PlatformType] of [PgWriterBase].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgWriterBase::class).withPackageName(PACKAGE_NAME)
+    }
+
     val session: PgSession
         get() = writer.session
 

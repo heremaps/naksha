@@ -1,11 +1,17 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
 import naksha.base.Platform
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.Platform.Platform_C.logger
+import naksha.base.PlatformType
 import naksha.base.generalException
 import naksha.model.*
 import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumn_C.allColumns
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Execute [UPSERT][naksha.model.request.WriteOp.UPSERT] into a collection.
@@ -15,6 +21,16 @@ import naksha.psql.PgColumn.PgColumn_C.allColumns
 internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partition: Int, writes: List<PgWrite>)
     : PgWriterBase(writer, collection, partition, writes)
 {
+    companion object PgWriterUpsert_C {
+        /**
+         * The [PlatformType] of [PgWriterUpsert].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgWriterUpsert::class).withPackageName(PACKAGE_NAME)
+    }
+
     private val writeByTn = mutableMapOf<TupleNumber, PgWrite>()
 
     init {

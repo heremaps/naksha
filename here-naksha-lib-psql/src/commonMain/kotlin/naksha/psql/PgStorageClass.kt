@@ -1,11 +1,12 @@
 package naksha.psql
 
 import naksha.base.JsEnum
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
-import kotlin.reflect.KClass
 
 /**
  * The storage class.
@@ -13,19 +14,21 @@ import kotlin.reflect.KClass
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class PgStorageClass : JsEnum() {
-    @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = PgStorageClass::class
-
-    override fun initClass() {
-    }
-
     companion object PgStorageClass_C {
+        /**
+         * The [PlatformType] of [PgStorageClass].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgStorageClass::class).withPackageName(PACKAGE_NAME)
+
         /**
          * The storage class for collections that should be consistent and long time stored, being fault-tolerant.
          */
         @JsStatic
         @JvmField
-        val Consistent = defIgnoreCase(PgStorageClass::class, "consistent") { self ->
+        val Consistent = defIgnoreCase(TYPE, "consistent") { self ->
             self.persistence = "p"
         }.alias<PgStorageClass>("p")
 
@@ -36,7 +39,7 @@ class PgStorageClass : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val Ephemeral = defIgnoreCase(PgStorageClass::class, "ephemeral") { self ->
+        val Ephemeral = defIgnoreCase(TYPE, "ephemeral") { self ->
             self.persistence = "e"
         }.alias<PgStorageClass>("e")
 
@@ -47,7 +50,7 @@ class PgStorageClass : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val Brittle = defIgnoreCase(PgStorageClass::class, "brittle") { self ->
+        val Brittle = defIgnoreCase(TYPE, "brittle") { self ->
             self.persistence = "u"
         }.alias<PgStorageClass>("u")
 
@@ -56,7 +59,7 @@ class PgStorageClass : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val Temporary = defIgnoreCase(PgStorageClass::class, "temporary") { self ->
+        val Temporary = defIgnoreCase(TYPE, "temporary") { self ->
             self.persistence = "t"
         }.alias<PgStorageClass>("t")
 
@@ -65,7 +68,7 @@ class PgStorageClass : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val Unknown = defIgnoreCase(PgStorageClass::class, "unknown")
+        val Unknown = defIgnoreCase(TYPE, "unknown")
 
         /**
          * Detect storage class from `relpersistence` from `pg_class` or by official names.
@@ -74,8 +77,11 @@ class PgStorageClass : JsEnum() {
          */
         @JsStatic
         @JvmStatic
-        fun of(value: String?): PgStorageClass = get(value, PgStorageClass::class)
+        fun of(value: String?): PgStorageClass = get(value, TYPE)
     }
+
+    override fun namespace() = TYPE
+    override fun initClass() {}
 
     /**
      * The PostgresQL persistence character.

@@ -2,9 +2,12 @@
 
 package naksha.psql
 
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.model.Version
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
@@ -16,8 +19,17 @@ import kotlin.jvm.JvmField
  * @see [PgTransactionsYear]
  */
 @JsExport
-class PgTransactions(c: PgNakshaTransactions)
-    : PgHead(c, "${c.id}${PG_HEAD}", PgStorageClass.Consistent, false, partitionBy = PgColumn.next_tn) {
+class PgTransactions(c: PgNakshaTransactions) : PgHead(c, "${c.id}${PG_HEAD}", PgStorageClass.Consistent, false, partitionBy = PgColumn.next_tn) {
+
+    companion object PgTransactions_C {
+        /**
+         * The [PlatformType] of [PgTransactions].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgTransactions::class).withPackageName(PACKAGE_NAME)
+    }
 
     /**
      * All partitions, with key being the year (`txn >> 41`).

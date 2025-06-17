@@ -56,7 +56,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
   protected static @NotNull NakshaHubConfig nakshaHubConfig;
 
   @Override
-  public @NotNull KClass<Config> getConfigKlass() {
+  public @NotNull KClass<Config> getConfigType() {
     return Platform.klassFor(Config.class);
   }
 

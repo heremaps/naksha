@@ -1,8 +1,14 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
 import naksha.base.Platform
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.Platform.Platform_C.logger
+import naksha.base.PlatformType
 import naksha.psql.PgColumn.PgColumn_C.allColumns
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Execute an **INSERT** _(aka [CREATE][naksha.model.request.WriteOp.CREATE])_ into a collection.
@@ -12,6 +18,17 @@ import naksha.psql.PgColumn.PgColumn_C.allColumns
 internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, partition: Int, writes: List<PgWrite>)
     : PgWriterBase(writer, collection, partition, writes)
 {
+
+    companion object PgWriterInsert_C {
+        /**
+         * The [PlatformType] of [PgWriterInsert].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgWriterInsert::class).withPackageName(PACKAGE_NAME)
+    }
+
     init {
         inRows.addColumns(allColumns)
         var i = 0

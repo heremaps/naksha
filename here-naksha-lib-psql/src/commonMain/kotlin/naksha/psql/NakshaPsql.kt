@@ -6,11 +6,11 @@ package naksha.psql
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.Naksha
 import naksha.model.NakshaVersion
-import naksha.psql.PgType.Companion.BYTE_ARRAY
-import naksha.psql.PgType.Companion.INT
-import naksha.psql.PgType.Companion.INT64
-import naksha.psql.PgType.Companion.SHORT
-import naksha.psql.PgType.Companion.STRING
+import naksha.psql.PgType.PgType_C.BYTE_ARRAY
+import naksha.psql.PgType.PgType_C.INT
+import naksha.psql.PgType.PgType_C.INT64
+import naksha.psql.PgType.PgType_C.SHORT
+import naksha.psql.PgType.PgType_C.STRING
 
 /**
  * The package name `naksha.psql`.

@@ -5,12 +5,14 @@ package naksha.psql
 import naksha.base.*
 import naksha.model.*
 import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
 import naksha.model.objects.NakshaTx
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.math.min
 
@@ -40,6 +42,16 @@ open class PgSession(
      */
     @JvmField val readOnly: Boolean
 ) : IWriteSession, IReadSession, ISession {
+
+    companion object PgSession_C {
+        /**
+         * The [PlatformType] of [PgSession].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgSession::class).withPackageName(PACKAGE_NAME)
+    }
 
     override val storage = pgStorage
 

@@ -16,11 +16,13 @@ import naksha.model.Naksha.Naksha_C.TRANSACTIONS_COL_NUMBER
 import naksha.base.NakshaError
 import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
 import naksha.base.NakshaException
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
 import naksha.psql.PgColumn.PgColumn_C.allColumns
 import naksha.psql.PgUtil.PgUtil_C.quoteIdent
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
@@ -52,6 +54,16 @@ open class PgMap internal constructor(
      */
     val number: Int = nakshaMap.number
 ) {
+    companion object PgMap_C {
+        /**
+         * The [PlatformType] of [PgMap].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgMap::class).withPackageName(PACKAGE_NAME)
+    }
+
     /**
      * The map-identifier quoted optionally in double quotes.
      * @since 3.0
@@ -425,7 +437,7 @@ WHERE id = $1"""
         if (outRows.size == 0) return null
         val tuple = outRows[0] ?: return null
         Naksha.cache.store(tuple)
-        val nakshaCollection = Naksha.decodeTuple(tuple).proxy(NakshaCollection::class)
+        val nakshaCollection = Naksha.decodeTuple(tuple).proxy(NakshaCollection.TYPE)
         val pgCollection = PgCollection(this, nakshaCollection)
         storeCollection(pgCollection)
         return pgCollection
@@ -469,7 +481,7 @@ WHERE naksha_tn_feature_number(tn) = $1"""
         if (outRows.size == 0) return null
         val tuple = outRows[0] ?: return null
         Naksha.cache.store(tuple)
-        val nakshaCollection = Naksha.decodeTuple(tuple).proxy(NakshaCollection::class)
+        val nakshaCollection = Naksha.decodeTuple(tuple).proxy(NakshaCollection.TYPE)
         val pgCollection = PgCollection(this, nakshaCollection)
         storeCollection(pgCollection)
         return pgCollection

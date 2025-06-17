@@ -1,11 +1,12 @@
 package naksha.psql
 
 import naksha.base.JsEnum
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
-import kotlin.reflect.KClass
 
 /**
  * The kind of PostgresQL database table.
@@ -13,58 +14,60 @@ import kotlin.reflect.KClass
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class PgKind : JsEnum() {
-    @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = PgKind::class
+    companion object PgKind_C {
+        /**
+         * The [PlatformType] of [PgKind].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgKind::class).withPackageName(PACKAGE_NAME)
 
-    override fun initClass() {
-    }
-
-    companion object {
         /**
          * Ordinary table.
          */
         @JsStatic
         @JvmField
-        val OrdinaryTable = def(PgKind::class, "r")
+        val OrdinaryTable = def(TYPE, "r")
 
         /**
          * Partitioned table, so the table has is partitioned via PARTITION BY, the children will be [OrdinaryTable]'s, except they're partitioned again, only then another [PartitionedTable] is found. Generally, the lowest level of partitioning should always be an [OrdinaryTable].
          */
         @JsStatic
         @JvmField
-        val PartitionedTable = def(PgKind::class, "p")
+        val PartitionedTable = def(TYPE, "p")
 
         @JsStatic
         @JvmField
-        val ForeignTable = def(PgKind::class, "f")
+        val ForeignTable = def(TYPE, "f")
 
         @JsStatic
         @JvmField
-        val View = def(PgKind::class, "v")
+        val View = def(TYPE, "v")
 
         @JsStatic
         @JvmField
-        val MaterializedView = def(PgKind::class, "m")
+        val MaterializedView = def(TYPE, "m")
 
         @JsStatic
         @JvmField
-        val Index = def(PgKind::class, "i")
+        val Index = def(TYPE, "i")
 
         @JsStatic
         @JvmField
-        val PartitionedIndex = def(PgKind::class, "I")
+        val PartitionedIndex = def(TYPE, "I")
 
         @JsStatic
         @JvmField
-        val Sequence = def(PgKind::class, "S")
+        val Sequence = def(TYPE, "S")
 
         @JsStatic
         @JvmField
-        val ToastTable = def(PgKind::class, "t")
+        val ToastTable = def(TYPE, "t")
 
         @JsStatic
         @JvmField
-        val CompositeType = def(PgKind::class, "c")
+        val CompositeType = def(TYPE, "c")
 
         /**
          * Returns the kind as read from `relkind` from `pg_class` table.
@@ -73,6 +76,9 @@ class PgKind : JsEnum() {
          */
         @JsStatic
         @JvmStatic
-        fun of(kind: String?): PgKind = JsEnum.get(kind, PgKind::class)
+        fun of(kind: String?): PgKind = JsEnum.get(kind, TYPE)
     }
+
+    override fun namespace() = TYPE
+    override fun initClass() {}
 }

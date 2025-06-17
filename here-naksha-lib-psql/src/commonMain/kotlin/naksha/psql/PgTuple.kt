@@ -1,11 +1,14 @@
-@file:Suppress("ArrayInDataClass")
+@file:Suppress("ArrayInDataClass", "OPT_IN_USAGE")
 
 package naksha.psql
 
 import naksha.base.Binary
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.model.*
 import naksha.model.Tuple
 import naksha.model.objects.NakshaFeature
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
@@ -74,6 +77,16 @@ internal data class PgTuple(
      */
     @JvmField var attachment: ByteArray? = null
 ) : ITuple {
+
+    companion object PgTuple_C {
+        /**
+         * The [PlatformType] of [PgTuple].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgTuple::class).withPackageName(PACKAGE_NAME)
+    }
 
     private var finalTuple: Tuple? = null
 

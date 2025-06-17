@@ -3,12 +3,12 @@
 package naksha.psql
 
 import naksha.base.JsEnum
-import naksha.base.PlatformUtil
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
-import kotlin.reflect.KClass
 
 /**
  * Constants for the PostgresQL data types, when stringified, returns the PostgresQL name, e.g. "bigint" or "text".
@@ -16,110 +16,118 @@ import kotlin.reflect.KClass
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class PgType : JsEnum() {
-    companion object {
+    companion object PgType_C {
+        /**
+         * The [PlatformType] of [PgType].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgType::class).withPackageName(PACKAGE_NAME)
+
         // https://www.postgresql.org/docs/current/datatype.html
         @JvmField
         @JsStatic
-        val NULL = defIgnoreCase(PgType::class, "null") {
+        val NULL = defIgnoreCase(TYPE, "null") {
             it.byteSize = 0
         }
 
         @JvmField
         @JsStatic
-        val BOOLEAN = defIgnoreCase(PgType::class, "boolean") {
+        val BOOLEAN = defIgnoreCase(TYPE, "boolean") {
             it.byteSize = 1
         }.alias<PgType>("bool")
 
         @JvmField
         @JsStatic
-        val BOOLEAN_ARRAY = defIgnoreCase(PgType::class, "boolean[]") {
+        val BOOLEAN_ARRAY = defIgnoreCase(TYPE, "boolean[]") {
             it.isArray = true
             it.childType = BOOLEAN
         }.alias<PgType>("bool[]")
 
         @JvmField
         @JsStatic
-        val SHORT = defIgnoreCase(PgType::class, "int2") {
+        val SHORT = defIgnoreCase(TYPE, "int2") {
             it.byteSize = 2
         }.alias<PgType>("smallint")
 
         @JvmField
         @JsStatic
-        val SHORT_ARRAY = defIgnoreCase(PgType::class, "int2[]") {
+        val SHORT_ARRAY = defIgnoreCase(TYPE, "int2[]") {
             it.isArray = true
             it.childType = SHORT
         }.alias<PgType>("smallint[]")
 
         @JvmField
         @JsStatic
-        val INT = defIgnoreCase(PgType::class, "int4") {
+        val INT = defIgnoreCase(TYPE, "int4") {
             it.byteSize = 4
         }.alias<PgType>("int").alias<PgType>("integer")
 
         @JvmField
         @JsStatic
-        val INT_ARRAY = defIgnoreCase(PgType::class, "int4[]") {
+        val INT_ARRAY = defIgnoreCase(TYPE, "int4[]") {
             it.isArray = true
             it.childType = INT
         }.alias<PgType>("int[]").alias<PgType>("integer[]")
 
         @JvmField
         @JsStatic
-        val INT64 = defIgnoreCase(PgType::class, "int8") {
+        val INT64 = defIgnoreCase(TYPE, "int8") {
             it.byteSize = 8
         }.alias<PgType>("bigint")
 
         @JvmField
         @JsStatic
-        val INT64_ARRAY = defIgnoreCase(PgType::class, "int8[]") {
+        val INT64_ARRAY = defIgnoreCase(TYPE, "int8[]") {
             it.isArray = true
             it.childType = INT64
         }.alias<PgType>("bigint[]")
 
         @JvmField
         @JsStatic
-        val FLOAT = defIgnoreCase(PgType::class, "float4") {
+        val FLOAT = defIgnoreCase(TYPE, "float4") {
             it.byteSize = 4
         }.alias<PgType>("real")
 
         @JvmField
         @JsStatic
-        val FLOAT_ARRAY = defIgnoreCase(PgType::class, "float4[]") {
+        val FLOAT_ARRAY = defIgnoreCase(TYPE, "float4[]") {
             it.isArray = true
             it.childType = FLOAT
         }.alias<PgType>("real[]")
 
         @JvmField
         @JsStatic
-        val DOUBLE = defIgnoreCase(PgType::class, "float8") {
+        val DOUBLE = defIgnoreCase(TYPE, "float8") {
             it.byteSize = 8
         }.alias<PgType>("double precision")
 
         @JvmField
         @JsStatic
-        val DOUBLE_ARRAY = defIgnoreCase(PgType::class, "float8[]") {
+        val DOUBLE_ARRAY = defIgnoreCase(TYPE, "float8[]") {
             it.isArray = true
             it.childType = DOUBLE
         }.alias<PgType>("double precision[]")
 
         @JvmField
         @JsStatic
-        val STRING = defIgnoreCase(PgType::class, "text")
+        val STRING = defIgnoreCase(TYPE, "text")
 
         @JvmField
         @JsStatic
-        val STRING_ARRAY = defIgnoreCase(PgType::class, "text[]") {
+        val STRING_ARRAY = defIgnoreCase(TYPE, "text[]") {
             it.isArray = true
             it.childType = STRING
         }
 
         @JvmField
         @JsStatic
-        val BYTE_ARRAY = defIgnoreCase(PgType::class, "bytea")
+        val BYTE_ARRAY = defIgnoreCase(TYPE, "bytea")
 
         @JvmField
         @JsStatic
-        val BYTE_ARRAY_ARRAY = defIgnoreCase(PgType::class, "bytea[]") {
+        val BYTE_ARRAY_ARRAY = defIgnoreCase(TYPE, "bytea[]") {
             it.isArray = true
             it.childType = BYTE_ARRAY
         }
@@ -131,12 +139,10 @@ class PgType : JsEnum() {
          */
         @JsStatic
         @JvmStatic
-        fun of(name: String?): PgType? = getDefined(name, PgType::class)
+        fun of(name: String?): PgType? = getDefined(name, TYPE)
     }
 
-    @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = PgType::class
-
+    override fun namespace() = TYPE
     override fun initClass() {}
 
     /**

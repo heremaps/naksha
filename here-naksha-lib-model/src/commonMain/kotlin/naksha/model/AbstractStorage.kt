@@ -38,10 +38,10 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
     override val lock = Platform.newLock()
 
     /**
-     * The _KClass_ of the configuration needed.
+     * The [PlatformType] of the configuration needed.
      * @since 3.0
      */
-    abstract val configKlass: PlatformType<CONFIG>
+    abstract val configType: PlatformType<CONFIG>
 
     /**
      * The atomic reference to the configuration for internal use within [initStorage].
@@ -91,7 +91,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
     internal fun invokeInitStorage(storage: NakshaStorage, create: Boolean?, upgrade: Boolean?) {
         lock.acquire().use {
             if (configRef.get() == null || create==true || upgrade==true) {
-                val _config = storage.proxy(configKlass)
+                val _config = storage.proxy(configType)
                 this._id = storage.id
                 this._number = storage.number
                 this.hardCap = storage.hardCap

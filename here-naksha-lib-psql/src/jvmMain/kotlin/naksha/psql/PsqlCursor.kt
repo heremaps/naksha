@@ -1,13 +1,9 @@
 package naksha.psql
 
-import naksha.base.AnyObject
-import naksha.base.Int64
-import naksha.base.Platform
+import naksha.base.*
 import naksha.base.Platform.Platform_C.longToInt64
-import naksha.base.toInt64
 import java.sql.ResultSet
 import java.sql.Statement
-import kotlin.reflect.KClass
 
 /**
  * Internal helper class to handle results as if they were returned by PLV8 engine.
@@ -254,23 +250,18 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any> get(name: String): T = column(name) as T
 
-    /**
-     * Reads the current row into a proxy object.
-     * @param klass the type of the proxy object to create.
-     * @return the created proxy object.
-     */
-    override fun <T : AnyObject> map(klass: KClass<T>): T {
+    override fun <T : AnyObject> map(type: PlatformType<T>): T {
         val rs = rsAtRow()
         val columnNames = columnNames()
         val columnTypes = columnTypes()
-        val row = Platform.newInstanceOf(klass)
+        val row = type.newInstance()
         var i = 0
         while (i < columnNames.size) {
-            val name = columnNames[i]
-            val type = columnTypes[i]
+            val col_name = columnNames[i]
+            val col_type = columnTypes[i]
             // See: https://www.postgresql.org/message-id/AANLkTinsk4rwT7v-751bwQkgTN1rkA=8uE-jk69nape-@mail.gmail.com
-            val value = columnValue(++i, type, rs)
-            row[name] = value
+            val value = columnValue(++i, col_type, rs)
+            row[col_name] = value
         }
         return row
     }

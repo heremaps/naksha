@@ -2,6 +2,8 @@
 
 package naksha.psql
 
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.base.illegalState
 import naksha.psql.PgUtil.PgUtil_C.quoteIdent
 import kotlin.js.JsExport
@@ -65,6 +67,14 @@ open class PgTable(
 ) {
 
     companion object PgTable_C {
+        /**
+         * The [PlatformType] of [PgTable].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgTable::class).withPackageName(PACKAGE_NAME)
+
         /**
          * Tests if this is any HEAD table _(either root or a performance-partition)_.
          * @param name the table name.
