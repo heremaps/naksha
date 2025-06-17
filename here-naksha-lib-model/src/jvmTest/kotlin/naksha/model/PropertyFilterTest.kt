@@ -24,6 +24,7 @@ class PropertyFilterTest {
         fun setupTuple() {
             // create the feature
             val feature = NakshaFeature()
+            feature["eventHandlerIds"] = arrayOf("handler-abc", "handler-xyz")
             feature.properties["foo"] = "bar"
             feature.properties["number"] = 1.1
             nestedJson["bool"] = true
@@ -290,5 +291,21 @@ class PropertyFilterTest {
         val filter = PropertyFilter(request)
         request.query.properties = null
         assertEquals(featureTuple,filter.filter(featureTuple))
+    }
+
+    @Test
+    fun valueContainsStringWithCustomRoot() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        request.query.properties = PQuery(Property("eventHandlerIds"), AnyOp.CONTAINS, "handler-abc")
+        assertEquals(featureTuple, filter.filter(featureTuple))
+    }
+
+    @Test
+    fun valueNotContainsStringWithCustomRoot() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        request.query.properties = PQuery(Property("eventHandlerIds"), AnyOp.CONTAINS, "handler-123")
+        assertEquals(null, filter.filter(featureTuple))
     }
 }
