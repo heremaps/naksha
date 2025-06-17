@@ -29,7 +29,7 @@ class PgPropertyFilterTest: PgTestBase() {
         featureB.properties["foo"] = "baz"
         insertFeatures(featureA, featureB)
         // And: A PQuery that will match only one feature.
-        val pQuery = PQuery(Property( "foo"), AnyOp.CONTAINS, "bar")
+        val pQuery = PQuery(Property( "properties", "foo"), AnyOp.CONTAINS, "bar")
 
         // And: A read request is created with the property query.
         val readRequest = ReadFeatures().apply {

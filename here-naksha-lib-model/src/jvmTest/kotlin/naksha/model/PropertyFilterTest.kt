@@ -60,7 +60,7 @@ class PropertyFilterTest {
     fun stringEqual() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("foo"),StringOp.EQUALS,"bar")
+        request.query.properties = PQuery(Property("properties","foo"),StringOp.EQUALS,"bar")
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
 
@@ -68,7 +68,7 @@ class PropertyFilterTest {
     fun stringNotEqual() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("foo"),StringOp.EQUALS,"foooooo")
+        request.query.properties = PQuery(Property("properties","foo"),StringOp.EQUALS,"foooooo")
         assertEquals(null,filter.filter(featureTuple))
     }
 
@@ -76,7 +76,7 @@ class PropertyFilterTest {
     fun stringStartWith() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("foo"),StringOp.STARTS_WITH,"b")
+        request.query.properties = PQuery(Property("properties","foo"),StringOp.STARTS_WITH,"b")
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
 
@@ -84,7 +84,7 @@ class PropertyFilterTest {
     fun stringNotStartWith() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("foo"),StringOp.STARTS_WITH,"a")
+        request.query.properties = PQuery(Property("properties","foo"),StringOp.STARTS_WITH,"a")
         assertEquals(null,filter.filter(featureTuple))
     }
 
@@ -92,7 +92,7 @@ class PropertyFilterTest {
     fun numberEqual() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("number"),DoubleOp.EQ,1.1)
+        request.query.properties = PQuery(Property("properties","number"),DoubleOp.EQ,1.1)
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
 
@@ -100,7 +100,7 @@ class PropertyFilterTest {
     fun numberGreaterThan() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("number"),DoubleOp.GT,1)
+        request.query.properties = PQuery(Property("properties","number"),DoubleOp.GT,1)
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
 
@@ -108,7 +108,7 @@ class PropertyFilterTest {
     fun numberNotLowerThan() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("number"),DoubleOp.LT,1.1)
+        request.query.properties = PQuery(Property("properties","number"),DoubleOp.LT,1.1)
         assertEquals(null,filter.filter(featureTuple))
     }
 
@@ -116,7 +116,7 @@ class PropertyFilterTest {
     fun numberNotGreaterThanOrEqual() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("number"),DoubleOp.GTE,2)
+        request.query.properties = PQuery(Property("properties","number"),DoubleOp.GTE,2)
         assertEquals(null,filter.filter(featureTuple))
     }
 
@@ -124,7 +124,7 @@ class PropertyFilterTest {
     fun numberLowerThanOrEqual() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("number"),DoubleOp.LTE,1.1)
+        request.query.properties = PQuery(Property("properties","number"),DoubleOp.LTE,1.1)
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
 
@@ -133,8 +133,8 @@ class PropertyFilterTest {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
         request.query.properties = PAnd(
-            PQuery(Property("number"),DoubleOp.LTE,1.1),
-            PQuery(Property("foo"),StringOp.EQUALS,"bar")
+            PQuery(Property("properties","number"),DoubleOp.LTE,1.1),
+            PQuery(Property("properties","foo"),StringOp.EQUALS,"bar")
         )
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
@@ -144,8 +144,8 @@ class PropertyFilterTest {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
         request.query.properties = PAnd(
-            PQuery(Property("number"),DoubleOp.LTE,0),
-            PQuery(Property("foo"),StringOp.EQUALS,"bar")
+            PQuery(Property("properties","number"),DoubleOp.LTE,0),
+            PQuery(Property("properties","foo"),StringOp.EQUALS,"bar")
         )
         assertEquals(null,filter.filter(featureTuple))
     }
@@ -155,8 +155,8 @@ class PropertyFilterTest {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
         request.query.properties = POr(
-            PQuery(Property("number"),DoubleOp.EQ,1.1),
-            PQuery(Property("foo"),StringOp.EQUALS,"foooo")
+            PQuery(Property("properties","number"),DoubleOp.EQ,1.1),
+            PQuery(Property("properties","foo"),StringOp.EQUALS,"foooo")
         )
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
@@ -166,8 +166,8 @@ class PropertyFilterTest {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
         request.query.properties = POr(
-            PQuery(Property("number"),DoubleOp.EQ,0),
-            PQuery(Property("foo"),StringOp.EQUALS,"foooo")
+            PQuery(Property("properties","number"),DoubleOp.EQ,0),
+            PQuery(Property("properties","foo"),StringOp.EQUALS,"foooo")
         )
         assertEquals(null,filter.filter(featureTuple))
     }
@@ -176,7 +176,7 @@ class PropertyFilterTest {
     fun notQueryString() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PNot(PQuery(Property("foo"),StringOp.STARTS_WITH,"a"))
+        request.query.properties = PNot(PQuery(Property("properties","foo"),StringOp.STARTS_WITH,"a"))
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
 
@@ -184,7 +184,7 @@ class PropertyFilterTest {
     fun propExists() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("json"),AnyOp.EXISTS,null)
+        request.query.properties = PQuery(Property("properties","json"),AnyOp.EXISTS,null)
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
 
@@ -192,7 +192,7 @@ class PropertyFilterTest {
     fun propNotExists() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("json","ololo"),AnyOp.EXISTS,null)
+        request.query.properties = PQuery(Property("properties","json","ololo"),AnyOp.EXISTS,null)
         assertEquals(null,filter.filter(featureTuple))
     }
 
@@ -200,7 +200,7 @@ class PropertyFilterTest {
     fun booleanPropTrue() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("json","bool"),AnyOp.IS_TRUE,null)
+        request.query.properties = PQuery(Property("properties","json","bool"),AnyOp.IS_TRUE,null)
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
 
@@ -208,7 +208,7 @@ class PropertyFilterTest {
     fun booleanPropNotFalse() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("json","bool"),AnyOp.IS_FALSE,null)
+        request.query.properties = PQuery(Property("properties","json","bool"),AnyOp.IS_FALSE,null)
         assertEquals(null,filter.filter(featureTuple))
     }
 
@@ -216,7 +216,7 @@ class PropertyFilterTest {
     fun valueIsNull() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("json","nullProps"),AnyOp.IS_NULL,null)
+        request.query.properties = PQuery(Property("properties","json","nullProps"),AnyOp.IS_NULL,null)
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
 
@@ -224,7 +224,7 @@ class PropertyFilterTest {
     fun valueIsNotNull() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("json","nullProps"),AnyOp.IS_NOT_NULL,null)
+        request.query.properties = PQuery(Property("properties","json","nullProps"),AnyOp.IS_NOT_NULL,null)
         assertEquals(null,filter.filter(featureTuple))
     }
 
@@ -232,7 +232,7 @@ class PropertyFilterTest {
     fun valueIsAnyOf() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("foo"),AnyOp.IS_ANY_OF, listOf("bar","barz"))
+        request.query.properties = PQuery(Property("properties","foo"),AnyOp.IS_ANY_OF, listOf("bar","barz"))
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
 
@@ -240,7 +240,7 @@ class PropertyFilterTest {
     fun valueIsNotAnyOf() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("foo"),AnyOp.IS_ANY_OF, arrayOf("hoho","haha"))
+        request.query.properties = PQuery(Property("properties","foo"),AnyOp.IS_ANY_OF, arrayOf("hoho","haha"))
         assertEquals(null,filter.filter(featureTuple))
     }
 
@@ -248,7 +248,7 @@ class PropertyFilterTest {
     fun valueContainsNumber() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("number"),AnyOp.CONTAINS, 1.1)
+        request.query.properties = PQuery(Property("properties","number"),AnyOp.CONTAINS, 1.1)
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
 
@@ -256,7 +256,7 @@ class PropertyFilterTest {
     fun valueContainsBoolean() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("json","bool"),AnyOp.CONTAINS, true)
+        request.query.properties = PQuery(Property("properties","json","bool"),AnyOp.CONTAINS, true)
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
 
@@ -264,7 +264,7 @@ class PropertyFilterTest {
     fun valueArrayContainsString() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("json","array"),AnyOp.CONTAINS, arrayOf("two", "three"))
+        request.query.properties = PQuery(Property("properties","json","array"),AnyOp.CONTAINS, arrayOf("two", "three"))
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
 
@@ -272,7 +272,7 @@ class PropertyFilterTest {
     fun valueArrayNotContainsString() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("json","array"),AnyOp.CONTAINS, arrayOf("four", "three"))
+        request.query.properties = PQuery(Property("properties","json","array"),AnyOp.CONTAINS, arrayOf("four", "three"))
         assertEquals(null,filter.filter(featureTuple))
     }
 
@@ -280,7 +280,7 @@ class PropertyFilterTest {
     fun valueContainsJson() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("json"),AnyOp.CONTAINS, nestedJson.copy(true))
+        request.query.properties = PQuery(Property("properties","json"),AnyOp.CONTAINS, nestedJson.copy(true))
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
 

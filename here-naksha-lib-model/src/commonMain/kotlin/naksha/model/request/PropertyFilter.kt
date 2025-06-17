@@ -53,11 +53,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
             is PNot -> return !resolvePropsQuery(pQuery.query, decoder)
             is PQuery -> {                                                                        
                 val propertyArray = pQuery.property.path.filterNotNull().toTypedArray()
-                val propFromFeature = if(propertyArray.isNotEmpty() && propertyArray[0] == Property.EVENT_HANDLER_IDS){
-                    decoder.get(Property.EVENT_HANDLER_IDS)
-                } else {
-                    decoder.get(Property.PROPERTIES,*propertyArray)
-                }
+                val propFromFeature = decoder.get(*propertyArray)
                 val op = pQuery.op
                 return resolveEachOp(op,propFromFeature,pQuery.value)
             }
