@@ -81,7 +81,7 @@ public class NHAdminStorageReader implements IReadSession {
 
   @NotNull
   @Override
-  public Response performExecute(@NotNull Request request) {
+  public Response execute(@NotNull Request request) {
     return session.execute(request);
   }
 

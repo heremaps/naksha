@@ -86,7 +86,7 @@ public class NHAdminReaderMock implements IReadSession {
    * @return the result.
    */
   @Override
-  public @NotNull Response performExecute(@NotNull Request request) {
+  public @NotNull Response execute(@NotNull Request request) {
     if (request instanceof ReadFeatures rf) {
       return executeReadFeatures(rf);
     }

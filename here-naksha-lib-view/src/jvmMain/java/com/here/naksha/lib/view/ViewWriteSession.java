@@ -59,7 +59,7 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   }
 
   @Override
-  public @NotNull Response performExecute(@NotNull Request request) {
+  public @NotNull Response execute(@NotNull Request request) {
     if (request instanceof WriteRequest) {
       final WriteRequest writeRequest = (WriteRequest) request;
       for (Write write : writeRequest.getWrites()) {

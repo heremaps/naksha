@@ -76,7 +76,7 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
   }
 
   @Override
-  public @NotNull Response performExecute(@NotNull Request readRequest) {
+  public @NotNull Response execute(@NotNull Request readRequest) {
     if (!(readRequest instanceof ReadFeatures)) {
       throw new UnsupportedOperationException("Only ReadFeatures are supported.");
     }

@@ -60,58 +60,14 @@ interface ISession : AutoCloseable {
     //       !!! This is as high throughput API, not a low latency !!!
 
     /**
-     * Executes the given [Request] by first performing the core execution logic via [performExecute],
-     * and then applying any necessary post-processing via [postProcess].
+     * Execute the given [Request].
      *
-     * The read-only session will only be able to execute [ReadRequest]'s and throw an [NakshaError.UNSUPPORTED_OPERATION],
-     * when a [WriteRequest] is provided.
+     * The read-only session will only be able to execute [ReadRequest]'s and throw an [NakshaError.UNSUPPORTED_OPERATION], when a [WriteRequest] is provided.
      * @param request the request to execute.
-     * @return the processed response.
+     * @return the response.
      * @since 2.0.7
      */
-    fun execute(request: Request): Response {
-        val rawResponse = performExecute(request)
-        return postProcess(request, rawResponse)
-    }
-
-    /**
-     * Performs the core execution logic for the given [Request], retrieving the raw response
-     * before any post-processing is applied.
-     *
-     * @param request the request to perform.
-     * @return the raw, unprocessed response from the execution.
-     * @since 3.0
-     */
-    fun performExecute(request: Request): Response
-
-    /**
-     * Applies post-processing logic to the raw [Response] received from [performExecute].
-     *
-     * For [SuccessResponse] and [ReadRequest] types with defined [request.resultFilters],
-     * this method loads all feature tuples and sequentially applies the filters,
-     * updating the response with the filtered list.
-     *
-     * @param request the original request that was executed.
-     * @param response the raw response received from [performExecute].
-     * @return the post-processed response.
-     * @since 3.0
-     */
-    fun postProcess(request: Request, response: Response): Response {
-        if (response is SuccessResponse && request is ReadRequest && request.resultFilters.isNotEmpty()) {
-
-            response.featureTupleList.loadAll()
-
-            // Apply all filters from the request sequentially.
-            var currentList = response.featureTupleList.asList().filterNotNull()
-            for (filter in request.resultFilters.filterNotNull()) {
-                currentList = currentList.mapNotNull { featureTuple -> filter.filter(featureTuple) }
-            }
-
-            // Update the response with the new, filtered list.
-            response.withFeatureTupleList(currentList)
-        }
-        return response
-    }
+    fun execute(request: Request): Response
 
     /**
      * Force parallel execution of the given [Request], if supported, otherwise fallback to a normal [execute]. This differs from [SessionOptions.parallel] in that it does not have such strong guarantee requirements, it is mainly for bulk loading or other situations, in which performance matters more than 100% safety.

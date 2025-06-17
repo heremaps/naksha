@@ -16,10 +16,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
-class PostProcessTest: PgTestBase() {
+class PgPropertyFilterTest: PgTestBase() {
 
     @Test
-    fun shouldApplyPropertyFilterDuringPostProcessing() {
+    fun shouldApplyPropertyFilterOnReadRequestWithSuccessResponse() {
         //Given: collection for this test
         testWithCollection("applyPropertyFilter")
         // And: Two features with different properties.
@@ -45,7 +45,7 @@ class PostProcessTest: PgTestBase() {
     }
 
     @Test
-    fun shouldApplyCustomFilterDuringPostProcessing() {
+    fun shouldApplyCustomFilterOnReadRequestOnSuccessResponse() {
         //Given: collection for this test
         testWithCollection("applyCustomFilter")
         // And: A custom filter implementation.
@@ -78,7 +78,7 @@ class PostProcessTest: PgTestBase() {
     }
 
     @Test
-    fun shouldNotTriggerPostProcessingForWriteRequest() {
+    fun shouldNotApplyFiltersForWriteRequestWithEmptyFilterList() {
         // Given: A feature to create and a WriteRequest to create it.
         val feature = randomFeature()
         val writeRequest = WriteRequest().apply {
@@ -95,7 +95,7 @@ class PostProcessTest: PgTestBase() {
     }
 
     @Test
-    fun shouldNotTriggerPostProcessingForWriteRequestWithResultFilter() {
+    fun shouldTriggerFilteringForWriteRequestWithResultFilter() {
         // Given: A filter that would discard any feature it processes.
         class discardingFilter() : ResultFilter {
             override fun filter(featureTuple: FeatureTuple): FeatureTuple? {
@@ -114,14 +114,13 @@ class PostProcessTest: PgTestBase() {
 
         // Then: The response is successful and still contains the feature, proving the filter was ignored.
         assertIs<SuccessResponse>(response)
-        assertEquals(1, response.features.size, "Write response should contain the created feature")
-        assertEquals(feature.id, response.features[0]?.id)
+        assertEquals(0, response.features.size, "Write response should not contain the created feature")
     }
 
 
 
     @Test
-    fun shouldNotTriggerPostProcessingForRequestWithErrorResponse() {
+    fun shouldNotTriggerFilteringForRequestWithErrorResponse() {
         // Given: A read request that is designed to fail by targeting a non-existent collection.
         val readRequest = ReadFeatures().apply {
             mapId = collection.mapId
@@ -139,7 +138,7 @@ class PostProcessTest: PgTestBase() {
     }
 
     @Test
-    fun shouldNotTriggerFilteringForReadRequestWthEmptyResultFilters() {
+    fun shouldNotFilterFeaturesForReadRequestWthEmptyResultFilters() {
         // Given: A single feature inserted into the database.
         val feature = randomFeature()
         insertFeature(feature)

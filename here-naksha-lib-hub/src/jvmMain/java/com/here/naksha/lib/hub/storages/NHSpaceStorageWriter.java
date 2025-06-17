@@ -72,7 +72,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
 
   @NotNull
   @Override
-  public Response performExecute(@NotNull Request request) {
+  public Response execute(@NotNull Request request) {
     if (request instanceof WriteRequest writeRequest) {
       if (isOnlyWriteCollections(writeRequest)) {
         return executeSingleCollectionWrite(writeRequest);

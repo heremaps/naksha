@@ -106,7 +106,7 @@ public class NHSpaceStorageReader implements IReadSession {
    */
   @Override
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public @NotNull Response performExecute(final @NotNull Request request) {
+  public @NotNull Response execute(final @NotNull Request request) {
     if (request instanceof ReadFeatures readFeatures) {
       return executeReadFeatures(readFeatures);
     } else if (request instanceof ReadCollections readCollections) {
