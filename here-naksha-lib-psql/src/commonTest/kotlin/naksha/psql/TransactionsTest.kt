@@ -34,7 +34,7 @@ class TransactionsTest : PgTestBase() {
         val readTxResponse = executeRead(readTxRequest)
         val transactions = assertNotNull(readTxResponse.features)
         assertEquals(1, transactions.size)
-        val transaction = assertNotNull(transactions.first()).proxy(NakshaTx::class)
+        val transaction = assertNotNull(transactions.first()).proxy(NakshaTx.TYPE)
         assertEquals(writtenVersion.toString(), transaction.id)
         assertEquals(writtenVersion, transaction.properties.xyz.version)
     }

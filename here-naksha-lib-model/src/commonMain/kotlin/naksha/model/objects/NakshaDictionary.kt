@@ -89,6 +89,7 @@ open class NakshaDictionary() : NakshaObject() {
         private val ENTRIES = NotNullProperty<NakshaDictionary, AnyList>(AnyList.TYPE) { _, _ -> AnyList() }
     }
 
+    override fun withType(type: String?): NakshaDictionary = super.withType(type) as NakshaDictionary
     override fun withId(id: String): NakshaDictionary = super.withId(id) as NakshaDictionary
     override fun withBBox(bbox: BBox): NakshaDictionary = super.withBBox(bbox) as NakshaDictionary
     override fun withAutoBBox(): NakshaDictionary = super.withAutoBBox() as NakshaDictionary

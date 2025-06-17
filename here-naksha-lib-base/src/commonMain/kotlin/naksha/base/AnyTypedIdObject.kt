@@ -32,6 +32,8 @@ open class AnyTypedIdObject : AnyTypedObject() {
 
         init { initialize() }
     }
+
+    override fun withType(type: String?): AnyTypedIdObject = super.withType(type) as AnyTypedIdObject
     
     /**
      * The unique identifier of the feature.

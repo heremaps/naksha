@@ -1,11 +1,13 @@
 package naksha.psql
 
 import naksha.base.Int64
+import naksha.base.Platform.Platform_C.fromJson
 import naksha.model.Naksha
 import naksha.model.NakshaVersion
 import naksha.model.objects.NakshaStorage
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 class UpgradeStorageTest : PgTestBase() {
 
@@ -25,12 +27,12 @@ class UpgradeStorageTest : PgTestBase() {
 
         // Downgrade storage, we need `override` instruction for this.
         val downgradeVersion = NakshaVersion.of("1.0.0")
-        val downgradeConfig = NakshaStorage.fromJSON("""{
+        val downgradeConfig = assertNotNull(fromJson("""{
   "id": "local_psql_test_storage",
   "className": "naksha.psql.PsqlTestStorage",
   "version": "$downgradeVersion",
   "override": true
-}""").proxy(PgConfig::class)
+}""", PgConfig.TYPE))
         Naksha.setupStorage(downgradeConfig)
         assertStorageVersion(downgradeVersion)
 

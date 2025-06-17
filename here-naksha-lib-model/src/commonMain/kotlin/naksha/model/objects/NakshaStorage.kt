@@ -51,7 +51,9 @@ open class NakshaStorage() : NakshaObject() {
          */
         @JvmField
         @JsStatic
-        val TYPE = forKClass(NakshaStorage::class).withPackageName(PACKAGE_NAME).withJsonType("naksha.Storage")
+        val TYPE = forKClass(NakshaStorage::class)
+            .withPackageName(PACKAGE_NAME)
+            .withJsonType("naksha.Storage")
 
         const val CLASSNAME_FIELD = "className"
 

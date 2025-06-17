@@ -46,6 +46,7 @@ open class NakshaTx : NakshaObject() {
         private val TIME = NotNullProperty<NakshaTx, Int64>(Int64_TYPE) { _, _ -> Platform.currentMillis() }
     }
 
+    override fun withType(type: String?): NakshaTx = super.withType(type) as NakshaTx
     override fun withId(id: String): NakshaTx = super.withId(id) as NakshaTx
     override fun withBBox(bbox: BBox): NakshaTx = super.withBBox(bbox) as NakshaTx
     override fun withAutoBBox(): NakshaTx = super.withAutoBBox() as NakshaTx

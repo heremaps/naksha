@@ -31,6 +31,7 @@ open class MomFeature : GeoFeature() {
 
     override fun isMomType(): Boolean = true
 
+    override fun withType(type: String?): MomFeature = super.withType(type) as MomFeature
     override fun withId(id: String): MomFeature = super.withId(id) as MomFeature
     override fun withBBox(bbox: BBox): MomFeature = super.withBBox(bbox) as MomFeature
     override fun withAutoBBox(): MomFeature = super.withAutoBBox() as MomFeature

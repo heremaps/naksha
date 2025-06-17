@@ -113,6 +113,28 @@ open class AnyTypedObject : AnyObject() {
         get() = type_get()
 
     /**
+     * Sets or clears the JSON type.
+     *
+     * If `null` is given, and not [isFeature], remove `type` property and return. Otherwise, if `null` given and [isFeature]:
+     * - Set `type` to `"Feature"` and remove `featureType`
+     * - If [isMomType], remove `momType`.
+     * - If [isDataHubType], remove `properties.featureType`
+     *
+     * If a JSON type is given, and not [isFeature], update `type` and return. Otherwise, if [isFeature]:
+     * - Set `type` to `"Feature"`
+     * - If [isMomType], set `momType`, else, if not [isDataHubType], set `featureType`
+     * - If [isDataHubType], set `properties.featureType`
+     *
+     * @param type The type to set.
+     * @return this.
+     * @see type_set
+     */
+    open fun withType(type: String?): AnyTypedObject {
+        type_set(type)
+        return this
+    }
+
+    /**
      * The JSON type of this object.
      *
      * This is a special handling, it performs the following checks in order:

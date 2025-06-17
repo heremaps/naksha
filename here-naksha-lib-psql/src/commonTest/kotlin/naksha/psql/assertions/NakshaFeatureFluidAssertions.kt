@@ -44,8 +44,8 @@ class NakshaFeatureFluidAssertions private constructor(val subject: NakshaFeatur
             } else {
                 assertNotNull(subjectBbox)
                 CommonProxyAssertions.assertAnyListsEqual(
-                    boundingBox.proxy(AnyList::class),
-                    subjectBbox.proxy(AnyList::class),
+                    boundingBox.proxy(AnyList.TYPE),
+                    subjectBbox.proxy(AnyList.TYPE),
                     "boundingBox"
                 )
             }
@@ -68,8 +68,8 @@ class NakshaFeatureFluidAssertions private constructor(val subject: NakshaFeatur
         } else {
             assertNotNull(right)
             CommonProxyAssertions.assertAnyObjectsEqual(
-                left.proxy(AnyObject::class),
-                right.proxy(AnyObject::class)
+                left.proxy(AnyObject.TYPE),
+                right.proxy(AnyObject.TYPE)
             )
         }
     }

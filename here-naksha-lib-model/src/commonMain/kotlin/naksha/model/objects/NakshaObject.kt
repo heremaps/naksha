@@ -40,6 +40,7 @@ open class NakshaObject : NakshaFeature() {
         private val DESCRIPTION_MEMBER = NullableProperty<NakshaFeature, String>(String_TYPE)
     }
 
+    override fun withType(type: String?): NakshaObject = super.withType(type) as NakshaObject
     override fun withId(id: String): NakshaObject = super.withId(id) as NakshaObject
     override fun withBBox(bbox: BBox): NakshaObject = super.withBBox(bbox) as NakshaObject
     override fun withAutoBBox(): NakshaObject = super.withAutoBBox() as NakshaObject

@@ -31,6 +31,7 @@ import kotlin.random.Random
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 
 @Suppress("HasPlatformType", "MayBeConstant")
 @BenchmarkMode(Mode.AverageTime) // Measures average execution time
@@ -54,11 +55,11 @@ class Plv8PerfTest : PgTestBase(
 
         val jsonPath = Companion::class.java.getResource("/topology.json")
         val json = Files.readString(Paths.get(jsonPath.toURI()))
-        val topologyFeatureTemplate: NakshaFeature = (Platform.fromJson(json) as JvmMap).proxy(NakshaFeature::class)
+        val topologyFeatureTemplate: NakshaFeature = assertNotNull(Platform.fromJson(json, NakshaFeature.TYPE))
 
         val smallJsonPath = Companion::class.java.getResource("/small_topology.json")
         val smallJson = Files.readString(Paths.get(smallJsonPath.toURI()))
-        val smallTopologyFeatureTemplate: NakshaFeature = (Platform.fromJson(smallJson) as JvmMap).proxy(NakshaFeature::class)
+        val smallTopologyFeatureTemplate: NakshaFeature = assertNotNull(Platform.fromJson(smallJson, NakshaFeature.TYPE))
     }
 
     @Ignore

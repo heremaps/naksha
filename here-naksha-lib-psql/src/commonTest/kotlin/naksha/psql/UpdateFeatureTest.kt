@@ -17,7 +17,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // CREATE FEATURE
         val initialFeature = NakshaFeature().apply {
             id = "feature_1"
-            featureType = "some_feature_type"
+            setRaw("type", "some_feature_type")
         }
         val writeFeatureReq = WriteRequest().add(
             Write().createFeature(collection, initialFeature)
@@ -30,9 +30,8 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         assertEquals(1, feature.properties.xyz.changeCount)
 
         // UPDATE featureType
-        feature.featureType = "new_feature_type"
-        assertEquals("new_feature_type", feature.featureType)
-        assertEquals("new_feature_type", feature.momType)
+        feature.withType("new_feature_type")
+        assertEquals("new_feature_type", feature.type)
         assertEquals("new_feature_type", feature.properties.featureType)
         val updateFeaturesReq = WriteRequest().add(
             Write().updateFeature(collection, feature, true)
@@ -173,14 +172,14 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // Given: initial feature - persisted
         val initialFeature = NakshaFeature().apply {
             id = "feature_for_update"
-            momType = "type_before"
+            setRaw("momType", "type_before")
         }
         val featureCreationResponse = executeWrite(WriteRequest().add(Write().createFeature(collection, initialFeature)))
 
         // And: desired update - without prev UUID
         val desiredFeature = NakshaFeature().apply {
             id = initialFeature.id
-            momType = "type_after"
+            setRaw("momType", "type_after")
             properties.xyz.setRaw("uuid", null)
         }
         val update = WriteRequest().add(Write().updateFeature(collection, desiredFeature, atomic = true))
@@ -194,7 +193,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
 
         // And:
         val persistedFeature = fetchSingleFeature(initialFeature.id)
-        assertEquals(initialFeature.momType,persistedFeature.momType)
+        assertEquals(initialFeature.type, persistedFeature.type)
         assertEquals(featureCreationResponse.features[0]!!.featureNumber, persistedFeature.featureNumber)
     }
 
@@ -205,14 +204,14 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // Given: initial feature - persisted
         val initialFeature = NakshaFeature().apply {
             id = "feature_for_update"
-            momType = "type_before"
+            setRaw("momType", "type_before")
         }
         executeWrite(WriteRequest().add(Write().createFeature(collection, initialFeature)))
 
         // And: desired update - without prev UUID
         val desiredFeature = NakshaFeature().apply {
             id = initialFeature.id
-            momType = "type_after"
+            setRaw("momType", "type_after")
             properties.xyz.setRaw("uuid", null)
         }
         val update = WriteRequest().add(Write().updateFeature(collection, desiredFeature, atomic = false))
@@ -225,7 +224,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
 
         // And:
         val persistedFeature = fetchSingleFeature(initialFeature.id)
-        assertEquals(desiredFeature.momType, persistedFeature.momType)
+        assertEquals(desiredFeature.type, persistedFeature.type)
         assertEquals(updateResponse.features[0]!!.featureNumber, persistedFeature.featureNumber)
     }
 
@@ -236,7 +235,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // Given: initial feature - persisted
         val initialFeature = NakshaFeature().apply {
             id = "feature_for_update"
-            momType = "type_before"
+            setRaw("momType", "type_before")
         }
         val featureCreationResponse = executeWrite(WriteRequest().add(Write().createFeature(collection, initialFeature)))
         val initialFeatureUuid = featureCreationResponse.features[0]!!.properties.xyz.uuid
@@ -244,7 +243,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // And: desired update - with prev UUID
         val desiredFeature = NakshaFeature().apply {
             id = initialFeature.id
-            momType = "type_after"
+            setRaw("momType", "type_after")
             properties.xyz.setRaw("uuid", initialFeatureUuid.toString())
         }
         val update = WriteRequest().add(Write().updateFeature(collection, desiredFeature, atomic = true))
@@ -257,7 +256,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
 
         // And:
         val persistedFeature = fetchSingleFeature(initialFeature.id)
-        assertEquals(desiredFeature.momType, persistedFeature.momType)
+        assertEquals(desiredFeature.type, persistedFeature.type)
         assertEquals(updateResponse.features[0]!!.featureNumber, persistedFeature.featureNumber)
     }
 

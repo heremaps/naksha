@@ -9,6 +9,7 @@ import naksha.model.request.*
 import naksha.model.request.query.*
 import naksha.model.RandomFeatures
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
+import naksha.model.objects.NakshaObject
 import kotlin.test.*
 
 class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
@@ -179,7 +180,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // Given:
         val inputFeature = randomFeature(featureId = TEST_FEATURE_ID).apply {
-            featureType = "unusual_type"
+            setRaw("type", "unusual_type")
         }
 
         // When:
@@ -187,7 +188,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // And:
         val featuresByType = executeMetaQuery(
-            MetaQuery(MetaColumn.featureType(), StringOp.EQUALS, inputFeature.featureType)
+            MetaQuery(MetaColumn.featureType(), StringOp.EQUALS, inputFeature.type)
         ).features
 
         // Then:
@@ -201,7 +202,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // Given:
         val inputFeature = randomFeature(featureId = TEST_FEATURE_ID).apply {
-            type = "quite_unusual_type"
+            setRaw("type", "quite_unusual_type")
         }
 
         // When:
@@ -297,7 +298,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // Given:
         val inputFeature = randomFeature(featureId = TEST_FEATURE_ID).apply {
-            type = "type_for_created_at_frame_test"
+            setRaw("type", "type_for_created_at_frame_test")
         }
 
         // And:
@@ -330,7 +331,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // Given:
         val inputFeature = randomFeature(featureId = TEST_FEATURE_ID).apply {
-            type = "type_for_updated_at_frame_test"
+            setRaw("type", "type_for_updated_at_frame_test")
         }
 
         // And:
@@ -411,7 +412,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         testWithCollection("readFeaturesByOperation")
 
         // Given
-        val feature = randomFeature(featureId = TEST_FEATURE_ID).apply {
+        val feature = randomFeature(featureId = TEST_FEATURE_ID).proxy(NakshaObject.TYPE).apply {
             title = "Title no 1"
         }
 
@@ -423,7 +424,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         val modifiedTitle = "Title no 2"
         val modifyFeature = WriteRequest().add(Write().updateFeature(
             collection,
-            createdFeature.apply { title = modifiedTitle },
+            createdFeature.proxy(NakshaObject.TYPE).apply { title = modifiedTitle },
             true
         ))
         executeWrite(modifyFeature)
@@ -448,7 +449,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         // Then: We only got UPDATED state - the one matching updated feature
         assertEquals(1, retrievedFeatures.size)
         val singleRetrievedHistoryFeature = retrievedFeatures[0]!!
-        assertEquals(modifiedTitle, singleRetrievedHistoryFeature.title)
+        assertEquals(modifiedTitle, singleRetrievedHistoryFeature.proxy(NakshaObject.TYPE).title)
         assertEquals(Operation.UPDATED, singleRetrievedHistoryFeature.properties.xyz.operation)
     }
 

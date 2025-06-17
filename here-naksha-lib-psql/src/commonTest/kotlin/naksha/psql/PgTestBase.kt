@@ -5,6 +5,7 @@ package naksha.psql
 
 import naksha.base.AtomicMap
 import naksha.base.Platform
+import naksha.base.Platform.Platform_C.fromJson
 import naksha.base.Platform.Platform_C.logger
 import naksha.base.PlatformUtil
 import naksha.model.*
@@ -104,7 +105,7 @@ abstract class PgTestBase(
                     val features = response.features
                     assertEquals(1, features.size)
                     val feature = features.first()
-                    map = assertNotNull(feature).proxy(NakshaMap::class)
+                    map = assertNotNull(feature).proxy(NakshaMap.TYPE)
                     mapRef = MapAndCollections(map)
                     initializedMaps[map_id] = assertNotNull(mapRef)
                     logger.info("Created test map: '$map_id'")
@@ -156,8 +157,8 @@ abstract class PgTestBase(
                         session.commit()
                         val features = response.features
                         assertEquals(1, features.size)
-                        val feature = features[0]
-                        existing = feature.proxy(NakshaCollection::class)
+                        val feature = features[0] ?: throw NullPointerException()
+                        existing = feature.proxy(NakshaCollection.TYPE)
                         mapRef.collections[colId] = assertNotNull(existing)
                     }
                     logger.info("Created test collection: '${colId}'")
@@ -332,10 +333,12 @@ abstract class PgTestBase(
          */
         @JvmStatic
         @JsStatic
-        protected val storageConfig = NakshaStorage.fromJSON("""{
-  "id": "local_psql_test_storage",
-  "className": "naksha.psql.PsqlTestStorage"
-}""").proxy(PgConfig::class)
+        protected val storageConfig = fromJson("""{
+    "type": "Feature",
+    "featureType": "${PgConfig.TYPE.jsonType}",
+    "id": "local_psql_test_storage",
+    "className": "naksha.psql.PsqlTestStorage"
+}""", PgConfig.TYPE) as PgConfig
 
         /**
          * Create [SessionOptions] and mutate the current [NakshaContext] to actually use the [PgTest] constants for `appName`, `appId`, and `author`, to be used when opening new PostgresQL sessions via [PgStorage.newWriteSession] or [PgStorage.newReadSession].

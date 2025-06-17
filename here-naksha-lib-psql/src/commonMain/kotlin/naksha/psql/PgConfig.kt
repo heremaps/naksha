@@ -38,7 +38,9 @@ class PgConfig() : NakshaStorage() {
          */
         @JvmField
         @JsStatic
-        val TYPE = forKClass(PgConfig::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(PgConfig::class)
+            .withPackageName(PACKAGE_NAME)
+            .withJsonType("naksha.PgConfig")
 
         private val MASTER = NotNullProperty<PgConfig, PgInstanceConfig>(PgInstanceConfig.TYPE) { self, _ ->
             self.getMasterOrNull() ?: throw NakshaException(ILLEGAL_STATE, "master not found")

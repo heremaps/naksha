@@ -3,6 +3,7 @@ package naksha.psql
 import naksha.model.Action
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaObject
 import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
 import naksha.model.request.Write
@@ -79,7 +80,7 @@ class UpsertFeatureTest : PgTestBase() {
     fun shouldUpsertMultipleFeatures() {
         // Given: Initial state of features
         val initialFeatures = (0..3).map { ind ->
-            NakshaFeature().apply {
+            NakshaFeature().proxy(NakshaObject.TYPE).apply {
                 id = "feature_${ind}_1"
                 title = "Initial title $ind"
             }

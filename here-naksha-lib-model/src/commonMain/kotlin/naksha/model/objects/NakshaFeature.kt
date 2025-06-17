@@ -45,6 +45,7 @@ open class NakshaFeature() : GeoFeature() {
     }
 
     override fun withId(id: String): NakshaFeature = super.withId(id) as NakshaFeature
+    override fun withType(type: String?): NakshaFeature = super.withType(type) as NakshaFeature
     override fun withBBox(bbox: BBox): NakshaFeature = super.withBBox(bbox) as NakshaFeature
     override fun withAutoBBox(): NakshaFeature = super.withAutoBBox() as NakshaFeature
     override fun withGeometry(geometry: SpGeometry?): NakshaFeature = super.withGeometry(geometry) as NakshaFeature

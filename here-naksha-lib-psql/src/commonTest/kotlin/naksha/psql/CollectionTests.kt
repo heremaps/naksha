@@ -252,7 +252,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             )
         )
         assertEquals(1, createCollectionResponse.features.size)
-        collection = createCollectionResponse.features[0]!!.proxy(NakshaCollection::class)
+        collection = createCollectionResponse.features[0]!!.proxy(NakshaCollection.TYPE)
 
         // Proof that del table was not created
         val delTableName = "$collectionId\$del"
@@ -311,7 +311,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             )
         )
         assertEquals(1, createResponse.features.size)
-        collection = assertNotNull(createResponse.features[0]).proxy(NakshaCollection::class)
+        collection = assertNotNull(createResponse.features[0]).proxy(NakshaCollection.TYPE)
 
         // update collection
         collection.storeDeleted = StoreMode.SUSPEND
@@ -321,14 +321,14 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             )
         )
         assertEquals(1, updateResponse.features.size)
-        val responseCollection = assertNotNull(updateResponse.features[0]).proxy(NakshaCollection::class)
+        val responseCollection = assertNotNull(updateResponse.features[0]).proxy(NakshaCollection.TYPE)
         assertEquals(StoreMode.SUSPEND, responseCollection.storeDeleted)
         val selectCollectionFromVirt = ReadFeatures().apply {
             mapId = map.id
             collectionIds += Naksha.COLLECTIONS_COL
             featureIds += collection.id
         }
-        val colRead = assertNotNull(executeRead(selectCollectionFromVirt).features[0]).proxy(NakshaCollection::class)
+        val colRead = assertNotNull(executeRead(selectCollectionFromVirt).features[0]).proxy(NakshaCollection.TYPE)
         assertEquals(StoreMode.SUSPEND, colRead.storeDeleted)
     }
 
@@ -357,7 +357,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 Write().upsertCollection(collection)
             )
         )
-        val createdCollection = response.features[0]!!.proxy(NakshaCollection::class)
+        val createdCollection = response.features[0]!!.proxy(NakshaCollection.TYPE)
         assertEquals(StoreMode.ON, createdCollection.storeDeleted)
         collection.storeDeleted = StoreMode.SUSPEND
         // update collection using upsert
@@ -366,7 +366,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 Write().upsertCollection(collection)
             )
         )
-        val updatedCollection = updateResponse.features[0]!!.proxy(NakshaCollection::class)
+        val updatedCollection = updateResponse.features[0]!!.proxy(NakshaCollection.TYPE)
         assertEquals(StoreMode.SUSPEND, updatedCollection.storeDeleted)
     }
 

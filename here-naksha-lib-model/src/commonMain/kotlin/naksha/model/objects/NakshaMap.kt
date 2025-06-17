@@ -52,6 +52,7 @@ open class NakshaMap() : NakshaObject() {
         private val DEFAULT_FLAGS = NullableProperty<NakshaMap, Flags>(Int_TYPE)
     }
 
+    override fun withType(type: String?): NakshaMap = super.withType(type) as NakshaMap
     override fun withId(id: String): NakshaMap = super.withId(id) as NakshaMap
     override fun withBBox(bbox: BBox): NakshaMap = super.withBBox(bbox) as NakshaMap
     override fun withAutoBBox(): NakshaMap = super.withAutoBBox() as NakshaMap

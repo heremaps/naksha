@@ -60,6 +60,7 @@ open class NakshaCollection() : NakshaObject() {
         this.storeMeta = storeMeta
     }
 
+    override fun withType(type: String?): NakshaCollection = super.withType(type) as NakshaCollection
     override fun withId(id: String): NakshaCollection = super.withId(id) as NakshaCollection
     override fun withBBox(bbox: BBox): NakshaCollection = super.withBBox(bbox) as NakshaCollection
     override fun withAutoBBox(): NakshaCollection = super.withAutoBBox() as NakshaCollection

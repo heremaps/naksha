@@ -3,6 +3,7 @@ package naksha.psql
 import naksha.base.Int64
 import naksha.base.NakshaError
 import naksha.base.Platform
+import naksha.base.Platform.Platform_C.fromJson
 import naksha.geo.BBox
 import naksha.model.*
 import naksha.model.request.*
@@ -11,6 +12,7 @@ import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatF
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaObject
 import kotlin.test.*
 
 class InsertFeatureTest : PgTestBase() {
@@ -50,7 +52,7 @@ class InsertFeatureTest : PgTestBase() {
             )
             .hasPropertiesThat { retrievedProperties ->
                 retrievedProperties
-                    .hasFeatureType(featureToCreate.properties.featureType)
+                    .hasFeatureType(featureToCreate.properties.getRaw("featureType") as String)
                     .hasXyzThat { retrievedXyz ->
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
@@ -93,7 +95,7 @@ class InsertFeatureTest : PgTestBase() {
   }
 }"""
         // Given: features to create
-        val featureToCreate = NakshaFeature.fromJson(json)
+        val featureToCreate = assertNotNull(fromJson(json, NakshaObject.TYPE))
         val xyz = featureToCreate.properties.xyz
         xyz.tags.addTag("wicked", false)
         val writeFeaturesReq = WriteRequest().apply {

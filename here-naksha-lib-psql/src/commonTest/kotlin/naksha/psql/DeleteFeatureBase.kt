@@ -96,7 +96,7 @@ abstract class DeleteFeatureBase(
         val createCollectionResp = executeWrite(createCollectionReq)
         assertEquals(1, createCollectionResp.length)
         assertEquals(1, createCollectionResp.features.size)
-        val collection = assertNotNull(createCollectionResp.features[0]).proxy(NakshaCollection::class)
+        val collection = assertNotNull(createCollectionResp.features[0]).proxy(NakshaCollection.TYPE)
         assertEquals(map.id, collection.mapId)
         assertEquals("delete_no_history_but_shadow", collection.id)
 

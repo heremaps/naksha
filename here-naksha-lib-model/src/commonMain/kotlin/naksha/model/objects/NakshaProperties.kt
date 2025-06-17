@@ -44,6 +44,7 @@ open class NakshaProperties : AnyTypedObject() {
         const val TAGS = "tags"
 
         private val _XYZ = NotNullProperty<NakshaProperties, XyzNs>(XyzNs.TYPE, name = XYZ_KEY)
+        private val FEATURE_TYPE_MEMBER = NullableProperty<NakshaProperties, String>(String_TYPE)
     }
 
     /**
@@ -51,4 +52,10 @@ open class NakshaProperties : AnyTypedObject() {
      * @since 1.0
      */
     var xyz by _XYZ
+
+    /**
+     * The optional feature-type.
+     * @since 1.0
+     */
+    var featureType: String? by FEATURE_TYPE_MEMBER
 }

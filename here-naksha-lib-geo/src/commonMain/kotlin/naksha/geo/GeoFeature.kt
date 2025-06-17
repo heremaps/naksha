@@ -68,6 +68,7 @@ open class GeoFeature : AnyTypedIdObject() {
 
     override fun isFeature(): Boolean = true
 
+    override fun withType(type: String?): GeoFeature = super.withType(type) as GeoFeature
     override fun withId(id: String): GeoFeature = super.withId(id) as GeoFeature
 
     // We know, it will always be at least "Feature"
