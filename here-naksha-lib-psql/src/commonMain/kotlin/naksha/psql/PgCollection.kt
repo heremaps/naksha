@@ -1,11 +1,13 @@
 package naksha.psql
 
 import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StoreMode
 import naksha.psql.PgUtil.PgUtil_C.quoteIdent
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
@@ -40,6 +42,16 @@ open class PgCollection internal constructor(
      */
     val number: Int = nakshaCollection.number
 ) {
+    companion object PgCollection_C {
+        /**
+         * The [PlatformType] of [PgCollection].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgCollection::class).withPackageName(PACKAGE_NAME)
+    }
+
     /**
      * The weak-reference to this [PgCollection], should be used when the collection should be cached.
      * @since 3.0

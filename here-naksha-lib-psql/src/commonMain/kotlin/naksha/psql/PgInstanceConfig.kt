@@ -1,13 +1,13 @@
-@file:OptIn(ExperimentalJsExport::class)
+@file:Suppress("OPT_IN_USAGE")
 
 package naksha.psql
 
-import naksha.base.AnyObject
-import naksha.base.NotNullProperty
+import naksha.base.*
 import naksha.base.NakshaError.NakshaError_C.ILLEGAL_ARGUMENT
-import naksha.base.NakshaException
-import kotlin.js.ExperimentalJsExport
+import naksha.base.Platform.Platform_C.forKClass
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * The configuration of a single PostgresQL instance.
@@ -17,17 +17,25 @@ import kotlin.js.JsExport
 @JsExport
 class PgInstanceConfig : AnyObject() {
     companion object PgInstanceConfig_C {
+        /**
+         * The [PlatformType] of [PgInstanceConfig].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgInstanceConfig::class).withPackageName(PACKAGE_NAME)
+
         internal const val DEFAULT_DB = "postgres"
         internal const val DEFAULT_USER = "postgres"
         internal const val DEFAULT_PASSWORD = "password"
         internal const val DEFAULT_PORT = 5432
-        private val HOST = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> "localhost" }
-        private val PORT = NotNullProperty<PgInstanceConfig, Int>(Int::class) { _,_ -> DEFAULT_PORT }
-        private val DATABASE = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_DB }
-        private val USER = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_USER }
-        private val PASSWORD = NotNullProperty<PgInstanceConfig, String>(String::class) { _,_ -> DEFAULT_PASSWORD }
-        private val READ_ONLY = NotNullProperty<PgInstanceConfig, Boolean>(Boolean::class) { _,_ -> false }
-        private val CONNECTION_LIMIT = NotNullProperty<PgInstanceConfig, Int>(Int::class) { self,_ ->
+        private val HOST = NotNullProperty<PgInstanceConfig, String>(String_TYPE) { _,_ -> "localhost" }
+        private val PORT = NotNullProperty<PgInstanceConfig, Int>(Int_TYPE) { _, _ -> DEFAULT_PORT }
+        private val DATABASE = NotNullProperty<PgInstanceConfig, String>(String_TYPE) { _, _ -> DEFAULT_DB }
+        private val USER = NotNullProperty<PgInstanceConfig, String>(String_TYPE) { _, _ -> DEFAULT_USER }
+        private val PASSWORD = NotNullProperty<PgInstanceConfig, String>(String_TYPE) { _, _ -> DEFAULT_PASSWORD }
+        private val READ_ONLY = NotNullProperty<PgInstanceConfig, Boolean>(Boolean_TYPE) { _, _ -> false }
+        private val CONNECTION_LIMIT = NotNullProperty<PgInstanceConfig, Int>(Int_TYPE) { self, _ ->
             // Compatibility hack, see:
             // https://github.com/heremaps/naksha/blob/v2/here-naksha-app-service/src/jvmTest/resources/unit_test_data/StorageApi/TC0001_createStorage/create_storage.json
             val raw = self.getRaw("maxPoolSize")

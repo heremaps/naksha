@@ -1,7 +1,13 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
 import naksha.base.AnyList
 import naksha.base.Int64
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 @Suppress("UNCHECKED_CAST")
 internal data class PgColumnEntry(
@@ -11,6 +17,16 @@ internal data class PgColumnEntry(
     val values: AnyList = AnyList()
 ) {
     constructor(column: PgColumn, index: Int = column.i) : this(index, column.name, column.type)
+
+    companion object {
+        /**
+         * The [PlatformType] of [PgColumnEntry].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgColumnEntry::class).withPackageName(PACKAGE_NAME)
+    }
 
     fun withSize(size: Int): PgColumnEntry {
         values.size = size

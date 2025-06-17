@@ -1,5 +1,4 @@
-@file:OptIn(ExperimentalJsExport::class)
-@file:Suppress("LeakingThis")
+@file:Suppress("LeakingThis", "OPT_IN_USAGE")
 
 package naksha.psql
 
@@ -18,10 +17,14 @@ import naksha.model.Naksha.Naksha_C.MAPS_COL_NUMBER
 import naksha.base.NakshaError.NakshaError_C.EXCEPTION
 import naksha.base.NakshaError.NakshaError_C.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaError_C.STORAGE_ID_MISMATCH
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.jbon.JbDecoder
 import naksha.model.objects.NakshaMap
 import naksha.psql.PgColumn.PgColumn_C.allColumns
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * The admin-map of the storage, requires a platform specific implementation.
@@ -56,6 +59,16 @@ abstract class PgAdminMap internal constructor(
     upgrade: Boolean?
 ) : PgMap(storage, NakshaMap().withStorageId(storage.id).withId(ADMIN_MAP)), IDictReader {
 
+    companion object PgAdminMap_C {
+        /**
+         * The [PlatformType] of [PgAdminMap].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgAdminMap::class).withPackageName(PACKAGE_NAME)
+    }
+    
     /**
      * The page-size of the database (`current_setting('block_size')`).
      * @since 3.0.0
@@ -545,7 +558,7 @@ WHERE id = $1"""
         if (outRows.size == 0) return null
         val tuple = outRows[0] ?: return null
         Naksha.cache.store(tuple)
-        val nakshaMap = Naksha.decodeTuple(tuple).proxy(NakshaMap::class)
+        val nakshaMap = Naksha.decodeTuple(tuple).proxy(NakshaMap.TYPE)
         val pgMap = PgMap(storage, nakshaMap)
         storeMap(pgMap)
         return pgMap
@@ -583,7 +596,7 @@ WHERE id = $1"""
         if (outRows.size == 0) return null
         val tuple = outRows[0] ?: return null
         Naksha.cache.store(tuple)
-        val nakshaMap = Naksha.decodeTuple(tuple).proxy(NakshaMap::class)
+        val nakshaMap = Naksha.decodeTuple(tuple).proxy(NakshaMap.TYPE)
         val pgMap = PgMap(storage, nakshaMap)
         storeMap(pgMap)
         return pgMap

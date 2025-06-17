@@ -4,8 +4,11 @@ package naksha.psql
 
 import naksha.base.NakshaError.NakshaError_C.PARTITION_NOT_FOUND
 import naksha.base.NakshaException
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.psql.PgUtil.PgUtil_C.partitionNumber
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
@@ -24,6 +27,16 @@ class PgDeleted(val head: PgHead) : PgTable(
     partitionByColumn = head.partitionByColumn,
     partitionCount = head.partitionCount
 ) {
+    companion object PgDeleted_C {
+        /**
+         * The [PlatformType] of [PgDeleted].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgDeleted::class).withPackageName(PACKAGE_NAME)
+    }
+
     @JvmField
     val partitions: Array<PgDeletedPartition> = Array(head.partitions.size) { PgDeletedPartition(this, it) }
 

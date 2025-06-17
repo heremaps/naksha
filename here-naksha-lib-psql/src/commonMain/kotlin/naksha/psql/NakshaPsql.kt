@@ -1,8 +1,9 @@
 // This will be exposed
 // - in JavaScript at the namespace: naksha.psql.{name}
-// - jn Java at the class naksha.psql.LibPsqlKt.{name}
+// - jn Java at the class naksha.psql.NakshaPsqlKt.{name}
 package naksha.psql
 
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.Naksha
 import naksha.model.NakshaVersion
 import naksha.psql.PgType.Companion.BYTE_ARRAY
@@ -10,6 +11,48 @@ import naksha.psql.PgType.Companion.INT
 import naksha.psql.PgType.Companion.INT64
 import naksha.psql.PgType.Companion.SHORT
 import naksha.psql.PgType.Companion.STRING
+
+/**
+ * The package name `naksha.psql`.
+ * @since 3.0
+ */
+const val PACKAGE_NAME = "naksha.psql"
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [PgCluster] interface.
+ * @since 3.0
+ */
+val PgCluster_TYPE = forKClass(PgCluster::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [PgConnection] interface.
+ * @since 3.0
+ */
+val PgConnection_TYPE = forKClass(PgConnection::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [PgCursor] interface.
+ * @since 3.0
+ */
+val PgCursor_TYPE = forKClass(PgCursor::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [PgInstance] interface.
+ * @since 3.0
+ */
+val PgInstance_TYPE = forKClass(PgInstance::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [PgInternalCollection] interface.
+ * @since 3.0
+ */
+val PgInternalCollection_TYPE = forKClass(PgInternalCollection::class).withPackageName(PACKAGE_NAME)
+
+/**
+ * The [PlatformType][naksha.base.PlatformType] of the [PgPlan] interface.
+ * @since 3.0
+ */
+val PgPlan_TYPE = forKClass(PgPlan::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The minimal `naksha~admin` version this version is compatible with.

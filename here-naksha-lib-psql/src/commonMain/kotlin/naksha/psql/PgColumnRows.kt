@@ -1,16 +1,32 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
 import naksha.base.Int64
+import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformType
 import naksha.model.*
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B96
 import naksha.psql.PgColumn.PgColumn_C.allColumns
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * Helper class to convert rows into arrays of column and vice versa. The main purpose is to read and write full tuples, but it supports basically as well virtual columns.
  * @since 3.0
  */
 internal class PgColumnRows {
+    companion object PgColumnRows_C {
+        /**
+         * The [PlatformType] of [PgColumnRows].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgColumnRows::class).withPackageName(PACKAGE_NAME)
+    }
+
     /**
      * All columns being added already.
      * @since 3.0

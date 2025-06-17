@@ -1,17 +1,15 @@
-@file:OptIn(ExperimentalJsExport::class)
+@file:Suppress("OPT_IN_USAGE")
 
 package naksha.psql
 
-import naksha.base.AnyObject
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
-import naksha.base.StringList
+import naksha.base.*
 import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
-import naksha.base.NakshaException
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.objects.NakshaStorage
-import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * The PostgresQL storage configuration.
@@ -33,14 +31,22 @@ class PgConfig() : NakshaStorage() {
         this.className = defaultClassName()
     }
 
-    companion object PsqlConfig_C {
-        private val MASTER = NotNullProperty<PgConfig, PgInstanceConfig>(PgInstanceConfig::class) { self, _ ->
+    companion object PgConfig_C {
+        /**
+         * The [PlatformType] of [PgConfig].
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val TYPE = forKClass(PgConfig::class).withPackageName(PACKAGE_NAME)
+
+        private val MASTER = NotNullProperty<PgConfig, PgInstanceConfig>(PgInstanceConfig.TYPE) { self, _ ->
             self.getMasterOrNull() ?: throw NakshaException(ILLEGAL_STATE, "master not found")
         }
-        private val REPLICAS_LIST = NotNullProperty<PgConfig, PgInstanceConfigList>(PgInstanceConfigList::class) { _,_ ->
+        private val REPLICAS_LIST = NotNullProperty<PgConfig, PgInstanceConfigList>(PgInstanceConfigList.TYPE) { _,_ ->
             PgInstanceConfigList() }
-        private val BOOLEAN_FALSE = NullableProperty<PgConfig, Boolean>(Boolean::class) { _, _ -> false }
-        private val STRING_NULL = NullableProperty<PgConfig, String>(String::class)
+        private val BOOLEAN_FALSE = NullableProperty<PgConfig, Boolean>(Boolean_TYPE) { _, _ -> false }
+        private val STRING_NULL = NullableProperty<PgConfig, String>(String_TYPE)
     }
 
     /**
@@ -66,7 +72,7 @@ class PgConfig() : NakshaStorage() {
         // https://github.com/heremaps/naksha/blob/v2/here-naksha-app-service/src/jvmTest/resources/unit_test_data/StorageApi/TC0001_createStorage/create_storage.json
         val rawProperties = getRaw("properties")
         val rawDbConfig = if (rawProperties is AnyObject) rawProperties.getRaw("dbConfig") else null
-        return if (rawDbConfig is AnyObject) rawDbConfig.proxy(PgInstanceConfig::class) else null
+        return if (rawDbConfig is AnyObject) rawDbConfig.proxy(PgInstanceConfig.TYPE) else null
     }
 
     /**
