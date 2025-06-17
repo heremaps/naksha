@@ -521,4 +521,19 @@ class PlatformTest {
             assertEquals("dataHubAndMom", map_get(properties, "featureType"))
         }
     }
+
+    @Test
+    fun testGzip() {
+        try {
+            val text = "Some test string test test test test test test test test test test test"
+            val raw = text.encodeToByteArray()
+            val compressed = Platform.gzipDeflate(raw)
+            val restored = Platform.gzipInflate(compressed)
+            assertContentEquals(raw, restored)
+            val restoredText = restored.decodeToString()
+            assertEquals(text, restoredText)
+        } catch (_: UnsupportedOperationException) {
+            // TODO: We need to implement ZIP in JavaScript!
+        }
+    }
 }

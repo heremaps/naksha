@@ -6,8 +6,6 @@ import naksha.base.NotNullProperty
 import naksha.base.AnyObject
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
-import naksha.model.objects.PACKAGE_NAME
-import naksha.model.request.notification.TuplesByTxn
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField

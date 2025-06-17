@@ -329,12 +329,13 @@ expect class Platform private constructor() {
         fun unbox(value: Any?): Any?
 
         /**
-         * Box the given value into the given type.
+         * Box the given value, mainly useful for [proxy types][Proxy].
          *
-         * @param raw The raw value to convert.
-         * @param alternative The alternative to return, when the raw value can't be converted.
-         * @param init The initializer, when the raw value can't be converted, preferred above [alternative] if given.
-         * @return The raw value as given type, the result of [init], or the given [alternative] (in that order).
+         * @param raw The raw value to box.
+         * @param type The type to box the raw value into.
+         * @param alternative The alternative to return, when the raw value can't be boxed.
+         * @param init The initializer, when the raw value can't be boxed, preferred above [alternative] if given.
+         * @return The raw value boxed to given type, the result of [init], or the given [alternative] (in that order).
          * @since 3.0
          */
         fun <T> box(raw: Any?, type: PlatformType<T>, alternative: T? = null, init: Fn0<T?>? = null): T?

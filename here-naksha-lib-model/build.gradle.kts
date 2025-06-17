@@ -13,6 +13,7 @@ description = gatherDescription()
 kotlin {
     jvm {
         compilerOptions {
+            // Generate Java-compatible default methods in interfaces for all interface methods that have default implementations in Kotlin.
             freeCompilerArgs = listOf("-Xjvm-default=all")
         }
     }
@@ -144,8 +145,4 @@ tasks.register("generateVersionFile") {
 
 tasks.named("jvmProcessResources") {
     dependsOn("generateVersionFile")
-}
-
-tasks.matching { it.name == "jsNodeTest" }.configureEach {
-    enabled = false
 }

@@ -979,7 +979,7 @@ return obj;
         actual fun gzipDeflate(raw: ByteArray): ByteArray {
             if (isPlv8()) js("""plv8.execute('SELECT gzip($1::bytea)::bytea as c',[raw])[0].c""").unsafeCast<ByteArray>()
             // TODO: Use Stream-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
-            throw UnsupportedOperationException("lz4Inflate is not implemented in the current environment")
+            throw UnsupportedOperationException("gzipDeflate is not implemented in the current environment")
         }
 
         /**
@@ -991,7 +991,7 @@ return obj;
         actual fun gzipInflate(compressed: ByteArray): ByteArray {
             if (isPlv8()) js("""plv8.execute('SELECT gunzip($1::bytea)::bytea as c',[compressed])[0].c""").unsafeCast<ByteArray>()
             // TODO: Use Stream-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
-            throw UnsupportedOperationException("lz4Inflate is not implemented in the current environment")
+            throw UnsupportedOperationException("gzipInflate is not implemented in the current environment")
         }
 
         @JsStatic

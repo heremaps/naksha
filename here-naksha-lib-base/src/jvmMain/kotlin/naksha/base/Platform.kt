@@ -324,10 +324,25 @@ actual class Platform {
             return value
         }
 
+        /**
+         * Box the given value into the given type.
+         *
+         * @param raw The raw value to convert.
+         * @return The raw value as given type or `null`, if boxing is not possible.
+         * @since 3.0
+         */
         @JvmStatic
         fun <T> box(raw: Any?, type: PlatformType<T>): T?
             = boxInto(raw, type, null, null)
 
+        /**
+         * Box the given value into the given type.
+         *
+         * @param raw The raw value to convert.
+         * @param alternative The alternative to return, when the raw value can't be converted.
+         * @return The raw value as given type or the given [alternative] (in that order).
+         * @since 3.0
+         */
         @JvmStatic
         fun <T> box(raw: Any?, type: PlatformType<T>, alternative: T?): T?
             = boxInto(raw, type, alternative, null)

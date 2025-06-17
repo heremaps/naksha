@@ -16,9 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-import static naksha.base.Platform.javaProxy;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static naksha.base.Platform.box;
+import static naksha.base.Platform.forClass;
+import static org.junit.jupiter.api.Assertions.*;
 
 import naksha.geo.PointCoord;
 import naksha.geo.SpPoint;
@@ -35,7 +35,7 @@ class NakshaFeatureProxyTest {
     nakshaFeature.setGeometry(new SpPoint(new PointCoord(10, 20)));
 
     // When:
-    CustomFeature proxiedFeature = javaProxy(nakshaFeature, CustomFeature.class);
+    CustomFeature proxiedFeature = box(nakshaFeature, forClass(CustomFeature.class));
 
     // Then:
     assertEquals(nakshaFeature.getId(), proxiedFeature.getId());
@@ -48,19 +48,15 @@ class NakshaFeatureProxyTest {
     NakshaFeature nakshaFeature = new NakshaFeature();
 
     // Then:
-    assertThrows(IllegalArgumentException.class, () -> {
-      javaProxy(nakshaFeature, CustomFeatureWithoutNonArgConstructor.class);
-    });
+    assertNull(box(nakshaFeature, forClass(CustomFeatureWithoutNonArgConstructor.class)));
   }
 
   @Test
   void shouldFailForNonPublicProxy() {
     // Given:
     NakshaFeature nakshaFeature = new NakshaFeature();
-
-    // Note: This throws kotlin.reflect.full.IllegalCallableAccessException, but this class should not be tested for!
     // Then:
-    assertThrows(Exception.class, () -> javaProxy(nakshaFeature, NonPublicCustomFeature.class));
+    assertNull(box(nakshaFeature, forClass(NonPublicCustomFeature.class)));
   }
 
   public static class CustomFeature extends NakshaFeature {

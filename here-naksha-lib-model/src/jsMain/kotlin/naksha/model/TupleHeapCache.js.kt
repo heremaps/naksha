@@ -16,54 +16,62 @@ actual class TupleHeapCache : ITupleCache {
     actual override val latencyInMicros: Int64
         get() = LATENCY_MEMORY
 
-    actual override fun get(tupleNumber: TupleNumber): Tuple? {
-        TODO("Not yet implemented")
-    }
+    // TODO: Clean the cache, currently its growing endlessly!
+    private val cache = HashMap<TupleNumber, Tuple>()
+
+    actual override fun get(tupleNumber: TupleNumber): Tuple? = cache[tupleNumber]
 
     actual override fun load(featureTuples: List<FeatureTuple?>, from: Int, to: Int, acceptFeature: Boolean): Int {
-        TODO("Not yet implemented")
+        var loaded = 0
+        for (i in from until to) {
+            val featureTuple = featureTuples[i] ?: continue
+            if (featureTuple.tuple == null) {
+                if (acceptFeature && featureTuple.feature != null) continue
+                val tuple = cache[featureTuple.tupleNumber] ?: continue
+                loaded++
+                featureTuple.tuple = tuple
+            }
+        }
+        return loaded
     }
 
     actual override fun put(tuple: Tuple) {
-        TODO("Not yet implemented")
+        cache[tuple.tupleNumber] = tuple
     }
 
     actual override fun store(tuples: List<Tuple>) {
-        TODO("Not yet implemented")
+        for (tuple in tuples) {
+            cache[tuple.tupleNumber] = tuple
+        }
     }
 
     actual override fun onStorageAdd(storage: IStorage) {
-        TODO("Not yet implemented")
     }
 
     actual override fun onStorageRemove(storage: IStorage) {
-        TODO("Not yet implemented")
     }
 
-    actual override fun getDictReader(storageNumber: Int64): IDictReader? {
-        TODO("Not yet implemented")
-    }
+    actual override fun getDictReader(storageNumber: Int64): IDictReader? = null
 
     actual override fun clear() {
-        TODO("Not yet implemented")
+        cache.clear()
     }
 
     actual override fun clear(storage: IStorage) {
-        TODO("Not yet implemented")
+        cache.clear()
     }
 
     actual override fun gc() {
-        TODO("Not yet implemented")
     }
 
     actual companion object TupleHeapCache_C {
+        private val singleton = TupleHeapCache()
+
         /**
          * Returns the head-cache implementation.
          * @return the head-cache implementation.
          * @since 3.0
          */
-        actual fun getInstance(): TupleHeapCache {
-            TODO("Not yet implemented")
-        }
+        actual fun getInstance(): TupleHeapCache = singleton
     }
 }

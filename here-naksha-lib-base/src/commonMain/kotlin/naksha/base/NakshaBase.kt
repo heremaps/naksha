@@ -510,8 +510,12 @@ internal fun <T> boxInto(raw: Any?, type: PlatformType<T>, alternative: T? = nul
         val existing = Symbols.get(asPlatformObject(unboxed))
         if (type.isInstance(existing)) return type.cast(existing)
 
-        // If data is a platform-map, we can read detect the property to detect the type.
-        if (unboxed is PlatformMap) return detectMap(unboxed).proxy(unboxed) as T
+        // If data is a platform-map, we detect the type, and if the detected is compatible, use it.
+        // This allows to detect interface implementations.
+        if (unboxed is PlatformMap) {
+            val detectedType = detectMap(unboxed)
+            if (detectedType.isAssignableTo(type)) return detectedType.proxy(unboxed) as T
+        }
 
         // Otherwise, if raw or data maps correctly, return, otherwise init or alternative.
         if (type.isInstance(raw)) return type.cast(raw)

@@ -7,10 +7,10 @@ import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 
 /**
- * The package name `naksha.model.request`.
+ * The package name `naksha.model.request.query`.
  * @since 3.0
  */
-const val PACKAGE_NAME = "naksha.model.request"
+const val PACKAGE_NAME = "naksha.model.request.query"
 
 /**
  * The [PlatformType] of [IMetaQuery].

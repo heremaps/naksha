@@ -382,14 +382,14 @@ class BBox() : ListProxy<Double>(Double_TYPE) {
      */
     fun centerCoord(): PointCoord {
         if (is2D()) {
-            val lon = round_double(maxLongitude - minLongitude) / 2.0
-            val lat = round_double(maxLatitude - minLatitude) / 2.0
+            val lon = round_double(round_double(minLongitude + maxLongitude) / 2.0)
+            val lat = round_double(round_double(minLatitude + maxLatitude) / 2.0)
             return PointCoord(lon, lat)
         }
         if (is3D()) {
-            val lon = round_double(maxLongitude - minLongitude) / 2.0
-            val lat = round_double(maxLatitude - minLatitude) / 2.0
-            val z = round_double(as_double_or_zero(maxZ) - as_double_or_zero(minZ)) / 2.0
+            val lon = round_double(round_double(minLongitude + maxLongitude) / 2.0)
+            val lat = round_double(round_double(minLatitude + maxLatitude) / 2.0)
+            val z = round_double( round_double(as_double_or_zero(minZ) + as_double_or_zero(maxZ)) / 2.0 )
             return PointCoord(lon, lat, z)
         }
         return PointCoord(0.0, 0.0)
