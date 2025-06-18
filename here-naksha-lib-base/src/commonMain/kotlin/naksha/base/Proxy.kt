@@ -248,8 +248,6 @@ abstract class Proxy : PlatformObject {
      */
     open fun unbox(value: Any?): Any? = Platform.unbox(value)
 
-    override fun hashCode(): Int = Platform.identityHashCode(this)
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         return platformObject() == Platform.unbox(other)

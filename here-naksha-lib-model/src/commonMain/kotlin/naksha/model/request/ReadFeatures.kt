@@ -211,7 +211,7 @@ open class ReadFeatures : ReadRequest() {
      * Add all features that match the given query into the result-set.
      * @since 3.0
      */
-    var query by QUERY
+    var query: RequestQuery by QUERY
 
     /**
      * Tests whether this request is effectively a query for all features in _HEAD/latest_ state, so it has no actual conditions, does only request one version of each feature, and does not touch history or deletion table.

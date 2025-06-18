@@ -7,7 +7,6 @@ import naksha.base.NakshaError
 import naksha.base.NakshaException
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
-import naksha.model.objects.PACKAGE_NAME
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic

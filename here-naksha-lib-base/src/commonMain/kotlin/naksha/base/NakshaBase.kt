@@ -604,6 +604,13 @@ inline fun <K, reified V> atomicMapArrayAdd(map: AtomicMap<K, Array<V>>, key: K,
     }
 }
 
+/**
+ * If [MapProxy], by default, may reuse `Map.Entry`, when iterating map entries.
+ *
+ * Enable this to improve performance and avoid a new object created for every entry in a map, but beware that some  implementations may fail, because hey keeps references to the returned `Map.Entry` instances _(currently only IntelliJ debugger is known to fail)_.
+ * @since 3.0
+ */
+var reuseMapEntry = false
 
 // ----------------------------------------------------------------------------------------------------------------------------------------
 private val isInitialied = AtomicBool(false)

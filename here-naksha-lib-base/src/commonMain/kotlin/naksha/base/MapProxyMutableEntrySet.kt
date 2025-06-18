@@ -6,7 +6,10 @@ import kotlin.collections.MutableMap.MutableEntry
 import kotlin.js.JsExport
 
 @JsExport
-internal class MapProxyMutableEntrySet<K, V> internal constructor(private val map: MapProxy<K,V>): MutableSet<MutableEntry<K, V?>> {
+internal class MapProxyMutableEntrySet<K, V> internal constructor(
+    private val map: MapProxy<K,V>,
+    private val reuseMapEntry: Boolean
+): MutableSet<MutableEntry<K, V?>> {
     override val size: Int
         get() = map.size
 
@@ -44,7 +47,7 @@ internal class MapProxyMutableEntrySet<K, V> internal constructor(private val ma
         return false
     }
 
-    override fun iterator(): MutableIterator<MutableEntry<K, V?>> = MapProxyEntryIterator(map)
+    override fun iterator(): MutableIterator<MutableEntry<K, V?>> = MapProxyEntryIterator(map, reuseMapEntry)
 
     override fun retainAll(elements: Collection<MutableEntry<K, V?>>): Boolean {
         var modified = false

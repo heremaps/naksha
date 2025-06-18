@@ -9,7 +9,10 @@ import kotlin.collections.MutableMap.MutableEntry
 import kotlin.js.JsExport
 
 @JsExport
-internal class MapProxyEntryIterator<K, V> internal constructor(private val map: MapProxy<K,V>): MutableIterator<MutableEntry<K, V?>> {
+internal class MapProxyEntryIterator<K, V> internal constructor(
+    private val map: MapProxy<K,V>,
+    private val reuseMapEntry: Boolean
+): MutableIterator<MutableEntry<K, V?>> {
     private val _it: PlatformIterator<PlatformList> = map_iterator(map.platformObject())
     private var _next: PlatformIteratorResult<PlatformList> = _it.next()
     private var _current: PlatformIteratorResult<PlatformList>? = null
@@ -33,7 +36,7 @@ internal class MapProxyEntryIterator<K, V> internal constructor(private val map:
         _next = _it.next()
 
         var entry = _entry
-        if (entry == null) {
+        if (entry == null || !reuseMapEntry) {
             entry = MapProxyMutableEntry(map, key)
             _entry = entry
         } else {

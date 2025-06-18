@@ -52,7 +52,7 @@ class InsertFeatureTest : PgTestBase() {
             )
             .hasPropertiesThat { retrievedProperties ->
                 retrievedProperties
-                    .hasFeatureType(featureToCreate.properties.getRaw("featureType") as String)
+                    .hasFeatureType(featureToCreate.properties.featureType)
                     .hasXyzThat { retrievedXyz ->
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)

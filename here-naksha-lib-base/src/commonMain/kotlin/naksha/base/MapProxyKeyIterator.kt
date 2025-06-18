@@ -6,7 +6,7 @@ import kotlin.js.JsExport
 
 @JsExport
 internal class MapProxyKeyIterator<K, V> internal constructor(map: MapProxy<K, V>): MutableIterator<K> {
-    private val _it = MapProxyEntryIterator(map)
+    private val _it = MapProxyEntryIterator(map, true)
 
     override fun hasNext(): Boolean = _it.hasNext()
 

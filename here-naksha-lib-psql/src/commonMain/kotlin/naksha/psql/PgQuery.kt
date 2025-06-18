@@ -4,6 +4,7 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.Platform.Platform_C.toJson
 import naksha.base.PlatformType
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField

@@ -358,12 +358,16 @@ class PlatformTest {
         }
     }
 
+
     class CustomFeature : AnyTypedObject() {
         companion object MyTypedObject_C {
             val TYPE = forKClass(CustomFeature::class).withJsonType("custom")
+
+            private val FOO_MEMBER = NullableProperty<CustomFeature, Boolean>(Boolean_TYPE)
         }
 
         override fun isFeature(): Boolean = true
+        var foo: Boolean? by FOO_MEMBER
     }
 
     @Test
@@ -381,11 +385,14 @@ class PlatformTest {
 
         val json = """{
     "type": "Feature",
-    "featureType": "custom"
+    "featureType": "custom",
+    "foo": "abc"
 }"""
         val parsed = assertIs<CustomFeature>(Platform.fromJson(json))
         parsed.apply {
             assertEquals("custom", type)
+            assertNull(parsed.foo) // because "abc" is no Boolean
+            assertEquals("abc", getRaw("foo")) // Because the underlying object still stores the real value
 
             // Read raw.
             assertEquals("Feature", getRaw("type"))

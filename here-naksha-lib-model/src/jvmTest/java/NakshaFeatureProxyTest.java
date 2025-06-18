@@ -20,6 +20,8 @@ import static naksha.base.Platform.box;
 import static naksha.base.Platform.forClass;
 import static org.junit.jupiter.api.Assertions.*;
 
+import naksha.base.Int64;
+import naksha.base.NakshaBaseKt;
 import naksha.geo.PointCoord;
 import naksha.geo.SpPoint;
 import naksha.model.objects.NakshaFeature;
@@ -70,4 +72,12 @@ class NakshaFeatureProxyTest {
   }
 
   static class NonPublicCustomFeature extends NakshaFeature {}
+
+  @Test
+  void testInt64Boxing() {
+    long x = 100L;
+    assertInstanceOf(Int64.class, box(x, NakshaBaseKt.getInt64_TYPE()));
+    assertNull(box(new Object(), NakshaBaseKt.getInt64_TYPE()));
+  }
+
 }

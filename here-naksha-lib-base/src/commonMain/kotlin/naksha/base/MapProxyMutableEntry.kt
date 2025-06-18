@@ -17,4 +17,11 @@ internal class MapProxyMutableEntry<K, V> internal constructor(private val map: 
         map[key] = newValue
         return old
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (other !is MapProxyMutableEntry<*, *>) return false
+        return key == other.key && value == other.value
+    }
+    override fun hashCode(): Int = key.hashCode() xor value.hashCode()
+    override fun toString(): String = "MapProxyMutableEntry(key=$key, value=$value)"
 }

@@ -195,8 +195,17 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
      */
     open fun toValue(key: K, value: Any?, alt: V? = null): V? = box(value, valueType, alt)
 
+    /**
+     * If this map should use `Map.Entry` objects, when iterating the entries.
+     * @since 3.0
+     * @see entries
+     * @see naksha.base.reuseMapEntry
+     */
+    @JvmField
+    var reuseMapEntry: Boolean = naksha.base.reuseMapEntry
+
     override val entries: MutableSet<MutableEntry<K, V?>>
-        get() = MapProxyMutableEntrySet(this)
+        get() = MapProxyMutableEntrySet(this, reuseMapEntry)
 
     override val keys: MutableSet<K>
         get() = MapProxyMutableKeySet(this)

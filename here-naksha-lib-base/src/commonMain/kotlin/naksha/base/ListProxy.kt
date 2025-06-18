@@ -321,6 +321,8 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
         return (if (a == array.size) array else array.copyOf(a)) as Array<Any>
     }
 
+    override fun hashCode(): Int = Platform.identityHashCode(this)
+
     @Suppress("UNCHECKED_CAST")
     override fun equals(other: Any?): Boolean {
         if (other == null) return false
