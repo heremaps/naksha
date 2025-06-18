@@ -5,6 +5,7 @@ package naksha.jbon
 import naksha.base.*
 import naksha.base.Binary.Binary_C.EMPTY_IMMUTABLE
 import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_set
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport
@@ -199,13 +200,16 @@ open class JbDecoder {
         /**
          * Convert the given JBON map into a platform native map.
          * @param jbMapDecoder The JBON map.
+         * @param existing If given, the map into which to read.
          * @return The platform native map.
          */
         @JvmStatic
-        internal fun readMap(jbMapDecoder: JbMapDecoder): AnyObject {
-            val imap = AnyObject()
+        internal fun readMap(jbMapDecoder: JbMapDecoder, existing: PlatformMap? = null): PlatformMap {
+            val imap = existing ?: Platform.newMap()
             while (jbMapDecoder.next()) {
-                imap[jbMapDecoder.key()] = jbMapDecoder.value().decodeValue()
+                val key = jbMapDecoder.key()
+                val value = jbMapDecoder.value().decodeValue()
+                map_set(imap, key, value)
             }
             return imap
         }
@@ -863,7 +867,7 @@ open class JbDecoder {
 
     /**
      * Read the current unit.
-     * @return _null_, [Boolean], [Int], [Int64], [Double], [String], [AnyObject] or [Array].
+     * @return _null_, [Boolean], [Int], [Int64], [Double], [String], [Array], or [PlatformMap].
      * @throws IllegalStateException If the reader position or the unit-type is invalid.
      */
     fun decodeValue(): Any? {

@@ -1,9 +1,9 @@
 package naksha.jbon
 
-import naksha.base.AnyObject
-import naksha.base.Platform
+import naksha.base.*
 import naksha.base.Platform.Platform_C.forKClass
-import naksha.base.PlatformType
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_contains_key
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_set
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -48,15 +48,39 @@ open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(d
      */
     open fun root(): JbMapDecoder = _map
 
+    private fun startMap(): PlatformMap? {
+        val id = id()
+        if (id != null) {
+            val map = Platform.newMap()
+            map_set(map, "id", id)
+            return map
+        }
+        return null
+    }
+
     /**
-     * Decode the feature into a map.
+     * Decode the feature into [AnyObject].
      * @return the map.
      */
-    open fun toAnyObject(): AnyObject {
-        val feature = root().toAnyObject()
-        val id = id()
-        if (id != null && "id" !in feature) feature.setRaw("id", id)
-        return feature
+    open fun toAnyObject(): AnyObject
+        = AnyObject.TYPE.proxy(root().toPlatformMap(startMap()))
+
+    /**
+     * Decode the feature into the given type.
+     * @param type The type into which to decode the feature.
+     * @return the decoded feature.
+     */
+    open fun <V, T: MapProxy<String, V>> to(type: PlatformType<T>): T
+        = type.proxy(root().toPlatformMap(startMap()))
+
+    /**
+     * Auto-detect the type of the feature and return it.
+     * @return The feature auto-boxed or `null`, if auto-boxing fails.
+     */
+    @Suppress("UNCHECKED_CAST")
+    open fun <T: MapProxy<String, *>> box(): T {
+        val pMap = root().toPlatformMap(startMap())
+        return (Platform.box(pMap, Any_TYPE) ?: throw illegalState("Failed to auto-box feature")) as T
     }
 
     private fun splitJsonPath(jsonPath: String): Array<Any> {

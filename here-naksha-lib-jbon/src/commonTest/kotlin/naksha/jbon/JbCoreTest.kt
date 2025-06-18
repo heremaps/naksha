@@ -1,6 +1,7 @@
 package naksha.jbon
 
 import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.Platform.Platform_C.fromJson
 import kotlin.test.*
 
@@ -882,6 +883,70 @@ class JbCoreTest {
 
         assertTrue(feature.selectPath("properties", "bar", 4))
         assertEquals(4, feature.reader.decodeValue())
+    }
 
+    class CustomFeature : AnyTypedIdObject() {
+        companion object CustomFeature_C {
+            val TYPE = forKClass(CustomFeature::class)
+                .withPackageName(PACKAGE_NAME)
+                .withJsonType("jbon.Custom")
+
+            val STRING_MEMBER = NullableProperty<CustomFeature, String>(String_TYPE)
+        }
+
+        var name: String? by STRING_MEMBER
+        var comment: String? by STRING_MEMBER
+    }
+
+    @Test
+    fun testCustomFeature() {
+        CustomFeature.TYPE.initialize()
+        val json = """{
+  "type": "Feature",
+  "featureType": "jbon.Custom",
+  "id": "Test",
+  "name": "Hello World"
+}"""
+        val feature = assertIs<CustomFeature>(fromJson(json))
+        feature.apply {
+            assertEquals(4, size)
+            val it = entries.iterator()
+            var entry = it.next()
+            assertEquals("type", entry.key)
+            assertEquals("Feature", entry.value)
+            entry = it.next()
+            assertEquals("featureType", entry.key)
+            assertEquals("jbon.Custom", entry.value)
+            entry = it.next()
+            assertEquals("id", entry.key)
+            assertEquals("Test", entry.value)
+            entry = it.next()
+            assertEquals("name", entry.key)
+            assertEquals("Hello World", entry.value)
+            assertFalse(it.hasNext())
+        }
+        val encoder = JbEncoder()
+        val jbon: ByteArray = encoder.buildFeatureFromMap(feature)
+        val decoder = JbFeatureDecoder()
+        decoder.mapBytes(jbon)
+        val restored = decoder.box<CustomFeature>()
+        restored.apply {
+            assertEquals(4, size)
+            val it = entries.iterator()
+            // Note: JBON keeps order, but for 'id', which always becomes first entry!
+            var entry = it.next()
+            assertEquals("id", entry.key)
+            assertEquals("Test", entry.value)
+            entry = it.next()
+            assertEquals("type", entry.key)
+            assertEquals("Feature", entry.value)
+            entry = it.next()
+            assertEquals("featureType", entry.key)
+            assertEquals("jbon.Custom", entry.value)
+            entry = it.next()
+            assertEquals("name", entry.key)
+            assertEquals("Hello World", entry.value)
+            assertFalse(it.hasNext())
+        }
     }
 }

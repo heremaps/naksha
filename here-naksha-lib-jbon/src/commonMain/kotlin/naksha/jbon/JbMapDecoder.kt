@@ -1,12 +1,14 @@
 package naksha.jbon
 
 import naksha.base.AnyObject
+import naksha.base.MapProxy
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformMap
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 
 /**
  * A map view.
@@ -112,10 +114,31 @@ class JbMapDecoder : JbEntryArray<JbMapDecoder>() {
     }
 
     /**
-     * Returns this map as [AnyObject].
-     * @return This binary as [AnyObject].
+     * Decode this JBON map into a [PlatformMap].
+     *
+     * **Note**: Each invocation creates a new map.
+     * @param map If given, the map into which to decode.
+     * @return this JBON map as [PlatformMap].
      */
-    fun toAnyObject(): AnyObject {
-        return JbDecoder.readMap(this)
+    @JvmOverloads
+    fun toPlatformMap(map: PlatformMap? = null): PlatformMap = JbDecoder.readMap(this, map)
+
+    /**
+     * Returns this map as [AnyObject].
+     *
+     * **Note**: Each invocation creates a new map.
+     * @return this map as [AnyObject].
+     */
+    fun toAnyObject(): AnyObject = to(AnyObject.TYPE)
+
+    /**
+     * Returns this map as any [MapProxy].
+     *
+     * **Note**: Each invocation creates a new map.
+     * @return this map as any [MapProxy].
+     */
+    fun <V, T: MapProxy<String, V>> to(type: PlatformType<T>): T {
+        val pMap = toPlatformMap()
+        return type.proxy(pMap)
     }
 }

@@ -140,7 +140,7 @@ open class PgWriter internal constructor(
      * @return a map by map, collection, and partition to write operations executed within.
      * @since 3.0
      */
-    private fun groupOperations(writes: ArrayList<PgWrite>)
+    private fun groupOperationsAndCreateTuple(writes: ArrayList<PgWrite>)
       : MutableMap<PgMap, MutableMap<PgCollection, Array<MutableMap<WriteOp, ArrayList<PgWrite>>?>>> {
         val byMap = mutableMapOf<PgMap, MutableMap<PgCollection, Array<MutableMap<WriteOp, ArrayList<PgWrite>>?>>>()
         var writeListCapacity = writes.size
@@ -208,7 +208,7 @@ open class PgWriter internal constructor(
         try {
             // This can be time-consuming, unless the connection is already open, try not to open it before we do this!
             prepareWrite(targetWrites)
-            val byMap = groupOperations(targetWrites)
+            val byMap = groupOperationsAndCreateTuple(targetWrites)
 
             // Perform the writes, if any error happens, we will roll back the session to where it was before we started.
             // Note: We must not close the connection, therefore no `session.useConnection().use {}`!
