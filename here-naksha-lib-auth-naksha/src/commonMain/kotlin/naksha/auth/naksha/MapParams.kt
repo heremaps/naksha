@@ -25,11 +25,15 @@ import kotlin.jvm.JvmField
 class MapParams() : NakshaParams() {
 
     /**
-     * Initialize parameters from the given map and storage.
-     * @param map The map.
+     * Auto generate parameters for operation done to a map.
+     * @param map The map to perform the operation upon.
      * @param storage The storage in which the map is located.
      * @return this.
      * @since 3.0
+     * @see NakshaOps.createMaps
+     * @see NakshaOps.readMaps
+     * @see NakshaOps.updateMaps
+     * @see NakshaOps.deleteMaps
      */
     @JsName("of")
     constructor(map: NakshaMap, storage: NakshaStorage) : this() {

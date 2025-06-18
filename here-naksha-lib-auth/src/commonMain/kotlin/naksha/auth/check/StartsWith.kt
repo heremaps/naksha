@@ -10,7 +10,10 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
- * `startsWith` - Tests if a parameter is a `String` and starts with the value. If the parameter is a list, test each parameter and succeed when the first one of the parameters starts with the value.
+ * `startsWith` - Tests if a parameter is a `String` and starts with the value.
+ *
+ * - If the parameter is a list, test each parameter value, and succeed when the first one matches.
+ * - If the parameter is a map, tests each parameter key, and succeed when the first one matches.
  * @since 3.0
  * @see Check
  * @see naksha.auth.ServiceOpParams
@@ -42,6 +45,13 @@ class StartsWith() : Check("startsWith") {
         if (parameter is List<*>) {
             for (p in parameter) {
                 if (p is String && p.startsWith(value, ignoreCase)) return true
+            }
+            return false
+        }
+        if (parameter is Map<*, *>) {
+            for (e in parameter) {
+                val key = e.key
+                if (key is String && test(key, value)) return true
             }
             return false
         }

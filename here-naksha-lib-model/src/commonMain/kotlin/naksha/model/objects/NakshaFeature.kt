@@ -37,10 +37,11 @@ open class NakshaFeature() : GeoFeature() {
          */
         @JvmField
         @JsStatic
-        val TYPE = forKClass(NakshaFeature::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(NakshaFeature::class)
+            .withPackageName(PACKAGE_NAME)
+            .withJsonType("Feature")
 
         const val PROPERTIES_KEY = "properties"
-
         private val REFERENCE_POINT_MEMBER = NullableProperty<NakshaFeature, SpPoint>(SpPoint.TYPE)
     }
 

@@ -16,7 +16,11 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
- * `eq` - Tests if a parameter equals the value. If the parameter is a list, test each parameter value and succeed when the first one of the values equals the value. Only supports `Scalar` values, so _null_, _boolean_, _string_, _int_, _int64_, or _double_.
+ * `eq` - Tests if a parameter equals the value. Only supports `Scalar` values, so _null_, _boolean_, _string_, _int_, _int64_, or _double_.
+ *
+ * - If the parameter is a list, test each parameter value, and succeed when the first one matches.
+ * - If the parameter is a map, tests each parameter key, and succeed when the first one matches.
+ *
  * @since 3.0
  * @see strict
  * @see Check
@@ -58,6 +62,14 @@ class Equals() : Check("eq") {
         if (parameter is List<*>) {
             for (p in parameter) {
                 if (test(p, value)) return true
+            }
+            return false
+        }
+        if (parameter is Map<*, *>) {
+            if (value !is String) return false
+            for (e in parameter) {
+                val key = e.key
+                if (key is String && test(key, value)) return true
             }
             return false
         }

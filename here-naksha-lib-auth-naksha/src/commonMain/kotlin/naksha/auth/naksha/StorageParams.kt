@@ -21,10 +21,12 @@ import kotlin.jvm.JvmField
 class StorageParams() : NakshaParams() {
 
     /**
-     * Initialize these parameters from the given feature.
-     * @param storage The storage from which to auto-set parameters.
+     * Auto generate parameters for operation done to a storage.
+     * @param storage The storage to perform the operation upon.
      * @return this.
      * @since 3.0
+     * @see NakshaOps.useStorages
+     * @see NakshaOps.manageStorages
      */
     @JsName("of")
     constructor(storage: NakshaStorage) : this() {

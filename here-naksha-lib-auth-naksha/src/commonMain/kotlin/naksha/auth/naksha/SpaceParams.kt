@@ -23,10 +23,12 @@ import kotlin.jvm.JvmField
 class SpaceParams() : NakshaParams() {
 
     /**
-     * Initialize parameters from the given space feature.
-     * @param space The space from which to auto-set parameters.
+     * Auto generate parameters for operation done to a space.
+     * @param space The space to perform the operation upon.
      * @return this.
      * @since 3.0
+     * @see NakshaOps.useSpaces
+     * @see NakshaOps.manageSpaces
      */
     @JsName("of")
     constructor(space: NakshaFeature) : this() { // TODO: We should have a concrete NakshaSpace feature!

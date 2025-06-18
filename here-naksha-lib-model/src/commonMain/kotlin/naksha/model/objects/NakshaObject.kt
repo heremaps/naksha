@@ -14,7 +14,7 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
- * A Naksha object is a feature with a meaning for Naksha/
+ * A Naksha object is a feature with a meaning for Naksha, so an internal Naksha object.
  *
  * @since 3.0
  * @see NakshaObject

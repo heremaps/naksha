@@ -10,7 +10,10 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
- * `matches` - Tests if a parameter is a `String` and matches the value, which should be a regular expression. If the parameter is a list, test each parameter and succeed when the first one of the parameters matches with the regex.
+ * `matches` - Tests if a parameter is a `String` and matches the value, which should be a regular expression.
+ *
+ * - If the parameter is a list, test each parameter value, and succeed when the first one matches.
+ * - If the parameter is a map, tests each parameter key, and succeed when the first one matches.
  * @since 3.0
  * @see Check
  * @see naksha.auth.ServiceOpParams
@@ -51,6 +54,13 @@ class Matches() : Check("matches") {
         if (parameter is List<*>) {
             for (p in parameter) {
                 if (p is String && regex.matches(p)) return true
+            }
+            return false
+        }
+        if (parameter is Map<*, *>) {
+            for (e in parameter) {
+                val key = e.key
+                if (key is String && regex.matches(key)) return true
             }
             return false
         }

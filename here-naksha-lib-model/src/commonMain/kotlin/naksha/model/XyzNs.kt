@@ -198,7 +198,6 @@ class XyzNs : AnyObject() {
 
         private val _ACTION = NotNullEnum<XyzNs, Action>(Action.TYPE) { _, _ -> Action.CREATED }
         private val _OPERATION = NotNullEnum<XyzNs, Operation>(Operation.TYPE) { _, _ -> Operation.CREATED }
-        private val _APP_ID = NotNullProperty<XyzNs, String>(String_TYPE) { _, _ -> NakshaContext.appId() }
         private val _STRING_NULL = NullableProperty<XyzNs, String>(String_TYPE, autoRemove = true)
         private val _INT_0 = NotNullProperty<XyzNs, Int>(Int_TYPE) { _, _ -> 0 }
         private val _INT_NULL = NullableProperty<XyzNs, Int>(Int_TYPE, autoRemove = true)
@@ -595,7 +594,7 @@ class XyzNs : AnyObject() {
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      */
-    val appId by _APP_ID
+    val appId: String? by _STRING_NULL
 
     /**
      * The author of the feature. Not every change of feature is done by intention, the author is only set, when the change of the

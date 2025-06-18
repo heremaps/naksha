@@ -123,7 +123,7 @@ open class Check() : AnyObject() {
                     val or = Check()
                     val list = or.useAnyOf()
                     for (v in _value) {
-                        list.add(forScalar(v))
+                        list.add(forAny(v))
                     }
                     or
                 }
@@ -153,6 +153,7 @@ open class Check() : AnyObject() {
         }
 
         private val BOOLEAN_MEMBER = NotNullProperty<Check, Boolean>(Boolean_TYPE) { _, _ -> false }
+        private val STRING_MEMBER = NullableProperty<Check, String>(String_TYPE)
         private val OP_CODE_MEMBER = NotNullEnum<Check, CheckOp>(CheckOp.TYPE) { _,_ -> CheckOp.UNDEFINED }
         private val ANY_LIST_MEMBER = NullableProperty<Check, AnyList>(AnyList.TYPE)
     }
@@ -225,6 +226,12 @@ open class Check() : AnyObject() {
     }
 
     /**
+     * If not `null`, the check expects that parameter is a `Map<String.*>` and the [test] is applied against the value assigned to the defined `key`.
+     * @since 3.0
+     */
+    var key: String? by STRING_MEMBER
+
+    /**
      * This method is called by the default [matches] implementation to test if child-checks should be supported.
      * @return _true_ if this check wants to support child-checks; _false_ otherwise.
      */
@@ -238,6 +245,12 @@ open class Check() : AnyObject() {
      * @since 3.0
      */
     fun matches(parameter: Any?): Boolean {
+        var param = parameter
+        if (key != null) {
+            if (parameter !is Map<*,*>) return false
+            if (!parameter.containsKey(key)) return false
+            param = parameter[key]
+        }
         val supportChildChecks = supportChildChecks()
         var ok = false
         val anyOf = this.anyOf
@@ -246,11 +259,11 @@ open class Check() : AnyObject() {
                 if (supportChildChecks && value is MapProxy<*, *>) {
                     // Child-check !
                     val childCheck = forAny(value)
-                    if (childCheck.matches(parameter)) {
+                    if (childCheck.matches(param)) {
                         ok = true
                         break
                     }
-                } else if (test(parameter, value)) {
+                } else if (test(param, value)) {
                     ok = true
                     break
                 }
@@ -264,11 +277,11 @@ open class Check() : AnyObject() {
                 if (supportChildChecks && value is MapProxy<*, *>) {
                     // Child-check !
                     val childCheck = forAny(value)
-                    if (!childCheck.matches(parameter)) {
+                    if (!childCheck.matches(param)) {
                         ok = false
                         break
                     }
-                } else if (!test(parameter, value)) {
+                } else if (!test(param, value)) {
                     ok = false
                     break
                 }

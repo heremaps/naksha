@@ -18,25 +18,26 @@
  */
 package naksha.auth;
 
-import static naksha.base.Platform.newList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static naksha.base.Platform.forClass;
+import static org.junit.jupiter.api.Assertions.*;
 
-import naksha.auth.action.ReadCollections;
-import naksha.auth.attribute.CollectionAttributes;
-import naksha.auth.naksha.NakshaResource;
-import naksha.base.AnyList;
-import naksha.base.ListProxy;
+import naksha.auth.naksha.CollectionParams;
+import naksha.auth.naksha.NakshaOps;
+import naksha.base.Platform;
+import naksha.model.NakshaContext;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaStorage;
 import org.junit.jupiter.api.Test;
 
 class JavaClientSampleTest {
 
-  /** Demo on how to parse and deal with following ARM:
+  /**
+   * Demo on how to parse and deal with _User Rights Matrix_ and _Access Matrix_.
    *
-   * {code @formatter:off}
-   * {
-   *    "someService": {
+   * This demo assumes the user does have the following URM _(User Rights Matrix)_
+   * <pre>{@code {
+   *    "naksha": {
    *       "readCollections": [
    *          {
    *             "id": "someCollection",
@@ -50,39 +51,56 @@ class JavaClientSampleTest {
    *       ]
    *    }
    * }
-   * {@code @formatter:on}
+   * }</pre>
+   * And tries to read the collection with the {@code id} "someCollection".
    */
   @Test
   void armConstructionSample() {
-    // Given
-    AccessRightsMatrix arm = new AccessRightsMatrix()
-        .withService(
-            "someService",
-            new ServiceAccessRights()
-                .withAction(new ReadCollections()
-                    .withAttributes(
-                        new CollectionAttributes()
-                            .id("someCollection")
-                            .storageId("someStorage"),
-                        new CollectionAttributes()
-                            .id("otherCollection")
-                            .storageId("otherStorage")
-                            .tags("tag1", "tag2"))));
+    // ------------------------------------------------------------------------------------------------------------------------------------
+    // The following code is normally done by Naksha-Hub:
 
-    // When
-    ServiceAccessRights armService = arm.useService("someService");
+    // Parse the URM, for example as provided in HTTP header of the request.
+    final String urmJson = "{\n" +
+        "   \"naksha\": {\n" +
+        "      \"readCollections\": [\n" +
+        "         {\n" +
+        "            \"id\": \"someCollection\",\n" +
+        "            \"storageId\": \"someStorage\"\n" +
+        "         },\n" +
+        "         {\n" +
+        "            \"id\": \"otherCollection\",\n" +
+        "            \"storageId\": \"otherStorage\",\n" +
+        "            \"tags\": [\"tag1\", \"tag2\"]\n" +
+        "         }\n" +
+        "      ]\n" +
+        "   }\n" +
+        "}";
+    final UserRightsMatrix userRightsMatrix = Platform.fromJson(urmJson, forClass(UserRightsMatrix.class));
+    assertNotNull(userRightsMatrix);
 
-    // Then:
-    assertNotNull(armService);
-    ListProxy<ServiceOpParams> attributes = armService.getResourceAttributesForAction(ReadCollections.NAME);
-    assertNotNull(attributes);
-    assertEquals(2, attributes.size());
-    assertEquals("someCollection", attributes.get(0).get(NakshaResource.ID_KEY));
-    assertEquals("someStorage", attributes.get(0).get(CollectionAttributes.STORAGE_ID_KEY));
-    assertEquals("otherCollection", attributes.get(1).get(NakshaResource.ID_KEY));
-    assertEquals("otherStorage", attributes.get(1).get(CollectionAttributes.STORAGE_ID_KEY));
-    final ListProxy<Object> tags =
-        assertInstanceOf(AnyList.class, attributes.get(1).get(CollectionAttributes.TAGS_KEY));
-    assertEquals(newList("tag1", "tag2"), tags.platformObject());
+    // Attach the URM, and other information read from HTTP header, into the context:
+    final NakshaContext context = NakshaContext.currentContext();
+    context.setAppId("someApp");
+    context.setAuthor("someUser");
+    context.setUrm(userRightsMatrix);
+
+    // ------------------------------------------------------------------------------------------------------------------------------------
+    // Now, assume you write some code that should test if the user has some rights.
+    // Assume the user wants to read the collection with id "someCollection", in "someMap", in "someStorage".
+    // You should have the storage, map, and collection the user wants to access at hand:
+    final NakshaStorage nakshaStorage = new NakshaStorage().withId("someStorage");
+    final NakshaMap nakshaMap = new NakshaMap("someMap");
+    final NakshaCollection nakshaCollection = new NakshaCollection("someCollection", "someMap");
+
+    // Then you create the operations the user wants to perform:
+    final NakshaOps ops = new NakshaOps();
+    ops.getReadCollections().add(
+        new CollectionParams(nakshaCollection, nakshaMap, nakshaStorage)
+    );
+
+    // The client that prepared above operation description, now tests if the current users URM allows this.
+    final UserRightsMatrix urm = NakshaContext.currentContext().getUrm();
+    assertNotNull(urm);
+    assertTrue( urm.matches(ops) );
   }
 }

@@ -45,7 +45,8 @@ class UserRightsFilter : MapProxy<String, Check>(String_TYPE, Check.TYPE) {
     fun matches(params: ServiceOpParams): Boolean {
         for (key in this.keys) {
             val check = Check.forAny(getRaw(key))
-            if (!check.matches(params[key])) return false
+            val value = params[key]
+            if (!check.matches(value)) return false
         }
         return true
     }

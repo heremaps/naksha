@@ -37,9 +37,9 @@ class UserRightsFilterList : ListProxy<UserRightsFilter>(UserRightsFilter.TYPE) 
      * @since 3.0
      */
     fun matches(params: ServiceOpParams): Boolean {
-        for (element in this) {
-            if (element == null) continue
-            if (element.matches(params)) return true
+        for (userRightsFilter in this) {
+            if (userRightsFilter == null) continue
+            if (userRightsFilter.matches(params)) return true
         }
         return false
     }

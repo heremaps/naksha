@@ -154,7 +154,7 @@ interface IMetadata {
      * The application identifier of the application that performed the last change.
      * @since 3.0
      */
-    val appId: String
+    val appId: String?
 
     /**
      * The last author that made a change at [authorTs].

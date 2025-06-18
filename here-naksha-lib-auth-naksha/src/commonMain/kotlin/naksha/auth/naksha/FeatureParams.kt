@@ -27,17 +27,21 @@ import kotlin.jvm.JvmField
 class FeatureParams() : NakshaParams() {
 
     /**
-     * Initialize parameters from the given collection, map, and storage.
-     * @param feature The feature.
+     * Auto generate parameters for operation done to a feature.
+     * @param feature The feature to perform the operation upon.
      * @param collection The collection in which the feature is located.
      * @param map The map in which the feature is located.
      * @param storage The storage in which the feature is located.
      * @return this.
      * @since 3.0
+     * @see NakshaOps.createFeatures
+     * @see NakshaOps.readFeatures
+     * @see NakshaOps.updateFeatures
+     * @see NakshaOps.deleteFeatures
      */
     @JsName("of")
     constructor(feature: NakshaFeature, collection: NakshaCollection, map: NakshaMap, storage: NakshaStorage) : this() {
-        fromFeature(collection)
+        fromFeature(feature)
         collectionId = collection.id
         collectionTags = collection.properties.xyz.tags.toTagMap()
         mapId = map.id

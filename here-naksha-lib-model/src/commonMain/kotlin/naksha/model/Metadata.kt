@@ -34,7 +34,7 @@ data class Metadata(
     override val hash: Int = 0,
     override val hereTile: Int = 0,
     override val id: String,
-    override val appId: String = NakshaContext.appId(),
+    override val appId: String? = NakshaContext.appId(),
     override val author: String? = NakshaContext.author(),
     override val origin: String? = null,
     override val target: String? = null,

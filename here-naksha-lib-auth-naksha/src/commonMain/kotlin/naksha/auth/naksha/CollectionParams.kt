@@ -26,12 +26,16 @@ import kotlin.jvm.JvmField
 class CollectionParams() : NakshaParams() {
 
     /**
-     * Initialize parameters from the given collection, map, and storage.
-     * @param collection The collection.
+     * Auto generate parameters for operation done to a collection.
+     * @param collection The collection to perform the operation upon.
      * @param map The map in which the collection is located.
      * @param storage The storage in which the collection is located.
      * @return this.
      * @since 3.0
+     * @see NakshaOps.createCollections
+     * @see NakshaOps.readCollections
+     * @see NakshaOps.updateCollections
+     * @see NakshaOps.deleteCollections
      */
     @JsName("of")
     constructor(collection: NakshaCollection, map: NakshaMap, storage: NakshaStorage) : this() {

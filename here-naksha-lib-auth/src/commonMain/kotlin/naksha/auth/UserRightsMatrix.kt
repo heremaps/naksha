@@ -132,7 +132,8 @@ class UserRightsMatrix : MapProxy<String, UserRights>(String_TYPE, UserRights.TY
     @JsName("matchesOps")
     @JvmOverloads
     fun matches(operations: ServiceOps, serviceName: String? = null): Boolean {
-        val userRights = this[serviceName ?: operations.serviceName] ?: return false
+        val key = serviceName ?: operations.serviceName
+        val userRights = this[key] ?: return false
         return userRights.matches(operations)
     }
 

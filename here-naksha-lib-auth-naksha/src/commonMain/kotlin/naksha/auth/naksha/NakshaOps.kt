@@ -66,28 +66,28 @@ class NakshaOps : ServiceOps() {
     }
 
     /**
-     * Triggered when a user wants to use a storage.
+     * When a user wants to use a storage.
      * @since 3.0
      * @see StorageParams
      */
     var useStorages: StorageParamsList by STORAGE_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user wants to create, update or delete a storage.
+     * When a user wants to create, update or delete a storage.
      * @since 3.0
      * @see StorageParams
      */
     var manageStorages: StorageParamsList by STORAGE_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user wants to send some event into the pipeline of a space, the user sending the event must have the `useSpaces` right for the corresponding space.
+     * When a user wants to send some event into the pipeline of a space, the user sending the event must have the `useSpaces` right for the corresponding space.
      * @since 3.0
      * @see SpaceParams
      */
     var useSpaces: SpaceParamsList by SPACE_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user modifies a spaces.
+     * When a user modifies a spaces.
      *
      * This right includes the right to modify the event-handler list of a space. However, adding a handler into a space requires, next to the [manageSpaces] right, additionally the [useEventHandlers] right _(this does not apply when removing a space)_.
      * @since 3.0
@@ -97,7 +97,7 @@ class NakshaOps : ServiceOps() {
     var manageSpaces: SpaceParamsList by SPACE_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user wants to add an event-handler into a space.
+     * When a user wants to add an event-handler into a space.
      * @since 3.0
      * @see UseEventHandlersParams
      */
@@ -111,84 +111,84 @@ class NakshaOps : ServiceOps() {
     var manageEventHandlers: ManageEventHandlersParamsList by MANAGE_EVENT_HANDLERS_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user wants to create a map.
+     * When a user wants to create a map.
      * @since 3.0
      * @see MapParams
      */
     var createMaps: MapParamsList by MAP_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user wants to read a map.
+     * When a user wants to read a map.
      * @since 3.0
      * @see MapParams
      */
     var readMaps: MapParamsList by MAP_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user wants to update a map.
+     * When a user wants to update a map.
      * @since 3.0
      * @see MapParams
      */
     var updateMaps: MapParamsList by MAP_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user wants to delete a map.
+     * When a user wants to delete a map.
      * @since 3.0
      * @see MapParams
      */
     var deleteMaps: MapParamsList by MAP_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user wants to create a collection.
+     * When a user wants to create a collection.
      * @since 3.0
      * @see CollectionParams
      */
     var createCollections: CollectionParamsList by COLLECTION_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user wants to read a collection.
+     * When a user wants to read a collection.
      * @since 3.0
      * @see CollectionParams
      */
     var readCollections: CollectionParamsList by COLLECTION_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user wants to update a collection.
+     * When a user wants to update a collection.
      * @since 3.0
      * @see CollectionParams
      */
     var updateCollections: CollectionParamsList by COLLECTION_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user wants to delete a collection.
+     * When a user wants to delete a collection.
      * @since 3.0
      * @see CollectionParams
      */
     var deleteCollections: CollectionParamsList by COLLECTION_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user wants to create a feature.
+     * When a user wants to create a feature.
      * @since 3.0
      * @see FeatureParams
      */
     var createFeatures: FeatureParamsList by FEATURE_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user wants to read a feature.
+     * When a user wants to read a feature.
      * @since 3.0
      * @see FeatureParams
      */
     var readFeatures: FeatureParamsList by FEATURE_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user wants to update a feature.
+     * When a user wants to update a feature.
      * @since 3.0
      * @see FeatureParams
      */
     var updateFeatures: FeatureParamsList by FEATURE_PARAMS_LIST_MEMBER
 
     /**
-     * Triggered when a user wants to delete a feature.
+     * When a user wants to delete a feature.
      * @since 3.0
      * @see FeatureParams
      */

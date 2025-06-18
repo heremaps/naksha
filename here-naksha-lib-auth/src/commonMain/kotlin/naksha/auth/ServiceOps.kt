@@ -9,7 +9,7 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
- * A map of service operations invocations, so the operations a user wants to perform.
+ * A map of operation invocations, so the operations a user wants to perform.
  *
  * The key is the name of the operation that should be executed _(for example `readFeatures`, `writeFeatures`, ...)_, the value is the [list of parameters][ServiceOpParamsList], with which each operation should be executed. If the same operation is executed multiple times with different parameters, one [parameter-set][ServiceOpParams] per execution should be added into the [parameter list][ServiceOpParamsList].
  *
@@ -34,17 +34,15 @@ open class ServiceOps : AnyObject() {
         @JvmField
         @JsStatic
         val TYPE: PlatformType<ServiceOps> = forKClass(ServiceOps::class).withPackageName(PACKAGE_NAME)
-
-        private val SERVICE_NAME_MEMBER = NotNullProperty<ServiceOps, String>(String_TYPE) { self, _ ->
-            forKClass(self::class).simpleName.removeSuffix("Ops").replaceFirstChar { it.lowercase() }
-        }
     }
 
     /**
-     * The service-name of the service.
+     * The service-name of the service to which this operation-set belongs.
      *
      * The default implementation lowercases the first character of the class-name, and removes an optional `Ops` suffix, so `NakshaOps` becomes `naksha`, `MapCreatorOps` becomes `mapCreator`, `UpmOps` becomes `upm`, aso.
+     *
+     * This property is runtime only, so it is not serialized and can't be found in the underlying serialized form. It should be overridden by extending classes, if the default rule about classname to `serviceName` relation does not apply.
      * @since 3.0
      */
-    val serviceName: String by SERVICE_NAME_MEMBER
+    val serviceName: String = forKClass(this::class).simpleName.removeSuffix("Ops").replaceFirstChar { it.lowercase() }
 }
