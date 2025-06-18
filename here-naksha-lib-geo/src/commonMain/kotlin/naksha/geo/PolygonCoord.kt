@@ -61,8 +61,8 @@ class PolygonCoord(): ListProxy<LinearRingCoord>(LinearRingCoord.TYPE), ICoordin
         if (size < 1) throw illegalState("PolygonCoord must have at least an exterior ring")
         return this
     }
-    override fun hasZ(): Boolean = this.any { hasZ() }
-    override fun hasM(): Boolean = this.any { hasM() }
+    override fun hasZ(): Boolean = this.any { it?.hasZ() ?: false}
+    override fun hasM(): Boolean = this.any { it?.hasM() ?: false }
 
     /**
      * The exterior ring of the polygon.

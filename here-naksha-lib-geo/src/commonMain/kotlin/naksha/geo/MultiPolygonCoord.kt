@@ -56,6 +56,6 @@ class MultiPolygonCoord() : ListProxy<PolygonCoord>(PolygonCoord.TYPE), ICoordin
         if (size > end) size = end
         return this
     }
-    override fun hasZ(): Boolean = this.any { hasZ() }
-    override fun hasM(): Boolean = this.any { hasM() }
+    override fun hasZ(): Boolean = this.any { it?.hasZ() ?: false }
+    override fun hasM(): Boolean = this.any { it?.hasM() ?: false }
 }

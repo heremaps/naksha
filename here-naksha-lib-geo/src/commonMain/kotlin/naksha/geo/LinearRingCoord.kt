@@ -53,6 +53,6 @@ class LinearRingCoord() : LineStringCoord() {
         if (first != last) this[size] = first
         return this
     }
-    override fun hasZ(): Boolean = this.any { hasZ() }
-    override fun hasM(): Boolean = this.any { hasM() }
+    override fun hasZ(): Boolean = this.any { it?.hasZ() ?: false}
+    override fun hasM(): Boolean = this.any { it?.hasM() ?: false }
 }

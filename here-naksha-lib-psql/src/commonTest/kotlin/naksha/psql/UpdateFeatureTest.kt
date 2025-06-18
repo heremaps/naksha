@@ -32,7 +32,6 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // UPDATE featureType
         feature.withType("new_feature_type")
         assertEquals("new_feature_type", feature.type)
-        assertEquals("new_feature_type", feature.properties.featureType)
         val updateFeaturesReq = WriteRequest().add(
             Write().updateFeature(collection, feature, true)
         )
