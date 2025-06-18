@@ -5,6 +5,7 @@ package naksha.model.request
 import naksha.base.*
 import naksha.model.GuidList
 import naksha.model.Version
+import naksha.model.request.query.IPropertyQuery
 import kotlin.js.JsExport
 
 /**
@@ -41,6 +42,26 @@ open class ReadFeatures : ReadRequest() {
      */
     open fun withMapId(value: String?): ReadFeatures {
         mapId = value
+        return this
+    }
+
+    /**
+     * Sets the property query for the request and automatically manages the required PropertyFilter.
+     * If the provided query is null, any existing PropertyFilter will be removed.
+     *
+     * @param pQuery The property query to apply, or null to clear it.
+     * @return this.
+     *
+     * @since 3.0
+     */
+    open fun withPropertyQuery(pQuery: IPropertyQuery?): ReadFeatures {
+        this.query.properties = pQuery
+        this.resultFilters.removeAll { it is PropertyFilter }
+
+        if (pQuery != null) {
+            this.resultFilters.add(PropertyFilter(this))
+        }
+
         return this
     }
 

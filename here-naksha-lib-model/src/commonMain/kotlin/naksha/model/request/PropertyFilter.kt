@@ -2,7 +2,11 @@ package naksha.model.request
 
 import naksha.base.AnyObject
 import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.gzipInflate
 import naksha.jbon.JbFeatureDecoder
+import naksha.model.Naksha.NakshaCompanion.cache
+import naksha.model.Naksha.NakshaCompanion.getStorageByNumber
+import naksha.model.featureGzip
 import naksha.model.request.query.*
 
 class PropertyFilter(val req: ReadFeatures) : ResultFilter {
@@ -14,12 +18,31 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
      */
     override fun filter(featureTuple: FeatureTuple): FeatureTuple? {
         val pSearch = req.query.properties ?: return featureTuple
-        if (featureTuple.tuple == null) return null
-        val feature = featureTuple.tuple?.feature ?: return null
-        val decoder = JbFeatureDecoder()
-        decoder.mapBytes(feature)
-        if (resolvePropsQuery(pSearch, decoder)) return featureTuple
+
+        val decoder = resolveFeatureAndDecoder(featureTuple) ?: return null
+
+        if (resolvePropsQuery(pSearch, decoder)) {
+            return featureTuple
+        }
         return null
+    }
+
+    private fun resolveFeatureAndDecoder(featureTuple: FeatureTuple): JbFeatureDecoder? {
+        val tuple = featureTuple.tuple ?: return null
+        val feature = featureTuple.tuple?.feature ?: return null
+        val flags = tuple.meta.flags
+
+        var raw = feature
+        if (flags.featureGzip()) {
+            raw = gzipInflate(feature)
+        }
+
+        val sn = tuple.storageNumber
+        val dictReader = getStorageByNumber(sn) ?: cache.getDictReader(sn)
+
+        val decoder = JbFeatureDecoder(dictReader)
+        decoder.mapBytes(raw)
+        return decoder
     }
 
     private fun resolvePropsQuery(pQuery: IPropertyQuery?, decoder: JbFeatureDecoder) : Boolean {
@@ -28,8 +51,9 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
             is PAnd -> return pQuery.all { resolvePropsQuery(it, decoder) }
             is POr -> return pQuery.any { resolvePropsQuery(it, decoder) }
             is PNot -> return !resolvePropsQuery(pQuery.query, decoder)
-            is PQuery -> {
-                val propFromFeature = decoder.get(Property.PROPERTIES,*pQuery.property.path.filterNotNull().toTypedArray())
+            is PQuery -> {                                                                        
+                val propertyArray = pQuery.property.path.filterNotNull().toTypedArray()
+                val propFromFeature = decoder.get(*propertyArray)
                 val op = pQuery.op
                 return resolveEachOp(op,propFromFeature,pQuery.value)
             }
@@ -71,7 +95,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
             is Array<*> -> {
                 if (queryProperty is Array<*>) return featureProperty.intersect(queryProperty.toSet()).size == queryProperty.size
                 if (queryProperty is List<*>) return featureProperty.intersect(queryProperty).size == queryProperty.size
-                return false
+                else return  featureProperty.contains(queryProperty)
             }
             is AnyObject -> {
                 if (queryProperty !is AnyObject) return false

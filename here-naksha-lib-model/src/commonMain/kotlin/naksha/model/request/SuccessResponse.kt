@@ -408,6 +408,34 @@ open class SuccessResponse() : Response() {
         return proxy(SpFeatureCollection::class)
     }
 
+    /**
+     * Applies a sequence of filters to the feature tuples in this response.
+     *
+     * @param filters The result filters to apply, passed as variable arguments.
+     * @return This `SuccessResponse` instance.
+     * @since 3.0
+     */
+    fun filterResults(vararg filters: ResultFilter): SuccessResponse {
+        if (filters.isEmpty()) {
+            return this
+        }
+
+        val tupleList = this.featureTupleList
+        if (tupleList.isEmpty()) {
+            return this
+        }
+
+        tupleList.loadAll(acceptFeature = true)
+
+        var currentList = tupleList.asList().filterNotNull()
+        for (filter in filters.filterNotNull()) {
+            currentList = currentList.mapNotNull { featureTuple -> filter.filter(featureTuple) }
+        }
+
+        this.withFeatureTupleList(currentList)
+        return this
+    }
+
     @Deprecated(message = "Use features property", replaceWith = ReplaceWith("features"), level = DeprecationLevel.ERROR)
     fun useFeatures(): NakshaFeatureList = features
 

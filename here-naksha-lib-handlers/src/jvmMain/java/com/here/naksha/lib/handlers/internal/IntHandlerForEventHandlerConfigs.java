@@ -18,16 +18,6 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
-import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
-import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
-import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.ADD_VALUES;
-import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.CONTAINS_VALUES;
-import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.REMOVE_W_PREFIXES;
-import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
-import static com.here.naksha.lib.handlers.internal.IntValidationUtil.basicValidationFor;
-import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
-
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
@@ -37,9 +27,6 @@ import com.here.naksha.lib.handlers.DefaultViewHandler;
 import com.here.naksha.lib.handlers.DefaultViewHandlerProperties;
 import com.here.naksha.lib.handlers.TagFilterHandler;
 import com.here.naksha.lib.handlers.TagFilterHandlerProperties;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
 import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
@@ -58,6 +45,20 @@ import naksha.model.util.ResultHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+
+import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
+import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
+import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.ADD_VALUES;
+import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.CONTAINS_VALUES;
+import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.REMOVE_W_PREFIXES;
+import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
+import static com.here.naksha.lib.handlers.internal.IntValidationUtil.basicValidationFor;
+import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 
 public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<EventHandlerConfig> {
 
@@ -258,9 +259,10 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
     // Scan through all spaces with JSON property "eventHandlerIds" containing the targeted handler ID
     final Property pRef = new Property(EVENT_HANDLER_IDS);
     final PQuery activeSpacesPOp = new PQuery(pRef, AnyOp.CONTAINS, handlerId);
-    final ReadFeatures readActiveHandlersRequest = new ReadFeatures().addCollectionId(SPACES);
-    readActiveHandlersRequest.setMapId(nakshaHub.getAdminMapId());
-    readActiveHandlersRequest.getQuery().setProperties(activeSpacesPOp);
+    final ReadFeatures readActiveHandlersRequest = new ReadFeatures().addCollectionId(SPACES)
+            .withMapId(nakshaHub.getAdminMapId())
+            .withPropertyQuery(activeSpacesPOp);
+
     return nakshaHub().getAdminStorage().useReadSession(new SessionOptions(), readSession -> {
       final Response readResult = readSession.execute(readActiveHandlersRequest);
       if (!(readResult instanceof SuccessResponse)) {

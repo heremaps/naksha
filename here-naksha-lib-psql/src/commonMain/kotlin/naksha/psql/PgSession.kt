@@ -210,25 +210,28 @@ open class PgSession(
 
     override fun execute(request: Request): Response {
         try {
-            when (request) {
+            val response = when (request) {
                 is WriteRequest -> {
                     val writer = PgWriter(this, executionCount++ != 0)
-                    return writer.execute(request.writes)
+                    writer.execute(request.writes)
                 }
 
                 is ReadRequest -> {
                     val reader = PgReader(this, request)
-                    val response = reader.execute()
+                    val readResponse = reader.execute()
                     if (tx == null) {
                         // If this read was performed on a blank session, without a pending transaction, then we can release the connection.
                         pgConnection?.close()
                         pgConnection = null
                     }
-                    return response
+                    readResponse
                 }
-
                 else -> throw illegalArg("Unknown request: ${request::class.simpleName}")
             }
+            if (response is SuccessResponse) {
+                response.filterResults(*request.resultFilters.filterNotNull().toTypedArray())
+            }
+            return response
         } catch (t: Throwable) {
             val nakshaException = PgExceptionMapper.map(t)
             nakshaException.error.print()

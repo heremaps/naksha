@@ -18,19 +18,10 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
-import static com.here.naksha.lib.handlers.internal.HttpStorageValidation.validateConfigForHttpStorage;
-import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
-import static naksha.model.NakshaError.CONFLICT;
-import static naksha.model.NakshaError.EXCEPTION;
-import static naksha.model.util.ResultHelper.extractResponseItems;
-
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import com.here.naksha.storage.http.HttpStorage;
-import java.util.List;
-import java.util.NoSuchElementException;
 import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
@@ -45,8 +36,16 @@ import naksha.model.request.Write;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
-import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
+
+import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
+import static com.here.naksha.lib.handlers.internal.HttpStorageValidation.validateConfigForHttpStorage;
+import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
+import static naksha.model.NakshaError.CONFLICT;
+import static naksha.model.NakshaError.EXCEPTION;
+import static naksha.model.util.ResultHelper.extractResponseItems;
 
 public class IntHandlerForStorageConfigs extends AdminFeatureEventHandler<NakshaStorage> {
 
@@ -108,9 +107,9 @@ public class IntHandlerForStorageConfigs extends AdminFeatureEventHandler<Naksha
     final Property property =
         new Property(NakshaFeature.PROPERTIES_KEY, DefaultStorageHandlerProperties.STORAGE_ID);
     final PQuery activeHandlersPOp = new PQuery(property, StringOp.EQUALS, storageId);
-    final ReadFeatures readActiveHandlersRequest = new ReadFeatures().addCollectionId(EVENT_HANDLERS);
-    readActiveHandlersRequest.setMapId(nakshaHub.getAdminMapId());
-    readActiveHandlersRequest.getQuery().setProperties(activeHandlersPOp);
+    final ReadFeatures readActiveHandlersRequest = new ReadFeatures().addCollectionId(EVENT_HANDLERS)
+            .withMapId(nakshaHub.getAdminMapId())
+            .withPropertyQuery(activeHandlersPOp);
     Response activeHandlersResponse = nakshaHub().getAdminStorage()
         .useReadSession(SessionOptions.from(NakshaContext.currentContext()), readSession -> readSession.execute(readActiveHandlersRequest));
     if(activeHandlersResponse instanceof SuccessResponse successResponse) {
