@@ -35,14 +35,16 @@ public class TagQueryUtil {
     if (queryParams == null) {
       return null;
     }
-    QueryParameter tagParams = queryParams.get(TAGS);
-    if (tagParams == null) {
+    final List<QueryParameter> tagParamsList = queryParams.getParametersForKey(TAGS);
+    if (tagParamsList.isEmpty()) {
       return null;
     }
     TagOr rootTagOrQuery = new TagOr();
-    while (tagParams.hasValues()) {
-      processParams(rootTagOrQuery, tagParams);
-      tagParams = tagParams.next();
+
+    for(final QueryParameter tagParam : tagParamsList) {
+      if (tagParam.hasValues()) {
+        processParams(rootTagOrQuery, tagParam);
+      }
     }
 
     if(rootTagOrQuery.size() == 1){
@@ -102,6 +104,7 @@ public class TagQueryUtil {
     if (delimiter == AMPERSAND || delimiter == END) {
       // this is the only tag, add directly to root
       rootOrQuery.add(tagExists(tag));
+      return null;
     } else if (delimiter == COMMA) {
       // open new OR operation with current tag
       return new TagOr(tagExists(tag));
