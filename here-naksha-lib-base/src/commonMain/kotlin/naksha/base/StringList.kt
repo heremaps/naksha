@@ -4,7 +4,6 @@ package naksha.base
 
 import kotlin.js.JsExport
 import kotlin.js.JsName
-import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -12,7 +11,7 @@ import kotlin.jvm.JvmStatic
  * @since 3.0
  */
 @JsExport
-open class StringList() : ListProxy<String>(String::class){
+open class StringList() : ListProxy<String>(String::class) {
 
     /**
      * Create an initialized string list.
@@ -32,6 +31,19 @@ open class StringList() : ListProxy<String>(String::class){
     fun append(element: String?): StringList {
         super.add(element)
         return this
+    }
+
+    /**
+     * Checks whether this list contains all supplied elements, order matters
+     * @param elements Elements to check for presence
+     * @return whether this list contains all elements
+     */
+    fun containsStringsInOrder(vararg elements: String): Boolean {
+        if (elements.size != this.size) return false
+        elements.forEachIndexed { index, element ->
+            if (element != this[index]) return false
+        }
+        return true
     }
 
     companion object StringList_C {

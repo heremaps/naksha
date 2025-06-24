@@ -19,15 +19,19 @@
 package com.here.naksha.handler.activitylog;
 
 import static com.here.naksha.handler.activitylog.NakshaActivityLog.ID;
+import static naksha.model.objects.NakshaFeature.PROPERTIES_KEY;
 import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
 import static naksha.model.objects.NakshaProperties.XYZ_KEY;
 
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
 import java.util.Optional;
 
+import java.util.Set;
 import naksha.base.StringList;
+import naksha.model.Guid;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import naksha.model.request.ReadFeatures;
-import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
@@ -41,7 +45,7 @@ class ActivityLogRequestTranslationUtil {
   static final String CREATED_AT = "createdAt";
   static final String UPDATED_AT = "updatedAt";
 
-  private static final String[] ACTIVITY_LOG_ID_PATH = new String[] {XYZ_ACTIVITY_LOG_NS, ID};
+  private static final String[] ACTIVITY_LOG_ID_PATH = new String[] {PROPERTIES_KEY, XYZ_ACTIVITY_LOG_NS, ID};
   private static final String[] UUID_PATH = new String[] {XYZ_KEY, UUID};
   static final Property PROPERTY_ACTIVITY_LOG_ID = new Property(ACTIVITY_LOG_ID_PATH);
   static final Property PROPERTY_UUID = new Property(UUID_PATH);
@@ -62,11 +66,29 @@ class ActivityLogRequestTranslationUtil {
    *
    * @param readFeatures ReadFeatures bearing potential POp to be translated (request will be mutated after this operation!)
    */
-  static void translatePropertyOperation(ReadFeatures readFeatures) {
-    IPropertyQuery propertyQuery = readFeatures.getQuery().getProperties();
-    if (propertyQuery != null) {
-      PropertyOperationUtil.transformPropertyInPropertyOperationTree(
-          propertyQuery, ActivityLogRequestTranslationUtil::translateIfApplicable);
+  static void transformOriginalRequest(ReadFeatures readFeatures, String spaceId) {
+    readFeatures.setQueryHistory(true);
+    readFeatures.setVersions(Integer.MAX_VALUE);
+    readFeatures.setCollectionIds(StringList.of(spaceId));
+    propagateFeatureIdAndVersion(readFeatures);
+  }
+
+  private static void propagateFeatureIdAndVersion(ReadFeatures readFeatures){
+    StringList featureIds = readFeatures.getFeatureIds();
+    if(featureIds.size() == 1){
+      Guid guid = Guid.fromString(featureIds.get(0));
+      readFeatures.setFeatureIds(StringList.of(guid.id));
+      readFeatures.setVersion(guid.tupleNumber.version);
+    } else if(featureIds.isEmpty()) {
+      Set<PQuery> disabledActivityLogPOps = PropertyOperationUtil.disablePQueriesInRequest(
+          readFeatures.getQuery(),
+          ActivityLogRequestTranslationUtil::isSingleActivityLogIdEqualityQuery
+      );
+      if(disabledActivityLogPOps.size() == 1){
+        PQuery activityLogIdProp = disabledActivityLogPOps.iterator().next();
+        String idFromActivityLogNs = activityLogIdProp.getValue().toString();
+        readFeatures.setFeatureIds(StringList.of(idFromActivityLogNs));
+      }
     }
   }
 
@@ -88,8 +110,16 @@ class ActivityLogRequestTranslationUtil {
   }
 
   private static boolean isSingleActivityLogIdEqualityQuery(PQuery pQuery) {
-    return StringOp.EQUALS.equals(pQuery.getOp()) && PROPERTY_ACTIVITY_LOG_ID.equals(pQuery.getProperty());
+    return StringOp.EQUALS.equals(pQuery.getOp()) && pQuery.getProperty().getPath().containsStringsInOrder(ACTIVITY_LOG_ID_PATH);
   }
+
+//  private static boolean hasMatchingPath(PQuery pQuery, String[] path) {
+//    StringList queryPath = pQuery.getProperty().getPath();
+//    if(queryPath.size() != path.length) return false;
+//    for(int i = 0; i < path.length; i++){
+//      if(path[i].equals(queryPath.get(i))) return true;
+//    }
+//  }
 
   private static PQuery uuidMustMatch(String desiredUuid) {
     final PQuery pQuery = new PQuery();

@@ -22,7 +22,7 @@ class ActivityLogRequestTranslationUtilTest {
     readFeatures.getQuery().setProperties(singleIdQuery);
 
     // When:
-    ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
+    ActivityLogRequestTranslationUtil.transformOriginalRequest(readFeatures);
 
     // Then:
     PropertyQueryAssertions.assertThatPropertyQuery(readFeatures.getQuery().getProperties())
@@ -45,7 +45,7 @@ class ActivityLogRequestTranslationUtilTest {
     readFeatures.getQuery().setProperties(idsQuery);
 
     // When:
-    ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
+    ActivityLogRequestTranslationUtil.transformOriginalRequest(readFeatures);
 
     // Then:
     PropertyQueryAssertions.assertThatPropertyQuery(readFeatures.getQuery().getProperties())
@@ -71,7 +71,7 @@ class ActivityLogRequestTranslationUtilTest {
     readFeatures.getQuery().setProperties(singleActivityLogIdQuery);
 
     // When:
-    ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
+    ActivityLogRequestTranslationUtil.transformOriginalRequest(readFeatures);
 
     // Then:
     PropertyQueryAssertions.assertThatPropertyQuery(readFeatures.getQuery().getProperties())
@@ -93,7 +93,7 @@ class ActivityLogRequestTranslationUtilTest {
     readFeatures.getQuery().setProperties(activityLogIdsQuery);
 
     // When:
-    ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
+    ActivityLogRequestTranslationUtil.transformOriginalRequest(readFeatures);
 
     // Then:
     PropertyQueryAssertions.assertThatPropertyQuery(readFeatures.getQuery().getProperties())
@@ -123,7 +123,7 @@ class ActivityLogRequestTranslationUtilTest {
     readFeatures.getQuery().setProperties(mixedQuery);
 
     // When:
-    ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
+    ActivityLogRequestTranslationUtil.transformOriginalRequest(readFeatures);
 
     // Then:
     PropertyQueryAssertions.assertThatPropertyQuery(readFeatures.getQuery().getProperties())

@@ -4,6 +4,8 @@ import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.CommonApiTestSetup;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.TestUtil;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
 import naksha.model.XyzFeatureCollection;
@@ -56,6 +58,7 @@ class ActivityLogApiTest extends ApiTest {
     // And: Client queries activity log space for this feature
     HttpResponse<String> getActivityResp = nakshaClient.get("hub/spaces/" + ACTIVITY_SPACE_ID + "/features/" + createdFeature.uuid,
         streamId);
+    // TODO: remove, urn:naksha:guid:TC1300_feature:-3843734806738129423:-1832392554:-439412809:-9139335626361915124:2025:6:23:13:0
 
     // Then: Activity response is valid and conveys expected data
     assertThat(getActivityResp)
@@ -384,6 +387,18 @@ class ActivityLogApiTest extends ApiTest {
         )));
   }
 
+  void xyz(){
+    new Random().nextInt();
+  }
+
+  private AtomicBoolean initialized = new AtomicBoolean(false);
+
+  void init(){
+    if(initialized.compareAndSet(false, true)) {
+      // do...
+    }
+  }
+
   private String formattedJson(String json, Map<String, Object> propsToOverride) {
     for (Entry<String, Object> entry : propsToOverride.entrySet()) {
       json = json.replace(entry.getKey(), entry.getValue().toString());
@@ -392,7 +407,7 @@ class ActivityLogApiTest extends ApiTest {
   }
 
   private FeatureMetadata featureMetadataFromFeatureResp(String featureResponse) {
-    NakshaFeature feature = JsonSerializable.deserialize(featureResponse, NakshaFeature.class);
+    NakshaFeature feature = JvmBoxingUtil.box(Platform.fromJSON(featureResponse), NakshaFeature.class);
     return FeatureMetadata.from(feature.getProperties().getXyz());
   }
 

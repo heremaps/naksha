@@ -19,6 +19,7 @@
 package com.here.naksha.handler.activitylog;
 
 import static com.here.naksha.handler.activitylog.ActivityLogEnhancer.enhanceWithActivityLog;
+import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.transformOriginalRequest;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
@@ -31,19 +32,26 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
-import java.util.*;
-import java.util.stream.Stream;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.StringList;
-import naksha.model.*;
+import naksha.model.Action;
+import naksha.model.Naksha;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
+import naksha.model.SessionOptions;
+import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
-import naksha.model.objects.NakshaProperties;
-import naksha.model.request.*;
-import naksha.model.request.query.POr;
-import naksha.model.request.query.PQuery;
-import naksha.model.request.query.Property;
-import naksha.model.request.query.StringOp;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Request;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -83,18 +91,10 @@ public class ActivityLogHandler extends AbstractEventHandler {
       return validationError;
     }
     final NakshaContext ctx = NakshaContext.currentContext();
-    final ReadFeatures request = transformRequest(event.getRequest());
+    final ReadFeatures request = (ReadFeatures) event.getRequest();
+    transformOriginalRequest(request, properties.getSpaceId());
     List<NakshaFeature> activityLogFeatures = activityLogFeatures(request, ctx);
     return new SuccessResponse(NakshaFeatureList.fromList(activityLogFeatures));
-  }
-
-  private @NotNull ReadFeatures transformRequest(Request request) {
-    final ReadFeatures readFeatures = (ReadFeatures) request;
-    readFeatures.setQueryHistory(true);
-    readFeatures.setVersions(Integer.MAX_VALUE);
-    ActivityLogRequestTranslationUtil.translatePropertyOperation(readFeatures);
-    readFeatures.setCollectionIds(StringList.fromList(List.of(properties.getSpaceId())));
-    return readFeatures;
   }
 
   private @Nullable ErrorResponse propertiesValidationError() {
@@ -107,97 +107,44 @@ public class ActivityLogHandler extends AbstractEventHandler {
   }
 
   private List<NakshaFeature> activityLogFeatures(ReadFeatures readFeatures, NakshaContext context) {
-    List<NakshaFeature> historyFeatures = fetchHistoryFeatures(readFeatures, context);
-    return featuresEnhancedWithActivity(historyFeatures, context);
+    List<NakshaFeature> allNecessaryFeatures = fetchFeatures(readFeatures, context);
+    return featuresEnhancedWithActivity(allNecessaryFeatures);
   }
 
-  private List<NakshaFeature> fetchHistoryFeatures(ReadFeatures readFeatures, NakshaContext context) {
-    return nakshaHub().getSpaceStorage().useReadSession(SessionOptions.from(context, true),
-            reader -> {
-              Response response = reader.execute(readFeatures);
-              if (!(response instanceof SuccessResponse)) {
-                return Collections.emptyList();
-              }
-              try {
-                return extractResponseItems((SuccessResponse) response, NakshaFeature.class);
-              } catch (NoSuchElementException e) {
-                return Collections.emptyList();
-              }
-
-            });
+  private List<NakshaFeature> fetchFeatures(ReadFeatures readFeatures, NakshaContext context) {
+    Naksha.cache.clear();
+    Response response = nakshaHub().getSpaceStorage().useReadSession(
+        SessionOptions.from(context, true),
+        readSession -> readSession.execute(readFeatures)
+    );
+    if (response instanceof SuccessResponse successResponse) {
+      return extractResponseItems(successResponse, NakshaFeature.class);
+    } else if (response instanceof ErrorResponse errorResponse) {
+      throw new NakshaException(errorResponse.getError());
+    } else {
+      throw new NakshaException(NakshaError.EXCEPTION, "Unexpected response type: " + response.getClass());
+    }
   }
 
-  private List<NakshaFeature> featuresEnhancedWithActivity(
-      List<NakshaFeature> historyFeatures, NakshaContext context) {
-    List<FeatureWithPredecessor> featuresWithPredecessors = featuresWithPredecessors(historyFeatures, context);
-    return featuresWithPredecessors.stream()
-        .map(featureWithPredecessor -> enhanceWithActivityLog(
-            featureWithPredecessor.feature, featureWithPredecessor.oldFeature, properties.getSpaceId()))
+  private List<NakshaFeature> featuresEnhancedWithActivity(List<NakshaFeature> features) {
+    List<FeatureWithPredecessor> featureWithPredecessors = featuresWithPredecessors(features);
+    return featureWithPredecessors.stream()
+        .map(featureWithSuccessor -> enhanceWithActivityLog(
+            featureWithSuccessor.feature, featureWithSuccessor.oldFeature, properties.getSpaceId()))
         .sorted(FEATURE_COMPARATOR)
         .toList();
   }
 
-  private List<FeatureWithPredecessor> featuresWithPredecessors(
-      List<NakshaFeature> historyFeatures, NakshaContext context) {
-    List<NakshaFeature> allNecessaryFeatures = collectAllNecessaryFeatures(historyFeatures, context);
-    Map<String, NakshaFeature> allFeaturesByUuid = featuresByUuid(allNecessaryFeatures);
-    return historyFeatures.stream()
-        .map(feature -> new FeatureWithPredecessor(feature, allFeaturesByUuid.get(puuid(feature))))
+  private List<FeatureWithPredecessor> featuresWithPredecessors(List<NakshaFeature> features) {
+    Map<String, NakshaFeature> featureVersionsByNuuid = featuresByNuuid(features);
+    return features.stream()
+        .map(feature -> new FeatureWithPredecessor(feature, featureVersionsByNuuid.get(uuid(feature))))
         .toList();
-  }
-
-  private List<NakshaFeature> collectAllNecessaryFeatures(
-      List<NakshaFeature> historyFeatures,
-      NakshaContext context
-  ) {
-    List<NakshaFeature> missingPredecessors = fetchMissingPredecessors(missingPuuids(historyFeatures), context);
-    return combine(historyFeatures, missingPredecessors);
-  }
-
-  private List<NakshaFeature> combine(List<NakshaFeature> historyFeatures, List<NakshaFeature> missingPredecessors) {
-    if (missingPredecessors.isEmpty()) {
-      return historyFeatures;
-    }
-    return Stream.concat(historyFeatures.stream(), missingPredecessors.stream())
-        .toList();
-  }
-
-  private Set<String> missingPuuids(List<NakshaFeature> historyFeatures) {
-    Set<String> requiredPredecessorsUuids = new HashSet<>();
-    Set<String> fetchedUuids = new HashSet<>();
-    historyFeatures.forEach(historyFeature -> {
-      fetchedUuids.add(uuid(historyFeature));
-      String puuid = puuid(historyFeature);
-      if (puuid != null) {
-        requiredPredecessorsUuids.add(puuid);
-      }
-    });
-    requiredPredecessorsUuids.removeAll(fetchedUuids);
-    return requiredPredecessorsUuids;
-  }
-
-  private List<NakshaFeature> fetchMissingPredecessors(Set<String> missingUuids, NakshaContext context) {
-    if (missingUuids.isEmpty()) {
-      return Collections.emptyList();
-    }
-    return fetchHistoryFeatures(missingPredecessorsRequest(missingUuids), context);
-  }
-
-  private ReadFeatures missingPredecessorsRequest(Set<String> missingUuids) {
-    PQuery[] matchUuids = missingUuids.stream()
-        .map(missingUuid ->
-            new PQuery(new Property(NakshaProperties.XYZ_KEY, "uuid"), StringOp.EQUALS, missingUuid))
-        .toArray(PQuery[]::new);
-    final ReadFeatures readFeatures = new ReadFeatures().addCollectionId(properties.getSpaceId())
-            .withPropertyQuery(new POr(matchUuids));
-    readFeatures.setQueryHistory(true);
-    readFeatures.setVersions(Integer.MAX_VALUE);
-    return readFeatures;
   }
 
   @NotNull
-  private static Map<String, NakshaFeature> featuresByUuid(List<NakshaFeature> historyFeatures) {
-    return historyFeatures.stream().collect(toMap(ActivityLogHandler::uuid, identity()));
+  private static Map<String, NakshaFeature> featuresByNuuid(List<NakshaFeature> historyFeatures) {
+    return historyFeatures.stream().collect(toMap(ActivityLogHandler::nuuidOrNullIfDeleted, identity()));
   }
 
   private static boolean nullOrEmpty(String value) {
@@ -208,13 +155,26 @@ public class ActivityLogHandler extends AbstractEventHandler {
     return xyzNamespace(feature).getUuid();
   }
 
-  private static String puuid(NakshaFeature feature) {
-    return xyzNamespace(feature).getPuuid();
+  /**
+   * Returns nuuid (uuid of next feature) for all non-DELETE versions.
+   * If feature represents DELETED version, we return null. The reason is that `nuuid` is equal to `uuid` when `op` is DELETE - this breaks grouping by nuuid as we can have 2 versions having the same nuuid (ie UPDATE & DELETE)
+   * @param feature
+   * @return
+   */
+  private static String nuuidOrNullIfDeleted(NakshaFeature feature) {
+    XyzNs xyzNs  = xyzNamespace(feature);
+    if(Action.DELETED.equals(xyzNs.getAction())){
+      return null;
+    } else {
+      return xyzNs.getNuuid();
+    }
   }
 
   private static XyzNs xyzNamespace(NakshaFeature feature) {
     return feature.getProperties().getXyz();
   }
 
-  private record FeatureWithPredecessor(@NotNull NakshaFeature feature, @Nullable NakshaFeature oldFeature) {}
+  private record FeatureWithPredecessor(@NotNull NakshaFeature feature, @Nullable NakshaFeature oldFeature) {
+
+  }
 }

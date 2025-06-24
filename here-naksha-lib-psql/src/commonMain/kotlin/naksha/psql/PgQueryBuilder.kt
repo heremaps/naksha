@@ -161,6 +161,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
                     (if (where.isEmpty()) "WHERE " else "$where AND ") + "naksha_tn_version($next_tn) > $version"
                 else
                     where
+                // TODO: tc1302 - empty history tables!
                 for (history in historyTables) {
                     if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
                     selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${history.quotedName} $better_where)\n")

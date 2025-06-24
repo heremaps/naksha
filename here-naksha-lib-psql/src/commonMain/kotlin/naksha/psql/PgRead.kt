@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Epoch
 import naksha.model.*
 import naksha.model.request.FeatureTuple
 
@@ -168,6 +169,13 @@ internal data class PgRead(
 
     fun initHistoryTables(): List<PgTable>? {
         val history = collection.historyTable ?: return null
+        // TODO: Jakub: hack to be be fixed, don't let this pass PR
+        if(history.years.isEmpty()){
+            // see: PgMap.createPgCollection
+            val year = Epoch().year
+            history.addYear(year)
+            history.addYear(year + 1)
+        }
         val tables = ArrayList<PgTable>(history.years.size)
         for (entry in history.years) {
             val year = entry.key

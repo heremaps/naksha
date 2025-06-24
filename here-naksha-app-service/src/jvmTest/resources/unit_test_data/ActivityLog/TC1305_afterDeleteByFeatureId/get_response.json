@@ -19,8 +19,7 @@
             "three",
             "four",
             "five"
-          ],
-          "version": 3
+          ]
         },
         "@ns:com:here:xyz:log": {
           "id": "${activityLogId}",
@@ -53,8 +52,7 @@
             "three",
             "four",
             "five"
-          ],
-          "version": 2
+          ]
         },
         "@ns:com:here:xyz:log": {
           "action": "UPDATE",
@@ -119,8 +117,7 @@
           "tags": [
             "one",
             "two"
-          ],
-          "version": 1
+          ]
         },
         "@ns:com:here:xyz:log": {
           "action": "CREATE",

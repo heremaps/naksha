@@ -34,6 +34,7 @@ import java.util.stream.Stream;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.*;
+import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.POr;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
@@ -419,6 +420,7 @@ class ActivityLogHandlerTest {
     return spaceStorageSessionReturningHistoryFeatures(handledRequest, List.of(historyFeatures));
   }
 
+  IPropertyQuery propertyQuery = readFeatures.getQuery().getProperties();
   private IReadSession spaceStorageSessionReturningHistoryFeatures(ReadRequest handledRequest, List<NakshaFeature> historyFeatures) {
     IReadSession readSession = mock(IReadSession.class);
     when(readSession.execute(handledRequest)).thenReturn(new SuccessResponse(NakshaFeatureList.fromList(historyFeatures)));

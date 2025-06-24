@@ -18,25 +18,56 @@
  */
 package com.here.naksha.lib.handlers.util;
 
+import com.here.naksha.lib.core.lambdas.F1;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
-import naksha.model.request.query.*;
+import naksha.model.request.RequestQuery;
+import naksha.model.request.query.IPropertyQuery;
+import naksha.model.request.query.PAnd;
+import naksha.model.request.query.PFalse;
+import naksha.model.request.query.PNot;
+import naksha.model.request.query.POr;
+import naksha.model.request.query.PQuery;
+import naksha.model.request.query.PTrue;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class PropertyOperationUtil {
 
-  private PropertyOperationUtil() {}
+  private PropertyOperationUtil() {
+  }
 
   public static void transformPropertyInPropertyOperationTree(
       IPropertyQuery rootPropertyOperation, Function<PQuery, Optional<PQuery>> transformingFunction) {
     replacePropertyInPropertyOperationTree(rootPropertyOperation, transformingFunction);
   }
 
+  public static Set<PQuery> disablePQueriesInRequest(@NotNull RequestQuery requestQuery, @NotNull F1<Boolean, PQuery> shouldDisable) {
+    IPropertyQuery rootPropertyQuery = requestQuery.getProperties();
+    if (rootPropertyQuery != null) {
+      // if there is only single PQuery in the whole request, disable without tree traversal by simply removing it (set to null)
+      if (rootPropertyQuery instanceof PQuery rootPQuery && shouldDisable.call(rootPQuery)) {
+        requestQuery.setProperties(null);
+        return Set.of(rootPQuery);
+      } else {
+        // if there is a tree (not a PQuery) under `requestQuery.properties` - traverse the tree and logically disable matching pQuery
+        HashSet<PQuery> disabledProperties = new HashSet<>();
+        disablePropertyInPropertyQueryTree(rootPropertyQuery, null, shouldDisable, disabledProperties);
+        return disabledProperties;
+      }
+    }
+    // root property query is null -> no disabled property queries -> empty set
+    return Collections.emptySet();
+  }
+
   private static void replacePropertyInPropertyOperationTree(
       IPropertyQuery propertyOperation, Function<PQuery, Optional<PQuery>> transformingFunction) {
-
     if (propertyOperation instanceof PAnd pAnd) {
       pAnd.forEach(
           iPropertyQuery -> replacePropertyInPropertyOperationTree(iPropertyQuery, transformingFunction));
@@ -53,6 +84,39 @@ public class PropertyOperationUtil {
     } else {
       throw new NakshaException(
           new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Unknown property operation: " + propertyOperation));
+    }
+  }
+
+  /**
+   * @param current            Currently traversed node
+   * @param parent             Parent containing current node (can be null for first iteration, should be checked on call-site)
+   * @param removalCondition   If evaluates to true, it effectively disables the check by replacing it with `true-ish` query
+   * @param disabledProperties Set of so-far disabled property queries
+   */
+  private static void disablePropertyInPropertyQueryTree(
+      @NotNull IPropertyQuery current, @Nullable IPropertyQuery parent, F1<Boolean, PQuery> removalCondition, Set<PQuery> disabledProperties
+  ) {
+    switch (current) {
+      case PAnd pAnd -> pAnd.forEach(andChild -> disablePropertyInPropertyQueryTree(andChild, pAnd, removalCondition, disabledProperties));
+      case POr pOr -> pOr.forEach(orChild -> disablePropertyInPropertyQueryTree(orChild, pOr, removalCondition, disabledProperties));
+      case PNot pNot -> disablePropertyInPropertyQueryTree(pNot.getQuery(), pNot, removalCondition, disabledProperties);
+      case PQuery currentyPQuery when removalCondition.call(currentyPQuery) -> {
+        if (parent instanceof PAnd pAndParent) {
+          pAndParent.remove(current);
+          pAndParent.add(PTrue.INSTANCE);
+          disabledProperties.add(currentyPQuery);
+        } else if (parent instanceof POr pOrParent) {
+          pOrParent.remove(current);
+          pOrParent.add(PTrue.INSTANCE);
+          disabledProperties.add(currentyPQuery);
+        } else if (parent instanceof PNot pNotParent) {
+          pNotParent.setQuery(PFalse.INSTANCE);
+          disabledProperties.add(currentyPQuery);
+        }
+      }
+      default -> {
+        // unhandled type / not matching pQuery => stop traversal without failing
+      }
     }
   }
 }

@@ -146,5 +146,30 @@ class ReadHistoryTest : PgTestBase() {
 
             assertEquals(Action.UPDATED, update2.properties.xyz.action)
         }
+
+        executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
+            collectionIds.add(collection.id)
+            featureIds.add(featureId)
+            queryHistory = true
+            version = updatedFeature2.guid!!.tupleNumber.version
+            versions = 2
+        }).apply {
+            // We expect to have 4 versions, but only want the middle 2 back
+            // As specified, we expect descending order: [deleted, ] updated2, updated1 [, created]
+            assertEquals(2, features.size)
+
+            val update2 = assertNotNull(features[0])
+            val update1 = assertNotNull(features[1])
+
+            assertEquals(featureId, update1.id)
+            assertEquals(Action.UPDATED, update1.properties.xyz.action)
+
+            assertEquals(featureId, update2.id)
+            assertEquals(Action.UPDATED, update2.properties.xyz.action)
+
+            assertEquals(update2.guid, update1.properties.xyz.nguid)
+            assertEquals(update1.guid, update2.properties.xyz.pguid)
+        }
     }
 }
