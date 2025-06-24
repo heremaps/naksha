@@ -326,9 +326,13 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       return verticle.sendErrorResponse(
           routingContext, NakshaError.ILLEGAL_ARGUMENT, "None of Tags or Prop search parameters is present, at least one is required.");
     }
-    final ReadFeatures rdRequest = new ReadFeatures();
+    final ReadFeatures rdRequest = new ReadFeatures()
+            .withPropertyQuery(propertyQuery)
+            .withTagQuery(tagQuery);
     rdRequest.setCollectionIds(StringList.of(spaceId));
     rdRequest.setLimit(limit);
+
+
 
     // Forward request to NH Space Storage reader instance
     final Response response = executeReadRequestFromSpaceStorage(rdRequest);
