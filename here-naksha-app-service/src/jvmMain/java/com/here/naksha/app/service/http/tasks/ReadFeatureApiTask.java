@@ -332,8 +332,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     rdRequest.setCollectionIds(StringList.of(spaceId));
     rdRequest.setLimit(limit);
 
-
-
     // Forward request to NH Space Storage reader instance
     final Response response = executeReadRequestFromSpaceStorage(rdRequest);
     final F1<NakshaFeature, NakshaFeature> preResponseProcessing = standardReadFeaturesPreResponseProcessing(propPaths, false, null);
