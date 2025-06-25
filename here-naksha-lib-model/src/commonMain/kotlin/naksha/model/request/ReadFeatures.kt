@@ -6,6 +6,7 @@ import naksha.base.*
 import naksha.model.GuidList
 import naksha.model.Version
 import naksha.model.request.query.IPropertyQuery
+import naksha.model.request.query.ITagQuery
 import kotlin.js.JsExport
 
 /**
@@ -62,6 +63,20 @@ open class ReadFeatures : ReadRequest() {
             this.resultFilters.add(PropertyFilter(this))
         }
 
+        return this
+    }
+
+    /**
+     * Sets the tag query for the request.
+     * If the provided query is null, the tag condition will be cleared.
+     *
+     * @param tQuery The tag query to apply, or null to clear it.
+     * @return this.
+     *
+     * @since 3.0
+     */
+    open fun withTagQuery(tQuery: ITagQuery?): ReadFeatures {
+        this.query.tags = tQuery
         return this
     }
 

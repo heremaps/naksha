@@ -214,6 +214,26 @@ public class QueryParameterList implements Iterable<QueryParameter> {
     return all;
   }
 
+
+  /**
+   * Returns all QueryParameter objects that match the given key.
+   * Whereas .get(key) returns only the first parameter, this method returns a list
+   * containing the first parameter and all subsequent parameters linked to it.
+   *
+   * @param key The key of the parameters to retrieve.
+   * @return A new List containing all matching QueryParameter objects in order.
+   * Returns an empty list if no parameters match the key.
+   */
+  public @NotNull List<@NotNull QueryParameter> getParametersForKey(@NotNull String key) {
+    final List<@NotNull QueryParameter> allParams = new ArrayList<>();
+    QueryParameter param = map.get(key);
+    while (param != null) {
+      allParams.add(param);
+      param = param.next;
+    }
+    return allParams;
+  }
+
   /**
    * Convert the given name into a key. The default implementation is case-sensitive, but you could for example make it case-insensitive by
    * doing

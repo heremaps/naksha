@@ -4,7 +4,6 @@
     {
       "id": "tc_900_feature_3",
       "type": "Feature",
-      "properties": {},
       "geometry": {
         "type":"Point",
         "coordinates":[ 8.6578, 50.1234, 0.0 ]
