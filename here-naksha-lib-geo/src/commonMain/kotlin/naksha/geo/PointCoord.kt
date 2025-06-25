@@ -66,7 +66,7 @@ class PointCoord() : ListProxy<Double>(Double_TYPE), ICoordinates {
         }
     }
 
-    override fun createData(): PlatformList = Platform.newArray(4)
+    override fun createData(): PlatformList = Platform.newList(4)
 
     // Ensure that whenever doubles read or written, they are rounded.
     // The setter and getter will bypass this method, using `array_get` direct, so they avoid to pay

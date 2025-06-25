@@ -33,7 +33,7 @@ data class SessionOptions @JvmOverloads constructor(
      * @since 3.0
      */
     @JvmField
-    val appId: String = NakshaContext.appId(),
+    val appId: String? = NakshaContext.appId(),
 
     /**
      * The author that acts; if any.
@@ -63,60 +63,62 @@ data class SessionOptions @JvmOverloads constructor(
     /**
      * When calculating the hash of a feature, the paths that should be excluded from hash calculation.
      * @since 3.0
+     * @see NakshaContext.excludePaths
      */
     @JvmField
-    val excludePaths: List<Array<String>>? = NakshaContext.currentContext().excludePaths,
+    val excludePaths: List<Array<String>>? = NakshaContext.currentContext<NakshaContext>().excludePaths,
 
     /**
      * When calculating the hash of a feature, a function to be called for every property to hash.
      *
-     * The function receives the feature that is being hashed, the current path, and the value to be hashed (will be _null_, _String_, _Int_, _Int64_, _Double_ or _Boolean_). It should return _true_, when the value should be part of the hash; _false_ otherwise.
+     * The function receives the feature that is being hashed, the current path, and the value to be hashed. It should return _true_, when the value should be part of the hash; _false_ otherwise.
      * @since 3.0
+     * @see NakshaContext.excludeFn
      */
     @JvmField
-    val excludeFn: Fn3<Boolean, NakshaFeature, List<String>, Any?>? = NakshaContext.currentContext().excludeFn,
+    val excludeFn: Fn3<Boolean, NakshaFeature, List<String>, Any?>? = NakshaContext.currentContext<NakshaContext>().excludeFn,
 
     /**
      * The time in milliseconds to wait for the TCP handshake.
      * @since 3.0
      */
     @JvmField
-    val connectTimeout: Int = NakshaContext.currentContext().connectTimeout,
+    val connectTimeout: Int = NakshaContext.currentContext<NakshaContext>().connectTimeout,
 
     /**
      * The time in milliseconds to wait for the TCP socket when reading or writing from it.
      * @since 3.0
      */
     @JvmField
-    val socketTimeout: Int = NakshaContext.currentContext().socketTimeout,
+    val socketTimeout: Int = NakshaContext.currentContext<NakshaContext>().socketTimeout,
 
     /**
      * The statement-timeout in milliseconds, this means how long to wait for each CREATE, UPDATE or DELETE to be executed.
      * @since 3.0
      */
     @JvmField
-    val stmtTimeout: Int = NakshaContext.currentContext().stmtTimeout,
+    val stmtTimeout: Int = NakshaContext.currentContext<NakshaContext>().stmtTimeout,
 
     /**
      * The lock-timeout in milliseconds, when the storage has to use locking.
      * @since 3.0
      */
     @JvmField
-    val lockTimeout: Int = NakshaContext.currentContext().lockTimeout,
+    val lockTimeout: Int = NakshaContext.currentContext<NakshaContext>().lockTimeout,
 
     /**
      * The timeout in milliseconds, when idle transactions are forcefully closed.
      * @since 3.0
      */
     @JvmField
-    val idleTxTimeout: Int = NakshaContext.currentContext().idleTxTimeout,
+    val idleTxTimeout: Int = NakshaContext.currentContext<NakshaContext>().idleTxTimeout,
 
     /**
      * Stream information.
      * @since 3.0
      */
     @JvmField
-    val streamInfo: StreamInfo = NakshaContext.currentContext().streamInfo,
+    val streamInfo: StreamInfo = NakshaContext.currentContext<NakshaContext>().streamInfo,
 
     /**
      * An authentication token for this session, if needed by the implementation.
@@ -135,7 +137,7 @@ data class SessionOptions @JvmOverloads constructor(
      * Returns the actor, which is either the [author], or if no [author] is available, the [appId].
      * @since 3.0
      */
-    val actor: String
+    val actor: String?
         get() = author ?: appId
 
     companion object SessionOptions_C {

@@ -2,7 +2,9 @@
 
 package naksha.base
 
+import naksha.base.Platform.Platform_C.asPlatformObject
 import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.Platform.Platform_C.isPlatformObject
 import naksha.base.PlatformListApi.PlatformListApi_C.list_get
 import naksha.base.PlatformListApi.PlatformListApi_C.list_get_capacity
 import naksha.base.PlatformListApi.PlatformListApi_C.list_get_length
@@ -18,6 +20,7 @@ import naksha.base.fn.Fn1
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 
 /**
  * The base class for proxy types bound to [PlatformList], [PlatformMap], or [PlatformDataView].
@@ -27,6 +30,7 @@ import kotlin.jvm.JvmField
  * **This allows runtime linking of types and data.**
  * @since 3.0
  */
+@Suppress("EqualsOrHashCode")
 @JsExport
 abstract class Proxy : PlatformObject {
     companion object Proxy_C {
@@ -224,9 +228,9 @@ abstract class Proxy : PlatformObject {
         val data = Platform.unbox(raw) ?: return init.call(key)
 
         // The data value is a complex object
-        if (Platform.isPlatformObject(data)) {
+        if (isPlatformObject(data)) {
             // If a proxy is requested.
-            if (type.isProxy()) return type.proxy(data)
+            if (type.isProxy()) return type.proxy(asPlatformObject(data))
 
             // A scalar type was requested, but a complex type found.
             // The only acceptable situation is that Any was requested.
@@ -253,7 +257,13 @@ abstract class Proxy : PlatformObject {
         return platformObject() == Platform.unbox(other)
     }
 
-    override fun toString(): String = Platform.toJson(this)
+    /**
+     * Basically invokes [Platform.toJson].
+     * @return this object as JSON string.
+     */
+    override fun toString(): String {
+        return Platform.toJson(this)
+    }
 
     /**
      * Create a copy of this object.
@@ -262,12 +272,14 @@ abstract class Proxy : PlatformObject {
      * @return a (optionally recursive) copy.
      */
     @Suppress("UNCHECKED_CAST")
+    @JvmOverloads
     fun <SELF : Proxy> copy(recursive: Boolean = false): SELF = platformType().proxy(Platform.copy(platformObject(), recursive)) as SELF
 
     /**
-     * Recursively compare this object with another, checking for values instead of just referential.
-     * This is needed because for arrays, the == operation compares whether the arrays are the same object.
-     * This will work for any nested structures of maps, lists, and arrays.
+     * Recursively compare this object with another, checking for values instead of just referential. This is needed because for arrays, the == operation compares whether the arrays are the same object. This will work for any nested structures of maps, lists, and arrays.
+     *
+     * @param other The other proxy to compare against.
+     * @return _true_, if this object and the given one are equal; _false_ otherwise.
      */
     fun contentDeepEquals(other: Proxy): Boolean = deepEquals(this, other)
 }

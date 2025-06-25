@@ -50,7 +50,7 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
     val elementType: PlatformType<E>
         get() = _elementType
 
-    override fun createData(): PlatformList = Platform.newList()
+    override fun createData(): PlatformList = Platform.listOf()
     override fun platformObject(): PlatformList = super.platformObject() as PlatformList
 
     @Suppress("UNCHECKED_CAST")

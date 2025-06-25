@@ -26,16 +26,18 @@ import kotlin.reflect.KClass
  *
  * The main purpose is to ensure that all entities can perform authorization, and share debugging information, like the stream-identifier for logging. It is recommended that each application creates its own stream-information class, with own special properties next to the shared general ones.
  *
- * It is normally created, when a new request is started, using the static [newInstance] factory method, and then attached to the current thread:
+ * It is normally created, when a new request is started _(intrinsically using the static [newInstance] factory method)_, and then attached to the current thread:
  *
  * ```kotlin
+ * val context = NakshaContext.currentContext()
  * ```
  * @since 2.0.5
  * @see newInstance
  * @see attachToCurrentThread
  */
 @JsExport
-open class NakshaContext protected constructor() {
+open class NakshaContext internal constructor() {
+
     /**
      * The time in milliseconds to wait for the TCP handshake.
      * @since 3.0
@@ -64,7 +66,7 @@ open class NakshaContext protected constructor() {
      * The idle-transaction-timeout in milliseconds.
      * @since 3.0
      */
-    open val idleTxTimeout = defaultIdleTxTimeout.get()
+    open val idleTxTimeout: Int = defaultIdleTxTimeout.get()
 
     /**
      * Whenever the pipeline of a space is entered, the `id` of the space is pushed to the end of the `spaceIds` list, and when the pipeline is left, the last `id` is removed from the `spaceIds` list.
@@ -79,7 +81,7 @@ open class NakshaContext protected constructor() {
      * @since 2.0.7
      */
     open var appName: String
-        get() = _appName ?: defaultAppName.get() ?: throw NakshaException(ILLEGAL_STATE, "Missing appName")
+        get() = _appName ?: defaultAppName.get()
         set(value) {
             _appName = value
         }
@@ -90,8 +92,8 @@ open class NakshaContext protected constructor() {
      * The application identifier of the client that acts. It is used at many places, for authorization, ownership of features and logging.
      * @since 2.0.7
      */
-    open var appId: String
-        get() = _appId ?: defaultAppId.get() ?: throw NakshaException(ILLEGAL_STATE, "Missing appId")
+    open var appId: String?
+        get() = _appId ?: defaultAppId.get()
         set(value) {
             _appId = value
         }
@@ -133,7 +135,7 @@ open class NakshaContext protected constructor() {
         get() {
             var s = _streamInfo
             if (s == null) {
-                s = streamInfoConstructorRef.call()
+                s = streamInfoType.newInstance()
                 _streamInfo = s
             }
             return s
@@ -161,7 +163,7 @@ open class NakshaContext protected constructor() {
         get() {
             var s = _streamInfo
             if (s == null) {
-                s = streamInfoConstructorRef.call()
+                s = streamInfoType.newInstance()
                 _streamInfo = s
             }
             return s.streamId
@@ -170,7 +172,7 @@ open class NakshaContext protected constructor() {
             val currentInfo = _streamInfo
             if (currentInfo != null && currentInfo.streamId == value) return
             // Create a new stream-information with the desired stream-id.
-            val newInfo = streamInfoConstructorRef.call()
+            val newInfo = streamInfoType.newInstance()
             newInfo.streamId = value
             _streamInfo = newInfo
         }
@@ -252,7 +254,7 @@ open class NakshaContext protected constructor() {
      * @return the actor.
      * @since 2.0.15
      */
-    open fun getActor(): String = author ?: appId
+    open fun getActor(): String? = author ?: appId
 
     /**
      * Returns the _actor_, which is normally the [author]. If author is _null_, then it returns the [appId].
@@ -268,6 +270,11 @@ open class NakshaContext protected constructor() {
 
     /**
      * When calculating the hash of a feature, the paths that should be excluded from hash calculation.
+     *
+     * If `null`, [defaultExcludePaths] is returned.
+     * @see NakshaContext.defaultExcludePaths
+     * @see SessionOptions.excludePaths
+     * @see Metadata.calculateHash
      */
     open var excludePaths: List<Array<String>>? = null
         get() = if (field == null) defaultExcludePaths.get() else field
@@ -275,7 +282,12 @@ open class NakshaContext protected constructor() {
     /**
      * When calculating the hash of a feature, a function to be called for every property to hash.
      *
-     * The function receives the feature that is being hashed, the current path, and the value to be hashed (will be _null_, _String_, _Int_, _Int64_, _Double_ or _Boolean_). It should return _true_, when the value should be part of the hash; _false_ otherwise.
+     * The function receives the feature that is being hashed, the current path, and the value to be hashed. It should return _true_, when the value should be part of the hash; _false_ otherwise.
+     *
+     * If `null`, then [defaultExcludeFn] is returned.
+     * @see NakshaContext.defaultExcludeFn
+     * @see SessionOptions.excludeFn
+     * @see Metadata.calculateHash
      */
     open var excludeFn: Fn3<Boolean, NakshaFeature, List<String>, Any?>? = null
         get() = if (field == null) defaultExcludeFn.get() else field
@@ -377,7 +389,7 @@ open class NakshaContext protected constructor() {
         return this
     }
 
-    @Suppress("OPT_IN_USAGE")
+    @Suppress("OPT_IN_USAGE", "NON_FINAL_MEMBER_IN_OBJECT")
     companion object NakshaContext_C {
         /**
          * The [PlatformType] of [NakshaContext].
@@ -392,13 +404,15 @@ open class NakshaContext protected constructor() {
          * @since 3.0
          */
         @JvmField
-        val defaultAppName = AtomicRef("NakshaClient/${NakshaVersion.CURRENT}")
+        @JsStatic
+        val defaultAppName = AtomicNonNullRef("NakshaClient/${NakshaVersion.CURRENT}")
 
         /**
          * The default application identifier to use, defaults to `null`.
          * @since 3.0
          */
         @JvmField
+        @JsStatic
         val defaultAppId = AtomicRef<String>(null)
 
         /**
@@ -406,8 +420,12 @@ open class NakshaContext protected constructor() {
          *
          * This is an application wide setting, that when not being _null_, will cause all contexts that have no exclude path, to use this one!
          * @since 3.0
+         * @see NakshaContext.excludePaths
+         * @see SessionOptions.excludePaths
+         * @see Metadata.calculateHash
          */
         @JvmField
+        @JsStatic
         val defaultExcludePaths = AtomicRef<List<Array<String>>>(null)
 
         /**
@@ -415,8 +433,12 @@ open class NakshaContext protected constructor() {
          *
          * This is an application wide setting, that when not being _null_, will cause all contexts that have no exclude function, to use this one!
          * @since 3.0
+         * @see NakshaContext.excludeFn
+         * @see SessionOptions.excludeFn
+         * @see Metadata.calculateHash
          */
         @JvmField
+        @JsStatic
         val defaultExcludeFn = AtomicRef<Fn3<Boolean, NakshaFeature, List<String>, Any?>>(null)
 
         /**
@@ -424,6 +446,7 @@ open class NakshaContext protected constructor() {
          * @since 3.0
          */
         @JvmField
+        @JsStatic
         val defaultConnectTimeout = AtomicInt(60_000)
 
         /**
@@ -431,6 +454,7 @@ open class NakshaContext protected constructor() {
          * @since 3.0
          */
         @JvmField
+        @JsStatic
         val defaultSocketTimeout = AtomicInt(60_000)
 
         /**
@@ -438,6 +462,7 @@ open class NakshaContext protected constructor() {
          * @since 3.0
          */
         @JvmField
+        @JsStatic
         val defaultStmtTimeout = AtomicInt(60_000)
 
         /**
@@ -445,6 +470,7 @@ open class NakshaContext protected constructor() {
          * @since 3.0
          */
         @JvmField
+        @JsStatic
         val defaultLockTimeout = AtomicInt(10_000)
 
         /**
@@ -452,6 +478,7 @@ open class NakshaContext protected constructor() {
          * @since 3.0
          */
         @JvmField
+        @JsStatic
         val defaultIdleTxTimeout = AtomicInt(60_000)
 
         /**
@@ -461,7 +488,7 @@ open class NakshaContext protected constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun appName(): String = currentContext().appName
+        fun appName(): String = currentContext<NakshaContext>().appName
 
         /**
          * Returns the current application identifier.
@@ -470,7 +497,7 @@ open class NakshaContext protected constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun appId(): String = currentContext().appId
+        fun appId(): String? = currentContext<NakshaContext>().appId
 
         /**
          * Returns the current author.
@@ -478,7 +505,7 @@ open class NakshaContext protected constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun author(): String? = currentContext().author
+        fun author(): String? = currentContext<NakshaContext>().author
 
         /**
          * Returns the current stream-information.
@@ -486,7 +513,7 @@ open class NakshaContext protected constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun streamInfo(): StreamInfo = currentContext().streamInfo
+        fun streamInfo(): StreamInfo = currentContext<NakshaContext>().streamInfo
 
         /**
          * Returns the current stream-identifier.
@@ -494,53 +521,62 @@ open class NakshaContext protected constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun streamId(): String = currentContext().streamId
+        fun streamId(): String = currentContext<NakshaContext>().streamId
 
         /**
-         * The thread local that stores the [NakshaContext].
+         * The type of the [NakshaContext] implementation; can be overridden by application code in bootstrap to modify the context type.
+         * @since 3.0
          */
-        @JvmStatic
-        protected var threadLocal: PlatformThreadLocal<NakshaContext> = Platform.newThreadLocal(::NakshaContext)
+        @JvmField
+        @JsStatic
+        var contextType: PlatformType<out NakshaContext> = TYPE
 
         /**
-         * Can be overridden by application code to modify the context creation.
+         * Creates a new uninitialized context, basically the same calling [newInstance] without arguments _(so with default values)_.
+         * @return a new uninitialized context.
          */
         @JvmStatic
         @JsStatic
-        var constructorRef: Fn0<NakshaContext> = Fn0(::NakshaContext)
+        fun newDefaultContext(): NakshaContext = newInstance()
 
         /**
-         * The default constructor to call to create [StreamInfo] instances, can be overridden by application code in bootstrap to ensure that all stream-information are some custom application specific instances.
+         * The thread local that stores the current [NakshaContext].
+         *
+         * By default, invokes [newDefaultContext] to create a new context. Can be overridden with another thread local that initializes differently.
+         * @since 3.0
          */
-        @JvmStatic
+        @JvmField
         @JsStatic
-        val streamInfoConstructorRef: Fn0<StreamInfo> = Fn0(::StreamInfo)
+        var threadLocal: PlatformThreadLocal<NakshaContext> = Platform.newThreadLocal(::newDefaultContext)
 
         /**
-         * Can be overridden by application code to modify the thread local context gathering.
+         * The type of the [StreamInfo] implementation to use; can be overridden by application code in bootstrap to ensure that all stream-information are some custom application specific instances.
+         * @since 3.0
          */
-        @JvmStatic
+        @JvmField
         @JsStatic
-        var currentRef: Fn0<NakshaContext> = Fn0(threadLocal::get)
+        var streamInfoType: PlatformType<out StreamInfo> = StreamInfo.TYPE
 
         /**
-         * Creates and initializes a new [NakshaContext]. This method does not bind the new context to the current thread, if this is wanted, [attachToCurrentThread] should be called, like:
-         * ```
-         * val context = NakshaContext.newInstance("app","user").attachToCurrentThread()
+         * Creates and initializes a new [NakshaContext].
+         *
+         * This method does not bind the new context to the current thread, if this is wanted, [attachToCurrentThread] should be called, like:
+         * ```kotlin
+         * val context = NakshaContext
+         *                 .newInstance("app","user")
+         *                 .attachToCurrentThread()
          * ```
          * @param appId the application-id for which to create the context.
          * @param author the author.
          * @param streamId the stream-identifier to use, if _null_, a random identifier is generated.
          * @param su If the user is a permanent super-user.
          */
-        // TODO: Kotlin-Compiler-Bug:
-        //       We need open, otherwise Java can't create another static method with the same name in extending class!
-        @Suppress("NON_FINAL_MEMBER_IN_OBJECT")
+        // Note: We need open, otherwise Java can't create another static method with the same name in extending class!
         @JvmStatic
         @JsStatic
         @JvmOverloads
-        open fun newInstance(appId: String, author: String? = null, streamId: String? = null, su: Boolean = false): NakshaContext {
-            val context = constructorRef.call()
+        open fun newInstance(appId: String? = null, author: String? = null, streamId: String? = null, su: Boolean = false): NakshaContext {
+            val context = contextType.newInstance()
             context.appId = appId
             context.author = author
             if (streamId != null) context.streamId = streamId
@@ -549,12 +585,21 @@ open class NakshaContext protected constructor() {
         }
 
         /**
-         * Returns the current context from the current thread. If no context is yet attached, it creates a new context, and binds it to the current thread, returning it.
-         * @return The context of the current thread.
+         * Returns the current thread local context.
+         *
+         * - If no context is yet attached to the current thread via [threadLocal], it creates a [new context][newInstance], binds it to the current thread, and returns it.
+         * - If the [threadLocal] has a context, but it is not of [contextType], the method creates a [new context][newInstance], binds it to the [threadLocal], and returns the new one.
+         * @return The current thread local context.
          */
-        @Suppress("NON_FINAL_MEMBER_IN_OBJECT")
+        // Note: We need open, otherwise Java can't create another static method with the same name in extending class!
         @JvmStatic
         @JsStatic
-        open fun currentContext(): NakshaContext = threadLocal.get()
+       open fun <CONTEXT : NakshaContext> currentContext(): CONTEXT {
+            var context = threadLocal.get()
+            if (contextType.isInstance(context)) return context as CONTEXT
+            context = contextType.newInstance()
+            threadLocal.set(context)
+            return context as CONTEXT
+        }
     }
 }

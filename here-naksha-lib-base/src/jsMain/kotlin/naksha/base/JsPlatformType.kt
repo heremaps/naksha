@@ -219,7 +219,17 @@ js("""
     override fun newInstance(): T {
         try {
             return kotlinClass.createInstance()
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            val msg = e.message
+            if (msg != null && msg.contains("should have a single no-arg constructor")) {
+                // If the constructor is protected or internal, we end up here.
+                // For the sake of compatibility with Java, we simply bypass restrictions and try to invoke
+                // the constructor without arguments, only if that fails, we return an error.
+                try {
+                    val constructor = nativeClass
+                    return js("new constructor()").unsafeCast<T>()
+                } catch (_: Throwable) {}
+            }
             throw illegalState("The class $name does not have a parameterless constructor")
         }
     }
@@ -301,10 +311,10 @@ js("""
         return isProxy
     }
 
-    override fun proxy(o: Any?): T = getOrCreateProxy(o, symbol)
+    override fun proxy(o: PlatformObject?): T = getOrCreateProxy(o, symbol)
 
     @Suppress("UNCHECKED_CAST")
-    override fun getProxy(o: Any?, symbol: Symbol): T? {
+    override fun getProxy(o: PlatformObject?, symbol: Symbol): T? {
         if (isInstance(o)) return o as T
         if (!isProxy()) return null
         val raw = unbox(o).asDynamic()
@@ -315,7 +325,7 @@ js("""
     }
 
     @Suppress("UNCHECKED_CAST", "UnsafeCastFromDynamic")
-    override fun getOrCreateProxy(o: Any?, symbol: Symbol): T {
+    override fun getOrCreateProxy(o: PlatformObject?, symbol: Symbol): T {
         if (isInstance(o)) return o as T
         if (!isProxy()) throw illegalState("The type '$name' is no proxy-type")
         if (!isInstantiatable) throw illegalState("The type '$name' is not instantiatable")

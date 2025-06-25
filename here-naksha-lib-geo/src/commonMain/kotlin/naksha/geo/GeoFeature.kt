@@ -4,6 +4,7 @@ package naksha.geo
 
 import naksha.base.*
 import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.Platform.Platform_C.isPlatformObject
 import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
 import naksha.base.PlatformMapApi.PlatformMapApi_C.map_set
 import kotlin.js.JsExport
@@ -143,7 +144,7 @@ open class GeoFeature : AnyTypedIdObject() {
     protected fun <T : MapProxy<String,*>> get_properties(type: PlatformType<out T>): T {
         val po = platformObject()
         var properties = map_get(po, "properties")
-        if (properties == null) {
+        if (properties !is PlatformMap) {
             properties = Platform.newMap()
             map_set(po, "properties", properties)
         }

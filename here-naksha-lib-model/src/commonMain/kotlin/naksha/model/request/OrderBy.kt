@@ -154,6 +154,6 @@ class OrderBy() : AnyObject() {
     override fun toString(): String {
         val col = column ?: return ""
         val next = this.next
-        return "${col.name} $sortOrder${if (next != null) ", $next" else ""}"
+        return "${col.columnName} $sortOrder${if (next != null) ", $next" else ""}"
     }
 }

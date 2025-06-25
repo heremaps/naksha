@@ -11,7 +11,6 @@ import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
-import kotlin.reflect.KClass
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B96
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
 
@@ -725,7 +724,7 @@ class PgColumn : JsEnum() {
          */
         @JvmStatic
         @JsStatic
-        fun ofRowColumn(metaColumn: MetaColumn): PgColumn? = when (metaColumn.name) {
+        fun ofRowColumn(metaColumn: MetaColumn): PgColumn? = when (metaColumn.columnName) {
             MetaColumn.NEXT_TN -> next_tn
             MetaColumn.UPDATED_AT -> updated_at
             MetaColumn.CREATED_AT -> created_at

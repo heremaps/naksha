@@ -3,7 +3,7 @@
 package naksha.psql
 
 import naksha.base.Int64
-import naksha.base.IntMutable
+import naksha.base.MutableInt
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.model.Version
@@ -101,15 +101,15 @@ internal abstract class PgWriterBase protected constructor(
      * @since 3.0
      * @see [featureCountByPartitionJoined]
      */
-    val featureCountByPartition: Map<Int, IntMutable>
+    val featureCountByPartition: Map<Int, MutableInt>
         get() {
             val partitions = collection.head.partitions
-            val partIndices = mutableMapOf<Int, IntMutable>()
+            val partIndices = mutableMapOf<Int, MutableInt>()
             for (i in writes.indices) {
                 val write = writes[i]
                 val partIndex = write.tupleNumber?.partitionIndex(partitions) ?: -1
                 val existing = partIndices[partIndex]
-                if (existing != null) existing.plus(1) else partIndices[partIndex] = IntMutable(1)
+                if (existing != null) existing.plus(1) else partIndices[partIndex] = MutableInt(1)
             }
             return partIndices
         }

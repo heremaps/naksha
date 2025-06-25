@@ -1,8 +1,8 @@
 package naksha.model.request
 
 import naksha.base.AnyList
-import naksha.base.AnyObject
-import naksha.base.Platform
+import naksha.base.*
+import naksha.base.PlatformUtil.PlatformUtil_C.deepContains
 import naksha.base.Platform.PlatformCompanion.gzipInflate
 import naksha.base.PlatformUtil
 import naksha.base.Proxy
@@ -55,10 +55,9 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
             is POr -> return pQuery.any { resolvePropsQuery(it, decoder) }
             is PNot -> return !resolvePropsQuery(pQuery.query, decoder)
             is PQuery -> {
-                val propertyArray = pQuery.property.path.filterNotNull().toTypedArray()
-                val propFromFeature = decoder.get(*propertyArray)
+                val propFromFeature = decoder.get(Property.PROPERTIES, *pQuery.property.path.filterNotNull().toTypedArray())
                 val op = pQuery.op
-                return resolveEachOp(op,propFromFeature,pQuery.value)
+                return resolveOp(op, propFromFeature, pQuery.value)
             }
         }
         throw IllegalArgumentException("Unknown query type for: $pQuery")
@@ -67,7 +66,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
         //TODO to disrupt the flow of the request
     }
 
-    private fun resolveEachOp(op: AnyOp, featureProperty: Any?, queryProperty: Any?) : Boolean {
+    private fun resolveOp(op: AnyOp, featureProperty: Any?, queryProperty: Any?) : Boolean {
         return when (op) {
             AnyOp.EXISTS -> featureProperty != Platform.UNDEFINED
             AnyOp.IS_NULL -> featureProperty == null
@@ -79,7 +78,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
                 if (queryProperty is List<*>) return queryProperty.contains(featureProperty)
                 false
             }
-            AnyOp.CONTAINS -> resolveContains(featureProperty, queryProperty)
+            AnyOp.CONTAINS -> deepContains(featureProperty, queryProperty)
             StringOp.EQUALS -> (featureProperty is String) && (queryProperty is String) && (featureProperty.toString() == queryProperty.toString())
             StringOp.STARTS_WITH -> (featureProperty is String) && (queryProperty is String) && (featureProperty.startsWith(queryProperty.toString()))
             DoubleOp.EQ -> (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() == queryProperty.toDouble())
@@ -88,67 +87,6 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
             DoubleOp.GTE -> (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() >= queryProperty.toDouble())
             DoubleOp.LTE -> (featureProperty is Number) && (queryProperty is Number) && (featureProperty.toDouble() <= queryProperty.toDouble())
             else -> throw IllegalArgumentException("Unknown op type for: $op")
-        }
-    }
-    /**
-     * The core logic is based on the v2 implementation, which used
-     * PostgreSQL's jsonb containment operator (@>).
-     * @see <a href="https://www.postgresql.org/docs/9.5/datatype-json.html#JSON-CONTAINMENT">PostgreSQL jsonb Containment</a>
-     */
-
-    private fun resolveContains(featureProperty: Any?, queryProperty: Any?): Boolean {
-        if (featureProperty == null) return queryProperty == null
-        if (Platform.isScalar(featureProperty)) {
-            return featureProperty.toString() == queryProperty.toString()
-        }
-        val parsedQuery = if (queryProperty is String) parseJsonString(queryProperty) else queryProperty
-
-        when (featureProperty) {
-            is AnyList -> {
-                return when (parsedQuery) {
-                    is AnyList -> parsedQuery.all { queryItem -> featureProperty.any { featureItem -> isMatch(featureItem, queryItem) } }
-                    is AnyObject -> featureProperty.any { it is AnyObject && it.containsAllProperties(parsedQuery) }
-                    else -> featureProperty.any { featureItem -> PlatformUtil.deepEquals(featureItem, parsedQuery) }
-                }
-            }
-            is AnyObject -> {
-                if (parsedQuery is AnyObject) {
-                    return featureProperty.containsAllProperties(parsedQuery)
-                }
-            }
-        }
-        return false
-    }
-
-    private fun AnyObject.containsAllProperties(queryObject: AnyObject): Boolean {
-        return queryObject.entries.all { (queryKey, queryValue) ->
-            if (!this.containsKey(queryKey)) {
-                false
-            } else {
-                val featureValue = this[queryKey]
-                resolveContains(featureValue, queryValue)
-            }
-        }
-    }
-
-    private fun isMatch(featureItem: Any?, queryItem: Any?): Boolean {
-        return when (queryItem) {
-            is AnyObject -> featureItem is AnyObject && featureItem.containsAllProperties(queryItem)
-            else -> PlatformUtil.deepEquals(featureItem, queryItem)
-        }
-    }
-
-
-    private fun parseJsonString(json: String?): Any? {
-        val trimmed = json?.trim() ?: return null
-        if (!((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]")))) {
-            return json
-        }
-        return try {
-            Proxy.box(Platform.fromJSON(json), Any::class)
-        } catch (e: Exception) {
-            Platform.PlatformCompanion.logger.warn("JSON parsing failed for string that appeared to be JSON: $json")
-            json
         }
     }
 }

@@ -6,7 +6,7 @@ import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformListApi.PlatformListApi_C.list_get
 import naksha.base.PlatformListApi.PlatformListApi_C.list_set
 import naksha.base.PlatformListApi.PlatformListApi_C.list_set_length
-import naksha.base.PlatformUtil.PlatformUtil_C.round_double
+import naksha.base.PlatformUtil.PlatformUtil_C.rd
 import naksha.base.fn.Fn0
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -66,7 +66,7 @@ class BBox() : ListProxy<Double>(Double_TYPE) {
         }
     }
 
-    override fun createData(): PlatformList = Platform.newArray(6)
+    override fun createData(): PlatformList = Platform.newList(6)
 
     // Ensure that whenever doubles read or written, they are rounded.
     // The setter and getter will bypass this method, using `array_get` direct, so they avoid to pay
@@ -382,14 +382,14 @@ class BBox() : ListProxy<Double>(Double_TYPE) {
      */
     fun centerCoord(): PointCoord {
         if (is2D()) {
-            val lon = round_double(round_double(minLongitude + maxLongitude) / 2.0)
-            val lat = round_double(round_double(minLatitude + maxLatitude) / 2.0)
+            val lon = rd(rd(minLongitude + maxLongitude) / 2.0)
+            val lat = rd(rd(minLatitude + maxLatitude) / 2.0)
             return PointCoord(lon, lat)
         }
         if (is3D()) {
-            val lon = round_double(round_double(minLongitude + maxLongitude) / 2.0)
-            val lat = round_double(round_double(minLatitude + maxLatitude) / 2.0)
-            val z = round_double( round_double(as_double_or_zero(minZ) + as_double_or_zero(maxZ)) / 2.0 )
+            val lon = rd(rd(minLongitude + maxLongitude) / 2.0)
+            val lat = rd(rd(minLatitude + maxLatitude) / 2.0)
+            val z = rd( rd(as_double_or_zero(minZ) + as_double_or_zero(maxZ)) / 2.0 )
             return PointCoord(lon, lat, z)
         }
         return PointCoord(0.0, 0.0)
@@ -414,10 +414,10 @@ class BBox() : ListProxy<Double>(Double_TYPE) {
      * @return this.
      */
     fun setLonLatMargin(longitude: Double, latitude: Double, margin: Double): BBox {
-        val west = sp_lon( round_double(longitude) - margin) ?: throw illegalArg("Illegal longitude: $longitude")
-        val south = sp_lat(round_double(latitude) - margin) ?: throw illegalArg("Illegal latitude: $latitude")
-        val east = sp_lon( round_double(longitude) + margin) ?: throw illegalArg("Illegal longitude: $longitude")
-        val north = sp_lat(round_double(latitude) + margin) ?: throw illegalArg("Illegal latitude: $latitude")
+        val west = sp_lon( rd(longitude) - margin) ?: throw illegalArg("Illegal longitude: $longitude")
+        val south = sp_lat(rd(latitude) - margin) ?: throw illegalArg("Illegal latitude: $latitude")
+        val east = sp_lon( rd(longitude) + margin) ?: throw illegalArg("Illegal longitude: $longitude")
+        val north = sp_lat(rd(latitude) + margin) ?: throw illegalArg("Illegal latitude: $latitude")
         val po = platformObject()
         if (is3D()) {
             list_set(po, WEST, west)
@@ -600,7 +600,7 @@ class BBox() : ListProxy<Double>(Double_TYPE) {
         val po = platformObject()
         val west = as_double_or_zero(list_get(po, WEST))
         val north = as_double_or_zero(list_get(po, SOUTH))
-        val min_z = round_double(minZ)
+        val min_z = rd(minZ)
         val east: Double
         val south: Double
         if (is2D()) {
@@ -611,7 +611,7 @@ class BBox() : ListProxy<Double>(Double_TYPE) {
             east = 0.0
             south = 0.0
         }
-        val max_z = round_double(maxZ)
+        val max_z = rd(maxZ)
 
         // to: [west, north, min_z, east, south, max_z]
         setCapacity(6)

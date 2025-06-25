@@ -1,10 +1,8 @@
 package naksha.psql.assertions
 
-import naksha.base.AnyObject
 import naksha.model.XyzNs
 import naksha.mom.v2.MomDeltaNs
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.NakshaProperties
 import naksha.mom.v2.MomFeature
 import kotlin.test.Test
 

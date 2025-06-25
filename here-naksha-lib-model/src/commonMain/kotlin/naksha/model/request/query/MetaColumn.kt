@@ -47,15 +47,15 @@ open class MetaColumn() : AnyObject() {
 
     /**
      * Create a column reference.
-     * @param name the field name.
+     * @param columnName the column name.
      * @since 3.0
      */
     @JsName("of")
-    constructor(name: String) : this() {
-        this.name = name
+    constructor(columnName: String) : this() {
+        this.columnName = columnName
     }
 
-    override fun toString(): String = getOr("name", "")
+    override fun toString(): String = columnName
     override fun hashCode(): Int = toString().hashCode()
     override fun equals(other: Any?): Boolean = toString() == other.toString()
 
@@ -733,11 +733,11 @@ open class MetaColumn() : AnyObject() {
         @JsStatic
         fun attachment(): MetaColumn = MetaColumn(ATTACHMENT)
 
-        private val NAME = NotNullProperty<MetaColumn, String>(String_TYPE) { _, _ -> "" }
+        private val STRING_MEMBER = NotNullProperty<MetaColumn, String>(String_TYPE) { _, _ -> "" }
     }
 
     /**
      * The name of the field.
      */
-    var name by NAME
+    var columnName: String by STRING_MEMBER
 }

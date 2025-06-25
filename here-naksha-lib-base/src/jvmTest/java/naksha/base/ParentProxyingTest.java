@@ -23,57 +23,75 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import kotlin.reflect.full.IllegalCallableAccessException;
 import org.junit.jupiter.api.Test;
 
 class ParentProxyingTest {
 
-  @Test
-  void shouldAllowProxyingInJava() {
-    // Given:
-    ProxyParent parent = new ProxyParent();
-
-    // When:
-    var child = parent.proxy(forClass(ProxyChild.class));
-
-    // Then:
-    assertNotNull(child);
-    assertInstanceOf(ProxyChild.class, child);
-  }
-
-  @Test
-  void shouldFailForProxyWithoutNonArgConstructor() {
-    // Given:
-    ProxyParent parent = new ProxyParent();
-
-    // Then:
-    assertThrows(NakshaException.class, () -> {
-      parent.proxy(forClass(ProxyChildWithoutNonArgConstructor.class));
-    });
-  }
-
-  @Test
-  void shouldFailForProxyWithUnsifficientVisibility() {
-    // Given:
-    ProxyParent parent = new ProxyParent();
-
-    // Then:
-    assertThrows(NakshaException.class, () -> {
-      parent.proxy(forClass(ProxyChildWithoutPublicConstructor.class));
-    });
-  }
-
   static class ProxyParent extends AnyObject {}
 
-  public static class ProxyChild extends ProxyParent {}
+  public static class WithPublicConstructor extends ProxyParent {}
 
-  public static class ProxyChildWithoutPublicConstructor extends ProxyParent {
-    ProxyChildWithoutPublicConstructor() {
+  public static class WithPrivateConstructor extends ProxyParent {
+    private WithPrivateConstructor() {
       // hello from package-private
     }
   }
 
-  static class ProxyChildWithoutNonArgConstructor extends ProxyParent {
-    ProxyChildWithoutNonArgConstructor(String unusedParam) {}
+  public static class WithInternalConstructor extends ProxyParent {
+    WithInternalConstructor() {
+      // hello from package-private
+    }
+  }
+
+  static class WithoutNonArgConstructor extends ProxyParent {
+    WithoutNonArgConstructor(String unusedParam) {}
+  }
+
+  @Test
+  void allow_WithPublicConstructor() {
+    // Given:
+    ProxyParent parent = new ProxyParent();
+
+    // When:
+    var child = parent.proxy(forClass(WithPublicConstructor.class));
+
+    // Then:
+    assertNotNull(child);
+    assertInstanceOf(WithPublicConstructor.class, child);
+  }
+
+  @Test
+  void fail_WithoutNonArgConstructor() {
+    // Given:
+    ProxyParent parent = new ProxyParent();
+
+    // Then:
+    assertThrows(NakshaException.class, () -> {
+      parent.proxy(forClass(WithoutNonArgConstructor.class));
+    });
+  }
+
+  @Test
+  void fail_WithPrivateConstructor() {
+    // Given:
+    ProxyParent parent = new ProxyParent();
+
+    // Then:
+    assertThrows(NakshaException.class, () -> {
+      parent.proxy(forClass(WithPrivateConstructor.class));
+    });
+  }
+
+  @Test
+  void allow_WithInternalConstructor() {
+    // Given:
+    ProxyParent parent = new ProxyParent();
+
+    // When:
+    var child = parent.proxy(forClass(WithInternalConstructor.class));
+
+    // Then:
+    assertNotNull(child);
+    assertInstanceOf(WithInternalConstructor.class, child);
   }
 }

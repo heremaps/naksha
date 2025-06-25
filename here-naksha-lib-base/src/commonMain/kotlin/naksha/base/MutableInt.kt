@@ -12,21 +12,21 @@ import kotlin.jvm.JvmField
  * @since 3.0
  */
 @JsExport
-data class IntMutable(
+data class MutableInt(
     /**
      * The value, can be mutated.
      * @since 3.0
      */
     var value: Int = 0
-) {
+) : JsonValue {
     companion object IntMutable_C {
         /**
-         * The [PlatformType] of [IntMutable].
+         * The [PlatformType] of [MutableInt].
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val TYPE = forKClass(IntMutable::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(MutableInt::class).withPackageName(PACKAGE_NAME)
 
         init { initialize() }
     }
@@ -37,7 +37,7 @@ data class IntMutable(
      * @return this.
      * @since 3.0
      */
-    operator fun plus(value: Int): IntMutable {
+    operator fun plus(value: Int): MutableInt {
         this.value += value
         return this
     }
@@ -48,7 +48,7 @@ data class IntMutable(
      * @return this.
      * @since 3.0
      */
-    operator fun minus(value: Int): IntMutable {
+    operator fun minus(value: Int): MutableInt {
         this.value -= value
         return this
     }
@@ -59,7 +59,7 @@ data class IntMutable(
      * @return this.
      * @since 3.0
      */
-    operator fun times(value: Int): IntMutable {
+    operator fun times(value: Int): MutableInt {
         this.value *= value
         return this
     }
@@ -70,13 +70,17 @@ data class IntMutable(
      * @return this.
      * @since 3.0
      */
-    operator fun div(value: Int): IntMutable {
+    operator fun div(value: Int): MutableInt {
         this.value /= value
         return this
     }
 
+    override val jsonValue: Int
+        get() = value
+    override fun duplicate(): MutableInt = MutableInt(value)
+
     override fun hashCode(): Int = value
-    override fun equals(other: Any?): Boolean = other is IntMutable && value == other.value
+    override fun equals(other: Any?): Boolean = other is MutableInt && value == other.value
     private var _cacheValue: Int = 0
     private var _cacheString: String? = null
 

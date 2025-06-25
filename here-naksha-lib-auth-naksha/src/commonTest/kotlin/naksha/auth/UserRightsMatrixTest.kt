@@ -226,6 +226,16 @@ class UserRightsMatrixTest {
     }
 
     @Test
+    fun allowUpsertFeature() {
+        // Default URM allows create and update.
+        val ops = NakshaOps()
+        ops.createFeatures += FeatureParams(topology, col, map, storage)
+        ops.updateFeatures += FeatureParams(topology, col, map, storage)
+        assertTrue(urm.matches(ops))
+    }
+
+
+    @Test
     fun denyReadFeaturesWithTagValueEquals() {
         // User has right to all features with the tag 'some' set to 'Xyz' or 'Zyx'.
         // Note: The topology feature has a tag "some=Bar"

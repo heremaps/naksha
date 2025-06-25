@@ -12,6 +12,7 @@ import kotlin.concurrent.Volatile
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -299,26 +300,36 @@ data class Metadata(
         )
 
         /**
-         * Calculates the feature hash to be stored in [Metadata].
-         * @param feature the feature.
+         * Calculates the metadata hash to be stored in [Metadata].
+         * @param feature the [NakshaFeature].
          * @param excludePaths an optional list of paths to exclude.
-         * @param excludeFn an optional function to call for the [feature], current path, current value to decide if the value should be excluded from hashing.
+         * @param excludeFn an optional function to call for the `feature`, the current path, and the current value, to decide if the value should be excluded from hashing. The function will return _true_, if the value should be excluded _(not hashed)_; _false_ if the value should be part of the hash.
          * @return the hash.
+         * @see SessionOptions.excludePaths
+         * @see SessionOptions.excludeFn
          */
         @Suppress("UNUSED_PARAMETER")
+        @JvmOverloads
         @JvmStatic
         @JsStatic
         fun calculateHash(
             feature: NakshaFeature,
-             excludePaths: List<Array<String>>? = null,
+            excludePaths: List<Array<String>>? = null,
             excludeFn: Fn3<Boolean, NakshaFeature, List<String>, Any?>? = null
         ): Int {
-            // TODO: We need to calculate the hash above the feature itself.
-            //  - Order keys first.
-            //  - Exclude the given paths
-            //  - Always exclude ["properties", "@ns:com:here:xyz"]
+            // TODO: The exclude function should be able to throw a `UseHash` exception with the hash calculated, so that
+            //       it is possible to implement own hashing algorithms. If the function returns _false_ and the value is
+            //       a map or list, the object should be entered and the function need to be called again for each child
+            //       key/index.
+            // TODO: We need to calculate a recursive hash above the feature itself.
+            //  - We need: hashMap, hashList, hashData, hashString, hashValue (boolean, int, int64, double)
+            //  - For map, order keys and operate in order.
+            //  - Exclude the given exclude paths
+            //      - Always exclude ["properties", "@ns:com:here:xyz"]
+            //  - If given, invoke the exclude function, if not excluded (false), continue
+            //  - Iterate all key/value pairs, optionally exclude them or ask exclude function
             //  - The purpose of the hash is to find similar entries
-            //    - We only care about real data changes (not times, author, other metadata)
+            //      - We only care about real data changes (not times, author, other metadata), this why to exclude parts
             return Fnv1a32.string(0, feature.id)
         }
 

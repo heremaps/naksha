@@ -5,9 +5,11 @@ import naksha.base.Platform.Platform_C.MAX_SAFE_INT64
 import naksha.base.Platform.Platform_C.MIN_SAFE_INT
 import naksha.base.Platform.Platform_C.MIN_SAFE_INT64
 import naksha.base.Platform.Platform_C.random
+import naksha.base.fn.Fx2
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 import kotlin.math.abs
 import kotlin.math.round
@@ -189,46 +191,39 @@ class PlatformUtil private constructor() {
         const val ROUND_MULTIPLIER_INT: Int = 10_000_000
 
         /**
-         * Round the given double using [round half to even](https://en.wikipedia.org/wiki/Rounding#Rounding_half_to_even) for seventh decimal digit.
+         * Round double using [round half to even](https://en.wikipedia.org/wiki/Rounding#Rounding_half_to_even) using seventh decimal digits.
          *
          * # Important
-         * It is important, that after every calculation a rounding happens to guarantee that we always keep spatial coordinates in the optimal _(and unique)_ representation. Technically, when we only want 7 decimal digits, there are plenty of possible representations for `0.1234567` like `0.12345671`, `0.12345672`, `0.12345674`, all of them represent `0.1234567`, but as more calculations we do, as more errors we introduce. Therefore, we need to round after every single calculation.
+         * It is important, that after a calculation a rounding happens to guarantee that we always keep spatial coordinates in the optimal _(and unique)_ representation. Technically, when we only want 7 decimal digits, there are plenty of possible representations for `0.1234567` like `0.12345671`, `0.12345672`, `0.12345672`, `0.12345674`, ..., all of them represent `0.1234567`.
          *
-         * It is not obvious, but by rounding after every single calculate, we guarantee that:
+         * Note, floating point numbers are commutative _(`a+b`==`b+a`)_, but not associative, so the following is not true for floating point numbers:
          *
          * `a + b + c` == `(a + b) + c` == `a + (b + c)`
          *
-         * This is not the case without rounding, let's show this by using an example _(execute in any browser console)_:
+         * Let's show this by using an example _(execute in any browser console)_:
          * ```js
-         * var a = 0.1234567;
-         * var b = -100.0;
-         * var c = +100.0;
-         * var r1 = a + (b + c);
-         * var r2 = (a + b) + c
-         * console.log( r1, " != ", r2 );
-         * // 0.1234567  !=  0.12345670000000553
-         * ```
-         * Now, with the rounding implemented like here, we get:
-         * ```js
-         * function round_double(value) {
+         * function rd(value) {
          *   return Math.round(value * 10_000_000.0)
          *          / 10_000_000.0;
          * }
          * var a = 0.1234567;
          * var b = -100.0;
          * var c = +100.0;
-         * var r1 = round_double( a + round_double(b + c) );
-         * var r2 = round_double( round_double(a + b) + c );
-         * console.log( r1, " == ", r2 );
+         * var r1 = a + (b + c);
+         * var r2 = (a + b) + c
+         * console.log( r1, " != ", r2 ); // not rounded
+         * // 0.1234567  !=  0.12345670000000553
+         * console.log( rd(r1), " == ", rd(r2) ); // rounded
          * // 0.1234567  ==  0.1234567
          * ```
+         * Basically this turns floating point numbers into fixed point numbers, except while doing calculations.
          * @param value The double value.
          * @return the double value rounded to 7 decimal digits.
          * @since 3.0
          */
         @JvmStatic
         @JsStatic
-        fun round_double(value: Double): Double = round(value * ROUND_MULTIPLIER_DOUBLE) / ROUND_MULTIPLIER_DOUBLE
+        fun rd(value: Double): Double = round(value * ROUND_MULTIPLIER_DOUBLE) / ROUND_MULTIPLIER_DOUBLE
 
         /**
          * Tests if the given value is logically a floating point number _(12.0 is not, 12.5 is)_.
@@ -391,42 +386,136 @@ class PlatformUtil private constructor() {
         }
 
         /**
-         * Recursively compare this object with another, checking for values instead of just referential.
-         * This is needed because for arrays, the == operation compares whether the arrays are the same object.
-         * This will work for any nested structures of maps, lists, and arrays.
+         * Recursively compare this object with another, checking for values instead of just referential. This is needed because for arrays, the equals operation _(`==`)_ compares whether the arrays are the same object.
+         *
+         * This will work for any nested structure, like maps, lists, and arrays.
+         * @param obj1 The first object to compare against the second.
+         * @param obj2 The second object to compare against the first.
+         * @return _true_ if both objects are recursively equal; _false_ otherwise.
          */
         @JvmStatic
         @JsStatic
-        fun deepEquals(obj1: Any?, obj2: Any?): Boolean {
-            if (obj1 === obj2) return true  // Same reference, or both null
-            if (obj1 == null || obj2 == null) return false  // One is null, the other is not
-            if (obj1::class != obj2::class) return false  // Different types
+        fun deepEquals(obj1: Any?, obj2: Any?): Boolean = deep_equals(obj1, obj2)
 
-            return when (obj1) {
-                is Array<*> -> obj1.contentDeepEquals(obj2 as Array<*>)
-                is List<*> -> {
-                    if (obj1.size != (obj2 as List<*>).size) return false
-                    for (i in 0 until obj1.size) {
-                        val v1 = obj1[i]
-                        val v2 = obj2[i]
-                        if (!deepEquals(v1, v2)) return false
-                    }
-                    return true
-                }
-                is Map<*, *> -> {
-                    if (obj1.size != (obj2 as Map<*,*>).size) return false
-                    val it = obj1.keys.iterator()
-                    while (it.hasNext()) {
-                        val key = it.next()
-                        val v1 = obj1[key]
-                        val v2 = obj2[key]
-                        if (!deepEquals(v1, v2)) return false
-                    }
-                    return true
-                }
-                else -> obj1 == obj2  // Primitive types, or any other objects
-            }
-        }
+        /**
+         * Recursively tests if the given `needle` is contained in the given `haystack`.
+         *
+         * This will work for any nested structure, like maps, lists, and arrays.
+         * @param haystack The haystack in which to search.
+         * @param needle The needle to search for.
+         * @return _true_ if `needle` is contained in `haystack`; _false_ otherwise.
+         */
+        @JvmStatic
+        @JsStatic
+        fun deepContains(haystack: Any?, needle: Any?): Boolean = deep_contains(haystack, needle)
+
+        /**
+         * Returns the amount of elements in an array or list, or the amount of key-value pairs in a map.
+         * @param listOrMap The list or map to check.
+         * @return the length or `0`.
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun getLength(listOrMap: Any?): Int = get_length(listOrMap)
+
+        /**
+         * Returns the list element at the given index, or `null`.
+         * @param list The list.
+         * @param index The index.
+         * @param alternative The alternative to return, when the index is out of bounds.
+         * @return The element at the given index, or `alternative`.
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        @JvmOverloads
+        fun getElement(list: Any?, index: Int, alternative: Any? = null): Any? = get_element(list, index, alternative)
+
+        /**
+         * Tests if the given map contains the given key.
+         * @param map The map to query.
+         * @param key The key to lookup.
+         * @return _true_ if the map contains the `key`, _false_ otherwise.
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun containsKey(map: Any?, key: Any?): Boolean = contains_key(map, key)
+
+        /**
+         * Reads the value associated to the given key in the given map.
+         * @param map The map to read.
+         * @param key The key to read.
+         * @param alternative The alternative to return, when the map does not contain the `key`.
+         * @return the associated value, or `alternative`.
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        @JvmOverloads
+        fun getValue(map: Any?, key: Any?, alternative: Any? = null): Any? = get_value(map, key, alternative)
+
+        /**
+         * Reads the value associated to the given key in the given map.
+         * @param map The map to read.
+         * @param fn The function to call for each key-value pair, receiving the key and value as arguments, in that order.
+         * @return if [AbortVisit] is thrown, returns the value returned; otherwise `null`.
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun <T> forEachEntry(map: Any?, fn: Fx2<Any?, Any?>): T? = for_each_entry(map, fn)
+
+        /**
+         * Tests if the given `value` is a [PlatformMap], [Map], or [MutableMap].
+         * @param value The value to test.
+         * @return _true_ if the value is a map; _false_ otherwise.
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun isMap(value: Any?): Boolean = is_map(value)
+
+        /**
+         * Tests if the given `value` is a [PlatformList], [List], [MutableList], or [Array].
+         * @param value The value to test.
+         * @return _true_ if the value is a list; _false_ otherwise.
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun isList(value: Any?): Boolean = is_list(value)
+
+        /**
+         * Tests if the given `value` is data, so it is [PlatformDataView] or [ByteArray].
+         * @param value The value to test.
+         * @return _true_ if the value is data; _false_ otherwise.
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun isData(value: Any?): Boolean = is_data(value)
+
+        /**
+         * Tests if the given `value` has data bytes, so it is [PlatformDataView], [ByteArray], or [String].
+         * @param value The value to test.
+         * @return _true_ if the value has data bytes; _false_ otherwise.
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun hasData(value: Any?): Boolean = has_data(value)
+
+        /**
+         * Returns the data bytes backing the given value or an empty byte array (size `0`).
+         * @param value The value for which to return the bytes ([ByteArray], [PlatformMap], or [String]).
+         * @return the
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun getData(value: Any?): ByteArray = get_data(value)
 
         init { initialize() }
     }

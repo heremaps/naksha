@@ -76,16 +76,30 @@ class JvmPlatformType<T : Any> internal constructor(
             ensureInitialized = _ensureInitialized
         }
 
-        /**
-         * Returns non-arg constructor for `Class<T>`.
-         */
-        @Suppress("UNCHECKED_CAST")
         private fun <T : Any> nonArgConstructorFor(jvmClass: Class<T>): Constructor<T>? {
             if (jvmClass.isInterface || Modifier.isAbstract(jvmClass.modifiers)) return null
-            for (c in jvmClass.constructors) {
-                if (c.parameters.isEmpty()) return c as Constructor<T>
+            for (c in jvmClass.declaredConstructors) {
+                @Suppress("UNCHECKED_CAST")
+                if (c.parameters.isEmpty()) {
+                    // Note: Package private means: not private, protected or public
+                    //       We only prevent access to private!
+                    if (Modifier.isPrivate(c.modifiers)) continue
+                    // We try to open protected or internal constructors.
+                    if (!Modifier.isPublic(c.modifiers)) {
+                        try {
+                            c.setAccessible(true)
+                        } catch (_: SecurityException) {
+                            continue
+                        }
+                    }
+                    return c as Constructor<T>
+                }
             }
             return null
+        }
+        private fun useAllocate(jvmClass: Class<*>): Boolean {
+            if (jvmClass.isInterface || Modifier.isAbstract(jvmClass.modifiers)) return false
+            return jvmClass.declaredConstructors.size == 0
         }
 
         private val NULL_PLATFORM_TYPE_ARRAY = Array<PlatformType<*>>(0) {
@@ -122,8 +136,9 @@ class JvmPlatformType<T : Any> internal constructor(
     override val nativeClass: Any = jvmClass
 
     private val nonArgConstructor: Constructor<T>? = nonArgConstructorFor(jvmClass)
+    private val useAllocate: Boolean = useAllocate(jvmClass)
 
-    override val isInstantiatable: Boolean = nonArgConstructor != null
+    override val isInstantiatable: Boolean = nonArgConstructor != null || useAllocate
 
     override fun initialize(): PlatformType<T> {
         if (initCache[this] == true) return this
@@ -156,9 +171,11 @@ class JvmPlatformType<T : Any> internal constructor(
      * @since 3.0
      */
     override fun newInstance(): T {
-        val constructor = (nonArgConstructor ?: throw illegalState("The class $name does not have a parameterless constructor"))
+        val constructor = nonArgConstructor
+        if (constructor == null && !useAllocate) throw illegalState("The class $name does not have an accessible parameterless constructor")
         try {
-            return constructor.newInstance()
+            if (constructor != null) return constructor.newInstance()
+            return allocate()
         } catch (t: Throwable) {
             logger.error("Failed to invoke parameterless constructor of $name", t)
             var e = t
@@ -239,10 +256,10 @@ class JvmPlatformType<T : Any> internal constructor(
 
     override fun isProxy(): Boolean = _isProxy
 
-    override fun proxy(o: Any?): T = getOrCreateProxy(o, symbol)
+    override fun proxy(o: PlatformObject?): T = getOrCreateProxy(o, symbol)
 
     @Suppress("UNCHECKED_CAST")
-    override fun getProxy(o: Any?, symbol: Symbol): T? {
+    override fun getProxy(o: PlatformObject?, symbol: Symbol): T? {
         if (isInstance(o)) return o as T
         if (!isProxy()) return null
         val jvmObject = unbox(o)
@@ -253,7 +270,7 @@ class JvmPlatformType<T : Any> internal constructor(
     }
 
     @Suppress("UNCHECKED_CAST")
-    override fun getOrCreateProxy(o: Any?, symbol: Symbol): T {
+    override fun getOrCreateProxy(o: PlatformObject?, symbol: Symbol): T {
         if (isInstance(o)) return o as T
         if (!isProxy()) throw illegalState("The type '$name' is no proxy-type")
         if (!isInstantiatable) throw illegalState("The type '$name' is not instantiatable")

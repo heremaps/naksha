@@ -3,7 +3,6 @@
 package naksha.base
 
 import naksha.base.fn.Fn0
-import kotlin.jvm.JvmOverloads
 import kotlin.reflect.KClass
 
 /**
@@ -217,18 +216,25 @@ expect class Platform private constructor() {
         fun intern(s: String, cd: Boolean = false): String
 
         /**
-         * Creates a new array.
-         * @param entries The entries to initialize the array with.
-         * @return The created array.
+         * Creates a new list from the given arguments.
+         * @param entries The entries to initialize the list with.
+         * @return The created list.
          */
-        fun newList(vararg entries: Any?): PlatformList
+        fun listOf(vararg entries: Any?): PlatformList
 
         /**
-         * Creates a new array.
-         * @param capacity The capacity to initialize the array with.
-         * @return The created array.
+         * Creates a new list from the given elements.
+         * @param elements The elements to initialize the list with.
+         * @return The created list.
          */
-        fun newArray(capacity: Int): PlatformList
+        fun listOfArray(elements: Array<*>): PlatformList
+
+        /**
+         * Creates a new list with a specific initial capacity.
+         * @param capacity The capacity to initialize the list with.
+         * @return The created list.
+         */
+        fun newList(capacity: Int): PlatformList
 
         /**
          * Creates a new map.

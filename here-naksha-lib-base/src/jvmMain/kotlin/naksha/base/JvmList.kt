@@ -4,11 +4,13 @@ import naksha.base.Platform.Platform_C.unsafe
 import java.util.*
 import kotlin.math.max
 import kotlin.math.round
+import kotlin.reflect.jvm.internal.impl.load.kotlin.JvmType
 
 /**
  * The JVM implementation of a [PlatformList].
  */
 open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
+
     constructor(vararg entries: Any?) : this() {
         val list: ArrayList<Any?>?
         if (entries.isNotEmpty()) {
@@ -21,6 +23,28 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
     }
 
     companion object {
+        /**
+         * Create a [PlatformList] from the given typed array.
+         *
+         * The method copies the elements _(the references)_.
+         * @param elements The elements to initialize the list with.
+         * @return the new [PlatformList] initialized with the given array of values.
+         */
+        @JvmStatic
+        fun fromArray(elements: Array<*>): JvmList {
+            val list: ArrayList<Any?>?
+            if (elements.isNotEmpty()) {
+                list = ArrayList(elements.size + 4)
+                list.addAll(elements)
+            } else {
+                list = null
+            }
+            val l = JvmList()
+            l.list = list
+            return l
+        }
+
+
         // We need to hack a bit, because of the stupidity today, that "private" properties are not accessible,
         // even for the price of total inefficiency, when not done! We rather waste huge amount of CPU cycles,
         // then give developers access to class internals, was a foolish world we live in!

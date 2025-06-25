@@ -99,7 +99,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
                     val col = o.column
                     if (col != null) {
                         // TODO: Support all columns
-                        val col_name = col.name
+                        val col_name = col.columnName
                         val pgColumn = when (col_name) {
                             MetaColumn.ATTACHMENT -> PgColumn.attachment
                             MetaColumn.ID -> PgColumn.id

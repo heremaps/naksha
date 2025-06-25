@@ -212,7 +212,7 @@ interface PlatformType<T> {
      * @return an instance of this type.
      * @since 3.0
      */
-    fun proxy(o: Any?): T
+    fun proxy(o: PlatformObject?): T
 
     /**
      * If this is a proxy and the given [PlatformObject] does have an instance of this type bound to the given `symbol` or `null`.
@@ -228,7 +228,7 @@ interface PlatformType<T> {
      * @return the bound proxy instance of this type, or `null`, if no instance of this is bound to the given [PlatformObject].
      * @since 3.0
      */
-    fun getProxy(o: Any?, symbol: Symbol = this.symbol): T?
+    fun getProxy(o: PlatformObject?, symbol: Symbol = this.symbol): T?
 
    /**
     * If this is a proxy, return an instance of this type from the [SymbolMember] bound to the given `symbol`.
@@ -244,7 +244,7 @@ interface PlatformType<T> {
      * @return the linked proxy.
      * @since 3.0
      */
-    fun getOrCreateProxy(o: Any?, symbol: Symbol = this.symbol): T
+    fun getOrCreateProxy(o: PlatformObject?, symbol: Symbol = this.symbol): T
 
     /**
      * Cast the given object into this type, if possible. The value `null` always result in `null`.

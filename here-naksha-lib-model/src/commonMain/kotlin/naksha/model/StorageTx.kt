@@ -53,7 +53,7 @@ open class StorageTx private constructor(
      * The application-id of the application performing the modifications.
      * @since 3.0
      */
-    val appId: String,
+    val appId: String?,
 
     /**
      * The author _(user)_ that performs the modifications; if any.
@@ -74,7 +74,7 @@ open class StorageTx private constructor(
     constructor(
         storageNumber: Int64,
         version: Version,
-        appId: String,
+        appId: String?,
         author: String?,
         dictReader: IDictReader?,
     ): this(null, storageNumber, version, appId, author, dictReader)
@@ -83,7 +83,7 @@ open class StorageTx private constructor(
     constructor(
         storage: IStorage,
         version: Version,
-        appId: String,
+        appId: String?,
         author: String?,
         dictReader: IDictReader?,
     ): this(storage, storage.number, version, appId, author, dictReader)

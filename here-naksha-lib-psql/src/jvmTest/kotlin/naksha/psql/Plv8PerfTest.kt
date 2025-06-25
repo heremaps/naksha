@@ -175,7 +175,7 @@ class Plv8PerfTest : PgTestBase(
     private fun executeParallel(concurrency: Int, batchRequests: List<WriteRequest>) = runBlocking {
         val stats = Collections.synchronizedList(mutableListOf<Stats>())
         val threadPool = Executors.newFixedThreadPool(concurrency)
-        val context = NakshaContext.currentContext()
+        val context = NakshaContext.currentContext<NakshaContext>()
         val start = System.nanoTime()
         val tasks = batchRequests.map { batchRequest ->
             threadPool.submit {

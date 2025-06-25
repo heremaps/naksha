@@ -351,7 +351,7 @@ abstract class PgTestBase(
             appId: String = PgTest.TEST_APP_ID,
             author: String? = PgTest.TEST_APP_AUTHOR,
         ): SessionOptions {
-            val context = NakshaContext.currentContext()
+            val context = NakshaContext.currentContext<NakshaContext>()
             context.appName = PgTest.TEST_APP_NAME
             context.appId = appId
             context.author = author

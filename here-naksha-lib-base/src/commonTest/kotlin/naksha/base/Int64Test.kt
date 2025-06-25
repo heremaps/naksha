@@ -20,7 +20,6 @@ class Int64Test {
         val c = a - b
         assertEquals(5L, c.toLong())
         assertEquals(5, c.toInt())
-
     }
 
     @Test

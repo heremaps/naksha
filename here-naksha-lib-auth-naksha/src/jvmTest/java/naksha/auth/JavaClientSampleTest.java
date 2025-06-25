@@ -33,9 +33,9 @@ import org.junit.jupiter.api.Test;
 class JavaClientSampleTest {
 
   /**
-   * Demo on how to parse and deal with _User Rights Matrix_ and _Access Matrix_.
-   *
-   * This demo assumes the user does have the following URM _(User Rights Matrix)_
+   * Demo on how to parse and deal with <i>User Rights Matrix</i> and <i>Access Matrix</i>.
+   * <p>
+   * This demo assumes the user does have the following URM <i>(User Rights Matrix)</i>
    * <pre>{@code {
    *    "naksha": {
    *       "readCollections": [

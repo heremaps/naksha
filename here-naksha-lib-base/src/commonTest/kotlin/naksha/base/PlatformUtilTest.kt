@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.PlatformUtil.PlatformUtil_C.round_double
+import naksha.base.PlatformUtil.PlatformUtil_C.rd
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -21,8 +21,8 @@ class PlatformUtilTest {
         val a = 0.1234567
         val b = -100.0
         val c = +100.0
-        val r1 = round_double( a + round_double(b + c) )
-        val r2 = round_double( round_double(a + b) + c )
+        val r1 = rd( a + rd(b + c) )
+        val r2 = rd( rd(a + b) + c )
         assertEquals(0.0, r2 - r1 )
     }
 }

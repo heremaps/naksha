@@ -45,7 +45,7 @@ class StringOp : AnyOp() {
          */
         @JvmField
         @JsStatic
-        val STARTS_WITH = def(TYPE, "startsWith")
+        val STARTS_WITH = def(TYPE, "starts_with")
 
     }
 }

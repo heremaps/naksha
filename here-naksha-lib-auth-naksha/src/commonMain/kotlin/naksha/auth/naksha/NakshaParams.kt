@@ -58,7 +58,7 @@ open class NakshaParams() : ServiceOpParams() {
         appId = xyz.appId
         author = xyz.author
         tags.copyFrom(xyz.tags)
-        val ctx = NakshaContext.currentContext()
+        val ctx = NakshaContext.currentContext<NakshaContext>()
         spaceIds.addAll(ctx.spaceIds)
     }
 

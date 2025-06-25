@@ -292,10 +292,13 @@ actual class Platform {
         fun newAtomicInt64(startValue: Long): AtomicInt64 = JvmAtomicInt64(startValue)
 
         @JvmStatic
-        actual fun newList(vararg entries: Any?): PlatformList = JvmList(*entries)
+        actual fun listOf(vararg entries: Any?): PlatformList = JvmList(*entries)
 
         @JvmStatic
-        actual fun newArray(capacity: Int): PlatformList {
+        actual fun listOfArray(elements: Array<*>): PlatformList = JvmList(elements)
+
+        @JvmStatic
+        actual fun newList(capacity: Int): PlatformList {
             val array = JvmList()
             array.setCapacity(capacity)
             return array
@@ -450,6 +453,7 @@ actual class Platform {
         actual fun <T> copy(obj: T?, recursive: Boolean): T? {
             if (obj == null) return null
             return when (obj) {
+                is JsonValue -> (if (recursive) obj.duplicate() else obj) as T
                 is Short -> obj
                 is Int -> obj
                 is Long -> obj
@@ -674,7 +678,8 @@ actual class Platform {
          * The [PlatformLogger], in Java redirected to [loggerThreadLocal].
          */
         @JvmStatic
-        actual val logger: PlatformLogger by loggerThreadLocal
+        actual val logger: PlatformLogger
+            get() = loggerThreadLocal.get()
 
         /**
          * Creates a new thread-local. Should be stored only in a static immutable variable (`val`).

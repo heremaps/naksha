@@ -232,18 +232,20 @@ open class AnyTypedObject : AnyObject() {
         }
 
         map_set(po, "type", FEATURE)
-        if (isMomType()) {
-            map_set(po, "momType", jsonType)
-        } else if (!isDataHubType()) {
-            map_set(po, "featureType", jsonType)
-        }
-        if (isDataHubType()) { // properties.featureType
-            var properties = map_get(po, "properties")
-            if (properties !is PlatformMap) {
-                properties = Platform.newMap()
-                map_set(po, "properties", properties)
+        if (jsonType != FEATURE) {
+            if (isMomType()) {
+                map_set(po, "momType", jsonType)
+            } else if (!isDataHubType()) {
+                map_set(po, "featureType", jsonType)
             }
-            map_set(properties, "featureType", jsonType)
+            if (isDataHubType()) { // properties.featureType
+                var properties = map_get(po, "properties")
+                if (properties !is PlatformMap) {
+                    properties = Platform.newMap()
+                    map_set(po, "properties", properties)
+                }
+                map_set(properties, "featureType", jsonType)
+            }
         }
     }
 

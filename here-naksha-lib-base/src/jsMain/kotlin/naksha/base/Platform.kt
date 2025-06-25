@@ -346,7 +346,7 @@ if (typeof k==='function') instance=Object.create(k.prototype);""")
         actual fun newAtomicInt64(startValue: Int64): AtomicInt64 = JsAtomicInt64(startValue)
 
         @JsStatic
-        actual fun newList(vararg entries: Any?): PlatformList {
+        actual fun listOf(vararg entries: Any?): PlatformList {
             val array = js("[]").unsafeCast<PlatformList>()
             if (entries.isNotEmpty()) {
                 var i = 0
@@ -359,7 +359,11 @@ if (typeof k==='function') instance=Object.create(k.prototype);""")
         }
 
         @JsStatic
-        actual fun newArray(capacity: Int): PlatformList = js("[]").unsafeCast<PlatformList>()
+        actual fun listOfArray(elements: Array<*>): PlatformList
+            = elements.unsafeCast<PlatformList>()
+
+        @JsStatic
+        actual fun newList(capacity: Int): PlatformList = js("[]").unsafeCast<PlatformList>()
 
         @JsStatic
         actual fun newByteArray(size: Int): ByteArray = ByteArray(size)
@@ -659,7 +663,10 @@ default:                 return null;
         actual fun isNil(any: Any?): Boolean = js("any===null || any===undefined").unsafeCast<Boolean>()
 
         @JsStatic
-        actual fun <T> copy(obj: T?, recursive: Boolean): T? = js("""
+        actual fun <T> copy(obj: T?, recursive: Boolean): T? {
+            if (obj == null) return null
+            if (obj is JsonValue) return (if (recursive) obj.duplicate() else obj).unsafeCast<T>()
+            return js("""
 if (typeof obj !== 'object' || obj === null) return obj;
 if (Array.isArray(obj)) {
   if (recursive) {
@@ -697,6 +704,7 @@ if (obj instanceof Object) {
 }
 return obj;
 """).unsafeCast<T?>()
+        }
 
         @JsName("toJson")
         @JsStatic

@@ -71,7 +71,9 @@ class NakshaFeatureProxyTest {
     public CustomFeatureWithoutNonArgConstructor(String unusedParam) {}
   }
 
-  static class NonPublicCustomFeature extends NakshaFeature {}
+  static class NonPublicCustomFeature extends NakshaFeature {
+    private NonPublicCustomFeature() {}
+  }
 
   @Test
   void testInt64Boxing() {

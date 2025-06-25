@@ -5,7 +5,7 @@ package naksha.geo
 
 import naksha.base.*
 import naksha.base.Platform.Platform_C.forKClass
-import naksha.base.PlatformUtil.PlatformUtil_C.round_double
+import naksha.base.PlatformUtil.PlatformUtil_C.rd
 import kotlin.jvm.JvmField
 import kotlin.math.round
 
@@ -144,20 +144,20 @@ internal const val FEATURE = "Feature"
  * Convert the given value into a spatial component with 7 decimal digits _(does round)_.
  * @param value The value to convert and round.
  * @return the given `value`, rounded to 7 decimal digits, or `null`, if the value can't be converted.
- * @see round_double
+ * @see rd
  */
 fun sp_double(value: Any?): Double? = when(value) {
-    is Double -> if (value.isNaN()) null else round_double(value)
-    is Float -> if (value.isNaN()) null else round_double(value.toDouble())
-    is Int64 -> if (value < SP_COMPONENT_MIN_INT || value > SP_COMPONENT_MAX_INT) null else round_double(value.toDouble())
+    is Double -> if (value.isNaN()) null else rd(value)
+    is Float -> if (value.isNaN()) null else rd(value.toDouble())
+    is Int64 -> if (value < SP_COMPONENT_MIN_INT || value > SP_COMPONENT_MAX_INT) null else rd(value.toDouble())
     is Long -> {
         val i64 = Int64(value)
-        if (i64 < SP_COMPONENT_MIN_INT || i64 > SP_COMPONENT_MAX_INT) null else round_double(value.toDouble())
+        if (i64 < SP_COMPONENT_MIN_INT || i64 > SP_COMPONENT_MAX_INT) null else rd(value.toDouble())
     }
-    is Number -> round_double(value.toDouble())
+    is Number -> rd(value.toDouble())
     is String -> {
         val f64 = value.toDoubleOrNull()
-        if (f64 == null || f64.isNaN()) null else round_double(f64)
+        if (f64 == null || f64.isNaN()) null else rd(f64)
     }
     else -> null
 }
@@ -166,7 +166,7 @@ fun sp_double(value: Any?): Double? = when(value) {
  * Round and validate the given component to longitude _(does not round)_.
  * @param component The component to validate.
  * @return the longitude component or `null`, if the given component is out of range.
- * @see round_double
+ * @see rd
  */
 fun sp_lon(component: Double?): Double? = if (component == null || component < -180.0 || component > 180.0) null else component
 
@@ -174,7 +174,7 @@ fun sp_lon(component: Double?): Double? = if (component == null || component < -
  * Round and validate the given component to latitude _(does not round)_.
  * @param component The component to validate.
  * @return the latitude component or `null`, if the given component is out of range.
- * @see round_double
+ * @see rd
  */
 fun sp_lat(component: Double?): Double? = if (component == null || component < -90.0 || component > 90.0) null else component
 
@@ -184,7 +184,7 @@ fun sp_lat(component: Double?): Double? = if (component == null || component < -
  * - Throws [NakshaError.ILLEGAL_ARGUMENT][naksha.base.NakshaError.ILLEGAL_ARGUMENT] if the given value is out of range.
  * @param component The spatial component.
  * @return the spatial fixed integer.
- * @see round_double
+ * @see rd
  */
 fun sp_double_to_int(component: Double): Int {
     if (component < -180.0 || component > 180.0) throw illegalArg("The component must be between -180 and 180")
@@ -197,9 +197,9 @@ fun sp_double_to_int(component: Double): Int {
  * - Throws [NakshaError.ILLEGAL_ARGUMENT][naksha.base.NakshaError.ILLEGAL_ARGUMENT] if the given value is out of range.
  * @param fixed The spatial fixed integer.
  * @return the spatial component.
- * @see round_double
+ * @see rd
  */
-fun sp_int_to_double(fixed: Int): Double = round_double(fixed.toDouble() / SP_COMPONENT_MULTIPLIER_DOUBLE)
+fun sp_int_to_double(fixed: Int): Double = rd(fixed.toDouble() / SP_COMPONENT_MULTIPLIER_DOUBLE)
 
 /**
  * Tests if the given value is a double and not NaN.
@@ -213,7 +213,7 @@ internal inline fun is_double(value: Any?): Boolean = value is Double && !value.
  * Returns either the given value as double or `0.0`, if the value is no double or NaN _(does not round)_.
  * @param value The value that should be a valid double.
  * @return the given value or `0.0`, if the value is no double or NaN.
- * @see round_double
+ * @see rd
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun as_double_or_zero(value: Any?): Double = if (value !is Double || value.isNaN()) 0.0 else value
@@ -222,7 +222,7 @@ internal inline fun as_double_or_zero(value: Any?): Double = if (value !is Doubl
  * Returns the given value as double or `null`, if the value is no double or NaN _(does not round)_.
  * @param value The value that should be a valid double.
  * @return the given value as double or `null`.
- * @see round_double
+ * @see rd
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun as_double_or_null(value: Any?): Double? = if (value !is Double || value.isNaN()) null else value

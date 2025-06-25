@@ -100,8 +100,18 @@ open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(d
     /**
      * Reads the value using the given path.
      *
+     * Value being returned are:
+     * - `null`
+     * - `Boolean`
+     * - `Int`
+     * - `Int64`
+     * - `Double`
+     * - `PlatformMap`
+     * - `PlatformList`
+     * - `PlatformDataView`
+     *
      * @param path the path to select, strings are used to enter maps, integers are used to select from arrays.
-     * @return either the value read from the path or [naksha.base.Platform.UNDEFINED], when the path does not exist.
+     * @return either the value read from the path or [Platform.UNDEFINED][naksha.base.Platform.UNDEFINED], when the path does not exist.
      */
     open operator fun get(vararg path: Any): Any? {
         reset() // Move the reader to the root-map.
@@ -112,8 +122,18 @@ open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(d
     /**
      * Reads the value using the given path.
      *
+     * Value being returned are:
+     * - `null`
+     * - `Boolean`
+     * - `Int`
+     * - `Int64`
+     * - `Double`
+     * - `PlatformMap`
+     * - `PlatformList`
+     * - `PlatformDataView`
+     *
      * @param path the path to select (`properties.test`), strings are used to enter maps, integers are used to select from arrays.
-     * @return either the value read from the path or [naksha.base.Platform.UNDEFINED], when the path does not exist.
+     * @return either the value read from the path or [Platform.UNDEFINED][naksha.base.Platform.UNDEFINED], when the path does not exist.
      */
     open fun getJsonPath(path: String): Any? = get(*splitJsonPath(path))
 

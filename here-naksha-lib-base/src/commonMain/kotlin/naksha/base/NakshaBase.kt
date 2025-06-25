@@ -23,8 +23,17 @@ import naksha.base.Platform.Platform_C.asPlatformObject
 import naksha.base.Platform.Platform_C.detectMap
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.Platform.Platform_C.isPlatformObject
+import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_byte_array
+import naksha.base.PlatformListApi.PlatformListApi_C.list_get
+import naksha.base.PlatformListApi.PlatformListApi_C.list_get_length
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_contains_key
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_key_iterator
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_size
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
+import naksha.base.fn.Fx2
+import kotlin.jvm.JvmOverloads
 
 /**
  * The package name `naksha.base`.
@@ -141,6 +150,252 @@ inline operator fun <reified T> Array<T>.minus(element: T?): Array<T> {
     }
     @Suppress("UNCHECKED_CAST")
     return newArray as Array<T>
+}
+
+/**
+ * Returns the amount of elements in an array or list, or the amount of key-value pairs in a map.
+ * @param listOrMap The list or map to check.
+ * @return the length or `0`.
+ * @since 3.0
+ */
+internal fun get_length(listOrMap: Any?): Int {
+    if (listOrMap is Array<*>) return listOrMap.size
+    if (listOrMap is List<*>) return listOrMap.size // works as well for MutableList<*>
+    if (listOrMap is PlatformList) return list_get_length(listOrMap)
+    if (listOrMap is Map<*, *>) return listOrMap.size // works as well for MutableMap<*, *>
+    if (listOrMap is PlatformMap) return map_size(listOrMap)
+    return 0
+}
+
+/**
+ * Returns the list element at the given index, or `null`.
+ * @param list The list.
+ * @param index The index.
+ * @param alternative The alternative to return, when the index is out of bounds.
+ * @return The element at the given index, or `alternative`.
+ * @since 3.0
+ */
+@JvmOverloads
+internal fun get_element(list: Any?, index: Int, alternative: Any? = null): Any? {
+    if (list is Array<*>) return if (index in 0 ..< list.size) list[index] else alternative
+    if (list is List<*>) return if (index in 0 ..< list.size) list[index] else alternative
+    if (list is PlatformList) return if (index in 0 ..< list_get_length(list)) list_get(list, index) else alternative
+    return alternative
+}
+
+/**
+ * Tests if the given map contains the given key.
+ * @param map The map to query.
+ * @param key The key to lookup.
+ * @return _true_ if the map contains the `key`, _false_ otherwise.
+ * @since 3.0
+ */
+internal fun contains_key(map: Any?, key: Any?): Boolean {
+    if (map is Map<*, *>) return map.containsKey(key)
+    if (map is PlatformMap) return map_contains_key(map, key)
+    return false
+}
+
+/**
+ * Reads the value associated to the given key in the given map.
+ * @param map The map to read.
+ * @param key The key to read.
+ * @param alternative The alternative to return, when the map does not contain the `key`.
+ * @return the associated value, or `alternative`.
+ * @since 3.0
+ */
+@JvmOverloads
+internal fun get_value(map: Any?, key: Any?, alternative: Any? = null): Any? {
+    try {
+        if (alternative == null) {
+            // Fast path.
+            if (map is Map<*, *>) return map[key]
+            if (map is PlatformMap) return map_get(map, key)
+            return null
+        }
+        if (map is Map<*, *>) return if (map.containsKey(key)) map[key] else alternative
+        if (map is PlatformMap) return if (map_contains_key(map, key)) map_get(map, key) else alternative
+        return alternative
+    } catch (_: Exception) {
+        // Some maps do allow null keys, some don't!
+        return alternative
+    }
+}
+
+/**
+ * Reads the value associated to the given key in the given map.
+ * @param map The map to read.
+ * @param fn The function to call for each key-value pair, receiving the key and value as arguments, in that order.
+ * @return if [AbortVisit] is thrown, returns the value returned; otherwise `null`.
+ * @since 3.0
+ */
+internal fun <T> for_each_entry(map: Any?, fn: Fx2<Any?, Any?>): T? {
+    try {
+        if (map is Map<*, *>) {
+            map.forEach { e -> fn.call(e.key, e.value) }
+        } else if (map is PlatformMap) {
+            val it = map_key_iterator(map)
+            var keyEntry = it.next()
+            while (!keyEntry.done) {
+                val key = keyEntry.value
+                val value = map_get(map, key)
+                fn.call(key, value)
+                keyEntry = it.next()
+            }
+        }
+    } catch (e: NakshaException) {
+        val err = e.error
+        @Suppress("UNCHECKED_CAST")
+        if (err is AbortVisit<*>) return err.value as T?
+    }
+    return null
+}
+
+/**
+ * Tests if the given `value` is a [PlatformMap], [Map], or [MutableMap].
+ * @param value The value to test.
+ * @return _true_ if the value is a map; _false_ otherwise.
+ * @since 3.0
+ */
+internal fun is_map(value: Any?): Boolean = value is PlatformMap || value is Map<*, *> // matches as well MutableMap<*, *>
+
+/**
+ * Tests if the given `value` is a [PlatformList], [List], [MutableList], or [Array].
+ * @param value The value to test.
+ * @return _true_ if the value is a list; _false_ otherwise.
+ * @since 3.0
+ */
+internal fun is_list(value: Any?): Boolean = value is PlatformList || value is Array<*> || value is List<*> // matches as well MutableList<*>
+
+/**
+ * Tests if the given `value` is data, so it is [PlatformDataView] or [ByteArray].
+ * @param value The value to test.
+ * @return _true_ if the value is data; _false_ otherwise.
+ * @since 3.0
+ */
+internal fun is_data(value: Any?): Boolean = value is PlatformDataView || value is ByteArray
+
+/**
+ * Tests if the given `value` has data bytes, so it is [PlatformDataView], [ByteArray], or [String].
+ * @param value The value to test.
+ * @return _true_ if the value has data bytes; _false_ otherwise.
+ * @since 3.0
+ */
+internal fun has_data(value: Any?): Boolean = value is PlatformDataView || value is ByteArray || value is String
+
+private val EMPTY_BYTES = ByteArray(0)
+
+/**
+ * Returns the data bytes backing the given value or an empty byte array (size `0`).
+ * @param value The value for which to return the bytes ([ByteArray], [PlatformMap], or [String]).
+ * @return the
+ * @since 3.0
+ */
+internal fun get_data(value: Any?): ByteArray {
+    if (value is PlatformDataView) return dataview_get_byte_array(value)
+    if (value is ByteArray) return value
+    if (value is String) return value.encodeToByteArray()
+    return EMPTY_BYTES
+}
+
+/**
+ * Tests if the given `haystack` contains the given `needle` recursively.
+ *
+ * @param haystack The haystack in which to search.
+ * @param needle The needle to search for.
+ * @return _true_ if `needle` is contained in `haystack`; _false_ otherwise.
+ * @since 3.0
+ */
+internal fun deep_contains(haystack: Any?, needle: Any?): Boolean {
+    // Same references or both null
+    if (haystack === needle) return true
+    // If only one of them is null
+    if (haystack == null || needle == null) return false
+    if (is_map(haystack)) {
+        if (!is_map(needle)) return false
+        // for_each_entry returns null, if needle is in haystack, or false otherwise!
+        return for_each_entry<Boolean?>(needle) { key, needle_value ->
+            // All needle values should be in haystack!
+            if (!contains_key(haystack, key)) AbortVisit.with(false)
+            // We do recursive equal.
+            val hay_value = get_value(haystack, key)
+            if (!PlatformUtil.deepEquals(hay_value, needle_value)) AbortVisit.with(false)
+        } != false
+    }
+    if (is_list(haystack)) {
+        if (!is_list(needle)) return false
+        val hay_len = get_length(haystack)
+        val needle_len = get_length(needle)
+        var needle_i = -1
+        while (++needle_i < needle_len) {
+            val needle_value = get_element(needle, needle_i)
+            // We need to find this needle value within haystack.
+            var found = false
+            var hay_i = -1
+            while (++hay_i < hay_len) {
+                val hay_value = get_element(haystack, hay_i)
+                if (PlatformUtil.deepEquals(hay_value, needle_value)) {
+                    found = true
+                    break
+                }
+            }
+            // If we can't, we're done, needle not contained in haystack.
+            if (!found) return false
+        }
+        return true
+    }
+    if (is_data(haystack)) {
+        if (!is_data(needle)) return false
+        val haystack_bytes = get_data(haystack)
+        val needle_bytes = get_data(needle)
+        return haystack_bytes.contentEquals(needle_bytes)
+    }
+    return haystack == needle
+}
+
+/**
+ * Tests if the given values are recursively equal.
+ *
+ * @param a The first value.
+ * @param b The second value to compare.
+ * @return _true_ if `a` is recursively equal to `b`; _false_ otherwise.
+ * @since 3.0
+ */
+internal fun deep_equals(a: Any?, b: Any?): Boolean {
+    if (a === b) return true
+    if (a == null || b == null) return false
+    if (is_map(a)) {
+        if (!is_map(b)) return false
+        val a_len = get_length(a)
+        val b_len = get_length(b)
+        if (a_len != b_len) return false
+        // Compare key-value pairs.
+        return for_each_entry<Boolean?>(a) { key, a_value ->
+            if (!contains_key(b, key)) AbortVisit.with(false)
+            val b_value = get_value(b, key)
+            if (!deep_equals(a_value, b_value)) AbortVisit.with(false)
+        } != false
+    }
+    if (is_list(a)) {
+        if (!is_list(b)) return false
+        val a_len = get_length(a)
+        val b_len = get_length(b)
+        if (a_len != b_len) return false
+        var i = -1
+        while (++i < a_len) {
+            val a_value = get_element(a, i)
+            val b_value = get_element(b, i)
+            if (!deep_equals(a_value, b_value)) return false
+        }
+        return true
+    }
+    if (is_data(a)) {
+        if (!is_data(b)) return false
+        val a_bytes = get_data(a)
+        val b_bytes = get_data(b)
+        return a_bytes.contentEquals(b_bytes)
+    }
+    return a == b
 }
 
 /**
@@ -499,7 +754,7 @@ internal fun <T> boxInto(raw: Any?, type: PlatformType<T>, alternative: T? = nul
 
         // If a proxy is requested, try to create one, or return existing one.
         if (type.isProxy()) {
-            if (type.isInstantiatable) return type.proxy(unboxed)
+            if (type.isInstantiatable) return type.proxy(asPlatformObject(unboxed))
 
             val existing = type.getProxy(asPlatformObject(unboxed))
             if (existing != null) return existing
@@ -642,8 +897,9 @@ internal fun initialize() {
         forKClass(Epoch::class).initialize()
         forKClass(FromJsonOptions::class).initialize()
         forKClass(Int64Encoding::class).initialize()
-        forKClass(IntMutable::class).initialize()
         forKClass(JsEnum::class).initialize()
+        forKClass(MutableInt::class).initialize()
+        forKClass(MutableDouble::class).initialize()
         forKClass(PlatformIterator::class).initialize()
         forKClass(PlatformIteratorResult::class).initialize()
         forKClass(PlatformTypeList::class).initialize()
