@@ -204,6 +204,7 @@ abstract class Proxy : PlatformObject {
      * @return The raw value as given type, the result of [init], or the given [alternative] (in that order).
      * @since 3.0
      */
+    @JvmOverloads
     open fun <T> box(raw: Any?, type: PlatformType<T>, alternative: T? = null, init: Fn0<T?>? = null): T?
         = Platform.box(raw, type, alternative, init)
 

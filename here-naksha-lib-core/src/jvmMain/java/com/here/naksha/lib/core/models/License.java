@@ -22,6 +22,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import java.util.Arrays;
 import java.util.List;
 import naksha.base.AnyObject;
+import org.jetbrains.annotations.NotNull;
+
+import static naksha.base.NakshaBaseKt.String_TYPE;
 
 public class License extends AnyObject {
 
@@ -64,20 +67,20 @@ public class License extends AnyObject {
   private static final String KEYWORD = "keyword";
 
   public String getKeyword() {
-    return (String) getRaw(KEYWORD);
+    return getAs(KEYWORD, String_TYPE);
   }
 
   public void setKeyword(final String keyword) {
     setRaw(KEYWORD, keyword);
   }
 
-  public License withKeyword(final String keyword) {
+  public @NotNull License withKeyword(final String keyword) {
     setKeyword(keyword);
     return this;
   }
 
   @JsonCreator
-  public static License forKeyword(String keyword) {
+  public static @NotNull License forKeyword(String keyword) {
     License l = new License();
     if (!ALLOWED_KEYWORDS.contains(keyword)) {
       throw new IllegalArgumentException("\""

@@ -3,8 +3,9 @@ package naksha.base
 import naksha.base.Platform.Platform_C.forKClass
 import kotlin.test.*
 
-class Foo : AnyObject() {
+open class Foo : AnyObject() {
     companion object {
+        val TYPE = forKClass(Foo::class).withPackageName(PACKAGE_NAME)
         val NAME = NotNullProperty<Foo, String>(String_TYPE) { _, _ -> "Bernd" }
         val AGE = NotNullProperty<Foo, Int>(Int_TYPE) { _, _ -> 0 }
         val XYZ = NullableProperty<Foo, String>(String_TYPE, name = "@ns:com:here:xyz")
@@ -15,14 +16,27 @@ class Foo : AnyObject() {
     var xyz: String? by XYZ
 }
 
-class Bar : AnyObject() {
+open class Bar : AnyObject() {
     companion object {
+        val TYPE = forKClass(Bar::class).withPackageName(PACKAGE_NAME)
         val FOO = NotNullProperty<Bar, Foo>(forKClass(Foo::class))
         val FOO2 = NullableProperty<Bar, Foo>(forKClass(Foo::class))
     }
 
     var foo: Foo by FOO
     var foo2: Foo? by FOO2
+}
+
+class Bar2 : Bar() {
+    companion object {
+        val TYPE = forKClass(Bar2::class).withPackageName(PACKAGE_NAME)
+    }
+}
+
+class Foo2 : Foo() {
+    companion object {
+        val TYPE = forKClass(Foo2::class).withPackageName(PACKAGE_NAME)
+    }
 }
 
 class ObjectProxyTest {
@@ -73,5 +87,26 @@ class ObjectProxyTest {
         val foo2 = bar.foo2
         assertNotNull(foo2)
         assertSame(foo2, bar.foo2)
+    }
+
+    @Test
+    fun testBarSuperType() {
+        val bar = Bar2()
+        assertTrue(Bar.TYPE.isInstance(bar))
+        assertTrue(Bar2.TYPE.isInstance(bar))
+        assertSame(Bar2.TYPE.superType, Bar.TYPE)
+    }
+
+    @Test
+    fun testFooSuperTypes() {
+        val foo = Foo2()
+        assertTrue(Foo.TYPE.isInstance(foo))
+        assertTrue(Foo2.TYPE.isInstance(foo))
+        assertSame(Foo2.TYPE.superType, Foo.TYPE)
+
+        assertSame(Foo.TYPE.superType, AnyObject.TYPE)
+        assertSame(AnyObject.TYPE.superType, MapProxy.TYPE)
+        assertSame(MapProxy.TYPE.superType, Proxy.TYPE)
+        assertNull(Proxy.TYPE.superType)
     }
 }

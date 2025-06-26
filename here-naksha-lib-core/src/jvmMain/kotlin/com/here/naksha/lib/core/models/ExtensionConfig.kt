@@ -1,17 +1,22 @@
 package com.here.naksha.lib.core.models
 
 import com.here.naksha.lib.core.models.features.Extension
-import naksha.base.AnyObject
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
-import naksha.base.StringList
+import naksha.base.*
+import naksha.base.Platform.Platform_C.forKClass
 
 class ExtensionConfig() : AnyObject() {
     companion object {
-        private val EXTENSIONS_NULL = NullableProperty<ExtensionConfig, ExtensionList>(ExtensionList::class)
-        private val WHITELIST_DELEGATE_CLASSES_NULL = NullableProperty<ExtensionConfig, StringList>(StringList::class)
-        private val LONG = NotNullProperty<ExtensionConfig, Long>(Long::class)
-        private val STRING = NotNullProperty<ExtensionConfig, String>(String::class)
+        /**
+         * The [PlatformType] of [ExtensionConfig].
+         * @since 3.0
+         */
+        @JvmField
+        val TYPE = forKClass(ExtensionConfig::class)
+
+        private val EXTENSIONS_NULL = NullableProperty<ExtensionConfig, ExtensionList>(ExtensionList.TYPE)
+        private val WHITELIST_DELEGATE_CLASSES_NULL = NullableProperty<ExtensionConfig, StringList>(StringList.TYPE)
+        private val LONG = NotNullProperty<ExtensionConfig, Long>(Long_TYPE)
+        private val STRING = NotNullProperty<ExtensionConfig, String>(String_TYPE)
     }
 
     var expiry by LONG

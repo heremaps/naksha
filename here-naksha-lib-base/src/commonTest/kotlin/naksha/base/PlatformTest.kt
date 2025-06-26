@@ -361,12 +361,13 @@ class PlatformTest {
 
     class CustomFeature : AnyTypedObject() {
         companion object MyTypedObject_C {
-            val TYPE = forKClass(CustomFeature::class).withJsonType("custom")
+            val TYPE = forKClass(CustomFeature::class)
+                .withJsonType("custom")
+                .withIsFeature(true)
 
             private val FOO_MEMBER = NullableProperty<CustomFeature, Boolean>(Boolean_TYPE)
         }
 
-        override fun isFeature(): Boolean = true
         var foo: Boolean? by FOO_MEMBER
     }
 
@@ -404,10 +405,10 @@ class PlatformTest {
 
     class CustomMomObject : AnyTypedObject() {
         companion object CustomMomObject_C {
-            val TYPE = forKClass(CustomMomObject::class).withJsonType("myMom")
+            val TYPE = forKClass(CustomMomObject::class)
+                .withJsonType("myMom")
+                .withIsMomType(true)
         }
-
-        override fun isMomType(): Boolean = true
     }
 
     @Test
@@ -443,11 +444,10 @@ class PlatformTest {
 
     class CustomDataHubObject : AnyTypedObject() {
         companion object CustomDataHubObject_C {
-            val TYPE = forKClass(CustomDataHubObject::class).withJsonType("myDataHub")
+            val TYPE = forKClass(CustomDataHubObject::class)
+                .withJsonType("myDataHub")
+                .withIsDataHubType(true)
         }
-
-        @Suppress("OVERRIDE_DEPRECATION")
-        override fun isDataHubType(): Boolean = true
     }
 
     @Test
@@ -486,12 +486,11 @@ class PlatformTest {
 
     class CustomDataHubMomObject : AnyTypedObject() {
         companion object CustomDataHubMomObject_C {
-            val TYPE = forKClass(CustomDataHubMomObject::class).withJsonType("dataHubAndMom")
+            val TYPE = forKClass(CustomDataHubMomObject::class)
+                .withJsonType("dataHubAndMom")
+                .withIsMomType(true)
+                .withIsDataHubType(true)
         }
-
-        override fun isMomType(): Boolean = true
-        @Suppress("OVERRIDE_DEPRECATION")
-        override fun isDataHubType(): Boolean = true
     }
 
     @Test

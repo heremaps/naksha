@@ -15,7 +15,7 @@ import kotlin.jvm.JvmField
  * @since 3.0
  */
 @JsExport
-class DifferenceMap: MapProxy<Any, Difference>(Any_TYPE, DIFFERENCE) {
+class DifferenceMap: MapProxy<Any, Difference>(Any_TYPE, Difference_TYPE) {
     companion object DifferenceMap_C {
         /**
          * The [PlatformType] of [DifferenceMap].

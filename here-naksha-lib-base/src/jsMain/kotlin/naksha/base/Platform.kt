@@ -4,6 +4,7 @@ package naksha.base
 
 import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
 import naksha.base.fn.Fn0
+import naksha.base.fn.Fn1
 import kotlin.math.round
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
@@ -11,6 +12,11 @@ import kotlin.reflect.KFunction
 @JsExport
 actual class Platform {
     actual companion object Platform_C {
+        @JsStatic
+        actual val isJvm: Boolean = false
+        @JsStatic
+        actual val isJs: Boolean = true
+
         private var isInitialized: Boolean = false
 
         internal val U64_MAX_VALUE = js("BigInt.asUintN(64,BigInt('18446744073709551615'))").unsafeCast<Int64>()
@@ -200,12 +206,23 @@ if (typeof k==='function') instance=Object.create(k.prototype);""")
             return if (all != null) PlatformTypeList(*all) else PlatformTypeList()
         }
 
+        /**
+         * A reflective method to find the first type that has in a JSON representation the property `type` set to the given value, and that is _(or implements)_ the given type.
+         *
+         * @param jsonType The value read from the `type` property of a JSON object.
+         * @param type The [PlatformType] that is searched for.
+         * @return either the first matching [PlatformType] or `null`, if no type matches.
+         * @since 3.0
+         */
+        @JsStatic
+        fun <T> forFirstJsonType(jsonType: String?, type: PlatformType<T>): PlatformType<T>? = forFirstJsonType(jsonType, type, null)
+
         @Suppress("UNCHECKED_CAST")
         @JsStatic
-        actual fun <T> forFirstJsonType(jsonType: String?, type: PlatformType<T>): PlatformType<T>? {
+        actual fun <T> forFirstJsonType(jsonType: String?, type: PlatformType<T>, test: Fn1<Boolean, PlatformType<*>>?): PlatformType<T>? {
             val foundTypes = JsPlatformType.byJsonType[jsonType] ?: return null
             for (foundType in foundTypes) {
-                if (foundType.isAssignableTo(type)) {
+                if (foundType.isAssignableTo(type) && (test==null || test.call(foundType))) {
                     return foundType as PlatformType<T>
                 }
             }

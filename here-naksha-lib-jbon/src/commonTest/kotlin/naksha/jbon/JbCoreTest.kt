@@ -889,6 +889,7 @@ class JbCoreTest {
         companion object CustomFeature_C {
             val TYPE = forKClass(CustomFeature::class)
                 .withPackageName(PACKAGE_NAME)
+                .withIsFeature(true)
                 .withJsonType("jbon.Custom")
 
             val STRING_MEMBER = NullableProperty<CustomFeature, String>(String_TYPE)

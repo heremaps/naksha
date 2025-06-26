@@ -26,13 +26,21 @@ import com.here.naksha.lib.core.models.indexing.Constraint.ConstraintMap;
 import com.here.naksha.lib.core.models.indexing.Index;
 import java.util.List;
 import java.util.Map;
-import naksha.base.JvmBoxingUtil;
+
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.base.StringList;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static naksha.base.NakshaBaseKt.String_TYPE;
+import static naksha.base.NakshaError.ILLEGAL_STATE;
+import static naksha.base.NakshaError.raise;
+import static naksha.base.Platform.forClass;
 
 /**
  * The space configuration. A space is an event-pipeline accessible via the REST API.
@@ -75,7 +83,10 @@ public final class Space extends EventTarget<Space> {
    */
   @AvailableSince(NakshaVersion.v2_0_3)
   public @NotNull String getName() {
-    return (String) getRaw(NAME);
+    var name = getAs(NAME, String_TYPE);
+    if (name == null) raise(ILLEGAL_STATE, "name is no string");
+    assert name != null;
+    return name;
   }
 
   /*
@@ -90,7 +101,11 @@ public final class Space extends EventTarget<Space> {
   @Override
   @AvailableSince(NakshaVersion.v2_0_3)
   public SpaceProperties getProperties() {
-    return JvmBoxingUtil.box(super.getProperties(), SpaceProperties.class);
+    final NakshaProperties properties = super.getProperties();
+    if (properties instanceof SpaceProperties) {
+      return (SpaceProperties) properties;
+    }
+    return forClass(SpaceProperties.class).proxy(properties);
   }
 
   /**
@@ -115,14 +130,14 @@ public final class Space extends EventTarget<Space> {
   /**
    * Copyright information for the data in the space.
    */
-  public List<Copyright> getCopyright() {
-    return JvmBoxingUtil.box(get(COPYRIGHT), Copyright.List.class);
+  public @Nullable List<@Nullable Copyright> getCopyright() {
+    return getAs(COPYRIGHT, forClass(Copyright.List.class));
   }
 
-  public void setCopyright(final List<Copyright> copyright) {
-    Copyright.List proxyBasedCopyright = new Copyright.List();
-    proxyBasedCopyright.addAll(copyright);
-    setRaw(COPYRIGHT, proxyBasedCopyright);
+  public void setCopyright(final @Nullable List<@Nullable Copyright> copyright) {
+    final Copyright.List proxyBasedCopyright = new Copyright.List();
+    if (copyright != null) proxyBasedCopyright.addAll(copyright);
+    set(COPYRIGHT, proxyBasedCopyright);
   }
 
   public @NotNull Space withCopyright(final List<Copyright> copyright) {
@@ -133,12 +148,12 @@ public final class Space extends EventTarget<Space> {
   /**
    * Information about the license bound to the data within the space. For valid keywords see {@link License}.
    */
-  public License getLicense() {
-    return JvmBoxingUtil.box(get(LICENSE), License.class);
+  public @Nullable License getLicense() {
+    return getAs(LICENSE, forClass(License.class));
   }
 
-  public void setLicense(final License license) {
-    setRaw(LICENSE, license);
+  public void setLicense(final @Nullable License license) {
+    set(LICENSE, license);
   }
 
   public @NotNull Space withLicense(final License license) {
@@ -149,16 +164,18 @@ public final class Space extends EventTarget<Space> {
   /**
    * List of packages that this space belongs to.
    */
-  public List<@NotNull String> getPackages() {
-    return JvmBoxingUtil.box(get(PACKAGES), StringList.class);
+  public @Nullable List<@NotNull String> getPackages() {
+    return getAs(PACKAGES, forClass(StringList.class));
   }
 
-  public void setPackages(final List<@NotNull String> packages) {
-    setPackages(StringList.fromList(packages));
+  public void setPackages(final @Nullable List<@NotNull String> packages) {
+    if (packages != null) {
+      setPackages(StringList.fromList(packages));
+    }
   }
 
-  public void setPackages(final StringList packages) {
-    setRaw(PACKAGES, packages);
+  public void setPackages(final @Nullable StringList packages) {
+    set(PACKAGES, packages);
   }
 
   /**
@@ -177,22 +194,22 @@ public final class Space extends EventTarget<Space> {
    * the value describes the properties to index including their ordering in the index. Properties not being indexes still can be searched,
    * but the result can be bad.
    */
-  public @Nullable Map<@NotNull String, @NotNull Index> getIndices() {
-    return JvmBoxingUtil.box(get(INDICES), Index.Map.class);
+  public @Nullable Index.Map getIndices() {
+    return getAs(INDICES, forClass(Index.Map.class));
   }
 
   public void setIndices(@Nullable Map<@NotNull String, @NotNull Index> indices) {
     Index.Map proxyBasedIndices = new Index.Map();
-    proxyBasedIndices.putAll(indices);
-    setRaw(INDICES, proxyBasedIndices);
+    if (indices != null) proxyBasedIndices.putAll(indices);
+    set(INDICES, proxyBasedIndices);
   }
 
   /**
    * A map defined by the user to apply constraints on feature-properties to prevent illegal values. Note that creating constraints later
    * will fail, if the space does not fulfill the constraint.
    */
-  public @Nullable Map<@NotNull String, @NotNull Constraint> getConstraints() {
-    return JvmBoxingUtil.box(get(CONSTRAINTS), ConstraintMap.class);
+  public @Nullable ConstraintMap getConstraints() {
+    return getAs(CONSTRAINTS, ConstraintMap.TYPE);
   }
 
   public void setConstraints(@Nullable Map<@NotNull String, @NotNull Constraint> constraints) {

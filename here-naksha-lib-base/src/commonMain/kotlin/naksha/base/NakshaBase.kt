@@ -1,4 +1,4 @@
-@file:Suppress("NOTHING_TO_INLINE", "unused")
+@file:Suppress("NOTHING_TO_INLINE", "unused", "OPT_IN_USAGE")
 
 // This will be exposed
 // - in JavaScript at the namespace: naksha.base.{name}
@@ -19,6 +19,10 @@ import naksha.base.NakshaError.NakshaError_C.MAP_EXISTS
 import naksha.base.NakshaError.NakshaError_C.MAP_NOT_FOUND
 import naksha.base.NakshaError.NakshaError_C.NOT_FOUND
 import naksha.base.NakshaError.NakshaError_C.UNSUPPORTED_OPERATION
+import naksha.base.Platform.Platform_C.MAX_SAFE_INT
+import naksha.base.Platform.Platform_C.MAX_SAFE_INT64
+import naksha.base.Platform.Platform_C.MIN_SAFE_INT
+import naksha.base.Platform.Platform_C.MIN_SAFE_INT64
 import naksha.base.Platform.Platform_C.asPlatformObject
 import naksha.base.Platform.Platform_C.detectMap
 import naksha.base.Platform.Platform_C.forKClass
@@ -33,6 +37,8 @@ import naksha.base.PlatformMapApi.PlatformMapApi_C.map_size
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
 import naksha.base.fn.Fx2
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 
 /**
@@ -402,180 +408,248 @@ internal fun deep_equals(a: Any?, b: Any?): Boolean {
  * The [PlatformType] for `any`.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val Any_TYPE = forKClass(Any::class).initialize()
 
 /**
  * The [PlatformType] for `boolean`.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val Boolean_TYPE = forKClass(Boolean::class).initialize()
 
 /**
  * The [PlatformType] for `int`.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val Int_TYPE = forKClass(Int::class).initialize()
 
 /**
  * The [PlatformType] for `int64`.
  * @since 3.0
  */
+@JvmField
+@JsStatic
+val Long_TYPE = forKClass(Long::class).initialize()
+
+/**
+ * The [PlatformType] for `int64`.
+ * @since 3.0
+ */
+@JvmField
+@JsStatic
 val Int64_TYPE = forKClass(Int64::class).initialize()
 
 /**
  * The [PlatformType] for `double`.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val Double_TYPE = forKClass(Double::class).initialize()
 
 /**
  * The [PlatformType] for `string`.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val String_TYPE = forKClass(String::class).initialize()
 
 /**
  * The [PlatformType] for `ByteArray`.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val ByteArray_TYPE = forKClass(ByteArray::class).initialize()
 
 /**
  * The [PlatformType] for `throwable`.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val Throwable_TYPE = forKClass(Throwable::class).initialize()
 
 /**
  * The [PlatformType] for `exception`.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val Exception_TYPE = forKClass(Exception::class).initialize()
 
 /**
  * The [PlatformType] of [AtomicBool].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val AtomicBool_TYPE = forKClass(AtomicBool::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [AtomicInt].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val AtomicInt_TYPE = forKClass(AtomicInt::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [AtomicInt64].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val AtomicInt64_TYPE = forKClass(AtomicInt64::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [AtomicMap].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val AtomicMap_TYPE = forKClass(AtomicMap::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [AtomicNonNullRef].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val AtomicNonNullRef_TYPE = forKClass(AtomicNonNullRef::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [AtomicRef].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val AtomicRef_TYPE = forKClass(AtomicRef::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [WeakRef].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val WeakRef_TYPE = forKClass(WeakRef::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [BinaryView].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val BinaryView_TYPE = forKClass(BinaryView::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [Like].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val Like_TYPE = forKClass(Like::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformDataView].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PlatformDataView_Type = forKClass(PlatformDataView::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformObject].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PlatformObject_TYPE = forKClass(PlatformObject::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformList].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PlatformList_TYPE = forKClass(PlatformList::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformMap].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PlatformMap_TYPE = forKClass(PlatformMap::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformImporter].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PlatformImporter_TYPE = forKClass(PlatformImporter::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformExporter].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PlatformExporter_TYPE = forKClass(PlatformExporter::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformLock].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PlatformLock_TYPE = forKClass(PlatformLock::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformLogger].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PlatformLogger_TYPE = forKClass(PlatformLogger::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformThreadLocal].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PlatformThreadLocal_TYPE = forKClass(PlatformThreadLocal::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [Symbol].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val Symbol_TYPE = forKClass(Symbol::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [SymbolResolver].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val SymbolResolver_TYPE = forKClass(SymbolResolver::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
  * The [PlatformType] of [PlatformType].
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PlatformType_TYPE = forKClass(PlatformType::class).withPackageName(PACKAGE_NAME).initialize()
 
 /**
@@ -736,10 +810,67 @@ fun unsupportedOp(msg: String): NakshaException = NakshaException(UNSUPPORTED_OP
 @Suppress("UNCHECKED_CAST")
 internal fun <T> boxInto(raw: Any?, type: PlatformType<T>, alternative: T? = null, init: Fn0<T?>? = null): T? {
     // If raw is for example Foo, and we ask boxInto(raw, Foo.TYPE), we want to just return raw.
-    if (type != Any_TYPE && type.isInstance(raw)) return raw as T
+    if (type !== Any_TYPE && type.isInstance(raw)) return raw as T
 
-    // Otherwise, unbox and start checking.
+    // Unbox the given raw, which can be a proxy or anything else.
+    // We want it to be a primitive or any PlatformObject (we can't do that much about other objects).
     val unboxed = Platform.unbox(raw) ?: return if (init != null) init.call() else alternative
+
+    // Fast path for primitives.
+    if (type === Boolean_TYPE) return if (raw is Boolean) raw as T else if (init != null) init.call() else alternative
+    if (type === String_TYPE) return if (raw is String) raw as T else if (init != null) init.call() else alternative
+    if (type === Int_TYPE) {
+        val value: Int? = when (unboxed) {
+            is Byte -> unboxed.toInt()
+            is Short -> unboxed.toInt()
+            is Int -> unboxed
+            is Int64 -> if (unboxed >= Int.MIN_VALUE && unboxed <= Int.MAX_VALUE) unboxed.toInt() else null
+            is Long -> if (unboxed >= Int.MIN_VALUE && unboxed <= Int.MAX_VALUE) unboxed.toInt() else null
+            is Float -> if (unboxed % 1.0f == 0.0f && unboxed >= Int.MIN_VALUE && unboxed <= Int.MAX_VALUE) unboxed.toInt() else null
+            is Double -> if (unboxed % 1.0 == 0.0 && unboxed >= Int.MIN_VALUE && unboxed <= Int.MAX_VALUE) unboxed.toInt() else null
+            else -> null
+        }
+        return if (value != null) value as T else if (init != null) init.call() else alternative
+    }
+    if (type === Int64_TYPE) {
+        val value: Int64? = when (unboxed) {
+            is Byte -> Int64(unboxed.toInt())
+            is Short -> Int64(unboxed.toInt())
+            is Int -> Int64(unboxed)
+            is Int64 -> unboxed
+            is Long -> Int64(unboxed)
+            is Float -> if (unboxed % 1.0f == 0.0f && unboxed >= MIN_SAFE_INT && unboxed <= MAX_SAFE_INT) Int64(unboxed.toDouble()) else null
+            is Double -> if (unboxed % 1.0 == 0.0 && unboxed >= MIN_SAFE_INT && unboxed <= MAX_SAFE_INT) Int64(unboxed) else null
+            else -> null
+        }
+        return if (value != null) value as T else if (init != null) init.call() else alternative
+    }
+    if (type === Long_TYPE) {
+        val value: Long? = when (unboxed) {
+            is Byte -> unboxed.toLong()
+            is Short -> unboxed.toLong()
+            is Int -> unboxed.toLong()
+            is Int64 -> unboxed.toLong()
+            is Long -> unboxed.toLong()
+            is Float -> if (unboxed % 1.0f == 0.0f && unboxed >= MIN_SAFE_INT && unboxed <= MAX_SAFE_INT) unboxed.toLong() else null
+            is Double -> if (unboxed % 1.0 == 0.0 && unboxed >= MIN_SAFE_INT && unboxed <= MAX_SAFE_INT) unboxed.toLong() else null
+            else -> null
+        }
+        return if (value != null) value as T else if (init != null) init.call() else alternative
+    }
+    if (type === Double_TYPE) {
+        val value: Double? = when (unboxed) {
+            is Byte -> unboxed.toDouble()
+            is Short -> unboxed.toDouble()
+            is Int -> unboxed.toDouble()
+            is Int64 -> if (unboxed >= MIN_SAFE_INT64 && unboxed <= MAX_SAFE_INT64) unboxed.toDouble() else null
+            is Long -> if (unboxed >= MIN_SAFE_INT64.toLong() && unboxed <= MAX_SAFE_INT64.toLong()) unboxed.toDouble() else null
+            is Float -> unboxed.toDouble()
+            is Double -> unboxed
+            else -> null
+        }
+        return if (value != null) value as T else if (init != null) init.call() else alternative
+    }
 
     if (isPlatformObject(unboxed)) {
         // If ANY type is okay:
@@ -783,23 +914,9 @@ internal fun <T> boxInto(raw: Any?, type: PlatformType<T>, alternative: T? = nul
         return JsEnum.get(unboxed, type as PlatformType<JsEnum>) as T
     }
 
-    // If Int64 is requested.
-    if (type == Int64_TYPE) {
-        val value = when (unboxed) {
-            is Short -> Int64(unboxed.toInt())
-            is Int -> Int64(unboxed)
-            is Long -> Int64(unboxed)
-            is Float -> if (unboxed % 1.0f == 0.0f) Int64(unboxed.toDouble()) else unboxed
-            is Double -> if (unboxed % 1.0 == 0.0) Int64(unboxed) else unboxed
-            else -> unboxed
-        }
-        if (value is Int64) return value as T
-    }
-
     // If raw or data are of an acceptable correct type, return them
     if (type.isInstance(raw)) return raw as T
     if (type.isInstance(unboxed)) return unboxed as T
-
     return if (init != null) init.call() else alternative
 }
 
@@ -909,6 +1026,6 @@ internal fun initialize() {
         forKClass(ToJsonOptions::class).initialize()
 
         // Eventually, add typed object detector
-        Platform.globalDetectors.add(AnyTypedObjectDetector.instance)
+        Platform.globalDetectors.add(AnyTypedObjectDetector.defaultDetector)
     }
 }

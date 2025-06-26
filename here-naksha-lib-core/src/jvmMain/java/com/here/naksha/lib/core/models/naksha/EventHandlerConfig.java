@@ -20,12 +20,15 @@ package com.here.naksha.lib.core.models.naksha;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.models.PluginCache.getEventHandlerConstructor;
+import static naksha.base.NakshaBaseKt.*;
+import static naksha.base.NakshaError.ILLEGAL_STATE;
 
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.lambdas.Fe3;
 import com.here.naksha.lib.core.models.PluginCache;
-import naksha.base.JvmAnyObjectUtil;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
@@ -47,7 +50,9 @@ public class EventHandlerConfig extends NakshaFeature {
 
   @AvailableSince(NakshaVersion.v2_0_7)
   public @NotNull String getClassName() {
-    return JvmAnyObjectUtil.getProperty(this, CLASS_NAME, String.class);
+    final String className = getAs(CLASS_NAME, String_TYPE);
+    if (className == null) throw new NakshaException(ILLEGAL_STATE, "className is no string");
+    return className;
   }
 
   @AvailableSince(NakshaVersion.v2_0_7)
@@ -67,7 +72,7 @@ public class EventHandlerConfig extends NakshaFeature {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   public @Nullable String getExtensionId() {
-    return JvmAnyObjectUtil.getProperty(this, EXTENSION_ID, String.class);
+    return getAs(EXTENSION_ID, String_TYPE);
   }
 
   @AvailableSince(NakshaVersion.v2_0_7)
@@ -82,7 +87,7 @@ public class EventHandlerConfig extends NakshaFeature {
    */
   @AvailableSince(NakshaVersion.v2_0_7)
   public boolean isActive() {
-    return JvmAnyObjectUtil.getOrSetProperty(this, ACTIVE, true);
+    return getOrSet(ACTIVE, true);
   }
 
   @AvailableSince(NakshaVersion.v2_0_7)

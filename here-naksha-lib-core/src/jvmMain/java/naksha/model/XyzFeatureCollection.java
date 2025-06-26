@@ -19,12 +19,11 @@
 package naksha.model;
 
 import static java.util.stream.Collectors.toList;
+import static naksha.base.NakshaBaseKt.*;
 
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import java.util.List;
 import naksha.base.AnyObject;
-import naksha.base.JvmListProxy;
-import naksha.base.JvmPropertyUtil;
 import naksha.base.NotNullProperty;
 import naksha.base.NullableProperty;
 import naksha.base.StringList;
@@ -39,36 +38,16 @@ public class XyzFeatureCollection extends XyzResponse {
   private static final String FEATURE_COLLECTION_TYPE = "FeatureCollection";
 
   private static final NotNullProperty<XyzFeatureCollection, String> TYPE =
-      JvmPropertyUtil.notNullProperty(String.class, "type", (xfc, name) -> FEATURE_COLLECTION_TYPE);
+      new NotNullProperty<>(String_TYPE, (xfc, name) -> FEATURE_COLLECTION_TYPE);
 
   private static final NotNullProperty<XyzFeatureCollection, NakshaFeatureList> FEATURES =
-      JvmPropertyUtil.notNullProperty(
-          NakshaFeatureList.class, "features", (xfc, name) -> new NakshaFeatureList());
+      new NotNullProperty<>(NakshaFeatureList.TYPE, (xfc, name) -> new NakshaFeatureList());
 
-  private static final NullableProperty<XyzFeatureCollection, BBox> BBOX =
-      JvmPropertyUtil.nullableProperty(BBox.class, "bbox");
-
-  private static final NullableProperty<XyzFeatureCollection, Boolean> PARTIAL =
-      JvmPropertyUtil.nullableProperty(Boolean.class, "partial");
-
-  private static final NullableProperty<XyzFeatureCollection, String> HANDLE =
-      JvmPropertyUtil.nullableProperty(String.class, "handle");
-
-  private static final NullableProperty<XyzFeatureCollection, String> NEXT_PAGE_TOKEN =
-      JvmPropertyUtil.nullableProperty(String.class, "nextPageToken", true);
-
-  private static final NullableProperty<XyzFeatureCollection, Long> COUNT =
-      JvmPropertyUtil.nullableProperty(Long.class, "count");
-
-  private static final NullableProperty<XyzFeatureCollection, StringList> INSERTED =
-      JvmPropertyUtil.nullableProperty(StringList.class, "inserted");
-
-  private static final NullableProperty<XyzFeatureCollection, StringList> UPDATED =
-      JvmPropertyUtil.nullableProperty(StringList.class, "updated");
-
-  private static final NullableProperty<XyzFeatureCollection, StringList> DELETED =
-      JvmPropertyUtil.nullableProperty(StringList.class, "deleted");
-
+  private static final NullableProperty<XyzFeatureCollection, BBox> BBOX = new NullableProperty<>(BBox.TYPE);
+  private static final NullableProperty<XyzFeatureCollection, Boolean> BOOLEAN_OR_NULL = new NullableProperty<>(Boolean_TYPE);
+  private static final NullableProperty<XyzFeatureCollection, String> STRING_OR_NULL = new NullableProperty<>(String_TYPE);
+  private static final NullableProperty<XyzFeatureCollection, Long> LONG_OR_NULL = new NullableProperty<>(Long_TYPE);
+  private static final NullableProperty<XyzFeatureCollection, StringList> STRING_LIST_OR_NULL = new NullableProperty<>(StringList.TYPE);
   private static final NullableProperty<XyzFeatureCollection, NakshaFeatureList> OLD_FEATURES =
       JvmPropertyUtil.nullableProperty(NakshaFeatureList.class, "oldFeatures");
 
@@ -211,8 +190,8 @@ public class XyzFeatureCollection extends XyzResponse {
    *
    * @return the amount of features that are matching the query.
    */
-  public Long getCount() {
-    return COUNT.getValue(this);
+  public @Nullable Long getCount() {
+    return getAs("count", Long_TYPE);
   }
 
   /**

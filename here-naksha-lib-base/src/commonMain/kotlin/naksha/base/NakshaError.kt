@@ -283,6 +283,21 @@ open class NakshaError() : AnyObject() {
             }
         })
 
+        /**
+         * Create a new error from the given arguments, and throw a [NakshaException] holding this error.
+         * @param code the error code.
+         * @param msg a human-readable message.
+         * @param cause the optional origin exception that caused this error; if any.
+         * @param streamId the optional stream-id to be added to the exception.
+         * @since 3.0
+         */
+        @JvmOverloads
+        @JvmStatic
+        @JsStatic
+        fun raise(code: String, msg: String, cause: Throwable? = null, streamId: String? = null): Nothing {
+            throw NakshaException(code, msg, cause, streamId)
+        }
+
         init { initialize() }
     }
 

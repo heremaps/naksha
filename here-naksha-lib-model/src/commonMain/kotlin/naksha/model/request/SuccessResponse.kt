@@ -2,9 +2,11 @@
 
 package naksha.model.request
 
+import naksha.base.ListProxy
 import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.PlatformList
 import naksha.base.PlatformType
-import naksha.geo.GeoCollection
+import naksha.geo.GeoFeature
 import naksha.model.*
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaFeatureList
@@ -35,7 +37,7 @@ import kotlin.jvm.JvmOverloads
  * ```
  *
  * ## Warning
- * It is highly recommended to only use either [features] or [featureTupleList], because they convert results on demand, so constantly switching between the two is very costly!
+ * It is highly recommended to only use either [getFeatures] or [featureTupleList], because they convert results on demand, so constantly switching between the two is very costly!
  * @since 3.0
  */
 @JsExport
@@ -49,7 +51,10 @@ open class SuccessResponse() : Response() {
     @Suppress("LeakingThis")
     @JsName("fromNakshaFeature")
     constructor(vararg features: NakshaFeature) : this() {
-        withFeatures(*features)
+        val list = NakshaFeatureList()
+        list.setCapacity(features.size)
+        for (feature in features) list.add(feature)
+        setFeatures(list)
     }
 
     /**
@@ -155,8 +160,7 @@ open class SuccessResponse() : Response() {
         get() {
             val features = getAs(FEATURES, NakshaFeatureList.TYPE)
             if (features is NakshaFeatureList) return features.size
-            val featureTupleList = getAs(FEATURE_TUPLE_LIST, FeatureTupleList.TYPE)
-            return featureTupleList?.size ?: 0
+            return _featureTupleList?.size ?: 0
         }
 
     companion object SuccessResponse_C {
@@ -168,20 +172,24 @@ open class SuccessResponse() : Response() {
         @JsStatic
         val TYPE = forKClass(SuccessResponse::class).withPackageName(PACKAGE_NAME)
 
-        private const val FEATURE_TUPLE_LIST = "featureTupleList"
         private const val FEATURES = "features"
     }
+
+    override fun withType(type: String?): SuccessResponse = super.withType(type) as SuccessResponse
+    override fun clearFeatures(): SuccessResponse = super.clearFeatures() as SuccessResponse
+
+    private var _featureTupleList: FeatureTupleList? = null
 
     /**
      * The [feature tuples][FeatureTuple] being part of the response.
      *
-     * - Setting the [featureTupleList], automatically clears the [features].
-     * - Reading the [featureTupleList], automatically convert set [features] into [FeatureTuple], clearing [features].
+     * - Setting the [featureTupleList], automatically clears the `features`.
+     * - Reading the [featureTupleList], automatically converts the `features` into [FeatureTuple], clearing the `features`.
      * @since 3.0
      */
-    open var featureTupleList: FeatureTupleList
+    var featureTupleList: FeatureTupleList
         get() {
-            var list = getAs(FEATURE_TUPLE_LIST, FeatureTupleList.TYPE)
+            var list = _featureTupleList
             if (list != null) return list
             list = FeatureTupleList()
 
@@ -195,62 +203,65 @@ open class SuccessResponse() : Response() {
                 }
             }
 
-            setRaw(FEATURE_TUPLE_LIST, list)
+            _featureTupleList = list
             removeRaw(FEATURES)
             return list
         }
         set(value) {
-            setRaw(FEATURE_TUPLE_LIST, value)
+            _featureTupleList = value
             removeRaw(FEATURES)
         }
+
+    /**
+     * Tests if the success response holds currently a [FeatureTupleList] instead of `features`.
+     * @return _true_ if the success response holds currently a [FeatureTupleList] instead of `features`.
+     * @since 3.0
+     */
+    fun hasFeatureTupleList(): Boolean = _featureTupleList != null
+
+    /**
+     * Tests if this response has any features, no matter if they are available already as `features` or currently pending as [FeatureTupleList].
+     * @return _true_ if this response has any features.
+     * @since 3.0
+     */
+    fun hasFeatures(): Boolean = containsKey(FEATURES) || _featureTupleList != null
 
     /**
      * The result converted into a [NakshaFeatureList].
      *
-     * Reading [features] can cause network IO, because when the local cache does not hold the [Tuple], it need to load them from the storage, or any remote cache!
+     * Reading [getFeatures] can cause network IO, because when the local cache does not hold the [Tuple], it need to load them from the storage, or any remote cache!
      *
-     * - Setting the [features], automatically clears the [featureTupleList].
-     * - Reading the [features], automatically convert set [featureTupleList] into [NakshaFeatureList], clearing [featureTupleList].
+     * - Setting the [getFeatures], automatically clears the [featureTupleList].
+     * - Reading the [getFeatures], automatically convert set [featureTupleList] into [NakshaFeatureList], clearing [featureTupleList].
      * @since 3.0
      */
-    open var features: NakshaFeatureList
-        get() {
-            var list = getAs(FEATURES, NakshaFeatureList.TYPE)
-            if (list != null) return list
-            list = NakshaFeatureList()
+    override fun <F : GeoFeature, LIST : ListProxy<F>> getFeatures(type: PlatformType<LIST>): LIST {
+        val raw = getRaw(FEATURES)
+        if (raw is PlatformList) return type.proxy(raw)
+        val list = type.newInstance()
 
-            // Optionally convert existing feature-tuple.
-            val featureTupleList = getAs(FEATURE_TUPLE_LIST, FeatureTupleList.TYPE)
-            if (featureTupleList != null) {
-                featureTupleList.loadAll(acceptFeature = true)
-                list.setCapacity(featureTupleList.size)
-                for (tuple in featureTupleList) {
-                    if (tuple == null) continue
-                    list.add(tuple.feature) // TODO (Jakub): tc0280 - adds null
-                }
+        // Optionally convert existing feature-tuple.
+        val featureTupleList = _featureTupleList
+        if (featureTupleList != null) {
+            featureTupleList.loadAll(acceptFeature = true)
+            list.setCapacity(featureTupleList.size)
+            for (tuple in featureTupleList) {
+                if (tuple == null) continue
+                list.add(list.elementType.proxy(tuple.feature)) // TODO (Jakub): tc0280 - adds null
             }
-
-            setRaw(FEATURES, list)
-            removeRaw(FEATURE_TUPLE_LIST)
-            return list
         }
-        set(value) {
-            setRaw(FEATURES, value)
-            removeRaw(FEATURE_TUPLE_LIST)
-        }
+        set(FEATURES, list)
+        _featureTupleList = null
+        return list
+    }
 
-    /**
-     * Copy given [features][NakshaFeature] into [features].
-     * @param features the features that form the success response.
-     * @return this.
-     * @since 3.0
-     * @see [features]
-     */
-    open fun withFeatures(vararg features: NakshaFeature): SuccessResponse {
-        val list = NakshaFeatureList()
-        list.setCapacity(features.size)
-        list.addAll(features)
-        this.features = list
+    override fun <F : GeoFeature, LIST : ListProxy<F>> setFeatures(list: LIST) {
+        set(FEATURES, list)
+        _featureTupleList = null
+    }
+
+    override fun <F : GeoFeature, LIST : ListProxy<F>> withFeatures(list: LIST): SuccessResponse {
+        setFeatures(list)
         return this
     }
 
@@ -266,7 +277,7 @@ open class SuccessResponse() : Response() {
         val list = NakshaFeatureList()
         list.setCapacity(features.size)
         list.addAll(features)
-        this.features = list
+        setFeatures(list)
         return this
     }
 
@@ -289,7 +300,7 @@ open class SuccessResponse() : Response() {
         } else {
             list = features
         }
-        this.features = list
+        setFeatures(list)
         return this
     }
 
@@ -397,28 +408,12 @@ open class SuccessResponse() : Response() {
         return this
     }
 
-    /**
-     * Returns this success-response as [GeoJSON feature collection][GeoCollection].
-     *
-     * To turn a [GeoJSON feature collection][GeoCollection] into a [SuccessResponse], just do:
-     * ```kotlin
-     * val collection: SpFeatureCollection = ...;
-     * val response = collection.proxy(SuccessResponse::class)
-     * ```
-     * Or in Java:
-     * ```java
-     * import static naksha.base.Platform.javaProxy;
-     * final SpFeatureCollection collection = ...;
-     * final SuccessResponse response =
-     *       javaProxy(collection, SuccessResponse.class);
-     * ```
-     * @return this response as [GeoJSON feature collection][GeoCollection].
-     * @since 3.0
-     */
-    fun asFeatureCollection(): GeoCollection {
-        this.features
-        return proxy(GeoCollection.TYPE)
-    }
+    @Deprecated(
+        message = "Use features property",
+        replaceWith = ReplaceWith("getFeatures(NakshaFeatureList.TYPE)"),
+        level = DeprecationLevel.ERROR
+    )
+    fun useFeatures(): NakshaFeatureList = getFeatures(NakshaFeatureList.TYPE)
 
     /**
      * Applies a sequence of filters to the feature tuples in this response.
@@ -448,9 +443,10 @@ open class SuccessResponse() : Response() {
         return this
     }
 
-    @Deprecated(message = "Use features property", replaceWith = ReplaceWith("features"), level = DeprecationLevel.ERROR)
-    fun useFeatures(): NakshaFeatureList = features
-
-    @Deprecated(message = "Use featureTupleList property", replaceWith = ReplaceWith("featureTupleList"), level = DeprecationLevel.ERROR)
+    @Deprecated(
+        message = "Use featureTupleList property",
+        replaceWith = ReplaceWith("featureTupleList"),
+        level = DeprecationLevel.ERROR
+    )
     fun useFeatureTupleList(): FeatureTupleList = featureTupleList
 }

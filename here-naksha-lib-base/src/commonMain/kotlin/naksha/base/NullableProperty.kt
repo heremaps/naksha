@@ -2,6 +2,7 @@ package naksha.base
 
 import naksha.base.fn.Fn2
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
 import kotlin.reflect.KClass
 
@@ -42,4 +43,7 @@ open class NullableProperty<OBJECT_TYPE : AnyObject, PROPERTY_TYPE : Any> @JvmOv
     autoCreate: Boolean = false,
     autoRemove: Boolean = false,
     init: Fn2<PROPERTY_TYPE?, OBJECT_TYPE, String>? = null
-) : NullableMapProperty<OBJECT_TYPE, Any, PROPERTY_TYPE>(type, name, autoCreate, autoRemove, init)
+) : NullableMapProperty<OBJECT_TYPE, Any, PROPERTY_TYPE>(type, name, autoCreate, autoRemove, init) {
+    @JsName("withInit")
+    constructor(type: PlatformType<PROPERTY_TYPE>, init: Fn2<PROPERTY_TYPE?, OBJECT_TYPE, String>) : this(type, null, false, false, init)
+}

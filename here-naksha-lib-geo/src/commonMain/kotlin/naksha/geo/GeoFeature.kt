@@ -58,7 +58,10 @@ open class GeoFeature : AnyTypedIdObject() {
          */
         @JvmField
         @JsStatic
-        val TYPE = forKClass(GeoFeature::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(GeoFeature::class)
+            .withPackageName(PACKAGE_NAME)
+            .withJsonType(FEATURE)
+            .withIsFeature(true)
 
         private val BBOX_NULL_MEMBER = NullableProperty<GeoFeature, BBox>(BBox.TYPE)
 
@@ -66,8 +69,6 @@ open class GeoFeature : AnyTypedIdObject() {
             initialize()
         }
     }
-
-    override fun isFeature(): Boolean = true
 
     override fun withType(type: String?): GeoFeature = super.withType(type) as GeoFeature
     override fun withId(id: String): GeoFeature = super.withId(id) as GeoFeature
@@ -158,7 +159,7 @@ open class GeoFeature : AnyTypedIdObject() {
      * @see properties
      */
     open fun withProperties(properties: AnyObject): GeoFeature {
-        setRaw("properties", unbox(properties))
+        set("properties", unbox(properties))
         return this
     }
 

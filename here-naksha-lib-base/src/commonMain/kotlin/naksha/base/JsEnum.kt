@@ -7,8 +7,10 @@ import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.Platform.Platform_C.logger
 import naksha.base.fn.Fx1
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -196,6 +198,7 @@ abstract class JsEnum : CharSequence {
          * @return the defined instance.
          * @throws IllegalStateException if another class is already registered for the value (there is a conflict).
          */
+        @JvmOverloads
         @JvmStatic
         @JsStatic
         fun <ENUM : JsEnum> defIgnoreCase(enumType: PlatformType<ENUM>, value: String, init: Fx1<ENUM>? = null): ENUM {
@@ -216,6 +219,7 @@ abstract class JsEnum : CharSequence {
          * @return the defined instance.
          * @throws IllegalStateException if another class is already registered for the value (there is a conflict).
          */
+        @JvmOverloads
         @JvmStatic
         @JsStatic
         fun <ENUM : JsEnum> def(enumType: PlatformType<ENUM>, value: Any?, init: Fx1<ENUM>? = null): ENUM {
@@ -419,7 +423,7 @@ abstract class JsEnum : CharSequence {
      * This means, unless one of the constants are really used, Jackson or other deserialization tools will not be able
      * to deserialize the value. This can lead to serious errors. This initialization method prevents this kind of error.
      */
-    protected abstract fun initClass()
+    protected open fun initClass() {}
 
     /**
      * This method is invoked if the enumeration value is created via reflection by [get], it should initialize properties

@@ -27,6 +27,7 @@ public abstract class EventTarget<SELF extends EventTarget<SELF>> extends Naksha
   public static final String EVENT_HANDLER_IDS = "eventHandlerIds";
   public static final String ID = "id";
 
+  @SuppressWarnings("unchecked")
   protected final @NotNull SELF self() {
     return (SELF) this;
   }

@@ -18,19 +18,19 @@
  */
 package com.here.naksha.lib.core.models.geojson.implementation.namespaces;
 
-import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import naksha.base.AnyObject;
-import naksha.base.JvmBoxingUtil;
 import naksha.model.Action;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static naksha.base.Platform.forClass;
+import static naksha.mom.v2.MomProperties.XYZ_ACTIVITY_LOG_NS;
 
 @SuppressWarnings("unused")
 public class XyzActivityLog extends AnyObject {
@@ -128,6 +128,6 @@ public class XyzActivityLog extends AnyObject {
   }
 
   public static @Nullable XyzActivityLog getXyzActivityLog(@NotNull NakshaProperties properties) {
-    return JvmBoxingUtil.box(properties.get(XYZ_ACTIVITY_LOG_NS), XyzActivityLog.class);
+    return properties.getAs(XYZ_ACTIVITY_LOG_NS, forClass(XyzActivityLog.class));
   }
 }

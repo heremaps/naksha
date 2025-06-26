@@ -170,6 +170,14 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
     fun <T> getAs(key: K, type: PlatformType<T>): T? = box(map_get(platformObject(), key), type)
 
     /**
+     * Helper to return the enumeration value of the key.
+     * @param key The key to query.
+     * @param type The expected enumeration type.
+     * @return The enumeration value.
+     */
+    fun <T: JsEnum> getEnum(key: K, type: PlatformType<T>): T = JsEnum.get(map_get(platformObject(), key), type)
+
+    /**
      * Helper to return the value of the key in the desired type. If the key does not exist, or is not of the expected type, `null` is returned.
      * @param <T> The expected type.
      * @param key The key to query.
@@ -220,7 +228,26 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
 
     override fun isEmpty(): Boolean = map_size(platformObject()) == 0
 
+    /**
+     * Removes the specified key and its corresponding value from this map.
+     *
+     * @return the previous value associated with the key, or `null` if the key was not present in the map.
+     * @since 3.0
+     * @see delete
+     * @see removeRaw
+     */
     override fun remove(key: K): V? = toValue(key, map_remove(platformObject(), key))
+
+    /**
+     * Deletes the given key from this map.
+     * @param key The key to delete.
+     * @since 3.0
+     * @see remove
+     * @see removeRaw
+     */
+    fun delete(key: K) {
+        map_remove(platformObject(), key)
+    }
 
     override fun putAll(from: Map<out K, V?>) {
         from.onEach { (key, value) -> put(key, value) }
@@ -242,14 +269,32 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
         }
     }
 
+    /**
+     * Associates the specified [value] with the specified [key] in the map.
+     *
+     * @return the previous value associated with the key, or `null` if the key was not present in the map.
+     * @since 3.0
+     * @see set
+     */
     override fun put(key: K, value: V?): V? = toValue(key, map_set(platformObject(), key, unbox(value)))
+
+    /**
+     * Set the given `key` to the given `value`.
+     * @param key The key to set.
+     * @param value The value to set.
+     * @since 3.0
+     * @see put
+     */
+    fun set(key: K, value: V?) {
+        map_set(platformObject(), key, unbox(value))
+    }
 
     override fun get(key: K): V? = toValue(key, map_get(platformObject(), key))
 
     /**
      * Returns the raw value stored in the underlying base map.
      * @param key The key to read.
-     * @return The raw value, being either a scalar or [PlatformObject].
+     * @return The raw _(unboxed)_ value, being either a scalar or [PlatformObject].
      */
     fun getRaw(key: Any): Any? = map_get(platformObject(), key)
 
@@ -258,20 +303,35 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
      * @param key The key to set.
      * @param value The value to set.
      * @return The previously set value.
+     * @see set
+     * @see put
      */
+    @Deprecated(
+        message = "Due to usage patterns, the method actually does not really set raw, please switch to set",
+        replaceWith = ReplaceWith("set(key, value)"),
+        level = DeprecationLevel.WARNING
+    )
     fun setRaw(key: Any, value: Any?): Any? = map_set(platformObject(), key, unbox(value))
 
     /**
      * Tests if the underlying base map stored the given key.
      * @param key The key to test.
      * @return _true_ if the underlying map contains the given key; _false_ otherwise.
+     * @see containsKey
      */
+    @Deprecated(
+        message = "The method does actually nothing else than the standard containsKey, please use this instead",
+        replaceWith = ReplaceWith("containsKey(key)"),
+        level = DeprecationLevel.WARNING
+    )
     fun hasRaw(key: Any): Boolean = map_contains_key(platformObject(), key)
 
     /**
      * Removes the key from the underlying base map.
      * @param key The key to remove.
-     * @return The value that was removed; _null_ if either the value was _null_ or no such key existed.
+     * @return The raw _(unboxed)_ value that was removed; _null_ if either the value was _null_ or no such key existed.
+     * @see remove
+     * @see delete
      */
     fun removeRaw(key: Any): Any? = map_remove(platformObject(), key)
 

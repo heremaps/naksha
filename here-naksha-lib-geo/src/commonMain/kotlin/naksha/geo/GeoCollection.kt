@@ -2,10 +2,8 @@
 
 package naksha.geo
 
-import naksha.base.AnyObject
-import naksha.base.NotNullProperty
+import naksha.base.*
 import naksha.base.Platform.Platform_C.forKClass
-import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -16,11 +14,11 @@ import kotlin.jvm.JvmField
  * @since 3.0
  */
 @JsExport
-open class GeoCollection() : AnyObject() {
+open class GeoCollection() : AnyTypedObject() {
 
     @JsName("GeoCollectionOf")
     constructor(vararg features: GeoFeature) : this() {
-        this.features.addAll(features)
+        this.getFeatures(GeoFeatureList.TYPE).addAll(features)
     }
 
     companion object GeoCollection_C {
@@ -32,18 +30,79 @@ open class GeoCollection() : AnyObject() {
         @JsStatic
         val TYPE: PlatformType<GeoCollection> = forKClass(GeoCollection::class)
             .withPackageName(PACKAGE_NAME)
-            .withJsonType("FeatureCollection")
+            .withJsonType(FEATURE_COLLECTION)
+            .withIsFeatureCollection(true)
 
-        private val FEATURES_MEMBER = NotNullProperty<GeoCollection, GeoFeatureList>(GeoFeatureList.TYPE) { _, _ -> GeoFeatureList() }
+        /**
+         * The constant for the string `"features"`.
+         * @since 3.0
+         */
+        const val FEATURES = "features"
 
         init {
             initialize()
         }
     }
 
+    override fun withType(type: String?): GeoCollection = super.withType(type) as GeoCollection
+
     /**
-     * The features of the collection.
+     * Returns the features of the collection.
+     * @param type The type of the feature list to return.
+     * @return the list.
      * @since 3.0
+     * @see getFeatures
+     * @see setFeatures
+     * @see withFeatures
+     * @see clearFeatures
      */
-    var features: GeoFeatureList by FEATURES_MEMBER
+    open fun <F : GeoFeature, LIST : ListProxy<F>> getFeatures(type: PlatformType<LIST>): LIST {
+        val raw = getRaw(FEATURES)
+        if (raw is PlatformList) return type.proxy(raw)
+        val list = type.newInstance()
+        set(FEATURES, list)
+        return list
+    }
+
+    /**
+     * Sets the features of the collection.
+     * @param list The list of the features.
+     * @since 3.0
+     * @see getFeatures
+     * @see setFeatures
+     * @see withFeatures
+     * @see clearFeatures
+     */
+    open fun <F : GeoFeature, LIST : ListProxy<F>> setFeatures(list: LIST) {
+        set(FEATURES, list)
+    }
+
+    /**
+     * Sets the features of the collection.
+     * @param list The list of the features.
+     * @return this.
+     * @since 3.0
+     * @see getFeatures
+     * @see setFeatures
+     * @see withFeatures
+     * @see clearFeatures
+     */
+    open fun <F : GeoFeature, LIST : ListProxy<F>> withFeatures(list: LIST): GeoCollection {
+        setFeatures(list)
+        return this
+    }
+
+    /**
+     * Remove all `features` from the collection.
+     * @return this.
+     * @since 3.0
+     * @see getFeatures
+     * @see setFeatures
+     * @see withFeatures
+     * @see clearFeatures
+     */
+    open fun clearFeatures(): GeoCollection {
+        removeRaw(FEATURES)
+        return this
+    }
 }

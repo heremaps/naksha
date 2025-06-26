@@ -66,6 +66,4 @@ class Int64Encoding : JsEnum() {
     }
 
     override fun namespace(): PlatformType<out JsEnum> = TYPE
-
-    override fun initClass() {}
 }

@@ -18,12 +18,17 @@
  */
 package com.here.naksha.lib.core.models.indexing;
 
-import naksha.base.JvmBoxingUtil;
-import naksha.base.JvmListProxy;
+import naksha.base.JsEnum;
+import naksha.base.JvmEnum;
+import naksha.base.ListProxy;
+import naksha.base.PlatformType;
 import naksha.model.objects.NakshaFeature;
+import org.jetbrains.annotations.NotNull;
+
+import static naksha.base.Platform.forClass;
 
 public class IndexProperty extends NakshaFeature {
-
+  public static final PlatformType<IndexProperty> TYPE = forClass(IndexProperty.class);
   private static final String PATH = "path";
   private static final String NULLS = "nulls";
   private static final String ASC = "asc";
@@ -36,7 +41,7 @@ public class IndexProperty extends NakshaFeature {
   }
 
   public void setPath(String path) {
-    setRaw(PATH, path);
+    set(PATH, path);
   }
 
   /**
@@ -47,28 +52,36 @@ public class IndexProperty extends NakshaFeature {
   }
 
   public void setAsc(boolean asc) {
-    setRaw(ASC, asc);
+    set(ASC, asc);
   }
 
   /**
    * Optionally decide if {@code null} values should be ordered first or last. If not explicitly defined, automatically decided.
    */
-  public Nulls getNulls() {
-    return JvmBoxingUtil.box(get(NULLS), Nulls.class);
+  public @NotNull Nulls getNulls() {
+    return getEnum(NULLS, Nulls.TYPE);
   }
 
   public void setNulls(Nulls nulls) {
-    setRaw(NULLS, nulls);
+    set(NULLS, nulls);
   }
 
-  public enum Nulls {
-    FIRST,
-    LAST
+  public static class Nulls extends JvmEnum {
+    static final PlatformType<Nulls> TYPE = forClass(Nulls.class);
+
+    static final Nulls FIRST = defIgnoreCase(TYPE, "FIRST");
+    static final Nulls LAST = defIgnoreCase(TYPE, "LAST");
+
+    @Override
+    public @NotNull PlatformType<? extends JsEnum> namespace() {
+      return TYPE;
+    }
   }
 
-  public static class IndexProperties extends JvmListProxy<IndexProperty> {
+  public static class IndexProperties extends ListProxy<IndexProperty> {
+    public static final PlatformType<IndexProperties> TYPE = forClass(IndexProperties.class);
     public IndexProperties() {
-      super(IndexProperty.class);
+      super(IndexProperty.TYPE);
     }
   }
 }

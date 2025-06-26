@@ -78,10 +78,8 @@ class FeatureTest {
             val TYPE = forKClass(DataHubFoo::class)
                 .withPackageName(PACKAGE_NAME)
                 .withJsonType("dataHubFoo")
+                .withIsDataHubType(true)
         }
-
-        @Suppress("OVERRIDE_DEPRECATION")
-        override fun isDataHubType(): Boolean = true
     }
 
     class MomFoo : Foo() {
@@ -89,11 +87,9 @@ class FeatureTest {
             val TYPE = forKClass(MomFoo::class)
                 .withPackageName(PACKAGE_NAME)
                 .withJsonType("momFoo")
+                .withIsMomType(true)
+                .withIsDataHubType(true)
         }
-
-        override fun isMomType(): Boolean = true
-        @Suppress("OVERRIDE_DEPRECATION")
-        override fun isDataHubType(): Boolean = true
     }
 
     @Test

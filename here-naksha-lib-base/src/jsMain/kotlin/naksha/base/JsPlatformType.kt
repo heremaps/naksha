@@ -4,6 +4,8 @@
 package naksha.base
 
 import naksha.base.Platform.Platform_C.DEFAULT_SYMBOL
+import naksha.base.Platform.Platform_C.forInstance
+import naksha.base.Platform.Platform_C.forJsClass
 import naksha.base.Platform.Platform_C.isPlatformObject
 import naksha.base.Platform.Platform_C.unbox
 import kotlin.reflect.KClass
@@ -21,7 +23,7 @@ class JsPlatformType<T : Any> internal constructor(
      * @since 3.0
      */
     val jsClass: JsClass<T>
-) : PlatformType<T> {
+) : AbstractPlatformType<T>() {
     companion object JsPlatformType_C {
         /**
          * The platform type by name.
@@ -73,6 +75,19 @@ class JsPlatformType<T : Any> internal constructor(
         }
 
     }
+
+    private val objectConstructor = js("Object").getPrototypeOf(js("Object"))
+    private var _superType: PlatformType<*>? = null
+    override val superType: PlatformType<*>?
+        get() {
+            var type = _superType
+            if (type != null) return type
+            val proto = js("Object").getPrototypeOf(this.jsClass).unsafeCast<JsClass<*>?>() ?: return null
+            if (proto === objectConstructor) return null
+            type = forJsClass(proto)
+            _superType = type
+            return type
+        }
 
     @Suppress("UselessCallOnNotNull")
     override var name: String = ""
@@ -352,8 +367,4 @@ js("""
         if (isInstance(o)) return o as T
         throw IllegalArgumentException("Can't cast '${o::class.js.name}' to '$name'")
     }
-
-    override fun equals(other: Any?): Boolean = this === other
-    override fun hashCode(): Int = Platform.identityHashCode(this)
-    override fun toString(): String = name
 }

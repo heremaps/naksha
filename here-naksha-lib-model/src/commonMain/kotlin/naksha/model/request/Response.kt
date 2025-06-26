@@ -2,9 +2,11 @@
 
 package naksha.model.request
 
-import naksha.base.AnyObject
+import naksha.base.ListProxy
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
+import naksha.geo.GeoCollection
+import naksha.geo.GeoFeature
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -15,7 +17,7 @@ import kotlin.jvm.JvmField
  * If this response is for a write request with [WriteRequest.returnResults] being _true_, the client signals that it is not interested in the result (except for either being success or failure), and the database should not generate result rows. This improves write throughput, because no data must be returned (often it simplifies the write itself, e.g. when deleting rows, they do not need to be read from the database).
  */
 @JsExport
-open class Response : AnyObject() {
+open class Response : GeoCollection() {
 
     companion object Response_C {
         /**
@@ -26,6 +28,10 @@ open class Response : AnyObject() {
         @JsStatic
         val TYPE = forKClass(Response::class).withPackageName(PACKAGE_NAME)
     }
+
+    override fun withType(type: String?): Response = super.withType(type) as Response
+    override fun clearFeatures(): Response = super.clearFeatures() as Response
+    override fun <F : GeoFeature, LIST : ListProxy<F>> withFeatures(list: LIST): Response = super.withFeatures(list) as Response
 
     /**
      * The size of the underlying platform object, so the hash-map, **not the amount of results**!

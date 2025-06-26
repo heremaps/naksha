@@ -25,54 +25,72 @@ const val PACKAGE_NAME = "naksha.model"
  * @since 3.0
  */
 @v30_experimental
+@JvmField
+@JsStatic
 val ILock_TYPE = forKClass(ILock::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [IMetadata] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val IMetadata_TYPE = forKClass(IMetadata::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [IMetadataArray] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val IMetadataArray_TYPE = forKClass(IMetadataArray::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [IReadSession] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val IReadSession_TYPE = forKClass(IReadSession::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [ISession] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val ISession_TYPE = forKClass(ISession::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [IStorage] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val IStorage_TYPE = forKClass(IStorage::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [ITuple] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val ITuple_TYPE = forKClass(ITuple::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [ITupleCache] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val ITupleCache_TYPE = forKClass(ITupleCache::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [IWriteSession] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val IWriteSession_TYPE = forKClass(IWriteSession::class).withPackageName(PACKAGE_NAME)
 
 @Deprecated("Replace with Action enumeration class",

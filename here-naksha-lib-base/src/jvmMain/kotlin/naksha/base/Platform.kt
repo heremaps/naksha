@@ -10,9 +10,10 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
-import naksha.base.JvmPlatformType.PlatformType_C.jvmClassToPlatformType
+import naksha.base.JvmPlatformType.JvmPlatformType_C.jvmClassToPlatformType
 import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
 import naksha.base.fn.Fn0
+import naksha.base.fn.Fn1
 import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
 import java.net.URLDecoder
@@ -31,6 +32,10 @@ import kotlin.reflect.KClass
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class Platform {
     actual companion object Platform_C {
+        @JvmField
+        actual val isJvm: Boolean = true
+        @JvmField
+        actual val isJs: Boolean = false
 
         @JvmField
         internal val module = SimpleModule().apply {
@@ -191,12 +196,23 @@ actual class Platform {
             return if (all != null) PlatformTypeList(*all) else PlatformTypeList()
         }
 
+        /**
+         * A reflective method to find the first type that has in a JSON representation the property `type` set to the given value, and that is _(or implements)_ the given type.
+         *
+         * @param jsonType The value read from the `type` property of a JSON object.
+         * @param type The [PlatformType] that is searched for.
+         * @return either the first matching [PlatformType] or `null`, if no type matches.
+         * @since 3.0
+         */
+        @JvmStatic
+        fun <T> forFirstJsonType(jsonType: String?, type: PlatformType<T>): PlatformType<T>? = forFirstJsonType(jsonType, type, null)
+
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
-        actual fun <T> forFirstJsonType(jsonType: String?, type: PlatformType<T>): PlatformType<T>? {
+        actual fun <T> forFirstJsonType(jsonType: String?, type: PlatformType<T>, test: Fn1<Boolean, PlatformType<*>>?): PlatformType<T>? {
             val foundTypes = JvmPlatformType.jsonTypeToPlatformType[jsonType] ?: return null
             for (foundType in foundTypes) {
-                if (foundType.isAssignableTo(type)) {
+                if (foundType.isAssignableTo(type) && (test==null || test.call(foundType))) {
                     return foundType as PlatformType<T>
                 }
             }

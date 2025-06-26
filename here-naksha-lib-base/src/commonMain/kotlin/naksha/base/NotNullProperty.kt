@@ -2,6 +2,7 @@ package naksha.base
 
 import naksha.base.fn.Fn2
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
 import kotlin.reflect.KClass
 
@@ -37,4 +38,7 @@ open class NotNullProperty<OBJECT_TYPE : AnyObject, PROPERTY_TYPE : Any> @JvmOve
     type: PlatformType<PROPERTY_TYPE>,
     name: String? = null,
     init: Fn2<PROPERTY_TYPE?, OBJECT_TYPE, String>? = null
-) : NotNullMapProperty<OBJECT_TYPE, Any, PROPERTY_TYPE>(type, name, init)
+) : NotNullMapProperty<OBJECT_TYPE, Any, PROPERTY_TYPE>(type, name, init) {
+    @JsName("withInit")
+    constructor(type: PlatformType<PROPERTY_TYPE>, init: Fn2<PROPERTY_TYPE?, OBJECT_TYPE, String>) : this(type, null, init)
+}

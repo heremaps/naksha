@@ -3,6 +3,7 @@
 package naksha.base
 
 import naksha.base.fn.Fn0
+import naksha.base.fn.Fn1
 import kotlin.reflect.KClass
 
 /**
@@ -12,6 +13,18 @@ import kotlin.reflect.KClass
  */
 expect class Platform private constructor() {
     companion object Platform_C {
+        /**
+         * True if this code currently executes on JVM.
+         * @since 3.0
+         */
+        val isJvm: Boolean
+
+        /**
+         * True if this code currently executes on JavaScript.
+         * @since 3.0
+         */
+        val isJs: Boolean
+
         /**
          * The platform specific value of undefined.
          */
@@ -171,14 +184,15 @@ expect class Platform private constructor() {
         fun forJsonType(jsonType: String?): PlatformTypeList
 
         /**
-         * A reflective method to find the first type that has in a JSON representation the property `type` set to the given value, and that is _(or implements)_ the given type.
+         * A reflective method to find the first type that has in a JSON representation the property `type` set to the given value, and that is _(or implements)_ the given type, and that matches the given test.
          *
          * @param jsonType The value read from the `type` property of a JSON object.
          * @param type The [PlatformType] that is searched for.
+         * @param test A test function that returns _true_, if the type is okay; _false_ otherwise; if `null`, it will always be _true_.
          * @return either the first matching [PlatformType] or `null`, if no type matches.
          * @since 3.0
          */
-        fun <T> forFirstJsonType(jsonType: String?, type: PlatformType<T>): PlatformType<T>?
+        fun <T> forFirstJsonType(jsonType: String?, type: PlatformType<T>, test: Fn1<Boolean, PlatformType<*>>? = null): PlatformType<T>?
 
         /**
          * A reflection method to query the [PlatformType] instance for the given Kotlin class.

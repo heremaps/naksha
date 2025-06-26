@@ -37,7 +37,7 @@ open class Request : AnyObject() {
     protected open fun defaultRowOptions() : ReturnColumns = ReturnColumns.all()
 
     /**
-     * Options of what data is needed by the [resultFilters] and the client (defaults for [SuccessResponse.features]).
+     * Options of what data is needed by the [resultFilters] and the client (defaults for [SuccessResponse.getFeatures]).
      *
      * The columns of a [tuple][naksha.model.Tuple] that are needed in the [resultFilters]. Actually, if any [resultFilters] are set, this causes the API to invoke [naksha.model.ISession.loadTuples] before delivering the [FeatureTuple] to the [resultFilters].
      * @since 3.0

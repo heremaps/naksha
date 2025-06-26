@@ -20,13 +20,22 @@ package naksha.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import naksha.base.PlatformType;
 import naksha.model.request.Response;
+
+import static naksha.base.Platform.forClass;
 
 /** The response providing the count of features in a space. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "CountResponse")
 @Deprecated
 public class CountResponse extends Response {
+  public static final PlatformType<CountResponse> TYPE = forClass(CountResponse.class).withJsonType("CountResponse");
+
+  @Override
+  public boolean isFeature() {
+    return false;
+  }
 
   private Long count;
   private Boolean estimated;

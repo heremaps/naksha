@@ -1,10 +1,14 @@
 // This will be exposed
 // - in JavaScript at the namespace: naksha.jbon.{name}
 // - jn Java at the class naksha.jbon.NakshaJbonKt.{name}
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.jbon
 
 import naksha.base.DataViewProxy
 import naksha.base.Platform.Platform_C.forKClass
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * The package name `naksha.jbon`
@@ -16,24 +20,32 @@ const val PACKAGE_NAME = "naksha.jbon"
  * The [PlatformType][naksha.base.PlatformType] of the [IDict] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val IDict_TYPE = forKClass(IDict::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [IDictBuilder] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val IDictBuilder_TYPE = forKClass(IDictBuilder::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [IDictManager] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val IDictManager_TYPE = forKClass(IDictManager::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [IDictReader] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val IDictReader_TYPE = forKClass(IDictReader::class).withPackageName(PACKAGE_NAME)
 
 // Encoding constants

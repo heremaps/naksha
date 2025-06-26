@@ -19,8 +19,14 @@
 package com.here.naksha.lib.core.models.payload;
 
 import naksha.base.AnyObject;
+import naksha.base.PlatformType;
+import naksha.geo.GeoCollection;
 import naksha.model.NakshaContext;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import static naksha.base.NakshaBaseKt.String_TYPE;
+import static naksha.base.Platform.forClass;
 
 /**
  * TODO CASL-798: review subclasses of XyzResponse from V2
@@ -46,8 +52,9 @@ import org.jetbrains.annotations.NotNull;
 /**
  * All classes that represent a valid response of any remote procedure to the XYZ Hub need to extend this class.
  */
-public abstract class XyzResponse extends AnyObject {
+public abstract class XyzResponse extends GeoCollection {
 
+  public static final PlatformType<XyzResponse> TYPE = forClass(XyzResponse.class);
   public static final String STREAM_ID = "streamId";
   public static final String ETAG = "etag";
 
@@ -63,7 +70,7 @@ public abstract class XyzResponse extends AnyObject {
    * @return the unique stream-identifier of this request
    */
   public @NotNull String getStreamId() {
-    return (String) getRaw(STREAM_ID);
+    return getOrCreate(STREAM_ID, String_TYPE, (_, _) -> NakshaContext.currentContext().getStreamId());
   }
 
   /**
@@ -73,9 +80,8 @@ public abstract class XyzResponse extends AnyObject {
    * @param streamId the unique stream-identifier to be set.
    */
   public void setStreamId(@NotNull String streamId) {
-    setRaw(STREAM_ID, streamId);
+    set(STREAM_ID, streamId);
   }
-
 
   /**
    * An optional set e-tag which should be some value that allows the storage to check if the content of the response has changed.
@@ -93,11 +99,11 @@ public abstract class XyzResponse extends AnyObject {
    * @param etag the e-tag, if null, the e-tag is removed.
    */
   @SuppressWarnings("WeakerAccess")
-  public void setEtag(String etag) {
+  public void setEtag(@Nullable String etag) {
     if (etag == null) {
-      remove(ETAG);
+      delete(ETAG);
     } else {
-      setRaw(ETAG, etag);
+      set(ETAG, etag);
     }
   }
 }

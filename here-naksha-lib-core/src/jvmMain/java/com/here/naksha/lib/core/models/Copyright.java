@@ -18,13 +18,20 @@
  */
 package com.here.naksha.lib.core.models;
 
-import naksha.base.JvmListProxy;
+import naksha.base.ListProxy;
+import naksha.base.PlatformType;
 import naksha.model.objects.NakshaFeature;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import static naksha.base.NakshaBaseKt.String_TYPE;
+import static naksha.base.Platform.forClass;
 
 /**
  * The copyright information object.
  */
 public class Copyright extends NakshaFeature {
+  public static final PlatformType<Copyright> TYPE = forClass(Copyright.class);
 
   private static final String LABEL = "label";
   private static final String ALT = "alt";
@@ -32,15 +39,15 @@ public class Copyright extends NakshaFeature {
   /**
    * The copyright label to be displayed by the client.
    */
-  public String getLabel() {
-    return (String) getRaw(LABEL);
+  public @Nullable String getLabel() {
+    return getAs(LABEL, String_TYPE);
   }
 
-  public void setLabel(final String label) {
-    setRaw(LABEL, label);
+  public void setLabel(final @Nullable String label) {
+    set(LABEL, label);
   }
 
-  public Copyright withLabel(final String label) {
+  public @NotNull Copyright withLabel(final @Nullable String label) {
     setLabel(label);
     return this;
   }
@@ -49,21 +56,21 @@ public class Copyright extends NakshaFeature {
    * The description text for the label to be displayed by the client.
    */
   public String getAlt() {
-    return (String) getRaw(ALT);
+    return getAs(ALT, String_TYPE);
   }
 
   public void setAlt(final String alt) {
-    setRaw(ALT, alt);
+    set(ALT, alt);
   }
 
-  public Copyright withAlt(final String alt) {
+  public @NotNull Copyright withAlt(final String alt) {
     setAlt(alt);
     return this;
   }
 
-  public static class List extends JvmListProxy<Copyright> {
+  public static class List extends ListProxy<Copyright> {
     public List() {
-      super(Copyright.class);
+      super(Copyright.TYPE);
     }
   }
 }

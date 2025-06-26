@@ -1,6 +1,8 @@
 // This will be exposed
 // - in JavaScript at the namespace: naksha.psql.{name}
 // - jn Java at the class naksha.psql.NakshaPsqlKt.{name}
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.psql
 
 import naksha.base.Platform.Platform_C.forKClass
@@ -11,6 +13,8 @@ import naksha.psql.PgType.PgType_C.INT
 import naksha.psql.PgType.PgType_C.INT64
 import naksha.psql.PgType.PgType_C.SHORT
 import naksha.psql.PgType.PgType_C.STRING
+import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 
 /**
  * The package name `naksha.psql`.
@@ -22,36 +26,48 @@ const val PACKAGE_NAME = "naksha.psql"
  * The [PlatformType][naksha.base.PlatformType] of the [PgCluster] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PgCluster_TYPE = forKClass(PgCluster::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [PgConnection] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PgConnection_TYPE = forKClass(PgConnection::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [PgCursor] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PgCursor_TYPE = forKClass(PgCursor::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [PgInstance] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PgInstance_TYPE = forKClass(PgInstance::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [PgInternalCollection] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PgInternalCollection_TYPE = forKClass(PgInternalCollection::class).withPackageName(PACKAGE_NAME)
 
 /**
  * The [PlatformType][naksha.base.PlatformType] of the [PgPlan] interface.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val PgPlan_TYPE = forKClass(PgPlan::class).withPackageName(PACKAGE_NAME)
 
 /**
@@ -62,6 +78,8 @@ val PgPlan_TYPE = forKClass(PgPlan::class).withPackageName(PACKAGE_NAME)
  * This is different from the normal [NakshaVersion.current], because `lib-psql` only increments the admin version, when the SQL functions are modified, and require an upgrade. So, even while client code may be modified, this still may not need an upgrade of the SQL functions.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val minAdminVersion = NakshaVersion.of("3.0.0-beta.24")
 
 /**
@@ -70,6 +88,8 @@ val minAdminVersion = NakshaVersion.of("3.0.0-beta.24")
  * This is different from the normal [NakshaVersion.current], because `lib-psql` only increments the admin version, when the SQL functions are modified, and require an upgrade. So, even while client code may be modified, this still may not need an upgrade of the SQL functions.
  * @since 3.0
  */
+@JvmField
+@JsStatic
 val adminVersion = NakshaVersion.of("3.0.0-beta.24")
 
 /**

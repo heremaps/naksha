@@ -14,7 +14,7 @@ import kotlin.jvm.JvmField
  * @since 3.0
  */
 @JsExport
-class DifferenceList: ListProxy<Difference>(DIFFERENCE) {
+class DifferenceList: ListProxy<Difference>(Difference_TYPE) {
     companion object DifferenceList_C {
         /**
          * The [PlatformType] of [DifferenceList].

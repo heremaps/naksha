@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.core.models.naksha;
 
-import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaProperties;
@@ -38,10 +37,10 @@ public class SpaceProperties extends NakshaProperties {
    * The backend storage collection details specified at space level
    */
   public @Nullable NakshaCollection getCollection() {
-    return JvmBoxingUtil.box(get(NAKSHA_COLLECTION), NakshaCollection.class);
+    return getAs(NAKSHA_COLLECTION, NakshaCollection.TYPE);
   }
 
   public void setCollection(final @Nullable NakshaCollection collection) {
-    setRaw(NAKSHA_COLLECTION, collection);
+    set(NAKSHA_COLLECTION, collection);
   }
 }

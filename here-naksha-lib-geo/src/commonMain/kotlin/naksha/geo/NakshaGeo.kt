@@ -1,11 +1,14 @@
 // This will be exposed
 // - in JavaScript at the namespace: naksha.geo.{name}
 // - jn Java at the class naksha.geo.NakshaGeoKt.{name}
+@file:Suppress("OPT_IN_USAGE")
+
 package naksha.geo
 
 import naksha.base.*
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformUtil.PlatformUtil_C.rd
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.math.round
 
@@ -20,6 +23,7 @@ const val PACKAGE_NAME = "naksha.geo"
  * @since 3.0
  */
 @JvmField
+@JsStatic
 val ICoordinates_TYPE = forKClass(ICoordinates::class).withPackageName(PACKAGE_NAME)
 
 /**
@@ -39,6 +43,7 @@ const val SP_COMPONENT_MAX_INT: Int = 1_800_000_000
  * @since 3.0
  */
 @JvmField
+@JsStatic
 val SP_COMPONENT_MAX_INT64: Int64 = Int64(1_800_000_000)
 
 /**
@@ -58,6 +63,7 @@ const val SP_COMPONENT_MIN_INT: Int = -1_800_000_000
  * @since 3.0
  */
 @JvmField
+@JsStatic
 val SP_COMPONENT_MIN_INT64: Int64 = Int64(-1_800_000_000)
 
 /**
@@ -139,6 +145,12 @@ internal const val SIZE_3D = 6
  * The string `Feature`.
  */
 internal const val FEATURE = "Feature"
+
+/**
+ * The string `FeatureCollection`.
+ */
+internal const val FEATURE_COLLECTION = "FeatureCollection"
+
 
 /**
  * Convert the given value into a spatial component with 7 decimal digits _(does round)_.
@@ -253,9 +265,12 @@ internal fun initialize() {
         forKClass(GeoFeature::class).initialize()
         forKClass(GeoFeatureList::class).initialize()
         forKClass(GeoCollection::class).initialize()
+        forKClass(GeoTypeDetector::class).initialize()
 
         forKClass(HereTile::class).initialize()
 
-        Platform.globalDetectors.add(GeoTypeDetector.instance)
+        // Replace the default detector with the lib-geo variant.
+        Platform.globalDetectors.remove(AnyTypedObjectDetector.defaultDetector)
+        Platform.globalDetectors.add(GeoTypeDetector.defaultGeoDetector)
     }
 }

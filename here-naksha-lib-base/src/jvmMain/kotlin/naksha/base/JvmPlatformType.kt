@@ -1,5 +1,6 @@
 package naksha.base
 
+import naksha.base.Platform.Platform_C.forClass
 import naksha.base.Platform.Platform_C.logger
 import naksha.base.Platform.Platform_C.unbox
 import naksha.base.Platform.Platform_C.unsafe
@@ -26,7 +27,20 @@ class JvmPlatformType<T : Any> internal constructor(
      * @since 3.0
      */
     override val kotlinClass: KClass<T>
-) : PlatformType<T> {
+) : AbstractPlatformType<T>() {
+
+    private var _superType: PlatformType<*>? = null
+    override val superType: PlatformType<*>?
+        get() {
+            var type = _superType
+            if (type != null) return type
+            val superClass = jvmClass.superclass ?: return null
+            if (superClass === Object::class.java) return null
+            type = forClass(superClass)
+            _superType = type
+            return type
+        }
+
     /**
      * The primitive type, if this has a primitive variant.
      * @since 3.0
@@ -43,7 +57,7 @@ class JvmPlatformType<T : Any> internal constructor(
         else -> null
     }
 
-    companion object PlatformType_C {
+    companion object JvmPlatformType_C {
         private val lock: PlatformLock = Platform.newLock()
         private val initCache: AtomicMap<JvmPlatformType<*>, Boolean> = AtomicMap()
 
@@ -300,8 +314,4 @@ class JvmPlatformType<T : Any> internal constructor(
         if (jvmClass.isInstance(o)) return jvmClass.cast(o)
         throw illegalArg("Can't cast '${o.javaClass.name}' to '$name'")
     }
-
-    override fun equals(other: Any?): Boolean = this === other
-    override fun hashCode(): Int = Platform.identityHashCode(this)
-    override fun toString(): String = name
 }

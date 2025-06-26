@@ -37,6 +37,12 @@ kotlin {
     jvm {}
 }
 
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(23))
+    }
+}
+
 tasks {
     getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
     getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }

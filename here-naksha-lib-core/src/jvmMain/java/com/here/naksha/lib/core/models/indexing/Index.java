@@ -20,9 +20,11 @@ package com.here.naksha.lib.core.models.indexing;
 
 import com.here.naksha.lib.core.models.indexing.IndexProperty.IndexProperties;
 import java.util.List;
-import naksha.base.JvmBoxingUtil;
-import naksha.base.JvmMapProxy;
+import naksha.base.MapProxy;
 import naksha.model.objects.NakshaFeature;
+import org.jetbrains.annotations.Nullable;
+
+import static naksha.base.Platform.forClass;
 
 /** The specification of an index. */
 public class Index extends NakshaFeature {
@@ -62,8 +64,8 @@ public class Index extends NakshaFeature {
   }
 
   /** All properties that should be included in this index. */
-  public List<IndexProperty> getIndexProperties() {
-    return JvmBoxingUtil.box(getProperties().get(NESTED_INDEX_PROPS), IndexProperties.class);
+  public @Nullable IndexProperties getIndexProperties() {
+    return getProperties().getAs(NESTED_INDEX_PROPS, IndexProperties.TYPE);
   }
 
   public void setProperties(List<IndexProperty> properties) {
@@ -72,9 +74,9 @@ public class Index extends NakshaFeature {
     getProperties().setRaw(NESTED_INDEX_PROPS, indexProperties);
   }
 
-  public static class Map extends JvmMapProxy<String, Index> {
+  public static class Map extends MapProxy<String, Index> {
     public Map() {
-      super(String.class, Index.class);
+      super(forClass(String.class), forClass(Index.class));
     }
   }
 }
