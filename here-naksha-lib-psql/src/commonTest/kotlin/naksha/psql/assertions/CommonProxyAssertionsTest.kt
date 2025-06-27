@@ -9,13 +9,13 @@ import kotlin.test.Test
 class CommonProxyAssertionsTest {
 
     @Test
-    fun shouldTreatSameObjectsAsEqual(){
+    fun shouldTreatSameObjectsAsEqual() {
         // Given:
         val left = NakshaFeature().apply {
             id = "some"
             properties.apply {
                 xyz = XyzNs().apply {
-                    setRaw("appId", "someAppId")
+                    set("appId", "someAppId")
                 }
             }
         }
@@ -34,7 +34,7 @@ class CommonProxyAssertionsTest {
             id = "some"
             properties.apply {
                 xyz = XyzNs()
-                setRaw("featureType", "test_type")
+                set("featureType", "test_type")
             }
         }
 
@@ -43,7 +43,7 @@ class CommonProxyAssertionsTest {
             id = "some"
             properties.apply {
                 delta = MomDeltaNs()
-                setRaw("featureType", "test_type")
+                set("featureType", "test_type")
             }
         }
 

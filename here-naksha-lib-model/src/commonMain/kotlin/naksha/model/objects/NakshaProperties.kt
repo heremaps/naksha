@@ -23,7 +23,8 @@ open class NakshaProperties : AnyTypedObject() {
          */
         @JvmField
         @JsStatic
-        val TYPE = forKClass(NakshaProperties::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(NakshaProperties::class)
+            .withPackageName(PACKAGE_NAME)
 
         /**
          * The key of the feature-type property (`featureType`).

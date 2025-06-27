@@ -1,12 +1,9 @@
 package naksha.model.objects
 
 import naksha.base.*
-import naksha.geo.BBox
-import naksha.geo.GeoFeature
-import naksha.geo.SpGeometry
-import naksha.geo.SpPoint
 import naksha.model.*
 import naksha.base.Platform.Platform_C.forKClass
+import naksha.geo.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -39,7 +36,7 @@ open class NakshaFeature() : GeoFeature() {
         @JsStatic
         val TYPE = forKClass(NakshaFeature::class)
             .withPackageName(PACKAGE_NAME)
-            .withJsonType("Feature")
+            .withJsonType(FEATURE)
 
         const val PROPERTIES_KEY = "properties"
         private val REFERENCE_POINT_MEMBER = NullableProperty<NakshaFeature, SpPoint>(SpPoint.TYPE)

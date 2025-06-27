@@ -47,11 +47,6 @@ import kotlin.jvm.JvmOverloads
  */
 const val PACKAGE_NAME = "naksha.base"
 
-/**
- * The string `Feature`.
- */
-internal const val FEATURE = "Feature"
-
 inline fun Int64(value: Long) = Platform.longToInt64(value)
 inline fun Int64(value: Int) = Platform.toInt64(value)
 inline fun Int64(value: Double, rawBits: Boolean = false) = if (rawBits) Platform.toInt64RawBits(value) else Platform.toInt64(value)

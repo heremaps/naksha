@@ -144,13 +144,12 @@ internal const val SIZE_3D = 6
 /**
  * The string `Feature`.
  */
-internal const val FEATURE = "Feature"
+const val FEATURE = "Feature"
 
 /**
  * The string `FeatureCollection`.
  */
-internal const val FEATURE_COLLECTION = "FeatureCollection"
-
+const val FEATURE_COLLECTION = "FeatureCollection"
 
 /**
  * Convert the given value into a spatial component with 7 decimal digits _(does round)_.

@@ -153,7 +153,7 @@ open class AnyTypedObject : AnyObject() {
         val po = platformObject()
         var raw = map_get(po, "type")
         if (raw is String) {
-            if (raw != FEATURE) return raw
+            if (raw != "Feature") return raw
 
             if (isMomType) {
                 raw = map_get(po, "momType")
@@ -171,7 +171,7 @@ open class AnyTypedObject : AnyObject() {
             raw = map_get(po, "featureType")
             if (raw is String) return raw
 
-            return forInstance(this).jsonType ?: FEATURE
+            return forInstance(this).jsonType ?: "Feature"
         }
         // Type not encoded, use the platform-type value
         return forInstance(this).jsonType
@@ -199,12 +199,12 @@ open class AnyTypedObject : AnyObject() {
         val po = platformObject()
         // Clear type.
         if (jsonType == null) {
-            if (isFeature) {
+            if (!isFeature) {
                 map_remove(po, "type")
                 return
             }
 
-            map_set(po, "type", FEATURE)
+            map_set(po, "type", "Feature")
             map_remove(po, "featureType")
             if (isMomType) {
                 map_remove(po, "momType")
@@ -224,8 +224,8 @@ open class AnyTypedObject : AnyObject() {
             return
         }
 
-        map_set(po, "type", FEATURE)
-        if (jsonType != FEATURE) {
+        map_set(po, "type", "Feature")
+        if (jsonType != "Feature") {
             if (isMomType) {
                 map_set(po, "momType", jsonType)
             } else if (!isDataHubType) {

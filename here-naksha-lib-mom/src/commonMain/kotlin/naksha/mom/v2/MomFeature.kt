@@ -6,6 +6,8 @@ import naksha.base.AnyObject
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.geo.BBox
+import naksha.geo.FEATURE
+import naksha.geo.GeoCollection.GeoCollection_C.FEATURES
 import naksha.geo.GeoFeature
 import naksha.geo.SpGeometry
 import kotlin.js.JsExport
@@ -28,6 +30,7 @@ open class MomFeature : GeoFeature() {
         @JsStatic
         val TYPE = forKClass(MomFeature::class)
             .withPackageName(PACKAGE_NAME)
+            .withJsonType(FEATURE)
             .withIsMomType(true)
     }
 
