@@ -10,8 +10,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 
-class JsEnumTest {
-    open class Vehicle : JsEnum() {
+class PlatformEnumTest {
+    open class Vehicle : PlatformEnum() {
         companion object {
             val TYPE = forKClass(Vehicle::class)
         }
@@ -55,11 +55,11 @@ class JsEnumTest {
         // Tests the code given as example in the JsEnum class!
         //Platform.logger.info("bar: {}", Car.BAR)
         //Platform.logger.info("foo: {}", Truck.FOO)
-        val bar = JsEnum.get("bar", forKClass(Vehicle::class))
+        val bar = PlatformEnum.get("bar", forKClass(Vehicle::class))
         assertSame(Car.BAR, bar)
-        val foo = JsEnum.get("foo", forKClass(Vehicle::class))
+        val foo = PlatformEnum.get("foo", forKClass(Vehicle::class))
         assertSame(Truck.FOO, foo)
-        val unknown = JsEnum.get("unknown", forKClass(Vehicle::class))
+        val unknown = PlatformEnum.get("unknown", forKClass(Vehicle::class))
         assertEquals("bar is Car", "$bar is ${bar.type()}")
         assertEquals("foo is Truck", "$foo is ${foo.type()}")
         assertEquals("unknown is Vehicle", "$unknown is ${unknown.type()}")

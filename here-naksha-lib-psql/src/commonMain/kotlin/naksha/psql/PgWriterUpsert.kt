@@ -193,13 +193,13 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                     write.tuple = tuple.copy(
                         meta = tuple.meta.copy(
                             tupleNumber = updated_tn,
-                            flags = tuple.meta.flags.withAction(Action.UPDATED).withOperation(Operation.UPDATED),
+                            flags = tuple.meta.flags.withAction(Action.UPDATE).withOperation(Operation.UPDATE),
                             changeCount = changeCount,
                             prevTupleNumber = prev_tn,
                         ),
                         attachment = attachment,
                     )
-                    write.action = Action.UPDATED
+                    write.action = Action.UPDATE
                 }
             }
         }

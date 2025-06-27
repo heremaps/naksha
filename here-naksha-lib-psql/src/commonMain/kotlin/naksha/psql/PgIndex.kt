@@ -1,7 +1,7 @@
 package naksha.psql
 
 import naksha.base.AtomicMap
-import naksha.base.JsEnum
+import naksha.base.PlatformEnum
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.base.fn.Fx2
@@ -52,7 +52,7 @@ import kotlin.jvm.JvmStatic
  */
 @Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate")
 @JsExport
-open class PgIndex : JsEnum() {
+open class PgIndex : PlatformEnum() {
     // TODO: We need to allow `CREATE INDEX CONCURRENTLY`, when the index is not unique.
     //       However, this can only be done, when being outside of a transaction!
     //       We need to add special support for index modification outside of transactions.

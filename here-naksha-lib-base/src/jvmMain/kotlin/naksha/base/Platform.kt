@@ -340,7 +340,7 @@ actual class Platform {
             if (value == null) return null
             if (value is JvmObject) return value
             if (value is Proxy) return value.platformObject() // as? JvmObject
-            if (value is JsEnum) return value.value
+            if (value is PlatformEnum) return value.value
             if (value is Array<*>) return JvmList(*value)
             if (value is Long) return JvmInt64(value)
             return value

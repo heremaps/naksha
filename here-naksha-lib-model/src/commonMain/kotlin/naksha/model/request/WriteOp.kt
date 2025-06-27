@@ -2,7 +2,7 @@
 
 package naksha.model.request
 
-import naksha.base.JsEnum
+import naksha.base.PlatformEnum
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
@@ -10,7 +10,7 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 @JsExport
-class WriteOp : JsEnum(), Comparable<WriteOp> {
+class WriteOp : PlatformEnum(), Comparable<WriteOp> {
     companion object WriteOp_C {
         /**
          * The [PlatformType] of [WriteOp].

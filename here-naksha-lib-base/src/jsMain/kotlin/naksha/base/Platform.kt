@@ -407,7 +407,7 @@ if (typeof k==='function') instance=Object.create(k.prototype);""")
         actual fun unbox(value: Any?): Any? {
             if (value == null) return null
             if (value is Proxy) return value.platformObject()
-            if (value is JsEnum) return value.value
+            if (value is PlatformEnum) return value.value
             return unboxPrimitive(value)
         }
 

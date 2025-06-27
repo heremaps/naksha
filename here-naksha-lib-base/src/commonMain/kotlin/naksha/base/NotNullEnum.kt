@@ -3,7 +3,6 @@ package naksha.base
 import naksha.base.fn.Fn2
 import kotlin.js.JsExport
 import kotlin.jvm.JvmOverloads
-import kotlin.reflect.KClass
 
 /**
  * The description of an object property.
@@ -40,7 +39,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-open class NotNullEnum<OBJECT_TYPE : AnyObject, PROPERTY_TYPE : JsEnum> @JvmOverloads constructor(
+open class NotNullEnum<OBJECT_TYPE : AnyObject, PROPERTY_TYPE : PlatformEnum> @JvmOverloads constructor(
     type: PlatformType<PROPERTY_TYPE>,
     name: String? = null,
     init: Fn2<PROPERTY_TYPE?, OBJECT_TYPE, String>? = null

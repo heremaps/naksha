@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.base.JsEnum
+import naksha.base.PlatformEnum
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
@@ -13,7 +13,7 @@ import kotlin.jvm.JvmStatic
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class PgKind : JsEnum() {
+class PgKind : PlatformEnum() {
     companion object PgKind_C {
         /**
          * The [PlatformType] of [PgKind].
@@ -76,7 +76,7 @@ class PgKind : JsEnum() {
          */
         @JsStatic
         @JvmStatic
-        fun of(kind: String?): PgKind = JsEnum.get(kind, TYPE)
+        fun of(kind: String?): PgKind = PlatformEnum.get(kind, TYPE)
     }
 
     override fun namespace() = TYPE

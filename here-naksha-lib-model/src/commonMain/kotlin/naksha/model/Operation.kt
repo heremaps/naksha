@@ -1,6 +1,6 @@
 package naksha.model
 
-import naksha.base.JsEnum
+import naksha.base.PlatformEnum
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.model.FlagsBits.FlagsBits_C.OP_SHIFT
@@ -8,7 +8,6 @@ import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
-import kotlin.reflect.KClass
 
 /**
  * An enumeration about the operation being performed.
@@ -19,7 +18,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class Operation : JsEnum() {
+class Operation : PlatformEnum() {
     override fun namespace() = TYPE
     override fun initClass() {}
 
@@ -33,47 +32,54 @@ class Operation : JsEnum() {
         @JsStatic
         val TYPE = forKClass(Operation::class).withPackageName(PACKAGE_NAME)
 
-        // action = CREATED
-        internal const val CREATED_VALUE = 0 shl OP_SHIFT
+        // action = CREATE
+        internal const val CREATE_VALUE = 0 shl OP_SHIFT
+        internal const val CREATE_STRING = "CREATE"
         internal const val CREATED_STRING = "CREATED"
-        internal const val CREATED_SHORT = "c"
+        internal const val CREATE_SHORT = "c"
 
-        // action = UPDATED
-        internal const val UPDATED_VALUE = 1 shl OP_SHIFT
+        // action = UPDATE
+        internal const val UPDATE_VALUE = 1 shl OP_SHIFT
+        internal const val UPDATE_STRING = "UPDATE"
         internal const val UPDATED_STRING = "UPDATED"
-        internal const val UPDATED_SHORT = "u"
+        internal const val UPDATE_SHORT = "u"
 
-        // action = DELETED
-        internal const val DELETED_VALUE = 2 shl OP_SHIFT
+        // action = DELETE
+        internal const val DELETE_VALUE = 2 shl OP_SHIFT
+        internal const val DELETE_STRING = "DELETE"
         internal const val DELETED_STRING = "DELETED"
-        internal const val DELETED_SHORT = "d"
+        internal const val DELETE_SHORT = "d"
 
-        // action = DELETED | UPDATED | CREATED
-        internal const val REBASED_VALUE = 3 shl OP_SHIFT
+        // action = DELETE | UPDATE | CREATE
+        internal const val REBASE_VALUE = 3 shl OP_SHIFT
+        internal const val REBASE_STRING = "REBASE"
         internal const val REBASED_STRING = "REBASED"
-        internal const val REBASED_SHORT = "b"
+        internal const val REBASE_SHORT = "b"
 
         // ---------------------------< extending action >----------------------------------------
 
-        // action = CREATED
-        internal const val FORKED_VALUE = 4 shl OP_SHIFT
+        // action = CREATE
+        internal const val FORK_VALUE = 4 shl OP_SHIFT
+        internal const val FORK_STRING = "FORK"
         internal const val FORKED_STRING = "FORKED"
-        internal const val FORKED_SHORT = "f"
+        internal const val FORK_SHORT = "f"
 
-        // action = UPDATED
-        internal const val MERGED_VALUE = 5 shl OP_SHIFT
+        // action = UPDATE
+        internal const val MERGE_VALUE = 5 shl OP_SHIFT
+        internal const val MERGE_STRING = "MERGE"
         internal const val MERGED_STRING = "MERGED"
-        internal const val MERGED_SHORT = "m"
+        internal const val MERGE_SHORT = "m"
 
-        // action = DELETED | CREATED
+        // action = DELETE | CREATE
         internal const val SPLIT_VALUE = 6 shl OP_SHIFT
         internal const val SPLIT_STRING = "SPLIT"
         internal const val SPLIT_SHORT = "s"
 
-        // action = DELETED | CREATED
-        internal const val JOINED_VALUE = 7 shl OP_SHIFT
+        // action = DELETE | CREATE
+        internal const val JOIN_VALUE = 7 shl OP_SHIFT
+        internal const val JOIN_STRING = "JOIN"
         internal const val JOINED_STRING = "JOINED"
-        internal const val JOINED_SHORT = "j"
+        internal const val JOIN_SHORT = "j"
 
         // action = UNDEFINED
         internal const val UNDEFINED_VALUE = 15 shl OP_SHIFT
@@ -86,12 +92,21 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val CREATED = defIgnoreCase(TYPE, CREATED_STRING) { self ->
-            self.intValue = CREATED_VALUE
-            self.shortId = CREATED_SHORT
-            self.action = Action.CREATED
-            self.actions = arrayOf(Action.CREATED)
-        }
+        val CREATE = defIgnoreCase(TYPE, CREATE_STRING) { self ->
+            self.intValue = CREATE_VALUE
+            self.shortId = CREATE_SHORT
+            self.action = Action.CREATE
+            self.actions = arrayOf(Action.CREATE)
+        }.alias<Operation>(CREATED_STRING)
+
+        @Deprecated(
+            message = "Deprecated, please use CREATE",
+            replaceWith = ReplaceWith("CREATE"),
+            level = DeprecationLevel.ERROR
+        )
+        @JsStatic
+        @JvmField
+        val CREATED = CREATE
 
         /**
          * The feature was updated.
@@ -99,12 +114,21 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val UPDATED = defIgnoreCase(TYPE, UPDATED_STRING) { self ->
-            self.intValue = UPDATED_VALUE
-            self.shortId = UPDATED_SHORT
-            self.action = Action.UPDATED
-            self.actions = arrayOf(Action.UPDATED)
-        }
+        val UPDATE = defIgnoreCase(TYPE, UPDATE_STRING) { self ->
+            self.intValue = UPDATE_VALUE
+            self.shortId = UPDATE_SHORT
+            self.action = Action.UPDATE
+            self.actions = arrayOf(Action.UPDATE)
+        }.alias<Operation>(UPDATED_STRING)
+
+        @Deprecated(
+            message = "Deprecated, please use UPDATE",
+            replaceWith = ReplaceWith("UPDATE"),
+            level = DeprecationLevel.ERROR
+        )
+        @JsStatic
+        @JvmField
+        val UPDATED = UPDATE
 
         /**
          * The feature was deleted.
@@ -112,12 +136,21 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val DELETED = defIgnoreCase(TYPE, DELETED_STRING) { self ->
-            self.intValue = DELETED_VALUE
-            self.shortId = DELETED_SHORT
-            self.action = Action.DELETED
-            self.actions = arrayOf(Action.DELETED)
-        }
+        val DELETE = defIgnoreCase(TYPE, DELETE_STRING) { self ->
+            self.intValue = DELETE_VALUE
+            self.shortId = DELETE_SHORT
+            self.action = Action.DELETE
+            self.actions = arrayOf(Action.DELETE)
+        }.alias<Operation>(DELETED_STRING)
+
+        @Deprecated(
+            message = "Deprecated, please use DELETE",
+            replaceWith = ReplaceWith("DELETE"),
+            level = DeprecationLevel.ERROR
+        )
+        @JsStatic
+        @JvmField
+        val DELETED = DELETE
 
         /**
          * The feature is created, but originates from another storage, map, or collection, or the `id` of the feature was changed.
@@ -127,15 +160,24 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val FORKED = defIgnoreCase(TYPE, FORKED_STRING) { self ->
-            self.intValue = FORKED_VALUE
-            self.shortId = FORKED_SHORT
-            self.action = Action.CREATED
-            self.actions = arrayOf(Action.CREATED)
-        }
+        val FORK = defIgnoreCase(TYPE, FORK_STRING) { self ->
+            self.intValue = FORK_VALUE
+            self.shortId = FORK_SHORT
+            self.action = Action.CREATE
+            self.actions = arrayOf(Action.CREATE)
+        }.alias<Operation>(FORKED_STRING)
+
+        @Deprecated(
+            message = "Deprecated, please use FORK",
+            replaceWith = ReplaceWith("FORK"),
+            level = DeprecationLevel.ERROR
+        )
+        @JsStatic
+        @JvmField
+        val FORKED = FORK
 
         /**
-         * The feature was [Action.UPDATED], and another client modified the feature concurrently, but the _service_ was able to auto-merge the updates done concurrently with the ones done by the client.
+         * The feature was [Action.UPDATE], and another client modified the feature concurrently, but the _service_ was able to auto-merge the updates done concurrently with the ones done by the client.
          *
          * The [base_tn][Metadata.baseTupleNumber] refers to the shared base [Tuple] that was modified by this and the foreign _principal_.
          * @see [Metadata.baseTupleNumber]
@@ -143,17 +185,26 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val MERGED = defIgnoreCase(TYPE, MERGED_STRING) { self ->
-            self.intValue = MERGED_VALUE
-            self.shortId = MERGED_SHORT
-            self.action = Action.UPDATED
-            self.actions = arrayOf(Action.UPDATED)
-        }
+        val MERGE = defIgnoreCase(TYPE, MERGE_STRING) { self ->
+            self.intValue = MERGE_VALUE
+            self.shortId = MERGE_SHORT
+            self.action = Action.UPDATE
+            self.actions = arrayOf(Action.UPDATE)
+        }.alias<Operation>(MERGED_STRING)
+
+        @Deprecated(
+            message = "Deprecated, please use MERGE",
+            replaceWith = ReplaceWith("MERGE"),
+            level = DeprecationLevel.ERROR
+        )
+        @JsStatic
+        @JvmField
+        val MERGED = MERGE
 
         /**
-         * The feature was split, the action will be either [CREATED][Action.CREATED] or [DELETED][Action.DELETED].
+         * The feature was split, the action will be either [CREATED][Action.CREATE] or [DELETED][Action.DELETE].
          *
-         * The feature that was split is expected to be deleted, so has [action] set to [DELETED][Action.DELETED], while the new features, being the outcome of the split, are created and have their action set to [CREATED][Action.CREATED].
+         * The feature that was split is expected to be deleted, so has [action] set to [DELETED][Action.DELETE], while the new features, being the outcome of the split, are created and have their action set to [CREATED][Action.CREATE].
          *
          * All features being part of a split have the [operation] set to [Operation.SPLIT], and they all will refer to the original feature that was split via [origin][Metadata.origin]. The `origin` refers to the [Tuple] before the split, so **not** to the [Tuple] that is created as the result of the split!
          *
@@ -165,11 +216,11 @@ class Operation : JsEnum() {
             self.intValue = SPLIT_VALUE
             self.shortId = SPLIT_SHORT
             self.action = null
-            self.actions = arrayOf(Action.CREATED, Action.DELETED)
+            self.actions = arrayOf(Action.CREATE, Action.DELETE)
         }
 
         /**
-         * The feature is the result of a join of some features into a new one. The action of the new feature set to [CREATED][Action.CREATED], and the action of all features joined into this new feature is set to [DELETED][Action.DELETED].
+         * The feature is the result of a join of some features into a new one. The action of the new feature set to [CREATED][Action.CREATE], and the action of all features joined into this new feature is set to [DELETED][Action.DELETE].
          *
          * This _operation_ requires that the client sets the [target][Metadata.target] to the new feature that replaces the deleted features.
          *
@@ -179,15 +230,24 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val JOINED = defIgnoreCase(TYPE, JOINED_STRING) { self ->
-            self.intValue = JOINED_VALUE
-            self.shortId = JOINED_SHORT
+        val JOIN = defIgnoreCase(TYPE, JOIN_STRING) { self ->
+            self.intValue = JOIN_VALUE
+            self.shortId = JOIN_SHORT
             self.action = null
-            self.actions = arrayOf(Action.CREATED, Action.DELETED)
-        }
+            self.actions = arrayOf(Action.CREATE, Action.DELETE)
+        }.alias<Operation>(JOINED_STRING)
+
+        @Deprecated(
+            message = "Deprecated, please use JOIN",
+            replaceWith = ReplaceWith("JOIN"),
+            level = DeprecationLevel.ERROR
+        )
+        @JsStatic
+        @JvmField
+        val JOINED = JOIN
 
         /**
-         * This [Tuple] is the result of a rebase. The action can be anything, so [CREATED][Action.CREATED], [UPDATED][Action.UPDATED], or [DELETED][Action.DELETED].
+         * This [Tuple] is the result of a rebase. The action can be anything, so [CREATED][Action.CREATE], [UPDATED][Action.UPDATE], or [DELETED][Action.DELETE].
          *
          * The values of [origin][Metadata.origin] and [target][Metadata.target] will be adjusted by the rebase to reflect the latest, updated, state.
          *
@@ -195,12 +255,21 @@ class Operation : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val REBASED = defIgnoreCase(TYPE, REBASED_STRING) { self ->
-            self.intValue = REBASED_VALUE
-            self.shortId = REBASED_SHORT
+        val REBASE = defIgnoreCase(TYPE, REBASE_STRING) { self ->
+            self.intValue = REBASE_VALUE
+            self.shortId = REBASE_SHORT
             self.action = null
-            self.actions = arrayOf(Action.CREATED, Action.UPDATED, Action.DELETED)
-        }
+            self.actions = arrayOf(Action.CREATE, Action.UPDATE, Action.DELETE)
+        }.alias<Operation>(REBASED_STRING)
+
+        @Deprecated(
+            message = "Deprecated, please use REBASE",
+            replaceWith = ReplaceWith("REBASE"),
+            level = DeprecationLevel.ERROR
+        )
+        @JsStatic
+        @JvmField
+        val REBASED = REBASE
 
         /**
          * The action is unknown (invalid state).
@@ -213,27 +282,27 @@ class Operation : JsEnum() {
             self.action = Action.UNDEFINED
         }
 
-        // This supports full-qualified names (that default JsEnum support as well) PLUS short notation!
+        // This supports full-qualified names (that default PlatformEnum support as well) PLUS short notation!
         private val FROM_STRING = mapOf(
-            Pair(CREATED_STRING, CREATED), Pair(CREATED_SHORT, CREATED),
-            Pair(UPDATED_STRING, UPDATED), Pair(UPDATED_SHORT, UPDATED),
-            Pair(DELETED_STRING, DELETED), Pair(DELETED_SHORT, DELETED),
-            Pair(REBASED_STRING, REBASED), Pair(REBASED_SHORT, REBASED),
-            Pair(FORKED_STRING, FORKED), Pair(FORKED_SHORT, FORKED),
-            Pair(MERGED_STRING, MERGED), Pair(MERGED_SHORT, MERGED),
+            Pair(CREATE_STRING, CREATE), Pair(CREATE_SHORT, CREATE), Pair(CREATED_STRING, CREATE),
+            Pair(UPDATE_STRING, UPDATE), Pair(UPDATE_SHORT, UPDATE), Pair(UPDATED_STRING, UPDATE),
+            Pair(DELETE_STRING, DELETE), Pair(DELETE_SHORT, DELETE), Pair(DELETED_STRING, DELETE),
+            Pair(REBASE_STRING, REBASE), Pair(REBASE_SHORT, REBASE), Pair(REBASED_STRING, REBASE),
+            Pair(FORK_STRING, FORK), Pair(FORK_SHORT, FORK), Pair(FORKED_STRING, FORK),
+            Pair(MERGE_STRING, MERGE), Pair(MERGE_SHORT, MERGE), Pair(MERGED_STRING, MERGE),
             Pair(SPLIT_STRING, SPLIT), Pair(SPLIT_SHORT, SPLIT),
-            Pair(JOINED_STRING, JOINED), Pair(JOINED_SHORT, JOINED),
+            Pair(JOIN_STRING, JOIN), Pair(JOIN_SHORT, JOIN), Pair(JOINED_STRING, JOIN),
         )
 
         private val FROM_VALUE = mapOf(
-            Pair(CREATED_VALUE, CREATED),
-            Pair(UPDATED_VALUE, UPDATED),
-            Pair(DELETED_VALUE, DELETED),
-            Pair(REBASED_VALUE, REBASED),
-            Pair(FORKED_VALUE, FORKED),
-            Pair(MERGED_VALUE, MERGED),
+            Pair(CREATE_VALUE, CREATE),
+            Pair(UPDATE_VALUE, UPDATE),
+            Pair(DELETE_VALUE, DELETE),
+            Pair(REBASE_VALUE, REBASE),
+            Pair(FORK_VALUE, FORK),
+            Pair(MERGE_VALUE, MERGE),
             Pair(SPLIT_VALUE, SPLIT),
-            Pair(JOINED_VALUE, JOINED),
+            Pair(JOIN_VALUE, JOIN),
         )
 
         /**
@@ -271,7 +340,7 @@ class Operation : JsEnum() {
     /**
      * The [Action] that correlates to this operation, if there is a single action hard-wired with the operation.
      *
-     * This is not the case for all operations, for example a [rebase][REBASED] is one operation, but can lead to different actions, as rebasing may create, update, and delete features as a result.
+     * This is not the case for all operations, for example a [rebase][REBASE] is one operation, but can lead to different actions, as rebasing may create, update, and delete features as a result.
      * @since 3.0
      */
     var action: Action? = null

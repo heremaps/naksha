@@ -1,12 +1,10 @@
 package naksha.psql
 
 import naksha.model.Action
-import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import naksha.model.objects.NakshaFeatureList
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.*
 
 class ReadFeaturesAll : PgTestBase() {
@@ -30,7 +28,7 @@ class ReadFeaturesAll : PgTestBase() {
         for (feature in writeFeaturesResp.getFeatures(NakshaFeatureList.TYPE)) {
             assertNotNull(feature)
             assertNull(allFeatures[feature.id])
-            assertEquals(Action.CREATED, feature.properties.xyz.action)
+            assertEquals(Action.CREATE, feature.properties.xyz.action)
             allFeatures[feature.id] = feature
         }
     }

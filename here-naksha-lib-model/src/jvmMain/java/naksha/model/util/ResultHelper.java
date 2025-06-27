@@ -164,18 +164,18 @@ public class ResultHelper {
     while (iterator.hasNext() && cnt++ < limit) {
       final NakshaFeature feature = iterator.next();
       final Action action = feature.getProperties().getXyz().getAction();
-      if (action == Action.CREATED) {
+      if (action == Action.CREATE) {
         insertedFeatures.add(box(feature, type));
-      } else if (action == Action.UPDATED) {
+      } else if (action == Action.UPDATE) {
         updatedFeatures.add(box(feature, type));
-      } else if (action == Action.DELETED) {
+      } else if (action == Action.DELETE) {
         deletedFeatures.add(box(feature, type));
       }
     }
     final Map<Action, List<T>> featuresByAction = new HashMap<>();
-    featuresByAction.put(Action.CREATED, insertedFeatures);
-    featuresByAction.put(Action.UPDATED, updatedFeatures);
-    featuresByAction.put(Action.DELETED, deletedFeatures);
+    featuresByAction.put(Action.CREATE, insertedFeatures);
+    featuresByAction.put(Action.UPDATE, updatedFeatures);
+    featuresByAction.put(Action.DELETE, deletedFeatures);
     return featuresByAction;
   }
 

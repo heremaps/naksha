@@ -41,7 +41,7 @@ public class ObligatoryLayersResolverTest {
     final Int64 updatedAt = Platform.currentMillis();
     return new Metadata(
         tupleNumber,
-        withAction(0, Action.CREATED),
+        withAction(0, Action.CREATE),
         null,
         updatedAt, null, null,
         null,

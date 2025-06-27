@@ -2,14 +2,12 @@
 
 package naksha.model.request.query
 
-import naksha.base.JsEnum
+import naksha.base.PlatformEnum
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
-import naksha.model.request.RequestQuery
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.reflect.KClass
 
 /**
  * An arbitrary query operation.
@@ -19,7 +17,7 @@ import kotlin.reflect.KClass
  * @see StringOp
  */
 @JsExport
-open class AnyOp : JsEnum() {
+open class AnyOp : PlatformEnum() {
     companion object AnyOp_C {
         /**
          * The [PlatformType] of [AnyOp].

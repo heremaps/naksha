@@ -8,12 +8,10 @@ import naksha.model.Naksha
 import naksha.model.Naksha.Naksha_C.featureNumber
 import naksha.model.Naksha.Naksha_C.partitionNumber
 import naksha.model.UidManager
-import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.model.RandomFeatures
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.*
 
 class TupleNumberPersistenceTest : PgTestBase(collection = null, mapId = "") {
@@ -107,7 +105,7 @@ class TupleNumberPersistenceTest : PgTestBase(collection = null, mapId = "") {
         assertEquals(20, featureTuples.size)
         val expectedUids = mutableMapOf<Int, Boolean>()
         for (i in 0 until featureTuples.size) {
-            val expectedUid = uidManager.next(Action.CREATED)
+            val expectedUid = uidManager.next(Action.CREATE)
             expectedUids[expectedUid] = true
         }
         // Then: tuples have been correctly persisted, and have UIDs between 0 and 19

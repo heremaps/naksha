@@ -2,19 +2,18 @@
 
 package naksha.model.request.query
 
-import naksha.base.JsEnum
+import naksha.base.PlatformEnum
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.reflect.KClass
 
 /**
  * The sort order.
  */
 @JsExport
-class SortOrder : JsEnum() {
+class SortOrder : PlatformEnum() {
     companion object SortOrder_C {
         /**
          * The [PlatformType] of [SortOrder].

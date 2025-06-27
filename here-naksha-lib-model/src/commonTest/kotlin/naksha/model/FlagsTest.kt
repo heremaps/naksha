@@ -20,7 +20,7 @@ class FlagsTest {
         assertEquals(GeoEncoding.TWKB, flags.geoEncoding())
         assertEquals(FeatureEncoding.JBON, flags.featureEncoding())
         assertEquals(TagsEncoding.JBON, flags.tagsEncoding())
-        assertEquals(Action.CREATED.intValue, flags.action())
+        assertEquals(Action.CREATE.intValue, flags.action())
     }
 
     @Test

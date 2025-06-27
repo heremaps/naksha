@@ -1,13 +1,12 @@
 @file:Suppress("OPT_IN_USAGE")
 package naksha.model.objects
 
-import naksha.base.JsEnum
+import naksha.base.PlatformEnum
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.reflect.KClass
 
 /**
  * How the data should be stored for certain components of [NakshaCollection].
@@ -17,7 +16,7 @@ import kotlin.reflect.KClass
  * @since 3.0
  */
 @JsExport
-class StoreMode: JsEnum() {
+class StoreMode: PlatformEnum() {
     companion object StoreMode_C {
         /**
          * The [PlatformType] of [StoreMode].

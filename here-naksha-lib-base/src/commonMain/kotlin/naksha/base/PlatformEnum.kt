@@ -2,12 +2,11 @@
 
 package naksha.base
 
-import naksha.base.JsEnum.JsEnum_C.get
+import naksha.base.PlatformEnum.JsEnum_C.get
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.Platform.Platform_C.logger
 import naksha.base.fn.Fx1
 import kotlin.js.JsExport
-import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
@@ -15,48 +14,48 @@ import kotlin.jvm.JvmStatic
 
 /**
  * A custom enumeration implementation that supports more flexible enumerations. Creating enumeration values requires to implement
- * [namespace]. The implementation is only done in the class directly extending the [JsEnum], which is called as well the **namespace**.
+ * [namespace]. The implementation is only done in the class directly extending the [PlatformEnum], which is called as well the **namespace**.
  *
  * An implementation normally looks like:
- * ```
- * open class Vehicle : JsEnum()
- * {
- *   override fun namespace(): KClass<out JsEnum> = Vehicle::class
+ * ```kotlin
+ * open class Vehicle : PlatformEnum() {
+ *   companion object Vehicle_C {
+ *     val TYPE = Platform.forKClass(Vehicle::class);
+ *   }
+ *   override fun namespace() = TYPE
  *   open fun type(): String = "Vehicle"
  * }
  * class Car : Vehicle() {
- *   companion object {
- *     @JvmStatic
- *     @JsStatic
- *     val BAR = def(Car::class, "bar")
+ *   companion object Car_C {
+ *     val TYPE = Platform.forKClass(Car::class);
+ *     val BAR = def(TYPE, "bar")
  *   }
  *   override fun type(): String = "Car"
  * }
  * class Truck : Vehicle() {
- *   companion object {
- *     @JvmStatic
- *     @JsStatic
- *     val FOO = def(Truck::class, "foo")
+ *   companion object Truck_C {
+ *     val TYPE = Platform.forKClass(Truck::class);
+ *     val FOO = def(TYPE, "foo")
  *   }
  *   override fun type(): String = "Truck"
  * }
  * ```
  * Ones created like in the above example, the constants can be used like:
- * ```
- * val bar = JsEnum.get("bar", Vehicle::class)
- * val foo = JsEnum.get("foo", Vehicle::class)
- * val unknown = JsEnum.get("unknown", Vehicle::class)
+ * ```kotlin
+ * val bar = PlatformEnum.get("bar", Vehicle.TYPE)
+ * val foo = PlatformEnum.get("foo", Vehicle.TYPE)
+ * val unknown = PlatformEnum.get("unknown", Vehicle.TYPE)
  * println("$bar is ${bar.type()}")
  * println("$foo is ${foo.type()}")
  * println("$unknown is ${unknown.type()}")
  * ```
  * This should print "bar is Car", "foo is Truck" and "unknown is Vehicle".
  *
- * @constructor Should not be called, please us [def] or [defIgnoreCase].
+ * @constructor Must not be called, please us [def] or [defIgnoreCase].
  */
 @Suppress("OPT_IN_USAGE", "NON_EXPORTABLE_TYPE")
 @JsExport
-abstract class JsEnum : CharSequence {
+abstract class PlatformEnum {
     init {
         check(false) { "Do not directly invoke enumeration constructor, please always use def or defIgnoreCase" }
     }
@@ -86,12 +85,12 @@ abstract class JsEnum : CharSequence {
 
     companion object JsEnum_C {
         /**
-         * The [PlatformType] of [JsEnum].
+         * The [PlatformType] of [PlatformEnum].
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val TYPE = forKClass(JsEnum::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(PlatformEnum::class).withPackageName(PACKAGE_NAME)
 
         private fun alignValue(value: Any?): Any? {
             if (value == null) return null
@@ -116,28 +115,28 @@ abstract class JsEnum : CharSequence {
 
         /**
          * A mapping between the class and the namespace. The namespace is the "root" class, so the class that directly
-         * extends [JsEnum].
+         * extends [PlatformEnum].
          */
         @JvmStatic
-        private val typeToNamespace = AtomicMap<PlatformType<out JsEnum>, PlatformType<out JsEnum>>()
+        private val typeToNamespace = AtomicMap<PlatformType<out PlatformEnum>, PlatformType<out PlatformEnum>>()
 
         /**
-         * All defined enumeration values of a namespace. The first level is the namespace (the Kotlin class that directly extend [JsEnum]), the second level maps values to defined enumeration instances.
+         * All defined enumeration values of a namespace. The first level is the namespace (the Kotlin class that directly extend [PlatformEnum]), the second level maps values to defined enumeration instances.
          */
         @JvmStatic
-        private val definedMap = AtomicMap<PlatformType<*>, AtomicMap<Any, JsEnum>>()
+        private val definedMap = AtomicMap<PlatformType<*>, AtomicMap<Any, PlatformEnum>>()
 
         /**
-         * All defined enumeration aliases. The first level is the namespace (the Kotlin class that directly extend [JsEnum]), the second level maps alias values to defined enumeration instances.
+         * All defined enumeration aliases. The first level is the namespace (the Kotlin class that directly extend [PlatformEnum]), the second level maps alias values to defined enumeration instances.
          */
         @JvmStatic
-        private val definedAliasesMap = AtomicMap<PlatformType<*>, AtomicMap<Any, JsEnum>>()
+        private val definedAliasesMap = AtomicMap<PlatformType<*>, AtomicMap<Any, PlatformEnum>>()
 
         /**
-         * All temporary registered enumeration values and alias values of a namespace. The first level is the namespace (the Kotlin class that directly extend [JsEnum]), the second level maps main values to temporary registered instances.
+         * All temporary registered enumeration values and alias values of a namespace. The first level is the namespace (the Kotlin class that directly extend [PlatformEnum]), the second level maps main values to temporary registered instances.
          */
         @JvmStatic
-        private val temporaryMap = AtomicMap<PlatformType<*>, AtomicMap<Any, WeakRef<JsEnum>>>()
+        private val temporaryMap = AtomicMap<PlatformType<*>, AtomicMap<Any, WeakRef<PlatformEnum>>>()
 
         /**
          * Returns the defined map, so the assignment between the value and the defined enumeration instance.
@@ -145,7 +144,7 @@ abstract class JsEnum : CharSequence {
          * @return the defined map.
          */
         @JvmStatic
-        private fun defMap(ns: PlatformType<out JsEnum>): AtomicMap<Any, JsEnum> {
+        private fun defMap(ns: PlatformType<out PlatformEnum>): AtomicMap<Any, PlatformEnum> {
             var defMap = definedMap[ns]
             if (defMap == null) {
                 defMap = AtomicMap()
@@ -161,7 +160,7 @@ abstract class JsEnum : CharSequence {
          * @return the defined aliases map.
          */
         @JvmStatic
-        private fun aliasMap(ns: PlatformType<out JsEnum>): AtomicMap<Any, JsEnum> {
+        private fun aliasMap(ns: PlatformType<out PlatformEnum>): AtomicMap<Any, PlatformEnum> {
             var aliasMap = definedAliasesMap[ns]
             if (aliasMap == null) {
                 aliasMap = AtomicMap()
@@ -178,7 +177,7 @@ abstract class JsEnum : CharSequence {
          * @return the temporary map.
          */
         @JvmStatic
-        private fun tempMap(ns: PlatformType<out JsEnum>, create: Boolean): AtomicMap<Any, WeakRef<JsEnum>>? {
+        private fun tempMap(ns: PlatformType<out PlatformEnum>, create: Boolean): AtomicMap<Any, WeakRef<PlatformEnum>>? {
             var tempMap = temporaryMap[ns]
             if (tempMap == null) {
                 if (!create) return null
@@ -201,7 +200,7 @@ abstract class JsEnum : CharSequence {
         @JvmOverloads
         @JvmStatic
         @JsStatic
-        fun <ENUM : JsEnum> defIgnoreCase(enumType: PlatformType<ENUM>, value: String, init: Fx1<ENUM>? = null): ENUM {
+        fun <ENUM : PlatformEnum> defIgnoreCase(enumType: PlatformType<ENUM>, value: String, init: Fx1<ENUM>? = null): ENUM {
             val e = def(enumType, value, init)
             val s = value.lowercase()
             val aliasMap = aliasMap(e.namespace())
@@ -222,7 +221,7 @@ abstract class JsEnum : CharSequence {
         @JvmOverloads
         @JvmStatic
         @JsStatic
-        fun <ENUM : JsEnum> def(enumType: PlatformType<ENUM>, value: Any?, init: Fx1<ENUM>? = null): ENUM {
+        fun <ENUM : PlatformEnum> def(enumType: PlatformType<ENUM>, value: Any?, init: Fx1<ENUM>? = null): ENUM {
             require(value === null || value is String || value is Number || value is Int64) {
                 "Invalid enumeration value, require null, String or Number"
             }
@@ -239,16 +238,16 @@ abstract class JsEnum : CharSequence {
          */
         @JvmStatic
         @JsStatic
-        fun <ENUM : JsEnum> get(value: Any?, enumType: PlatformType<ENUM>): ENUM = __get(value, enumType, true)
+        fun <ENUM : PlatformEnum> get(value: Any?, enumType: PlatformType<ENUM>): ENUM = __get(value, enumType, true)
 
         /**
          * Returns an iterator above all defined enumeration value.
-         * @param ns the namespace as returned by [JsEnum.namespace], which is simply the base enumeration class.
+         * @param ns the namespace as returned by [PlatformEnum.namespace], which is simply the base enumeration class.
          * @return an iterator above all defined enumeration values.
          */
         @JvmStatic
         @JsStatic
-        fun <ENUM : JsEnum> iterate(ns: PlatformType<ENUM>): Iterator<ENUM> {
+        fun <ENUM : PlatformEnum> iterate(ns: PlatformType<ENUM>): Iterator<ENUM> {
             val map = definedMap[ns] ?: return emptyList<ENUM>().iterator()
             @Suppress("UNCHECKED_CAST")
             return map.values.iterator() as Iterator<ENUM>
@@ -262,7 +261,7 @@ abstract class JsEnum : CharSequence {
          */
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
-        fun <ENUM : JsEnum> getDefined(value: Any?, enumType: PlatformType<ENUM>): ENUM? {
+        fun <ENUM : PlatformEnum> getDefined(value: Any?, enumType: PlatformType<ENUM>): ENUM? {
             val alignedValue = alignValue(value)
             val key = alignedValue ?: NULL
             val ns = typeToNamespace[enumType] ?: return null
@@ -289,7 +288,7 @@ abstract class JsEnum : CharSequence {
          */
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
-        private fun <ENUM : JsEnum> __get(value: Any?, enumType: PlatformType<out ENUM>, temporary: Boolean): ENUM {
+        private fun <ENUM : PlatformEnum> __get(value: Any?, enumType: PlatformType<out ENUM>, temporary: Boolean): ENUM {
             // Optimistic locking, when something goes wrong, because another thread acts at the same time, we simply
             // restart the whole operation from start.
             val alignedValue = alignValue(value)
@@ -380,19 +379,19 @@ abstract class JsEnum : CharSequence {
     /**
      * Returns the namespace of this instance.
      *
-     * The namespace is the root enumeration type, so the type that directly extends [JsEnum]. Should simply be implemented in the root class as:
+     * The namespace is the root enumeration type, so the type that directly extends [PlatformEnum]. Should simply be implemented in the root class as:
      * ```
      * override val namespace: PlatformType<out JsEnum> = forKClass(this::class)
      * ```
-     * @return The namespace, the [PlatformType] that directly extends [JsEnum].
+     * @return The namespace, the [PlatformType] that directly extends [PlatformEnum].
      */
-    abstract fun namespace(): PlatformType<out JsEnum>
+    abstract fun namespace(): PlatformType<out PlatformEnum>
 
     /**
      * Register an enumeration child-class.
      * @param enumKlass the enumeration child-class.
      */
-    protected fun <CHILD : JsEnum> register(enumKlass: PlatformType<out CHILD>) {
+    protected fun <CHILD : PlatformEnum> register(enumKlass: PlatformType<out CHILD>) {
         val namespace = namespace()
         val existing = typeToNamespace.putIfAbsent(enumKlass, namespace)
         check(existing == null || existing == namespace) {
@@ -405,7 +404,7 @@ abstract class JsEnum : CharSequence {
 
     /**
      * This method is invoked exactly ones per namespace, when the enumeration namespace is not yet initialized. It simplifies
-     * auto-initialization. Actually, it is required that the namespace class (the class directly extending the [JsEnum]) implements this
+     * auto-initialization. Actually, it is required that the namespace class (the class directly extending the [PlatformEnum]) implements this
      * method and invokes [register] for all extending (child) classes. For example, when an enumeration class `Vehicle` is created
      * with two extending (child) enumeration classes, being `Car` and `Truck`, then the `initClass` method of the `Vehicle` should do:
      * ```
@@ -469,7 +468,7 @@ abstract class JsEnum : CharSequence {
      * @return this.
      */
     @Suppress("UNCHECKED_CAST")
-    fun <SELF : JsEnum> with(lambda: Fx1<SELF>): SELF {
+    fun <SELF : PlatformEnum> with(lambda: Fx1<SELF>): SELF {
         lambda.call(this as SELF)
         return this
     }
@@ -492,7 +491,7 @@ abstract class JsEnum : CharSequence {
      * @return this.
      */
     @Suppress("UNCHECKED_CAST")
-    protected fun <SELF : JsEnum> alias(value: Any): SELF {
+    protected fun <SELF : PlatformEnum> alias(value: Any): SELF {
         // Optimistic locking
         while (true) {
             val ns = namespace()
@@ -545,17 +544,17 @@ abstract class JsEnum : CharSequence {
      */
     fun like(other: Any?): Boolean {
         if (this === other) return true
-        if (other is JsEnum) return other.value == value
+        if (other is PlatformEnum) return other.value == value
         return value == other
     }
 
-    final override fun equals(other: Any?): Boolean = this === other || (other is JsEnum && other.value == value)
+    final override fun equals(other: Any?): Boolean = this === other || (other is PlatformEnum && other.value == value)
     final override fun hashCode(): Int = toString().hashCode()
 
-    final override val length: Int
-        get() = toString().length
-
-    final override fun get(index: Int): Char = toString()[index]
-
-    final override fun subSequence(startIndex: Int, endIndex: Int): CharSequence = toString().subSequence(startIndex, endIndex)
+//    final override val length: Int
+//        get() = toString().length
+//
+//    final override fun get(index: Int): Char = toString()[index]
+//
+//    final override fun subSequence(startIndex: Int, endIndex: Int): CharSequence = toString().subSequence(startIndex, endIndex)
 }

@@ -221,9 +221,9 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       return validatedErrorResponse;
     } else if (response instanceof SuccessResponse successResponse) {
       final Map<Action, List<F>> featureMap = readFeaturesGroupedByAction(successResponse, type);
-      final List<F> insertedFeatures = featureMap.get(Action.CREATED);
-      final List<F> updatedFeatures = featureMap.get(Action.UPDATED);
-      final List<F> deletedFeatures = featureMap.get(Action.DELETED);
+      final List<F> insertedFeatures = featureMap.get(Action.CREATE);
+      final List<F> updatedFeatures = featureMap.get(Action.UPDATE);
+      final List<F> deletedFeatures = featureMap.get(Action.DELETE);
       // extract violations if available
       List<NakshaFeature> violations = null;
       if (successResponse instanceof ContextXyzFeatureResponse cr) {

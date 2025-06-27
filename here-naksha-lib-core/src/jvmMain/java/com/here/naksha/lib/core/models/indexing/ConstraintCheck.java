@@ -20,74 +20,35 @@ package com.here.naksha.lib.core.models.indexing;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import naksha.base.JvmBoxingUtil;
+import naksha.base.*;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import static naksha.base.NakshaBaseKt.*;
+import static naksha.base.Platform.forClass;
 
 /** A condition to check. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeName(value = "Check")
 public class ConstraintCheck extends Constraint {
+  public static final PlatformType<ConstraintCheck> TYPE = forClass(ConstraintCheck.class);
 
-  /** The condition to apply. */
-  public enum Test {
-    /** If the property is not null; ignores {@link #getValue()}. */
-    NOT_NULL,
-
-    /** If the value of the property is unique; ignores {@link #getValue()}. */
-    UNIQUE,
-
-    /** If the value of the property is greater than the {@link #getValue()}. */
-    GT,
-
-    /** If the value of the property is greater than or equal to the {@link #getValue()}. */
-    GTE,
-
-    /** If the value of the property is equal to the {@link #getValue()}. */
-    EQ,
-
-    /** If the value of the property is less than the {@link #getValue()}. */
-    LT,
-
-    /** If the value of the property is less than or equal to the {@link #getValue()}. */
-    LTE,
-
-    /** If the length of the property is more than or equal to the defined {@link #getValue()}. */
-    MIN_LEN,
-
-    /** If the length of the property is less than or equal to the defined {@link #getValue()}. */
-    MAX_LEN,
-
-    /** If the value matches the given regular expression, given in the {@link #getValue()}. */
-    MATCHES
-  }
-
-  private static final String TEST = "test";
-  private static final String PATH = "path";
-  private static final String VALUE = "value";
+  private static final NotNullProperty<ConstraintCheck, ConstraintTest> TEST
+      = new NotNullProperty<>(ConstraintTest.TYPE, "test");
+  private static final NotNullProperty<ConstraintCheck, String> PATH
+      = new NotNullProperty<>(String_TYPE, "path");
+  private static final NullableProperty<ConstraintCheck, Object> VALUE
+      = new NullableProperty<>(Object_TYPE, "value");
 
   /** The check to perform. */
-  public Test getTest() {
-    return JvmBoxingUtil.box(get(TEST), Test.class);
-  }
-
-  public void setTest(Test test) {
-    setRaw(TEST, test);
-  }
+  public @NotNull ConstraintTest getTest() { return TEST.getValue(this); }
+  public void setTest(@NotNull ConstraintTest test) { TEST.setValue(this, test); }
 
   /** The JSON path to the property to check. */
-  public String getPath() {
-    return (String) getRaw(PATH);
-  }
-
-  public void setPath(String path) {
-    setRaw(PATH, path);
-  }
+  public @NotNull String getPath() { return PATH.getValue(this); }
+  public void setPath(@NotNull String path) { PATH.setValue(this, path); }
 
   /** The optional value for the check. */
-  public Object getValue() {
-    return getRaw(VALUE);
-  }
-
-  public void setValue(Object value) {
-    setRaw(VALUE, value);
-  }
+  public @Nullable Object getValue() { return VALUE.getValue(this); }
+  public void setValue(@Nullable Object value) { VALUE.setValue(this, value); }
 }

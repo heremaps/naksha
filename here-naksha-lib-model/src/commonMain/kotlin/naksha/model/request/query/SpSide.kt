@@ -2,20 +2,19 @@
 
 package naksha.model.request.query
 
-import naksha.base.JsEnum
+import naksha.base.PlatformEnum
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.reflect.KClass
 
 /**
  * @since 3.0
  * @see SpBuffer
  */
 @JsExport
-class SpSide : JsEnum() {
+class SpSide : PlatformEnum() {
     companion object SpSide_C {
         /**
          * The [PlatformType] of [SpSide].

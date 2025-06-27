@@ -10,7 +10,7 @@ import kotlin.jvm.JvmField
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class Int64Encoding : JsEnum() {
+class Int64Encoding : PlatformEnum() {
     companion object Int64Encoding_C {
         /**
          * The [PlatformType] of [DoubleList].
@@ -65,5 +65,5 @@ class Int64Encoding : JsEnum() {
         init { initialize() }
     }
 
-    override fun namespace(): PlatformType<out JsEnum> = TYPE
+    override fun namespace(): PlatformType<out PlatformEnum> = TYPE
 }

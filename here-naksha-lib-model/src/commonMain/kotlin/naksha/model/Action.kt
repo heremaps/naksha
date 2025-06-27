@@ -1,6 +1,6 @@
 package naksha.model
 
-import naksha.base.JsEnum
+import naksha.base.PlatformEnum
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.model.FlagsBits.FlagsBits_C.ACTION_SHIFT
@@ -8,18 +8,17 @@ import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
-import kotlin.reflect.KClass
 
 /**
- * An enumeration about the action that actually was performed for a feature in a storage, being [CREATED], [UPDATED], or [DELETED].
+ * An enumeration about the action that actually was performed for a feature in a storage, being [CREATE], [UPDATE], or [DELETE].
  *
  * @since 1.0.0
  * @see [Operation]
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class Action : JsEnum() {
-    override fun namespace(): PlatformType<out JsEnum> = TYPE
+class Action : PlatformEnum() {
+    override fun namespace(): PlatformType<out PlatformEnum> = TYPE
 
     override fun initClass() {}
 
@@ -33,17 +32,20 @@ class Action : JsEnum() {
         @JsStatic
         val TYPE = forKClass(Action::class).withPackageName(PACKAGE_NAME)
 
-        internal const val CREATED_VALUE = 0 shl ACTION_SHIFT
-        internal const val CREATED_STRING = "CREATE"
-        internal const val CREATED_SHORT = "c"
+        internal const val CREATE_VALUE = 0 shl ACTION_SHIFT
+        internal const val CREATE_STRING = "CREATE"
+        internal const val CREATED_STRING = "CREATED"
+        internal const val CREATE_SHORT = "c"
 
-        internal const val UPDATED_VALUE = 1 shl ACTION_SHIFT
-        internal const val UPDATED_STRING = "UPDATE"
-        internal const val UPDATED_SHORT = "u"
+        internal const val UPDATE_VALUE = 1 shl ACTION_SHIFT
+        internal const val UPDATE_STRING = "UPDATE"
+        internal const val UPDATED_STRING = "UPDATED"
+        internal const val UPDATE_SHORT = "u"
 
-        internal const val DELETED_VALUE = 2 shl ACTION_SHIFT
-        internal const val DELETED_STRING = "DELETE"
-        internal const val DELETED_SHORT = "d"
+        internal const val DELETE_VALUE = 2 shl ACTION_SHIFT
+        internal const val DELETE_STRING = "DELETE"
+        internal const val DELETED_STRING = "DELETED"
+        internal const val DELETE_SHORT = "d"
 
         internal const val UNDEFINED_VALUE = 3 shl ACTION_SHIFT
         internal const val UNDEFINED_STRING = "UNDEFINED"
@@ -55,10 +57,19 @@ class Action : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val CREATED = defIgnoreCase(TYPE, CREATED_STRING) { self ->
-            self.intValue = CREATED_VALUE
-            self.shortId = CREATED_SHORT
-        }
+        val CREATE = defIgnoreCase(TYPE, CREATE_STRING) { self ->
+            self.intValue = CREATE_VALUE
+            self.shortId = CREATE_SHORT
+        }.alias<Action>(CREATED_STRING)
+
+        @Deprecated(
+            message = "Deprecated, please use CREATE",
+            replaceWith = ReplaceWith("CREATE"),
+            level = DeprecationLevel.ERROR
+        )
+        @JsStatic
+        @JvmField
+        val CREATED = CREATE
 
         /**
          * The feature was updated.
@@ -66,10 +77,19 @@ class Action : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val UPDATED = defIgnoreCase(TYPE, UPDATED_STRING) { self ->
-            self.intValue = UPDATED_VALUE
-            self.shortId = UPDATED_SHORT
-        }
+        val UPDATE = defIgnoreCase(TYPE, UPDATE_STRING) { self ->
+            self.intValue = UPDATE_VALUE
+            self.shortId = UPDATE_SHORT
+        }.alias<Action>(UPDATED_STRING)
+
+        @Deprecated(
+            message = "Deprecated, please use UPDATE",
+            replaceWith = ReplaceWith("UPDATE"),
+            level = DeprecationLevel.ERROR
+        )
+        @JsStatic
+        @JvmField
+        val UPDATED = UPDATE
 
         /**
          * The feature was deleted.
@@ -77,10 +97,19 @@ class Action : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val DELETED = defIgnoreCase(TYPE, DELETED_STRING) { self ->
-            self.intValue = DELETED_VALUE
-            self.shortId = DELETED_SHORT
-        }
+        val DELETE = defIgnoreCase(TYPE, DELETE_STRING) { self ->
+            self.intValue = DELETE_VALUE
+            self.shortId = DELETE_SHORT
+        }.alias<Action>(DELETED_STRING)
+
+        @Deprecated(
+            message = "Deprecated, please use DELETE",
+            replaceWith = ReplaceWith("DELETE"),
+            level = DeprecationLevel.ERROR
+        )
+        @JsStatic
+        @JvmField
+        val DELETED = DELETE
 
         /**
          * The action is unknown (invalid state).
@@ -95,15 +124,15 @@ class Action : JsEnum() {
 
         // This supports full-qualified names (that default JsEnum support as well) PLUS short notation!
         private val FROM_STRING = mapOf(
-            Pair(CREATED_STRING, CREATED), Pair(CREATED_SHORT, CREATED),
-            Pair(UPDATED_STRING, UPDATED), Pair(UPDATED_SHORT, UPDATED),
-            Pair(DELETED_STRING, DELETED), Pair(DELETED_SHORT, DELETED),
+            Pair(CREATE_STRING, CREATE), Pair(CREATE_SHORT, CREATE), Pair(CREATED_STRING, CREATE),
+            Pair(UPDATE_STRING, UPDATE), Pair(UPDATE_SHORT, UPDATE), Pair(UPDATED_STRING, UPDATE),
+            Pair(DELETE_STRING, DELETE), Pair(DELETE_SHORT, DELETE), Pair(DELETED_STRING, DELETE),
         )
 
         private val FROM_VALUE = mapOf(
-            Pair(CREATED_VALUE, CREATED),
-            Pair(UPDATED_VALUE, UPDATED),
-            Pair(DELETED_VALUE, DELETED),
+            Pair(CREATE_VALUE, CREATE),
+            Pair(UPDATE_VALUE, UPDATE),
+            Pair(DELETE_VALUE, DELETE),
         )
 
         /**

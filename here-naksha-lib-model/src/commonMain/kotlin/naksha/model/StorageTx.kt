@@ -148,7 +148,7 @@ open class StorageTx private constructor(
         val tn = TupleNumber(storageNumber, map.number, collection.number, feature.featureNumber, version, uid.next(action))
         // TODO: Handle other operations like rebase!
         val base_tn: TupleNumber? = null
-        val prev_tn: TupleNumber? = if (operation == Operation.CREATED || (operation == Operation.UPDATED && !atomic)) null else {
+        val prev_tn: TupleNumber? = if (operation == Operation.CREATE || (operation == Operation.UPDATE && !atomic)) null else {
             xyz.guid?.tupleNumber ?: throw illegalArg("$operation with atomic=$atomic requires that the feature has a UUID!")
         }
         // Transactions are special, they are partitioned over `next_tn` in the HEAD, before being partitioned over `tn` in the year!
@@ -202,7 +202,7 @@ open class StorageTx private constructor(
     }
 
     /**
-     * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was [created][Operation.CREATED].
+     * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was [created][Operation.CREATE].
      *
      * ### Note
      * This method can be used for `upsert` as well, just that on-conflict the following values have to be updated form the already existing feature:
@@ -230,7 +230,7 @@ open class StorageTx private constructor(
         feature: NakshaFeature,
         attachment: ByteArray?
     ): Tuple {
-        val metadata = metadataOf(map, collection, feature, Operation.CREATED, Action.CREATED)
+        val metadata = metadataOf(map, collection, feature, Operation.CREATE, Action.CREATE)
         val dictionary = dictReader?.getEncodingDictionary(feature)
         return Tuple(
             meta = metadata,
@@ -244,7 +244,7 @@ open class StorageTx private constructor(
     }
 
     /**
-     * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was [updated][Operation.UPDATED].
+     * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was [updated][Operation.UPDATE].
      * @param map the map in which the feature is going to be created.
      * @param collection the collection in which the feature is going to be created.
      * @param feature the feature that was created.
@@ -258,7 +258,7 @@ open class StorageTx private constructor(
         attachment: ByteArray?,
         atomic: Boolean = false,
     ): Tuple {
-        val metadata = metadataOf(map, collection, feature, Operation.UPDATED, Action.UPDATED, atomic)
+        val metadata = metadataOf(map, collection, feature, Operation.UPDATE, Action.UPDATE, atomic)
         val dictionary = dictReader?.getEncodingDictionary(feature)
         return Tuple(
             meta = metadata,
@@ -272,7 +272,7 @@ open class StorageTx private constructor(
     }
 
     /**
-     * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was [deleted][Operation.DELETED].
+     * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was [deleted][Operation.DELETE].
      *
      * ### Note
      * There is no difference between purge and delete, except that on a purge, the [Tuple] is not persisted in shadow and/or history, which means that the [TupleNumber] of the purged feature potentially can't be load from storage or cache, so the [Tuple] is not available.
@@ -288,7 +288,7 @@ open class StorageTx private constructor(
         feature: NakshaFeature,
         attachment: ByteArray?
     ): Tuple {
-        val metadata = metadataOf(map, collection, feature, Operation.DELETED, Action.DELETED)
+        val metadata = metadataOf(map, collection, feature, Operation.DELETE, Action.DELETE)
         val dictionary = dictReader?.getEncodingDictionary(feature)
         return Tuple(
             meta = metadata,

@@ -411,6 +411,15 @@ internal fun deep_equals(a: Any?, b: Any?): Boolean {
 val Any_TYPE = forKClass(Any::class).initialize()
 
 /**
+ * A hack for Java and JavaScript, where `any` is rather named `Object`.
+ * @since 3.0
+ * @see Any_TYPE
+ */
+@JvmField
+@JsStatic
+val Object_TYPE = Any_TYPE
+
+/**
  * The [PlatformType] for `boolean`.
  * @since 3.0
  */
@@ -908,8 +917,8 @@ internal fun <T> boxInto(raw: Any?, type: PlatformType<T>, alternative: T? = nul
     }
 
     // If enum was requested, turn the value into an enumeration value.
-    if (JsEnum.TYPE.isAssignableFrom(type)) {
-        return JsEnum.get(unboxed, type as PlatformType<JsEnum>) as T
+    if (PlatformEnum.TYPE.isAssignableFrom(type)) {
+        return PlatformEnum.get(unboxed, type as PlatformType<PlatformEnum>) as T
     }
 
     // If raw or data are of an acceptable correct type, return them
@@ -1049,7 +1058,7 @@ internal fun initialize() {
         forKClass(Epoch::class).initialize()
         forKClass(FromJsonOptions::class).initialize()
         forKClass(Int64Encoding::class).initialize()
-        forKClass(JsEnum::class).initialize()
+        forKClass(PlatformEnum::class).initialize()
         forKClass(MutableInt::class).initialize()
         forKClass(MutableDouble::class).initialize()
         forKClass(PlatformIterator::class).initialize()

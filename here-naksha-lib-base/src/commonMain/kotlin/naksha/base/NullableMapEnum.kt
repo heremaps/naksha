@@ -6,7 +6,6 @@ import naksha.base.PlatformMapApi.PlatformMapApi_C.map_set
 import naksha.base.fn.Fn2
 import kotlin.js.JsExport
 import kotlin.jvm.JvmOverloads
-import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
 /**
@@ -45,7 +44,7 @@ import kotlin.reflect.KProperty
  */
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
 @JsExport
-open class NullableMapEnum<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE, PROPERTY_TYPE : JsEnum> @JvmOverloads constructor(
+open class NullableMapEnum<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE, PROPERTY_TYPE : PlatformEnum> @JvmOverloads constructor(
     val type: PlatformType<PROPERTY_TYPE>,
     val name: String? = null,
     val init: Fn2<PROPERTY_TYPE?, MAP, String>? = null
@@ -66,7 +65,7 @@ open class NullableMapEnum<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYP
                 }
             }
         }
-        return JsEnum.getDefined(raw, type)
+        return PlatformEnum.getDefined(raw, type)
     }
 
     open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE?) {

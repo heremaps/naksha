@@ -11,7 +11,6 @@ import naksha.model.request.query.SpIntersects
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
-import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaFeatureList
 import naksha.model.objects.NakshaObject
 import kotlin.test.*
@@ -58,7 +57,7 @@ class InsertFeatureTest : PgTestBase() {
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
                             .hasProperty("author", PgTest.TEST_APP_AUTHOR)
-                            .hasProperty("action", Action.CREATED.text)
+                            .hasProperty("action", Action.CREATE.text)
                     }
                     .hasTags(TagList("wicked"))
             }
@@ -133,7 +132,7 @@ class InsertFeatureTest : PgTestBase() {
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
                             .hasProperty("author", PgTest.TEST_APP_AUTHOR)
-                            .hasProperty("action", Action.CREATED.text)
+                            .hasProperty("action", Action.CREATE.text)
                     }
                     .hasTags(TagList("wicked"))
             }
@@ -233,7 +232,7 @@ class InsertFeatureTest : PgTestBase() {
                             retrievedXyz
                                 .hasProperty("appId", PgTest.TEST_APP_ID)
                                 .hasProperty("author", PgTest.TEST_APP_AUTHOR)
-                                .hasProperty("action", Action.CREATED.text)
+                                .hasProperty("action", Action.CREATE.text)
                         }
                 }
         }

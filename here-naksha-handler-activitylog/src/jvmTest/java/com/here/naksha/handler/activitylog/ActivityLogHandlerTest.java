@@ -134,7 +134,7 @@ class ActivityLogHandlerTest {
   @Test
   void shouldImmediatelySucceedOnWriteCollection() {
     // Given: event bearing some WriteCollections request
-    IEvent event = eventWith(new WriteRequest().add(new Write().deleteCollectionById(null, "some_collection")));
+    IEvent event = eventWith(new WriteRequest().add(new Write().deleteCollectionById(null,"some_collection")));
 
     // When: handler tries to process such event
     Response result = handler.processEvent(event);
@@ -151,53 +151,90 @@ class ActivityLogHandlerTest {
   }
 
   @Test
-  void shouldComposeActivityFeatures() throws Exception {
-    // Given: features uuid
-    String initialUuid = "uuid_0";
-    String newUuid = "uuid_1";
-
-    // And: old version of feature
+  void shouldTransformReadRequest() {
+    // Given: Original read request
+    String featureUuid = "featureUuid";
     String featureId = "featureId";
-    NakshaFeature oldFeature = nakshaFeature(featureId)
-        .withUuid(initialUuid)
-        .withPuuid(null)
-        .withNuuid(newUuid)
-        .withAction(Action.CREATED)
-        .withCustomProperties(
-            Map.of(
-                "op", "old feature",
-                "magicNumber", 123
+    ReadFeatures originalReadFeatures = new ReadFeatures();
+    originalReadFeatures.setVersions(1);
+    originalReadFeatures.getQuery().setProperties(
+            new POr(
+                new PQuery(new Property(NakshaFeature.ID_KEY), StringOp.EQUALS, featureUuid),
+                    new PQuery(PROPERTY_ACTIVITY_LOG_ID, StringOp.EQUALS, featureId)
             )
-        ).build();
+        );
 
-    // And: new version of feature
-    NakshaFeature newFeature = nakshaFeature(featureId)
-        .withUuid(newUuid)
-        .withPuuid(initialUuid)
-        .withNuuid(null)
-        .withAction(Action.UPDATED)
-        .withCustomProperties(Map.of(
-            "op", "new feature",
-            "magicBoolean", true
-        ))
-        .build();
+    // And: Configured session that will receive read request from handler
+    IReadSession readSession = mock(IReadSession.class);
+    when(spaceStorage.newReadSession(any())).thenReturn(readSession);
+    when(readSession.execute(any())).thenReturn(new SuccessResponse());
 
-    // And: space storage that returns these features for some ReadFeatures request
-    configureSpaceStorage(
-        initialHistoryAwareRequestReturns(List.of(newFeature)),
-        requestForMissingPredecessorsReturns(List.of(oldFeature))
+    // When: Processing event with original request
+    handler.processEvent(eventWith(originalReadFeatures));
+
+    // Then: Some request was executed by the session
+    ArgumentCaptor<ReadFeatures> requestCaptor = ArgumentCaptor.forClass(ReadFeatures.class);
+    verify(readSession).execute(requestCaptor.capture());
+
+    // And: The executed request was a ReadFeatures transformed by handler
+    ReadFeatures requestPassedToSpaceStorage = requestCaptor.getValue();
+    assertEquals(List.of(SPACE_ID), requestPassedToSpaceStorage.getCollectionIds(),
+        "Transformed request should use 'spaceId' from handler's properties");
+    assertEquals(Integer.MAX_VALUE,requestPassedToSpaceStorage.getVersions(), "Transformed request should return all versions of feature");
+    assertThatPropertyQuery(requestPassedToSpaceStorage.getQuery().getProperties()) // POp for id and activityLogId should be transformed
+        .hasChildrenThat(
+            first -> first
+                .hasOp(StringOp.EQUALS)
+                .hasProperty(PROPERTY_UUID)
+                .hasValue(featureUuid),
+            second -> second
+                .hasOp(StringOp.EQUALS)
+                .hasProperty(List.of(NakshaFeature.ID_KEY))
+                .hasValue(featureId)
+        );
+  }
+
+  @Test
+  void shouldComposeActivityFeatures() throws Exception {
+    // Given: old version of feature
+    String featureId = "featureId";
+    NakshaFeature oldFeature = nakshaFeature(
+        featureId,
+        "initial_uuid",
+        null,
+        Action.CREATE,
+        Map.of(
+            "op", "old feature",
+            "magicNumber", 123
+        )
     );
 
-    // When: handler processes given request
-    Response result = handler.processEvent(eventWith(new ReadFeatures()));
+    // And: new version of feature
+    NakshaFeature newFeature = nakshaFeature(
+        featureId,
+        "new_uuid",
+        "initial_uuid",
+        Action.UPDATE,
+        Map.of(
+            "op", "new feature",
+            "magicBoolean", true
+        )
+    );
 
-    // Then: result contains single feature (made of the two configured above)
+    // And: space storage that returns these features for some ReadFeatures request
+    ReadFeatures request = new ReadFeatures();
+    spaceStorageSessionReturningHistoryFeatures(request, oldFeature, newFeature);
+
+    // When: handler processes given request
+    Response result = handler.processEvent(eventWith(request));
+
+    // Then: result contains activity log calculated on basis of these features
     assertThatResult(result)
         .hasActivityFeatures(
-            singleFeature -> singleFeature
+            firstFeature -> firstFeature
                 .hasId(uuid(newFeature))
                 .hasActivityLogId(featureId)
-                .hasAction(Action.UPDATED.toString())
+                .hasAction(Action.UPDATE.toString())
                 .hasReversePatch("""
                     {
                       "add": 1,
@@ -220,31 +257,95 @@ class ActivityLogHandlerTest {
                         }
                       ]
                     }
-                    """)
+                    """),
+            secondFeature -> secondFeature
+                .hasId(uuid(oldFeature))
+                .hasActivityLogId(featureId)
+                .hasAction(Action.CREATE.toString())
+                .hasReversePatch(null)
+        );
+  }
+
+  @Test
+  void shouldFetchAdditionalHistoryFeaturesWhenNeeded() throws Exception {
+    // Given: Client request (we don't care about it's specifics)
+    ReadFeatures firstRequest = new ReadFeatures();
+
+    // And: Space storage that will return two history features for client's request
+    IReadSession readSession = spaceStorageSessionReturningHistoryFeatures(firstRequest,
+        nakshaFeature("id_1", "uuid_1", "puuid_1", Action.UPDATE),
+        nakshaFeature("id_2", "uuid_2", "puuid_2", Action.DELETE)
+    );
+
+    // And: Space storage that will return two predecessors for any other request
+    when(readSession.execute(not(eq(firstRequest)))).thenReturn(new SuccessResponse(NakshaFeatureList.fromList(List.of(
+        nakshaFeature("id_1", "puuid_1", null, Action.CREATE),
+        nakshaFeature("id_2", "puuid_2", null, Action.CREATE)
+    ))));
+
+    // When: Handler processes event with original client's request
+    Response result = handler.processEvent(eventWith(firstRequest));
+
+    // Then: Space storage should be queried twice
+    ArgumentCaptor<ReadFeatures> requestCaptor = ArgumentCaptor.forClass(ReadFeatures.class);
+    verify(readSession, times(2)).execute(requestCaptor.capture());
+
+    // And: First request passed to the space should be the client one
+    List<ReadFeatures> requestPassedToSpace = requestCaptor.getAllValues();
+    assertEquals(2, requestPassedToSpace.size());
+    assertEquals(firstRequest, requestPassedToSpace.get(0));
+
+    // And: Second request passed to space should be about fetching additional predecessors
+    ReadFeatures secondRequest = requestPassedToSpace.get(1);
+    assertEquals(Integer.MAX_VALUE,secondRequest.getVersions());
+    assertEquals(List.of(SPACE_ID), secondRequest.getCollectionIds());
+    PropertyQueryAssertions.assertThatPropertyQuery(secondRequest.getQuery().getProperties())
+        .isPOr()
+        .hasChildrenThat(
+            first -> first
+                .hasProperty(PROPERTY_UUID)
+                .hasOp(StringOp.EQUALS)
+                .hasValue("puuid_2"),
+            second -> second
+                .hasProperty(PROPERTY_UUID)
+                .hasOp(StringOp.EQUALS)
+                .hasValue("puuid_1")
+        );
+
+    // And: Handler's result should only contain features from the first response (to client's request)
+    assertThatResult(result)
+        .hasActivityFeatures(
+            first -> first
+                .hasId("uuid_2")
+                .hasActivityLogId("id_2")
+                .hasAction(Action.DELETE.toString()),
+            second -> second
+                .hasId("uuid_1")
+                .hasActivityLogId("id_1")
+                .hasAction(Action.UPDATE.toString())
         );
   }
 
   @Test
   void shouldNotCalculateReversePatchAfterCreation() throws Exception {
-    // Given: space storage that returns only some feature with 'CREATE' action
-    configureSpaceStorage(
-        initialHistoryAwareRequestReturns(List.of(
-            nakshaFeature("featureId")
-                .withUuid("uuid")
-                .withPuuid(null)
-                .withAction(Action.CREATED)
-                .build())
-        ),
-        requestForMissingPredecessorsReturns(emptyList())
-    );
+    // Given: ReadFeatures request
+    ReadFeatures request = new ReadFeatures();
+
+    // And: space storage that returns some feature with 'CREATE' action for given request
+    spaceStorageSessionReturningHistoryFeatures(request, nakshaFeature(
+        "featureId",
+        "uuid",
+        null,
+        Action.CREATE
+    ));
 
     // When: handler processes event bearing such request
-    Response result = handler.processEvent(eventWith(new ReadFeatures()));
+    Response result = handler.processEvent(eventWith(request));
 
     // Then: result does not bear any reverse patch
     assertThatResult(result)
         .hasActivityFeatures(feature -> feature
-            .hasAction(Action.CREATED.toString())
+            .hasAction(Action.CREATE.toString())
             .hasId("uuid")
             .hasActivityLogId("featureId")
             .hasReversePatch(null)

@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.models.indexing;
 
-import com.here.naksha.lib.core.models.indexing.IndexProperty.IndexProperties;
+import com.here.naksha.lib.core.models.indexing.IndexProperty.IndexPropertyList;
 import java.util.List;
 import naksha.base.MapProxy;
 import naksha.base.NotNullProperty;
@@ -73,12 +73,12 @@ public class Index extends NakshaFeature {
   }
 
   /** All properties that should be included in this index. */
-  public @Nullable IndexProperties getIndexProperties() {
-    return getProperties().getAs(NESTED_INDEX_PROPS, IndexProperties.TYPE);
+  public @Nullable IndexProperty.IndexPropertyList getIndexProperties() {
+    return getProperties().getAs(NESTED_INDEX_PROPS, IndexPropertyList.TYPE);
   }
 
   public void setProperties(List<IndexProperty> properties) {
-    IndexProperties indexProperties = new IndexProperties();
+    IndexPropertyList indexProperties = new IndexPropertyList();
     indexProperties.addAll(properties);
     getProperties().setRaw(NESTED_INDEX_PROPS, indexProperties);
   }

@@ -57,7 +57,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
                             .hasProperty("author", PgTest.TEST_APP_AUTHOR)
-                            .hasProperty("action", Action.UPDATED.text)
+                            .hasProperty("action", Action.UPDATE.text)
                             .hasProperty("changeCount", 2)
                     }
             }
@@ -103,8 +103,8 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         assertNotNull(retrievedTuples)
         assertEquals(2, retrievedTuples.size)
 
-        val createdTuple = retrievedTuples.first { it.meta.action() == Action.CREATED }
-        val updatedTuple = retrievedTuples.first { it.meta.action() == Action.UPDATED }
+        val createdTuple = retrievedTuples.first { it.meta.action() == Action.CREATE }
+        val updatedTuple = retrievedTuples.first { it.meta.action() == Action.UPDATE }
 
         // Then
         assertNotEquals(updatedTuple.tupleNumber.version, createdTuple.tupleNumber.version)

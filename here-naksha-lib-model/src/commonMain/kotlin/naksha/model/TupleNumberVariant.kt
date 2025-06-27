@@ -2,21 +2,20 @@
 
 package naksha.model
 
-import naksha.base.JsEnum
+import naksha.base.PlatformEnum
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
-import kotlin.reflect.KClass
 
 /**
  * The possible [TupleNumber] binary encoding.
  * @since 3.0
  */
 @JsExport
-class TupleNumberVariant internal constructor() : JsEnum() {
+class TupleNumberVariant internal constructor() : PlatformEnum() {
     companion object TupleNumberVariant_C {
         /**
          * The [PlatformType] of [TupleNumberVariant].

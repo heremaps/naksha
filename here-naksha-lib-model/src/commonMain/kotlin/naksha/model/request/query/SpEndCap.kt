@@ -2,13 +2,12 @@
 
 package naksha.model.request.query
 
-import naksha.base.JsEnum
+import naksha.base.PlatformEnum
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.reflect.KClass
 
 /**
  * TODO
@@ -17,7 +16,7 @@ import kotlin.reflect.KClass
  * @see SpBuffer
  */
 @JsExport
-class SpEndCap : JsEnum() {
+class SpEndCap : PlatformEnum() {
     companion object SpEndCap_C {
         /**
          * The [PlatformType] of [SpEndCap].

@@ -15,7 +15,7 @@ import kotlin.jvm.JvmField
  * @since 3.0
  */
 @JsExport
-open class CheckOp : JsEnum() {
+open class CheckOp : PlatformEnum() {
     companion object CheckOp_C {
         /**
          * The [PlatformType] of [CheckOp].
@@ -130,6 +130,6 @@ open class CheckOp : JsEnum() {
     var checkType: PlatformType<out Check> = Check.TYPE
         protected set
 
-    override fun namespace(): PlatformType<out JsEnum> = TYPE
+    override fun namespace(): PlatformType<out PlatformEnum> = TYPE
     override fun initClass() {}
 }

@@ -113,7 +113,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     assertEquals(1d, ((PointCoord) feature.getGeometry().getCoordinates()).getLongitude());
     assertTrue(feature.getProperties().containsKey("testProperty"));
     assertEquals("test", feature.getProperties().get("testProperty").toString());
-    assertSame(Action.UPDATED, response1.getFeatureTupleList().get(0).tuple.meta.action());
+    assertSame(Action.UPDATE, response1.getFeatureTupleList().get(0).tuple.meta.action());
 
     writeSession.commit();
 
@@ -210,7 +210,7 @@ public class ViewWriteSessionTests extends PsqlTests {
 
     SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
     assertNotNull(response.getFeatureTupleList().get(0));
-    assertSame(Action.CREATED, response.getFeatureTupleList().get(0).tuple.meta.action());
+    assertSame(Action.CREATE, response.getFeatureTupleList().get(0).tuple.meta.action());
     writeSession.commit();
 
     //check if the newly added feature found on layer
@@ -252,7 +252,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     Tuple tuple = featureTuple.tuple;
     assertNotNull(tuple);
 
-    assertSame(Action.DELETED, tuple.meta.action());
+    assertSame(Action.DELETE, tuple.meta.action());
     assertEquals("feature_id_view1", featureTuple.getId());
 
     // TODO: Ones we have the loadTuples available, do:

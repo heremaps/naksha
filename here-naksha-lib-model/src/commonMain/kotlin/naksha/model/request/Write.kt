@@ -306,7 +306,7 @@ open class Write : AnyObject() {
      *
      * If not explicitly set, defaults to `feature.id`. If no feature identifier is available, throws an [ILLEGAL_STATE] exception.
      *
-     * If the `id` differs from `feature.properties.xyz.guid.id`, then the feature is [forked][Operation.FORKED], this requires that the storage sets the [origin][Metadata.origin]. This is only valid for [CREATE][WriteOp.CREATE].
+     * If the `id` differs from `feature.properties.xyz.guid.id`, then the feature is [forked][Operation.FORK], this requires that the storage sets the [origin][Metadata.origin]. This is only valid for [CREATE][WriteOp.CREATE].
      * @since 3.0
      */
     @Suppress("SENSELESS_COMPARISON")

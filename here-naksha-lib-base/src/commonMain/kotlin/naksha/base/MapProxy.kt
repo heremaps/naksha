@@ -191,9 +191,9 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
             }
         }
         val value: T?
-        if (type.isAssignableTo(JsEnum.TYPE)) {
+        if (type.isAssignableTo(PlatformEnum.TYPE)) {
             @Suppress("UNCHECKED_CAST")
-            value = JsEnum.get(raw, type as PlatformType<out JsEnum>) as T
+            value = PlatformEnum.get(raw, type as PlatformType<out PlatformEnum>) as T
         } else {
             value = type.newInstance()
         }
@@ -217,7 +217,7 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
      * @param type The expected enumeration type.
      * @return The enumeration value.
      */
-    fun <T: JsEnum> getEnum(key: K, type: PlatformType<T>): T = JsEnum.get(map_get(platformObject(), key), type)
+    fun <T: PlatformEnum> getEnum(key: K, type: PlatformType<T>): T = PlatformEnum.get(map_get(platformObject(), key), type)
 
     /**
      * Helper to return the value of the key in the desired type. If the key does not exist, or is not of the expected type, `null` is returned.

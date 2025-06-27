@@ -38,52 +38,36 @@ public class IndexProperty extends NakshaFeature {
   /**
    * The JSON path to the property to index.
    */
-  public String getPath() {
-    return PATH.getValue(this);
-  }
-
-  public void setPath(String path) {
-    PATH.setValue(this, path);
-  }
+  public String getPath() {return PATH.getValue(this); }
+  public void setPath(String path) { PATH.setValue(this, path); }
 
   /**
    * If the property should be naturally ordered ascending.
    */
-  public boolean isAsc() {
-    return ASC.getValue(this);
-  }
-
-  public void setAsc(boolean asc) {
-    ASC.setValue(this, asc);
-  }
+  public boolean isAsc() { return ASC.getValue(this); }
+  public void setAsc(boolean asc) { ASC.setValue(this, asc); }
 
   /**
    * Optionally decide if {@code null} values should be ordered first or last. If not explicitly defined, automatically decided.
    */
-  public @NotNull Nulls getNulls() {
-    return NULLS.getValue(this);
-  }
+  public @NotNull Nulls getNulls() { return NULLS.getValue(this); }
 
-  public void setNulls(Nulls nulls) {
-    set(NULLS, nulls);
-  }
+  public void setNulls(Nulls nulls) { NULLS.setValue(this, nulls); }
 
-  public static class Nulls extends JvmEnum {
-    static final PlatformType<Nulls> TYPE = forClass(Nulls.class);
+  public static class Nulls extends PlatformEnum {
+    static final PlatformType<Nulls>  TYPE = forClass(Nulls.class);
 
     static final Nulls FIRST = defIgnoreCase(TYPE, "FIRST");
     static final Nulls LAST = defIgnoreCase(TYPE, "LAST");
 
     @Override
-    public @NotNull PlatformType<? extends JsEnum> namespace() {
+    public @NotNull PlatformType<? extends PlatformEnum> namespace() {
       return TYPE;
     }
   }
 
-  public static class IndexProperties extends ListProxy<IndexProperty> {
-    public static final PlatformType<IndexProperties> TYPE = forClass(IndexProperties.class);
-    public IndexProperties() {
-      super(IndexProperty.TYPE);
-    }
+  public static class IndexPropertyList extends ListProxy<IndexProperty> {
+    public static final PlatformType<IndexPropertyList> TYPE = forClass(IndexPropertyList.class);
+    public IndexPropertyList() { super(IndexProperty.TYPE); }
   }
 }

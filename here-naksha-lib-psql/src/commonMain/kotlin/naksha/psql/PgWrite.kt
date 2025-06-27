@@ -66,9 +66,9 @@ internal data class PgWrite(val original: Write, val i: Int) {
      * @since 3.0
      */
     var action: Action = when (original.op) {
-        WriteOp.CREATE, WriteOp.UPSERT -> Action.CREATED
-        WriteOp.UPDATE -> Action.UPDATED
-        WriteOp.DELETE, WriteOp.PURGE -> Action.DELETED
+        WriteOp.CREATE, WriteOp.UPSERT -> Action.CREATE
+        WriteOp.UPDATE -> Action.UPDATE
+        WriteOp.DELETE, WriteOp.PURGE -> Action.DELETE
         else -> Action.UNDEFINED
     }
 

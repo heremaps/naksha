@@ -65,8 +65,8 @@ abstract class DeleteFeatureBase(
             versions = 10
         }).apply { // this = SuccessResponse
             assertEquals(2, getFeatures(NakshaFeatureList.TYPE).size)
-            assertSame(Action.DELETED, featureTupleList[0]?.tuple?.meta?.flags?.actionEnum())
-            assertSame(Action.CREATED, featureTupleList[1]?.tuple?.meta?.flags?.actionEnum())
+            assertSame(Action.DELETE, featureTupleList[0]?.tuple?.meta?.flags?.actionEnum())
+            assertSame(Action.CREATE, featureTupleList[1]?.tuple?.meta?.flags?.actionEnum())
         }
 
         // verify if delete table contains element
@@ -79,7 +79,7 @@ abstract class DeleteFeatureBase(
             assertEquals(1, getFeatures(NakshaFeatureList.TYPE).size)
             val deletedFeature = assertNotNull(getFeatures(NakshaFeatureList.TYPE)[0])
             assertEquals(initialFeature.id, deletedFeature.id)
-            assertEquals(Action.DELETED, deletedFeature.properties.xyz.action)
+            assertEquals(Action.DELETE, deletedFeature.properties.xyz.action)
         }
     }
 

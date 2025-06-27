@@ -18,17 +18,21 @@
  */
 package naksha.model;
 
-import static naksha.base.JvmAnyObjectUtil.getProperty;
-
 import com.google.flatbuffers.FlatBufferBuilder;
 import com.here.naksha.lib.core.bin.ConnectorPayload;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.util.Hasher;
 import com.here.naksha.lib.core.view.ViewSerialize;
 import java.nio.ByteBuffer;
+
+import naksha.base.NotNullProperty;
+import naksha.base.NullableProperty;
 import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static naksha.base.NakshaBaseKt.ByteArray_TYPE;
+import static naksha.base.NakshaBaseKt.String_TYPE;
 
 /**
  * A wrapper class which is based on {@link Response} for binary responses from connectors. Internally it uses an actual binary
@@ -42,7 +46,11 @@ public class BinaryResponse extends XyzResponse {
   public static final String BINARY_SUPPORT_VERSION = "0.6.0";
 
   private static final String BYTES_KEY = "bytes";
+  private static final NotNullProperty<BinaryResponse, byte[]> BYTES
+      = new NotNullProperty<>(ByteArray_TYPE, BYTES_KEY);
   private static final String MIME_TYPE_KEY = "mimeType";
+  private static final NotNullProperty<BinaryResponse, String> MIME_TYPE
+      = new NotNullProperty<>(String_TYPE, MIME_TYPE_KEY);
 
   public static BinaryResponse binaryResponse(
       byte @NotNull [] bytes,
@@ -56,11 +64,11 @@ public class BinaryResponse extends XyzResponse {
   }
 
   public @NotNull String getMimeType() {
-    return getProperty(this, MIME_TYPE_KEY, String.class);
+    return MIME_TYPE.getValue(this);
   }
 
   public byte @NotNull [] getBytes() {
-    return getProperty(this, BYTES_KEY, byte[].class);
+    return BYTES.getValue(this);
   }
 
   public byte @NotNull [] toByteArray(@Nullable Class<? extends ViewSerialize> viewClass) {

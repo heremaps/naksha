@@ -7,7 +7,6 @@ import naksha.base.fn.Fn2
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
-import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
 /**
@@ -46,7 +45,7 @@ import kotlin.reflect.KProperty
  */
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
 @JsExport
-open class NotNullMapEnum<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE, PROPERTY_TYPE : JsEnum> @JvmOverloads constructor(
+open class NotNullMapEnum<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE, PROPERTY_TYPE : PlatformEnum> @JvmOverloads constructor(
     val type: PlatformType<PROPERTY_TYPE>,
     val name: String? = null,
     val init: Fn2<PROPERTY_TYPE?, MAP, String>? = null
@@ -69,7 +68,7 @@ open class NotNullMapEnum<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE
                 }
             }
         }
-        return JsEnum.get(raw, type)
+        return PlatformEnum.get(raw, type)
     }
 
     @JsName("getValueByProperty")

@@ -2,7 +2,7 @@
 
 package naksha.psql
 
-import naksha.base.JsEnum
+import naksha.base.PlatformEnum
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
@@ -15,7 +15,7 @@ import kotlin.jvm.JvmStatic
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class PgType : JsEnum() {
+class PgType : PlatformEnum() {
     companion object PgType_C {
         /**
          * The [PlatformType] of [PgType].

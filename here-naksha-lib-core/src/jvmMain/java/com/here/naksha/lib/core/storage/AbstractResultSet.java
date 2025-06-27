@@ -26,7 +26,6 @@ import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.view.ViewDeserialize.Storage;
 import com.here.naksha.lib.core.view.ViewSerialize;
 import java.util.NoSuchElementException;
-import naksha.geo.ProxyGeoUtil;
 import naksha.geo.SpGeometry;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;

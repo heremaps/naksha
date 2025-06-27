@@ -3,7 +3,7 @@
 package naksha.psql
 
 import naksha.base.Int64
-import naksha.base.JsEnum
+import naksha.base.PlatformEnum
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import naksha.model.request.query.MetaColumn
@@ -30,7 +30,7 @@ import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
  * See [storage-toast.html](https://www.postgresql.org/docs/current/storage-toast.html).
  */
 @JsExport
-class PgColumn : JsEnum() {
+class PgColumn : PlatformEnum() {
     private fun checkThatNotDefined(column: PgColumn) {
         check(!isDefined) { "Changing ${column.name} is not allowed!" }
     }
@@ -661,7 +661,7 @@ class PgColumn : JsEnum() {
          * All columns that we copy from the user data, when we update a row.
          *
          * This excludes the columns that need updates:
-         * - [flags] - we need to set operation to [UPDATED][naksha.model.Operation.UPDATED], action to [UPDATED][naksha.model.Action.UPDATED]
+         * - [flags] - we need to set operation to [UPDATED][naksha.model.Operation.UPDATE], action to [UPDATED][naksha.model.Action.UPDATE]
          * - [cc] - we need to increment change-count
          * - [prev_tn] - is copied from [tn] of the current _HEAD_ record
          * @since 3.0
@@ -691,7 +691,7 @@ class PgColumn : JsEnum() {
          *
          * In that case we copy from _HEAD_ into a temporary CTE table, then further to _HISTORY_ and/or _SHADOW_, but we need to update some columns, therefore this excludes the columns that need updates:
          * - [next_tn] - will become the current [tn] to signal tombstone state _(dead-end)_
-         * - [flags] - we need to set operation to [DELETED][naksha.model.Operation.DELETED], action to [DELETED][naksha.model.Action.DELETED]
+         * - [flags] - we need to set operation to [DELETED][naksha.model.Operation.DELETE], action to [DELETED][naksha.model.Action.DELETE]
          * - [tn] - must be updated to match current `version`, with a new `seq` and `uid` (this is the `final_tn`)
          * - [prev_tn] - is copied from [tn] of the current _HEAD_ record
          * - [base_tn] - needs to be set to `null`

@@ -340,7 +340,7 @@ expect class Platform private constructor() {
          *
          * - If the given object is a [Proxy], returns the [PlatformObject] of the proxy.
          * - If the given object is [Long], then [Int64] is returned.
-         * - If the given object is an [JsEnum], the underlying value is returned ([JsEnum.value]).
+         * - If the given object is an [PlatformEnum], the underlying value is returned ([PlatformEnum.value]).
          * - Otherwise, the given object is returned as is.
          *
          * @param value The object to access.

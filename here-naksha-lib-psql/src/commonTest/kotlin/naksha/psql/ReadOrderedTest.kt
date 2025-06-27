@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.model.Action
-import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.OrderBy
 import naksha.model.request.ReadFeatures
@@ -38,7 +37,7 @@ class ReadOrderedTest : PgTestBase() {
         for (feature in writeFeaturesResp.getFeatures(NakshaFeatureList.TYPE)) {
             assertNotNull(feature)
             assertNull(allFeatures[feature.id])
-            assertEquals(Action.CREATED, feature.properties.xyz.action)
+            assertEquals(Action.CREATE, feature.properties.xyz.action)
             allFeatures[feature.id] = feature
             allFeaturesOrderedByIdAsc.add(feature)
             allFeaturesOrderedByIdDesc.add(feature)

@@ -24,7 +24,7 @@ import kotlin.jvm.JvmStatic
 @JsExport
 data class Metadata(
     override val tupleNumber: TupleNumber = TupleNumber.HEAD,
-    override val flags: Flags = Flags().withAction(Action.CREATED),
+    override val flags: Flags = Flags().withAction(Action.CREATE),
     override val updatedAt: Int64 = Platform.currentMillis(),
     override val createdAt: Int64? = null,
     override val authorTs: Int64? = null,

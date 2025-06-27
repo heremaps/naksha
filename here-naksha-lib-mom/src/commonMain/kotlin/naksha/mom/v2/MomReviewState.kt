@@ -1,6 +1,6 @@
 package naksha.mom.v2
 
-import naksha.base.JsEnum
+import naksha.base.PlatformEnum
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
 import kotlin.js.JsExport
@@ -12,7 +12,7 @@ import kotlin.jvm.JvmField
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class MomReviewState : JsEnum() {
+class MomReviewState : PlatformEnum() {
     override fun namespace() = TYPE
     override fun initClass() {}
 
