@@ -7,6 +7,7 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
 import naksha.model.request.query.*
 import naksha.model.RandomFeatures
+import naksha.model.objects.NakshaFeatureList
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,7 +26,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         // And:
         val featuresWithFooTag = executeTagsQuery(
             TagExists("sample")
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(1, featuresWithFooTag.size)
@@ -43,7 +44,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         // And:
         val featuresWithFooTag = executeTagsQuery(
             TagExists("non-existing")
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(0, featuresWithFooTag.size)
@@ -60,7 +61,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         // And:
         val featuresWithFooTag = executeTagsQuery(
             TagValueIsString(name = "foo", value = "bar")
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(1, featuresWithFooTag.size)
@@ -80,7 +81,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         // And:
         val enabledFeatures = executeTagsQuery(
             TagValueIsBool(name = "flag", value = true)
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(2, enabledFeatures.size)
@@ -100,7 +101,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         // And:
         val featuresFromThisDecade = executeTagsQuery(
             TagValueMatches(name = "year", regex = "202[0-9]")
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(1, featuresFromThisDecade.size)
@@ -121,7 +122,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         // And:
         val featuresGt2 = executeTagsQuery(
             TagValueIsDouble("some_number", DoubleOp.GT, 1.0)
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(1, featuresGt2.size)
@@ -130,7 +131,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         // When
         val featuresLte5 = executeTagsQuery(
             TagValueIsDouble("some_number", DoubleOp.LTE, 5.0)
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(2, featuresLte5.size)
@@ -140,7 +141,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         // When:
         val featuresEq6 = executeTagsQuery(
             TagValueIsDouble("some_number", DoubleOp.EQ, 6.0)
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertTrue(featuresEq6.isEmpty())
@@ -178,7 +179,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
             ),
             TagValueIsString(name = "role", value = "admin")
         )
-        val features = executeTagsQuery(activeJohnsOrAdmin).features
+        val features = executeTagsQuery(activeJohnsOrAdmin).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(2, features.size)
@@ -198,13 +199,13 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         insertFeatures(feature)
 
         // When
-        val byTagName = executeTagsQuery(TagExists("ref_lorem")).features
+        val byTagName = executeTagsQuery(TagExists("ref_lorem")).getFeatures(NakshaFeatureList.TYPE)
 
         // Then
         assertTrue(byTagName.isEmpty())
 
         // When
-        val byFullTag = executeTagsQuery(TagExists("ref_lorem=ipsum")).features
+        val byFullTag = executeTagsQuery(TagExists("ref_lorem=ipsum")).getFeatures(NakshaFeatureList.TYPE)
 
         // Then
         assertEquals(1, byFullTag.size)
@@ -218,13 +219,13 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         insertFeatures(feature)
 
         // When
-        val byTagName = executeTagsQuery(TagExists("sourceID")).features
+        val byTagName = executeTagsQuery(TagExists("sourceID")).getFeatures(NakshaFeatureList.TYPE)
 
         // Then
         assertTrue(byTagName.isEmpty())
 
         // When
-        val byFullTag = executeTagsQuery(TagExists("sourceID:=123")).features
+        val byFullTag = executeTagsQuery(TagExists("sourceID:=123")).getFeatures(NakshaFeatureList.TYPE)
 
         // Then
         assertEquals(1, byFullTag.size)

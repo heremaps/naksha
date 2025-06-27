@@ -3,6 +3,7 @@ package naksha.psql
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaFeatureList
 import naksha.model.objects.StoreMode
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
@@ -25,7 +26,7 @@ abstract class DeleteFeatureBase(
                 Write().createFeature(collection.mapId, collection.id, NakshaFeature(featureId))
             )
         ).let { // this = SuccessResponse
-            val features = assertNotNull(it.features)
+            val features = assertNotNull(it.getFeatures(NakshaFeatureList.TYPE))
             assertEquals(1, features.size)
             assertNotNull(features.first())
         }
@@ -37,7 +38,7 @@ abstract class DeleteFeatureBase(
                 Write().deleteFeatureById(collection.mapId, collection.id, featureId)
             )
         ).let { // this = SuccessResponse
-            val features = assertNotNull(it.features)
+            val features = assertNotNull(it.getFeatures(NakshaFeatureList.TYPE))
             assertEquals(1, features.size)
             assertNotNull(features.first())
         }
@@ -51,7 +52,7 @@ abstract class DeleteFeatureBase(
             collectionIds += collection.id
             featureIds += initialFeature.id
         }).let { // this = SuccessResponse
-            val features = assertNotNull(it.features)
+            val features = assertNotNull(it.getFeatures(NakshaFeatureList.TYPE))
             assertEquals(0, features.size)
         }
 
@@ -63,7 +64,7 @@ abstract class DeleteFeatureBase(
             queryHistory = true
             versions = 10
         }).apply { // this = SuccessResponse
-            assertEquals(2, features.size)
+            assertEquals(2, getFeatures(NakshaFeatureList.TYPE).size)
             assertSame(Action.DELETED, featureTupleList[0]?.tuple?.meta?.flags?.actionEnum())
             assertSame(Action.CREATED, featureTupleList[1]?.tuple?.meta?.flags?.actionEnum())
         }
@@ -75,8 +76,8 @@ abstract class DeleteFeatureBase(
             featureIds += initialFeature.id
             queryDeleted = true
         }).apply { // this = SuccessResponse
-            assertEquals(1, features.size)
-            val deletedFeature = assertNotNull(features[0])
+            assertEquals(1, getFeatures(NakshaFeatureList.TYPE).size)
+            val deletedFeature = assertNotNull(getFeatures(NakshaFeatureList.TYPE)[0])
             assertEquals(initialFeature.id, deletedFeature.id)
             assertEquals(Action.DELETED, deletedFeature.properties.xyz.action)
         }
@@ -95,8 +96,8 @@ abstract class DeleteFeatureBase(
         )
         val createCollectionResp = executeWrite(createCollectionReq)
         assertEquals(1, createCollectionResp.length)
-        assertEquals(1, createCollectionResp.features.size)
-        val collection = assertNotNull(createCollectionResp.features[0]).proxy(NakshaCollection.TYPE)
+        assertEquals(1, createCollectionResp.getFeatures(NakshaFeatureList.TYPE).size)
+        val collection = assertNotNull(createCollectionResp.getFeatures(NakshaFeatureList.TYPE)[0]).proxy(NakshaCollection.TYPE)
         assertEquals(map.id, collection.mapId)
         assertEquals("delete_no_history_but_shadow", collection.id)
 
@@ -107,8 +108,8 @@ abstract class DeleteFeatureBase(
         )
         val createFeatureResp = executeWrite(createFeatureReq)
         assertEquals(1, createFeatureResp.length)
-        assertEquals(1, createFeatureResp.features.size)
-        val feature = assertNotNull(createFeatureResp.features[0])
+        assertEquals(1, createFeatureResp.getFeatures(NakshaFeatureList.TYPE).size)
+        val feature = assertNotNull(createFeatureResp.getFeatures(NakshaFeatureList.TYPE)[0])
 
         // Delete the feature.
         val deleteFeaturesReq = WriteRequest().add(
@@ -116,8 +117,8 @@ abstract class DeleteFeatureBase(
         )
         val deleteFeatureResp = executeWrite(deleteFeaturesReq)
         assertEquals(1, deleteFeatureResp.length)
-        assertEquals(1, deleteFeatureResp.features.size)
-        val deleteFeature = assertNotNull(deleteFeatureResp.features[0])
+        assertEquals(1, deleteFeatureResp.getFeatures(NakshaFeatureList.TYPE).size)
+        val deleteFeature = assertNotNull(deleteFeatureResp.getFeatures(NakshaFeatureList.TYPE)[0])
         assertEquals(feature.id, deleteFeature.id)
     }
 }

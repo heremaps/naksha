@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaFeatureList
 import naksha.model.objects.StoreMode.StoreMode_C.ON
 import naksha.model.request.ReadCollections
 import kotlin.test.Test
@@ -23,8 +24,8 @@ class ReadCollectionsTest : PgTestBase(collection = NakshaCollection(
         })
 
         // Then
-        assertEquals(1, retrievedCollectionMeta.features.size)
-        val collectionFeature = retrievedCollectionMeta.features[0]!!.proxy(NakshaCollection.TYPE)
+        assertEquals(1, retrievedCollectionMeta.getFeatures(NakshaFeatureList.TYPE).size)
+        val collectionFeature = retrievedCollectionMeta.getFeatures(NakshaFeatureList.TYPE)[0]!!.proxy(NakshaCollection.TYPE)
         assertEquals(collection.id, collectionFeature.id)
         assertEquals(collection.partitions, collectionFeature.partitions)
         assertEquals(collection.storeDeleted, collectionFeature.storeDeleted)

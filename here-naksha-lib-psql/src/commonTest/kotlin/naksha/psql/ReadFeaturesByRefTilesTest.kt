@@ -5,6 +5,7 @@ import naksha.geo.PointCoord
 import naksha.geo.SpPoint
 import naksha.model.request.ReadFeatures
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
+import naksha.model.objects.NakshaFeatureList
 import kotlin.test.*
 
 class ReadFeaturesByRefTilesTest : PgTestBase(collection = null, mapId = "") {
@@ -52,7 +53,7 @@ class ReadFeaturesByRefTilesTest : PgTestBase(collection = null, mapId = "") {
         }
 
         // When:
-        val features = executeRead(getFeaturesFromZagrebAndPrague).features
+        val features = executeRead(getFeaturesFromZagrebAndPrague).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(2, features.size)
@@ -73,7 +74,7 @@ class ReadFeaturesByRefTilesTest : PgTestBase(collection = null, mapId = "") {
         }
 
         // When:
-        val features = executeRead(getFeaturesFromBologna).features
+        val features = executeRead(getFeaturesFromBologna).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertTrue(features.isEmpty())

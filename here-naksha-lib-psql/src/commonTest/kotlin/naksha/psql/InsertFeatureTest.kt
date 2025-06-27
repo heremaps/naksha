@@ -12,6 +12,7 @@ import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatF
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaFeatureList
 import naksha.model.objects.NakshaObject
 import kotlin.test.*
 
@@ -37,7 +38,7 @@ class InsertFeatureTest : PgTestBase() {
             collectionIds += collection.id
             featureIds += featureToCreate.id
         })
-        val retrievedFeatures = readResponse.features
+        val retrievedFeatures = readResponse.getFeatures(NakshaFeatureList.TYPE)
 
         // Then: we got 1 feature
         assertEquals(1, retrievedFeatures.size)
@@ -111,7 +112,7 @@ class InsertFeatureTest : PgTestBase() {
             collectionIds += collection.id
             featureIds += featureToCreate.id
         })
-        val retrievedFeatures = readResponse.features
+        val retrievedFeatures = readResponse.getFeatures(NakshaFeatureList.TYPE)
 
         // Then: we got 1 feature
         assertEquals(1, retrievedFeatures.size)
@@ -155,7 +156,7 @@ class InsertFeatureTest : PgTestBase() {
             collectionIds += collection.id
             featureIds += featureToCreate.id
         })
-        val retrievedFeatures = readResponse.features
+        val retrievedFeatures = readResponse.getFeatures(NakshaFeatureList.TYPE)
 
         // Then: we got 1 feature
         assertEquals(1, retrievedFeatures.size)
@@ -201,7 +202,7 @@ class InsertFeatureTest : PgTestBase() {
 //            this.version = version
 //            this.minVersion = version
         })
-        val retrievedFeatures = readResponse.features
+        val retrievedFeatures = readResponse.getFeatures(NakshaFeatureList.TYPE)
 
         // Then: we got <count> features
         //assertEquals(count, retrievedFeatures.size)
@@ -256,7 +257,7 @@ class InsertFeatureTest : PgTestBase() {
         assertEquals(firstFeature.tupleNumber, tupleNumber)
 
         // This will force the cache to contact the storage, and to load the tuple.
-        val features = featuresByIdResponse.features
+        val features = featuresByIdResponse.getFeatures(NakshaFeatureList.TYPE)
         assertEquals(firstFeatureToCreate.id, features[0]!!.id)
 
         // Read only one feature by bounding box.
@@ -266,8 +267,8 @@ class InsertFeatureTest : PgTestBase() {
             query.spatial =
                 SpIntersects(BBox(firstFeatureToCreate.geometry).addMargin(0.0000001).toPolygon())
         })
-        assertEquals(1, featuresByBBox.features.size)
-        assertEquals(firstFeatureToCreate.id, featuresByBBox.features[0]!!.id)
+        assertEquals(1, featuresByBBox.getFeatures(NakshaFeatureList.TYPE).size)
+        assertEquals(firstFeatureToCreate.id, featuresByBBox.getFeatures(NakshaFeatureList.TYPE)[0]!!.id)
     }
 
     @Test

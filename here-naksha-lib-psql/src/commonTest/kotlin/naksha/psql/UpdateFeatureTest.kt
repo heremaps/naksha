@@ -3,6 +3,7 @@ package naksha.psql
 import naksha.base.NakshaError
 import naksha.model.*
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaFeatureList
 import naksha.model.request.*
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import kotlin.test.*
@@ -23,8 +24,8 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
             Write().createFeature(collection, initialFeature)
         )
         val writeFeatureResp = executeWrite(writeFeatureReq)
-        assertEquals(1, writeFeatureResp.features.size)
-        val feature = assertNotNull(writeFeatureResp.features[0])
+        assertEquals(1, writeFeatureResp.getFeatures(NakshaFeatureList.TYPE).size)
+        val feature = assertNotNull(writeFeatureResp.getFeatures(NakshaFeatureList.TYPE)[0])
         assertEquals(initialFeature.id, feature.id)
         assertEquals(initialFeature.type, feature.type)
         assertEquals(1, feature.properties.xyz.changeCount)
@@ -36,8 +37,8 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
             Write().updateFeature(collection, feature, true)
         )
         val updateFeatureResp = executeWrite(updateFeaturesReq)
-        assertEquals(1, updateFeatureResp.features.size)
-        val updatedFeature = assertNotNull(updateFeatureResp.features[0])
+        assertEquals(1, updateFeatureResp.getFeatures(NakshaFeatureList.TYPE).size)
+        val updatedFeature = assertNotNull(updateFeatureResp.getFeatures(NakshaFeatureList.TYPE)[0])
         assertEquals(2, updatedFeature.properties.xyz.changeCount)
 
         // Retrieving feature by id
@@ -72,8 +73,8 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
             Write().createFeature(collection, initialFeature)
         )
         val writeResp = executeWrite(writeInitialFeature)
-        assertEquals(1, writeResp.features.size)
-        val writtenFeature = assertNotNull(writeResp.features[0])
+        assertEquals(1, writeResp.getFeatures(NakshaFeatureList.TYPE).size)
+        val writtenFeature = assertNotNull(writeResp.getFeatures(NakshaFeatureList.TYPE)[0])
         assertEquals(initialFeature.id, writtenFeature.id)
 
         // UPDATE FEATURE
@@ -84,8 +85,8 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
             Write().updateFeature(collection, featureToUpdate, true)
         )
         val updateFeatureResp = executeWrite(updateFeaturesReq)
-        assertEquals(1, updateFeatureResp.features.size)
-        val updatedFeature = assertNotNull(updateFeatureResp.features[0])
+        assertEquals(1, updateFeatureResp.getFeatures(NakshaFeatureList.TYPE).size)
+        val updatedFeature = assertNotNull(updateFeatureResp.getFeatures(NakshaFeatureList.TYPE)[0])
         assertEquals(initialFeature.id, updatedFeature.id)
         assertEquals(2, updatedFeature.properties.xyz.changeCount)
 
@@ -193,7 +194,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val persistedFeature = fetchSingleFeature(initialFeature.id)
         assertEquals(initialFeature.type, persistedFeature.type)
-        assertEquals(featureCreationResponse.features[0]!!.featureNumber, persistedFeature.featureNumber)
+        assertEquals(featureCreationResponse.getFeatures(NakshaFeatureList.TYPE)[0]!!.featureNumber, persistedFeature.featureNumber)
     }
 
     @Test
@@ -224,7 +225,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val persistedFeature = fetchSingleFeature(initialFeature.id)
         assertEquals(desiredFeature.type, persistedFeature.type)
-        assertEquals(updateResponse.features[0]!!.featureNumber, persistedFeature.featureNumber)
+        assertEquals(updateResponse.getFeatures(NakshaFeatureList.TYPE)[0]!!.featureNumber, persistedFeature.featureNumber)
     }
 
     @Test
@@ -237,7 +238,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
             setRaw("momType", "type_before")
         }
         val featureCreationResponse = executeWrite(WriteRequest().add(Write().createFeature(collection, initialFeature)))
-        val initialFeatureUuid = featureCreationResponse.features[0]!!.properties.xyz.uuid
+        val initialFeatureUuid = featureCreationResponse.getFeatures(NakshaFeatureList.TYPE)[0]!!.properties.xyz.uuid
 
         // And: desired update - with prev UUID
         val desiredFeature = NakshaFeature().apply {
@@ -256,7 +257,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val persistedFeature = fetchSingleFeature(initialFeature.id)
         assertEquals(desiredFeature.type, persistedFeature.type)
-        assertEquals(updateResponse.features[0]!!.featureNumber, persistedFeature.featureNumber)
+        assertEquals(updateResponse.getFeatures(NakshaFeatureList.TYPE)[0]!!.featureNumber, persistedFeature.featureNumber)
     }
 
     private fun fetchSingleFeature(id: String): NakshaFeature {
@@ -267,7 +268,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
             featureIds += id
         })
         assertEquals(1, readFeatureResp.length)
-        val retrievedFeature = assertNotNull(readFeatureResp.features[0])
+        val retrievedFeature = assertNotNull(readFeatureResp.getFeatures(NakshaFeatureList.TYPE)[0])
         assertEquals(id, retrievedFeature.id)
         return retrievedFeature
     }

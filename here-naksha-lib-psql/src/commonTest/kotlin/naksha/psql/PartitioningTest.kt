@@ -4,6 +4,7 @@ import naksha.base.Epoch
 import naksha.model.SessionOptions
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaFeatureList
 import naksha.model.request.*
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.Ignore
@@ -85,7 +86,7 @@ class PartitioningTest : PgTestBase() {
             // then
             // feature should be successfully stored
             assertTrue { result is SuccessResponse }
-            assertEquals(1, (result as SuccessResponse).features.size)
+            assertEquals(1, (result as SuccessResponse).getFeatures(NakshaFeatureList.TYPE).size)
         }
 
         // also - should be able to read
@@ -94,7 +95,7 @@ class PartitioningTest : PgTestBase() {
         readRequest.collectionIds.add(partitionedCollection.id)
         readRequest.featureIds.add("f1")
         val readResponse = executeRead(readRequest)
-        assertEquals(1, readResponse.features.size)
+        assertEquals(1, readResponse.getFeatures(NakshaFeatureList.TYPE).size)
     }
 
     @Test
@@ -113,7 +114,7 @@ class PartitioningTest : PgTestBase() {
         val response = executeWrite(writeRequest)
 
         // then
-        assertEquals(1, response.features.size)
+        assertEquals(1, response.getFeatures(NakshaFeatureList.TYPE).size)
     }
 
     @Test
@@ -132,7 +133,7 @@ class PartitioningTest : PgTestBase() {
         val response = executeWrite(writeRequest)
 
         // then
-        assertEquals(1, response.features.size)
+        assertEquals(1, response.getFeatures(NakshaFeatureList.TYPE).size)
     }
 
     @Test

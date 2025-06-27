@@ -3,6 +3,7 @@ package naksha.psql
 import naksha.model.Naksha
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaFeatureList
 import naksha.model.objects.NakshaTx
 import naksha.model.request.*
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
@@ -22,8 +23,8 @@ class TransactionsTest : PgTestBase() {
         Naksha.cache.clear(storage)
 
         // This should load the tuple from the storage, as we cleared the cache.
-        val writtenFeatures = writeFeatureResponse.features
-        assertNotNull(writeFeatureResponse.features)
+        val writtenFeatures = writeFeatureResponse.getFeatures(NakshaFeatureList.TYPE)
+        assertNotNull(writeFeatureResponse.getFeatures(NakshaFeatureList.TYPE))
         assertEquals(1, writtenFeatures.size)
         val writtenFeature = assertNotNull(writtenFeatures.first())
         val writtenVersion = assertNotNull(writtenFeature.properties.xyz.version)
@@ -32,7 +33,7 @@ class TransactionsTest : PgTestBase() {
         // Read the transaction.
         val readTxRequest = ReadTransactions().readVersion(writtenVersion)
         val readTxResponse = executeRead(readTxRequest)
-        val transactions = assertNotNull(readTxResponse.features)
+        val transactions = assertNotNull(readTxResponse.getFeatures(NakshaFeatureList.TYPE))
         assertEquals(1, transactions.size)
         val transaction = assertNotNull(transactions.first()).proxy(NakshaTx.TYPE)
         assertEquals(writtenVersion.toString(), transaction.id)
@@ -83,6 +84,6 @@ class TransactionsTest : PgTestBase() {
             featureIds += transactionId
         }
         val readResponse = storage.newReadSession().execute(readRequest) as SuccessResponse
-        assertTrue(readResponse.features[0]!!.properties.xyz.tags.contains("sth"))
+        assertTrue(readResponse.getFeatures(NakshaFeatureList.TYPE)[0]!!.properties.xyz.tags.contains("sth"))
     }
 }

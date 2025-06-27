@@ -11,6 +11,7 @@ import naksha.model.request.query.MetaColumn
 import naksha.model.request.query.SortOrder
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
+import naksha.model.objects.NakshaFeatureList
 import kotlin.test.*
 
 class ReadOrderedTest : PgTestBase() {
@@ -33,8 +34,8 @@ class ReadOrderedTest : PgTestBase() {
             }
         }
         val writeFeaturesResp = executeWrite(writeFeaturesReq)
-        assertEquals(COUNT, writeFeaturesResp.features.size)
-        for (feature in writeFeaturesResp.features) {
+        assertEquals(COUNT, writeFeaturesResp.getFeatures(NakshaFeatureList.TYPE).size)
+        for (feature in writeFeaturesResp.getFeatures(NakshaFeatureList.TYPE)) {
             assertNotNull(feature)
             assertNull(allFeatures[feature.id])
             assertEquals(Action.CREATED, feature.properties.xyz.action)
@@ -54,6 +55,7 @@ class ReadOrderedTest : PgTestBase() {
             orderBy = OrderBy.id()
             limit = ORDER_BY_ID_LIMIT
         }).apply {
+            val features = getFeatures(NakshaFeatureList.TYPE)
             assertEquals(ORDER_BY_ID_LIMIT, features.size)
             for (entry in features.withIndex()) {
                 val expected = allFeaturesOrderedByIdDesc[entry.index]
@@ -68,6 +70,7 @@ class ReadOrderedTest : PgTestBase() {
             orderBy = OrderBy(MetaColumn.id(), order = SortOrder.ASCENDING)
             limit = ORDER_BY_ID_LIMIT
         }).apply {
+            val features = getFeatures(NakshaFeatureList.TYPE)
             assertEquals(ORDER_BY_ID_LIMIT, features.size)
             for (entry in features.withIndex()) {
                 val expected = allFeaturesOrderedByIdAsc[entry.index]

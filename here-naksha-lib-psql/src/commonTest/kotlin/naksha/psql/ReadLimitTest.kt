@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaFeatureList
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -27,6 +28,6 @@ class ReadLimitTest : PgTestBase() {
         })
 
         // then
-        assertEquals(2, readWithLimit.features.size)
+        assertEquals(2, readWithLimit.getFeatures(NakshaFeatureList.TYPE).size)
     }
 }

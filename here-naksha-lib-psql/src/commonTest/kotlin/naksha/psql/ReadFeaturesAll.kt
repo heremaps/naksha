@@ -5,6 +5,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
+import naksha.model.objects.NakshaFeatureList
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.*
 
@@ -25,8 +26,8 @@ class ReadFeaturesAll : PgTestBase() {
             }
         }
         val writeFeaturesResp = executeWrite(writeFeaturesReq)
-        assertEquals(COUNT, writeFeaturesResp.features.size)
-        for (feature in writeFeaturesResp.features) {
+        assertEquals(COUNT, writeFeaturesResp.getFeatures(NakshaFeatureList.TYPE).size)
+        for (feature in writeFeaturesResp.getFeatures(NakshaFeatureList.TYPE)) {
             assertNotNull(feature)
             assertNull(allFeatures[feature.id])
             assertEquals(Action.CREATED, feature.properties.xyz.action)
@@ -40,8 +41,8 @@ class ReadFeaturesAll : PgTestBase() {
             mapId = collection.mapId
             collectionIds += collection.id
         }).apply {
-            assertEquals(COUNT, features.size)
-            for (feature in features) {
+            assertEquals(COUNT, getFeatures(NakshaFeatureList.TYPE).size)
+            for (feature in getFeatures(NakshaFeatureList.TYPE)) {
                 assertNotNull(feature)
                 assertNotNull(allFeatures[feature.id])
                 allFeatures.remove(feature.id)

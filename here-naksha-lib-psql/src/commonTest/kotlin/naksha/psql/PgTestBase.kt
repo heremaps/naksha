@@ -9,10 +9,7 @@ import naksha.base.Platform.Platform_C.fromJson
 import naksha.base.Platform.Platform_C.logger
 import naksha.base.PlatformUtil
 import naksha.model.*
-import naksha.model.objects.NakshaCollection
-import naksha.model.objects.NakshaFeature
-import naksha.model.objects.NakshaMap
-import naksha.model.objects.NakshaStorage
+import naksha.model.objects.*
 import naksha.model.request.*
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.js.ExperimentalJsStatic
@@ -102,7 +99,7 @@ abstract class PgTestBase(
                     val request = WriteRequest()
                     request.writes += Write().createMap(map)
                     val response = executeWrite(request)
-                    val features = response.features
+                    val features = response.getFeatures(NakshaFeatureList.TYPE)
                     assertEquals(1, features.size)
                     val feature = features.first()
                     map = assertNotNull(feature).proxy(NakshaMap.TYPE)
@@ -155,7 +152,7 @@ abstract class PgTestBase(
                     storage.newWriteSession(newSessionOptions()).use { session ->
                         val response = assertSuccess(session.execute(request))
                         session.commit()
-                        val features = response.features
+                        val features = response.getFeatures(NakshaFeatureList.TYPE)
                         assertEquals(1, features.size)
                         val feature = features[0] ?: throw NullPointerException()
                         existing = feature.proxy(NakshaCollection.TYPE)

@@ -3,6 +3,7 @@ package naksha.psql
 import naksha.model.Action
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaFeatureList
 import naksha.model.objects.NakshaObject
 import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
@@ -42,7 +43,7 @@ class UpsertFeatureTest : PgTestBase() {
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true
-        }).features.sortedBy { it!!.properties.xyz.version!!.txn.toLong() }
+        }).getFeatures(NakshaFeatureList.TYPE).sortedBy { it!!.properties.xyz.version!!.txn.toLong() }
 
         // Then
         assertThatFeature(retrievedFeatures[0]!!)
@@ -104,7 +105,7 @@ class UpsertFeatureTest : PgTestBase() {
         // Then
         assertIs<SuccessResponse>(response)
         // TODO: only the first one is updated
-        response.features.forEach { feature ->
+        response.getFeatures(NakshaFeatureList.TYPE).forEach { feature ->
             assertNotNull(feature)
             assertEquals(Action.UPDATED, feature.properties.xyz.action)
         }

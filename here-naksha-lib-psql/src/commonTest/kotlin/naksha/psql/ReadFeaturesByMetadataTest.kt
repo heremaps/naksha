@@ -9,6 +9,7 @@ import naksha.model.request.*
 import naksha.model.request.query.*
 import naksha.model.RandomFeatures
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
+import naksha.model.objects.NakshaFeatureList
 import naksha.model.objects.NakshaObject
 import kotlin.test.*
 
@@ -38,7 +39,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
                 op = StringOp.EQUALS,
                 value = sessionOptions.appId
             )
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(1, featuresByAppId.size)
@@ -65,7 +66,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
                 op = StringOp.STARTS_WITH,
                 value = "prefixed_test_app"
             )
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(1, featuresByAppIdPrefix.size)
@@ -92,7 +93,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
                 op = StringOp.EQUALS,
                 value = sessionOptions.author
             )
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(1, featuresByAuthor.size)
@@ -119,7 +120,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
                 op = StringOp.STARTS_WITH,
                 value = "Jacky"
             )
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(1, featuresByAuthorPrefix.size)
@@ -143,7 +144,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
                 op = StringOp.EQUALS,
                 value = inputFeature.id
             )
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(1, featuresById.size)
@@ -167,7 +168,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
                 op = StringOp.STARTS_WITH,
                 value = TEST_FEATURE_ID.substring(0..4)
             )
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(1, featuresByIdPrefix.size)
@@ -189,7 +190,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val featuresByType = executeMetaQuery(
             MetaQuery(MetaColumn.featureType(), StringOp.EQUALS, inputFeature.type)
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(1, featuresByType.size)
@@ -211,7 +212,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val featuresByTypePrefix = executeMetaQuery(
             MetaQuery(MetaColumn.featureType(), StringOp.STARTS_WITH, "quite")
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(1, featuresByTypePrefix.size)
@@ -244,8 +245,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         })
 
         // Then:
-        assertEquals(1, featuresByAppIdAndAuthor.features.size)
-        assertEquals(featureToCreate.id, featuresByAppIdAndAuthor.features[0]!!.id)
+        assertEquals(1, featuresByAppIdAndAuthor.getFeatures(NakshaFeatureList.TYPE).size)
+        assertEquals(featureToCreate.id, featuresByAppIdAndAuthor.getFeatures(NakshaFeatureList.TYPE)[0]!!.id)
     }
 
     @Test
@@ -266,8 +267,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         ))
 
         // Then:
-        assertEquals(1, featuresByCreatedAt.features.size)
-        assertEquals(inputFeature.id, featuresByCreatedAt.features[0]!!.id)
+        assertEquals(1, featuresByCreatedAt.getFeatures(NakshaFeatureList.TYPE).size)
+        assertEquals(inputFeature.id, featuresByCreatedAt.getFeatures(NakshaFeatureList.TYPE)[0]!!.id)
     }
 
     @Test
@@ -288,8 +289,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         ))
 
         // Then:
-        assertEquals(1, featuresByUpdatedAt.features.size)
-        assertEquals(inputFeature.id, featuresByUpdatedAt.features[0]!!.id)
+        assertEquals(1, featuresByUpdatedAt.getFeatures(NakshaFeatureList.TYPE).size)
+        assertEquals(inputFeature.id, featuresByUpdatedAt.getFeatures(NakshaFeatureList.TYPE)[0]!!.id)
     }
 
     @Test
@@ -321,8 +322,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         )
 
         // Then:
-        assertEquals(1, featuresCreatedInFrame.features.size)
-        assertEquals(inputFeature.id, featuresCreatedInFrame.features[0]!!.id)
+        assertEquals(1, featuresCreatedInFrame.getFeatures(NakshaFeatureList.TYPE).size)
+        assertEquals(inputFeature.id, featuresCreatedInFrame.getFeatures(NakshaFeatureList.TYPE)[0]!!.id)
     }
 
     @Test
@@ -354,8 +355,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         )
 
         // Then:
-        assertEquals(1, featuresUpdatedInFrame.features.size)
-        assertEquals(inputFeature.id, featuresUpdatedInFrame.features[0]!!.id)
+        assertEquals(1, featuresUpdatedInFrame.getFeatures(NakshaFeatureList.TYPE).size)
+        assertEquals(inputFeature.id, featuresUpdatedInFrame.getFeatures(NakshaFeatureList.TYPE)[0]!!.id)
     }
 
     @Test
@@ -376,8 +377,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         ))
 
         // Then:
-        assertEquals(1, featuresByAuthorTs.features.size)
-        assertEquals(inputFeature.id, featuresByAuthorTs.features[0]!!.id)
+        assertEquals(1, featuresByAuthorTs.getFeatures(NakshaFeatureList.TYPE).size)
+        assertEquals(inputFeature.id, featuresByAuthorTs.getFeatures(NakshaFeatureList.TYPE)[0]!!.id)
     }
 
     @Test
@@ -399,7 +400,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
                 MetaQuery(MetaColumn.author(), StringOp.EQUALS, "this_is_totally_off"),
                 MetaQuery(MetaColumn.appId(), StringOp.STARTS_WITH, appId.substring(0, 2))
             )
-        }).features
+        }).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(10, featuresByAppIdAndAuthor.size)
@@ -418,7 +419,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // When: feature is created
         val creationResp = insertFeatures(feature)
-        val createdFeature = creationResp.features[0] ?: fail("Expected non-empty creation response")
+        val createdFeature = creationResp.getFeatures(NakshaFeatureList.TYPE)[0] ?: fail("Expected non-empty creation response")
 
         // And: feature is modified
         val modifiedTitle = "Title no 2"
@@ -444,7 +445,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
             }
         }
         val response = executeRead(getHistoryWithoutUpdates)
-        val retrievedFeatures = response.features
+        val retrievedFeatures = response.getFeatures(NakshaFeatureList.TYPE)
 
         // Then: We only got UPDATED state - the one matching updated feature
         assertEquals(1, retrievedFeatures.size)
@@ -478,7 +479,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
             }
         }
         val response = executeRead(getHistoryWithoutUpdates)
-        val retrievedFeatures = response.features
+        val retrievedFeatures = response.getFeatures(NakshaFeatureList.TYPE)
 
         // Then: We only got DELETED state
         assertEquals(1, retrievedFeatures.size)
@@ -493,7 +494,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
             collectionIds += collection.id
             featureIds += feature.id
         })
-        val persistedFeatures = persistedFeatureResponse.features
+        val persistedFeatures = persistedFeatureResponse.getFeatures(NakshaFeatureList.TYPE)
         assertEquals(1, persistedFeatures.size)
         val persistedFeature = persistedFeatures[0]
         assertNotNull(persistedFeature)

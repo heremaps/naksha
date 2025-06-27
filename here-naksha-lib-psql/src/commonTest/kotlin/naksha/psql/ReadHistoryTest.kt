@@ -4,6 +4,7 @@ import naksha.model.Action
 import naksha.model.Naksha
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaFeatureList
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -27,8 +28,8 @@ class ReadHistoryTest : PgTestBase() {
             }
         }
         val writeFeaturesResp = executeWrite(writeFeaturesReq)
-        assertEquals(COUNT, writeFeaturesResp.features.size)
-        for (feature in writeFeaturesResp.features) {
+        assertEquals(COUNT, writeFeaturesResp.getFeatures(NakshaFeatureList.TYPE).size)
+        for (feature in writeFeaturesResp.getFeatures(NakshaFeatureList.TYPE)) {
             assertNotNull(feature)
             assertNull(allFeatures[feature.id])
             assertEquals(Action.CREATED, feature.properties.xyz.action)
@@ -49,8 +50,8 @@ class ReadHistoryTest : PgTestBase() {
         executeWrite(WriteRequest().apply {
             add(Write().updateFeature(collection, updatedFeature1, true))
         }).apply {
-            assertEquals(1, features.size)
-            updatedFeature1 = assertNotNull(features.first())
+            assertEquals(1, getFeatures(NakshaFeatureList.TYPE).size)
+            updatedFeature1 = assertNotNull(getFeatures(NakshaFeatureList.TYPE).first())
             assertEquals(featureId, updatedFeature1.id)
             assertEquals(Action.UPDATED, updatedFeature1.properties.xyz.guid?.tupleNumber?.action)
         }
@@ -61,8 +62,8 @@ class ReadHistoryTest : PgTestBase() {
         executeWrite(WriteRequest().apply {
             add(Write().updateFeature(collection, updatedFeature2, true))
         }).apply {
-            assertEquals(1, features.size)
-            updatedFeature2 = assertNotNull(features.first())
+            assertEquals(1, getFeatures(NakshaFeatureList.TYPE).size)
+            updatedFeature2 = assertNotNull(getFeatures(NakshaFeatureList.TYPE).first())
             assertEquals(featureId, updatedFeature2.id)
             assertEquals(Action.UPDATED, updatedFeature2.properties.xyz.guid?.tupleNumber?.action)
         }
@@ -72,8 +73,8 @@ class ReadHistoryTest : PgTestBase() {
         executeWrite(WriteRequest().apply {
             add(Write().deleteFeatureById(collection, createdFeature.id))
         }).apply {
-            assertEquals(1, features.size)
-            deletedFeature = assertNotNull(features.first())
+            assertEquals(1, getFeatures(NakshaFeatureList.TYPE).size)
+            deletedFeature = assertNotNull(getFeatures(NakshaFeatureList.TYPE).first())
             assertEquals(featureId, deletedFeature.id)
             assertEquals(Action.DELETED, deletedFeature.properties.xyz.guid?.tupleNumber?.action)
         }
@@ -88,12 +89,12 @@ class ReadHistoryTest : PgTestBase() {
             versions = 10
         }).apply {
             // We expect to get 4 versions back, in descending order: deleted, updated2, updated1, created
-            assertEquals(4, features.size)
+            assertEquals(4, getFeatures(NakshaFeatureList.TYPE).size)
 
-            val delete = assertNotNull(features[0])
-            val update2 = assertNotNull(features[1])
-            val update1 = assertNotNull(features[2])
-            val create = assertNotNull(features[3])
+            val delete = assertNotNull(getFeatures(NakshaFeatureList.TYPE)[0])
+            val update2 = assertNotNull(getFeatures(NakshaFeatureList.TYPE)[1])
+            val update1 = assertNotNull(getFeatures(NakshaFeatureList.TYPE)[2])
+            val create = assertNotNull(getFeatures(NakshaFeatureList.TYPE)[3])
 
             assertEquals(featureId, delete.id)
             assertEquals(Action.DELETED, delete.properties.xyz.action)
@@ -132,10 +133,10 @@ class ReadHistoryTest : PgTestBase() {
         }).apply {
             // We expect to have 4 versions, but only want the latest 2 back
             // As specified, we expect descending order: deleted, updated2[, updated1, created]
-            assertEquals(2, features.size)
+            assertEquals(2, getFeatures(NakshaFeatureList.TYPE).size)
 
-            val delete = assertNotNull(features[0])
-            val update2 = assertNotNull(features[1])
+            val delete = assertNotNull(getFeatures(NakshaFeatureList.TYPE)[0])
+            val update2 = assertNotNull(getFeatures(NakshaFeatureList.TYPE)[1])
 
             assertEquals(featureId, delete.id)
             assertEquals(Action.DELETED, delete.properties.xyz.action)

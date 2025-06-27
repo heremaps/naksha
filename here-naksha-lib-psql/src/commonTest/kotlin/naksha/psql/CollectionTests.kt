@@ -24,6 +24,7 @@ import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.REF_POINT_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaFeatureList
 import naksha.model.objects.StoreMode
 import naksha.model.request.ErrorResponse
 import naksha.model.request.ReadFeatures
@@ -51,7 +52,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             collectionIds += collection.id
         }
         val collectionContent = executeRead(readAllFromCollection)
-        assertEquals(0, collectionContent.features.size)
+        assertEquals(0, collectionContent.getFeatures(NakshaFeatureList.TYPE).size)
 
         // And: Virtual Collections contain the created collection
         val selectCollectionFromVirt = ReadFeatures().apply {
@@ -60,7 +61,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             featureIds += collection.id
         }
         val virtBeforeDelete = executeRead(selectCollectionFromVirt)
-        assertEquals(1, virtBeforeDelete.features.size)
+        assertEquals(1, virtBeforeDelete.getFeatures(NakshaFeatureList.TYPE).size)
 
         // When: Collection gets deleted
         executeWrite(
@@ -71,7 +72,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
         // Then: it is not present in Virtual Collections anymore
         val virtAfterDelete = executeRead(selectCollectionFromVirt)
-        assertEquals(0, virtAfterDelete.features.size)
+        assertEquals(0, virtAfterDelete.getFeatures(NakshaFeatureList.TYPE).size)
 
         // And: reading from this collection fails
         assertFails("ERROR: relation \"${collection.id}\" does not exist") {
@@ -196,8 +197,8 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 Write().createFeature(collection, feature)
             )
         )
-        assertEquals(1, createFeaturesResponse.features.size)
-        feature = assertNotNull(createFeaturesResponse.features[0])
+        assertEquals(1, createFeaturesResponse.getFeatures(NakshaFeatureList.TYPE).size)
+        feature = assertNotNull(createFeaturesResponse.getFeatures(NakshaFeatureList.TYPE)[0])
 
 
         val readFeatureRequest = ReadFeatures()
@@ -205,8 +206,8 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         readFeatureRequest.collectionIds.add(collectionName)
         readFeatureRequest.featureIds.add(feature.id)
         val readFeaturesResponse = executeRead(readFeatureRequest)
-        assertEquals(1, readFeaturesResponse.features.size)
-        feature = assertNotNull(readFeaturesResponse.features[0])
+        assertEquals(1, readFeaturesResponse.getFeatures(NakshaFeatureList.TYPE).size)
+        feature = assertNotNull(readFeaturesResponse.getFeatures(NakshaFeatureList.TYPE)[0])
         feature.properties["foo"] = "bar"
 
 
@@ -215,13 +216,13 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 Write().updateFeature(collection, feature, true)
             )
         )
-        assertEquals(1, updateResponse.features.size)
-        feature = assertNotNull(updateResponse.features[0])
+        assertEquals(1, updateResponse.getFeatures(NakshaFeatureList.TYPE).size)
+        feature = assertNotNull(updateResponse.getFeatures(NakshaFeatureList.TYPE)[0])
 
         // Ensure that the updated feature has the "foo" property
         val readUpdatedFeatureResponse = executeRead(readFeatureRequest)
-        assertEquals(1, readUpdatedFeatureResponse.features.size)
-        val readFeature = assertNotNull(readUpdatedFeatureResponse.features[0])
+        assertEquals(1, readUpdatedFeatureResponse.getFeatures(NakshaFeatureList.TYPE).size)
+        val readFeature = assertNotNull(readUpdatedFeatureResponse.getFeatures(NakshaFeatureList.TYPE)[0])
         assertEquals("bar", readFeature.properties["foo"])
 
         // Delete the feature.
@@ -233,7 +234,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
         // Ensure that it is deleted.
         val deletedFeatureResponse = executeRead(readFeatureRequest)
-        assertEquals(0, deletedFeatureResponse.features.size)
+        assertEquals(0, deletedFeatureResponse.getFeatures(NakshaFeatureList.TYPE).size)
     }
 
     @Test
@@ -251,8 +252,8 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 Write().createCollection(collection)
             )
         )
-        assertEquals(1, createCollectionResponse.features.size)
-        collection = createCollectionResponse.features[0]!!.proxy(NakshaCollection.TYPE)
+        assertEquals(1, createCollectionResponse.getFeatures(NakshaFeatureList.TYPE).size)
+        collection = createCollectionResponse.getFeatures(NakshaFeatureList.TYPE)[0]!!.proxy(NakshaCollection.TYPE)
 
         // Proof that del table was not created
         val delTableName = "$collectionId\$del"
@@ -270,17 +271,17 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 Write().createFeature(collection, feature)
             )
         )
-        assertEquals(1, featureCreateResponse.features.size)
-        feature = featureCreateResponse.features[0]!!
+        assertEquals(1, featureCreateResponse.getFeatures(NakshaFeatureList.TYPE).size)
+        feature = featureCreateResponse.getFeatures(NakshaFeatureList.TYPE)[0]!!
 
         val readFeature = ReadFeatures()
         readFeature.mapId = map.id
         readFeature.collectionIds.add(collectionId)
         readFeature.featureIds.add(feature.id)
         val readFeatureResponse = executeRead(readFeature)
-        assertEquals(1, readFeatureResponse.features.size)
+        assertEquals(1, readFeatureResponse.getFeatures(NakshaFeatureList.TYPE).size)
         // TODO: Deep compare the features, they should be identical!
-        feature = featureCreateResponse.features[0]!!
+        feature = featureCreateResponse.getFeatures(NakshaFeatureList.TYPE)[0]!!
 
         feature.properties["foo"] = "bar"
         val writeResponse = executeWrite(
@@ -288,17 +289,17 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 Write().updateFeature(collection, feature, true)
             )
         )
-        assertEquals(1, writeResponse.features.size)
+        assertEquals(1, writeResponse.getFeatures(NakshaFeatureList.TYPE).size)
         Naksha.cache.clear()
         val updatedFeatureResponse = executeRead(readFeature)
-        assertEquals("bar", updatedFeatureResponse.features[0]?.properties?.get("foo"))
+        assertEquals("bar", updatedFeatureResponse.getFeatures(NakshaFeatureList.TYPE)[0]?.properties?.get("foo"))
         executeWrite(
             WriteRequest().add(
                 Write().deleteFeatureById(collection, feature.id)
             )
         )
         val deletedFeatureResponse = executeRead(readFeature)
-        assertEquals(0, deletedFeatureResponse.features.size)
+        assertEquals(0, deletedFeatureResponse.getFeatures(NakshaFeatureList.TYPE).size)
     }
 
     @Test
@@ -310,8 +311,8 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 Write().createCollection(collection)
             )
         )
-        assertEquals(1, createResponse.features.size)
-        collection = assertNotNull(createResponse.features[0]).proxy(NakshaCollection.TYPE)
+        assertEquals(1, createResponse.getFeatures(NakshaFeatureList.TYPE).size)
+        collection = assertNotNull(createResponse.getFeatures(NakshaFeatureList.TYPE)[0]).proxy(NakshaCollection.TYPE)
 
         // update collection
         collection.storeDeleted = StoreMode.SUSPEND
@@ -320,15 +321,15 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 Write().updateCollection(collection ,true)
             )
         )
-        assertEquals(1, updateResponse.features.size)
-        val responseCollection = assertNotNull(updateResponse.features[0]).proxy(NakshaCollection.TYPE)
+        assertEquals(1, updateResponse.getFeatures(NakshaFeatureList.TYPE).size)
+        val responseCollection = assertNotNull(updateResponse.getFeatures(NakshaFeatureList.TYPE)[0]).proxy(NakshaCollection.TYPE)
         assertEquals(StoreMode.SUSPEND, responseCollection.storeDeleted)
         val selectCollectionFromVirt = ReadFeatures().apply {
             mapId = map.id
             collectionIds += Naksha.COLLECTIONS_COL
             featureIds += collection.id
         }
-        val colRead = assertNotNull(executeRead(selectCollectionFromVirt).features[0]).proxy(NakshaCollection.TYPE)
+        val colRead = assertNotNull(executeRead(selectCollectionFromVirt).getFeatures(NakshaFeatureList.TYPE)[0]).proxy(NakshaCollection.TYPE)
         assertEquals(StoreMode.SUSPEND, colRead.storeDeleted)
     }
 
@@ -357,7 +358,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 Write().upsertCollection(collection)
             )
         )
-        val createdCollection = response.features[0]!!.proxy(NakshaCollection.TYPE)
+        val createdCollection = response.getFeatures(NakshaFeatureList.TYPE)[0]!!.proxy(NakshaCollection.TYPE)
         assertEquals(StoreMode.ON, createdCollection.storeDeleted)
         collection.storeDeleted = StoreMode.SUSPEND
         // update collection using upsert
@@ -366,7 +367,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 Write().upsertCollection(collection)
             )
         )
-        val updatedCollection = updateResponse.features[0]!!.proxy(NakshaCollection.TYPE)
+        val updatedCollection = updateResponse.getFeatures(NakshaFeatureList.TYPE)[0]!!.proxy(NakshaCollection.TYPE)
         assertEquals(StoreMode.SUSPEND, updatedCollection.storeDeleted)
     }
 
@@ -385,7 +386,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         // then
         assertEquals(0, response.length)
         assertEquals(0, response.featureTupleList.size)
-        assertEquals(0, response.features.size)
+        assertEquals(0, response.getFeatures(NakshaFeatureList.TYPE).size)
     }
 
     @Test

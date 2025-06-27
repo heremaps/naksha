@@ -9,6 +9,7 @@ import naksha.model.request.WriteRequest
 import naksha.model.request.query.*
 import naksha.psql.assertions.AnyObjectFluidAssertions.Companion.assertThatAnyObject
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
+import naksha.model.objects.NakshaFeatureList
 import kotlin.test.*
 
 class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
@@ -37,7 +38,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
                 collectionIds += collection.id
                 featureIds += feature.id
             }
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then: geometry is there and it is what we inserted
         assertEquals(1, retrievedFeatures.size)
@@ -70,7 +71,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
                 collectionIds += collection.id
                 featureIds += feature.id
             }
-        ).features
+        ).getFeatures(NakshaFeatureList.TYPE)
 
         // Then: geometry is there and it is what we inserted
         assertEquals(1, retrievedFeatures.size)
@@ -97,8 +98,8 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
         )
 
         // Then:
-        assertEquals(1, featuresByBBox.features.size)
-        assertEquals(feature.id, featuresByBBox.features[0]!!.id)
+        assertEquals(1, featuresByBBox.getFeatures(NakshaFeatureList.TYPE).size)
+        assertEquals(feature.id, featuresByBBox.getFeatures(NakshaFeatureList.TYPE)[0]!!.id)
     }
 
     @Test
@@ -128,7 +129,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
 
         // And
         val czechiaLvl7 = HereTile("1220103")
-        val featuresInCzechia = executeSpatialQuery(SpRefInHereTile(czechiaLvl7)).features
+        val featuresInCzechia = executeSpatialQuery(SpRefInHereTile(czechiaLvl7)).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(1, featuresInCzechia.size)
@@ -172,7 +173,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
         insertFeatures(valencia, somePlaceInPrague)
 
         // And:
-        val features = executeSpatialQuery(query).features
+        val features = executeSpatialQuery(query).getFeatures(NakshaFeatureList.TYPE)
 
         // Then
         assertEquals(2, features.size)
@@ -201,7 +202,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
         insertFeature(feature)
 
         // And
-        val features = executeSpatialQuery(readByCorridor).features
+        val features = executeSpatialQuery(readByCorridor).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(1, features.size)
@@ -233,7 +234,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
         val featuresWithinThreeHundredMetersFromNrt = executeSpatialQuery(SpIntersects(
             SpPoint(nrtAirportCoord),
             SpBuffer(distance = 300.0, geography = true)
-        )).features
+        )).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertTrue(featuresWithinThreeHundredMetersFromNrt.isEmpty())
@@ -242,7 +243,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
         val featuresWithinThreeHundredDegreesFromNrt = executeSpatialQuery(SpIntersects(
             SpPoint(nrtAirportCoord),
             SpBuffer(distance = 300.0, geography = false)
-        )).features
+        )).getFeatures(NakshaFeatureList.TYPE)
 
         // Then:
         assertEquals(1, featuresWithinThreeHundredDegreesFromNrt.size)

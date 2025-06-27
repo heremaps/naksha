@@ -7,6 +7,7 @@ import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
+import naksha.model.objects.NakshaFeatureList
 import kotlin.test.*
 
 class AttachmentTest : PgTestBase() {
@@ -27,6 +28,7 @@ class AttachmentTest : PgTestBase() {
         executeWrite(writeFeaturesReq).apply {
             // Verify the result (will come from cache)
             assertEquals(1, length)
+            val features = getFeatures(NakshaFeatureList.TYPE)
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
@@ -48,6 +50,7 @@ class AttachmentTest : PgTestBase() {
             featureIds += featureToCreate.id
         }).apply {
             assertEquals(1, length)
+            val features = getFeatures(NakshaFeatureList.TYPE)
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
@@ -80,6 +83,7 @@ class AttachmentTest : PgTestBase() {
         executeWrite(writeFeaturesReq).apply {
             // Verify the result (will come from cache)
             assertEquals(1, length)
+            val features = getFeatures(NakshaFeatureList.TYPE)
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
@@ -103,6 +107,7 @@ class AttachmentTest : PgTestBase() {
             featureIds += featureToCreate.id
         }).apply {
             assertEquals(1, length)
+            val features = getFeatures(NakshaFeatureList.TYPE)
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
@@ -136,6 +141,7 @@ class AttachmentTest : PgTestBase() {
         }
         executeWrite(updateFeatureReq).apply {
             assertEquals(1, length)
+            val features = getFeatures(NakshaFeatureList.TYPE)
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
@@ -172,6 +178,7 @@ class AttachmentTest : PgTestBase() {
         executeWrite(writeFeaturesReq).apply {
             // Verify the result (will come from cache)
             assertEquals(1, length)
+            val features = getFeatures(NakshaFeatureList.TYPE)
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
@@ -195,6 +202,7 @@ class AttachmentTest : PgTestBase() {
             featureIds += featureToCreate.id
         }).apply {
             assertEquals(1, length)
+            val features = getFeatures(NakshaFeatureList.TYPE)
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
@@ -228,6 +236,7 @@ class AttachmentTest : PgTestBase() {
         }
         executeWrite(updateFeatureReq).apply {
             assertEquals(1, length)
+            val features = getFeatures(NakshaFeatureList.TYPE)
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
