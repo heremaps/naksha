@@ -29,6 +29,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 
+  private ReadRequestType readRequestType;
 
 public class ReadFeaturesProxyWrapper extends ReadFeatures {
 
@@ -88,6 +89,10 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
   public ReadFeaturesProxyWrapper withQueryParameters(Map<String, Object> parameters) {
     setQueryParameters(parameters);
     return this;
+  }
+
+  public ReadFeaturesProxyWrapper shallowClone() {
+    return this.copy(false);
   }
 
   public ReadFeaturesProxyWrapper withLimit(int limit){

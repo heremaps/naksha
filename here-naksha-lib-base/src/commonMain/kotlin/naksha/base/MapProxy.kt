@@ -4,6 +4,7 @@ package naksha.base
 
 import naksha.base.Platform.Platform_C.forInstance
 import naksha.base.Platform.Platform_C.forKClass
+import naksha.base.Platform.Platform_C.toPlatform
 import naksha.base.PlatformMapApi.PlatformMapApi_C.map_clear
 import naksha.base.PlatformMapApi.PlatformMapApi_C.map_contains_key
 import naksha.base.PlatformMapApi.PlatformMapApi_C.map_contains_value
@@ -53,6 +54,47 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
             return map
         }
 
+        /**
+         * Convert the given input map into a proxy map.
+         *
+         * @param outType The [PlatformType] of the map to return.
+         * @param inMap The input map.
+         * @return if the given `inMap` is of the required `outType`, returns the given `inMap`; otherwise create a new map of `outType`, copy entries into it, and returns it. If `null` given, returns an empty `outType` map.
+         */
+        @Suppress("UNCHECKED_CAST")
+        @JvmStatic
+        @JsStatic
+        fun <K: Any, V: Any?, IN: Map<K, V>, OUT: MapProxy<K, V>> to(outType: PlatformType<OUT>, inMap: IN?): OUT {
+            if (outType.isInstance(inMap)) return inMap as OUT
+            val outMap = outType.newInstance()
+            if (inMap != null) {
+                for (e in inMap.entries) {
+                    outMap.set(e.key, e.value)
+                }
+            }
+            return outMap
+        }
+
+        /**
+         * Convert the given input map into a proxy map.
+         *
+         * @param outType The [PlatformType] of the map to return.
+         * @param inMap The input map.
+         * @return if the given `inMap` is of the required `outType`, returns the given `inMap`; otherwise create a new map of `outType`, copy entries into it, and returns it. If `null` given, returns `null`.
+         */
+        @Suppress("UNCHECKED_CAST")
+        @JvmStatic
+        @JsStatic
+        fun <K: Any, V: Any?, IN: Map<K, V>, OUT: MapProxy<K, V>> toNullable(outType: PlatformType<OUT>, inMap: IN?): OUT? {
+            if (inMap == null) return null
+            if (outType.isInstance(inMap)) return inMap as OUT
+            val outMap = outType.newInstance()
+            for (e in inMap.entries) {
+                outMap.set(e.key, e.value)
+            }
+            return outMap
+        }
+
         init { initialize() }
     }
 
@@ -90,7 +132,7 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
         var value = box(raw, forInstance(alternative))
         if (value == null) {
             value = alternative
-            map_set(data, key, unbox(value))
+            map_set(data, key, toPlatform(value))
         }
         return value
     }
@@ -114,7 +156,7 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
             @Suppress("UNCHECKED_CAST")
             value = init.call(this as SELF, key)
             if (value == null) throw illegalState("Failed to get or init '$key', init method returned null")
-            map_set(data, key, unbox(value))
+            map_set(data, key, toPlatform(value))
         }
         return value
     }
@@ -143,7 +185,7 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
             @Suppress("UNCHECKED_CAST")
             val value = init.call(this as SELF, key)
             if (value != null) {
-                val unboxed = unbox(value)
+                val unboxed = toPlatform(value)
                 map_set(data, key, unboxed)
                 return value
             }
@@ -155,7 +197,7 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
         } else {
             value = type.newInstance()
         }
-        val unboxed = unbox(value)
+        val unboxed = toPlatform(value)
         map_set(data, key, unboxed)
         return value
     }
@@ -259,7 +301,7 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
         while (i < items.size) {
             val original = items[i++]
             val key = toKey(original)
-            val value = if (i < items.size) unbox(items[i++]) else null
+            val value = if (i < items.size) toPlatform(items[i++]) else null
             if (key == null) {
                 if (original == null) throw illegalArg("Invalid key: null")
                 val originalType = forInstance(original)
@@ -276,7 +318,7 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
      * @since 3.0
      * @see set
      */
-    override fun put(key: K, value: V?): V? = toValue(key, map_set(platformObject(), key, unbox(value)))
+    override fun put(key: K, value: V?): V? = toValue(key, map_set(platformObject(), key, toPlatform(value)))
 
     /**
      * Set the given `key` to the given `value`.
@@ -286,7 +328,7 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
      * @see put
      */
     fun set(key: K, value: V?) {
-        map_set(platformObject(), key, unbox(value))
+        map_set(platformObject(), key, toPlatform(value))
     }
 
     override fun get(key: K): V? = toValue(key, map_get(platformObject(), key))
@@ -300,6 +342,8 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
 
     /**
      * Sets the raw value stored in the underlying base map.
+     *
+     * THis method does use [unbox] instead of the stronger [toPlatform]!
      * @param key The key to set.
      * @param value The value to set.
      * @return The previously set value.

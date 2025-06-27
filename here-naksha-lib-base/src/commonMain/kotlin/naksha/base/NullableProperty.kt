@@ -27,12 +27,12 @@ import kotlin.reflect.KClass
  * ```
  * @param OBJECT_TYPE the type of the object to which to attach the property.
  * @param PROPERTY_TYPE the type of the property, must have the base type of the map as super type.
- * @property type the [PlatformType] of the property type.
- * @property name the name of the property in the map, if different from the property name, if _null_, the property name is used.
- * @property autoCreate if the value should be auto-created, when it is _null_. If additionally an [init] is defined, then this invoked
+ * @param type the [PlatformType] of the property type.
+ * @param name the name of the property in the map, if different from the property name, if _null_, the property name is used.
+ * @param autoCreate if the value should be auto-created, when it is _null_. If additionally an [init] is defined, then this invoked
  * before auto-generating a value.
  * @param autoRemove if the value should be removed, when it is set to _null_.
- * @property init the initializer to create a new value, when the property does not exist or the value is not of the desired type. If the
+ * @param init the initializer to create a new value, when the property does not exist or the value is not of the desired type. If the
  * initializer returns _null_, the value is created by invoking the default constructor of the value type.
  */
 @Suppress("OPT_IN_USAGE")

@@ -27,12 +27,15 @@ import naksha.base.Platform.Platform_C.asPlatformObject
 import naksha.base.Platform.Platform_C.detectMap
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.Platform.Platform_C.isPlatformObject
+import naksha.base.Platform.Platform_C.unbox
 import naksha.base.PlatformDataViewApi.PlatformDataViewApi_C.dataview_get_byte_array
 import naksha.base.PlatformListApi.PlatformListApi_C.list_get
 import naksha.base.PlatformListApi.PlatformListApi_C.list_get_length
+import naksha.base.PlatformListApi.PlatformListApi_C.list_set
 import naksha.base.PlatformMapApi.PlatformMapApi_C.map_contains_key
 import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
 import naksha.base.PlatformMapApi.PlatformMapApi_C.map_key_iterator
+import naksha.base.PlatformMapApi.PlatformMapApi_C.map_set
 import naksha.base.PlatformMapApi.PlatformMapApi_C.map_size
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
@@ -968,6 +971,43 @@ inline fun <K, reified V> atomicMapArrayAdd(map: AtomicMap<K, Array<V>>, key: K,
         val new_array = Array(existing.size + 1) { if (it == existing.size) value else existing[it] }
         if (map.replace(key, existing, new_array)) return new_array.lastIndex
         // Concurrent map update, retry.
+    }
+}
+
+/**
+ * Default implementation of [Platform.toNative].
+ */
+internal fun to_platform(value: Any?, alternative: Any? = value): Any? {
+    if (value == null) return null
+    return when (val unboxed = unbox(value)) {
+        is Byte -> unboxed.toInt()
+        is Short -> unboxed.toInt()
+        is Long -> Int64(unboxed)
+        is Float -> unboxed.toDouble()
+        // Array is typed, we can't convert, the rest is cross-platform conform.
+        is Int, is Int64, Double, is String, is PlatformMap, is PlatformList, is ByteArray, is Array<*> -> unboxed
+        is Map<*,*> -> {
+            val map = Platform.newMap()
+            for (e in unboxed.entries) {
+                val k = to_platform(e.key, e.key)
+                val v = to_platform(e.value, e.value)
+                map_set(map, k, v)
+            }
+            map
+        }
+        is List<*> -> {
+            val size = unboxed.size
+            val list = Platform.newList(size)
+            var i = -1
+            while (++i < size) {
+                val e = unboxed[i]
+                val v = to_platform(e, e)
+                list_set(list, i, v)
+            }
+            list
+        }
+        is CharSequence -> unboxed.toString()
+        else -> alternative
     }
 }
 

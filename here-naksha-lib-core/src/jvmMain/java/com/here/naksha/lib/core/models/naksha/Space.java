@@ -22,13 +22,10 @@ import com.fasterxml.jackson.annotation.*;
 import com.here.naksha.lib.core.models.Copyright;
 import com.here.naksha.lib.core.models.License;
 import com.here.naksha.lib.core.models.indexing.Constraint;
-import com.here.naksha.lib.core.models.indexing.Constraint.ConstraintMap;
+import com.here.naksha.lib.core.models.indexing.ConstraintMap;
 import com.here.naksha.lib.core.models.indexing.Index;
 import java.util.List;
-import java.util.Map;
 
-import naksha.base.NakshaError;
-import naksha.base.NakshaException;
 import naksha.base.StringList;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
@@ -198,7 +195,7 @@ public final class Space extends EventTarget<Space> {
     return getAs(INDICES, forClass(Index.Map.class));
   }
 
-  public void setIndices(@Nullable Map<@NotNull String, @NotNull Index> indices) {
+  public void setIndices(@Nullable java.util.Map<@NotNull String, @NotNull Index> indices) {
     Index.Map proxyBasedIndices = new Index.Map();
     if (indices != null) proxyBasedIndices.putAll(indices);
     set(INDICES, proxyBasedIndices);
@@ -212,7 +209,7 @@ public final class Space extends EventTarget<Space> {
     return getAs(CONSTRAINTS, ConstraintMap.TYPE);
   }
 
-  public void setConstraints(@Nullable Map<@NotNull String, @NotNull Constraint> constraints) {
+  public void setConstraints(@Nullable java.util.Map<@NotNull String, @NotNull Constraint> constraints) {
     ConstraintMap constraintMap = new ConstraintMap();
     constraintMap.putAll(constraints);
     setRaw(CONSTRAINTS, constraintMap);

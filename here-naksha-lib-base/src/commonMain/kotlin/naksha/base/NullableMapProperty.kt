@@ -50,8 +50,7 @@ open class NullableMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE
 ) {
     @JvmOverloads
     open fun getValue(self: MAP, propertyName: String? = null): PROPERTY_TYPE? {
-        val key =
-            this.name ?: propertyName ?: throw IllegalArgumentException("Undefined property name")
+        val key = this.name ?: propertyName ?: throw IllegalArgumentException("Undefined property name")
         if (autoCreate) return self.getOrCreate(key, type, init)
         val data = self.platformObject()
         var value: PROPERTY_TYPE? = null
@@ -66,18 +65,21 @@ open class NullableMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE
         return value
     }
 
-    @JsName("setValueByProperty")
-    open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE?) {
-        val key = this.name ?: property.name
-        if (autoRemove && value == null) self.removeRaw(key) else self.put(key, value)
-    }
     @JsName("getValueByProperty")
     open operator fun getValue(self: MAP, property: KProperty<*>): PROPERTY_TYPE? =
         getValue(self, property.name)
 
     @JvmOverloads
-    open fun setValue(self: MAP, propertyName: String? = null, value: PROPERTY_TYPE?) {
-        val key = this.name ?: propertyName ?: throw IllegalArgumentException("Undefined property name")
+    open fun setValue(self: MAP, propertyName: String? = null, value: PROPERTY_TYPE?) =
+        self.put(
+            this.name ?: this.name ?: propertyName
+            ?: throw IllegalArgumentException("Undefined property name"),
+            value
+        )
+
+    @JsName("setValueByProperty")
+    open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE?) {
+        val key = this.name ?: property.name
         if (autoRemove && value == null) self.removeRaw(key) else self.put(key, value)
     }
 }

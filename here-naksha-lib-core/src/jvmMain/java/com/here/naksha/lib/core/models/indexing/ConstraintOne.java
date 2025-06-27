@@ -18,23 +18,28 @@
  */
 package com.here.naksha.lib.core.models.indexing;
 
+import naksha.base.ListProxy;
+import naksha.base.NullableProperty;
+import naksha.base.PlatformType;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
-import naksha.base.JvmBoxingUtil;
+
+import static naksha.base.Platform.forClass;
 
 public class ConstraintOne extends Constraint {
-
-  private static final String OF = "of";
+  public static final PlatformType<ConstraintOne> TYPE = forClass(ConstraintOne.class);
+  private static final NullableProperty<ConstraintOne, ConstraintList> OF
+      = new NullableProperty<>(ConstraintList.TYPE, "of");
 
   /**
    * The constraints of which at least one need to hold true (OR).
    */
-  public List<Constraint> getOf() {
-    return JvmBoxingUtil.box(get(OF), ConstraintList.class);
+  public @Nullable ConstraintList getOf() {
+    return OF.getValue(this);
   }
 
-  public void setOf(List<Constraint> of) {
-    ConstraintList proxyBasedConstrains = new ConstraintList();
-    proxyBasedConstrains.addAll(of);
-    setRaw(OF, proxyBasedConstrains);
+  public void setOf(@Nullable List<Constraint> of) {
+    OF.setValue(this, ListProxy.to(ConstraintList.TYPE, of));
   }
 }

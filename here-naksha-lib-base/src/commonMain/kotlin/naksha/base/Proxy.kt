@@ -5,6 +5,7 @@ package naksha.base
 import naksha.base.Platform.Platform_C.asPlatformObject
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.Platform.Platform_C.isPlatformObject
+import naksha.base.Platform.Platform_C.unbox
 import naksha.base.PlatformListApi.PlatformListApi_C.list_get
 import naksha.base.PlatformListApi.PlatformListApi_C.list_get_capacity
 import naksha.base.PlatformListApi.PlatformListApi_C.list_get_length
@@ -252,6 +253,28 @@ abstract class Proxy : PlatformObject {
      * @since 3.0
      */
     open fun unbox(value: Any?): Any? = Platform.unbox(value)
+
+    /**
+     * Internally called by setters to convert native objects to cross-platform variants.
+     *
+     * The result must be any of the following:
+     * - `null`
+     * - `Boolean`
+     * - `Int`
+     * - `Int64` - from `Long`
+     * - `Double` - from `Float`
+     * - `String` - from `CharSequence`
+     * - `Array<*>`
+     * - `PlatformList` - from `List<*,*>`
+     * - `PlatformMap` - from `Map<*,*>`
+     * - `ByteArray`
+     * @param value The value to convert.
+     * @param alternative The alternative to use, when the value can't be converted. This is not checked any further, if value is given again, it is returned as is.
+     * @return the given `value` converted into platform object.
+     * @see Platform.toPlatform
+     */
+    @JvmOverloads
+    open fun toPlatform(value: Any?, alternative: Any? = value): Any? = Platform.toPlatform(value, alternative)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

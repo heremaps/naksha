@@ -19,9 +19,12 @@
 package com.here.naksha.lib.core.models.payload;
 
 import naksha.base.AnyObject;
+import naksha.base.ListProxy;
 import naksha.base.PlatformType;
 import naksha.geo.GeoCollection;
+import naksha.geo.GeoFeature;
 import naksha.model.NakshaContext;
+import naksha.model.XyzFeatureCollection;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -53,6 +56,13 @@ import static naksha.base.Platform.forClass;
  * All classes that represent a valid response of any remote procedure to the XYZ Hub need to extend this class.
  */
 public abstract class XyzResponse extends GeoCollection {
+
+  @Override
+  public <F extends GeoFeature, LIST extends ListProxy<F>> @NotNull XyzResponse withFeatures(@NotNull LIST list) {
+    super.withFeatures(list);
+    return this;
+  }
+
 
   public static final PlatformType<XyzResponse> TYPE = forClass(XyzResponse.class);
   public static final String STREAM_ID = "streamId";

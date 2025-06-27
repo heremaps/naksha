@@ -21,6 +21,7 @@ import naksha.base.fn.Fn2
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
 import kotlin.math.max
 import kotlin.reflect.KClass
 
@@ -39,6 +40,45 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
         @JvmField
         @JsStatic
         val TYPE = forKClass(ListProxy::class).withPackageName(PACKAGE_NAME)
+
+        /**
+         * Convert the given input list into a proxy list for the given element.
+         *
+         * @param outType The [PlatformType] of the list to return.
+         * @param inList The input list.
+         * @return if the given `inList` is of the required `outType`, returns the given `inList`; otherwise create a new list of `outType`, copy elements into it, and returns it. If `null` given, returns an empty `outType` list.
+         */
+        @Suppress("UNCHECKED_CAST")
+        @JvmStatic
+        @JsStatic
+        fun <E: Any, IN: List<E>, OUT: ListProxy<E>> to(outType: PlatformType<OUT>, inList: IN?): OUT {
+            if (outType.isInstance(inList)) return inList as OUT
+            val outList = outType.newInstance()
+            if (inList != null) {
+                outList.setCapacity(inList.size)
+                outList.addAll(inList)
+            }
+            return outList
+        }
+
+        /**
+         * Convert the given input list into a proxy list for the given element.
+         *
+         * @param outType The [PlatformType] of the list to return.
+         * @param inList The input list.
+         * @return if the given `inList` is of the required `outType`, returns the given `inList`; otherwise create a new list of `outType`, copy elements into it, and returns it; `null` if the given `inList` is `null`.
+         */
+        @Suppress("UNCHECKED_CAST")
+        @JvmStatic
+        @JsStatic
+        fun <E: Any, IN: List<E>, OUT: ListProxy<E>> toNullable(outType: PlatformType<OUT>, inList: IN?): OUT? {
+            if (outType.isInstance(inList)) return inList as OUT
+            if (inList == null) return null
+            val outList = outType.newInstance()
+            outList.setCapacity(inList.size)
+            outList.addAll(inList)
+            return outList
+        }
 
         init { initialize() }
     }
@@ -104,7 +144,7 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
         if (value == null) {
             @Suppress("UNCHECKED_CAST")
             value = init.call(this as SELF, i)
-            list_set(data, i, unbox(value))
+            list_set(data, i, toPlatform(value))
         }
         return value
     }
@@ -130,12 +170,12 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
                 @Suppress("UNCHECKED_CAST")
                 value = init.call(this as SELF, i)
                 if (value != null) {
-                    list_set(data, i, unbox(value))
+                    list_set(data, i, toPlatform(value))
                     return value
                 }
             }
             value = type.newInstance()
-            list_set(data, i, unbox(value))
+            list_set(data, i, toPlatform(value))
         }
         return value
     }
@@ -186,7 +226,7 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
 
     override fun set(index: Int, element: E?): E? {
         val data = platformObject()
-        return box(list_set(data, index, unbox(element)), elementType)
+        return box(list_set(data, index, toPlatform(element)), elementType)
     }
 
     /**
@@ -240,7 +280,7 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
     override fun addAll(elements: Collection<E?>): Boolean {
         val data = platformObject()
         if (elements.isNotEmpty()) {
-            for (e in elements) list_push(data, unbox(e))
+            for (e in elements) list_push(data, toPlatform(e))
             return true
         }
         return false
@@ -258,7 +298,7 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
         if (elements.isNotEmpty()) {
             val array = arrayOfNulls<Any?>(elements.size)
             var i = 0
-            for (e in elements) array[i++] = unbox(e)
+            for (e in elements) array[i++] = toPlatform(e)
             list_splice(data, index, 0, *array)
             return true
         }
@@ -267,11 +307,11 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
 
     override fun add(index: Int, element: E?) {
         if(index < 0) throw IndexOutOfBoundsException(index.toString())
-        list_splice(platformObject(), index, 0, unbox(element))
+        list_splice(platformObject(), index, 0, toPlatform(element))
     }
 
     override fun add(element: E?): Boolean {
-        list_push(platformObject(), unbox(element))
+        list_push(platformObject(), toPlatform(element))
         return true
     }
 

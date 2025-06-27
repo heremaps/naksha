@@ -590,14 +590,37 @@ actual class Platform {
         }
 
         @JvmStatic
-        actual fun fromPlatform(obj: Any?, importers: List<PlatformImporter>): Any? {
+        actual fun fromNative(obj: Any?, importers: List<PlatformImporter>): Any? {
             TODO("Implement me!")
         }
 
         @JvmStatic
-        actual fun toPlatform(obj: Any?, exporters: List<PlatformExporter>): Any? {
+        actual fun toNative(obj: Any?, exporters: List<PlatformExporter>): Any? {
             TODO("Implement me!")
         }
+
+        /**
+         * This is stronger than [unbox], as it will convert the given value into any valid platform type.
+         *
+         * The result must be any of the following:
+         * - `null`
+         * - `Boolean`
+         * - `Int`
+         * - `Int64` - from `Long`
+         * - `Double` - from `Float`
+         * - `String` - from `CharSequence`
+         * - `Array<*>`
+         * - `PlatformList` - from `List<*,*>`
+         * - `PlatformMap` - from `Map<*,*>`
+         * - `ByteArray`
+         * @param value The value to convert.
+         * @return the given `value` converted into platform object, if that is not possible, returns the given `value` again.
+         */
+        @JvmStatic
+        fun toPlatform(value: Any?): Any? = toPlatform(value, value)
+
+        @JvmStatic
+        actual fun toPlatform(value: Any?, alternative: Any?): Any? = to_platform(value, alternative)
 
         /**
          * The iterator member.

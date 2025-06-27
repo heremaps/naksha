@@ -601,7 +601,11 @@ expect class Platform private constructor() {
          * @param importers The importers to use.
          * @return The given platform native objects converted into multi-platform objects.
          */
-        fun fromPlatform(obj: Any?, importers: List<PlatformImporter>): Any?
+        @Deprecated(
+            message = "Actually not really deprecated, but not yet implemented!",
+            level = DeprecationLevel.ERROR
+        )
+        fun fromNative(obj: Any?, importers: List<PlatformImporter>): Any?
 
         /**
          * Convert the given multi-platform objects recursively into the default platform native objects, for example [PlatformMap] may become a pure `Object` in JavaScript. This is often useful when exchanging code with libraries that do not support `Map`. In Java this will convert to [PlatformMap] to [LinkedHashMap].
@@ -609,7 +613,31 @@ expect class Platform private constructor() {
          * @param exporters The exporters to use.
          * @return The platform native objects.
          */
-        fun toPlatform(obj: Any?, exporters: List<PlatformExporter>): Any?
+        @Deprecated(
+            message = "Actually not really deprecated, but not yet implemented!",
+            level = DeprecationLevel.ERROR
+        )
+        fun toNative(obj: Any?, exporters: List<PlatformExporter>): Any?
+
+        /**
+         * This is stronger than [unbox], as it will convert the given value into any valid platform type.
+         *
+         * The result must be any of the following:
+         * - `null`
+         * - `Boolean`
+         * - `Int`
+         * - `Int64` - from `Long`
+         * - `Double` - from `Float`
+         * - `String` - from `CharSequence`
+         * - `Array<*>`
+         * - `PlatformList` - from `List<*,*>`
+         * - `PlatformMap` - from `Map<*,*>`
+         * - `ByteArray`
+         * @param value The value to convert.
+         * @param alternative The alternative to use, when the value can't be converted. This is not checked any further, if value is given again, it is returned as is.
+         * @return the given `value` converted into platform object.
+         */
+        fun toPlatform(value: Any?, alternative: Any? = value): Any?
 
         /**
          * Returns the current epoch milliseconds.

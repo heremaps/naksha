@@ -5,6 +5,7 @@ import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
 import naksha.base.PlatformMapApi.PlatformMapApi_C.map_set
 import naksha.base.fn.Fn2
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -39,9 +40,9 @@ import kotlin.reflect.KProperty
  * @param MAP the type of the map to which to attach the property.
  * @param MAP_VALUE_TYPE the base type of all values in the map.
  * @param PROPERTY_TYPE the type of the property, must have the base type of the map as super type.
- * @property type the [PlatformType] of the property type.
- * @property name the name of the property in the map, if different from the property name, if _null_, the property name is used.
- * @property init the initializer to create an initial value, when the property does not exist or is of an invalid type.
+ * @param type the [PlatformType] of the property type.
+ * @param name the name of the property in the map, if different from the property name, if _null_, the property name is used.
+ * @param init the initializer to create an initial value, when the property does not exist or is of an invalid type.
  */
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
 @JsExport
@@ -50,8 +51,10 @@ open class NotNullMapEnum<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE
     val name: String? = null,
     val init: Fn2<PROPERTY_TYPE?, MAP, String>? = null
 ) {
-    open operator fun getValue(self: MAP, property: KProperty<*>): PROPERTY_TYPE {
-        val key = this.name ?: property.name
+
+    @JvmOverloads
+    open fun getValue(self: MAP, propertyName: String? = null): PROPERTY_TYPE {
+        val key = this.name ?: propertyName ?: throw IllegalArgumentException("Undefined property name")
         val po = self.platformObject()
         var raw: Any? = null
         if (map_contains_key(po, key)) {
@@ -69,9 +72,19 @@ open class NotNullMapEnum<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE
         return JsEnum.get(raw, type)
     }
 
-    open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE) {
-        val key = this.name ?: property.name
+    @JsName("getValueByProperty")
+    open operator fun getValue(self: MAP, property: KProperty<*>): PROPERTY_TYPE
+        = getValue(self, this.name ?: property.name)
+
+    @JvmOverloads
+    open fun setValue(self: MAP, propertyName: String? = null, value: PROPERTY_TYPE?) {
+        val key = this.name ?: propertyName ?: throw IllegalArgumentException("Undefined property name")
         val po = self.platformObject()
-        map_set(po, key, value.value)
+        map_set(po, key, value?.value)
+    }
+
+    @JsName("setValueByProperty")
+    open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE) {
+       setValue(self, this.name ?: property.name, value)
     }
 }

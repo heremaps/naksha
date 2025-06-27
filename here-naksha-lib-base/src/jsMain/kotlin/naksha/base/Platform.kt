@@ -828,7 +828,7 @@ return obj;
          * @return The given platform native objects converted into multi-platform objects.
          */
         @JsStatic
-        actual fun fromPlatform(obj: Any?, importers: List<PlatformImporter>): Any? {
+        actual fun fromNative(obj: Any?, importers: List<PlatformImporter>): Any? {
             TODO("Not yet implemented fromPlatform")
         }
 
@@ -841,9 +841,12 @@ return obj;
          * @return The platform native objects.
          */
         @JsStatic
-        actual fun toPlatform(obj: Any?, exporters: List<PlatformExporter>): Any? {
+        actual fun toNative(obj: Any?, exporters: List<PlatformExporter>): Any? {
             TODO("Not yet implemented toPlatform")
         }
+
+        @JsStatic
+        actual fun toPlatform(value: Any?, alternative: Any?): Any? = to_platform(value, alternative)
 
         /**
          * The [PlatformLogger].

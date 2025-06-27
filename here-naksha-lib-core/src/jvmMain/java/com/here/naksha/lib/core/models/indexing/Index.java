@@ -21,17 +21,26 @@ package com.here.naksha.lib.core.models.indexing;
 import com.here.naksha.lib.core.models.indexing.IndexProperty.IndexProperties;
 import java.util.List;
 import naksha.base.MapProxy;
+import naksha.base.NotNullProperty;
+import naksha.base.NullableProperty;
+import naksha.base.PlatformType;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.Nullable;
 
+import static naksha.base.NakshaBaseKt.Boolean_TYPE;
+import static naksha.base.NakshaBaseKt.String_TYPE;
 import static naksha.base.Platform.forClass;
 
 /** The specification of an index. */
 public class Index extends NakshaFeature {
+  public static final PlatformType<Index> TYPE = forClass(Index.class);
 
-  private static final String ALG = "alg";
-  private static final String INDEX_HISTORY = "indexHistory";
-  private static final String NESTED_INDEX_PROPS = "index";
+  private static final NullableProperty<Index, String> ALG
+      = new NullableProperty<>(String_TYPE, "alg");
+  private static final NotNullProperty<Index, Boolean> INDEX_HISTORY
+      = new NotNullProperty<>(Boolean_TYPE, "indexHistory", (self, name) -> Boolean.FALSE);
+  private static final NullableProperty<Index, String> INDEX
+      = new NullableProperty<>(String_TYPE, "index");
 
   /**
    * The algorithm to use. The implementing processor will decide if it supports the algorithm.
@@ -46,21 +55,21 @@ public class Index extends NakshaFeature {
    * </ul>
    * <p>Note that if no algorithm given, the PostgresQL processor will auto-select on and return the selected algorithm in the response.
    */
-  public String getAlg() {
-    return (String) getRaw(ALG);
+  public @Nullable String getAlg() {
+    return ALG.getValue(this);
   }
 
-  public void setAlg(String alg) {
-    setRaw(ALG, alg);
+  public void setAlg(@Nullable String alg) {
+    ALG.setValue(this, alg);
   }
 
   /** If the index should be applied to the history too. */
   public boolean isIndexHistory() {
-    return getOrSet(INDEX_HISTORY, false);
+    return INDEX_HISTORY.getValue(this);
   }
 
   public void setIndexHistory(boolean indexHistory) {
-    setRaw(INDEX_HISTORY, indexHistory);
+    INDEX_HISTORY.setValue(this, indexHistory);
   }
 
   /** All properties that should be included in this index. */

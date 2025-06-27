@@ -42,7 +42,7 @@ import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
-public class QueryParameterListTest {
+public class QueryParameterConstraintListTest {
 
   public static String urlEncoded(String text) {
     return URLEncoder.encode(text, UTF_8);
