@@ -54,7 +54,7 @@ open class StreamInfo() {
             type
         }
         val any = pType.newInstance() as MapProxy<String, Any?>
-        for (entry in data) any.setRaw(entry.key, entry.value)
+        for (entry in data) any.set(entry.key, entry.value)
         any[TIME_IN_STORAGE] = timeInStorageMs.get()
         return any as T
     }

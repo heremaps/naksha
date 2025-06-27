@@ -226,7 +226,10 @@ actual class Platform {
          * @since 3.0
          */
         @JvmStatic
-        actual fun <T: Any> forKClass(kClass: KClass<T>): PlatformType<T> = forClass(kClass.java)
+        actual fun <T: Any> forKClass(kClass: KClass<T>): PlatformType<T> {
+            if (kClass.isCompanion) throw illegalArg("Illegal argument, must not be an companion: forKClass(${kClass.qualifiedName})")
+            return forClass(kClass.java)
+        }
 
         /**
          * Query the [JvmPlatformType] instance for the given Java class.
@@ -540,8 +543,10 @@ actual class Platform {
             val type_name = map_get(map, "type")
             if (type_name is String) {
                 val all = JvmPlatformType.jsonTypeToPlatformType[type_name]
-                if (all != null) {
-                    for (type in all) {
+                if (!all.isNullOrEmpty()) {
+                    var i = all.size
+                    while (--i >= 0) {
+                        val type = all[i]
                         if (type.isProxy() && type.isInstantiatable && type.isAssignableTo(MapProxy.TYPE)) {
                             return type as PlatformType<MapProxy<String, *>>
                         }
@@ -695,7 +700,7 @@ actual class Platform {
          */
         @JvmStatic
         actual val logger: PlatformLogger
-            get() = loggerThreadLocal.get()
+            get() = loggerThreadLocal.get() ?: loggerDefault
 
         /**
          * Creates a new thread-local. Should be stored only in a static immutable variable (`val`).
@@ -703,7 +708,9 @@ actual class Platform {
          * @return The thread local.
          */
         @JvmStatic
-        actual fun <T> newThreadLocal(initializer: (() -> T)?): PlatformThreadLocal<T> = JvmThreadLocal(initializer)
+        actual fun <T> newThreadLocal(initializer: Fn0<T?>?): PlatformThreadLocal<T> {
+            return JvmThreadLocal(initializer)
+        }
 
         /**
          * The nano-time when the class is initialized.

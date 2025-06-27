@@ -195,7 +195,7 @@ open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(d
      */
     fun toMap(): AnyObject {
         val feature = _map.toAnyObject()
-        if (id() != null && "id" !in feature) feature.setRaw("id", id())
+        if (id() != null && "id" !in feature) feature.set("id", id())
         return feature
     }
 

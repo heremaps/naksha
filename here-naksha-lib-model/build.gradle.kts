@@ -20,8 +20,7 @@ kotlin {
 
     js(IR) {
         outputModuleName = "naksha_model"
-        useEsModules()
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        useEsModules() //
         compilerOptions {
             target.set("es2015")
         }

@@ -1,11 +1,20 @@
 package naksha.base
 
-class JsThreadLocal<T>(initializer: (()->T)?) : PlatformThreadLocal<T> {
-    private var value: T? = initializer?.invoke()
+import naksha.base.fn.Fn0
 
-    override fun get(): T = value!!
+class JsThreadLocal<T>(private val initializer: Fn0<T?>?) : PlatformThreadLocal<T> {
+    private var isInitialized = false
+    private var value: T? = null
 
-    override fun set(value: T) {
+    override fun get(): T? {
+        if (!isInitialized) {
+            isInitialized = true
+            value = initializer?.call()
+        }
+        return value
+    }
+
+    override fun set(value: T?) {
         this.value = value
     }
 }

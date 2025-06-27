@@ -57,8 +57,7 @@ kotlin {
     jvm {}
     js(IR) {
         outputModuleName = "naksha_geo"
-        useEsModules()
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        useEsModules() //
         compilerOptions {
             target.set("es2015")
         }

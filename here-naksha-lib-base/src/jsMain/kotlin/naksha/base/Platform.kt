@@ -769,8 +769,10 @@ return obj;
             val type_name = map_get(map, "type")
             if (type_name is String) {
                 val all = JsPlatformType.byJsonType[type_name]
-                if (all != null) {
-                    for (type in all) {
+                if (!all.isNullOrEmpty()) {
+                    var i = all.size
+                    while (--i >= 0) {
+                        val type = all[i]
                         if (type.isProxy() && type.isInstantiatable && type.isAssignableTo(MapProxy.TYPE)) {
                             return type as PlatformType<MapProxy<String, *>>
                         }
@@ -855,7 +857,9 @@ return obj;
          * @return The thread local.
          */
         @JsStatic
-        actual fun <T> newThreadLocal(initializer: (() -> T)?): PlatformThreadLocal<T> = JsThreadLocal(initializer)
+        actual fun <T> newThreadLocal(initializer: Fn0<T?>?): PlatformThreadLocal<T> {
+            return JsThreadLocal(initializer)
+        }
 
         // TODO: Implement high resolution timer, when available (sadly, not in PLV8):
         //       https://developer.mozilla.org/en-US/docs/Web/API/Performance/now

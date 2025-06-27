@@ -75,7 +75,7 @@ public class ResultHelper {
       SuccessResponse response, Class<R> featureType, long offset, long limit) {
     final PlatformType<R> type = forClass(featureType);
     final List<R> features = new ArrayList<>();
-    final Iterator<NakshaFeature> iterator = response.getFeatures().iterator();
+    final Iterator<NakshaFeature> iterator = response.getFeatures(NakshaFeatureList.TYPE).iterator();
     int pos = 0;
     int cnt = 0;
     while (iterator.hasNext() && cnt < limit) {
@@ -117,7 +117,7 @@ public class ResultHelper {
       final @NotNull SuccessResponse result,
       final @NotNull Class<T> type
   ) {
-    final List<NakshaFeature> features = result.getFeatures();
+    final List<NakshaFeature> features = result.getFeatures(NakshaFeatureList.TYPE);
     if (features.isEmpty()) {
       return null;
     }
@@ -131,7 +131,7 @@ public class ResultHelper {
     }
     final var response = (SuccessResponse) result;
     final ArrayList<String> ids = new ArrayList<>(response.resultSize());
-    final NakshaFeatureList features = response.getFeatures();
+    final NakshaFeatureList features = response.getFeatures(NakshaFeatureList.TYPE);
     for (final NakshaFeature feature : features) {
        ids.add(feature.getId());
     }
@@ -152,7 +152,7 @@ public class ResultHelper {
   public static <T extends NakshaFeature> Map<Action, List<T>> readFeaturesGroupedByAction(
           SuccessResponse result, Class<T> featureType, long limit) {
     final PlatformType<T> type = forClass(featureType);
-    final NakshaFeatureList features = result.getFeatures();
+    final NakshaFeatureList features = result.getFeatures(NakshaFeatureList.TYPE);
     if (features.isEmpty()) {
       return Collections.emptyMap();
     }

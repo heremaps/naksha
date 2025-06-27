@@ -85,6 +85,7 @@ class JsPlatformType<T : Any> internal constructor(
             val proto = js("Object").getPrototypeOf(this.jsClass).unsafeCast<JsClass<*>?>() ?: return null
             if (proto === objectConstructor) return null
             type = forJsClass(proto)
+            type.initialize()
             _superType = type
             return type
         }
@@ -241,6 +242,9 @@ js("""
                 // For the sake of compatibility with Java, we simply bypass restrictions and try to invoke
                 // the constructor without arguments, only if that fails, we return an error.
                 try {
+                    // This is very important, we need to ensure that the companion object is initialized!
+                    initialize()
+                    // Now we can call the constructor directly.
                     val constructor = nativeClass
                     return js("new constructor()").unsafeCast<T>()
                 } catch (_: Throwable) {}

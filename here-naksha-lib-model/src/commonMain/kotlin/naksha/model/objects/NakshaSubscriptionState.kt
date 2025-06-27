@@ -28,7 +28,7 @@ open class NakshaSubscriptionState() : AnyObject() {
 
     @JsName("of")
     constructor(id: String) : this() {
-        setRaw("id", id)
+        set("id", id)
     }
 
     companion object NakshaSubscriptionState_C {

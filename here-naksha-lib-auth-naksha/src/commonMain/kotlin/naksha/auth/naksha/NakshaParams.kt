@@ -29,12 +29,12 @@ open class NakshaParams() : ServiceOpParams() {
      * @return this.
      * @since 3.0
      */
-    @JsName("of")
+    @JsName("NakshaParamsOf")
     constructor(feature: NakshaFeature) : this() {
         fromFeature(feature)
     }
 
-    companion object NakshaResource_C {
+    companion object NakshaParams_C {
         /**
          * The [PlatformType] of [NakshaParams].
          * @since 3.0

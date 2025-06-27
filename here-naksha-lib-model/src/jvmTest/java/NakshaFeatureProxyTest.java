@@ -78,8 +78,8 @@ class NakshaFeatureProxyTest {
   @Test
   void testInt64Boxing() {
     long x = 100L;
-    assertInstanceOf(Int64.class, box(x, NakshaBaseKt.getInt64_TYPE()));
-    assertNull(box(new Object(), NakshaBaseKt.getInt64_TYPE()));
+    assertInstanceOf(Int64.class, box(x, NakshaBaseKt.Int64_TYPE));
+    assertNull(box(new Object(), NakshaBaseKt.Int64_TYPE));
   }
 
 }

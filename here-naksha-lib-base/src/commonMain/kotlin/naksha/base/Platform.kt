@@ -320,7 +320,7 @@ expect class Platform private constructor() {
          * @param initializer An optional lambda to be invoked, when the thread-local is read for the first time.
          * @return The thread local.
          */
-        fun <T> newThreadLocal(initializer: (() -> T)? = null): PlatformThreadLocal<T>
+        fun <T> newThreadLocal(initializer: Fn0<T?>? = null): PlatformThreadLocal<T>
 
         /**
          * Creates a new weak reference to the given referent.

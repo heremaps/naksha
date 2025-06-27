@@ -14,8 +14,7 @@ kotlin {
     jvm {}
     js(IR) {
         outputModuleName = "naksha_psql"
-        useEsModules()
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        useEsModules() //
         compilerOptions {
             target.set("es2015")
         }

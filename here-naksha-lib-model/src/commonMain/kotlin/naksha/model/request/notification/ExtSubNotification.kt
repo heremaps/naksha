@@ -20,9 +20,9 @@ open class ExtSubNotification() : SubNotification() {
 
     @JsName("ExtSubNotificationOf")
     constructor(storage: IStorage, subscriptionId: String, state: NakshaSubscriptionState): this() {
-        setRaw("storage", storage)
-        setRaw("subscriptionId", subscriptionId)
-        setRaw("subscriptionState", state)
+        set("storage", storage)
+        set("subscriptionId", subscriptionId)
+        set("subscriptionState", state)
     }
 
     companion object ExtSubNotification_C {

@@ -44,8 +44,7 @@ kotlin {
     jvm {}
     js(IR) {
         outputModuleName = "naksha_diff"
-        useEsModules()
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        useEsModules() //
         compilerOptions {
             target.set("es2015")
         }

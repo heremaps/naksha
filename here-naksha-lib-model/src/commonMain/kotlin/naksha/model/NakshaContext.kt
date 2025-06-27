@@ -36,7 +36,7 @@ import kotlin.reflect.KClass
  * @see attachToCurrentThread
  */
 @JsExport
-open class NakshaContext internal constructor() {
+open class NakshaContext protected constructor() {
 
     /**
      * The time in milliseconds to wait for the TCP handshake.

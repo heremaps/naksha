@@ -39,7 +39,7 @@ class FeatureParams() : NakshaParams() {
      * @see NakshaOps.updateFeatures
      * @see NakshaOps.deleteFeatures
      */
-    @JsName("of")
+    @JsName("FeatureParamsOf")
     constructor(feature: NakshaFeature, collection: NakshaCollection, map: NakshaMap, storage: NakshaStorage) : this() {
         fromFeature(feature)
         collectionId = collection.id
@@ -57,7 +57,8 @@ class FeatureParams() : NakshaParams() {
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<FeatureParams> = forKClass(FeatureParams::class).withPackageName(PACKAGE_NAME)
+        val TYPE: PlatformType<FeatureParams> = forKClass(FeatureParams::class)
+            .withPackageName(PACKAGE_NAME)
 
         private val STRING_MEMBER = NullableProperty<FeatureParams, String>(String_TYPE, autoRemove = true)
         private val TAG_MAP_MEMBER = NotNullProperty<FeatureParams, TagMap>(TagMap.TYPE) { _,_ -> TagMap() }

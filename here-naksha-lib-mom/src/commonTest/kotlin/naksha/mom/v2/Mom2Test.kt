@@ -42,9 +42,9 @@ class Mom2Test {
             assertEquals(4, size)
             assertEquals("foo", id)
             assertEquals("CustomMomType", type)
-            assertTrue(isFeature())
-            assertTrue(isMomType())
-            assertFalse(isDataHubType())
+            assertTrue(isFeature)
+            assertTrue(isMomType)
+            assertFalse(isDataHubType)
 
             assertTrue(containsKey("type"))
             assertEquals("Feature", getRaw("type"))

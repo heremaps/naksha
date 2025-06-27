@@ -30,7 +30,7 @@ open class Notification(): Request() {
      */
     @JsName("NotificationOf")
     constructor(storage: IStorage): this() {
-        setRaw("storage", storage)
+        set("storage", storage)
     }
 
     companion object Notification_C {

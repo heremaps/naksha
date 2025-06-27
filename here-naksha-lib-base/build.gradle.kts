@@ -52,7 +52,7 @@ kotlin {
     jvm {}
     js(IR) {
         outputModuleName = "naksha_base"
-        useEsModules()
+        useEsModules() //
         compilerOptions {
             target.set("es2015")
         }

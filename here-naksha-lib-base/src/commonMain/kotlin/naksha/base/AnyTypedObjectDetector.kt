@@ -106,6 +106,7 @@ open class AnyTypedObjectDetector(
                 }
             }
         }
+        // Note: 'type' will be checked by Platform.detectMap, which calls this!
         return null
     }
 }

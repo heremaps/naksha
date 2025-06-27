@@ -209,7 +209,7 @@ open class Write : AnyObject() {
             var raw = getRaw("version")
             if (raw is Double) {
                 raw = raw.toInt64()
-                setRaw("version", raw)
+                set("version", raw)
             }
             if (raw is Int64) {
                 if (raw === versionRaw) return versionValue
@@ -223,7 +223,7 @@ open class Write : AnyObject() {
             if (value == null) removeRaw("version") else {
                 versionValue = value
                 versionRaw = value.txn
-                setRaw("version", versionRaw)
+                set("version", versionRaw)
             }
         }
 
@@ -262,7 +262,7 @@ open class Write : AnyObject() {
             if (value == null) removeRaw("tupleNumber") else {
                 tupleNumberValue = value
                 tupleNumberRaw = value.toUrn()
-                setRaw("tupleNumber", tupleNumberRaw)
+                set("tupleNumber", tupleNumberRaw)
             }
         }
 
@@ -290,7 +290,7 @@ open class Write : AnyObject() {
             return if (raw is Boolean) raw else false
         }
         set(value) {
-            if (value) setRaw("atomic", true) else removeRaw("atomic")
+            if (value) set("atomic", true) else removeRaw("atomic")
         }
 
     /**
@@ -317,14 +317,14 @@ open class Write : AnyObject() {
             return feature?.id ?: throw illegalState("Missing feature identifier")
         }
         set(value) {
-            if (value == null) removeRaw("id") else setRaw("id", value)
+            if (value == null) removeRaw("id") else set("id", value)
         }
 
     /**
      * @see [id]
      */
     fun withId(value: String?): Write {
-        if (value == null) removeRaw("id") else setRaw("id", value)
+        if (value == null) removeRaw("id") else set("id", value)
         return this
     }
 
@@ -373,7 +373,7 @@ open class Write : AnyObject() {
         }
         set(value) {
             // Note: Technically, from Java/JavaScript we can have a setter being called with `null`.
-            if (value == null) removeRaw("featureNumber") else setRaw("featureNumber", value)
+            if (value == null) removeRaw("featureNumber") else set("featureNumber", value)
         }
 
     /**
@@ -383,7 +383,7 @@ open class Write : AnyObject() {
      * @see [featureNumber]
      */
     fun withFeatureNumber(value: Int64?): Write {
-        if (value == null) removeRaw("featureNumber") else setRaw("featureNumber", value)
+        if (value == null) removeRaw("featureNumber") else set("featureNumber", value)
         return this
     }
 

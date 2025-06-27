@@ -26,10 +26,10 @@ open class MomFeature : GeoFeature() {
          */
         @JvmField
         @JsStatic
-        val TYPE = forKClass(MomFeature_C::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(MomFeature::class)
+            .withPackageName(PACKAGE_NAME)
+            .withIsMomType(true)
     }
-
-    override fun isMomType(): Boolean = true
 
     override fun withType(type: String?): MomFeature = super.withType(type) as MomFeature
     override fun withId(id: String): MomFeature = super.withId(id) as MomFeature

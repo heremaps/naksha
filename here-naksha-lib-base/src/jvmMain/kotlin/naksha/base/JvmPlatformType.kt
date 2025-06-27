@@ -37,6 +37,7 @@ class JvmPlatformType<T : Any> internal constructor(
             val superClass = jvmClass.superclass ?: return null
             if (superClass === Object::class.java) return null
             type = forClass(superClass)
+            type.initialize()
             _superType = type
             return type
         }

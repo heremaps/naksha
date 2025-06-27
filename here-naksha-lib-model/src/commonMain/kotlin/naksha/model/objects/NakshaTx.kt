@@ -64,8 +64,8 @@ open class NakshaTx : NakshaObject() {
     @JvmOverloads
     fun setEpoch(epoch: Timestamp, seq: Int64 = Int64(0)): NakshaTx {
         val version = Version.of(epoch.year, epoch.month, epoch.day, seq)
-        setRaw("id", version.toString())
-        setRaw("time", epoch.ts)
+        set("id", version.toString())
+        set("time", epoch.ts)
         return this
     }
 

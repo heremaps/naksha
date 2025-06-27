@@ -13,8 +13,7 @@ kotlin {
     jvm {}
     js(IR) {
         outputModuleName = "naksha_auth_naksha"
-        useEsModules()
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        useEsModules() //
         compilerOptions {
             target.set("es2015")
         }
