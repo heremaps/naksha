@@ -38,7 +38,6 @@ public class ConstraintOne extends Constraint {
   public @Nullable ConstraintList getOf() {
     return OF.getValue(this);
   }
-
   public void setOf(@Nullable List<Constraint> of) {
     OF.setValue(this, ListProxy.to(ConstraintList.TYPE, of));
   }

@@ -157,9 +157,4 @@ public class HistoryStatisticsResponse extends Response {
     setMaxVersion(maxVersion);
     return this;
   }
-
-  @Override
-  public int resultSize() {
-    return 0;
-  }
 }

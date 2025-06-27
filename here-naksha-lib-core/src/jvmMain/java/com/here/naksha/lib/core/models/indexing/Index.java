@@ -18,12 +18,9 @@
  */
 package com.here.naksha.lib.core.models.indexing;
 
-import com.here.naksha.lib.core.models.indexing.IndexProperty.IndexPropertyList;
 import java.util.List;
-import naksha.base.MapProxy;
-import naksha.base.NotNullProperty;
-import naksha.base.NullableProperty;
-import naksha.base.PlatformType;
+
+import naksha.base.*;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,8 +36,8 @@ public class Index extends NakshaFeature {
       = new NullableProperty<>(String_TYPE, "alg");
   private static final NotNullProperty<Index, Boolean> INDEX_HISTORY
       = new NotNullProperty<>(Boolean_TYPE, "indexHistory", (self, name) -> Boolean.FALSE);
-  private static final NullableProperty<Index, String> INDEX
-      = new NullableProperty<>(String_TYPE, "index");
+  private static final NullableProperty<Index, IndexPropertyList> INDEX
+      = new NullableProperty<>(IndexPropertyList.TYPE, "index");
 
   /**
    * The algorithm to use. The implementing processor will decide if it supports the algorithm.
@@ -58,7 +55,6 @@ public class Index extends NakshaFeature {
   public @Nullable String getAlg() {
     return ALG.getValue(this);
   }
-
   public void setAlg(@Nullable String alg) {
     ALG.setValue(this, alg);
   }
@@ -67,25 +63,15 @@ public class Index extends NakshaFeature {
   public boolean isIndexHistory() {
     return INDEX_HISTORY.getValue(this);
   }
-
   public void setIndexHistory(boolean indexHistory) {
     INDEX_HISTORY.setValue(this, indexHistory);
   }
 
   /** All properties that should be included in this index. */
-  public @Nullable IndexProperty.IndexPropertyList getIndexProperties() {
-    return getProperties().getAs(NESTED_INDEX_PROPS, IndexPropertyList.TYPE);
+  public @Nullable IndexPropertyList getIndexProperties() {
+    return INDEX.getValue(this);
   }
-
-  public void setProperties(List<IndexProperty> properties) {
-    IndexPropertyList indexProperties = new IndexPropertyList();
-    indexProperties.addAll(properties);
-    getProperties().setRaw(NESTED_INDEX_PROPS, indexProperties);
-  }
-
-  public static class Map extends MapProxy<String, Index> {
-    public Map() {
-      super(forClass(String.class), forClass(Index.class));
-    }
+  public void setProperties(@Nullable List<IndexProperty> properties) {
+    INDEX.setValue(this, ListProxy.toNullable(IndexPropertyList.TYPE, properties));
   }
 }

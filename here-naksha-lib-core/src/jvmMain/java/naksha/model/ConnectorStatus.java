@@ -97,11 +97,6 @@ public class ConnectorStatus extends Response {
     return this;
   }
 
-  @Override
-  public int resultSize() {
-    return 0;
-  }
-
   public static class MaintenanceStatus {
     private long maintainedAt;
     private Set<String> maintenanceRunning;

@@ -78,9 +78,4 @@ public class Changeset extends Response {
     setDeleted(deleted);
     return this;
   }
-
-  @Override
-  public int resultSize() {
-    return 0;
-  }
 }

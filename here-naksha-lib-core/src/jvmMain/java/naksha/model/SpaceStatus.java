@@ -121,11 +121,6 @@ public class SpaceStatus extends Response {
     this.propStats = propStats;
   }
 
-  @Override
-  public int resultSize() {
-    return 0;
-  }
-
   public static class IDXAvailable {
     private String src;
     private String property;

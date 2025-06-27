@@ -26,6 +26,7 @@ import com.here.naksha.lib.core.models.indexing.ConstraintMap;
 import com.here.naksha.lib.core.models.indexing.Index;
 import java.util.List;
 
+import com.here.naksha.lib.core.models.indexing.IndexMap;
 import naksha.base.StringList;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
@@ -191,12 +192,12 @@ public final class Space extends EventTarget<Space> {
    * the value describes the properties to index including their ordering in the index. Properties not being indexes still can be searched,
    * but the result can be bad.
    */
-  public @Nullable Index.Map getIndices() {
-    return getAs(INDICES, forClass(Index.Map.class));
+  public @Nullable IndexMap getIndices() {
+    return getAs(INDICES, forClass(IndexMap.class));
   }
 
   public void setIndices(@Nullable java.util.Map<@NotNull String, @NotNull Index> indices) {
-    Index.Map proxyBasedIndices = new Index.Map();
+    IndexMap proxyBasedIndices = new IndexMap();
     if (indices != null) proxyBasedIndices.putAll(indices);
     set(INDICES, proxyBasedIndices);
   }

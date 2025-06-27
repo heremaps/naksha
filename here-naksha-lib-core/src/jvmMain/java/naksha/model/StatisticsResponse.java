@@ -215,11 +215,6 @@ public class StatisticsResponse extends Response {
     return this;
   }
 
-  @Override
-  public int resultSize() {
-    return 0;
-  }
-
   public static class Value<T> {
 
     T value;

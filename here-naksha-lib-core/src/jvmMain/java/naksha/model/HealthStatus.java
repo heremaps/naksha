@@ -52,9 +52,4 @@ public class HealthStatus extends Response {
     setStatus(status);
     return this;
   }
-
-  @Override
-  public int resultSize() {
-    return 0;
-  }
 }

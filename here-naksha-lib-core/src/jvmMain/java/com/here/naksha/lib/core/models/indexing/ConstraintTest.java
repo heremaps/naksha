@@ -9,7 +9,7 @@ import static naksha.base.Platform.forClass;
 /**
  * The condition to apply.
  */
-public class ConstraintTest extends PlatformEnum {
+public final class ConstraintTest extends PlatformEnum {
   public static final PlatformType<ConstraintTest> TYPE = forClass(ConstraintTest.class);
 
   @Override

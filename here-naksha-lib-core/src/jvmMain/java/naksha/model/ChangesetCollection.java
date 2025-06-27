@@ -93,9 +93,4 @@ public class ChangesetCollection extends Response {
     setVersions(versions);
     return this;
   }
-
-  @Override
-  public int resultSize() {
-    return 0;
-  }
 }

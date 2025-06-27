@@ -65,9 +65,4 @@ public class IndexProperty extends NakshaFeature {
       return TYPE;
     }
   }
-
-  public static class IndexPropertyList extends ListProxy<IndexProperty> {
-    public static final PlatformType<IndexPropertyList> TYPE = forClass(IndexPropertyList.class);
-    public IndexPropertyList() { super(IndexProperty.TYPE); }
-  }
 }

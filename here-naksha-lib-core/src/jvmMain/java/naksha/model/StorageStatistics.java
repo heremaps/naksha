@@ -57,11 +57,6 @@ public class StorageStatistics extends Response {
     return this;
   }
 
-  @Override
-  public int resultSize() {
-    return 0;
-  }
-
   public static class SpaceByteSizes {
     private StatisticsResponse.Value<Long> contentBytes;
     private StatisticsResponse.Value<Long> historyBytes;
