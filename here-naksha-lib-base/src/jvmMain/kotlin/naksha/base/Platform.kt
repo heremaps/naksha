@@ -14,6 +14,7 @@ import naksha.base.JvmPlatformType.JvmPlatformType_C.jvmClassToPlatformType
 import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
+import naksha.base.fn.Fx1
 import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
 import java.net.URLDecoder
@@ -172,6 +173,26 @@ actual class Platform {
             unsafe = unsafeConstructor.newInstance()
             val someByteArray = ByteArray(8)
             baseOffset = unsafe.arrayBaseOffset(someByteArray.javaClass)
+        }
+
+        /**
+         * Poor man's `apply` _(like in Kotlin)_, to be used from Java like:
+         * ```java
+         * import static naksha.base.Platform.apply;
+         * // ...
+         * void demo() {
+         *   final Foo foo = apply(new Foo(), (self) -> {
+         *     self.setBar(1);
+         *     self.setOtherBar("Demo");
+         *   });
+         * }
+         * ```
+         * @since 3.0
+         */
+        @JvmStatic
+        fun <T> apply(self: T, fn: Fx1<T>): T {
+            fn.call(self);
+            return self;
         }
 
         @JvmStatic

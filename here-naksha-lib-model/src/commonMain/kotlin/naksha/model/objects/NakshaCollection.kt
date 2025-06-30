@@ -60,16 +60,8 @@ open class NakshaCollection() : NakshaObject() {
         this.storeMeta = storeMeta
     }
 
-    override fun withType(type: String?): NakshaCollection = super.withType(type) as NakshaCollection
-    override fun withId(id: String): NakshaCollection = super.withId(id) as NakshaCollection
-    override fun withBBox(bbox: BBox): NakshaCollection = super.withBBox(bbox) as NakshaCollection
-    override fun withAutoBBox(): NakshaCollection = super.withAutoBBox() as NakshaCollection
-    override fun withGeometry(geometry: SpGeometry?): NakshaCollection = super.withGeometry(geometry) as NakshaCollection
     override val properties: NakshaProperties
         get() = get_properties(NakshaProperties.TYPE)
-    override fun withProperties(properties: AnyObject): NakshaCollection = super.withProperties(properties) as NakshaCollection
-    override fun withFeatureNumber(value: Int64): NakshaCollection = super.withFeatureNumber(value) as NakshaCollection
-    override fun withReferencePoint(value: SpPoint?): NakshaCollection = super.withReferencePoint(value) as NakshaCollection
 
     override fun featureNumberOfId(id: String): Int64 = Naksha.collectionNumber(id).toInt64()
 
@@ -173,7 +165,7 @@ open class NakshaCollection() : NakshaObject() {
     }
 
     /**
-     * If the `featureType` equals to this value, then the [metadata feature-type][naksha.model.Metadata.ft] will be `null`, otherwise [metadata feature-type][naksha.model.Metadata.ft] is set to the [NakshaFeature.featureType].
+     * If the `featureType` equals to this value, then the [metadata feature-type][naksha.model.Metadata.ft] will be `null`, otherwise [metadata feature-type][naksha.model.Metadata.ft] is set to the [NakshaFeature.type].
      *
      * ### Note
      * The index on the [feature-type][naksha.model.Metadata.ft] is partial, features are only indexed when `ft` is not `null`, what is always the case, when it matches the [defaultFeatureType]. This is based upon the assumption, that in most cases all features within a collection do have the same feature-type. If this assumption holds true, and index would be a big waste, even when only a few features differ from the [defaultFeatureType], adding all values into the index would be a waste. So, this property is for the query planner to take advantage of this fact, when searching for feature-type. If the feature-type is the [defaultFeatureType], this means most of the time a full collection scan, so usage of the feature-type index is not helpful.

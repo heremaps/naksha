@@ -5,8 +5,10 @@ package naksha.model.request
 import naksha.base.ListProxy
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformList
+import naksha.base.PlatformListApi.PlatformListApi_C.list_get_length
 import naksha.base.PlatformType
 import naksha.geo.GeoFeature
+import naksha.geo.GeoFeatureList
 import naksha.model.*
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaFeatureList
@@ -49,7 +51,7 @@ open class SuccessResponse() : Response() {
      * @see [features]
      */
     @Suppress("LeakingThis")
-    @JsName("fromNakshaFeature")
+    @JsName("SuccessResponseOf")
     constructor(vararg features: NakshaFeature) : this() {
         val list = NakshaFeatureList()
         list.setCapacity(features.size)
@@ -64,23 +66,9 @@ open class SuccessResponse() : Response() {
      * @see [features]
      */
     @Suppress("LeakingThis")
-    @JsName("fromNakshaFeatureList")
+    @JsName("SuccessResponseOfList")
     constructor(features: List<NakshaFeature?>) : this() {
-        withFeatures(features)
-    }
-
-    /**
-     * Create a response for the given [NakshaFeatureList], assigned to [features] _(not copied)_.
-     * @param features the features that form the success response.
-     * @param copy if `true`, copies the given feature list; defaults to `false`.
-     * @since 3.0
-     * @see [features]
-     */
-    @Suppress("LeakingThis")
-    @JsName("ofNakshaFeatureList")
-    @JvmOverloads
-    constructor(features: NakshaFeatureList, copy: Boolean = false) : this() {
-        withFeatures(features, copy)
+        setFeatures(features)
     }
 
     /**
@@ -91,10 +79,10 @@ open class SuccessResponse() : Response() {
      * @see [featureTupleList]
      */
     @Suppress("LeakingThis")
-    @JsName("ofFeatureTupleList")
+    @JsName("SuccessResponseOfFeatureTupleList")
     @JvmOverloads
     constructor(featureTupleList: FeatureTupleList, copy: Boolean = false) : this() {
-        withFeatureTupleList(featureTupleList, copy)
+        setFeatureTupleList(featureTupleList, copy)
     }
 
     /**
@@ -107,7 +95,7 @@ open class SuccessResponse() : Response() {
     @Suppress("LeakingThis")
     @JsName("ofTupleNumberList")
     constructor(tupleNumberList: TupleNumberList) : this() {
-        withTupleNumberList(tupleNumberList)
+        setTupleNumberList(tupleNumberList)
     }
 
     /**
@@ -120,7 +108,7 @@ open class SuccessResponse() : Response() {
     @Suppress("LeakingThis")
     @JsName("fromTupleNumberByteArray")
     constructor(tupleNumberByteArray:  ByteArray) : this() {
-        withTupleNumberByteArray(tupleNumberByteArray)
+        setTupleNumberByteArray(tupleNumberByteArray)
     }
 
     /**
@@ -133,7 +121,7 @@ open class SuccessResponse() : Response() {
     @Suppress("LeakingThis")
     @JsName("fromTupleNumberBinaryArray")
     constructor(tupleNumberBinaryArray: TupleNumberBinaryArray) : this() {
-        withTupleNumberBinary(tupleNumberBinaryArray)
+        setTupleNumberBinary(tupleNumberBinaryArray)
     }
 
     /**
@@ -146,7 +134,7 @@ open class SuccessResponse() : Response() {
     @Suppress("LeakingThis")
     @JsName("fromTupleList")
     constructor(tupleList: TupleList) : this() {
-        withTupleList(tupleList)
+        setTupleList(tupleList)
     }
 
     /**
@@ -158,8 +146,8 @@ open class SuccessResponse() : Response() {
      */
     override val length: Int
         get() {
-            val features = getAs(FEATURES, NakshaFeatureList.TYPE)
-            if (features is NakshaFeatureList) return features.size
+            val features = getRaw(FEATURES)
+            if (features is PlatformList) return list_get_length(features)
             return _featureTupleList?.size ?: 0
         }
 
@@ -175,19 +163,16 @@ open class SuccessResponse() : Response() {
         private const val FEATURES = "features"
     }
 
-    override fun withType(type: String?): SuccessResponse = super.withType(type) as SuccessResponse
-    override fun clearFeatures(): SuccessResponse = super.clearFeatures() as SuccessResponse
-
     private var _featureTupleList: FeatureTupleList? = null
 
     /**
      * The [feature tuples][FeatureTuple] being part of the response.
      *
-     * - Setting the [featureTupleList], automatically clears the `features`.
      * - Reading the [featureTupleList], automatically converts the `features` into [FeatureTuple], clearing the `features`.
+     * - Setting the [featureTupleList], automatically clears the `features`.
      * @since 3.0
      */
-    var featureTupleList: FeatureTupleList
+    val featureTupleList: FeatureTupleList
         get() {
             var list = _featureTupleList
             if (list != null) return list
@@ -207,10 +192,105 @@ open class SuccessResponse() : Response() {
             removeRaw(FEATURES)
             return list
         }
-        set(value) {
-            _featureTupleList = value
-            removeRaw(FEATURES)
+
+    /**
+     * Copy the given [FeatureTuple] into [featureTupleList].
+     * @param list the list of [FeatureTuple] that form the success response.
+     * @since 3.0
+     * @see [list]
+     */
+    @JsName("setFeatureTuples")
+    open fun setFeatureTupleList(list: List<FeatureTuple?>): SuccessResponse {
+        val featureTupleList = FeatureTupleList()
+        featureTupleList.setCapacity(list.size)
+        featureTupleList.addAll(list)
+        _featureTupleList = featureTupleList
+        return this
+    }
+
+    /**
+     * Create a response for the given [FeatureTupleList], assigned to [featureTupleList] _(not copied)_.
+     * @param featureTupleList the [FeatureTupleList] that form the success response.
+     * @param copy if `true`, copies the given feature list; defaults to `false`.
+     * @since 3.0
+     * @see [featureTupleList]
+     */
+    @JvmOverloads
+    open fun setFeatureTupleList(featureTupleList: FeatureTupleList, copy: Boolean = false) {
+        val list: FeatureTupleList
+        if (copy) {
+            list = FeatureTupleList()
+            list.setCapacity(featureTupleList.size)
+            list.addAll(featureTupleList)
+        } else {
+            list = featureTupleList
         }
+        _featureTupleList = list
+    }
+
+    /**
+     * Create a response for the given [TupleNumberList], copied into [featureTupleList].
+     *
+     * @param tupleNumberList the [TupleNumberList] that form the success response.
+     * @since 3.0
+     * @see [featureTupleList]
+     */
+    open fun setTupleNumberList(tupleNumberList: TupleNumberList) {
+        val list = FeatureTupleList()
+        list.setCapacity(tupleNumberList.size)
+        for (tupleNumber in tupleNumberList) {
+            if (tupleNumber == null) continue
+            list.add(FeatureTuple(tupleNumber))
+        }
+        _featureTupleList = list
+    }
+
+    /**
+     * Sets the [featureTupleList] to the decoded [tuple-number's][naksha.model.TupleNumber] read from the [TupleNumberBinaryArray], encoded in the given [ByteArray]. Basically, this will automatically wrap the given [ByteArray] into an [TupleNumberBinaryArray], and then convert it into a [FeatureTupleList].
+     *
+     * @since 3.0
+     * @see [featureTupleList]
+     */
+    open fun setTupleNumberByteArray(value: ByteArray) {
+        setTupleNumberBinary(TupleNumberBinaryArray(value))
+    }
+
+    /**
+     * Sets the [featureTupleList] to the decoded [tuple-number's][naksha.model.TupleNumber] read from the given [TupleNumberBinaryArray].
+     *
+     * This constructor will convert the binary-array into a [FeatureTupleList].
+     *
+     * @since 3.0
+     * @see [featureTupleList]
+     */
+    // TODO: CASL-942 filter properties
+    open fun setTupleNumberBinary(value: TupleNumberBinaryArray) {
+        val list = FeatureTupleList()
+        list.setCapacity(value.size)
+        for (tupleNumber in value) {
+            if (tupleNumber != null) {
+                list.add(FeatureTuple(tupleNumber, null))
+            }
+        }
+        _featureTupleList = list
+    }
+
+    /**
+     * Create a response for the given [TupleList], copy it into [featureTupleList].
+     *
+     * @param tupleList the [TupleList] that form the success response.
+     * @since 3.0
+     * @see [featureTupleList]
+     */
+    open fun setTupleList(tupleList: TupleList) {
+        val list = FeatureTupleList()
+        list.setCapacity(tupleList.size)
+        for (tuple in tupleList) {
+            if (tuple == null) continue
+            list.add(FeatureTuple(tuple.tupleNumber, tuple))
+        }
+        _featureTupleList = list
+    }
 
     /**
      * Tests if the success response holds currently a [FeatureTupleList] instead of `features`.
@@ -224,15 +304,16 @@ open class SuccessResponse() : Response() {
      * @return _true_ if this response has any features.
      * @since 3.0
      */
-    fun hasFeatures(): Boolean = containsKey(FEATURES) || _featureTupleList != null
+    fun hasFeatures(): Boolean = length >= 0
 
     /**
-     * The result converted into a [NakshaFeatureList].
+     * The result converted into a list of the given type.
      *
-     * Reading [getFeatures] can cause network IO, because when the local cache does not hold the [Tuple], it need to load them from the storage, or any remote cache!
+     * Reading the features automatically convert the [featureTupleList] into feature list, clearing [featureTupleList].
      *
-     * - Setting the [getFeatures], automatically clears the [featureTupleList].
-     * - Reading the [getFeatures], automatically convert set [featureTupleList] into [NakshaFeatureList], clearing [featureTupleList].
+     * Converting the [FeatureTupleList] into a feature list can cause network IO, because when the local cache does not hold the [Tuple], the API need to load them from the storage, or any remote cache.
+     * @param type The type to return the features in.
+     * @return The feature list.
      * @since 3.0
      */
     override fun <F : GeoFeature, LIST : ListProxy<F>> getFeatures(type: PlatformType<LIST>): LIST {
@@ -255,157 +336,24 @@ open class SuccessResponse() : Response() {
         return list
     }
 
-    override fun <F : GeoFeature, LIST : ListProxy<F>> setFeatures(list: LIST) {
-        set(FEATURES, list)
+    /**
+     * Sets the features of the collection.
+     *
+     * Setting the features, automatically clears the [featureTupleList].
+     * @param list The list of the features to be set.
+     * @since 3.0
+     * @see getFeatures
+     * @see setFeatures
+     * @see clearFeatures
+     */
+    override fun <F : GeoFeature, LIST : List<F?>> setFeatures(list: LIST) {
+        set(FEATURES, ListProxy.to(GeoFeatureList.TYPE, list))
         _featureTupleList = null
     }
 
-    override fun <F : GeoFeature, LIST : ListProxy<F>> withFeatures(list: LIST): SuccessResponse {
-        setFeatures(list)
-        return this
-    }
-
-    /**
-     * Copy the given [features][NakshaFeature] into [features].
-     * @param features the features that form the success response.
-     * @return this.
-     * @since 3.0
-     * @see [features]
-     */
-    @JsName("withFeatureList")
-    open fun withFeatures(features: List<NakshaFeature?>): SuccessResponse {
-        val list = NakshaFeatureList()
-        list.setCapacity(features.size)
-        list.addAll(features)
-        setFeatures(list)
-        return this
-    }
-
-    /**
-     * Assign or copy the given [NakshaFeatureList] to [features].
-     * @param features the features that form the success response.
-     * @param copy if `true`, copies the given feature list; defaults to `false`.
-     * @return this.
-     * @since 3.0
-     * @see [features]
-     */
-    @JsName("withNakshaFeatureList")
-    @JvmOverloads
-    open fun withFeatures(features: NakshaFeatureList, copy: Boolean = false): SuccessResponse {
-        val list: NakshaFeatureList
-        if (copy) {
-            list = NakshaFeatureList()
-            list.setCapacity(features.size)
-            list.addAll(features)
-        } else {
-            list = features
-        }
-        setFeatures(list)
-        return this
-    }
-
-    /**
-     * Copy the given [FeatureTuple] into [featureTupleList].
-     * @param list the list of [FeatureTuple] that form the success response.
-     * @since 3.0
-     * @see [list]
-     */
-    @JsName("withFeatureTuple")
-    open fun withFeatureTupleList(list: List<FeatureTuple?>): SuccessResponse {
-        val featureTupleList = FeatureTupleList()
-        featureTupleList.setCapacity(list.size)
-        featureTupleList.addAll(list)
-        this.featureTupleList = featureTupleList
-        return this
-    }
-
-    /**
-     * Create a response for the given [FeatureTupleList], assigned to [featureTupleList] _(not copied)_.
-     * @param featureTupleList the [FeatureTupleList] that form the success response.
-     * @param copy if `true`, copies the given feature list; defaults to `false`.
-     * @since 3.0
-     * @see [featureTupleList]
-     */
-    @JvmOverloads
-    open fun withFeatureTupleList(featureTupleList: FeatureTupleList, copy: Boolean = false): SuccessResponse {
-        val list: FeatureTupleList
-        if (copy) {
-            list = FeatureTupleList()
-            list.setCapacity(featureTupleList.size)
-            list.addAll(featureTupleList)
-        } else {
-            list = featureTupleList
-        }
-        this.featureTupleList = list
-        return this
-    }
-
-    /**
-     * Create a response for the given [TupleNumberList], copied into [featureTupleList].
-     *
-     * @param tupleNumberList the [TupleNumberList] that form the success response.
-     * @since 3.0
-     * @see [featureTupleList]
-     */
-    open fun withTupleNumberList(tupleNumberList: TupleNumberList): SuccessResponse {
-        val list = FeatureTupleList()
-        list.setCapacity(tupleNumberList.size)
-        for (tupleNumber in tupleNumberList) {
-            if (tupleNumber == null) continue
-            list.add(FeatureTuple(tupleNumber))
-        }
-        this.featureTupleList = list
-        return this
-    }
-
-    /**
-     * Sets the [featureTupleList] to the decoded [tuple-number's][naksha.model.TupleNumber] read from the [TupleNumberBinaryArray], encoded in the given [ByteArray]. Basically, this will automatically wrap the given [ByteArray] into an [TupleNumberBinaryArray], and then convert it into a [FeatureTupleList].
-     *
-     * @since 3.0
-     * @see [featureTupleList]
-     */
-    open fun withTupleNumberByteArray(value: ByteArray): SuccessResponse {
-        withTupleNumberBinary(TupleNumberBinaryArray(value))
-        return this
-    }
-
-    /**
-     * Sets the [featureTupleList] to the decoded [tuple-number's][naksha.model.TupleNumber] read from the given [TupleNumberBinaryArray].
-     *
-     * This constructor will convert the binary-array into a [FeatureTupleList].
-     *
-     * @since 3.0
-     * @see [featureTupleList]
-     */
-    // TODO: CASL-942 filter properties
-    open fun withTupleNumberBinary(value: TupleNumberBinaryArray): SuccessResponse {
-        val list = FeatureTupleList()
-        list.setCapacity(value.size)
-        for (tupleNumber in value) {
-            if (tupleNumber != null) {
-                list.add(FeatureTuple(tupleNumber, null))
-            }
-        }
-        featureTupleList = list
-        return this
-    }
-
-    /**
-     * Create a response for the given [TupleList], copy it into [featureTupleList].
-     *
-     * @param tupleList the [TupleList] that form the success response.
-     * @since 3.0
-     * @see [featureTupleList]
-     */
-    open fun withTupleList(tupleList: TupleList): SuccessResponse {
-        val list = FeatureTupleList()
-        list.setCapacity(tupleList.size)
-        for (tuple in tupleList) {
-            if (tuple == null) continue
-            list.add(FeatureTuple(tuple.tupleNumber, tuple))
-        }
-        featureTupleList = list
-        return this
+    override fun clearFeatures() {
+        removeRaw(FEATURES)
+        _featureTupleList = null
     }
 
     @Deprecated(

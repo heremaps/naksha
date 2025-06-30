@@ -46,14 +46,8 @@ open class NakshaTx : NakshaObject() {
         private val TIME = NotNullProperty<NakshaTx, Int64>(Int64_TYPE) { _, _ -> Platform.currentMillis() }
     }
 
-    override fun withType(type: String?): NakshaTx = super.withType(type) as NakshaTx
-    override fun withId(id: String): NakshaTx = super.withId(id) as NakshaTx
-    override fun withBBox(bbox: BBox): NakshaTx = super.withBBox(bbox) as NakshaTx
-    override fun withAutoBBox(): NakshaTx = super.withAutoBBox() as NakshaTx
-    override fun withGeometry(geometry: SpGeometry?): NakshaTx = super.withGeometry(geometry) as NakshaTx
     override val properties: NakshaProperties
         get() = get_properties(NakshaProperties.TYPE)
-    override fun withProperties(properties: AnyObject): NakshaTx = super.withProperties(properties) as NakshaTx
 
     /**
      * Sets [id], [version], [txn], and [time] in a synchronized manner.
@@ -104,18 +98,13 @@ open class NakshaTx : NakshaObject() {
         return this
     }
 
-    /**
-     * The feature-id of the transaction.
-     *
-     * ### Warning
-     * The feature-id of a transaction **must be** the stringified [version].
-     */
-    override var id: String
-        get() = getAs("id", String_TYPE) ?: throw illegalState("The property 'id' must be a valid string")
-        set(value) {
-            val txn = Int64(value.toLong())
-            setVersion(Version(txn))
-        }
+    // The feature-id of a transaction **must be** the stringified [version].
+    override fun get_id(): String
+        = getAs("id", String_TYPE) ?: throw illegalState("The property 'id' must be a valid string")
+    override fun set_id(id: String) {
+        val txn = Int64(id.toLong())
+        setVersion(Version(txn))
+    }
 
     /**
      * The [unix epoch](https://en.wikipedia.org/wiki/Unix_time) time in milliseconds of when the transaction has started.

@@ -52,16 +52,8 @@ open class NakshaMap() : NakshaObject() {
         private val DEFAULT_FLAGS = NullableProperty<NakshaMap, Flags>(Int_TYPE)
     }
 
-    override fun withType(type: String?): NakshaMap = super.withType(type) as NakshaMap
-    override fun withId(id: String): NakshaMap = super.withId(id) as NakshaMap
-    override fun withBBox(bbox: BBox): NakshaMap = super.withBBox(bbox) as NakshaMap
-    override fun withAutoBBox(): NakshaMap = super.withAutoBBox() as NakshaMap
-    override fun withGeometry(geometry: SpGeometry?): NakshaMap = super.withGeometry(geometry) as NakshaMap
     override val properties: NakshaProperties
         get() = get_properties(NakshaProperties.TYPE)
-    override fun withProperties(properties: AnyObject): NakshaMap = super.withProperties(properties) as NakshaMap
-    override fun withFeatureNumber(value: Int64): NakshaMap = super.withFeatureNumber(value) as NakshaMap
-    override fun withReferencePoint(value: SpPoint?): NakshaMap = super.withReferencePoint(value) as NakshaMap
 
     /**
      * The encoding flags to be used for new rows of all collections of this map, that do not have an own [defaultFlags][NakshaCollection.defaultFlags].
@@ -103,13 +95,4 @@ open class NakshaMap() : NakshaObject() {
      * @since 3.0
      */
     var storageId by STORAGE_ID
-
-    /**
-     * @see [storageId]
-     */
-    fun withStorageId(value: String?): NakshaMap {
-        storageId = value
-        return this
-    }
-
 }

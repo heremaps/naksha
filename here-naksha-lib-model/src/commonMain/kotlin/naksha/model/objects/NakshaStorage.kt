@@ -64,15 +64,8 @@ open class NakshaStorage() : NakshaObject() {
         private val UPGRADE = NotNullProperty<NakshaStorage, Boolean>(Boolean_TYPE) { _, _ -> false }
     }
 
-    override fun withId(id: String): NakshaStorage = super.withId(id) as NakshaStorage
-    override fun withBBox(bbox: BBox): NakshaStorage = super.withBBox(bbox) as NakshaStorage
-    override fun withAutoBBox(): NakshaStorage = super.withAutoBBox() as NakshaStorage
-    override fun withGeometry(geometry: SpGeometry?): NakshaStorage = super.withGeometry(geometry) as NakshaStorage
     override val properties: NakshaProperties
         get() = get_properties(NakshaProperties.TYPE)
-    override fun withProperties(properties: AnyObject): NakshaStorage = super.withProperties(properties) as NakshaStorage
-    override fun withFeatureNumber(value: Int64): NakshaStorage = super.withFeatureNumber(value) as NakshaStorage
-    override fun withReferencePoint(value: SpPoint?): NakshaStorage = super.withReferencePoint(value) as NakshaStorage
 
     /**
      * The default classname to use, if any.
@@ -87,49 +80,16 @@ open class NakshaStorage() : NakshaObject() {
     var className by CLASSNAME
 
     /**
-     * Set the unique class-name.
-     * @param className the unique class-name.
-     * @return this.
-     * @since 3.0
-     */
-    fun withClassName(className: String): NakshaStorage {
-        this.className = className
-        return this
-    }
-
-    /**
      * If _true_, then the storage will create missing structures when being initialized; if _false_, the initialization does not modify the storage, but rather throw an [NakshaError.INITIALIZATION_FAILED].
      * @since 3.0
      */
     var create by CREATE
 
     /**
-     * Set [create] state.
-     * @param create create state.
-     * @return this.
-     * @since 3.0
-     */
-    fun withCreate(create: Boolean): NakshaStorage {
-        this.create = create
-        return this
-    }
-
-    /**
      * if _true_, then the storage will upgrade the admin-structures (e.g. stored procedures), when necessary; if _false_, the initialization does not modify the storage, but rather throw an [NakshaError.INITIALIZATION_FAILED].
      * @since 3.0
      */
     var upgrade by UPGRADE
-
-    /**
-     * Set [upgrade] state.
-     * @param upgrade upgrade state.
-     * @return this.
-     * @since 3.0
-     */
-    fun withUpgrade(upgrade: Boolean): NakshaStorage {
-        this.upgrade = upgrade
-        return this
-    }
 
     /**
      * The hard-cap (limit) of the storage. No result-set every should become bigger than this amount of features.
@@ -140,17 +100,6 @@ open class NakshaStorage() : NakshaObject() {
      * @since 3.0
      */
     var hardCap by HARDCAP
-
-    /**
-     * Set [hardCap].
-     * @param hardCap the new hard-cap.
-     * @return this.
-     * @since 3.0
-     */
-    fun withHardCap(hardCap: Int): NakshaStorage {
-        this.hardCap = hardCap
-        return this
-    }
 
     override fun equals(other: Any?): Boolean {
         if (other is NakshaStorage) return super.contentDeepEquals(other)

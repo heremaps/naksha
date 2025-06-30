@@ -77,7 +77,7 @@ open class PgWriter internal constructor(
      */
     fun execute(writes: WriteList) : Response {
         val tupleNumberList = executeWrites(writes.mapNotNull { it }.toMutableList())
-        return SuccessResponse().withTupleNumberList(tupleNumberList)
+        return SuccessResponse().setTupleNumberList(tupleNumberList)
     }
 
     /**

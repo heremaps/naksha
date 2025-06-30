@@ -4,9 +4,9 @@ package naksha.geo
 
 import naksha.base.*
 import naksha.base.Platform.Platform_C.forKClass
-import naksha.base.Platform.Platform_C.isPlatformObject
 import naksha.base.PlatformMapApi.PlatformMapApi_C.map_get
 import naksha.base.PlatformMapApi.PlatformMapApi_C.map_set
+import naksha.base.bugs.KT_68775_infinite_loop_for_calling_super_getter
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -70,12 +70,9 @@ open class GeoFeature : AnyTypedIdObject() {
         }
     }
 
-    override fun withType(type: String?): GeoFeature = super.withType(type) as GeoFeature
-    override fun withId(id: String): GeoFeature = super.withId(id) as GeoFeature
-
     // We know, it will always be at least "Feature"
     override val type: String
-        get() = type_get() ?: FEATURE
+        get() = get_type() ?: FEATURE
 
     /**
      * The bounding box.
@@ -83,28 +80,30 @@ open class GeoFeature : AnyTypedIdObject() {
      */
     var bbox: BBox? by BBOX_NULL_MEMBER
 
-    open fun withBBox(bbox: BBox): GeoFeature {
-        this.bbox = bbox
-        return this
-    }
-
     /**
-     * Calculate the bounding box from the geometry and updated the [bbox] property.
+     * Calculate the bounding box from the geometry.
      *
-     * Example:
+     * Can be used to update the [bbox] property, Kotlin example:
      * ```kotlin
-     * val geo: GeoFeature = GeoFeature()
-     *     .withId("demo")
-     *     .withGeometry(geometry)
-     *     .withAutoBBox()
+     * val geo = GeoFeature().apply {
+     *   id = "demo"
+     *   geometry = someGeometry
+     *   bbox = calculateBBox()
+     * }
      * ```
-     * @return this.
+     * Java example:
+     * ```java
+     * import static naksha.base.Platform.apply;
+     * final var geo = apply(new GeoFeature(), (self)-> {
+     *   self.setId("demo");
+     *   self.setGeometry(someGeometry);
+     *   self.setBBox( self.calculateBBox() );
+     * });
+     * ```
+     * @return the calculated and set bounding box.
      * @since 3.0
      */
-    open fun withAutoBBox(): GeoFeature {
-        this.bbox = BBox(geometry)
-        return this
-    }
+    open fun calculateBBox(): BBox = BBox(geometry)
 
     /**
      * The geometry of the feature.
@@ -125,15 +124,13 @@ open class GeoFeature : AnyTypedIdObject() {
             }
         }
 
-    open fun withGeometry(geometry: SpGeometry?): GeoFeature {
-        this.geometry = geometry
-        return this
-    }
-
     /**
      * The properties of the feature.
      * @since 3.0
+     * @see setProperties
+     * @see get_properties
      */
+    @KT_68775_infinite_loop_for_calling_super_getter
     open val properties: AnyObject
         get() = get_properties(AnyObject.TYPE)
 
@@ -142,6 +139,7 @@ open class GeoFeature : AnyTypedIdObject() {
      * @param type The type that should be returned.
      * @return the properties.
      */
+    @KT_68775_infinite_loop_for_calling_super_getter
     protected fun <T : MapProxy<String,*>> get_properties(type: PlatformType<out T>): T {
         val po = platformObject()
         var properties = map_get(po, "properties")
@@ -155,12 +153,10 @@ open class GeoFeature : AnyTypedIdObject() {
     /**
      * Set the [properties].
      * @param properties The properties to set.
-     * @return this.
      * @see properties
      */
-    open fun withProperties(properties: AnyObject): GeoFeature {
+    open fun setProperties(properties: AnyObject) {
         set("properties", unbox(properties))
-        return this
     }
 
 }

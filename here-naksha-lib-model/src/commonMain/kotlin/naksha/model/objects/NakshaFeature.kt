@@ -42,31 +42,8 @@ open class NakshaFeature() : GeoFeature() {
         private val REFERENCE_POINT_MEMBER = NullableProperty<NakshaFeature, SpPoint>(SpPoint.TYPE)
     }
 
-    override fun withId(id: String): NakshaFeature = super.withId(id) as NakshaFeature
-    override fun withType(type: String?): NakshaFeature = super.withType(type) as NakshaFeature
-    override fun withBBox(bbox: BBox): NakshaFeature = super.withBBox(bbox) as NakshaFeature
-    override fun withAutoBBox(): NakshaFeature = super.withAutoBBox() as NakshaFeature
-    override fun withGeometry(geometry: SpGeometry?): NakshaFeature = super.withGeometry(geometry) as NakshaFeature
     override val properties: NakshaProperties
         get() = get_properties(NakshaProperties.TYPE)
-    override fun withProperties(properties: AnyObject): NakshaFeature = super.withProperties(properties) as NakshaFeature
-
-    /**
-     * Sets a custom feature-number, which in fact changes the [id] of the feature, and must be a 63-bit unsigned integer (`0 .. 9,223,372,036,854,775,807`).
-     * @see [featureNumber]
-     */
-    open fun withFeatureNumber(value: Int64): NakshaFeature {
-        this.featureNumber = value
-        return this
-    }
-
-    /**
-     * @see referencePoint
-     */
-    open fun withReferencePoint(value: SpPoint?): NakshaFeature {
-        referencePoint = value
-        return this
-    }
 
     /**
      * Reference point of the feature. Used for grid calculation.

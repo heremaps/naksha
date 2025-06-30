@@ -41,10 +41,6 @@ import kotlin.jvm.JvmField
 @Suppress("DEPRECATION")
 @JsExport
 open class AnyTypedObject : AnyObject() {
-    init {
-        @Suppress("LeakingThis")
-        jsonType_init()
-    }
 
     companion object AnyTypedObject_C {
         /**
@@ -103,34 +99,12 @@ open class AnyTypedObject : AnyObject() {
      * The JSON type of the feature.
      *
      * @since 3.0
-     * @see type_get
-     * @see type_set
+     * @see get_type
+     * @see setType
      */
     @KT_68775_infinite_loop_for_calling_super_getter
     open val type: String?
-        get() = type_get()
-
-    /**
-     * Sets or clears the JSON type.
-     *
-     * If `null` is given, and not [isFeature], remove `type` property and return. Otherwise, if `null` given and [isFeature]:
-     * - Set `type` to `"Feature"` and remove `featureType`
-     * - If [isMomType], remove `momType`.
-     * - If [isDataHubType], remove `properties.featureType`
-     *
-     * If a JSON type is given, and not [isFeature], update `type` and return. Otherwise, if [isFeature]:
-     * - Set `type` to `"Feature"`
-     * - If [isMomType], set `momType`, else, if not [isDataHubType], set `featureType`
-     * - If [isDataHubType], set `properties.featureType`
-     *
-     * @param type The type to set.
-     * @return this.
-     * @see type_set
-     */
-    open fun withType(type: String?): AnyTypedObject {
-        type_set(type)
-        return this
-    }
+        get() = get_type()
 
     /**
      * The JSON type of this object.
@@ -148,8 +122,7 @@ open class AnyTypedObject : AnyObject() {
      * @see type
      */
     @KT_68775_infinite_loop_for_calling_super_getter
-    protected open fun type_get(): String? {
-        val type = forInstance(this)
+    protected open fun get_type(): String? {
         val po = platformObject()
         var raw = map_get(po, "type")
         if (raw is String) {
@@ -180,7 +153,7 @@ open class AnyTypedObject : AnyObject() {
     /**
      * Sets or clears the JSON type.
      *
-     * If `null` is given, and not [PlatformType.isFeature], remove `type` property and return. Otherwise, if `null` given and [PlatformType.isFeature]:
+     * The implementation does: If `null` is given, and not [PlatformType.isFeature], remove the `type` property and return. Otherwise, if `null` given and [PlatformType.isFeature]:
      * - Set `type` to `"Feature"` and remove `featureType`
      * - If [PlatformType.isMomType], remove `momType`.
      * - If [PlatformType.isDataHubType], remove `properties.featureType`
@@ -190,15 +163,13 @@ open class AnyTypedObject : AnyObject() {
      * - If [PlatformType.isMomType], set `momType`, else, if not [PlatformType.isDataHubType], set `featureType`
      * - If [PlatformType.isDataHubType], set `properties.featureType`
      *
+     * @param type The type to set.
      * @since 3.0
-     * @see type
-     * @see jsonType
      */
-    @KT_68775_infinite_loop_for_calling_super_getter
-    protected open fun type_set(jsonType: String?) {
+    open fun setType(type: String?) {
         val po = platformObject()
         // Clear type.
-        if (jsonType == null) {
+        if (type == null) {
             if (!isFeature) {
                 map_remove(po, "type")
                 return
@@ -220,16 +191,16 @@ open class AnyTypedObject : AnyObject() {
 
         // Update type.
         if (!isFeature) {
-            map_set(po, "type", jsonType)
+            map_set(po, "type", type)
             return
         }
 
         map_set(po, "type", "Feature")
-        if (jsonType != "Feature") {
+        if (type != "Feature") {
             if (isMomType) {
-                map_set(po, "momType", jsonType)
+                map_set(po, "momType", type)
             } else if (!isDataHubType) {
-                map_set(po, "featureType", jsonType)
+                map_set(po, "featureType", type)
             }
             if (isDataHubType) { // properties.featureType
                 var properties = map_get(po, "properties")
@@ -237,24 +208,15 @@ open class AnyTypedObject : AnyObject() {
                     properties = Platform.newMap()
                     map_set(po, "properties", properties)
                 }
-                map_set(properties, "featureType", jsonType)
+                map_set(properties, "featureType", type)
             }
         }
     }
 
-    /**
-     * Automatically invoked by the constructor of [AnyTypedObject].
-     *
-     * Reads [PlatformType.jsonType] of `this` and invokes [type_set].
-     * @since 3.0
-     * @see type
-     * @see isFeature
-     * @see isMomType
-     * @see isDataHubType
-     */
-    protected open fun jsonType_init() {
+    override fun onCreation() {
+        super.onCreation()
         val type = forInstance(this)
-        type_set(type.jsonType)
+        setType(type.jsonType)
     }
 
 }

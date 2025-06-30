@@ -26,6 +26,11 @@ open class NakshaFeatureList : ListProxy<NakshaFeature>(NakshaFeature.TYPE){
         @JsStatic
         val TYPE = forKClass(NakshaFeatureList::class).withPackageName(PACKAGE_NAME)
 
+        @Deprecated(
+            message = "Use ListProxy.to or ListProxy.toNullable instead",
+            replaceWith = ReplaceWith("ListProxy.to(NakshaFeatureList.TYPE, features)"),
+            level = DeprecationLevel.WARNING
+        )
         @JvmStatic
         @JsStatic
         fun fromList(features: List<NakshaFeature>): NakshaFeatureList =

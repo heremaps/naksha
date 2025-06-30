@@ -51,7 +51,7 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
         @JsStatic
-        fun <E: Any, IN: List<E>, OUT: ListProxy<E>> to(outType: PlatformType<OUT>, inList: IN?): OUT {
+        fun <E: Any, IN: List<E?>, OUT: ListProxy<E>> to(outType: PlatformType<OUT>, inList: IN?): OUT {
             if (outType.isInstance(inList)) return inList as OUT
             val outList = outType.newInstance()
             if (inList != null) {
@@ -66,14 +66,14 @@ open class ListProxy<E>(private var _elementType: PlatformType<E>) : Proxy(), Mu
          *
          * @param outType The [PlatformType] of the list to return.
          * @param inList The input list.
-         * @return if the given `inList` is of the required `outType`, returns the given `inList`; otherwise create a new list of `outType`, copy elements into it, and returns it; `null` if the given `inList` is `null`.
+         * @return if the given `inList` is of the required `outType`, returns the given `inList`; otherwise create a new list of `outType`, copy elements into it, and returns it; `null` if the given `inList` is `null` or empty.
          */
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
         @JsStatic
-        fun <E: Any, IN: List<E>, OUT: ListProxy<E>> toNullable(outType: PlatformType<OUT>, inList: IN?): OUT? {
+        fun <E: Any, IN: List<E?>, OUT: ListProxy<E>> toNullable(outType: PlatformType<OUT>, inList: IN?): OUT? {
             if (outType.isInstance(inList)) return inList as OUT
-            if (inList == null) return null
+            if (inList.isNullOrEmpty()) return null
             val outList = outType.newInstance()
             outList.setCapacity(inList.size)
             outList.addAll(inList)

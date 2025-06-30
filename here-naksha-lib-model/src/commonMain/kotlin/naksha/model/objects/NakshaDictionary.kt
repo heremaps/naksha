@@ -89,16 +89,8 @@ open class NakshaDictionary() : NakshaObject() {
         private val ENTRIES = NotNullProperty<NakshaDictionary, AnyList>(AnyList.TYPE) { _, _ -> AnyList() }
     }
 
-    override fun withType(type: String?): NakshaDictionary = super.withType(type) as NakshaDictionary
-    override fun withId(id: String): NakshaDictionary = super.withId(id) as NakshaDictionary
-    override fun withBBox(bbox: BBox): NakshaDictionary = super.withBBox(bbox) as NakshaDictionary
-    override fun withAutoBBox(): NakshaDictionary = super.withAutoBBox() as NakshaDictionary
-    override fun withGeometry(geometry: SpGeometry?): NakshaDictionary = super.withGeometry(geometry) as NakshaDictionary
     override val properties: NakshaProperties
         get() = get_properties(NakshaProperties.TYPE)
-    override fun withProperties(properties: AnyObject): NakshaDictionary = super.withProperties(properties) as NakshaDictionary
-    override fun withFeatureNumber(value: Int64): NakshaDictionary = super.withFeatureNumber(value) as NakshaDictionary
-    override fun withReferencePoint(value: SpPoint?): NakshaDictionary = super.withReferencePoint(value) as NakshaDictionary
 
     /**
      * The content of the dictionary.

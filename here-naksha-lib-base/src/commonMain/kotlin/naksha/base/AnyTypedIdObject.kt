@@ -33,21 +33,21 @@ open class AnyTypedIdObject : AnyTypedObject() {
         init { initialize() }
     }
 
-    override fun withType(type: String?): AnyTypedIdObject = super.withType(type) as AnyTypedIdObject
-    
     /**
      * The unique identifier of the feature.
      * @since 3.0
+     * @see get_id
+     * @see set_id
      */
     @KT_68775_infinite_loop_for_calling_super_getter
-    open var id: String
-        get() = id_get()
+    var id: String
+        get() = get_id()
         set(value) {
-            id_set(value)
+            set_id(value)
         }
 
     @KT_68775_infinite_loop_for_calling_super_getter
-    protected open fun id_get(): String {
+    protected open fun get_id(): String {
         val raw = getRaw("id")
         if (raw is String) return raw
         val id = randomString()
@@ -56,12 +56,7 @@ open class AnyTypedIdObject : AnyTypedObject() {
     }
 
     @KT_68775_infinite_loop_for_calling_super_getter
-    protected open fun id_set(id: String) {
+    protected open fun set_id(id: String) {
         setRaw("id", id)
-    }
-
-    open fun withId(id: String): AnyTypedIdObject {
-        this.id = id
-        return this
     }
 }

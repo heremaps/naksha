@@ -44,8 +44,6 @@ open class GeoCollection() : AnyTypedObject() {
         }
     }
 
-    override fun withType(type: String?): GeoCollection = super.withType(type) as GeoCollection
-
     /**
      * Returns the features of the collection.
      * @param type The type of the feature list to return.
@@ -53,7 +51,6 @@ open class GeoCollection() : AnyTypedObject() {
      * @since 3.0
      * @see getFeatures
      * @see setFeatures
-     * @see withFeatures
      * @see clearFeatures
      */
     open fun <F : GeoFeature, LIST : ListProxy<F>> getFeatures(type: PlatformType<LIST>): LIST {
@@ -70,26 +67,10 @@ open class GeoCollection() : AnyTypedObject() {
      * @since 3.0
      * @see getFeatures
      * @see setFeatures
-     * @see withFeatures
      * @see clearFeatures
      */
-    open fun <F : GeoFeature, LIST : ListProxy<F>> setFeatures(list: LIST) {
-        set(FEATURES, list)
-    }
-
-    /**
-     * Sets the features of the collection.
-     * @param list The list of the features.
-     * @return this.
-     * @since 3.0
-     * @see getFeatures
-     * @see setFeatures
-     * @see withFeatures
-     * @see clearFeatures
-     */
-    open fun <F : GeoFeature, LIST : ListProxy<F>> withFeatures(list: LIST): GeoCollection {
-        setFeatures(list)
-        return this
+    open fun <F : GeoFeature, LIST : List<F?>> setFeatures(list: LIST) {
+        set(FEATURES, ListProxy.toNullable(GeoFeatureList.TYPE, list))
     }
 
     /**
@@ -98,11 +79,9 @@ open class GeoCollection() : AnyTypedObject() {
      * @since 3.0
      * @see getFeatures
      * @see setFeatures
-     * @see withFeatures
      * @see clearFeatures
      */
-    open fun clearFeatures(): GeoCollection {
+    open fun clearFeatures() {
         removeRaw(FEATURES)
-        return this
     }
 }
