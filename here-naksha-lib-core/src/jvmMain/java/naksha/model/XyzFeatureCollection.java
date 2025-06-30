@@ -18,7 +18,6 @@
  */
 package naksha.model;
 
-import static java.util.stream.Collectors.toList;
 import static naksha.base.NakshaBaseKt.*;
 import static naksha.base.Platform.forClass;
 
@@ -28,21 +27,14 @@ import java.util.List;
 import naksha.base.*;
 import naksha.geo.BBox;
 import naksha.geo.GeoFeature;
-import naksha.model.objects.NakshaFeature;
+import naksha.geo.GeoFeatureList;
 import naksha.model.objects.NakshaFeatureList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class XyzFeatureCollection extends XyzResponse {
-  @Override
-  public <F extends GeoFeature, LIST extends ListProxy<F>> @NotNull XyzFeatureCollection withFeatures(@NotNull LIST list) {
-    super.withFeatures(list);
-    return this;
-  }
 
-
-  public static final PlatformType<XyzFeatureCollection> TYPE = forClass(XyzFeatureCollection.class)
-      .withJsonType("FeatureCollection");
+  public static final PlatformType<XyzFeatureCollection> TYPE = forClass(XyzFeatureCollection.class);
 
   @Override
   public void onCreation() {
@@ -50,19 +42,34 @@ public class XyzFeatureCollection extends XyzResponse {
     setFeatures(new NakshaFeatureList());
   }
 
+  public static final String INSERTED = "inserted";
+  public static final String UPDATED = "inserted";
+  public static final String DELETED = "deleted";
+  private static final NotNullProperty<XyzFeatureCollection, StringList> STRING_LIST$
+      = new NotNullProperty<>(StringList.TYPE, null, (self, name) -> new StringList() );
+
+  public static final String FAILED = "failed";
+  private static final NullableProperty<XyzFeatureCollection, ModificationFailureList> FAILED$
+      = new NullableProperty<>(ModificationFailureList.TYPE, FAILED, false, true);
+
+  private static final NullableProperty<XyzFeatureCollection, Integer> VERSION$
+      = new NullableProperty<>(Int_TYPE, "version", false, true);
+
+  public static final String OLD_FEATURES = "oldFeatures";
+  public static final String VIOLATIONS = "violations";
+
+  private static final NullableProperty<XyzFeatureCollection, BBox> BBOX$
+      = new NullableProperty<>(BBox.TYPE, "bbox", false, true);
+
   public @Nullable BBox getBbox() {
-    return getAs("bbox", BBox.TYPE);
+    return BBOX$.getValue(this);
   }
-
   public void setBbox(@Nullable BBox bbox) {
-    set("bbox", bbox);
+    BBOX$.setValue(this, bbox);
   }
 
-  @SuppressWarnings("unused")
-  public XyzFeatureCollection withBbox(final BBox bbox) {
-    setBbox(bbox);
-    return this;
-  }
+  private static final NullableProperty<XyzFeatureCollection, String> HANDLE$
+      = new NullableProperty<>(String_TYPE, "handle", false, true);
 
   /**
    * Returns the Space handle which is used to iterate above data.
@@ -71,7 +78,7 @@ public class XyzFeatureCollection extends XyzResponse {
    * @deprecated use {@link #getNextPageToken()} instead.
    */
   public @Nullable String getHandle() {
-    return getAs("handle", String_TYPE);
+    return HANDLE$.getValue(this);
   }
 
   /**
@@ -82,17 +89,11 @@ public class XyzFeatureCollection extends XyzResponse {
    */
   @SuppressWarnings("WeakerAccess")
   public void setHandle(@Nullable String handle) {
-    set("handle", handle);
+    HANDLE$.setValue(this, handle);
   }
 
-  /**
-   * @deprecated use {@link #withNextPageToken(String)} instead.
-   */
-  @SuppressWarnings("unused")
-  public @NotNull XyzFeatureCollection withHandle(final @Nullable String handle) {
-    setHandle(handle);
-    return this;
-  }
+  private static final NullableProperty<XyzFeatureCollection, String> NEXT_PAGE_TOKEN$
+      = new NullableProperty<>(String_TYPE, "nextPageToken", false, true);
 
   /**
    * Returns the Space nextPageToken which is used to iterate above data.
@@ -100,7 +101,7 @@ public class XyzFeatureCollection extends XyzResponse {
    * @return the nextPageToken.
    */
   public @Nullable String getNextPageToken() {
-    return getAs("nextPageToken", String_TYPE);
+    return NEXT_PAGE_TOKEN$.getValue(this);
   }
 
   /**
@@ -110,14 +111,11 @@ public class XyzFeatureCollection extends XyzResponse {
    */
   @SuppressWarnings("WeakerAccess")
   public void setNextPageToken(@Nullable String nextPageToken) {
-    set("nextPageToken", nextPageToken);
+    NEXT_PAGE_TOKEN$.setValue(this, nextPageToken);
   }
 
-  @SuppressWarnings("unused")
-  public @NotNull XyzFeatureCollection withNextPageToken(final @Nullable String nextPageToken) {
-    setNextPageToken(nextPageToken);
-    return this;
-  }
+  private static final NotNullBoolProperty<XyzFeatureCollection> PARTIAL$
+      = new NotNullBoolProperty<>("partial", false, true);
 
   /**
    * Returns true if FeatureCollection does not contain all results. Is used for tweaks.
@@ -125,24 +123,22 @@ public class XyzFeatureCollection extends XyzResponse {
    * @return the handle.
    */
   public @NotNull Boolean isPartial() {
-    return getOr("partial", Boolean.FALSE);
+    return PARTIAL$.getValue(this);
   }
 
   /**
    * Set indication if FeatureCollection has all expected results or not.
    *
-   * @param partial is true if FeatureCollection does not contains all data.
+   * @param partial is true if FeatureCollection does not contain all data.
    */
   @SuppressWarnings("WeakerAccess")
   public void setPartial(@NotNull Boolean partial) {
-    set("partial", partial);
+    PARTIAL$.setValue(this, partial);
   }
 
-  @SuppressWarnings("unused")
-  public @NotNull XyzFeatureCollection withPartial(final @NotNull Boolean partial) {
-    setPartial(partial);
-    return this;
-  }
+  public static final String COUNT = "count";
+  private static final NotNullProperty<XyzFeatureCollection, Long> COUNT$
+      = new NotNullProperty<>(Long_TYPE, COUNT, (self, name) -> 0L );
 
   /**
    * Returns the proprietary count property that is used by Space count requests to return the number of features found.
@@ -150,7 +146,7 @@ public class XyzFeatureCollection extends XyzResponse {
    * @return the amount of features that are matching the query.
    */
   public @Nullable Long getCount() {
-    return getAs("count", Long_TYPE);
+    return COUNT$.getValue(this);
   }
 
   /**
@@ -161,23 +157,17 @@ public class XyzFeatureCollection extends XyzResponse {
   @SuppressWarnings("WeakerAccess")
   public void setCount(@Nullable Long count) {
     if (count == null) {
-      delete("count");
+      delete(COUNT);
     } else {
-      set("count", count);
+      COUNT$.setValue(this, count);
     }
-  }
-
-  @SuppressWarnings("unused")
-  public @NotNull XyzFeatureCollection withCount(final @Nullable Long count) {
-    setCount(count);
-    return this;
   }
 
   /**
    * @return list of features IDs of those features that where successfully inserted.
    */
   public @Nullable StringList getInserted() {
-    return getAs("inserted", StringList.TYPE);
+    return STRING_LIST$.getValue(this, INSERTED);
   }
 
   /**
@@ -187,29 +177,14 @@ public class XyzFeatureCollection extends XyzResponse {
    */
   @SuppressWarnings("WeakerAccess")
   public void setInserted(@Nullable List<String> inserted) {
-    setNullableList("inserted", inserted, StringList.TYPE);
-  }
-
-  /**
-   * Appends the given feature ID into the list of inserted
-   *
-   * @param insertId the ID to be inserted into the list
-   */
-  public void appendInsertId(@NotNull String insertId) {
-    appendNullableStringList("inserted", insertId);
-  }
-
-  @SuppressWarnings("unused")
-  public XyzFeatureCollection withInserted(List<String> inserted) {
-    setInserted(inserted);
-    return this;
+    STRING_LIST$.setValue(this, INSERTED, ListProxy.to(StringList.TYPE, inserted));
   }
 
   /**
    * @return list of features IDs of those features that where successfully updated.
    */
   public @Nullable StringList getUpdated() {
-    return getAs("updated", StringList.TYPE);
+    return STRING_LIST$.getValue(this, "updated");
   }
 
   /**
@@ -218,7 +193,7 @@ public class XyzFeatureCollection extends XyzResponse {
    * @param updated the IDs of the features that where updated.
    */
   public void setUpdated(@Nullable List<String> updated) {
-    setNullableList("updated", updated, StringList.TYPE);
+    STRING_LIST$.setValue(this, UPDATED, ListProxy.to(StringList.TYPE, updated));
   }
 
   /**
@@ -227,20 +202,14 @@ public class XyzFeatureCollection extends XyzResponse {
    * @param updateId the ID to be inserted into the list
    */
   public void appendUpdateId(@NotNull String updateId) {
-    appendNullableStringList("updated", updateId);
-  }
-
-  @SuppressWarnings("unused")
-  public XyzFeatureCollection withUpdated(@Nullable List<String> updated) {
-    setUpdated(updated);
-    return this;
+    STRING_LIST$.getValue(this, UPDATED).append(updateId);
   }
 
   /**
    * @return list of features IDs of those features that where successfully deleted.
    */
   public @Nullable StringList getDeleted() {
-    return getAs("deleted", StringList.TYPE);
+    return STRING_LIST$.getValue(this, DELETED);
   }
 
   /**
@@ -249,40 +218,19 @@ public class XyzFeatureCollection extends XyzResponse {
    * @param deleted the IDs of the features that where deleted.
    */
   public void setDeleted(@Nullable List<String> deleted) {
-    setNullableList("deleted", deleted);
-  }
-
-  /**
-   * Appends the given feature ID into the list of deleted
-   *
-   * @param deleteId the ID to be inserted into the list
-   */
-  public void appendDeleteId(@NotNull String deleteId) {
-    appendNullableStringList("deleted", deleteId);
-  }
-
-  @SuppressWarnings("unused")
-  public @NotNull XyzFeatureCollection withDeleted(@Nullable List<String> deleted) {
-    setDeleted(deleted);
-    return this;
+    STRING_LIST$.setValue(this, DELETED, ListProxy.to(StringList.TYPE, deleted));
   }
 
   /**
    * @return A list of modification failures
    */
-  public ModificationFailureList getFailed() {
-    return getAs("failed", ModificationFailureList.TYPE);
+  public @Nullable ModificationFailureList getFailed() {
+    return FAILED$.getValue(this);
   }
 
   @SuppressWarnings("WeakerAccess")
-  public void setFailed(@NotNull List<ModificationFailure> failed) {
-    setNullableStringList("failed", failed);
-  }
-
-  @SuppressWarnings("unused")
-  public XyzFeatureCollection withFailed(List<ModificationFailure> failed) {
-    setFailed(failed);
-    return this;
+  public void setFailed(@Nullable List<ModificationFailure> failed) {
+    FAILED$.setValue(this, FAILED, ListProxy.toNullable(ModificationFailureList.TYPE, failed));
   }
 
   /**
@@ -291,166 +239,37 @@ public class XyzFeatureCollection extends XyzResponse {
    *
    * @return The new space-version after some modification
    */
-  public Integer getVersion() {
-    return VERSION.getValue(this);
+  public @Nullable Integer getVersion() {
+    return VERSION$.getValue(this);
   }
 
-  public void setVersion(int version) {
-    VERSION.setValue(this, version);
+  public void setVersion(@Nullable Integer version) {
+    VERSION$.setValue(this, version);
   }
 
-  public XyzFeatureCollection withVersion(int version) {
-    setVersion(version);
-    return this;
+  public <F extends GeoFeature, LIST extends ListProxy<F>> @Nullable LIST getOldFeatures(PlatformType<LIST> type) {
+    final var raw = getRaw(OLD_FEATURES);
+    return raw instanceof PlatformList ? type.proxy((PlatformList) raw) : null;
   }
 
-  @SuppressWarnings("unused")
-  public List<NakshaFeature> getOldFeatures() {
-    return OLD_FEATURES.getValue(this);
-  }
-
-  @SuppressWarnings("WeakerAccess")
-  public void setOldFeatures(List<NakshaFeature> oldFeatures) {
-    setOldFeatures(NakshaFeatureList.fromList(oldFeatures));
-  }
-
-  public void setOldFeatures(NakshaFeatureList oldFeatures) {
-    OLD_FEATURES.setValue(this, oldFeatures);
-  }
-
-  @SuppressWarnings("unused")
-  public XyzFeatureCollection withOldFeatures(List<NakshaFeature> oldFeatures) {
-    setOldFeatures(oldFeatures);
-    return this;
-  }
-
-  @SuppressWarnings("unused")
-  public @NotNull XyzFeatureCollection withInsertedFeatures(
-      final @NotNull List<? extends @NotNull NakshaFeature> insertedFeatures) {
-    getFeatures().addAll(insertedFeatures); // append features
-    setInserted(insertedFeatures.stream().map(NakshaFeature::getId).collect(toList())); // overwrite inserted
-    return this;
-  }
-
-  public @NotNull XyzFeatureCollection withUpdatedFeatures(
-      final @NotNull List<? extends @NotNull NakshaFeature> updatedFeatures) {
-    getFeatures().addAll(updatedFeatures); // append features
-    setUpdated(updatedFeatures.stream().map(NakshaFeature::getId).collect(toList())); // overwrite updated
-    return this;
-  }
-
-  public @NotNull XyzFeatureCollection withDeletedFeatures(
-      final @NotNull List<? extends @NotNull NakshaFeature> deletedFeatures) {
-    getFeatures().addAll(deletedFeatures); // append features
-    setDeleted(deletedFeatures.stream().map(NakshaFeature::getId).collect(toList())); // overwrite deleted
-    return this;
-  }
-
-  public @Nullable List<NakshaFeature> getViolations() {
-    return VIOLATIONS.getValue(this);
-  }
-
-  public void setViolations(final @Nullable List<NakshaFeature> violations) {
-    if(violations == null){
-      setViolations(null);
-    } else {
-      setViolations(NakshaFeatureList.fromList(violations));
-    }
-  }
-
-  public void setViolations(final @Nullable NakshaFeatureList violations) {
-    VIOLATIONS.setValue(this, violations);
-  }
-
-  public @NotNull XyzFeatureCollection withViolations(final @Nullable List<NakshaFeature> violations) {
-    setViolations(violations);
-    return this;
-  }
-
-  private <E, LIST extends ListProxy<E>> void setNullableList(
-      final @NotNull String property,
-      final @Nullable List<E> elements,
-      final @NotNull PlatformType<LIST> listType
-  ) {
-    if (elements == null) {
-      delete(property);
-    } else {
-      set(property, ListProxy.to(elements, listType));
-    }
-  }
-
-  private void appendNullableStringList(@NotNull String property, @NotNull String element) {
-    var list = getAs(property, StringList.TYPE);
+  public <F extends GeoFeature, LIST extends List<F>> void setOldFeatures(@Nullable LIST list) {
     if (list == null) {
-      list = new StringList();
-      set(property, list);
-    }
-    list.add(element);
-  }
-
-  public static class ModificationFailureList extends ListProxy<ModificationFailure> {
-    public static final PlatformType<ModificationFailureList> TYPE = forClass(ModificationFailureList.class);
-
-    public ModificationFailureList() {
-      super(ModificationFailure.TYPE);
-    }
-
-    public ModificationFailureList(List<ModificationFailure> failures) {
-      this();
-      addAll(failures);
+      delete(OLD_FEATURES);
+    } else {
+      set(OLD_FEATURES, ListProxy.toNullable(GeoFeatureList.TYPE, list));
     }
   }
 
-  public static class ModificationFailure extends AnyObject {
-    public static final PlatformType<ModificationFailure> TYPE = forClass(ModificationFailure.class);
-    private String id;
-    private Long position;
-    private String message;
+  public <F extends GeoFeature, LIST extends ListProxy<F>> @Nullable LIST getViolations(PlatformType<LIST> type) {
+    final var raw = getRaw(VIOLATIONS);
+    return raw instanceof PlatformList ? type.proxy((PlatformList) raw) : null;
+  }
 
-    public String getId() {
-      return id;
-    }
-
-    public void setId(String id) {
-      this.id = id;
-    }
-
-    @SuppressWarnings("unused")
-    public @NotNull ModificationFailure withId(String id) {
-      setId(id);
-      return this;
-    }
-
-    @SuppressWarnings("unused")
-    public Long getPosition() {
-      return position;
-    }
-
-    @SuppressWarnings("WeakerAccess")
-    public void setPosition(Long position) {
-      this.position = position;
-    }
-
-    @SuppressWarnings("unused")
-    public ModificationFailure withPosition(Long position) {
-      setPosition(position);
-      return this;
-    }
-
-    @SuppressWarnings("unused")
-    public String getMessage() {
-      return message;
-    }
-
-    @SuppressWarnings("WeakerAccess")
-    public void setMessage(String message) {
-      this.message = message;
-    }
-
-    @SuppressWarnings("unused")
-    public ModificationFailure withMessage(String message) {
-      setMessage(message);
-      return this;
+  public <F extends GeoFeature, LIST extends List<F>> void setViolations(@Nullable LIST list) {
+    if (list == null) {
+      delete(VIOLATIONS);
+    } else {
+      set(VIOLATIONS, ListProxy.toNullable(GeoFeatureList.TYPE, list));
     }
   }
 }

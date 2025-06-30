@@ -36,14 +36,14 @@ package com.here.naksha.test.common;
  * License-Filename: LICENSE
  */
 
-import static com.here.naksha.test.common.JsonUtil.parseJson;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import naksha.base.AnyObject;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
+
+import static naksha.base.Platform.*;
 
 public class FileUtil {
 
@@ -54,7 +54,8 @@ public class FileUtil {
   public static String loadFileOrFail(final @NotNull String rootPath, final @NotNull String fileName) {
     final String filePath = rootPath + fileName;
     try {
-      String json = new String(Files.readAllBytes(Paths.get(filePath)));
+      //noinspection UnnecessaryLocalVariable
+      final var json = new String(Files.readAllBytes(Paths.get(filePath)));
       return json;
     } catch (IOException e) {
       Assertions.fail("Unable to read test file " + filePath, e);
@@ -68,11 +69,15 @@ public class FileUtil {
 
   public static <T extends AnyObject> T parseJsonFileOrFail(
       final @NotNull String fileName, final @NotNull Class<T> type) {
-    return parseJson(loadFileOrFail(fileName), type);
+    final var content = loadFileOrFail(fileName);
+    if (content == null) throw new NullPointerException("Unable to load file " + fileName);
+    return fromJson(content, forClass(type));
   }
 
   public static <T extends AnyObject> T parseJsonFileOrFail(
       final @NotNull String rootPath, final @NotNull String fileName, final @NotNull Class<T> type) {
-    return parseJson(loadFileOrFail(rootPath, fileName), type);
+    final var content = loadFileOrFail(rootPath, fileName);
+    if (content == null) throw new NullPointerException("Unable to load file " + fileName);
+    return fromJson(content, forClass(type));
   }
 }

@@ -27,7 +27,7 @@ import com.here.naksha.lib.core.models.payload.events.IfRowLock;
 import java.util.List;
 import java.util.Map;
 import naksha.model.XyzFeatureCollection;
-import naksha.model.XyzFeatureCollection.ModificationFailure;
+import naksha.model.ModificationFailure;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

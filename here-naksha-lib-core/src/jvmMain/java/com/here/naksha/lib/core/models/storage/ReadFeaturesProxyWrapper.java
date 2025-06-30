@@ -18,14 +18,15 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import naksha.base.JvmBoxingUtil;
-import naksha.base.JvmMapProxy;
-import naksha.base.StringList;
+import java.util.HashMap;
+import java.util.Map;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.ISpatialQuery;
 import naksha.model.request.query.ITagQuery;
 import org.jetbrains.annotations.NotNull;
+
+import static naksha.base.Platform.forClass;
 
 import java.util.Map;
 
@@ -121,6 +122,6 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
   }
 
   public static ReadFeaturesProxyWrapper proxyWrapperOf(@NotNull ReadFeatures readFeatures){
-    return JvmBoxingUtil.box(readFeatures, ReadFeaturesProxyWrapper.class);
+    return readFeatures.proxy(forClass(ReadFeaturesProxyWrapper.class));
   }
 }

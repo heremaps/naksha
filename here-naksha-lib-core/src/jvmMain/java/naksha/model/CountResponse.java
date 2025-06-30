@@ -20,9 +20,14 @@ package naksha.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import naksha.base.NotNullBoolProperty;
+import naksha.base.NotNullProperty;
+import naksha.base.NullableBoolProperty;
 import naksha.base.PlatformType;
 import naksha.model.request.Response;
+import org.jetbrains.annotations.NotNull;
 
+import static naksha.base.NakshaBaseKt.Long_TYPE;
 import static naksha.base.Platform.forClass;
 
 /** The response providing the count of features in a space. */
@@ -31,16 +36,8 @@ import static naksha.base.Platform.forClass;
 @Deprecated
 public class CountResponse extends Response {
   public static final PlatformType<CountResponse> TYPE = forClass(CountResponse.class).withJsonType("CountResponse");
-
-  @Override
-  public boolean isFeature() {
-    return false;
-  }
-
-  private Long count;
-  private Boolean estimated;
-
-  public CountResponse() {}
+  private static final NotNullProperty<CountResponse, Long> COUNT$ = new NotNullProperty<>(Long_TYPE, "count", (self, name) -> 0L);
+  private static final NotNullBoolProperty<CountResponse> ESTIMATED$ = new NotNullBoolProperty<>("estimated");
 
   /**
    * Returns the proprietary count property that is used by Space count requests to return the
@@ -49,8 +46,8 @@ public class CountResponse extends Response {
    * @return the amount of features that are matching the query.
    */
   @SuppressWarnings("unused")
-  public Long getCount() {
-    return this.count;
+  public @NotNull Long getCount() {
+    return COUNT$.getValue(this);
   }
 
   /**
@@ -61,14 +58,8 @@ public class CountResponse extends Response {
    *     removed.
    */
   @SuppressWarnings("WeakerAccess")
-  public void setCount(final Long count) {
-    this.count = count;
-  }
-
-  @SuppressWarnings("unused")
-  public CountResponse withCount(final Long count) {
-    setCount(count);
-    return this;
+  public void setCount(@NotNull Long count) {
+    COUNT$.setValue(this, count);
   }
 
   /**
@@ -77,8 +68,8 @@ public class CountResponse extends Response {
    * @return true, if the value of the count property is an estimation.
    */
   @SuppressWarnings("unused")
-  public Boolean getEstimated() {
-    return this.estimated;
+  public boolean getEstimated() {
+    return ESTIMATED$.getValue(this);
   }
 
   /**
@@ -87,13 +78,7 @@ public class CountResponse extends Response {
    * @param estimated the estimated flag that defines, if the count property is an estimation.
    */
   @SuppressWarnings("WeakerAccess")
-  public void setEstimated(Boolean estimated) {
-    this.estimated = estimated;
-  }
-
-  @SuppressWarnings("unused")
-  public CountResponse withEstimated(Boolean estimated) {
-    setEstimated(estimated);
-    return this;
+  public void setEstimated(boolean estimated) {
+    ESTIMATED$.setValue(this, estimated);
   }
 }

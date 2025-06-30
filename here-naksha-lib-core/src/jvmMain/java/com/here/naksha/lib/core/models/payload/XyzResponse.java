@@ -18,20 +18,22 @@
  */
 package com.here.naksha.lib.core.models.payload;
 
-import naksha.base.AnyObject;
 import naksha.base.ListProxy;
+import naksha.base.Platform;
 import naksha.base.PlatformType;
 import naksha.geo.GeoCollection;
 import naksha.geo.GeoFeature;
 import naksha.model.NakshaContext;
-import naksha.model.XyzFeatureCollection;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+
 import static naksha.base.NakshaBaseKt.String_TYPE;
+import static naksha.base.Platform.apply;
 import static naksha.base.Platform.forClass;
 
-/**
+/*
  * TODO CASL-798: review subclasses of XyzResponse from V2
  * Subclasses to review:
  *     {@link naksha.model.CountResponse}
@@ -52,24 +54,21 @@ import static naksha.base.Platform.forClass;
  *     {@link naksha.model.SpaceStatus}
  */
 
+// TODO: We need to make the documentation public:
+//       https://here-technologies.atlassian.net/wiki/spaces/DataHub/pages/718971502/Connectors+Protocol
+
 /**
  * All classes that represent a valid response of any remote procedure to the XYZ Hub need to extend this class.
  */
 public abstract class XyzResponse extends GeoCollection {
-
-  @Override
-  public <F extends GeoFeature, LIST extends ListProxy<F>> @NotNull XyzResponse withFeatures(@NotNull LIST list) {
-    super.withFeatures(list);
-    return this;
-  }
-
-
   public static final PlatformType<XyzResponse> TYPE = forClass(XyzResponse.class);
+
   public static final String STREAM_ID = "streamId";
   public static final String ETAG = "etag";
 
   @Override
   public void onCreation() {
+    super.onCreation();
     setStreamId(NakshaContext.currentContext().getStreamId());
   }
 
