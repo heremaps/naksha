@@ -17,15 +17,18 @@ kotlin {
     sourceSets {
         jvmMain {
             dependencies {
+                implementation(libs.picocli)
             }
         }
         jvmTest {
             dependencies {
+                implementation(libs.bundles.testing)
             }
         }
     }
 
-    jvm {}
+    jvm {
+    }
 }
 
 tasks {
@@ -35,6 +38,7 @@ tasks {
         useJUnitPlatform()
         maxHeapSize = "6g"
     }
+
     val shadowCreate by registering(ShadowJar::class) {
         archiveBaseName.set(fatJarBaseName)
         archiveClassifier.set("")
