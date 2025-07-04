@@ -23,6 +23,7 @@ private val Descriptions = mapOf(
     "here-naksha-lib-psql" to "Naksha library, implementation of the Naksha Storage-Abstraction-Layer.",
     "here-naksha-lib-view" to "Naksha library, adding capabilities to combine multiple storages, maps, collections into a single virtual view.",
     "here-naksha-storage-http" to "TBD",
+    "here-naksha-cli" to "TBD",
 )
 
 fun Project.gatherDescription(): String
