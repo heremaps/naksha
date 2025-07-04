@@ -7,7 +7,7 @@ plugins {
 
 description = gatherDescription()
 val mainClass = "com.here.naksha.cli.Main"
-val fatJarBaseName = "my-fat-app"
+val fatJarBaseName = "naksha-cli"
 
 kotlin {
     jvmToolchain {
