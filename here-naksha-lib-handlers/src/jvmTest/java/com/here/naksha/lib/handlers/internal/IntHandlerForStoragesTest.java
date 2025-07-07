@@ -19,6 +19,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
@@ -96,22 +97,22 @@ class IntHandlerForStoragesTest {
     int validConnectionTimeout = 30;
     return Stream.of(
         arguments("Invalid connection timeout: -1, allowed values (sec): 0 - 30",
-                new HttpStorageProperties(validUrl, -1, validSocketTimeout, emptyMap())),
+                createHttpStorageProperties(validUrl, -1, validSocketTimeout, emptyMap())),
         arguments("Invalid connection timeout: 91, allowed values (sec): 0 - 30",
-                new HttpStorageProperties(validUrl, 91, validSocketTimeout, emptyMap())),
+                createHttpStorageProperties(validUrl, 91, validSocketTimeout, emptyMap())),
         arguments("Invalid socket timeout: -1, allowed values (sec): 0 - 90",
-                new HttpStorageProperties(validUrl, validConnectionTimeout, -1, emptyMap())),
+                createHttpStorageProperties(validUrl, validConnectionTimeout, -1, emptyMap())),
         arguments("Invalid socket timeout: 91, allowed values (sec): 0 - 90",
-                new HttpStorageProperties(validUrl, validConnectionTimeout, 91, emptyMap())),
+                createHttpStorageProperties(validUrl, validConnectionTimeout, 91, emptyMap())),
         arguments("Invalid url: this_is_not_a_url",
-            new HttpStorageProperties("this_is_not_a_url", validConnectionTimeout, validSocketTimeout, emptyMap())),
+            createHttpStorageProperties("this_is_not_a_url", validConnectionTimeout, validSocketTimeout, emptyMap())),
         arguments("Invalid url: ftp://cool.files.com/static/rfc959.txt",
-            new HttpStorageProperties("ftp://cool.files.com/static/rfc959.txt", validConnectionTimeout, validSocketTimeout, emptyMap())),
+            createHttpStorageProperties("ftp://cool.files.com/static/rfc959.txt", validConnectionTimeout, validSocketTimeout, emptyMap())),
         arguments("""
                   Invalid connection timeout: -1, allowed values (sec): 0 - 30
                   Invalid socket timeout: 91, allowed values (sec): 0 - 90
                   Invalid url: ftp://cool.files.com/static/rfc959.txt""",
-                new HttpStorageProperties("ftp://cool.files.com/static/rfc959.txt", -1, 91, emptyMap()))
+                createHttpStorageProperties("ftp://cool.files.com/static/rfc959.txt", -1, 91, emptyMap()))
     );
   }
 
@@ -137,6 +138,15 @@ class IntHandlerForStoragesTest {
     IStorage adminStorage = mock(IStorage.class);
     when(adminStorage.newWriteSession(any(SessionOptions.class))).thenReturn(writeSession);
     when(naksha.getAdminStorage()).thenReturn(adminStorage);
+  }
+
+  private static HttpStorageProperties createHttpStorageProperties(String url, Integer connectionTimeout, Integer socketTimeout, Map<String, String> headers) {
+    HttpStorageProperties httpStorageProperties = new HttpStorageProperties();
+    httpStorageProperties.setUrl(url);
+    httpStorageProperties.setConnectTimeout(connectionTimeout);
+    httpStorageProperties.setSocketTimeout(socketTimeout);
+    httpStorageProperties.setHeaders(headers);
+    return httpStorageProperties;
   }
 
 }
