@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e # exit on error
+
+DIR="$(cd "$(dirname "$0")" && pwd)"
+"${DIR}"/../gradlew :here-naksha-cli:build >> /dev/null
+
+JAR=$(find "${DIR}/build/libs" -name "naksha-cli*.jar" -type f -exec ls -t {} + | head -n 1)
+
+if [[ -f "$JAR" ]]; then
+  java -jar "$JAR" "$@"
+else
+  echo "Error: JAR file not found!" >&2
+  exit 1
+fi
