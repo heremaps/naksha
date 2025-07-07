@@ -20,12 +20,13 @@ package com.here.naksha.storage.http;
 
 import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
+import kotlin.reflect.KClass;
 import naksha.base.Int64;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.PlatformLock;
+import naksha.base.Platform;
 import naksha.jbon.JbDictionary;
+import naksha.model.AbstractStorage;
 import naksha.model.IReadSession;
-import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
@@ -34,11 +35,16 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class HttpStorage implements IStorage {
 
-  private final KeyProperties defaultKeyProperties;
+public class HttpStorage extends AbstractStorage<NakshaStorage> {
 
-  private final NakshaStorage storageConfig;
+  private  KeyProperties defaultKeyProperties;
+
+  private  NakshaStorage storageConfig;
+
+  public HttpStorage() {
+
+  }
 
   public HttpStorage(@NotNull NakshaStorage storageConfig) {
     this.storageConfig = storageConfig;
@@ -58,16 +64,39 @@ public class HttpStorage implements IStorage {
     return JvmBoxingUtil.box(storage.getProperties(), HttpStorageProperties.class);
   }
 
+  @Override
+  protected void initStorage(@NotNull NakshaStorage config, @Nullable Boolean create, @Nullable Boolean upgrade) {
+    HttpStorageProperties properties = getProperties(config);
+    if (properties == null || properties.getUrl() == null) {
+      throw new IllegalArgumentException("A HTTP storage must have properties containing a 'url'");
+    }
+    this.defaultKeyProperties = new KeyProperties(
+            config.getId(),
+            properties.getUrl(),
+            properties.getHeaders(),
+            properties.getConnectTimeout(),
+            properties.getSocketTimeout()
+    );
+  }
+
+
+
   @NotNull
   @Override
   public IReadSession newReadSession(@Nullable SessionOptions options) {
+    useInitialized();
+    if (defaultKeyProperties == null) {
+      throw new IllegalStateException("HttpStorage is not initialized.");
+    }
+
     final RequestSender requestSender = RequestSenderCache.getInstance()
-        .getSenderWith(new KeyProperties(
-            defaultKeyProperties.name(),
-            defaultKeyProperties.hostUrl(),
-            defaultKeyProperties.defaultHeaders(),
-            options != null ? options.connectTimeout : defaultKeyProperties.connectionTimeoutSec(),
-            options != null ? options.socketTimeout : defaultKeyProperties.socketTimeoutSec()));
+            .getSenderWith(new KeyProperties(
+                    getId(),
+                    defaultKeyProperties.hostUrl(),
+                    defaultKeyProperties.defaultHeaders(),
+                    defaultKeyProperties.connectionTimeoutSec(),
+                    defaultKeyProperties.socketTimeoutSec()
+            ));
     return new HttpStorageReadSession(NakshaContext.currentContext(), requestSender);
   }
 
@@ -89,16 +118,6 @@ public class HttpStorage implements IStorage {
   }
 
   @Override
-  public @NotNull PlatformLock getLock() {
-    throw new NotImplementedException("Not supported by HTTP storage");
-  }
-
-  @Override
-  public @NotNull NakshaStorage getConfig() {
-    return storageConfig;
-  }
-
-  @Override
   public @NotNull Int64 getNumber() {
     throw new NotImplementedException("Not supported by HTTP storage");
   }
@@ -116,5 +135,20 @@ public class HttpStorage implements IStorage {
   @Override
   public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
     throw new NotImplementedException("Not supported by HTTP storage");
+  }
+
+  @Override
+  protected void afterInit() {
+    // Nothing to do
+  }
+
+  @Override
+  protected void shutdownStorage(boolean dropCache) {
+    // Nothing to do
+  }
+
+  @Override
+  public @NotNull KClass<NakshaStorage> getConfigKlass() {
+    return Platform.klassFor(NakshaStorage.class);
   }
 }

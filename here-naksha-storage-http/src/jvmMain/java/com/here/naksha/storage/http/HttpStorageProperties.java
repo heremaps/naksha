@@ -33,8 +33,8 @@ import org.jetbrains.annotations.Nullable;
 @AvailableSince(NakshaVersion.v2_0_12)
 public class HttpStorageProperties extends NakshaProperties {
 
-  public static final int DEF_CONNECTION_TIMEOUT_SEC = 20;
-  public static final int DEF_SOCKET_TIMEOUT_SEC = 90;
+  public static final Integer DEF_CONNECTION_TIMEOUT_SEC = 20;
+  public static final Integer DEF_SOCKET_TIMEOUT_SEC = 90;
   public static final Map<String, String> DEFAULT_HEADERS = Map.of(
       "Content-Type", "application/json",
       "Accept-Encoding", "gzip");
@@ -56,6 +56,8 @@ public class HttpStorageProperties extends NakshaProperties {
   @JsonProperty(HEADERS)
   private @NotNull Map<String, String> headers;
 
+  public HttpStorageProperties() {}
+
   @JsonCreator
   public HttpStorageProperties(
       @JsonProperty(value = URL, required = true) @NotNull String url,
@@ -72,18 +74,46 @@ public class HttpStorageProperties extends NakshaProperties {
    * Points to the instance, not to an endpoint.
    */
   public @NotNull String getUrl() {
-    return url;
+    return (String) getRaw(URL);
   }
 
+  public void setUrl(final @Nullable String url) {
+    setRaw(URL, url);
+  }
+
+  /**
+   * The connection timeout in seconds.
+   * By default: 20
+   */
   public @NotNull Integer getConnectTimeout() {
-    return connectTimeout;
+    return getOrSet(CONNECTION_TIMEOUT, DEF_CONNECTION_TIMEOUT_SEC);
   }
 
+  public void setConnectTimeout(final @Nullable Integer connectTimeout) {
+    setRaw(CONNECTION_TIMEOUT, connectTimeout);
+  }
+
+  /**
+   * The socket timeout in seconds.
+   * By default: 90
+   */
   public @NotNull Integer getSocketTimeout() {
-    return socketTimeout;
+    return getOrSet(SOCKET_TIMEOUT, DEF_SOCKET_TIMEOUT_SEC);
   }
 
+  public void setSocketTimeout(final @Nullable Integer socketTimeout) {
+    setRaw(SOCKET_TIMEOUT, socketTimeout);
+  }
+
+  /**
+   * The HTTP headers to be sent with each request.
+   * By default: 'Content-Type: application/json' and 'Accept-Encoding: gzip'
+   */
   public @NotNull Map<String, String> getHeaders() {
-    return headers;
+    return getOrSet(HEADERS, DEFAULT_HEADERS);
+  }
+
+  public void setHeaders(final @Nullable Map<String, String> headers) {
+    setRaw(HEADERS, headers);
   }
 }

@@ -39,6 +39,7 @@ import java.util.stream.Stream;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
+import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
@@ -61,6 +62,8 @@ class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
   */
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
+    // Set up Http Storage
+    createStorage(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/http_storage_space/create_storage.json");
     // Set up Http Storage based Space
     setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/http_storage_space");
     // Set up (standard) Psql Storage based Space
@@ -231,10 +234,10 @@ class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
 
     String streamId = UUID.randomUUID().toString();
 
+    stubFor(any(anyUrl()));
+
     // When: Get Features By BBox request is submitted to NakshaHub
     nakshaClient.get("hub/spaces/" + HTTP_SPACE_ID + "/bbox?" + ExampleQueryData.PARAMS + "&" + inputQueryString, streamId);
-
-    stubFor(any(anyUrl()).willReturn(ok()));
 
     verify(1, outputQueryPattern);
   }

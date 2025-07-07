@@ -29,9 +29,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
+import naksha.model.XyzFeatureCollection;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
@@ -69,7 +74,7 @@ class HttpStorageReadExecute {
       // For Error 404 (not found) on single feature GetById request, we need to return empty result
       return new SuccessResponse(Collections.emptyList());
     }
-    return prepareResult(response);
+    return prepareResult(response, singleFeatureMapper);
   }
 
   private static Response executeFeaturesById(
@@ -81,7 +86,7 @@ class HttpStorageReadExecute {
         format("/%s/features?%s", baseEndpoint(readRequest), queryParamsString),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response);
+    return prepareResult(response, collectionMapper);
   }
 
   private static Response executeFeatureByBBox(
@@ -92,7 +97,7 @@ class HttpStorageReadExecute {
         format("/%s/bbox?%s%s", baseEndpoint(readRequest), queryParamsString, getPOpQueryOrEmpty(readRequest)),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response);
+    return prepareResult(response, collectionMapper);
   }
 
   private static Response executeFeaturesByTile(
@@ -110,7 +115,7 @@ class HttpStorageReadExecute {
             baseEndpoint(readRequest), tileId, queryParamsString, getPOpQueryOrEmpty(readRequest)),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response);
+    return prepareResult(response, collectionMapper);
   }
 
   private static Response executeIterate(
@@ -121,7 +126,7 @@ class HttpStorageReadExecute {
         format("/%s/iterate?%s", baseEndpoint(readRequest), queryParamsString),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response);
+    return prepareResult(response, collectionMapper);
   }
 
   /**
@@ -129,7 +134,7 @@ class HttpStorageReadExecute {
    */
   private static String getPOpQueryOrEmpty(ReadFeaturesProxyWrapper readRequest) {
     final IPropertyQuery propertyQuery = readRequest.getQuery().getProperties();
-    return propertyQuery == null ? "" : "&" + propertyQuery.toString().replaceAll("\\s", "");
+    return propertyQuery == null ? "" : "&" + IPropertyQueryToQueryConverter.convert(propertyQuery);
   }
 
   /**
@@ -144,4 +149,10 @@ class HttpStorageReadExecute {
   private static String baseEndpoint(ReadFeaturesProxyWrapper request) {
     return request.getCollectionIds().get(0);
   }
+
+  private static final Function<Object, List<NakshaFeature>> collectionMapper = tuples ->
+          JvmBoxingUtil.box(tuples, XyzFeatureCollection.class).getFeatures();
+
+  private static final Function<Object, List<NakshaFeature>> singleFeatureMapper = tuples ->
+          List.of(JvmBoxingUtil.box(tuples, NakshaFeature.class));
 }

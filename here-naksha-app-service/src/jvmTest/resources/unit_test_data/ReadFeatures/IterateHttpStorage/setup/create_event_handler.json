@@ -7,6 +7,6 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "${dataDb.storageId}"
+    "storageId": "iterate_features_http_test_storage"
   }
 }

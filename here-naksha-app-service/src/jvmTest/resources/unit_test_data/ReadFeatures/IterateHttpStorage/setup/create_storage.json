@@ -5,6 +5,7 @@
   "description": "Http storage instance for testing purpose",
   "className": "com.here.naksha.storage.http.HttpStorage",
   "properties": {
-    "url": "http://localhost:9095"
+    "url": "http://localhost:9095",
+    "schema": "${dataDb.schema}"
   }
 }

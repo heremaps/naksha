@@ -27,11 +27,13 @@ import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
+
 import naksha.base.FromJsonOptions;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
 import naksha.model.NakshaError;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
@@ -43,15 +45,17 @@ import org.jetbrains.annotations.Nullable;
  */
 class PrepareResult {
 
-  static Response prepareResult(HttpResponse<byte[]> httpResponse) {
+  static Response prepareResult(HttpResponse<byte[]> httpResponse,
+                                    Function<Object, List<NakshaFeature>> tuplesToFeatureList) {
 
     String error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
     if (error != null)
       return new ErrorResponse(new NakshaError(error, "Response http status code: " + httpResponse.statusCode()));
 
-    Object tuples = Platform.fromJSON(prepareBody(httpResponse), FromJsonOptions.DEFAULT);
-    NakshaFeatureList features = JvmBoxingUtil.box(tuples, NakshaFeatureList.class);
-    return new SuccessResponse(features);
+        Object tuples = Platform.fromJSON(prepareBody(httpResponse), FromJsonOptions.DEFAULT);
+        List<NakshaFeature> featuresList = tuplesToFeatureList.apply(tuples);
+        NakshaFeatureList nakshaFeatures = NakshaFeatureList.fromList(featuresList);
+        return new SuccessResponse(nakshaFeatures);
   }
 
   private static String prepareBody(HttpResponse<byte[]> response) {
