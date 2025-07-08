@@ -44,6 +44,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
@@ -58,10 +59,12 @@ class ReadFeaturesByTileHttpStorageTest extends ApiTest {
   private static final String TYPE_QUADKEY = "quadkey";
   private static final String NAKSHA_ENDPOINT = "hub/spaces/" + HTTP_SPACE_ID + "/tile";
   private static final String STORAGE_ENDPOINT = "/my_env/my_storage/my_feat_type";
+  private static final String TEST_DIR_SETUP_PATH = "ReadFeatures/ByTileHttpStorage/setup/";
 
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
-    setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByTileHttpStorage/setup");
+    createStorage(nakshaClient, TEST_DIR_SETUP_PATH + "create_storage.json");
+    setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH);
   }
 
   private static Stream<Arguments> standardTestParams() {

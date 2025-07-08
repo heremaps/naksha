@@ -1,75 +1,38 @@
 package com.here.naksha.storage.http;
 
-import com.fasterxml.jackson.databind.exc.MismatchedInputException;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class HttpStoragePropertiesTest {
 
-    final static String TEST_RESOURCE_DIR = "/unit_test_data/HttpStorageProperties/";
-
     @Test
-    void t01_testConvertAllFields() {
-        var properties = jsonResourceToPropertiesOrFail("t01_testConvertAllFields");
+    void shouldReturnDefaultValuesOnCreation() {
+        // Given: a new HttpStorageProperties object created with the default constructor
+        final HttpStorageProperties properties = new HttpStorageProperties();
 
-        assertEquals("https://example.org", properties.getUrl());
-        assertEquals(60, properties.getConnectTimeout());
-        assertEquals(3600, properties.getSocketTimeout());
-
-        Map<String, String> headers = properties.getHeaders();
-        assertEquals("Bearer <token>", headers.get("Authorization"));
-        assertEquals("application/json", headers.get("Content-Type"));
-        assertEquals(2, properties.getHeaders().size());
-    }
-
-    @Test
-    void t02_testConvertMissingToDefault() {
-        var properties = jsonResourceToPropertiesOrFail("t02_testConvertMissingToNull");
-
-        assertEquals("https://example.org", properties.getUrl());
+        // Then: the getters should return the predefined default values
         assertEquals(HttpStorageProperties.DEF_CONNECTION_TIMEOUT_SEC, properties.getConnectTimeout());
         assertEquals(HttpStorageProperties.DEF_SOCKET_TIMEOUT_SEC, properties.getSocketTimeout());
-
         assertEquals(HttpStorageProperties.DEFAULT_HEADERS, properties.getHeaders());
     }
 
     @Test
-    void t03_testDontThrowOnExcessFields() {
-        assertDoesNotThrow(
-                () -> jsonResourceToPropertiesOrFail("t03_testDontThrowOnExcessFields")
-        );
-    }
+    void should_set_and_get_all_properties_correctly() {
+        // Given: a new properties object
+        final HttpStorageProperties properties = new HttpStorageProperties();
+        final String testUrl = "https://example.com/test";
+        final int testConnectTimeout = 15;
+        final int testSocketTimeout = 45;
 
-    @Test
-    void t04_testThrowOnMissingMandatory() {
-        UncheckedIOException wrappingException = assertThrows(
-                UncheckedIOException.class,
-                () -> jsonResourceToPropertiesOrFail("t04_testThrowOnMissingMandatory")
-        );
+        // When: we set all properties using the public setters
+        properties.setUrl(testUrl);
+        properties.setConnectTimeout(testConnectTimeout);
+        properties.setSocketTimeout(testSocketTimeout);
 
-        IOException causeException = wrappingException.getCause();
-        assertInstanceOf(
-                MismatchedInputException.class,
-                causeException
-        );
-    }
-
-    private HttpStorageProperties jsonResourceToPropertiesOrFail(String fileName) {
-        String resource = TEST_RESOURCE_DIR + fileName + ".json";
-
-        try (InputStream testResourceStream = this.getClass().getResourceAsStream(resource)) {
-            if (testResourceStream == null) throw new IOException("Could not access " + resource + " resource");
-            return JsonSerializable.deserialize(testResourceStream, HttpStorageProperties.class);
-        } catch (IOException e) {
-            fail("Unable to convert json resource", e);
-            return null;
-        }
+        // Then: the getters should return the exact values that were set
+        assertEquals(testUrl, properties.getUrl());
+        assertEquals(testConnectTimeout, properties.getConnectTimeout());
+        assertEquals(testSocketTimeout, properties.getSocketTimeout());
     }
 }

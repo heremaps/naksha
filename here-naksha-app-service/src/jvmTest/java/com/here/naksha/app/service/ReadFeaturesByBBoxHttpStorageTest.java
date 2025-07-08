@@ -39,6 +39,7 @@ import java.util.stream.Stream;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
+import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
@@ -53,6 +54,7 @@ class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
   private static final String PSQL_SPACE_ID = "read_features_by_bbox_space_4_psql_storage";
   private static final String VIEW_SPACE_ID = "read_features_by_bbox_space_4_view_storage";
   private static final String ENDPOINT = "/my_env/my_storage/my_feat_type/bbox";
+  private static final String TEST_DIR_SETUP_PATH = "ReadFeatures/ByBBoxHttpStorage/setup/";
 
   /*
   For this test suite, we upfront create various Features using different combination of Tags and Geometry.
@@ -61,15 +63,17 @@ class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
   */
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
+    // Set up Http Storage
+    createStorage(nakshaClient, TEST_DIR_SETUP_PATH + "http_storage_space/create_storage.json");
     // Set up Http Storage based Space
-    setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/http_storage_space");
+    setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH + "http_storage_space");
     // Set up (standard) Psql Storage based Space
-    setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/psql_storage_space");
+    setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH + "psql_storage_space");
     // Set up View Space over Psql and Http Storage based spaces
-    createHandler(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/view_space/create_sourceId_handler.json");
-    setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByBBoxHttpStorage/setup/view_space");
+    createHandler(nakshaClient, TEST_DIR_SETUP_PATH + "view_space/create_sourceId_handler.json");
+    setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH + "view_space");
     // Load some test data in PsqlStorage based Space
-    final String initialFeaturesJson = loadFileOrFail("ReadFeatures/ByBBoxHttpStorage/setup/psql_storage_space/create_features.json");
+    final String initialFeaturesJson = loadFileOrFail(TEST_DIR_SETUP_PATH + "psql_storage_space/create_features.json");
     final HttpResponse<String> response = nakshaClient.post("hub/spaces/" + PSQL_SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());
     assertThat(response).hasStatus(200);
   }
@@ -231,10 +235,10 @@ class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {
 
     String streamId = UUID.randomUUID().toString();
 
+    stubFor(any(anyUrl()));
+
     // When: Get Features By BBox request is submitted to NakshaHub
     nakshaClient.get("hub/spaces/" + HTTP_SPACE_ID + "/bbox?" + ExampleQueryData.PARAMS + "&" + inputQueryString, streamId);
-
-    stubFor(any(anyUrl()).willReturn(ok()));
 
     verify(1, outputQueryPattern);
   }

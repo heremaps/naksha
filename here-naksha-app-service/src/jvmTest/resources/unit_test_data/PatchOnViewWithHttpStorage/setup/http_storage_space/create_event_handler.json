@@ -7,6 +7,6 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "${dataDb.storageId}"
+    "storageId": "patch_on_view_test_http_storage"
   }
 }

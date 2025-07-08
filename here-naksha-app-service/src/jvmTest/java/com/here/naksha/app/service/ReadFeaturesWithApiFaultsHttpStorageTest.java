@@ -37,6 +37,7 @@ import java.net.http.HttpResponse;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -54,10 +55,12 @@ class ReadFeaturesWithApiFaultsHttpStorageTest extends ApiTest {
   private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
   private static final String SPACE_ID = "read_features_api_faults_http_test_space";
   private static final String ENDPOINT = "/my_env/my_storage/my_feat_type/features";
+  private static final String TEST_DIR_SETUP_PATH = "ReadFeatures/WithApiFaultsHttpStorage/setup/";
 
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
-    setupHandlerAndSpace(nakshaClient, "ReadFeatures/WithApiFaultsHttpStorage/setup");
+    createStorage(nakshaClient, TEST_DIR_SETUP_PATH + "create_storage.json");
+    setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH);
   }
 
   @Test

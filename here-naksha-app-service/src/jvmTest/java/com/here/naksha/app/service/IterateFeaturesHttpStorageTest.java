@@ -34,6 +34,7 @@ import java.net.http.HttpResponse;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 
@@ -49,6 +50,7 @@ class IterateFeaturesHttpStorageTest extends ApiTest {
 
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
+    createStorage(nakshaClient, TEST_DIR_PATH + "setup/create_storage.json");
     setupHandlerAndSpace(nakshaClient, TEST_DIR_PATH + "setup");
   }
 

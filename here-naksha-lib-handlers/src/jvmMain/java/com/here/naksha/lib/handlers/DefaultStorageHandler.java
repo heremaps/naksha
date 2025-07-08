@@ -140,13 +140,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       throw new NakshaException(NakshaError.ILLEGAL_STATE,
           "Unable to determine 'mapId' for handler '" + eventHandlerConfig.getId() + "', config of storage '" + storage.getId() + "' has no properties.");
     }
-    String schema = getProperty(nakshaProperties, STORAGE_PROPERTIES_SCHEMA_KEY, String.class);
-    if (schema == null) {
-      throw new NakshaException(NakshaError.ILLEGAL_STATE,
-          "Unable to determine 'mapId' for handler '" + eventHandlerConfig.getId() + "' and through associated storage '" + storage.getId()
-          + "'.");
-    }
-    return schema;
+    return getProperty(nakshaProperties, STORAGE_PROPERTIES_SCHEMA_KEY, String.class);
   }
 
   private void addStorageTimeToStreamInfo(StopWatch storageTimer, NakshaContext ctx) {
@@ -222,7 +216,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull OperationData operationData,
       final @NotNull OperationAttempt operationAttempt,
       final @NotNull StopWatch storageTimer) {
-    logger.info("Processing WriteFeatures against map '{}' and collection '{}'", operationData.mapId, operationData.collectionId);
+    logger.info("Processing WriteFeatures for mapId: '{}' collection '{}'", operationData.mapId, operationData.collectionId);
     return forwardWriteRequest(
         operationData,
         errorResponse -> reattemptFeatureRequest(

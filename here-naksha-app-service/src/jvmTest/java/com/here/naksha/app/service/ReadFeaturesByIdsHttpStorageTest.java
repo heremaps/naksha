@@ -33,6 +33,7 @@ import java.net.http.HttpResponse;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
@@ -51,18 +52,21 @@ class ReadFeaturesByIdsHttpStorageTest extends ApiTest {
   private static final String VIEW_SPACE_ID = "read_features_by_ids_http_test_view_space";
 
   private static final String ENDPOINT = "/my_env/my_storage/my_feat_type/features";
+  private static final String TEST_DIR_SETUP_PATH = "ReadFeatures/ByIdsHttpStorage/setup/";
 
 
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
+    // Set up Http Storage
+    createStorage(nakshaClient, TEST_DIR_SETUP_PATH + "http_storage_space/create_storage.json");
     // Set up Http Storage based Space
-    setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByIdsHttpStorage/setup/http_storage_space");
+    setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH + "http_storage_space");
     // Set up (standard) Psql Storage based Space
-    setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByIdsHttpStorage/setup/psql_storage_space");
+    setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH + "psql_storage_space");
     // Set up View Space over Psql and Http Storage based spaces
-    setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByIdsHttpStorage/setup/view_space");
+    setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH + "view_space");
     // Load some test data in PsqlStorage based Space
-    final String initialFeaturesJson = loadFileOrFail("ReadFeatures/ByIdsHttpStorage/setup/psql_storage_space/create_features.json");
+    final String initialFeaturesJson = loadFileOrFail(TEST_DIR_SETUP_PATH + "psql_storage_space/create_features.json");
     final HttpResponse<String> response = nakshaClient.post("hub/spaces/" + PSQL_SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());
     assertThat(response).hasStatus(200);
   }
