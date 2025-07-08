@@ -22,10 +22,6 @@ class StorageConfigConverter implements CommandLine.ITypeConverter<File> {
             throw new CommandLine.TypeConversionException("It is not a file!");
         }
 
-        if(!file.canRead()) {
-            throw new CommandLine.TypeConversionException("File is not readable!");
-        }
-
         String json;
 
         try {

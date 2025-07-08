@@ -13,8 +13,8 @@ import java.util.concurrent.Callable;
         exitCodeListHeading = "Exit Codes:%n",
         exitCodeList = {
                 " 0:Successful program execution",
-                " 1:Invalid input",
-                " 2:Execution exception"
+                " 1:Execution exception",
+                " 2:Invalid input"
         },
         sortSynopsis = false,
         sortOptions = false
