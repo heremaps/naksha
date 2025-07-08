@@ -216,7 +216,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull OperationData operationData,
       final @NotNull OperationAttempt operationAttempt,
       final @NotNull StopWatch storageTimer) {
-    logger.info("Processing WriteFeatures {}collection '{}'", operationData.mapId, operationData.collectionId);
+    logger.info("Processing WriteFeatures for mapId: '{}' collection '{}'", operationData.mapId, operationData.collectionId);
     return forwardWriteRequest(
         operationData,
         errorResponse -> reattemptFeatureRequest(
