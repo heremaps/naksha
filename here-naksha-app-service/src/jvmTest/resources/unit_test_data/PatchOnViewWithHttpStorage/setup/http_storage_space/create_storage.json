@@ -10,6 +10,5 @@
       "Authorization" : "Bearer <token>",
       "Content-Type" :  "application/json"
     }
-  },
-  "schema": "${dataDb.schema}"
+  }
 }

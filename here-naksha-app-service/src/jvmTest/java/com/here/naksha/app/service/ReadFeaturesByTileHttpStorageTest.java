@@ -59,11 +59,12 @@ class ReadFeaturesByTileHttpStorageTest extends ApiTest {
   private static final String TYPE_QUADKEY = "quadkey";
   private static final String NAKSHA_ENDPOINT = "hub/spaces/" + HTTP_SPACE_ID + "/tile";
   private static final String STORAGE_ENDPOINT = "/my_env/my_storage/my_feat_type";
+  private static final String TEST_DIR_SETUP_PATH = "ReadFeatures/ByTileHttpStorage/setup/";
 
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
-    createStorage(nakshaClient, "ReadFeatures/ByTileHttpStorage/setup/create_storage.json");
-    setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByTileHttpStorage/setup");
+    createStorage(nakshaClient, TEST_DIR_SETUP_PATH + "create_storage.json");
+    setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH);
   }
 
   private static Stream<Arguments> standardTestParams() {

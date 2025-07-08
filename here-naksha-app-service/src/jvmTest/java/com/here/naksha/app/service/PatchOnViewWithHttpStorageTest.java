@@ -26,19 +26,20 @@ public class PatchOnViewWithHttpStorageTest extends ApiTest {
     private static final String PSQL_SPACE_ID = "patch_on_view_test_psql_space";
     private static final String VIEW_SPACE_ID = "patch_on_view_test_view_space";
     private static final String ENDPOINT = "/my_env/my_storage/my_feat_type/features";
+    private static final String TEST_DIR_SETUP_PATH = "PatchOnViewWithHttpStorage/setup/";
 
     @BeforeAll
     static void setup() throws URISyntaxException, IOException, InterruptedException {
-        createStorage(nakshaClient, "PatchOnViewWithHttpStorage/setup/http_storage_space/create_storage.json");
+        createStorage(nakshaClient, TEST_DIR_SETUP_PATH + "http_storage_space/create_storage.json");
         // Set up Base space - using Http Storage
-        setupHandlerAndSpace(nakshaClient, "PatchOnViewWithHttpStorage/setup/http_storage_space");
+        setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH + "http_storage_space");
         // Set up Delta space - using Psql Storage
-        createHandler(nakshaClient, "PatchOnViewWithHttpStorage/setup/psql_storage_space/create_sourceId_handler.json");
-        setupHandlerAndSpace(nakshaClient, "PatchOnViewWithHttpStorage/setup/psql_storage_space");
+        createHandler(nakshaClient, TEST_DIR_SETUP_PATH + "psql_storage_space/create_sourceId_handler.json");
+        setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH + "psql_storage_space");
         // Set up View space - using above Delta and Base spaces
-        setupHandlerAndSpace(nakshaClient, "PatchOnViewWithHttpStorage/setup/view_space");
+        setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH + "view_space");
         // Load some test data in Delta space
-        final String initialFeaturesJson = loadFileOrFail("PatchOnViewWithHttpStorage/setup/psql_storage_space/create_features.json");
+        final String initialFeaturesJson = loadFileOrFail(TEST_DIR_SETUP_PATH + "psql_storage_space/create_features.json");
         final HttpResponse<String> response = nakshaClient.post("hub/spaces/" + PSQL_SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());
         assertThat(response).hasStatus(200);
     }

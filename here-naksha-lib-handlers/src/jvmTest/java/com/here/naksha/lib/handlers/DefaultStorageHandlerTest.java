@@ -265,24 +265,21 @@ class DefaultStorageHandlerTest extends AbstractTest {
   }
 
   @Test
-  void shouldFailWhenStorageConfigHasNoMapId() {
+  void shouldSucceedWhenStorageConfigHasNoMapId() {
     // Given:
     configureStorageConfig(new NakshaStorage());
 
     // And
     DefaultStorageHandler handler = storageHandler();
 
+    // And
+    when(storageWriteSession.execute(any(WriteRequest.class))).thenReturn(new SuccessResponse());
+
     // When:
     Response response = handler.process(event(writeRandomFeature()));
 
     // Then:
-    assertInstanceOf(ErrorResponse.class, response);
-    ErrorResponse errorResponse = (ErrorResponse) response;
-    assertEquals(NakshaError.ILLEGAL_STATE, errorResponse.getError().getCode());
-    assertEquals(
-        "Unable to determine 'mapId' for handler '" + HANDLER_ID + "' and through associated storage '" + STORAGE_ID + "'.",
-        errorResponse.getError().getMsg()
-    );
+    assertInstanceOf(SuccessResponse.class, response);
   }
 
   @Test
