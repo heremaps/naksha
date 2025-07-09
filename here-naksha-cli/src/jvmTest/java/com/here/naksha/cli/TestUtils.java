@@ -11,9 +11,8 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.stream.Collectors;
 
-public class TestUtils {
+public final class TestUtils {
     public static final int SUCCESS_EXIT_CODE = CommandLine.ExitCode.OK;
     public static final int INVALID_INPUT_EXIT_CODE = CommandLine.ExitCode.USAGE;
 
@@ -23,7 +22,7 @@ public class TestUtils {
                 throw new IOException("Resource not found: " + resourcePath);
             }
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
-                return reader.lines().collect(Collectors.toList());
+                return reader.lines().toList();
             }
         }
     }
@@ -34,11 +33,13 @@ public class TestUtils {
             throw new IOException("Resource not found: " + resourcePath);
         }
         try {
-            // Convert URL to URI then to Path to get absolute path
             return Paths.get(resourceUrl.toURI()).toAbsolutePath().toString();
         } catch (URISyntaxException e) {
             throw new IOException("Invalid URI syntax for resource: " + resourcePath, e);
         }
     }
 
+    private TestUtils() {
+    }
 }
+

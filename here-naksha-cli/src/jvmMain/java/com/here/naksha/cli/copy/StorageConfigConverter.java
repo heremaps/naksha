@@ -7,12 +7,10 @@ import picocli.CommandLine;
 
 import java.io.File;
 import java.nio.file.Files;
-import java.nio.file.Path;
 
 class StorageConfigConverter implements CommandLine.ITypeConverter<File> {
     public File convert(String value) throws CommandLine.TypeConversionException {
         File file = new File(value);
-        Path path = file.toPath(); // if needed
 
         if(!file.exists()) {
             throw new CommandLine.TypeConversionException("File does not exist!");
@@ -25,7 +23,7 @@ class StorageConfigConverter implements CommandLine.ITypeConverter<File> {
         String json;
 
         try {
-            json = Files.readString(path);
+            json = Files.readString(file.toPath());
         } catch (Exception e) {
             throw new CommandLine.TypeConversionException("Problem with reading!");
         }

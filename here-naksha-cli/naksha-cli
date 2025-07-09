@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e # exit on error
 
-export NODE_OPTIONS="--no-deprecation"
-
 DIR="$(cd "$(dirname "$0")" && pwd)"
 "${DIR}"/../gradlew :here-naksha-cli:build > /dev/null 2>&1
 

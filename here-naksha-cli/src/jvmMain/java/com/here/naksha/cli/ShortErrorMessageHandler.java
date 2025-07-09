@@ -1,11 +1,10 @@
-package com.here.naksha.cli.copy;
+package com.here.naksha.cli;
 
 import picocli.CommandLine;
 
 import java.io.PrintWriter;
 
-public class ShortErrorMessageHandler implements CommandLine.IParameterExceptionHandler {
-
+class ShortErrorMessageHandler implements CommandLine.IParameterExceptionHandler {
     public int handleParseException(CommandLine.ParameterException ex, String[] args) {
         CommandLine cmd = ex.getCommandLine();
         PrintWriter err = cmd.getErr();

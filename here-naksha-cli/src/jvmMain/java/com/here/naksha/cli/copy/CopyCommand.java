@@ -3,7 +3,6 @@ package com.here.naksha.cli.copy;
 import picocli.CommandLine;
 
 import java.io.File;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 
 @CommandLine.Command(
@@ -33,13 +32,13 @@ public class CopyCommand implements Callable<Integer> {
             names = { "--srcMapId" },
             description = "Id of source map."
     )
-    private Optional<Integer> srcMapId;
+    private Integer srcMapId;
 
     @CommandLine.Option(
             names = { "--srcCollectionId" },
             description = "Id of source collection."
     )
-    private Optional<Integer> srcCollectionId;
+    private Integer srcCollectionId;
 
     @CommandLine.Option(
             names = { "--targetStorageConfig" },
@@ -53,13 +52,13 @@ public class CopyCommand implements Callable<Integer> {
             names = { "--targetMapId" },
             description = "Id of target map."
     )
-    private Optional<Integer> targetMapId;
+    private Integer targetMapId;
 
     @CommandLine.Option(
             names = { "--targetCollectionId" },
             description = "Id of target collection."
     )
-    private Optional<Integer> targetCollectionId;
+    private Integer targetCollectionId;
 
     @Override
     public Integer call() throws Exception {
