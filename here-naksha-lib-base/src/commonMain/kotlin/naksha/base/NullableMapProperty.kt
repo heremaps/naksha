@@ -78,10 +78,8 @@ open class NullableMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE
         getValue(self, property.name)
 
     @JvmOverloads
-    open fun setValue(self: MAP, propertyName: String? = null, value: PROPERTY_TYPE?) =
-        self.put(
-            this.name ?: this.name ?: propertyName
-            ?: throw IllegalArgumentException("Undefined property name"),
-            value
-        )
+    open fun setValue(self: MAP, propertyName: String? = null, value: PROPERTY_TYPE?) {
+        val key = this.name ?: propertyName ?: throw IllegalArgumentException("Undefined property name")
+        if (autoRemove && value == null) self.removeRaw(key) else self.put(key, value)
+    }
 }

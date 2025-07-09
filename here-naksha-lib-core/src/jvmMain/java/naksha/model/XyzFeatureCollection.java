@@ -55,7 +55,7 @@ public class XyzFeatureCollection extends XyzResponse {
       JvmPropertyUtil.nullableProperty(String.class, "handle");
 
   private static final NullableProperty<XyzFeatureCollection, String> NEXT_PAGE_TOKEN =
-      JvmPropertyUtil.nullableProperty(String.class, "nextPageToken");
+      JvmPropertyUtil.nullableProperty(String.class, "nextPageToken", true);
 
   private static final NullableProperty<XyzFeatureCollection, Long> COUNT =
       JvmPropertyUtil.nullableProperty(Long.class, "count");
