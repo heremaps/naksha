@@ -61,7 +61,7 @@ public class ActivityLogEnhancer {
   private static Original original(@Nullable XyzNs xyzNamespace, @Nullable String spaceId) {
     Original original = new Original();
     if (xyzNamespace != null) {
-//      original.setPuuid(xyzNamespace.getPuuid()); // TODO: restore this when [INSERT_TICKET] is fixed
+//      original.setPuuid(xyzNamespace.getPuuid()); // TODO: restore this when CASL-1094 is fixed
       original.setUpdatedAt(xyzNamespace.getUpdatedAt().toLong());
       original.setCreatedAt(xyzNamespace.getCreatedAt().toLong());
     }
@@ -71,7 +71,7 @@ public class ActivityLogEnhancer {
     return original;
   }
 
-  // TODO: this should be removed when [INSERT_TICKET] is fixed
+  // TODO: this should be removed when CASL-1094 is fixed
   // puuid should be a part of xyz namespace, without having to rely on `oldFeature.properties.xyz.uuid`
   private static void propagateVirtualPuuid(@Nullable XyzNs xyzNamespace, @NotNull Original original, @Nullable NakshaFeature oldFeature) {
     if(oldFeature != null) {

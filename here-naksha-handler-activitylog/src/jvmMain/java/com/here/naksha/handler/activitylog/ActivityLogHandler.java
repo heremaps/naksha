@@ -135,6 +135,11 @@ public class ActivityLogHandler extends AbstractEventHandler {
         .toList();
   }
 
+  // TODO: CASL-1094: in V2 this method was utilizing `properties.xyz.puuid` field to combine subsequent versions of feature
+  // During v3 alignment (CASL-1057) it was observed that sometimes puuids of UPDATED & DELETED features are missing
+  // Because of that, a bypass that uses `properties.xyz.nuuid` was introduced - logically, it's still correct to combine subsequent versions like that
+  // However, this is not expected behavior, as both `puuid` and `nuuid` are expected to be populated in middle features, which is not the case
+  // CASL-1094 aims to find the cause and fix missing puuids, then we should consider moving back to the logic that was in place in V2
   private List<FeatureWithPredecessor> featuresWithPredecessors(List<NakshaFeature> features) {
     Map<String, NakshaFeature> featureVersionsByNuuid = featuresByNuuid(features);
     return features.stream()
