@@ -58,7 +58,6 @@ class ActivityLogApiTest extends ApiTest {
     // And: Client queries activity log space for this feature
     HttpResponse<String> getActivityResp = nakshaClient.get("hub/spaces/" + ACTIVITY_SPACE_ID + "/features/" + createdFeature.uuid,
         streamId);
-    // TODO: remove, urn:naksha:guid:TC1300_feature:-3843734806738129423:-1832392554:-439412809:-9139335626361915124:2025:6:23:13:0
 
     // Then: Activity response is valid and conveys expected data
     assertThat(getActivityResp)
@@ -385,18 +384,6 @@ class ActivityLogApiTest extends ApiTest {
             "\"${createdAt}\"", updatedFeature.createdAt,
             "\"${updatedAt}\"", updatedFeature.updatedAt
         )));
-  }
-
-  void xyz(){
-    new Random().nextInt();
-  }
-
-  private AtomicBoolean initialized = new AtomicBoolean(false);
-
-  void init(){
-    if(initialized.compareAndSet(false, true)) {
-      // do...
-    }
   }
 
   private String formattedJson(String json, Map<String, Object> propsToOverride) {
