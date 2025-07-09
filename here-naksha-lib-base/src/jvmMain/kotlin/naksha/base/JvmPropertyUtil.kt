@@ -25,12 +25,14 @@ object JvmPropertyUtil {
     fun <BEARER: AnyObject, PROPERTY: Any> nullableProperty(
         propertyType: Class<PROPERTY>,
         name: String,
+        autoRemove: Boolean = false,
         init: ((BEARER, String) -> PROPERTY)? = null
     ): NullableProperty<BEARER, PROPERTY> {
         val propertyK = Reflection.getOrCreateKotlinClass(propertyType) as KClass<PROPERTY>
         return NullableProperty(
             klass = propertyK,
             name = name,
+            autoRemove = autoRemove,
             init = init
         )
     }
