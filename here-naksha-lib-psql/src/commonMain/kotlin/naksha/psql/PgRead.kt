@@ -169,7 +169,11 @@ internal data class PgRead(
 
     fun initHistoryTables(): List<PgTable>? {
         val history = collection.historyTable ?: return null
-        // TODO: Jakub: hack to be be fixed, don't let this pass PR
+        // TODO: hack to be be fixed as part of CASL-1095
+        // it was observed that if collection is used for the first time (it is not cached) they `years` are empty
+        // even if the year partitions actually exist on DB side
+        // this results in returned history tables being empty (even though they can be there)
+        // this behavior was observedd during CASL-1057 development
         if(history.years.isEmpty()){
             // see: PgMap.createPgCollection
             val year = Epoch().year
