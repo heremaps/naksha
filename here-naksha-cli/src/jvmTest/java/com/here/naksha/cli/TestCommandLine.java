@@ -4,6 +4,7 @@ import picocli.CommandLine;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Collections;
 import java.util.List;
 
 public class TestCommandLine {
@@ -35,6 +36,6 @@ public class TestCommandLine {
     }
 
     private List<String> readLinesFromString(String str) {
-        return str.isEmpty() ? List.of() : str.lines().toList();
+        return str.isEmpty() ? Collections.emptyList() : str.lines().toList();
     }
 }

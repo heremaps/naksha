@@ -44,7 +44,7 @@ class CopyCommandTest {
         TestCommandLine.CommandResult result = cmd.execute(testCase.args());
 
         // Then: Output and exit code are checked
-        testCase.assertThis(result);
+        testCase.assertMatches(result);
     }
 
     @ParameterizedTest
@@ -57,7 +57,7 @@ class CopyCommandTest {
         TestCommandLine.CommandResult result = cmd.execute(testCase.args());
 
         // Then: Output and exit code are checked
-        testCase.assertThis(result);
+        testCase.assertMatches(result);
     }
 
     private static Stream<Named<ProperMessageAndExitCodeTestCase>> properMessageAndExitCodeTestCases() throws IOException {

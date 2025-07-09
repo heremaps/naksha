@@ -11,7 +11,7 @@ public record ProperMessageAndExitCodeTestCase(
         List<String> expectedStdoutPatterns,
         List<String> expectedStderrPatterns
 ) {
-    public void assertThis(
+    public void assertMatches(
             TestCommandLine.CommandResult result
     ) {
         assertEquals(expectedExitCode(), result.exitCode(), "Unexpected exit code");
