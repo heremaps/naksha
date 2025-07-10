@@ -18,6 +18,8 @@ kotlin {
         jvmMain {
             dependencies {
                 implementation(libs.picocli)
+                implementation(project(":here-naksha-lib-base"))
+                implementation(project(":here-naksha-lib-model"))
             }
         }
         jvmTest {
