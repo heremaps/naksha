@@ -25,6 +25,7 @@ kotlin {
         jvmTest {
             dependencies {
                 implementation(libs.bundles.testing)
+                implementation(libs.assertj.core)
             }
         }
     }
@@ -59,4 +60,5 @@ tasks {
     }
 }
 
-setOverallCoverage(0.0) // only increasing allowed!
+setOverallCoverage(0.0)
+// only increasing allowed!

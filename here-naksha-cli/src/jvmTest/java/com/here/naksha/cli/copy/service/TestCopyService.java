@@ -1,86 +1,143 @@
-package com.here.naksha.cli.copy;
+package com.here.naksha.cli.copy.service;
 
-import com.here.naksha.cli.copy.service.CopyService;
-import naksha.base.StringList;
-import naksha.model.IStorage;
+import naksha.base.fn.Fn1;
+import naksha.model.IReadSession;
+import naksha.model.ISession;
+import naksha.model.IWriteSession;
 import naksha.model.SessionOptions;
-import naksha.model.request.ReadFeatures;
-import org.jetbrains.annotations.Nullable;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
+import naksha.model.request.*;
+import org.mockito.ArgumentCaptor;
 
-import static org.mockito.Mockito.mock;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 
-class TestCopyServiceBuilder {
-    private @Nullable String srcMapId;
-    private @Nullable String targetMapId;
-    private @Nullable String srcCollectionId;
-    private @Nullable String targetCollectionId;
-    private final IStorage mockedSrcStorage = mock();
-    private final IStorage mockedTargetStorage = mock();
-    private final SessionOptions mockedSessionOptions = mock();
-    private final ReadFeatures readFeatures = new ReadFeatures();
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
-    public CopyService build() throws CopyServiceException {
-        CopyService.Builder builder = new CopyService.Builder(
-                mockedSrcStorage,
-                mockedTargetStorage,
-                mockedSessionOptions
-        )
-            .setSrcCollectionId(srcCollectionId)
-            .setSrcMapId(srcMapId)
-            .setTargetCollectionId(targetCollectionId)
-            .setTargetMapId(targetMapId);
+class TestCopyService {
+    private final SessionOptions sessionOptions = mock();
+    private final CopyService copyService;
+    private final TestCopyElement srcTestCopyElement;
+    private final TestCopyElement targetTestCopyElement;
+    private final SuccessResponse response = mock();
+    private final IWriteSession writeSession = mock();
+    private final IReadSession readSession = mock();
 
-        return builder.build();
+    public TestCopyService(
+            TestCopyElement srcTestCopyElement,
+            TestCopyElement targetTestCopyElement
+    ) {
+        this.srcTestCopyElement = srcTestCopyElement;
+        this.targetTestCopyElement = targetTestCopyElement;
+        copyService = new CopyService(
+                srcTestCopyElement.getCopyElement(),
+                targetTestCopyElement.getCopyElement(),
+                sessionOptions
+        );
+        mockWriteSession();
+        mockReadSession();
     }
 
-    public TestCopyServiceBuilder setSrcMapId(@Nullable String srcMapId) {
-        this.srcMapId = srcMapId;
-        readFeatures.setMapId(srcMapId);
-        return this;
+    public void copy() throws CopyServiceException {
+        copyService.copy();
     }
 
-    public TestCopyServiceBuilder setTargetMapId(@Nullable String targetMapId) {
-        this.targetMapId = targetMapId;
-        return this;
+    public void mockSrcStorageResponseWithSuccess(
+            List<NakshaFeature> featureList
+    ) {
+        when(
+                response.getFeatures()
+        ).thenReturn(
+                NakshaFeatureList.fromList(featureList)
+        );
+        when(
+                readSession.execute(any())
+        ).thenReturn(response);
     }
 
-    public TestCopyServiceBuilder setSrcCollectionId(@Nullable String srcCollectionId) {
-        this.srcCollectionId = srcCollectionId;
-        if(srcCollectionId != null) {
-            readFeatures.setCollectionIds(StringList.of(srcCollectionId));
-        }
-        return this;
+    public void mockResponse(ISession session, Response response) {
+        when(
+                session.execute(any())
+        ).thenReturn(response);
     }
 
-    public TestCopyServiceBuilder setTargetCollectionId(@Nullable String targetCollectionId) {
-        this.targetCollectionId = targetCollectionId;
-        return this;
+    private void mockReadSession() {
+        when(srcTestCopyElement.getStorage().useReadSession(eq(sessionOptions), any()))
+                .thenAnswer(invocation -> {
+                    Fn1<Response, IReadSession> lambda = invocation.getArgument(1);
+                    return lambda.call(readSession);
+                });
     }
 
-    public IStorage getMockedSrcStorage() {
-        return mockedSrcStorage;
+    private void mockWriteSession() {
+        when(targetTestCopyElement.getStorage().useWriteSession(eq(sessionOptions), any()))
+                .thenAnswer(invocation -> {
+                    Fn1<Response, IWriteSession> lambda = invocation.getArgument(1);
+                    return lambda.call(writeSession);
+                });
     }
 
-    public IStorage getMockedTargetStorage() {
-        return mockedTargetStorage;
+    public List<ReadFeatures> getReadSessionReadFeatures() {
+        return captureRequests(readSession)
+                .stream()
+                .filter(r -> r instanceof ReadFeatures)
+                .map(r -> (ReadFeatures) r)
+                .toList();
     }
 
-
-    public SessionOptions getMockedSessionOptions() {
-        return mockedSessionOptions;
+    public List<Write> getWriteSessionWrites() {
+        return captureRequests(writeSession)
+                .stream()
+                .filter(r -> r instanceof WriteRequest)
+                .flatMap(r -> ((WriteRequest) r).getWrites().stream())
+                .toList();
     }
 
-    public ReadFeatures getReadFeatures() {
-        return readFeatures;
+    private List<Request> captureRequests(ISession session) {
+        ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
+        verify(session, atLeastOnce()).execute(requestArgumentCaptor.capture());
+        return requestArgumentCaptor.getAllValues();
     }
 
-    @Nullable
-    public String getTargetMapId() {
-        return targetMapId;
+    public void assertReadRequests() {
+        List<ReadFeatures> readFeaturesList = getReadSessionReadFeatures();
+        assertThat(readFeaturesList).hasSize(1);
+        ReadFeatures readFeatures = readFeaturesList.getFirst();
+        assertThat(readFeatures.getCollectionIds())
+                .hasSize(1);
+        assertThat(readFeatures.getCollectionIds().getFirst())
+                .isEqualTo(srcTestCopyElement.getCollectionId());
+        assertThat(readFeatures.getMapId())
+                .isEqualTo(srcTestCopyElement.getMapId());
     }
 
-    @Nullable
-    public String getTargetCollectionId() {
-        return targetCollectionId;
+    public void assertWriteRequests(List<NakshaFeature> featureList) {
+        List<Write> writes = getWriteSessionWrites();
+        assertThat(writes)
+                .allMatch(w -> w.getOp()
+                        .equals(WriteOp.CREATE)
+                )
+                .allMatch(w -> w.getCollectionId()
+                        .equals(targetTestCopyElement.getCollectionId())
+                )
+                .allMatch(w -> Objects.equals(w.getMapId(), targetTestCopyElement.getMapId()));
+
+        Stream<NakshaFeature> actualNakshaFeature = writes.stream()
+                .map(w -> w.getFeature());
+        assertThat(actualNakshaFeature)
+                .containsExactlyInAnyOrderElementsOf(featureList);
+    }
+
+    public IWriteSession getWriteSession() {
+        return writeSession;
+    }
+
+    public IReadSession getReadSession() {
+        return readSession;
     }
 }

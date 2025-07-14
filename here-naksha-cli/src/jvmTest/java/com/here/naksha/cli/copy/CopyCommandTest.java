@@ -32,8 +32,8 @@ class CopyCommandTest {
         String basePath = "unit_test_data/copy.CopyCommandTest/shouldFailWithUnreadableFile/";
         ProperMessageAndExitCodeTestCase testCase = new ProperMessageAndExitCodeTestCase(
                 new String[]{
-                    "--srcStorageConfig=" + unreadableFile.toAbsolutePath(),
-                    "--targetStorageConfig=" + unreadableFile.toAbsolutePath()
+                        "--srcStorageConfig=" + unreadableFile.toAbsolutePath(),
+                        "--targetStorageConfig=" + unreadableFile.toAbsolutePath()
                 },
                 INVALID_INPUT_EXIT_CODE,
                 readLinesFromResource(basePath + "stdout.txt"),
