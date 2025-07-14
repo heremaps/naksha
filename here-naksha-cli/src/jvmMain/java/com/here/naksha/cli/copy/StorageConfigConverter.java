@@ -12,11 +12,11 @@ class StorageConfigConverter implements CommandLine.ITypeConverter<File> {
     public File convert(String value) throws CommandLine.TypeConversionException {
         File file = new File(value);
 
-        if(!file.exists()) {
+        if (!file.exists()) {
             throw new CommandLine.TypeConversionException("File does not exist!");
         }
 
-        if(!file.isFile()) {
+        if (!file.isFile()) {
             throw new CommandLine.TypeConversionException("It is not a file!");
         }
 

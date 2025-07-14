@@ -1,5 +1,6 @@
 package com.here.naksha.cli.copy;
 
+import org.jetbrains.annotations.Nullable;
 import picocli.CommandLine;
 
 import java.io.File;
@@ -21,7 +22,7 @@ import java.util.concurrent.Callable;
 public class CopyCommand implements Callable<Integer> {
 
     @CommandLine.Option(
-            names = { "--srcStorageConfig" },
+            names = {"--srcStorageConfig"},
             description = "Path to file with source storage config.",
             required = true,
             converter = StorageConfigConverter.class
@@ -29,19 +30,19 @@ public class CopyCommand implements Callable<Integer> {
     private File srcStorageConfig;
 
     @CommandLine.Option(
-            names = { "--srcMapId" },
+            names = {"--srcMapId"},
             description = "Id of source map."
     )
-    private Integer srcMapId;
+    private @Nullable String srcMapId;
 
     @CommandLine.Option(
-            names = { "--srcCollectionId" },
+            names = {"--srcCollectionId"},
             description = "Id of source collection."
     )
-    private Integer srcCollectionId;
+    private @Nullable String srcCollectionId;
 
     @CommandLine.Option(
-            names = { "--targetStorageConfig" },
+            names = {"--targetStorageConfig"},
             description = "Path to file with target storage config.",
             required = true,
             converter = StorageConfigConverter.class
@@ -49,16 +50,16 @@ public class CopyCommand implements Callable<Integer> {
     private File targetStorageConfig;
 
     @CommandLine.Option(
-            names = { "--targetMapId" },
+            names = {"--targetMapId"},
             description = "Id of target map."
     )
-    private Integer targetMapId;
+    private @Nullable String targetMapId;
 
     @CommandLine.Option(
-            names = { "--targetCollectionId" },
+            names = {"--targetCollectionId"},
             description = "Id of target collection."
     )
-    private Integer targetCollectionId;
+    private @Nullable String targetCollectionId;
 
     @Override
     public Integer call() throws Exception {
