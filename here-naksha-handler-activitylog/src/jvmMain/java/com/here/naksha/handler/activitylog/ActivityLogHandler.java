@@ -33,6 +33,7 @@ import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -149,7 +150,14 @@ public class ActivityLogHandler extends AbstractEventHandler {
 
   @NotNull
   private static Map<String, NakshaFeature> featuresByNuuid(List<NakshaFeature> historyFeatures) {
-    return historyFeatures.stream().collect(toMap(ActivityLogHandler::nuuidOrNullIfDeleted, identity()));
+    Map<String, NakshaFeature> featureVersionsByNuuid = new HashMap<>();
+    for (NakshaFeature feature : historyFeatures) {
+      String nuuid = nuuidOrNullIfDeleted(feature);
+      if(nuuid != null) {
+        featureVersionsByNuuid.put(nuuid, feature);
+      }
+    }
+    return featureVersionsByNuuid;
   }
 
   private static boolean nullOrEmpty(String value) {

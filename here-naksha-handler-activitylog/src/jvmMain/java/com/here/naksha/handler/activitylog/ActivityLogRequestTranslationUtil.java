@@ -80,6 +80,7 @@ class ActivityLogRequestTranslationUtil {
           readFeatures.getQuery(),
           ActivityLogRequestTranslationUtil::isSingleActivityLogIdEqualityQuery
       );
+      // TODO: wrong count
       if(disabledActivityLogPOps.size() == 1){
         PQuery activityLogIdProp = disabledActivityLogPOps.iterator().next();
         String idFromActivityLogNs = activityLogIdProp.getValue().toString();
