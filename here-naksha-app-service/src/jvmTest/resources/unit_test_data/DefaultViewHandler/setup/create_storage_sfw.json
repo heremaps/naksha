@@ -5,15 +5,14 @@
   "description": "PSQL storage instance for testing purpose",
   "className": "naksha.psql.PsqlStorage",
   "properties": {
-    "master": {
+    "dbConfig": {
       "host": "${dataDb.host}",
       "db": "${dataDb.db}",
-      "port": ${dataDb.port},
       "user": "${dataDb.user}",
       "password": "${dataDb.password}",
-      "readOnly": false
-    },
-    "appName": "test-app-name",
-    "schema": "${dataDb.schema}"
+      "port": ${dataDb.port},
+      "readOnly": false,
+      "schema": "${dataDb.schema}"
+    }
   }
 }

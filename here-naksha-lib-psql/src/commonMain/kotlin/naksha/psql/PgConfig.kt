@@ -8,6 +8,7 @@ import naksha.base.NullableProperty
 import naksha.base.StringList
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
+import naksha.model.objects.NakshaProperties
 import naksha.model.objects.NakshaStorage
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -64,9 +65,10 @@ class PgConfig() : NakshaStorage() {
         }
         // Try to port old code, so try properties.dbConfig
         // https://github.com/heremaps/naksha/blob/v2/here-naksha-app-service/src/jvmTest/resources/unit_test_data/StorageApi/TC0001_createStorage/create_storage.json
-        val rawProperties = getRaw("properties")
-        val rawDbConfig = if (rawProperties is AnyObject) rawProperties.getRaw("dbConfig") else null
-        return if (rawDbConfig is AnyObject) rawDbConfig.proxy(PgInstanceConfig::class) else null
+
+        return getAs("properties", NakshaProperties::class)
+            ?.getAs("dbConfig", AnyObject::class)
+            ?.proxy(PgInstanceConfig::class)
     }
 
     /**

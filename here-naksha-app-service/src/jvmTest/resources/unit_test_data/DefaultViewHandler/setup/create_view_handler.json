@@ -7,7 +7,7 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "${dataDb.storageId}",
+    "storageId": "mod-view-dev",
     "spaceIds": [
       "mod-dev:topology-delta",
       "mod-dev:topology-dlb",

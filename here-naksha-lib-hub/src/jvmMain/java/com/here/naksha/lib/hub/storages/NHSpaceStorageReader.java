@@ -296,7 +296,7 @@ public class NHSpaceStorageReader implements IReadSession {
 
   @Override
   public int getStmtTimeout() {
-    throw NOT_SUPPORTED_ERROR;
+    return 0;
   }
 
   @Override

@@ -41,7 +41,12 @@ import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import naksha.base.JvmBoxingUtil;
 import naksha.base.StringList;
 import naksha.model.IStorage;
@@ -51,6 +56,7 @@ import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.request.ErrorResponse;
+import naksha.model.request.OrderBy;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
@@ -150,12 +156,20 @@ public class DefaultViewHandler extends AbstractEventHandler {
   }
 
   private List<Space> fetchSpaces(List<String> spaceIds) {
-    ReadFeatures readSpacesByIds = new ReadFeatures().addCollectionId(SPACES);
+    ReadFeatures readSpacesByIds = new ReadFeatures().addCollectionId(SPACES).withMapId("naksha-hub-admin");
     readSpacesByIds.setFeatureIds(StringList.fromList(spaceIds));
     Response spacesResp = nakshaHub().getAdminStorage()
         .useReadSession(SessionOptions.from(NakshaContext.currentContext()), session -> session.execute(readSpacesByIds));
     if (spacesResp instanceof SuccessResponse successResponse) {
-      return ResultHelper.extractResponseItems(successResponse, Space.class);
+      List<Space> unorderedSpaces = ResultHelper.extractResponseItems(successResponse, Space.class);
+
+      Map<String, Space> spaceMap = unorderedSpaces.stream()
+              .collect(Collectors.toMap(Space::getId, Function.identity()));
+
+      return spaceIds.stream()
+              .map(spaceMap::get)
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
     } else if (spacesResp instanceof ErrorResponse errorResponse) {
       logger.error("Error while fetching spaces: {}", errorResponse.getError(), errorResponse.getError().getCause());
       throw new NakshaException(errorResponse.getError());
@@ -165,7 +179,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
     }
   }
 
-  private Response processRequest(NakshaContext ctx, IView view, Request request) {
+  private Response  processRequest(NakshaContext ctx, IView view, Request request) {
     if (request instanceof ReadFeatures rf) {
       return forwardReadFeatures(ctx, view, rf);
     } else if (request instanceof WriteRequest wr) {
@@ -195,7 +209,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
   private ViewLayerCollection prepareViewLayerCollection(IStorage nhStorage, List<NakshaCollection> collections) {
     final List<ViewLayer> viewLayerList = new ArrayList<>();
     for (final NakshaCollection collection : collections) {
-      viewLayerList.add(new ViewLayer(nhStorage, collection));
+      viewLayerList.add(new ViewLayer(nhStorage,"naksha_data_schema", collection.getId()));
     }
 
     return new ViewLayerCollection("", viewLayerList);
