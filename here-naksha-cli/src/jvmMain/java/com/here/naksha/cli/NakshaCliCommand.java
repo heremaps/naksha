@@ -10,5 +10,5 @@ import picocli.CommandLine;
                 CopyCommand.class
         }
 )
-public class NakshaCliCommand {
+final class NakshaCliCommand {
 }

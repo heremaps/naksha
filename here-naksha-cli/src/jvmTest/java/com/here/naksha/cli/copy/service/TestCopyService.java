@@ -1,12 +1,10 @@
 package com.here.naksha.cli.copy.service;
 
 import naksha.base.fn.Fn1;
-import naksha.model.IReadSession;
-import naksha.model.ISession;
-import naksha.model.IWriteSession;
-import naksha.model.SessionOptions;
+import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.request.*;
 import org.mockito.ArgumentCaptor;
 
@@ -20,13 +18,16 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class TestCopyService {
-    private final SessionOptions sessionOptions = mock();
     private final CopyService copyService;
     private final TestCopyElement srcTestCopyElement;
     private final TestCopyElement targetTestCopyElement;
     private final SuccessResponse response = mock();
     private final IWriteSession writeSession = mock();
     private final IReadSession readSession = mock();
+    private final SessionOptions sessionOptions = mock();
+    private final NakshaProvider nakshaProvider = mock();
+    private final IStorage srcStorage = mock();
+    private final IStorage targetStorage = mock();
 
     public TestCopyService(
             TestCopyElement srcTestCopyElement,
@@ -35,16 +36,28 @@ class TestCopyService {
         this.srcTestCopyElement = srcTestCopyElement;
         this.targetTestCopyElement = targetTestCopyElement;
         copyService = new CopyService(
-                srcTestCopyElement.getCopyElement(),
-                targetTestCopyElement.getCopyElement(),
+                nakshaProvider,
                 sessionOptions
         );
+        setupStorageMocks();
+        setupSessionMocks();
+    }
+
+    private void setupStorageMocks() {
+        when(nakshaProvider.useStorage(srcTestCopyElement.getStorage())).thenReturn(srcStorage);
+        when(nakshaProvider.useStorage(targetTestCopyElement.getStorage())).thenReturn(targetStorage);
+    }
+
+    private void setupSessionMocks() {
         mockWriteSession();
         mockReadSession();
     }
 
     public void copy() throws CopyServiceException {
-        copyService.copy();
+        copyService.copy(
+                srcTestCopyElement.getCopyElement(),
+                targetTestCopyElement.getCopyElement()
+        );
     }
 
     public void mockSrcStorageResponseWithSuccess(
@@ -67,7 +80,7 @@ class TestCopyService {
     }
 
     private void mockReadSession() {
-        when(srcTestCopyElement.getStorage().useReadSession(eq(sessionOptions), any()))
+        when(srcStorage.useReadSession(eq(sessionOptions), any()))
                 .thenAnswer(invocation -> {
                     Fn1<Response, IReadSession> lambda = invocation.getArgument(1);
                     return lambda.call(readSession);
@@ -75,26 +88,29 @@ class TestCopyService {
     }
 
     private void mockWriteSession() {
-        when(targetTestCopyElement.getStorage().useWriteSession(eq(sessionOptions), any()))
+        when(targetStorage.useWriteSession(eq(sessionOptions), any()))
                 .thenAnswer(invocation -> {
                     Fn1<Response, IWriteSession> lambda = invocation.getArgument(1);
                     return lambda.call(writeSession);
                 });
     }
 
-    public List<ReadFeatures> getReadSessionReadFeatures() {
-        return captureRequests(readSession)
-                .stream()
-                .filter(r -> r instanceof ReadFeatures)
-                .map(r -> (ReadFeatures) r)
+    private <T extends Request> List<T> captureRequestsOfType(ISession session, Class<T> type) {
+        ArgumentCaptor<Request> captor = ArgumentCaptor.forClass(Request.class);
+        verify(session, atLeastOnce()).execute(captor.capture());
+        return captor.getAllValues().stream()
+                .filter(type::isInstance)
+                .map(type::cast)
                 .toList();
     }
 
+    public List<ReadFeatures> getReadSessionReadFeatures() {
+        return captureRequestsOfType(readSession, ReadFeatures.class);
+    }
+
     public List<Write> getWriteSessionWrites() {
-        return captureRequests(writeSession)
-                .stream()
-                .filter(r -> r instanceof WriteRequest)
-                .flatMap(r -> ((WriteRequest) r).getWrites().stream())
+        return captureRequestsOfType(writeSession, WriteRequest.class).stream()
+                .flatMap(wr -> wr.getWrites().stream())
                 .toList();
     }
 
@@ -139,5 +155,17 @@ class TestCopyService {
 
     public IReadSession getReadSession() {
         return readSession;
+    }
+
+    public NakshaProvider getNakshaProvider() {
+        return nakshaProvider;
+    }
+
+    public TestCopyElement getSrcTestCopyElement() {
+        return srcTestCopyElement;
+    }
+
+    public TestCopyElement getTargetTestCopyElement() {
+        return targetTestCopyElement;
     }
 }

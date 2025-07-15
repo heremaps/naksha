@@ -1,6 +1,7 @@
 package com.here.naksha.cli.copy.service;
 
 import naksha.model.IStorage;
+import naksha.model.objects.NakshaStorage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,7 +13,7 @@ public class TestCopyElement {
     private TestCopyElement(
             Builder builder
     ) {
-        IStorage storage = mock();
+        NakshaStorage storage = mock();
         copyElement = new CopyElement.Builder(storage, builder.collectionId)
                 .setMapId(builder.mapId)
                 .build();
@@ -22,8 +23,8 @@ public class TestCopyElement {
         return copyElement;
     }
 
-    public IStorage getStorage() {
-        return copyElement.getStorage();
+    public NakshaStorage getStorage() {
+        return copyElement.getNakshaStorage();
     }
 
     @Nullable
@@ -41,7 +42,7 @@ public class TestCopyElement {
         private final @NotNull String collectionId;
 
         public Builder(
-                String collectionId
+                @NotNull String collectionId
         ) {
             this.collectionId = collectionId;
         }

@@ -1,6 +1,7 @@
 package com.here.naksha.cli.copy.service;
 
 import naksha.base.StringList;
+import naksha.model.IStorage;
 import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
@@ -13,54 +14,77 @@ import java.util.List;
 import static naksha.model.util.RequestHelper.createFeaturesRequest;
 import static naksha.model.util.ResultHelper.extractResponseItems;
 
-public class CopyService {
-    private final CopyElement srcCopyElement;
-    private final CopyElement targetCopyElement;
+public final class CopyService {
     private final SessionOptions sessionOptions;
+    private final NakshaProvider nakshaProvider;
 
     public CopyService(
-            @NotNull CopyElement src,
-            @NotNull CopyElement target,
+            @NotNull NakshaProvider nakshaProvider,
             @Nullable SessionOptions sessionOptions
     ) {
-        srcCopyElement = src;
-        targetCopyElement = target;
         this.sessionOptions = sessionOptions;
+        this.nakshaProvider = nakshaProvider;
     }
 
-    public void copy() throws CopyServiceException {
-        List<NakshaFeature> features = readFeaturesFromSrc();
-        writeFeaturesToTarget(features);
+    public void copy(
+            @NotNull CopyElement src,
+            @NotNull CopyElement target
+    ) throws CopyServiceException {
+        List<NakshaFeature> features = readFeaturesFromSrc(src);
+        writeFeaturesToTarget(features, target);
     }
 
-    private void writeFeaturesToTarget(@NotNull List<NakshaFeature> features) throws CopyServiceException {
+    private void writeFeaturesToTarget(
+            @NotNull List<NakshaFeature> features,
+            CopyElement target
+    ) throws CopyServiceException {
+        IStorage storage;
+
+        try {
+            storage = nakshaProvider.useStorage(target.getNakshaStorage());
+        } catch (Exception e) {
+            throw new CopyServiceException("Can not get target storage!", e);
+        }
+
         WriteRequest writeRequest = createFeaturesRequest(
-                targetCopyElement.getMapId(),
-                targetCopyElement.getCollectionId(),
+                target.getMapId(),
+                target.getCollectionId(),
                 features
         );
 
-        Response response = targetCopyElement.getStorage().useWriteSession(
+        Response response = storage.useWriteSession(
                 sessionOptions,
                 writer -> writer.execute(writeRequest)
         );
 
-        if (response instanceof ErrorResponse errorResponse) {
-            throw new CopyServiceException(
+        switch (response) {
+            case SuccessResponse ignored -> { /*do nothing*/ }
+            case ErrorResponse errorResponse -> throw new CopyServiceException(
                     "Problem with writing to target!",
                     new NakshaException(errorResponse.getError())
             );
+            default -> throw new IllegalStateException("Unexpected value: " + response);
         }
     }
 
-    private List<NakshaFeature> readFeaturesFromSrc() throws CopyServiceException {
+    private List<NakshaFeature> readFeaturesFromSrc(
+            CopyElement source
+    ) throws CopyServiceException {
+        IStorage storage;
+
+        try {
+            storage = nakshaProvider.useStorage(source.getNakshaStorage());
+        } catch (Exception e) {
+            throw new CopyServiceException("Can not get source storage!", e);
+        }
+
         ReadFeatures readFeatures = new ReadFeatures();
         readFeatures.setCollectionIds(
-                StringList.of(srcCopyElement.getCollectionId())
+                StringList.of(source.getCollectionId())
         );
-        readFeatures.setMapId(srcCopyElement.getMapId());
+        readFeatures.setMapId(source.getMapId());
 
-        Response response = srcCopyElement.getStorage().useReadSession(
+        Response response = storage.useReadSession(
                 sessionOptions,
                 reader -> reader.execute(readFeatures)
         );

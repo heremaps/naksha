@@ -4,7 +4,9 @@ import naksha.model.ISession;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
+import naksha.model.request.SuccessResponse;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -32,6 +34,7 @@ class CopyServiceTest {
                 target
         );
         copyService.mockSrcStorageResponseWithSuccess(featureList);
+        copyService.mockResponse(copyService.getWriteSession(), new SuccessResponse());
 
         // When
         copyService.copy();
@@ -42,15 +45,52 @@ class CopyServiceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("shouldCopyFailTestCases")
-    void shouldCopyFail(String errorMessage, Function<TestCopyService, ISession> sessionFunction) {
+    @MethodSource("shouldCopyFailDueToStorageErrorTestCases")
+    void shouldCopyFailDueToStorageError(String errorMessage, Function<TestCopyService, NakshaStorage> nakshaStorageFunction) {
         // Given
-        TestCopyElement copyElement = new TestCopyElement.Builder("colid")
-                .setMapId("mapid")
-                .build();
+        TestCopyElement.Builder builder = new TestCopyElement.Builder("colid")
+                .setMapId("mapid");
+        TestCopyElement srcCopyElement = builder.build();
+        TestCopyElement targetCopyElement = builder.build();
         TestCopyService copyService = new TestCopyService(
-                copyElement,
-                copyElement
+                srcCopyElement,
+                targetCopyElement
+        );
+        NakshaException ex = mock();
+        copyService.mockSrcStorageResponseWithSuccess(Collections.emptyList());
+        when(copyService.getNakshaProvider().useStorage(nakshaStorageFunction.apply(copyService))).thenThrow(ex);
+
+        // When & Then
+        assertThatThrownBy(copyService::copy)
+                .isInstanceOf(CopyServiceException.class)
+                .hasMessage(errorMessage)
+                .hasRootCauseInstanceOf(NakshaException.class);
+    }
+
+    private static Stream<Arguments> shouldCopyFailDueToStorageErrorTestCases() {
+        return Stream.of(
+                Arguments.of(
+                        "Can not get source storage!",
+                        (Function<TestCopyService, NakshaStorage>) cs -> cs.getSrcTestCopyElement().getStorage()
+                ),
+                Arguments.of(
+                        "Can not get target storage!",
+                        (Function<TestCopyService, NakshaStorage>) cs -> cs.getTargetTestCopyElement().getStorage()
+                )
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("shouldCopyFailDueToSessionErrorTestCases")
+    void shouldCopyFailDueToSessionError(String errorMessage, Function<TestCopyService, ISession> sessionFunction) {
+        // Given
+        TestCopyElement.Builder builder = new TestCopyElement.Builder("colid")
+                .setMapId("mapid");
+        TestCopyElement srcCopyElement = builder.build();
+        TestCopyElement targetCopyElement = builder.build();
+        TestCopyService copyService = new TestCopyService(
+                srcCopyElement,
+                targetCopyElement
         );
         ErrorResponse response = mock();
         when(response.getError()).thenReturn(new NakshaError());
@@ -64,7 +104,7 @@ class CopyServiceTest {
                 .hasRootCauseInstanceOf(NakshaException.class);
     }
 
-    private static Stream<Arguments> shouldCopyFailTestCases() {
+    private static Stream<Arguments> shouldCopyFailDueToSessionErrorTestCases() {
         return Stream.of(
                 Arguments.of(
                         "Problem with reading from source!",
@@ -78,13 +118,17 @@ class CopyServiceTest {
     }
 
     private static Stream<Arguments> shouldCopyTestCases() {
-        List<TestCopyElement> copyElements = List.of(
+        List<TestCopyElement.Builder> copyElementBuilders = List.of(
                 new TestCopyElement.Builder("colid")
-                        .setMapId("mapid")
-                        .build(),
+                        .setMapId("mapid"),
                 new TestCopyElement.Builder("colid")
-                        .build()
         );
+        List<TestCopyElement> srcCopyElements = copyElementBuilders.stream()
+                .map(TestCopyElement.Builder::build)
+                .toList();
+        List<TestCopyElement> targetCopyElements = copyElementBuilders.stream()
+                .map(TestCopyElement.Builder::build)
+                .toList();
         List<List<NakshaFeature>> features = List.of(
                 List.of(
                         new NakshaFeature("1"),
@@ -96,9 +140,9 @@ class CopyServiceTest {
                 Collections.emptyList()
         );
 
-        return copyElements.stream()
+        return srcCopyElements.stream()
                 .flatMap(src ->
-                        copyElements.stream()
+                        targetCopyElements.stream()
                                 .flatMap(target ->
                                         features.stream()
                                                 .map(f ->

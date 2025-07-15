@@ -4,7 +4,7 @@ import picocli.CommandLine;
 
 import java.io.PrintWriter;
 
-class ShortErrorMessageHandler implements CommandLine.IParameterExceptionHandler {
+final class ShortErrorMessageHandler implements CommandLine.IParameterExceptionHandler {
     public int handleParseException(CommandLine.ParameterException ex, String[] args) {
         CommandLine cmd = ex.getCommandLine();
         PrintWriter err = cmd.getErr();
