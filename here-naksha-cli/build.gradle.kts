@@ -60,5 +60,4 @@ tasks {
     }
 }
 
-setOverallCoverage(0.0)
-// only increasing allowed!
+setOverallCoverage(0.0) // only increasing allowed!
