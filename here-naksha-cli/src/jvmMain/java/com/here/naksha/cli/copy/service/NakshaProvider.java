@@ -5,7 +5,7 @@ import naksha.model.Naksha;
 import naksha.model.objects.NakshaStorage;
 
 public final class NakshaProvider {
-    IStorage useStorage(NakshaStorage nakshaStorage) {
+    public IStorage useStorage(NakshaStorage nakshaStorage) {
         return Naksha.useStorage(nakshaStorage);
     }
 }

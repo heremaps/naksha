@@ -1,21 +1,21 @@
 package com.here.naksha.cli;
 
-import java.util.List;
-
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertLinesMatch;
 
 public record ProperMessageAndExitCodeTestCase(
         String[] args,
         int expectedExitCode,
-        List<String> expectedStdoutPatterns,
-        List<String> expectedStderrPatterns
+        String expectedStdoutPatterns,
+        String expectedStderrPatterns
 ) {
     public void assertMatches(
             TestCommandLine.CommandResult result
     ) {
         assertEquals(expectedExitCode(), result.exitCode(), "Unexpected exit code");
-        assertLinesMatch(expectedStdoutPatterns(), result.stdOut());
-        assertLinesMatch(expectedStderrPatterns(), result.stdErr());
+        assertThat(result.stdOut().lines().toList())
+                .containsExactlyElementsOf(expectedStdoutPatterns.lines().toList());
+        assertThat(result.stdErr().lines().toList())
+                .containsExactlyElementsOf(expectedStderrPatterns.lines().toList());
     }
 }

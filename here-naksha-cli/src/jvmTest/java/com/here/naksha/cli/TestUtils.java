@@ -10,19 +10,20 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
-import java.util.List;
+import java.util.stream.Collectors;
 
 public final class TestUtils {
     public static final int SUCCESS_EXIT_CODE = CommandLine.ExitCode.OK;
     public static final int INVALID_INPUT_EXIT_CODE = CommandLine.ExitCode.USAGE;
+    public static final int EXECUTION_EXCEPTION_EXIT_CODE = CommandLine.ExitCode.SOFTWARE;
 
-    public static List<String> readLinesFromResource(String resourcePath) throws IOException {
+    public static String readStringFromResource(String resourcePath) throws IOException {
         try (InputStream in = TestUtils.class.getClassLoader().getResourceAsStream(resourcePath)) {
             if (in == null) {
                 throw new IOException("Resource not found: " + resourcePath);
             }
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
-                return reader.lines().toList();
+                return reader.lines().collect(Collectors.joining("\n"));
             }
         }
     }

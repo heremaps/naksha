@@ -26,15 +26,18 @@ public class CopyCommand implements Callable<Integer> {
     private final CopyServiceFactory copyServiceFactory;
     private final SessionOptions sessionOptions;
     private final NakshaStorageProvider nakshaStorageProvider;
+    private final NakshaProvider nakshaProvider;
 
     public CopyCommand(
             CopyServiceFactory copyServiceFactory,
             NakshaStorageProvider nakshaStorageProvider,
+            NakshaProvider nakshaProvider,
             SessionOptions sessionOptions
     ) {
         this.copyServiceFactory = copyServiceFactory;
         this.sessionOptions = sessionOptions;
         this.nakshaStorageProvider = nakshaStorageProvider;
+        this.nakshaProvider = nakshaProvider;
     }
 
     @CommandLine.Option(
@@ -88,8 +91,6 @@ public class CopyCommand implements Callable<Integer> {
         CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage, targetCollectionId)
                 .setMapId(targetMapId)
                 .build();
-
-        NakshaProvider nakshaProvider = new NakshaProvider();
 
         CopyService copyService = copyServiceFactory.create(
                 nakshaProvider,

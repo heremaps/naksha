@@ -29,7 +29,7 @@ class CopyServiceTest {
             List<NakshaFeature> featureList
     ) throws Exception {
         // Given
-        TestCopyService copyService = new TestCopyService(
+        CopyServiceTestContext copyService = new CopyServiceTestContext(
                 src,
                 target
         );
@@ -44,17 +44,18 @@ class CopyServiceTest {
         copyService.assertWriteRequests(featureList);
     }
 
+    private TestCopyElement getCopyElement() {
+        return new TestCopyElement.Builder("colid")
+                .setMapId("mapid").build();
+    }
+
     @ParameterizedTest
     @MethodSource("shouldCopyFailDueToStorageErrorTestCases")
-    void shouldCopyFailDueToStorageError(String errorMessage, Function<TestCopyService, NakshaStorage> nakshaStorageFunction) {
+    void shouldCopyFailDueToStorageError(String errorMessage, Function<CopyServiceTestContext, NakshaStorage> nakshaStorageFunction) {
         // Given
-        TestCopyElement.Builder builder = new TestCopyElement.Builder("colid")
-                .setMapId("mapid");
-        TestCopyElement srcCopyElement = builder.build();
-        TestCopyElement targetCopyElement = builder.build();
-        TestCopyService copyService = new TestCopyService(
-                srcCopyElement,
-                targetCopyElement
+        CopyServiceTestContext copyService = new CopyServiceTestContext(
+                getCopyElement(),
+                getCopyElement()
         );
         NakshaException ex = mock();
         copyService.mockSrcStorageResponseWithSuccess(Collections.emptyList());
@@ -71,26 +72,22 @@ class CopyServiceTest {
         return Stream.of(
                 Arguments.of(
                         "Can not get source storage!",
-                        (Function<TestCopyService, NakshaStorage>) cs -> cs.getSrcTestCopyElement().getStorage()
+                        (Function<CopyServiceTestContext, NakshaStorage>) cs -> cs.getSrcTestCopyElement().getStorage()
                 ),
                 Arguments.of(
                         "Can not get target storage!",
-                        (Function<TestCopyService, NakshaStorage>) cs -> cs.getTargetTestCopyElement().getStorage()
+                        (Function<CopyServiceTestContext, NakshaStorage>) cs -> cs.getTargetTestCopyElement().getStorage()
                 )
         );
     }
 
     @ParameterizedTest
     @MethodSource("shouldCopyFailDueToSessionErrorTestCases")
-    void shouldCopyFailDueToSessionError(String errorMessage, Function<TestCopyService, ISession> sessionFunction) {
+    void shouldCopyFailDueToSessionError(String errorMessage, Function<CopyServiceTestContext, ISession> sessionFunction) {
         // Given
-        TestCopyElement.Builder builder = new TestCopyElement.Builder("colid")
-                .setMapId("mapid");
-        TestCopyElement srcCopyElement = builder.build();
-        TestCopyElement targetCopyElement = builder.build();
-        TestCopyService copyService = new TestCopyService(
-                srcCopyElement,
-                targetCopyElement
+        CopyServiceTestContext copyService = new CopyServiceTestContext(
+                getCopyElement(),
+                getCopyElement()
         );
         ErrorResponse response = mock();
         when(response.getError()).thenReturn(new NakshaError());
@@ -108,11 +105,11 @@ class CopyServiceTest {
         return Stream.of(
                 Arguments.of(
                         "Problem with reading from source!",
-                        (Function<TestCopyService, ISession>) TestCopyService::getReadSession
+                        (Function<CopyServiceTestContext, ISession>) CopyServiceTestContext::getReadSession
                 ),
                 Arguments.of(
                         "Problem with writing to target!",
-                        (Function<TestCopyService, ISession>) TestCopyService::getWriteSession
+                        (Function<CopyServiceTestContext, ISession>) CopyServiceTestContext::getWriteSession
                 )
         );
     }

@@ -1,176 +1,188 @@
 package com.here.naksha.cli.copy;
 
-import com.here.naksha.cli.ProperMessageAndExitCodeTestCase;
 import com.here.naksha.cli.TestCommandLine;
-import org.junit.jupiter.api.Named;
+import com.here.naksha.cli.copy.service.CopyElement;
+import com.here.naksha.cli.copy.service.CopyServiceException;
+import naksha.model.objects.NakshaStorage;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import static com.here.naksha.cli.TestUtils.*;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.here.naksha.cli.TestUtils.EXECUTION_EXCEPTION_EXIT_CODE;
+import static com.here.naksha.cli.TestUtils.SUCCESS_EXIT_CODE;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 class CopyCommandTest {
+    private void assertCopyElement(
+            CopyElement ce,
+            String mapId,
+            String collectionId,
+            NakshaStorage nakshaStorage
+    ) {
+        assertThat(ce)
+                .matches(e -> Objects.equals(e.getMapId(), mapId))
+                .matches(e -> Objects.equals(e.getCollectionId(), collectionId))
+                .matches(e -> Objects.equals(e.getNakshaStorage(), nakshaStorage));
+    }
+
+    private void assertConsoleOut(
+            TestCommandLine.CommandResult result,
+            int exitCode,
+            String stdOut,
+            String stdErr
+    ) {
+        assertThat(result.exitCode())
+                .isEqualTo(exitCode);
+        assertThat(result.stdErr())
+                .isEqualTo(stdErr);
+        assertThat(result.stdOut())
+                .isEqualTo(stdOut);
+    }
+
     @Test
-    void shouldFailWithUnreadableFile(@TempDir Path dir) throws IOException {
+    void shouldCopy() throws CopyServiceException, NakshaStorageProviderException {
         // Given
-        TestCommandLine cmd = new TestCommandLine(new CopyCommand());
+        TestCopyCommand testCopyCommand = new TestCopyCommand();
+        TestCommandLine cmd = new TestCommandLine(testCopyCommand.getCopyCommand());
+        String srcMapId = "srcm1";
+        String targetMapId = "tm1";
+        String srcCollectionId = "srcc1";
+        String targetCollectionId = "tc1";
+        File srcStorageConfig = new File("src");
+        File targetStorageConfig = new File("target");
 
-        Path unreadableFile = dir.resolve("bad");
-        Files.writeString(unreadableFile, "{}");
-        File file = unreadableFile.toFile();
+        String[] args = {
+                "--srcStorageConfig=%s".formatted(srcStorageConfig.getPath()),
+                "--targetStorageConfig=%s".formatted(targetStorageConfig.getPath()),
+                "--srcMapId=%s".formatted(srcMapId),
+                "--srcCollectionId=%s".formatted(srcCollectionId),
+                "--targetMapId=%s".formatted(targetMapId),
+                "--targetCollectionId=%s".formatted(targetCollectionId)
+        };
 
-        assertTrue(file.setReadable(false));
+        NakshaStorage srcNakshaStorage = mock();
+        when(testCopyCommand.getNakshaStorageProvider().get(srcStorageConfig)).thenReturn(srcNakshaStorage);
+        NakshaStorage targetNakshaStorage = mock();
+        when(testCopyCommand.getNakshaStorageProvider().get(targetStorageConfig)).thenReturn(targetNakshaStorage);
 
-        String basePath = "unit_test_data/copy.CopyCommandTest/shouldFailWithUnreadableFile/";
-        ProperMessageAndExitCodeTestCase testCase = new ProperMessageAndExitCodeTestCase(
-                new String[]{
-                        "--srcStorageConfig=" + unreadableFile.toAbsolutePath(),
-                        "--targetStorageConfig=" + unreadableFile.toAbsolutePath()
-                },
-                INVALID_INPUT_EXIT_CODE,
-                readLinesFromResource(basePath + "stdout.txt"),
-                readLinesFromResource(basePath + "stderr.txt")
+        // When: command executed with given args
+        TestCommandLine.CommandResult result = cmd.execute(args);
+
+        // Then: Copy service is used with good params
+        ArgumentCaptor<CopyElement> srcCopyElement = ArgumentCaptor.forClass(CopyElement.class);
+        ArgumentCaptor<CopyElement> targetCopyElement = ArgumentCaptor.forClass(CopyElement.class);
+        verify(testCopyCommand.getCopyServiceFactory(), only()).create(
+                eq(testCopyCommand.getNakshaProvider()),
+                eq(testCopyCommand.getSessionOptions())
         );
-
-        //When: command executed with given args
-        TestCommandLine.CommandResult result = cmd.execute(testCase.args());
-
-        // Then: Output and exit code are checked
-        testCase.assertMatches(result);
+        verify(testCopyCommand.getCopyService(), only()).copy(srcCopyElement.capture(), targetCopyElement.capture());
+        assertCopyElement(
+                srcCopyElement.getValue(),
+                srcMapId,
+                srcCollectionId,
+                srcNakshaStorage
+        );
+        assertCopyElement(
+                targetCopyElement.getValue(),
+                targetMapId,
+                targetCollectionId,
+                targetNakshaStorage
+        );
+        assertConsoleOut(
+                result,
+                SUCCESS_EXIT_CODE,
+                "",
+                ""
+        );
     }
 
     @ParameterizedTest
-    @MethodSource("properMessageAndExitCodeTestCases")
-    void shouldGiveProperMessageAndExitCode(ProperMessageAndExitCodeTestCase testCase) {
+    @MethodSource("shouldGiveProperMessageAndExitCodeTestCases")
+    void shouldGiveProperMessageAndExitCode(
+            Consumer<TestCopyCommand> c,
+            int expectedExitCode,
+            String expectedStdErr,
+            String expectedStdOut
+    ) {
         // Given
-        TestCommandLine cmd = new TestCommandLine(new CopyCommand());
+        TestCopyCommand testCopyCommand = new TestCopyCommand();
+        TestCommandLine cmd = new TestCommandLine(testCopyCommand.getCopyCommand());
+        String[] args = {
+                "--srcStorageConfig=src",
+                "--targetStorageConfig=target",
+        };
+        c.accept(testCopyCommand);
 
-        // When: command executed with given args
-        TestCommandLine.CommandResult result = cmd.execute(testCase.args());
+        // When
+        TestCommandLine.CommandResult result = cmd.execute(args);
 
-        // Then: Output and exit code are checked
-        testCase.assertMatches(result);
+        // Then
+        assertConsoleOut(
+                result,
+                expectedExitCode,
+                expectedStdOut,
+                expectedStdErr
+        );
     }
 
-    private static Stream<Named<ProperMessageAndExitCodeTestCase>> properMessageAndExitCodeTestCases() throws IOException {
-        String pathToNoExistingFile = "/no/exists/file.json";
-        String basePath = "unit_test_data/copy.CopyCommandTest/shouldGiveProperMessageAndExitCode/";
+    private static Stream<Arguments> shouldGiveProperMessageAndExitCodeTestCases() {
         return Stream.of(
-                Named.named(
-                        "No existing storage configs",
-                        new ProperMessageAndExitCodeTestCase(
-                                new String[]{
-                                        "--srcStorageConfig=" + pathToNoExistingFile,
-                                        "--targetStorageConfig=" + pathToNoExistingFile
-                                },
-                                INVALID_INPUT_EXIT_CODE,
-                                readLinesFromResource(basePath + "no_existing_storage_configs/stdout.txt"),
-                                readLinesFromResource(basePath + "no_existing_storage_configs/stderr.txt")
-                        )
+                Arguments.of(
+                        (Consumer<TestCopyCommand>) (cc) -> {
+                            File file = new File("src");
+                            Exception ex = new NakshaStorageProviderException("Test", file);
+                            try {
+                                when(cc.getNakshaStorageProvider().get(eq(file))).thenThrow(ex);
+                            } catch (NakshaStorageProviderException e) {
+                                throw new RuntimeException(e);
+                            }
+                        },
+                        EXECUTION_EXCEPTION_EXIT_CODE,
+                        "Test file: src\n", // std err
+                        "" // std out
                 ),
-                Named.named(
-                        "No existing src storage config",
-                        new ProperMessageAndExitCodeTestCase(
-                                new String[]{
-                                        "--srcStorageConfig=" + pathToNoExistingFile,
-                                        "--targetStorageConfig=" + getAbsolutePathOfResource(
-                                                basePath + "storage_configs/good"
-                                        )
-                                },
-                                INVALID_INPUT_EXIT_CODE,
-                                readLinesFromResource(basePath + "no_existing_src_storage_config/stdout.txt"),
-                                readLinesFromResource(basePath + "no_existing_src_storage_config/stderr.txt")
-                        )
+                Arguments.of(
+                        (Consumer<TestCopyCommand>) (cc) -> {
+                            File file = new File("target");
+                            Exception ex = new NakshaStorageProviderException("Test", file);
+                            try {
+                                when(cc.getNakshaStorageProvider().get(eq(file))).thenThrow(ex);
+                            } catch (NakshaStorageProviderException e) {
+                                throw new RuntimeException(e);
+                            }
+                        },
+                        EXECUTION_EXCEPTION_EXIT_CODE,
+                        "Test file: target\n", // std err
+                        "" // std out
                 ),
-                Named.named(
-                        "No existing target storage config",
-                        new ProperMessageAndExitCodeTestCase(
-                                new String[]{
-                                        "--targetStorageConfig=" + pathToNoExistingFile,
-                                        "--srcStorageConfig=" + getAbsolutePathOfResource(
-                                                basePath + "storage_configs/good"
-                                        )
-                                },
-                                INVALID_INPUT_EXIT_CODE,
-                                readLinesFromResource(basePath + "no_existing_target_storage_config/stdout.txt"),
-                                readLinesFromResource(basePath + "no_existing_target_storage_config/stderr.txt")
-                        )
+                Arguments.of(
+                        (Consumer<TestCopyCommand>) (cc) -> {
+                            Exception ex = new CopyServiceException("Test");
+                            try {
+                                doThrow(ex).when(cc.getCopyService()).copy(any(), any());
+                            } catch (CopyServiceException e) {
+                                throw new RuntimeException(e);
+                            }
+                        },
+                        EXECUTION_EXCEPTION_EXIT_CODE,
+                        "Test\n", // std err
+                        "" // std out
                 ),
-                Named.named(
-                        "Bad storage config format",
-                        new ProperMessageAndExitCodeTestCase(
-                                new String[]{
-                                        "--targetStorageConfig=" + getAbsolutePathOfResource(
-                                                basePath + "storage_configs/bad"
-                                        ),
-                                        "--srcStorageConfig=" + getAbsolutePathOfResource(
-                                                basePath + "storage_configs/good"
-                                        )
-                                },
-                                INVALID_INPUT_EXIT_CODE,
-                                readLinesFromResource(basePath + "bad_storage_config_format/stdout.txt"),
-                                readLinesFromResource(basePath + "bad_storage_config_format/stderr.txt")
-                        )
-                ),
-                Named.named(
-                        "Storage config is not a file",
-                        new ProperMessageAndExitCodeTestCase(
-                                new String[]{
-                                        "--targetStorageConfig=" + getAbsolutePathOfResource(
-                                                basePath + "storage_configs/"
-                                        ),
-                                        "--srcStorageConfig=" + getAbsolutePathOfResource(
-                                                basePath + "storage_configs/good"
-                                        )
-                                },
-                                INVALID_INPUT_EXIT_CODE,
-                                readLinesFromResource(basePath + "storage_config_is_not_a_file/stdout.txt"),
-                                readLinesFromResource(basePath + "storage_config_is_not_a_file/stderr.txt")
-                        )
-                ),
-                Named.named(
-                        "Correct storage configs",
-                        new ProperMessageAndExitCodeTestCase(
-                                new String[]{
-                                        "--targetStorageConfig=" + getAbsolutePathOfResource(
-                                                basePath + "storage_configs/good"
-                                        ),
-                                        "--srcStorageConfig=" + getAbsolutePathOfResource(
-                                                basePath + "storage_configs/good"
-                                        )
-                                },
-                                SUCCESS_EXIT_CODE,
-                                readLinesFromResource(basePath + "correct_storage_configs/stdout.txt"),
-                                readLinesFromResource(basePath + "correct_storage_configs/stderr.txt")
-                        )
-                ),
-                Named.named(
-                        "Correct storage configs with all optional parameters",
-                        new ProperMessageAndExitCodeTestCase(
-                                new String[]{
-                                        "--targetStorageConfig=" + getAbsolutePathOfResource(
-                                                basePath + "storage_configs/good"
-                                        ),
-                                        "--srcStorageConfig=" + getAbsolutePathOfResource(
-                                                basePath + "storage_configs/good"
-                                        ),
-                                        "--srcMapId=1",
-                                        "--srcCollectionId=1",
-                                        "--targetMapId=1",
-                                        "--targetCollectionId=1"
-                                },
-                                SUCCESS_EXIT_CODE,
-                                readLinesFromResource(basePath + "correct_storage_configs/stdout.txt"),
-                                readLinesFromResource(basePath + "correct_storage_configs/stderr.txt")
-                        )
+                Arguments.of(
+                        (Consumer<TestCopyCommand>) (cc) -> {
+                        },
+                        SUCCESS_EXIT_CODE,
+                        "", // std err
+                        "" // std out
                 )
         );
     }

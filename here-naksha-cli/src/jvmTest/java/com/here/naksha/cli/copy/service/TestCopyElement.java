@@ -1,6 +1,5 @@
 package com.here.naksha.cli.copy.service;
 
-import naksha.model.IStorage;
 import naksha.model.objects.NakshaStorage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

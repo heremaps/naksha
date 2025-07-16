@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.util.stream.Stream;
 
 import static com.here.naksha.cli.TestUtils.INVALID_INPUT_EXIT_CODE;
-import static com.here.naksha.cli.TestUtils.readLinesFromResource;
+import static com.here.naksha.cli.TestUtils.readStringFromResource;
 
 class NakshaCliCommandTest {
     @ParameterizedTest
@@ -32,8 +32,8 @@ class NakshaCliCommandTest {
                         new ProperMessageAndExitCodeTestCase(
                                 new String[]{},
                                 INVALID_INPUT_EXIT_CODE,
-                                readLinesFromResource(basePath + "empty_command/stdout.txt"),
-                                readLinesFromResource(basePath + "empty_command/stderr.txt")
+                                readStringFromResource(basePath + "empty_command/stdout.txt"),
+                                readStringFromResource(basePath + "empty_command/stderr.txt")
                         )
                 ),
                 Named.named(
@@ -41,8 +41,8 @@ class NakshaCliCommandTest {
                         new ProperMessageAndExitCodeTestCase(
                                 new String[]{"copy"},
                                 INVALID_INPUT_EXIT_CODE,
-                                readLinesFromResource(basePath + "copy_command_without_options/stdout.txt"),
-                                readLinesFromResource(basePath + "copy_command_without_options/stderr.txt")
+                                readStringFromResource(basePath + "copy_command_without_options/stdout.txt"),
+                                readStringFromResource(basePath + "copy_command_without_options/stderr.txt")
                         )
                 )
         );

@@ -4,7 +4,6 @@ import naksha.base.fn.Fn1;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
-import naksha.model.objects.NakshaStorage;
 import naksha.model.request.*;
 import org.mockito.ArgumentCaptor;
 
@@ -17,11 +16,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-class TestCopyService {
+class CopyServiceTestContext {
     private final CopyService copyService;
     private final TestCopyElement srcTestCopyElement;
     private final TestCopyElement targetTestCopyElement;
-    private final SuccessResponse response = mock();
     private final IWriteSession writeSession = mock();
     private final IReadSession readSession = mock();
     private final SessionOptions sessionOptions = mock();
@@ -29,7 +27,7 @@ class TestCopyService {
     private final IStorage srcStorage = mock();
     private final IStorage targetStorage = mock();
 
-    public TestCopyService(
+    public CopyServiceTestContext(
             TestCopyElement srcTestCopyElement,
             TestCopyElement targetTestCopyElement
     ) {
@@ -63,6 +61,7 @@ class TestCopyService {
     public void mockSrcStorageResponseWithSuccess(
             List<NakshaFeature> featureList
     ) {
+        SuccessResponse response = mock();
         when(
                 response.getFeatures()
         ).thenReturn(
@@ -104,20 +103,14 @@ class TestCopyService {
                 .toList();
     }
 
-    public List<ReadFeatures> getReadSessionReadFeatures() {
+    private List<ReadFeatures> getReadSessionReadFeatures() {
         return captureRequestsOfType(readSession, ReadFeatures.class);
     }
 
-    public List<Write> getWriteSessionWrites() {
+    private List<Write> getWriteSessionWrites() {
         return captureRequestsOfType(writeSession, WriteRequest.class).stream()
                 .flatMap(wr -> wr.getWrites().stream())
                 .toList();
-    }
-
-    private List<Request> captureRequests(ISession session) {
-        ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
-        verify(session, atLeastOnce()).execute(requestArgumentCaptor.capture());
-        return requestArgumentCaptor.getAllValues();
     }
 
     public void assertReadRequests() {
