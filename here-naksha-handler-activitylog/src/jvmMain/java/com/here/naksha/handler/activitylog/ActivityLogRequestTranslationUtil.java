@@ -71,21 +71,28 @@ class ActivityLogRequestTranslationUtil {
 
   private static void propagateFeatureIdAndVersion(ReadFeatures readFeatures){
     StringList featureIds = readFeatures.getFeatureIds();
-    if(featureIds.size() == 1){
-      Guid guid = Guid.fromString(featureIds.get(0));
-      readFeatures.setFeatureIds(StringList.of(guid.id));
-      readFeatures.setVersion(guid.tupleNumber.version);
-    } else if(featureIds.isEmpty()) {
+    if(featureIds.isEmpty()) {
       Set<PQuery> disabledActivityLogPOps = PropertyOperationUtil.disablePQueriesInRequest(
           readFeatures.getQuery(),
           ActivityLogRequestTranslationUtil::isSingleActivityLogIdEqualityQuery
       );
-      // TODO: wrong count
-      if(disabledActivityLogPOps.size() == 1){
-        PQuery activityLogIdProp = disabledActivityLogPOps.iterator().next();
-        String idFromActivityLogNs = activityLogIdProp.getValue().toString();
-        readFeatures.setFeatureIds(StringList.of(idFromActivityLogNs));
-      }
+      disabledActivityLogPOps.forEach(activityLogOp -> {
+        readFeatures.getFeatureIds().add(activityLogOp.getValue().toString());
+      });
+    } else if(featureIds.size() == 1) {
+      Guid guid = Guid.fromString(featureIds.get(0));
+      readFeatures.setFeatureIds(StringList.of(guid.id));
+      readFeatures.setVersion(guid.tupleNumber.version);
+    } else {
+      // multiple tuple numbers (guids) provided
+      StringList featureIdsFromUuid = new StringList();
+      featureIds.forEach(uuid -> featureIdsFromUuid.add(Guid.fromString(uuid).id));
+      readFeatures.setFeatureIds(featureIdsFromUuid);
+      // unable to pick single version from N guids, fetching all head versions,
+      // then, using post-processing to filter out unnecessary ones
+      // TODO: CASL-1057: add result filter for versions higher than ...
+      // TODO: review potential improvement as part of CASL-1107
+      readFeatures.setVersion(null);
     }
   }
   private static boolean isSingleActivityLogIdEqualityQuery(PQuery pQuery) {
