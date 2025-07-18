@@ -9,9 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class NakshaStorageProviderTest {
     @Test
@@ -22,9 +20,10 @@ class NakshaStorageProviderTest {
         NakshaStorageProvider nakshaStorageProvider = new NakshaStorageProvider();
 
         // When & Then
-        assertThatThrownBy(() -> nakshaStorageProvider.get(file))
-                .isInstanceOf(NakshaStorageProviderException.class)
-                .hasMessage("File does not exist! file: %s".formatted(file.getPath()));
+        NakshaStorageProviderException exception = assertThrows(NakshaStorageProviderException.class, () -> {
+            nakshaStorageProvider.get(file);
+        });
+        assertEquals("File does not exist! file: %s".formatted(file.getPath()), exception.getMessage());
     }
 
     @Test
@@ -37,9 +36,10 @@ class NakshaStorageProviderTest {
         NakshaStorageProvider nakshaStorageProvider = new NakshaStorageProvider();
 
         // When & Then
-        assertThatThrownBy(() -> nakshaStorageProvider.get(file))
-                .isInstanceOf(NakshaStorageProviderException.class)
-                .hasMessage("Problem with reading! file: %s".formatted(file.getPath()));
+        NakshaStorageProviderException exception = assertThrows(NakshaStorageProviderException.class, () -> {
+            nakshaStorageProvider.get(file);
+        });
+        assertEquals("Problem with reading! file: %s".formatted(file.getPath()), exception.getMessage());
     }
 
     @Test
@@ -49,9 +49,10 @@ class NakshaStorageProviderTest {
         NakshaStorageProvider nakshaStorageProvider = new NakshaStorageProvider();
 
         // When & Then
-        assertThatThrownBy(() -> nakshaStorageProvider.get(file))
-                .isInstanceOf(NakshaStorageProviderException.class)
-                .hasMessage("It is not a file! file: %s".formatted(file.getPath()));
+        NakshaStorageProviderException exception = assertThrows(NakshaStorageProviderException.class, () -> {
+            nakshaStorageProvider.get(file);
+        });
+        assertEquals("It is not a file! file: %s".formatted(file.getPath()), exception.getMessage());
     }
 
     @Test
@@ -67,13 +68,14 @@ class NakshaStorageProviderTest {
         NakshaStorageProvider nakshaStorageProvider = new NakshaStorageProvider();
 
         // When & Then
-        assertThatThrownBy(() -> nakshaStorageProvider.get(file))
-                .isInstanceOf(NakshaStorageProviderException.class)
-                .hasMessage("Problem with json parsing! file: %s".formatted(file.getPath()));
+        NakshaStorageProviderException exception = assertThrows(NakshaStorageProviderException.class, () -> {
+            nakshaStorageProvider.get(file);
+        });
+        assertEquals("Problem with json parsing! file: %s".formatted(file.getPath()), exception.getMessage());
     }
 
     @Test
-    void shouldWork(@TempDir Path dir) throws IOException, NakshaStorageProviderException {
+    void shouldProvideStorage(@TempDir Path dir) throws IOException {
         // Given
         Path pathToFile = dir.resolve("file");
         Files.writeString(pathToFile, """
@@ -85,10 +87,9 @@ class NakshaStorageProviderTest {
         NakshaStorageProvider nakshaStorageProvider = new NakshaStorageProvider();
 
         // When
-        NakshaStorage nakshaStorage = nakshaStorageProvider.get(file);
+        NakshaStorage nakshaStorage = assertDoesNotThrow(() -> nakshaStorageProvider.get(file));
 
         // Then
-        assertThat(nakshaStorage)
-                .isNotNull();
+        assertNotNull(nakshaStorage);
     }
 }
