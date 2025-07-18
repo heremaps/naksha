@@ -7,7 +7,7 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "${dataDb.storageId}",
+    "storageId": "read_features_by_bbox_http_view_storage",
     "spaceIds": [
       "read_features_by_bbox_space_4_psql_storage",
       "read_features_by_bbox_space_4_http_storage"

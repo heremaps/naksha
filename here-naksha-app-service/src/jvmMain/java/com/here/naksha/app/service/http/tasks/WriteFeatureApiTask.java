@@ -279,7 +279,7 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
       requestFeaturesIds.add(feature.getId());
     }
 
-    // Fetch features that already exist in the storeage
+    // Fetch features that already exist in the storage
     final ReadFeatures getExistingFeatures = proxyWrapperOf(RequestHelper.readFeaturesByIdsRequest(null, spaceId, requestFeaturesIds))
         .withReadRequestType(ReadFeaturesProxyWrapper.ReadRequestType.GET_BY_IDS)
         .withQueryParameters(Map.of(FEATURE_IDS, requestFeaturesIds));

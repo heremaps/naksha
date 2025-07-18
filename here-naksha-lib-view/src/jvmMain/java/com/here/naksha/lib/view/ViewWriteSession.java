@@ -60,11 +60,15 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
 
   @Override
   public @NotNull Response execute(@NotNull Request request) {
+    getSession();
     if (request instanceof WriteRequest) {
       final WriteRequest writeRequest = (WriteRequest) request;
       for (Write write : writeRequest.getWrites()) {
-        write.setMapId(writeLayer.getMapId());
-        write.setCollectionId(writeLayer.getCollectionId());
+        if(write.getOp().equals(WriteOp.UPDATE)){
+          write.withOp(WriteOp.UPSERT);
+        }
+        write.withMapId(writeLayer.getMapId());
+        write.withCollectionId(writeLayer.getCollectionId());
       }
     } else if (request instanceof ReadFeatures) {
       final ReadFeatures readFeatures = (ReadFeatures) request;

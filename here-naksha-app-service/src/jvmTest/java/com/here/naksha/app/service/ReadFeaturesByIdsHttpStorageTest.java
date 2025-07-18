@@ -63,7 +63,8 @@ class ReadFeaturesByIdsHttpStorageTest extends ApiTest {
     setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH + "http_storage_space");
     // Set up (standard) Psql Storage based Space
     setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH + "psql_storage_space");
-    // Set up View Space over Psql and Http Storage based spaces
+    // Set up View Storage, View Space over Psql and Http Storage based spaces
+    createStorage(nakshaClient, TEST_DIR_SETUP_PATH + "view_space/create_storage.json");
     setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH + "view_space");
     // Load some test data in PsqlStorage based Space
     final String initialFeaturesJson = loadFileOrFail(TEST_DIR_SETUP_PATH + "psql_storage_space/create_features.json");

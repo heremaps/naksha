@@ -18,26 +18,21 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import java.util.HashMap;
-import java.util.Map;
 import naksha.base.JvmBoxingUtil;
+import naksha.base.JvmMapProxy;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.ISpatialQuery;
 import naksha.model.request.query.ITagQuery;
 import org.jetbrains.annotations.NotNull;
 
-/**
- *
- *
- * Fields of this class do not follow map-based Proxy pattern usually enforced by {@link naksha.base.Proxy}
- * This class leaves only in memory, it is not serialized, so there's no need to make it harder for us.
- */
+import java.util.Map;
+
+
 public class ReadFeaturesProxyWrapper extends ReadFeatures {
 
-  private ReadRequestType readRequestType;
-
-  private Map<String, Object> queryParameters;
+  static final String READ_REQUEST_TYPE = "readRequestType";
+  static final String QUERY_PARAMETERS = "queryParameters";
 
   public enum ReadRequestType {
     GET_BY_ID,
@@ -49,33 +44,44 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
 
   public ReadFeaturesProxyWrapper() {
     super();
-    this.queryParameters = new HashMap<>();
+  }
+
+  public static class QueryParameterMap extends JvmMapProxy<String, Object> {
+    public QueryParameterMap() {
+      super(String.class, Object.class);
+    }
   }
 
   public ReadRequestType getReadRequestType() {
-    return readRequestType;
+    return (ReadRequestType) getRaw(READ_REQUEST_TYPE);
   }
 
   public ReadFeaturesProxyWrapper withReadRequestType(ReadRequestType requestType) {
-    this.readRequestType = requestType;
+    setRaw(READ_REQUEST_TYPE, requestType);
     return this;
   }
 
   public Map<String, Object> getQueryParameters() {
-    return queryParameters;
+    return JvmBoxingUtil.box(get(QUERY_PARAMETERS), QueryParameterMap.class);
   }
 
   public <T> T getQueryParameter(String key) throws ClassCastException {
-    return (T) queryParameters.get(key);
+    return (T) getQueryParameters().get(key);
+  }
+
+  public void setQueryParameters(Map<String, Object> parameters) {
+    if (parameters == null) {
+      setRaw(QUERY_PARAMETERS, null);
+      return;
+    }
+    final QueryParameterMap proxyMap = new QueryParameterMap();
+    proxyMap.putAll(parameters);
+    setRaw(QUERY_PARAMETERS, proxyMap);
   }
 
   public ReadFeaturesProxyWrapper withQueryParameters(Map<String, Object> parameters) {
-    this.queryParameters = parameters;
+    setQueryParameters(parameters);
     return this;
-  }
-
-  public ReadFeaturesProxyWrapper shallowClone() {
-    return this.copy(false);
   }
 
   public ReadFeaturesProxyWrapper withLimit(int limit){

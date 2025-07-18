@@ -19,17 +19,14 @@
 package com.here.naksha.lib.view;
 
 import kotlin.reflect.KClass;
-import naksha.base.Int64;
 import naksha.base.Platform;
-import naksha.base.PlatformLock;
 import naksha.jbon.JbDictionary;
-import naksha.model.*;
+import naksha.model.AbstractStorage;
+import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaStorage;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Objects;
 
 // TODO: This should implement IStorage
 public class View extends AbstractStorage<NakshaStorage> implements IView {
@@ -92,6 +89,6 @@ public class View extends AbstractStorage<NakshaStorage> implements IView {
 
   @Override
   protected void initStorage(@NotNull NakshaStorage nakshaStorage, @Nullable Boolean create, @Nullable Boolean upgrade) {
-
+    // Nothing to do
   }
 }

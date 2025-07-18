@@ -1,13 +1,5 @@
 package com.here.naksha.lib.view;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Objects;
 import naksha.base.StringList;
 import naksha.geo.PointCoord;
 import naksha.geo.SpPoint;
@@ -17,15 +9,28 @@ import naksha.model.SessionOptions;
 import naksha.model.Tuple;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaFeatureList;
 import naksha.model.objects.StoreMode;
-import naksha.model.request.*;
+import naksha.model.request.FeatureTuple;
+import naksha.model.request.FeatureTupleList;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
+import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.EnabledIf;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ViewWriteSessionTests extends PsqlTests {
@@ -125,6 +130,46 @@ public class ViewWriteSessionTests extends PsqlTests {
   @Test
   @Order(17)
   @EnabledIf("runTest")
+  void updateNonExistentFeatureCreatesFeature() {
+    assertNotNull(storage);
+    final String FEATURE_ID = "non_existent_feature";
+    //GIVEN
+    ViewLayer layer0 = new ViewLayer(storage, TEST_MAP_ID, COLLECTION_0);
+    ViewLayer layer1 = new ViewLayer(storage, TEST_MAP_ID, COLLECTION_1);
+
+    //AND view will write to layer0 (top priority) by default
+    ViewLayerCollection viewLayerCollection = new ViewLayerCollection("Layers", layer0, layer1);
+    View view = new View(viewLayerCollection);
+
+    ViewWriteSession writeSession = view.newWriteSession(new SessionOptions()).init();
+
+    //AND Try to "update" a feature that does not exist
+    final WriteRequest writeRequest = new WriteRequest();
+    final NakshaFeature feature = new NakshaFeature(FEATURE_ID);
+    feature.setGeometry(new SpPoint(new PointCoord(10d, 10d)));
+    writeRequest.add(new Write().updateFeature(COLLECTION_0_FEATURE, feature, false));
+
+    //WHEN Because UPDATE is changed to UPSERT, this should create the feature
+    SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
+    //THEN
+    assertNotNull(response.getFeatureTupleList().get(0));
+    assertSame(Action.CREATED, response.getFeatureTupleList().get(0).tuple.meta.action());
+    writeSession.commit();
+
+    //GIVEN Verify the feature was actually created in the top layer (collection_0)
+    ReadFeatures readRequest = new ReadFeatures();
+    readRequest.getFeatureIds().add(FEATURE_ID);
+    //WHEN
+    List<NakshaFeature> createdFeatures = queryView(view, readRequest);
+    //THEN
+    assertEquals(1, createdFeatures.size());
+    assertEquals(FEATURE_ID, createdFeatures.get(0).getId());
+    assertEquals(10d, ((PointCoord) createdFeatures.get(0).getGeometry().getCoordinates()).getLongitude());
+  }
+
+  @Test
+  @Order(18)
+  @EnabledIf("runTest")
   void featureMissingInCollection1() {
     assertNotNull(storage);
 
@@ -143,7 +188,7 @@ public class ViewWriteSessionTests extends PsqlTests {
   }
 
   @Test
-  @Order(18)
+  @Order(19)
   @EnabledIf("runTest")
   void writeFeatureOnSelectedLayer() {
     assertNotNull(storage);
@@ -177,7 +222,7 @@ public class ViewWriteSessionTests extends PsqlTests {
   }
 
   @Test
-  @Order(19)
+  @Order(20)
   @EnabledIf("runTest")
   void deleteFeatureFromTopLayer() {
     assertNotNull(storage);
