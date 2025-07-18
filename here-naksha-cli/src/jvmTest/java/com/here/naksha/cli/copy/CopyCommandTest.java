@@ -1,189 +1,187 @@
 package com.here.naksha.cli.copy;
 
+import com.here.naksha.cli.ProperMessageAndExitCodeTestCase;
 import com.here.naksha.cli.TestCommandLine;
-import com.here.naksha.cli.copy.service.CopyElement;
-import com.here.naksha.cli.copy.service.CopyServiceException;
+import com.here.naksha.cli.copy.service.*;
+import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaStorage;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 
 import java.io.File;
-import java.util.Objects;
-import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 import static com.here.naksha.cli.TestUtils.EXECUTION_EXCEPTION_EXIT_CODE;
 import static com.here.naksha.cli.TestUtils.SUCCESS_EXIT_CODE;
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class CopyCommandTest {
+    CopyServiceFactory copyServiceFactory = mock();
+    NakshaStorageProvider nakshaStorageProvider = mock();
+    StorageProvider storageProvider = mock();
+    SessionOptions sessionOptions = mock();
+    CopyCommand copyCommand = new CopyCommand(
+            copyServiceFactory,
+            nakshaStorageProvider,
+            storageProvider,
+            sessionOptions
+    );
+    TestCommandLine commandLine = new TestCommandLine(copyCommand);
+
     private void assertCopyElement(
-            CopyElement ce,
-            String mapId,
-            String collectionId,
-            NakshaStorage nakshaStorage
+            CopyElement expected,
+            CopyElement actual
     ) {
-        assertThat(ce)
-                .matches(e -> Objects.equals(e.getMapId(), mapId))
-                .matches(e -> Objects.equals(e.getCollectionId(), collectionId))
-                .matches(e -> Objects.equals(e.getNakshaStorage(), nakshaStorage));
+        assertEquals(expected.getMapId(), actual.getMapId());
+        assertEquals(expected.getCollectionId(), actual.getCollectionId());
+        assertEquals(expected.getNakshaStorage(), actual.getNakshaStorage());
     }
 
-    private void assertConsoleOut(
-            TestCommandLine.CommandResult result,
-            int exitCode,
-            String stdOut,
-            String stdErr
-    ) {
-        assertThat(result.exitCode())
-                .isEqualTo(exitCode);
-        assertThat(result.stdErr())
-                .isEqualTo(stdErr);
-        assertThat(result.stdOut())
-                .isEqualTo(stdOut);
+    private void assertCopyServiceParams(
+            CopyService copyService,
+            CopyElement srcCopyElement,
+            CopyElement targetCopyElement
+    ) throws CopyServiceException {
+        ArgumentCaptor<CopyElement> actualSrcCopyElements = ArgumentCaptor.forClass(CopyElement.class);
+        ArgumentCaptor<CopyElement> actualTargetCopyElements = ArgumentCaptor.forClass(CopyElement.class);
+        verify(copyService, only()).copy(actualSrcCopyElements.capture(), actualTargetCopyElements.capture());
+        assertCopyElement(
+                srcCopyElement,
+                actualSrcCopyElements.getValue()
+        );
+        assertCopyElement(
+                targetCopyElement,
+                actualTargetCopyElements.getValue()
+        );
     }
 
     @Test
     void shouldCopy() throws CopyServiceException, NakshaStorageProviderException {
         // Given
-        TestCopyCommand testCopyCommand = new TestCopyCommand();
-        TestCommandLine cmd = new TestCommandLine(testCopyCommand.getCopyCommand());
-        String srcMapId = "srcm1";
-        String targetMapId = "tm1";
-        String srcCollectionId = "srcc1";
-        String targetCollectionId = "tc1";
         File srcStorageConfig = new File("src");
-        File targetStorageConfig = new File("target");
-
-        String[] args = {
-                "--srcStorageConfig=%s".formatted(srcStorageConfig.getPath()),
-                "--targetStorageConfig=%s".formatted(targetStorageConfig.getPath()),
-                "--srcMapId=%s".formatted(srcMapId),
-                "--srcCollectionId=%s".formatted(srcCollectionId),
-                "--targetMapId=%s".formatted(targetMapId),
-                "--targetCollectionId=%s".formatted(targetCollectionId)
-        };
-
         NakshaStorage srcNakshaStorage = mock();
-        when(testCopyCommand.getNakshaStorageProvider().get(srcStorageConfig)).thenReturn(srcNakshaStorage);
+        when(nakshaStorageProvider.get(srcStorageConfig)).thenReturn(srcNakshaStorage);
+
+        // And
+        File targetStorageConfig = new File("target");
         NakshaStorage targetNakshaStorage = mock();
-        when(testCopyCommand.getNakshaStorageProvider().get(targetStorageConfig)).thenReturn(targetNakshaStorage);
+        when(nakshaStorageProvider.get(targetStorageConfig)).thenReturn(targetNakshaStorage);
 
-        // When: command executed with given args
-        TestCommandLine.CommandResult result = cmd.execute(args);
+        // And
+        CopyElement srcCopyElement = new CopyElement.Builder(srcNakshaStorage, "srcc")
+                .setMapId("srcm")
+                .build();
 
-        // Then: Copy service is used with good params
-        ArgumentCaptor<CopyElement> srcCopyElement = ArgumentCaptor.forClass(CopyElement.class);
-        ArgumentCaptor<CopyElement> targetCopyElement = ArgumentCaptor.forClass(CopyElement.class);
-        verify(testCopyCommand.getCopyServiceFactory(), only()).create(
-                eq(testCopyCommand.getNakshaProvider()),
-                eq(testCopyCommand.getSessionOptions())
-        );
-        verify(testCopyCommand.getCopyService(), only()).copy(srcCopyElement.capture(), targetCopyElement.capture());
-        assertCopyElement(
-                srcCopyElement.getValue(),
-                srcMapId,
-                srcCollectionId,
-                srcNakshaStorage
-        );
-        assertCopyElement(
-                targetCopyElement.getValue(),
-                targetMapId,
-                targetCollectionId,
-                targetNakshaStorage
-        );
-        assertConsoleOut(
-                result,
+        // And
+        CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage, "targetc")
+                .setMapId("targetm")
+                .build();
+
+        // And
+        ProperMessageAndExitCodeTestCase testCase = new ProperMessageAndExitCodeTestCase(
+                new String[]{
+                        "--srcStorageConfig=%s".formatted(srcStorageConfig.getPath()),
+                        "--targetStorageConfig=%s".formatted(targetStorageConfig.getPath()),
+                        "--srcMapId=%s".formatted(srcCopyElement.getMapId()),
+                        "--srcCollectionId=%s".formatted(srcCopyElement.getCollectionId()),
+                        "--targetMapId=%s".formatted(targetCopyElement.getMapId()),
+                        "--targetCollectionId=%s".formatted(targetCopyElement.getCollectionId())
+                },
                 SUCCESS_EXIT_CODE,
                 "",
                 ""
         );
-    }
 
-    @ParameterizedTest
-    @MethodSource("shouldGiveProperMessageAndExitCodeTestCases")
-    void shouldGiveProperMessageAndExitCode(
-            Consumer<TestCopyCommand> c,
-            int expectedExitCode,
-            String expectedStdErr,
-            String expectedStdOut
-    ) {
-        // Given
-        TestCopyCommand testCopyCommand = new TestCopyCommand();
-        TestCommandLine cmd = new TestCommandLine(testCopyCommand.getCopyCommand());
-        String[] args = {
-                "--srcStorageConfig=src",
-                "--targetStorageConfig=target",
-        };
-        c.accept(testCopyCommand);
+        // And
+        CopyService copyService = mock();
+        when(copyServiceFactory.create(eq(storageProvider), eq(sessionOptions))).thenReturn(copyService);
 
-        // When
-        TestCommandLine.CommandResult result = cmd.execute(args);
+        // When: command executed with given args
+        TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
 
         // Then
-        assertConsoleOut(
-                result,
-                expectedExitCode,
-                expectedStdOut,
-                expectedStdErr
-        );
+        assertCopyServiceParams(copyService, srcCopyElement, targetCopyElement);
+
+        // And
+        testCase.assertMatches(result);
     }
 
-    private static Stream<Arguments> shouldGiveProperMessageAndExitCodeTestCases() {
-        return Stream.of(
-                Arguments.of(
-                        (Consumer<TestCopyCommand>) (cc) -> {
-                            File file = new File("src");
-                            Exception ex = new NakshaStorageProviderException("Test", file);
-                            try {
-                                when(cc.getNakshaStorageProvider().get(eq(file))).thenThrow(ex);
-                            } catch (NakshaStorageProviderException e) {
-                                throw new RuntimeException(e);
-                            }
-                        },
-                        EXECUTION_EXCEPTION_EXIT_CODE,
-                        "Test file: src\n", // std err
-                        "" // std out
-                ),
-                Arguments.of(
-                        (Consumer<TestCopyCommand>) (cc) -> {
-                            File file = new File("target");
-                            Exception ex = new NakshaStorageProviderException("Test", file);
-                            try {
-                                when(cc.getNakshaStorageProvider().get(eq(file))).thenThrow(ex);
-                            } catch (NakshaStorageProviderException e) {
-                                throw new RuntimeException(e);
-                            }
-                        },
-                        EXECUTION_EXCEPTION_EXIT_CODE,
-                        "Test file: target\n", // std err
-                        "" // std out
-                ),
-                Arguments.of(
-                        (Consumer<TestCopyCommand>) (cc) -> {
-                            Exception ex = new CopyServiceException("Test");
-                            try {
-                                doThrow(ex).when(cc.getCopyService()).copy(any(), any());
-                            } catch (CopyServiceException e) {
-                                throw new RuntimeException(e);
-                            }
-                        },
-                        EXECUTION_EXCEPTION_EXIT_CODE,
-                        "Test\n", // std err
-                        "" // std out
-                ),
-                Arguments.of(
-                        (Consumer<TestCopyCommand>) (cc) -> {
-                        },
-                        SUCCESS_EXIT_CODE,
-                        "", // std err
-                        "" // std out
-                )
+    @Test
+    void shouldFailWithBadSrcNakshaStorage() throws NakshaStorageProviderException {
+        // Given
+        File file = new File("src");
+        String exceptionMessage = "Test message";
+        when(nakshaStorageProvider.get(eq(file))).thenThrow(new NakshaStorageProviderException(exceptionMessage, file));
+
+        // And
+        ProperMessageAndExitCodeTestCase testCase = new ProperMessageAndExitCodeTestCase(
+                new String[]{
+                        "--srcStorageConfig=%s".formatted(file.getPath()),
+                        "--targetStorageConfig=target"
+                },
+                EXECUTION_EXCEPTION_EXIT_CODE,
+                "",
+                exceptionMessage + " file: " + file.getPath()
         );
+
+        // When
+        TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
+
+        // Then
+        testCase.assertMatches(result);
+    }
+
+    @Test
+    void shouldFailWithBadTargetNakshaStorage() throws NakshaStorageProviderException {
+        // Given
+        File file = new File("target");
+        String exceptionMessage = "Test message";
+        when(nakshaStorageProvider.get(eq(file))).thenThrow(new NakshaStorageProviderException(exceptionMessage, file));
+
+        // And
+        ProperMessageAndExitCodeTestCase testCase = new ProperMessageAndExitCodeTestCase(
+                new String[]{
+                        "--srcStorageConfig=src",
+                        "--targetStorageConfig=%s".formatted(file.getPath())
+                },
+                EXECUTION_EXCEPTION_EXIT_CODE,
+                "",
+                exceptionMessage + " file: " + file.getPath()
+        );
+
+        // When
+        TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
+
+        // Then
+        testCase.assertMatches(result);
+    }
+
+    @Test
+    void shouldFailWhenCopyFail() throws CopyServiceException {
+        // Given
+        CopyService copyService = mock();
+        String exceptionMessage = "Test message";
+        doThrow(new CopyServiceException(exceptionMessage)).when(copyService).copy(any(), any());
+
+        // And
+        when(copyServiceFactory.create(eq(storageProvider), eq(sessionOptions))).thenReturn(copyService);
+
+        // And
+        ProperMessageAndExitCodeTestCase testCase = new ProperMessageAndExitCodeTestCase(
+                new String[]{
+                        "--srcStorageConfig=src",
+                        "--targetStorageConfig=target"
+                },
+                EXECUTION_EXCEPTION_EXIT_CODE,
+                "",
+                exceptionMessage
+        );
+
+        // When
+        TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
+
+        // Then
+        testCase.assertMatches(result);
     }
 }

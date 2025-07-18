@@ -4,11 +4,9 @@ import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.io.IOException;
 import java.util.stream.Stream;
 
 import static com.here.naksha.cli.TestUtils.INVALID_INPUT_EXIT_CODE;
-import static com.here.naksha.cli.TestUtils.readStringFromResource;
 
 class NakshaCliCommandTest {
     @ParameterizedTest
@@ -24,16 +22,19 @@ class NakshaCliCommandTest {
         testCase.assertMatches(result);
     }
 
-    private static Stream<Named<ProperMessageAndExitCodeTestCase>> properMessageAndExitCodeTestCases() throws IOException {
-        String basePath = "unit_test_data/NakshaCLICommandTest/shouldGiveProperMessageAndExitCode/";
+    private static Stream<Named<ProperMessageAndExitCodeTestCase>> properMessageAndExitCodeTestCases() {
         return Stream.of(
                 Named.named(
                         "Empty command",
                         new ProperMessageAndExitCodeTestCase(
                                 new String[]{},
                                 INVALID_INPUT_EXIT_CODE,
-                                readStringFromResource(basePath + "empty_command/stdout.txt"),
-                                readStringFromResource(basePath + "empty_command/stderr.txt")
+                                "",
+                                """
+                                        Missing required subcommand
+                                        Usage: naksha-cli [-hV] [COMMAND]
+                                        Try 'naksha-cli --help' for more information.
+                                        """
                         )
                 ),
                 Named.named(
@@ -41,8 +42,17 @@ class NakshaCliCommandTest {
                         new ProperMessageAndExitCodeTestCase(
                                 new String[]{"copy"},
                                 INVALID_INPUT_EXIT_CODE,
-                                readStringFromResource(basePath + "copy_command_without_options/stdout.txt"),
-                                readStringFromResource(basePath + "copy_command_without_options/stderr.txt")
+                                "",
+                                """
+                                        Missing required options: '--srcStorageConfig=<srcStorageConfig>', '--targetStorageConfig=<targetStorageConfig>'
+                                        Usage: naksha-cli copy [-hV] --srcStorageConfig=<srcStorageConfig>
+                                                               [--srcMapId=<srcMapId>]
+                                                               [--srcCollectionId=<srcCollectionId>]
+                                                               --targetStorageConfig=<targetStorageConfig>
+                                                               [--targetMapId=<targetMapId>]
+                                                               [--targetCollectionId=<targetCollectionId>]
+                                        Try 'naksha-cli copy --help' for more information.
+                                        """
                         )
                 )
         );

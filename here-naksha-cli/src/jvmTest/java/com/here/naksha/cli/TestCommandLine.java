@@ -11,8 +11,7 @@ public class TestCommandLine {
     private final StringWriter err = new StringWriter();
 
     public TestCommandLine(Object cmd) {
-        CommandFactory commandFactory = new CommandFactory();
-        commandLine = new CommandLine(cmd, commandFactory);
+        commandLine = new CommandLine(cmd, new CommandFactory());
         commandLine.setParameterExceptionHandler(new ShortErrorMessageHandler());
         commandLine.setExecutionExceptionHandler(new PrintExceptionMessageHandler());
         commandLine.setOut(new PrintWriter(out));
