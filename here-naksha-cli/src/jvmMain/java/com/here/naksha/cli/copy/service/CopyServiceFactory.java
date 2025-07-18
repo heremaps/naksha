@@ -4,11 +4,11 @@ import naksha.model.SessionOptions;
 
 public final class CopyServiceFactory {
     public CopyService create(
-            NakshaProvider nakshaProvider,
+            StorageProvider storageProvider,
             SessionOptions sessionOptions
     ) {
         return new CopyService(
-                nakshaProvider,
+                storageProvider,
                 sessionOptions
         );
     }

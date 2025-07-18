@@ -16,14 +16,14 @@ import static naksha.model.util.ResultHelper.extractResponseItems;
 
 public final class CopyService {
     private final SessionOptions sessionOptions;
-    private final NakshaProvider nakshaProvider;
+    private final StorageProvider storageProvider;
 
     public CopyService(
-            @NotNull NakshaProvider nakshaProvider,
+            @NotNull StorageProvider storageProvider,
             @Nullable SessionOptions sessionOptions
     ) {
         this.sessionOptions = sessionOptions;
-        this.nakshaProvider = nakshaProvider;
+        this.storageProvider = storageProvider;
     }
 
     public void copy(
@@ -41,7 +41,7 @@ public final class CopyService {
         IStorage storage;
 
         try {
-            storage = nakshaProvider.useStorage(target.getNakshaStorage());
+            storage = storageProvider.useStorage(target.getNakshaStorage());
         } catch (Exception e) {
             throw new CopyServiceException("Can not get target storage!", e);
         }
@@ -63,7 +63,7 @@ public final class CopyService {
                     "Problem with writing to target!",
                     new NakshaException(errorResponse.getError())
             );
-            default -> throw new IllegalStateException("Unexpected value: " + response);
+            default -> throw new CopyServiceException("Unexpected response from target!");
         }
     }
 
@@ -73,7 +73,7 @@ public final class CopyService {
         IStorage storage;
 
         try {
-            storage = nakshaProvider.useStorage(source.getNakshaStorage());
+            storage = storageProvider.useStorage(source.getNakshaStorage());
         } catch (Exception e) {
             throw new CopyServiceException("Can not get source storage!", e);
         }
@@ -95,7 +95,7 @@ public final class CopyService {
                     "Problem with reading from source!",
                     new NakshaException(errorResponse.getError())
             );
-            default -> throw new IllegalStateException("Unexpected value: " + response);
+            default -> throw new CopyServiceException("Unexpected response from source!");
         };
     }
 

@@ -2,7 +2,7 @@ package com.here.naksha.cli.copy;
 
 import com.here.naksha.cli.copy.service.CopyService;
 import com.here.naksha.cli.copy.service.CopyServiceFactory;
-import com.here.naksha.cli.copy.service.NakshaProvider;
+import com.here.naksha.cli.copy.service.StorageProvider;
 import naksha.model.SessionOptions;
 
 import static org.mockito.ArgumentMatchers.eq;
@@ -15,16 +15,16 @@ public class TestCopyCommand {
     private final CopyCommand copyCommand;
     private final SessionOptions sessionOptions = mock();
     private final NakshaStorageProvider nakshaStorageProvider = mock();
-    private final NakshaProvider nakshaProvider = mock();
+    private final StorageProvider storageProvider = mock();
 
     public TestCopyCommand() {
         copyCommand = new CopyCommand(
                 copyServiceFactory,
                 nakshaStorageProvider,
-                nakshaProvider,
+                storageProvider,
                 sessionOptions
         );
-        when(copyServiceFactory.create(eq(nakshaProvider), eq(sessionOptions))).thenReturn(copyService);
+        when(copyServiceFactory.create(eq(storageProvider), eq(sessionOptions))).thenReturn(copyService);
     }
 
     public SessionOptions getSessionOptions() {
@@ -47,7 +47,7 @@ public class TestCopyCommand {
         return nakshaStorageProvider;
     }
 
-    public NakshaProvider getNakshaProvider() {
-        return nakshaProvider;
+    public StorageProvider getNakshaProvider() {
+        return storageProvider;
     }
 }

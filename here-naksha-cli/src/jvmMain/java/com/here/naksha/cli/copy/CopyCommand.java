@@ -26,18 +26,18 @@ public class CopyCommand implements Callable<Integer> {
     private final CopyServiceFactory copyServiceFactory;
     private final SessionOptions sessionOptions;
     private final NakshaStorageProvider nakshaStorageProvider;
-    private final NakshaProvider nakshaProvider;
+    private final StorageProvider storageProvider;
 
     public CopyCommand(
             CopyServiceFactory copyServiceFactory,
             NakshaStorageProvider nakshaStorageProvider,
-            NakshaProvider nakshaProvider,
+            StorageProvider storageProvider,
             SessionOptions sessionOptions
     ) {
         this.copyServiceFactory = copyServiceFactory;
         this.sessionOptions = sessionOptions;
         this.nakshaStorageProvider = nakshaStorageProvider;
-        this.nakshaProvider = nakshaProvider;
+        this.storageProvider = storageProvider;
     }
 
     @CommandLine.Option(
@@ -93,7 +93,7 @@ public class CopyCommand implements Callable<Integer> {
                 .build();
 
         CopyService copyService = copyServiceFactory.create(
-                nakshaProvider,
+                storageProvider,
                 sessionOptions
         );
 

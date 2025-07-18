@@ -9,10 +9,9 @@ public class TestCommandLine {
     private final CommandLine commandLine;
     private final StringWriter out = new StringWriter();
     private final StringWriter err = new StringWriter();
-    private final CommandFactory commandFactory;
 
     public TestCommandLine(Object cmd) {
-        commandFactory = new CommandFactory();
+        CommandFactory commandFactory = new CommandFactory();
         commandLine = new CommandLine(cmd, commandFactory);
         commandLine.setParameterExceptionHandler(new ShortErrorMessageHandler());
         commandLine.setExecutionExceptionHandler(new PrintExceptionMessageHandler());
