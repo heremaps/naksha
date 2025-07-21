@@ -7,7 +7,7 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "${dataDb.storageId}",
+    "storageId": "view_union_view_storage",
     "spaceIds": [
       "delta_view_union_test_psql_space",
       "base_view_union_test_http_space"
