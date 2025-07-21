@@ -84,6 +84,7 @@ junit_jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "jun
 junit_params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
 
 mockito = "org.mockito:mockito-core:5.16.0"
+mockito_junit = "org.mockito:mockito-junit-jupiter:5.16.0"
 mockito_kotlin = "org.mockito.kotlin:mockito-kotlin:5.4.0"
 wiremock =  "org.wiremock:wiremock:3.3.1"
 kotlintest_runner_junit5 = { module = "io.kotlintest:kotlintest-runner-junit5", version = "3.3.2" }
@@ -133,7 +134,7 @@ junit = ["junit_jupiter_api", "junit_jupiter_engine", "junit_jupiter", "junit_pa
 testing = [
     "junit_jupiter_api", "junit_jupiter_engine", "junit_jupiter", "junit_params", # junit
     "json_assert",
-    "mockito"
+    "mockito", "mockito_junit"
 ]
 jackson = ["jackson_core", "jackson_core_annotations", "jackson_core_databind", "jackson_core_dataformat", "jackson_kotlin"]
 logging = ["slf4j_api", "slf4j_console", "jcl_slf4j", "log4j_core", "log4j_api", "log4j_jcl", "log4j_slf4j"]

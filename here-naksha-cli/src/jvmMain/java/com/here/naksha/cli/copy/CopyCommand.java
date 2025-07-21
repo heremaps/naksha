@@ -22,21 +22,17 @@ import java.util.concurrent.Callable;
         sortSynopsis = false,
         sortOptions = false
 )
-public class CopyCommand implements Callable<Integer> {
+public final class CopyCommand implements Callable<Integer> {
     private final CopyServiceFactory copyServiceFactory;
-    private final SessionOptions sessionOptions;
-    private final NakshaStorageProvider nakshaStorageProvider;
+    private final NakshaStorageParser nakshaStorageParser;
     private final StorageProvider storageProvider;
 
     public CopyCommand(
             CopyServiceFactory copyServiceFactory,
-            NakshaStorageProvider nakshaStorageProvider,
-            StorageProvider storageProvider,
-            SessionOptions sessionOptions
+            StorageProvider storageProvider
     ) {
         this.copyServiceFactory = copyServiceFactory;
-        this.sessionOptions = sessionOptions;
-        this.nakshaStorageProvider = nakshaStorageProvider;
+        this.nakshaStorageParser = new NakshaStorageParser();
         this.storageProvider = storageProvider;
     }
 
@@ -81,9 +77,9 @@ public class CopyCommand implements Callable<Integer> {
     private String targetCollectionId;
 
     @Override
-    public Integer call() throws NakshaStorageProviderException, CopyServiceException {
-        NakshaStorage srcNakshaStorage = nakshaStorageProvider.get(srcStorageConfig);
-        NakshaStorage targetNakshaStorage = nakshaStorageProvider.get(targetStorageConfig);
+    public Integer call() throws NakshaStorageParserException, CopyServiceException {
+        NakshaStorage srcNakshaStorage = nakshaStorageParser.get(srcStorageConfig);
+        NakshaStorage targetNakshaStorage = nakshaStorageParser.get(targetStorageConfig);
 
         CopyElement srcCopyElement = new CopyElement.Builder(srcNakshaStorage, srcCollectionId)
                 .setMapId(srcMapId)
@@ -91,6 +87,8 @@ public class CopyCommand implements Callable<Integer> {
         CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage, targetCollectionId)
                 .setMapId(targetMapId)
                 .build();
+
+        SessionOptions sessionOptions = SessionOptions.from(null);
 
         CopyService copyService = copyServiceFactory.create(
                 storageProvider,

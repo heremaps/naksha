@@ -3,7 +3,7 @@ package com.here.naksha.cli;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertLinesMatch;
 
-public record ProperMessageAndExitCodeTestCase(
+public record CliTestCase(
         String[] args,
         int expectedExitCode,
         String expectedStdout,

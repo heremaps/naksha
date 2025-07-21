@@ -11,17 +11,17 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class NakshaStorageProviderTest {
+class NakshaStorageParserTest {
     @Test
     void shouldFailWithFileDoesNotExist(@TempDir Path dir) {
         // Given
         Path pathToFile = dir.resolve("NoExist");
         File file = pathToFile.toFile();
-        NakshaStorageProvider nakshaStorageProvider = new NakshaStorageProvider();
+        NakshaStorageParser nakshaStorageParser = new NakshaStorageParser();
 
         // When & Then
-        NakshaStorageProviderException exception = assertThrows(NakshaStorageProviderException.class, () -> {
-            nakshaStorageProvider.get(file);
+        NakshaStorageParserException exception = assertThrows(NakshaStorageParserException.class, () -> {
+            nakshaStorageParser.get(file);
         });
         assertEquals("File does not exist! file: %s".formatted(file.getPath()), exception.getMessage());
     }
@@ -33,24 +33,24 @@ class NakshaStorageProviderTest {
         Files.writeString(pathToFile, "{}");
         File file = pathToFile.toFile();
         assertTrue(file.setReadable(false), "Can not set file as unreadable!");
-        NakshaStorageProvider nakshaStorageProvider = new NakshaStorageProvider();
+        NakshaStorageParser nakshaStorageParser = new NakshaStorageParser();
 
         // When & Then
-        NakshaStorageProviderException exception = assertThrows(NakshaStorageProviderException.class, () -> {
-            nakshaStorageProvider.get(file);
+        NakshaStorageParserException exception = assertThrows(NakshaStorageParserException.class, () -> {
+            nakshaStorageParser.get(file);
         });
         assertEquals("Problem with reading! file: %s".formatted(file.getPath()), exception.getMessage());
     }
 
     @Test
-    void shouldFailWithItIsNoFile(@TempDir Path dir) throws IOException {
+    void shouldFailWithItIsNoFile(@TempDir Path dir) {
         // Given
         File file = dir.toFile();
-        NakshaStorageProvider nakshaStorageProvider = new NakshaStorageProvider();
+        NakshaStorageParser nakshaStorageParser = new NakshaStorageParser();
 
         // When & Then
-        NakshaStorageProviderException exception = assertThrows(NakshaStorageProviderException.class, () -> {
-            nakshaStorageProvider.get(file);
+        NakshaStorageParserException exception = assertThrows(NakshaStorageParserException.class, () -> {
+            nakshaStorageParser.get(file);
         });
         assertEquals("It is not a file! file: %s".formatted(file.getPath()), exception.getMessage());
     }
@@ -65,11 +65,11 @@ class NakshaStorageProviderTest {
                 }
                 """);
         File file = pathToFile.toFile();
-        NakshaStorageProvider nakshaStorageProvider = new NakshaStorageProvider();
+        NakshaStorageParser nakshaStorageParser = new NakshaStorageParser();
 
         // When & Then
-        NakshaStorageProviderException exception = assertThrows(NakshaStorageProviderException.class, () -> {
-            nakshaStorageProvider.get(file);
+        NakshaStorageParserException exception = assertThrows(NakshaStorageParserException.class, () -> {
+            nakshaStorageParser.get(file);
         });
         assertEquals("Problem with json parsing! file: %s".formatted(file.getPath()), exception.getMessage());
     }
@@ -84,10 +84,10 @@ class NakshaStorageProviderTest {
                 }
                 """);
         File file = pathToFile.toFile();
-        NakshaStorageProvider nakshaStorageProvider = new NakshaStorageProvider();
+        NakshaStorageParser nakshaStorageParser = new NakshaStorageParser();
 
         // When
-        NakshaStorage nakshaStorage = assertDoesNotThrow(() -> nakshaStorageProvider.get(file));
+        NakshaStorage nakshaStorage = assertDoesNotThrow(() -> nakshaStorageParser.get(file));
 
         // Then
         assertNotNull(nakshaStorage);

@@ -9,14 +9,6 @@ public final class CopyElement {
     private final String mapId;
     private final String collectionId;
 
-    private CopyElement(
-            Builder builder
-    ) {
-        this.nakshaStorage = builder.nakshaStorage;
-        this.collectionId = builder.collectionId;
-        this.mapId = builder.mapId;
-    }
-
     public NakshaStorage getNakshaStorage() {
         return nakshaStorage;
     }
@@ -29,7 +21,7 @@ public final class CopyElement {
         return collectionId;
     }
 
-    public static class Builder {
+    public final static class Builder {
         private final NakshaStorage nakshaStorage;
         private String mapId;
         private final String collectionId;
@@ -52,5 +44,13 @@ public final class CopyElement {
             this.mapId = mapId;
             return this;
         }
+    }
+
+    private CopyElement(
+            Builder builder
+    ) {
+        this.nakshaStorage = builder.nakshaStorage;
+        this.collectionId = builder.collectionId;
+        this.mapId = builder.mapId;
     }
 }

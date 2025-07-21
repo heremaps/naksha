@@ -78,11 +78,7 @@ public final class CopyService {
             throw new CopyServiceException("Can not get source storage!", e);
         }
 
-        ReadFeatures readFeatures = new ReadFeatures();
-        readFeatures.setCollectionIds(
-                StringList.of(source.getCollectionId())
-        );
-        readFeatures.setMapId(source.getMapId());
+        ReadFeatures readFeatures = createReadFeaturesRequest(source);
 
         Response response = storage.useReadSession(
                 sessionOptions,
@@ -99,4 +95,13 @@ public final class CopyService {
         };
     }
 
+    private ReadFeatures createReadFeaturesRequest(CopyElement source) {
+        ReadFeatures readFeatures = new ReadFeatures();
+        readFeatures.setCollectionIds(
+                StringList.of(source.getCollectionId())
+        );
+        readFeatures.setMapId(source.getMapId());
+
+        return readFeatures;
+    }
 }

@@ -7,14 +7,14 @@ import naksha.model.objects.NakshaStorage;
 import java.io.File;
 import java.nio.file.Files;
 
-public final class NakshaStorageProvider {
-    NakshaStorage get(File file) throws NakshaStorageProviderException {
+final class NakshaStorageParser {
+    NakshaStorage get(File file) throws NakshaStorageParserException {
         if (!file.exists()) {
-            throw new NakshaStorageProviderException("File does not exist!", file);
+            throw new NakshaStorageParserException("File does not exist!", file);
         }
 
         if (!file.isFile()) {
-            throw new NakshaStorageProviderException("It is not a file!", file);
+            throw new NakshaStorageParserException("It is not a file!", file);
         }
 
         String json;
@@ -22,14 +22,14 @@ public final class NakshaStorageProvider {
         try {
             json = Files.readString(file.toPath());
         } catch (Exception e) {
-            throw new NakshaStorageProviderException("Problem with reading!", file);
+            throw new NakshaStorageParserException("Problem with reading!", file);
         }
 
         try {
             Object rawConfig = Platform.fromJSON(json);
             return JvmBoxingUtil.box(rawConfig, NakshaStorage.class);
         } catch (Exception e) {
-            throw new NakshaStorageProviderException("Problem with json parsing!", file, e);
+            throw new NakshaStorageParserException("Problem with json parsing!", file, e);
         }
     }
 }

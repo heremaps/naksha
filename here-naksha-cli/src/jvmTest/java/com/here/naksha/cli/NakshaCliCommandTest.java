@@ -1,5 +1,7 @@
 package com.here.naksha.cli;
 
+import naksha.model.NakshaContext;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -9,9 +11,14 @@ import java.util.stream.Stream;
 import static com.here.naksha.cli.TestUtils.INVALID_INPUT_EXIT_CODE;
 
 class NakshaCliCommandTest {
+    @BeforeEach
+    void beforeEach() {
+        NakshaContext.currentContext().withAppId("testAppId");
+    }
+
     @ParameterizedTest
     @MethodSource("properMessageAndExitCodeTestCases")
-    void shouldGiveProperMessageAndExitCode(ProperMessageAndExitCodeTestCase testCase) {
+    void shouldGiveProperMessageAndExitCode(CliTestCase testCase) {
         // Given
         TestCommandLine cmd = new TestCommandLine(new NakshaCliCommand());
 
@@ -22,11 +29,11 @@ class NakshaCliCommandTest {
         testCase.assertMatches(result);
     }
 
-    private static Stream<Named<ProperMessageAndExitCodeTestCase>> properMessageAndExitCodeTestCases() {
+    private static Stream<Named<CliTestCase>> properMessageAndExitCodeTestCases() {
         return Stream.of(
                 Named.named(
                         "Empty command",
-                        new ProperMessageAndExitCodeTestCase(
+                        new CliTestCase(
                                 new String[]{},
                                 INVALID_INPUT_EXIT_CODE,
                                 "",
@@ -39,7 +46,7 @@ class NakshaCliCommandTest {
                 ),
                 Named.named(
                         "Copy command without options",
-                        new ProperMessageAndExitCodeTestCase(
+                        new CliTestCase(
                                 new String[]{"copy"},
                                 INVALID_INPUT_EXIT_CODE,
                                 "",
