@@ -1,6 +1,7 @@
 package com.here.naksha.cli.copy;
 
 import com.here.naksha.cli.copy.service.*;
+import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaStorage;
 import org.jetbrains.annotations.Nullable;
@@ -88,7 +89,8 @@ public final class CopyCommand implements Callable<Integer> {
                 .setMapId(targetMapId)
                 .build();
 
-        SessionOptions sessionOptions = SessionOptions.from(null);
+        NakshaContext.currentContext().withAppId("nakshacli");
+        SessionOptions sessionOptions = SessionOptions.from(NakshaContext.currentContext());
 
         CopyService copyService = copyServiceFactory.create(
                 storageProvider,

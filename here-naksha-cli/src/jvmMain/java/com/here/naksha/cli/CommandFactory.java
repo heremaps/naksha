@@ -3,8 +3,6 @@ package com.here.naksha.cli;
 import com.here.naksha.cli.copy.CopyCommand;
 import com.here.naksha.cli.copy.service.CopyServiceFactory;
 import com.here.naksha.cli.copy.service.StorageProvider;
-import naksha.model.NakshaContext;
-import naksha.model.SessionOptions;
 import picocli.CommandLine;
 
 final class CommandFactory implements CommandLine.IFactory {

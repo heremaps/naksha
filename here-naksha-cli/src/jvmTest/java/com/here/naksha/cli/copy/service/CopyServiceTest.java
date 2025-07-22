@@ -1,13 +1,12 @@
 package com.here.naksha.cli.copy.service;
 
-import com.here.naksha.cli.copy.SessionOptionsProvider;
 import naksha.base.fn.Fn1;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.*;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -27,12 +26,12 @@ class CopyServiceTest {
     private final CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage, "targetcol")
             .setMapId("targetmap")
             .build();
-    private SessionOptions sessionOptions;
+    private static SessionOptions sessionOptions;
 
-    @BeforeEach
-    void beforeEach() {
-        NakshaContext.currentContext().withAppId("testAppId");
-        sessionOptions = SessionOptionsProvider.get();
+    @BeforeAll
+    static void beforeAll() {
+        NakshaContext nakshaContext = NakshaContext.currentContext().withAppId("testAppId");
+        sessionOptions = SessionOptions.from(nakshaContext);
     }
 
     @Test
@@ -178,7 +177,6 @@ class CopyServiceTest {
     }
 
 
-
     @Test
     void shouldFailWhenUnableToUseTarget() {
         // Given: failing storage provider
@@ -268,7 +266,7 @@ class CopyServiceTest {
                 });
         when(readSession.execute(any())).thenReturn(
                 new SuccessResponse(
-                    NakshaFeatureList.fromList(features)
+                        NakshaFeatureList.fromList(features)
                 )
         );
         return readSession;

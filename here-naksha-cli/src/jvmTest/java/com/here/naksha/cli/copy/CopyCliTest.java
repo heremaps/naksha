@@ -3,8 +3,6 @@ package com.here.naksha.cli.copy;
 import com.here.naksha.cli.CliTestCase;
 import com.here.naksha.cli.TestCommandLine;
 import com.here.naksha.cli.copy.service.*;
-import naksha.model.NakshaContext;
-import naksha.model.SessionOptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,13 +24,10 @@ class CopyCliTest {
     private CopyServiceFactory copyServiceFactory;
     @Mock
     private StorageProvider storageProvider;
-    private SessionOptions sessionOptions;
     private TestCommandLine commandLine;
 
     @BeforeEach
     void beforeEach() {
-        NakshaContext.currentContext().withAppId("testAppId");
-        sessionOptions = SessionOptionsProvider.get();
         CopyCommand copyCommand = new CopyCommand(
                 copyServiceFactory,
                 storageProvider
@@ -78,7 +73,7 @@ class CopyCliTest {
 
         // And
         CopyService copyService = mock();
-        when(copyServiceFactory.create(eq(storageProvider), eq(sessionOptions))).thenReturn(copyService);
+        when(copyServiceFactory.create(eq(storageProvider), any())).thenReturn(copyService);
 
         // When: command executed with given args
         TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
@@ -104,7 +99,7 @@ class CopyCliTest {
                 },
                 EXECUTION_EXCEPTION_EXIT_CODE,
                 "",
-                nakshaStorageParserErrorMessage.formatted( file.getPath() )
+                nakshaStorageParserErrorMessage.formatted(file.getPath())
         );
 
         // When
@@ -130,7 +125,7 @@ class CopyCliTest {
                 },
                 EXECUTION_EXCEPTION_EXIT_CODE,
                 "",
-                nakshaStorageParserErrorMessage.formatted( targetFile.getPath() )
+                nakshaStorageParserErrorMessage.formatted(targetFile.getPath())
         );
 
         // When
@@ -148,7 +143,7 @@ class CopyCliTest {
         doThrow(new CopyServiceException(exceptionMessage)).when(copyService).copy(any(), any());
 
         // And
-        when(copyServiceFactory.create(eq(storageProvider), eq(sessionOptions))).thenReturn(copyService);
+        when(copyServiceFactory.create(eq(storageProvider), any())).thenReturn(copyService);
 
         // And
         File validStorageConfig = new File(validStorageConfigPath);
