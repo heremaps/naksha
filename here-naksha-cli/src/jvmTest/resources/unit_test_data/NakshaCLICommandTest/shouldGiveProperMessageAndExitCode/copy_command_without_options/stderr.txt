@@ -1,8 +1,0 @@
-Missing required options: '--srcStorageConfig=<srcStorageConfig>', '--targetStorageConfig=<targetStorageConfig>'
-Usage: naksha-cli copy [-hV] --srcStorageConfig=<srcStorageConfig>
-                       [--srcMapId=<srcMapId>]
-                       [--srcCollectionId=<srcCollectionId>]
-                       --targetStorageConfig=<targetStorageConfig>
-                       [--targetMapId=<targetMapId>]
-                       [--targetCollectionId=<targetCollectionId>]
-Try 'naksha-cli copy --help' for more information.

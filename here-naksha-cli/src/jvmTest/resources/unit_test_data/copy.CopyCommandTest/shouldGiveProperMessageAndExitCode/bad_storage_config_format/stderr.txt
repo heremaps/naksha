@@ -1,7 +1,0 @@
-Invalid value for option '--targetStorageConfig': Problem with json parsing!
-Usage: copy [-hV] --srcStorageConfig=<srcStorageConfig> [--srcMapId=<srcMapId>]
-            [--srcCollectionId=<srcCollectionId>]
-            --targetStorageConfig=<targetStorageConfig>
-            [--targetMapId=<targetMapId>]
-            [--targetCollectionId=<targetCollectionId>]
-Try 'copy --help' for more information.

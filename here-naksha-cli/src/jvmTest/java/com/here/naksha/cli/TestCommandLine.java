@@ -4,8 +4,6 @@ import picocli.CommandLine;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.Collections;
-import java.util.List;
 
 public class TestCommandLine {
     private final CommandLine commandLine;
@@ -13,8 +11,9 @@ public class TestCommandLine {
     private final StringWriter err = new StringWriter();
 
     public TestCommandLine(Object cmd) {
-        commandLine = new CommandLine(cmd);
+        commandLine = new CommandLine(cmd, new CommandFactory());
         commandLine.setParameterExceptionHandler(new ShortErrorMessageHandler());
+        commandLine.setExecutionExceptionHandler(new PrintExceptionMessageHandler());
         commandLine.setOut(new PrintWriter(out));
         commandLine.setErr(new PrintWriter(err));
     }
@@ -23,19 +22,15 @@ public class TestCommandLine {
         int exitCode = commandLine.execute(args);
         return new CommandResult(
                 exitCode,
-                readLinesFromString(out.toString()),
-                readLinesFromString(err.toString())
+                out.toString(),
+                err.toString()
         );
     }
 
     public record CommandResult(
             int exitCode,
-            List<String> stdOut,
-            List<String> stdErr
+            String stdOut,
+            String stdErr
     ) {
-    }
-
-    private List<String> readLinesFromString(String str) {
-        return str.isEmpty() ? Collections.emptyList() : str.lines().toList();
     }
 }

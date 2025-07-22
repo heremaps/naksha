@@ -1,3 +1,0 @@
-Missing required subcommand
-Usage: naksha-cli [-hV] [COMMAND]
-Try 'naksha-cli --help' for more information.
