@@ -74,6 +74,9 @@ class CopyServiceTest {
         // And: assert writes
         List<Write> writes = captureWrites(writeSession);
         assertWrites(writes, features);
+
+        // And: assert commit
+        verify(writeSession).commit();
     }
 
     @Test
@@ -150,8 +153,9 @@ class CopyServiceTest {
 
     @Test
     void shouldFailWhenWritingToTargetFails() {
-        // Given: failing target storage
-        IStorage targetStorage = createFailingTargetStorage();
+        // Given: failing target storage with write session
+        IStorage targetStorage = mock();
+        IWriteSession writeSession = createWriteSessionForStorageReturningErrorResponse(targetStorage);
 
         // And: valid source storage
         IStorage srcStorage = createValidSrcStorage();
@@ -172,8 +176,10 @@ class CopyServiceTest {
                     targetCopyElement
             );
         });
-
         assertEquals("Problem with writing to target!", exception.getMessage());
+
+        // And
+        verify(writeSession).rollback();
     }
 
 
@@ -203,16 +209,11 @@ class CopyServiceTest {
         assertEquals("Can not get target storage!", exception.getMessage());
     }
 
-    private IStorage createTargetStorageReturningUnexpectedResponse() {
-        IStorage targetStorage = mock();
-        when(targetStorage.useWriteSession(eq(sessionOptions), any())).thenReturn(new Response());
-        return targetStorage;
-    }
-
     @Test
     void shouldFailOnUnexpectedResponseFromTarget() {
         // Given: unexpected response from target storage
-        IStorage targetStorage = createTargetStorageReturningUnexpectedResponse();
+        IStorage targetStorage = mock();
+        IWriteSession writeSession = createWriteSessionForStorageReturningUnexpectedResponse(targetStorage);
 
         // And: valid source storage
         IStorage srcStorage = createValidSrcStorage();
@@ -233,8 +234,10 @@ class CopyServiceTest {
                     targetCopyElement
             );
         });
-
         assertEquals("Unexpected response from target!", exception.getMessage());
+
+        // And
+        verify(writeSession).rollback();
     }
 
     private <T extends Request> List<T> captureRequestsOfType(ISession session, Class<T> type) {
@@ -244,6 +247,28 @@ class CopyServiceTest {
                 .filter(type::isInstance)
                 .map(type::cast)
                 .toList();
+    }
+
+    private IWriteSession createWriteSessionForStorageReturningErrorResponse(IStorage storage) {
+        IWriteSession writeSession = mock();
+        when(storage.useWriteSession(eq(sessionOptions), any()))
+                .thenAnswer(invocation -> {
+                    Fn1<Response, IWriteSession> lambda = invocation.getArgument(1);
+                    return lambda.call(writeSession);
+                });
+        when(writeSession.execute(any())).thenReturn(new ErrorResponse());
+        return writeSession;
+    }
+
+    private IWriteSession createWriteSessionForStorageReturningUnexpectedResponse(IStorage storage) {
+        IWriteSession writeSession = mock();
+        when(storage.useWriteSession(eq(sessionOptions), any()))
+                .thenAnswer(invocation -> {
+                    Fn1<Response, IWriteSession> lambda = invocation.getArgument(1);
+                    return lambda.call(writeSession);
+                });
+        when(writeSession.execute(any())).thenReturn(new Response());
+        return writeSession;
     }
 
     private IWriteSession createWriteSessionForStorageReturningSuccessResponse(IStorage storage) {
@@ -336,12 +361,6 @@ class CopyServiceTest {
         IStorage srcStorage = mock();
         when(srcStorage.useReadSession(eq(sessionOptions), any())).thenReturn(new Response());
         return srcStorage;
-    }
-
-    private IStorage createFailingTargetStorage() {
-        IStorage targetStorage = mock();
-        when(targetStorage.useWriteSession(eq(sessionOptions), any())).thenReturn(new ErrorResponse());
-        return targetStorage;
     }
 
     private IStorage createValidSrcStorage() {

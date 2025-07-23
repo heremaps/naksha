@@ -25,6 +25,8 @@ kotlin {
         jvmTest {
             dependencies {
                 implementation(libs.bundles.testing)
+                implementation(libs.test.containers)
+                implementation(project(":here-naksha-lib-psql"))
             }
         }
     }

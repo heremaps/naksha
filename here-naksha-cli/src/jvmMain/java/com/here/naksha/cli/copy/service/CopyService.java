@@ -54,8 +54,15 @@ public final class CopyService {
 
         Response response = storage.useWriteSession(
                 sessionOptions,
-                writer -> writer.execute(writeRequest)
-        );
+                writer -> {
+                    Response r = writer.execute(writeRequest);
+                    if (r instanceof SuccessResponse) {
+                        writer.commit();
+                    } else {
+                        writer.rollback();
+                    }
+                    return r;
+                });
 
         switch (response) {
             case SuccessResponse ignored -> { /*do nothing*/ }
