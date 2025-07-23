@@ -143,6 +143,8 @@ class PsqlCopyTest {
                 reader -> reader.execute(readFeatures)
         );
 
+        Assertions.assertInstanceOf(SuccessResponse.class, response);
+
         return extractResponseItems((SuccessResponse) response, NakshaFeature.class);
     }
 
