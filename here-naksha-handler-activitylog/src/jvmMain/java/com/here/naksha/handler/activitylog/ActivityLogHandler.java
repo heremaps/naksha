@@ -130,8 +130,8 @@ public class ActivityLogHandler extends AbstractEventHandler {
   private List<NakshaFeature> featuresEnhancedWithActivity(List<NakshaFeature> features) {
     List<FeatureWithPredecessor> featureWithPredecessors = featuresWithPredecessors(features);
     return featureWithPredecessors.stream()
-        .map(featureWithSuccessor -> enhanceWithActivityLog(
-            featureWithSuccessor.feature, featureWithSuccessor.oldFeature, properties.getSpaceId()))
+        .map(featureWithPredecessor -> enhanceWithActivityLog(
+            featureWithPredecessor.feature, featureWithPredecessor.oldFeature, properties.getSpaceId()))
         .sorted(FEATURE_COMPARATOR)
         .toList();
   }
