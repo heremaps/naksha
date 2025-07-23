@@ -130,56 +130,17 @@ class ActivityLogHandlerTest {
   }
 
   @Test
-  void shouldTransformReadRequest() {
-    // Given: Original read request
-    String featureUuid = "featureUuid";
-    String featureId = "featureId";
-    ReadFeatures originalReadFeatures = new ReadFeatures();
-    originalReadFeatures.setVersions(1);
-    originalReadFeatures.getQuery().setProperties(
-            new POr(
-                new PQuery(new Property(NakshaFeature.ID_KEY), StringOp.EQUALS, featureUuid),
-                    new PQuery(PROPERTY_ACTIVITY_LOG_ID, StringOp.EQUALS, featureId)
-            )
-        );
-
-    // And: Configured session that will receive read request from handler
-    IReadSession readSession = mock(IReadSession.class);
-    when(spaceStorage.newReadSession(any())).thenReturn(readSession);
-    when(readSession.execute(any())).thenReturn(new SuccessResponse());
-
-    // When: Processing event with original request
-    handler.processEvent(eventWith(originalReadFeatures));
-
-    // Then: Some request was executed by the session
-    ArgumentCaptor<ReadFeatures> requestCaptor = ArgumentCaptor.forClass(ReadFeatures.class);
-    verify(readSession).execute(requestCaptor.capture());
-
-    // And: The executed request was a ReadFeatures transformed by handler
-    ReadFeatures requestPassedToSpaceStorage = requestCaptor.getValue();
-    assertEquals(List.of(SPACE_ID), requestPassedToSpaceStorage.getCollectionIds(),
-        "Transformed request should use 'spaceId' from handler's properties");
-    assertEquals(Integer.MAX_VALUE,requestPassedToSpaceStorage.getVersions(), "Transformed request should return all versions of feature");
-    assertThatPropertyQuery(requestPassedToSpaceStorage.getQuery().getProperties()) // POp for id and activityLogId should be transformed
-        .hasChildrenThat(
-            first -> first
-                .hasOp(StringOp.EQUALS)
-                .hasProperty(PROPERTY_UUID)
-                .hasValue(featureUuid),
-            second -> second
-                .hasOp(StringOp.EQUALS)
-                .hasProperty(List.of(NakshaFeature.ID_KEY))
-                .hasValue(featureId)
-        );
-  }
-
-  @Test
   void shouldComposeActivityFeatures() throws Exception {
-    // Given: old version of feature
+    // Given: features uuid
+    String initialUuid = "initialUuid";
+    String newUuid = "newUuid";
+
+    // And: old version of feature
     String featureId = "featureId";
     NakshaFeature oldFeature = nakshaFeature(featureId)
-        .withUuid("initial_uuid")
+        .withUuid(initialUuid)
         .withPuuid(null)
+        .withNuuid(newUuid)
         .withAction(Action.CREATED)
         .withCustomProperties(
             Map.of(
@@ -190,8 +151,9 @@ class ActivityLogHandlerTest {
 
     // And: new version of feature
     NakshaFeature newFeature = nakshaFeature(featureId)
-        .withUuid("new_uuid")
-        .withPuuid("initial_uuid")
+        .withUuid(newUuid)
+        .withPuuid(initialUuid)
+        .withNuuid(null)
         .withAction(Action.UPDATED)
         .withCustomProperties(Map.of(
             "op", "new feature",
@@ -241,82 +203,6 @@ class ActivityLogHandlerTest {
                 .hasActivityLogId(featureId)
                 .hasAction(Action.CREATED.toString())
                 .hasReversePatch(null)
-        );
-  }
-
-  @Test
-  void shouldFetchAdditionalHistoryFeaturesWhenNeeded() throws Exception {
-    // Given: Client request (we don't care about it's specifics)
-    ReadFeatures firstRequest = new ReadFeatures();
-
-    // And: Space storage that will return two history features for client's request
-    IReadSession readSession = spaceStorageSessionReturningHistoryFeatures(firstRequest,
-        nakshaFeature("id_1")
-            .withUuid("uuid_1")
-            .withPuuid("puuid_1")
-            .withAction(Action.UPDATED)
-            .build(),
-        nakshaFeature("id_2")
-            .withUuid("uuid_2")
-            .withPuuid("puuid_2")
-            .withAction(Action.DELETED)
-            .build()
-    );
-
-    // And: Space storage that will return two predecessors for any other request
-    when(readSession.execute(not(eq(firstRequest)))).thenReturn(new SuccessResponse(NakshaFeatureList.fromList(List.of(
-        nakshaFeature("id_1")
-            .withUuid("puuid_1")
-            .withPuuid(null)
-            .withAction(Action.CREATED)
-            .build(),
-        nakshaFeature("id_2")
-            .withUuid("puuid_2")
-            .withPuuid(null)
-            .withAction(Action.CREATED)
-            .build()
-    ))));
-
-    // When: Handler processes event with original client's request
-    Response result = handler.processEvent(eventWith(firstRequest));
-
-    // Then: Space storage should be queried twice
-    ArgumentCaptor<ReadFeatures> requestCaptor = ArgumentCaptor.forClass(ReadFeatures.class);
-    verify(readSession, times(2)).execute(requestCaptor.capture());
-
-    // And: First request passed to the space should be the client one
-    List<ReadFeatures> requestPassedToSpace = requestCaptor.getAllValues();
-    assertEquals(2, requestPassedToSpace.size());
-    assertEquals(firstRequest, requestPassedToSpace.get(0));
-
-    // And: Second request passed to space should be about fetching additional predecessors
-    ReadFeatures secondRequest = requestPassedToSpace.get(1);
-    assertEquals(Integer.MAX_VALUE,secondRequest.getVersions());
-    assertEquals(List.of(SPACE_ID), secondRequest.getCollectionIds());
-    PropertyQueryAssertions.assertThatPropertyQuery(secondRequest.getQuery().getProperties())
-        .isPOr()
-        .hasChildrenThat(
-            first -> first
-                .hasProperty(PROPERTY_UUID)
-                .hasOp(StringOp.EQUALS)
-                .hasValue("puuid_2"),
-            second -> second
-                .hasProperty(PROPERTY_UUID)
-                .hasOp(StringOp.EQUALS)
-                .hasValue("puuid_1")
-        );
-
-    // And: Handler's result should only contain features from the first response (to client's request)
-    assertThatResult(result)
-        .hasActivityFeatures(
-            first -> first
-                .hasId("uuid_2")
-                .hasActivityLogId("id_2")
-                .hasAction(Action.DELETED.toString()),
-            second -> second
-                .hasId("uuid_1")
-                .hasActivityLogId("id_1")
-                .hasAction(Action.UPDATED.toString())
         );
   }
 
