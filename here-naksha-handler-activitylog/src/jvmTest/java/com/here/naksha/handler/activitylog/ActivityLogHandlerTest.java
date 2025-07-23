@@ -420,7 +420,6 @@ class ActivityLogHandlerTest {
     return spaceStorageSessionReturningHistoryFeatures(handledRequest, List.of(historyFeatures));
   }
 
-  IPropertyQuery propertyQuery = readFeatures.getQuery().getProperties();
   private IReadSession spaceStorageSessionReturningHistoryFeatures(ReadRequest handledRequest, List<NakshaFeature> historyFeatures) {
     IReadSession readSession = mock(IReadSession.class);
     when(readSession.execute(handledRequest)).thenReturn(new SuccessResponse(NakshaFeatureList.fromList(historyFeatures)));

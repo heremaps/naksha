@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
+import naksha.model.request.ReadFeatures;
 import naksha.model.request.RequestQuery;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.PAnd;
@@ -66,6 +67,12 @@ public class PropertyOperationUtil {
     return Collections.emptySet();
   }
 
+  private static void removeRedundantQueries(ReadFeatures readFeatures) {
+    IPropertyQuery parent = readFeatures.getQuery().getProperties();
+
+
+  }
+
   private static void replacePropertyInPropertyOperationTree(
       IPropertyQuery propertyOperation, Function<PQuery, Optional<PQuery>> transformingFunction) {
     if (propertyOperation instanceof PAnd pAnd) {
@@ -93,6 +100,8 @@ public class PropertyOperationUtil {
    * @param removalCondition   If evaluates to true, it effectively disables the check by replacing it with `true-ish` query
    * @param disabledProperties Set of so-far disabled property queries
    */
+  // TODO CASL-1123: this can be improved - we could inline "always true" statement such as AND(PTrue, PTrue) or OR(PTrue, PFalse)
+  // in such cases we can simply remove the node - in edge cases, we could end up without IPropertyQuery at all (if all gets resolved)
   private static void disablePropertyInPropertyQueryTree(
       @NotNull IPropertyQuery current, @Nullable IPropertyQuery parent, F1<Boolean, PQuery> removalCondition, Set<PQuery> disabledProperties
   ) {

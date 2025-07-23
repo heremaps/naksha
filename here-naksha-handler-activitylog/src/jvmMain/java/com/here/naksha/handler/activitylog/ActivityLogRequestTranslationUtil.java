@@ -24,18 +24,16 @@ import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
 import static naksha.model.objects.NakshaProperties.XYZ_KEY;
 
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
-import java.util.Optional;
-
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import naksha.base.StringList;
 import naksha.model.Guid;
-import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaProperties;
+import naksha.model.Version;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
-import org.jetbrains.annotations.NotNull;
 
 class ActivityLogRequestTranslationUtil {
 
@@ -45,20 +43,19 @@ class ActivityLogRequestTranslationUtil {
   static final String CREATED_AT = "createdAt";
   static final String UPDATED_AT = "updatedAt";
 
-  private static final String[] ACTIVITY_LOG_ID_PATH = new String[] {PROPERTIES_KEY, XYZ_ACTIVITY_LOG_NS, ID};
-  private static final String[] UUID_PATH = new String[] {XYZ_KEY, UUID};
+  private static final String[] ACTIVITY_LOG_ID_PATH = new String[]{PROPERTIES_KEY, XYZ_ACTIVITY_LOG_NS, ID};
+  private static final String[] UUID_PATH = new String[]{XYZ_KEY, UUID};
   static final Property PROPERTY_ACTIVITY_LOG_ID = new Property(ACTIVITY_LOG_ID_PATH);
   static final Property PROPERTY_UUID = new Property(UUID_PATH);
 
-  private ActivityLogRequestTranslationUtil() {}
+  private ActivityLogRequestTranslationUtil() {
+  }
 
   /**
-   * Mutates [ReadFeatures] so that it is aligned with Acitvity Log needs, more specifically
-   * - we query history
-   * - we query for all available versions
-   * - we assume the query will always hit the collection with Space's id
-   * - if singular featureId is defined, we assume its value holds guuid which will be used to extract actual featureId
-   * - if no feature ids are defined, we expect activityLogId defined, that is then disabled and used as regular featureId
+   * Mutates [ReadFeatures] so that it is aligned with Acitvity Log needs, more specifically - we query history - we query for all available
+   * versions - we assume the query will always hit the collection with Space's id - if singular featureId is defined, we assume its value
+   * holds guuid which will be used to extract actual featureId - if no feature ids are defined, we expect activityLogId defined, that is
+   * then disabled and used as regular featureId
    *
    * @param readFeatures ReadFeatures bearing potential POp to be translated (request will be mutated after this operation!)
    */
@@ -69,32 +66,43 @@ class ActivityLogRequestTranslationUtil {
     propagateFeatureIdAndVersion(readFeatures);
   }
 
-  private static void propagateFeatureIdAndVersion(ReadFeatures readFeatures){
-    StringList featureIds = readFeatures.getFeatureIds();
-    if(featureIds.isEmpty()) {
-      Set<PQuery> disabledActivityLogPOps = PropertyOperationUtil.disablePQueriesInRequest(
-          readFeatures.getQuery(),
-          ActivityLogRequestTranslationUtil::isSingleActivityLogIdEqualityQuery
-      );
-      disabledActivityLogPOps.forEach(activityLogOp -> {
-        readFeatures.getFeatureIds().add(activityLogOp.getValue().toString());
-      });
-    } else if(featureIds.size() == 1) {
-      Guid guid = Guid.fromString(featureIds.get(0));
-      readFeatures.setFeatureIds(StringList.of(guid.id));
+  private static void propagateFeatureIdAndVersion(ReadFeatures readFeatures) {
+    StringList translatedFeatureIds = new StringList();
+    // by default we don't set max version and fetch all - this will be overridden later if possible
+    readFeatures.setVersion(null);
+    // handle potential activity log ids placed in property query
+    Set<PQuery> disabledActivityLogPOps = PropertyOperationUtil.disablePQueriesInRequest(
+        readFeatures.getQuery(),
+        ActivityLogRequestTranslationUtil::isSingleActivityLogIdEqualityQuery
+    );
+    if (!disabledActivityLogPOps.isEmpty()) {
+      disabledActivityLogPOps.forEach(activityLogOp -> translatedFeatureIds.add(activityLogOp.getValue().toString()));
+      readFeatures.refreshPropertyFilter();
+    }
+    // handle featureIds from original request after activityLog ones
+    StringList requestFeatureIds = readFeatures.getFeatureIds();
+    if (requestFeatureIds.size() == 1 && translatedFeatureIds.isEmpty()) {
+      Guid guid = Guid.fromString(requestFeatureIds.get(0));
+      translatedFeatureIds.add(guid.id);
+      // single guid gives us possibility to establish specific version
       readFeatures.setVersion(guid.tupleNumber.version);
     } else {
-      // multiple tuple numbers (guids) provided
+      // multiple tuple numbers (guids) provided OR we have single guid and at least one id from activityLogNs
       StringList featureIdsFromUuid = new StringList();
-      featureIds.forEach(uuid -> featureIdsFromUuid.add(Guid.fromString(uuid).id));
-      readFeatures.setFeatureIds(featureIdsFromUuid);
-      // unable to pick single version from N guids, fetching all head versions,
-      // then, using post-processing to filter out unnecessary ones
-      // TODO: CASL-1057: add result filter for versions higher than ...
+      Map<String, Version> maxVersionsPerFeatureId = new HashMap<>();
+      requestFeatureIds.forEach(rawGuid -> {
+        Guid guid = Guid.fromString(rawGuid);
+        translatedFeatureIds.add(guid.id);
+        maxVersionsPerFeatureId.put(guid.id, guid.tupleNumber.version);
+      });
+      // unable to pick single version from N guids (fetching all versions by default)
+      // utilizing post-processing to filter out unnecessary ones
       // TODO: review potential improvement as part of CASL-1107
-      readFeatures.setVersion(null);
+      readFeatures.getResultFilters().add((new MaxVersionResultFilter(maxVersionsPerFeatureId)));
     }
+    readFeatures.setFeatureIds(translatedFeatureIds);
   }
+
   private static boolean isSingleActivityLogIdEqualityQuery(PQuery pQuery) {
     return StringOp.EQUALS.equals(pQuery.getOp()) && pQuery.getProperty().getPath().containsStringsInOrder(ACTIVITY_LOG_ID_PATH);
   }

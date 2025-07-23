@@ -91,6 +91,25 @@ class PropertyOperationUtilTest {
     assertEquals(PFalse.INSTANCE, nestedPNot.getQuery());
   }
 
+  @Test
+  void shouldDisableSimpleOr(){
+    // Given
+    POr root = new POr();
+    root.add(new PQuery(new Property("foo", "bar"), StringOp.EQUALS, "a"));
+    root.add(new PQuery(new Property("foo", "bar"), StringOp.EQUALS, "b"));
+    RequestQuery query = new RequestQuery();
+    query.setProperties(root);
+
+    // When
+    PropertyOperationUtil.disablePQueriesInRequest(query, pQueryMatchesPath("foo", "bar"));
+
+    // Then
+    POr mutatedPropertyQuery = (POr) query.getProperties();
+    assertEquals(2, mutatedPropertyQuery.size());
+    assertInstanceOf(PTrue.class, mutatedPropertyQuery.get(0));
+    assertInstanceOf(PTrue.class, mutatedPropertyQuery.get(1));
+  }
+
   private F1<Boolean, PQuery> pQueryMatchesPath(String... expectedPath) {
     return pQuery -> {
       StringList queryPath = pQuery.getProperty().getPath();
