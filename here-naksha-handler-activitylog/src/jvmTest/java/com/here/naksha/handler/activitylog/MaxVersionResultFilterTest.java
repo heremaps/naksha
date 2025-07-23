@@ -22,11 +22,11 @@ class MaxVersionResultFilterTest {
   );
 
   @Test
-  void shouldFilterTupleOutIfVersionTooHigh() {
+  void shouldExcludeTupleIfVersionTooHigh() {
     // Given
     FeatureTuple featureTuple = featureTuple(
         "f2",
-        Version.of(2025, 7, 1, new JvmInt64(0)) // f2 has limit to 2025-7-2
+        Version.of(2025, 7, 3, new JvmInt64(0)) // f2 has limit to 2025-7-2
     );
 
     // When, Then
@@ -50,7 +50,7 @@ class MaxVersionResultFilterTest {
     // Given
     FeatureTuple featureTuple = featureTuple(
         "f2",
-        Version.of(2025, 7, 3, new JvmInt64(0)) // f2 has limit to 2025-7-2
+        Version.of(2025, 7, 1, new JvmInt64(0)) // f2 has limit to 2025-7-2
     );
 
     // When, Then

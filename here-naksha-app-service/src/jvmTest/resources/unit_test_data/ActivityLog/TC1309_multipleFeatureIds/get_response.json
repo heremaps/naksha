@@ -111,6 +111,5 @@
       }
     }
   ],
-  "type": "FeatureCollection",
-  "nextPageToken": null
+  "type": "FeatureCollection"
 }

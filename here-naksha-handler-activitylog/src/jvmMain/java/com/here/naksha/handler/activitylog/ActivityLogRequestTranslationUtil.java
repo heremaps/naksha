@@ -88,7 +88,6 @@ class ActivityLogRequestTranslationUtil {
       readFeatures.setVersion(guid.tupleNumber.version);
     } else {
       // multiple tuple numbers (guids) provided OR we have single guid and at least one id from activityLogNs
-      StringList featureIdsFromUuid = new StringList();
       Map<String, Version> maxVersionsPerFeatureId = new HashMap<>();
       requestFeatureIds.forEach(rawGuid -> {
         Guid guid = Guid.fromString(rawGuid);

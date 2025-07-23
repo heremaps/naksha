@@ -459,7 +459,7 @@ class ActivityLogApiTest extends ApiTest {
     FeatureMetadata deletedFeature = featureMetadataFromFeatureResp(deleteResp.body());
 
     // And: Client queries activity log space for this feature
-    String uuidsQuery = "id=%s,%s".formatted(updatedFeature.uuid, deletedFeature.uuid);
+    String uuidsQuery = "id=%s&id=%s".formatted(urlEncoded(updatedFeature.uuid), urlEncoded(deletedFeature.uuid));
     HttpResponse<String> getResp = nakshaClient.get("hub/spaces/" + ACTIVITY_SPACE_ID + "/features?" + uuidsQuery, streamId);
 
     // Then: Expected ActivityLog response matches the response
