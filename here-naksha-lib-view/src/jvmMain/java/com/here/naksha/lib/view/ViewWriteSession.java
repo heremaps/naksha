@@ -50,17 +50,9 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
     return this;
   }
 
-  public ViewWriteSession init() {
-    if (writeLayer == null) {
-      writeLayer = view.getViewCollection().getTopPriorityLayer();
-    }
-    this.session = writeLayer.getStorage().newWriteSession(options);
-    return this;
-  }
-
   @Override
   public @NotNull Response execute(@NotNull Request request) {
-    getSession();
+    ensureSessionInitialized();
     if (request instanceof WriteRequest) {
       final WriteRequest writeRequest = (WriteRequest) request;
       for (Write write : writeRequest.getWrites()) {
@@ -99,10 +91,17 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   }
 
   private IWriteSession getSession() {
-    if (this.session == null) {
-      init();
-    }
+    ensureSessionInitialized();
     return this.session;
+  }
+
+  private void ensureSessionInitialized() {
+    if (this.session == null) {
+      if (this.writeLayer == null) {
+        this.writeLayer = this.view.getViewCollection().getTopPriorityLayer();
+      }
+      this.session = this.writeLayer.getStorage().newWriteSession(this.options);
+    }
   }
 
   @Override

@@ -86,7 +86,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("Layers", layer0, layer1);
     View view = new View(viewLayerCollection);
 
-    ViewWriteSession writeSession = view.newWriteSession(new SessionOptions()).init();
+    ViewWriteSession writeSession = view.newWriteSession(new SessionOptions());
     ReadFeatures readRequest = new ReadFeatures();
     readRequest.getFeatureIds().add("feature_id_view0");
     Response response = writeSession.execute(readRequest);
@@ -141,7 +141,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("Layers", layer0, layer1);
     View view = new View(viewLayerCollection);
 
-    ViewWriteSession writeSession = view.newWriteSession(new SessionOptions()).init();
+    ViewWriteSession writeSession = view.newWriteSession(new SessionOptions());
 
     //AND Try to "update" a feature that does not exist
     final WriteRequest writeRequest = new WriteRequest();
@@ -200,7 +200,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("Layers", layer0, layer1);
     View view = new View(viewLayerCollection);
 
-    ViewWriteSession writeSession = view.newWriteSession(null).withWriteLayer(layer1).init();
+    ViewWriteSession writeSession = view.newWriteSession(null).withWriteLayer(layer1);
     WriteRequest writeRequest = new WriteRequest();
     final NakshaFeature feature = new NakshaFeature(FEATURE_ID);
     feature.setGeometry(new SpPoint(new PointCoord(0d, 0d)));
@@ -231,7 +231,7 @@ public class ViewWriteSessionTests extends PsqlTests {
 
     ViewLayerCollection viewLayerCollection = new ViewLayerCollection("Layers", layer1, layer0);
     View view = new View(viewLayerCollection);
-    ViewWriteSession writeSession = view.newWriteSession(new SessionOptions()).init();
+    ViewWriteSession writeSession = view.newWriteSession(new SessionOptions());
     WriteRequest writeRequest = new WriteRequest();
     writeRequest.add(new Write().deleteFeatureById(COLLECTION_0_FEATURE, "feature_id_view1"));
 

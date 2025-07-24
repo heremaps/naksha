@@ -138,7 +138,7 @@ public class ViewTest {
 
     Response success = new SuccessResponse(sampleXyzWriteResponse(1, Action.CREATED));
     when(session.execute(request)).thenReturn(success);
-    ViewWriteSession writeSession = view.newWriteSession(sessionOptions).init();
+    ViewWriteSession writeSession = view.newWriteSession(sessionOptions);
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
@@ -163,7 +163,7 @@ public class ViewTest {
     request.add(write.deleteFeatureById(topologiesDS.getMapId(), topologiesDS.getCollectionId(), feature.getId()));
     SuccessResponse successResponse1 = new SuccessResponse(sampleXyzWriteResponse(1, Action.DELETED));
     when(session.execute(request)).thenReturn(successResponse1);
-    ViewWriteSession writeSession = view.newWriteSession(sessionOptions).init();
+    ViewWriteSession writeSession = view.newWriteSession(sessionOptions);
 
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class, response);

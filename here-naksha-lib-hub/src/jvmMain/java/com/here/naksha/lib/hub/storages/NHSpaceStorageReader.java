@@ -294,7 +294,6 @@ public class NHSpaceStorageReader implements IReadSession {
     throw NOT_SUPPORTED_ERROR;
   }
 
-  // used in ParallelQueryExecutor
   @Override
   public int getStmtTimeout() {
     return 0;
