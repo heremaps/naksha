@@ -34,19 +34,20 @@ class ActivityLogApiTest extends ApiTest {
   private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
   private static final String REGULAR_SPACE_ID = "regular_space_ah";
   private static final String ACTIVITY_SPACE_ID = "activity_history_space";
+  private static final String TEST_BASE_DIR = "ActivityLog";
 
   @BeforeAll
   static void setup() throws Exception {
-    setupHandlerAndSpace(nakshaClient, "ActivityLog/setup/regularSpace");
-    createHandler(nakshaClient, "ActivityLog/setup/activityLogSpace/create_event_handler.json");
-    createSpace(nakshaClient, "ActivityLog/setup/activityLogSpace/create_space.json");
+    setupHandlerAndSpace(nakshaClient, TEST_BASE_DIR + "/setup/regularSpace");
+    createHandler(nakshaClient, TEST_BASE_DIR + "/setup/activityLogSpace/create_event_handler.json");
+    createSpace(nakshaClient, TEST_BASE_DIR + "/setup/activityLogSpace/create_space.json");
   }
 
   @Test
   void tc1300_testActivityLogAfterCreateByUuid() throws Exception {
     // Given: Test files
-    String createFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1300_afterCreateByUuid/create_features.json");
-    String expectedGetResponse = TestUtil.loadFileOrFail("ActivityLog/TC1300_afterCreateByUuid/get_response.json");
+    String createFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1300_afterCreateByUuid/create_features.json");
+    String expectedGetResponse = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1300_afterCreateByUuid/get_response.json");
     String streamId = UUID.randomUUID().toString();
 
     // When: New feature is created
@@ -73,8 +74,8 @@ class ActivityLogApiTest extends ApiTest {
   @Test
   void tc1301_testActivityLogAfterCreateByFeatureId() throws Exception {
     // Given: Test files
-    String createFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1301_afterCreateByFeatureId/create_features.json");
-    String expectedGetResponse = TestUtil.loadFileOrFail("ActivityLog/TC1301_afterCreateByFeatureId/get_response.json");
+    String createFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1301_afterCreateByFeatureId/create_features.json");
+    String expectedGetResponse = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1301_afterCreateByFeatureId/get_response.json");
     String streamId = UUID.randomUUID().toString();
     String featureId = "TC1301_feature";
 
@@ -103,9 +104,9 @@ class ActivityLogApiTest extends ApiTest {
   @Test
   void tc1302_testActivityLogAfterUpdateByUuid() throws Exception {
     // Given: Test files
-    String createFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1302_afterUpdateByUuid/create_features.json");
-    String updateFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1302_afterUpdateByUuid/update_feature.json");
-    String expectedActivityResp = TestUtil.loadFileOrFail("ActivityLog/TC1302_afterUpdateByUuid/get_response.json");
+    String createFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1302_afterUpdateByUuid/create_features.json");
+    String updateFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1302_afterUpdateByUuid/update_feature.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1302_afterUpdateByUuid/get_response.json");
     String streamId = UUID.randomUUID().toString();
     String featureId = "TC1302_feature";
 
@@ -139,9 +140,9 @@ class ActivityLogApiTest extends ApiTest {
   @Test
   void tc1303_testActivityLogAfterUpdateByFeatureId() throws Exception {
     // Given: Test files
-    String createFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1303_afterUpdateByFeatureId/create_features.json");
-    String updateFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1303_afterUpdateByFeatureId/update_feature.json");
-    String expectedActivityResp = TestUtil.loadFileOrFail("ActivityLog/TC1303_afterUpdateByFeatureId/get_response.json");
+    String createFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1303_afterUpdateByFeatureId/create_features.json");
+    String updateFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1303_afterUpdateByFeatureId/update_feature.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1303_afterUpdateByFeatureId/get_response.json");
     String streamId = UUID.randomUUID().toString();
     String featureId = "TC1303_feature";
 
@@ -179,9 +180,9 @@ class ActivityLogApiTest extends ApiTest {
   @Test
   void tc1304_testActivityLogAfterDeleteByUuid() throws Exception {
     // Given: Test files
-    String createFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1304_afterDeleteByUuid/create_features.json");
-    String updateFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1304_afterDeleteByUuid/update_feature.json");
-    String expectedActivityResp = TestUtil.loadFileOrFail("ActivityLog/TC1304_afterDeleteByUuid/get_response.json");
+    String createFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1304_afterDeleteByUuid/create_features.json");
+    String updateFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1304_afterDeleteByUuid/update_feature.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1304_afterDeleteByUuid/get_response.json");
     String streamId = UUID.randomUUID().toString();
     String featureId = "TC1304_feature";
 
@@ -219,9 +220,9 @@ class ActivityLogApiTest extends ApiTest {
   @Test
   void tc1305_testActivityLogAfterDeleteByFeatureId() throws Exception {
     // Given: Test files
-    String createFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1305_afterDeleteByFeatureId/create_features.json");
-    String updateFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1305_afterDeleteByFeatureId/update_feature.json");
-    String expectedActivityResp = TestUtil.loadFileOrFail("ActivityLog/TC1305_afterDeleteByFeatureId/get_response.json");
+    String createFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1305_afterDeleteByFeatureId/create_features.json");
+    String updateFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1305_afterDeleteByFeatureId/update_feature.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1305_afterDeleteByFeatureId/get_response.json");
     String streamId = UUID.randomUUID().toString();
     String featureId = "TC1305_feature";
 
@@ -268,22 +269,22 @@ class ActivityLogApiTest extends ApiTest {
   @Test
   void tc1306_testActivityLogWithSourceId() throws URISyntaxException, IOException, InterruptedException {
     // Given: Test files
-    String createFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1306_withSourceId/create_features.json");
-    String updateFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1306_withSourceId/update_feature.json");
-    String expectedActivityResp = TestUtil.loadFileOrFail("ActivityLog/TC1306_withSourceId/get_response.json");
+    String createFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1306_withSourceId/create_features.json");
+    String updateFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1306_withSourceId/update_feature.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1306_withSourceId/get_response.json");
     String streamId = UUID.randomUUID().toString();
     String sourceIdSpace = "source_id_ah_test_space";
     String activityLogSpace = "activity_history_space_source_id_tests";
     String featureId = "TC1306_feature";
 
     // And: space with sourceId handling
-    CommonApiTestSetup.createHandler(nakshaClient, "ActivityLog/TC1306_withSourceId/sourceIdSpace/create_default_handler.json");
-    CommonApiTestSetup.createHandler(nakshaClient, "ActivityLog/TC1306_withSourceId/sourceIdSpace/create_source_id_handler.json");
-    CommonApiTestSetup.createSpace(nakshaClient, "ActivityLog/TC1306_withSourceId/sourceIdSpace/create_space.json");
+    CommonApiTestSetup.createHandler(nakshaClient, TEST_BASE_DIR + "/TC1306_withSourceId/sourceIdSpace/create_default_handler.json");
+    CommonApiTestSetup.createHandler(nakshaClient, TEST_BASE_DIR + "/TC1306_withSourceId/sourceIdSpace/create_source_id_handler.json");
+    CommonApiTestSetup.createSpace(nakshaClient, TEST_BASE_DIR + "/TC1306_withSourceId/sourceIdSpace/create_space.json");
 
     // And: space with activity log that is based on sourceId handling space
-    CommonApiTestSetup.createHandler(nakshaClient, "ActivityLog/TC1306_withSourceId/activityLogSpace/create_event_handler.json");
-    CommonApiTestSetup.createSpace(nakshaClient, "ActivityLog/TC1306_withSourceId/activityLogSpace/create_space.json");
+    CommonApiTestSetup.createHandler(nakshaClient, TEST_BASE_DIR + "/TC1306_withSourceId/activityLogSpace/create_event_handler.json");
+    CommonApiTestSetup.createSpace(nakshaClient, TEST_BASE_DIR + "/TC1306_withSourceId/activityLogSpace/create_space.json");
 
     // When: New feature is created
     HttpResponse<String> createResp = nakshaClient.post("hub/spaces/" + sourceIdSpace + "/features", createFeatureJson, streamId);
@@ -314,9 +315,9 @@ class ActivityLogApiTest extends ApiTest {
   @Test
   void tc1307_testActivityLogByBBox() throws Exception {
     // Given: Test files
-    String createFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1307_byBbox/create_features.json");
-    String updateFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1307_byBbox/update_feature.json");
-    String expectedActivityResp = TestUtil.loadFileOrFail("ActivityLog/TC1307_byBbox/get_response.json");
+    String createFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1307_byBbox/create_features.json");
+    String updateFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1307_byBbox/update_feature.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1307_byBbox/get_response.json");
     String streamId = UUID.randomUUID().toString();
     String featureId = "TC1307_feature";
 
@@ -352,9 +353,9 @@ class ActivityLogApiTest extends ApiTest {
   @Test
   void tc1308_testActivityLogByTile() throws Exception {
     // Given: Test files
-    String createFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1308_byTile/create_features.json");
-    String updateFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1308_byTile/update_feature.json");
-    String expectedActivityResp = TestUtil.loadFileOrFail("ActivityLog/TC1308_byTile/get_response.json");
+    String createFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1308_byTile/create_features.json");
+    String updateFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1308_byTile/update_feature.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1308_byTile/get_response.json");
     String streamId = UUID.randomUUID().toString();
     String featureId = "TC1308_feature";
 
@@ -389,9 +390,9 @@ class ActivityLogApiTest extends ApiTest {
   @Test
   void tc1309_testActivityLogForMultipleFeatureIds() throws Exception {
     // Given: Test files
-    String createFeaturesJson = TestUtil.loadFileOrFail("ActivityLog/TC1309_multipleFeatureIds/create_features.json");
-    String updateFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1309_multipleFeatureIds/update_feature.json");
-    String expectedActivityResp = TestUtil.loadFileOrFail("ActivityLog/TC1309_multipleFeatureIds/get_response.json");
+    String createFeaturesJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1309_multipleFeatureIds/create_features.json");
+    String updateFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1309_multipleFeatureIds/update_feature.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1309_multipleFeatureIds/get_response.json");
     String streamId = UUID.randomUUID().toString();
     String firstFeatureId = "TC1309_feature_1";
     String secondFeatureId = "TC1309_feature_2";
@@ -434,9 +435,9 @@ class ActivityLogApiTest extends ApiTest {
   @Test
   void tc1310_testActivityLogForMultipleUuids() throws Exception {
     // Given: Test files
-    String createFeaturesJson = TestUtil.loadFileOrFail("ActivityLog/TC1310_multipleLogIds/create_features.json");
-    String updateFeatureJson = TestUtil.loadFileOrFail("ActivityLog/TC1310_multipleLogIds/update_feature.json");
-    String expectedActivityResp = TestUtil.loadFileOrFail("ActivityLog/TC1310_multipleLogIds/get_response.json");
+    String createFeaturesJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1310_multipleLogIds/create_features.json");
+    String updateFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1310_multipleLogIds/update_feature.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1310_multipleLogIds/get_response.json");
     String streamId = UUID.randomUUID().toString();
     String firstFeatureId = "TC1310_feature_1";
     String secondFeatureId = "TC1310_feature_2";
@@ -449,7 +450,8 @@ class ActivityLogApiTest extends ApiTest {
     FeatureMetadata secondCreatedFeature = createdFeatures.get(secondFeatureId);
 
     // And: Second feature is updated
-    HttpResponse<String> updateResp = nakshaClient.put("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + secondFeatureId, updateFeatureJson, streamId);
+    HttpResponse<String> updateResp = nakshaClient.put("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + secondFeatureId, updateFeatureJson,
+        streamId);
     assertThat(updateResp).hasStatus(200);
     FeatureMetadata updatedFeature = featureMetadataFromFeatureResp(updateResp.body());
 

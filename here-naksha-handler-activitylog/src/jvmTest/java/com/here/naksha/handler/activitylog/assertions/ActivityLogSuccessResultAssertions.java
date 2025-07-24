@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.List;
 import java.util.function.Consumer;
-
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;

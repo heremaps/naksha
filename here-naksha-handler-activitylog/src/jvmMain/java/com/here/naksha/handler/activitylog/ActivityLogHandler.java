@@ -23,8 +23,6 @@ import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationU
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 import static naksha.model.util.ResultHelper.extractResponseItems;
 
 import com.here.naksha.lib.core.IEvent;
