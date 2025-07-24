@@ -20,9 +20,7 @@ class NakshaStorageParserTest {
         NakshaStorageParser nakshaStorageParser = new NakshaStorageParser();
 
         // When & Then
-        NakshaStorageParserException exception = assertThrows(NakshaStorageParserException.class, () -> {
-            nakshaStorageParser.get(file);
-        });
+        NakshaStorageParserException exception = assertThrows(NakshaStorageParserException.class, () -> nakshaStorageParser.get(file));
         assertEquals("File does not exist! file: %s".formatted(file.getPath()), exception.getMessage());
     }
 
@@ -36,9 +34,7 @@ class NakshaStorageParserTest {
         NakshaStorageParser nakshaStorageParser = new NakshaStorageParser();
 
         // When & Then
-        NakshaStorageParserException exception = assertThrows(NakshaStorageParserException.class, () -> {
-            nakshaStorageParser.get(file);
-        });
+        NakshaStorageParserException exception = assertThrows(NakshaStorageParserException.class, () -> nakshaStorageParser.get(file));
         assertEquals("Problem with reading! file: %s".formatted(file.getPath()), exception.getMessage());
     }
 
@@ -49,9 +45,7 @@ class NakshaStorageParserTest {
         NakshaStorageParser nakshaStorageParser = new NakshaStorageParser();
 
         // When & Then
-        NakshaStorageParserException exception = assertThrows(NakshaStorageParserException.class, () -> {
-            nakshaStorageParser.get(file);
-        });
+        NakshaStorageParserException exception = assertThrows(NakshaStorageParserException.class, () -> nakshaStorageParser.get(file));
         assertEquals("It is not a file! file: %s".formatted(file.getPath()), exception.getMessage());
     }
 
@@ -68,9 +62,7 @@ class NakshaStorageParserTest {
         NakshaStorageParser nakshaStorageParser = new NakshaStorageParser();
 
         // When & Then
-        NakshaStorageParserException exception = assertThrows(NakshaStorageParserException.class, () -> {
-            nakshaStorageParser.get(file);
-        });
+        NakshaStorageParserException exception = assertThrows(NakshaStorageParserException.class, () -> nakshaStorageParser.get(file));
         assertEquals("Problem with json parsing! file: %s".formatted(file.getPath()), exception.getMessage());
     }
 

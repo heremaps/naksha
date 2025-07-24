@@ -89,7 +89,6 @@ class CopyCliTest {
     void shouldFailWithBadSrcNakshaStorage() {
         // Given
         File file = new File(invalidStorageConfigPath);
-        String exceptionMessage = "Test message";
 
         // And
         CliTestCase testCase = new CliTestCase(

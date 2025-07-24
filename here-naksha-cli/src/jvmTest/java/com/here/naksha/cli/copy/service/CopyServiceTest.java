@@ -60,12 +60,10 @@ class CopyServiceTest {
         );
 
         // When
-        assertDoesNotThrow(() -> {
-            copyService.copy(
-                    srcCopyElement,
-                    targetCopyElement
-            );
-        });
+        assertDoesNotThrow(() -> copyService.copy(
+                srcCopyElement,
+                targetCopyElement
+        ));
 
         // Then: assert read request
         List<ReadFeatures> readFeaturesList = captureRequestsOfType(readSession, ReadFeatures.class);
@@ -94,12 +92,10 @@ class CopyServiceTest {
         );
 
         // When & Then
-        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> {
-            copyService.copy(
-                    srcCopyElement,
-                    targetCopyElement
-            );
-        });
+        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+                srcCopyElement,
+                targetCopyElement
+        ));
 
         assertEquals("Problem with reading from source!", exception.getMessage());
     }
@@ -116,12 +112,10 @@ class CopyServiceTest {
         );
 
         // When & Then
-        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> {
-            copyService.copy(
-                    srcCopyElement,
-                    targetCopyElement
-            );
-        });
+        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+                srcCopyElement,
+                targetCopyElement
+        ));
 
         assertEquals("Can not get source storage!", exception.getMessage());
     }
@@ -141,12 +135,10 @@ class CopyServiceTest {
         );
 
         // When & Then
-        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> {
-            copyService.copy(
-                    srcCopyElement,
-                    targetCopyElement
-            );
-        });
+        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+                srcCopyElement,
+                targetCopyElement
+        ));
 
         assertEquals("Unexpected response from source!", exception.getMessage());
     }
@@ -170,12 +162,10 @@ class CopyServiceTest {
         );
 
         // When & Then
-        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> {
-            copyService.copy(
-                    srcCopyElement,
-                    targetCopyElement
-            );
-        });
+        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+                srcCopyElement,
+                targetCopyElement
+        ));
         assertEquals("Problem with writing to target!", exception.getMessage());
 
         // And
@@ -199,12 +189,10 @@ class CopyServiceTest {
         );
 
         // When & Then
-        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> {
-            copyService.copy(
-                    srcCopyElement,
-                    targetCopyElement
-            );
-        });
+        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+                srcCopyElement,
+                targetCopyElement
+        ));
 
         assertEquals("Can not get target storage!", exception.getMessage());
     }
@@ -228,12 +216,10 @@ class CopyServiceTest {
         );
 
         // When & Then
-        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> {
-            copyService.copy(
-                    srcCopyElement,
-                    targetCopyElement
-            );
-        });
+        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+                srcCopyElement,
+                targetCopyElement
+        ));
         assertEquals("Unexpected response from target!", exception.getMessage());
 
         // And
@@ -249,35 +235,30 @@ class CopyServiceTest {
                 .toList();
     }
 
-    private IWriteSession createWriteSessionForStorageReturningErrorResponse(IStorage storage) {
+    private IWriteSession createWriteSession(IStorage storage) {
         IWriteSession writeSession = mock();
         when(storage.useWriteSession(eq(sessionOptions), any()))
                 .thenAnswer(invocation -> {
                     Fn1<Response, IWriteSession> lambda = invocation.getArgument(1);
                     return lambda.call(writeSession);
                 });
+        return writeSession;
+    }
+
+    private IWriteSession createWriteSessionForStorageReturningErrorResponse(IStorage storage) {
+        IWriteSession writeSession = createWriteSession(storage);
         when(writeSession.execute(any())).thenReturn(new ErrorResponse());
         return writeSession;
     }
 
     private IWriteSession createWriteSessionForStorageReturningUnexpectedResponse(IStorage storage) {
-        IWriteSession writeSession = mock();
-        when(storage.useWriteSession(eq(sessionOptions), any()))
-                .thenAnswer(invocation -> {
-                    Fn1<Response, IWriteSession> lambda = invocation.getArgument(1);
-                    return lambda.call(writeSession);
-                });
+        IWriteSession writeSession = createWriteSession(storage);
         when(writeSession.execute(any())).thenReturn(new Response());
         return writeSession;
     }
 
     private IWriteSession createWriteSessionForStorageReturningSuccessResponse(IStorage storage) {
-        IWriteSession writeSession = mock();
-        when(storage.useWriteSession(eq(sessionOptions), any()))
-                .thenAnswer(invocation -> {
-                    Fn1<Response, IWriteSession> lambda = invocation.getArgument(1);
-                    return lambda.call(writeSession);
-                });
+        IWriteSession writeSession = createWriteSession(storage);
         when(writeSession.execute(any())).thenReturn(new SuccessResponse());
         return writeSession;
     }
