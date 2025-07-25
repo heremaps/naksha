@@ -1,75 +1,94 @@
 package com.here.naksha.cli.copy.service.psql;
 
-import com.here.naksha.cli.TestContainersPsqlStorage;
 import com.here.naksha.cli.copy.service.CopyElement;
 import com.here.naksha.cli.copy.service.CopyService;
 import com.here.naksha.cli.copy.service.CopyServiceException;
 import com.here.naksha.cli.copy.service.StorageProvider;
+import com.here.naksha.cli.test_containers.MapController;
+import com.here.naksha.cli.test_containers.StorageController;
+import com.here.naksha.cli.test_containers.TestContainersPsqlStoragePool;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaStorage;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 class PsqlCopyTest {
-    private static CopyService copyService;
-    private static TestContainersPsqlStorage testContainersPsqlStorage;
-    private static final String SRC_MAP_ID = "srcmapid";
-    private static final String SRC_COLLECTION_ID = "srccolid";
-    private static final String TARGET_MAP_ID = "targetmapid";
-    private static final String TARGET_COLLECTION_ID = "targetcolid";
+    private CopyService copyService;
+    private final String srcCollectionId = "srccolid";
+    private final String targetCollectionId = "targetcolid";
+    private SessionOptions sessionOptions;
+    private MapController srcMapController;
+    private MapController targetMapController;
+    private StorageController srcStorageController;
+    private StorageController targetStorageController;
+    private final List<NakshaFeature> features = getSampleFeatures();
 
-    @BeforeAll
-    static void beforeAll() {
-        NakshaContext.currentContext().withAppId("app");
-        SessionOptions sessionOptions = SessionOptions.from(NakshaContext.currentContext());
-
+    @BeforeEach
+    void beforeEach() {
+        NakshaContext.currentContext().withAppId("testapp");
+        sessionOptions = SessionOptions.from(NakshaContext.currentContext());
         copyService = new CopyService(new StorageProvider(), sessionOptions);
-
-        testContainersPsqlStorage = initAndGetTestContainersPsqlStorage(sessionOptions);
-    }
-
-    @AfterAll
-    static void afterAll() {
-        testContainersPsqlStorage.stop();
     }
 
     @Test
-    void shouldCopyBetweenMaps() throws CopyServiceException {
-        // Given: source copy element
+    void shouldCopyFeaturesBetweenMapsOnTheSameStorage() throws CopyServiceException {
+        // Given: storage with maps and collections
+        prepareMapsAndCollectionsOnOneStorage();
+
+        // And: source copy element
         CopyElement srcCopyElement = getSrcCopyElement();
 
         // And: target copy element
         CopyElement targetCopyElement = getTargetCopyElement();
 
-        // And: sample features in source test collection
-        List<NakshaFeature> features = getSampleFeatures();
-        testContainersPsqlStorage.addFeatures(SRC_MAP_ID, SRC_COLLECTION_ID, features);
+        // When: copying
+        copyService.copy(srcCopyElement, targetCopyElement);
+
+        // Then: target test collection contains features from source
+        List<NakshaFeature> actualFeatures = targetMapController.readFeatures(targetCollectionId, sessionOptions);
+        assertFeatures(actualFeatures);
+    }
+
+    @Test
+    void shouldCopyFeaturesBetweenStorages() throws CopyServiceException {
+        // Given: storages with maps and collections
+        prepareMapsAndCollectionsOnDifferentStorages();
+
+        // And: source copy element
+        CopyElement srcCopyElement = getSrcCopyElement();
+
+        // And: target copy element
+        CopyElement targetCopyElement = getTargetCopyElement();
 
         // When: copying
         copyService.copy(srcCopyElement, targetCopyElement);
 
-        // Then: target test contains features from source
-        List<NakshaFeature> actualFeatures = testContainersPsqlStorage.readFeatures(targetCopyElement);
+        // Then: target test collection contains features from source
+        List<NakshaFeature> actualFeatures = targetMapController.readFeatures(targetCollectionId, sessionOptions);
+        assertFeatures(actualFeatures);
+    }
+
+    private void assertFeatures(List<NakshaFeature> actualFeatures) {
         Assertions.assertEquals(features.size(), actualFeatures.size());
+        Assertions.assertIterableEquals(
+                features.stream().map(NakshaFeature::getId).toList(),
+                actualFeatures.stream().map(NakshaFeature::getId).toList()
+        );
     }
 
     private CopyElement getSrcCopyElement() {
-        NakshaStorage srcNakshaStorage = testContainersPsqlStorage.getNakshaStorage();
-        return new CopyElement.Builder(srcNakshaStorage, SRC_COLLECTION_ID)
-                .setMapId(SRC_MAP_ID)
+        return new CopyElement.Builder(srcStorageController.getNakshaStorage(), srcCollectionId)
+                .setMapId(srcMapController.getMapId())
                 .build();
     }
 
     private CopyElement getTargetCopyElement() {
-        NakshaStorage targetNakshaStorage = testContainersPsqlStorage.getNakshaStorage();
-        return new CopyElement.Builder(targetNakshaStorage, TARGET_COLLECTION_ID)
-                .setMapId(TARGET_MAP_ID)
+        return new CopyElement.Builder(targetStorageController.getNakshaStorage(), targetCollectionId)
+                .setMapId(targetMapController.getMapId())
                 .build();
     }
 
@@ -80,13 +99,33 @@ class PsqlCopyTest {
         );
     }
 
-    private static TestContainersPsqlStorage initAndGetTestContainersPsqlStorage(SessionOptions sessionOptions) {
-        testContainersPsqlStorage = new TestContainersPsqlStorage(sessionOptions);
-        testContainersPsqlStorage.start();
-        testContainersPsqlStorage.addMapToTheStorage(SRC_MAP_ID);
-        testContainersPsqlStorage.addMapToTheStorage(TARGET_MAP_ID);
-        testContainersPsqlStorage.addCollectionToTheStorage(SRC_COLLECTION_ID, SRC_MAP_ID);
-        testContainersPsqlStorage.addCollectionToTheStorage(TARGET_COLLECTION_ID, TARGET_MAP_ID);
-        return testContainersPsqlStorage;
+    private MapController createMapWithEmptyCollection(StorageController storageController, String collectionId) {
+        MapController mapController = storageController.getMapControllerOfUniqueMap(sessionOptions);
+        mapController.addCollectionToTheMap(collectionId, sessionOptions);
+        return mapController;
+    }
+
+    private void addFeaturesToCollection(MapController mapController, String collectionId, List<NakshaFeature> features) {
+        mapController.addFeatures(collectionId, features, sessionOptions);
+    }
+
+    private void prepareMapsAndCollectionsOnOneStorage() {
+        prepareSrcMap();
+
+        targetStorageController = srcStorageController;
+        targetMapController = createMapWithEmptyCollection(targetStorageController, targetCollectionId);
+    }
+
+    private void prepareMapsAndCollectionsOnDifferentStorages() {
+        prepareSrcMap();
+
+        targetStorageController = TestContainersPsqlStoragePool.getInstance(1);
+        targetMapController = createMapWithEmptyCollection(targetStorageController, targetCollectionId);
+    }
+
+    private void prepareSrcMap() {
+        srcStorageController = TestContainersPsqlStoragePool.getInstance(0);
+        srcMapController = createMapWithEmptyCollection(srcStorageController, srcCollectionId);
+        addFeaturesToCollection(srcMapController, srcCollectionId, features);
     }
 }
