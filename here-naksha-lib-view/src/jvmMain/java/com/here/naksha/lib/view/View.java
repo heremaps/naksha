@@ -18,16 +18,24 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.model.*;
+import kotlin.reflect.KClass;
+import naksha.base.Platform;
+import naksha.jbon.JbDictionary;
+import naksha.model.AbstractStorage;
+import naksha.model.SessionOptions;
+import naksha.model.objects.NakshaStorage;
+import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
-
 // TODO: This should implement IStorage
-public class View {
+public class View extends AbstractStorage<NakshaStorage> implements IView {
 
   private @NotNull ViewLayerCollection viewLayerCollection;
+
+  public View() {
+
+  }
 
   public View(@NotNull ViewLayerCollection viewLayerCollection) {
     this.viewLayerCollection = viewLayerCollection;
@@ -47,5 +55,40 @@ public class View {
 
   public void setViewLayerCollection(@NotNull ViewLayerCollection viewLayerCollection) {
     this.viewLayerCollection = viewLayerCollection;
+  }
+
+  @Override
+  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
+    throw new NotImplementedException("Not supported by View storage");
+  }
+
+  @Override
+  public @Nullable JbDictionary getDictionary(@NotNull String id) {
+    throw new NotImplementedException("Not supported by View storage");
+  }
+
+  @Override
+  public @Nullable JbDictionary getEncodingDictionary(@Nullable Object feature, @Nullable Object context) {
+    throw new NotImplementedException("Not supported by View storage");
+  }
+
+  @Override
+  protected void afterInit() {
+    // Nothing to do
+  }
+
+  @Override
+  protected void shutdownStorage(boolean dropCache) {
+    // Nothing to do
+  }
+
+  @Override
+  public @NotNull KClass<NakshaStorage> getConfigKlass() {
+    return Platform.klassFor(NakshaStorage.class);
+  }
+
+  @Override
+  protected void initStorage(@NotNull NakshaStorage nakshaStorage, @Nullable Boolean create, @Nullable Boolean upgrade) {
+    // Nothing to do
   }
 }

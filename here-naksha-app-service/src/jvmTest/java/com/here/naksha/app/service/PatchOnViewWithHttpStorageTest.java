@@ -30,13 +30,15 @@ public class PatchOnViewWithHttpStorageTest extends ApiTest {
 
     @BeforeAll
     static void setup() throws URISyntaxException, IOException, InterruptedException {
+        // Set up Http Storage
         createStorage(nakshaClient, TEST_DIR_SETUP_PATH + "http_storage_space/create_storage.json");
         // Set up Base space - using Http Storage
         setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH + "http_storage_space");
         // Set up Delta space - using Psql Storage
         createHandler(nakshaClient, TEST_DIR_SETUP_PATH + "psql_storage_space/create_sourceId_handler.json");
         setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH + "psql_storage_space");
-        // Set up View space - using above Delta and Base spaces
+        // Set up View Storage, View space - using above Delta and Base spaces
+        createStorage(nakshaClient, TEST_DIR_SETUP_PATH + "view_space/create_storage.json");
         setupHandlerAndSpace(nakshaClient, TEST_DIR_SETUP_PATH + "view_space");
         // Load some test data in Delta space
         final String initialFeaturesJson = loadFileOrFail(TEST_DIR_SETUP_PATH + "psql_storage_space/create_features.json");

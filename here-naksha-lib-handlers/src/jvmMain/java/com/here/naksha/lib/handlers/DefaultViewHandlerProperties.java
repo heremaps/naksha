@@ -18,9 +18,12 @@
  */
 package com.here.naksha.lib.handlers;
 
+import java.util.Arrays;
 import java.util.List;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.StringList;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
@@ -56,7 +59,22 @@ public class DefaultViewHandlerProperties extends NakshaProperties {
   }
 
   public @NotNull ViewType getViewType() {
-    return JvmBoxingUtil.box(get(VIEW_TYPE), ViewType.class);
+    final Object raw = getRaw(VIEW_TYPE);
+    if (raw instanceof ViewType) {
+      return (ViewType) raw;
+    }
+    if (raw instanceof String) {
+      try {
+        return ViewType.valueOf((String) raw);
+      } catch (IllegalArgumentException e) {
+        final String errorMessage = String.format(
+                "Invalid value for the 'viewType' property. The value '%s' is not supported. Please use one of: %s",
+                raw,
+                Arrays.toString(ViewType.values()));
+        throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, errorMessage);
+      }
+    }
+    return ViewType.LAYERED;
   }
 
   public void setViewType(@NotNull ViewType viewType) {

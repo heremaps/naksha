@@ -14,8 +14,7 @@
             "tags": [
                 "one",
                 "xyz_source_id_COM_1000001_20240301"
-            ],
-            "version": 2
+            ]
         },
         "speedLimit": "10",
         "layer": "delta"
