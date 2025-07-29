@@ -4,6 +4,7 @@ package naksha.model
 
 import naksha.base.ListProxy
 import kotlin.js.JsExport
+import kotlin.jvm.JvmStatic
 
 /**
  * A list of [Guid]'s.

@@ -56,6 +56,7 @@ import com.here.naksha.app.service.http.ops.TileToBboxUtil;
 import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.lambdas.F1;
+import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;

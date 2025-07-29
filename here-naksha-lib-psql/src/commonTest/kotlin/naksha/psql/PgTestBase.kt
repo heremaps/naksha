@@ -20,10 +20,7 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 /**
  * Base class for all tests using postgres as storage. It provides:
@@ -252,6 +249,7 @@ abstract class PgTestBase(
             val response = session.execute(request)
             if (response is ErrorResponse) {
                 response.error.print(logger)
+                fail("ErrorResponse while reading: ${response.error.code}: \n${response.error.msg}")
             }
             assertIs<SuccessResponse>(response)
             response

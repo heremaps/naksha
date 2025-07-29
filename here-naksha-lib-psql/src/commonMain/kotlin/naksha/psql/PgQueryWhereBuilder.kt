@@ -51,8 +51,9 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
     }
 
     private fun whereGuids() {
-        val tupleNumbers =
-            request.guids.mapNotNull { it?.tupleNumber?.toByteArray(TupleNumberVariant.B160) }
+        val tupleNumbers: Array<ByteArray> = request.guids
+            .mapNotNull { it?.tupleNumber?.toByteArray(TupleNumberVariant.B160) }
+            .toTypedArray()
         if (tupleNumbers.isNotEmpty()) {
             if (where.isNotEmpty()) where.append(" AND ")
             val placeholder = placeholderForArg(tupleNumbers, PgType.BYTE_ARRAY_ARRAY)
@@ -264,7 +265,6 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
                             "Couldn't find PgColumn for TupleColumn: ${metaQuery.column.name}"
                         )
                     }
-                val placeholder = placeholderForArg(metaQuery.value, pgColumn.type)
                 val leftOperand = if (metaQuery.column == MetaColumn.operation()) {
                     "${PgColumn.flags.name} & ${FlagsBits.OP_MASK}"
                 } else if (metaQuery.column == MetaColumn.action()) {
@@ -275,8 +275,18 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
                     pgColumn.name
                 }
                 val resolvedQuery = when (val op = metaQuery.op) {
-                    is StringOp -> resolveStringOp(op, leftOperand, placeholder)
-                    is DoubleOp -> resolveDoubleOp(op, leftOperand, placeholder)
+                    is StringOp -> {
+                        val placeholder = placeholderForArg(metaQuery.value, pgColumn.type)
+                        resolveStringOp(op, leftOperand, placeholder)
+                    }
+                    is DoubleOp -> {
+                        val placeholder = placeholderForArg(metaQuery.value, pgColumn.type)
+                        resolveDoubleOp(op, leftOperand, placeholder)
+                    }
+                    AnyOp.IS_ANY_OF -> {
+                        val placeholder = placeholderForArg(metaQuery.value, arrayTypeFor(pgColumn.type))
+                        "$leftOperand = ANY($placeholder)"
+                    }
                     else -> throw illegalArg("Unknown op type: ${op::class.simpleName}")
                 }
                 where.append(resolvedQuery)
@@ -286,6 +296,20 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
                 NakshaError.ILLEGAL_ARGUMENT,
                 "Unknown metadata query type: ${metaQuery::class.simpleName}"
             )
+        }
+    }
+
+    private fun arrayTypeFor(pgType: PgType): PgType {
+        return when (pgType) {
+            PgType.BOOLEAN -> PgType.BOOLEAN_ARRAY
+            PgType.SHORT -> PgType.SHORT_ARRAY
+            PgType.INT -> PgType.INT_ARRAY
+            PgType.INT64 -> PgType.INT64_ARRAY
+            PgType.FLOAT -> PgType.FLOAT_ARRAY
+            PgType.DOUBLE -> PgType.DOUBLE_ARRAY
+            PgType.STRING -> PgType.STRING_ARRAY
+            PgType.BYTE_ARRAY -> PgType.BYTE_ARRAY_ARRAY
+            else -> throw illegalArg("Unknown array type for PgType: ${pgType::class.simpleName}")
         }
     }
 

@@ -36,12 +36,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
+import naksha.base.StringList;
 import naksha.model.Action;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
+import naksha.model.TupleNumber;
+import naksha.model.TupleNumberVariant;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
@@ -51,16 +55,15 @@ import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.WriteRequest;
+import naksha.model.request.query.AnyOp;
+import naksha.model.request.query.MetaColumn;
+import naksha.model.request.query.MetaQuery;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ActivityLogHandler extends AbstractEventHandler {
 
   private static final Comparator<NakshaFeature> FEATURE_COMPARATOR = new ActivityLogComparator();
-
-  private final @NotNull Logger logger = LoggerFactory.getLogger(ActivityLogHandler.class);
   private final @NotNull ActivityLogHandlerProperties properties;
 
   // TODO: remove unused 'eventTarget' property as part of MCPODS-7103
@@ -106,12 +109,60 @@ public class ActivityLogHandler extends AbstractEventHandler {
   }
 
   private List<NakshaFeature> activityLogFeatures(ReadFeatures readFeatures, NakshaContext context) {
-    List<NakshaFeature> allNecessaryFeatures = fetchFeatures(readFeatures, context);
-    return featuresEnhancedWithActivity(allNecessaryFeatures);
+    Naksha.cache.clear();
+    CollectedFeatures initialFeatures = collectInitialFeatures(readFeatures, context);
+    List<FeatureWithPredecessor> featuresWithPredecessors = featuresWithPredecessors(initialFeatures, context);
+    return featuresEnhancedWithActivity(featuresWithPredecessors);
+  }
+
+  private CollectedFeatures collectInitialFeatures(ReadFeatures readFeatures, NakshaContext context) {
+    CollectedFeatures collectedFeatures = new CollectedFeatures();
+    collectedFeatures.add(fetchFeatures(readFeatures, context));
+    return collectedFeatures;
+  }
+
+  // TODO: CASL-1094: in V2 this method was utilizing `properties.xyz.puuid` field to combine subsequent versions of feature
+  // During v3 alignment (CASL-1057) it was observed that sometimes puuids of UPDATED & DELETED features are missing
+  // Because of that, a bypass that uses `properties.xyz.nuuid` was introduced - logically, it's still correct to combine subsequent versions like that
+  // However, this is not expected behavior, as both `puuid` and `nuuid` are expected to be populated in middle features, which is not the case
+  // CASL-1094 aims to find the cause and fix missing puuids, then we should consider moving back to the logic that was in place in V2
+  private List<FeatureWithPredecessor> featuresWithPredecessors(CollectedFeatures collectedFeatures, NakshaContext context) {
+    collectMissingPredecessors(collectedFeatures, context);
+    return collectedFeatures.byUuid
+        .entrySet().stream()
+        .map(uuidAndFeature -> new FeatureWithPredecessor(
+            uuidAndFeature.getValue(),
+            collectedFeatures.byNuuid.get(uuidAndFeature.getKey())
+        ))
+        .toList();
+  }
+
+  private void collectMissingPredecessors(CollectedFeatures collectedFeatures, NakshaContext context) {
+    List<TupleNumber> featuresWithoutPredecessorsTns = collectedFeatures.byUuid.values().stream()
+        .filter(f -> !collectedFeatures.byNuuid.containsKey(f.getId()))
+        .map(NakshaFeature::getTupleNumber)
+        .toList();
+    if(!featuresWithoutPredecessorsTns.isEmpty()) {
+      List<NakshaFeature> missingPredecessors = fetchFeatures(requestPredecessorsOf(featuresWithoutPredecessorsTns), context);
+      collectedFeatures.add(missingPredecessors);
+    }
+  }
+
+  private ReadFeatures requestPredecessorsOf(List<TupleNumber> tupleNumbers) {
+    // we will compare against `next_tn` which is encodded with 96-bit encoding
+    byte[][] b96tns = new byte[tupleNumbers.size()][];
+    for (int i = 0; i < tupleNumbers.size(); i++) {
+      b96tns[i] = tupleNumbers.get(i).toByteArray(TupleNumberVariant.B96);
+    }
+    MetaQuery nuidQuery = new MetaQuery(MetaColumn.nextVersion(), AnyOp.IS_ANY_OF, b96tns);
+    ReadFeatures requestPredecessors = new ReadFeatures();
+    requestPredecessors.setCollectionIds(StringList.of(properties.getSpaceId()));
+    requestPredecessors.setQueryHistory(true);
+    requestPredecessors.getQuery().setMetadata(nuidQuery);
+    return requestPredecessors;
   }
 
   private List<NakshaFeature> fetchFeatures(ReadFeatures readFeatures, NakshaContext context) {
-    Naksha.cache.clear();
     Response response = nakshaHub().getSpaceStorage().useReadSession(
         SessionOptions.from(context, true),
         readSession -> readSession.execute(readFeatures)
@@ -125,8 +176,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
     }
   }
 
-  private List<NakshaFeature> featuresEnhancedWithActivity(List<NakshaFeature> features) {
-    List<FeatureWithPredecessor> featureWithPredecessors = featuresWithPredecessors(features);
+  private List<NakshaFeature> featuresEnhancedWithActivity(List<FeatureWithPredecessor> featureWithPredecessors) {
     return featureWithPredecessors.stream()
         .map(featureWithPredecessor -> enhanceWithActivityLog(
             featureWithPredecessor.feature, featureWithPredecessor.oldFeature, properties.getSpaceId()))
@@ -134,55 +184,39 @@ public class ActivityLogHandler extends AbstractEventHandler {
         .toList();
   }
 
-  // TODO: CASL-1094: in V2 this method was utilizing `properties.xyz.puuid` field to combine subsequent versions of feature
-  // During v3 alignment (CASL-1057) it was observed that sometimes puuids of UPDATED & DELETED features are missing
-  // Because of that, a bypass that uses `properties.xyz.nuuid` was introduced - logically, it's still correct to combine subsequent versions like that
-  // However, this is not expected behavior, as both `puuid` and `nuuid` are expected to be populated in middle features, which is not the case
-  // CASL-1094 aims to find the cause and fix missing puuids, then we should consider moving back to the logic that was in place in V2
-  private List<FeatureWithPredecessor> featuresWithPredecessors(List<NakshaFeature> features) {
-    Map<String, NakshaFeature> featureVersionsByNuuid = featuresByNuuid(features);
-    return features.stream()
-        .map(feature -> new FeatureWithPredecessor(feature, featureVersionsByNuuid.get(uuid(feature))))
-        .toList();
-  }
-
-  @NotNull
-  private static Map<String, NakshaFeature> featuresByNuuid(List<NakshaFeature> historyFeatures) {
-    Map<String, NakshaFeature> featureVersionsByNuuid = new HashMap<>();
-    for (NakshaFeature feature : historyFeatures) {
-      String nuuid = nuuidOrNullIfDeleted(feature);
-      if(nuuid != null) {
-        featureVersionsByNuuid.put(nuuid, feature);
-      }
-    }
-    return featureVersionsByNuuid;
-  }
-
   private static boolean nullOrEmpty(String value) {
     return value == null || value.isBlank();
   }
 
-  private static String uuid(NakshaFeature feature) {
-    return xyzNamespace(feature).getUuid();
-  }
-
   /**
-   * Returns nuuid (uuid of next feature) for all non-DELETE versions.
-   * If feature represents DELETED version, we return null. The reason is that `nuuid` is equal to `uuid` when `op` is DELETE - this breaks grouping by nuuid as we can have 2 versions having the same nuuid (ie UPDATE & DELETE)
-   * @param feature
-   * @return
+   * Returns nuuid (uuid of next feature) for all non-DELETE versions. If feature represents DELETED version, we return null. The reason is
+   * that `nuuid` is equal to `uuid` when `op` is DELETE - this breaks grouping by nuuid as we can have 2 versions having the same nuuid (ie
+   * UPDATE & DELETE)
    */
-  private static String nuuidOrNullIfDeleted(NakshaFeature feature) {
-    XyzNs xyzNs  = xyzNamespace(feature);
-    if(Action.DELETED.equals(xyzNs.getAction())){
+  private static String nuuidOrNullIfDeleted(XyzNs xyzNs) {
+    if (Action.DELETED.equals(xyzNs.getAction())) {
       return null;
     } else {
       return xyzNs.getNuuid();
     }
   }
 
-  private static XyzNs xyzNamespace(NakshaFeature feature) {
-    return feature.getProperties().getXyz();
+  private record CollectedFeatures(@NotNull Map<String, NakshaFeature> byUuid, @NotNull Map<String, NakshaFeature> byNuuid) {
+
+    private CollectedFeatures() {
+      this(new HashMap<>(), new HashMap<>());
+    }
+
+    private void add(List<NakshaFeature> features) {
+      for (NakshaFeature feature : features) {
+        XyzNs xyzNs = feature.getProperties().getXyz();
+        byUuid.put(xyzNs.getUuid(), feature);
+        String nuuid = nuuidOrNullIfDeleted(xyzNs);
+        if (nuuid != null) {
+          byNuuid.put(nuuid, feature);
+        }
+      }
+    }
   }
 
   private record FeatureWithPredecessor(@NotNull NakshaFeature feature, @Nullable NakshaFeature oldFeature) {
