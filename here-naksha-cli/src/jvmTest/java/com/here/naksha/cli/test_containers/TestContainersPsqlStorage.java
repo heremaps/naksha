@@ -11,10 +11,16 @@ import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 
-final class TestContainersPsqlStorage {
+public final class TestContainersPsqlStorage {
+    private final int exposedPort = 5432;
     private final String postgresImageUri = "ghcr.io/naksha-oss/naksha-postgres:v16.2-r4";
     private final GenericContainer<?> postgres = new GenericContainer<>(postgresImageUri);
     private IStorage storage;
+    private boolean isStarted = false;
+
+    public IStorage getStorage() {
+        return storage;
+    }
 
     TestContainersPsqlStorage() {
     }
@@ -22,22 +28,24 @@ final class TestContainersPsqlStorage {
     /**
      * Should be called once before any operation.
      */
-    void start() {
-        setUpPostgres();
-        postgres.start();
-        NakshaContext.currentContext().withAppId("testcontainer");
-        storage = Naksha.useStorage(getNakshaStorage());
+    synchronized void start() {
+        if (!isStarted) {
+            setUpPostgres();
+            postgres.start();
+            NakshaContext.currentContext().withAppId("testcontainer");
+            storage = Naksha.useStorage(getNakshaStorage());
+            isStarted = true;
+        }
     }
 
     /**
      * Should be called once after all operations.
      */
-    void stop() {
-        postgres.stop();
-    }
-
-    StorageController getStorageController() {
-        return new StorageController(storage);
+    synchronized void stop() {
+        if (isStarted) {
+            postgres.stop();
+            isStarted = false;
+        }
     }
 
     private NakshaStorage getNakshaStorage() {
@@ -61,7 +69,7 @@ final class TestContainersPsqlStorage {
                         """.formatted(
                         postgres.getHost(),
                         PgInstanceConfig.DEFAULT_DB,
-                        postgres.getMappedPort(5432),
+                        postgres.getMappedPort(exposedPort),
                         PgInstanceConfig.DEFAULT_USER,
                         PgInstanceConfig.DEFAULT_PASSWORD
                 )
@@ -69,7 +77,7 @@ final class TestContainersPsqlStorage {
     }
 
     private void setUpPostgres() {
-        postgres.addExposedPort(5432);
+        postgres.addExposedPort(exposedPort);
         postgres.addEnv("PGPASSWORD", PgInstanceConfig.DEFAULT_PASSWORD);
         postgres.setWaitStrategy(
                 new LogMessageWaitStrategy()

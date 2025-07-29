@@ -6,14 +6,24 @@ import java.util.List;
  * A singleton pool containing two instances of {@link TestContainersPsqlStorage}.
  */
 public final class TestContainersPsqlStoragePool {
-    /**
-     * Returns a {@link StorageController} instance for the storage at the specified index.
-     *
-     * @param index the index of the storage instance (either {@code 0} or {@code 1})
-     * @return a new {@link StorageController} instance associated with the specified storage
-     */
-    public static StorageController getInstance(int index) {
-        return PsqlStoragePoolHolder.POOL.get(index).getStorageController();
+    public static TestContainersPsqlStorage getRunningContainer(InstanceIndex instanceIndex) {
+        List<TestContainersPsqlStorage> testContainersPsqlStorages = PsqlStoragePoolHolder.POOL;
+        return testContainersPsqlStorages.get(instanceIndex.getIndex());
+    }
+
+    public enum InstanceIndex {
+        FIRST_INSTANCE(0),
+        SECOND_INSTANCE(1);
+
+        private final int index;
+
+        InstanceIndex(int index) {
+            this.index = index;
+        }
+
+        public int getIndex() {
+            return index;
+        }
     }
 
     private TestContainersPsqlStoragePool() {
