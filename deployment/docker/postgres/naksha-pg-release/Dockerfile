@@ -10,6 +10,10 @@ RUN chown postgres:postgres /usr/bin/run_postgres.sh \
     && cd /home/postgres \
     && chown -R postgres:postgres *
 
+# Remove any unnecessary packages and cache
+RUN dnf clean all  \
+    && rm -rf /var/cache/dnf
+
 EXPOSE 5432
 
 CMD /usr/bin/run_postgres.sh

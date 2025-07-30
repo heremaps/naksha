@@ -65,7 +65,7 @@ log4j_slf4j = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.r
 postgres = "org.postgresql:postgresql:42.7.5"
 commons_dbutils = "commons-dbutils:commons-dbutils:1.7"
 
-commons_lang3 = "org.apache.commons:commons-lang3:3.12.0"
+commons_lang3 = "org.apache.commons:commons-lang3:3.18.0"
 jodah_expiringmap = "net.jodah:expiringmap:0.5.10"
 caffinitas_ohc = "org.caffinitas.ohc:ohc-core:0.7.4"
 caffeine = "com.github.ben-manes.caffeine:caffeine:3.2.0"
