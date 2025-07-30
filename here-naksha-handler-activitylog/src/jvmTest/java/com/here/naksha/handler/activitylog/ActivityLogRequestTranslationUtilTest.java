@@ -7,16 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import naksha.base.JvmInt64;
 import naksha.base.StringList;
 import naksha.model.Guid;
+import naksha.model.GuidList;
 import naksha.model.TupleNumber;
 import naksha.model.Version;
 import naksha.model.request.ReadFeatures;
-import naksha.model.request.ResultFilter;
-import naksha.model.request.ResultFilterList;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.POr;
 import naksha.model.request.query.PQuery;
@@ -33,10 +31,9 @@ class ActivityLogRequestTranslationUtilTest {
   void shouldTranslateSingleGuidPassedAsFeatureId() {
     // Given: single GUID passed in ReadFeatures
     String featureId = "test_feature_id";
-    Version version = randomVersion();
-    String rawGuid = rawGuid(featureId, version);
+    Guid guid = guid(featureId, randomVersion());
     ReadFeatures readFeatures = new ReadFeatures();
-    readFeatures.setFeatureIds(StringList.of(rawGuid));
+    readFeatures.setFeatureIds(StringList.of(guid.toString()));
 
     // When: translating the original request
     transformOriginalRequest(readFeatures, TEST_SPACE_ID);
@@ -44,27 +41,24 @@ class ActivityLogRequestTranslationUtilTest {
     // Then: request will reach correct collection and history
     verifyAllHistoricalVersionsInCollection(readFeatures);
 
-    // And: there is a single featureId withing the request
-    StringList featureIds = readFeatures.getFeatureIds();
-    assertEquals(1, featureIds.size());
-    assertEquals(featureId, featureIds.get(0));
+    // And: no feature ids are passed from original requesy
+    assertTrue(readFeatures.getFeatureIds().isEmpty());
 
-    // And: translated request contains max version defined in original GUID, no post-filtering needed
-    assertEquals(version, readFeatures.getVersion());
-    assertTrue(readFeatures.getResultFilters().isEmpty());
+    // And: there is a single guid passed from original featureId
+    GuidList finalGuids = readFeatures.getGuids();
+    assertEquals(1, finalGuids.size());
+    assertEquals(guid, finalGuids.get(0));
   }
 
   @Test
   void shouldTranslateMultipleGuidsPassedAsFeatureIds() {
     // Given: multiple GUIDs passed in ReadFeatures
-    Map<String, Version> featureVersions = Map.of(
-        "f1", randomVersion(),
-        "f2", randomVersion(),
-        "f3", randomVersion()
+    GuidList guids = GuidList.of(
+        guid("f1", randomVersion()),
+        guid("f2", randomVersion()),
+        guid("f3", randomVersion())
     );
-    List<String> rawGuids = featureVersions.entrySet().stream()
-        .map(entry -> rawGuid(entry.getKey(), entry.getValue()))
-        .toList();
+    List<String> rawGuids = guids.stream().map(Guid::toString).toList();
     ReadFeatures readFeatures = new ReadFeatures();
     readFeatures.setFeatureIds(StringList.fromList(rawGuids));
 
@@ -77,17 +71,13 @@ class ActivityLogRequestTranslationUtilTest {
     // And: no max version is set - it will be covered in post filtering
     assertNull(readFeatures.getVersion());
 
-    // And: translated request contains featureIds from input guids
-    StringList featureIds = readFeatures.getFeatureIds();
-    assertEquals(3, featureIds.size());
-    assertTrue(featureIds.containsAll(featureVersions.keySet()));
+    // And: translated request does not contain any feature id (no acitivytLog was defined)
+    assertTrue(readFeatures.getFeatureIds().isEmpty());
 
-    // And: request version is null - mutliple version querying is not available during query processing stage
-    //      but translated request contains filter for version postprocessing, so versions are taken into account
-    ResultFilterList resultFilters = readFeatures.getResultFilters();
-    assertEquals(1, resultFilters.size());
-    ResultFilter versionFilter = resultFilters.get(0);
-    assertEquals(new MaxVersionResultFilter(featureVersions), versionFilter);
+    // And: all guids defined in featureIds were moved to ReadFeatures.guids
+    GuidList finalGuids = readFeatures.getGuids();
+    assertEquals(guids.size(), finalGuids.size());
+    assertTrue(finalGuids.containsAll(guids));
   }
 
   @Test
@@ -114,6 +104,9 @@ class ActivityLogRequestTranslationUtilTest {
 
     // And: there is dummy POr(PTrue, PTrue) query
     assertNull(readFeatures.getQuery().getProperties());
+
+    // And: there are no guids (nothing was declared in original featureIds)
+    assertTrue(readFeatures.getGuids().isEmpty());
   }
 
   @Test
@@ -134,10 +127,7 @@ class ActivityLogRequestTranslationUtilTest {
     // Then: request will reach correct collection and history
     verifyAllHistoricalVersionsInCollection(readFeatures);
 
-    // And: no max version is set
-    assertNull(readFeatures.getVersion());
-
-    // And: there is a single featureId withing the request
+    // And: all ids defined in AcitvityLogNs are now part of featureIds
     StringList featureIds = readFeatures.getFeatureIds();
     assertEquals(2, featureIds.size());
     assertTrue(featureIds.containsAll(List.of(firstId, secondId)));
@@ -146,6 +136,9 @@ class ActivityLogRequestTranslationUtilTest {
     // TODO CASL-1123: in the future we should simply delete such IPropertyQuery
     POr root = (POr) readFeatures.getQuery().getProperties();
     assertTrue(root.stream().allMatch(PTrue.class::isInstance));
+
+    // And: there are no guids (nothing was declared in original featureIds)
+    assertTrue(readFeatures.getGuids().isEmpty());
   }
 
   @Test
@@ -153,9 +146,9 @@ class ActivityLogRequestTranslationUtilTest {
     // Given: guids passed in ReadFeatures.featureIds
     String id = "id";
     Version version = randomVersion();
-    String guid = rawGuid(id, version);
+    Guid guid = guid(id, version);
     ReadFeatures readFeatures = new ReadFeatures();
-    readFeatures.setFeatureIds(StringList.of(guid));
+    readFeatures.setFeatureIds(StringList.of(guid.toString()));
 
     // And: featureId passed as activity log ns prop
     String activityLogId = "activity_log_id";
@@ -168,19 +161,15 @@ class ActivityLogRequestTranslationUtilTest {
     // Then: request will reach correct collection and history
     verifyAllHistoricalVersionsInCollection(readFeatures);
 
-    // And: no max version is set (we can't use the one from guid as it would limit features mentioned in activity log ns)
-    assertNull(readFeatures.getVersion());
+    // And: feature ids are populated from ActivityLogNs
+    StringList finalFeatureIds = readFeatures.getFeatureIds();
+    assertEquals(1, finalFeatureIds.size());
+    assertEquals(activityLogId, finalFeatureIds.get(0));
 
-    // And: all the feature ids are part of final query
-    StringList featureIds = readFeatures.getFeatureIds();
-    assertEquals(2, featureIds.size());
-    assertTrue(featureIds.containsAll(List.of(id, activityLogId)));
-
-    // And: post-filtering is applied only to features included as guid
-    assertNull(readFeatures.getQuery().getProperties());
-    ResultFilterList resultFilters = readFeatures.getResultFilters();
-    assertEquals(1, resultFilters.size());
-    assertEquals(new MaxVersionResultFilter(Map.of(id, version)), resultFilters.get(0));
+    // And: guuids are populared from original feature ids
+    GuidList finalGuids = readFeatures.getGuids();
+    assertEquals(1, finalGuids.size());
+    assertEquals(guid, finalGuids.get(0));
   }
 
   private void verifyAllHistoricalVersionsInCollection(ReadFeatures readFeatures) {
@@ -195,9 +184,9 @@ class ActivityLogRequestTranslationUtilTest {
     return new Version(random.nextLong());
   }
 
-  private String rawGuid(String featureId, Version version) {
+  private Guid guid(String featureId, Version version) {
     return new Guid(featureId, new TupleNumber(
         new JvmInt64(0), 0, 0, new JvmInt64(0), version, 0
-    )).toString();
+    ));
   }
 }

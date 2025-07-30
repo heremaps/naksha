@@ -23,6 +23,7 @@ import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationU
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
+import static naksha.base.Platform.getLogger;
 import static naksha.model.util.ResultHelper.extractResponseItems;
 
 import com.here.naksha.lib.core.IEvent;
@@ -36,7 +37,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.Platform;
 import naksha.base.StringList;
 import naksha.model.Action;
 import naksha.model.Naksha;
@@ -95,8 +95,16 @@ public class ActivityLogHandler extends AbstractEventHandler {
     final NakshaContext ctx = NakshaContext.currentContext();
     final ReadFeatures request = (ReadFeatures) event.getRequest();
     transformOriginalRequest(request, properties.getSpaceId());
-    List<NakshaFeature> activityLogFeatures = activityLogFeatures(request, ctx);
-    return new SuccessResponse(NakshaFeatureList.fromList(activityLogFeatures));
+    try {
+      List<NakshaFeature> activityLogFeatures = activityLogFeatures(request, ctx);
+      return new SuccessResponse(NakshaFeatureList.fromList(activityLogFeatures));
+    } catch (NakshaException e) {
+      getLogger().error("Failed to process activity log", e);
+      return new ErrorResponse(e.getError());
+    } catch (Exception e) {
+      getLogger().error("Failed to process activity log", e);
+      return new ErrorResponse(NakshaError.EXCEPTION, "Failed to process activity log", e);
+    }
   }
 
   private @Nullable ErrorResponse propertiesValidationError() {
@@ -109,7 +117,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
   }
 
   private List<NakshaFeature> activityLogFeatures(ReadFeatures readFeatures, NakshaContext context) {
-    Naksha.cache.clear();
+    Naksha.cache.clear(); // TODO CASL-1107: this effectively kills TupleCache but there's no other way to ensure references to TNs are present
     CollectedFeatures initialFeatures = collectInitialFeatures(readFeatures, context);
     List<FeatureWithPredecessor> featuresWithPredecessors = featuresWithPredecessors(initialFeatures, context);
     return featuresEnhancedWithActivity(featuresWithPredecessors);

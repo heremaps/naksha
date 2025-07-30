@@ -3,9 +3,11 @@ package com.here.naksha.handler.activitylog;
 import static com.here.naksha.handler.activitylog.ActivityLogHandlerProperties.activityLogHandlerProperties;
 import static com.here.naksha.handler.activitylog.NakshaFeatureBuilder.nakshaFeature;
 import static com.here.naksha.handler.activitylog.assertions.ActivityLogSuccessResultAssertions.assertThatResult;
+import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -21,6 +23,7 @@ import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+import naksha.base.AnyList;
 import naksha.base.JvmInt64;
 import naksha.model.Action;
 import naksha.model.IReadSession;
@@ -28,7 +31,6 @@ import naksha.model.IStorage;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadCollections;
 import naksha.model.request.ReadFeatures;
@@ -38,11 +40,18 @@ import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
+import naksha.model.request.query.AnyOp;
+import naksha.model.request.query.IMetaQuery;
+import naksha.model.request.query.MetaColumn;
+import naksha.model.request.query.MetaQuery;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -62,11 +71,12 @@ class ActivityLogHandlerTest {
   @Mock
   IStorage spaceStorage;
 
+  private AutoCloseable mockCloseable;
   private ActivityLogHandler handler;
 
   @BeforeEach
   void setup() {
-    MockitoAnnotations.openMocks(this);
+    mockCloseable = MockitoAnnotations.openMocks(this);
     when(naksha.getSpaceStorage()).thenReturn(spaceStorage);
     doCallRealMethod().when(spaceStorage).runInReadSession(any(), any());
     doCallRealMethod().when(spaceStorage).useReadSession(any(), any());
@@ -74,6 +84,15 @@ class ActivityLogHandlerTest {
     doCallRealMethod().when(spaceStorage).runInWriteSession(any(), any());
     handler = handlerForSpaceId(SPACE_ID);
     NakshaContext.currentContext().withAppId("test-app");
+  }
+
+  @AfterEach
+  void teardown() {
+    try {
+      mockCloseable.close();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @ParameterizedTest
@@ -110,7 +129,7 @@ class ActivityLogHandlerTest {
   @Test
   void shouldImmediatelySucceedOnWriteCollection() {
     // Given: event bearing some WriteCollections request
-    IEvent event = eventWith(new WriteRequest().add(new Write().deleteCollectionById(null,"some_collection")));
+    IEvent event = eventWith(new WriteRequest().add(new Write().deleteCollectionById(null, "some_collection")));
 
     // When: handler tries to process such event
     Response result = handler.processEvent(event);
@@ -129,8 +148,8 @@ class ActivityLogHandlerTest {
   @Test
   void shouldComposeActivityFeatures() throws Exception {
     // Given: features uuid
-    String initialUuid = "initialUuid";
-    String newUuid = "newUuid";
+    String initialUuid = "uuid_0";
+    String newUuid = "uuid_1";
 
     // And: old version of feature
     String featureId = "featureId";
@@ -159,11 +178,13 @@ class ActivityLogHandlerTest {
         .build();
 
     // And: space storage that returns these features for some ReadFeatures request
-    ReadFeatures request = new ReadFeatures();
-    spaceStorageSessionReturningHistoryFeatures(request, oldFeature, newFeature);
+    configureSpaceStorage(
+        initialHistoryAwareRequestReturns(List.of(newFeature)),
+        requestForMissingPredecessorsReturns(List.of(oldFeature))
+    );
 
     // When: handler processes given request
-    Response result = handler.processEvent(eventWith(request));
+    Response result = handler.processEvent(eventWith(new ReadFeatures()));
 
     // Then: result contains activity log calculated on basis of these features
     assertThatResult(result)
@@ -205,18 +226,20 @@ class ActivityLogHandlerTest {
 
   @Test
   void shouldNotCalculateReversePatchAfterCreation() throws Exception {
-    // Given: ReadFeatures request
-    ReadFeatures request = new ReadFeatures();
-
-    // And: space storage that returns some feature with 'CREATE' action for given request
-    spaceStorageSessionReturningHistoryFeatures(request, nakshaFeature("featureId")
-        .withUuid("uuid")
-        .withPuuid(null)
-        .withAction(Action.CREATED)
-        .build());
+    // Given: space storage that returns only some feature with 'CREATE' action
+    configureSpaceStorage(
+        initialHistoryAwareRequestReturns(List.of(
+            nakshaFeature("featureId")
+                .withUuid("uuid")
+                .withPuuid(null)
+                .withAction(Action.CREATED)
+                .build())
+        ),
+        requestForMissingPredecessorsReturns(emptyList())
+    );
 
     // When: handler processes event bearing such request
-    Response result = handler.processEvent(eventWith(request));
+    Response result = handler.processEvent(eventWith(new ReadFeatures()));
 
     // Then: result does not bear any reverse patch
     assertThatResult(result)
@@ -230,29 +253,30 @@ class ActivityLogHandlerTest {
 
   @Test
   void shouldNotCalculateDiffAfterDeletion() throws Exception {
-    // Given: ReadFeatures request
-    ReadFeatures request = new ReadFeatures();
-
-    // And: space storage that returns features with 'DELETE' and `CREATE` actions for given request
-    spaceStorageSessionReturningHistoryFeatures(request,
-        nakshaFeature("featureId")
-            .withUuid("delete_uuid")
-            .withPuuid("create_uuid")
-            .withAction(Action.DELETED)
-            .withCreatedAt(T0)
-            .withUpdatedAt(T1)
-            .build(),
-        nakshaFeature("featureId")
-            .withUuid("create_uuid")
-            .withPuuid(null)
-            .withAction(Action.CREATED)
-            .withCreatedAt(T0)
-            .withUpdatedAt(T0)
-            .build()
+    // Given: space storage that returns features with 'DELETE' and `CREATE` actions
+    configureSpaceStorage(
+        initialHistoryAwareRequestReturns(List.of(
+            nakshaFeature("featureId")
+                .withUuid("delete_uuid")
+                .withPuuid("create_uuid")
+                .withAction(Action.DELETED)
+                .withCreatedAt(T0)
+                .withUpdatedAt(T1)
+                .build()
+        )),
+        requestForMissingPredecessorsReturns(List.of(
+            nakshaFeature("featureId")
+                .withUuid("create_uuid")
+                .withPuuid(null)
+                .withAction(Action.CREATED)
+                .withCreatedAt(T0)
+                .withUpdatedAt(T0)
+                .build()
+        ))
     );
 
     // When: handler processes event bearing such request
-    Response result = handler.processEvent(eventWith(request));
+    Response result = handler.processEvent(eventWith(new ReadFeatures()));
 
     // Then: there is no reverse patch for any of these features
     assertThatResult(result)
@@ -279,19 +303,43 @@ class ActivityLogHandlerTest {
     DatahubSample datahubSample = DatahubSamplesUtil.loadDatahubSample();
 
     // And:
-    ReadFeatures request = new ReadFeatures();
-
-    // And:
-    spaceStorageSessionReturningHistoryFeatures(request, datahubSample.historyFeatures());
-
-    // And
-    IEvent event = eventWith(request);
+    spaceStorageReturnsAllNecessaryFeatures(datahubSample.historyFeatures());
 
     // When
-    Response result = handlerWithSampleSpace.processEvent(event);
+    Response result = handlerWithSampleSpace.processEvent(eventWith(new ReadFeatures()));
 
     // Then
     assertThatResult(result).hasActivityFeaturesIdenticalTo(datahubSample.activityFeatures());
+  }
+
+  @Test
+  void shouldFailIfInitialRequestFails(){
+    // Given
+    configureSpaceStorage(
+        initialHistoryRequestFails(),
+        requestForMissingPredecessorsReturns(List.of(new NakshaFeature("some_id")))
+    );
+
+    // When: handler processes event bearing such request
+    Response result = handler.processEvent(eventWith(new ReadFeatures()));
+
+    // Then:
+    Assertions.assertInstanceOf(ErrorResponse.class, result);
+  }
+
+  @Test
+  void shouldFailIfRequestForMissingPredecessorsFails(){
+    // Given
+    configureSpaceStorage(
+        initialHistoryAwareRequestReturns(List.of(new NakshaFeature("some_id"))),
+        requestForMissingPredecessorsFails()
+    );
+
+    // When: handler processes event bearing such request
+    Response result = handler.processEvent(eventWith(new ReadFeatures()));
+
+    // Then:
+    Assertions.assertInstanceOf(ErrorResponse.class, result);
   }
 
   private ActivityLogHandler handlerForSpaceId(String spaceId) {
@@ -299,16 +347,84 @@ class ActivityLogHandlerTest {
     return new ActivityLogHandler(eventHandler, naksha);
   }
 
-  private IReadSession spaceStorageSessionReturningHistoryFeatures(ReadRequest handledRequest, NakshaFeature... historyFeatures) {
-    return spaceStorageSessionReturningHistoryFeatures(handledRequest, List.of(historyFeatures));
+  private void spaceStorageReturnsAllNecessaryFeatures(List<NakshaFeature> historyFeatures) {
+    configureSpaceStorage(
+        initialHistoryAwareRequestReturns(historyFeatures),
+        requestForMissingPredecessorsReturns(emptyList())
+    );
   }
 
-  private IReadSession spaceStorageSessionReturningHistoryFeatures(ReadRequest handledRequest, List<NakshaFeature> historyFeatures) {
-    IReadSession readSession = mock(IReadSession.class);
-    when(readSession.execute(handledRequest)).thenReturn(new SuccessResponse(NakshaFeatureList.fromList(historyFeatures)));
+  private void configureSpaceStorage(ReadBehavior... readBehaviors){
+    IReadSession readSession = mockReadSession(readBehaviors);
     when(spaceStorage.newReadSession(any())).thenReturn(readSession);
+  }
+
+  private ReadBehavior initialHistoryAwareRequestReturns(List<NakshaFeature> nakshaFeatures){
+    ArgumentMatcher<ReadRequest> notNextTnBasedHistoryQuery = readRequest -> {
+      return isHistoryAwareReadFeatures(readRequest) && !containsNextVersionMetaQuery((ReadFeatures) readRequest);
+    };
+    return ReadBehavior.successfulRead(notNextTnBasedHistoryQuery, nakshaFeatures);
+  }
+
+  private ReadBehavior requestForMissingPredecessorsReturns(List<NakshaFeature> nakshaFeatures) {
+    ArgumentMatcher<ReadRequest> anyNextTnBasedRequest = readRequest -> {
+      return isHistoryAwareReadFeatures(readRequest)
+             && containsNextVersionMetaQuery((ReadFeatures) readRequest);
+    };
+    return ReadBehavior.successfulRead(anyNextTnBasedRequest, nakshaFeatures);
+  }
+
+  private ReadBehavior initialHistoryRequestFails(){
+    ArgumentMatcher<ReadRequest> notNextTnBasedHistoryQuery = readRequest -> {
+      return isHistoryAwareReadFeatures(readRequest) && !containsNextVersionMetaQuery((ReadFeatures) readRequest);
+    };
+    return ReadBehavior.failingRead(notNextTnBasedHistoryQuery);
+  }
+
+  private ReadBehavior requestForMissingPredecessorsFails() {
+    ArgumentMatcher<ReadRequest> anyNextTnBasedRequest = readRequest -> {
+      return isHistoryAwareReadFeatures(readRequest)
+             && containsNextVersionMetaQuery((ReadFeatures) readRequest);
+    };
+    return ReadBehavior.failingRead(anyNextTnBasedRequest);
+  }
+
+  private boolean isHistoryAwareReadFeatures(ReadRequest readRequest) {
+    if (readRequest instanceof ReadFeatures rf) {
+      return rf.getQueryHistory() && rf.getCollectionIds().size() == 1;
+    }
+    return false;
+  }
+
+  private boolean containsNextVersionMetaQuery(ReadFeatures readFeatures){
+    IMetaQuery metaQuery = readFeatures.getQuery().getMetadata();
+    if (metaQuery instanceof MetaQuery mq) {
+      return mq.getColumn().equals(MetaColumn.nextVersion())
+             && mq.getOp().equals(AnyOp.IS_ANY_OF)
+             && mq.getValue() instanceof AnyList;
+    }
+    return false;
+  }
+
+  private IReadSession mockReadSession(ReadBehavior... readBehavior) {
+    IReadSession readSession = mock(IReadSession.class);
+    for (ReadBehavior behavior : readBehavior) {
+      when(readSession.execute(argThat(behavior.readReqMatcher))).thenReturn(behavior.readResponse);
+    }
     return readSession;
   }
+
+  private record ReadBehavior(ArgumentMatcher<ReadRequest> readReqMatcher, Response readResponse) {
+
+    static ReadBehavior successfulRead(ArgumentMatcher<ReadRequest> readReqMatcher, List<NakshaFeature> returnedFeatures) {
+      return new ReadBehavior(readReqMatcher, new SuccessResponse(returnedFeatures));
+    }
+
+    static ReadBehavior failingRead(ArgumentMatcher<ReadRequest> readReqMatcher) {
+      return new ReadBehavior(readReqMatcher, new ErrorResponse());
+    }
+  }
+
 
   private IEvent eventWith(Request request) {
     IEvent event = Mockito.mock(IEvent.class);
@@ -322,7 +438,7 @@ class ActivityLogHandlerTest {
 
   private static Stream<Request> unhandledRequests() {
     return Stream.of(
-        new WriteRequest().add(new Write().createFeature(null,"some_collection",new NakshaFeature("some_feature"))),
+        new WriteRequest().add(new Write().createFeature(null, "some_collection", new NakshaFeature("some_feature"))),
         new ReadCollections()
     );
   }
