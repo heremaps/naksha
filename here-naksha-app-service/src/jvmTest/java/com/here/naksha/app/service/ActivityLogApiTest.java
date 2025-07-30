@@ -26,6 +26,7 @@ import naksha.base.Platform;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
+import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -481,6 +482,84 @@ class ActivityLogApiTest extends ApiTest {
             "\"${feature_2_created_updated_at}\"", secondCreatedFeature.updatedAt,
             "\"${feature_2_updated_created_at}\"", updatedFeature.createdAt,
             "\"${feature_2_updated_updated_at}\"", updatedFeature.updatedAt
+        )));
+  }
+
+  // TODO: enable or remove this test: currently it's impossible to query for `id` and `p.@ns:com:here:xyz:log.id` at the same time
+  // the '/search' does not handle id querying and '/features' does not handle custom property query (it will ignore 'p.@ns:com:here:xyz:log.id')
+  // @Test
+  void tc1311_shouldNotReturnAnythingIfLogIdAndUuidConcernDifferentFeatures() throws Exception {
+    // Given: Test files
+    String createFirstJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1311_invalidMix/create_first.json");
+    String createSecondJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1311_invalidMix/create_second.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1311_invalidMix/get_response.json");
+    String streamId = UUID.randomUUID().toString();
+    String firstFeatureId = "TC1311_feature_1";
+
+    // When: First feature is created
+    HttpResponse<String> firstCreatedResp = nakshaClient.post("hub/spaces/" + REGULAR_SPACE_ID + "/features", createFirstJson, streamId);
+    assertThat(firstCreatedResp).hasStatus(200);
+
+    // And: Second feature is created
+    HttpResponse<String> secondCreateResp = nakshaClient.post("hub/spaces/" + REGULAR_SPACE_ID + "/features", createSecondJson, streamId);
+    assertThat(secondCreateResp).hasStatus(200);
+    String secondCreatedUuid = featureMetadataFromCollectionResp(secondCreateResp.body()).uuid;
+
+    // And: Client queries activity log space using both activityLogNs (in query) and UUID (in path)
+    String secondUuidQuery = "id=%s".formatted(urlEncoded(secondCreatedUuid));
+    String firstIdNsQuery = urlEncoded("p.@ns:com:here:xyz:log.id") + "=" + firstFeatureId;
+    HttpResponse<String> getResp = nakshaClient.get(
+        "hub/spaces/" + ACTIVITY_SPACE_ID + "/features?%s&%s".formatted(secondUuidQuery, firstIdNsQuery), streamId);
+
+    // Then
+    assertThat(getResp)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId);
+  }
+
+  @Test
+  void tc1312_shouldReturnOnlyLimitedFeaturesForUuid() throws Exception {
+    // Given: Test files
+    String createFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1312_limitedActivity/create_features.json");
+    String firstUpdateJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1312_limitedActivity/first_update_feature.json");
+    String secondUpdateJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1312_limitedActivity/second_update_feature.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1312_limitedActivity/get_response.json");
+    String streamId = UUID.randomUUID().toString();
+    String featureId = "TC1312_feature";
+
+    // When: New feature is created
+    HttpResponse<String> createResp = nakshaClient.post("hub/spaces/" + REGULAR_SPACE_ID + "/features", createFeatureJson, streamId);
+    assertThat(createResp).hasStatus(200);
+
+    // And: This feature is updated for the first time
+    HttpResponse<String> firstUpdateResp = nakshaClient.put("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, firstUpdateJson,
+        streamId);
+    assertThat(firstUpdateResp).hasStatus(200);
+    FeatureMetadata firstUpdatedFeature = featureMetadataFromFeatureResp(firstUpdateResp.body());
+
+    // And: This feature is updated for the second time
+    HttpResponse<String> secondUpdateResp = nakshaClient.put("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, secondUpdateJson,
+        streamId);
+    assertThat(secondUpdateResp).hasStatus(200);
+    FeatureMetadata secondUpdatedFeature = featureMetadataFromFeatureResp(secondUpdateResp.body());
+
+    // And: This feature is deleted
+    HttpResponse<String> deleteResp = nakshaClient.delete("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, streamId);
+    assertThat(deleteResp).hasStatus(200);
+
+    // And: Client queries activity log space for the second updated state
+    HttpResponse<String> getResp = nakshaClient.get("hub/spaces/" + ACTIVITY_SPACE_ID + "/features/" + secondUpdatedFeature.uuid, streamId);
+
+    // Then: Expected ActivityLog response matches the response
+    assertThat(getResp)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(formattedJson(expectedActivityResp, Map.of(
+            "${id}", secondUpdatedFeature.uuid,
+            "${activityLogId}", featureId,
+            "${puuid}", firstUpdatedFeature.uuid,
+            "\"${createdAt}\"", secondUpdatedFeature.createdAt,
+            "\"${updatedAt}\"", secondUpdatedFeature.updatedAt
         )));
   }
 

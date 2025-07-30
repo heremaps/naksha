@@ -1,0 +1,29 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "id": "TC1311_feature_2",
+      "type": "Feature",
+      "properties": {
+        "speedLimit": "70",
+        "toBeDeleted": {
+          "foo": "bar"
+        },
+        "@ns:com:here:xyz": {
+          "tags": [
+            "two",
+            "three"
+          ]
+        }
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          8.68873,
+          50.0562,
+          292.9437777
+        ]
+      }
+    }
+  ]
+}
