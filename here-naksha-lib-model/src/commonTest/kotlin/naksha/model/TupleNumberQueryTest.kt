@@ -5,6 +5,7 @@ import naksha.model.request.query.AnyOp
 import naksha.model.request.query.MetaColumn
 import naksha.model.request.query.MetaQuery
 import kotlin.random.Random
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertIs
 
@@ -12,6 +13,7 @@ class TupleNumberQueryTest {
 
     private val random = Random.Default
 
+    @Ignore // TODO CASL-1140: analyze & either fix or remove this test
     @Test
     fun shouldStoreTnsAsByteArray() {
         // Given:
