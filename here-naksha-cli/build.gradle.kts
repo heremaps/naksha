@@ -6,12 +6,16 @@ plugins {
 }
 
 description = gatherDescription()
-val mainClass = "com.here.naksha.cli.Main"
+val mainClassPath = "com.here.naksha.cli.Main"
 val fatJarBaseName = "naksha-cli"
 
 kotlin {
-    jvmToolchain {
-        this.languageVersion.set(JavaLanguageVersion.of(21))
+    jvmToolchain(23)
+
+    jvm {
+        mainRun {
+            mainClass.set(mainClassPath)
+        }
     }
 
     sourceSets {
@@ -21,6 +25,7 @@ kotlin {
                 implementation(project(":here-naksha-lib-base"))
                 implementation(project(":here-naksha-lib-model"))
                 implementation(project(":here-naksha-lib-psql"))
+                implementation(project(":here-naksha-lib-core"))
             }
         }
         jvmTest {
@@ -29,9 +34,6 @@ kotlin {
                 implementation(libs.test.containers)
             }
         }
-    }
-
-    jvm {
     }
 }
 
@@ -48,7 +50,7 @@ tasks {
         archiveClassifier.set("")
         archiveVersion.set(project.version.toString())
         manifest {
-            attributes["Main-Class"] = mainClass
+            attributes["Main-Class"] = mainClassPath
         }
 
         from(kotlin.jvm().compilations.getByName("main").output)
@@ -56,7 +58,7 @@ tasks {
         configurations = listOf(project.configurations.getByName("jvmRuntimeClasspath"))
     }
 
-    named("build") {
+    named("jvmJar") {
         dependsOn(shadowCreate)
     }
 }

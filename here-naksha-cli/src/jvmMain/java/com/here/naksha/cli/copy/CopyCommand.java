@@ -102,6 +102,8 @@ public final class CopyCommand implements Callable<Integer> {
                 targetCopyElement
         );
 
+        System.out.println("success!");
+
         return CommandLine.ExitCode.OK;
     }
 }
