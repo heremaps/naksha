@@ -11,7 +11,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.File;
-import java.io.IOException;
 
 import static com.here.naksha.cli.TestUtils.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -67,7 +66,7 @@ class CopyCliTest {
                         "--targetCollectionId=%s".formatted(targetCopyElement.getCollectionId())
                 },
                 SUCCESS_EXIT_CODE,
-                "",
+                "success!",
                 ""
         );
 
@@ -181,9 +180,6 @@ class CopyCliTest {
             
             }"; line: 3, column: 4]
             """;
-
-    private CopyCliTest() throws IOException {
-    }
 
     private void assertCopyElement(
             CopyElement expected,
