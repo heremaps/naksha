@@ -37,7 +37,7 @@ public class PropertySearchSamples {
             Pair.of("properties.%40ns%3Acom%3Ahere%3Axyz.specProp=1", "properties.@ns:com:here:xyz.specProp=1"),
             Pair.of("p.propWithShortPrefix=1", "properties.propWithShortPrefix=1"),
             Pair.of("""
-                            f.id!=1
+                            f.id=1
                             &properties.prop_2!=value_2,value_22
                             &properties.prop_3=.null,value_33
                             &properties.prop_4!=.null,value_44
@@ -60,7 +60,7 @@ public class PropertySearchSamples {
                             .replace(System.lineSeparator(), "")
                     ,
                     """
-                            f.id!=1
+                            f.id=1
                             &properties.prop_2!=value_2,value_22
                             &properties.prop_3=.null,value_33
                             &properties.prop_4!=.null,value_44

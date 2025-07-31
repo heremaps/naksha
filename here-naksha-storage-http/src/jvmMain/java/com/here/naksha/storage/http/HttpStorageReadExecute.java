@@ -21,6 +21,7 @@ package com.here.naksha.storage.http;
 import static com.here.naksha.common.http.apis.ApiParamsConst.*;
 import static com.here.naksha.storage.http.PrepareResult.prepareResult;
 import static java.lang.String.format;
+import static java.util.stream.Collectors.joining;
 
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import java.net.HttpURLConnection;
@@ -30,9 +31,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import naksha.base.JvmBoxingUtil;
+import naksha.base.StringList;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.XyzFeatureCollection;
@@ -92,27 +93,43 @@ class HttpStorageReadExecute {
   private static Response executeFeatureByBBox(
       @NotNull NakshaContext context, ReadFeaturesProxyWrapper readRequest, RequestSender requestSender) {
     String queryParamsString = keysToKeyValuesStrings(readRequest, WEST, NORTH, EAST, SOUTH, LIMIT);
+    String featureIdsQueryString = getFeatureIdsQueryOrEmpty(readRequest);
+    String propertyQueryString = getPOpQueryOrEmpty(readRequest);
 
     HttpResponse<byte[]> response = requestSender.sendRequest(
-        format("/%s/bbox?%s%s", baseEndpoint(readRequest), queryParamsString, getPOpQueryOrEmpty(readRequest)),
+        format("/%s/bbox?%s%s%s", baseEndpoint(readRequest), queryParamsString, featureIdsQueryString, propertyQueryString),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
     return prepareResult(response, collectionMapper);
   }
 
+  private static String getFeatureIdsQueryOrEmpty(ReadFeaturesProxyWrapper readRequest) {
+    StringList featureIds = readRequest.getFeatureIds();
+    if (featureIds.isEmpty()) {
+      return "";
+    } else {
+      return featureIds.stream().collect(joining(
+          "&%s=".formatted(SHORT_FEATURE_ID), // delimeter
+          "&%s=".formatted(SHORT_FEATURE_ID), // prefix
+          "" // suffix
+      ));
+    }
+  }
+
   private static Response executeFeaturesByTile(
       @NotNull NakshaContext context, ReadFeaturesProxyWrapper readRequest, RequestSender requestSender) {
-    String queryParamsString = keysToKeyValuesStrings(readRequest, MARGIN, LIMIT);
     String tileType = readRequest.getQueryParameter(TILE_TYPE);
-    String tileId = readRequest.getQueryParameter(TILE_ID);
-
-    if (tileType != null && !tileType.equals(TILE_TYPE_QUADKEY))
+    if (tileType != null && !tileType.equals(TILE_TYPE_QUADKEY)) {
       return new ErrorResponse(new NakshaError(NakshaError.NOT_IMPLEMENTED, "Tile type other than " + TILE_TYPE_QUADKEY));
+    }
 
+    String queryParamsString = keysToKeyValuesStrings(readRequest, MARGIN, LIMIT);
+    String featureIdsQueryString = getFeatureIdsQueryOrEmpty(readRequest);
+    String tileId = readRequest.getQueryParameter(TILE_ID);
     HttpResponse<byte[]> response = requestSender.sendRequest(
         format(
-            "/%s/quadkey/%s?%s%s",
-            baseEndpoint(readRequest), tileId, queryParamsString, getPOpQueryOrEmpty(readRequest)),
+            "/%s/quadkey/%s?%s%s%s",
+            baseEndpoint(readRequest), tileId, queryParamsString, featureIdsQueryString, getPOpQueryOrEmpty(readRequest)),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
     return prepareResult(response, collectionMapper);
@@ -143,7 +160,7 @@ class HttpStorageReadExecute {
   private static String keysToKeyValuesStrings(ReadFeaturesProxyWrapper readRequest, String... key) {
     return Arrays.stream(key)
         .map(k -> k + "=" + readRequest.getQueryParameter(k))
-        .collect(Collectors.joining("&"));
+        .collect(joining("&"));
   }
 
   private static String baseEndpoint(ReadFeaturesProxyWrapper request) {
@@ -151,8 +168,8 @@ class HttpStorageReadExecute {
   }
 
   private static final Function<Object, List<NakshaFeature>> collectionMapper = tuples ->
-          JvmBoxingUtil.box(tuples, XyzFeatureCollection.class).getFeatures();
+      JvmBoxingUtil.box(tuples, XyzFeatureCollection.class).getFeatures();
 
   private static final Function<Object, List<NakshaFeature>> singleFeatureMapper = tuples ->
-          List.of(JvmBoxingUtil.box(tuples, NakshaFeature.class));
+      List.of(JvmBoxingUtil.box(tuples, NakshaFeature.class));
 }

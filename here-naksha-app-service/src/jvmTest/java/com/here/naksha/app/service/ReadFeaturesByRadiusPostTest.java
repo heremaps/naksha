@@ -73,6 +73,7 @@ class ReadFeaturesByRadiusPostTest extends ApiTest {
     TC 11 - Point1, radius=5m, Prop-2 (should return features 2,3 with appropriate selected json prop)
     TC 12 - Point1, radius=5m, Prop-2 (should return features 2,3 disregarding invalid prop selection)
     TC 13 - Invalid delimiter of prop selection (should return 400)
+    TC 14 - Point1, radius=5m and f.id=<feature_2_id> (should return features 2 only)
 
   */
 
@@ -189,9 +190,18 @@ class ReadFeaturesByRadiusPostTest extends ApiTest {
                     ),
                     "ReadFeatures/ByRadiusPost/TC13_withInvalidDelimiterPropSelection/response.json",
                     400
+            ),
+            standardTestSpec(
+                "tc14_testGetByRadiusPostWithPointRadiusAndShortFeatureId",
+                "ReadFeatures/ByRadiusPost/TC14_withPointRadiusAndFId/request_body.json",
+                List.of(
+                    "radius=5",
+                    "f.id=my-custom-id-2"
+                ),
+                "ReadFeatures/ByRadiusPost/TC14_withPointRadiusAndFId/feature_response_part.json",
+                200
             )
     );
-
   }
 
     private static Stream<Arguments> strictJsonTestParams() {

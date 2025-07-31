@@ -1,12 +1,10 @@
 {
-  "id": "${id}",
+  "id": "will_be_changed",
   "type": "Feature",
   "geometry": {
     "type": "Point",
     "coordinates": [
-      8.68872,
-      50.0561,
-      292.9437776
+      0,0,0
     ]
   },
   "properties": {

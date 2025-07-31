@@ -924,4 +924,25 @@ class ReadFeaturesByBBoxTest extends ApiTest {
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
 
+  @Test
+  void tc0736_testBBoxWithShortFeatureId() throws Exception {
+    // Test API : GET /hub/spaces/{spaceId}/bbox
+    // Validate features returned match with given BBox and Search conditions (Boolean equals)
+
+    // Given: Features By BBox request (against configured space)
+    final String bboxQueryParam = "west=8.6476&south=50.1175&east=8.6729&north=50.1248";
+    final String expectedBodyPart =
+        loadFileOrFail("ReadFeatures/ByBBox/TC0735_BBoxAndFId/feature_response_part.json");
+    String streamId = UUID.randomUUID().toString();
+    final String featureId = "my-custom-id-700-7";
+
+    // When: Get Features By BBox and 'f.id' request is submitted to NakshaHub
+    HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/bbox?" + bboxQueryParam + "&f.id=" + featureId, streamId);
+
+    // Then: Perform assertions
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+  }
 }

@@ -38,7 +38,6 @@ public final class IPropertyQueryToQueryConverter {
     private static final String VALUE_NULL = ".null";
     private static final String VALUE_TRUE = "true";
     private static final String VALUE_FALSE = "false";
-    private static final String PATH_FEATURE_ID = "f.id";
 
     /**
      * A private helper record to hold the final serialized parts of a simple query.
@@ -134,15 +133,11 @@ public final class IPropertyQueryToQueryConverter {
         throw new IllegalStateException("Unsupported query type for part resolution: " + query.getClass().getSimpleName());
     }
 
-    private static String getEncodedPath(Property property) {
-            List<String> pathSegments = property.getPath();
-            if (pathSegments.size() == 1 && pathSegments.get(0).equals("id")) {
-                return PATH_FEATURE_ID;
-            }
-            return pathSegments.stream()
-                    .map(IPropertyQueryToQueryConverter::urlEncode)
-                    .collect(Collectors.joining(DELIMITER_DOT));
-    }
+  private static String getEncodedPath(Property property) {
+    return property.getPath().stream()
+        .map(IPropertyQueryToQueryConverter::urlEncode)
+        .collect(Collectors.joining(DELIMITER_DOT));
+  }
 
     private static String urlEncode(Object obj) {
         return URLEncoder.encode(obj.toString(), StandardCharsets.UTF_8);

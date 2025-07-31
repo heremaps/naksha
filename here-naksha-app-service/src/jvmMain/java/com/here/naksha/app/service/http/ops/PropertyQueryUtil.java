@@ -1,11 +1,6 @@
 package com.here.naksha.app.service.http.ops;
 
-import static com.here.naksha.app.service.http.ops.PropKeys.FULL_PROP_PREFIX;
-import static com.here.naksha.app.service.http.ops.PropKeys.FULL_XYZ_PROP_PREFIX;
-import static com.here.naksha.app.service.http.ops.PropKeys.NULL_PROP_VALUE;
-import static com.here.naksha.app.service.http.ops.PropKeys.SHORT_PROP_PREFIX;
-import static com.here.naksha.app.service.http.ops.PropKeys.SHORT_XYZ_PROP_PREFIX;
-import static com.here.naksha.app.service.http.ops.PropKeys.SHORT_FEATURE_ID;
+import static com.here.naksha.common.http.apis.ApiParamsConst.SHORT_FEATURE_ID;
 import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.*;
 import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.COMMA;
 import static com.here.naksha.lib.core.models.payload.events.QueryOperation.*;
@@ -20,6 +15,7 @@ import java.util.*;
  import naksha.model.NakshaError;
  import naksha.model.NakshaException;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import naksha.model.request.query.AnyOp;
  import naksha.model.request.query.DoubleOp;
  import naksha.model.request.query.IPropertyQuery;
@@ -33,6 +29,12 @@ import naksha.model.request.query.AnyOp;
 import org.jetbrains.annotations.Nullable;
 
 public class PropertyQueryUtil {
+
+  private static final String NULL_PROP_VALUE = ".null";
+  private static final String SHORT_PROP_PREFIX = "p.";
+  private static final String FULL_PROP_PREFIX = Property.PROPERTIES + ".";
+  private static final String SHORT_XYZ_PROP_PREFIX = "f.";
+  private static final String FULL_XYZ_PROP_PREFIX = FULL_PROP_PREFIX + NakshaProperties.XYZ_KEY + ".";
 
   private static final Set<String> IGNORED_KEYS = Set.of(
       SHORT_FEATURE_ID // handled in FeatureIdQuery
