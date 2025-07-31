@@ -206,14 +206,12 @@ open class JbDecoder {
          * @return The platform native array.
          */
         @JvmStatic
-        internal fun readArray(jbArray: JbArrayDecoder): Array<Any?> {
-            val arr = Array<Any?>(jbArray.length()) {}
-            var i = 0
+        internal fun readArray(jbArray: JbArrayDecoder): AnyList {
+            val list = AnyList()
             while (jbArray.next() && jbArray.ok()) {
-                arr[i] = jbArray.value().decodeValue()
-                i += 1
+                list.add(jbArray.value().decodeValue())
             }
-            return arr
+            return list
         }
     }
 

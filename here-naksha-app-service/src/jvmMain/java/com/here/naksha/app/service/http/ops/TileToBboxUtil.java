@@ -21,15 +21,12 @@ package com.here.naksha.app.service.http.ops;
 import static com.here.naksha.common.http.apis.ApiParamsConst.TILE_TYPE_QUADKEY;
 
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
-import naksha.geo.SpBoundingBox;
 import naksha.geo.SpPolygon;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import org.jetbrains.annotations.NotNull;
 
 public class TileToBboxUtil {
-
-  private static final boolean DONT_CLONE = false;
 
   private TileToBboxUtil() {
   }
@@ -43,13 +40,13 @@ public class TileToBboxUtil {
       if (!TILE_TYPE_QUADKEY.equals(tileType)) {
         throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Tile type " + tileType + " not supported");
       }
-      return bboxForTile(tileId).addMargin(margin).toPolygon();
+      /*
+       * We use getExtendedBbox instead of .getBbox().addMargin() to keep behavior from v2,
+       * where margins were calculated by size in pixels on the respective level of quad tree.
+      */
+      return WebMercatorTile.forQuadkey(tileId).getExtendedBBox(margin).toPolygon();
     } catch (Exception ex) {
       throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Error interpreting tile input: " + ex.getMessage());
     }
-  }
-
-  private static SpBoundingBox bboxForTile(String tileId) {
-    return WebMercatorTile.forQuadkey(tileId).getBBox(DONT_CLONE);
   }
 }

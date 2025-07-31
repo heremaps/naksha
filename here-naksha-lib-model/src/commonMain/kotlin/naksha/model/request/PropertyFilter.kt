@@ -1,13 +1,23 @@
 package naksha.model.request
 
+import naksha.base.AnyList
 import naksha.base.AnyObject
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.gzipInflate
+import naksha.base.PlatformUtil
+import naksha.base.Proxy
 import naksha.jbon.JbFeatureDecoder
 import naksha.model.Naksha.NakshaCompanion.cache
 import naksha.model.Naksha.NakshaCompanion.getStorageByNumber
 import naksha.model.featureGzip
-import naksha.model.request.query.*
+import naksha.model.request.query.AnyOp
+import naksha.model.request.query.DoubleOp
+import naksha.model.request.query.IPropertyQuery
+import naksha.model.request.query.PAnd
+import naksha.model.request.query.PNot
+import naksha.model.request.query.POr
+import naksha.model.request.query.PQuery
+import naksha.model.request.query.StringOp
 
 class PropertyFilter(val req: ReadFeatures) : ResultFilter {
 
@@ -45,7 +55,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
         return decoder
     }
 
-    private fun resolvePropsQuery(pQuery: IPropertyQuery?, decoder: JbFeatureDecoder) : Boolean {
+    private fun resolvePropsQuery(pQuery: IPropertyQuery?, decoder: JbFeatureDecoder): Boolean {
         when (pQuery) {
             null -> return true
             is PAnd -> return pQuery.all { resolvePropsQuery(it, decoder) }
@@ -88,20 +98,59 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
         }
     }
 
-    private fun resolveContains(featureProperty: Any?, queryProperty: Any?) : Boolean {
+    private fun resolveContains(featureProperty: Any?, queryProperty: Any?): Boolean {
         if (featureProperty == null) return queryProperty == null
-        if (Platform.isScalar(featureProperty)) return featureProperty.toString() == queryProperty.toString()
+        if (Platform.isScalar(featureProperty)) {
+            return featureProperty.toString() == queryProperty.toString()
+        }
+        val parsedQuery = if (queryProperty is String) parseJsonString(queryProperty) else queryProperty
+
         when (featureProperty) {
-            is Array<*> -> {
-                if (queryProperty is Array<*>) return featureProperty.intersect(queryProperty.toSet()).size == queryProperty.size
-                if (queryProperty is List<*>) return featureProperty.intersect(queryProperty).size == queryProperty.size
-                else return  featureProperty.contains(queryProperty)
+            is AnyList -> {
+                return when (parsedQuery) {
+                    is AnyList -> parsedQuery.all { queryItem -> featureProperty.any { featureItem -> isMatch(featureItem, queryItem) } }
+                    is AnyObject -> featureProperty.any { it is AnyObject && it.containsAllProperties(parsedQuery) }
+                    else -> featureProperty.any { featureItem -> PlatformUtil.deepEquals(featureItem, parsedQuery) }
+                }
             }
             is AnyObject -> {
-                if (queryProperty !is AnyObject) return false
-                return featureProperty.contentDeepEquals(queryProperty)
+                if (parsedQuery is AnyObject) {
+                    return featureProperty.containsAllProperties(parsedQuery)
+                }
             }
         }
         return false
+    }
+
+    private fun AnyObject.containsAllProperties(queryObject: AnyObject): Boolean {
+        return queryObject.entries.all { (queryKey, queryValue) ->
+            if (!this.containsKey(queryKey)) {
+                false
+            } else {
+                val featureValue = this[queryKey]
+                resolveContains(featureValue, queryValue)
+            }
+        }
+    }
+
+    private fun isMatch(featureItem: Any?, queryItem: Any?): Boolean {
+        return when (queryItem) {
+            is AnyObject -> featureItem is AnyObject && featureItem.containsAllProperties(queryItem)
+            else -> PlatformUtil.deepEquals(featureItem, queryItem)
+        }
+    }
+
+
+    private fun parseJsonString(json: String?): Any? {
+        val trimmed = json?.trim() ?: return null
+        if (!((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]")))) {
+            return json
+        }
+        return try {
+            Proxy.box(Platform.fromJSON(json), Any::class)
+        } catch (e: Exception) {
+            Platform.PlatformCompanion.logger.warn("JSON parsing failed for string that appeared to be JSON: $json")
+            json
+        }
     }
 }
