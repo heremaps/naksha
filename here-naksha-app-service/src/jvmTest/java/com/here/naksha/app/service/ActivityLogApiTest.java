@@ -26,7 +26,6 @@ import naksha.base.Platform;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
-import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -485,9 +484,7 @@ class ActivityLogApiTest extends ApiTest {
         )));
   }
 
-  // TODO: enable or remove this test: currently it's impossible to query for `id` and `p.@ns:com:here:xyz:log.id` at the same time
-  // the '/search' does not handle id querying and '/features' does not handle custom property query (it will ignore 'p.@ns:com:here:xyz:log.id')
-  // @Test
+  @Test
   void tc1311_shouldNotReturnAnythingIfLogIdAndUuidConcernDifferentFeatures() throws Exception {
     // Given: Test files
     String createFirstJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1311_invalidMix/create_first.json");
