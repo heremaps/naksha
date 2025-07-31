@@ -20,6 +20,7 @@ package com.here.naksha.lib.core.models.storage;
 
 import naksha.base.JvmBoxingUtil;
 import naksha.base.JvmMapProxy;
+import naksha.base.StringList;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.ISpatialQuery;
@@ -58,6 +59,11 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
 
   public ReadFeaturesProxyWrapper withReadRequestType(ReadRequestType requestType) {
     setRaw(READ_REQUEST_TYPE, requestType);
+    return this;
+  }
+
+  public ReadFeaturesProxyWrapper withFeatureIds(StringList featureIds){
+    setFeatureIds(featureIds);
     return this;
   }
 
