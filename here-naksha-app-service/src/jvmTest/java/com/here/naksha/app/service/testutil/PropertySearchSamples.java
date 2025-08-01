@@ -79,7 +79,8 @@ public class PropertySearchSamples {
                             &properties.@ns:com:here:xyz.prop_15=lt=111,1111
                             &properties.@ns:com:here:xyz.prop_16=lt=222,2222
                             """.replace(System.lineSeparator(), "")
-            )
+            )//,
+//            Pair.of("f.id!=1", "f.id!=1") // TODO: uncomment once custom featureId querying is working (CASL-1149)
     ).map(pair -> {
       RequestPatternBuilder builder = queryToPatternBuilder(pair.getRight());
       return Arguments.of(
