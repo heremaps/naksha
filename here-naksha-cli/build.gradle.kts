@@ -20,11 +20,13 @@ kotlin {
                 implementation(libs.picocli)
                 implementation(project(":here-naksha-lib-base"))
                 implementation(project(":here-naksha-lib-model"))
+                implementation(project(":here-naksha-lib-psql"))
             }
         }
         jvmTest {
             dependencies {
                 implementation(libs.bundles.testing)
+                implementation(libs.test.containers)
             }
         }
     }
