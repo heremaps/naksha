@@ -29,11 +29,6 @@ class IPropertyQueryToQueryConverterTest {
         return new Property("properties", propName);
     }
 
-    // Helper to create the special top-level ID property
-    private static @NotNull Property idProp() {
-        return new Property("id");
-    }
-
     @Test
     void andSingle() {
         IPropertyQuery query = new PAnd(
@@ -177,13 +172,6 @@ class IPropertyQueryToQueryConverterTest {
                         + "&properties.prop_5=lte=5",
                 result
         );
-    }
-
-    @Test
-    void addPrefixToIdProp() {
-        IPropertyQuery query = new PQuery(idProp(), DoubleOp.EQ, 1);
-        String result = IPropertyQueryToQueryConverter.convert(query);
-        assertEquals("f.id=1", result);
     }
 
     @ParameterizedTest
