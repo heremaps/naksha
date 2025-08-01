@@ -432,7 +432,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
           "Collection auto creation is disabled, failing due to missing collection specified in request: {}",
           operationData.collectionId);
       return new ErrorResponse(new NakshaError(
-          NakshaError.EXCEPTION, "Could not find and auto-create collection: " + operationData.collectionId));
+          NakshaError.NOT_FOUND, "Could not find and auto-create collection: " + operationData.collectionId));
     }
   }
 
