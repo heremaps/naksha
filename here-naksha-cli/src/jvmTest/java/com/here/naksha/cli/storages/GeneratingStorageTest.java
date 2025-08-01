@@ -10,6 +10,8 @@ import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.List;
 
@@ -24,13 +26,17 @@ class GeneratingStorageTest {
         NakshaContext.currentContext().withAppId("test");
     }
 
-    @Test
-    void shouldRead() {
+    @ParameterizedTest
+    @CsvSource({
+            "0",
+            "1",
+            "50"
+    })
+    void shouldRead(int countOfFeatures) {
         // Given: storage
         GeneratingStorage storage = new GeneratingStorage();
 
         // And: config
-        int countOfFeatures = 100;
         GeneratingStorageConfig config = configWithGivenCountOfFeatures(countOfFeatures);
 
         // And: init storage with config
