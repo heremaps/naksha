@@ -208,6 +208,7 @@ open class JbDecoder {
         @JvmStatic
         internal fun readArray(jbArray: JbArrayDecoder): AnyList {
             val list = AnyList()
+            list.setCapacity(jbArray.length())
             while (jbArray.next() && jbArray.ok()) {
                 list.add(jbArray.value().decodeValue())
             }
