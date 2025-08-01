@@ -186,10 +186,10 @@ class ActivityLogHandlerTest {
     // When: handler processes given request
     Response result = handler.processEvent(eventWith(new ReadFeatures()));
 
-    // Then: result contains activity log calculated on basis of these features
+    // Then: result contains single feature (made of the two configured above)
     assertThatResult(result)
         .hasActivityFeatures(
-            firstFeature -> firstFeature
+            singleFeature -> singleFeature
                 .hasId(uuid(newFeature))
                 .hasActivityLogId(featureId)
                 .hasAction(Action.UPDATED.toString())
@@ -215,12 +215,7 @@ class ActivityLogHandlerTest {
                         }
                       ]
                     }
-                    """),
-            secondFeature -> secondFeature
-                .hasId(uuid(oldFeature))
-                .hasActivityLogId(featureId)
-                .hasAction(Action.CREATED.toString())
-                .hasReversePatch(null)
+                    """)
         );
   }
 
@@ -281,14 +276,9 @@ class ActivityLogHandlerTest {
     // Then: there is no reverse patch for any of these features
     assertThatResult(result)
         .hasActivityFeatures(
-            first -> first
+            feature -> feature
                 .hasAction(Action.DELETED.toString())
                 .hasId("delete_uuid")
-                .hasActivityLogId("featureId")
-                .hasReversePatch(null),
-            second -> second
-                .hasAction(Action.CREATED.toString())
-                .hasId("create_uuid")
                 .hasActivityLogId("featureId")
                 .hasReversePatch(null)
         );

@@ -10,14 +10,7 @@ import naksha.jbon.JbFeatureDecoder
 import naksha.model.Naksha.NakshaCompanion.cache
 import naksha.model.Naksha.NakshaCompanion.getStorageByNumber
 import naksha.model.featureGzip
-import naksha.model.request.query.AnyOp
-import naksha.model.request.query.DoubleOp
-import naksha.model.request.query.IPropertyQuery
-import naksha.model.request.query.PAnd
-import naksha.model.request.query.PNot
-import naksha.model.request.query.POr
-import naksha.model.request.query.PQuery
-import naksha.model.request.query.StringOp
+import naksha.model.request.query.*
 
 class PropertyFilter(val req: ReadFeatures) : ResultFilter {
 

@@ -435,9 +435,9 @@ class ActivityLogApiTest extends ApiTest {
   @Test
   void tc1310_testActivityLogForMultipleUuids() throws Exception {
     // Given: Test files
-    String createFeaturesJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1310_multipleLogIds/create_features.json");
-    String updateFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1310_multipleLogIds/update_feature.json");
-    String expectedActivityResp = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1310_multipleLogIds/get_response.json");
+    String createFeaturesJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1310_multipleUuids/create_features.json");
+    String updateFeatureJson = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1310_multipleUuids/update_feature.json");
+    String expectedActivityResp = TestUtil.loadFileOrFail(TEST_BASE_DIR + "/TC1310_multipleUuids/get_response.json");
     String streamId = UUID.randomUUID().toString();
     String firstFeatureId = "TC1310_feature_1";
     String secondFeatureId = "TC1310_feature_2";
@@ -449,18 +449,18 @@ class ActivityLogApiTest extends ApiTest {
     FeatureMetadata fistCreatedFeature = createdFeatures.get(firstFeatureId);
     FeatureMetadata secondCreatedFeature = createdFeatures.get(secondFeatureId);
 
+    // And: First feature is deleted
+    HttpResponse<String> deleteResp = nakshaClient.delete("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + firstFeatureId, streamId);
+    assertThat(deleteResp).hasStatus(200);
+    FeatureMetadata deletedFeature = featureMetadataFromFeatureResp(deleteResp.body());
+
     // And: Second feature is updated
     HttpResponse<String> updateResp = nakshaClient.put("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + secondFeatureId, updateFeatureJson,
         streamId);
     assertThat(updateResp).hasStatus(200);
     FeatureMetadata updatedFeature = featureMetadataFromFeatureResp(updateResp.body());
 
-    // And: First feature is deleted
-    HttpResponse<String> deleteResp = nakshaClient.delete("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + firstFeatureId, streamId);
-    assertThat(deleteResp).hasStatus(200);
-    FeatureMetadata deletedFeature = featureMetadataFromFeatureResp(deleteResp.body());
-
-    // And: Client queries activity log space for this feature
+    // And: Client queries activity log space for deleted feature (f1) and updated feature (f2)
     String uuidsQuery = "id=%s&id=%s".formatted(urlEncoded(updatedFeature.uuid), urlEncoded(deletedFeature.uuid));
     HttpResponse<String> getResp = nakshaClient.get("hub/spaces/" + ACTIVITY_SPACE_ID + "/features?" + uuidsQuery, streamId);
 
@@ -503,15 +503,16 @@ class ActivityLogApiTest extends ApiTest {
     String secondCreatedUuid = featureMetadataFromCollectionResp(secondCreateResp.body()).uuid;
 
     // And: Client queries activity log space using both activityLogNs (in query) and UUID (in path)
-    String secondUuidQuery = "id=%s".formatted(urlEncoded(secondCreatedUuid));
+    String secondUuidQuery = "f.id=%s".formatted(urlEncoded(secondCreatedUuid));
     String firstIdNsQuery = urlEncoded("p.@ns:com:here:xyz:log.id") + "=" + firstFeatureId;
     HttpResponse<String> getResp = nakshaClient.get(
-        "hub/spaces/" + ACTIVITY_SPACE_ID + "/features?%s&%s".formatted(secondUuidQuery, firstIdNsQuery), streamId);
+        "hub/spaces/" + ACTIVITY_SPACE_ID + "/search?%s&%s".formatted(secondUuidQuery, firstIdNsQuery), streamId);
 
     // Then
     assertThat(getResp)
         .hasStatus(200)
-        .hasStreamIdHeader(streamId);
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedActivityResp);
   }
 
   @Test

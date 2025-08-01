@@ -118,15 +118,13 @@ public class ActivityLogHandler extends AbstractEventHandler {
 
   private List<NakshaFeature> activityLogFeatures(ReadFeatures readFeatures, NakshaContext context) {
     Naksha.cache.clear(); // TODO CASL-1107: this effectively kills TupleCache but there's no other way to ensure references to TNs are present
-    CollectedFeatures initialFeatures = collectInitialFeatures(readFeatures, context);
-    List<FeatureWithPredecessor> featuresWithPredecessors = featuresWithPredecessors(initialFeatures, context);
+    CollectedFeatures collectedFeatures = collectInitialFeatures(readFeatures, context);
+    List<FeatureWithPredecessor> featuresWithPredecessors = featuresWithPredecessors(collectedFeatures, context);
     return featuresEnhancedWithActivity(featuresWithPredecessors);
   }
 
   private CollectedFeatures collectInitialFeatures(ReadFeatures readFeatures, NakshaContext context) {
-    CollectedFeatures collectedFeatures = new CollectedFeatures();
-    collectedFeatures.add(fetchFeatures(readFeatures, context));
-    return collectedFeatures;
+    return new CollectedFeatures(fetchFeatures(readFeatures, context));
   }
 
   // TODO: CASL-1094: in V2 this method was utilizing `properties.xyz.puuid` field to combine subsequent versions of feature
@@ -136,23 +134,22 @@ public class ActivityLogHandler extends AbstractEventHandler {
   // CASL-1094 aims to find the cause and fix missing puuids, then we should consider moving back to the logic that was in place in V2
   private List<FeatureWithPredecessor> featuresWithPredecessors(CollectedFeatures collectedFeatures, NakshaContext context) {
     collectMissingPredecessors(collectedFeatures, context);
-    return collectedFeatures.byUuid
-        .entrySet().stream()
-        .map(uuidAndFeature -> new FeatureWithPredecessor(
-            uuidAndFeature.getValue(),
-            collectedFeatures.byNuuid.get(uuidAndFeature.getKey())
+    return collectedFeatures.getActivityLogRoots().stream()
+        .map(feature -> new FeatureWithPredecessor(
+            feature,
+            collectedFeatures.getPredecessorOf(feature)
         ))
         .toList();
   }
 
   private void collectMissingPredecessors(CollectedFeatures collectedFeatures, NakshaContext context) {
-    List<TupleNumber> featuresWithoutPredecessorsTns = collectedFeatures.byUuid.values().stream()
-        .filter(f -> !collectedFeatures.byNuuid.containsKey(f.getId()))
+    List<TupleNumber> featuresWithoutPredecessorsTns = collectedFeatures.activityLogRoots.stream()
+        .filter(f -> !collectedFeatures.allByNuuid.containsKey(f.getId()))
         .map(NakshaFeature::getTupleNumber)
         .toList();
-    if(!featuresWithoutPredecessorsTns.isEmpty()) {
+    if (!featuresWithoutPredecessorsTns.isEmpty()) {
       List<NakshaFeature> missingPredecessors = fetchFeatures(requestPredecessorsOf(featuresWithoutPredecessorsTns), context);
-      collectedFeatures.add(missingPredecessors);
+      collectedFeatures.addPredecessors(missingPredecessors);
     }
   }
 
@@ -196,33 +193,52 @@ public class ActivityLogHandler extends AbstractEventHandler {
     return value == null || value.isBlank();
   }
 
-  /**
-   * Returns nuuid (uuid of next feature) for all non-DELETE versions. If feature represents DELETED version, we return null. The reason is
-   * that `nuuid` is equal to `uuid` when `op` is DELETE - this breaks grouping by nuuid as we can have 2 versions having the same nuuid (ie
-   * UPDATE & DELETE)
-   */
-  private static String nuuidOrNullIfDeleted(XyzNs xyzNs) {
-    if (Action.DELETED.equals(xyzNs.getAction())) {
-      return null;
-    } else {
-      return xyzNs.getNuuid();
-    }
-  }
+  private static class CollectedFeatures {
 
-  private record CollectedFeatures(@NotNull Map<String, NakshaFeature> byUuid, @NotNull Map<String, NakshaFeature> byNuuid) {
+    private final @NotNull List<NakshaFeature> activityLogRoots;
+    private final @NotNull Map<String, NakshaFeature> allByNuuid;
 
-    private CollectedFeatures() {
-      this(new HashMap<>(), new HashMap<>());
+    CollectedFeatures(@NotNull List<NakshaFeature> activityLogRoots) {
+      this.activityLogRoots = activityLogRoots;
+      this.allByNuuid = new HashMap<>();
+      updateAllByNuuid(activityLogRoots);
     }
 
-    private void add(List<NakshaFeature> features) {
+    @NotNull List<NakshaFeature> getActivityLogRoots() {
+      return activityLogRoots;
+    }
+
+    @Nullable NakshaFeature getPredecessorOf(NakshaFeature nakshaFeature) {
+      return allByNuuid.get(xyzNs(nakshaFeature).getUuid());
+    }
+
+    void addPredecessors(List<NakshaFeature> predecessors) {
+      updateAllByNuuid(predecessors);
+    }
+
+    private void updateAllByNuuid(List<NakshaFeature> features) {
       for (NakshaFeature feature : features) {
-        XyzNs xyzNs = feature.getProperties().getXyz();
-        byUuid.put(xyzNs.getUuid(), feature);
-        String nuuid = nuuidOrNullIfDeleted(xyzNs);
+        String nuuid = nuuidOrNullIfDeleted(xyzNs(feature));
         if (nuuid != null) {
-          byNuuid.put(nuuid, feature);
+          allByNuuid.put(nuuid, feature);
         }
+      }
+    }
+
+    private static XyzNs xyzNs(NakshaFeature feature) {
+      return feature.getProperties().getXyz();
+    }
+
+    /**
+     * Returns nuuid (uuid of next feature) for all non-DELETE versions. If feature represents DELETED version, we return null. The reason
+     * is that `nuuid` is equal to `uuid` when `op` is DELETE - this breaks grouping by nuuid as we can have 2 versions having the same
+     * nuuid (ie UPDATE & DELETE)
+     */
+    private static String nuuidOrNullIfDeleted(XyzNs xyzNs) {
+      if (Action.DELETED.equals(xyzNs.getAction())) {
+        return null;
+      } else {
+        return xyzNs.getNuuid();
       }
     }
   }

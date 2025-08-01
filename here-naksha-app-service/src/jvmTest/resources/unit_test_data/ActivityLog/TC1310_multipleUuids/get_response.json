@@ -47,38 +47,6 @@
     {
       "type": "Feature",
       "properties": {
-        "speedLimit": "70",
-        "@ns:com:here:xyz": {
-          "uuid": "${feature_2_created_uuid}",
-          "nuuid": "${feature_2_updated_uuid}",
-          "updatedAt": "${feature_2_created_updated_at}",
-          "operation": "CREATED",
-          "action": "CREATE"
-        },
-        "@ns:com:here:xyz:log": {
-          "id": "TC1310_feature_2",
-          "original": {
-            "updatedAt": "${feature_2_created_updated_at}",
-            "createdAt": "${feature_2_created_created_at}",
-            "space": "regular_space_ah"
-          },
-          "action": "CREATE",
-          "diff": null
-        }
-      },
-      "id": "${feature_2_created_uuid}",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          9.68872,
-          51.0561,
-          293.9437776
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "speedLimit": "60",
         "@ns:com:here:xyz": {
           "uuid": "${feature_1_deleted_uuid}",
@@ -101,38 +69,6 @@
         }
       },
       "id": "${feature_1_deleted_uuid}",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          8.68872,
-          50.0561,
-          292.9437776
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "speedLimit": "60",
-        "@ns:com:here:xyz": {
-          "uuid": "${feature_1_created_uuid}",
-          "nuuid": "${feature_1_deleted_uuid}",
-          "updatedAt": "${feature_1_created_updated_at}",
-          "operation": "CREATED",
-          "action": "CREATE"
-        },
-        "@ns:com:here:xyz:log": {
-          "id": "TC1310_feature_1",
-          "original": {
-            "updatedAt": "${feature_1_created_updated_at}",
-            "createdAt": "${feature_1_created_created_at}",
-            "space": "regular_space_ah"
-          },
-          "action": "CREATE",
-          "diff": null
-        }
-      },
-      "id": "${feature_1_created_uuid}",
       "geometry": {
         "type": "Point",
         "coordinates": [
