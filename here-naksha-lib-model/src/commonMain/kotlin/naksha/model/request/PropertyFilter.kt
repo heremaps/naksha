@@ -97,6 +97,11 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
             else -> throw IllegalArgumentException("Unknown op type for: $op")
         }
     }
+    /**
+     * The core logic is based on the v2 implementation, which used
+     * PostgreSQL's jsonb containment operator (@>).
+     * @see <a href="https://www.postgresql.org/docs/9.5/datatype-json.html#JSON-CONTAINMENT">PostgreSQL jsonb Containment</a>
+     */
 
     private fun resolveContains(featureProperty: Any?, queryProperty: Any?): Boolean {
         if (featureProperty == null) return queryProperty == null

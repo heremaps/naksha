@@ -8,9 +8,6 @@
         "speedLimit": "10",
         "@ns:com:here:xyz": {
           "tags": [ "one","xyz_source_id_task_2" ]
-        },
-        "@ns:com:here:mom:meta": {
-          "sourceId": "task_2"
         }
       },
       "geometry": {
@@ -25,9 +22,6 @@
         "speedLimit": "40",
         "@ns:com:here:xyz": {
           "tags": [ "three", "four","xyz_source_id_task_4" ]
-        },
-        "@ns:com:here:mom:meta": {
-          "sourceId": "task_4"
         }
       },
       "geometry": {
