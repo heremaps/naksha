@@ -3,13 +3,11 @@
   "features": [
     {
       "id": "my-custom-id-700-6",
-      "type": "Feature",
-      "properties": {}
+      "type": "Feature"
     },
     {
       "id": "my-custom-id-700-7",
-      "type": "Feature",
-      "properties": {}
+      "type": "Feature"
     }
   ],
   "streamId": "{{streamId}}"

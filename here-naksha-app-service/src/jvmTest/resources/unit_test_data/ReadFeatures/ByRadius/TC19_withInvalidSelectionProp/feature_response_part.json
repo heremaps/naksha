@@ -4,7 +4,6 @@
     {
       "id": "my-custom-id-3",
       "type": "Feature",
-      "properties": {},
       "geometry": {
         "type":"Point",
         "coordinates":[ 8.61235, 50.1234, 0.0 ]

@@ -33,6 +33,20 @@ class PropertyFilterTest {
             innerJson["a"] = 1
             nestedJson["array"] = arrayOf("one", "two", "three", innerJson)
             feature.properties["json"] = nestedJson
+            val references = arrayOf(
+                AnyObject().apply {
+                    put("id", "ref-1")
+                    put("type", "primary")
+                },
+                AnyObject().apply {
+                    put("id", "ref-2")
+                    put("type", "secondary")
+                    put("active", true)
+                }
+            )
+            feature.properties["references"] = references
+            val nestedArray = arrayOf(1, arrayOf("a", "b", arrayOf(100, 200)), "c")
+            feature.properties["nestedArray"] = nestedArray
             // build tuple containing the feature
             val encoder = JbEncoder()
             val featureBytes = encoder.buildFeatureFromMap(feature)
@@ -307,5 +321,102 @@ class PropertyFilterTest {
         val filter = PropertyFilter(request)
         request.query.properties = PQuery(Property("eventHandlerIds"), AnyOp.CONTAINS, "handler-123")
         assertEquals(null, filter.filter(featureTuple))
+    }
+
+    @Test
+    fun arrayContainsObjectSubset() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        val queryJson = """{"id":"ref-2","active":true}"""
+        request.query.properties = PQuery(Property("properties","references"), AnyOp.CONTAINS, queryJson)
+        assertEquals(featureTuple, filter.filter(featureTuple), "Should match when query is a subset of an object in the array")
+    }
+
+    @Test
+    fun arrayContainsObjectFromJsonArrayString() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        val queryJson = """[{"id":"ref-1"}]"""
+        request.query.properties = PQuery(Property("properties", "references"), AnyOp.CONTAINS, queryJson)
+        assertEquals(featureTuple, filter.filter(featureTuple), "Should match when query is a JSON array string of objects")
+    }
+
+    @Test
+    fun singleObjectContainsSubset() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        val queryJson = """{"bool":true}"""
+        request.query.properties = PQuery(Property("properties","json"), AnyOp.CONTAINS, queryJson)
+        assertEquals(featureTuple, filter.filter(featureTuple), "Should match when feature property is an object containing the query subset")
+    }
+
+    @Test
+    fun scalarInArrayMatchesAtTopLevel() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        request.query.properties = PQuery(Property("properties", "nestedArray"), AnyOp.CONTAINS, 1)
+        assertEquals(featureTuple, filter.filter(featureTuple), "Should find a scalar value at the top level of an array")
+    }
+
+    @Test
+    fun scalarInArrayFailsAtDeeperLevel() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        request.query.properties = PQuery(Property("properties", "nestedArray"), AnyOp.CONTAINS, 200)
+        assertEquals(null, filter.filter(featureTuple), "Should NOT find a scalar value deep inside a nested array")
+    }
+
+    @Test
+    fun nestedArrayInArrayMatchesAtTopLevel() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        val queryJson = """[["a", "b", [100, 200]]]"""
+        request.query.properties = PQuery(Property("properties", "nestedArray"), AnyOp.CONTAINS, queryJson)
+        assertEquals(featureTuple, filter.filter(featureTuple), "Should match a nested array as a whole element")
+    }
+
+    @Test
+    fun elementInNestedArrayFailsToMatchAtTopLevel() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        val queryJson = """["a"]"""
+        request.query.properties = PQuery(Property("properties", "nestedArray"), AnyOp.CONTAINS, queryJson)
+        assertEquals(null, filter.filter(featureTuple), "Should NOT match an element from a nested array at the top level")
+    }
+
+    @Test
+    fun arrayContainsAllWithDuplicateQueryElements() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        val queryJson = """["one", "two", "two"]"""
+        request.query.properties = PQuery(Property("properties", "json", "array"), AnyOp.CONTAINS, queryJson)
+        assertEquals(featureTuple, filter.filter(featureTuple), "Should match even with duplicate elements in the query")
+    }
+
+    @Test
+    fun objectDoesNotContainNestedPair() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        val queryJson = """{"a": 1}"""
+        request.query.properties = PQuery(Property("properties", "json"), AnyOp.CONTAINS, queryJson)
+        assertEquals(null, filter.filter(featureTuple), "Should NOT find a key-value pair from a nested object")
+    }
+
+    @Test
+    fun objectContainsSubsetWithEmptyObjectValue() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        val queryJson = """{"json": {}}"""
+        request.query.properties = PQuery(Property("properties"), AnyOp.CONTAINS, queryJson)
+        assertEquals(featureTuple, filter.filter(featureTuple), "Should match when a value is checked for containment against an empty object")
+    }
+
+    @Test
+    fun containsEmptyArrayQuery() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        val queryJson = "[]"
+        request.query.properties = PQuery(Property("properties", "references"), AnyOp.CONTAINS, queryJson)
+        assertEquals(featureTuple, filter.filter(featureTuple), "Should match when the contains query is an empty array")
     }
 }

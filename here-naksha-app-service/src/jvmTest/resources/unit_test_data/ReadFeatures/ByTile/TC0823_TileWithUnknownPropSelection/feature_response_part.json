@@ -4,7 +4,6 @@
     {
       "id": "my-custom-id-800-7",
       "type": "Feature",
-      "properties": {},
       "geometry": {
         "type":"LineString",
         "coordinates":[[8.6579, 50.1245, 0.0],[8.6583, 50.1235, 0.0]]
