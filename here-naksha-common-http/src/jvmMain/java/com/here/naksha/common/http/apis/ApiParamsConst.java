@@ -52,4 +52,5 @@ public class ApiParamsConst {
   public static final double NULL_COORDINATE = 9999;
   public static final String TILE_TYPE_QUADKEY = "quadkey";
   public static final String HANDLER_ID = "handlerId";
+  public static final String SHORT_FEATURE_ID = "f.id";
 }

@@ -48,6 +48,7 @@ import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
+import com.here.naksha.app.service.http.ops.FeatureIdQueryUtil;
 import com.here.naksha.app.service.http.ops.PropertyQueryUtil;
 import com.here.naksha.app.service.http.ops.PropertySelectionUtil;
 import com.here.naksha.app.service.http.ops.TagQueryUtil;
@@ -223,6 +224,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final SpBoundingBox bbox = new SpBoundingBox(west, south, east, north);
     final ITagQuery tagQuery = TagQueryUtil.tagQueryFromParams(queryParams);
     final IPropertyQuery propertyQuery = PropertyQueryUtil.propertyQueryFromParams(queryParams);
+    final StringList suppliedFeatureIds = FeatureIdQueryUtil.featureIdsFromParams(queryParams);
 
     final Map<String, Object> queryParamsMap = new HashMap<>();
     queryParamsMap.put(WEST, west);
@@ -235,6 +237,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     }
 
     final ReadFeatures readFeatures = new ReadFeaturesProxyWrapper()
+        .withFeatureIds(suppliedFeatureIds)
         .withReadRequestType(ReadRequestType.GET_BY_BBOX)
         .withQueryParameters(queryParamsMap)
         .withLimit(limit)
@@ -275,6 +278,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final SpPolygon tilePolygon = TileToBboxUtil.bboxPolygonForTile(tileType, tileId, (int) margin);
     final ITagQuery tagQuery = TagQueryUtil.tagQueryFromParams(queryParams);
     final IPropertyQuery propertyQuery = PropertyQueryUtil.propertyQueryFromParams(queryParams);
+    final StringList suppliedFeatureIds = FeatureIdQueryUtil.featureIdsFromParams(queryParams);
 
     final Map<String, Object> queryParamsMap = new HashMap<>();
     queryParamsMap.put(MARGIN, margin);
@@ -286,6 +290,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     }
 
     final ReadFeatures rdRequest = new ReadFeaturesProxyWrapper()
+        .withFeatureIds(suppliedFeatureIds)
         .withReadRequestType(ReadRequestType.GET_BY_TILE)
         .withQueryParameters(queryParamsMap)
         .withLimit(limit)
@@ -326,9 +331,11 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       return verticle.sendErrorResponse(
           routingContext, NakshaError.ILLEGAL_ARGUMENT, "None of Tags or Prop search parameters is present, at least one is required.");
     }
+    final StringList suppliedFeatureIds = FeatureIdQueryUtil.featureIdsFromParams(queryParams);
     final ReadFeatures rdRequest = new ReadFeatures()
-            .withPropertyQuery(propertyQuery)
-            .withTagQuery(tagQuery);
+        .withPropertyQuery(propertyQuery)
+        .withTagQuery(tagQuery);
+    rdRequest.setFeatureIds(suppliedFeatureIds);
     rdRequest.setCollectionIds(StringList.of(spaceId));
     rdRequest.setLimit(limit);
 
@@ -410,10 +417,12 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
         (radius > 0) ? new SpIntersects(refGeometry, new SpBuffer(radius, true)) : new SpIntersects(refGeometry);
     final ITagQuery tagQuery = TagQueryUtil.tagQueryFromParams(queryParams);
     final IPropertyQuery propertyQuery = PropertyQueryUtil.propertyQueryFromParams(queryParams);
+    final StringList suppliedFeatureIds = FeatureIdQueryUtil.featureIdsFromParams(queryParams);
     final RequestQuery query = new RequestQuery();
     query.setSpatial(radiusQuery);
     query.setTags(tagQuery);
     final ReadFeatures rdRequest = new ReadFeatures();
+    rdRequest.setFeatureIds(suppliedFeatureIds);
     rdRequest.setCollectionIds(StringList.of(spaceId));
     rdRequest.setQuery(query);
     rdRequest.withPropertyQuery(propertyQuery);
@@ -490,11 +499,13 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
         (radius > 0) ? new SpIntersects(refGeometry, new SpBuffer(radius, true)) : new SpIntersects(refGeometry);
     final ITagQuery tagQuery = TagQueryUtil.tagQueryFromParams(queryParams);
     final IPropertyQuery propertyQuery = PropertyQueryUtil.propertyQueryFromParams(queryParams);
+    final StringList suppliedFeatureIds = FeatureIdQueryUtil.featureIdsFromParams(queryParams);
     final RequestQuery query = new RequestQuery();
     query.setSpatial(radiusQuery);
     query.setTags(tagQuery);
     final ReadFeatures rdRequest = new ReadFeatures();
     rdRequest.setCollectionIds(StringList.of(spaceId));
+    rdRequest.setFeatureIds(suppliedFeatureIds);
     rdRequest.setQuery(query);
     rdRequest.withPropertyQuery(propertyQuery);
 

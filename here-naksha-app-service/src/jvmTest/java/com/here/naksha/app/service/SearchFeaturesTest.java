@@ -231,4 +231,25 @@ class SearchFeaturesTest extends ApiTest {
             .hasStreamIdHeader(streamId)
             .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
   }
+
+  @Test
+  void tc1009_testSearchFeaturesWithShortFeatureId() throws URISyntaxException, InterruptedException, IOException {
+    // Test API : GET /hub/spaces/{spaceId}/search
+    // Validate features getting returned for given Tag filter parameters
+    // Given: search query
+    final String tagsQueryParam = "tags=one+four";
+    final String expectedBodyPart = loadFileOrFail("ReadFeatures/Search/TC1009_searchWithFId/search_response.json");
+    final String streamId = UUID.randomUUID().toString();
+    final String featureId = "tc_900_feature_3";
+
+    // When: Get Features By Tile request is submitted to NakshaHub
+    final HttpResponse<String> response = nakshaClient.get("hub/spaces/" + SPACE_ID + "/search" + "?" + tagsQueryParam + "&f.id=" + featureId, streamId);
+
+    // Then: Perform assertions
+    ResponseAssertions.assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+  }
+
 }

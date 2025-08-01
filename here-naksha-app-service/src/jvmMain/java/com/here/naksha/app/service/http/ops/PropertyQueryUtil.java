@@ -1,49 +1,60 @@
 package com.here.naksha.app.service.http.ops;
 
-import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.*;
+import static com.here.naksha.common.http.apis.ApiParamsConst.SHORT_FEATURE_ID;
+import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.AMPERSAND;
 import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.COMMA;
-import static com.here.naksha.lib.core.models.payload.events.QueryOperation.*;
-import static naksha.model.request.query.Property.PROPERTIES;
+import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.END;
+import static com.here.naksha.lib.core.models.payload.events.QueryOperation.CONTAINS;
+import static com.here.naksha.lib.core.models.payload.events.QueryOperation.EQUALS;
+import static com.here.naksha.lib.core.models.payload.events.QueryOperation.GREATER_THAN;
+import static com.here.naksha.lib.core.models.payload.events.QueryOperation.GREATER_THAN_OR_EQUALS;
+import static com.here.naksha.lib.core.models.payload.events.QueryOperation.LESS_THAN;
+import static com.here.naksha.lib.core.models.payload.events.QueryOperation.LESS_THAN_OR_EQUALS;
+import static com.here.naksha.lib.core.models.payload.events.QueryOperation.NOT_EQUALS;
 
 import com.here.naksha.lib.core.models.payload.events.QueryDelimiter;
 import com.here.naksha.lib.core.models.payload.events.QueryOperation;
 import com.here.naksha.lib.core.models.payload.events.QueryParameter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.util.ValueList;
-import java.util.*;
-
- import naksha.model.NakshaError;
- import naksha.model.NakshaException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
- import naksha.model.request.query.AnyOp;
- import naksha.model.request.query.DoubleOp;
- import naksha.model.request.query.IPropertyQuery;
- import naksha.model.request.query.PAnd;
- import naksha.model.request.query.PNot;
- import naksha.model.request.query.POr;
- import naksha.model.request.query.PQuery;
- import naksha.model.request.query.Property;
- import naksha.model.request.query.StringOp;
- import org.jetbrains.annotations.NotNull;
+import naksha.model.request.query.AnyOp;
+import naksha.model.request.query.DoubleOp;
+import naksha.model.request.query.IPropertyQuery;
+import naksha.model.request.query.PAnd;
+import naksha.model.request.query.PNot;
+import naksha.model.request.query.POr;
+import naksha.model.request.query.PQuery;
+import naksha.model.request.query.Property;
+import naksha.model.request.query.StringOp;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class PropertyQueryUtil {
 
   private static final String NULL_PROP_VALUE = ".null";
-
   private static final String SHORT_PROP_PREFIX = "p.";
-  private static final String FULL_PROP_PREFIX = PROPERTIES + ".";
+  private static final String FULL_PROP_PREFIX = Property.PROPERTIES + ".";
   private static final String SHORT_XYZ_PROP_PREFIX = "f.";
   private static final String FULL_XYZ_PROP_PREFIX = FULL_PROP_PREFIX + NakshaProperties.XYZ_KEY + ".";
-  private static final String XYZ_PROP_ID = "f.id";
 
-  private PropertyQueryUtil() {}
+  private static final Set<String> IGNORED_KEYS = Set.of(
+      SHORT_FEATURE_ID // handled in FeatureIdQuery
+  );
+
+  private PropertyQueryUtil() {
+  }
 
   /**
-   * Function builds Property Query ({@link IPropertyQuery}) based on property key:value pairs supplied as API query parameter.
-   * We iterate through all the parameters, exclude the keys that doesn't start with prefix "p." or "f." or "properties.",
-   * and interpret the others by identifying the desired operation.
+   * Function builds Property Query ({@link IPropertyQuery}) based on property key:value pairs supplied as API query parameter. We iterate
+   * through all the parameters, exclude the keys that doesn't start with prefix "p." or "f." or "properties.", and interpret the others by
+   * identifying the desired operation.
    * <p>
    * Multiple parameter keys result into AND list.
    * <br>
@@ -55,17 +66,20 @@ public class PropertyQueryUtil {
    * <br>
    * So, "p.prop_1=value_1,value_11" will form OR condition as (p.prop_1=value_1 OR p.prop_1=value_11).
    * <br>
-   * NOTE that OR condition is supported only for the same one key and multiple values only, not for multiple key value pairs.
-   * The reason is to prevent complication when transformation between property search and other types of search like tag search is employed (for example through Source ID Handler).
-   * So, "?p.property_name_1=value_1 OR p.@ns:com:here:mom:meta.sourceId=abc" through Source ID Handler would then become an OR between a property search (the first clause unchanged) and a tag search (the second clause transformed), which is not supported.
-   * Only AND relation is supported between different types of search (property, tag, spatial,...).
+   * NOTE that OR condition is supported only for the same one key and multiple values only, not for multiple key value pairs. The reason is
+   * to prevent complication when transformation between property search and other types of search like tag search is employed (for example
+   * through Source ID Handler). So, "?p.property_name_1=value_1 OR p.@ns:com:here:mom:meta.sourceId=abc" through Source ID Handler would
+   * then become an OR between a property search (the first clause unchanged) and a tag search (the second clause transformed), which is not
+   * supported. Only AND relation is supported between different types of search (property, tag, spatial,...).
    * </p>
    *
    * @param queryParams API query parameter from where property search params need to be extracted
    * @return property query that can be used as part of {@link naksha.model.request.RequestQuery}
    */
   public static @Nullable IPropertyQuery propertyQueryFromParams(final @Nullable QueryParameterList queryParams) {
-    if (queryParams == null) return null;
+    if (queryParams == null) {
+      return null;
+    }
     // global initialization
     final List<IPropertyQuery> globalOpList = new ArrayList<>();
     // iterate through each parameter
@@ -73,7 +87,9 @@ public class PropertyQueryUtil {
       // prepare property search operation
       final IPropertyQuery crtOp = preparePropertySearchOperation(param);
       // add current search operation to global list
-      if (crtOp != null) globalOpList.add(crtOp);
+      if (crtOp != null) {
+        globalOpList.add(crtOp);
+      }
     }
 
     if (globalOpList.isEmpty()) {
@@ -92,7 +108,9 @@ public class PropertyQueryUtil {
     final StringBuilder str = new StringBuilder();
     if (key.startsWith(SHORT_PROP_PREFIX)) {
       str.append(FULL_PROP_PREFIX).append(key.substring(SHORT_PROP_PREFIX.length()));
-    } else if (key.equals(XYZ_PROP_ID)) {
+    } else if (IGNORED_KEYS.contains(key)) {
+      return null; // exclude ignored keys
+    } else if (key.equals(SHORT_FEATURE_ID)) {
       str.append(NakshaFeature.ID_KEY);
     } else if (key.startsWith(SHORT_XYZ_PROP_PREFIX)) {
       str.append(FULL_XYZ_PROP_PREFIX).append(key.substring(SHORT_XYZ_PROP_PREFIX.length()));
@@ -116,7 +134,9 @@ public class PropertyQueryUtil {
 
     // expand key if needed (e.g. p.prop_1 should be properties.prop_1)
     final String[] propPath = expandKeyToRealJsonPath(propKey);
-    if (propPath == null) return null;
+    if (propPath == null) {
+      return null;
+    }
 
     // iterate through all given values for a key
     int delimIdx = 0;
@@ -232,15 +252,15 @@ public class PropertyQueryUtil {
     }
   }
 
-  private static @NotNull PQuery propertyExistsQuery(final @NotNull String[] propPath){
+  private static @NotNull PQuery propertyExistsQuery(final @NotNull String[] propPath) {
     return new PQuery(new Property(propPath), AnyOp.EXISTS);
   }
 
-  private static @NotNull PQuery propertyEqualsQuery(final @NotNull String[] propPath, String value){
+  private static @NotNull PQuery propertyEqualsQuery(final @NotNull String[] propPath, String value) {
     return new PQuery(new Property(propPath), StringOp.EQUALS, value);
   }
 
-  private static @NotNull PQuery propertyContainsQuery(final @NotNull String[] propPath, String value){
+  private static @NotNull PQuery propertyContainsQuery(final @NotNull String[] propPath, String value) {
     return new PQuery(new Property(propPath), StringOp.CONTAINS, value);
   }
 }

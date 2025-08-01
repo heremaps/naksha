@@ -85,6 +85,7 @@ class ReadFeaturesByRadiusTest extends ApiTest {
     TC 20 - Wrong delimiter in prop selection (should return 400)
     TC 21 - clip=false, see below
     TC 22 - clip=true, see below
+    TC 23 - Point1, radius=5m & f.id=<feature_2_id> (should return feature 2 only)
 
     TC 21 and 22 use the following geometry to test clipping
     select
@@ -298,7 +299,7 @@ class ReadFeaturesByRadiusTest extends ApiTest {
                     ),
                     "ReadFeatures/ByRadius/TC21_withClipFalse/response.json",
                     200
-//            ),
+            ),
 //            standardTestSpec(
 //                    "tc22_withClipTrue",
 //                    List.of(
@@ -308,6 +309,15 @@ class ReadFeaturesByRadiusTest extends ApiTest {
 //                    ),
 //                    "ReadFeatures/ByRadius/TC22_withClipTrue/response.json",
 //                    200
+            standardTestSpec(
+                "tc23_testGetByRadiusWithLatLonRadiusAndShortFeatureId",
+                List.of(
+                    "f.id=my-custom-id-2",
+                    "lon=8.6123&lat=50.1234",
+                    "radius=5"
+                ),
+                "ReadFeatures/ByRadius/TC23_withLatLonRadiusAndFId/feature_response_part.json",
+                200
             )
     );
 
