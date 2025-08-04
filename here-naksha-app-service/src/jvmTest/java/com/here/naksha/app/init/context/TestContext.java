@@ -9,7 +9,6 @@ import static naksha.model.NakshaContext.newInstance;
 import com.here.naksha.app.service.NakshaApp;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-import naksha.model.NakshaContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

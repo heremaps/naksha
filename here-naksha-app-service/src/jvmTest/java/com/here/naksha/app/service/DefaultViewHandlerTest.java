@@ -1,23 +1,24 @@
 package com.here.naksha.app.service;
 
+import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
+import static com.here.naksha.app.common.CommonApiTestSetup.createSpace;
+import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
+import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
+import static org.junit.jupiter.api.Named.named;
+
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Named;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
 import java.util.stream.Stream;
-
-import static com.here.naksha.app.common.CommonApiTestSetup.*;
-import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
-import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
-import static org.junit.jupiter.api.Named.named;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Named;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class DefaultViewHandlerTest extends ApiTest {
 

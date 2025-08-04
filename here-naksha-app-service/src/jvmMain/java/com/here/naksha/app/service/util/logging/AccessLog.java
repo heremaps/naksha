@@ -20,13 +20,11 @@ package com.here.naksha.app.service.util.logging;
 
 import static naksha.base.JvmAnyObjectUtil.getOrCreateProperty;
 import static naksha.base.JvmAnyObjectUtil.getProperty;
-import static naksha.base.JvmAnyObjectUtil.getPropertyOrReturnDefault;
 
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import naksha.base.AnyObject;
-import naksha.base.Platform;
 import naksha.model.StreamInfo;
 
 public class AccessLog extends AccessLogExtended {

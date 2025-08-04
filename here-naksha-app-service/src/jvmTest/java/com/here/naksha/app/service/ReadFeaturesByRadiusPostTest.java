@@ -18,8 +18,19 @@
  */
 package com.here.naksha.app.service;
 
+import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
+import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static com.here.naksha.app.common.TestUtil.urlEncoded;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
+
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.http.HttpResponse;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
@@ -28,16 +39,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.net.http.HttpResponse;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Stream;
-import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
-import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
-import static com.here.naksha.app.common.TestUtil.urlEncoded;
-import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
 /*
   TODO: Fix with CASL-942

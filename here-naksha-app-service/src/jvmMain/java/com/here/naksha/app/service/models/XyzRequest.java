@@ -18,8 +18,6 @@
  */
 package com.here.naksha.app.service.models;
 
-import com.fasterxml.jackson.annotation.*;
-import com.here.naksha.lib.core.models.Typed;
 import naksha.base.AnyObject;
 
 /**

@@ -1,19 +1,18 @@
 package com.here.naksha.app.auth;
 
 
-import com.here.naksha.app.common.ApiTest;
-import com.here.naksha.app.common.NakshaTestWebClient;
-import com.here.naksha.app.common.TestUtil;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
-import java.net.http.HttpResponse;
-import java.util.UUID;
-
 import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.generateJWT;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
+
+import com.here.naksha.app.common.ApiTest;
+import com.here.naksha.app.common.NakshaTestWebClient;
+import com.here.naksha.app.common.TestUtil;
+import java.net.http.HttpResponse;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class JwtTest extends ApiTest {
     // For this test suite, the default test-config.json denotes that

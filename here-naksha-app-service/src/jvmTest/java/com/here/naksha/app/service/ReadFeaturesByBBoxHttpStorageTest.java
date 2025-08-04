@@ -18,6 +18,22 @@
  */
 package com.here.naksha.app.service;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.any;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
+import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
+import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
+import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
+import static com.here.naksha.app.service.testutil.GzipUtil.stubOkGzipEncoded;
+
 import com.github.tomakehurst.wiremock.client.MappingBuilder;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
@@ -25,25 +41,16 @@ import com.github.tomakehurst.wiremock.matching.UrlPattern;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.service.testutil.PropertySearchSamples;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
 import java.util.stream.Stream;
-
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
-import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
-import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
-import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
-import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
-import static com.here.naksha.app.service.testutil.GzipUtil.stubOkGzipEncoded;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 @WireMockTest(httpPort = 9090)
 class ReadFeaturesByBBoxHttpStorageTest extends ApiTest {

@@ -31,11 +31,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
-import naksha.model.XyzFeatureCollection;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
+import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;

@@ -18,7 +18,11 @@
  */
 package com.here.naksha.app.service.http.apis;
 
-import static com.here.naksha.app.service.http.tasks.StorageApiTask.StorageApiReqType.*;
+import static com.here.naksha.app.service.http.tasks.StorageApiTask.StorageApiReqType.CREATE_STORAGE;
+import static com.here.naksha.app.service.http.tasks.StorageApiTask.StorageApiReqType.DELETE_STORAGE;
+import static com.here.naksha.app.service.http.tasks.StorageApiTask.StorageApiReqType.GET_ALL_STORAGES;
+import static com.here.naksha.app.service.http.tasks.StorageApiTask.StorageApiReqType.GET_STORAGE_BY_ID;
+import static com.here.naksha.app.service.http.tasks.StorageApiTask.StorageApiReqType.UPDATE_STORAGE;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.tasks.StorageApiTask;
