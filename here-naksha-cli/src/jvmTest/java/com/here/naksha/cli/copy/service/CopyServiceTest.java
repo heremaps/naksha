@@ -120,7 +120,7 @@ class CopyServiceTest {
                 targetCopyElement
         ));
 
-        assertEquals("Problem with read session!", exception.getMessage());
+        assertEquals("Problem while reading features from source!", exception.getMessage());
     }
 
     @Test
@@ -188,7 +188,7 @@ class CopyServiceTest {
                 srcCopyElement,
                 targetCopyElement
         ));
-        assertEquals("Problem with write session!", exception.getMessage());
+        assertEquals("Problem while writing features to target!", exception.getMessage());
     }
 
     @Test

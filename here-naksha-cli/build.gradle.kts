@@ -6,7 +6,7 @@ plugins {
 }
 
 description = gatherDescription()
-val mainClassPath = "com.here.naksha.cli.Main"
+val mainClazz = "com.here.naksha.cli.Main"
 val fatJarBaseName = "naksha-cli"
 
 kotlin {
@@ -14,7 +14,7 @@ kotlin {
 
     jvm {
         mainRun {
-            mainClass.set(mainClassPath)
+            mainClass.set(mainClazz)
         }
     }
 
@@ -50,7 +50,7 @@ tasks {
         archiveClassifier.set("")
         archiveVersion.set(project.version.toString())
         manifest {
-            attributes["Main-Class"] = mainClassPath
+            attributes["Main-Class"] = mainClazz
         }
 
         from(kotlin.jvm().compilations.getByName("main").output)

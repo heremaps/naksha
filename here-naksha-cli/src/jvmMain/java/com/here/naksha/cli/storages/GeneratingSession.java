@@ -17,7 +17,7 @@ import java.util.List;
 final class GeneratingSession implements IReadSession {
     private final GeneratingStorage storage;
     private final SessionOptions sessionOptions;
-    private final GeneratingStorageConfig config;
+    private final GeneratingStorageConfigProperties configProperties;
 
     GeneratingSession(
             GeneratingStorage storage,
@@ -25,13 +25,14 @@ final class GeneratingSession implements IReadSession {
     ) {
         this.storage = storage;
         this.sessionOptions = sessionOptions;
-        config = storage.getConfig();
+        GeneratingStorageConfig config = storage.getConfig();
+        configProperties = config.getGeneratingStorageConfigProperties();
     }
 
     @NotNull
     @Override
     public Response execute(@NotNull Request request) {
-        int count = config.getCount();
+        int count = configProperties.getCount();
 
         List<NakshaFeature> features = new ArrayList<>();
 

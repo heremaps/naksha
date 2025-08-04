@@ -67,7 +67,7 @@ public final class CopyService {
                         return r;
                     });
         } catch (Exception e) {
-            throw new CopyServiceException("Problem with write session!", e);
+            throw new CopyServiceException("Problem while writing features to target!", e);
         }
 
         switch (response) {
@@ -101,7 +101,7 @@ public final class CopyService {
                     reader -> reader.execute(readFeatures)
             );
         } catch (Exception e) {
-            throw new CopyServiceException("Problem with read session!", e);
+            throw new CopyServiceException("Problem while reading features from source!", e);
         }
 
         return switch (response) {

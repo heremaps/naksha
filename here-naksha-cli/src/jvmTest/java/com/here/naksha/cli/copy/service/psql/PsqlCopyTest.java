@@ -4,7 +4,8 @@ import com.here.naksha.cli.copy.service.CopyElement;
 import com.here.naksha.cli.copy.service.CopyService;
 import com.here.naksha.cli.copy.service.CopyServiceException;
 import com.here.naksha.cli.copy.service.StorageProvider;
-import com.here.naksha.cli.test_containers.TestContainersPsqlStoragePool;
+import com.here.naksha.cli.storages.GeneratingStorage;
+import com.here.naksha.cli.testcontainers.TestContainersPsqlStoragePool;
 import naksha.base.StringList;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
@@ -22,7 +23,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.UUID;
 
-import static com.here.naksha.cli.test_containers.TestContainersPsqlStoragePool.InstanceIndex;
+import static com.here.naksha.cli.testcontainers.TestContainersPsqlStoragePool.InstanceIndex;
 import static naksha.model.RandomFeatures.randomFeatures;
 import static naksha.model.util.RequestHelper.createFeaturesRequest;
 import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
@@ -128,7 +129,7 @@ class PsqlCopyTest {
     private IStorage generatingStorageWithGivenCountOfFeatures(int count) {
         NakshaStorage nakshaStorage = new NakshaStorage()
                 .withId("test_generating_storage")
-                .withClassName("com.here.naksha.cli.storages.GeneratingStorage");
+                .withClassName(GeneratingStorage.class.getCanonicalName());
         nakshaStorage.getProperties().setRaw("count", count);
         return Naksha.useStorage(nakshaStorage);
     }
