@@ -38,7 +38,7 @@ public class SourceIdHandler extends AbstractEventHandler {
   private static final Logger logger = LoggerFactory.getLogger(SourceIdHandler.class);
   private static final String TAG_PREFIX = "xyz_source_id_";
   private static final String SOURCE_ID = "sourceId";
-  public static final int PREF_PATHS_SIZE = 2;
+  public static final int PREF_PATHS_SIZE = 3;
 
   public SourceIdHandler(final @NotNull INaksha hub) {
     super(hub);
