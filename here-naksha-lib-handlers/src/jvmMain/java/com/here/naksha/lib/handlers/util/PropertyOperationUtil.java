@@ -21,13 +21,7 @@ package com.here.naksha.lib.handlers.util;
 import com.here.naksha.lib.core.lambdas.F1;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
-import naksha.model.request.ReadFeatures;
 import naksha.model.request.RequestQuery;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.PAnd;
@@ -42,11 +36,6 @@ import org.jetbrains.annotations.Nullable;
 public class PropertyOperationUtil {
 
   private PropertyOperationUtil() {
-  }
-
-  public static void transformPropertyInPropertyOperationTree(
-      IPropertyQuery rootPropertyOperation, Function<PQuery, Optional<PQuery>> transformingFunction) {
-    replacePropertyInPropertyOperationTree(rootPropertyOperation, transformingFunction);
   }
 
   public static Set<PQuery> disablePQueriesInRequest(@NotNull RequestQuery requestQuery, @NotNull F1<Boolean, PQuery> shouldDisable) {
@@ -65,33 +54,6 @@ public class PropertyOperationUtil {
     }
     // root property query is null -> no disabled property queries -> empty set
     return Collections.emptySet();
-  }
-
-  private static void removeRedundantQueries(ReadFeatures readFeatures) {
-    IPropertyQuery parent = readFeatures.getQuery().getProperties();
-
-
-  }
-
-  private static void replacePropertyInPropertyOperationTree(
-      IPropertyQuery propertyOperation, Function<PQuery, Optional<PQuery>> transformingFunction) {
-    if (propertyOperation instanceof PAnd pAnd) {
-      pAnd.forEach(
-          iPropertyQuery -> replacePropertyInPropertyOperationTree(iPropertyQuery, transformingFunction));
-    } else if (propertyOperation instanceof POr pOr) {
-      pOr.forEach(iPropertyQuery -> replacePropertyInPropertyOperationTree(iPropertyQuery, transformingFunction));
-    } else if (propertyOperation instanceof PNot pNot) {
-      replacePropertyInPropertyOperationTree(pNot.getQuery(), transformingFunction);
-    } else if (propertyOperation instanceof PQuery pQuery) {
-      AtomicReference<PQuery> transformed = new AtomicReference<>();
-      transformingFunction.apply(pQuery).ifPresent(transformed::set);
-      pQuery.setProperty(transformed.get().getProperty());
-      pQuery.setOp(transformed.get().getOp());
-      pQuery.setValue(transformed.get().getValue());
-    } else {
-      throw new NakshaException(
-          new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Unknown property operation: " + propertyOperation));
-    }
   }
 
   /**

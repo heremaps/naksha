@@ -22,7 +22,6 @@ import static com.here.naksha.handler.activitylog.NakshaActivityLog.ID;
 import static com.here.naksha.lib.handlers.util.PropertyOperationUtil.disablePQueriesInRequest;
 import static naksha.model.objects.NakshaFeature.PROPERTIES_KEY;
 import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
-import static naksha.model.objects.NakshaProperties.XYZ_KEY;
 
 import java.util.Set;
 import naksha.base.StringList;
@@ -42,9 +41,7 @@ class ActivityLogRequestTranslationUtil {
   static final String UPDATED_AT = "updatedAt";
 
   private static final String[] ACTIVITY_LOG_ID_PATH = new String[]{PROPERTIES_KEY, XYZ_ACTIVITY_LOG_NS, ID};
-  private static final String[] UUID_PATH = new String[]{XYZ_KEY, UUID};
   static final Property PROPERTY_ACTIVITY_LOG_ID = new Property(ACTIVITY_LOG_ID_PATH);
-  static final Property PROPERTY_UUID = new Property(UUID_PATH);
 
   private ActivityLogRequestTranslationUtil() {
   }
@@ -64,7 +61,7 @@ class ActivityLogRequestTranslationUtil {
 
     // extract UUIDs from featureIds, reset featureIds
     StringList rawGuids = readFeatures.getFeatureIds();
-    if(!rawGuids.isEmpty()){
+    if (!rawGuids.isEmpty()) {
       GuidList guids = new GuidList();
       rawGuids.forEach(rawGuid -> guids.add(Guid.fromString(rawGuid)));
       readFeatures.setGuids(guids);
