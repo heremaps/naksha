@@ -3,13 +3,13 @@ package com.here.naksha.cli.storages;
 import naksha.model.objects.NakshaProperties;
 
 public final class GeneratingStorageConfigProperties extends NakshaProperties {
-    private static final String COUNT = "count";
+    private static final String COUNT_KEY = "count";
 
-    int getCount() {
-        return (int) getRaw(COUNT);
+    public int getCount() {
+        return (int) getRaw(COUNT_KEY);
     }
 
-    void setCount(int count) {
-        setRaw(COUNT, count);
+    public void setCount(int count) {
+        setRaw(COUNT_KEY, count);
     }
 }

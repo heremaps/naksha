@@ -5,6 +5,7 @@ import com.here.naksha.cli.copy.service.CopyService;
 import com.here.naksha.cli.copy.service.CopyServiceException;
 import com.here.naksha.cli.copy.service.StorageProvider;
 import com.here.naksha.cli.storages.GeneratingStorage;
+import com.here.naksha.cli.storages.GeneratingStorageConfig;
 import com.here.naksha.cli.testcontainers.TestContainersPsqlStoragePool;
 import naksha.base.StringList;
 import naksha.model.IStorage;
@@ -127,11 +128,12 @@ class PsqlCopyTest {
     }
 
     private IStorage generatingStorageWithGivenCountOfFeatures(int count) {
-        NakshaStorage nakshaStorage = new NakshaStorage()
-                .withId("test_generating_storage")
-                .withClassName(GeneratingStorage.class.getCanonicalName());
-        nakshaStorage.getProperties().setRaw("count", count);
-        return Naksha.useStorage(nakshaStorage);
+        GeneratingStorageConfig config = new GeneratingStorageConfig();
+        config.getProperties().setCount(count);
+        config.setId("test_generating_storage");
+        config.setClassName(GeneratingStorage.class.getCanonicalName());
+
+        return Naksha.useStorage(config);
     }
 
     private void assertSameFeatures(List<NakshaFeature> expectedFeatures, List<NakshaFeature> actualFeatures) {
