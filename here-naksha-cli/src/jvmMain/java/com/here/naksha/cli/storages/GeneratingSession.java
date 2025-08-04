@@ -26,7 +26,7 @@ final class GeneratingSession implements IReadSession {
         this.storage = storage;
         this.sessionOptions = sessionOptions;
         GeneratingStorageConfig config = storage.getConfig();
-        configProperties = config.getGeneratingStorageConfigProperties();
+        configProperties = config.getProperties();
     }
 
     @NotNull

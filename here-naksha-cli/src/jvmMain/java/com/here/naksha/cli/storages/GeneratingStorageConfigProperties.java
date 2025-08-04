@@ -2,7 +2,7 @@ package com.here.naksha.cli.storages;
 
 import naksha.model.objects.NakshaProperties;
 
-final class GeneratingStorageConfigProperties {
+public final class GeneratingStorageConfigProperties extends NakshaProperties {
     private final int count;
 
     GeneratingStorageConfigProperties(NakshaProperties nakshaProperties) {
