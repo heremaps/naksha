@@ -5,7 +5,8 @@ import picocli.CommandLine;
 import java.net.URL;
 import java.nio.file.Paths;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public final class TestUtils {
     public static final int SUCCESS_EXIT_CODE = CommandLine.ExitCode.OK;

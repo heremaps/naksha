@@ -5,7 +5,6 @@ import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaProperties;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
@@ -67,13 +66,7 @@ class GeneratingStorageTest {
 
     private GeneratingStorageConfig configWithGivenCountOfFeatures(int count) {
         GeneratingStorageConfig config = new GeneratingStorageConfig();
-
-        NakshaProperties nakshaProperties = new NakshaProperties();
-        nakshaProperties.setRaw("count", count);
-
-        GeneratingStorageConfigProperties properties = new GeneratingStorageConfigProperties(nakshaProperties);
-
-        config.init(properties);
+        config.getProperties().setCount(count);
 
         return config;
     }
