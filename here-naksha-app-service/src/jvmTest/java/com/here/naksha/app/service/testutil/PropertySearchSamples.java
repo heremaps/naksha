@@ -1,14 +1,13 @@
 package com.here.naksha.app.service.testutil;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.here.naksha.app.common.TestUtil.urlEncoded;
+
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
+import java.util.stream.Stream;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.params.provider.Arguments;
-
-import java.util.stream.Stream;
-
-import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
-import static com.here.naksha.app.common.TestUtil.urlEncoded;
 
 public class PropertySearchSamples {
 

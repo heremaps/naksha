@@ -1,17 +1,20 @@
 package com.here.naksha.app.service.util;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Named.named;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
+
 import com.here.naksha.app.service.http.ops.PropertySelectionUtil;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
+import java.util.Set;
+import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import java.util.Set;
-import java.util.stream.Stream;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Named.named;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 public class PropertySelectionUtilTest {
 

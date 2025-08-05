@@ -152,7 +152,7 @@ open class PgWriter internal constructor(
                     val tuple = tx.created(write.map.head, write.collection.head, f, write.attachment)
                     write.tuple = tuple
                     val tupleNumber = tuple.tupleNumber
-                    write.tupleNumber = tuple.tupleNumber
+                    write.tupleNumber = tupleNumber
                 }
                 WriteOp.UPDATE -> {
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")

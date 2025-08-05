@@ -51,6 +51,7 @@ public class ActivityLogEnhancer {
     final NakshaActivityLog activityLog = new NakshaActivityLog();
     activityLog.setId(newFeature.getId());
     activityLog.setOriginal(original(xyzNamespace, spaceId));
+    propagateVirtualPuuid(xyzNamespace, activityLog.getOriginal(), oldFeature);
     Action action = xyzNamespace.getAction();
     activityLog.setAction(action.toString());
     activityLog.setDiff(calculateDiff(action, newFeature, oldFeature));
@@ -60,7 +61,7 @@ public class ActivityLogEnhancer {
   private static Original original(@Nullable XyzNs xyzNamespace, @Nullable String spaceId) {
     Original original = new Original();
     if (xyzNamespace != null) {
-      original.setPuuid(xyzNamespace.getPuuid());
+//      original.setPuuid(xyzNamespace.getPuuid()); // TODO: restore this when CASL-1094 is fixed
       original.setUpdatedAt(xyzNamespace.getUpdatedAt().toLong());
       original.setCreatedAt(xyzNamespace.getCreatedAt().toLong());
     }
@@ -68,6 +69,18 @@ public class ActivityLogEnhancer {
       original.setSpace(spaceId);
     }
     return original;
+  }
+
+  // TODO: this should be removed when CASL-1094 is fixed
+  // puuid should be a part of xyz namespace, without having to rely on `oldFeature.properties.xyz.uuid`
+  private static void propagateVirtualPuuid(@Nullable XyzNs xyzNamespace, @NotNull Original original, @Nullable NakshaFeature oldFeature) {
+    if(oldFeature != null) {
+      String puuid = uuid(oldFeature);
+      original.setPuuid(puuid);
+      if(xyzNamespace != null) {
+        xyzNamespace.put("puuid", puuid);
+      }
+    }
   }
 
   private static @Nullable JsonNode calculateDiff(

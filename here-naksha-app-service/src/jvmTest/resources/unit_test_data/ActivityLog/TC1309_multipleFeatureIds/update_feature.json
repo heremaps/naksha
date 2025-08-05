@@ -1,0 +1,15 @@
+{
+  "id": "TC1309_feature_2",
+  "type": "Feature",
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      9.68872,
+      51.0561,
+      293.9437776
+    ]
+  },
+  "properties": {
+    "speedLimit": "80"
+  }
+}

@@ -5,6 +5,7 @@ import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationU
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PUUID;
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.UPDATED_AT;
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.UUID;
+import static naksha.model.XyzNs.NUUID;
 
 import java.util.Map;
 import naksha.base.JvmInt64;
@@ -40,6 +41,11 @@ class NakshaFeatureBuilder {
 
   NakshaFeatureBuilder withPuuid(String puuid) {
     feature.getProperties().getXyz().put(PUUID, puuid);
+    return this;
+  }
+
+  NakshaFeatureBuilder withNuuid(String nuuid) {
+    feature.getProperties().getXyz().put(NUUID, nuuid);
     return this;
   }
 

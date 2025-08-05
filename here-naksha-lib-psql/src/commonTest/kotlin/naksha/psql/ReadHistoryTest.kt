@@ -3,12 +3,10 @@ package naksha.psql
 import naksha.model.Action
 import naksha.model.Naksha
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
-import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.*
 
 class ReadHistoryTest : PgTestBase() {
@@ -145,6 +143,31 @@ class ReadHistoryTest : PgTestBase() {
             assertEquals(delete.properties.xyz.nguid, delete.properties.xyz.guid)
 
             assertEquals(Action.UPDATED, update2.properties.xyz.action)
+        }
+
+        executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
+            collectionIds.add(collection.id)
+            featureIds.add(featureId)
+            queryHistory = true
+            version = updatedFeature2.guid!!.tupleNumber.version
+            versions = 2
+        }).apply {
+            // We expect to have 4 versions, but only want the middle 2 back
+            // As specified, we expect descending order: [deleted, ] updated2, updated1 [, created]
+            assertEquals(2, features.size)
+
+            val update2 = assertNotNull(features[0])
+            val update1 = assertNotNull(features[1])
+
+            assertEquals(featureId, update1.id)
+            assertEquals(Action.UPDATED, update1.properties.xyz.action)
+
+            assertEquals(featureId, update2.id)
+            assertEquals(Action.UPDATED, update2.properties.xyz.action)
+
+            assertEquals(update2.guid, update1.properties.xyz.nguid)
+            assertEquals(update1.guid, update2.properties.xyz.pguid)
         }
     }
 }

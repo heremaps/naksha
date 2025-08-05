@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Epoch
 import naksha.model.*
 import naksha.model.request.FeatureTuple
 
@@ -168,6 +169,17 @@ internal data class PgRead(
 
     fun initHistoryTables(): List<PgTable>? {
         val history = collection.historyTable ?: return null
+        // TODO: hack to be be fixed as part of CASL-1095
+        // it was observed that if collection is used for the first time (it is not cached) they `years` are empty
+        // even if the year partitions actually exist on DB side
+        // this results in returned history tables being empty (even though they can be there)
+        // this behavior was observedd during CASL-1057 development
+        if(history.years.isEmpty()){
+            // see: PgMap.createPgCollection
+            val year = Epoch().year
+            history.addYear(year)
+            history.addYear(year + 1)
+        }
         val tables = ArrayList<PgTable>(history.years.size)
         for (entry in history.years) {
             val year = entry.key

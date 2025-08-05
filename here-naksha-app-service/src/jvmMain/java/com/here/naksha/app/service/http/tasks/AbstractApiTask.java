@@ -26,7 +26,6 @@ import static naksha.model.util.ResultHelper.extractResponseItems;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 import static naksha.model.util.ResultHelper.readFeaturesGroupedByAction;
 
-import com.here.naksha.app.service.NakshaApp;
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.models.IterateHandle;
@@ -34,10 +33,8 @@ import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.lambdas.F1;
 import com.here.naksha.lib.core.models.ContextXyzFeatureResponse;
-import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.util.PropertyPathUtil;
-import com.here.naksha.lib.hub.NakshaHub;
 import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
 import java.util.List;

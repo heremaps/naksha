@@ -23,8 +23,14 @@ import static java.lang.System.arraycopy;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
-
-import naksha.diff.*;
+import naksha.diff.Difference;
+import naksha.diff.DifferenceCalculator;
+import naksha.diff.InsertOp;
+import naksha.diff.ListDiff;
+import naksha.diff.MapDiff;
+import naksha.diff.PrimitiveDiff;
+import naksha.diff.RemoveOp;
+import naksha.diff.UpdateOp;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.RequestQuery;

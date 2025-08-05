@@ -18,7 +18,11 @@
  */
 package com.here.naksha.app.service.http.apis;
 
-import static com.here.naksha.app.service.http.tasks.EventHandlerApiTask.EventHandlerApiReqType.*;
+import static com.here.naksha.app.service.http.tasks.EventHandlerApiTask.EventHandlerApiReqType.CREATE_HANDLER;
+import static com.here.naksha.app.service.http.tasks.EventHandlerApiTask.EventHandlerApiReqType.DELETE_HANDLER;
+import static com.here.naksha.app.service.http.tasks.EventHandlerApiTask.EventHandlerApiReqType.GET_ALL_HANDLERS;
+import static com.here.naksha.app.service.http.tasks.EventHandlerApiTask.EventHandlerApiReqType.GET_HANDLER_BY_ID;
+import static com.here.naksha.app.service.http.tasks.EventHandlerApiTask.EventHandlerApiReqType.UPDATE_HANDLER;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.tasks.EventHandlerApiTask;

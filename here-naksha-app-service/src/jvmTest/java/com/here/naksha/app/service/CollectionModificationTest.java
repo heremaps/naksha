@@ -1,17 +1,18 @@
 package com.here.naksha.app.service;
 
+import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
+import static com.here.naksha.app.common.CommonApiTestSetup.createSpace;
+import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
+import static com.here.naksha.app.common.TestUtil.urlEncoded;
+import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
+
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.TestUtil;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
 import java.net.http.HttpResponse;
 import java.util.UUID;
-
-import static com.here.naksha.app.common.CommonApiTestSetup.*;
-import static com.here.naksha.app.common.TestUtil.urlEncoded;
-import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class CollectionModificationTest extends ApiTest {
 

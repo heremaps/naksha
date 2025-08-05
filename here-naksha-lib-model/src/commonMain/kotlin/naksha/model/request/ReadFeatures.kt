@@ -2,7 +2,9 @@
 
 package naksha.model.request
 
-import naksha.base.*
+import naksha.base.NotNullProperty
+import naksha.base.NullableProperty
+import naksha.base.StringList
 import naksha.model.GuidList
 import naksha.model.Version
 import naksha.model.request.query.IPropertyQuery
@@ -21,8 +23,10 @@ open class ReadFeatures : ReadRequest() {
 
     companion object ReadFeatures_C {
         private val STRING_OR_NULL = NullableProperty<ReadRequest, String>(String::class)
-        private val BOOLEAN_OR_FALSE = NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
-        private val BOOLEAN_OR_TRUE = NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> true }
+        private val BOOLEAN_OR_FALSE =
+            NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
+        private val BOOLEAN_OR_TRUE =
+            NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> true }
         private val INT_OR_1 = NotNullProperty<ReadRequest, Int>(Int::class) { _, _ -> 1 }
         private val VERSION_OR_NULL = NullableProperty<ReadRequest, Version>(Version::class)
         private val STRING_LIST = NotNullProperty<ReadRequest, StringList>(StringList::class)
@@ -36,7 +40,7 @@ open class ReadFeatures : ReadRequest() {
      *
      * @since 3.0
      */
-     var mapId by STRING_OR_NULL
+    var mapId by STRING_OR_NULL
 
     /**
      * @see [mapId]
@@ -64,6 +68,18 @@ open class ReadFeatures : ReadRequest() {
         }
 
         return this
+    }
+
+    /**
+     * Refreshes PropertyFilter based on [RequestQuery.properties] found under [ReadFeatures.query]
+     * This method comes handy if [IPropertyQuery] was mutated outside of this class scope,
+     * in such cases we need to populate the filter once again so it will be in sync with the query
+     */
+    fun refreshPropertyFilter() {
+        this.resultFilters.removeAll { it is PropertyFilter }
+        if(query.properties != null) {
+            this.resultFilters.add(PropertyFilter(this))
+        }
     }
 
     /**

@@ -18,11 +18,11 @@
  */
 package com.here.naksha.app.service.http;
 
-import naksha.model.XyzResponseType;
 import com.here.naksha.lib.core.models.payload.events.feature.GetFeaturesByTileResponseType;
 import com.here.naksha.lib.core.util.MIMEType;
 import io.vertx.ext.web.MIMEHeader;
 import io.vertx.ext.web.impl.ParsableMIMEValue;
+import naksha.model.XyzResponseType;
 import org.jetbrains.annotations.Nullable;
 
 /**

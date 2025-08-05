@@ -33,7 +33,6 @@ import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import naksha.model.objects.NakshaStorage;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Assertions;

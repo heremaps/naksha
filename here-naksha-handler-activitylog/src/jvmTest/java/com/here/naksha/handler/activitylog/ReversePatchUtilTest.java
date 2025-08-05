@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
-
 import naksha.geo.LineStringCoord;
 import naksha.geo.PointCoord;
 import naksha.geo.SpLineString;

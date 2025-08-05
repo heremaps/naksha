@@ -1,17 +1,16 @@
 package com.here.naksha.handler.activitylog.sample;
 
+import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
+
 import com.here.naksha.handler.activitylog.ActivityLogComparator;
 import com.here.naksha.handler.activitylog.NakshaActivityLog;
 import com.here.naksha.handler.activitylog.Original;
-import naksha.model.XyzFeatureCollection;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.test.common.FileUtil;
+import java.util.List;
+import naksha.model.XyzFeatureCollection;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
-
-import java.util.List;
-
-import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
 
 public class DatahubSamplesUtil {
 

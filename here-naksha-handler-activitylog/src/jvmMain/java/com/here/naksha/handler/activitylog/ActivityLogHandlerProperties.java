@@ -18,12 +18,9 @@
  */
 package com.here.naksha.handler.activitylog;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
-import org.jetbrains.annotations.NotNull;
 
 @AvailableSince(NakshaVersion.v2_0_14)
 public class ActivityLogHandlerProperties extends NakshaProperties {
@@ -31,17 +28,17 @@ public class ActivityLogHandlerProperties extends NakshaProperties {
   @AvailableSince(NakshaVersion.v2_0_14)
   public static final String SPACE_ID = "spaceId";
 
-  @AvailableSince(NakshaVersion.v2_0_14)
-  @JsonProperty(SPACE_ID)
-  private final @NotNull String spaceId;
-
-  @AvailableSince(NakshaVersion.v2_0_14)
-  @JsonCreator
-  public ActivityLogHandlerProperties(@JsonProperty(SPACE_ID) @NotNull String spaceId) {
-    this.spaceId = spaceId;
+  public String getSpaceId() {
+    return (String) getRaw(SPACE_ID);
   }
 
-  public @NotNull String getSpaceId() {
-    return spaceId;
+  public static ActivityLogHandlerProperties activityLogHandlerProperties(String spaceId) {
+    ActivityLogHandlerProperties properties = new ActivityLogHandlerProperties();
+    properties.setSpaceId(spaceId);
+    return properties;
+  }
+
+  private void setSpaceId(String spaceId) {
+    setRaw(SPACE_ID, spaceId);
   }
 }

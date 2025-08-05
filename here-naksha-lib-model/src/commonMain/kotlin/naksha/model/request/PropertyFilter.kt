@@ -10,14 +10,7 @@ import naksha.jbon.JbFeatureDecoder
 import naksha.model.Naksha.NakshaCompanion.cache
 import naksha.model.Naksha.NakshaCompanion.getStorageByNumber
 import naksha.model.featureGzip
-import naksha.model.request.query.AnyOp
-import naksha.model.request.query.DoubleOp
-import naksha.model.request.query.IPropertyQuery
-import naksha.model.request.query.PAnd
-import naksha.model.request.query.PNot
-import naksha.model.request.query.POr
-import naksha.model.request.query.PQuery
-import naksha.model.request.query.StringOp
+import naksha.model.request.query.*
 
 class PropertyFilter(val req: ReadFeatures) : ResultFilter {
 
@@ -57,11 +50,12 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
 
     private fun resolvePropsQuery(pQuery: IPropertyQuery?, decoder: JbFeatureDecoder): Boolean {
         when (pQuery) {
-            null -> return true
+            null, is PTrue -> return true
+            is PFalse -> return false
             is PAnd -> return pQuery.all { resolvePropsQuery(it, decoder) }
             is POr -> return pQuery.any { resolvePropsQuery(it, decoder) }
             is PNot -> return !resolvePropsQuery(pQuery.query, decoder)
-            is PQuery -> {                                                                        
+            is PQuery -> {
                 val propertyArray = pQuery.property.path.filterNotNull().toTypedArray()
                 val propFromFeature = decoder.get(*propertyArray)
                 val op = pQuery.op
