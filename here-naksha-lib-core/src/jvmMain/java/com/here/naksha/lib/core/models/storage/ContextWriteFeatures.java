@@ -39,7 +39,7 @@ public abstract class ContextWriteFeatures extends WriteRequest {
   private static final String VIOLATIONS_KEY = "violations";
 
   /**
-   * The list of features to be returned as context
+   * The list of features passed as context, as part of Write request
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public @Nullable List<NakshaFeature> getContext() {
@@ -61,7 +61,7 @@ public abstract class ContextWriteFeatures extends WriteRequest {
   }
 
   /**
-   * The list of violations to be returned as context
+   * The list of violations passed as part of Write request
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public @Nullable List<NakshaFeature> getViolations() {
