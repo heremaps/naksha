@@ -50,8 +50,8 @@ class CopyServiceTest {
 
         // And
         StorageProvider storageProvider = mock();
-        when(storageProvider.useStorage(eq(srcNakshaStorage))).thenReturn(srcStorage);
-        when(storageProvider.useStorage(eq(targetNakshaStorage))).thenReturn(targetStorage);
+        when(storageProvider.useStorage(srcNakshaStorage)).thenReturn(srcStorage);
+        when(storageProvider.useStorage(targetNakshaStorage)).thenReturn(targetStorage);
 
         // And
         CopyService copyService = new CopyService(
@@ -101,6 +101,29 @@ class CopyServiceTest {
     }
 
     @Test
+    void shouldFailWhenReadSessionFails() {
+        // Given: storage with failing read session
+        IStorage srcStorage = createStorageWithFailingReadSession();
+
+        // And
+        StorageProvider storageProvider = createStorageProviderReturningSrcStorage(srcStorage);
+
+        // And
+        CopyService copyService = new CopyService(
+                storageProvider,
+                sessionOptions
+        );
+
+        // When & Then
+        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+                srcCopyElement,
+                targetCopyElement
+        ));
+
+        assertEquals("Problem while reading features from source!", exception.getMessage());
+    }
+
+    @Test
     void shouldFailWhenCanNotGetSourceStorage() {
         // Given: failing storage provider
         StorageProvider storageProvider = createFailingStorageProvider(srcNakshaStorage);
@@ -144,6 +167,31 @@ class CopyServiceTest {
     }
 
     @Test
+    void shouldFailWhenWriteSessionFails() {
+        // Given: target storage with failing write session
+        IStorage targetStorage = createStorageWithFailingWriteSession();
+
+        // And: valid source storage
+        IStorage srcStorage = createValidSrcStorage();
+
+        // And
+        StorageProvider storageProvider = createStorageProvider(srcStorage, targetStorage);
+
+        // And
+        CopyService copyService = new CopyService(
+                storageProvider,
+                sessionOptions
+        );
+
+        // When & Then
+        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+                srcCopyElement,
+                targetCopyElement
+        ));
+        assertEquals("Problem while writing features to target!", exception.getMessage());
+    }
+
+    @Test
     void shouldFailWhenWritingToTargetFails() {
         // Given: failing target storage with write session
         IStorage targetStorage = mock();
@@ -180,7 +228,7 @@ class CopyServiceTest {
 
         // And: valid source storage
         IStorage srcStorage = createValidSrcStorage();
-        when(storageProvider.useStorage(eq(srcNakshaStorage))).thenReturn(srcStorage);
+        when(storageProvider.useStorage(srcNakshaStorage)).thenReturn(srcStorage);
 
         // And
         CopyService copyService = new CopyService(
@@ -278,6 +326,20 @@ class CopyServiceTest {
         return readSession;
     }
 
+    private IStorage createStorageWithFailingWriteSession() {
+        IStorage storage = mock();
+        when(storage.newWriteSession(any())).thenThrow(new RuntimeException());
+        when(storage.useWriteSession(any(), any())).thenCallRealMethod();
+        return storage;
+    }
+
+    private IStorage createStorageWithFailingReadSession() {
+        IStorage storage = mock();
+        when(storage.newReadSession(any())).thenThrow(new RuntimeException());
+        when(storage.useReadSession(any(), any())).thenCallRealMethod();
+        return storage;
+    }
+
     private List<Write> captureWrites(IWriteSession writeSession) {
         return captureRequestsOfType(writeSession, WriteRequest.class).stream()
                 .flatMap(wr -> wr.getWrites().stream())
@@ -286,7 +348,7 @@ class CopyServiceTest {
 
     private void assertWrites(List<Write> writes, List<NakshaFeature> expectedFeatures) {
         List<NakshaFeature> actualFeatures = writes.stream()
-                .map((w) -> {
+                .map(w -> {
                     assertWrite(w);
                     return w.getFeature();
                 })
@@ -352,8 +414,8 @@ class CopyServiceTest {
 
     private StorageProvider createStorageProvider(IStorage srcStorage, IStorage targetStorage) {
         StorageProvider storageProvider = mock();
-        when(storageProvider.useStorage(eq(srcNakshaStorage))).thenReturn(srcStorage);
-        when(storageProvider.useStorage(eq(targetNakshaStorage))).thenReturn(targetStorage);
+        when(storageProvider.useStorage(srcNakshaStorage)).thenReturn(srcStorage);
+        when(storageProvider.useStorage(targetNakshaStorage)).thenReturn(targetStorage);
 
         return storageProvider;
     }

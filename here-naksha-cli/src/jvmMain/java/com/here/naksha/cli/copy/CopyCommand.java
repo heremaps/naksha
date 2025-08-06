@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import picocli.CommandLine;
 
 import java.io.File;
+import java.io.PrintWriter;
 import java.util.concurrent.Callable;
 
 @CommandLine.Command(
@@ -27,6 +28,9 @@ public final class CopyCommand implements Callable<Integer> {
     private final CopyServiceFactory copyServiceFactory;
     private final NakshaStorageParser nakshaStorageParser;
     private final StorageProvider storageProvider;
+
+    @CommandLine.Spec
+    private CommandLine.Model.CommandSpec commandSpec;
 
     public CopyCommand(
             CopyServiceFactory copyServiceFactory,
@@ -101,6 +105,9 @@ public final class CopyCommand implements Callable<Integer> {
                 srcCopyElement,
                 targetCopyElement
         );
+
+        PrintWriter printWriter = commandSpec.commandLine().getOut();
+        printWriter.println("success!");
 
         return CommandLine.ExitCode.OK;
     }

@@ -1,4 +1,4 @@
-package com.here.naksha.cli.test_containers;
+package com.here.naksha.cli.testcontainers;
 
 import naksha.model.IStorage;
 import naksha.model.Naksha;

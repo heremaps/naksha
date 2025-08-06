@@ -1,4 +1,4 @@
-package com.here.naksha.cli.test_containers;
+package com.here.naksha.cli.testcontainers;
 
 import java.util.List;
 

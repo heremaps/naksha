@@ -4,14 +4,18 @@ import com.here.naksha.cli.copy.service.CopyElement;
 import com.here.naksha.cli.copy.service.CopyService;
 import com.here.naksha.cli.copy.service.CopyServiceException;
 import com.here.naksha.cli.copy.service.StorageProvider;
-import com.here.naksha.cli.test_containers.TestContainersPsqlStoragePool;
+import com.here.naksha.cli.storages.GeneratingStorage;
+import com.here.naksha.cli.storages.GeneratingStorageConfig;
+import com.here.naksha.cli.testcontainers.TestContainersPsqlStoragePool;
 import naksha.base.StringList;
 import naksha.model.IStorage;
+import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.request.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.UUID;
 
-import static com.here.naksha.cli.test_containers.TestContainersPsqlStoragePool.InstanceIndex;
+import static com.here.naksha.cli.testcontainers.TestContainersPsqlStoragePool.InstanceIndex;
 import static naksha.model.RandomFeatures.randomFeatures;
 import static naksha.model.util.RequestHelper.createFeaturesRequest;
 import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
@@ -37,6 +41,30 @@ class PsqlCopyTest {
         NakshaContext.currentContext().withAppId("testapp");
         sessionOptions = SessionOptions.from(NakshaContext.currentContext());
         copyService = new CopyService(new StorageProvider(), sessionOptions);
+    }
+
+    @Test
+    void shouldCopyFeaturesBetweenGeneratingStorageAndPostgres() throws CopyServiceException {
+        // Given: prepared source
+        int countOfFeatures = 100;
+        IStorage sourceStorage = generatingStorageWithGivenCountOfFeatures(countOfFeatures);
+        CopyElement source = copyElementForGeneratingStorage(sourceStorage);
+
+        // And: prepared target
+        IStorage targetStorage = TestContainersPsqlStoragePool.getRunningContainer(InstanceIndex.FIRST_INSTANCE)
+                .getStorage();
+        CopyElement target = createMapWithEmptyCollection(targetStorage, targetCollectionId);
+
+        // When: copying
+        copyService.copy(source, target);
+
+        // And
+        List<NakshaFeature> targetFeatures = readFeatures(
+                targetStorage, target.getMapId(), target.getCollectionId(), sessionOptions
+        );
+
+        // Then
+        Assertions.assertEquals(countOfFeatures, targetFeatures.size());
     }
 
     @Test
@@ -93,6 +121,19 @@ class PsqlCopyTest {
 
         // Then: target collection contains features from source
         assertSameFeatures(sourceFeatures, targetFeatures);
+    }
+
+    private CopyElement copyElementForGeneratingStorage(IStorage storage) {
+        return new CopyElement.Builder(storage.getConfig(), "").build();
+    }
+
+    private IStorage generatingStorageWithGivenCountOfFeatures(int count) {
+        GeneratingStorageConfig config = new GeneratingStorageConfig();
+        config.getProperties().setCount(count);
+        config.setId("test_generating_storage");
+        config.setClassName(GeneratingStorage.class.getCanonicalName());
+
+        return Naksha.useStorage(config);
     }
 
     private void assertSameFeatures(List<NakshaFeature> expectedFeatures, List<NakshaFeature> actualFeatures) {

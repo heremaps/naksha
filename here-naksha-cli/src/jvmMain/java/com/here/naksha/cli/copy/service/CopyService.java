@@ -52,20 +52,26 @@ public final class CopyService {
                 features
         );
 
-        Response response = storage.useWriteSession(
-                sessionOptions,
-                writer -> {
-                    Response r = writer.execute(writeRequest);
-                    if (r instanceof SuccessResponse) {
-                        writer.commit();
-                    } else {
-                        writer.rollback();
-                    }
-                    return r;
-                });
+        Response response;
+
+        try {
+            response = storage.useWriteSession(
+                    sessionOptions,
+                    writer -> {
+                        Response r = writer.execute(writeRequest);
+                        if (r instanceof SuccessResponse) {
+                            writer.commit();
+                        } else {
+                            writer.rollback();
+                        }
+                        return r;
+                    });
+        } catch (Exception e) {
+            throw new CopyServiceException("Problem while writing features to target!", e);
+        }
 
         switch (response) {
-            case SuccessResponse ignored -> { /*do nothing*/ }
+            case SuccessResponse _ -> { /*do nothing*/ }
             case ErrorResponse errorResponse -> throw new CopyServiceException(
                     "Problem with writing to target!",
                     new NakshaException(errorResponse.getError())
@@ -87,10 +93,16 @@ public final class CopyService {
 
         ReadFeatures readFeatures = createReadFeaturesRequest(source);
 
-        Response response = storage.useReadSession(
-                sessionOptions,
-                reader -> reader.execute(readFeatures)
-        );
+        Response response;
+
+        try {
+            response = storage.useReadSession(
+                    sessionOptions,
+                    reader -> reader.execute(readFeatures)
+            );
+        } catch (Exception e) {
+            throw new CopyServiceException("Problem while reading features from source!", e);
+        }
 
         return switch (response) {
             case SuccessResponse successResponse -> extractResponseItems(successResponse, NakshaFeature.class);
