@@ -107,7 +107,7 @@ public class MockContextLoaderHandler extends AbstractEventHandler {
       throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "No features supplied for validation");
     }
     for (final Write write : wf.getWrites()) {
-      if (!WriteOp.UPSERT.equals(write.getOp())) {
+      if (!(WriteOp.CREATE.equals(write.getOp()) || WriteOp.UPDATE.equals(write.getOp()))) {
         throw new NakshaException(NakshaError.NOT_IMPLEMENTED, "Unsupported operation type for validation - " + write.getOp());
       }
       HandlerUtil.checkInstanceOf(

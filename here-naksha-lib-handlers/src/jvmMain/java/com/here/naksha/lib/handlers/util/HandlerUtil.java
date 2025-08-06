@@ -23,6 +23,7 @@ import com.here.naksha.lib.core.models.ContextXyzFeatureResponse;
 import java.util.ArrayList;
 import java.util.List;
 import naksha.base.JvmBoxingUtil;
+import naksha.model.Action;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.TagList;
@@ -40,6 +41,7 @@ import org.jetbrains.annotations.Nullable;
 public final class HandlerUtil {
 
   public static String REVIEW_STATE_PREFIX = "@:review-state:";
+  private final static String ACTION = "action";
 
   private HandlerUtil() {}
 
@@ -47,6 +49,10 @@ public final class HandlerUtil {
       final @NotNull List<NakshaFeature> features,
       final @Nullable List<NakshaFeature> context,
       final @Nullable List<NakshaFeature> violations) {
+
+    for (final NakshaFeature feature : features) {
+      feature.getProperties().getXyz().setRaw(ACTION, Action.UPDATED);
+    }
     // Create ContextResult with cursor, context and violations
     final ContextXyzFeatureResponse ctxResult = new ContextXyzFeatureResponse();
     ctxResult.setFeatures(features);
@@ -183,7 +189,7 @@ public final class HandlerUtil {
       final @NotNull NakshaFeature feature, final @NotNull MomReviewState reviewState) {
     final NakshaProperties properties = feature.getProperties();
     final XyzNs xyzNs = properties.getXyz();
-    final MomDeltaNs deltaNs = properties.getDelta();
+    final MomDeltaNs deltaNs = properties.useDeltaNamespace();
     deltaNs.setChangeState(MomChangeState.UPDATED.getText());
     deltaNs.setReviewState(reviewState.getText());
     final @NotNull List<@NotNull String> tags = tagsWithoutReviewState(xyzNs.getTags());
