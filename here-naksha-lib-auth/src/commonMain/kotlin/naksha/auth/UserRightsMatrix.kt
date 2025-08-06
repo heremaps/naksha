@@ -91,7 +91,7 @@ class UserRightsMatrix : MapProxy<String, UserRights>(String_TYPE, UserRights.TY
          */
         @JvmField
         @JsStatic
-        val TYPE: PlatformType<UserRightsMatrix> = forKClass(UserRightsMatrix::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(UserRightsMatrix::class).withPackageName(PACKAGE_NAME)
 
         /**
          * Parse the given JSON and return the [URM][UserRightsMatrix].

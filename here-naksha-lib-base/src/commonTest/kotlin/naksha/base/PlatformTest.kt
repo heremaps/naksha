@@ -360,7 +360,7 @@ class PlatformTest {
 
 
     class CustomFeature : AnyTypedObject() {
-        companion object MyTypedObject_C {
+        companion object CustomFeature_C {
             val TYPE = forKClass(CustomFeature::class)
                 .withJsonType("custom")
                 .withIsFeature(true)

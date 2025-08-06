@@ -18,6 +18,7 @@
  */
 package naksha.auth;
 
+import static naksha.base.Platform.apply;
 import static naksha.base.Platform.forClass;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -88,7 +89,7 @@ class JavaClientSampleTest {
     // Now, assume you write some code that should test if the user has some rights.
     // Assume the user wants to read the collection with id "someCollection", in "someMap", in "someStorage".
     // You should have the storage, map, and collection the user wants to access at hand:
-    final NakshaStorage nakshaStorage = new NakshaStorage().withId("someStorage");
+    final NakshaStorage nakshaStorage = apply(new NakshaStorage(), (self) -> self.setId("someStorage"));
     final NakshaMap nakshaMap = new NakshaMap("someMap");
     final NakshaCollection nakshaCollection = new NakshaCollection("someCollection", "someMap");
 

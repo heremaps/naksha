@@ -10,7 +10,7 @@ import kotlin.js.JsExport
 @JsExport
 interface ITuple {
     /**
-     * Convert this int a standard [Tuple].
+     * Convert this into a standard [Tuple].
      * @return either `this`, when this is a [Tuple], a new created standard [Tuple] object, or _null_, if no [Tuple] can be created.
      */
     fun toTuple(): Tuple?
