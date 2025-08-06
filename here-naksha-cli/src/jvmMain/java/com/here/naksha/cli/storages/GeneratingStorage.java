@@ -8,6 +8,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public final class GeneratingStorage extends AbstractStorage<GeneratingStorageConfig> {
+    private final GeneratingStorageService service = new GeneratingStorageService();
+
     @NotNull
     @Override
     public KClass<GeneratingStorageConfig> getConfigKlass() {
@@ -62,5 +64,9 @@ public final class GeneratingStorage extends AbstractStorage<GeneratingStorageCo
     @Override
     protected void shutdownStorage(boolean dropCache) {
         // nothing to do
+    }
+
+    GeneratingStorageService getService() {
+        return service;
     }
 }
