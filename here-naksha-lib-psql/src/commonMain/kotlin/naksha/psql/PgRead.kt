@@ -2,11 +2,8 @@
 
 package naksha.psql
 
+import naksha.base.*
 import naksha.base.Platform.Platform_C.forKClass
-import naksha.base.PlatformType
-import naksha.base.collectionNotFound
-import naksha.base.illegalState
-import naksha.base.mapNotFound
 import naksha.model.*
 import naksha.model.request.FeatureTuple
 import kotlin.js.JsStatic

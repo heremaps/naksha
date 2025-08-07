@@ -16,10 +16,10 @@ import kotlin.jvm.JvmField
  * The internal collection in the admin-map, that keeps track of the dictionaries of the storage.
  */
 @JsExport
-class PgNakshaDictionaries internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection()
-    .withMapId(Naksha.ADMIN_MAP)
-    .withId(Naksha.DICTIONARIES_COL)
-), PgInternalCollection, IDictManager {
+class PgNakshaDictionaries internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection().apply {
+    mapId = Naksha.ADMIN_MAP
+    id = Naksha.DICTIONARIES_COL
+}), PgInternalCollection, IDictManager {
 
     companion object PgNakshaDictionaries_C {
         /**

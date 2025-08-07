@@ -18,8 +18,7 @@
  */
 package com.here.naksha.lib.view;
 
-import kotlin.reflect.KClass;
-import naksha.base.Platform;
+import naksha.base.PlatformType;
 import naksha.jbon.JbDictionary;
 import naksha.model.AbstractStorage;
 import naksha.model.SessionOptions;
@@ -28,14 +27,14 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static naksha.base.Platform.forClass;
+
 // TODO: This should implement IStorage
 public class View extends AbstractStorage<NakshaStorage> implements IView {
 
   private @NotNull ViewLayerCollection viewLayerCollection;
 
-  public View() {
-
-  }
+  public View() {}
 
   public View(@NotNull ViewLayerCollection viewLayerCollection) {
     this.viewLayerCollection = viewLayerCollection;
@@ -83,8 +82,8 @@ public class View extends AbstractStorage<NakshaStorage> implements IView {
   }
 
   @Override
-  public @NotNull KClass<NakshaStorage> getConfigKlass() {
-    return Platform.klassFor(NakshaStorage.class);
+  public @NotNull PlatformType<NakshaStorage> getConfigType() {
+    return forClass(NakshaStorage.class);
   }
 
   @Override

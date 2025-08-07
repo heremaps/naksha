@@ -14,10 +14,10 @@ import kotlin.jvm.JvmField
  * The internal collection in each map that keeps track of the collections being in the map.
  */
 @JsExport
-class PgNakshaCollections internal constructor(map: PgMap) : PgCollection(map, NakshaCollection()
-    .withMapId(map.id)
-    .withId(Naksha.COLLECTIONS_COL)
-), PgInternalCollection {
+class PgNakshaCollections internal constructor(map: PgMap) : PgCollection(map, NakshaCollection().apply {
+    mapId = map.id
+    id = Naksha.COLLECTIONS_COL
+}), PgInternalCollection {
     companion object PgNakshaCollections_C {
         /**
          * The [PlatformType] of [PgNakshaCollections].

@@ -102,7 +102,7 @@ open class PgMap internal constructor(
         get() {
             var c = _collections
             if (c == null) {
-                c = PgCollection(this, NakshaCollection().withMapId(id).withId(COLLECTIONS_COL))
+                c = PgCollection(this, NakshaCollection().apply { mapId = id; id = COLLECTIONS_COL; })
                 _collections = c
             }
             return c

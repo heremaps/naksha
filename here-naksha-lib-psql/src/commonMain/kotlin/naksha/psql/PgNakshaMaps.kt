@@ -14,10 +14,10 @@ import kotlin.jvm.JvmField
  * The internal collection in the admin-map, that keeps track of the maps of the storage.
  */
 @JsExport
-class PgNakshaMaps internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection()
-    .withMapId(Naksha.ADMIN_MAP)
-    .withId(Naksha.MAPS_COL)
-), PgInternalCollection {
+class PgNakshaMaps internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection().apply {
+    mapId = Naksha.ADMIN_MAP
+    id = Naksha.MAPS_COL
+}), PgInternalCollection {
     companion object PgNakshaMaps_C {
         /**
          * The [PlatformType] of [PgNakshaMaps].

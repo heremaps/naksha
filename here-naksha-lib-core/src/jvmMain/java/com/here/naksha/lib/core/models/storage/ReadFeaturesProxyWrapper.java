@@ -18,19 +18,20 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import java.util.HashMap;
 import java.util.Map;
+
+import naksha.base.MapProxy;
+import naksha.base.PlatformType;
+import naksha.base.StringList;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.ISpatialQuery;
 import naksha.model.request.query.ITagQuery;
 import org.jetbrains.annotations.NotNull;
 
+import static naksha.base.NakshaBaseKt.Any_TYPE;
+import static naksha.base.NakshaBaseKt.String_TYPE;
 import static naksha.base.Platform.forClass;
-
-import java.util.Map;
-
-  private ReadRequestType readRequestType;
 
 public class ReadFeaturesProxyWrapper extends ReadFeatures {
 
@@ -49,9 +50,10 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
     super();
   }
 
-  public static class QueryParameterMap extends JvmMapProxy<String, Object> {
+  public static class QueryParameterMap extends MapProxy<String, Object> {
+    static final PlatformType<QueryParameterMap> TYPE = forClass(QueryParameterMap.class);
     public QueryParameterMap() {
-      super(String.class, Object.class);
+      super(String_TYPE, Any_TYPE);
     }
   }
 
@@ -69,8 +71,8 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
     return this;
   }
 
-  public Map<String, Object> getQueryParameters() {
-    return JvmBoxingUtil.box(get(QUERY_PARAMETERS), QueryParameterMap.class);
+  public QueryParameterMap getQueryParameters() {
+    return getAs(QUERY_PARAMETERS, QueryParameterMap.TYPE);
   }
 
   public <T> T getQueryParameter(String key) throws ClassCastException {

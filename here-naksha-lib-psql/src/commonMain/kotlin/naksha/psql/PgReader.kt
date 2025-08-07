@@ -69,7 +69,9 @@ class PgReader(
                         featureTuples.add(FeatureTuple(TupleNumber.fromB160(tn, storageNumber, mapNumber, col_num)))
                     }
                 }
-                return SuccessResponse().setFeatureTupleList(featureTuples)
+                val response = SuccessResponse()
+                response.setFeatureTupleList(featureTuples)
+                return response
             }
         } catch (e: Exception) {
             val nakshaException = PgExceptionMapper.map(e)

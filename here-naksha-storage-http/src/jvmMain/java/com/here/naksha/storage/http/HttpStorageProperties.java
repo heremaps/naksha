@@ -21,17 +21,22 @@ package com.here.naksha.storage.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
+
+import naksha.base.PlatformType;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static naksha.base.Platform.forClass;
+
 /**
  * A Http storage configuration as used by the {@link HttpStorage}.
  */
 @AvailableSince(NakshaVersion.v2_0_12)
 public class HttpStorageProperties extends NakshaProperties {
+  public static final PlatformType<HttpStorageProperties> TYPE = forClass(HttpStorageProperties.class);
 
   public static final Integer DEF_CONNECTION_TIMEOUT_SEC = 20;
   public static final Integer DEF_SOCKET_TIMEOUT_SEC = 90;

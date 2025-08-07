@@ -22,8 +22,8 @@ import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
 import kotlin.reflect.KClass;
 import naksha.base.Int64;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
+import naksha.base.PlatformType;
 import naksha.jbon.JbDictionary;
 import naksha.model.AbstractStorage;
 import naksha.model.IReadSession;
@@ -34,6 +34,8 @@ import naksha.model.objects.NakshaStorage;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static naksha.base.Platform.forClass;
 
 
 public class HttpStorage extends AbstractStorage<NakshaStorage> {
@@ -61,7 +63,7 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
   }
 
   private static @Nullable HttpStorageProperties getProperties(@NotNull NakshaStorage storage) {
-    return JvmBoxingUtil.box(storage.getProperties(), HttpStorageProperties.class);
+    return HttpStorageProperties.TYPE.proxy(storage.getProperties());
   }
 
   @Override
@@ -148,7 +150,7 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
   }
 
   @Override
-  public @NotNull KClass<NakshaStorage> getConfigKlass() {
-    return Platform.klassFor(NakshaStorage.class);
+  public @NotNull PlatformType<NakshaStorage> getConfigType() {
+    return forClass(NakshaStorage.class);
   }
 }

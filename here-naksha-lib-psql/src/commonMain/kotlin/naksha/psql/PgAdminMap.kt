@@ -57,7 +57,10 @@ abstract class PgAdminMap internal constructor(
      * @since 3.0.0
      */
     upgrade: Boolean?
-) : PgMap(storage, NakshaMap().withStorageId(storage.id).withId(ADMIN_MAP)), IDictReader {
+) : PgMap(storage, NakshaMap().apply {
+    id = ADMIN_MAP
+    storageId = storage.id
+}), IDictReader {
 
     companion object PgAdminMap_C {
         /**

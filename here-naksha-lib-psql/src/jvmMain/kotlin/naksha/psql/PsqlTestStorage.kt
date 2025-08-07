@@ -98,7 +98,8 @@ class PsqlTestStorage : PsqlStorage() {
             if (master == null) master = startDocker()
             config.master = master
         }
-        config.withCreate(true).withUpgrade(true)
+        config.create = true
+        config.upgrade = true
         super.initStorage(config, create, upgrade)
     }
 

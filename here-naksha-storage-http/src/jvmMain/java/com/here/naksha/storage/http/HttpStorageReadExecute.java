@@ -32,17 +32,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import naksha.base.JvmBoxingUtil;
+import naksha.base.PlatformObject;
 import naksha.base.StringList;
 import naksha.model.NakshaContext;
 import naksha.base.NakshaError;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.query.IPropertyQuery;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -167,9 +169,21 @@ class HttpStorageReadExecute {
     return request.getCollectionIds().get(0);
   }
 
-  private static final Function<Object, List<NakshaFeature>> collectionMapper = tuples ->
-      JvmBoxingUtil.box(tuples, XyzFeatureCollection.class).getFeatures();
+  private static final Function<@NotNull Object, @Nullable List<NakshaFeature>> collectionMapper = raw -> {
+    if (raw instanceof PlatformObject) {
+      final var po = (PlatformObject) raw;
+      return XyzFeatureCollection.TYPE.proxy(po).getFeatures(NakshaFeatureList.TYPE);
+    }
+    return null;
+  };
 
-  private static final Function<Object, List<NakshaFeature>> singleFeatureMapper = tuples ->
-      List.of(JvmBoxingUtil.box(tuples, NakshaFeature.class));
+  private static final Function<@NotNull Object, @Nullable List<NakshaFeature>> singleFeatureMapper = raw -> {
+    if (raw instanceof PlatformObject) {
+      final var po = (PlatformObject) raw;
+      final var list = new NakshaFeatureList();
+      list.add( NakshaFeature.TYPE.proxy(po) );
+      return list;
+    }
+    return null;
+  };
 }

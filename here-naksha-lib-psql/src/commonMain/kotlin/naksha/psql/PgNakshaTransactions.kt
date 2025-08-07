@@ -17,13 +17,13 @@ import kotlin.jvm.JvmField
  * The internal collection in the admin-map, that keeps track of the transactions of the storage.
  */
 @JsExport
-class PgNakshaTransactions internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection()
-    .withMapId(ADMIN_MAP)
-    .withId(TRANSACTIONS_COL)
-    .withStoreDeleted(StoreMode.OFF)
-    .withStoreHistory(StoreMode.OFF)
-    .withStoreMeta(StoreMode.OFF)
-), PgInternalCollection {
+class PgNakshaTransactions internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection().apply {
+    mapId = ADMIN_MAP
+    id = TRANSACTIONS_COL
+    storeDeleted = StoreMode.OFF
+    storeHistory = StoreMode.OFF
+    storeMeta = StoreMode.OFF
+}), PgInternalCollection {
 
     companion object PgNakshaTransactions_C {
         /**

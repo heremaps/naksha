@@ -32,12 +32,13 @@ import java.util.zip.GZIPInputStream;
 
 import naksha.base.FromJsonOptions;
 import naksha.base.Platform;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -45,20 +46,33 @@ import org.jetbrains.annotations.Nullable;
  */
 class PrepareResult {
 
-  static Response prepareResult(HttpResponse<byte[]> httpResponse,
-                                    Function<Object, List<NakshaFeature>> tuplesToFeatureList) {
-
+  static Response prepareResult(
+      @NotNull HttpResponse<byte[]> httpResponse,
+      @NotNull Function<@NotNull Object, @Nullable List<NakshaFeature>> rawToFeatureList
+  ) {
     String error = mapHttpStatusToErrorOrNull(httpResponse.statusCode());
-    if (error != null)
+    if (error != null) {
       return new ErrorResponse(new NakshaError(error, "Response http status code: " + httpResponse.statusCode()));
+    }
 
-        Object tuples = Platform.fromJSON(prepareBody(httpResponse), FromJsonOptions.DEFAULT);
-        List<NakshaFeature> featuresList = tuplesToFeatureList.apply(tuples);
-        NakshaFeatureList nakshaFeatures = NakshaFeatureList.fromList(featuresList);
-        return new SuccessResponse(nakshaFeatures);
+    final var rawJson = prepareBody(httpResponse);
+    final var raw = Platform.fromJson(rawJson);
+    if (raw == null) {
+      return new ErrorResponse(new NakshaError(NakshaError.EXCEPTION, "Failed to parse raw json, result is null"));
+    }
+    try {
+      final var featuresList = rawToFeatureList.apply(raw);
+      if (featuresList == null) {
+        return new ErrorResponse(new NakshaError(NakshaError.EXCEPTION, "Failed to proxy json result"));
+      }
+      NakshaFeatureList nakshaFeatures = NakshaFeatureList.fromList(featuresList);
+      return new SuccessResponse(nakshaFeatures);
+    } catch (RuntimeException e) {
+      return new ErrorResponse(new NakshaError(NakshaError.EXCEPTION, "Failed to proxy json result", e));
+    }
   }
 
-  private static String prepareBody(HttpResponse<byte[]> response) {
+  private static @NotNull String prepareBody(@NotNull HttpResponse<byte[]> response) {
     List<String> contentEncodingList = response.headers().allValues("content-encoding");
     if (contentEncodingList.isEmpty()) return new String(response.body(), StandardCharsets.UTF_8);
     if (contentEncodingList.size() > 1)
