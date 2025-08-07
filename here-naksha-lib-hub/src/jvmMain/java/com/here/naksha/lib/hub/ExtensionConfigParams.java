@@ -18,15 +18,17 @@
  */
 package com.here.naksha.lib.hub;
 
-import static naksha.base.JvmAnyObjectUtil.getOrSetProperty;
-import static naksha.base.JvmAnyObjectUtil.getProperty;
+import static naksha.base.NakshaBaseKt.String_TYPE;
+import static naksha.base.Platform.forClass;
 
 import java.util.List;
 import naksha.base.AnyObject;
+import naksha.base.PlatformType;
 import naksha.base.StringList;
 
 public class ExtensionConfigParams extends AnyObject {
 
+  public static final PlatformType<ExtensionConfigParams> TYPE = forClass(ExtensionConfigParams.class);
   public static final String WHITELIST_CLASSES = "whitelistClasses";
   public static final String INTERVAL_MS = "intervalms";
   public static final String EXTENSION_ROOT_PATH = "extensionsRootPath";
@@ -38,20 +40,20 @@ public class ExtensionConfigParams extends AnyObject {
    * @return List of whitelist urls used in classloader
    */
   public List<String> getWhiteListClasses() {
-    return getOrSetProperty(this, WHITELIST_CLASSES, DEFAULT_WHITELIST_CLASSES);
+    return getOrSet(WHITELIST_CLASSES, DEFAULT_WHITELIST_CLASSES);
   }
 
   /**
    * @return config expiry in millisecond
    */
   public long getIntervalMs() {
-    return getOrSetProperty(this, INTERVAL_MS, DEFAULT_INTERVAL_MS);
+    return getOrSet(INTERVAL_MS, DEFAULT_INTERVAL_MS);
   }
 
   /**
    * @return extensions root directory
    */
   public String getExtensionRootPath() {
-    return getProperty(this, EXTENSION_ROOT_PATH, String.class);
+    return getAs(EXTENSION_ROOT_PATH, String_TYPE);
   }
 }

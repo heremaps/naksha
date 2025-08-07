@@ -9,6 +9,7 @@ import naksha.model.AbstractStorage
 import naksha.model.objects.NakshaFeature
 
 class Extension() : NakshaFeature() {
+
     companion object {
         /**
          * The [PlatformType] of [Extension].

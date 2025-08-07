@@ -18,31 +18,30 @@
  */
 package com.here.naksha.lib.hub;
 
-import static naksha.base.JvmAnyObjectUtil.getOrSetProperty;
-import static naksha.base.JvmAnyObjectUtil.getProperty;
-import static naksha.base.JvmAnyObjectUtil.getPropertyOrReturnDefault;
-
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.Map;
 import naksha.base.AnyObject;
-import naksha.base.Platform;
+import naksha.base.PlatformType;
 import naksha.model.NakshaVersion;
-import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaStorage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static naksha.base.NakshaBaseKt.Int_TYPE;
+import static naksha.base.NakshaBaseKt.String_TYPE;
+import static naksha.base.Platform.forClass;
+
 /**
  * The configuration of Naksha-Hub and the admin-storage where the Hub keeps internal configurations, like spaces, storages, handlers, <code>...</code>.
  */
 public final class NakshaHubConfig extends NakshaStorage {
 
+  public static final PlatformType<NakshaHubConfig> TYPE = forClass(NakshaHubConfig.class);
   private static final Logger logger = LoggerFactory.getLogger(NakshaHubConfig.class);
 
   /**
@@ -106,7 +105,7 @@ public final class NakshaHubConfig extends NakshaStorage {
   public void onCreation() {
     setEndpointDetailsIfInvalid();
     resolveEnv();
-    Integer requestBodyLimit = getProperty(this, REQUEST_BODY_LIMIT, Integer.class);
+    Integer requestBodyLimit = getAs(REQUEST_BODY_LIMIT, Int_TYPE);
     if (requestBodyLimit != null && requestBodyLimit > MAX_REQ_BODY_LIMIT) {
       logger.warn(
           "Configured request body limit {} MB not supported. Falling back to default limit of {} MB",
@@ -117,7 +116,7 @@ public final class NakshaHubConfig extends NakshaStorage {
   }
 
   private void setEndpointDetailsIfInvalid() {
-    String endpoint = getProperty(this, ENDPOINT, String.class);
+    String endpoint = getAs(ENDPOINT, String_TYPE);
     if (endpoint == null || endpoint.isEmpty()) {
       resolveInvalidEndpoint();
     } else {
@@ -137,7 +136,7 @@ public final class NakshaHubConfig extends NakshaStorage {
   }
 
   private void resolveInvalidEndpoint() {
-    int httpPort = getOrSetProperty(this, HTTP_PORT, 8080);
+    int httpPort = getOrSet(HTTP_PORT, 8080);
     if (httpPort < 0 || httpPort > 65535) {
       logger.atError()
           .setMessage("Invalid port in Naksha configuration: {}, changing to default 8080")
@@ -146,7 +145,7 @@ public final class NakshaHubConfig extends NakshaStorage {
       httpPort = 8080;
       setHttpPort(8080);
     }
-    String hostname = getOrSetProperty(this, HOSTNAME, "localhost");
+    String hostname = getOrSet(HOSTNAME, "localhost");
     if (hostname.isBlank()) {
       try {
         hostname = InetAddress.getLocalHost().getHostAddress();
@@ -177,7 +176,7 @@ public final class NakshaHubConfig extends NakshaStorage {
     if (envVal != null && !envVal.isEmpty() && !"null".equalsIgnoreCase(envVal)) {
       setRaw(ENV, envVal);
     }
-    String propEnv = getProperty(this, ENV, String.class);
+    String propEnv = getAs(ENV, String_TYPE);
     if (propEnv == null || propEnv.isEmpty() || "null".equalsIgnoreCase(propEnv)) {
       setRaw(ENV, "local");
     }
@@ -187,18 +186,18 @@ public final class NakshaHubConfig extends NakshaStorage {
    * The port at which to listen for HTTP requests.
    */
   public @NotNull Integer getHttpPort() {
-    return getOrSetProperty(this, HTTP_PORT, 8080);
+    return getOrSet(HTTP_PORT, 8080);
   }
 
   private void setHttpPort(@NotNull Integer httpPort) {
-    setRaw(HTTP_PORT, httpPort);
+    set(HTTP_PORT, httpPort);
   }
 
   /**
    * The hostname to use to refer to this instance, if {@code null}, then auto-detected.
    */
   public @NotNull String getHostname() {
-    return getProperty(this, HOSTNAME, String.class);
+    return getAs(HOSTNAME, String_TYPE);
   }
 
   private void setHostname(@NotNull String hostname) {
@@ -209,7 +208,7 @@ public final class NakshaHubConfig extends NakshaStorage {
    * The application-id to be used when modifying the admin-database.
    */
   public @NotNull String getAppId() {
-    return getOrSetProperty(this, APP_ID, "naksha");
+    return getOrSet(APP_ID, "naksha");
   }
 
 
@@ -217,14 +216,14 @@ public final class NakshaHubConfig extends NakshaStorage {
    * The author to be used when modifying the admin-database.
    */
   public @Nullable String getAuthor() {
-    return getOrSetProperty(this, AUTHOR, defaultAppName());
+    return getOrSet(AUTHOR, defaultAppName());
   }
 
   /**
    * The public endpoint, for example "https://naksha.foo.com/".
    */
   public @NotNull String getEndpoint() {
-    return getProperty(this, ENDPOINT, String.class);
+    return getAs(ENDPOINT, String_TYPE);
   }
 
   private void setEndpoint(@NotNull String endpoint) {
@@ -235,35 +234,35 @@ public final class NakshaHubConfig extends NakshaStorage {
    * The environment, for example "local", "dev", "e2e" or "prd".
    */
   public @NotNull String getEnv() {
-    return getProperty(this, ENV, String.class);
+    return getAs(ENV, String_TYPE);
   }
 
   /**
    * If set, then serving static files from this directory.
    */
   public @Nullable String getWebRoot() {
-    return getProperty(this, WEB_ROOT, String.class);
+    return getAs(WEB_ROOT, String_TYPE);
   }
 
   /**
    * The JWT key files to be read from the disk ({@code "~/.config/naksha/auth/$<jwtName>.(key|pub)"}).
    */
   public @NotNull String getJwtName() {
-    return getOrSetProperty(this, JWT_NAME, "jwt");
+    return getOrSet(JWT_NAME, "jwt");
   }
 
   /**
    * The user-agent to be used for external communication.
    */
   public @NotNull String getUserAgent() {
-    return getOrSetProperty(this, USER_AGENT, defaultAppName());
+    return getOrSet(USER_AGENT, defaultAppName());
   }
 
   /**
    * If debugging mode is enabled.
    */
   public boolean isDebug() {
-    return getPropertyOrReturnDefault(this, DEBUG, false);
+    return getOr(DEBUG, false);
   }
 
   public void setDebug(boolean debug) {
@@ -274,46 +273,46 @@ public final class NakshaHubConfig extends NakshaStorage {
    * The fully qualified class name to be used to initiate NakshaHub instance
    */
   public @NotNull String getHubClassName() {
-    return getOrSetProperty(this, HUB_CLASS_NAME, defaultHubClassName());
+    return getOrSet(HUB_CLASS_NAME, defaultHubClassName());
   }
 
   /**
    * Optional storage-specific parameters
    */
   public Map<String, Object> getStorageParams() {
-    return getProperty(this, STORAGE_PARAMS, AnyObject.class);
+    return getAs(STORAGE_PARAMS, AnyObject.TYPE);
   }
 
   /**
    * Optional extension-manager parameters
    */
   public @Nullable ExtensionConfigParams getExtensionConfigParams() {
-    return getProperty(this, EXTENSION_CONFIG_PARAMS, ExtensionConfigParams.class);
+    return getAs(EXTENSION_CONFIG_PARAMS, ExtensionConfigParams.TYPE);
   }
 
   /**
    * Optional Http request body limit in MB. Default is {@link #DEF_REQ_BODY_LIMIT}.
    */
   public Integer getRequestBodyLimit() {
-    return getOrSetProperty(this, REQUEST_BODY_LIMIT, DEF_REQ_BODY_LIMIT);
+    return getOrSet(REQUEST_BODY_LIMIT, DEF_REQ_BODY_LIMIT);
   }
 
-  private void setRequestBodyLimit(@NotNull Integer bodyLimit) {
-    setRaw(REQUEST_BODY_LIMIT, bodyLimit);
+  private void setRequestBodyLimit(int bodyLimit) {
+    set(REQUEST_BODY_LIMIT, bodyLimit);
   }
 
   /**
    * Optional Total Concurrency Limit
    */
   public Integer getMaxParallelRequestsPerCPU() {
-    return getProperty(this, MAX_PARALLEL_REQUESTS_PER_CPU, Integer.class);
+    return getAs(MAX_PARALLEL_REQUESTS_PER_CPU, Int_TYPE);
   }
 
   /**
    * Optional Total Author Concurrency Threshold
    */
   public Integer getMaxPctParallelRequestsPerActor() {
-    return getProperty(this, MAX_PCT_PARALLEL_REQUESTS_PER_ACTOR, Integer.class);
+    return getAs(MAX_PCT_PARALLEL_REQUESTS_PER_ACTOR, Int_TYPE);
   }
 
   /**

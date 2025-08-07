@@ -27,6 +27,8 @@ import naksha.model.request.Write;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
+import static naksha.base.NakshaBaseKt.String_TYPE;
+
 class IntValidationUtil {
 
   static final SuccessResponse SUCCESSFUL_VALIDATION = new SuccessResponse();
@@ -42,13 +44,17 @@ class IntValidationUtil {
     return basicValidationFor(feature);
   }
 
+  private static final String TITLE_KEY = "title";
+  private static final String DESCRIPTION_KEY = "description";
+
   static Response basicValidationFor(NakshaFeature feature) {
-    Response titleValidation = requiredPropertyValidationError(feature.getTitle(), NakshaFeature.TITLE_KEY);
+    final var title = feature.getAs(TITLE_KEY, String_TYPE);
+    Response titleValidation = requiredPropertyValidationError(title, TITLE_KEY);
     if (titleValidation instanceof ErrorResponse) {
       return titleValidation;
     }
-    Response descValidation =
-        requiredPropertyValidationError(feature.getDescription(), NakshaFeature.DESCRIPTION_KEY);
+    final var description = feature.getAs(DESCRIPTION_KEY, String_TYPE);
+    Response descValidation = requiredPropertyValidationError(description, DESCRIPTION_KEY);
     if (descValidation instanceof ErrorResponse) {
       return descValidation;
     }

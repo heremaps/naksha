@@ -24,6 +24,7 @@ import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.hub.NakshaHubAdminStorageIdentifiers.DEFAULT_HUB_ADMIN_MAP_ID;
 import static com.here.naksha.lib.hub.NakshaHubAdminStorageIdentifiers.DEFAULT_HUB_ADMIN_STORAGE_ID;
+import static naksha.base.Platform.apply;
 import static naksha.model.Action.CREATE;
 import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
@@ -48,8 +49,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import naksha.base.FromJsonOptions;
-import naksha.base.JvmBoxingUtil;
-import naksha.base.JvmJsonUtil;
 import naksha.base.Platform;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
@@ -144,10 +143,11 @@ public class NakshaHub implements INaksha {
     logger.info("NakshaHub initialization started.");
 //    // TODO force create and update?
 //    // TODO CASL-657: support clustering
-    final NakshaStorage storageConfig = new PgConfig(adminStorageId)
-        .withMasterUri(adminPgMasterUrl)
-        .withCreate(true)
-        .withUpgrade(true);
+    final NakshaStorage storageConfig = apply(new PgConfig(adminStorageId), (self) -> {
+      self.withMasterUri(adminPgMasterUrl);
+      self.setCreate(true);
+      self.setUpgrade(true);
+    });
 
     //    this.psqlStorage = new PsqlStorage(PsqlStorage.ADMIN_STORAGE_ID, appName, storageUrl);
     logger.info("Initializing Admin storage (if not already).");
@@ -182,8 +182,10 @@ public class NakshaHub implements INaksha {
     return adminMapId;
   }
 
-  private NakshaContext setupMapAndContext(String mapId) {
-    NakshaMap map = new NakshaMap().withId(mapId);
+  private NakshaContext setupMapAndContext(@NotNull String mapId) {
+    final NakshaMap map = apply(new NakshaMap(), (self) -> {
+      self.setId(mapId);
+    });
     Write createMap = new Write().upsertMap(map, false);
     NakshaContext initialContext = NakshaContext.currentContext().withAuthor(NakshaHubConfig.defaultAppName());
     psqlStorage.runInWriteSession(SessionOptions.from(initialContext), writer -> {
@@ -216,7 +218,7 @@ public class NakshaHub implements INaksha {
       logger.info("WriteCollections Request for {}, against Admin storage.", ALL_HUB_INTERNAL_COLLECTIONS);
       final Response createAdminCollectionsResponse = admin.execute(upsertAdminCollectionsRequest());
       if (createAdminCollectionsResponse instanceof SuccessResponse successResponse) {
-        NakshaFeatureList createdCollections = successResponse.getFeatures();
+        NakshaFeatureList createdCollections = successResponse.getFeatures(NakshaFeatureList.TYPE);
         for (NakshaFeature createdCollection : createdCollections) {
           if (Objects.equals(
               CREATE.getValue(),
@@ -327,7 +329,8 @@ public class NakshaHub implements INaksha {
 
   private NakshaHubConfig readHubDefaultConfigFromFile() {
     final String configJson = IoHelp.readResource("config/" + DEF_CFG_ID + ".json");
-    NakshaHubConfig defCfg = JvmJsonUtil.readJsonAs(configJson, NakshaHubConfig.class);
+    NakshaHubConfig defCfg = Platform.fromJson(configJson, NakshaHubConfig.TYPE);
+    assert defCfg != null;
     defCfg.setId(DEF_CFG_ID); // overwrite Id to desired value
     return defCfg;
   }
@@ -415,7 +418,7 @@ public class NakshaHub implements INaksha {
       }
       Extension extension;
       try {
-        extension = JvmBoxingUtil.box(Platform.fromJson(exJson, FromJsonOptions.DEFAULT), Extension.class);
+        extension = Platform.fromJson(exJson, Extension.TYPE);
         extList.add(extension);
       } catch (Exception e) {
         logger.error("Failed to convert extension meta data to Extension object. {} ", exJson, e);

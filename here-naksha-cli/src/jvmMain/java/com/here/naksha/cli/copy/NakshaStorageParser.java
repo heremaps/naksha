@@ -1,7 +1,7 @@
 package com.here.naksha.cli.copy;
 
-import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
+import naksha.base.PlatformObject;
 import naksha.model.objects.NakshaStorage;
 
 import java.io.File;
@@ -26,8 +26,9 @@ final class NakshaStorageParser {
         }
 
         try {
-            Object rawConfig = Platform.fromJSON(json);
-            return JvmBoxingUtil.box(rawConfig, NakshaStorage.class);
+            Object rawConfig = Platform.fromJson(json);
+            assert rawConfig instanceof PlatformObject;
+            return NakshaStorage.TYPE.proxy((PlatformObject) rawConfig);
         } catch (Exception e) {
             throw new NakshaStorageParserException("Problem with json parsing!", file, e);
         }

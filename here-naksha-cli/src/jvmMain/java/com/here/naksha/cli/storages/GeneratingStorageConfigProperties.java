@@ -1,19 +1,22 @@
 package com.here.naksha.cli.storages;
 
-import naksha.base.JvmList;
+import naksha.base.PlatformType;
 import naksha.model.objects.NakshaProperties;
 
+import static naksha.base.Platform.forClass;
+
 public final class GeneratingStorageConfigProperties extends NakshaProperties {
+    public static final PlatformType<GeneratingStorageConfigProperties> TYPE = forClass(GeneratingStorageConfigProperties.class);
     private static final String COUNT_KEY = "count";
     private static final String TILE_IDS_KEY = "tileIds";
     private static final String TILE_IDS_CSV_FILE_PATH_KEY = "tileIdsCsvFilePath";
 
     public Integer getCount() {
-        return (Integer) getRaw(COUNT_KEY);
+        return (Integer) get(COUNT_KEY);
     }
 
     public void setCount(Integer count) {
-        setRaw(COUNT_KEY, count);
+        set(COUNT_KEY, count);
     }
 
     public GeneratingStorageConfigProperties withCount(Integer count) {

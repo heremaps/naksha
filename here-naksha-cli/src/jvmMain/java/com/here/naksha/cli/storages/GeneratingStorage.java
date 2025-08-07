@@ -1,7 +1,8 @@
 package com.here.naksha.cli.storages;
 
-import kotlin.jvm.JvmClassMappingKt;
-import kotlin.reflect.KClass;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
+import naksha.base.PlatformType;
 import naksha.jbon.JbDictionary;
 import naksha.model.*;
 import org.jetbrains.annotations.NotNull;
@@ -12,8 +13,8 @@ public final class GeneratingStorage extends AbstractStorage<GeneratingStorageCo
 
     @NotNull
     @Override
-    public KClass<GeneratingStorageConfig> getConfigKlass() {
-        return JvmClassMappingKt.getKotlinClass(GeneratingStorageConfig.class);
+    public PlatformType<GeneratingStorageConfig> getConfigType() {
+        return GeneratingStorageConfig.TYPE;
     }
 
     @NotNull

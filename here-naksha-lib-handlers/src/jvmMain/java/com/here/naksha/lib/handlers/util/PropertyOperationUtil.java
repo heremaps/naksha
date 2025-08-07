@@ -18,12 +18,15 @@
  */
 package com.here.naksha.lib.handlers.util;
 
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
-import naksha.base.NakshaError;
-import naksha.base.NakshaException;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+import com.here.naksha.lib.core.lambdas.F1;
+import naksha.model.request.RequestQuery;
 import naksha.model.request.query.*;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class PropertyOperationUtil {
 
