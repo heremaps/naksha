@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.core.models;
 
-import java.util.List;
 import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaFeature;
@@ -27,6 +26,8 @@ import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 //  TODO (CASL-780): this needs to prevail but not here
 public class ContextXyzFeatureResponse extends SuccessResponse {
@@ -48,7 +49,11 @@ public class ContextXyzFeatureResponse extends SuccessResponse {
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public void setContext(@Nullable List<NakshaFeature> contextFeatures) {
-    setContext(NakshaFeatureList.fromList(contextFeatures));
+    if(contextFeatures == null) {
+      setContext(null);
+    } else {
+      setContext(NakshaFeatureList.fromList(contextFeatures));
+    }
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
@@ -66,7 +71,11 @@ public class ContextXyzFeatureResponse extends SuccessResponse {
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public void setViolations(@Nullable List<NakshaFeature> violations) {
-    setViolations(NakshaFeatureList.fromList(violations));
+    if(violations == null) {
+      setViolations(null);
+    } else {
+      setViolations(NakshaFeatureList.fromList(violations));
+    }
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)

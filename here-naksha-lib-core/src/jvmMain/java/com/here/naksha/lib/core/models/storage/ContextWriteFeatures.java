@@ -18,13 +18,15 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import java.util.List;
+import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.ApiStatus;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 /**
  * Abstract class representing WriteRequest along with list of features as context and list of violations.
@@ -33,35 +35,50 @@ import org.jetbrains.annotations.Nullable;
 @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
 public abstract class ContextWriteFeatures extends WriteRequest {
 
+  private static final String CONTEXT_KEY = "context";
+  private static final String VIOLATIONS_KEY = "violations";
+
   /**
    * The list of features passed as context, as part of Write request
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  private @Nullable List<@NotNull NakshaFeature> context;
+  public @Nullable List<NakshaFeature> getContext() {
+    return JvmBoxingUtil.box(get(CONTEXT_KEY), NakshaFeatureList.class);
+  }
+
+  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
+  public void setContext(@Nullable List<NakshaFeature> contextFeatures) {
+    if(contextFeatures == null) {
+      setContext(null);
+    } else {
+      setContext(NakshaFeatureList.fromList(contextFeatures));
+    }
+  }
+
+  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
+  public void setContext(@Nullable NakshaFeatureList contextFeatures) {
+    put(CONTEXT_KEY, contextFeatures);
+  }
 
   /**
    * The list of violations passed as part of Write request
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  private @Nullable List<@NotNull NakshaFeature> violations;
-
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public @Nullable List<NakshaFeature> getContext() {
-    return context;
-  }
-
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
-  public void setContext(@Nullable List<NakshaFeature> context) {
-    this.context = context;
-  }
-
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public @Nullable List<NakshaFeature> getViolations() {
-    return violations;
+    return JvmBoxingUtil.box(get(VIOLATIONS_KEY), NakshaFeatureList.class);
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public void setViolations(@Nullable List<NakshaFeature> violations) {
-    this.violations = violations;
+    if(violations == null) {
+      setViolations(null);
+    } else {
+      setViolations(NakshaFeatureList.fromList(violations));
+    }
+  }
+
+  @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
+  public void setViolations(@Nullable NakshaFeatureList violations) {
+    put(VIOLATIONS_KEY, violations);
   }
 }

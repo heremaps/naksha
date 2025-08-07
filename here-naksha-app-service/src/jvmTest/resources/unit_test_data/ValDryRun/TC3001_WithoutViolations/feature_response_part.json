@@ -12,7 +12,6 @@
         "@ns:com:here:mom:delta": {
           "changeState": "UPDATED",
           "reviewState": "UNPUBLISHED",
-          "changeCounter": 0,
           "potentialValue": 0,
           "priorityCategory": 0
         },
@@ -36,7 +35,6 @@
         "@ns:com:here:mom:delta": {
           "changeState": "UPDATED",
           "reviewState": "UNPUBLISHED",
-          "changeCounter": 0,
           "potentialValue": 0,
           "priorityCategory": 0
         },

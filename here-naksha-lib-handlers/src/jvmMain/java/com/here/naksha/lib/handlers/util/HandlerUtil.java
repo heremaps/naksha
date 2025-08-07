@@ -18,11 +18,10 @@
  */
 package com.here.naksha.lib.handlers.util;
 
-import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import com.here.naksha.lib.core.models.ContextXyzFeatureResponse;
-import java.util.ArrayList;
-import java.util.List;
+import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import naksha.base.JvmBoxingUtil;
+import naksha.model.Action;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.TagList;
@@ -37,6 +36,9 @@ import naksha.model.request.WriteList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public final class HandlerUtil {
 
   public static String REVIEW_STATE_PREFIX = "@:review-state:";
@@ -47,6 +49,10 @@ public final class HandlerUtil {
       final @NotNull List<NakshaFeature> features,
       final @Nullable List<NakshaFeature> context,
       final @Nullable List<NakshaFeature> violations) {
+
+    for (final NakshaFeature feature : features) {
+      feature.getProperties().getXyz().setRaw(XyzNs.ACTION, Action.UPDATED);
+    }
     // Create ContextResult with cursor, context and violations
     final ContextXyzFeatureResponse ctxResult = new ContextXyzFeatureResponse();
     ctxResult.setFeatures(features);
@@ -183,12 +189,20 @@ public final class HandlerUtil {
       final @NotNull NakshaFeature feature, final @NotNull MomReviewState reviewState) {
     final NakshaProperties properties = feature.getProperties();
     final XyzNs xyzNs = properties.getXyz();
-    final MomDeltaNs deltaNs = properties.getDelta();
+    final MomDeltaNs deltaNs = properties.useDeltaNamespace();
+    // TODO: CASL- 1179 Discuss default value strategy: eager creation vs. lazy on-get.
+    initializeDeltaDefaults(deltaNs);
     deltaNs.setChangeState(MomChangeState.UPDATED.getText());
     deltaNs.setReviewState(reviewState.getText());
     final @NotNull List<@NotNull String> tags = tagsWithoutReviewState(xyzNs.getTags());
     tags.add(REVIEW_STATE_PREFIX + reviewState);
     TagList tagList = JvmBoxingUtil.box(tags, TagList.class);
     xyzNs.setTags(tagList, false);
+  }
+  public static void initializeDeltaDefaults(final @NotNull MomDeltaNs deltaNs) {
+    deltaNs.getChangeState();
+    deltaNs.getReviewState();
+    deltaNs.getPotentialValue();
+    deltaNs.getPriorityCategory();
   }
 }
