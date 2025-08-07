@@ -31,5 +31,5 @@ open class MomFeature : GeoFeature() {
     }
 
     override val properties: MomProperties
-        get() = get_properties(MomProperties.TYPE)
+        get() = getProperties(MomProperties.TYPE)
 }

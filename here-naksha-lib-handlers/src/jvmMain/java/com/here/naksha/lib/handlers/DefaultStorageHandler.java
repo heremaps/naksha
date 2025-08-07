@@ -26,7 +26,7 @@ import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttemp
 import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.FIRST_ATTEMPT;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
-import static naksha.base.JvmAnyObjectUtil.getProperty;
+import static naksha.base.NakshaBaseKt.String_TYPE;
 import static naksha.base.Platform.longToInt64;
 import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
 
@@ -41,7 +41,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.StringList;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
@@ -84,7 +83,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     this.eventHandlerConfig = eventHandlerConfig;
     this.eventTarget = eventTarget;
     this.properties = Objects.requireNonNull(
-        JvmBoxingUtil.box(eventHandlerConfig.getProperties(), DefaultStorageHandlerProperties.class));
+        eventHandlerConfig.getProperties(DefaultStorageHandlerProperties.TYPE)
+    );
   }
 
   @Override
@@ -140,7 +140,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       throw new NakshaException(NakshaError.ILLEGAL_STATE,
           "Unable to determine 'mapId' for handler '" + eventHandlerConfig.getId() + "', config of storage '" + storage.getId() + "' has no properties.");
     }
-    return getProperty(nakshaProperties, STORAGE_PROPERTIES_SCHEMA_KEY, String.class);
+    return nakshaProperties.getAs(STORAGE_PROPERTIES_SCHEMA_KEY, String_TYPE);
   }
 
   private void addStorageTimeToStreamInfo(StopWatch storageTimer, NakshaContext ctx) {
@@ -490,7 +490,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
             (NakshaCollection) wc.getWrites().get(0).getFeature();
       } else {
         // use existing Space collection (as it is not an Update request)
-        final SpaceProperties spaceProperties = JvmBoxingUtil.box(s.getProperties(), SpaceProperties.class);
+        final SpaceProperties spaceProperties = s.getProperties(SpaceProperties.TYPE);
         collectionDefinedInSpace = spaceProperties.getCollection();
       }
       if (collectionDefinedInSpace != null) {

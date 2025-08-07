@@ -29,6 +29,7 @@ import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.*;
 import naksha.model.request.query.*;
+import naksha.mom.v2.MomProperties;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -123,7 +124,7 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   private Optional<String> getSourceIdFromFeature(NakshaProperties properties) {
     try {
-      return Optional.ofNullable(properties.get(NakshaProperties.META_KEY))
+      return Optional.ofNullable(properties.get(MomProperties.META_KEY))
           .map(Map.class::cast)
           .map(metaProperties -> metaProperties.get(SOURCE_ID))
           .map(Object::toString);
@@ -196,7 +197,7 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   private static boolean propertyReferenceEqualsSourceId(Property pRef) {
     List<@NotNull String> path = pRef.getPath();
-    return path.size() == PREF_PATHS_SIZE && path.containsAll(List.of(NakshaProperties.META_KEY, SOURCE_ID));
+    return path.size() == PREF_PATHS_SIZE && path.containsAll(List.of(MomProperties.META_KEY, SOURCE_ID));
   }
 
   private static boolean sourceIdTransformationCapable(PQuery propertyOperation) {

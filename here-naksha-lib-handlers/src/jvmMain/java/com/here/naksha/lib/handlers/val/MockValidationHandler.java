@@ -18,6 +18,12 @@
  */
 package com.here.naksha.lib.handlers.val;
 
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
+import static com.here.naksha.lib.handlers.util.MockUtil.parseFeatures;
+import static com.here.naksha.lib.handlers.util.MockUtil.parseJson;
+import static com.here.naksha.lib.handlers.util.MockUtil.toJson;
+
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
@@ -25,9 +31,13 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.ContextWriteFeatures;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
-import naksha.base.JvmBoxingUtil;
+import java.util.ArrayList;
+import java.util.List;
+
+import naksha.model.objects.NakshaFeatureList;
+import naksha.mom.v2.MomProperties;
 import naksha.mom.v2.MomReference;
-import naksha.model.mom.MomReferenceList;
+import naksha.mom.v2.MomReferenceList;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.Request;
@@ -38,13 +48,6 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
-import static com.here.naksha.lib.handlers.util.MockUtil.parseFeatures;
-
 public class MockValidationHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(MockValidationHandler.class);
@@ -53,7 +56,7 @@ public class MockValidationHandler extends AbstractEventHandler {
   protected @NotNull NakshaProperties properties;
 
   private static final String MOCK_VIOLATIONS_FILE = "mock_data/dry_run_violations.json";
-  private static final List<NakshaFeature> mockViolations = parseFeatures(MOCK_VIOLATIONS_FILE);
+  private static final NakshaFeatureList mockViolations = parseFeatures(MOCK_VIOLATIONS_FILE);
   private static final int totalViolations = mockViolations.size();
 
   public MockValidationHandler(
@@ -63,7 +66,7 @@ public class MockValidationHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties = JvmBoxingUtil.box(eventHandler.getProperties(), NakshaProperties.class);
+    this.properties = eventHandler.getProperties(NakshaProperties.TYPE);
   }
 
   @Override
@@ -144,12 +147,15 @@ public class MockValidationHandler extends AbstractEventHandler {
       final @Nullable String featureType) {
     final List<NakshaFeature> violations = new ArrayList<>();
     for (int i = 0; i < count && i < totalViolations; i++) {
-      final NakshaFeature violation = mockViolations.get(i).copy(true);
+      final var violation = mockViolations.get(i);
+      assert violation != null;
       // randomize violation id
       violation.setId("urn:here::here:Topology:violation_" + RandomStringUtils.randomAlphabetic(12));
       // add reference to feature
       final MomReference reference = new MomReference(feature.getId(), spaceId, featureType);
-      violation.getProperties().setReferences(MomReferenceList.of(reference));
+      final MomReferenceList referenceList = new MomReferenceList();
+      referenceList.add(reference);
+      violation.getProperties(MomProperties.TYPE).setReferences(referenceList);
       violation.put("violatedObject", reference);
       violation.setGeometry(feature.getGeometry());
       // add violation to the list

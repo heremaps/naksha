@@ -18,17 +18,22 @@
  */
 package com.here.naksha.lib.core.models.naksha;
 
+import naksha.base.PlatformType;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.Nullable;
 
+import static naksha.base.Platform.forClass;
+
 /**
  * Default variant of Space properties supported by Naksha - default storage handler
  */
 @AvailableSince(NakshaVersion.v2_0_7)
 public class SpaceProperties extends NakshaProperties {
+
+  public static final PlatformType<SpaceProperties> TYPE = forClass(SpaceProperties.class);
 
   @AvailableSince(NakshaVersion.v2_0_7)
   public static final String NAKSHA_COLLECTION = "collection";

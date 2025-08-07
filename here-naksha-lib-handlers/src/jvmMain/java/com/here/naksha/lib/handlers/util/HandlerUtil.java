@@ -19,15 +19,15 @@
 package com.here.naksha.lib.handlers.util;
 
 import com.here.naksha.lib.core.models.ContextXyzFeatureResponse;
-import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
-import naksha.base.JvmBoxingUtil;
-import naksha.model.Action;
+import java.util.ArrayList;
+import java.util.List;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
 import naksha.model.TagList;
 import naksha.model.XyzNs;
 import naksha.mom.v2.MomChangeState;
-import naksha.model.mom.MomDeltaNs;
+import naksha.mom.v2.MomDeltaNs;
+import naksha.mom.v2.MomProperties;
 import naksha.mom.v2.MomReviewState;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
@@ -187,16 +187,14 @@ public final class HandlerUtil {
 
   public static void setDeltaReviewState(
       final @NotNull NakshaFeature feature, final @NotNull MomReviewState reviewState) {
-    final NakshaProperties properties = feature.getProperties();
-    final XyzNs xyzNs = properties.getXyz();
-    final MomDeltaNs deltaNs = properties.useDeltaNamespace();
-    // TODO: CASL- 1179 Discuss default value strategy: eager creation vs. lazy on-get.
-    initializeDeltaDefaults(deltaNs);
+    final var properties = feature.getProperties(MomProperties.TYPE);
+    final var xyzNs = properties.getXyz();
+    final var deltaNs = properties.useDelta();
     deltaNs.setChangeState(MomChangeState.UPDATED.getText());
     deltaNs.setReviewState(reviewState.getText());
-    final @NotNull List<@NotNull String> tags = tagsWithoutReviewState(xyzNs.getTags());
+    final var tags = tagsWithoutReviewState(xyzNs.getTags());
     tags.add(REVIEW_STATE_PREFIX + reviewState);
-    TagList tagList = JvmBoxingUtil.box(tags, TagList.class);
+    final var tagList = new TagList(tags);
     xyzNs.setTags(tagList, false);
   }
   public static void initializeDeltaDefaults(final @NotNull MomDeltaNs deltaNs) {

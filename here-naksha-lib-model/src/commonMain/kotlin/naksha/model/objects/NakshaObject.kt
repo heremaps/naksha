@@ -38,7 +38,7 @@ open class NakshaObject : NakshaFeature() {
     }
 
     override val properties: NakshaProperties
-        get() = get_properties(NakshaProperties.TYPE)
+        get() = getProperties(NakshaProperties.TYPE)
 
     /**
      * Human-readable title.

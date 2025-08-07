@@ -2,10 +2,10 @@
 
 package naksha.mom.v2
 
-import naksha.base.AnyObject
 import naksha.base.NullableProperty
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformType
+import naksha.model.objects.NakshaProperties
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -16,7 +16,7 @@ import kotlin.jvm.JvmField
  * @see MomFeature
  */
 @JsExport
-open class MomProperties : AnyObject() {
+open class MomProperties : NakshaProperties() {
 
     companion object MomProperties_C {
         /**

@@ -15,6 +15,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class MomReferenceList : ListProxy<MomReference>(MomReference.TYPE) {
+
     companion object MomReferenceList_C {
         /**
          * The [PlatformType] of [MomReferenceList].

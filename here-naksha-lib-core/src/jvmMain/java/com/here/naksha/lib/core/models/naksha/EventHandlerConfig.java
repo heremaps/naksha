@@ -22,6 +22,7 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.core.models.PluginCache.getEventHandlerConstructor;
 import static naksha.base.NakshaBaseKt.*;
 import static naksha.base.NakshaError.ILLEGAL_STATE;
+import static naksha.base.Platform.forClass;
 
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
@@ -29,6 +30,7 @@ import com.here.naksha.lib.core.lambdas.Fe3;
 import com.here.naksha.lib.core.models.PluginCache;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
+import naksha.base.PlatformType;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
@@ -43,6 +45,7 @@ import org.slf4j.LoggerFactory;
 @AvailableSince(NakshaVersion.v2_0_3)
 public class EventHandlerConfig extends NakshaFeature {
 
+  public static final PlatformType<EventHandlerConfig> TYPE = forClass(EventHandlerConfig.class);
   private static final @NotNull Logger logger = LoggerFactory.getLogger(EventHandlerConfig.class);
 
   @AvailableSince(NakshaVersion.v2_0_7)

@@ -39,6 +39,7 @@ kotlin {
                 api(libs.kotlinx.datetime)
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-geo"))
+                api(project(":here-naksha-lib-model"))
             }
         }
         commonTest {
@@ -49,6 +50,7 @@ kotlin {
                 implementation(libs.kotlinx.datetime)
                 implementation(project(":here-naksha-lib-base"))
                 implementation(project(":here-naksha-lib-geo"))
+                implementation(project(":here-naksha-lib-model"))
             }
         }
         jvmMain {

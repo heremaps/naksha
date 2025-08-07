@@ -27,7 +27,6 @@ import com.here.naksha.lib.handlers.DefaultViewHandler;
 import com.here.naksha.lib.handlers.DefaultViewHandlerProperties;
 import com.here.naksha.lib.handlers.TagFilterHandler;
 import com.here.naksha.lib.handlers.TagFilterHandlerProperties;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
@@ -78,7 +77,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
     if (basicValidationResult instanceof ErrorResponse) {
       return basicValidationResult;
     }
-    final EventHandlerConfig eventHandler = JvmBoxingUtil.box(write.getFeature(), EventHandlerConfig.class);
+    final var eventHandler = write.getFeature(EventHandlerConfig.TYPE);
     if (eventHandler == null) {
       return new ErrorResponse(
           NakshaError.ILLEGAL_ARGUMENT,
@@ -123,8 +122,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
       return storageValidation;
     }
 
-    DefaultViewHandlerProperties viewHandlerProperties =
-        JvmBoxingUtil.box(eventHandler.getProperties(), DefaultViewHandlerProperties.class);
+    DefaultViewHandlerProperties viewHandlerProperties = eventHandler.getProperties(DefaultViewHandlerProperties.TYPE);
 
     List<String> spaceIds = viewHandlerProperties.getSpaceIds();
     if (spaceIds == null || spaceIds.isEmpty()) {
@@ -147,8 +145,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
 
   private @NotNull Response tagFilterHandlerPropertiesValidation(EventHandlerConfig eventHandler) {
 
-    TagFilterHandlerProperties properties =
-        JvmBoxingUtil.box(eventHandler.getProperties(), TagFilterHandlerProperties.class);
+    TagFilterHandlerProperties properties = eventHandler.getProperties(TagFilterHandlerProperties.TYPE);
 
     List<String> addList = properties.getAdd();
     List<String> removeWithPrefixesList = properties.getRemoveWithPrefixes();

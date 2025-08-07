@@ -19,18 +19,23 @@
 package com.here.naksha.lib.handlers;
 
 import java.util.List;
-import naksha.base.JvmBoxingUtil;
+
+import naksha.base.PlatformType;
 import naksha.base.StringList;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.Nullable;
 
+import static naksha.base.Platform.forClass;
+
 /**
  * Default variant of EventHandler properties supported by Naksha - for TagFilterHandler
  */
 @AvailableSince(NakshaVersion.v2_0_13)
 public class TagFilterHandlerProperties extends NakshaProperties {
+
+  public static final PlatformType<TagFilterHandlerProperties> TYPE = forClass(TagFilterHandlerProperties.class);
 
   @AvailableSince(NakshaVersion.v2_0_13)
   public static final String ADD_VALUES = "add";
@@ -45,35 +50,35 @@ public class TagFilterHandlerProperties extends NakshaProperties {
    * To specify list of tags to be added to the {@link naksha.model.objects.NakshaFeature} during create/update
    * {@link naksha.model.request.WriteRequest} operations.
    */
-  public @Nullable List<String> getAdd() {
-    return JvmBoxingUtil.box(get(ADD_VALUES), StringList.class);
+  public @Nullable StringList getAdd() {
+    return getAs(ADD_VALUES, StringList.TYPE);
   }
 
   public void setAdd(@Nullable final List<String> add) {
-    setRaw(ADD_VALUES, StringList.fromList(add));
+    set(ADD_VALUES, StringList.fromList(add));
   }
 
   /**
    * To specify prefix-matching tags to be removed from the {@link naksha.model.objects.NakshaFeature} during create/update
    * {@link naksha.model.request.WriteRequest} operations. This is applied before {@link #getAdd()} operation.
    */
-  public @Nullable List<String> getRemoveWithPrefixes() {
-    return JvmBoxingUtil.box(get(REMOVE_W_PREFIXES), StringList.class);
+  public @Nullable StringList getRemoveWithPrefixes() {
+    return getAs(REMOVE_W_PREFIXES, StringList.TYPE);
   }
 
   public void setRemoveWithPrefixes(final @Nullable List<String> removeWithPrefixes) {
-    setRaw(REMOVE_W_PREFIXES, StringList.fromList(removeWithPrefixes));
+    set(REMOVE_W_PREFIXES, StringList.fromList(removeWithPrefixes));
   }
 
   /**
    * To specify list of tags to be added as AND filter condition whenever {@link naksha.model.request.ReadFeatures} is processed via this
    * handler.
    */
-  public @Nullable List<String> getContains() {
-    return JvmBoxingUtil.box(get(CONTAINS_VALUES), StringList.class);
+  public @Nullable StringList getContains() {
+    return getAs(CONTAINS_VALUES, StringList.TYPE);
   }
 
   public void setContains(@Nullable List<String> contains) {
-    setRaw(CONTAINS_VALUES, StringList.fromList(contains));
+    set(CONTAINS_VALUES, StringList.fromList(contains));
   }
 }

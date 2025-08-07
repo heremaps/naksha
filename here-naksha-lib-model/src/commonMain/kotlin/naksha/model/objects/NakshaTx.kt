@@ -4,8 +4,6 @@ package naksha.model.objects
 
 import naksha.base.*
 import naksha.base.Platform.Platform_C.forKClass
-import naksha.geo.BBox
-import naksha.geo.SpGeometry
 import naksha.model.*
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -47,7 +45,7 @@ open class NakshaTx : NakshaObject() {
     }
 
     override val properties: NakshaProperties
-        get() = get_properties(NakshaProperties.TYPE)
+        get() = getProperties(NakshaProperties.TYPE)
 
     /**
      * Sets [id], [version], [txn], and [time] in a synchronized manner.

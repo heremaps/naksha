@@ -43,7 +43,7 @@ open class NakshaFeature() : GeoFeature() {
     }
 
     override val properties: NakshaProperties
-        get() = get_properties(NakshaProperties.TYPE)
+        get() = getProperties(NakshaProperties.TYPE)
 
     /**
      * Reference point of the feature. Used for grid calculation.

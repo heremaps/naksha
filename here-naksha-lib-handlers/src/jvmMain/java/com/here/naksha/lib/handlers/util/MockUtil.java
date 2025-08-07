@@ -27,8 +27,6 @@ import com.here.naksha.lib.core.view.ViewSerialize;
 import java.io.IOException;
 
 import naksha.base.FromJsonOptions;
-import naksha.base.JvmBoxingUtil;
-import naksha.base.JvmJsonUtil;
 import naksha.base.Platform;
 import naksha.model.objects.NakshaFeatureList;
 import org.jetbrains.annotations.NotNull;
@@ -74,6 +72,6 @@ public class MockUtil {
   }
 
   public static NakshaFeatureList parseFeatures(final @NotNull String featuresFile) {
-    return JvmBoxingUtil.box(Platform.fromJson(loadFile(featuresFile), FromJsonOptions.DEFAULT), NakshaFeatureList.class);
+    return Platform.fromJson(loadFile(featuresFile), NakshaFeatureList.TYPE);
   }
 }

@@ -20,18 +20,22 @@ package com.here.naksha.lib.handlers;
 
 import java.util.Arrays;
 import java.util.List;
-import naksha.base.JvmBoxingUtil;
+import naksha.base.PlatformType;
 import naksha.base.StringList;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static naksha.base.Platform.forClass;
+
 @AvailableSince(NakshaVersion.v2_0_12)
 public class DefaultViewHandlerProperties extends NakshaProperties {
+
+  public static final PlatformType<DefaultViewHandlerProperties> TYPE = forClass(DefaultViewHandlerProperties.class);
 
   @AvailableSince(NakshaVersion.v2_0_12)
   public static final String STORAGE_ID = "storageId";
@@ -50,8 +54,8 @@ public class DefaultViewHandlerProperties extends NakshaProperties {
     setRaw(STORAGE_ID, storageId);
   }
 
-  public @Nullable List<String> getSpaceIds() {
-    return JvmBoxingUtil.box(get(SPACE_IDS), StringList.class);
+  public @Nullable StringList getSpaceIds() {
+    return getAs(SPACE_IDS, StringList.TYPE);
   }
 
   public void setSpaceIds(@Nullable List<String> spaceIds) {
@@ -78,7 +82,7 @@ public class DefaultViewHandlerProperties extends NakshaProperties {
   }
 
   public void setViewType(@NotNull ViewType viewType) {
-    setRaw(VIEW_TYPE, viewType);
+    set(VIEW_TYPE, viewType);
   }
 
   public enum ViewType {

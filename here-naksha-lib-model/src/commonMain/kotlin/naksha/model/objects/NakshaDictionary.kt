@@ -3,9 +3,6 @@
 package naksha.model.objects
 
 import naksha.base.*
-import naksha.geo.BBox
-import naksha.geo.SpGeometry
-import naksha.geo.SpPoint
 import naksha.jbon.JbDictionary
 import naksha.jbon.JbEncoder
 import naksha.base.NakshaError.NakshaError_C.ILLEGAL_STATE
@@ -90,7 +87,7 @@ open class NakshaDictionary() : NakshaObject() {
     }
 
     override val properties: NakshaProperties
-        get() = get_properties(NakshaProperties.TYPE)
+        get() = getProperties(NakshaProperties.TYPE)
 
     /**
      * The content of the dictionary.

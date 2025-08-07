@@ -31,9 +31,10 @@ import com.here.naksha.lib.handlers.util.HandlerUtil;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import naksha.base.JvmBoxingUtil;
+
+import naksha.mom.v2.MomProperties;
 import naksha.mom.v2.MomReference;
-import naksha.model.mom.MomReferenceList;
+import naksha.mom.v2.MomReferenceList;
 import naksha.mom.v2.MomReviewState;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
@@ -59,8 +60,7 @@ public class EndorsementHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
-    this.properties =
-        Objects.requireNonNull(JvmBoxingUtil.box(eventHandler.getProperties(), NakshaProperties.class));
+    this.properties = Objects.requireNonNull(eventHandler.getProperties(NakshaProperties.TYPE));
   }
 
   @Override
@@ -116,7 +116,7 @@ public class EndorsementHandler extends AbstractEventHandler {
       return;
     }
     for (final NakshaFeature violation : violations) {
-      final MomReferenceList references = violation.getProperties().getReferences();
+      final MomReferenceList references = violation.getProperties(MomProperties.TYPE).getReferences();
       if (references == null) {
         continue;
       }

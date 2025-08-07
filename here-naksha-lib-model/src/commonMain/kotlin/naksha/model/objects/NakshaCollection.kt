@@ -4,9 +4,6 @@ package naksha.model.objects
 
 import naksha.base.*
 import naksha.base.Platform.Platform_C.forKClass
-import naksha.geo.BBox
-import naksha.geo.SpGeometry
-import naksha.geo.SpPoint
 import naksha.model.Flags
 import naksha.model.Naksha
 import kotlin.js.JsExport
@@ -61,7 +58,7 @@ open class NakshaCollection() : NakshaObject() {
     }
 
     override val properties: NakshaProperties
-        get() = get_properties(NakshaProperties.TYPE)
+        get() = getProperties(NakshaProperties.TYPE)
 
     override fun featureNumberOfId(id: String): Int64 = Naksha.collectionNumber(id).toInt64()
 

@@ -70,8 +70,8 @@ open class StringList() : ListProxy<String>(String_TYPE){
         val TYPE = forKClass(StringList::class).withPackageName(PACKAGE_NAME)
 
         @JvmStatic
-        fun fromList(strings: List<String>): StringList =
-            StringList().apply { addAll(strings) }
+        fun fromList(strings: List<String>?): StringList =
+            StringList().apply { if (strings != null) addAll(strings) }
 
         @JvmStatic
         fun of(vararg strings: String): StringList =

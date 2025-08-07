@@ -11,6 +11,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -26,6 +27,17 @@ open class TagList() : ListProxy<String>(String_TYPE) {
     @JsName("of")
     constructor(vararg tags: String): this() {
         addTags(listOf(*tags), false)
+    }
+
+    /**
+     * Create a tag list from the given arguments.
+     * @param tags the tags.
+     * @param normalize if the tags should become normalized.
+     */
+    @JvmOverloads
+    @JsName("ofList")
+    constructor(tags: List<String>, normalize: Boolean = true): this() {
+        addTags(tags, normalize)
     }
 
     /**

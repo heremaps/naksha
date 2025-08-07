@@ -4,9 +4,6 @@ package naksha.model.objects
 
 import naksha.base.*
 import naksha.base.Platform.Platform_C.forKClass
-import naksha.geo.BBox
-import naksha.geo.SpGeometry
-import naksha.geo.SpPoint
 import naksha.model.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -53,7 +50,7 @@ open class NakshaMap() : NakshaObject() {
     }
 
     override val properties: NakshaProperties
-        get() = get_properties(NakshaProperties.TYPE)
+        get() = getProperties(NakshaProperties.TYPE)
 
     /**
      * The encoding flags to be used for new rows of all collections of this map, that do not have an own [defaultFlags][NakshaCollection.defaultFlags].

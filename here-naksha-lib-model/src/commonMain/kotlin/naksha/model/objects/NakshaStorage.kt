@@ -3,9 +3,6 @@
 package naksha.model.objects
 
 import naksha.base.*
-import naksha.geo.BBox
-import naksha.geo.SpGeometry
-import naksha.geo.SpPoint
 import naksha.model.Naksha
 import naksha.base.NakshaError
 import naksha.base.Platform.Platform_C.forKClass
@@ -65,7 +62,7 @@ open class NakshaStorage() : NakshaObject() {
     }
 
     override val properties: NakshaProperties
-        get() = get_properties(NakshaProperties.TYPE)
+        get() = getProperties(NakshaProperties.TYPE)
 
     /**
      * The default classname to use, if any.

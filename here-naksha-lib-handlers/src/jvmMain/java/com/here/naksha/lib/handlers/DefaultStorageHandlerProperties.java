@@ -19,7 +19,7 @@
 package com.here.naksha.lib.handlers;
 
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
-import naksha.base.JvmBoxingUtil;
+import naksha.base.PlatformType;
 import naksha.model.IStorage;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
@@ -28,12 +28,15 @@ import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static naksha.base.Platform.forClass;
+
 /**
  * Default variant of EventHandler properties supported by Naksha - default storage handler
  */
 @AvailableSince(NakshaVersion.v2_0_7)
 public class DefaultStorageHandlerProperties extends NakshaProperties {
 
+  public static final PlatformType<DefaultStorageHandlerProperties> TYPE = forClass(DefaultStorageHandlerProperties.class);
   private static final Boolean DEFAULT_AUTO_CREATE_COLLECTION = true;
   private static final Boolean DEFAULT_AUTO_DELETE_COLLECTION = true;
 
@@ -64,7 +67,7 @@ public class DefaultStorageHandlerProperties extends NakshaProperties {
    * Details of the backend xyz collection to use. If undefined, the collection defined at the {@link SpaceProperties} level will be used.
    */
   public @Nullable NakshaCollection getCollection() {
-    return JvmBoxingUtil.box(get(COLLECTION), NakshaCollection.class);
+    return getAs(COLLECTION, NakshaCollection.TYPE);
   }
 
   public void setCollection(final @Nullable NakshaCollection collection) {

@@ -30,7 +30,6 @@ import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.HandlerUtil;
 import java.util.List;
 import java.util.Objects;
-import naksha.base.JvmBoxingUtil;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.Request;
@@ -54,7 +53,7 @@ public class EchoHandler extends AbstractEventHandler {
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
     this.properties =
-        Objects.requireNonNull(JvmBoxingUtil.box(eventHandler.getProperties(), NakshaProperties.class));
+        Objects.requireNonNull(eventHandler.getProperties(NakshaProperties.TYPE));
   }
 
   @Override

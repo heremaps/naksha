@@ -22,7 +22,6 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import com.here.naksha.storage.http.HttpStorage;
-import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaContext;
 import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
@@ -43,8 +42,8 @@ import java.util.List;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.handlers.internal.HttpStorageValidation.validateConfigForHttpStorage;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
-import static naksha.model.NakshaError.CONFLICT;
-import static naksha.model.NakshaError.EXCEPTION;
+import static naksha.base.NakshaError.CONFLICT;
+import static naksha.base.NakshaError.EXCEPTION;
 import static naksha.model.util.ResultHelper.extractResponseItems;
 
 public class IntHandlerForStorageConfigs extends AdminFeatureEventHandler<NakshaStorage> {
@@ -65,7 +64,7 @@ public class IntHandlerForStorageConfigs extends AdminFeatureEventHandler<Naksha
     if (basicValidation instanceof ErrorResponse) {
       return basicValidation;
     }
-    final NakshaStorage storageConfig = JvmBoxingUtil.box(write.getFeature(), NakshaStorage.class);
+    final NakshaStorage storageConfig = write.getFeature(NakshaStorage.TYPE);
     if (storageConfig == null) {
       return new ErrorResponse(
           NakshaError.ILLEGAL_ARGUMENT,

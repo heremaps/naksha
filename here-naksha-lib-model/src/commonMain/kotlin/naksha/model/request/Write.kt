@@ -335,6 +335,14 @@ open class Write : AnyObject() {
     var feature by FEATURE_NULL
 
     /**
+     * The new feature state to persist; if any _(not valid for deletes)_.
+     * @param type the type to return.
+     * @return the feature as given type.
+     * @since 3.0
+     */
+    fun <FEATURE : AnyObject> getFeature(type: PlatformType<FEATURE>): FEATURE? = getAs("feature", type)
+
+    /**
      * @see [feature]
      */
     fun withFeature(value: NakshaFeature?): Write {

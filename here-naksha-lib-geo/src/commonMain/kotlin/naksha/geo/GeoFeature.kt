@@ -128,19 +128,19 @@ open class GeoFeature : AnyTypedIdObject() {
      * The properties of the feature.
      * @since 3.0
      * @see setProperties
-     * @see get_properties
+     * @see getProperties
      */
     @KT_68775_infinite_loop_for_calling_super_getter
     open val properties: AnyObject
-        get() = get_properties(AnyObject.TYPE)
+        get() = getProperties(AnyObject.TYPE)
 
     /**
-     * Internal method to read properties.
-     * @param type The type that should be returned.
+     * Read properties in a specific type.
+     * @param type the type that should be returned.
      * @return the properties.
      */
     @KT_68775_infinite_loop_for_calling_super_getter
-    protected fun <T : MapProxy<String,*>> get_properties(type: PlatformType<out T>): T {
+    fun <T : MapProxy<String,*>> getProperties(type: PlatformType<out T>): T {
         val po = platformObject()
         var properties = map_get(po, "properties")
         if (properties !is PlatformMap) {

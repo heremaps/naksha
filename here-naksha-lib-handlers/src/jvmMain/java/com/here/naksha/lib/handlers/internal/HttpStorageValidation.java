@@ -5,7 +5,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Set;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.NakshaError;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
@@ -29,7 +28,7 @@ public class HttpStorageValidation {
   static Response validateConfigForHttpStorage(NakshaStorage httpStorageConfig) {
     HttpStorageProperties httpStorageProperties;
     try {
-      httpStorageProperties = JvmBoxingUtil.box(httpStorageConfig.getProperties(), HttpStorageProperties.class);
+      httpStorageProperties = httpStorageConfig.getProperties(HttpStorageProperties.TYPE);
     } catch (Exception exception) {
       return new ErrorResponse(
           NakshaError.ILLEGAL_ARGUMENT,

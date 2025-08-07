@@ -32,11 +32,9 @@ import com.here.naksha.lib.view.ViewReadSession;
 import com.here.naksha.lib.view.merge.MergeByStoragePriority;
 import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
 import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
-import naksha.base.JvmBoxingUtil;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
 import naksha.base.NakshaError;
-import naksha.base.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
@@ -71,7 +69,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
         super(hub);
         this.eventHandler = eventHandler;
         this.eventTarget = eventTarget;
-        this.properties = JvmBoxingUtil.box(eventHandler.getProperties(), DefaultViewHandlerProperties.class);
+        this.properties = eventHandler.getProperties(DefaultViewHandlerProperties.TYPE);
     }
 
     @Override
