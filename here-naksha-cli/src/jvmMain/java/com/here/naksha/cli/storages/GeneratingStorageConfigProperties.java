@@ -7,6 +7,7 @@ public final class GeneratingStorageConfigProperties extends NakshaProperties {
     private static final String COUNT_KEY = "count";
     private static final String TILE_IDS_KEY = "tileIds";
     private static final String TILE_IDS_CSV_FILE_PATH_KEY = "tileIdsCsvFilePath";
+    private static final String FEATURE_TEMPLATE_FILE_PATH_KEY = "featureTemplateFilePath";
 
     public Integer getCount() {
         return (Integer) getRaw(COUNT_KEY);
@@ -44,6 +45,19 @@ public final class GeneratingStorageConfigProperties extends NakshaProperties {
 
     public GeneratingStorageConfigProperties withTileIdsCsvFilePath(String path) {
         setTileIdsCsvFilePath(path);
+        return this;
+    }
+
+    public String getFeatureTemplateFilePath() {
+        return (String) getRaw(FEATURE_TEMPLATE_FILE_PATH_KEY);
+    }
+
+    public void setFeatureTemplateFilePath(String path) {
+        setRaw(FEATURE_TEMPLATE_FILE_PATH_KEY, path);
+    }
+
+    public GeneratingStorageConfigProperties withFetureTemplateFilePath(String path) {
+        setFeatureTemplateFilePath(path);
         return this;
     }
 }

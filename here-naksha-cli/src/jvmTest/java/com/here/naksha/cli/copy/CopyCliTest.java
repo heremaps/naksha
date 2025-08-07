@@ -3,6 +3,9 @@ package com.here.naksha.cli.copy;
 import com.here.naksha.cli.CliTestCase;
 import com.here.naksha.cli.TestCommandLine;
 import com.here.naksha.cli.copy.service.*;
+import com.here.naksha.cli.parsers.JsonFileParser;
+import com.here.naksha.cli.parsers.JsonFileParserException;
+import naksha.model.objects.NakshaStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.File;
+import java.nio.file.Path;
 
 import static com.here.naksha.cli.TestUtils.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,31 +39,31 @@ class CopyCliTest {
     }
 
     @Test
-    void shouldCopy() throws CopyServiceException, NakshaStorageParserException {
+    void shouldCopy() throws CopyServiceException, JsonFileParserException {
         // Given
-        File srcStorageConfig = new File(validStorageConfigPath);
+        Path srcStorageConfig = Path.of(validStorageConfigPath);
 
         // And
-        File targetStorageConfig = new File(validStorageConfigPath);
+        Path targetStorageConfig = Path.of(validStorageConfigPath);
 
         // And
-        NakshaStorageParser nakshaStorageParser = new NakshaStorageParser();
+        JsonFileParser jsonFileParser = new JsonFileParser();
 
         // And
-        CopyElement srcCopyElement = new CopyElement.Builder(nakshaStorageParser.get(srcStorageConfig), "srcc")
+        CopyElement srcCopyElement = new CopyElement.Builder(jsonFileParser.parse(srcStorageConfig, NakshaStorage.class), "srcc")
                 .setMapId("srcm")
                 .build();
 
         // And
-        CopyElement targetCopyElement = new CopyElement.Builder(nakshaStorageParser.get(targetStorageConfig), "targetc")
+        CopyElement targetCopyElement = new CopyElement.Builder(jsonFileParser.parse(targetStorageConfig, NakshaStorage.class), "targetc")
                 .setMapId("targetm")
                 .build();
 
         // And
         CliTestCase testCase = new CliTestCase(
                 new String[]{
-                        "--srcStorageConfig=%s".formatted(srcStorageConfig.getPath()),
-                        "--targetStorageConfig=%s".formatted(targetStorageConfig.getPath()),
+                        "--srcStorageConfig=%s".formatted(srcStorageConfig),
+                        "--targetStorageConfig=%s".formatted(targetStorageConfig),
                         "--srcMapId=%s".formatted(srcCopyElement.getMapId()),
                         "--srcCollectionId=%s".formatted(srcCopyElement.getCollectionId()),
                         "--targetMapId=%s".formatted(targetCopyElement.getMapId()),

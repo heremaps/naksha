@@ -1,6 +1,6 @@
 package com.here.naksha.cli.storages;
 
-import com.here.naksha.cli.TestUtils;
+import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.lib.core.models.geojson.HQuad;
 import naksha.base.JvmList;
 import naksha.geo.SpBoundingBox;
@@ -24,11 +24,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static com.here.naksha.cli.TestUtils.getAbsolutePathOfResource;
 import static naksha.model.util.ResultHelper.extractResponseItems;
 import static org.junit.jupiter.api.Assertions.*;
 
 class GeneratingStorageTest {
-    SessionOptions sessionOptions = new SessionOptions();
+    private final JsonFileParser jsonFileParser = new JsonFileParser();
+    private final SessionOptions sessionOptions = new SessionOptions();
 
     @BeforeAll
     static void beforeAll() {
@@ -37,16 +39,17 @@ class GeneratingStorageTest {
 
     @ParameterizedTest
     @MethodSource
-    void shouldRead(int countOfFeatures, JvmList tileIds, String tileIdsCsv) {
+    void shouldRead(int countOfFeatures, JvmList tileIds, String tileIdsCsv, String featureTemplateFile) {
         // Given: storage
         GeneratingStorage storage = new GeneratingStorage();
 
-        // And: config with count and tileIds
+        // And: config
         GeneratingStorageConfig config = new GeneratingStorageConfig();
         config.getProperties()
                 .withCount(countOfFeatures)
                 .withTileIds(tileIds)
-                .withTileIdsCsvFilePath(tileIdsCsv);
+                .withTileIdsCsvFilePath(tileIdsCsv)
+                .withFetureTemplateFilePath(featureTemplateFile);
 
         // And: init storage with config
         storage.initStorage(config, false, false);
@@ -60,12 +63,34 @@ class GeneratingStorageTest {
         assertInstanceOf(SuccessResponse.class, response);
 
         // And: features received
-        List<NakshaFeature> nakshaFeatureList = extractResponseItems((SuccessResponse) response, NakshaFeature.class);
-        assertEquals(countOfFeatures, nakshaFeatureList.size());
+        List<NakshaFeature> generatedFeatures = extractResponseItems((SuccessResponse) response, NakshaFeature.class);
+        assertEquals(countOfFeatures, generatedFeatures.size());
 
         // And: features in tileIds from sources (list and csv file)
         List<String> expectedTileIds = getExpectedTileIdsFromSources(tileIds, tileIdsCsv);
-        assertFeaturesInTiles(nakshaFeatureList, expectedTileIds);
+        assertFeaturesInTiles(generatedFeatures, expectedTileIds);
+
+        // And: features use template file if provided
+        NakshaFeature baseFeature;
+        if (featureTemplateFile != null) {
+            baseFeature = loadBaseFeature(featureTemplateFile);
+        } else { // empty base feature otherwise
+            baseFeature = new NakshaFeature();
+        }
+
+        generatedFeatures
+                .forEach(generatedFeature -> {
+                    // Id and geometry are replaced
+                    baseFeature.setId(generatedFeature.getId());
+                    baseFeature.setGeometry(generatedFeature.getGeometry());
+                    // And reference point is erased
+                    baseFeature.setReferencePoint(null);
+
+                    assertTrue(
+                            baseFeature.contentDeepEquals(generatedFeature),
+                            "Generated feature should use template!"
+                    );
+                });
     }
 
     @Test
@@ -82,36 +107,55 @@ class GeneratingStorageTest {
     }
 
     private static Stream<Arguments> shouldRead() {
-        String csvFileName = "tile_ids.csv";
-        String absolutePathCsvFile = TestUtils.getAbsolutePathOfResource(csvFileName);
+        String tileIdsCsvFileName = "tile_ids.csv";
+        String absolutePathTileIdsCsvFile = getAbsolutePathOfResource(tileIdsCsvFileName);
+
+        String featureTemplateFileName = "sample_topology_feature.json";
+        String absolutePathFeatureTemplateFile = getAbsolutePathOfResource(featureTemplateFileName);
 
         return Stream.of(
                 Arguments.of(
                         0,
                         new JvmList("122013100013", "122013100020"),
-                        absolutePathCsvFile
+                        absolutePathTileIdsCsvFile,
+                        null
                 ),
                 Arguments.of(
                         1,
                         new JvmList("122013100013", "122013100020"),
-                        absolutePathCsvFile
+                        absolutePathTileIdsCsvFile,
+                        null
                 ),
                 Arguments.of(
                         50,
                         new JvmList("122013100013", "122013100020"),
-                        absolutePathCsvFile
+                        absolutePathTileIdsCsvFile,
+                        null
                 ),
                 Arguments.of(
                         2137,
                         new JvmList("122013100013", "122013100020", "122013100021"),
+                        null,
                         null
                 ),
                 Arguments.of(
                         7321,
                         null,
-                        absolutePathCsvFile
+                        absolutePathTileIdsCsvFile,
+                        null
+                ),
+                Arguments.of(
+                        7312,
+                        new JvmList("122013100013", "122013100020"),
+                        absolutePathTileIdsCsvFile,
+                        absolutePathFeatureTemplateFile
                 )
         );
+    }
+
+    private NakshaFeature loadBaseFeature(String featureTemplateFilePath) {
+        Path path = Path.of(featureTemplateFilePath);
+        return assertDoesNotThrow(() -> jsonFileParser.parse(path, NakshaFeature.class));
     }
 
     private List<String> getExpectedTileIdsFromSources(JvmList tileIds, String tileIdsCsv) {

@@ -1,14 +1,16 @@
 package com.here.naksha.cli.copy;
 
 import com.here.naksha.cli.copy.service.*;
+import com.here.naksha.cli.parsers.JsonFileParser;
+import com.here.naksha.cli.parsers.JsonFileParserException;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaStorage;
 import org.jetbrains.annotations.Nullable;
 import picocli.CommandLine;
 
-import java.io.File;
 import java.io.PrintWriter;
+import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
 @CommandLine.Command(
@@ -26,7 +28,7 @@ import java.util.concurrent.Callable;
 )
 public final class CopyCommand implements Callable<Integer> {
     private final CopyServiceFactory copyServiceFactory;
-    private final NakshaStorageParser nakshaStorageParser;
+    private final JsonFileParser jsonFileParser;
     private final StorageProvider storageProvider;
 
     @CommandLine.Spec
@@ -37,7 +39,7 @@ public final class CopyCommand implements Callable<Integer> {
             StorageProvider storageProvider
     ) {
         this.copyServiceFactory = copyServiceFactory;
-        this.nakshaStorageParser = new NakshaStorageParser();
+        this.jsonFileParser = new JsonFileParser();
         this.storageProvider = storageProvider;
     }
 
@@ -46,7 +48,7 @@ public final class CopyCommand implements Callable<Integer> {
             description = "Path to file with source storage config.",
             required = true
     )
-    private File srcStorageConfig;
+    private Path srcStorageConfig;
 
     @CommandLine.Option(
             names = {"--srcMapId"},
@@ -66,7 +68,7 @@ public final class CopyCommand implements Callable<Integer> {
             description = "Path to file with target storage config.",
             required = true
     )
-    private File targetStorageConfig;
+    private Path targetStorageConfig;
 
     @CommandLine.Option(
             names = {"--targetMapId"},
@@ -82,9 +84,9 @@ public final class CopyCommand implements Callable<Integer> {
     private String targetCollectionId;
 
     @Override
-    public Integer call() throws NakshaStorageParserException, CopyServiceException {
-        NakshaStorage srcNakshaStorage = nakshaStorageParser.get(srcStorageConfig);
-        NakshaStorage targetNakshaStorage = nakshaStorageParser.get(targetStorageConfig);
+    public Integer call() throws JsonFileParserException, CopyServiceException {
+        NakshaStorage srcNakshaStorage = jsonFileParser.parse(srcStorageConfig, NakshaStorage.class);
+        NakshaStorage targetNakshaStorage = jsonFileParser.parse(targetStorageConfig, NakshaStorage.class);
 
         CopyElement srcCopyElement = new CopyElement.Builder(srcNakshaStorage, srcCollectionId)
                 .setMapId(srcMapId)
