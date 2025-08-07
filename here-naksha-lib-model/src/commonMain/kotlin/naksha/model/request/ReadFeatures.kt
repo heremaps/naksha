@@ -2,9 +2,7 @@
 
 package naksha.model.request
 
-import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
-import naksha.base.StringList
+import naksha.base.*
 import naksha.base.Platform.Platform_C.forKClass
 import naksha.model.GuidList
 import naksha.model.Version

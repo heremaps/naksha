@@ -383,11 +383,11 @@ open class SuccessResponse() : Response() {
         tupleList.loadAll(acceptFeature = true)
 
         var currentList = tupleList.asList().filterNotNull()
-        for (filter in filters.filterNotNull()) {
+        for (filter in filters) {
             currentList = currentList.mapNotNull { featureTuple -> filter.filter(featureTuple) }
         }
 
-        this.withFeatureTupleList(currentList)
+        setFeatureTupleList(currentList)
         return this
     }
 

@@ -19,6 +19,7 @@
 package naksha.model.util;
 
 import static java.util.Collections.emptyList;
+import static naksha.base.NakshaBaseKt.String_TYPE;
 import static naksha.base.Platform.box;
 import static naksha.base.Platform.forClass;
 
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import naksha.base.MapProxy;
 import naksha.base.PlatformType;
 import naksha.model.Action;
 import naksha.model.objects.NakshaFeature;
@@ -93,13 +95,14 @@ public class ResultHelper {
     return features;
   }
 
-  public static <R extends NakshaFeature> JvmMapProxy<String, R> extractAndGroupAllFeaturesById(SuccessResponse response, Class<R> featureType) {
-    JvmMapProxy<String, R> featuresById = new JvmMapProxy<>(String.class, featureType);
-    final Iterator<NakshaFeature> iterator = response.getFeatures().iterator();
-    NakshaFeature current;
-    while (iterator.hasNext()) {
-      current = iterator.next();
-      featuresById.put(current.getId(), JvmBoxingUtil.box(current, featureType));
+  public static <R extends NakshaFeature> @NotNull MapProxy<String, R> extractAndGroupAllFeaturesById(
+      final @NotNull SuccessResponse response, final @NotNull Class<R> featureClass
+  ) {
+    final var featureType = forClass(featureClass);
+    final var featuresById = new MapProxy<>(String_TYPE, featureType);
+    final var featureList = response.getFeatures(NakshaFeatureList.TYPE);
+    for (final NakshaFeature current : featureList) {
+      featuresById.put(current.getId(), featureType.proxy(current));
     }
     return featuresById;
   }
