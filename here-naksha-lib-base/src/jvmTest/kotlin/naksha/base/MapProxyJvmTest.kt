@@ -3,12 +3,12 @@ package naksha.base
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
-class MapProxyTest {
+class MapProxyJvmTest {
 
     @Test
     fun shouldRemoveInIterator() {
         // Given
-        val mapProxy = MapProxy(Int::class, String::class)
+        val mapProxy = MapProxy(Int_TYPE, String_TYPE)
         mapProxy.putAll(
             mapOf(
                 1 to "one",
@@ -34,7 +34,7 @@ class MapProxyTest {
     @Test
     fun shouldUpdateContentViaEntries() {
         // Given
-        val mapProxy = MapProxy(Int::class, String::class)
+        val mapProxy = MapProxy(Int_TYPE, String_TYPE)
         mapProxy.putAll(
             mapOf(
                 1 to "one",
