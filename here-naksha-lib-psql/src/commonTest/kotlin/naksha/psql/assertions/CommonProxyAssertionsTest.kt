@@ -2,7 +2,7 @@ package naksha.psql.assertions
 
 import naksha.base.AnyObject
 import naksha.model.XyzNs
-import naksha.model.mom.MomMetaNs
+import naksha.model.mom.MomDeltaNs
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaProperties
 import kotlin.test.Test
@@ -30,7 +30,7 @@ class CommonProxyAssertionsTest {
 
     @Test
     fun shouldIgnoreLogicallyEmptyValues(){
-        // Given: Object with empty Xyz, without Meta
+        // Given: Object with empty Xyz, without Delta
         val left = NakshaFeature().apply {
             id = "some"
             properties = NakshaProperties().apply {
@@ -39,11 +39,11 @@ class CommonProxyAssertionsTest {
             }
         }
 
-        // And: Object with empty Meta, without Xyz
+        // And: Object with empty Delta, without Xyz
         val right = NakshaFeature().apply {
             id = "some"
             properties = NakshaProperties().apply {
-                meta = MomMetaNs()
+                delta = MomDeltaNs()
                 setRaw("featureType", "test_type")
             }
         }

@@ -60,14 +60,6 @@ class MomDeltaNs : AnyObject() {
      */
     var dueTS: String? by STRING_NULL
 
-    override fun onCreation() {
-        super.onCreation()
-        changeState
-        reviewState
-        potentialValue
-        priorityCategory
-    }
-
     fun getChangeStateEnum(): MomChangeState = MomChangeState.of(changeState)
 
     fun setChangeStateEnum(enumValue: MomChangeState) {
