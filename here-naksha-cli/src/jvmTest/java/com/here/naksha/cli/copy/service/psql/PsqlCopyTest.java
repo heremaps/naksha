@@ -7,7 +7,9 @@ import com.here.naksha.cli.copy.service.StorageProvider;
 import com.here.naksha.cli.storages.GeneratingStorage;
 import com.here.naksha.cli.storages.GeneratingStorageConfig;
 import com.here.naksha.cli.testcontainers.TestContainersPsqlStoragePool;
+import naksha.base.JvmList;
 import naksha.base.StringList;
+import naksha.geo.HereTile;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
@@ -15,9 +17,9 @@ import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaMap;
-import naksha.model.objects.NakshaStorage;
 import naksha.model.request.*;
-import org.junit.jupiter.api.Assertions;
+import naksha.model.request.query.SpOr;
+import naksha.model.request.query.SpRefInHereTile;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +31,7 @@ import static naksha.model.RandomFeatures.randomFeatures;
 import static naksha.model.util.RequestHelper.createFeaturesRequest;
 import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
 import static naksha.model.util.ResultHelper.extractResponseItems;
+import static org.junit.jupiter.api.Assertions.*;
 
 class PsqlCopyTest {
     private CopyService copyService;
@@ -47,7 +50,8 @@ class PsqlCopyTest {
     void shouldCopyFeaturesBetweenGeneratingStorageAndPostgres() throws CopyServiceException {
         // Given: prepared source
         int countOfFeatures = 100;
-        IStorage sourceStorage = generatingStorageWithGivenCountOfFeatures(countOfFeatures);
+        JvmList tileIds = new JvmList("122013100013", "122013100020");
+        IStorage sourceStorage = generatingStorageWithGivenCountOfFeaturesAndTilesIds(countOfFeatures, tileIds);
         CopyElement source = copyElementForGeneratingStorage(sourceStorage);
 
         // And: prepared target
@@ -59,12 +63,12 @@ class PsqlCopyTest {
         copyService.copy(source, target);
 
         // And
-        List<NakshaFeature> targetFeatures = readFeatures(
-                targetStorage, target.getMapId(), target.getCollectionId(), sessionOptions
+        List<NakshaFeature> targetFeatures = readFeaturesInTheGivenTiles(
+                targetStorage, target.getMapId(), target.getCollectionId(), sessionOptions, tileIds
         );
 
         // Then
-        Assertions.assertEquals(countOfFeatures, targetFeatures.size());
+        assertEquals(countOfFeatures, targetFeatures.size());
     }
 
     @Test
@@ -127,18 +131,20 @@ class PsqlCopyTest {
         return new CopyElement.Builder(storage.getConfig(), "").build();
     }
 
-    private IStorage generatingStorageWithGivenCountOfFeatures(int count) {
+    private IStorage generatingStorageWithGivenCountOfFeaturesAndTilesIds(int count, JvmList tileIds) {
         GeneratingStorageConfig config = new GeneratingStorageConfig();
-        config.getProperties().setCount(count);
         config.setId("test_generating_storage");
         config.setClassName(GeneratingStorage.class.getCanonicalName());
+        config.getProperties()
+                .withCount(count)
+                .withTileIds(tileIds);
 
         return Naksha.useStorage(config);
     }
 
     private void assertSameFeatures(List<NakshaFeature> expectedFeatures, List<NakshaFeature> actualFeatures) {
-        Assertions.assertEquals(expectedFeatures.size(), actualFeatures.size());
-        Assertions.assertIterableEquals(
+        assertEquals(expectedFeatures.size(), actualFeatures.size());
+        assertIterableEquals(
                 expectedFeatures.stream().map(NakshaFeature::getId).sorted().toList(),
                 actualFeatures.stream().map(NakshaFeature::getId).sorted().toList()
         );
@@ -168,6 +174,27 @@ class PsqlCopyTest {
         makeWriteRequest(storage, writeRequest, sessionOptions);
     }
 
+    private List<NakshaFeature> readFeaturesInTheGivenTiles(
+            IStorage storage,
+            String mapId,
+            String collectionId,
+            SessionOptions sessionOptions,
+            JvmList tileIds
+    ) {
+        SpOr spOr = new SpOr();
+        tileIds.forEach(tileId -> spOr.add(new SpRefInHereTile(new HereTile((String) tileId))));
+
+        RequestQuery requestQuery = new RequestQuery();
+        requestQuery.setSpatial(spOr);
+
+        ReadFeatures readRequest = createReadFeaturesRequest(mapId, collectionId);
+        readRequest.setQuery(requestQuery);
+
+        SuccessResponse response = makeReadRequest(storage, readRequest, sessionOptions);
+
+        return extractResponseItems(response, NakshaFeature.class);
+    }
+
     private List<NakshaFeature> readFeatures(
             IStorage storage,
             String mapId,
@@ -176,14 +203,18 @@ class PsqlCopyTest {
     ) {
         ReadFeatures readFeatures = createReadFeaturesRequest(mapId, collectionId);
 
+        SuccessResponse response = makeReadRequest(storage, readFeatures, sessionOptions);
+
+        return extractResponseItems(response, NakshaFeature.class);
+    }
+
+    private SuccessResponse makeReadRequest(IStorage storage, Request request, SessionOptions sessionOptions) {
         Response response = storage.useReadSession(
                 sessionOptions,
-                reader -> reader.execute(readFeatures)
+                reader -> reader.execute(request)
         );
 
-        Assertions.assertInstanceOf(SuccessResponse.class, response);
-
-        return extractResponseItems((SuccessResponse) response, NakshaFeature.class);
+        return assertInstanceOf(SuccessResponse.class, response);
     }
 
     private ReadFeatures createReadFeaturesRequest(String mapId, String collectionId) {
@@ -226,7 +257,7 @@ class PsqlCopyTest {
     private void makeWriteRequest(IStorage storage, WriteRequest writeRequest, SessionOptions sessionOptions) {
         storage.useWriteSession(sessionOptions, writer -> {
             Response response = writer.execute(writeRequest);
-            Assertions.assertInstanceOf(SuccessResponse.class, response);
+            assertInstanceOf(SuccessResponse.class, response);
             writer.commit();
             return response;
         });

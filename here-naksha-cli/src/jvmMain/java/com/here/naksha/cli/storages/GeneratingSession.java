@@ -11,13 +11,11 @@ import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.List;
 
 final class GeneratingSession implements IReadSession {
     private final GeneratingStorage storage;
     private final SessionOptions sessionOptions;
-    private final GeneratingStorageConfigProperties configProperties;
 
     GeneratingSession(
             GeneratingStorage storage,
@@ -25,22 +23,15 @@ final class GeneratingSession implements IReadSession {
     ) {
         this.storage = storage;
         this.sessionOptions = sessionOptions;
-        GeneratingStorageConfig config = storage.getConfig();
-        configProperties = config.getProperties();
     }
 
     @NotNull
     @Override
     public Response execute(@NotNull Request request) {
-        int count = configProperties.getCount();
-
-        List<NakshaFeature> features = new ArrayList<>();
-
-        for (int i = 0; i < count; ++i) {
-            features.add(new NakshaFeature(Integer.toString(i)));
-        }
-
-        return new SuccessResponse(features);
+        GeneratingStorageService service = storage.getService();
+        GeneratingStorageConfig config = storage.getConfig();
+        List<NakshaFeature> generatedFeatures = service.generateFeatures(config.getProperties());
+        return new SuccessResponse(generatedFeatures);
     }
 
     @NotNull
