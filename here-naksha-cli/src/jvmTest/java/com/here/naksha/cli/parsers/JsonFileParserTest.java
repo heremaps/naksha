@@ -19,7 +19,10 @@ class JsonFileParserTest {
         JsonFileParser jsonFileParser = new JsonFileParser();
 
         // When & Then
-        JsonFileParserException exception = assertThrows(JsonFileParserException.class, () -> jsonFileParser.parse(pathToFile, AnyObject.class));
+        JsonFileParserException exception = assertThrows(
+                JsonFileParserException.class,
+                () -> jsonFileParser.parse(pathToFile, AnyObject.class)
+        );
         assertEquals("File does not exist! file: %s".formatted(pathToFile), exception.getMessage());
     }
 
@@ -33,7 +36,10 @@ class JsonFileParserTest {
         JsonFileParser jsonFileParser = new JsonFileParser();
 
         // When & Then
-        JsonFileParserException exception = assertThrows(JsonFileParserException.class, () -> jsonFileParser.parse(pathToFile, AnyObject.class));
+        JsonFileParserException exception = assertThrows(
+                JsonFileParserException.class,
+                () -> jsonFileParser.parse(pathToFile, AnyObject.class)
+        );
         assertEquals("Problem with reading! file: %s".formatted(pathToFile), exception.getMessage());
     }
 
@@ -43,12 +49,15 @@ class JsonFileParserTest {
         JsonFileParser jsonFileParser = new JsonFileParser();
 
         // When & Then
-        JsonFileParserException exception = assertThrows(JsonFileParserException.class, () -> jsonFileParser.parse(dir, AnyObject.class));
+        JsonFileParserException exception = assertThrows(
+                JsonFileParserException.class,
+                () -> jsonFileParser.parse(dir, AnyObject.class)
+        );
         assertEquals("It is not a file! file: %s".formatted(dir), exception.getMessage());
     }
 
     @Test
-    void shouldFailWithJsonParsing(@TempDir Path dir) throws IOException {
+    void shouldFailWithJsonParsingProblem(@TempDir Path dir) throws IOException {
         // Given
         Path pathToFile = dir.resolve("file");
         Files.writeString(pathToFile, """
@@ -59,8 +68,26 @@ class JsonFileParserTest {
         JsonFileParser jsonFileParser = new JsonFileParser();
 
         // When & Then
-        JsonFileParserException exception = assertThrows(JsonFileParserException.class, () -> jsonFileParser.parse(pathToFile, AnyObject.class));
+        JsonFileParserException exception = assertThrows(
+                JsonFileParserException.class,
+                () -> jsonFileParser.parse(pathToFile, AnyObject.class)
+        );
         assertEquals("Problem with json parsing! file: %s".formatted(pathToFile), exception.getMessage());
+    }
+
+    @Test
+    void shouldFailWithCannotBeBoxed(@TempDir Path dir) throws IOException {
+        // Given: file with PlatformList
+        Path pathToFile = dir.resolve("file");
+        Files.writeString(pathToFile, "[1, 2]");
+        JsonFileParser jsonFileParser = new JsonFileParser();
+
+        // When: parsing to proxy for PlatformMap & Then: throw
+        JsonFileParserException exception = assertThrows(
+                JsonFileParserException.class,
+                () -> jsonFileParser.parse(pathToFile, AnyObject.class)
+        );
+        assertEquals("Cannot be boxed! file: %s".formatted(pathToFile), exception.getMessage());
     }
 
     @Test
@@ -77,7 +104,7 @@ class JsonFileParserTest {
         // When
         AnyObject object = assertDoesNotThrow(() -> jsonFileParser.parse(pathToFile, AnyObject.class));
 
-        // Then: key and value is present
+        // Then: key and value are present
         assertNotNull(object);
         assertEquals("value", object.get("key"));
     }

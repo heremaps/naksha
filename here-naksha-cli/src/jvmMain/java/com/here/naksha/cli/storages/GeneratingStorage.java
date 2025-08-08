@@ -25,6 +25,10 @@ public final class GeneratingStorage extends AbstractStorage<GeneratingStorageCo
     @NotNull
     @Override
     public IReadSession newReadSession(@Nullable SessionOptions sessionOptions) {
+        if (sessionOptions == null) {
+            sessionOptions = SessionOptions.from(NakshaContext.currentContext());
+        }
+
         return new GeneratingSession(
                 this,
                 sessionOptions

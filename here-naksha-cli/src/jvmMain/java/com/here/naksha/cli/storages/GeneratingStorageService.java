@@ -11,6 +11,7 @@ import naksha.geo.SpLineString;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.objects.NakshaFeature;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,19 +26,9 @@ final class GeneratingStorageService {
     private final JsonFileParser jsonFileParser = new JsonFileParser();
 
     List<NakshaFeature> generateFeatures(GeneratingStorageConfigProperties configProperties) {
-        Integer count = configProperties.getCount();
-
-        if (count == null) {
-            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Provide count in the config properties.");
-        }
-
-        List<String> tileIds = getTileIds(configProperties);
-
-        NakshaFeature baseFeature = new NakshaFeature();
-
-        if (configProperties.getFeatureTemplateFilePath() != null) {
-            baseFeature = loadBaseFeature(configProperties.getFeatureTemplateFilePath());
-        }
+        int count = requireCount(configProperties.getCount());
+        List<String> tileIds = loadAndRequireTileIds(configProperties);
+        NakshaFeature templateFeature = loadTemplateFeatureOrEmpty(configProperties.getFeatureTemplateFilePath());
 
         List<NakshaFeature> features = new ArrayList<>();
         Random random = ThreadLocalRandom.current();
@@ -45,16 +36,32 @@ final class GeneratingStorageService {
         for (int i = 0; i < count; ++i) {
             String featureId = Integer.toString(i);
             String tileId = randomTileId(tileIds, random);
-            NakshaFeature feature = generateFeature(baseFeature, featureId, tileId, random);
+            NakshaFeature feature = generateFeature(templateFeature, featureId, tileId, random);
             features.add(feature);
         }
 
         return features;
     }
 
-    private NakshaFeature loadBaseFeature(String featureTemplateFilePath) {
-        Path path = Path.of(featureTemplateFilePath);
+    private int requireCount(@Nullable Integer count) {
+        if (count == null) {
+            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Provide count in the config properties.");
+        }
+
+        return count;
+    }
+
+    private NakshaFeature loadTemplateFeatureOrEmpty(@Nullable String featureTemplateFilePath) {
+        if (featureTemplateFilePath != null) {
+            return loadTemplateFeature(featureTemplateFilePath);
+        }
+
+        return new NakshaFeature();
+    }
+
+    private NakshaFeature loadTemplateFeature(String featureTemplateFilePath) {
         try {
+            Path path = Path.of(featureTemplateFilePath);
             return jsonFileParser.parse(path, NakshaFeature.class);
         } catch (JsonFileParserException e) {
             throw new NakshaException(NakshaError.EXCEPTION, "Problem while loading the feature template!", e);
@@ -98,7 +105,7 @@ final class GeneratingStorageService {
         return new PointCoord(currentLon, currentLat);
     }
 
-    private List<String> getTileIds(GeneratingStorageConfigProperties configProperties) {
+    private List<String> loadAndRequireTileIds(GeneratingStorageConfigProperties configProperties) {
         List<String> tileIds = new ArrayList<>();
 
         if (configProperties.getTileIds() != null) {
@@ -124,8 +131,8 @@ final class GeneratingStorageService {
     }
 
     private List<String> loadTileIdsFromCsv(String pathToFile) {
-        Path path = Paths.get(pathToFile);
         try {
+            Path path = Paths.get(pathToFile);
             return Files.readAllLines(path);
         } catch (IOException e) {
             throw new NakshaException(NakshaError.EXCEPTION, "Problem while loading tileIds from CSV file!", e);

@@ -49,7 +49,7 @@ class GeneratingStorageTest {
                 .withCount(countOfFeatures)
                 .withTileIds(tileIds)
                 .withTileIdsCsvFilePath(tileIdsCsv)
-                .withFetureTemplateFilePath(featureTemplateFile);
+                .withFeatureTemplateFilePath(featureTemplateFile);
 
         // And: init storage with config
         storage.initStorage(config, false, false);
