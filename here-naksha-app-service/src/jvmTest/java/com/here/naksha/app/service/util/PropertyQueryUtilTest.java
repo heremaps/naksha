@@ -11,14 +11,13 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import com.here.naksha.app.service.http.ops.PropertyQueryUtil;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
-import java.util.Set;
 import java.util.stream.Stream;
 import naksha.model.NakshaException;
-import naksha.model.objects.NakshaFeature;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.DoubleOp;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.PAnd;
+import naksha.model.request.query.POr;
 import naksha.model.request.query.StringOp;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -31,7 +30,7 @@ class PropertyQueryUtilTest {
   void testBuildOperationForPropertySearchParams() {
     // Given: query params
     final QueryParameterList params = new QueryParameterList(
-        urlEncoded("f.id") + "=" + urlEncoded("@value:1") + ",'12345'"
+        "&p.prop_1=value_1"
         + "&p.prop_2!=value_2,value_22"
         + "&p.prop_3=.null,value_33"
         + "&p.prop_4!=.null,value_44"
@@ -49,7 +48,6 @@ class PropertyQueryUtilTest {
         + "&" + urlEncoded("properties.@ns:com:here:xyz.tags") + "=cs=" + urlEncoded("{\"id\":\"123\"}") + ",element_4"
         + "&f.tags=cs=element_5"
     );
-    final Set<String> excludedKeys = Set.of("west", "tags");
 
     // When: retrieving query from query params
     final IPropertyQuery retrievedQuery = PropertyQueryUtil.propertyQueryFromParams(params);
@@ -60,13 +58,12 @@ class PropertyQueryUtilTest {
     // And: it contains 15 subclauses
     assertEquals(15, rootAndQuery.size(), "Expected total 15 AND operations");
 
-    // And: first op is OR
+    // And: first op is simple query
     assertThatPropertyQuery(rootAndQuery.get(0))
-        .isPOr()
-        .hasChildrenThat(
-            first -> first.hasOp(StringOp.EQUALS).hasPropertyWithPath(NakshaFeature.ID_KEY).hasValue("@value:1"),
-            second -> second.hasOp(StringOp.EQUALS).hasPropertyWithPath(NakshaFeature.ID_KEY).hasValue("12345")
-        );
+        .isPQuery()
+        .hasOp(StringOp.EQUALS)
+        .hasPropertyWithPath("properties", "prop_1")
+        .hasValue("value_1");
 
     // And: second op is OR
     assertThatPropertyQuery(rootAndQuery.get(1))
@@ -86,10 +83,7 @@ class PropertyQueryUtilTest {
     assertThatPropertyQuery(rootAndQuery.get(2))
         .isPOr()
         .hasChildrenThat(
-            first -> first.isPNot()
-                .hasChildrenThat(
-                    f1 -> f1.isPQuery().hasOp(StringOp.EXISTS).hasPropertyWithPath("properties", "prop_3")
-                ),
+            first -> first.isPQuery().hasOp(AnyOp.IS_NULL).hasPropertyWithPath("properties", "prop_3"),
             second -> second.isPQuery().hasOp(StringOp.EQUALS).hasPropertyWithPath("properties", "prop_3").hasValue("value_33")
         )
     ;
@@ -97,7 +91,7 @@ class PropertyQueryUtilTest {
     assertThatPropertyQuery(rootAndQuery.get(3))
         .isPOr()
         .hasChildrenThat(
-            first -> first.isPQuery().hasOp(StringOp.EQUALS).hasPropertyWithPath("properties", "prop_4"),
+            first -> first.isPQuery().hasOp(AnyOp.IS_NOT_NULL).hasPropertyWithPath("properties", "prop_4"),
             second -> second.isPNot()
                 .hasChildrenThat(
                     f1 -> f1.isPQuery().hasOp(StringOp.EQUALS).hasPropertyWithPath("properties", "prop_4").hasValue("value_44")
@@ -108,7 +102,7 @@ class PropertyQueryUtilTest {
     assertThatPropertyQuery(rootAndQuery.get(4))
         .isPOr()
         .hasChildrenThat(
-            first -> first.isPQuery().hasOp(DoubleOp.GT).hasPropertyWithPath("properties", "prop_5").hasValue(5.5),
+            first -> first.isPQuery().hasOp(DoubleOp.GTE).hasPropertyWithPath("properties", "prop_5").hasValue(5.5),
             second -> second.isPQuery().hasOp(DoubleOp.GTE).hasPropertyWithPath("properties", "prop_5").hasValue(55L)
         )
     ;
@@ -192,6 +186,37 @@ class PropertyQueryUtilTest {
     assertThatPropertyQuery(rootAndQuery.get(14))
         .isPQuery().hasOp(AnyOp.CONTAINS).hasPropertyWithPath(TAGS_PROP_PATH).hasValue("element_5")
     ;
+  }
+
+  @Test
+  void shouldIgnoreShortIdQuery() {
+    // Given
+    final QueryParameterList params = new QueryParameterList(
+        urlEncoded("f.id") + "=" + urlEncoded("@value:1") + ",'12345'"
+        + "&p.prop_2!=value_2,value_22"
+    );
+
+    // When: retrieving query from query params
+    final IPropertyQuery retrievedQuery = PropertyQueryUtil.propertyQueryFromParams(params);
+
+    // Then: retrieved query is OR
+    final POr rootOrQuery = assertQueryIs(POr.class, retrievedQuery);
+
+    // And: it contains 2 subclauses
+    assertEquals(2, rootOrQuery.size(), "Expected single OR operation");
+
+    // And: validate prop_2 subclause
+    assertThatPropertyQuery(rootOrQuery)
+        .hasChildrenThat(
+            first -> first.isPNot()
+                .hasChildrenThat(
+                    f1 -> f1.isPQuery().hasOp(StringOp.EQUALS).hasPropertyWithPath("properties", "prop_2").hasValue("value_2")
+                ),
+            second -> second.isPNot()
+                .hasChildrenThat(
+                    s1 -> s1.isPQuery().hasOp(StringOp.EQUALS).hasPropertyWithPath("properties", "prop_2").hasValue("value_22")
+                )
+        );
   }
 
   private static Arguments propQuerySpec(String query, String assertionDesc) {

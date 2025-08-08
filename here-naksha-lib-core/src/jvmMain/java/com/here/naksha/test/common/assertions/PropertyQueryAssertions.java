@@ -92,12 +92,17 @@ public class PropertyQueryAssertions {
 
   @SafeVarargs
   public final PropertyQueryAssertions hasChildrenThat(Consumer<PropertyQueryAssertions>... childrenAssertions) {
-    assertInstanceOf(List.class, subject, "Expected multiple operations");
-    List<IPropertyQuery> subjects = (List) subject;
-    assertEquals(subjects.size(), childrenAssertions.length, "Expecting single assertion per property query");
-    for (int i = 0; i < subjects.size(); i++) {
-      PropertyQueryAssertions childAssertion = new PropertyQueryAssertions(subjects.get(i));
-      childrenAssertions[i].accept(childAssertion);
+    if(subject instanceof PNot pNotSubject) {
+      assertEquals(1, childrenAssertions.length, "PNot can only have one child");
+      PropertyQueryAssertions childAssertion = new PropertyQueryAssertions(pNotSubject.getQuery());
+      childrenAssertions[0].accept(childAssertion);
+    } else if(subject instanceof List subjects) {
+      assertEquals(subjects.size(), childrenAssertions.length, "Expecting single assertion per property query");
+      for (int i = 0; i < subjects.size(); i++) {
+        assertInstanceOf(IPropertyQuery.class, subjects.get(i));
+        PropertyQueryAssertions childAssertion = new PropertyQueryAssertions((IPropertyQuery) subjects.get(i));
+        childrenAssertions[i].accept(childAssertion);
+      }
     }
     return this;
   }

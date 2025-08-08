@@ -7,7 +7,7 @@
       "properties": {
         "speedLimit": "160",
         "@ns:com:here:xyz": {
-          "uuid": "00000003-B191-4B2A-863D-23ED782504B2"
+          "uuid": "${uuid}"
         }
       },
       "geometry": {
@@ -20,12 +20,12 @@
       }
     },
     {
-      "id": "tc_1102_feature_2",
+      "id": "tc_1102_feature_1",
       "type": "Feature",
       "properties": {
         "speedLimit": "280",
         "@ns:com:here:xyz": {
-          "uuid": "00000002-B191-4B2A-863D-23ED782504B2"
+          "uuid": "${uuid}"
         }
       },
       "geometry": {

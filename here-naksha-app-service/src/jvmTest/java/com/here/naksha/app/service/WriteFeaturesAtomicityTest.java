@@ -19,15 +19,19 @@
 package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
+import static com.here.naksha.app.common.FeatureMetadata.ExtractionUtil.featureMetadataFromCollectionResp;
+import static com.here.naksha.app.common.FeatureMetadata.ExtractionUtil.featuresMetadataById;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
 import com.here.naksha.app.common.ApiTest;
+import com.here.naksha.app.common.FeatureMetadata;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -70,17 +74,23 @@ class WriteFeaturesAtomicityTest extends ApiTest {
 
   @Test
   void tc_1102_duplicatedUpdateShouldFail() throws URISyntaxException, IOException, InterruptedException {
-    // Given: multiple features to save (all valid)
+    // Given: valid feature to save
     String streamId = UUID.randomUUID().toString();
-    List<String> featureIds = List.of("tc_1102_feature_1", "tc_1102_feature_2");
     String createFeatureJson = loadFileOrFail("WriteFeaturesAtomicity/TC1102_duplicatedUpdateShouldFail/create_features.json");
+    String featureId = "tc_1102_feature";
+
+    // And
     HttpResponse<String> createResp = nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", createFeatureJson, streamId);
     assertThat(createResp).hasStatus(200);
+    FeatureMetadata createdFeature = featureMetadataFromCollectionResp(createResp.body());
 
-    // When: updating these features and one of the updates is invalid (missing points coordinates)
+    // When: updating these features and one of the updates is invalid (invalid points coordinates)
+//    String updateJson = loadFileOrFail("WriteFeaturesAtomicity/TC1102_duplicatedUpdateShouldFail/update_features.json");
+    String updateJson = loadFileOrFail("WriteFeaturesAtomicity/TC1102_duplicatedUpdateShouldFail/update_features.json")
+        .replace("${uuid}", createdFeature.uuid());
     HttpResponse<String> updateResp = nakshaClient.put(
         "hub/spaces/" + SPACE_ID + "/features",
-        loadFileOrFail("WriteFeaturesAtomicity/TC1102_duplicatedUpdateShouldFail/update_features.json"),
+        updateJson,
         streamId
     );
 
@@ -89,9 +99,7 @@ class WriteFeaturesAtomicityTest extends ApiTest {
         .hasStatus(409)
         .hasStreamIdHeader(streamId);
 
-    // And: none of the features got updated - they are equal to initial (creation) state
-    String idsQuery = "?id=" + String.join("&id=", featureIds);
-    HttpResponse<String> getResp = nakshaClient.get("hub/spaces/" + SPACE_ID + "/features" + idsQuery, streamId);
+    HttpResponse<String> getResp = nakshaClient.get("hub/spaces/" + SPACE_ID + "/features/" + featureId, streamId);
     assertThat(getResp)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
