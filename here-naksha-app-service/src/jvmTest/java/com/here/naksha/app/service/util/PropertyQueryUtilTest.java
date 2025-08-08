@@ -83,7 +83,8 @@ class PropertyQueryUtilTest {
     assertThatPropertyQuery(rootAndQuery.get(2))
         .isPOr()
         .hasChildrenThat(
-            first -> first.isPQuery().hasOp(AnyOp.IS_NULL).hasPropertyWithPath("properties", "prop_3"),
+            first -> first.isPNot()
+                .hasChildrenThat(negated -> negated.isPQuery().hasOp(AnyOp.EXISTS).hasPropertyWithPath("properties", "prop_3")),
             second -> second.isPQuery().hasOp(StringOp.EQUALS).hasPropertyWithPath("properties", "prop_3").hasValue("value_33")
         )
     ;
@@ -91,7 +92,7 @@ class PropertyQueryUtilTest {
     assertThatPropertyQuery(rootAndQuery.get(3))
         .isPOr()
         .hasChildrenThat(
-            first -> first.isPQuery().hasOp(AnyOp.IS_NOT_NULL).hasPropertyWithPath("properties", "prop_4"),
+            first -> first.isPQuery().hasOp(AnyOp.EXISTS).hasPropertyWithPath("properties", "prop_4"),
             second -> second.isPNot()
                 .hasChildrenThat(
                     f1 -> f1.isPQuery().hasOp(StringOp.EQUALS).hasPropertyWithPath("properties", "prop_4").hasValue("value_44")

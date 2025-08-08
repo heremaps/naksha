@@ -186,14 +186,14 @@ public class PropertyQueryUtil {
     if (operation == EQUALS) {
       // check if it is NULL operation
       if (NULL_PROP_VALUE.equals(value)) {
-        return new PQuery(new Property(propPath), AnyOp.IS_NULL);
+        return new PNot(propertyExistsQuery(propPath));
       } else {
         return propertyEqualsQuery(propPath, value);
       }
     } else if (operation == NOT_EQUALS) {
       // check if it is NOT NULL operation
       if (NULL_PROP_VALUE.equals(value)) {
-        return new PQuery(new Property(propPath), AnyOp.IS_NOT_NULL);
+        return propertyExistsQuery(propPath);
       } else {
         return new PNot(propertyEqualsQuery(propPath, value));
       }
