@@ -1,5 +1,8 @@
 package com.here.naksha.cli.copy.service;
 
+import com.here.naksha.cli.results.ErrorResult;
+import com.here.naksha.cli.results.IResult;
+import com.here.naksha.cli.results.SuccessResult;
 import naksha.base.fn.Fn1;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
@@ -62,10 +65,19 @@ class CopyServiceTest {
         );
 
         // When
-        assertDoesNotThrow(() -> copyService.copy(
+        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
-        ));
+        );
+
+        // Then: assert success result
+        SuccessResult<CopyServiceSuccessResultPayload, CopyServiceException> successResult = assertInstanceOf(
+                SuccessResult.class, copyResult
+        );
+
+        // And: assert result payload
+        CopyServiceSuccessResultPayload payload = successResult.payload();
+        assertEquals(features.size(), payload.numberOfCopiedElements());
 
         // Then: assert read request
         List<ReadFeatures> readFeaturesList = captureRequestsOfType(readSession, ReadFeatures.class);
@@ -93,13 +105,14 @@ class CopyServiceTest {
                 sessionOptions
         );
 
-        // When & Then
-        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+        // When
+        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
-        ));
+        );
 
-        assertEquals("Problem with reading from source!", exception.getMessage());
+        // Then
+        assertIsErrorResultWithGivenMessage(copyResult, "Problem with reading from source!");
     }
 
     @Test
@@ -116,13 +129,14 @@ class CopyServiceTest {
                 sessionOptions
         );
 
-        // When & Then
-        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+        // When
+        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
-        ));
+        );
 
-        assertEquals("Problem while reading features from source!", exception.getMessage());
+        // Then
+        assertIsErrorResultWithGivenMessage(copyResult, "Problem while reading features from source!");
     }
 
     @Test
@@ -136,13 +150,14 @@ class CopyServiceTest {
                 sessionOptions
         );
 
-        // When & Then
-        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+        // When
+        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
-        ));
+        );
 
-        assertEquals("Can not get source storage!", exception.getMessage());
+        // Then
+        assertIsErrorResultWithGivenMessage(copyResult, "Can not get source storage!");
     }
 
     @Test
@@ -159,13 +174,14 @@ class CopyServiceTest {
                 sessionOptions
         );
 
-        // When & Then
-        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+        // When
+        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
-        ));
+        );
 
-        assertEquals("Unexpected response from source!", exception.getMessage());
+        // Then
+        assertIsErrorResultWithGivenMessage(copyResult, "Unexpected response from source!");
     }
 
     @Test
@@ -185,12 +201,14 @@ class CopyServiceTest {
                 sessionOptions
         );
 
-        // When & Then
-        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+        // When
+        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
-        ));
-        assertEquals("Problem while writing features to target!", exception.getMessage());
+        );
+
+        // Then
+        assertIsErrorResultWithGivenMessage(copyResult, "Problem while writing features to target!");
     }
 
     @Test
@@ -211,12 +229,14 @@ class CopyServiceTest {
                 sessionOptions
         );
 
-        // When & Then
-        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+        // When
+        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
-        ));
-        assertEquals("Problem with writing to target!", exception.getMessage());
+        );
+
+        // Then
+        assertIsErrorResultWithGivenMessage(copyResult, "Problem with writing to target!");
 
         // And
         verify(writeSession).rollback();
@@ -238,13 +258,14 @@ class CopyServiceTest {
                 sessionOptions
         );
 
-        // When & Then
-        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+        // When
+        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
-        ));
+        );
 
-        assertEquals("Can not get target storage!", exception.getMessage());
+        // Then
+        assertIsErrorResultWithGivenMessage(copyResult, "Can not get target storage!");
     }
 
     @Test
@@ -265,15 +286,30 @@ class CopyServiceTest {
                 sessionOptions
         );
 
-        // When & Then
-        CopyServiceException exception = assertThrows(CopyServiceException.class, () -> copyService.copy(
+        // When
+        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
-        ));
-        assertEquals("Unexpected response from target!", exception.getMessage());
+        );
+
+        // Then
+        assertIsErrorResultWithGivenMessage(copyResult, "Unexpected response from target!");
 
         // And
         verify(writeSession).rollback();
+    }
+
+    private void assertIsErrorResultWithGivenMessage(
+            IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult,
+            String errorMessage
+    ) {
+        ErrorResult<CopyServiceSuccessResultPayload, CopyServiceException> errorResult = assertInstanceOf(
+                ErrorResult.class, copyResult
+        );
+
+        // And: assert result payload
+        CopyServiceException exception = errorResult.payload();
+        assertEquals(errorMessage, exception.getMessage());
     }
 
     private <T extends Request> List<T> captureRequestsOfType(ISession session, Class<T> type) {

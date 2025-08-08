@@ -3,10 +3,12 @@ package com.here.naksha.cli.copy;
 import com.here.naksha.cli.copy.service.*;
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.cli.parsers.JsonFileParserException;
+import com.here.naksha.cli.results.ErrorResult;
+import com.here.naksha.cli.results.IResult;
+import com.here.naksha.cli.results.SuccessResult;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaStorage;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import picocli.CommandLine;
 
@@ -34,15 +36,6 @@ public final class CopyCommand implements Callable<Integer> {
 
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec commandSpec;
-
-    public CopyCommand(
-            @NotNull CopyServiceFactory copyServiceFactory,
-            @NotNull StorageProvider storageProvider
-    ) {
-        this.copyServiceFactory = copyServiceFactory;
-        this.jsonFileParser = new JsonFileParser();
-        this.storageProvider = storageProvider;
-    }
 
     @CommandLine.Option(
             names = {"--srcStorageConfig"},
@@ -82,36 +75,91 @@ public final class CopyCommand implements Callable<Integer> {
     )
     private @Nullable String targetCollectionId;
 
+    public CopyCommand(
+            CopyServiceFactory copyServiceFactory,
+            StorageProvider storageProvider
+    ) {
+        this.copyServiceFactory = copyServiceFactory;
+        this.jsonFileParser = new JsonFileParser();
+        this.storageProvider = storageProvider;
+    }
+
     @Override
     public Integer call() throws JsonFileParserException, CopyServiceException {
-        NakshaStorage srcNakshaStorage = jsonFileParser.parse(srcStorageConfig, NakshaStorage.class);
-        NakshaStorage targetNakshaStorage = jsonFileParser.parse(targetStorageConfig, NakshaStorage.class);
-
-        CopyElement srcCopyElement = new CopyElement.Builder(srcNakshaStorage)
-                .setMapId(srcMapId)
-                .setCollectionId(srcCollectionId)
-                .build();
-        CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage)
-                .setMapId(targetMapId)
-                .setCollectionId(targetCollectionId)
-                .build();
+        CopyElement srcCopyElement = buildSrcCopyElement();
+        CopyElement targetCopyElement = buildTargetCopyElement();
 
         NakshaContext.currentContext().withAppId("nakshacli");
         SessionOptions sessionOptions = SessionOptions.from(NakshaContext.currentContext());
 
+        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copy(
+                srcCopyElement,
+                targetCopyElement,
+                sessionOptions
+        );
+
+        CopyServiceSuccessResultPayload resultPayload = requireSuccessResultAndGetPayload(copyResult);
+
+        PrintWriter commandLineOut = getCommandLineOut();
+        String successMessage = buildCopySuccessMessage(resultPayload);
+        commandLineOut.println(successMessage);
+
+        return CommandLine.ExitCode.OK;
+    }
+
+    private PrintWriter getCommandLineOut() {
+        CommandLine commandLine = commandSpec.commandLine();
+        return commandLine.getOut();
+    }
+
+    private String buildCopySuccessMessage(CopyServiceSuccessResultPayload resultPayload) {
+        return "Success! Copied %d features.".formatted(
+                resultPayload.numberOfCopiedElements()
+        );
+    }
+
+    private CopyServiceSuccessResultPayload requireSuccessResultAndGetPayload(
+            IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult
+    ) throws CopyServiceException {
+        return switch (copyResult) {
+            case ErrorResult(CopyServiceException exception) -> throw exception;
+            case SuccessResult(CopyServiceSuccessResultPayload payload) -> payload;
+        };
+    }
+
+    private CopyElement buildSrcCopyElement() throws JsonFileParserException {
+        NakshaStorage srcNakshaStorage = loadStorage(srcStorageConfig);
+        return new CopyElement.Builder(srcNakshaStorage)
+                .setMapId(srcMapId)
+                .setCollectionId(srcCollectionId)
+                .build();
+    }
+
+    private CopyElement buildTargetCopyElement() throws JsonFileParserException {
+        NakshaStorage targetNakshaStorage = loadStorage(targetStorageConfig);
+        return new CopyElement.Builder(targetNakshaStorage)
+                .setMapId(targetMapId)
+                .setCollectionId(targetCollectionId)
+                .build();
+    }
+
+    private IResult<CopyServiceSuccessResultPayload, CopyServiceException> copy(
+            CopyElement srcCopyElement,
+            CopyElement targetCopyElement,
+            SessionOptions sessionOptions
+    ) {
         CopyService copyService = copyServiceFactory.create(
                 storageProvider,
                 sessionOptions
         );
 
-        copyService.copy(
+        return copyService.copy(
                 srcCopyElement,
                 targetCopyElement
         );
+    }
 
-        PrintWriter printWriter = commandSpec.commandLine().getOut();
-        printWriter.println("success!");
-
-        return CommandLine.ExitCode.OK;
+    private NakshaStorage loadStorage(Path storageConfig) throws JsonFileParserException {
+        return jsonFileParser.parse(storageConfig, NakshaStorage.class);
     }
 }
