@@ -20,7 +20,6 @@ package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.FeatureMetadata.ExtractionUtil.featureMetadataFromCollectionResp;
-import static com.here.naksha.app.common.FeatureMetadata.ExtractionUtil.featuresMetadataById;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
@@ -31,7 +30,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

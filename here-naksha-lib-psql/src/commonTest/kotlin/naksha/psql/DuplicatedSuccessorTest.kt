@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.model.RandomFeatures
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.ErrorResponse
@@ -10,10 +9,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
-class DuplicatedSuccessorTest: PgTestBase(NakshaCollection("duplicate_successor_test_col")) {
+class DuplicatedSuccessorTest : PgTestBase(NakshaCollection("duplicate_successor_test_col")) {
 
     @Test
-    fun shouldNotAllowMultipleFeaturesToSucceedOneVersion(){
+    fun shouldNotAllowMultipleFeaturesToSucceedOneVersion() {
         // Given: created feature in DB
         val initialFeature = insertFeatures(randomFeature()).features.first()!!
 
@@ -36,7 +35,7 @@ class DuplicatedSuccessorTest: PgTestBase(NakshaCollection("duplicate_successor_
     }
 
     @Test
-    fun shouldNotAllowSuccessorsWithDifferentFeatureId(){
+    fun shouldNotAllowSuccessorsWithDifferentFeatureId() {
         // Given: created feature in DB
         val initialFeatureA = insertFeatures(randomFeature("f_a")).features.first()!!
         val initialFeatureB = insertFeatures(randomFeature("f_b")).features.first()!!
