@@ -10,6 +10,8 @@ kotlin {
             jvmToolchain(23)
             dependencies {
                 implementation(project(":here-naksha-lib-core"))
+                implementation(project(":here-naksha-lib-auth"))
+                implementation(project(":here-naksha-lib-auth-naksha"))
                 implementation(project(":here-naksha-lib-psql"))
                 implementation(project(":here-naksha-storage-http"))
                 //implementation(project(":here-naksha-lib-extension"))
@@ -30,6 +32,8 @@ kotlin {
         jvmTest {
             dependencies {
                 implementation(project(":here-naksha-lib-core"))
+                implementation(project(":here-naksha-lib-auth"))
+                implementation(project(":here-naksha-lib-auth-naksha"))
                 implementation(libs.bundles.testing)
                 implementation(libs.resillience4j.retry)
                 implementation(libs.test.containers)
