@@ -27,6 +27,7 @@ import com.here.naksha.lib.core.models.indexing.Index;
 import java.util.List;
 
 import com.here.naksha.lib.core.models.indexing.IndexMap;
+import naksha.base.PlatformType;
 import naksha.base.StringList;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaCollection;
@@ -45,6 +46,8 @@ import static naksha.base.Platform.forClass;
  */
 @SuppressWarnings("unused")
 public final class Space extends EventTarget<Space> {
+
+  public static final PlatformType<Space> TYPE = forClass(Space.class);
 
   /**
    * Beta release date: 2018-10-01T00:00Z[UTC]

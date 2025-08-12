@@ -19,10 +19,13 @@
 package com.here.naksha.app.service.models;
 
 import java.util.List;
-import naksha.base.JvmAnyObjectUtil;
+
+import naksha.base.ListProxy;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
 import org.jetbrains.annotations.NotNull;
+
+import static naksha.base.NakshaBaseKt.String_TYPE;
 
 public class FeatureCollectionRequest extends XyzRequest {
 
@@ -36,11 +39,11 @@ public class FeatureCollectionRequest extends XyzRequest {
   }
 
   public @NotNull NakshaFeatureList getFeatures() {
-    return JvmAnyObjectUtil.getProperty(this, FEATURES_KEY, NakshaFeatureList.class);
+    return getOrCreate(FEATURES_KEY, NakshaFeatureList.TYPE, (self, key) -> new NakshaFeatureList());
   }
 
   public void setFeatures(@NotNull List<? extends NakshaFeature> features) {
-    setRaw(FEATURES_KEY, NakshaFeatureList.fromList(features));
+    set(FEATURES_KEY, ListProxy.to(NakshaFeatureList.TYPE, features));
   }
 
   public @NotNull FeatureCollectionRequest withFeatures(final @NotNull List<? extends @NotNull NakshaFeature> features) {
@@ -54,7 +57,7 @@ public class FeatureCollectionRequest extends XyzRequest {
    * @return the nextPageToken.
    */
   public String getNextPageToken() {
-    return JvmAnyObjectUtil.getProperty(this, NEXT_PAGE_TOKEN_KEY, String.class);
+    return getAs(NEXT_PAGE_TOKEN_KEY, String_TYPE);
   }
 
   /**
@@ -63,7 +66,7 @@ public class FeatureCollectionRequest extends XyzRequest {
    * @param nextPageToken the nextPageToken, if null the nextPageToken property is removed.
    */
   public void setNextPageToken(String nextPageToken) {
-    setRaw(NEXT_PAGE_TOKEN_KEY, nextPageToken);
+    set(NEXT_PAGE_TOKEN_KEY, nextPageToken);
   }
 
   public @NotNull FeatureCollectionRequest withNextPageToken(final String nextPageToken) {

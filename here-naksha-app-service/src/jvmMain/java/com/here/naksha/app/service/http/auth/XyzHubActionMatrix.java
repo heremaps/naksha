@@ -24,7 +24,6 @@ import com.here.naksha.lib.core.models.auth.AttributeMap;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.util.List;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.StringList;
 import org.jetbrains.annotations.NotNull;
 
@@ -186,7 +185,7 @@ public class XyzHubActionMatrix extends ActionMatrix {
     addAction(MANAGE_CONNECTORS, XyzHubAttributeMap.ofConnector(eventHandler));
 
     // MANAGE_PACKAGES right is needed to add the connector to a packages.
-    List<String> packages = JvmBoxingUtil.box(eventHandler.get(XyzHubAttributeMap.PACKAGES), StringList.class);
+    List<String> packages = eventHandler.getAs(XyzHubAttributeMap.PACKAGES, StringList.TYPE);
     for (final @NotNull String packageId : packages) {
       addAction(MANAGE_PACKAGES, XyzHubAttributeMap.ofPackage(packageId));
     }
@@ -204,8 +203,8 @@ public class XyzHubActionMatrix extends ActionMatrix {
 
     // MANAGE_CONNECTORS includes the right to remove the connector from a package.
     // MANAGE_PACKAGES right is needed to add the connector to a packages.
-    final List<@NotNull String> newPackages = JvmBoxingUtil.box(_new.getRaw(XyzHubAttributeMap.PACKAGES), StringList.class);
-    final List<@NotNull String> oldPackages = JvmBoxingUtil.box(_old.getRaw(XyzHubAttributeMap.PACKAGES), StringList.class);
+    final List<@NotNull String> newPackages = _new.getAs(XyzHubAttributeMap.PACKAGES, StringList.TYPE);
+    final List<@NotNull String> oldPackages = _old.getAs(XyzHubAttributeMap.PACKAGES, StringList.TYPE);
     for (final @NotNull String newPackageId : newPackages) {
       if (oldPackages.contains(newPackageId)) {
         addAction(MANAGE_PACKAGES, XyzHubAttributeMap.ofPackage(newPackageId));

@@ -29,7 +29,6 @@ import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import io.vertx.ext.web.RoutingContext;
 import naksha.base.FromJsonOptions;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
 import naksha.base.StringList;
 import naksha.model.NakshaContext;
@@ -148,7 +147,7 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
 
   private Space spaceFromRequestBody() {
     final String bodyJson = routingContext.body().asString();
-    return JvmBoxingUtil.box(Platform.fromJson(bodyJson, FromJsonOptions.DEFAULT), Space.class);
+    return Platform.fromJson(bodyJson, Space.TYPE);
   }
 
   private static String mismatchMsg(String spaceIdFromPath, Space spaceFromBody) {

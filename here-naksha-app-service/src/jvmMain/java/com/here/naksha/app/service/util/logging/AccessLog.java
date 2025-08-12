@@ -18,56 +18,58 @@
  */
 package com.here.naksha.app.service.util.logging;
 
-import static naksha.base.JvmAnyObjectUtil.getOrCreateProperty;
-import static naksha.base.JvmAnyObjectUtil.getProperty;
-
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import naksha.base.AnyObject;
+import naksha.base.PlatformType;
 import naksha.model.StreamInfo;
 
-public class AccessLog extends AccessLogExtended {
+import static naksha.base.NakshaBaseKt.Long_TYPE;
+import static naksha.base.NakshaBaseKt.String_TYPE;
+import static naksha.base.Platform.forClass;
 
+public class AccessLog extends AccessLogExtended {
+  public static final PlatformType<AccessLog> TYPE = forClass(AccessLog.class);
   private static final String CLIENT_INFO_KEY = "clientInfo";
   private static final String REQUEST_INFO_KEY = "reqInfo";
   private static final String RESPONSE_INFO_KEY = "respInfo";
   private static final String STREAM_INFO_KEY = "streamInfo";
 
   public ClientInfo getClientInfo() {
-    return getOrCreateProperty(this, CLIENT_INFO_KEY, ClientInfo.class);
+    return getOrCreate(CLIENT_INFO_KEY, ClientInfo.TYPE);
   }
 
   public void setClientInfo(ClientInfo clientInfo) {
-    setRaw(CLIENT_INFO_KEY, clientInfo);
+    set(CLIENT_INFO_KEY, clientInfo);
   }
 
   public RequestInfo getReqInfo() {
-    return getOrCreateProperty(this, REQUEST_INFO_KEY, RequestInfo.class);
+    return getOrCreate(REQUEST_INFO_KEY, RequestInfo.TYPE);
   }
 
   public void setReqInfo(RequestInfo reqInfo) {
-    setRaw(REQUEST_INFO_KEY, reqInfo);
+    set(REQUEST_INFO_KEY, reqInfo);
   }
 
   public ResponseInfo getRespInfo() {
-    return getOrCreateProperty(this, RESPONSE_INFO_KEY, ResponseInfo.class);
+    return getOrCreate(RESPONSE_INFO_KEY, ResponseInfo.TYPE);
   }
 
   public void setRespInfo(ResponseInfo respInfo) {
-    setRaw(RESPONSE_INFO_KEY, respInfo);
+    set(RESPONSE_INFO_KEY, respInfo);
   }
 
   public StreamInfo getStreamInfo() {
-    return getOrCreateProperty(this, STREAM_INFO_KEY, StreamInfo.class);
+    return getOrCreate(STREAM_INFO_KEY, StreamInfo.TYPE);
   }
 
   public StreamInfo getStreamInfoOrCreateNewWithStreamId(String streamId) {
-    return getOrCreateProperty(this, STREAM_INFO_KEY, StreamInfo.class, (o,k) -> new StreamInfo(streamId));
+    return getOrCreate(STREAM_INFO_KEY, StreamInfo.TYPE, (self,key) -> new StreamInfo(streamId));
   }
 
   public void setStreamInfo(StreamInfo streamInfo) {
-    setRaw(STREAM_INFO_KEY, streamInfo);
+    set(STREAM_INFO_KEY, streamInfo);
   }
 
   public void end() {
@@ -75,7 +77,7 @@ public class AccessLog extends AccessLogExtended {
   }
 
   public static class RequestInfo extends RequestInfoExtended {
-
+    public static final PlatformType<RequestInfo> TYPE = forClass(RequestInfo.class);
     private static final String METHOD_KEY = "method";
     private static final String URI_KEY = "uri";
     private static final String CONTENT_TYPE_KEY = "contentType";
@@ -85,104 +87,104 @@ public class AccessLog extends AccessLogExtended {
     private static final String ORIGIN_KEY = "origin";
 
     public String getMethod() {
-      return getProperty(this, METHOD_KEY, String.class);
+      return getAs(METHOD_KEY, String_TYPE);
     }
 
     public void setMethod(String method) {
-      setRaw(METHOD_KEY, method);
+      set(METHOD_KEY, method);
     }
 
     public String getUri() {
-      return getProperty(this, URI_KEY, String.class);
+      return getAs(URI_KEY, String_TYPE);
     }
 
     public void setUri(String uri) {
-      setRaw(URI_KEY, uri);
+      set(URI_KEY, uri);
     }
 
     public String getContentType() {
-      return getProperty(this, CONTENT_TYPE_KEY, String.class);
+      return getAs(CONTENT_TYPE_KEY, String_TYPE);
     }
 
     public void setContentType(String contentType) {
-      setRaw(CONTENT_TYPE_KEY, contentType);
+      set(CONTENT_TYPE_KEY, contentType);
     }
 
     public String getAccept() {
-      return getProperty(this, ACCEPT_KEY, String.class);
+      return getAs(ACCEPT_KEY, String_TYPE);
     }
 
     public void setAccept(String accept) {
-      setRaw(ACCEPT_KEY, accept);
+      set(ACCEPT_KEY, accept);
     }
 
     public long getRequestSize() {
-      return getProperty(this, REQUEST_SIZE_KEY, Long.class);
+      return getOr(REQUEST_SIZE_KEY, 0L);
     }
 
     public void setRequestSize(long requestSize) {
-      setRaw(REQUEST_SIZE_KEY, requestSize);
+      set(REQUEST_SIZE_KEY, requestSize);
     }
 
     public String getReferer() {
-      return getProperty(this, REFERER_KEY, String.class);
+      return getAs(REFERER_KEY, String_TYPE);
     }
 
     public void setReferer(String referer) {
-      setRaw(REFERER_KEY, referer);
+      set(REFERER_KEY, referer);
     }
 
     public String getOrigin() {
-      return getProperty(this, ORIGIN_KEY, String.class);
+      return getAs(ORIGIN_KEY, String_TYPE);
     }
 
     public void setOrigin(String origin) {
-      setRaw(ORIGIN_KEY, origin);
+      set(ORIGIN_KEY, origin);
     }
   }
 
   public static class ResponseInfo extends AnyObject {
-
+    public static final PlatformType<ResponseInfo> TYPE = forClass(ResponseInfo.class);
     private static final String STATUS_CODE_KEY = "statusCode";
     private static final String STATUS_MSG_KEY = "statusMsg";
     private static final String RESPONSE_SIZE_KEY = "size";
     private static final String CONTENT_TYPE_KEY = "contentType";
 
     public long getStatusCode() {
-      return getProperty(this, STATUS_CODE_KEY, Long.class);
+      return getOr(STATUS_CODE_KEY, 0L);
     }
 
     public void setStatusCode(long statusCode) {
-      setRaw(STATUS_CODE_KEY, statusCode);
+      set(STATUS_CODE_KEY, statusCode);
     }
 
     public String getStatusMsg() {
-      return getProperty(this, STATUS_MSG_KEY, String.class);
+      return getAs(STATUS_MSG_KEY, String_TYPE);
     }
 
     public void setStatusMsg(String statusMsg) {
-      setRaw(STATUS_MSG_KEY, statusMsg);
+      set(STATUS_MSG_KEY, statusMsg);
     }
 
     public long getResponseSize() {
-      return getProperty(this, RESPONSE_SIZE_KEY, Long.class);
+      return getOr(RESPONSE_SIZE_KEY, 0L);
     }
 
     public void setResponseSize(long responseSize) {
-      setRaw(RESPONSE_SIZE_KEY, responseSize);
+      set(RESPONSE_SIZE_KEY, responseSize);
     }
 
     public String getContentType() {
-      return getProperty(this, CONTENT_TYPE_KEY, String.class);
+      return getAs(CONTENT_TYPE_KEY, String_TYPE);
     }
 
     public void setContentType(String contentType) {
-      setRaw(CONTENT_TYPE_KEY, contentType);
+      set(CONTENT_TYPE_KEY, contentType);
     }
   }
 
   public static class ClientInfo extends AnyObject {
-
+    public static final PlatformType<ClientInfo> TYPE = forClass(ClientInfo.class);
     private static final String REMOTE_ADDRESS_KEY = "remoteAddress";
     private static final String IP_KEY = "ip";
     private static final String USER_AGENT_KEY = "userAgent";
@@ -191,62 +193,62 @@ public class AccessLog extends AccessLogExtended {
     private static final String APP_ID_KEY = "appId";
 
     public String getRemoteAddress() {
-      return getProperty(this, REMOTE_ADDRESS_KEY, String.class);
+      return getAs(REMOTE_ADDRESS_KEY, String_TYPE);
     }
 
     public void setRemoteAddress(String remoteAddress) {
-      setRaw(REMOTE_ADDRESS_KEY, remoteAddress);
+      set(REMOTE_ADDRESS_KEY, remoteAddress);
     }
 
     public String getIp() {
-      return getProperty(this, IP_KEY, String.class);
+      return getAs(IP_KEY, String_TYPE);
     }
 
     public void setIp(String ip) {
-      setRaw(IP_KEY, ip);
+      set(IP_KEY, ip);
     }
 
     public String getUserAgent() {
-      return getProperty(this, USER_AGENT_KEY, String.class);
+      return getAs(USER_AGENT_KEY, String_TYPE);
     }
 
     public void setUserAgent(String userAgent) {
-      setRaw(USER_AGENT_KEY, userAgent);
+      set(USER_AGENT_KEY, userAgent);
     }
 
     public String getRealm() {
-      return getProperty(this, REALM_KEY, String.class);
+      return getAs(REALM_KEY, String_TYPE);
     }
 
     public void setRealm(String realm) {
-      setRaw(REALM_KEY, realm);
+      set(REALM_KEY, realm);
     }
 
     public String getUserId() {
-      return getProperty(this, USER_ID_KEY, String.class);
+      return getAs(USER_ID_KEY, String_TYPE);
     }
 
     public void setUserId(String userId) {
-      setRaw(USER_ID_KEY, userId);
+      set(USER_ID_KEY, userId);
     }
 
     public String getAppId() {
-      return getProperty(this, APP_ID_KEY, String.class);
+      return getAs(APP_ID_KEY, String_TYPE);
     }
 
     public void setAppId(String appId) {
-      setRaw(APP_ID_KEY, appId);
+      set(APP_ID_KEY, appId);
     }
   }
 }
 
 class AccessLogExtended extends AnyObject {
-
-  private static DateTimeFormatter dtFormatter =
+  public static final PlatformType<AccessLogExtended> TYPE = forClass(AccessLogExtended.class);
+  private static final DateTimeFormatter dtFormatter =
       DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss,SSS").withZone(ZoneId.of("UTC"));
 
   // needed for calculations
-  private long start;
+  private final long start;
 
   // serializable field
   private static final String SRC_KEY = "src";
@@ -272,71 +274,72 @@ class AccessLogExtended extends AnyObject {
   }
 
   public String getSrc() {
-    return getProperty(this, SRC_KEY, String.class);
+    return getAs(SRC_KEY, String_TYPE);
   }
 
   public void setSrc(String src) {
-    setRaw(SRC_KEY, src);
+    set(SRC_KEY, src);
   }
 
   public String getStreamId() {
-    return getProperty(this, STREAM_ID_KEY, String.class);
+    return getAs(STREAM_ID_KEY, String_TYPE);
   }
 
   public void setStreamId(String streamId) {
-    setRaw(STREAM_ID_KEY, streamId);
+    set(STREAM_ID_KEY, streamId);
   }
 
   public long getUnixTime() {
-    return getProperty(this, UNIX_TIME_KEY, Long.class);
+    return getOr(UNIX_TIME_KEY, 0L);
   }
 
   public void setUnixTime(long unixTime) {
-    setRaw(UNIX_TIME_KEY, unixTime);
+    set(UNIX_TIME_KEY, unixTime);
   }
 
   public String getTime() {
-    return getProperty(this, TIME_KEY, String.class);
+    return getAs(TIME_KEY, String_TYPE);
   }
 
   public void setTime(String time) {
-    setRaw(TIME_KEY, time);
+    set(TIME_KEY, time);
   }
 
   public long getNs() {
-    return getProperty(this, NS_KEY, Long.class);
+    return getOr(NS_KEY, 0L);
   }
 
   public void setNs(long ns) {
-    setRaw(NS_KEY, ns);
+    set(NS_KEY, ns);
   }
 
   public long getMs() {
-    return getProperty(this, MS_KEY, Long.class);
+    return getOr(MS_KEY, 0L);
   }
 
   public void setMs(long ms) {
-    setRaw(MS_KEY, ms);
+    set(MS_KEY, ms);
   }
 }
 
 class RequestInfoExtended extends AnyObject {
+  public static final PlatformType<RequestInfoExtended> TYPE = forClass(RequestInfoExtended.class);
   private static final String CONTENT_TYPE_KEY = "contentType";
   private static final String ACCEPT_KEY = "accept";
 
   public String getContentType() {
-    return getProperty(this, CONTENT_TYPE_KEY, String.class);
+    return getAs(CONTENT_TYPE_KEY, String_TYPE);
   }
 
   public void setContentType(String contentType) {
-    setRaw(CONTENT_TYPE_KEY, contentType);
+    set(CONTENT_TYPE_KEY, contentType);
   }
 
   public String getAccept() {
-    return getProperty(this, ACCEPT_KEY, String.class);
+    return getAs(ACCEPT_KEY, String_TYPE);
   }
 
   public void setAccept(String accept) {
-    setRaw(ACCEPT_KEY, accept);
+    set(ACCEPT_KEY, accept);
   }
 }

@@ -18,12 +18,9 @@
  */
 package com.here.naksha.app.service.http.auth;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import io.vertx.core.json.jackson.DatabindCodec;
-import naksha.auth.ServiceUserRights;
 import naksha.auth.UserRightsMatrix;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,35 +39,5 @@ public class JWTPayload {
 
   public int iat;
   public int exp;
-  public UserRightsMatrix urm;
-
-  @JsonIgnore
-  private XyzHubActionMatrix __nakshaMatrix; // TODO NakshaActionMatrix
-
-  /**
-   * Returns the Naksha action matrix, if there is any for this JWT token.
-   *
-   * @return the Naksha action matrix or null.
-   */
-  @JsonIgnore
-  public @Nullable XyzHubActionMatrix getNakshaMatrix() {
-    if (__nakshaMatrix != null) {
-      return __nakshaMatrix;
-    }
-    if (urm == null) {
-      return null;
-    }
-    final ServiceUserRights hereActionMatrix = urm.get(URMServiceId.NAKSHA);
-    if (hereActionMatrix == null) {
-      return null;
-    }
-    return __nakshaMatrix = DatabindCodec.mapper().convertValue(hereActionMatrix, XyzHubActionMatrix.class);
-  }
-
-  /**
-   * Constants for all services that may be part of the JWT token.
-   */
-  public static final class URMServiceId {
-    static final String NAKSHA = "naksha";
-  }
+  public @Nullable UserRightsMatrix urm;
 }

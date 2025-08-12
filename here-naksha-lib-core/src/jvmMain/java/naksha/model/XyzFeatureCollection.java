@@ -22,6 +22,7 @@ import static naksha.base.NakshaBaseKt.*;
 import static naksha.base.Platform.forClass;
 
 import com.here.naksha.lib.core.models.payload.XyzResponse;
+
 import java.util.List;
 
 import naksha.base.*;
@@ -163,10 +164,22 @@ public class XyzFeatureCollection extends XyzResponse {
     }
   }
 
+  private <F extends GeoFeature, LIST extends List<F>> void addFeaturesAndIds(@NotNull StringList ids, @Nullable LIST featuresToAdd) {
+    if (featuresToAdd == null) return;
+    final var features = getFeatures(GeoFeatureList.TYPE);
+    for (final F feature : featuresToAdd) {
+      final var id = feature.getId();
+      if (!ids.contains(id)) {
+        ids.add(id);
+        features.add(feature);
+      }
+    }
+  }
+
   /**
    * @return list of features IDs of those features that where successfully inserted.
    */
-  public @Nullable StringList getInserted() {
+  public @NotNull StringList getInserted() {
     return STRING_LIST$.getValue(this, INSERTED);
   }
 
@@ -180,10 +193,14 @@ public class XyzFeatureCollection extends XyzResponse {
     STRING_LIST$.setValue(this, INSERTED, ListProxy.to(StringList.TYPE, inserted));
   }
 
+  public <F extends GeoFeature, LIST extends List<F>> void addInsertedFeatures(@Nullable LIST inserted) {
+    addFeaturesAndIds(getInserted(), inserted);
+  }
+
   /**
    * @return list of features IDs of those features that where successfully updated.
    */
-  public @Nullable StringList getUpdated() {
+  public @NotNull StringList getUpdated() {
     return STRING_LIST$.getValue(this, "updated");
   }
 
@@ -194,6 +211,10 @@ public class XyzFeatureCollection extends XyzResponse {
    */
   public void setUpdated(@Nullable List<String> updated) {
     STRING_LIST$.setValue(this, UPDATED, ListProxy.to(StringList.TYPE, updated));
+  }
+
+  public <F extends GeoFeature, LIST extends List<F>> void addUpdatedFeatures(@Nullable LIST updated) {
+    addFeaturesAndIds(getUpdated(), updated);
   }
 
   /**
@@ -208,7 +229,7 @@ public class XyzFeatureCollection extends XyzResponse {
   /**
    * @return list of features IDs of those features that where successfully deleted.
    */
-  public @Nullable StringList getDeleted() {
+  public @NotNull StringList getDeleted() {
     return STRING_LIST$.getValue(this, DELETED);
   }
 
@@ -219,6 +240,10 @@ public class XyzFeatureCollection extends XyzResponse {
    */
   public void setDeleted(@Nullable List<String> deleted) {
     STRING_LIST$.setValue(this, DELETED, ListProxy.to(StringList.TYPE, deleted));
+  }
+
+  public <F extends GeoFeature, LIST extends List<F>> void addDeletedFeatures(@Nullable LIST deleted) {
+    addFeaturesAndIds(getDeleted(), deleted);
   }
 
   /**

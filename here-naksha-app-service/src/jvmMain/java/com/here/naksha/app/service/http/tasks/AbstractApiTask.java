@@ -21,7 +21,8 @@ package com.here.naksha.app.service.http.tasks;
 import static com.here.naksha.common.http.apis.ApiParamsConst.DEF_ADMIN_FEATURE_LIMIT;
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
-import static naksha.base.JvmBoxingUtil.box;
+import static naksha.base.Platform.apply;
+import static naksha.base.Platform.forClass;
 import static naksha.model.util.ResultHelper.extractResponseItems;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 import static naksha.model.util.ResultHelper.readFeaturesGroupedByAction;
@@ -41,9 +42,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import naksha.base.AnyObject;
-import naksha.base.FromJsonOptions;
 import naksha.base.Platform;
-import naksha.geo.ProxyGeoUtil;
+import naksha.geo.GeoUtil;
 import naksha.geo.SpGeometry;
 import naksha.model.Action;
 import naksha.model.NakshaContext;
@@ -129,7 +129,8 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       if (feature == null) {
         return handleNoElements(noElementsStrategy);
       }
-      final XyzFeatureCollection featureResponse = new XyzFeatureCollection().withFeatures(List.of(feature));
+      final var featureResponse = new XyzFeatureCollection();
+      featureResponse.setFeatures(List.of(feature));
       return verticle.sendXyzResponse(routingContext, HttpResponseType.FEATURE, featureResponse);
     } else {
       return verticle.sendErrorResponse(
@@ -170,7 +171,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       return validatedErrorResponse;
     } else if (response instanceof SuccessResponse successResponse) {
       final List<F> features = extractResponseItems(successResponse, type, offset, maxLimit);
-      List<F> processedFeatures = features;
+      final List<F> processedFeatures;
       if (preResponseProcessing != null) {
         processedFeatures = new ArrayList<>();
         for (F feature : features) {
@@ -179,6 +180,8 @@ public abstract class AbstractApiTask<T extends XyzResponse>
             processedFeatures.add(processedFeature);
           }
         }
+      } else {
+        processedFeatures = features;
       }
       if (processedFeatures.isEmpty()) {
         logger.info("No features found, returning empty collection");
@@ -191,9 +194,10 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       return verticle.sendXyzResponse(
           routingContext,
           HttpResponseType.FEATURE_COLLECTION,
-          new XyzFeatureCollection()
-              .withFeatures(processedFeatures)
-              .withNextPageToken(handleStr));
+          apply(new XyzFeatureCollection(), (self) -> {
+              self.setFeatures(processedFeatures);
+              self.setNextPageToken(handleStr);
+          }));
     } else {
       return verticle.sendErrorResponse(
           routingContext,
@@ -225,10 +229,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       final List<F> updatedFeatures = featureMap.get(Action.UPDATE);
       final List<F> deletedFeatures = featureMap.get(Action.DELETE);
       // extract violations if available
-      List<NakshaFeature> violations = null;
-      if (successResponse instanceof ContextXyzFeatureResponse cr) {
-        violations = cr.getViolations();
-      }
+      final List<NakshaFeature> violations = successResponse instanceof ContextXyzFeatureResponse cr ? cr.getViolations() : null;
       if (featureMap.isEmpty() && (violations == null || violations.isEmpty())) {
         if (isDeleteOperation) {
           logger.info("No data found, returning empty collection");
@@ -241,11 +242,12 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       return verticle.sendXyzResponse(
           routingContext,
           HttpResponseType.FEATURE_COLLECTION,
-          new XyzFeatureCollection()
-              .withInsertedFeatures(insertedFeatures)
-              .withUpdatedFeatures(updatedFeatures)
-              .withDeletedFeatures(deletedFeatures)
-              .withViolations(violations));
+          apply(new XyzFeatureCollection(), (self) -> {
+              self.addInsertedFeatures(insertedFeatures);
+              self.addUpdatedFeatures(updatedFeatures);
+              self.addDeletedFeatures(deletedFeatures);
+              self.setViolations(violations);
+          }));
     } else {
       return verticle.sendErrorResponse(
           routingContext,
@@ -264,7 +266,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   XyzFeatureCollection emptyFeatureCollection() {
-    return new XyzFeatureCollection().withFeatures(emptyList());
+    return apply(new XyzFeatureCollection(), (self) -> self.setFeatures(emptyList()) );
   }
 
   protected @Nullable XyzResponse validateErrorResultEmptyCollection(final @Nullable Response response) {
@@ -296,7 +298,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
 
   protected <P extends AnyObject> @NotNull P parseRequestBodyAs(final Class<P> type) {
     final String bodyJson = routingContext.body().asString();
-    return requireNonNull(box(Platform.fromJson(bodyJson, FromJsonOptions.DEFAULT), type));
+    return requireNonNull(Platform.fromJson(bodyJson, forClass(type)));
   }
 
   protected <F extends NakshaFeature> @Nullable F1<F, F> standardReadFeaturesPreResponseProcessing(
@@ -324,7 +326,8 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     final Map<String, Object> tgtMap = PropertyPathUtil.extractPropertyMapFromFeature(f, propPaths);
     NakshaFeature newF = new NakshaFeature();
     newF.putAll(tgtMap);
-    return (F) box(newF, f.getClass());
+    final var type = forClass(f.getClass());
+    return (F) type.proxy(newF);
   }
 
   private <F extends NakshaFeature> void applyGeometryClipping(final @NotNull F f, final SpGeometry clipGeo) {
@@ -335,10 +338,10 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       //    GeometryFixer.fix(geom).intersection(bbox)
       // it is the best available way of clipping geometry, equivalent to PostGIS approach of:
       //    ST_Intersection(ST_MakeValid(geo, 'method=structure'), bbox)
-      Geometry jtsGeo = ProxyGeoUtil.toJtsGeometry(geo);
-      Geometry jtsClip = ProxyGeoUtil.toJtsGeometry(clipGeo);
+      Geometry jtsGeo = GeoUtil.toJtsGeometry(geo);
+      Geometry jtsClip = GeoUtil.toJtsGeometry(clipGeo);
       Geometry clippedGeo = GeometryFixer.fix(jtsGeo).intersection(jtsClip);
-      f.setGeometry(ProxyGeoUtil.toProxyGeometry(clippedGeo));
+      f.setGeometry(GeoUtil.toProxyGeometry(clippedGeo));
     }
   }
 }

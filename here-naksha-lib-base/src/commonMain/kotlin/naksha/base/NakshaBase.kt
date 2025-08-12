@@ -436,7 +436,7 @@ val Boolean_TYPE = forKClass(Boolean::class).initialize()
 val Int_TYPE = forKClass(Int::class).initialize()
 
 /**
- * The [PlatformType] for `int64`.
+ * The [PlatformType] for `int64`, using the JVM only version.
  * @since 3.0
  */
 @JvmField

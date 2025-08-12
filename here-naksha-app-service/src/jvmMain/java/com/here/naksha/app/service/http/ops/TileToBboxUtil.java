@@ -52,6 +52,6 @@ public class TileToBboxUtil {
   }
 
   private static BBox bboxForTile(String tileId) {
-    return WebMercatorTile.forQuadkey(tileId).getBBox(DONT_CLONE);
+    return WebMercatorTile.forQuadkey(tileId).getBBox(false);
   }
 }

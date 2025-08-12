@@ -17,6 +17,7 @@ import kotlin.collections.MutableMap.MutableEntry
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
@@ -169,6 +170,7 @@ open class MapProxy<K, V>(val keyType: PlatformType<K>, val valueType: PlatformT
      * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return The value.
      */
+    @JvmOverloads
     fun <T, KEY: K, SELF: MapProxy<K, V>> getOrCreate(
         key: KEY,
         type: PlatformType<T>,

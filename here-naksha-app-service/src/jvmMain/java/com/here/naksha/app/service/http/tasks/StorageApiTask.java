@@ -23,14 +23,18 @@ import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.STORAGE_ID;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
+import static java.util.Objects.requireNonNull;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import io.vertx.ext.web.RoutingContext;
+
+import java.util.Objects;
 import java.util.Set;
-import naksha.base.JvmJsonUtil;
+
+import naksha.base.Platform;
 import naksha.base.StringList;
 import naksha.model.NakshaContext;
 import naksha.base.NakshaError;
@@ -164,7 +168,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
 
   private @NotNull NakshaStorage storageConfigFromRequestBody() {
     final String bodyJson = routingContext.body().asString();
-    return JvmJsonUtil.readJsonAs(bodyJson, NakshaStorage.class);
+    return requireNonNull(Platform.fromJson(bodyJson, NakshaStorage.TYPE));
   }
 
   private static String mismatchMsg(String storageIdFromPath, NakshaStorage storageConfigFromBody) {

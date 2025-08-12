@@ -20,15 +20,14 @@ package com.here.naksha.app.service.models;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import naksha.base.AnyObject;
-import naksha.base.FromJsonOptions;
-import naksha.base.JvmBoxingUtil;
-import naksha.base.Platform;
-import naksha.base.ToJsonOptions;
+
+import naksha.base.*;
 import org.jetbrains.annotations.NotNull;
 
-public class IterateHandle extends AnyObject {
+import static naksha.base.Platform.forClass;
 
+public class IterateHandle extends AnyObject {
+  public static final PlatformType<IterateHandle> TYPE = forClass(IterateHandle.class);
   private static final String OFFSET_KEY = "offset";
   private static final String LIMIT_KEY = "limit";
 
@@ -39,11 +38,11 @@ public class IterateHandle extends AnyObject {
   }
 
   public int getOffset() {
-    return (int) getRaw(OFFSET_KEY);
+    return getOr(OFFSET_KEY, 0);
   }
 
   public void setOffset(int offset) {
-    setRaw(OFFSET_KEY, offset);
+    set(OFFSET_KEY, offset);
   }
 
   public IterateHandle withOffset(int offset) {
@@ -52,11 +51,11 @@ public class IterateHandle extends AnyObject {
   }
 
   public int getLimit() {
-    return (int) getRaw(LIMIT_KEY);
+    return getOr(LIMIT_KEY, Integer.MAX_VALUE);
   }
 
   public void setLimit(int limit) {
-    setRaw(LIMIT_KEY, limit);
+    set(LIMIT_KEY, limit);
   }
 
   public IterateHandle withLimit(int limit) {
@@ -70,6 +69,6 @@ public class IterateHandle extends AnyObject {
 
   public static IterateHandle base64DecodedDeserializedJson(final @NotNull String handle) {
     final String json = new String(Base64.getDecoder().decode(handle));
-    return JvmBoxingUtil.box(Platform.fromJson(json, FromJsonOptions.DEFAULT), IterateHandle.class);
+    return Platform.fromJson(json, IterateHandle.TYPE);
   }
 }

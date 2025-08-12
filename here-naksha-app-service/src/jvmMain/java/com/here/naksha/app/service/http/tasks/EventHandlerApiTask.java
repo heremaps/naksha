@@ -28,7 +28,7 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import io.vertx.ext.web.RoutingContext;
-import naksha.base.JvmJsonUtil;
+import naksha.base.Platform;
 import naksha.base.StringList;
 import naksha.model.NakshaContext;
 import naksha.base.NakshaError;
@@ -144,7 +144,11 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
 
   private @NotNull EventHandlerConfig handlerFromRequestBody() {
     final String bodyJson = routingContext.body().asString();
-    return JvmJsonUtil.readJsonAs(bodyJson, EventHandlerConfig.class);
+    final var handlerConfig = Platform.fromJson(bodyJson, EventHandlerConfig.TYPE);
+    if (handlerConfig == null) {
+      throw new IllegalStateException("Failed to parse handler config: " + bodyJson);
+    }
+    return handlerConfig;
   }
 
   private static String mismatchMsg(String handlerIdFromPath, EventHandlerConfig handlerToUpdate) {
