@@ -541,12 +541,12 @@ open class NakshaCollection() : NakshaFeature() {
         private val STORE_HISTORY = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { self, _ ->
             // For downward compatibility with Naksha version 2
             val old = self.getRaw("disableHistory")
-            if (old == true) StoreMode.SUSPEND else StoreMode.ON
+            if (old == true) StoreMode.OFF else StoreMode.ON
         }
         private val STORE_DELETED = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { self, _ ->
             // For downward compatibility with Naksha version 2
             val old = self.getRaw("autoPurge")
-            if (old == true) StoreMode.SUSPEND else StoreMode.ON
+            if (old == true) StoreMode.OFF else StoreMode.ON
         }
         private val STORE_META = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { _, _ -> StoreMode.ON }
     }
