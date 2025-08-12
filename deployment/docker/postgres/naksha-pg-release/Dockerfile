@@ -1,6 +1,8 @@
-ARG DR_NAKSHA_POSTGRES=hcr.data.here.com/naksha/postgres
-ARG VERSION
-FROM ${DR_NAKSHA_POSTGRES}:pljava-${VERSION}
+#ARG DR_NAKSHA_POSTGRES=hcr.data.here.com/naksha/postgres
+#ARG VERSION
+#FROM ${DR_NAKSHA_POSTGRES}:pljava-${VERSION}
+
+FROM ghcr.io/naksha-oss/naksha-postgres:v16.2-r4
 
 ADD files /
 

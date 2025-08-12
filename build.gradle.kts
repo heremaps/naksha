@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.js.plain.objects) apply false
     alias(libs.plugins.foojay) apply false
     alias(libs.plugins.vanniktechMavenPublish)
+    alias(libs.plugins.jacoco)
 
     // Only need within root
     // see: https://github.com/johnrengelman/shadow
@@ -74,7 +75,7 @@ enum class PublishModule {
 
 val allModules = mapOf(
     Pair("naksha", Pair(CleanAndTest.OFF, PublishModule.CONFIG_ONLY)),
-    Pair("here-naksha-app-service", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    Pair("here-naksha-app-service", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     Pair("here-naksha-common-http", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     Pair("here-naksha-handler-activitylog", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     //Pair("here-naksha-handler-http", Pair(CleanAndTest.OFF, PublishModule.NO)),
@@ -289,4 +290,10 @@ fun Task.publishToCentral() {
         }
     }
 }
-tasks.register("publishToCentral") { publishToCentral() }
+
+tasks.register("jacocoTestReport", JacocoReport::class){
+    dependsOn("cleanAndTestAll")
+    reports {
+        xml.required = true
+    }
+}
