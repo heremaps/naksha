@@ -1,7 +1,12 @@
 package com.here.naksha.cli.storages;
 
+import naksha.base.ListProxy;
 import naksha.base.PlatformType;
+import naksha.base.StringList;
 import naksha.model.objects.NakshaProperties;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 import static naksha.base.Platform.forClass;
 
@@ -24,15 +29,15 @@ public final class GeneratingStorageConfigProperties extends NakshaProperties {
         return this;
     }
 
-    public JvmList getTileIds() {
-        return (JvmList) getRaw(TILE_IDS_KEY);
+    public @Nullable StringList getTileIds() {
+        return getAs(TILE_IDS_KEY, StringList.TYPE);
     }
 
-    public void setTileIds(JvmList tileIds) {
-        setRaw(TILE_IDS_KEY, tileIds);
+    public void setTileIds(@Nullable List<String> tileIds) {
+        set(TILE_IDS_KEY, ListProxy.toNullable(StringList.TYPE, tileIds));
     }
 
-    public GeneratingStorageConfigProperties withTileIds(JvmList tileIds) {
+    public GeneratingStorageConfigProperties withTileIds(@Nullable List<String> tileIds) {
         setTileIds(tileIds);
         return this;
     }

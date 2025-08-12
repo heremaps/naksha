@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
@@ -43,7 +42,7 @@ public abstract class ContextWriteFeatures extends WriteRequest {
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public @Nullable List<NakshaFeature> getContext() {
-    return JvmBoxingUtil.box(get(CONTEXT_KEY), NakshaFeatureList.class);
+    return getAs(CONTEXT_KEY, NakshaFeatureList.TYPE);
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
@@ -65,7 +64,7 @@ public abstract class ContextWriteFeatures extends WriteRequest {
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public @Nullable List<NakshaFeature> getViolations() {
-    return JvmBoxingUtil.box(get(VIOLATIONS_KEY), NakshaFeatureList.class);
+    return getAs(VIOLATIONS_KEY, NakshaFeatureList.TYPE);
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)

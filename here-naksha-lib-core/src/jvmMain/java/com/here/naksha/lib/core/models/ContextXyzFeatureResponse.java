@@ -29,6 +29,8 @@ import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+
 import static naksha.base.Platform.forClass;
 
 //  TODO (CASL-780): this needs to prevail but not here

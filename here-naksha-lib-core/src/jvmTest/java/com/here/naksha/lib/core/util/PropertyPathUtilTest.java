@@ -1,7 +1,6 @@
 package com.here.naksha.lib.core.util;
 
 import com.here.naksha.lib.core.common.TestUtil;
-import naksha.base.JvmJsonUtil;
 import naksha.base.Platform;
 import naksha.base.ToJsonOptions;
 import naksha.model.objects.NakshaFeature;
@@ -131,7 +130,8 @@ class PropertyPathUtilTest {
     ) throws JSONException {
         // Given: Input Feature content
         final String featureJson = TestUtil.loadFileOrFail(TEST_DATA_FOLDER, inputFilePath); // "JsonTest/Input.json");
-        final NakshaFeature feature = JvmJsonUtil.readJsonAs(featureJson, NakshaFeature.class);
+        assertNotNull(featureJson);
+        final NakshaFeature feature = Platform.fromJson(featureJson, NakshaFeature.TYPE);
 
         // Given: Expected Feature content
         final String expectedJsonData = TestUtil.loadFileOrFail(TEST_DATA_FOLDER, expectedFilePath); // "JsonTest/Expected.json");

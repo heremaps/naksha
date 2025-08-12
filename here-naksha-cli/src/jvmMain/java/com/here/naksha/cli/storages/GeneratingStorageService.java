@@ -2,12 +2,12 @@ package com.here.naksha.cli.storages;
 
 import com.here.naksha.lib.core.models.geojson.HQuad;
 import naksha.base.JvmList;
+import naksha.geo.BBox;
 import naksha.geo.LineStringCoord;
 import naksha.geo.PointCoord;
-import naksha.geo.SpBoundingBox;
 import naksha.geo.SpLineString;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.objects.NakshaFeature;
 
 import java.io.IOException;
@@ -55,7 +55,7 @@ final class GeneratingStorageService {
 
     private SpLineString randomLineInTile(String tileId, Random random) {
         HQuad hQuad = new HQuad(tileId, true);
-        SpBoundingBox tileBbox = hQuad.getBoundingBox();
+        final var tileBbox = hQuad.getBoundingBox();
 
         int pointsInLine = random.nextInt(2, 10);
         LineStringCoord coords = new LineStringCoord();
@@ -67,7 +67,7 @@ final class GeneratingStorageService {
         return new SpLineString(coords);
     }
 
-    private PointCoord randomPointCoord(SpBoundingBox boundingBox, Random random) {
+    private PointCoord randomPointCoord(BBox boundingBox, Random random) {
         double lonDist = boundingBox.getMaxLongitude() - boundingBox.getMinLongitude();
         double latDist = boundingBox.getMaxLatitude() - boundingBox.getMinLatitude();
 
@@ -81,7 +81,7 @@ final class GeneratingStorageService {
         List<String> tileIds = new ArrayList<>();
 
         if (configProperties.getTileIds() != null) {
-            JvmList tileIdsInJvmList = configProperties.getTileIds();
+            final var tileIdsInJvmList = configProperties.getTileIds();
 
             tileIdsInJvmList.forEach(o -> {
                 if (o instanceof String tileId) {

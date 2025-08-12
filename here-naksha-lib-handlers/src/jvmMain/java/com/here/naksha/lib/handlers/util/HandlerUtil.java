@@ -21,8 +21,11 @@ package com.here.naksha.lib.handlers.util;
 import com.here.naksha.lib.core.models.ContextXyzFeatureResponse;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
+import naksha.model.Action;
 import naksha.model.TagList;
 import naksha.model.XyzNs;
 import naksha.mom.v2.MomChangeState;
@@ -51,7 +54,7 @@ public final class HandlerUtil {
       final @Nullable List<NakshaFeature> violations) {
 
     for (final NakshaFeature feature : features) {
-      feature.getProperties().getXyz().setRaw(XyzNs.ACTION, Action.UPDATED);
+      feature.getProperties().getXyz().set(XyzNs.ACTION, Action.UPDATED);
     }
     // Create ContextResult with cursor, context and violations
     final ContextXyzFeatureResponse ctxResult = new ContextXyzFeatureResponse();
