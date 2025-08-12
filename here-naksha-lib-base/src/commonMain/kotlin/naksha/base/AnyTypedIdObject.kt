@@ -30,6 +30,7 @@ open class AnyTypedIdObject : AnyTypedObject() {
         @JsStatic
         val TYPE = forKClass(AnyTypedIdObject::class).withPackageName(PACKAGE_NAME)
 
+        const val ID_KEY = "id"
         init { initialize() }
     }
 
@@ -48,15 +49,15 @@ open class AnyTypedIdObject : AnyTypedObject() {
 
     @KT_68775_infinite_loop_for_calling_super_getter
     protected open fun get_id(): String {
-        val raw = getRaw("id")
+        val raw = getRaw(ID_KEY)
         if (raw is String) return raw
         val id = randomString()
-        setRaw("id", id)
+        setRaw(ID_KEY, id)
         return id
     }
 
     @KT_68775_infinite_loop_for_calling_super_getter
     protected open fun set_id(id: String) {
-        setRaw("id", id)
+        setRaw(ID_KEY, id)
     }
 }

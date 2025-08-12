@@ -12,7 +12,7 @@ import kotlin.math.round
 /**
  * The default implementation of the [DiffContext].
  *
- * Can be extended, to just implement a special handling for [ignore], but leave the default [equalsDouble] unmodified.
+ * Can be extended, to just implement a special handling for [ignore], but leave the default [equalsDouble] unmodified. Doubles are compared to 6 decimal digits, and are treated equal, if their rounded value to the 6'th decimal digit are equal.
  *
  * @since 3.0
  */

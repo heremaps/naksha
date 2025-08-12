@@ -29,7 +29,7 @@ class MapDiff : AnyObject(), Difference {
     }
 
     /**
-     * The differences, a map that describes the differences, for each key where something changes a [Difference] is stored as value in this [DifferenceMap], unchanged keys are _undefined_ in this map.
+     * The differences, a map that describes the differences, for each key where something changes a [Difference] is stored as value in this [DifferenceMap], unchanged keys are `undefined` in this map.
      * @since 3.0
      */
     val differences: DifferenceMap by DIFFERENCES
