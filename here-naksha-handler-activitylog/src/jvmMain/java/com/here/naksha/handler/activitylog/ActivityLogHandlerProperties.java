@@ -18,12 +18,17 @@
  */
 package com.here.naksha.handler.activitylog;
 
+import naksha.base.PlatformType;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 
+import static naksha.base.Platform.forClass;
+
 @AvailableSince(NakshaVersion.v2_0_14)
 public class ActivityLogHandlerProperties extends NakshaProperties {
+
+  public static final PlatformType<ActivityLogHandlerProperties> TYPE = forClass(ActivityLogHandlerProperties.class);
 
   @AvailableSince(NakshaVersion.v2_0_14)
   public static final String SPACE_ID = "spaceId";

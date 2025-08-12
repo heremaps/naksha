@@ -23,14 +23,8 @@ import static java.lang.System.arraycopy;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
-import naksha.diff.Difference;
-import naksha.diff.DifferenceCalculator;
-import naksha.diff.InsertOp;
-import naksha.diff.ListDiff;
-import naksha.diff.MapDiff;
-import naksha.diff.PrimitiveDiff;
-import naksha.diff.RemoveOp;
-import naksha.diff.UpdateOp;
+
+import naksha.diff.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.RequestQuery;
@@ -94,14 +88,15 @@ class ReversePatchUtil {
   }
 
   private static void handleMap(MapDiff mapDiff, ReversePatch.Builder builder, String currentPath) {
-    for (Map.Entry<Object, Difference> diffEntry : mapDiff.entrySet()) {
+    for (Map.Entry<Object, Difference> diffEntry : mapDiff.getDifferences().entrySet()) {
       handle(diffEntry.getValue(), builder, diffPatchPath(currentPath, diffEntry.getKey()));
     }
   }
 
   private static void handleList(ListDiff listDiff, ReversePatch.Builder builder, String currentPath) {
-    for (int i = 0; i < listDiff.size(); i++) {
-      Difference diff = listDiff.get(i);
+    final var differences = listDiff.getDifferences();
+    for (int i = 0; i < differences.size(); i++) {
+      Difference diff = differences.get(i);
       if (diff != null) {
         handle(diff, builder, diffPatchPath(currentPath, i));
       }

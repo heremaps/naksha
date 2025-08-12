@@ -11,7 +11,7 @@ import naksha.base.String_TYPE
  */
 class Original : AnyObject() {
     companion object {
-        public val TYPE = forKClass<Original>(Original::class).withPackageName("com.here.naksha.handler.activitylog")
+        val TYPE = forKClass(Original::class).withPackageName("com.here.naksha.handler.activitylog")
         private val STRING_NULL = NullableProperty<Original, String>(String_TYPE)
         // TODO: We should never work with LONG, we should use Int64, JavaScript does not have 64-bit integers !!!
         private val LONG_NULL = NullableProperty<Original, Long>(Long_TYPE)

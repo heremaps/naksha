@@ -36,14 +36,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.NakshaError;
 import naksha.base.StringList;
 import naksha.model.Action;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.TupleNumber;
 import naksha.model.TupleNumberVariant;
@@ -71,8 +70,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
   public ActivityLogHandler(
       @NotNull EventHandlerConfig handlerConfig, @NotNull INaksha hub) {
     super(hub);
-    this.properties = Objects.requireNonNull(
-        JvmBoxingUtil.box(handlerConfig.getProperties(), ActivityLogHandlerProperties.class));
+    this.properties = Objects.requireNonNull(handlerConfig.getProperties(ActivityLogHandlerProperties.TYPE));
   }
 
   @Override

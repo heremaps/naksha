@@ -20,6 +20,7 @@ package com.here.naksha.handler.activitylog;
 
 import static com.here.naksha.handler.activitylog.ReversePatchUtil.reversePatch;
 import static com.here.naksha.handler.activitylog.ReversePatchUtil.toJsonNode;
+import static naksha.mom.v2.MomProperties.XYZ_ACTIVITY_LOG_NS;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import naksha.model.Action;
@@ -40,7 +41,7 @@ public class ActivityLogEnhancer {
   static NakshaFeature enhanceWithActivityLog(
       @NotNull NakshaFeature newFeature, @Nullable NakshaFeature oldFeature, @NotNull String spaceId) {
     NakshaActivityLog activityLog = activityLog(newFeature, oldFeature, spaceId);
-    newFeature.getProperties().put(NakshaProperties.XYZ_ACTIVITY_LOG_NS, activityLog);
+    newFeature.getProperties().put(XYZ_ACTIVITY_LOG_NS, activityLog);
     newFeature.setId(uuid(newFeature));
     return newFeature;
   }

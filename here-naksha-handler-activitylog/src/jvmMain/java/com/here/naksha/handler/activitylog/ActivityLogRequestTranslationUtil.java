@@ -21,7 +21,7 @@ package com.here.naksha.handler.activitylog;
 import static com.here.naksha.handler.activitylog.NakshaActivityLog.ID;
 import static com.here.naksha.lib.handlers.util.PropertyOperationUtil.disablePQueriesInRequest;
 import static naksha.model.objects.NakshaFeature.PROPERTIES_KEY;
-import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
+import static naksha.mom.v2.MomProperties.XYZ_ACTIVITY_LOG_NS;
 
 import java.util.Set;
 import naksha.base.StringList;
